@@ -477,27 +477,49 @@ function mkUpdateWithData<ParentViewState, ChildViewState>(
     child: WithData<ParentViewState, ChildViewState>,
     group: KindergartenGroup,
 ): [updateFunc<ParentViewState>, MountFunc, MountFunc] {
+    let mount = noopMount,
+        unmount = noopMount;
+    let lastResult = false;
+    let childElement: BaseJayElement<ChildViewState> | undefined = undefined;
     const parentContext = currentConstructionContext();
-
-    // Wrap the update to switch context when updating
-    return mkUpdateCondition({
-        condition: (data: ParentViewState) => child.accessor(data) != null,
-        elem: (): BaseJayElement<ParentViewState> => {
-            const childElem = child.elem();
-            const update = (newData: ParentViewState) => {
-                const childData = child.accessor(newData);
-                const childContext = parentContext.forAsync(childData);
-                withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => childElem.update(childData))
-
-            }
-            return {
-                update,
-                mount: childElem.mount,
-                unmount: childElem.unmount,
-                dom: childElem.dom
-            }
+    const savedContext = saveContext();
+    
+    const update = (newData: ParentViewState) => {
+        const childData = child.accessor(newData);
+        const result = childData != null;
+        
+        // Construct the child element when first needed
+        if (!childElement && result) {
+            const childContext = parentContext.forAsync(childData);
+            childElement = restoreContext(savedContext, () =>
+                withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => child.elem())
+            );
+            mount = () => lastResult && childElement!.mount();
+            unmount = () => childElement!.unmount();
         }
-    }, group);
+
+        // Handle mounting/unmounting based on condition
+        if (result) {
+            if (!lastResult) {
+                group.ensureNode(childElement!.dom);
+                childElement!.mount();
+            }
+            // Update child with child data, not parent data
+            const childContext = parentContext.forAsync(childData);
+            restoreContext(savedContext, () =>
+                withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => 
+                    childElement!.update(childData!)
+                )
+            );
+        } else if (lastResult) {
+            childElement!.unmount();
+            group.removeNode(childElement!.dom);
+        }
+
+        lastResult = result;
+    };
+    
+    return [update, mount, unmount];
 }
 
 function text<ViewState>(content: string): TextElement<ViewState> {

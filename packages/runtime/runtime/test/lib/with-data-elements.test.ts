@@ -3,6 +3,7 @@ import {
     dynamicElement as de,
     element as e,
     dynamicText as dt,
+    conditional as c, BaseJayElement,
 } from '../../lib/';
 import { JayElement, ReferencesManager } from '../../lib';
 import { ConstructContext } from '../../lib';
@@ -226,6 +227,227 @@ describe('withData-element', () => {
             expect(jayElement.dom.querySelector('.inner')).not.toBeNull();
             expect(jayElement.dom.querySelector('.title')).toHaveTextContent('New Inner');
             expect(jayElement.dom.querySelector('.value')).toHaveTextContent('456');
+        });
+    });
+
+    describe('recursive binary tree', () => {
+        // This tests true recursive structures like the binary-tree example.
+        // Recursion requires conditional guards to prevent infinite construction.
+        // The pattern matches what the Jay-HTML compiler generates:
+        //   c((vs) => vs.hasLeft, () => de(..., [withData((vs) => vs.left, () => renderTree())]))
+        
+        interface BinaryTreeNode {
+            value: number;
+            hasLeft: boolean;
+            hasRight: boolean;
+            left: BinaryTreeNode | null;
+            right: BinaryTreeNode | null;
+        }
+
+        function makeBinaryTree(data: BinaryTreeNode): JayElement<BinaryTreeNode, any> {
+            let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
+            
+            // Recursive render function (matches generated code pattern)
+            function renderTreeNode(): BaseJayElement<BinaryTreeNode> {
+                return de('div', { class: 'tree-node' }, [
+                    e('div', { class: 'value' }, [dt((vs) => vs.value)]),
+                    de('div', { class: 'children' }, [
+                        c(
+                            (vs) => vs.hasLeft,
+                            () => de('div', { class: 'left-child' }, [
+                                e('div', { class: 'branch' }, ['L']),
+                                withData(
+                                    (vs) => vs.left,
+                                    () => renderTreeNode(),
+                                ),
+                            ]),
+                        ),
+                        c(
+                            (vs) => vs.hasRight,
+                            () => de('div', { class: 'right-child' }, [
+                                e('div', { class: 'branch' }, ['R']),
+                                withData(
+                                    (vs) => vs.right,
+                                    () => renderTreeNode(),
+                                ),
+                            ]),
+                        ),
+                    ]),
+                ]);
+            }
+            
+            return ConstructContext.withRootContext(data, refManager, renderTreeNode);
+        }
+
+        it('should render recursive binary tree structure', () => {
+            const tree: BinaryTreeNode = {
+                value: 50,
+                hasLeft: true,
+                hasRight: true,
+                left: {
+                    value: 30,
+                    hasLeft: false,
+                    hasRight: false,
+                    left: null,
+                    right: null,
+                },
+                right: {
+                    value: 70,
+                    hasLeft: false,
+                    hasRight: false,
+                    left: null,
+                    right: null,
+                },
+            };
+            
+            const jayElement = makeBinaryTree(tree);
+            
+            const values = Array.from(jayElement.dom.querySelectorAll('.value')).map(
+                (el) => el.textContent,
+            );
+            expect(values).toEqual(['50', '30', '70']);
+            
+            const branches = Array.from(jayElement.dom.querySelectorAll('.branch')).map(
+                (el) => el.textContent,
+            );
+            expect(branches).toEqual(['L', 'R']);
+        });
+
+        it('should handle deeper recursion (3 levels)', () => {
+            const tree: BinaryTreeNode = {
+                value: 50,
+                hasLeft: true,
+                hasRight: true,
+                left: {
+                    value: 30,
+                    hasLeft: true,
+                    hasRight: false,
+                    left: {
+                        value: 20,
+                        hasLeft: false,
+                        hasRight: false,
+                        left: null,
+                        right: null,
+                    },
+                    right: null,
+                },
+                right: {
+                    value: 70,
+                    hasLeft: false,
+                    hasRight: true,
+                    left: null,
+                    right: {
+                        value: 80,
+                        hasLeft: false,
+                        hasRight: false,
+                        left: null,
+                        right: null,
+                    },
+                },
+            };
+            
+            const jayElement = makeBinaryTree(tree);
+            
+            const values = Array.from(jayElement.dom.querySelectorAll('.value')).map(
+                (el) => el.textContent,
+            );
+            expect(values).toEqual(['50', '30', '20', '70', '80']);
+        });
+
+        it('should handle single node (no children)', () => {
+            const tree: BinaryTreeNode = {
+                value: 42,
+                hasLeft: false,
+                hasRight: false,
+                left: null,
+                right: null,
+            };
+            
+            const jayElement = makeBinaryTree(tree);
+            
+            const values = Array.from(jayElement.dom.querySelectorAll('.value')).map(
+                (el) => el.textContent,
+            );
+            expect(values).toEqual(['42']);
+            
+            // Should have no branches since no children
+            const branches = jayElement.dom.querySelectorAll('.branch');
+            expect(branches.length).toBe(0);
+        });
+
+        it('should update recursive structure dynamically', () => {
+            // Start with single node
+            const tree: BinaryTreeNode = {
+                value: 50,
+                hasLeft: false,
+                hasRight: false,
+                left: null,
+                right: null,
+            };
+            
+            const jayElement = makeBinaryTree(tree);
+            expect(Array.from(jayElement.dom.querySelectorAll('.value')).map(el => el.textContent)).toEqual(['50']);
+            
+            // Add children
+            jayElement.update({
+                value: 50,
+                hasLeft: true,
+                hasRight: true,
+                left: {
+                    value: 30,
+                    hasLeft: false,
+                    hasRight: false,
+                    left: null,
+                    right: null,
+                },
+                right: {
+                    value: 70,
+                    hasLeft: false,
+                    hasRight: false,
+                    left: null,
+                    right: null,
+                },
+            });
+            
+            const values = Array.from(jayElement.dom.querySelectorAll('.value')).map(
+                (el) => el.textContent,
+            );
+            expect(values).toEqual(['50', '30', '70']);
+        });
+
+        it('should handle unbalanced tree', () => {
+            const tree: BinaryTreeNode = {
+                value: 10,
+                hasLeft: true,
+                hasRight: false,
+                left: {
+                    value: 5,
+                    hasLeft: true,
+                    hasRight: false,
+                    left: {
+                        value: 3,
+                        hasLeft: false,
+                        hasRight: false,
+                        left: null,
+                        right: null,
+                    },
+                    right: null,
+                },
+                right: null,
+            };
+            
+            const jayElement = makeBinaryTree(tree);
+            
+            const values = Array.from(jayElement.dom.querySelectorAll('.value')).map(
+                (el) => el.textContent,
+            );
+            expect(values).toEqual(['10', '5', '3']);
+            
+            // Should only have left branches
+            const branches = Array.from(jayElement.dom.querySelectorAll('.branch')).map(
+                (el) => el.textContent,
+            );
+            expect(branches).toEqual(['L', 'L']);
         });
     });
 });
