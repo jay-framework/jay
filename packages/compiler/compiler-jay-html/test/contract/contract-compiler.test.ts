@@ -620,4 +620,272 @@ describe('compile contract', () => {
             );
         });
     });
+
+    describe('recursive contracts', () => {
+        it('should compile simple recursive contract with array recursion', async () => {
+            const contract = `
+name: tree-node
+tags:
+  - tag: name
+    type: data
+    dataType: string
+  - tag: id
+    type: data
+    dataType: string
+  - tag: children
+    type: sub-contract
+    repeated: true
+    link: $/
+`;
+            const parsedContract = parseContract(contract, 'tree-node.jay-contract');
+            const result = await compileContract(parsedContract, './tree-node', noHopResolver);
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+import { JayContract } from '@jay-framework/runtime';
+
+export interface TreeNodeViewState {
+    name: string;
+    id: string;
+    children: Array<TreeNodeViewState>;
+}
+
+export interface TreeNodeRefs {}
+
+export interface TreeNodeRepeatedRefs {}
+
+export type TreeNodeContract = JayContract<TreeNodeViewState, TreeNodeRefs>`),
+            );
+        });
+
+        it('should compile binary tree with multiple recursive references', async () => {
+            const contract = `
+name: binary-tree
+tags:
+  - tag: value
+    type: data
+    dataType: number
+  - tag: id
+    type: data
+    dataType: string
+  - tag: left
+    type: sub-contract
+    link: $/
+  - tag: right
+    type: sub-contract
+    link: $/
+`;
+            const parsedContract = parseContract(contract, 'binary-tree.jay-contract');
+            const result = await compileContract(parsedContract, './binary-tree', noHopResolver);
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+import { JayContract } from '@jay-framework/runtime';
+
+export interface BinaryTreeViewState {
+    value: number;
+    id: string;
+    left: BinaryTreeViewState | null;
+    right: BinaryTreeViewState | null;
+}
+
+export interface BinaryTreeRefs {}
+
+export interface BinaryTreeRepeatedRefs {}
+
+export type BinaryTreeContract = JayContract<BinaryTreeViewState, BinaryTreeRefs>`),
+            );
+        });
+
+        it('should compile indirect recursion through container', async () => {
+            const contract = `
+name: menu-item
+tags:
+  - tag: label
+    type: data
+    dataType: string
+  - tag: id
+    type: data
+    dataType: string
+  - tag: submenu
+    type: sub-contract
+    tags:
+      - tag: items
+        type: sub-contract
+        repeated: true
+        link: $/
+`;
+            const parsedContract = parseContract(contract, 'menu-item.jay-contract');
+            const result = await compileContract(parsedContract, './menu-item', noHopResolver);
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+import { JayContract } from '@jay-framework/runtime';
+
+export interface SubmenuOfMenuItemViewState {
+    items: Array<MenuItemViewState>;
+}
+
+export interface MenuItemViewState {
+    label: string;
+    id: string;
+    submenu: SubmenuOfMenuItemViewState;
+}
+
+export interface MenuItemRefs {}
+
+export interface MenuItemRepeatedRefs {}
+
+export type MenuItemContract = JayContract<MenuItemViewState, MenuItemRefs>`),
+            );
+        });
+
+        it('should compile nested type reference with $/path syntax', async () => {
+            const contract = `
+name: complex-tree
+tags:
+  - tag: name
+    type: data
+    dataType: string
+  - tag: metadata
+    type: sub-contract
+    tags:
+      - tag: category
+        type: data
+        dataType: string
+      - tag: tags
+        type: data
+        dataType: string
+  - tag: children
+    type: sub-contract
+    repeated: true
+    link: $/
+  - tag: relatedMetadata
+    type: sub-contract
+    repeated: true
+    link: $/metadata
+`;
+            const parsedContract = parseContract(contract, 'complex-tree.jay-contract');
+            const result = await compileContract(parsedContract, './complex-tree', noHopResolver);
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+import { JayContract } from '@jay-framework/runtime';
+
+export interface MetadatumOfComplexTreeViewState {
+    category: string;
+    tags: string;
+}
+
+export interface ComplexTreeViewState {
+    name: string;
+    metadata: MetadatumOfComplexTreeViewState;
+    children: Array<ComplexTreeViewState>;
+    relatedMetadata: Array<MetadatumOfComplexTreeViewState>;
+}
+
+export interface ComplexTreeRefs {}
+
+export interface ComplexTreeRepeatedRefs {}
+
+export type ComplexTreeContract = JayContract<ComplexTreeViewState, ComplexTreeRefs>`),
+            );
+        });
+
+        it('should compile recursive link from nested sub-contract', async () => {
+            const contract = `
+name: document
+tags:
+  - tag: title
+    type: data
+    dataType: string
+  - tag: nestedStructure
+    type: sub-contract
+    tags:
+      - tag: name
+        type: data
+        dataType: string
+      - tag: id
+        type: data
+        dataType: string
+      - tag: children
+        type: sub-contract
+        repeated: true
+        link: $/nestedStructure
+`;
+            const parsedContract = parseContract(contract, 'document.jay-contract');
+            const result = await compileContract(parsedContract, './document', noHopResolver);
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+import { JayContract } from '@jay-framework/runtime';
+
+export interface NestedStructureOfDocumentViewState {
+    name: string;
+    id: string;
+    children: Array<NestedStructureOfDocumentViewState>;
+}
+
+export interface DocumentViewState {
+    title: string;
+    nestedStructure: NestedStructureOfDocumentViewState;
+}
+
+export interface DocumentRefs {}
+
+export interface DocumentRepeatedRefs {}
+
+export type DocumentContract = JayContract<DocumentViewState, DocumentRefs>`),
+            );
+        });
+
+        it('should compile recursive contract with interactive elements', async () => {
+            const contract = `
+name: folder-tree
+tags:
+  - tag: name
+    type: data
+    dataType: string
+  - tag: id
+    type: data
+    dataType: string
+  - tag: toggle
+    type: interactive
+    elementType: HTMLButtonElement
+  - tag: children
+    type: sub-contract
+    repeated: true
+    link: $/
+`;
+            const parsedContract = parseContract(contract, 'folder-tree.jay-contract');
+            const result = await compileContract(parsedContract, './folder-tree', noHopResolver);
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+import { HTMLElementCollectionProxy, HTMLElementProxy, JayContract } from '@jay-framework/runtime';
+
+export interface FolderTreeViewState {
+    name: string;
+    id: string;
+    children: Array<FolderTreeViewState>;
+}
+
+export interface FolderTreeRefs {
+    toggle: HTMLElementProxy<FolderTreeViewState, HTMLButtonElement>;
+}
+
+export interface FolderTreeRepeatedRefs {
+    toggle: HTMLElementCollectionProxy<FolderTreeViewState, HTMLButtonElement>;
+}
+
+export type FolderTreeContract = JayContract<FolderTreeViewState, FolderTreeRefs>`),
+            );
+        });
+    });
 });

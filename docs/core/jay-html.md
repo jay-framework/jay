@@ -579,7 +579,7 @@ For homogeneous tree structures where all children share the same structure:
     <span class="tree-arrow" if="hasChildren && !open">►</span>
     <span class="tree-name">{name}</span>
   </div>
-  
+
   <!-- Recurse through children array -->
   <ul if="open" class="tree-children">
     <li forEach="children" trackBy="id">
@@ -603,6 +603,7 @@ For homogeneous tree structures where all children share the same structure:
 ```
 
 **Key Points:**
+
 - The `<recurse ref="treeNode">` element triggers recursion for each child
 - `forEach` provides both iteration context and recursion guard (stops when array is empty)
 - Use `trackBy` for efficient DOM updates
@@ -621,7 +622,7 @@ For heterogeneous structures where different paths lead to children (binary tree
       <div class="branch">L</div>
       <recurse ref="btreeNode" accessor="left" />
     </div>
-    
+
     <!-- Right child -->
     <div class="right-child" if="hasRight">
       <div class="branch">R</div>
@@ -646,6 +647,7 @@ For heterogeneous structures where different paths lead to children (binary tree
 ```
 
 **Key Points:**
+
 - The `accessor` attribute specifies which property to follow for recursion
 - Each accessor uses `withData` runtime function which includes built-in null checking
 - Recursion is self-guarding - automatically stops when accessor returns `null`
@@ -656,7 +658,7 @@ For heterogeneous structures where different paths lead to children (binary tree
 ```html
 <div ref="listNode">
   <div class="item-value">{value}</div>
-  
+
   <!-- Recurse to next item if it exists -->
   <div class="next-item" if="hasNext">
     <div class="arrow">→</div>
@@ -681,7 +683,7 @@ For heterogeneous structures where different paths lead to children (binary tree
 
 1. **Compilation**: The compiler detects `<recurse>` elements and generates internal recursive render functions
 2. **Type Generation**: Generates recursive TypeScript types (e.g., `Array<TreeViewState>` or `TreeViewState | null`)
-3. **Runtime**: 
+3. **Runtime**:
    - For `forEach` recursion: Uses array iteration with termination when empty
    - For `accessor` recursion: Uses `withData` with built-in null checking
 4. **Context Switching**: Each recursive call operates on the child's data context
@@ -697,6 +699,7 @@ For heterogeneous structures where different paths lead to children (binary tree
 #### When to Use Recursive Structures
 
 **Use recursive structures for:**
+
 - File/folder trees
 - Nested comments and threads
 - Organization hierarchies
@@ -705,6 +708,7 @@ For heterogeneous structures where different paths lead to children (binary tree
 - Nested menu systems
 
 **Consider component-based recursion for:**
+
 - Different visual styles at different depths
 - Complex state management per node
 - Reusable tree nodes across different contexts
