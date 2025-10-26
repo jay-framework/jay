@@ -528,6 +528,187 @@ Use `forEach="array"` and `trackBy="key"` for list rendering:
 </ul>
 ```
 
+### Recursive Structures
+
+Jay-HTML supports recursive rendering within a single HTML structure and a single Jay Component, allowing you to build complex nested UIs like trees, nested comments, file browsers, and more without extracting separate components.
+
+#### Marking Recursive Regions
+
+Use the `ref` attribute to mark a region that can be recursively rendered:
+
+```html
+<div ref="treeNode">
+  <div class="node-name">{name}</div>
+  <!-- Recursive content goes here -->
+</div>
+```
+
+#### Recursive Data Types
+
+Define recursive data structures using JSON Schema-style references with the `$` prefix:
+
+```html
+<script type="application/jay-data">
+  data:
+    name: string
+    id: string
+    children: array<$/data>  # Recursive reference to root type
+</script>
+```
+
+For single optional children (linked lists, binary trees):
+
+```html
+<script type="application/jay-data">
+  data:
+    value: number
+    id: string
+    left: $/data   # References root type (nullable)
+    right: $/data  # References root type (nullable)
+</script>
+```
+
+#### Array-Based Recursion (forEach)
+
+For homogeneous tree structures where all children share the same structure:
+
+```html
+<div ref="treeNode">
+  <div class="tree-head">
+    <span class="tree-arrow" if="hasChildren && open">▼</span>
+    <span class="tree-arrow" if="hasChildren && !open">►</span>
+    <span class="tree-name">{name}</span>
+  </div>
+  
+  <!-- Recurse through children array -->
+  <ul if="open" class="tree-children">
+    <li forEach="children" trackBy="id">
+      <recurse ref="treeNode" />
+    </li>
+  </ul>
+</div>
+```
+
+**Data Contract:**
+
+```html
+<script type="application/jay-data">
+  data:
+    name: string
+    id: string
+    open: boolean
+    hasChildren: boolean
+    children: array<$/data>
+</script>
+```
+
+**Key Points:**
+- The `<recurse ref="treeNode">` element triggers recursion for each child
+- `forEach` provides both iteration context and recursion guard (stops when array is empty)
+- Use `trackBy` for efficient DOM updates
+- The recursion naturally terminates when reaching leaf nodes (empty `children` array)
+
+#### Accessor-Based Recursion
+
+For heterogeneous structures where different paths lead to children (binary trees, linked lists):
+
+```html
+<div ref="btreeNode">
+  <div class="node-value">{value}</div>
+  <div class="children">
+    <!-- Left child -->
+    <div class="left-child" if="hasLeft">
+      <div class="branch">L</div>
+      <recurse ref="btreeNode" accessor="left" />
+    </div>
+    
+    <!-- Right child -->
+    <div class="right-child" if="hasRight">
+      <div class="branch">R</div>
+      <recurse ref="btreeNode" accessor="right" />
+    </div>
+  </div>
+</div>
+```
+
+**Data Contract:**
+
+```html
+<script type="application/jay-data">
+  data:
+    value: number
+    id: string
+    hasLeft: boolean
+    hasRight: boolean
+    left: $/data
+    right: $/data
+</script>
+```
+
+**Key Points:**
+- The `accessor` attribute specifies which property to follow for recursion
+- Each accessor uses `withData` runtime function which includes built-in null checking
+- Recursion is self-guarding - automatically stops when accessor returns `null`
+- The `if` conditions are optional for safety (built into `withData`) but useful for UX
+
+#### Linked List Example
+
+```html
+<div ref="listNode">
+  <div class="item-value">{value}</div>
+  
+  <!-- Recurse to next item if it exists -->
+  <div class="next-item" if="hasNext">
+    <div class="arrow">→</div>
+    <recurse ref="listNode" accessor="next" />
+  </div>
+</div>
+```
+
+**Data Contract:**
+
+```html
+<script type="application/jay-data">
+  data:
+    value: string
+    id: string
+    hasNext: boolean
+    next: $/data
+</script>
+```
+
+#### How It Works
+
+1. **Compilation**: The compiler detects `<recurse>` elements and generates internal recursive render functions
+2. **Type Generation**: Generates recursive TypeScript types (e.g., `Array<TreeViewState>` or `TreeViewState | null`)
+3. **Runtime**: 
+   - For `forEach` recursion: Uses array iteration with termination when empty
+   - For `accessor` recursion: Uses `withData` with built-in null checking
+4. **Context Switching**: Each recursive call operates on the child's data context
+5. **Safe Termination**: Recursion automatically stops at leaf nodes (empty arrays or null values)
+
+#### Validation Rules
+
+- **Array recursion** (`<recurse>` without accessor): Must be inside a `forEach` loop
+- **Accessor recursion** (`<recurse accessor="path">`): Self-guarding via built-in null checks, no explicit guard required
+- **Reference validation**: The `ref` attribute must exist as an ancestor element
+- **Type safety**: Data types must match between parent and recursive child
+
+#### When to Use Recursive Structures
+
+**Use recursive structures for:**
+- File/folder trees
+- Nested comments and threads
+- Organization hierarchies
+- Binary trees and linked lists
+- DOM tree representations
+- Nested menu systems
+
+**Consider component-based recursion for:**
+- Different visual styles at different depths
+- Complex state management per node
+- Reusable tree nodes across different contexts
+
 ### Component Rendering
 
 Render imported components:

@@ -199,7 +199,37 @@ conditionFunc
 }
 
 condition
-  = enumCondition
+  = logicalOrCondition
+
+logicalOrCondition
+  = head:logicalAndCondition tail:(_ "||" _ logicalAndCondition)* {
+    if (tail.length === 0) return head;
+    return tail.reduce((acc, curr) => {
+      const right = curr[3];
+      return RenderFragment.merge(
+        acc.map(_ => `(${_})`),
+        right.map(_ => `(${_})`),
+        ' || '
+      );
+    }, head);
+  }
+
+logicalAndCondition
+  = head:primaryCondition tail:(_ "&&" _ primaryCondition)* {
+    if (tail.length === 0) return head;
+    return tail.reduce((acc, curr) => {
+      const right = curr[3];
+      return RenderFragment.merge(
+        acc.map(_ => `(${_})`),
+        right.map(_ => `(${_})`),
+        ' && '
+      );
+    }, head);
+  }
+
+primaryCondition
+  = "(" _ cond:condition _ ")" { return cond; }
+  / enumCondition
   / booleanCondition
 
 booleanCondition

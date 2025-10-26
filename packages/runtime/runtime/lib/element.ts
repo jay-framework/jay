@@ -5,8 +5,9 @@ import {
     BaseJayElement,
     JayComponent,
     JayComponentConstructor,
+    jayLog,
+    LogType,
     MountFunc,
-    noop,
     noopMount,
     noopUpdate,
     updateFunc,
@@ -203,6 +204,7 @@ function isJayElement<ViewState>(
         | Conditional<ViewState>
         | When<ViewState, any>
         | ForEach<ViewState, any>
+        | WithData<ViewState, any>
         | TextElement<ViewState>
         | BaseJayElement<ViewState>,
 ): c is BaseJayElement<ViewState> {
@@ -213,6 +215,7 @@ export function isCondition<ViewState>(
         | Conditional<ViewState>
         | When<ViewState, any>
         | ForEach<ViewState, any>
+        | WithData<ViewState, any>
         | TextElement<ViewState>
         | BaseJayElement<ViewState>,
 ): c is Conditional<ViewState> {
@@ -224,6 +227,7 @@ export function isForEach<ViewState, Item>(
         | Conditional<ViewState>
         | When<ViewState, any>
         | ForEach<ViewState, Item>
+        | WithData<ViewState, any>
         | TextElement<ViewState>
         | BaseJayElement<ViewState>,
 ): c is ForEach<ViewState, Item> {
@@ -235,10 +239,23 @@ export function isWhen<ViewState, Item>(
         | Conditional<ViewState>
         | When<ViewState, any>
         | ForEach<ViewState, Item>
+        | WithData<ViewState, any>
         | TextElement<ViewState>
         | BaseJayElement<ViewState>,
 ): c is When<ViewState, any> {
     return (c as When<ViewState, any>).promise !== undefined;
+}
+
+export function isWithData<ViewState, ChildViewState>(
+    c:
+        | Conditional<ViewState>
+        | When<ViewState, any>
+        | ForEach<ViewState, any>
+        | WithData<ViewState, ChildViewState>
+        | TextElement<ViewState>
+        | BaseJayElement<ViewState>,
+): c is WithData<ViewState, ChildViewState> {
+    return (c as WithData<ViewState, ChildViewState>).accessor !== undefined;
 }
 
 function mkWhenCondition<ViewState, Resolved>(
@@ -267,10 +284,21 @@ function mkWhenConditionBase<ViewState, Resolved>(
     setupPromise: SetupPromise,
 ): [updateFunc<ViewState>, MountFunc, MountFunc] {
     let show = false;
+    let savedValue = undefined;
     const parentContext = currentConstructionContext();
     const savedContext = saveContext();
     const [cUpdate, cMouth, cUnmount] = mkUpdateCondition(
-        conditional(() => show, when.elem),
+        conditional(
+            () => show,
+            () => {
+                let childContext = parentContext.forAsync(savedValue);
+                return restoreContext(savedContext, () => {
+                    return withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => {
+                        return when.elem();
+                    });
+                });
+            },
+        ),
         group,
     );
 
@@ -279,10 +307,8 @@ function mkWhenConditionBase<ViewState, Resolved>(
     const handleValue = (changedPromise: Promise<Resolved>) => (value: any | typeof Hide) => {
         if (changedPromise === currentPromise) {
             show = value !== Hide;
-            let childContext = parentContext.forAsync(value);
-            return restoreContext(savedContext, () =>
-                withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => cUpdate(value)),
-            );
+            savedValue = value;
+            cUpdate(value);
         }
     };
 
@@ -305,7 +331,7 @@ function mkWhenResolvedCondition<ViewState, Resolved>(
     group: KindergartenGroup,
 ): [updateFunc<ViewState>, MountFunc, MountFunc] {
     return mkWhenConditionBase(when, group, (promise, handleValue) =>
-        promise.then(handleValue).catch(noop),
+        promise.then(handleValue).catch((err) => jayLog.error(LogType.ASYNC_ERROR, err)),
     );
 }
 
@@ -328,7 +354,7 @@ function mkWhenPendingCondition<ViewState>(
                 clearTimeout(timeout);
                 handleValue(Hide);
             })
-            .catch(noop);
+            .catch((err) => jayLog.error(LogType.ASYNC_ERROR, err));
     });
 }
 
@@ -344,6 +370,18 @@ export interface ForEach<ViewState, Item> {
     getItems: (T) => Array<Item>;
     elemCreator: (Item, String) => BaseJayElement<Item>;
     trackBy: string;
+}
+
+export function withData<ParentViewState, ChildViewState>(
+    accessor: (data: ParentViewState) => ChildViewState | null | undefined,
+    elem: () => BaseJayElement<ChildViewState>,
+): WithData<ParentViewState, ChildViewState> {
+    return { accessor, elem };
+}
+
+export interface WithData<ParentViewState, ChildViewState> {
+    accessor: (data: ParentViewState) => ChildViewState | null | undefined;
+    elem: () => BaseJayElement<ChildViewState>;
 }
 
 function applyListChanges<Item>(
@@ -412,13 +450,16 @@ function mkUpdateCondition<ViewState>(
         unmount = noopMount;
     let lastResult = false;
     let childElement: BaseJayElement<ViewState> | TextElement<ViewState> = undefined;
+    const savedContext = saveContext();
     const update = (newData: ViewState) => {
-        if (!childElement) {
-            childElement = child.elem();
+        const result = child.condition(newData);
+        if (!childElement && result) {
+            restoreContext(savedContext, () => {
+                childElement = child.elem();
+            });
             mount = () => lastResult && childElement.mount();
             unmount = () => childElement.unmount();
         }
-        const result = child.condition(newData);
 
         if (result) {
             if (!lastResult) {
@@ -432,6 +473,55 @@ function mkUpdateCondition<ViewState>(
         }
         lastResult = result;
     };
+    return [update, mount, unmount];
+}
+
+function mkUpdateWithData<ParentViewState, ChildViewState>(
+    child: WithData<ParentViewState, ChildViewState>,
+    group: KindergartenGroup,
+): [updateFunc<ParentViewState>, MountFunc, MountFunc] {
+    let mount = noopMount,
+        unmount = noopMount;
+    let lastResult = false;
+    let childElement: BaseJayElement<ChildViewState> | undefined = undefined;
+    const parentContext = currentConstructionContext();
+    const savedContext = saveContext();
+
+    const update = (newData: ParentViewState) => {
+        const childData = child.accessor(newData);
+        const result = childData != null;
+
+        // Construct the child element when first needed
+        if (!childElement && result) {
+            const childContext = parentContext.forAsync(childData);
+            childElement = restoreContext(savedContext, () =>
+                withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => child.elem()),
+            );
+            mount = () => lastResult && childElement!.mount();
+            unmount = () => childElement!.unmount();
+        }
+
+        // Handle mounting/unmounting based on condition
+        if (result) {
+            if (!lastResult) {
+                group.ensureNode(childElement!.dom);
+                childElement!.mount();
+            }
+            // Update child with child data, not parent data
+            const childContext = parentContext.forAsync(childData);
+            restoreContext(savedContext, () =>
+                withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () =>
+                    childElement!.update(childData!),
+                ),
+            );
+        } else if (lastResult) {
+            childElement!.unmount();
+            group.removeNode(childElement!.dom);
+        }
+
+        lastResult = result;
+    };
+
     return [update, mount, unmount];
 }
 
@@ -503,6 +593,7 @@ export const mathMLElement = elementNS(MathML);
 type DynamicElementChildren<ViewState> = Array<
     | Conditional<ViewState>
     | ForEach<ViewState, any>
+    | WithData<ViewState, any>
     | TextElement<ViewState>
     | BaseJayElement<ViewState>
     | When<ViewState, any>
@@ -530,6 +621,8 @@ export const dynamicElementNS =
                 [update, mount, unmount] = mkUpdateCondition(child, group);
             } else if (isForEach(child)) {
                 [update, mount, unmount] = mkUpdateCollection(child, group);
+            } else if (isWithData(child)) {
+                [update, mount, unmount] = mkUpdateWithData(child, group);
             } else if (isWhen(child)) {
                 [update, mount, unmount] = mkWhenCondition(child, group);
             } else {

@@ -4,6 +4,7 @@ import {
     isEnumType,
     isObjectType,
     isPromiseType,
+    isRecursiveType,
     JayImportedType,
     JayType,
 } from '@jay-framework/compiler-shared';
@@ -33,6 +34,14 @@ function renderInterface(aType: JayType): string {
                         }
                         if (arrayItemType instanceof JayImportedType) {
                             return `  ${prop}: Array<${arrayItemType.name}>`;
+                        } else if (isRecursiveType(arrayItemType)) {
+                            // Recursive array: array<$/data> → Array<ViewState>
+                            if (!arrayItemType.resolvedType) {
+                                throw new Error(
+                                    `Recursive type not resolved: ${arrayItemType.referencePath}`,
+                                );
+                            }
+                            return `  ${prop}: Array<${arrayItemType.resolvedType.name}>`;
                         } else {
                             throw new Error('not implemented yet');
                             // todo implement array of array or array of primitive
@@ -59,6 +68,14 @@ function renderInterface(aType: JayType): string {
                             .join(',\n')}\n}`;
                         childInterfaces.push(genEnum);
                         return `  ${prop}: ${childType.name}`;
+                    } else if (isRecursiveType(childType)) {
+                        // Recursive single child: $/data → ViewState | null
+                        if (!childType.resolvedType) {
+                            throw new Error(
+                                `Recursive type not resolved: ${childType.referencePath}`,
+                            );
+                        }
+                        return `  ${prop}: ${childType.resolvedType.name} | null`;
                     } else throw new Error(`unknown type ${childType.name}, ${childType.kind}`);
                 })
                 .join(',\n');

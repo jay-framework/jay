@@ -16,6 +16,7 @@ import {
     mkRef,
     mkRefsTree,
     nestRefs,
+    RecursiveRegion,
     Ref,
     RefsTree,
     RenderFragment,
@@ -50,6 +51,8 @@ import {
     ensureSingleChildElement,
     isConditional,
     isForEach,
+    isRecurse,
+    isRecurseWithData,
 } from './jay-html-helpers';
 import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
@@ -64,6 +67,12 @@ import {
 import { processImportedComponents, renderImports } from './jay-html-compile-imports';
 import { tagToNamespace } from './tag-to-namespace';
 
+interface RecursiveRegionInfo {
+    refName: string;
+    hasRecurse: boolean;
+    isInsideGuard: boolean; // true if inside forEach or conditional
+}
+
 interface RenderContext {
     variables: Variables;
     importedSymbols: Set<string>;
@@ -74,6 +83,8 @@ interface RenderContext {
     importerMode: RuntimeMode;
     namespaces: JayHtmlNamespace[];
     importedRefNameToRef: Map<string, Ref>;
+    recursiveRegions: RecursiveRegionInfo[]; // Stack of recursive regions we're currently inside
+    isInsideGuard: boolean; // Are we currently inside a forEach or conditional?
 }
 
 function renderFunctionDeclaration(preRenderType: string): string {
@@ -259,6 +270,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
                 .plus(tagFunc.import),
             [...attributes.validations, ...children.validations, ...ref.validations],
             mergeRefsTrees(attributes.refs, children.refs, ref.refs),
+            [...attributes.recursiveRegions, ...children.recursiveRegions, ...ref.recursiveRegions],
         );
     }
 
@@ -280,12 +292,29 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
                 .plus(tagFunc.import),
             [...attributes.validations, ...children.validations, ...ref.validations],
             mergeRefsTrees(attributes.refs, children.refs, ref.refs),
+            [...attributes.recursiveRegions, ...children.recursiveRegions, ...ref.recursiveRegions],
         );
     }
 
     function renderHtmlElement(htmlElement: HTMLElement, newContext: RenderContext) {
         if (importedSymbols.has(htmlElement.rawTagName))
             return renderNestedComponent(htmlElement, newContext);
+
+        // Check if this element defines a recursive region
+        let contextForChildren = newContext;
+        let currentRegion: RecursiveRegionInfo | null = null;
+        if (htmlElement.hasAttribute('ref')) {
+            const refName = htmlElement.getAttribute('ref');
+            currentRegion = {
+                refName,
+                hasRecurse: false,
+                isInsideGuard: newContext.isInsideGuard,
+            };
+            contextForChildren = {
+                ...newContext,
+                recursiveRegions: [...newContext.recursiveRegions, currentRegion],
+            };
+        }
 
         let childNodes =
             node.childNodes.length > 1
@@ -294,34 +323,41 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
                   )
                 : node.childNodes;
 
-        let childIndent = newContext.indent.child();
+        let childIndent = contextForChildren.indent.child();
         if (childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE)
             childIndent = childIndent.noFirstLineBreak();
 
         let needDynamicElement = childNodes
-            .map((_) => isConditional(_) || isForEach(_) || checkAsync(_).isAsync)
+            .map(
+                (_) =>
+                    isConditional(_) ||
+                    isForEach(_) ||
+                    isRecurseWithData(_) ||
+                    checkAsync(_).isAsync,
+            )
             .reduce((prev, current) => prev || current, false);
 
         let childRenders =
             childNodes.length === 0
                 ? RenderFragment.empty()
                 : childNodes
-                      .map((_) => renderNode(_, newContext))
+                      .map((_) => renderNode(_, contextForChildren))
                       .reduce(
                           (prev, current) => RenderFragment.merge(prev, current, ',\n'),
                           RenderFragment.empty(),
                       )
                       .map((children) =>
                           childIndent.firstLineBreak
-                              ? `\n${children}\n${newContext.indent.firstLine}`
+                              ? `\n${children}\n${contextForChildren.indent.firstLine}`
                               : children,
                       );
 
-        let attributes = renderAttributes(htmlElement, newContext);
-        let renderedRef = renderElementRef(htmlElement, newContext);
+        let attributes = renderAttributes(htmlElement, contextForChildren);
+        let renderedRef = renderElementRef(htmlElement, contextForChildren);
 
+        let result: RenderFragment;
         if (needDynamicElement)
-            return de(
+            result = de(
                 htmlElement.rawTagName,
                 attributes,
                 childRenders,
@@ -329,13 +365,36 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
                 newContext.indent,
             );
         else
-            return e(
+            result = e(
                 htmlElement.rawTagName,
                 attributes,
                 childRenders,
                 renderedRef,
                 newContext.indent,
             );
+
+        // If this element has a ref that contains recursion, extract it to a function
+        if (currentRegion && currentRegion.hasRecurse) {
+            const functionName = `renderRecursiveRegion_${currentRegion.refName}`;
+            const recursiveRegion: RecursiveRegion = {
+                refName: currentRegion.refName,
+                renderedContent: result.rendered,
+                viewStateType: contextForChildren.variables.currentType.name,
+            };
+
+            // Replace the inline element with a function call (no parameters)
+            const functionCall = `${newContext.indent.firstLine}${functionName}()`;
+
+            result = new RenderFragment(
+                functionCall,
+                result.imports.plus(Import.baseJayElement),
+                result.validations,
+                result.refs,
+                [...result.recursiveRegions, recursiveRegion],
+            );
+        }
+
+        return result;
     }
 
     function c(renderedCondition: RenderFragment, childElement: RenderFragment) {
@@ -344,6 +403,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
             Imports.merge(childElement.imports, renderedCondition.imports).plus(Import.conditional),
             [...renderedCondition.validations, ...childElement.validations],
             mergeRefsTrees(renderedCondition.refs, childElement.refs),
+            [...renderedCondition.recursiveRegions, ...childElement.recursiveRegions],
         );
     }
 
@@ -359,6 +419,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             childElement.imports.plus(Import.forEach),
             [...renderedForEach.validations, ...childElement.validations],
             childElement.refs,
+            [...renderedForEach.recursiveRegions, ...childElement.recursiveRegions],
         );
     }
 
@@ -415,11 +476,68 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             let htmlElement = node as HTMLElement;
             // if (isForEach(htmlElement)) dynamicRef = true;
 
-            if (isConditional(htmlElement)) {
+            if (isRecurse(htmlElement)) {
+                // Handle <recurse ref="name" accessor="path" /> element
+                const refAttr = htmlElement.getAttribute('ref');
+                const accessorAttr = htmlElement.getAttribute('accessor');
+
+                if (!refAttr) {
+                    return new RenderFragment('', Imports.none(), [
+                        '<recurse> element must have a "ref" attribute',
+                    ]);
+                }
+
+                // Find the recursive region with matching ref
+                const region = context.recursiveRegions.find((r) => r.refName === refAttr);
+
+                if (!region) {
+                    return new RenderFragment('', Imports.none(), [
+                        `<recurse ref="${refAttr}"> references unknown ref - no element with ref="${refAttr}" found as ancestor`,
+                    ]);
+                }
+
+                // Validate recursion guard
+                // Recursion with accessor uses withData which has built-in null check (self-guarding)
+                // Recursion without accessor (or with ".") relies on forEach context, so needs explicit guard
+                if ((!accessorAttr || accessorAttr === '.') && !context.isInsideGuard) {
+                    return new RenderFragment('', Imports.none(), [
+                        `<recurse ref="${refAttr}"> without accessor must be inside a forEach loop to provide context and prevent infinite recursion`,
+                    ]);
+                }
+
+                // Mark that this region has recursion
+                region.hasRecurse = true;
+
+                // Generate the recursive function call
+                const functionName = `renderRecursiveRegion_${refAttr}`;
+
+                // If accessor is provided and not ".", we need to use withData to switch context
+                if (accessorAttr && accessorAttr !== '.') {
+                    const accessor = parseAccessor(accessorAttr, variables);
+                    const accessorCode = accessor.render();
+                    // withData expects a function: (data) => data.child
+                    const accessorFunction = `(${variables.currentVar}) => ${accessorCode.rendered}`;
+                    return new RenderFragment(
+                        `${indent.firstLine}withData(${accessorFunction}, () => ${functionName}())`,
+                        Imports.for(Import.withData).plus(accessorCode.imports),
+                        [...accessor.validations, ...accessorCode.validations],
+                        mkRefsTree([], {}),
+                    );
+                } else {
+                    // No accessor or "." means use current context (forEach case)
+                    return new RenderFragment(
+                        `${indent.firstLine}${functionName}()`,
+                        Imports.none(),
+                        [],
+                        mkRefsTree([], {}),
+                    );
+                }
+            } else if (isConditional(htmlElement)) {
                 let condition = htmlElement.getAttribute('if');
                 let childElement = renderHtmlElement(htmlElement, {
                     ...context,
                     indent: indent.child(),
+                    isInsideGuard: true, // Mark that we're inside a guard
                 });
                 let renderedCondition = parseCondition(condition, variables);
                 return c(renderedCondition, childElement);
@@ -449,6 +567,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                     variables: forEachVariables,
                     indent: indent.child().noFirstLineBreak().withLastLineBreak(),
                     dynamicRef: true,
+                    isInsideGuard: true, // Mark that we're inside a guard
                 };
 
                 let childElement = renderHtmlElement(htmlElement, newContext);
@@ -562,6 +681,23 @@ function generateCssImport(jayFile: JayHtmlSourceFile): string {
     return `import './${jayFile.filename}.css';`;
 }
 
+function generateRecursiveFunctions(recursiveRegions: RecursiveRegion[]): string {
+    if (recursiveRegions.length === 0) {
+        return '';
+    }
+
+    return recursiveRegions
+        .map((region) => {
+            const functionName = `renderRecursiveRegion_${region.refName}`;
+            const returnType = `BaseJayElement<${region.viewStateType}>`;
+
+            return `    function ${functionName}(): ${returnType} {
+        return ${region.renderedContent};
+    }`;
+        })
+        .join('\n\n');
+}
+
 function renderFunctionImplementation(
     types: JayType,
     rootBodyElement: HTMLElement,
@@ -596,6 +732,8 @@ function renderFunctionImplementation(
             importerMode,
             namespaces,
             importedRefNameToRef,
+            recursiveRegions: [], // Initialize empty recursive regions stack
+            isInsideGuard: false, // Not inside any guard initially
         });
         renderedRoot = optimizeRefs(renderedRoot, headlessImports);
     } else renderedRoot = new RenderFragment('', Imports.none(), rootElement.validations);
@@ -648,9 +786,13 @@ ${Indent.forceIndent(code, 4)},
     `
             : '';
 
+    // Generate recursive render functions
+    const recursiveFunctions = generateRecursiveFunctions(renderedRoot.recursiveRegions);
+    const recursiveFunctionsSection = recursiveFunctions ? `\n${recursiveFunctions}\n\n` : '';
+
     const body = `export function render(options?: RenderElementOptions): ${preRenderType} {
 ${renderedRefsManager}    
-${headLinksInjection}const render = (viewState: ${viewStateType}) => ConstructContext.withRootContext(
+${headLinksInjection}${recursiveFunctionsSection}    const render = (viewState: ${viewStateType}) => ConstructContext.withRootContext(
         viewState, refManager,
         () => ${renderedRoot.rendered.trim()}
     ) as ${elementType};
@@ -822,6 +964,8 @@ function renderBridge(
         importerMode: RuntimeMode.WorkerSandbox,
         namespaces: [],
         importedRefNameToRef,
+        recursiveRegions: [], // Initialize empty recursive regions stack
+        isInsideGuard: false, // Not inside any guard initially
     });
     renderedBridge = optimizeRefs(renderedBridge, headlessImports);
 
@@ -866,6 +1010,8 @@ function renderSandboxRoot(
         importerMode: RuntimeMode.WorkerSandbox,
         namespaces: [],
         importedRefNameToRef,
+        recursiveRegions: [], // Initialize empty recursive regions stack
+        isInsideGuard: false, // Not inside any guard initially
     });
     let refsPart =
         renderedBridge.rendered.length > 0

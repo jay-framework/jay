@@ -29,6 +29,12 @@ const importsOrder = {
     JAY_4_REACT: 4,
 };
 export const Import = {
+    baseJayElement: importStatementFragment(
+        JAY_RUNTIME,
+        'BaseJayElement',
+        ImportsFor.implementation,
+        ImportsFor.elementSandbox,
+    ),
     jayElement: importStatementFragment(
         JAY_RUNTIME,
         'JayElement',
@@ -89,6 +95,7 @@ export const Import = {
         'conditional as c',
         ImportsFor.implementation,
     ),
+    withData: importStatementFragment(JAY_RUNTIME, 'withData', ImportsFor.implementation),
     dynamicElement: importStatementFragment(
         JAY_RUNTIME,
         'dynamicElement as de',

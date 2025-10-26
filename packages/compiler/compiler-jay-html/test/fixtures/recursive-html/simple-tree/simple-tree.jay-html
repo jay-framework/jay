@@ -1,0 +1,28 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+  name: string
+  id: string
+  open: boolean
+  children: array<$/data>
+    </script>
+</head>
+<body>
+<div class="tree-container">
+    <h1>File Browser</h1>
+    
+    <div class="tree-node" ref="treeNode">
+        <div ref="nodeHeader" class="node-header">
+            <span>{name}</span>
+        </div>
+        <ul if="open">
+            <li forEach="children" trackBy="id">
+                <recurse ref="treeNode" />
+            </li>
+        </ul>
+    </div>
+</div>
+</body>
+</html>
+

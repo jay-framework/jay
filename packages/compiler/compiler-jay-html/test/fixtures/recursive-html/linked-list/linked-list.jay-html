@@ -1,0 +1,26 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+  value: string
+  id: string
+  isLast: boolean
+  next: $/data
+    </script>
+</head>
+<body>
+<div class="linked-list">
+    <div class="list-node" ref="listNode">
+        <div ref="nodeContent" class="node-content">
+            <span class="value">{value}</span>
+            <span class="id">{id}</span>
+        </div>
+        <div class="next-arrow" if="!isLast">→</div>
+        <div class="next-node" if="!isLast">
+            <recurse ref="listNode" accessor="next" />
+        </div>
+    </div>
+</div>
+</body>
+</html>
+

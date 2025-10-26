@@ -68,6 +68,7 @@ describe('expression-compiler', () => {
         let defaultVars = new Variables(
             new JayObjectType('data', {
                 member: JayString,
+                member2: JayBoolean,
                 anEnum: new JayEnumType('AnEnum', ['one', 'two', 'three']),
             }),
         );
@@ -100,6 +101,58 @@ describe('expression-compiler', () => {
         it('enum not condition with !==', () => {
             const actual = parseCondition('anEnum !== one', defaultVars);
             expect(actual.rendered).toEqual('vs => vs.anEnum !== AnEnum.one');
+        });
+
+        it('logical AND with two boolean conditions', () => {
+            const actual = parseCondition('member && member2', defaultVars);
+            expect(actual.rendered).toEqual('vs => (vs.member) && (vs.member2)');
+        });
+
+        it('logical OR with two boolean conditions', () => {
+            const actual = parseCondition('member || member2', defaultVars);
+            expect(actual.rendered).toEqual('vs => (vs.member) || (vs.member2)');
+        });
+
+        it('logical AND with negated conditions', () => {
+            const actual = parseCondition('!member && member2', defaultVars);
+            expect(actual.rendered).toEqual('vs => (!vs.member) && (vs.member2)');
+        });
+
+        it('logical OR with negated conditions', () => {
+            const actual = parseCondition('!member || !member2', defaultVars);
+            expect(actual.rendered).toEqual('vs => (!vs.member) || (!vs.member2)');
+        });
+
+        it('mixed AND and OR with proper precedence', () => {
+            const actual = parseCondition('member && member2 || !member', defaultVars);
+            expect(actual.rendered).toEqual('vs => ((vs.member) && (vs.member2)) || (!vs.member)');
+        });
+
+        it('logical AND with enum and boolean', () => {
+            const actual = parseCondition('anEnum == one && member', defaultVars);
+            expect(actual.rendered).toEqual('vs => (vs.anEnum === AnEnum.one) && (vs.member)');
+        });
+
+        it('logical OR with enum and boolean', () => {
+            const actual = parseCondition('anEnum != one || member2', defaultVars);
+            expect(actual.rendered).toEqual('vs => (vs.anEnum !== AnEnum.one) || (vs.member2)');
+        });
+
+        it('complex condition with enums and booleans', () => {
+            const actual = parseCondition(
+                'anEnum == one && member || anEnum == two && !member2',
+                defaultVars,
+            );
+            expect(actual.rendered).toEqual(
+                'vs => ((vs.anEnum === AnEnum.one) && (vs.member)) || ((vs.anEnum === AnEnum.two) && (!vs.member2))',
+            );
+        });
+
+        it('parenthesized conditions', () => {
+            const actual = parseCondition('(member || member2) && anEnum == one', defaultVars);
+            expect(actual.rendered).toEqual(
+                'vs => ((vs.member) || (vs.member2)) && (vs.anEnum === AnEnum.one)',
+            );
         });
 
         it('basic condition with member not in type should report a problem', () => {

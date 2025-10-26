@@ -42,6 +42,14 @@ non sandboxed Todo MVC using plain rollup build
 
 a non sandboxed version of a tree, with recursive component structure
 
+### tree-recursive
+
+Demonstrates recursive HTML structures using `forEach` iteration. Shows how to build a tree with expandable/collapsible nodes where the recursion happens within a single HTML structure using `<recurse>` elements. This pattern is ideal for homogeneous tree structures (file browsers, nested comments, etc.) where all nodes share the same structure.
+
+### btree-recursive
+
+Demonstrates recursive HTML structures using the `accessor` attribute for binary trees. Shows how to build a binary tree visualization where left and right children are accessed via explicit accessors. This pattern is ideal for heterogeneous recursive structures (binary trees, linked lists, DOM trees) where different paths need to be followed to reach child nodes.
+
 ## Jay 4 React
 
 Demonstrates how to use Jay Components with a React project.

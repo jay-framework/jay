@@ -1,0 +1,28 @@
+<html>
+  <head>
+    <script type="application/jay-data">
+      data:
+        name: string
+        id: string
+        open: boolean
+        hasChildren: boolean
+        children: array<$/data>
+    </script>
+  </head>
+  <body>
+    <div class="tree-node" ref="treeNode">
+      <div ref="head" class="tree-head">
+        <span class="tree-arrow" if="hasChildren && open">▼</span>
+        <span class="tree-arrow" if="hasChildren && !open">►</span>
+        <span class="tree-arrow" if="!hasChildren"> </span>
+        <span class="tree-name">{name}</span>
+      </div>
+      <ul if="open" class="tree-children">
+        <li forEach="children" trackBy="id">
+          <recurse ref="treeNode" />
+        </li>
+      </ul>
+    </div>
+  </body>
+</html>
+

@@ -186,7 +186,7 @@ function markAutoOnImportedRefs(
 }
 
 export function optimizeRefs(
-    { rendered, imports, validations, refs }: RenderFragment,
+    { rendered, imports, validations, refs, recursiveRegions }: RenderFragment,
     headlessImports: JayHeadlessImports[] = [],
 ): RenderFragment {
     const deDuplicateRefsTree = (refs: RefsTree): RefsTree => {
@@ -241,7 +241,7 @@ export function optimizeRefs(
         { ...markedAutoOnImported.children, ...importedRefs },
         markedAutoOnImported.repeated,
     );
-    return new RenderFragment(rendered, imports, validations, combined);
+    return new RenderFragment(rendered, imports, validations, combined, recursiveRegions);
 }
 
 export enum ReferenceManagerTarget {

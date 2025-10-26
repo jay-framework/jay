@@ -1,0 +1,30 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+  name: string
+  id: string
+  type: enum (file | folder)
+  isExpanded: boolean
+  children: array<$/data>
+    </script>
+</head>
+<body>
+<div class="file-tree">
+    <div class="tree-item" ref="treeItem">
+        <div ref="itemHeader" class="item-header">
+            <span class="icon">{type}</span>
+            <span class="name">{name}</span>
+        </div>
+        <div if="type == folder">
+            <div class="children" if="isExpanded">
+                <div forEach="children" trackBy="id">
+                    <recurse ref="treeItem" />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+
