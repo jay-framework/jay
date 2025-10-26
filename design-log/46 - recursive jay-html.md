@@ -1069,3 +1069,128 @@ Key benefits:
 
 This design enables developers and designers to build complex recursive UIs like trees, nested comments, and file browsers with minimal effort while maintaining Jay's core principles of type safety and design-code integration.
 
+---
+
+## Design Refinement: Self-Guarding Recursion (October 2025)
+
+### Key Realization
+
+During implementation and testing, we discovered that **recursion with an accessor attribute is inherently self-guarding** and does not require an explicit `forEach` or `if` conditional wrapper.
+
+### Why Accessor-Based Recursion Is Self-Guarding
+
+The `withData` runtime function (which handles accessor-based recursion) includes built-in null checking and conditional mounting/unmounting:
+
+```typescript
+function mkUpdateWithData<ParentViewState, ChildViewState>(
+    child: WithData<ParentViewState, ChildViewState>,
+    group: KindergartenGroup,
+): [updateFunc<ParentViewState>, MountFunc, MountFunc] {
+    // ...
+    const update = (newData: ParentViewState) => {
+        const childData = child.accessor(newData);
+        const result = childData != null;  // <-- Built-in null check
+        
+        // Only constructs/renders when childData is not null
+        if (!childElement && result) {
+            // Construct child element in child's context
+            const childContext = parentContext.forAsync(childData);
+            childElement = restoreContext(savedContext, () =>
+                withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => child.elem())
+            );
+        }
+        
+        // Handles mounting/unmounting based on null check
+        if (result) {
+            // Mount and update with child data
+            childElement!.update(childData!);
+        } else if (lastResult) {
+            // Unmount when child becomes null
+            childElement!.unmount();
+        }
+    };
+}
+```
+
+This means:
+- If `accessor` returns `null`, the recursive element is never constructed
+- Recursion naturally terminates when reaching a leaf node (where `left`/`right`/`next` is `null`)
+- No explicit `if` conditional needed around `<recurse accessor="left">`
+
+### Updated Validation Rules
+
+**Old Rule (Initial Design):**
+- All `<recurse>` elements must be inside a `forEach` loop or `if` conditional
+
+**New Rule (Refined):**
+- `<recurse>` **with accessor** (e.g., `<recurse ref="node" accessor="left">`) is self-guarding via `withData`'s null check
+  - No explicit guard required
+  - Can be used directly inside the recursive region
+- `<recurse>` **without accessor** or with `accessor="."` must be inside a `forEach` loop
+  - Relies on `forEach` to provide the iteration context
+  - `forEach` itself provides the guard (no iteration when array is empty)
+
+### Examples
+
+#### Self-Guarding: Binary Tree with Accessor
+
+```html
+<div ref="treeNode">
+  <div class="value">{value}</div>
+  <div class="children">
+    <!-- No explicit 'if' needed - withData checks hasLeft/left for null -->
+    <div class="left-child" if="hasLeft">
+      <recurse ref="treeNode" accessor="left" />
+    </div>
+    <div class="right-child" if="hasRight">
+      <recurse ref="treeNode" accessor="right" />
+    </div>
+  </div>
+</div>
+```
+
+The `if="hasLeft"` is optional for recursion safety (withData handles null), but useful for UX (avoiding empty divs).
+
+#### Requires Guard: Tree with forEach
+
+```html
+<div ref="treeNode">
+  <div class="name">{name}</div>
+  <!-- forEach is required - provides both context and guard -->
+  <ul if="open">
+    <li forEach="children" trackBy="id">
+      <recurse ref="treeNode" />  <!-- or accessor="." -->
+    </li>
+  </ul>
+</div>
+```
+
+The `forEach` is required because:
+1. It provides the iteration context (switches to each child's data)
+2. It guards against infinite recursion (no iteration when `children` is empty)
+
+### Implementation Impact
+
+The compiler validation was updated to reflect this:
+
+```typescript
+// Recursion with accessor uses withData which has built-in null check (self-guarding)
+// Recursion without accessor (or with ".") relies on forEach context, so needs explicit guard
+if ((!accessorAttr || accessorAttr === '.') && !context.isInsideGuard) {
+    return new RenderFragment('', Imports.none(), [
+        `<recurse ref="${refAttr}"> without accessor must be inside a forEach loop to provide context and prevent infinite recursion`,
+    ]);
+}
+```
+
+### Design Implications
+
+This refinement:
+1. **Simplifies usage** for common recursive structures (linked lists, binary trees)
+2. **Reduces boilerplate** - no need for redundant conditionals around accessor-based recursion
+3. **Maintains safety** - recursion still cannot cause infinite loops
+4. **Clarifies semantics** - accessor-based and forEach-based recursion have different requirements
+5. **Preserves flexibility** - developers can still add `if` conditions for UX purposes
+
+The distinction between "self-guarding accessor recursion" and "forEach-guarded iteration recursion" better reflects the underlying runtime behavior and makes the feature easier to understand and use correctly.
+

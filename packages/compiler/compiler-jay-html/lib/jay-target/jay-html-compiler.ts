@@ -490,9 +490,11 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 }
                 
                 // Validate recursion guard
-                if (!context.isInsideGuard) {
+                // Recursion with accessor uses withData which has built-in null check (self-guarding)
+                // Recursion without accessor (or with ".") relies on forEach context, so needs explicit guard
+                if ((!accessorAttr || accessorAttr === '.') && !context.isInsideGuard) {
                     return new RenderFragment('', Imports.none(), [
-                        `<recurse ref="${refAttr}"> must be inside a forEach loop or conditional (if) to prevent infinite recursion`,
+                        `<recurse ref="${refAttr}"> without accessor must be inside a forEach loop to provide context and prevent infinite recursion`,
                     ]);
                 }
                 
