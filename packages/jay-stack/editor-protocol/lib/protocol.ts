@@ -40,6 +40,10 @@ export interface HasImageMessage extends BaseMessage<HasImageResponse> {
     imageId: string;
 }
 
+export interface GetProjectConfigurationMessage extends BaseMessage<GetProjectConfigurationResponse> {
+    type: 'getProjectConfiguration';
+}
+
 // Response types with discriminators
 export interface PublishResponse extends BaseResponse {
     type: 'publish';
@@ -66,9 +70,66 @@ export interface HasImageResponse extends BaseResponse {
     imageUrl?: string;
 }
 
+export interface ProjectPage {
+    name: string;
+    url: string;
+    filePath: string;
+    usedComponents: {
+        contract: string;
+        src: string;
+        name: string;
+        key: string;
+    }[];
+}
+
+export interface ProjectComponent {
+    name: string;
+    filePath: string;
+    contractPath?: string;
+}
+
+export interface InstalledApp {
+    name: string;
+    module: string;
+    pages: {
+        name: string;
+        headless_components: {
+            name: string;
+            key: string;
+            contract: string;
+            slugs?: string[];
+        }[];
+    }[];
+    components: {
+        name: string;
+        headless_components: {
+            name: string;
+            key: string;
+            contract: string;
+        }[];
+    }[];
+    config_map?: {
+        display_name: string;
+        key: string;
+    }[];
+}
+
+export interface ProjectConfiguration {
+    name: string;
+    localPath: string;
+    pages: ProjectPage[];
+    components: ProjectComponent[];
+    installedApps: InstalledApp[];
+}
+
+export interface GetProjectConfigurationResponse extends BaseResponse {
+    type: 'getProjectConfiguration';
+    configuration: ProjectConfiguration;
+}
+
 // Union types for all messages and responses
-export type EditorProtocolMessageTypes = PublishMessage | SaveImageMessage | HasImageMessage;
-export type EditorProtocolResponseTypes = PublishResponse | SaveImageResponse | HasImageResponse;
+export type EditorProtocolMessageTypes = PublishMessage | SaveImageMessage | HasImageMessage | GetProjectConfigurationMessage;
+export type EditorProtocolResponseTypes = PublishResponse | SaveImageResponse | HasImageResponse | GetProjectConfigurationResponse;
 
 export interface ProtocolMessage {
     id: string;
@@ -91,6 +152,9 @@ export interface EditorProtocol {
 
     // Check if a previously saved image exists
     hasImage(params: HasImageMessage): Promise<HasImageResponse>;
+
+    // Get the project configuration including pages, components, and installed apps
+    getProjectConfiguration(params: GetProjectConfigurationMessage): Promise<GetProjectConfigurationResponse>;
 }
 
 // Dev server side interface for handling editor requests
@@ -103,4 +167,7 @@ export interface DevServerProtocol {
 
     // Handle image existence check requests
     onHasImage(callback: EditorProtocol['hasImage']): void;
+
+    // Handle project configuration requests
+    onGetProjectConfiguration(callback: EditorProtocol['getProjectConfiguration']): void;
 }

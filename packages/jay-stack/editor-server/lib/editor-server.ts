@@ -9,9 +9,11 @@ import type {
     PublishMessage,
     SaveImageMessage,
     HasImageMessage,
+    GetProjectConfigurationMessage,
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
+    GetProjectConfigurationResponse,
 } from '@jay-framework/editor-protocol';
 import { createProtocolResponse } from '@jay-framework/editor-protocol';
 
@@ -40,6 +42,7 @@ export class EditorServer implements DevServerProtocol {
         publish?: (params: PublishMessage) => Promise<PublishResponse>;
         saveImage?: (params: SaveImageMessage) => Promise<SaveImageResponse>;
         hasImage?: (params: HasImageMessage) => Promise<HasImageResponse>;
+        getProjectConfiguration?: (params: GetProjectConfigurationMessage) => Promise<GetProjectConfigurationResponse>;
     } = {};
 
     constructor(options: EditorServerOptions) {
@@ -134,6 +137,10 @@ export class EditorServer implements DevServerProtocol {
         this.handlers.hasImage = callback;
     }
 
+    onGetProjectConfiguration(callback: (params: GetProjectConfigurationMessage) => Promise<GetProjectConfigurationResponse>): void {
+        this.handlers.getProjectConfiguration = callback;
+    }
+
     private handlePortDiscovery(req: any, res: any): void {
         const url = new URL(req.url, `http://localhost:${this.port}`);
         const tabId = url.searchParams.get('id');
@@ -226,6 +233,13 @@ export class EditorServer implements DevServerProtocol {
                 }
                 const hasResult = await this.handlers.hasImage(payload as HasImageMessage);
                 return createProtocolResponse(id, hasResult);
+
+            case 'getProjectConfiguration':
+                if (!this.handlers.getProjectConfiguration) {
+                    throw new Error('Get project configuration handler not registered');
+                }
+                const configResult = await this.handlers.getProjectConfiguration(payload as GetProjectConfigurationMessage);
+                return createProtocolResponse(id, configResult);
 
             default:
                 throw new Error(`Unknown message type: ${(payload as any).type}`);

@@ -4,9 +4,14 @@ import type {
     PublishMessage,
     SaveImageMessage,
     HasImageMessage,
+    GetProjectConfigurationMessage,
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
+    GetProjectConfigurationResponse,
+    ProjectConfiguration,
+    EditorProtocolMessageTypes,
+    EditorProtocolResponseTypes,
 } from './protocol';
 
 // Message constructors
@@ -33,6 +38,12 @@ export function createHasImageMessage(imageId: string): HasImageMessage {
     return {
         type: 'hasImage',
         imageId,
+    };
+}
+
+export function createGetProjectConfigurationMessage(): GetProjectConfigurationMessage {
+    return {
+        type: 'getProjectConfiguration',
     };
 }
 
@@ -67,6 +78,19 @@ export function createHasImageResponse(exists: boolean, imageUrl?: string): HasI
     };
 }
 
+export function createGetProjectConfigurationResponse(
+    configuration: ProjectConfiguration,
+    success: boolean = true,
+    error?: string,
+): GetProjectConfigurationResponse {
+    return {
+        type: 'getProjectConfiguration',
+        success,
+        configuration,
+        error,
+    };
+}
+
 // Simple ID generator using timestamp + random number
 let messageIdCounter = 0;
 function generateMessageId(): string {
@@ -77,7 +101,7 @@ function generateMessageId(): string {
 
 // Protocol wrapper constructors
 export function createProtocolMessage(
-    payload: PublishMessage | SaveImageMessage | HasImageMessage,
+    payload: EditorProtocolMessageTypes,
 ): ProtocolMessage {
     return {
         id: generateMessageId(),
@@ -88,7 +112,7 @@ export function createProtocolMessage(
 
 export function createProtocolResponse(
     id: string,
-    payload: PublishResponse | SaveImageResponse | HasImageResponse,
+    payload: EditorProtocolResponseTypes,
 ): ProtocolResponse {
     return {
         id,

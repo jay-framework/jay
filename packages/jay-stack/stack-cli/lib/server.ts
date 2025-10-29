@@ -46,6 +46,7 @@ async function initApp() {
     editorServer.onPublish(handlers.onPublish);
     editorServer.onSaveImage(handlers.onSaveImage);
     editorServer.onHasImage(handlers.onHasImage);
+    editorServer.onGetProjectConfiguration(handlers.onGetProjectConfiguration);
 
     // Start dev server
     const { server, viteServer, routes } = await mkDevServer({
