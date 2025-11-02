@@ -78,3 +78,4 @@ This `tree-recursive` example uses **template recursion** with the `<recurse>` e
 2. **More explicit**: Clear recursive boundary with `ref` attribute
 3. **Single file**: Everything in one Jay-HTML file
 4. **Type safety**: Automatic recursive type generation
+

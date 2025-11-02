@@ -18,3 +18,4 @@ window.onload = function () {
     target.innerHTML = '';
     target.appendChild(treeComponent.element.dom);
 };
+
