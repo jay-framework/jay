@@ -1,0 +1,32 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+  label: string
+  id: string
+  icon: string
+  hasSubmenu: boolean
+  isOpen: boolean
+  submenu:
+    items: array<$/data>
+    </script>
+</head>
+<body>
+<nav class="menu">
+    <li class="menu-item" ref="menuItem">
+        <a href="#">
+            <span class="icon">{icon}</span>
+            <span class="label">{label}</span>
+        </a>
+        <div if="hasSubmenu">
+            <ul class="submenu" if="isOpen">
+                <li forEach="submenu.items" trackBy="id">
+                    <recurse ref="menuItem" />
+                </li>
+            </ul>
+        </div>
+    </li>
+</nav>
+</body>
+</html>
+
