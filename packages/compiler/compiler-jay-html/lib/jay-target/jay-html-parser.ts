@@ -201,11 +201,35 @@ function resolveType(
  */
 function resolveRecursiveReferences(type: JayType, rootType: JayObjectType): void {
     if (type instanceof JayRecursiveType) {
-        // For now, we only support "$/data" which references the root type
-        if (type.referencePath === '$/data') {
-            type.resolvedType = rootType;
+        // Parse the reference path (e.g., "$/data" or "$/data/tree")
+        const parts = type.referencePath.split('/').filter((p) => p);
+        
+        if (parts.length >= 2 && parts[0] === '$' && parts[1] === 'data') {
+            // Start from root type
+            let resolvedType: JayType = rootType;
+            
+            // Navigate through nested paths (if any)
+            for (let i = 2; i < parts.length; i++) {
+                const pathSegment = parts[i];
+                
+                if (resolvedType instanceof JayObjectType && pathSegment in resolvedType.props) {
+                    resolvedType = resolvedType.props[pathSegment];
+                } else if (resolvedType instanceof JayArrayType) {
+                    // If current type is array, navigate into its item type
+                    if (resolvedType.itemType instanceof JayObjectType && pathSegment in resolvedType.itemType.props) {
+                        resolvedType = resolvedType.itemType.props[pathSegment];
+                    } else {
+                        // Path not found
+                        return;
+                    }
+                } else {
+                    // Path not found
+                    return;
+                }
+            }
+            
+            type.resolvedType = resolvedType;
         }
-        // TODO: Support nested paths like "$/data/submenu"
     } else if (type instanceof JayArrayType) {
         resolveRecursiveReferences(type.itemType, rootType);
     } else if (type instanceof JayObjectType) {
