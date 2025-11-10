@@ -558,7 +558,11 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 // Recursion without accessor (or with ".") relies on forEach context, so needs explicit guard
                 if ((!accessorAttr || accessorAttr === '.') && !context.isInsideGuard) {
                     return new RenderFragment('', Imports.none(), [
-                        `<recurse ref="${refAttr}"> without accessor must be inside a forEach loop to provide context and prevent infinite recursion`,
+                        `<recurse ref="${refAttr}"> without accessor must be inside a forEach loop or conditional (if="...") to provide context and prevent infinite recursion. ` +
+                        `Suggestions: ` +
+                        `1) Wrap in a forEach loop if iterating over an array (e.g., <li forEach="children" trackBy="id"><recurse ref="${refAttr}"/></li>), ` +
+                        `2) Add an accessor attribute if accessing a nested property (e.g., <recurse ref="${refAttr}" accessor="child"/>), or ` +
+                        `3) Wrap in a conditional to guard the recursion (e.g., <div if="hasChild"><recurse ref="${refAttr}" accessor="child"/></div>).`,
                     ]);
                 }
 
@@ -572,6 +576,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 if (accessorAttr && accessorAttr !== '.') {
                     const accessor = parseAccessor(accessorAttr, variables);
                     const accessorCode = accessor.render();
+                    
                     // withData expects a function: (data) => data.child
                     const accessorFunction = `(${variables.currentVar}) => ${accessorCode.rendered}`;
                     return new RenderFragment(

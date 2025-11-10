@@ -413,5 +413,30 @@ describe('generate jay-html element', () => {
             expect(elementFile.validations).toEqual([]);
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
+
+        it('should report error when nested recursion missing context switch', async () => {
+            // Test that we catch when someone tries to access nested properties
+            // without using <with-data> or forEach to switch context
+            const folder = 'recursive-html/nested-without-context';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            
+            // Should have validation errors
+            expect(elementFile.validations.length).toBeGreaterThan(0);
+            
+            // Should report that 'name' property is not found in root ViewState
+            // (because we're trying to access tree.name without switching context to tree)
+            const nameError = elementFile.validations.find((v) => 
+                v.includes('name') && v.includes('not found')
+            );
+            expect(nameError).toBeDefined();
+            expect(nameError).toContain('the data field [name] not found in Jay data');
+            
+            // Should also report that 'children' property is not found
+            const childrenError = elementFile.validations.find((v) => 
+                v.includes('children') && v.includes('not found')
+            );
+            expect(childrenError).toBeDefined();
+            expect(childrenError).toContain('the data field [children] not found in Jay data');
+        });
     });
 });

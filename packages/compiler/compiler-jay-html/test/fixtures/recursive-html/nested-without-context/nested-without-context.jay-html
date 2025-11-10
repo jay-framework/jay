@@ -1,0 +1,24 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+  title: string
+  tree:
+    id: string
+    name: string
+    children: $/data/tree
+    </script>
+</head>
+<body>
+<div class="container">
+    <h1>{title}</h1>
+    <div class="tree-node" ref="treeNode">
+        <div>{name}</div>
+        <div>
+            <recurse ref="treeNode" accessor="children"/>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+

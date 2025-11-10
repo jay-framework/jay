@@ -365,7 +365,7 @@ describe('compiler', () => {
                 expect(jayFile.validations.length).toBeGreaterThan(0);
                 expect(jayFile.validations[0]).toContain('invalid recursive reference');
                 expect(jayFile.validations[0]).toContain('$/invalid/path');
-                expect(jayFile.validations[0]).toContain('must start with $/data');
+                expect(jayFile.validations[0]).toContain('must start with "$/data"');
             });
 
             it('should report error for recursive reference without $ prefix', async () => {
@@ -385,6 +385,29 @@ describe('compiler', () => {
                 expect(jayFile.validations).toContain(
                     'invalid type [array<#/data>] found at [data.children]',
                 );
+            });
+
+            it('should report error for recursive reference to non-existent property', async () => {
+                let jayFile = await parseJayFile(
+                    jayFileWith(
+                        ` data:
+                            |   tree:
+                            |     name: string
+                            |     id: string
+                            |     children: $/data/nonexistent`,
+                        '<body></body>',
+                    ),
+                    'Tree',
+                    '',
+                    {},
+                    defaultImportResolver,
+                );
+
+                expect(jayFile.validations.length).toBeGreaterThan(0);
+                expect(jayFile.validations[0]).toContain('invalid recursive reference');
+                expect(jayFile.validations[0]).toContain('$/data/nonexistent');
+                expect(jayFile.validations[0]).toContain('Property "nonexistent" not found');
+                expect(jayFile.validations[0]).toContain('Available properties');
             });
 
             it('should report error for malformed array syntax', async () => {
