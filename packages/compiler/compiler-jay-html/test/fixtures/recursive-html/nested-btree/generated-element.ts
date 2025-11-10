@@ -56,14 +56,20 @@ export function render(options?: RenderElementOptions): NestedBtreeElementPreRen
                         (vs1) => vs1.hasLeft,
                         () =>
                             de('div', { class: 'left-child' }, [
-                                withData((vs1) => vs1.left, () => renderRecursiveRegion_treeNode()),
+                                withData(
+                                    (vs1) => vs1.left,
+                                    () => renderRecursiveRegion_treeNode(),
+                                ),
                             ]),
                     ),
                     c(
                         (vs1) => vs1.hasRight,
                         () =>
                             de('div', { class: 'right-child' }, [
-                                withData((vs1) => vs1.right, () => renderRecursiveRegion_treeNode()),
+                                withData(
+                                    (vs1) => vs1.right,
+                                    () => renderRecursiveRegion_treeNode(),
+                                ),
                             ]),
                     ),
                 ]),
@@ -77,9 +83,11 @@ export function render(options?: RenderElementOptions): NestedBtreeElementPreRen
             de('div', { class: 'tree-container' }, [
                 e('h1', {}, [dt((vs) => vs.title)]),
                 e('p', { class: 'description' }, [dt((vs) => vs.description)]),
-                withData((vs: NestedBtreeViewState) => vs.btree, () => renderRecursiveRegion_treeNode()),
+                withData(
+                    (vs: NestedBtreeViewState) => vs.btree,
+                    () => renderRecursiveRegion_treeNode(),
+                ),
             ]),
         ) as NestedBtreeElement;
     return [refManager.getPublicAPI() as NestedBtreeElementRefs, render];
 }
-

@@ -674,41 +674,41 @@ When recursive data is nested within a parent structure (e.g., `data.tree` inste
 
 ```html
 <html>
-<head>
-  <script type="application/jay-data">
-data:
-  title: string
-  description: string
-  btree:
-    value: number
-    id: string
-    hasLeft: boolean
-    hasRight: boolean
-    left: $/data/btree
-    right: $/data/btree
-  </script>
-</head>
-<body>
-<div class="tree-container">
-  <h1>{title}</h1>
-  <p>{description}</p>
-  
-  <!-- Switch context to btree for recursive region -->
-  <with-data accessor="btree">
-    <div class="tree-node" ref="treeNode">
-      <div class="node-value">{value}</div>
-      <div class="children">
-        <div class="left-child" if="hasLeft">
-          <recurse ref="treeNode" accessor="left"/>
+  <head>
+    <script type="application/jay-data">
+      data:
+        title: string
+        description: string
+        btree:
+          value: number
+          id: string
+          hasLeft: boolean
+          hasRight: boolean
+          left: $/data/btree
+          right: $/data/btree
+    </script>
+  </head>
+  <body>
+    <div class="tree-container">
+      <h1>{title}</h1>
+      <p>{description}</p>
+
+      <!-- Switch context to btree for recursive region -->
+      <with-data accessor="btree">
+        <div class="tree-node" ref="treeNode">
+          <div class="node-value">{value}</div>
+          <div class="children">
+            <div class="left-child" if="hasLeft">
+              <recurse ref="treeNode" accessor="left" />
+            </div>
+            <div class="right-child" if="hasRight">
+              <recurse ref="treeNode" accessor="right" />
+            </div>
+          </div>
         </div>
-        <div class="right-child" if="hasRight">
-          <recurse ref="treeNode" accessor="right"/>
-        </div>
-      </div>
+      </with-data>
     </div>
-  </with-data>
-</div>
-</body>
+  </body>
 </html>
 ```
 
@@ -730,7 +730,7 @@ When `<with-data>` narrows context to an array, use `forEach="."` to iterate ove
     <li forEach="." trackBy="id">
       <span>{name}</span>
       <div if="children">
-        <recurse ref="menuItem" accessor="children"/>
+        <recurse ref="menuItem" accessor="children" />
       </div>
     </li>
   </ul>

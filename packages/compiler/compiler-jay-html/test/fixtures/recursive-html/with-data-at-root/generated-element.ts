@@ -37,8 +37,14 @@ export type WithDataAtRootElementRender = RenderElement<
     WithDataAtRootElementRefs,
     WithDataAtRootElement
 >;
-export type WithDataAtRootElementPreRender = [WithDataAtRootElementRefs, WithDataAtRootElementRender];
-export type WithDataAtRootContract = JayContract<WithDataAtRootViewState, WithDataAtRootElementRefs>;
+export type WithDataAtRootElementPreRender = [
+    WithDataAtRootElementRefs,
+    WithDataAtRootElementRender,
+];
+export type WithDataAtRootContract = JayContract<
+    WithDataAtRootViewState,
+    WithDataAtRootElementRefs
+>;
 
 export function render(options?: RenderElementOptions): WithDataAtRootElementPreRender {
     const [refManager, [refTreeNode]] = ReferencesManager.for(options, ['treeNode'], [], [], []);
@@ -54,14 +60,20 @@ export function render(options?: RenderElementOptions): WithDataAtRootElementPre
                         (vs1) => vs1.hasLeft,
                         () =>
                             de('div', { class: 'left-child' }, [
-                                withData((vs1) => vs1.left, () => renderRecursiveRegion_treeNode()),
+                                withData(
+                                    (vs1) => vs1.left,
+                                    () => renderRecursiveRegion_treeNode(),
+                                ),
                             ]),
                     ),
                     c(
                         (vs1) => vs1.hasRight,
                         () =>
                             de('div', { class: 'right-child' }, [
-                                withData((vs1) => vs1.right, () => renderRecursiveRegion_treeNode()),
+                                withData(
+                                    (vs1) => vs1.right,
+                                    () => renderRecursiveRegion_treeNode(),
+                                ),
                             ]),
                     ),
                 ]),
@@ -72,8 +84,12 @@ export function render(options?: RenderElementOptions): WithDataAtRootElementPre
 
     const render = (viewState: WithDataAtRootViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
-            de('div', {}, [withData((vs: WithDataAtRootViewState) => vs.tree, () => renderRecursiveRegion_treeNode())]),
+            de('div', {}, [
+                withData(
+                    (vs: WithDataAtRootViewState) => vs.tree,
+                    () => renderRecursiveRegion_treeNode(),
+                ),
+            ]),
         ) as WithDataAtRootElement;
     return [refManager.getPublicAPI() as WithDataAtRootElementRefs, render];
 }
-

@@ -219,7 +219,7 @@ Use the `ref` attribute to mark an element as a recursive region, then use `<rec
 <div class="tree-node" ref="treeNode">
   <div class="node-name">{name}</div>
   <div if="children">
-    <recurse ref="treeNode" accessor="children"/>
+    <recurse ref="treeNode" accessor="children" />
   </div>
 </div>
 ```
@@ -248,10 +248,10 @@ data:
     <div class="tree-node" ref="treeNode">
       <div>{value}</div>
       <div if="left">
-        <recurse ref="treeNode" accessor="left"/>
+        <recurse ref="treeNode" accessor="left" />
       </div>
       <div if="right">
-        <recurse ref="treeNode" accessor="right"/>
+        <recurse ref="treeNode" accessor="right" />
       </div>
     </div>
   </with-data>
@@ -259,6 +259,7 @@ data:
 ```
 
 The `<with-data>` element:
+
 - Accepts an `accessor` attribute specifying a property path
 - Changes the view state context for its children
 - Must have exactly one child element
@@ -276,7 +277,7 @@ Within a `<with-data>` context, you can use `forEach="."` to iterate over the cu
     <li forEach="." trackBy="id">
       <span>{name}</span>
       <div if="children">
-        <recurse ref="menuItem" accessor="children"/>
+        <recurse ref="menuItem" accessor="children" />
       </div>
     </li>
   </ul>
@@ -298,7 +299,7 @@ Example with forEach (no accessor needed):
 <ul ref="list">
   <li forEach="items" trackBy="id">
     {text}
-    <recurse ref="list"/>
+    <recurse ref="list" />
   </li>
 </ul>
 ```
@@ -308,6 +309,6 @@ Example with accessor (built-in guard):
 ```html
 <div ref="node">
   {value}
-  <recurse ref="node" accessor="child"/>
+  <recurse ref="node" accessor="child" />
 </div>
 ```

@@ -119,9 +119,16 @@ function validateRecursivePath(
     for (let i = 1; i < pathParts.length; i++) {
         const part = pathParts[i];
         if (!currentData || typeof currentData !== 'object' || !(part in currentData)) {
-            const availableKeys = currentData && typeof currentData === 'object' ? Object.keys(currentData) : [];
-            return `Property "${part}" not found at path "$/` + traversedPath.join('/') + `"` +
-                   (availableKeys.length > 0 ? `. Available properties: ${availableKeys.join(', ')}` : '');
+            const availableKeys =
+                currentData && typeof currentData === 'object' ? Object.keys(currentData) : [];
+            return (
+                `Property "${part}" not found at path "$/` +
+                traversedPath.join('/') +
+                `"` +
+                (availableKeys.length > 0
+                    ? `. Available properties: ${availableKeys.join(', ')}`
+                    : '')
+            );
         }
         currentData = currentData[part];
         traversedPath.push(part);
@@ -211,56 +218,61 @@ function resolveRecursiveReferences(
     if (type instanceof JayRecursiveType) {
         // Parse the reference path (e.g., "$/data" or "$/data/tree")
         const parts = type.referencePath.split('/').filter((p) => p);
-        
+
         if (parts.length >= 2 && parts[0] === '$' && parts[1] === 'data') {
             // Start from root type
             let resolvedType: JayType = rootType;
             const traversedPath = ['$', 'data'];
-            
+
             // Navigate through nested paths (if any)
             for (let i = 2; i < parts.length; i++) {
                 const pathSegment = parts[i];
-                
+
                 if (resolvedType instanceof JayObjectType && pathSegment in resolvedType.props) {
                     resolvedType = resolvedType.props[pathSegment];
                     traversedPath.push(pathSegment);
                 } else if (resolvedType instanceof JayArrayType) {
                     // If current type is array, navigate into its item type
-                    if (resolvedType.itemType instanceof JayObjectType && pathSegment in resolvedType.itemType.props) {
+                    if (
+                        resolvedType.itemType instanceof JayObjectType &&
+                        pathSegment in resolvedType.itemType.props
+                    ) {
                         resolvedType = resolvedType.itemType.props[pathSegment];
                         traversedPath.push(pathSegment);
                     } else {
                         // Path not found in array item type
-                        const availableProps = resolvedType.itemType instanceof JayObjectType
-                            ? Object.keys(resolvedType.itemType.props)
-                            : [];
+                        const availableProps =
+                            resolvedType.itemType instanceof JayObjectType
+                                ? Object.keys(resolvedType.itemType.props)
+                                : [];
                         validations.push(
                             `Recursive reference "${type.referencePath}" failed: property "${pathSegment}" not found at path "${traversedPath.join('/')}"` +
-                            (availableProps.length > 0
-                                ? `. Available properties: ${availableProps.join(', ')}`
-                                : '. The array item type has no properties.')
+                                (availableProps.length > 0
+                                    ? `. Available properties: ${availableProps.join(', ')}`
+                                    : '. The array item type has no properties.'),
                         );
                         return;
                     }
                 } else {
                     // Path not found
-                    const availableProps = resolvedType instanceof JayObjectType
-                        ? Object.keys(resolvedType.props)
-                        : [];
+                    const availableProps =
+                        resolvedType instanceof JayObjectType
+                            ? Object.keys(resolvedType.props)
+                            : [];
                     validations.push(
                         `Recursive reference "${type.referencePath}" failed: property "${pathSegment}" not found at path "${traversedPath.join('/')}"` +
-                        (availableProps.length > 0
-                            ? `. Available properties: ${availableProps.join(', ')}`
-                            : '. The current type has no properties.')
+                            (availableProps.length > 0
+                                ? `. Available properties: ${availableProps.join(', ')}`
+                                : '. The current type has no properties.'),
                     );
                     return;
                 }
             }
-            
+
             type.resolvedType = resolvedType;
         } else if (parts.length < 2 || parts[0] !== '$' || parts[1] !== 'data') {
             validations.push(
-                `Invalid recursive reference "${type.referencePath}". Recursive references must start with "$/data" (e.g., "$/data" or "$/data/tree")`
+                `Invalid recursive reference "${type.referencePath}". Recursive references must start with "$/data" (e.g., "$/data" or "$/data/tree")`,
             );
         }
     } else if (type instanceof JayArrayType) {

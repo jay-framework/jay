@@ -11,25 +11,25 @@ Consider this data structure:
 ```yaml
 data:
   tree:
-  - id: string
-    name: string
-    hasChildren: boolean
-    isOpen: boolean
-    children: $/data/tree  # References the tree array type
+    - id: string
+      name: string
+      hasChildren: boolean
+      isOpen: boolean
+      children: $/data/tree # References the tree array type
 ```
 
 When we try to create a recursive region, we encounter a context mismatch:
 
 ```html
 <ul class="menu-list" ref="menuItem">
-    <li forEach="tree" trackBy="id">
-        <a href="#">
-            <span class="name">{name}</span>
-        </a>
-        <div if="hasChildren && isOpen">
-            <recurse ref="menuItem"/>
-        </div>
-    </li>
+  <li forEach="tree" trackBy="id">
+    <a href="#">
+      <span class="name">{name}</span>
+    </a>
+    <div if="hasChildren && isOpen">
+      <recurse ref="menuItem" />
+    </div>
+  </li>
 </ul>
 ```
 
@@ -54,12 +54,12 @@ When we try to create a recursive region, we encounter a context mismatch:
 
 ```html
 <ul class="menu-list">
-    <li forEach="tree" trackBy="id" ref="menuItem">
-        <a href="#"><span class="name">{name}</span></a>
-        <div if="hasChildren && isOpen">
-            <recurse ref="menuItem"/>
-        </div>
-    </li>
+  <li forEach="tree" trackBy="id" ref="menuItem">
+    <a href="#"><span class="name">{name}</span></a>
+    <div if="hasChildren && isOpen">
+      <recurse ref="menuItem" />
+    </div>
+  </li>
 </ul>
 ```
 
@@ -69,12 +69,12 @@ When we try to create a recursive region, we encounter a context mismatch:
 
 ```html
 <ul class="menu-list" ref="menuItem">
-    <li forEach="tree" trackBy="id">
-        <a href="#"><span class="name">{name}</span></a>
-        <div if="hasChildren && isOpen">
-            <recurse ref="menuItem" accessor="children"/>
-        </div>
-    </li>
+  <li forEach="tree" trackBy="id">
+    <a href="#"><span class="name">{name}</span></a>
+    <div if="hasChildren && isOpen">
+      <recurse ref="menuItem" accessor="children" />
+    </div>
+  </li>
 </ul>
 ```
 
@@ -85,17 +85,19 @@ When we try to create a recursive region, we encounter a context mismatch:
 The fundamental issue is a **context type mismatch between initialization and recursion**:
 
 1. **Initialization Phase**: The recursive region is called with the root ViewState type
+
    - Needs to access `tree` array
    - `forEach="tree"` makes sense here
 
 2. **Recursion Phase**: The recursive region is called with the tree item type
-   - Needs to access `children` array  
+
+   - Needs to access `children` array
    - `forEach="children"` makes sense here
 
 3. **The Conflict**: We can't write both in a single template because:
    - `ref="menuItem"` establishes the recursive region boundary
    - The region's ViewState type is fixed at compile time
-   - We need the region to work with *different accessor paths* depending on how it's invoked
+   - We need the region to work with _different accessor paths_ depending on how it's invoked
 
 ### Why This Is a Design Problem
 
@@ -123,49 +125,54 @@ Introduce a mechanism to reset the ViewState context to a specific type before e
 
 ```html
 <with-data accessor="tree">
-    <ul class="menu-list" ref="menuItem">
-        <li forEach="." trackBy="id">
-            <a href="#"><span class="name">{name}</span></a>
-            <div if="hasChildren && isOpen">
-                <recurse ref="menuItem" accessor="children"/>
-            </div>
-        </li>
-    </ul>
+  <ul class="menu-list" ref="menuItem">
+    <li forEach="." trackBy="id">
+      <a href="#"><span class="name">{name}</span></a>
+      <div if="hasChildren && isOpen">
+        <recurse ref="menuItem" accessor="children" />
+      </div>
+    </li>
+  </ul>
 </with-data>
 ```
 
 **Semantics:**
+
 - `<with-data accessor="tree">` switches context to the `tree` array type
 - Inside, `forEach="."` means "iterate over the current context" (the array itself)
 - On recursion, `accessor="children"` switches to the children array
 - Both forEach operate on arrays, just accessed differently
 
 **Advantages:**
+
 - Clear and explicit context boundary
 - Reuses the `withData` concept from the runtime
 - `forEach="."` is intuitive ("this" in programming)
 
 **Disadvantages:**
+
 - Introduces a new HTML element
 
 #### Option 2: `context` Attribute
 
 ```html
 <ul class="menu-list" context="tree" ref="menuItem">
-    <li forEach="." trackBy="id">
-        <a href="#"><span class="name">{name}</span></a>
-        <div if="hasChildren && isOpen">
-            <recurse ref="menuItem" accessor="children"/>
-        </div>
-    </li>
+  <li forEach="." trackBy="id">
+    <a href="#"><span class="name">{name}</span></a>
+    <div if="hasChildren && isOpen">
+      <recurse ref="menuItem" accessor="children" />
+    </div>
+  </li>
 </ul>
 ```
 
 **Advantages:**
+
 - No new elements, just an attribute
 - More compact
 
 **Disadvantages:**
+
 - Less explicit about the context boundary
 - Mixing `context` and `ref` on the same element might be confusing
 
@@ -173,22 +180,24 @@ Introduce a mechanism to reset the ViewState context to a specific type before e
 
 ```html
 <recurse-root accessor="tree">
-    <ul class="menu-list" ref="menuItem">
-        <li forEach="." trackBy="id">
-            <a href="#"><span class="name">{name}</span></a>
-            <div if="hasChildren && isOpen">
-                <recurse ref="menuItem" accessor="children"/>
-            </div>
-        </li>
-    </ul>
+  <ul class="menu-list" ref="menuItem">
+    <li forEach="." trackBy="id">
+      <a href="#"><span class="name">{name}</span></a>
+      <div if="hasChildren && isOpen">
+        <recurse ref="menuItem" accessor="children" />
+      </div>
+    </li>
+  </ul>
 </recurse-root>
 ```
 
 **Advantages:**
+
 - Explicitly names it as related to recursion
 - Clear boundary
 
 **Disadvantages:**
+
 - More verbose
 - The name might imply it's required for all recursion (it's not)
 
@@ -202,11 +211,12 @@ The `<with-data>` element provides the clearest semantics and matches the runtim
 
 ```html
 <with-data accessor="expression">
-    <!-- Content here operates in the switched context -->
+  <!-- Content here operates in the switched context -->
 </with-data>
 ```
 
 **Rules:**
+
 1. The `accessor` attribute is required and must resolve to a valid type
 2. Inside `<with-data>`, the ViewState context is the resolved type
 3. `forEach="."` inside `<with-data>` means "iterate over the current context"
@@ -217,36 +227,36 @@ The `<with-data>` element provides the clearest semantics and matches the runtim
 
 ```html
 <html>
-<head>
+  <head>
     <script type="application/jay-data">
-data:
-  tree:
-  - id: string
-    name: string
-    hasChildren: boolean
-    isOpen: boolean
-    children: $/data/tree
+      data:
+        tree:
+        - id: string
+          name: string
+          hasChildren: boolean
+          isOpen: boolean
+          children: $/data/tree
     </script>
-</head>
-<body>
-<nav class="menu">
-    <!-- Switch context to the tree array -->
-    <with-data accessor="tree">
+  </head>
+  <body>
+    <nav class="menu">
+      <!-- Switch context to the tree array -->
+      <with-data accessor="tree">
         <ul class="menu-list" ref="menuItem">
-            <!-- Now forEach="." iterates over the current context (tree array) -->
-            <li forEach="." trackBy="id">
-                <a href="#">
-                    <span class="name">{name}</span>
-                </a>
-                <div if="hasChildren && isOpen">
-                    <!-- Recurse with children accessor -->
-                    <recurse ref="menuItem" accessor="children"/>
-                </div>
-            </li>
+          <!-- Now forEach="." iterates over the current context (tree array) -->
+          <li forEach="." trackBy="id">
+            <a href="#">
+              <span class="name">{name}</span>
+            </a>
+            <div if="hasChildren && isOpen">
+              <!-- Recurse with children accessor -->
+              <recurse ref="menuItem" accessor="children" />
+            </div>
+          </li>
         </ul>
-    </with-data>
-</nav>
-</body>
+      </with-data>
+    </nav>
+  </body>
 </html>
 ```
 
@@ -272,66 +282,66 @@ data:
 
 ```typescript
 export interface TreeOfIndirectRecursion2ViewState {
-    id: string;
-    name: string;
-    hasChildren: boolean;
-    isOpen: boolean;
-    children: Array<TreeOfIndirectRecursion2ViewState> | null;
+  id: string;
+  name: string;
+  hasChildren: boolean;
+  isOpen: boolean;
+  children: Array<TreeOfIndirectRecursion2ViewState> | null;
 }
 
 export interface IndirectRecursion2ViewState {
-    tree: Array<TreeOfIndirectRecursion2ViewState>;
+  tree: Array<TreeOfIndirectRecursion2ViewState>;
 }
 
 export function render(options?: RenderElementOptions): IndirectRecursion2ElementPreRender {
-    const [refManager, [refMenuItem]] = ReferencesManager.for(
-        options, 
-        [], 
-        ['menuItem'], 
-        [], 
-        []
+  const [refManager, [refMenuItem]] = ReferencesManager.for(options, [], ['menuItem'], [], []);
+
+  // Recursive function operates on the array type
+  function renderRecursiveRegion_menuItem(): BaseJayElement<
+    Array<TreeOfIndirectRecursion2ViewState>
+  > {
+    return de(
+      'ul',
+      { class: 'menu-list' },
+      [
+        forEach(
+          // forEach="." becomes identity function
+          (vs: Array<TreeOfIndirectRecursion2ViewState>) => vs,
+          (vs1: TreeOfIndirectRecursion2ViewState) => {
+            return de('li', {}, [
+              e('a', { href: '#' }, [e('span', { class: 'name' }, [dt((vs1) => vs1.name)])]),
+              c(
+                (vs1) => vs1.hasChildren && vs1.isOpen,
+                () =>
+                  e('div', {}, [
+                    // accessor="children" uses withData
+                    withData(
+                      (vs1) => vs1.children,
+                      () => renderRecursiveRegion_menuItem(),
+                    ),
+                  ]),
+              ),
+            ]);
+          },
+          'id',
+        ),
+      ],
+      refMenuItem(),
     );
+  }
 
-    // Recursive function operates on the array type
-    function renderRecursiveRegion_menuItem(): BaseJayElement<Array<TreeOfIndirectRecursion2ViewState>> {
-        return de('ul', { class: 'menu-list' }, [
-            forEach(
-                // forEach="." becomes identity function
-                (vs: Array<TreeOfIndirectRecursion2ViewState>) => vs,
-                (vs1: TreeOfIndirectRecursion2ViewState) => {
-                    return de('li', {}, [
-                        e('a', { href: '#' }, [
-                            e('span', { class: 'name' }, [dt((vs1) => vs1.name)]),
-                        ]),
-                        c(
-                            (vs1) => vs1.hasChildren && vs1.isOpen,
-                            () => e('div', {}, [
-                                // accessor="children" uses withData
-                                withData(
-                                    (vs1) => vs1.children,
-                                    () => renderRecursiveRegion_menuItem()
-                                )
-                            ])
-                        ),
-                    ]);
-                },
-                'id'
-            ),
-        ], refMenuItem());
-    }
+  const render = (viewState: IndirectRecursion2ViewState) =>
+    ConstructContext.withRootContext(viewState, refManager, () =>
+      e('nav', { class: 'menu' }, [
+        // accessor="tree" uses withData
+        withData(
+          (vs) => vs.tree,
+          () => renderRecursiveRegion_menuItem(),
+        ),
+      ]),
+    ) as IndirectRecursion2Element;
 
-    const render = (viewState: IndirectRecursion2ViewState) =>
-        ConstructContext.withRootContext(viewState, refManager, () =>
-            e('nav', { class: 'menu' }, [
-                // accessor="tree" uses withData
-                withData(
-                    (vs) => vs.tree,
-                    () => renderRecursiveRegion_menuItem()
-                )
-            ]),
-        ) as IndirectRecursion2Element;
-
-    return [refManager.getPublicAPI() as IndirectRecursion2ElementRefs, render];
+  return [refManager.getPublicAPI() as IndirectRecursion2ElementRefs, render];
 }
 ```
 
@@ -351,7 +361,7 @@ Add support for `<with-data>` element:
 ```typescript
 // In jay-html-helpers.ts
 export function isWithData(element: HTMLElement): boolean {
-    return element.rawTagName === 'with-data';
+  return element.rawTagName === 'with-data';
 }
 ```
 
@@ -361,33 +371,33 @@ Handle `<with-data>` elements in the compiler:
 
 ```typescript
 if (isWithData(htmlElement)) {
-    const accessor = htmlElement.getAttribute('accessor');
-    if (!accessor) {
-        return new RenderFragment('', Imports.none(), [
-            '<with-data> element must have an "accessor" attribute',
-        ]);
-    }
+  const accessor = htmlElement.getAttribute('accessor');
+  if (!accessor) {
+    return new RenderFragment('', Imports.none(), [
+      '<with-data> element must have an "accessor" attribute',
+    ]);
+  }
 
-    // Parse the accessor
-    const accessorExpr = parseAccessor(accessor, variables);
-    
-    // Create new variables context with the resolved type
-    const newVariables = variables.childVariableFor(accessorExpr);
-    
-    // Render children with new context
-    const childElement = renderHtmlElement(htmlElement, {
-        ...context,
-        variables: newVariables,
-    });
+  // Parse the accessor
+  const accessorExpr = parseAccessor(accessor, variables);
 
-    // Wrap in withData call
-    return new RenderFragment(
-        `withData(${accessorExpr.render().rendered}, () => ${childElement.rendered})`,
-        childElement.imports.plus(Import.withData),
-        [...accessorExpr.validations, ...childElement.validations],
-        childElement.refs,
-        childElement.recursiveRegions
-    );
+  // Create new variables context with the resolved type
+  const newVariables = variables.childVariableFor(accessorExpr);
+
+  // Render children with new context
+  const childElement = renderHtmlElement(htmlElement, {
+    ...context,
+    variables: newVariables,
+  });
+
+  // Wrap in withData call
+  return new RenderFragment(
+    `withData(${accessorExpr.render().rendered}, () => ${childElement.rendered})`,
+    childElement.imports.plus(Import.withData),
+    [...accessorExpr.validations, ...childElement.validations],
+    childElement.refs,
+    childElement.recursiveRegions,
+  );
 }
 ```
 
@@ -397,18 +407,16 @@ When accessor is just ".", it means the current context:
 
 ```typescript
 if (forEach === '.') {
-    // Identity function - iterate over current context
-    forEachFragment = new RenderFragment(
-        `(${variables.currentVar}: ${variables.currentType.name}) => ${variables.currentVar}`,
-        Imports.none(),
-        []
-    );
+  // Identity function - iterate over current context
+  forEachFragment = new RenderFragment(
+    `(${variables.currentVar}: ${variables.currentType.name}) => ${variables.currentVar}`,
+    Imports.none(),
+    [],
+  );
 } else {
-    // Normal accessor parsing
-    const forEachAccessor = parseAccessor(forEach, variables);
-    forEachFragment = forEachAccessor.render().map(
-        _ => `(${paramName}: ${paramType}) => ${_}`
-    );
+  // Normal accessor parsing
+  const forEachAccessor = parseAccessor(forEach, variables);
+  forEachFragment = forEachAccessor.render().map((_) => `(${paramName}: ${paramType}) => ${_}`);
 }
 ```
 
@@ -419,29 +427,32 @@ The parser needs to understand that `children: $/data/tree` creates a `JayRecurs
 ```typescript
 // In resolveRecursiveReferences
 if (type instanceof JayRecursiveType) {
-    const parts = type.referencePath.split('/').filter(p => p);
-    
-    if (parts.length >= 2 && parts[0] === '$' && parts[1] === 'data') {
-        let resolvedType: JayType = rootType;
-        
-        // Navigate to the target type
-        for (let i = 2; i < parts.length; i++) {
-            const pathSegment = parts[i];
-            if (resolvedType instanceof JayObjectType && pathSegment in resolvedType.props) {
-                resolvedType = resolvedType.props[pathSegment];
-            } else if (resolvedType instanceof JayArrayType) {
-                if (resolvedType.itemType instanceof JayObjectType && pathSegment in resolvedType.itemType.props) {
-                    resolvedType = resolvedType.itemType.props[pathSegment];
-                } else {
-                    return; // Path not found
-                }
-            } else {
-                return; // Path not found
-            }
+  const parts = type.referencePath.split('/').filter((p) => p);
+
+  if (parts.length >= 2 && parts[0] === '$' && parts[1] === 'data') {
+    let resolvedType: JayType = rootType;
+
+    // Navigate to the target type
+    for (let i = 2; i < parts.length; i++) {
+      const pathSegment = parts[i];
+      if (resolvedType instanceof JayObjectType && pathSegment in resolvedType.props) {
+        resolvedType = resolvedType.props[pathSegment];
+      } else if (resolvedType instanceof JayArrayType) {
+        if (
+          resolvedType.itemType instanceof JayObjectType &&
+          pathSegment in resolvedType.itemType.props
+        ) {
+          resolvedType = resolvedType.itemType.props[pathSegment];
+        } else {
+          return; // Path not found
         }
-        
-        type.resolvedType = resolvedType;
+      } else {
+        return; // Path not found
+      }
     }
+
+    type.resolvedType = resolvedType;
+  }
 }
 ```
 
@@ -459,26 +470,27 @@ if (type instanceof JayRecursiveType) {
 Existing recursive HTML that doesn't need context switching continues to work unchanged. The `<with-data>` element is only needed when the recursive structure's entry point differs from its recursive point.
 
 **Before (doesn't work):**
+
 ```html
 <ul ref="menuItem">
-    <li forEach="tree" trackBy="id">
-        <recurse ref="menuItem" accessor="children"/>
-    </li>
+  <li forEach="tree" trackBy="id">
+    <recurse ref="menuItem" accessor="children" />
+  </li>
 </ul>
 ```
 
 **After (works):**
+
 ```html
 <with-data accessor="tree">
-    <ul ref="menuItem">
-        <li forEach="." trackBy="id">
-            <recurse ref="menuItem" accessor="children"/>
-        </li>
-    </ul>
+  <ul ref="menuItem">
+    <li forEach="." trackBy="id">
+      <recurse ref="menuItem" accessor="children" />
+    </li>
+  </ul>
 </with-data>
 ```
 
 ## Conclusion
 
 The `<with-data>` element provides a clean, explicit way to handle context switching in recursive HTML structures. It solves the fundamental problem of type mismatch between initialization and recursion paths, while maintaining type safety and clarity. The syntax maps naturally to the existing `withData` runtime function, making implementation straightforward.
-

@@ -113,4 +113,3 @@ The example creates this binary search tree:
 ```
 
 Each node is rendered recursively using the same template, demonstrating the power of recursive Jay-HTML templates for hierarchical data structures.
-

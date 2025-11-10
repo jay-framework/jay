@@ -52,7 +52,9 @@ export type IndirectRecursion2Contract = JayContract<
 export function render(options?: RenderElementOptions): IndirectRecursion2ElementPreRender {
     const [refManager, [refMenuItem]] = ReferencesManager.for(options, ['menuItem'], [], [], []);
 
-    function renderRecursiveRegion_menuItem(): BaseJayElement<Array<TreeOfIndirectRecursion2ViewState>> {
+    function renderRecursiveRegion_menuItem(): BaseJayElement<
+        Array<TreeOfIndirectRecursion2ViewState>
+    > {
         return de(
             'ul',
             { class: 'menu-list' },
@@ -86,7 +88,10 @@ export function render(options?: RenderElementOptions): IndirectRecursion2Elemen
     const render = (viewState: IndirectRecursion2ViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             de('nav', { class: 'menu' }, [
-                withData((vs: IndirectRecursion2ViewState) => vs.tree, () => renderRecursiveRegion_menuItem()),
+                withData(
+                    (vs: IndirectRecursion2ViewState) => vs.tree,
+                    () => renderRecursiveRegion_menuItem(),
+                ),
             ]),
         ) as IndirectRecursion2Element;
     return [refManager.getPublicAPI() as IndirectRecursion2ElementRefs, render];

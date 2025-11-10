@@ -340,14 +340,14 @@ describe('compiler', () => {
                 const types = assertObjectType(jayFile.val.types);
                 expect(types.name).toBe('MenuViewState');
 
-                const tree = assertArrayType(types.props.tree)
-                const treeItem = assertObjectType(tree.itemType)
+                const tree = assertArrayType(types.props.tree);
+                const treeItem = assertObjectType(tree.itemType);
                 expect(treeItem.props.id).toBe(JayString);
 
-                const recursive = assertRecursiveType(treeItem.props.children)
+                const recursive = assertRecursiveType(treeItem.props.children);
                 // check the recursion
                 expect(recursive.resolvedType).toBe(types.props.tree);
-            })
+            });
             it('should report error for invalid recursive reference path', async () => {
                 let jayFile = await parseJayFile(
                     jayFileWith(
@@ -923,23 +923,17 @@ describe('compiler', () => {
     });
 });
 
-function assertArrayType(
-    value: JayType
-): JayArrayType {
+function assertArrayType(value: JayType): JayArrayType {
     expect(value.kind).toBe(JayTypeKind.array);
     return value as JayArrayType;
 }
 
-function assertObjectType(
-    value: JayType
-): JayObjectType {
+function assertObjectType(value: JayType): JayObjectType {
     expect(value.kind).toBe(JayTypeKind.object);
     return value as JayObjectType;
 }
 
-function assertRecursiveType(
-    value: JayType
-): JayRecursiveType {
+function assertRecursiveType(value: JayType): JayRecursiveType {
     expect(value.kind).toBe(JayTypeKind.recursive);
     return value as JayRecursiveType;
 }
