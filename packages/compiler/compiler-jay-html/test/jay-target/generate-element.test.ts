@@ -379,6 +379,13 @@ describe('generate jay-html element', () => {
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
+        it('nested btree with accessor recursion and with-data', async () => {
+            const folder = 'recursive-html/nested-btree';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
         it('tree with conditional recursion', async () => {
             const folder = 'recursive-html/tree-with-conditional';
             const elementFile = await readFileAndGenerateElementFile(folder);

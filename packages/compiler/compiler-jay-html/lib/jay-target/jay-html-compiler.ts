@@ -492,14 +492,9 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 // Parse the accessor to get the new context type
                 const accessorExpr = parseAccessor(accessor, variables);
                 
-                if (!isArrayType(accessorExpr.resolvedType)) {
-                    return new RenderFragment('', Imports.none(), [
-                        `<with-data> accessor must resolve to an array type, but got ${accessorExpr.resolvedType.name || 'unknown'}`,
-                    ]);
-                }
-
-                // Create new variables context with the array type (not the item type)
-                // This allows forEach="." to iterate over the array
+                // Create new variables context with the resolved type
+                // For arrays, this allows forEach="." to iterate over the array
+                // For objects, this allows direct property access
                 // Count depth by traversing parent chain
                 let depth = 1;
                 let parent = variables;
