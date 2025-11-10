@@ -1,4 +1,4 @@
-import { render, BtreeNodeElementRefs, BtreeNodeViewState } from './btree-node.jay-html';
+import {render, BtreeNodeElementRefs, BtreeNodeViewState, TreeOfBtreeNodeViewState} from './btree-node.jay-html';
 import { makeJayComponent, Props } from '@jay-framework/component';
 
 export interface BTreeNode {
@@ -18,7 +18,7 @@ export function btreeNode(
 }
 
 function BtreeNodeConstructor(rootNode: Props<BTreeNode>, refs: BtreeNodeElementRefs) {
-    const mapNodeToViewState = ({ value, id, left, right }: BTreeNode): BtreeNodeViewState => {
+    const mapNodeToViewState = ({ value, id, left, right }: BTreeNode): TreeOfBtreeNodeViewState => {
         return {
             value,
             id,
@@ -29,7 +29,9 @@ function BtreeNodeConstructor(rootNode: Props<BTreeNode>, refs: BtreeNodeElement
         };
     };
     return {
-        render: (): BtreeNodeViewState => mapNodeToViewState(rootNode.props()),
+        render: (): BtreeNodeViewState => ({
+            tree: mapNodeToViewState(rootNode.props())
+        }),
     };
 }
 

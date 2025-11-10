@@ -1,0 +1,30 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+  tree:
+    value: number
+    id: string
+    hasLeft: boolean
+    hasRight: boolean
+    left: $/data/tree
+    right: $/data/tree
+    </script>
+</head>
+<body>
+<with-data accessor="tree">
+    <div class="tree-node" ref="treeNode">
+        <div class="node-value">{value}</div>
+        <div class="children">
+            <div class="left-child" if="hasLeft">
+                <recurse ref="treeNode" accessor="left"/>
+            </div>
+            <div class="right-child" if="hasRight">
+                <recurse ref="treeNode" accessor="right"/>
+            </div>
+        </div>
+    </div>
+</with-data>
+</body>
+</html>
+

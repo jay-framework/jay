@@ -784,10 +784,22 @@ function renderFunctionImplementation(
     const rootElement = ensureSingleChildElement(rootBodyElement);
     let renderedRoot: RenderFragment;
     if (rootElement.val) {
+        // Check if the root element is a directive that needs wrapping
+        const needsWrapper = 
+            isWithData(rootElement.val) ||
+            isForEach(rootElement.val) ||
+            isConditional(rootElement.val) ||
+            isRecurse(rootElement.val) ||
+            checkAsync(rootElement.val).isAsync;
+
+        const indent = needsWrapper?
+            new Indent('        ') :
+            new Indent('    ');
+
         renderedRoot = renderNode(rootElement.val, {
             variables,
             importedSymbols,
-            indent: new Indent('    '),
+            indent: indent,
             dynamicRef: false,
             importedSandboxedSymbols,
             refNameGenerator: new RefNameGenerator(),
@@ -797,6 +809,19 @@ function renderFunctionImplementation(
             recursiveRegions: [], // Initialize empty recursive regions stack
             isInsideGuard: false, // Not inside any guard initially
         });
+
+        if (needsWrapper) {
+            // Wrap the directive in a dynamic element
+
+            // Wrap in a dynamic element
+            renderedRoot = new RenderFragment(
+                `de('div', {}, [\n${renderedRoot.rendered}\n    ])`,
+                renderedRoot.imports.plus(Import.dynamicElement),
+                renderedRoot.validations,
+                renderedRoot.refs,
+                renderedRoot.recursiveRegions,
+            );
+        }
         renderedRoot = optimizeRefs(renderedRoot, headlessImports);
     } else renderedRoot = new RenderFragment('', Imports.none(), rootElement.validations);
     const elementType = baseElementName + 'Element';

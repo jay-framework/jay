@@ -438,5 +438,13 @@ describe('generate jay-html element', () => {
             expect(childrenError).toBeDefined();
             expect(childrenError).toContain('the data field [children] not found in Jay data');
         });
+
+        it('with-data at root of body', async () => {
+            // Test that <with-data> at the root level generates proper code wrapped in de()
+            const folder = 'recursive-html/with-data-at-root';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
     });
 });
