@@ -607,49 +607,6 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 const forEach = htmlElement.getAttribute('forEach'); // todo extract type
                 const trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
 
-                // Special handling for forEach="." (identity - iterate over current context)
-                if (forEach === '.') {
-                    // Current context must be an array
-                    if (!isArrayType(variables.currentType)) {
-                        return new RenderFragment('', Imports.none(), [
-                            `forEach="." requires current context to be an array, but got ${variables.currentType.name || 'unknown'}`,
-                        ]);
-                    }
-
-                    const paramName = variables.currentVar;
-                    const paramType = variables.currentType.name;
-                    // Identity function: just return the array itself
-                    const forEachFragment = new RenderFragment(
-                        `(${paramName}: ${paramType}) => ${paramName}`,
-                        Imports.none(),
-                        []
-                    );
-
-                    // For forEach=".", we need to get the item type from the array
-                    const arrayType = variables.currentType as JayArrayType;
-                    const itemType = arrayType.itemType;
-                    // Create variables for the item (not using childVariableFor since we don't have an accessor)
-                    let depth = 1;
-                    let parent = variables;
-                    const maxDepth = 100; // Safety limit
-                    while (parent && parent.parent && depth < maxDepth) {
-                        depth++;
-                        parent = parent.parent;
-                    }
-                    const forEachVariables = new Variables(itemType, variables, depth);
-
-                    let newContext = {
-                        ...context,
-                        variables: forEachVariables,
-                        indent: indent.child().noFirstLineBreak().withLastLineBreak(),
-                        dynamicRef: true,
-                        isInsideGuard: true, // Mark that we're inside a guard
-                    };
-
-                    let childElement = renderHtmlElement(htmlElement, newContext);
-                    return renderForEach(forEachFragment, forEachVariables, trackBy, childElement);
-                }
-
                 const forEachAccessor = parseAccessor(forEach, variables);
                 const forEachAccessPath = forEachAccessor.terms;
                 if (forEachAccessor.resolvedType === JayUnknown)
