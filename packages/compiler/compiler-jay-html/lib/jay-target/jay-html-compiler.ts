@@ -4,6 +4,7 @@ import {
     ImportsFor,
     isArrayType,
     isPromiseType,
+    JayArrayType,
     JayAtomicType,
     JayComponentType,
     JayErrorType,
@@ -53,6 +54,7 @@ import {
     isForEach,
     isRecurse,
     isRecurseWithData,
+    isWithData,
 } from './jay-html-helpers';
 import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
@@ -333,6 +335,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
                     isConditional(_) ||
                     isForEach(_) ||
                     isRecurseWithData(_) ||
+                    isWithData(_) ||
                     checkAsync(_).isAsync,
             )
             .reduce((prev, current) => prev || current, false);
@@ -476,7 +479,66 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             let htmlElement = node as HTMLElement;
             // if (isForEach(htmlElement)) dynamicRef = true;
 
-            if (isRecurse(htmlElement)) {
+            if (isWithData(htmlElement)) {
+                // Handle <with-data accessor="expression"> element
+                const accessor = htmlElement.getAttribute('accessor');
+                
+                if (!accessor) {
+                    return new RenderFragment('', Imports.none(), [
+                        '<with-data> element must have an "accessor" attribute',
+                    ]);
+                }
+
+                // Parse the accessor to get the new context type
+                const accessorExpr = parseAccessor(accessor, variables);
+                
+                if (!isArrayType(accessorExpr.resolvedType)) {
+                    return new RenderFragment('', Imports.none(), [
+                        `<with-data> accessor must resolve to an array type, but got ${accessorExpr.resolvedType.name || 'unknown'}`,
+                    ]);
+                }
+
+                // Create new variables context with the array type (not the item type)
+                // This allows forEach="." to iterate over the array
+                // Count depth by traversing parent chain
+                let depth = 1;
+                let parent = variables;
+                const maxDepth = 100; // Safety limit
+                while (parent && parent.parent && depth < maxDepth) {
+                    depth++;
+                    parent = parent.parent;
+                }
+                const newVariables = new Variables(accessorExpr.resolvedType, variables, depth);
+                
+                // Render children (not the with-data element itself) with new context
+                const childNodes = htmlElement.childNodes.filter(
+                    (child) => child.nodeType !== NodeType.TEXT_NODE || child.innerText.trim() !== ''
+                );
+                
+                if (childNodes.length !== 1) {
+                    return new RenderFragment('', Imports.none(), [
+                        `<with-data> element must have exactly one child element, but found ${childNodes.length}`,
+                    ]);
+                }
+
+                const childElement = renderNode(childNodes[0], {
+                    ...context,
+                    variables: newVariables,
+                    indent: indent,
+                });
+
+                // Generate accessor function for withData
+                const accessorFunction = `(${variables.currentVar}: ${variables.currentType.name}) => ${accessorExpr.render().rendered}`;
+
+                // Wrap in withData call
+                return new RenderFragment(
+                    `${indent.firstLine}withData(${accessorFunction}, () => ${childElement.rendered})`,
+                    childElement.imports.plus(Import.withData).plus(accessorExpr.render().imports),
+                    [...accessorExpr.validations, ...childElement.validations],
+                    childElement.refs,
+                    childElement.recursiveRegions,
+                );
+            } else if (isRecurse(htmlElement)) {
                 // Handle <recurse ref="name" accessor="path" /> element
                 const refAttr = htmlElement.getAttribute('ref');
                 const accessorAttr = htmlElement.getAttribute('accessor');
@@ -544,6 +606,49 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             } else if (isForEach(htmlElement)) {
                 const forEach = htmlElement.getAttribute('forEach'); // todo extract type
                 const trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
+
+                // Special handling for forEach="." (identity - iterate over current context)
+                if (forEach === '.') {
+                    // Current context must be an array
+                    if (!isArrayType(variables.currentType)) {
+                        return new RenderFragment('', Imports.none(), [
+                            `forEach="." requires current context to be an array, but got ${variables.currentType.name || 'unknown'}`,
+                        ]);
+                    }
+
+                    const paramName = variables.currentVar;
+                    const paramType = variables.currentType.name;
+                    // Identity function: just return the array itself
+                    const forEachFragment = new RenderFragment(
+                        `(${paramName}: ${paramType}) => ${paramName}`,
+                        Imports.none(),
+                        []
+                    );
+
+                    // For forEach=".", we need to get the item type from the array
+                    const arrayType = variables.currentType as JayArrayType;
+                    const itemType = arrayType.itemType;
+                    // Create variables for the item (not using childVariableFor since we don't have an accessor)
+                    let depth = 1;
+                    let parent = variables;
+                    const maxDepth = 100; // Safety limit
+                    while (parent && parent.parent && depth < maxDepth) {
+                        depth++;
+                        parent = parent.parent;
+                    }
+                    const forEachVariables = new Variables(itemType, variables, depth);
+
+                    let newContext = {
+                        ...context,
+                        variables: forEachVariables,
+                        indent: indent.child().noFirstLineBreak().withLastLineBreak(),
+                        dynamicRef: true,
+                        isInsideGuard: true, // Mark that we're inside a guard
+                    };
+
+                    let childElement = renderHtmlElement(htmlElement, newContext);
+                    return renderForEach(forEachFragment, forEachVariables, trackBy, childElement);
+                }
 
                 const forEachAccessor = parseAccessor(forEach, variables);
                 const forEachAccessPath = forEachAccessor.terms;

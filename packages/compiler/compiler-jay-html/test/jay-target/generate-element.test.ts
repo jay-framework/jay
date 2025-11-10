@@ -372,6 +372,13 @@ describe('generate jay-html element', () => {
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
+        it('indirect recursion through container 2', async () => {
+            const folder = 'recursive-html/indirect-recursion-2';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
         it('tree with conditional recursion', async () => {
             const folder = 'recursive-html/tree-with-conditional';
             const elementFile = await readFileAndGenerateElementFile(folder);

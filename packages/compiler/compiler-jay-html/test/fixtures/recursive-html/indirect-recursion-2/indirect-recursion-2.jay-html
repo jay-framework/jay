@@ -2,31 +2,28 @@
 <head>
     <script type="application/jay-data">
 data:
-  label: string
-  id: string
-  icon: string
-  hasSubmenu: boolean
-  isOpen: boolean
-  submenu:
-    items: array<$/data>
+  tree:
+  - id: string
+    name: string
+    hasChildren: boolean
+    isOpen: boolean
+    children: $/data/tree
     </script>
 </head>
 <body>
 <nav class="menu">
-    <li class="menu-item" ref="menuItem">
-        <a href="#">
-            <span class="icon">{icon}</span>
-            <span class="label">{label}</span>
-        </a>
-        <div if="hasSubmenu">
-            <ul class="submenu" if="isOpen">
-                <li forEach="submenu.items" trackBy="id">
-                    <recurse ref="menuItem" />
-                </li>
-            </ul>
-        </div>
-    </li>
+    <with-data accessor="tree">
+        <ul class="menu-list" ref="menuItem">
+            <li forEach="." trackBy="id">
+                <a href="#">
+                    <span class="name">{name}</span>
+                </a>
+                <div if="hasChildren && isOpen">
+                    <recurse ref="menuItem" accessor="children"/>
+                </div>
+            </li>
+        </ul>
+    </with-data>
 </nav>
 </body>
 </html>
-
