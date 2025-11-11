@@ -38,8 +38,8 @@ function extractHeadlessComponents(jayHtmlContent: string): {
 }[] {
     const root = parse(jayHtmlContent);
     const headlessScripts = root.querySelectorAll('script[type="application/jay-headless"]');
-    
-    return headlessScripts.map(script => ({
+
+    return headlessScripts.map((script) => ({
         contract: script.getAttribute('contract') || '',
         src: script.getAttribute('src') || '',
         name: script.getAttribute('name') || '',
@@ -50,14 +50,14 @@ function extractHeadlessComponents(jayHtmlContent: string): {
 // Helper function to scan pages in the project
 async function scanProjectPages(pagesBasePath: string): Promise<ProjectPage[]> {
     const pages: ProjectPage[] = [];
-    
+
     async function scanDirectory(dirPath: string, urlPath: string = '') {
         try {
             const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-            
+
             for (const entry of entries) {
                 const fullPath = path.join(dirPath, entry.name);
-                
+
                 if (entry.isDirectory()) {
                     // Handle parameterized routes like [slug]
                     const isParam = entry.name.startsWith('[') && entry.name.endsWith(']');
@@ -68,11 +68,11 @@ async function scanProjectPages(pagesBasePath: string): Promise<ProjectPage[]> {
                     // Found a page file
                     const pageUrl = urlPath || '/';
                     const pageName = path.basename(dirPath) || 'home';
-                    
+
                     try {
                         const jayHtmlContent = await fs.promises.readFile(fullPath, 'utf-8');
                         const usedComponents = extractHeadlessComponents(jayHtmlContent);
-                        
+
                         pages.push({
                             name: pageName,
                             url: pageUrl,
@@ -88,7 +88,7 @@ async function scanProjectPages(pagesBasePath: string): Promise<ProjectPage[]> {
             console.warn(`Failed to scan directory ${dirPath}:`, error);
         }
     }
-    
+
     await scanDirectory(pagesBasePath);
     return pages;
 }
@@ -96,18 +96,21 @@ async function scanProjectPages(pagesBasePath: string): Promise<ProjectPage[]> {
 // Helper function to scan components in the project
 async function scanProjectComponents(componentsBasePath: string): Promise<ProjectComponent[]> {
     const components: ProjectComponent[] = [];
-    
+
     try {
         const entries = await fs.promises.readdir(componentsBasePath, { withFileTypes: true });
-        
+
         for (const entry of entries) {
             if (entry.isFile() && entry.name.endsWith(JAY_EXTENSION)) {
                 const componentName = path.basename(entry.name, JAY_EXTENSION);
                 const componentPath = path.join(componentsBasePath, entry.name);
-                const contractPath = path.join(componentsBasePath, `${componentName}${JAY_CONTRACT_EXTENSION}`);
-                
+                const contractPath = path.join(
+                    componentsBasePath,
+                    `${componentName}${JAY_CONTRACT_EXTENSION}`,
+                );
+
                 const hasContract = fs.existsSync(contractPath);
-                
+
                 components.push({
                     name: componentName,
                     filePath: componentPath,
@@ -118,7 +121,7 @@ async function scanProjectComponents(componentsBasePath: string): Promise<Projec
     } catch (error) {
         console.warn(`Failed to scan components directory ${componentsBasePath}:`, error);
     }
-    
+
     return components;
 }
 
@@ -126,23 +129,23 @@ async function scanProjectComponents(componentsBasePath: string): Promise<Projec
 async function scanInstalledApps(configBasePath: string): Promise<InstalledApp[]> {
     const installedApps: InstalledApp[] = [];
     const installedAppsPath = path.join(configBasePath, 'installedApps');
-    
+
     try {
         if (!fs.existsSync(installedAppsPath)) {
             return installedApps;
         }
-        
+
         const appDirs = await fs.promises.readdir(installedAppsPath, { withFileTypes: true });
-        
+
         for (const appDir of appDirs) {
             if (appDir.isDirectory()) {
                 const appConfigPath = path.join(installedAppsPath, appDir.name, 'app.conf.yaml');
-                
+
                 try {
                     if (fs.existsSync(appConfigPath)) {
                         const configContent = await fs.promises.readFile(appConfigPath, 'utf-8');
                         const appConfig = YAML.parse(configContent);
-                        
+
                         installedApps.push({
                             name: appConfig.name || appDir.name,
                             module: appConfig.module || appDir.name,
@@ -159,14 +162,14 @@ async function scanInstalledApps(configBasePath: string): Promise<InstalledApp[]
     } catch (error) {
         console.warn(`Failed to scan installed apps directory ${installedAppsPath}:`, error);
     }
-    
+
     return installedApps;
 }
 
 // Helper function to get project name from project.conf.yaml
 async function getProjectName(configBasePath: string): Promise<string> {
     const projectConfigPath = path.join(configBasePath, 'project.conf.yaml');
-    
+
     try {
         if (fs.existsSync(projectConfigPath)) {
             const configContent = await fs.promises.readFile(projectConfigPath, 'utf-8');
@@ -176,7 +179,7 @@ async function getProjectName(configBasePath: string): Promise<string> {
     } catch (error) {
         console.warn(`Failed to read project config ${projectConfigPath}:`, error);
     }
-    
+
     return 'Unnamed Project';
 }
 
@@ -403,12 +406,14 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
         }
     };
 
-    const onGetProjectConfiguration = async (params: GetProjectConfigurationMessage): Promise<GetProjectConfigurationResponse> => {
+    const onGetProjectConfiguration = async (
+        params: GetProjectConfigurationMessage,
+    ): Promise<GetProjectConfigurationResponse> => {
         try {
             const pagesBasePath = path.resolve(config.devServer.pagesBase);
             const componentsBasePath = path.resolve(config.devServer.componentsBase);
             const configBasePath = path.resolve('./config');
-            
+
             // Scan project structure
             const [projectName, pages, components, installedApps] = await Promise.all([
                 getProjectName(configBasePath),
@@ -416,7 +421,7 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
                 scanProjectComponents(componentsBasePath),
                 scanInstalledApps(configBasePath),
             ]);
-            
+
             const projectConfiguration: ProjectConfiguration = {
                 name: projectName,
                 localPath: process.cwd(),
@@ -424,9 +429,9 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
                 components,
                 installedApps,
             };
-            
+
             console.log(`📋 Retrieved project configuration: ${projectName}`);
-            
+
             return {
                 type: 'getProjectConfiguration',
                 success: true,

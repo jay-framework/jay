@@ -42,7 +42,9 @@ export class EditorServer implements DevServerProtocol {
         publish?: (params: PublishMessage) => Promise<PublishResponse>;
         saveImage?: (params: SaveImageMessage) => Promise<SaveImageResponse>;
         hasImage?: (params: HasImageMessage) => Promise<HasImageResponse>;
-        getProjectConfiguration?: (params: GetProjectConfigurationMessage) => Promise<GetProjectConfigurationResponse>;
+        getProjectConfiguration?: (
+            params: GetProjectConfigurationMessage,
+        ) => Promise<GetProjectConfigurationResponse>;
     } = {};
 
     constructor(options: EditorServerOptions) {
@@ -137,7 +139,11 @@ export class EditorServer implements DevServerProtocol {
         this.handlers.hasImage = callback;
     }
 
-    onGetProjectConfiguration(callback: (params: GetProjectConfigurationMessage) => Promise<GetProjectConfigurationResponse>): void {
+    onGetProjectConfiguration(
+        callback: (
+            params: GetProjectConfigurationMessage,
+        ) => Promise<GetProjectConfigurationResponse>,
+    ): void {
         this.handlers.getProjectConfiguration = callback;
     }
 
@@ -238,7 +244,9 @@ export class EditorServer implements DevServerProtocol {
                 if (!this.handlers.getProjectConfiguration) {
                     throw new Error('Get project configuration handler not registered');
                 }
-                const configResult = await this.handlers.getProjectConfiguration(payload as GetProjectConfigurationMessage);
+                const configResult = await this.handlers.getProjectConfiguration(
+                    payload as GetProjectConfigurationMessage,
+                );
                 return createProtocolResponse(id, configResult);
 
             default:

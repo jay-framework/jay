@@ -40,7 +40,8 @@ export interface HasImageMessage extends BaseMessage<HasImageResponse> {
     imageId: string;
 }
 
-export interface GetProjectConfigurationMessage extends BaseMessage<GetProjectConfigurationResponse> {
+export interface GetProjectConfigurationMessage
+    extends BaseMessage<GetProjectConfigurationResponse> {
     type: 'getProjectConfiguration';
 }
 
@@ -128,8 +129,16 @@ export interface GetProjectConfigurationResponse extends BaseResponse {
 }
 
 // Union types for all messages and responses
-export type EditorProtocolMessageTypes = PublishMessage | SaveImageMessage | HasImageMessage | GetProjectConfigurationMessage;
-export type EditorProtocolResponseTypes = PublishResponse | SaveImageResponse | HasImageResponse | GetProjectConfigurationResponse;
+export type EditorProtocolMessageTypes =
+    | PublishMessage
+    | SaveImageMessage
+    | HasImageMessage
+    | GetProjectConfigurationMessage;
+export type EditorProtocolResponseTypes =
+    | PublishResponse
+    | SaveImageResponse
+    | HasImageResponse
+    | GetProjectConfigurationResponse;
 
 export interface ProtocolMessage {
     id: string;
@@ -154,7 +163,9 @@ export interface EditorProtocol {
     hasImage(params: HasImageMessage): Promise<HasImageResponse>;
 
     // Get the project configuration including pages, components, and installed apps
-    getProjectConfiguration(params: GetProjectConfigurationMessage): Promise<GetProjectConfigurationResponse>;
+    getProjectConfiguration(
+        params: GetProjectConfigurationMessage,
+    ): Promise<GetProjectConfigurationResponse>;
 }
 
 // Dev server side interface for handling editor requests

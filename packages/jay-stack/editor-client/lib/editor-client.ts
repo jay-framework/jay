@@ -58,7 +58,9 @@ export class EditorClient implements EditorProtocol {
         return this.connectionManager.sendMessage<HasImageMessage>(params);
     }
 
-    async getProjectConfiguration(params: GetProjectConfigurationMessage): Promise<GetProjectConfigurationResponse> {
+    async getProjectConfiguration(
+        params: GetProjectConfigurationMessage,
+    ): Promise<GetProjectConfigurationResponse> {
         return this.connectionManager.sendMessage<GetProjectConfigurationMessage>(params);
     }
 

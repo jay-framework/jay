@@ -100,9 +100,7 @@ function generateMessageId(): string {
 }
 
 // Protocol wrapper constructors
-export function createProtocolMessage(
-    payload: EditorProtocolMessageTypes,
-): ProtocolMessage {
+export function createProtocolMessage(payload: EditorProtocolMessageTypes): ProtocolMessage {
     return {
         id: generateMessageId(),
         timestamp: Date.now(),
