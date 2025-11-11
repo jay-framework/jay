@@ -372,6 +372,20 @@ describe('generate jay-html element', () => {
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
+        it('indirect recursion through container 2', async () => {
+            const folder = 'recursive-html/indirect-recursion-2';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        it('nested btree with accessor recursion and with-data', async () => {
+            const folder = 'recursive-html/nested-btree';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
         it('tree with conditional recursion', async () => {
             const folder = 'recursive-html/tree-with-conditional';
             const elementFile = await readFileAndGenerateElementFile(folder);
@@ -395,6 +409,39 @@ describe('generate jay-html element', () => {
 
         it('binary tree with multiple optional children', async () => {
             const folder = 'recursive-html/binary-tree';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        it('should report error when nested recursion missing context switch', async () => {
+            // Test that we catch when someone tries to access nested properties
+            // without using <with-data> or forEach to switch context
+            const folder = 'recursive-html/nested-without-context';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+
+            // Should have validation errors
+            expect(elementFile.validations.length).toBeGreaterThan(0);
+
+            // Should report that 'name' property is not found in root ViewState
+            // (because we're trying to access tree.name without switching context to tree)
+            const nameError = elementFile.validations.find(
+                (v) => v.includes('name') && v.includes('not found'),
+            );
+            expect(nameError).toBeDefined();
+            expect(nameError).toContain('the data field [name] not found in Jay data');
+
+            // Should also report that 'children' property is not found
+            const childrenError = elementFile.validations.find(
+                (v) => v.includes('children') && v.includes('not found'),
+            );
+            expect(childrenError).toBeDefined();
+            expect(childrenError).toContain('the data field [children] not found in Jay data');
+        });
+
+        it('with-data at root of body', async () => {
+            // Test that <with-data> at the root level generates proper code wrapped in de()
+            const folder = 'recursive-html/with-data-at-root';
             const elementFile = await readFileAndGenerateElementFile(folder);
             expect(elementFile.validations).toEqual([]);
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));

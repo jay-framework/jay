@@ -251,21 +251,14 @@ describe('compiler', () => {
                 );
 
                 expect(jayFile.validations).toEqual([]);
-                const types = jayFile.val.types as JayObjectType;
+                const types = assertObjectType(jayFile.val.types);
                 expect(types.name).toBe('TreeViewState');
                 expect(types.props.name).toBe(JayString);
                 expect(types.props.id).toBe(JayString);
 
-                // Check children is an array
-                expect(types.props.children).toBeInstanceOf(JayArrayType);
-                const childrenArray = types.props.children as JayArrayType;
-
-                // Check the item type is a recursive reference
-                expect(childrenArray.itemType.kind).toBe(JayTypeKind.recursive);
-                const recursiveType = childrenArray.itemType as JayRecursiveType;
+                const childrenArray = assertArrayType(types.props.children);
+                const recursiveType = assertRecursiveType(childrenArray.itemType);
                 expect(recursiveType.referencePath).toBe('$/data');
-
-                // Check that the recursive reference is resolved to the root type
                 expect(recursiveType.resolvedType).toBe(types);
                 expect(recursiveType.name).toBe('TreeViewState');
             });
@@ -286,17 +279,13 @@ describe('compiler', () => {
                 );
 
                 expect(jayFile.validations).toEqual([]);
-                const types = jayFile.val.types as JayObjectType;
+                const types = assertObjectType(jayFile.val.types);
                 expect(types.name).toBe('LinkedListViewState');
                 expect(types.props.value).toBe(JayString);
                 expect(types.props.id).toBe(JayString);
 
-                // Check next is a recursive reference
-                expect(types.props.next.kind).toBe(JayTypeKind.recursive);
-                const recursiveType = types.props.next as JayRecursiveType;
+                const recursiveType = assertRecursiveType(types.props.next as JayRecursiveType);
                 expect(recursiveType.referencePath).toBe('$/data');
-
-                // Check that the recursive reference is resolved to the root type
                 expect(recursiveType.resolvedType).toBe(types);
                 expect(recursiveType.name).toBe('LinkedListViewState');
             });
@@ -319,23 +308,46 @@ describe('compiler', () => {
                 );
 
                 expect(jayFile.validations).toEqual([]);
-                const types = jayFile.val.types as JayObjectType;
+                const types = assertObjectType(jayFile.val.types);
                 expect(types.name).toBe('MenuViewState');
 
-                // Check submenu.items
-                const submenu = types.props.submenu as JayObjectType;
+                const submenu = assertObjectType(types.props.submenu);
                 expect(submenu.props.title).toBe(JayString);
 
-                const items = submenu.props.items as JayArrayType;
-                expect(items.itemType.kind).toBe(JayTypeKind.recursive);
-                const recursiveType = items.itemType as JayRecursiveType;
+                const items = assertArrayType(submenu.props.items);
+                const recursiveType = assertRecursiveType(items.itemType as JayRecursiveType);
                 expect(recursiveType.referencePath).toBe('$/data');
-
-                // Check that the recursive reference is resolved to the root type
                 expect(recursiveType.resolvedType).toBe(types);
                 expect(recursiveType.name).toBe('MenuViewState');
             });
 
+            it('should parse indirect array recursion through container', async () => {
+                let jayFile = await parseJayFile(
+                    jayFileWith(
+                        ` data:
+                                    tree:
+                                      - id: string
+                                        children: $/data/tree`,
+                        '<body></body>',
+                    ),
+                    'Menu',
+                    '',
+                    {},
+                    defaultImportResolver,
+                );
+
+                expect(jayFile.validations).toEqual([]);
+                const types = assertObjectType(jayFile.val.types);
+                expect(types.name).toBe('MenuViewState');
+
+                const tree = assertArrayType(types.props.tree);
+                const treeItem = assertObjectType(tree.itemType);
+                expect(treeItem.props.id).toBe(JayString);
+
+                const recursive = assertRecursiveType(treeItem.props.children);
+                // check the recursion
+                expect(recursive.resolvedType).toBe(types.props.tree);
+            });
             it('should report error for invalid recursive reference path', async () => {
                 let jayFile = await parseJayFile(
                     jayFileWith(
@@ -353,7 +365,7 @@ describe('compiler', () => {
                 expect(jayFile.validations.length).toBeGreaterThan(0);
                 expect(jayFile.validations[0]).toContain('invalid recursive reference');
                 expect(jayFile.validations[0]).toContain('$/invalid/path');
-                expect(jayFile.validations[0]).toContain('must start with $/data');
+                expect(jayFile.validations[0]).toContain('must start with "$/data"');
             });
 
             it('should report error for recursive reference without $ prefix', async () => {
@@ -373,6 +385,29 @@ describe('compiler', () => {
                 expect(jayFile.validations).toContain(
                     'invalid type [array<#/data>] found at [data.children]',
                 );
+            });
+
+            it('should report error for recursive reference to non-existent property', async () => {
+                let jayFile = await parseJayFile(
+                    jayFileWith(
+                        ` data:
+                            |   tree:
+                            |     name: string
+                            |     id: string
+                            |     children: $/data/nonexistent`,
+                        '<body></body>',
+                    ),
+                    'Tree',
+                    '',
+                    {},
+                    defaultImportResolver,
+                );
+
+                expect(jayFile.validations.length).toBeGreaterThan(0);
+                expect(jayFile.validations[0]).toContain('invalid recursive reference');
+                expect(jayFile.validations[0]).toContain('$/data/nonexistent');
+                expect(jayFile.validations[0]).toContain('Property "nonexistent" not found');
+                expect(jayFile.validations[0]).toContain('Available properties');
             });
 
             it('should report error for malformed array syntax', async () => {
@@ -887,3 +922,18 @@ describe('compiler', () => {
         });
     });
 });
+
+function assertArrayType(value: JayType): JayArrayType {
+    expect(value.kind).toBe(JayTypeKind.array);
+    return value as JayArrayType;
+}
+
+function assertObjectType(value: JayType): JayObjectType {
+    expect(value.kind).toBe(JayTypeKind.object);
+    return value as JayObjectType;
+}
+
+function assertRecursiveType(value: JayType): JayRecursiveType {
+    expect(value.kind).toBe(JayTypeKind.recursive);
+    return value as JayRecursiveType;
+}

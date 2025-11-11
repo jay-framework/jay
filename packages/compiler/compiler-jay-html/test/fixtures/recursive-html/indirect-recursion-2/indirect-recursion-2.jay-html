@@ -1,0 +1,29 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+  tree:
+  - id: string
+    name: string
+    hasChildren: boolean
+    isOpen: boolean
+    children: $/data/tree
+    </script>
+</head>
+<body>
+<nav class="menu">
+    <with-data accessor="tree">
+        <ul class="menu-list" ref="menuItem">
+            <li forEach="." trackBy="id">
+                <a href="#">
+                    <span class="name">{name}</span>
+                </a>
+                <div if="hasChildren && isOpen">
+                    <recurse ref="menuItem" accessor="children"/>
+                </div>
+            </li>
+        </ul>
+    </with-data>
+</nav>
+</body>
+</html>

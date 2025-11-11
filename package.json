@@ -23,7 +23,7 @@
     "version:packages:patch": "wsrun -p '@jay-framework/*' -s -e --report --prefix version patch --deferred && yarn version apply --all",
     "version:packages:minor": "wsrun -p '@jay-framework/*' -s -e --report --prefix version minor --deferred && yarn version apply --all",
     "version:packages:major": "wsrun -p '@jay-framework/*' -s -e --report --prefix version major --deferred && yarn version apply --all",
-    "publish": "node scripts/publish.js",
+    "publish": "node scripts/publish.cjs",
     "publish:interactive": "yarn workspaces foreach -p --no-private exec \"yarn npm publish --access public\"",
     "publish:manual": "yarn workspaces foreach -p --no-private exec \"yarn npm publish --access public --otp ${NPM_OTP}\""
   },

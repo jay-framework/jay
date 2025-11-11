@@ -4,6 +4,7 @@ import {
     ImportsFor,
     isArrayType,
     isPromiseType,
+    JayArrayType,
     JayAtomicType,
     JayComponentType,
     JayErrorType,
@@ -53,6 +54,7 @@ import {
     isForEach,
     isRecurse,
     isRecurseWithData,
+    isWithData,
 } from './jay-html-helpers';
 import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
@@ -333,6 +335,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
                     isConditional(_) ||
                     isForEach(_) ||
                     isRecurseWithData(_) ||
+                    isWithData(_) ||
                     checkAsync(_).isAsync,
             )
             .reduce((prev, current) => prev || current, false);
@@ -476,7 +479,62 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             let htmlElement = node as HTMLElement;
             // if (isForEach(htmlElement)) dynamicRef = true;
 
-            if (isRecurse(htmlElement)) {
+            if (isWithData(htmlElement)) {
+                // Handle <with-data accessor="expression"> element
+                const accessor = htmlElement.getAttribute('accessor');
+
+                if (!accessor) {
+                    return new RenderFragment('', Imports.none(), [
+                        '<with-data> element must have an "accessor" attribute',
+                    ]);
+                }
+
+                // Parse the accessor to get the new context type
+                const accessorExpr = parseAccessor(accessor, variables);
+
+                // Create new variables context with the resolved type
+                // For arrays, this allows forEach="." to iterate over the array
+                // For objects, this allows direct property access
+                // Count depth by traversing parent chain
+                let depth = 1;
+                let parent = variables;
+                const maxDepth = 100; // Safety limit
+                while (parent && parent.parent && depth < maxDepth) {
+                    depth++;
+                    parent = parent.parent;
+                }
+                const newVariables = new Variables(accessorExpr.resolvedType, variables, depth);
+
+                // Render children (not the with-data element itself) with new context
+                const childNodes = htmlElement.childNodes.filter(
+                    (child) =>
+                        child.nodeType !== NodeType.TEXT_NODE || child.innerText.trim() !== '',
+                );
+
+                if (childNodes.length !== 1) {
+                    return new RenderFragment('', Imports.none(), [
+                        `<with-data> element must have exactly one child element, but found ${childNodes.length}`,
+                    ]);
+                }
+
+                const childElement = renderNode(childNodes[0], {
+                    ...context,
+                    variables: newVariables,
+                    indent: indent,
+                });
+
+                // Generate accessor function for withData
+                const accessorFunction = `(${variables.currentVar}: ${variables.currentType.name}) => ${accessorExpr.render().rendered}`;
+
+                // Wrap in withData call
+                return new RenderFragment(
+                    `${indent.firstLine}withData(${accessorFunction}, () => ${childElement.rendered})`,
+                    childElement.imports.plus(Import.withData).plus(accessorExpr.render().imports),
+                    [...accessorExpr.validations, ...childElement.validations],
+                    childElement.refs,
+                    childElement.recursiveRegions,
+                );
+            } else if (isRecurse(htmlElement)) {
                 // Handle <recurse ref="name" accessor="path" /> element
                 const refAttr = htmlElement.getAttribute('ref');
                 const accessorAttr = htmlElement.getAttribute('accessor');
@@ -501,7 +559,11 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 // Recursion without accessor (or with ".") relies on forEach context, so needs explicit guard
                 if ((!accessorAttr || accessorAttr === '.') && !context.isInsideGuard) {
                     return new RenderFragment('', Imports.none(), [
-                        `<recurse ref="${refAttr}"> without accessor must be inside a forEach loop to provide context and prevent infinite recursion`,
+                        `<recurse ref="${refAttr}"> without accessor must be inside a forEach loop or conditional (if="...") to provide context and prevent infinite recursion. ` +
+                            `Suggestions: ` +
+                            `1) Wrap in a forEach loop if iterating over an array (e.g., <li forEach="children" trackBy="id"><recurse ref="${refAttr}"/></li>), ` +
+                            `2) Add an accessor attribute if accessing a nested property (e.g., <recurse ref="${refAttr}" accessor="child"/>), or ` +
+                            `3) Wrap in a conditional to guard the recursion (e.g., <div if="hasChild"><recurse ref="${refAttr}" accessor="child"/></div>).`,
                     ]);
                 }
 
@@ -515,6 +577,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 if (accessorAttr && accessorAttr !== '.') {
                     const accessor = parseAccessor(accessorAttr, variables);
                     const accessorCode = accessor.render();
+
                     // withData expects a function: (data) => data.child
                     const accessorFunction = `(${variables.currentVar}) => ${accessorCode.rendered}`;
                     return new RenderFragment(
@@ -722,10 +785,20 @@ function renderFunctionImplementation(
     const rootElement = ensureSingleChildElement(rootBodyElement);
     let renderedRoot: RenderFragment;
     if (rootElement.val) {
+        // Check if the root element is a directive that needs wrapping
+        const needsWrapper =
+            isWithData(rootElement.val) ||
+            isForEach(rootElement.val) ||
+            isConditional(rootElement.val) ||
+            isRecurse(rootElement.val) ||
+            checkAsync(rootElement.val).isAsync;
+
+        const indent = needsWrapper ? new Indent('        ') : new Indent('    ');
+
         renderedRoot = renderNode(rootElement.val, {
             variables,
             importedSymbols,
-            indent: new Indent('    '),
+            indent: indent,
             dynamicRef: false,
             importedSandboxedSymbols,
             refNameGenerator: new RefNameGenerator(),
@@ -735,6 +808,19 @@ function renderFunctionImplementation(
             recursiveRegions: [], // Initialize empty recursive regions stack
             isInsideGuard: false, // Not inside any guard initially
         });
+
+        if (needsWrapper) {
+            // Wrap the directive in a dynamic element
+
+            // Wrap in a dynamic element
+            renderedRoot = new RenderFragment(
+                `de('div', {}, [\n${renderedRoot.rendered}\n    ])`,
+                renderedRoot.imports.plus(Import.dynamicElement),
+                renderedRoot.validations,
+                renderedRoot.refs,
+                renderedRoot.recursiveRegions,
+            );
+        }
         renderedRoot = optimizeRefs(renderedRoot, headlessImports);
     } else renderedRoot = new RenderFragment('', Imports.none(), rootElement.validations);
     const elementType = baseElementName + 'Element';

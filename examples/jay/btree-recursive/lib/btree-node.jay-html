@@ -2,15 +2,17 @@
   <head>
     <script type="application/jay-data">
       data:
-        value: number
-        id: string
-        hasLeft: boolean
-        hasRight: boolean
-        left: $/data
-        right: $/data
+        tree:
+            value: number
+            id: string
+            hasLeft: boolean
+            hasRight: boolean
+            left: $/data/tree
+            right: $/data/tree
     </script>
   </head>
   <body>
+    <with-data accessor="tree">
     <div class="btree-node" ref="treeNode">
       <div class="node-container">
         <div ref="nodeValue" class="node-value">{value}</div>
@@ -26,6 +28,8 @@
         </div>
       </div>
     </div>
+    </with-data>
   </body>
 </html>
+
 

@@ -3,6 +3,7 @@ import {
     Imports,
     isImportedType,
     isObjectType,
+    isRecursiveType,
     JayArrayType,
     JayImportedType,
     JayImportName,
@@ -65,6 +66,8 @@ export class Variables {
             else if (isObjectType(curr) && curr.props[member]) {
                 curr = curr.props[member];
                 if (isImportedType(curr)) curr = curr.type;
+                // Follow recursive type references
+                if (isRecursiveType(curr) && curr.resolvedType) curr = curr.resolvedType;
             } else {
                 validations.push(`the data field [${accessor.join('.')}] not found in Jay data`);
                 curr = JayUnknown;

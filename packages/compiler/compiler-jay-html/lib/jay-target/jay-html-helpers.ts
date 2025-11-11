@@ -28,6 +28,13 @@ export function isRecurseWithData(node: Node): boolean {
     return accessor != null && accessor !== '.';
 }
 
+export function isWithData(node: Node): boolean {
+    if (node.nodeType === NodeType.TEXT_NODE) return false;
+    const element = node as HTMLElement;
+    if (!element.rawTagName) return false;
+    return element.rawTagName.toLowerCase() === 'with-data';
+}
+
 export interface AsyncDirectiveType {
     directive?: string;
     import?: ImportName;

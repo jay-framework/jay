@@ -176,3 +176,139 @@ Since Jay uses immutable view state, the `trackBy` attribute is essential for pr
 ```
 
 In this example, each `ProductCard` component receives the entire product object as its context.
+
+## Recursive Rendering
+
+Jay-HTML supports recursive component structures where elements can reference themselves, enabling the rendering of tree-like and nested data structures.
+
+### Defining Recursive Types
+
+Recursive types are defined in the data contract using the `$/data` or `$/data/path` syntax:
+
+```yaml
+data:
+  title: string
+  tree:
+    id: string
+    name: string
+    children: $/data/tree
+```
+
+The `$/data/tree` reference creates a recursive type where `children` has the same type as `tree` itself.
+
+### Nested Recursive References
+
+You can reference nested types deeper in the data structure:
+
+```yaml
+data:
+  root:
+    value: number
+    nested:
+      id: string
+      children: $/data/root/nested
+```
+
+This creates a recursive type at `root.nested` where `children` has the same type as the parent `nested` object.
+
+### Creating Recursive Regions
+
+Use the `ref` attribute to mark an element as a recursive region, then use `<recurse>` to trigger recursion:
+
+```html
+<div class="tree-node" ref="treeNode">
+  <div class="node-name">{name}</div>
+  <div if="children">
+    <recurse ref="treeNode" accessor="children" />
+  </div>
+</div>
+```
+
+The compiler generates a recursive function for the referenced element, and `<recurse>` calls that function with the specified data.
+
+### Context Switching with `<with-data>`
+
+When your recursive data is nested within a parent structure, use `<with-data>` to switch the view state context:
+
+```yaml
+data:
+  title: string
+  description: string
+  btree:
+    value: number
+    left: $/data/btree
+    right: $/data/btree
+```
+
+```html
+<div class="tree-container">
+  <h1>{title}</h1>
+  <p>{description}</p>
+  <with-data accessor="btree">
+    <div class="tree-node" ref="treeNode">
+      <div>{value}</div>
+      <div if="left">
+        <recurse ref="treeNode" accessor="left" />
+      </div>
+      <div if="right">
+        <recurse ref="treeNode" accessor="right" />
+      </div>
+    </div>
+  </with-data>
+</div>
+```
+
+The `<with-data>` element:
+
+- Accepts an `accessor` attribute specifying a property path
+- Changes the view state context for its children
+- Must have exactly one child element
+- Works with both object and array types
+
+This allows the recursive region to operate on a consistent type (`btree`) whether it's at the root level or in a recursive call.
+
+### Identity Accessor with `forEach`
+
+Within a `<with-data>` context, you can use `forEach="."` to iterate over the current context:
+
+```html
+<with-data accessor="tree">
+  <ul ref="menuItem">
+    <li forEach="." trackBy="id">
+      <span>{name}</span>
+      <div if="children">
+        <recurse ref="menuItem" accessor="children" />
+      </div>
+    </li>
+  </ul>
+</with-data>
+```
+
+The `forEach="."` syntax means "iterate over the current context", which is useful when `<with-data>` has already narrowed the context to an array.
+
+### Recursion Guards
+
+Recursion requires proper guards to prevent infinite loops:
+
+- **Recursion with accessor** (e.g., `<recurse accessor="children"/>`) uses `withData` which includes a built-in null check
+- **Recursion without accessor** (e.g., `<recurse/>` in a forEach loop) must be inside a `forEach` or conditional to prevent infinite recursion
+
+Example with forEach (no accessor needed):
+
+```html
+<ul ref="list">
+  <li forEach="items" trackBy="id">
+    {text}
+    <recurse ref="list" />
+  </li>
+</ul>
+```
+
+Example with accessor (built-in guard):
+
+```html
+<div ref="node">
+  {value}
+  <recurse ref="node" accessor="child" />
+</div>
+```

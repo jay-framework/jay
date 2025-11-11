@@ -48,6 +48,8 @@ export function hasRefs(refs: RefsTree, includingAutoRefs: boolean) {
 export function nestRefs(path: string[], renderFragment: RenderFragment): RenderFragment {
     let refs = renderFragment.refs;
     for (let index = path.length - 1; index >= 0; --index) {
+        // Skip "." which is an identity accessor and doesn't represent a property path
+        if (path[index] === '.') continue;
         refs = mkRefsTree([], { [path[index]]: refs }, refs.repeated);
     }
     return new RenderFragment(

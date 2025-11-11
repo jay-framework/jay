@@ -568,6 +568,21 @@ For single optional children (linked lists, binary trees):
 </script>
 ```
 
+For nested recursive structures, use path syntax to reference nested types:
+
+```html
+<script type="application/jay-data">
+  data:
+    title: string
+    tree:
+      id: string
+      name: string
+      children: $/data/tree  # References the tree type nested in data
+</script>
+```
+
+The `$/data/path` syntax allows you to reference any nested type in your data structure for recursion.
+
 #### Array-Based Recursion (forEach)
 
 For homogeneous tree structures where all children share the same structure:
@@ -652,6 +667,77 @@ For heterogeneous structures where different paths lead to children (binary tree
 - Each accessor uses `withData` runtime function which includes built-in null checking
 - Recursion is self-guarding - automatically stops when accessor returns `null`
 - The `if` conditions are optional for safety (built into `withData`) but useful for UX
+
+#### Context Switching with `<with-data>`
+
+When recursive data is nested within a parent structure (e.g., `data.tree` instead of just `data`), use `<with-data>` to switch the view state context before entering the recursive region:
+
+```html
+<html>
+  <head>
+    <script type="application/jay-data">
+      data:
+        title: string
+        description: string
+        btree:
+          value: number
+          id: string
+          hasLeft: boolean
+          hasRight: boolean
+          left: $/data/btree
+          right: $/data/btree
+    </script>
+  </head>
+  <body>
+    <div class="tree-container">
+      <h1>{title}</h1>
+      <p>{description}</p>
+
+      <!-- Switch context to btree for recursive region -->
+      <with-data accessor="btree">
+        <div class="tree-node" ref="treeNode">
+          <div class="node-value">{value}</div>
+          <div class="children">
+            <div class="left-child" if="hasLeft">
+              <recurse ref="treeNode" accessor="left" />
+            </div>
+            <div class="right-child" if="hasRight">
+              <recurse ref="treeNode" accessor="right" />
+            </div>
+          </div>
+        </div>
+      </with-data>
+    </div>
+  </body>
+</html>
+```
+
+**Key Points:**
+
+- `<with-data accessor="property">` switches the view state context to the specified property
+- Inside `<with-data>`, properties are accessed relative to the new context
+- The recursive region operates on a consistent type whether called initially or recursively
+- `<with-data>` must have exactly one child element
+- Works with both object and array types
+
+**Identity Accessor with forEach:**
+
+When `<with-data>` narrows context to an array, use `forEach="."` to iterate over it:
+
+```html
+<with-data accessor="tree">
+  <ul ref="menuItem">
+    <li forEach="." trackBy="id">
+      <span>{name}</span>
+      <div if="children">
+        <recurse ref="menuItem" accessor="children" />
+      </div>
+    </li>
+  </ul>
+</with-data>
+```
+
+The `forEach="."` syntax means "iterate over the current context", which is useful after `<with-data>` has already narrowed to an array.
 
 #### Linked List Example
 
