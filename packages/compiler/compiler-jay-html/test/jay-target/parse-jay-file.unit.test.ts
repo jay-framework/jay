@@ -348,6 +348,45 @@ describe('compiler', () => {
                 // check the recursion
                 expect(recursive.resolvedType).toBe(types.props.tree);
             });
+
+            it('should parse indirect nested array recursion', async () => {
+                let jayFile = await parseJayFile(
+                    jayFileWith(
+                        `data:
+                                      object1:
+                                            arrayObject2:
+                                            -     id: string
+                                                  arrayObject3:
+                                                  -     id: string
+                                                        subContract: $/data/object1/arrayObject2/arrayObject3`,
+                        '<body></body>',
+                    ),
+                    'Menu',
+                    '',
+                    {},
+                    defaultImportResolver,
+                );
+
+                expect(jayFile.validations).toEqual([]);
+                const types = assertObjectType(jayFile.val.types);
+                expect(types.name).toBe('MenuViewState');
+
+                // Navigate: object1 -> arrayObject2 (array) -> arrayObject3 (array) -> subContract (recursive)
+                const object1 = assertObjectType(types.props.object1);
+                const arrayObject2 = assertArrayType(object1.props.arrayObject2);
+                const arrayObject2Item = assertObjectType(arrayObject2.itemType);
+                expect(arrayObject2Item.props.id).toBe(JayString);
+
+                const arrayObject3 = assertArrayType(arrayObject2Item.props.arrayObject3);
+                const arrayObject3Item = assertObjectType(arrayObject3.itemType);
+                expect(arrayObject3Item.props.id).toBe(JayString);
+
+                const recursive = assertRecursiveType(arrayObject3Item.props.subContract);
+                // check the recursion - it should point to arrayObject3 itself
+                expect(recursive.referencePath).toBe('$/data/object1/arrayObject2/arrayObject3');
+                expect(recursive.resolvedType).toBe(arrayObject3);
+            })
+
             it('should report error for invalid recursive reference path', async () => {
                 let jayFile = await parseJayFile(
                     jayFileWith(
