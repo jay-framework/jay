@@ -27,7 +27,7 @@ export function redirect3xx(status: number, location: string): Redirect3xx {
 }
 
 export function partialRender<ViewState extends object, CarryForward>(
-    rendered: Partial<ViewState>,
+    rendered: ViewState,
     carryForward: CarryForward,
 ): PartialRender<ViewState, CarryForward> {
     return { kind: 'PartialRender', rendered, carryForward };
