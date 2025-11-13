@@ -437,6 +437,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             childElement.imports.plus(asyncType.import),
             [...getPromiseFragment.validations, ...childElement.validations],
             childElement.refs,
+            [...getPromiseFragment.recursiveRegions, ...childElement.recursiveRegions],
         );
     }
 
@@ -955,6 +956,7 @@ ${indent.firstLine}])`,
             childElement.imports.plus(importMap[asyncType]),
             [...renderedAsync.validations, ...childElement.validations],
             childElement.refs,
+            [...renderedAsync.recursiveRegions, ...childElement.recursiveRegions],
         );
     }
 
