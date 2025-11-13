@@ -29,12 +29,11 @@ export async function loadPageParts(
         .catch(() => false);
 
     const parts: DevServerPagePart[] = [];
-    const pageCode = path.resolve(pagesBase, './page.ts');
     if (exists) {
         const pageComponent = (await vite.ssrLoadModule(route.compPath)).page;
         parts.push({
             compDefinition: pageComponent,
-            clientImport: `import {page} from '${pageCode}'`,
+            clientImport: `import {page} from '${route.compPath}'`,
             clientPart: `{comp: page.comp, contextMarkers: []}`,
         });
     }
