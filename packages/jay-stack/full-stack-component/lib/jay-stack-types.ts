@@ -25,7 +25,7 @@ export interface Redirect3xx {
 
 export interface PartialRender<ViewState extends object, CarryForward> {
     kind: 'PartialRender';
-    rendered: Partial<ViewState>;
+    rendered: ViewState;
     carryForward: CarryForward;
 }
 
