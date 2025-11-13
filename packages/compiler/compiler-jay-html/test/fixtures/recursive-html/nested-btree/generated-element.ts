@@ -30,7 +30,9 @@ export interface NestedBtreeViewState {
 }
 
 export interface NestedBtreeElementRefs {
-    treeNode: HTMLElementProxy<BtreeOfNestedBtreeViewState, HTMLDivElement>;
+    btree: {
+        treeNode: HTMLElementProxy<BtreeOfNestedBtreeViewState, HTMLDivElement>;
+    };
 }
 
 export type NestedBtreeElement = JayElement<NestedBtreeViewState, NestedBtreeElementRefs>;
@@ -43,7 +45,16 @@ export type NestedBtreeElementPreRender = [NestedBtreeElementRefs, NestedBtreeEl
 export type NestedBtreeContract = JayContract<NestedBtreeViewState, NestedBtreeElementRefs>;
 
 export function render(options?: RenderElementOptions): NestedBtreeElementPreRender {
-    const [refManager, [refTreeNode]] = ReferencesManager.for(options, ['treeNode'], [], [], []);
+    const [btreeRefManager, [refTreeNode]] = ReferencesManager.for(
+        options,
+        ['treeNode'],
+        [],
+        [],
+        [],
+    );
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
+        btree: btreeRefManager,
+    });
 
     function renderRecursiveRegion_treeNode(): BaseJayElement<BtreeOfNestedBtreeViewState> {
         return e(

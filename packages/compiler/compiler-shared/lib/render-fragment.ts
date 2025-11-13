@@ -57,6 +57,7 @@ export function nestRefs(path: string[], renderFragment: RenderFragment): Render
         renderFragment.imports,
         renderFragment.validations,
         refs,
+        renderFragment.recursiveRegions,
     );
 }
 

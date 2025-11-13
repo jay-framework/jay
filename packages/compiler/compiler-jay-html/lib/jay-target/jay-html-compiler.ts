@@ -526,13 +526,17 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 // Generate accessor function for withData
                 const accessorFunction = `(${variables.currentVar}: ${variables.currentType.name}) => ${accessorExpr.render().rendered}`;
 
+                // Nest refs under the accessor path (e.g., refs inside <with-data accessor="tree"> 
+                // should be nested under the "tree" key)
+                const nestedChildElement = nestRefs(accessorExpr.terms, childElement);
+
                 // Wrap in withData call
                 return new RenderFragment(
-                    `${indent.firstLine}withData(${accessorFunction}, () => ${childElement.rendered})`,
-                    childElement.imports.plus(Import.withData).plus(accessorExpr.render().imports),
-                    [...accessorExpr.validations, ...childElement.validations],
-                    childElement.refs,
-                    childElement.recursiveRegions,
+                    `${indent.firstLine}withData(${accessorFunction}, () => ${nestedChildElement.rendered})`,
+                    nestedChildElement.imports.plus(Import.withData).plus(accessorExpr.render().imports),
+                    [...accessorExpr.validations, ...nestedChildElement.validations],
+                    nestedChildElement.refs,
+                    nestedChildElement.recursiveRegions,
                 );
             } else if (isRecurse(htmlElement)) {
                 // Handle <recurse ref="name" accessor="path" /> element
