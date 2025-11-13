@@ -62,6 +62,7 @@ export class JayImportedType implements JayType {
     constructor(
         public readonly name: string,
         public readonly type: JayType,
+        public readonly isOptional: boolean = false,
     ) {}
     readonly kind = JayTypeKind.imported;
 }

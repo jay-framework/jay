@@ -312,7 +312,7 @@ function parseTypes(
             jayYaml.data, // Pass root data for recursive reference validation
         );
         const headlessImportedTypes = Object.fromEntries(
-            headlessImports.map((_) => [_.key, new JayImportedType(_.rootType.name, _.rootType)]),
+            headlessImports.map((_) => [_.key, new JayImportedType(_.rootType.name, _.rootType, true)]),
         );
         const finalType = new JayObjectType(resolvedType.name, {
             ...headlessImportedTypes,
