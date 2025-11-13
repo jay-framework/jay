@@ -118,15 +118,19 @@ function validateRecursivePath(
     const traversedPath = ['data'];
     for (let i = 1; i < pathParts.length; i++) {
         const part = pathParts[i];
-        
+
         // If currentData is an array, we need to look inside the array's item type (first element)
         if (Array.isArray(currentData)) {
             if (currentData.length === 0) {
-                return `Cannot navigate through empty array at path "$/` + traversedPath.join('/') + `"`;
+                return (
+                    `Cannot navigate through empty array at path "$/` +
+                    traversedPath.join('/') +
+                    `"`
+                );
             }
             currentData = currentData[0];
         }
-        
+
         if (!currentData || typeof currentData !== 'object' || !(part in currentData)) {
             const availableKeys =
                 currentData && typeof currentData === 'object' ? Object.keys(currentData) : [];
@@ -312,7 +316,10 @@ function parseTypes(
             jayYaml.data, // Pass root data for recursive reference validation
         );
         const headlessImportedTypes = Object.fromEntries(
-            headlessImports.map((_) => [_.key, new JayImportedType(_.rootType.name, _.rootType)]),
+            headlessImports.map((_) => [
+                _.key,
+                new JayImportedType(_.rootType.name, _.rootType, true),
+            ]),
         );
         const finalType = new JayObjectType(resolvedType.name, {
             ...headlessImportedTypes,

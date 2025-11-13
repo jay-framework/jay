@@ -385,7 +385,7 @@ describe('compiler', () => {
                 // check the recursion - it should point to arrayObject3 itself
                 expect(recursive.referencePath).toBe('$/data/object1/arrayObject2/arrayObject3');
                 expect(recursive.resolvedType).toBe(arrayObject3);
-            })
+            });
 
             it('should report error for invalid recursive reference path', async () => {
                 let jayFile = await parseJayFile(
@@ -499,6 +499,7 @@ describe('compiler', () => {
                                 type: {
                                     name: 'comp1',
                                     kind: JayTypeKind.imported,
+                                    isOptional: false,
                                     type: {
                                         api: [],
                                         name: 'comp1',
@@ -518,6 +519,7 @@ describe('compiler', () => {
                                 type: {
                                     name: 'comp3',
                                     kind: JayTypeKind.imported,
+                                    isOptional: false,
                                     type: {
                                         api: [],
                                         name: 'comp2',
@@ -536,6 +538,7 @@ describe('compiler', () => {
                                 type: {
                                     name: 'comp4',
                                     kind: JayTypeKind.imported,
+                                    isOptional: false,
                                     type: {
                                         api: [],
                                         name: 'comp4',
@@ -554,6 +557,7 @@ describe('compiler', () => {
                                 type: {
                                     name: 'comp5',
                                     kind: JayTypeKind.imported,
+                                    isOptional: false,
                                     type: {
                                         api: [],
                                         name: 'comp5',
@@ -572,6 +576,7 @@ describe('compiler', () => {
                                 type: {
                                     name: 'comp6',
                                     kind: JayTypeKind.imported,
+                                    isOptional: false,
                                     type: {
                                         api: [],
                                         name: 'comp6',

@@ -28,7 +28,9 @@ export interface WithDataAtRootViewState {
 }
 
 export interface WithDataAtRootElementRefs {
-    treeNode: HTMLElementProxy<TreeOfWithDataAtRootViewState, HTMLDivElement>;
+    tree: {
+        treeNode: HTMLElementProxy<TreeOfWithDataAtRootViewState, HTMLDivElement>;
+    };
 }
 
 export type WithDataAtRootElement = JayElement<WithDataAtRootViewState, WithDataAtRootElementRefs>;
@@ -47,7 +49,16 @@ export type WithDataAtRootContract = JayContract<
 >;
 
 export function render(options?: RenderElementOptions): WithDataAtRootElementPreRender {
-    const [refManager, [refTreeNode]] = ReferencesManager.for(options, ['treeNode'], [], [], []);
+    const [treeRefManager, [refTreeNode]] = ReferencesManager.for(
+        options,
+        ['treeNode'],
+        [],
+        [],
+        [],
+    );
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
+        tree: treeRefManager,
+    });
 
     function renderRecursiveRegion_treeNode(): BaseJayElement<TreeOfWithDataAtRootViewState> {
         return e(

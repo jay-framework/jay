@@ -8,7 +8,7 @@ import {
 } from '../counter/counter.jay-contract?jay-workerSandbox';
 
 export interface PageUsingCounterViewState {
-    counter: CounterViewState;
+    counter?: CounterViewState;
 }
 
 export interface PageUsingCounterElementRefs {

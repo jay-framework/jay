@@ -10,6 +10,7 @@ import {
     dynamicElement as de,
     forEach,
     ConstructContext,
+    HTMLElementCollectionProxy,
     HTMLElementProxy,
     RenderElementOptions,
     JayContract,
@@ -28,7 +29,13 @@ export interface IndirectRecursion2ViewState {
 }
 
 export interface IndirectRecursion2ElementRefs {
-    menuItem: HTMLElementProxy<Array<TreeOfIndirectRecursion2ViewState>, HTMLUListElement>;
+    tree: {
+        menuItemName: HTMLElementCollectionProxy<
+            TreeOfIndirectRecursion2ViewState,
+            HTMLSpanElement
+        >;
+        menuItem: HTMLElementProxy<Array<TreeOfIndirectRecursion2ViewState>, HTMLUListElement>;
+    };
 }
 
 export type IndirectRecursion2Element = JayElement<
@@ -50,7 +57,16 @@ export type IndirectRecursion2Contract = JayContract<
 >;
 
 export function render(options?: RenderElementOptions): IndirectRecursion2ElementPreRender {
-    const [refManager, [refMenuItem]] = ReferencesManager.for(options, ['menuItem'], [], [], []);
+    const [treeRefManager, [refMenuItem, refMenuItemName]] = ReferencesManager.for(
+        options,
+        ['menuItem'],
+        ['menuItemName'],
+        [],
+        [],
+    );
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
+        tree: treeRefManager,
+    });
 
     function renderRecursiveRegion_menuItem(): BaseJayElement<
         Array<TreeOfIndirectRecursion2ViewState>
@@ -64,7 +80,12 @@ export function render(options?: RenderElementOptions): IndirectRecursion2Elemen
                     (vs2: TreeOfIndirectRecursion2ViewState) => {
                         return de('li', {}, [
                             e('a', { href: '#' }, [
-                                e('span', { class: 'name' }, [dt((vs2) => vs2.name)]),
+                                e(
+                                    'span',
+                                    { class: 'name' },
+                                    [dt((vs2) => vs2.name)],
+                                    refMenuItemName(),
+                                ),
                             ]),
                             c(
                                 (vs2) => vs2.hasChildren && vs2.isOpen,

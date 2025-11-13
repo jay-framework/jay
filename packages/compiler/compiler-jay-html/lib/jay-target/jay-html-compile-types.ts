@@ -22,7 +22,8 @@ function renderInterface(aType: JayType): string {
                 .map((prop) => {
                     let childType = aType.props[prop];
                     if (childType instanceof JayImportedType) {
-                        return `  ${prop}: ${childType.name}`;
+                        const optional = childType.isOptional ? '?' : '';
+                        return `  ${prop}${optional}: ${childType.name}`;
                     } else if (isObjectType(childType)) {
                         childInterfaces.push(renderInterface(childType));
                         return `  ${prop}: ${childType.name}`;

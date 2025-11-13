@@ -15,8 +15,8 @@ data:
     <with-data accessor="tree">
         <ul class="menu-list" ref="menuItem">
             <li forEach="." trackBy="id">
-                <a href="#">
-                    <span class="name">{name}</span>
+                <a href="#" >
+                    <span class="name" ref="menu-item-name">{name}</span>
                 </a>
                 <div if="hasChildren && isOpen">
                     <recurse ref="menuItem" accessor="children"/>
