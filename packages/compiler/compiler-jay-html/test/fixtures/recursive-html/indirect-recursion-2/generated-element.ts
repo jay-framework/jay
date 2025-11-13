@@ -30,9 +30,12 @@ export interface IndirectRecursion2ViewState {
 
 export interface IndirectRecursion2ElementRefs {
     tree: {
-        menuItemName: HTMLElementCollectionProxy<TreeOfIndirectRecursion2ViewState, HTMLSpanElement>;
+        menuItemName: HTMLElementCollectionProxy<
+            TreeOfIndirectRecursion2ViewState,
+            HTMLSpanElement
+        >;
         menuItem: HTMLElementProxy<Array<TreeOfIndirectRecursion2ViewState>, HTMLUListElement>;
-    }
+    };
 }
 
 export type IndirectRecursion2Element = JayElement<

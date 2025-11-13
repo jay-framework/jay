@@ -385,7 +385,7 @@ describe('compiler', () => {
                 // check the recursion - it should point to arrayObject3 itself
                 expect(recursive.referencePath).toBe('$/data/object1/arrayObject2/arrayObject3');
                 expect(recursive.resolvedType).toBe(arrayObject3);
-            })
+            });
 
             it('should report error for invalid recursive reference path', async () => {
                 let jayFile = await parseJayFile(
