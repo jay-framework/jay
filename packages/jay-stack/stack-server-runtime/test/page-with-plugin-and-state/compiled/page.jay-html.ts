@@ -15,7 +15,7 @@ import {
 } from '../../simple-plugin/compiled/simple-plugin.jay-contract';
 
 export interface PageViewState {
-    plugin: SimplePluginViewState;
+    plugin?: SimplePluginViewState;
     pageSlowlyRendered: string;
     pageFastDynamicRendered: string;
 }
