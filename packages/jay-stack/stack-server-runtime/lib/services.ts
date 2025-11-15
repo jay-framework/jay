@@ -1,37 +1,18 @@
 /**
- * Service marker and registry for Jay Stack server-side dependency injection.
+ * Service registry for Jay Stack server-side dependency injection.
  * 
  * Services are global singletons (not hierarchical like client contexts) that provide
  * infrastructure capabilities like database connections, API clients, etc.
+ * 
+ * Note: ServiceMarker and createJayService are defined in @jay-framework/fullstack-component
+ * to avoid circular dependencies. This module contains only the runtime implementation.
  */
 
-// ============================================================================
-// Service Marker Pattern
-// ============================================================================
+import type { ServiceMarker } from '@jay-framework/fullstack-component';
 
-/**
- * A type-safe marker for identifying a service.
- * Similar to ContextMarker but for server-side services.
- */
-export interface ServiceMarker<ServiceType> {}
-
-/**
- * Creates a service marker used to register and retrieve services.
- * 
- * @param name - Optional name for the service (used in error messages)
- * 
- * @example
- * ```typescript
- * export interface DatabaseService {
- *   query<T>(sql: string): Promise<T[]>;
- * }
- * 
- * export const DATABASE_SERVICE = createJayService<DatabaseService>('DatabaseService');
- * ```
- */
-export function createJayService<ServiceType = unknown>(name?: string): ServiceMarker<ServiceType> {
-    return Symbol(name) as ServiceMarker<ServiceType>;
-}
+// Re-export for convenience
+export type { ServiceMarker } from '@jay-framework/fullstack-component';
+export { createJayService } from '@jay-framework/fullstack-component';
 
 // ============================================================================
 // Service Registry

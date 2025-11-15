@@ -1,5 +1,44 @@
 import { ComponentConstructor, ContextMarkers, JayComponentCore } from '@jay-framework/component';
 
+// ============================================================================
+// Service Marker (for server-side dependency injection)
+// ============================================================================
+
+/**
+ * A type-safe marker for identifying a service.
+ * Similar to ContextMarker but for server-side services.
+ */
+export interface ServiceMarker<ServiceType> {}
+
+/**
+ * Creates a service marker used to register and retrieve services.
+ * 
+ * @param name - Optional name for the service (used in error messages)
+ * 
+ * @example
+ * ```typescript
+ * export interface DatabaseService {
+ *   query<T>(sql: string): Promise<T[]>;
+ * }
+ * 
+ * export const DATABASE_SERVICE = createJayService<DatabaseService>('DatabaseService');
+ * ```
+ */
+export function createJayService<ServiceType = unknown>(name?: string): ServiceMarker<ServiceType> {
+    return Symbol(name) as ServiceMarker<ServiceType>;
+}
+
+/**
+ * Type helper for extracting service types from an array of markers.
+ */
+export type ServiceMarkers<T extends any[]> = {
+    [K in keyof T]: ServiceMarker<T[K]>;
+};
+
+// ============================================================================
+// Page Props and URL Params
+// ============================================================================
+
 export interface PageProps {
     language: string;
     url: string;
@@ -77,7 +116,7 @@ export interface JayStackComponentDefinition<
     CompCore extends JayComponentCore<PropsT, ViewState>,
 > {
     // render: PreRenderElement<ViewState, Refs, JayElement<ViewState, Refs>>;
-    services: ContextMarkers<Services>;
+    services: ServiceMarkers<Services>;
     contexts: ContextMarkers<Contexts>;
     loadParams: LoadParams<Services, Params>;
     slowlyRender: RenderSlowly<Services, PropsT, StaticViewState, any>;

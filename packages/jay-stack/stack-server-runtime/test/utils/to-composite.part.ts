@@ -5,6 +5,6 @@ export function toCompositePart(parts: DevServerPagePart[]): CompositePart[] {
     return parts.map((_) => ({
         comp: _.compDefinition.comp,
         key: _.key,
-        contextMarkers: _.compDefinition.clientContexts,
+        contextMarkers: _.compDefinition.contexts,
     }));
 }

@@ -7,6 +7,7 @@ import {
     RenderFast,
     RenderSlowly,
     UrlParams,
+    ServiceMarkers,
 } from './jay-stack-types';
 import { Getter, Setter } from '@jay-framework/reactive';
 
@@ -69,7 +70,7 @@ export type Builder<
             CompCore
         > & {
             withServices<NewServices extends Array<any>>(
-                ...contextMarkers: ContextMarkers<NewServices>
+                ...serviceMarkers: ServiceMarkers<NewServices>
             ): Builder<
                 'Contexts',
                 StaticViewState,
@@ -506,7 +507,7 @@ class BuilderImplementation<
             CompCore
         >
 {
-    services: ContextMarkers<Services> = [] as ContextMarkers<Services>;
+    services: ServiceMarkers<Services> = [] as ServiceMarkers<Services>;
     contexts: ContextMarkers<Contexts> = [] as ContextMarkers<Contexts>;
     loadParams: LoadParams<Services, Params>;
     slowlyRender: RenderSlowly<Services, PropsT, StaticViewState, CarryForward>;
@@ -539,7 +540,7 @@ class BuilderImplementation<
     }
 
     withServices<NewServices extends Array<any>>(
-        ...contextMarkers: ContextMarkers<NewServices>
+        ...serviceMarkers: ServiceMarkers<NewServices>
     ): Builder<
         'Contexts',
         StaticViewState,
@@ -551,7 +552,7 @@ class BuilderImplementation<
         Params,
         CompCore
     > {
-        this.services = contextMarkers as ContextMarkers<Services>;
+        this.services = serviceMarkers as ServiceMarkers<Services>;
         return this as unknown as Builder<
             'Contexts',
             StaticViewState,
