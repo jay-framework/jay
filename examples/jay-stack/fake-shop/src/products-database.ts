@@ -13,7 +13,8 @@ export interface ProductsDatabaseService {
     getProductBySlug(slug: string): Promise<Product | undefined>;
 }
 
-export const PRODUCTS_DATABASE_SERVICE = createJayService<ProductsDatabaseService>('ProductsDatabase');
+export const PRODUCTS_DATABASE_SERVICE =
+    createJayService<ProductsDatabaseService>('ProductsDatabase');
 
 const products: Product[] = [
     {
@@ -93,7 +94,7 @@ export function createProductsDatabaseService(): ProductsDatabaseService {
         async getProducts() {
             return products;
         },
-        
+
         async getProductBySlug(slug: string) {
             return products.find((product) => product.slug === slug);
         },

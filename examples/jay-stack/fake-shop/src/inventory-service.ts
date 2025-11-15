@@ -25,7 +25,7 @@ export function createInventoryService(): InventoryService {
         async getAvailableUnits(productId: string) {
             return availabilityMap.get(productId) ?? 0;
         },
-        
+
         async isInStock(productId: string) {
             const units = await this.getAvailableUnits(productId);
             return units > 0;

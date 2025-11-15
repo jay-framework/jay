@@ -9,10 +9,7 @@ import { PRODUCTS_DATABASE_SERVICE, ProductsDatabaseService } from '../../produc
 
 interface ProductsCarryForward {}
 
-async function renderSlowlyChanging(
-    props: PageProps,
-    productsDb: ProductsDatabaseService,
-) {
+async function renderSlowlyChanging(props: PageProps, productsDb: ProductsDatabaseService) {
     const products = await productsDb.getProducts();
     return partialRender({ products }, {});
 }

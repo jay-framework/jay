@@ -6,14 +6,8 @@ import {
 } from '@jay-framework/fullstack-component';
 import { PageElementRefs, PageContract, TypeOfPageViewState } from './page.jay-html';
 import { Props } from '@jay-framework/component';
-import { 
-    PRODUCTS_DATABASE_SERVICE, 
-    ProductsDatabaseService 
-} from '../../../products-database';
-import { 
-    INVENTORY_SERVICE, 
-    InventoryService 
-} from '../../../inventory-service';
+import { PRODUCTS_DATABASE_SERVICE, ProductsDatabaseService } from '../../../products-database';
+import { INVENTORY_SERVICE, InventoryService } from '../../../inventory-service';
 
 interface ProductPageParams extends UrlParams {
     slug: string;
@@ -27,9 +21,10 @@ interface ProductAndInventoryCarryForward {
     inStock: boolean;
 }
 
-async function* urlLoader(
-    [productsDb, inventory]: [ProductsDatabaseService, InventoryService],
-): AsyncIterable<ProductPageParams[]> {
+async function* urlLoader([productsDb, inventory]: [
+    ProductsDatabaseService,
+    InventoryService,
+]): AsyncIterable<ProductPageParams[]> {
     const products = await productsDb.getProducts();
     yield products.map(({ slug }) => ({ slug }));
 }
@@ -42,7 +37,7 @@ async function renderSlowlyChanging(
     if (!product) {
         throw new Error(`Product not found: ${props.slug}`);
     }
-    
+
     const { name, sku, price, id } = product;
     return partialRender(
         { name, sku, price, id, type: TypeOfPageViewState.physical },
