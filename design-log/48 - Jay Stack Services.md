@@ -46,10 +46,15 @@ Similar to client `ContextMarker<T>`, we create a `ServiceMarker<T>` in the stac
 
 export interface ServiceMarker<ServiceType> {}
 
-export function createJayService<ServiceType = unknown>(): ServiceMarker<ServiceType> {
-    return Symbol();
+export function createJayService<ServiceType = unknown>(name?: string): ServiceMarker<ServiceType> {
+    return Symbol(name);
 }
 ```
+
+**Benefits:**
+- Optional `name` parameter for better error messages
+- Symbol description helps identify which service is missing
+- Type-safe marker carries type information
 
 Key differences from `ContextMarker`:
 - No hierarchical lookup needed (flat structure)
@@ -73,8 +78,13 @@ export function registerService<ServiceType>(
 
 export function getService<ServiceType>(marker: ServiceMarker<ServiceType>): ServiceType {
     const service = serviceRegistry.get(marker as symbol);
-    if (!service) {
-        throw new Error('Service not found. Did you register it in jay.init.ts?');
+    if (service === undefined) {
+        const symbolKey = marker as symbol;
+        const serviceName = symbolKey.description || 'Unknown service';
+        throw new Error(
+            `Service '${serviceName}' not found. Did you register it in jay.init.ts?\n` +
+            `Make sure to call: registerService(${serviceName.toUpperCase()}_SERVICE, ...)`
+        );
     }
     return service;
 }
@@ -220,7 +230,7 @@ export interface DatabaseService {
     close(): Promise<void>;
 }
 
-export const DATABASE_SERVICE = createJayService<DatabaseService>();
+export const DATABASE_SERVICE = createJayService<DatabaseService>('DatabaseService');
 
 export function createDatabaseService(connectionString: string): DatabaseService {
     const pool = new Pool({ connectionString });
@@ -245,7 +255,7 @@ export interface InventoryService {
     dispose(): void;
 }
 
-export const INVENTORY_SERVICE = createJayService<InventoryService>();
+export const INVENTORY_SERVICE = createJayService<InventoryService>('InventoryService');
 
 export function createInventoryService(db: DatabaseService): InventoryService {
     return {

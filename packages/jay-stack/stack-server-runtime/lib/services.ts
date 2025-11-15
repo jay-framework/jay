@@ -18,17 +18,19 @@ export interface ServiceMarker<ServiceType> {}
 /**
  * Creates a service marker used to register and retrieve services.
  * 
+ * @param name - Optional name for the service (used in error messages)
+ * 
  * @example
  * ```typescript
  * export interface DatabaseService {
  *   query<T>(sql: string): Promise<T[]>;
  * }
  * 
- * export const DATABASE_SERVICE = createJayService<DatabaseService>();
+ * export const DATABASE_SERVICE = createJayService<DatabaseService>('DatabaseService');
  * ```
  */
-export function createJayService<ServiceType = unknown>(): ServiceMarker<ServiceType> {
-    return Symbol() as ServiceMarker<ServiceType>;
+export function createJayService<ServiceType = unknown>(name?: string): ServiceMarker<ServiceType> {
+    return Symbol(name) as ServiceMarker<ServiceType>;
 }
 
 // ============================================================================
@@ -78,7 +80,12 @@ export function registerService<ServiceType>(
 export function getService<ServiceType>(marker: ServiceMarker<ServiceType>): ServiceType {
     const service = serviceRegistry.get(marker as symbol);
     if (service === undefined) {
-        throw new Error('Service not found. Did you register it in jay.init.ts?');
+        const symbolKey = marker as symbol;
+        const serviceName = symbolKey.description || 'Unknown service';
+        throw new Error(
+            `Service '${serviceName}' not found. Did you register it in jay.init.ts?\n` +
+            `Make sure to call: registerService(${serviceName.toUpperCase()}_SERVICE, ...)`
+        );
     }
     return service;
 }
