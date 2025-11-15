@@ -8,6 +8,7 @@ import {
 } from '@jay-framework/fullstack-component';
 import { JayComponentCore } from '@jay-framework/component';
 import { DevServerPagePart } from './load-page-parts';
+import { resolveServices } from './services';
 
 export interface SlowlyChangingPhase {
     runSlowlyForPage(
@@ -53,7 +54,9 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
         for (const part of parts) {
             const { compDefinition } = part;
             if (compDefinition.loadParams) {
-                const compParams = compDefinition.loadParams([]);
+                // Resolve services from registry
+                const services = resolveServices(compDefinition.services);
+                const compParams = compDefinition.loadParams(services);
                 if (!(await findMatchingParams(pageParams, compParams))) return notFound();
             }
         }
@@ -63,9 +66,11 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
         for (const part of parts) {
             const { compDefinition, key } = part;
             if (compDefinition.slowlyRender) {
+                // Resolve services from registry
+                const services = resolveServices(compDefinition.services);
                 const slowlyRenderedPart = await compDefinition.slowlyRender(
                     { ...pageProps, ...pageParams },
-                    [],
+                    ...services,
                 );
                 if (slowlyRenderedPart.kind === 'PartialRender') {
                     if (!key) {

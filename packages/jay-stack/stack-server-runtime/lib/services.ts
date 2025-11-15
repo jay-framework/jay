@@ -108,6 +108,23 @@ export function clearServiceRegistry(): void {
     serviceRegistry.clear();
 }
 
+/**
+ * Resolves an array of service markers to their registered instances.
+ * Used by the runtime to inject services into render functions.
+ * 
+ * @param serviceMarkers - Array of service markers to resolve
+ * @returns Array of resolved service instances
+ * 
+ * @example
+ * ```typescript
+ * const services = resolveServices([DATABASE_SERVICE, INVENTORY_SERVICE]);
+ * // Returns: [databaseInstance, inventoryInstance]
+ * ```
+ */
+export function resolveServices(serviceMarkers: any[]): Array<any> {
+    return serviceMarkers.map(marker => getService(marker));
+}
+
 // ============================================================================
 // Lifecycle Hooks
 // ============================================================================
