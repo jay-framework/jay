@@ -42,47 +42,47 @@ export type FastRenderResult<ViewState extends object, CarryForward> =
     | Redirect3xx;
 export type AnyFastRenderResult = FastRenderResult<object, object>;
 
-export type LoadParams<ServerContexts, Params extends UrlParams> = (
-    contexts: ServerContexts,
+export type LoadParams<Services, Params extends UrlParams> = (
+    contexts: Services,
 ) => AsyncIterable<Params[]>;
 
 export type RenderSlowly<
-    ServerContexts extends Array<object>,
+    Services extends Array<object>,
     PropsT extends object,
     StaticViewState extends object,
     SlowlyCarryForward,
 > = (
     props: PropsT,
-    ...contexts: ServerContexts
+    ...services: Services
 ) => Promise<SlowlyRenderResult<StaticViewState, SlowlyCarryForward>>;
 
 export type RenderFast<
-    ServerContexts extends Array<object>,
+    Services extends Array<object>,
     PropsT extends object,
     DynamicViewState extends object,
     FastCarryForward,
 > = (
     props: PropsT,
-    ...contexts: ServerContexts
+    ...services: Services
 ) => Promise<FastRenderResult<DynamicViewState, FastCarryForward>>;
 
 export interface JayStackComponentDefinition<
     StaticViewState extends object,
     ViewState extends object,
     Refs extends object,
-    ServerContexts extends Array<any>,
-    ClientContexts extends Array<any>,
+    Services extends Array<any>,
+    Contexts extends Array<any>,
     PropsT extends object,
     Params extends UrlParams,
     CompCore extends JayComponentCore<PropsT, ViewState>,
 > {
     // render: PreRenderElement<ViewState, Refs, JayElement<ViewState, Refs>>;
-    serverContexts: ContextMarkers<ServerContexts>;
-    clientContexts: ContextMarkers<ClientContexts>;
-    loadParams: LoadParams<ServerContexts, Params>;
-    slowlyRender: RenderSlowly<ServerContexts, PropsT, StaticViewState, any>;
-    fastRender: RenderFast<ServerContexts, PropsT, ViewState, any>;
-    comp: ComponentConstructor<PropsT, Refs, ViewState, ClientContexts, CompCore>;
+    services: ContextMarkers<Services>;
+    contexts: ContextMarkers<Contexts>;
+    loadParams: LoadParams<Services, Params>;
+    slowlyRender: RenderSlowly<Services, PropsT, StaticViewState, any>;
+    fastRender: RenderFast<Services, PropsT, ViewState, any>;
+    comp: ComponentConstructor<PropsT, Refs, ViewState, Contexts, CompCore>;
 }
 
 export type AnyJayStackComponentDefinition = JayStackComponentDefinition<

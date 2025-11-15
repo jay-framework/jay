@@ -20,6 +20,7 @@ import { loadPageParts } from '@jay-framework/stack-server-runtime';
 import { generateClientScript } from '@jay-framework/stack-server-runtime';
 import { Request, Response } from 'express';
 import { DevServerOptions } from './dev-server-options';
+import { ServiceLifecycleManager } from './service-lifecycle';
 
 async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
     return await scanRoutes(pagesBaseFolder, {
@@ -54,6 +55,7 @@ export interface DevServer {
     server: Connect.Server;
     viteServer: ViteDevServer;
     routes: DevServerRoute[];
+    lifecycleManager: ServiceLifecycleManager;
 }
 
 function handleOtherResponseCodes(
@@ -142,6 +144,16 @@ function mkRoute(
 
 export async function mkDevServer(options: DevServerOptions): Promise<DevServer> {
     const { serverBase, pagesBase, jayRollupConfig, dontCacheSlowly } = defaults(options);
+    
+    // Initialize service lifecycle manager
+    const lifecycleManager = new ServiceLifecycleManager(serverBase);
+    
+    // Initialize services before starting the server
+    await lifecycleManager.initialize();
+    
+    // Set up graceful shutdown handlers
+    setupGracefulShutdown(lifecycleManager);
+    
     const vite = await createServer({
         server: { middlewareMode: true },
         plugins: [jayRuntime(jayRollupConfig)],
@@ -149,6 +161,9 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
         base: serverBase,
         root: pagesBase,
     });
+
+    // Set up hot reload for jay.init.ts
+    setupServiceHotReload(vite, lifecycleManager);
 
     const routes: JayRoutes = await initRoutes(pagesBase);
     const slowlyPhase = new DevSlowlyChangingPhase(dontCacheSlowly);
@@ -161,5 +176,52 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
         server: vite.middlewares,
         viteServer: vite,
         routes: devServerRoutes,
+        lifecycleManager,
     };
+}
+
+/**
+ * Sets up graceful shutdown handlers for SIGTERM and SIGINT
+ */
+function setupGracefulShutdown(lifecycleManager: ServiceLifecycleManager): void {
+    const shutdown = async (signal: string) => {
+        console.log(`\n${signal} received, shutting down gracefully...`);
+        await lifecycleManager.shutdown();
+        process.exit(0);
+    };
+
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
+}
+
+/**
+ * Sets up hot reload for jay.init.ts file changes
+ */
+function setupServiceHotReload(
+    vite: ViteDevServer,
+    lifecycleManager: ServiceLifecycleManager,
+): void {
+    const initFilePath = lifecycleManager.getInitFilePath();
+    if (!initFilePath) {
+        return; // No init file to watch
+    }
+
+    // Watch the init file for changes
+    vite.watcher.add(initFilePath);
+
+    vite.watcher.on('change', async (changedPath) => {
+        if (changedPath === initFilePath) {
+            console.log('[Services] jay.init.ts changed, reloading services...');
+            try {
+                await lifecycleManager.reload();
+                // Trigger browser reload
+                vite.ws.send({
+                    type: 'full-reload',
+                    path: '*',
+                });
+            } catch (error) {
+                console.error('[Services] Failed to reload services:', error);
+            }
+        }
+    });
 }
