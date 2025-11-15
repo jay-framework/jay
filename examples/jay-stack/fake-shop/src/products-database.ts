@@ -1,4 +1,6 @@
-interface Product {
+import { createJayService } from '@jay-framework/stack-server-runtime';
+
+export interface Product {
     id: string;
     sku: string;
     name: string;
@@ -6,7 +8,14 @@ interface Product {
     price: number;
 }
 
-export const products = [
+export interface ProductsDatabaseService {
+    getProducts(): Promise<Product[]>;
+    getProductBySlug(slug: string): Promise<Product | undefined>;
+}
+
+export const PRODUCTS_DATABASE_SERVICE = createJayService<ProductsDatabaseService>('ProductsDatabase');
+
+const products: Product[] = [
     {
         id: '1',
         sku: 'LAP-001',
@@ -79,10 +88,14 @@ export const products = [
     },
 ];
 
-export async function getProducts() {
-    return products;
-}
-
-export async function getProductBySlug(slug: string): Promise<Product> {
-    return products.find((product) => product.slug === slug);
+export function createProductsDatabaseService(): ProductsDatabaseService {
+    return {
+        async getProducts() {
+            return products;
+        },
+        
+        async getProductBySlug(slug: string) {
+            return products.find((product) => product.slug === slug);
+        },
+    };
 }

@@ -1,6 +1,10 @@
 # Jay Stack Fake Shop Example
 
-This example demonstrates how to use the Jay Stack CLI with custom configuration for both the dev server and the editor server.
+This example demonstrates how to use Jay Stack with **services dependency injection** for server-side infrastructure.
+
+## Services Architecture
+
+This example showcases the new services pattern for managing server-side dependencies like databases and business logic services.
 
 ## Configuration
 
@@ -38,3 +42,53 @@ The CLI will automatically find available ports within the specified ranges and 
 ```
 
 You can now develop and edit your Jay app using these servers. Static files in the `public` folder will be served automatically.
+
+## Services
+
+The fake-shop uses two services:
+
+### 1. ProductsDatabaseService (`src/products-database.ts`)
+Manages the product catalog with methods:
+- `getProducts()` - Returns all products
+- `getProductBySlug(slug)` - Finds a product by its slug
+
+### 2. InventoryService (`src/inventory-service.ts`)
+Tracks product inventory with methods:
+- `getAvailableUnits(productId)` - Returns stock count
+- `isInStock(productId)` - Checks if product is available
+
+### Service Initialization (`src/jay.init.ts`)
+
+Services are registered on startup:
+
+```typescript
+import { onInit, registerService } from '@jay-framework/stack-server-runtime';
+
+onInit(async () => {
+    const productsDb = createProductsDatabaseService();
+    registerService(PRODUCTS_DATABASE_SERVICE, productsDb);
+    
+    const inventory = createInventoryService();
+    registerService(INVENTORY_SERVICE, inventory);
+});
+```
+
+### Using Services in Pages
+
+Pages declare dependencies with `withServices()`:
+
+```typescript
+export const page = makeJayStackComponent<PageContract>()
+    .withServices(PRODUCTS_DATABASE_SERVICE, INVENTORY_SERVICE)
+    .withSlowlyRender(async (props, productsDb, inventory) => {
+        const products = await productsDb.getProducts();
+        // ...
+    });
+```
+
+## Benefits
+
+- ✅ **Type-safe** - Full TypeScript support for services
+- ✅ **Testable** - Services can be easily mocked
+- ✅ **Hot reload** - Services reload automatically during development
+- ✅ **Clean architecture** - Clear separation between UI and business logic
