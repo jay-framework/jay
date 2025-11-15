@@ -1,6 +1,6 @@
 /**
  * Service lifecycle management for the Jay Stack dev-server.
- * 
+ *
  * Handles loading jay.init.ts, running init/shutdown callbacks,
  * hot reloading services, and graceful shutdown.
  */
@@ -148,4 +148,3 @@ export class ServiceLifecycleManager {
         return this.isInitialized;
     }
 }
-

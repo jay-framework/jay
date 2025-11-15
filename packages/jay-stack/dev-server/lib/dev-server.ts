@@ -144,16 +144,16 @@ function mkRoute(
 
 export async function mkDevServer(options: DevServerOptions): Promise<DevServer> {
     const { serverBase, pagesBase, jayRollupConfig, dontCacheSlowly } = defaults(options);
-    
+
     // Initialize service lifecycle manager
     const lifecycleManager = new ServiceLifecycleManager(serverBase);
-    
+
     // Initialize services before starting the server
     await lifecycleManager.initialize();
-    
+
     // Set up graceful shutdown handlers
     setupGracefulShutdown(lifecycleManager);
-    
+
     const vite = await createServer({
         server: { middlewareMode: true },
         plugins: [jayRuntime(jayRollupConfig)],

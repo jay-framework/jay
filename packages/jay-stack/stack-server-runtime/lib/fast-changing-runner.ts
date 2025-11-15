@@ -14,10 +14,10 @@ export async function renderFastChangingData(
         const { compDefinition, key } = part;
         if (compDefinition.fastRender) {
             const partSlowlyCarryForward = key ? carryForward[key] : carryForward;
-            
+
             // Resolve services from registry
             const services = resolveServices(compDefinition.services);
-            
+
             const fastRenderedPart = await compDefinition.fastRender(
                 { ...pageProps, ...pageParams },
                 partSlowlyCarryForward,

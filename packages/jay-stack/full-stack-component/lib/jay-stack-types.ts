@@ -12,15 +12,15 @@ export interface ServiceMarker<ServiceType> {}
 
 /**
  * Creates a service marker used to register and retrieve services.
- * 
+ *
  * @param name - Optional name for the service (used in error messages)
- * 
+ *
  * @example
  * ```typescript
  * export interface DatabaseService {
  *   query<T>(sql: string): Promise<T[]>;
  * }
- * 
+ *
  * export const DATABASE_SERVICE = createJayService<DatabaseService>('DatabaseService');
  * ```
  */

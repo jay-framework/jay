@@ -114,12 +114,7 @@ export type Builder<
                 NewStaticViewState extends Partial<ViewState>,
                 NewCarryForward extends object,
             >(
-                slowlyRender: RenderSlowly<
-                    Services,
-                    PropsT,
-                    NewStaticViewState,
-                    NewCarryForward
-                >,
+                slowlyRender: RenderSlowly<Services, PropsT, NewStaticViewState, NewCarryForward>,
             ): Builder<
                 'FastRender',
                 NewStaticViewState,
@@ -206,12 +201,7 @@ export type Builder<
                   NewStaticViewState extends Partial<ViewState>,
                   NewCarryForward extends object,
               >(
-                  slowlyRender: RenderSlowly<
-                      Services,
-                      PropsT,
-                      NewStaticViewState,
-                      NewCarryForward
-                  >,
+                  slowlyRender: RenderSlowly<Services, PropsT, NewStaticViewState, NewCarryForward>,
               ): Builder<
                   'FastRender',
                   NewStaticViewState,
@@ -423,13 +413,7 @@ export type Builder<
                     >;
 
                     withInteractive(
-                        comp: ComponentConstructor<
-                            PropsT,
-                            Refs,
-                            ViewState,
-                            Contexts,
-                            CompCore
-                        >,
+                        comp: ComponentConstructor<PropsT, Refs, ViewState, Contexts, CompCore>,
                     ): Builder<
                         'Done',
                         StaticViewState,
@@ -454,13 +438,7 @@ export type Builder<
                       CompCore
                   > & {
                       withInteractive(
-                          comp: ComponentConstructor<
-                              PropsT,
-                              Refs,
-                              ViewState,
-                              Contexts,
-                              CompCore
-                          >,
+                          comp: ComponentConstructor<PropsT, Refs, ViewState, Contexts, CompCore>,
                       ): Builder<
                           'Done',
                           StaticViewState,
@@ -685,13 +663,7 @@ class BuilderImplementation<
     }
 
     withInteractive(
-        comp: ComponentConstructor<
-            PropsT & CarryForward,
-            Refs,
-            ViewState,
-            Contexts,
-            CompCore
-        >,
+        comp: ComponentConstructor<PropsT & CarryForward, Refs, ViewState, Contexts, CompCore>,
     ): Builder<
         'Done',
         StaticViewState,

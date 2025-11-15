@@ -1,9 +1,9 @@
 /**
  * Service registry for Jay Stack server-side dependency injection.
- * 
+ *
  * Services are global singletons (not hierarchical like client contexts) that provide
  * infrastructure capabilities like database connections, API clients, etc.
- * 
+ *
  * Note: ServiceMarker and createJayService are defined in @jay-framework/fullstack-component
  * to avoid circular dependencies. This module contains only the runtime implementation.
  */
@@ -23,10 +23,10 @@ const serviceRegistry = new Map<symbol, any>();
 /**
  * Registers a service instance with the given marker.
  * Typically called within an `onInit()` callback.
- * 
+ *
  * @param marker - The service marker created with `createJayService()`
  * @param service - The service instance to register
- * 
+ *
  * @example
  * ```typescript
  * onInit(async () => {
@@ -45,11 +45,11 @@ export function registerService<ServiceType>(
 /**
  * Retrieves a registered service by its marker.
  * Throws an error if the service is not found.
- * 
+ *
  * @param marker - The service marker
  * @returns The registered service instance
  * @throws Error if service is not registered
- * 
+ *
  * @example
  * ```typescript
  * onShutdown(async () => {
@@ -65,7 +65,7 @@ export function getService<ServiceType>(marker: ServiceMarker<ServiceType>): Ser
         const serviceName = symbolKey.description || 'Unknown service';
         throw new Error(
             `Service '${serviceName}' not found. Did you register it in jay.init.ts?\n` +
-            `Make sure to call: registerService(${serviceName.toUpperCase()}_SERVICE, ...)`
+                `Make sure to call: registerService(${serviceName.toUpperCase()}_SERVICE, ...)`,
         );
     }
     return service;
@@ -73,7 +73,7 @@ export function getService<ServiceType>(marker: ServiceMarker<ServiceType>): Ser
 
 /**
  * Checks if a service is registered.
- * 
+ *
  * @param marker - The service marker
  * @returns true if the service is registered
  */
@@ -92,10 +92,10 @@ export function clearServiceRegistry(): void {
 /**
  * Resolves an array of service markers to their registered instances.
  * Used by the runtime to inject services into render functions.
- * 
+ *
  * @param serviceMarkers - Array of service markers to resolve
  * @returns Array of resolved service instances
- * 
+ *
  * @example
  * ```typescript
  * const services = resolveServices([DATABASE_SERVICE, INVENTORY_SERVICE]);
@@ -103,7 +103,7 @@ export function clearServiceRegistry(): void {
  * ```
  */
 export function resolveServices(serviceMarkers: any[]): Array<any> {
-    return serviceMarkers.map(marker => getService(marker));
+    return serviceMarkers.map((marker) => getService(marker));
 }
 
 // ============================================================================
@@ -119,9 +119,9 @@ const shutdownCallbacks: ShutdownCallback[] = [];
 /**
  * Registers a callback to be executed during service initialization.
  * Multiple callbacks can be registered and will be executed in order.
- * 
+ *
  * @param callback - Async or sync function to initialize services
- * 
+ *
  * @example
  * ```typescript
  * onInit(async () => {
@@ -137,9 +137,9 @@ export function onInit(callback: InitCallback): void {
 /**
  * Registers a callback to be executed during service shutdown.
  * Multiple callbacks can be registered. They execute in reverse order (LIFO).
- * 
+ *
  * @param callback - Async or sync function to clean up services
- * 
+ *
  * @example
  * ```typescript
  * onShutdown(async () => {
@@ -181,4 +181,3 @@ export function clearLifecycleCallbacks(): void {
     initCallbacks.length = 0;
     shutdownCallbacks.length = 0;
 }
-

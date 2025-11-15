@@ -48,12 +48,16 @@ You can now develop and edit your Jay app using these servers. Static files in t
 The fake-shop uses two services:
 
 ### 1. ProductsDatabaseService (`src/products-database.ts`)
+
 Manages the product catalog with methods:
+
 - `getProducts()` - Returns all products
 - `getProductBySlug(slug)` - Finds a product by its slug
 
 ### 2. InventoryService (`src/inventory-service.ts`)
+
 Tracks product inventory with methods:
+
 - `getAvailableUnits(productId)` - Returns stock count
 - `isInStock(productId)` - Checks if product is available
 
@@ -65,11 +69,11 @@ Services are registered on startup:
 import { onInit, registerService } from '@jay-framework/stack-server-runtime';
 
 onInit(async () => {
-    const productsDb = createProductsDatabaseService();
-    registerService(PRODUCTS_DATABASE_SERVICE, productsDb);
-    
-    const inventory = createInventoryService();
-    registerService(INVENTORY_SERVICE, inventory);
+  const productsDb = createProductsDatabaseService();
+  registerService(PRODUCTS_DATABASE_SERVICE, productsDb);
+
+  const inventory = createInventoryService();
+  registerService(INVENTORY_SERVICE, inventory);
 });
 ```
 
@@ -79,11 +83,11 @@ Pages declare dependencies with `withServices()`:
 
 ```typescript
 export const page = makeJayStackComponent<PageContract>()
-    .withServices(PRODUCTS_DATABASE_SERVICE, INVENTORY_SERVICE)
-    .withSlowlyRender(async (props, productsDb, inventory) => {
-        const products = await productsDb.getProducts();
-        // ...
-    });
+  .withServices(PRODUCTS_DATABASE_SERVICE, INVENTORY_SERVICE)
+  .withSlowlyRender(async (props, productsDb, inventory) => {
+    const products = await productsDb.getProducts();
+    // ...
+  });
 ```
 
 ## Benefits
