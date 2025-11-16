@@ -1,5 +1,44 @@
 import { ComponentConstructor, ContextMarkers, JayComponentCore } from '@jay-framework/component';
 
+// ============================================================================
+// Service Marker (for server-side dependency injection)
+// ============================================================================
+
+/**
+ * A type-safe marker for identifying a service.
+ * Similar to ContextMarker but for server-side services.
+ */
+export interface ServiceMarker<ServiceType> {}
+
+/**
+ * Creates a service marker used to register and retrieve services.
+ *
+ * @param name - Optional name for the service (used in error messages)
+ *
+ * @example
+ * ```typescript
+ * export interface DatabaseService {
+ *   query<T>(sql: string): Promise<T[]>;
+ * }
+ *
+ * export const DATABASE_SERVICE = createJayService<DatabaseService>('DatabaseService');
+ * ```
+ */
+export function createJayService<ServiceType = unknown>(name?: string): ServiceMarker<ServiceType> {
+    return Symbol(name) as ServiceMarker<ServiceType>;
+}
+
+/**
+ * Type helper for extracting service types from an array of markers.
+ */
+export type ServiceMarkers<T extends any[]> = {
+    [K in keyof T]: ServiceMarker<T[K]>;
+};
+
+// ============================================================================
+// Page Props and URL Params
+// ============================================================================
+
 export interface PageProps {
     language: string;
     url: string;
@@ -42,47 +81,47 @@ export type FastRenderResult<ViewState extends object, CarryForward> =
     | Redirect3xx;
 export type AnyFastRenderResult = FastRenderResult<object, object>;
 
-export type LoadParams<ServerContexts, Params extends UrlParams> = (
-    contexts: ServerContexts,
+export type LoadParams<Services, Params extends UrlParams> = (
+    contexts: Services,
 ) => AsyncIterable<Params[]>;
 
 export type RenderSlowly<
-    ServerContexts extends Array<object>,
+    Services extends Array<object>,
     PropsT extends object,
     StaticViewState extends object,
     SlowlyCarryForward,
 > = (
     props: PropsT,
-    ...contexts: ServerContexts
+    ...services: Services
 ) => Promise<SlowlyRenderResult<StaticViewState, SlowlyCarryForward>>;
 
 export type RenderFast<
-    ServerContexts extends Array<object>,
+    Services extends Array<object>,
     PropsT extends object,
     DynamicViewState extends object,
     FastCarryForward,
 > = (
     props: PropsT,
-    ...contexts: ServerContexts
+    ...services: Services
 ) => Promise<FastRenderResult<DynamicViewState, FastCarryForward>>;
 
 export interface JayStackComponentDefinition<
     StaticViewState extends object,
     ViewState extends object,
     Refs extends object,
-    ServerContexts extends Array<any>,
-    ClientContexts extends Array<any>,
+    Services extends Array<any>,
+    Contexts extends Array<any>,
     PropsT extends object,
     Params extends UrlParams,
     CompCore extends JayComponentCore<PropsT, ViewState>,
 > {
     // render: PreRenderElement<ViewState, Refs, JayElement<ViewState, Refs>>;
-    serverContexts: ContextMarkers<ServerContexts>;
-    clientContexts: ContextMarkers<ClientContexts>;
-    loadParams: LoadParams<ServerContexts, Params>;
-    slowlyRender: RenderSlowly<ServerContexts, PropsT, StaticViewState, any>;
-    fastRender: RenderFast<ServerContexts, PropsT, ViewState, any>;
-    comp: ComponentConstructor<PropsT, Refs, ViewState, ClientContexts, CompCore>;
+    services: ServiceMarkers<Services>;
+    contexts: ContextMarkers<Contexts>;
+    loadParams: LoadParams<Services, Params>;
+    slowlyRender: RenderSlowly<Services, PropsT, StaticViewState, any>;
+    fastRender: RenderFast<Services, PropsT, ViewState, any>;
+    comp: ComponentConstructor<PropsT, Refs, ViewState, Contexts, CompCore>;
 }
 
 export type AnyJayStackComponentDefinition = JayStackComponentDefinition<

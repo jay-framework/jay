@@ -1,3 +1,12 @@
+import { createJayService } from '@jay-framework/fullstack-component';
+
+export interface InventoryService {
+    getAvailableUnits(productId: string): Promise<number>;
+    isInStock(productId: string): Promise<boolean>;
+}
+
+export const INVENTORY_SERVICE = createJayService<InventoryService>('Inventory');
+
 const availabilityMap = new Map([
     ['1', 1],
     ['2', 0],
@@ -11,6 +20,15 @@ const availabilityMap = new Map([
     ['10', 0],
 ]);
 
-export function getAvailableUnits(productId: string): Promise<number> {
-    return Promise.resolve(availabilityMap[productId]);
+export function createInventoryService(): InventoryService {
+    return {
+        async getAvailableUnits(productId: string) {
+            return availabilityMap.get(productId) ?? 0;
+        },
+
+        async isInStock(productId: string) {
+            const units = await this.getAvailableUnits(productId);
+            return units > 0;
+        },
+    };
 }

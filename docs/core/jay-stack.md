@@ -10,7 +10,8 @@ Jay Stack components provide:
 - **Server-Side Rendering** - SEO-friendly, fast initial loads
 - **Client-Side Interactivity** - Reactive state management
 - **Type Safety** - Full TypeScript support with generated contracts
-- **Context Support** - Server and client context injection
+- **Service Injection** - Server-side dependency injection for database, API clients, etc.
+- **Context Support** - Client-side hierarchical context injection
 - **URL Parameter Loading** - Dynamic routing with parameter handling
 
 ## Rendering Phases
@@ -24,9 +25,9 @@ Jay Stack implements three distinct rendering phases for optimal performance:
 **Output**: Pre-rendered HTML with static data
 
 ```typescript
-.withSlowlyRender(async (props, ...contexts) => {
+.withSlowlyRender(async (props, productsDb) => {
   // Load static data that doesn't change often
-  const product = await getProductBySlug(props.slug);
+  const product = await productsDb.getProductBySlug(props.slug);
 
   return partialRender(
     {
@@ -46,13 +47,13 @@ Jay Stack implements three distinct rendering phases for optimal performance:
 **Output**: Server-rendered HTML with dynamic data
 
 ```typescript
-.withFastRender(async (props, ...contexts) => {
+.withFastRender(async (props, carryForward, inventory) => {
   // Load dynamic data that can change
-  const inventory = await getInventoryStatus(props.productId);
+  const status = await inventory.getStatus(carryForward.productId);
 
   return partialRender(
-    { inStock: inventory.available > 0 },
-    { productId: props.productId, inStock: inventory.available > 0 }
+    { inStock: status.available > 0 },
+    { productId: carryForward.productId, inStock: status.available > 0 }
   );
 })
 ```
@@ -82,12 +83,17 @@ Jay Stack implements three distinct rendering phases for optimal performance:
 Jay Stack uses a fluent builder API for creating full-stack components:
 
 ```typescript
-import { makeJayStackComponent, partialRender } from '@jay-framework/fullstack-component';
+import {
+  makeJayStackComponent,
+  partialRender,
+  createJayService,
+} from '@jay-framework/fullstack-component';
+import { PRODUCTS_DATABASE_SERVICE, INVENTORY_SERVICE } from './services';
 
 export const page = makeJayStackComponent<PageContract>()
   .withProps<PageProps>()
-  .withServerContext(DatabaseContext, AuthContext)
-  .withClientContext(ThemeContext, UserContext)
+  .withServices(PRODUCTS_DATABASE_SERVICE, INVENTORY_SERVICE)
+  .withContexts(ThemeContext, UserContext)
   .withLoadParams(urlLoader)
   .withSlowlyRender(slowlyRender)
   .withFastRender(fastRender)
@@ -109,27 +115,35 @@ interface ProductPageProps {
 makeJayStackComponent<ProductContract>().withProps<ProductPageProps>();
 ```
 
-#### `.withServerContext(...contextMarkers)`
+#### `.withServices(...serviceMarkers)`
 
-Adds server-side context markers for dependency injection:
+Adds server-side service markers for dependency injection:
 
 ```typescript
-const DatabaseContext = createJayContext<Database>();
-const AuthContext = createJayContext<AuthService>();
+import { createJayService } from '@jay-framework/fullstack-component';
 
-makeJayStackComponent<ProductContract>().withServerContext(DatabaseContext, AuthContext);
+const PRODUCTS_DATABASE_SERVICE = createJayService<ProductsDatabase>('ProductsDatabase');
+const INVENTORY_SERVICE = createJayService<InventoryService>('Inventory');
+
+makeJayStackComponent<ProductContract>().withServices(PRODUCTS_DATABASE_SERVICE, INVENTORY_SERVICE);
 ```
 
-#### `.withClientContext(...contextMarkers)`
+Services are global singletons (not hierarchical) that provide infrastructure capabilities like database connections, API clients, and other server-side resources. They are registered in the `jay.init.ts` file at the project root.
+
+#### `.withContexts(...contextMarkers)`
 
 Adds client-side context markers for dependency injection:
 
 ```typescript
+import { createJayContext } from '@jay-framework/runtime';
+
 const ThemeContext = createJayContext<Theme>();
 const UserContext = createJayContext<User>();
 
-makeJayStackComponent<ProductContract>().withClientContext(ThemeContext, UserContext);
+makeJayStackComponent<ProductContract>().withContexts(ThemeContext, UserContext);
 ```
+
+Contexts are hierarchical and reactive, allowing components to access shared state from parent components. They are provided using `provideContext` or `provideReactiveContext` in parent components.
 
 #### `.withLoadParams(loadParams)`
 
@@ -140,21 +154,25 @@ interface ProductParams extends UrlParams {
   slug: string;
 }
 
-async function* urlLoader(): AsyncIterable<ProductParams[]> {
-  const products = await getProducts();
+async function* urlLoader(productsDb: ProductsDatabase): AsyncIterable<ProductParams[]> {
+  const products = await productsDb.getAllProducts();
   yield products.map(({ slug }) => ({ slug }));
 }
 
-makeJayStackComponent<ProductContract>().withLoadParams(urlLoader);
+makeJayStackComponent<ProductContract>()
+  .withServices(PRODUCTS_DATABASE_SERVICE)
+  .withLoadParams(urlLoader);
 ```
+
+The URL loader receives the requested services as parameters, allowing you to query the database or other services to generate URL parameters.
 
 #### `.withSlowlyRender(slowlyRender)`
 
 Defines the slow rendering function for semi-static data:
 
 ```typescript
-async function slowlyRender(props: ProductPageProps & ProductParams) {
-  const product = await getProductBySlug(props.slug);
+async function slowlyRender(props: ProductPageProps & ProductParams, productsDb: ProductsDatabase) {
+  const product = await productsDb.getProductBySlug(props.slug);
 
   return partialRender(
     {
@@ -166,25 +184,35 @@ async function slowlyRender(props: ProductPageProps & ProductParams) {
   );
 }
 
-makeJayStackComponent<ProductContract>().withSlowlyRender(slowlyRender);
+makeJayStackComponent<ProductContract>()
+  .withServices(PRODUCTS_DATABASE_SERVICE)
+  .withSlowlyRender(slowlyRender);
 ```
+
+The slow render function receives props and the requested services as parameters.
 
 #### `.withFastRender(fastRender)`
 
 Defines the fast rendering function for dynamic data:
 
 ```typescript
-async function fastRender(props: ProductPageProps & ProductParams & { productId: string }) {
-  const inventory = await getInventoryStatus(props.productId);
+async function fastRender(
+  props: ProductPageProps & ProductParams,
+  carryForward: { productId: string },
+  inventory: InventoryService,
+) {
+  const status = await inventory.getStatus(carryForward.productId);
 
   return partialRender(
-    { inStock: inventory.available > 0 },
-    { productId: props.productId, inStock: inventory.available > 0 },
+    { inStock: status.available > 0 },
+    { productId: carryForward.productId, inStock: status.available > 0 },
   );
 }
 
-makeJayStackComponent<ProductContract>().withFastRender(fastRender);
+makeJayStackComponent<ProductContract>().withServices(INVENTORY_SERVICE).withFastRender(fastRender);
 ```
+
+The fast render function receives props, the carry-forward data from slow render, and the requested services as parameters.
 
 #### `.withInteractive(componentConstructor)`
 
@@ -194,6 +222,8 @@ Defines the client-side interactive component:
 function interactiveConstructor(
   props: ProductPageProps & ProductParams & { productId: string; inStock: boolean },
   refs,
+  themeContext: Theme,
+  userContext: User,
 ) {
   const [quantity, setQuantity] = createSignal(1);
 
@@ -202,12 +232,19 @@ function interactiveConstructor(
   });
 
   return {
-    render: () => ({ quantity: quantity() }),
+    render: () => ({
+      quantity: quantity(),
+      theme: themeContext.currentTheme,
+    }),
   };
 }
 
-makeJayStackComponent<ProductContract>().withInteractive(interactiveConstructor);
+makeJayStackComponent<ProductContract>()
+  .withContexts(ThemeContext, UserContext)
+  .withInteractive(interactiveConstructor);
 ```
+
+The interactive component receives props, refs, and the requested client-side contexts as parameters. Note that services are not available in the interactive phase - only contexts.
 
 ## Render Response Builders
 
@@ -265,20 +302,48 @@ props: PageProps & ProductParams & SlowRenderCarryForward;
 props: PageProps & ProductParams & FastRenderCarryForward;
 ```
 
-### Context Injection
+### Service and Context Injection
 
-Contexts are available in all rendering phases:
+#### Services (Server-Side)
+
+Services are available in URL loading, slow render, and fast render phases:
 
 ```typescript
-// Server contexts in slow and fast render
-async function slowlyRender(props, database, auth) {
+// Services in URL loader
+async function* urlLoader(productsDb: ProductsDatabase): AsyncIterable<ProductParams[]> {
+  const products = await productsDb.getAllProducts();
+  yield products.map(({ slug }) => ({ slug }));
+}
+
+// Services in slow render
+async function slowlyRender(
+  props: ProductPageProps,
+  productsDb: ProductsDatabase,
+  auth: AuthService,
+) {
   const user = await auth.getUser(props.userId);
-  const data = await database.getData(user.id);
+  const data = await productsDb.getUserData(user.id);
   return partialRender({ data }, { userId: user.id });
 }
 
-// Client contexts in interactive
-function interactiveConstructor(props, refs, theme, user) {
+// Services in fast render
+async function fastRender(
+  props: ProductPageProps,
+  carryForward: { userId: string },
+  inventory: InventoryService,
+) {
+  const status = await inventory.getStatus(carryForward.userId);
+  return partialRender({ status });
+}
+```
+
+#### Contexts (Client-Side)
+
+Contexts are only available in the interactive phase:
+
+```typescript
+// Contexts in interactive component
+function interactiveConstructor(props, refs, theme: Theme, user: User) {
   const isDarkMode = theme.isDarkMode();
   const userPreferences = user.getPreferences();
 
@@ -343,25 +408,88 @@ async function* urlLoader(): AsyncIterable<ProductParams[]> {
 }
 ```
 
-## Context Management
+## Service Management
 
-### Server Contexts
+### Defining Services
 
-Server contexts provide services and data access:
+Services are defined using `createJayService` and type markers:
 
 ```typescript
-// Define server context
-const DatabaseContext = createJayContext<Database>();
-const AuthContext = createJayContext<AuthService>();
+// src/services/products-database.ts
+import { createJayService } from '@jay-framework/fullstack-component';
 
-// Use in rendering functions
-async function slowlyRender(props, database, auth) {
-  const user = await auth.getUser(props.userId);
-  const data = await database.getUserData(user.id);
-
-  return partialRender({ data }, { userId: user.id });
+export interface ProductsDatabase {
+  getAllProducts(): Promise<Product[]>;
+  getProductBySlug(slug: string): Promise<Product | null>;
+  updateProduct(id: string, updates: Partial<Product>): Promise<void>;
 }
+
+export const PRODUCTS_DATABASE_SERVICE = createJayService<ProductsDatabase>('ProductsDatabase');
 ```
+
+### Registering Services
+
+Services are registered in the `src/jay.init.ts` file:
+
+```typescript
+// src/jay.init.ts
+import {
+  onInit,
+  onShutdown,
+  registerService,
+  getService,
+} from '@jay-framework/stack-server-runtime';
+import { PRODUCTS_DATABASE_SERVICE, createProductsDatabase } from './services/products-database';
+import { INVENTORY_SERVICE, createInventoryService } from './services/inventory';
+
+onInit(async () => {
+  // Initialize and register services
+  const productsDb = await createProductsDatabase();
+  registerService(PRODUCTS_DATABASE_SERVICE, productsDb);
+
+  const inventory = await createInventoryService();
+  registerService(INVENTORY_SERVICE, inventory);
+
+  console.log('Services initialized');
+});
+
+onShutdown(async () => {
+  // Clean up services
+  const productsDb = getService(PRODUCTS_DATABASE_SERVICE);
+  await productsDb.close();
+
+  const inventory = getService(INVENTORY_SERVICE);
+  await inventory.dispose();
+
+  console.log('Services shut down');
+});
+```
+
+The `src/jay.init.ts` file:
+
+- Is automatically loaded by the dev server on startup
+- Supports hot reload - services are reinitialized when the file changes
+- Provides lifecycle hooks for initialization and cleanup
+- Manages graceful shutdown in production
+- Has full TypeScript support since it's in the `src/` directory
+
+### Using Services in Pages
+
+Once registered, services are injected into your page components:
+
+```typescript
+import { makeJayStackComponent } from '@jay-framework/fullstack-component';
+import { PRODUCTS_DATABASE_SERVICE } from './services/products-database';
+
+export const page = makeJayStackComponent<PageContract>()
+  .withServices(PRODUCTS_DATABASE_SERVICE)
+  .withSlowlyRender(async (props, productsDb) => {
+    const products = await productsDb.getAllProducts();
+    return partialRender({ products });
+  });
+```
+
+## Context Management
 
 ### Client Contexts
 

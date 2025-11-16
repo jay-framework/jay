@@ -20,7 +20,7 @@ describe('dev server', () => {
     function optionsForDir(directory: string): DevServerOptions {
         return {
             ...baseOptions,
-            pagesBase: path.resolve(__dirname, directory),
+            pagesRootFolder: path.resolve(__dirname, directory),
         };
     }
 

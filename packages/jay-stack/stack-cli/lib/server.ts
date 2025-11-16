@@ -49,8 +49,9 @@ async function initApp() {
 
     // Start dev server
     const { server, viteServer, routes } = await mkDevServer({
-        pagesBase: path.resolve(resolvedConfig.devServer.pagesBase),
-        serverBase: '/',
+        pagesRootFolder: path.resolve(resolvedConfig.devServer.pagesBase),
+        projectRootFolder: process.cwd(),
+        publicBaseUrlPath: '/',
         dontCacheSlowly: false,
         jayRollupConfig: jayOptions,
     });
