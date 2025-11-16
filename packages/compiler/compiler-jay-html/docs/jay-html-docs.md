@@ -211,6 +211,65 @@ data:
 
 This creates a recursive type at `root.nested` where `children` has the same type as the parent `nested` object.
 
+### Array Recursion vs. Array Item References
+
+When working with arrays, you can use two different syntaxes:
+
+**Array Recursion** - Use `array<$/data/path>` to create arrays of recursive items:
+
+```yaml
+data:
+  name: string
+  id: string
+  children: array<$/data>
+```
+
+This creates an array where each item has the same type as the root data structure.
+
+**Generated TypeScript:**
+```typescript
+export interface TreeViewState {
+  name: string;
+  id: string;
+  children: Array<TreeViewState>;
+}
+```
+
+**Array Item Unwrapping** - Use `$/data/path[]` to reference a single item from an array property:
+
+```yaml
+data:
+  products:
+    - id: string
+      name: string
+      price: number
+  featuredProduct: $/data/products[]
+```
+
+The `[]` suffix unwraps the array and links to the item type instead of the full array.
+
+**Generated TypeScript:**
+```typescript
+export interface ProductOfProductListViewState {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export interface ProductListViewState {
+  products: Array<ProductOfProductListViewState>;
+  featuredProduct: ProductOfProductListViewState | null;
+}
+```
+
+**Comparison:**
+
+| Syntax | Use Case | Generated Type |
+|--------|----------|----------------|
+| `array<$/data>` | Multiple items (array) | `Array<ItemType>` |
+| `$/data/arrayProp` | Reference to entire array | `Array<ItemType>` |
+| `$/data/arrayProp[]` | Single item from array | `ItemType \| null` |
+
 ### Creating Recursive Regions
 
 Use the `ref` attribute to mark an element as a recursive region, then use `<recurse>` to trigger recursion:
