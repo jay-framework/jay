@@ -83,7 +83,11 @@ Jay Stack implements three distinct rendering phases for optimal performance:
 Jay Stack uses a fluent builder API for creating full-stack components:
 
 ```typescript
-import { makeJayStackComponent, partialRender, createJayService } from '@jay-framework/fullstack-component';
+import {
+  makeJayStackComponent,
+  partialRender,
+  createJayService,
+} from '@jay-framework/fullstack-component';
 import { PRODUCTS_DATABASE_SERVICE, INVENTORY_SERVICE } from './services';
 
 export const page = makeJayStackComponent<PageContract>()
@@ -167,10 +171,7 @@ The URL loader receives the requested services as parameters, allowing you to qu
 Defines the slow rendering function for semi-static data:
 
 ```typescript
-async function slowlyRender(
-  props: ProductPageProps & ProductParams,
-  productsDb: ProductsDatabase
-) {
+async function slowlyRender(props: ProductPageProps & ProductParams, productsDb: ProductsDatabase) {
   const product = await productsDb.getProductBySlug(props.slug);
 
   return partialRender(
@@ -198,7 +199,7 @@ Defines the fast rendering function for dynamic data:
 async function fastRender(
   props: ProductPageProps & ProductParams,
   carryForward: { productId: string },
-  inventory: InventoryService
+  inventory: InventoryService,
 ) {
   const status = await inventory.getStatus(carryForward.productId);
 
@@ -208,9 +209,7 @@ async function fastRender(
   );
 }
 
-makeJayStackComponent<ProductContract>()
-  .withServices(INVENTORY_SERVICE)
-  .withFastRender(fastRender);
+makeJayStackComponent<ProductContract>().withServices(INVENTORY_SERVICE).withFastRender(fastRender);
 ```
 
 The fast render function receives props, the carry-forward data from slow render, and the requested services as parameters.
@@ -320,7 +319,7 @@ async function* urlLoader(productsDb: ProductsDatabase): AsyncIterable<ProductPa
 async function slowlyRender(
   props: ProductPageProps,
   productsDb: ProductsDatabase,
-  auth: AuthService
+  auth: AuthService,
 ) {
   const user = await auth.getUser(props.userId);
   const data = await productsDb.getUserData(user.id);
@@ -331,7 +330,7 @@ async function slowlyRender(
 async function fastRender(
   props: ProductPageProps,
   carryForward: { userId: string },
-  inventory: InventoryService
+  inventory: InventoryService,
 ) {
   const status = await inventory.getStatus(carryForward.userId);
   return partialRender({ status });
@@ -440,14 +439,8 @@ import {
   registerService,
   getService,
 } from '@jay-framework/stack-server-runtime';
-import {
-  PRODUCTS_DATABASE_SERVICE,
-  createProductsDatabase,
-} from './services/products-database';
-import {
-  INVENTORY_SERVICE,
-  createInventoryService,
-} from './services/inventory';
+import { PRODUCTS_DATABASE_SERVICE, createProductsDatabase } from './services/products-database';
+import { INVENTORY_SERVICE, createInventoryService } from './services/inventory';
 
 onInit(async () => {
   // Initialize and register services
@@ -473,6 +466,7 @@ onShutdown(async () => {
 ```
 
 The `src/jay.init.ts` file:
+
 - Is automatically loaded by the dev server on startup
 - Supports hot reload - services are reinitialized when the file changes
 - Provides lifecycle hooks for initialization and cleanup

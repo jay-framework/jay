@@ -32,9 +32,13 @@ async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
 function defaults(options: DevServerOptions): DevServerOptions {
     const publicBaseUrlPath = options.publicBaseUrlPath || process.env.BASE || '/';
     const projectRootFolder = options.projectRootFolder || '.';
-    const pagesRootFolder = path.resolve(projectRootFolder, options.pagesRootFolder || './src/pages');
+    const pagesRootFolder = path.resolve(
+        projectRootFolder,
+        options.pagesRootFolder || './src/pages',
+    );
     const tsConfigFilePath =
-        options.jayRollupConfig.tsConfigFilePath || path.resolve(projectRootFolder, './tsconfig.json');
+        options.jayRollupConfig.tsConfigFilePath ||
+        path.resolve(projectRootFolder, './tsconfig.json');
     return {
         publicBaseUrlPath,
         pagesRootFolder,
@@ -145,7 +149,13 @@ function mkRoute(
 }
 
 export async function mkDevServer(options: DevServerOptions): Promise<DevServer> {
-    const { publicBaseUrlPath, pagesRootFolder, projectRootFolder, jayRollupConfig, dontCacheSlowly } = defaults(options);
+    const {
+        publicBaseUrlPath,
+        pagesRootFolder,
+        projectRootFolder,
+        jayRollupConfig,
+        dontCacheSlowly,
+    } = defaults(options);
 
     // Initialize service lifecycle manager
     const lifecycleManager = new ServiceLifecycleManager(projectRootFolder);

@@ -371,10 +371,7 @@ import {
 } from '@jay-framework/fullstack-component';
 import { render, PageElementRefs } from './page.jay-html';
 import { Props } from '@jay-framework/component';
-import {
-  PRODUCTS_DATABASE_SERVICE,
-  ProductsDatabase,
-} from '../../../services/products-database';
+import { PRODUCTS_DATABASE_SERVICE, ProductsDatabase } from '../../../services/products-database';
 import { INVENTORY_SERVICE, InventoryService } from '../../../services/inventory';
 
 interface ProductPageParams extends UrlParams {
