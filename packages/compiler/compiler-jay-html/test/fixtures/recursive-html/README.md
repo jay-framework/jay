@@ -9,6 +9,7 @@ The recursive jay-html feature allows marking HTML subtrees as recursive regions
 - `ref="regionName"` on an element to mark it as a recursive region
 - `<recurse ref="regionName" />` to trigger recursion at that point
 - `array<$/data>` type syntax to define recursive type references
+- `$/data/path[]` syntax to unwrap array items and reference the item type
 
 ## Test Cases
 
@@ -126,8 +127,17 @@ const render = (viewState: TreeViewState) =>
 2. **Type Consistency**: The array/property type must match the recursive type reference
    - Array recursion: `array<$/data>` → `Array<ViewState>`
    - Single recursion: `$/data` → `ViewState | null`
+   - Array reference: `$/data/arrayProp` → `Array<ItemType>`
+   - Array item unwrap: `$/data/arrayProp[]` → `ItemType | null`
 3. **Valid Region References**: `<recurse ref="name">` must reference an existing `ref="name"` element
 4. **Descendant Requirement**: `<recurse>` must be a descendant of the referenced region
+5. **Array Unwrap Validation**: The `[]` syntax must point to an actual array property
+
+## Type Nullability Rules
+
+- **Non-array types** get `| null` since they may not exist
+- **Array types** don't get `| null` since an empty array (`[]`) can be used
+- **Repeated tags** with `repeated: true` always generate arrays
 
 ## Not Yet Tested
 
@@ -137,6 +147,5 @@ These fixtures do **not** yet test:
 - Referencing nested types (`array<$/data/metadata>`)
 - Error cases (missing guards, invalid references, etc.)
 - React target generation for recursive structures
-- Contract file recursion with `link: $/`
 
 Additional test fixtures should be added for these scenarios.
