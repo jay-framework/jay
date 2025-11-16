@@ -70,27 +70,20 @@ export class ServiceLifecycleManager {
         console.log(`[Services] Loading initialization file: ${this.initFilePath}`);
 
         try {
-            // Use Vite's SSR module loader if available (handles TypeScript)
-            // Otherwise fall back to native import (requires .js files)
+            // Load jay.init.ts through Vite's SSR loader (handles TypeScript)
+            // Vite is configured to treat @jay-framework/stack-server-runtime as external,
+            // so both this file and jay.init.ts will share the same module instance
             if (this.viteServer) {
-                // Load jay.init.ts through Vite
                 await this.viteServer.ssrLoadModule(this.initFilePath);
-
-                // Load the runtime module through Vite to ensure same module instance
-                const runtimeModule = await this.viteServer.ssrLoadModule(
-                    '@jay-framework/stack-server-runtime',
-                );
-
-                // Execute registered init callbacks
-                await runtimeModule.runInitCallbacks();
             } else {
-                // Convert file path to file URL for ES module import
+                // Fallback for production: use native import (requires .js files)
                 const fileUrl = pathToFileURL(this.initFilePath).href;
                 await import(fileUrl);
-
-                // Execute registered init callbacks
-                await runInitCallbacks();
             }
+
+            // Execute registered init callbacks
+            // This works because Vite uses Node's require for stack-server-runtime (external)
+            await runInitCallbacks();
 
             this.isInitialized = true;
             console.log('[Services] Initialization complete');
@@ -111,26 +104,13 @@ export class ServiceLifecycleManager {
         console.log('[Services] Shutting down...');
 
         try {
-            // Load shutdown callbacks through Vite if available
-            if (this.viteServer) {
-                const runtimeModule = await this.viteServer.ssrLoadModule(
-                    '@jay-framework/stack-server-runtime',
-                );
-
-                await Promise.race([
-                    runtimeModule.runShutdownCallbacks(),
-                    new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error('Shutdown timeout')), timeoutMs),
-                    ),
-                ]);
-            } else {
-                await Promise.race([
-                    runShutdownCallbacks(),
-                    new Promise((_, reject) =>
-                        setTimeout(() => reject(new Error('Shutdown timeout')), timeoutMs),
-                    ),
-                ]);
-            }
+            // Use the same stack-server-runtime instance due to Vite's external config
+            await Promise.race([
+                runShutdownCallbacks(),
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Shutdown timeout')), timeoutMs),
+                ),
+            ]);
 
             console.log('[Services] Shutdown complete');
         } catch (error) {
@@ -158,28 +138,24 @@ export class ServiceLifecycleManager {
         // Step 1: Graceful shutdown
         await this.shutdown();
 
-        // Step 2: Clear all caches - use Vite's module if available
-        if (this.viteServer) {
-            const runtimeModule = await this.viteServer.ssrLoadModule(
-                '@jay-framework/stack-server-runtime',
-            );
-            runtimeModule.clearLifecycleCallbacks();
-            runtimeModule.clearServiceRegistry();
+        // Step 2: Clear all caches
+        // Uses the same stack-server-runtime instance due to Vite's external config
+        clearLifecycleCallbacks();
+        clearServiceRegistry();
 
-            // Invalidate Vite's module cache
+        // Step 3: Invalidate module caches
+        if (this.viteServer) {
+            // Invalidate Vite's module cache for jay.init.ts
             const moduleNode = this.viteServer.moduleGraph.getModuleById(this.initFilePath);
             if (moduleNode) {
                 await this.viteServer.moduleGraph.invalidateModule(moduleNode);
             }
         } else {
-            clearLifecycleCallbacks();
-            clearServiceRegistry();
-
-            // Clear Node.js module cache
+            // Clear Node.js module cache (production fallback)
             delete require.cache[require.resolve(this.initFilePath)];
         }
 
-        // Step 3: Re-import and re-initialize
+        // Step 4: Re-import and re-initialize
         this.isInitialized = false;
         await this.initialize();
 

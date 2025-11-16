@@ -10,10 +10,6 @@
 
 import type { ServiceMarker } from '@jay-framework/fullstack-component';
 
-// Re-export for convenience
-export type { ServiceMarker } from '@jay-framework/fullstack-component';
-export { createJayService } from '@jay-framework/fullstack-component';
-
 // ============================================================================
 // Service Registry
 // ============================================================================

@@ -159,6 +159,11 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
         appType: 'custom',
         base: publicBaseUrlPath,
         root: pagesRootFolder,
+        ssr: {
+            // Mark stack-server-runtime as external so Vite uses Node's require
+            // This ensures jay.init.ts and dev-server share the same module instance
+            external: ['@jay-framework/stack-server-runtime'],
+        },
     });
 
     // Set the Vite server and initialize services

@@ -27,7 +27,7 @@ onInit(async () => {
     const inventory = createInventoryService();
     registerService(INVENTORY_SERVICE, inventory);
 
-    console.log('[Fake Shop] Services initialized successfully');
+    console.log('[Fake Shop] Services initialized successfully!!!!');
 });
 
 onShutdown(async () => {

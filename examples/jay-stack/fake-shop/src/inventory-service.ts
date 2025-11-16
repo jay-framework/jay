@@ -1,4 +1,4 @@
-import { createJayService } from '@jay-framework/stack-server-runtime';
+import { createJayService } from '@jay-framework/fullstack-component';
 
 export interface InventoryService {
     getAvailableUnits(productId: string): Promise<number>;
