@@ -91,10 +91,10 @@ function validateRecursivePath(
 ): string | undefined {
     // Check if the path ends with [] (array item unwrapping syntax)
     const hasArrayUnwrap = referencePath.endsWith('[]');
-    const pathToValidate = hasArrayUnwrap 
-        ? referencePath.substring(0, referencePath.length - 2) 
+    const pathToValidate = hasArrayUnwrap
+        ? referencePath.substring(0, referencePath.length - 2)
         : referencePath;
-    
+
     // Parse the reference path (e.g., "$/data" or "$/data/submenu/items")
     const parts = pathToValidate.split('/').filter((p) => p);
 
@@ -155,9 +155,11 @@ function validateRecursivePath(
 
     // If [] syntax is used, validate that the resolved path is actually an array
     if (hasArrayUnwrap && !Array.isArray(currentData)) {
-        return `Recursive reference with [] unwrap syntax must point to an array type, but "$/` +
+        return (
+            `Recursive reference with [] unwrap syntax must point to an array type, but "$/` +
             traversedPath.join('/') +
-            `" is not an array.`;
+            `" is not an array.`
+        );
     }
 
     return undefined;
@@ -244,10 +246,10 @@ function resolveRecursiveReferences(
     if (type instanceof JayRecursiveType) {
         // Check if the path ends with [] (array item unwrapping syntax)
         const hasArrayUnwrap = type.referencePath.endsWith('[]');
-        const pathToResolve = hasArrayUnwrap 
-            ? type.referencePath.substring(0, type.referencePath.length - 2) 
+        const pathToResolve = hasArrayUnwrap
+            ? type.referencePath.substring(0, type.referencePath.length - 2)
             : type.referencePath;
-        
+
         // Parse the reference path (e.g., "$/data" or "$/data/tree")
         const parts = pathToResolve.split('/').filter((p) => p);
 

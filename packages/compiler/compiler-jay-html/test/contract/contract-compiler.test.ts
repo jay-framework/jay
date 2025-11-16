@@ -967,7 +967,11 @@ tags:
     description: Link to the products array item type (will be Product, not Array<Product>)
 `;
             const parsedContract = parseContract(contract, 'product-list-unwrapped.jay-contract');
-            const result = await compileContract(parsedContract, './product-list-unwrapped', noHopResolver);
+            const result = await compileContract(
+                parsedContract,
+                './product-list-unwrapped',
+                noHopResolver,
+            );
 
             expect(result.validations).toEqual([]);
             expect(await prettify(result.val)).toBe(
