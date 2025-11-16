@@ -21,7 +21,7 @@ export interface TreeOfIndirectRecursion2ViewState {
     name: string;
     hasChildren: boolean;
     isOpen: boolean;
-    children: Array<TreeOfIndirectRecursion2ViewState> | null;
+    children: Array<TreeOfIndirectRecursion2ViewState>;
 }
 
 export interface IndirectRecursion2ViewState {

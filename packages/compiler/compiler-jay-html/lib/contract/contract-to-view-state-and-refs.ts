@@ -260,8 +260,14 @@ function resolveRecursiveReferences(type: JayType | undefined, rootType: JayType
             // Reference to root type
             type.resolvedType = rootType;
         } else if (type.referencePath.startsWith('$/')) {
+            // Check if the path ends with [] (array item unwrapping syntax)
+            const hasArrayUnwrap = type.referencePath.endsWith('[]');
+            const pathToResolve = hasArrayUnwrap 
+                ? type.referencePath.substring(0, type.referencePath.length - 2) 
+                : type.referencePath;
+            
             // Reference to nested type
-            const path = type.referencePath.substring(2); // Remove '$/'
+            const path = pathToResolve.substring(2); // Remove '$/'
             const pathParts = path.split('/');
             let currentType: JayType = rootType;
 
@@ -277,6 +283,11 @@ function resolveRecursiveReferences(type: JayType | undefined, rootType: JayType
                 } else {
                     break;
                 }
+            }
+
+            // If [] syntax is used, unwrap the array
+            if (hasArrayUnwrap && isArrayType(currentType)) {
+                currentType = currentType.itemType;
             }
 
             type.resolvedType = currentType || rootType;

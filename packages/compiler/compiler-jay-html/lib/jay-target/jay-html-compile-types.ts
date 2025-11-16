@@ -70,13 +70,16 @@ function renderInterface(aType: JayType): string {
                         childInterfaces.push(genEnum);
                         return `  ${prop}: ${childType.name}`;
                     } else if (isRecursiveType(childType)) {
-                        // Recursive single child: $/data → ViewState | null
+                        // Recursive reference
                         if (!childType.resolvedType) {
                             throw new Error(
                                 `Recursive type not resolved: ${childType.referencePath}`,
                             );
                         }
-                        return `  ${prop}: ${childType.resolvedType.name} | null`;
+                        // Arrays don't need | null since they can be empty []
+                        // Only non-array types get | null (e.g., single optional child: $/data → ViewState | null)
+                        const nullSuffix = isArrayType(childType.resolvedType) ? '' : ' | null';
+                        return `  ${prop}: ${childType.resolvedType.name}${nullSuffix}`;
                     } else throw new Error(`unknown type ${childType.name}, ${childType.kind}`);
                 })
                 .join(',\n');

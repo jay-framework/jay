@@ -89,8 +89,14 @@ function validateRecursivePath(
     rootData: any,
     currentPath: Array<string>,
 ): string | undefined {
+    // Check if the path ends with [] (array item unwrapping syntax)
+    const hasArrayUnwrap = referencePath.endsWith('[]');
+    const pathToValidate = hasArrayUnwrap 
+        ? referencePath.substring(0, referencePath.length - 2) 
+        : referencePath;
+    
     // Parse the reference path (e.g., "$/data" or "$/data/submenu/items")
-    const parts = referencePath.split('/').filter((p) => p);
+    const parts = pathToValidate.split('/').filter((p) => p);
 
     if (parts.length === 0 || parts[0] !== '$') {
         return `Recursive reference must start with "$/" (got: ${referencePath}). Use "$/data" or "$/data/path" format.`;
@@ -145,6 +151,13 @@ function validateRecursivePath(
         }
         currentData = currentData[part];
         traversedPath.push(part);
+    }
+
+    // If [] syntax is used, validate that the resolved path is actually an array
+    if (hasArrayUnwrap && !Array.isArray(currentData)) {
+        return `Recursive reference with [] unwrap syntax must point to an array type, but "$/` +
+            traversedPath.join('/') +
+            `" is not an array.`;
     }
 
     return undefined;
@@ -229,8 +242,14 @@ function resolveRecursiveReferences(
     validations: JayValidations,
 ): void {
     if (type instanceof JayRecursiveType) {
+        // Check if the path ends with [] (array item unwrapping syntax)
+        const hasArrayUnwrap = type.referencePath.endsWith('[]');
+        const pathToResolve = hasArrayUnwrap 
+            ? type.referencePath.substring(0, type.referencePath.length - 2) 
+            : type.referencePath;
+        
         // Parse the reference path (e.g., "$/data" or "$/data/tree")
-        const parts = type.referencePath.split('/').filter((p) => p);
+        const parts = pathToResolve.split('/').filter((p) => p);
 
         if (parts.length >= 2 && parts[0] === '$' && parts[1] === 'data') {
             // Start from root type
@@ -280,6 +299,11 @@ function resolveRecursiveReferences(
                     );
                     return;
                 }
+            }
+
+            // If [] syntax is used, unwrap the array
+            if (hasArrayUnwrap && resolvedType instanceof JayArrayType) {
+                resolvedType = resolvedType.itemType;
             }
 
             type.resolvedType = resolvedType;
