@@ -14,8 +14,6 @@ import {
 import { PRODUCTS_DATABASE_SERVICE, createProductsDatabaseService } from './products-database';
 import { INVENTORY_SERVICE, createInventoryService } from './inventory-service';
 
-console.log('!!!!!!!!!!!!!!!!!!!!!!!!!')
-
 onInit(async () => {
     console.log('[Fake Shop] Initializing services...');
 
