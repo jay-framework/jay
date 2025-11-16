@@ -227,6 +227,7 @@ data:
 This creates an array where each item has the same type as the root data structure.
 
 **Generated TypeScript:**
+
 ```typescript
 export interface TreeViewState {
   name: string;
@@ -249,6 +250,7 @@ data:
 The `[]` suffix unwraps the array and links to the item type instead of the full array.
 
 **Generated TypeScript:**
+
 ```typescript
 export interface ProductOfProductListViewState {
   id: string;
@@ -264,11 +266,11 @@ export interface ProductListViewState {
 
 **Comparison:**
 
-| Syntax | Use Case | Generated Type |
-|--------|----------|----------------|
-| `array<$/data>` | Multiple items (array) | `Array<ItemType>` |
-| `$/data/arrayProp` | Reference to entire array | `Array<ItemType>` |
-| `$/data/arrayProp[]` | Single item from array | `ItemType \| null` |
+| Syntax               | Use Case                  | Generated Type     |
+| -------------------- | ------------------------- | ------------------ |
+| `array<$/data>`      | Multiple items (array)    | `Array<ItemType>`  |
+| `$/data/arrayProp`   | Reference to entire array | `Array<ItemType>`  |
+| `$/data/arrayProp[]` | Single item from array    | `ItemType \| null` |
 
 ### Creating Recursive Regions
 

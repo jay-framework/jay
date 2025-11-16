@@ -199,6 +199,7 @@ tags:
 The `link: $/` references the root of the current contract, creating a recursive structure.
 
 **Generated TypeScript:**
+
 ```typescript
 export interface FolderTreeViewState {
   name: string;
@@ -234,6 +235,7 @@ tags:
 The `link: $/metadata` references the `metadata` sub-contract within the same contract.
 
 **Generated TypeScript:**
+
 ```typescript
 export interface MetadataOfDocumentViewState {
   category: string;
@@ -277,12 +279,15 @@ tags:
 ```
 
 **Without `[]` - Links to the Array:**
+
 - `link: $/products` → `Array<ProductOfProductListViewState>`
 
 **With `[]` - Links to the Array Item:**
+
 - `link: $/products[]` → `ProductOfProductListViewState | null`
 
 **Generated TypeScript:**
+
 ```typescript
 export interface ProductOfProductListViewState {
   id: string;
@@ -299,13 +304,13 @@ export interface ProductListViewState {
 
 ### Recursive Link Syntax Reference
 
-| Syntax | Resolves To | Generated Type |
-|--------|-------------|----------------|
-| `$/` | Root contract | `ContractViewState \| null` |
-| `$/propertyName` | Nested property | `PropertyType \| null` |
-| `$/arrayProperty` | Array property | `Array<ItemType>` |
-| `$/arrayProperty[]` | Array item type | `ItemType \| null` |
-| `$/nested/path` | Deeply nested property | `PropertyType \| null` |
+| Syntax              | Resolves To            | Generated Type              |
+| ------------------- | ---------------------- | --------------------------- |
+| `$/`                | Root contract          | `ContractViewState \| null` |
+| `$/propertyName`    | Nested property        | `PropertyType \| null`      |
+| `$/arrayProperty`   | Array property         | `Array<ItemType>`           |
+| `$/arrayProperty[]` | Array item type        | `ItemType \| null`          |
+| `$/nested/path`     | Deeply nested property | `PropertyType \| null`      |
 
 ### Type Nullability Rules
 
@@ -316,6 +321,7 @@ export interface ProductListViewState {
 ### Common Use Cases
 
 **1. Tree Structures (Direct Recursion)**
+
 ```yaml
 name: tree-node
 tags:
@@ -329,6 +335,7 @@ tags:
 ```
 
 **2. Linked Lists (Single Recursion)**
+
 ```yaml
 name: linked-list
 tags:
@@ -341,6 +348,7 @@ tags:
 ```
 
 **3. Nested Menus (Indirect Recursion)**
+
 ```yaml
 name: menu
 tags:
@@ -357,6 +365,7 @@ tags:
 ```
 
 **4. Featured Item from Array (Array Unwrapping)**
+
 ```yaml
 name: catalog
 tags:

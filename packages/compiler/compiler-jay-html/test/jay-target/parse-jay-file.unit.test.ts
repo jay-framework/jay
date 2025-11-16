@@ -418,7 +418,9 @@ describe('compiler', () => {
                 expect(productType.props.price).toBe(JayNumber);
 
                 // featuredProduct should be a recursive reference that resolves to the products array
-                const recursiveType = assertRecursiveType(types.props.featuredProduct as JayRecursiveType);
+                const recursiveType = assertRecursiveType(
+                    types.props.featuredProduct as JayRecursiveType,
+                );
                 expect(recursiveType.referencePath).toBe('$/data/products');
                 expect(recursiveType.resolvedType).toBe(productsArray);
             });
@@ -454,7 +456,9 @@ describe('compiler', () => {
                 expect(productType.props.price).toBe(JayNumber);
 
                 // featuredProduct should be a recursive reference that resolves to the product item type (not the array)
-                const recursiveType = assertRecursiveType(types.props.featuredProduct as JayRecursiveType);
+                const recursiveType = assertRecursiveType(
+                    types.props.featuredProduct as JayRecursiveType,
+                );
                 expect(recursiveType.referencePath).toBe('$/data/products[]');
                 expect(recursiveType.resolvedType).toBe(productType);
             });

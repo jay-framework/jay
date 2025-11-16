@@ -262,10 +262,10 @@ function resolveRecursiveReferences(type: JayType | undefined, rootType: JayType
         } else if (type.referencePath.startsWith('$/')) {
             // Check if the path ends with [] (array item unwrapping syntax)
             const hasArrayUnwrap = type.referencePath.endsWith('[]');
-            const pathToResolve = hasArrayUnwrap 
-                ? type.referencePath.substring(0, type.referencePath.length - 2) 
+            const pathToResolve = hasArrayUnwrap
+                ? type.referencePath.substring(0, type.referencePath.length - 2)
                 : type.referencePath;
-            
+
             // Reference to nested type
             const path = pathToResolve.substring(2); // Remove '$/'
             const pathParts = path.split('/');
