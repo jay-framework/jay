@@ -134,12 +134,12 @@ export function clearLifecycleCallbacks(): void {
 
 ### 3. Init File Pattern - Lifecycle Hooks
 
-Projects can create a `jay.init.ts` (or `jay.init.js`) file at the project root that registers lifecycle hooks.
+Projects can create a `src/jay.init.ts` (or `jay.init.js`) file that registers lifecycle hooks.
 
 The API uses a **hook-based pattern** where you call `onInit()` and `onShutdown()` at the top level:
 
 ```typescript
-// jay.init.ts
+// src/jay.init.ts
 
 import {
   onInit,
@@ -284,7 +284,7 @@ export function createInventoryService(db: DatabaseService): InventoryService {
   };
 }
 
-// jay.init.ts (project root)
+// src/jay.init.ts (project root)
 import {
   onInit,
   onShutdown,
@@ -341,7 +341,7 @@ The dev-server package (`packages/jay-stack/dev-server`) manages the full servic
 
 ### Startup Flow
 
-1. **Find init file** - Look for `jay.init.ts` (or `.js`) in project root
+1. **Find init file** - Look for `src/jay.init.ts` (or `.js`)
 2. **Import module** - Import the file (this registers hooks via `onInit`/`onShutdown` calls)
 3. **Run init callbacks** - Execute all registered `onInit` callbacks in order
 4. **Ready state** - Server is ready to handle requests
@@ -479,7 +479,7 @@ We chose `onInit(callback)` and `onShutdown(callback)` over export-based pattern
 **Example of composability:**
 
 ```typescript
-// jay.init.ts
+// src/jay.init.ts
 import './services/database.init'; // Registers its own hooks
 import './services/cache.init'; // Registers its own hooks
 import './services/queue.init'; // Registers its own hooks

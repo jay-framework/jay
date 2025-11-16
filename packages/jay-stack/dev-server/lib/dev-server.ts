@@ -30,13 +30,15 @@ async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
 }
 
 function defaults(options: DevServerOptions): DevServerOptions {
-    const serverBase = options.serverBase || process.env.BASE || '/';
-    const pagesBase = path.resolve(serverBase, options.pagesBase || './src/pages');
+    const publicBaseUrlPath = options.publicBaseUrlPath || process.env.BASE || '/';
+    const projectRootFolder = options.projectRootFolder || '.';
+    const pagesRootFolder = path.resolve(projectRootFolder, options.pagesRootFolder || './src/pages');
     const tsConfigFilePath =
-        options.jayRollupConfig.tsConfigFilePath || path.resolve(serverBase, './tsconfig.json');
+        options.jayRollupConfig.tsConfigFilePath || path.resolve(projectRootFolder, './tsconfig.json');
     return {
-        serverBase,
-        pagesBase,
+        publicBaseUrlPath,
+        pagesRootFolder,
+        projectRootFolder,
         dontCacheSlowly: options.dontCacheSlowly,
         jayRollupConfig: {
             ...(options.jayRollupConfig || {}),
@@ -78,7 +80,7 @@ function mkRoute(
     const path = routeToExpressRoute(route);
     const handler = async (req: Request, res: Response) => {
         try {
-            const url = req.originalUrl.replace(options.serverBase, '');
+            const url = req.originalUrl.replace(options.publicBaseUrlPath, '');
             const pageParams = req.params;
             const pageProps: PageProps = {
                 language: 'en',
@@ -89,7 +91,7 @@ function mkRoute(
             const pageParts = await loadPageParts(
                 vite,
                 route,
-                options.pagesBase,
+                options.pagesRootFolder,
                 options.jayRollupConfig,
             );
 
@@ -143,13 +145,10 @@ function mkRoute(
 }
 
 export async function mkDevServer(options: DevServerOptions): Promise<DevServer> {
-    const { serverBase, pagesBase, jayRollupConfig, dontCacheSlowly } = defaults(options);
+    const { publicBaseUrlPath, pagesRootFolder, projectRootFolder, jayRollupConfig, dontCacheSlowly } = defaults(options);
 
     // Initialize service lifecycle manager
-    const lifecycleManager = new ServiceLifecycleManager(serverBase);
-
-    // Initialize services before starting the server
-    await lifecycleManager.initialize();
+    const lifecycleManager = new ServiceLifecycleManager(projectRootFolder);
 
     // Set up graceful shutdown handlers
     setupGracefulShutdown(lifecycleManager);
@@ -158,14 +157,18 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
         server: { middlewareMode: true },
         plugins: [jayRuntime(jayRollupConfig)],
         appType: 'custom',
-        base: serverBase,
-        root: pagesBase,
+        base: publicBaseUrlPath,
+        root: pagesRootFolder,
     });
+
+    // Set the Vite server and initialize services
+    lifecycleManager.setViteServer(vite);
+    await lifecycleManager.initialize();
 
     // Set up hot reload for jay.init.ts
     setupServiceHotReload(vite, lifecycleManager);
 
-    const routes: JayRoutes = await initRoutes(pagesBase);
+    const routes: JayRoutes = await initRoutes(pagesRootFolder);
     const slowlyPhase = new DevSlowlyChangingPhase(dontCacheSlowly);
 
     const devServerRoutes: DevServerRoute[] = routes.map((route: JayRoute) =>

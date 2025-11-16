@@ -63,7 +63,7 @@ Tracks product inventory with methods:
 
 ### Service Initialization (`src/jay.init.ts`)
 
-Services are registered on startup:
+Services are registered in the `src/jay.init.ts` file:
 
 ```typescript
 import { onInit, registerService } from '@jay-framework/stack-server-runtime';
@@ -76,6 +76,8 @@ onInit(async () => {
   registerService(INVENTORY_SERVICE, inventory);
 });
 ```
+
+The dev server automatically loads this file on startup and provides lifecycle hooks for service initialization and cleanup.
 
 ### Using Services in Pages
 

@@ -430,10 +430,10 @@ export const PRODUCTS_DATABASE_SERVICE = createJayService<ProductsDatabase>('Pro
 
 ### Registering Services
 
-Services are registered in the `jay.init.ts` file at your project root:
+Services are registered in the `src/jay.init.ts` file:
 
 ```typescript
-// jay.init.ts
+// src/jay.init.ts
 import {
   onInit,
   onShutdown,
@@ -443,11 +443,11 @@ import {
 import {
   PRODUCTS_DATABASE_SERVICE,
   createProductsDatabase,
-} from './src/services/products-database';
+} from './services/products-database';
 import {
   INVENTORY_SERVICE,
   createInventoryService,
-} from './src/services/inventory';
+} from './services/inventory';
 
 onInit(async () => {
   // Initialize and register services
@@ -472,11 +472,12 @@ onShutdown(async () => {
 });
 ```
 
-The `jay.init.ts` file:
+The `src/jay.init.ts` file:
 - Is automatically loaded by the dev server on startup
 - Supports hot reload - services are reinitialized when the file changes
 - Provides lifecycle hooks for initialization and cleanup
 - Manages graceful shutdown in production
+- Has full TypeScript support since it's in the `src/` directory
 
 ### Using Services in Pages
 

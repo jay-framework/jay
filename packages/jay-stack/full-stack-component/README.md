@@ -208,7 +208,7 @@ const AUTH_SERVICE = createJayService<AuthService>('Auth');
 makeJayStackComponent<MyComponentContract>().withServices(DATABASE_SERVICE, AUTH_SERVICE);
 ```
 
-Services are global singletons registered in `jay.init.ts` at your project root.
+Services are global singletons registered in `src/jay.init.ts`.
 
 #### `.withContexts(...contextMarkers)`
 
