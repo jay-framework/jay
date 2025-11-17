@@ -280,12 +280,12 @@ export function renderReferenceManager(
 
     const getUniqueRefManagerName = (baseName: string): string => {
         const baseCamelCase = camelCase(`${baseName}RefManager`);
-        
+
         if (!usedRefManagerNames.has(baseCamelCase)) {
             usedRefManagerNames.add(baseCamelCase);
             return baseCamelCase;
         }
-        
+
         // If name is already used, append a suffix
         let suffix = 2;
         let uniqueName = `${baseCamelCase}${suffix}`;
