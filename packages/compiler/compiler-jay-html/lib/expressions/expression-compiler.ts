@@ -86,6 +86,25 @@ export class Variables {
             return variables;
         }
     }
+
+    childVariableForWithData(accessor: Accessor): Variables {
+        const path = accessor.terms.join('.');
+        if (this.children[path]) return this.children[path];
+        else {
+            // For with-data, use the resolved type directly (not itemType like forEach)
+            // Count depth by traversing parent chain
+            let depth = 1;
+            let parent: Variables = this;
+            const maxDepth = 100; // Safety limit
+            while (parent && parent.parent && depth < maxDepth) {
+                depth++;
+                parent = parent.parent;
+            }
+            const variables = new Variables(accessor.resolvedType, this, depth);
+            this.children[path] = variables;
+            return variables;
+        }
+    }
 }
 
 function doParse(expression: string, startRule, vars?: Variables) {
