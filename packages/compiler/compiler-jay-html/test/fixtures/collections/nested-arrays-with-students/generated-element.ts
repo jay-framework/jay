@@ -112,7 +112,7 @@ export function render(options?: RenderElementOptions): NestedArraysWithStudents
             students: studentsRefManager,
         },
     );
-    const [studentsRefManager, [refName2, refGrade2]] = ReferencesManager.for(
+    const [studentsRefManager2, [refName2, refGrade2]] = ReferencesManager.for(
         options,
         [],
         ['name', 'grade'],
@@ -126,7 +126,7 @@ export function render(options?: RenderElementOptions): NestedArraysWithStudents
         [],
         [],
         {
-            students: studentsRefManager,
+            students: studentsRefManager2,
         },
     );
     const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
