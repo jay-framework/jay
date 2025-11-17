@@ -1,0 +1,42 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    classA:
+    -   id: string
+        className: string
+        students:
+        -   name: string
+            grade: number
+            id: string
+    classB:
+    -   id: string
+        className: string
+        students:
+        -   name: string
+            grade: number
+            id: string
+    </script>
+</head>
+<body>
+<div>
+    <h1>Class A</h1>
+    <div forEach="classA" trackBy="id">
+        <h2 ref="className">{className}</h2>
+        <div forEach="students" trackBy="id">
+            <span ref="name">{name}</span>
+            <span ref="grade">{grade}</span>
+        </div>
+    </div>
+    <h1>Class B</h1>
+    <div forEach="classB" trackBy="id">
+        <h2 ref="className">{className}</h2>
+        <div forEach="students" trackBy="id">
+            <span ref="name">{name}</span>
+            <span ref="grade">{grade}</span>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+
