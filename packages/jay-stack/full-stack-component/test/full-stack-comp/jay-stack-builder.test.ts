@@ -6,6 +6,6 @@ describe('jay-stack-builder', () => {
         expect(component.comp).toBeDefined();
         expect(component.fastRender).toBeDefined();
         expect(component.slowlyRender).toBeDefined();
-        expect(component.serverContexts).toHaveLength(1);
+        expect(component.services).toHaveLength(1);
     });
 });

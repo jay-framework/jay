@@ -20,6 +20,7 @@ import { loadPageParts } from '@jay-framework/stack-server-runtime';
 import { generateClientScript } from '@jay-framework/stack-server-runtime';
 import { Request, Response } from 'express';
 import { DevServerOptions } from './dev-server-options';
+import { ServiceLifecycleManager } from './service-lifecycle';
 
 async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
     return await scanRoutes(pagesBaseFolder, {
@@ -29,13 +30,19 @@ async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
 }
 
 function defaults(options: DevServerOptions): DevServerOptions {
-    const serverBase = options.serverBase || process.env.BASE || '/';
-    const pagesBase = path.resolve(serverBase, options.pagesBase || './src/pages');
+    const publicBaseUrlPath = options.publicBaseUrlPath || process.env.BASE || '/';
+    const projectRootFolder = options.projectRootFolder || '.';
+    const pagesRootFolder = path.resolve(
+        projectRootFolder,
+        options.pagesRootFolder || './src/pages',
+    );
     const tsConfigFilePath =
-        options.jayRollupConfig.tsConfigFilePath || path.resolve(serverBase, './tsconfig.json');
+        options.jayRollupConfig.tsConfigFilePath ||
+        path.resolve(projectRootFolder, './tsconfig.json');
     return {
-        serverBase,
-        pagesBase,
+        publicBaseUrlPath,
+        pagesRootFolder,
+        projectRootFolder,
         dontCacheSlowly: options.dontCacheSlowly,
         jayRollupConfig: {
             ...(options.jayRollupConfig || {}),
@@ -54,6 +61,7 @@ export interface DevServer {
     server: Connect.Server;
     viteServer: ViteDevServer;
     routes: DevServerRoute[];
+    lifecycleManager: ServiceLifecycleManager;
 }
 
 function handleOtherResponseCodes(
@@ -76,7 +84,7 @@ function mkRoute(
     const path = routeToExpressRoute(route);
     const handler = async (req: Request, res: Response) => {
         try {
-            const url = req.originalUrl.replace(options.serverBase, '');
+            const url = req.originalUrl.replace(options.publicBaseUrlPath, '');
             const pageParams = req.params;
             const pageProps: PageProps = {
                 language: 'en',
@@ -87,7 +95,7 @@ function mkRoute(
             const pageParts = await loadPageParts(
                 vite,
                 route,
-                options.pagesBase,
+                options.pagesRootFolder,
                 options.jayRollupConfig,
             );
 
@@ -141,16 +149,41 @@ function mkRoute(
 }
 
 export async function mkDevServer(options: DevServerOptions): Promise<DevServer> {
-    const { serverBase, pagesBase, jayRollupConfig, dontCacheSlowly } = defaults(options);
+    const {
+        publicBaseUrlPath,
+        pagesRootFolder,
+        projectRootFolder,
+        jayRollupConfig,
+        dontCacheSlowly,
+    } = defaults(options);
+
+    // Initialize service lifecycle manager
+    const lifecycleManager = new ServiceLifecycleManager(projectRootFolder);
+
+    // Set up graceful shutdown handlers
+    setupGracefulShutdown(lifecycleManager);
+
     const vite = await createServer({
         server: { middlewareMode: true },
         plugins: [jayRuntime(jayRollupConfig)],
         appType: 'custom',
-        base: serverBase,
-        root: pagesBase,
+        base: publicBaseUrlPath,
+        root: pagesRootFolder,
+        ssr: {
+            // Mark stack-server-runtime as external so Vite uses Node's require
+            // This ensures jay.init.ts and dev-server share the same module instance
+            external: ['@jay-framework/stack-server-runtime'],
+        },
     });
 
-    const routes: JayRoutes = await initRoutes(pagesBase);
+    // Set the Vite server and initialize services
+    lifecycleManager.setViteServer(vite);
+    await lifecycleManager.initialize();
+
+    // Set up hot reload for jay.init.ts
+    setupServiceHotReload(vite, lifecycleManager);
+
+    const routes: JayRoutes = await initRoutes(pagesRootFolder);
     const slowlyPhase = new DevSlowlyChangingPhase(dontCacheSlowly);
 
     const devServerRoutes: DevServerRoute[] = routes.map((route: JayRoute) =>
@@ -161,5 +194,52 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
         server: vite.middlewares,
         viteServer: vite,
         routes: devServerRoutes,
+        lifecycleManager,
     };
+}
+
+/**
+ * Sets up graceful shutdown handlers for SIGTERM and SIGINT
+ */
+function setupGracefulShutdown(lifecycleManager: ServiceLifecycleManager): void {
+    const shutdown = async (signal: string) => {
+        console.log(`\n${signal} received, shutting down gracefully...`);
+        await lifecycleManager.shutdown();
+        process.exit(0);
+    };
+
+    process.on('SIGTERM', () => shutdown('SIGTERM'));
+    process.on('SIGINT', () => shutdown('SIGINT'));
+}
+
+/**
+ * Sets up hot reload for jay.init.ts file changes
+ */
+function setupServiceHotReload(
+    vite: ViteDevServer,
+    lifecycleManager: ServiceLifecycleManager,
+): void {
+    const initFilePath = lifecycleManager.getInitFilePath();
+    if (!initFilePath) {
+        return; // No init file to watch
+    }
+
+    // Watch the init file for changes
+    vite.watcher.add(initFilePath);
+
+    vite.watcher.on('change', async (changedPath) => {
+        if (changedPath === initFilePath) {
+            console.log('[Services] jay.init.ts changed, reloading services...');
+            try {
+                await lifecycleManager.reload();
+                // Trigger browser reload
+                vite.ws.send({
+                    type: 'full-reload',
+                    path: '*',
+                });
+            } catch (error) {
+                console.error('[Services] Failed to reload services:', error);
+            }
+        }
+    });
 }

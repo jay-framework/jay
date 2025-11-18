@@ -1,0 +1,30 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+  treeType: enum (var1|var2)
+  tree:
+    value: string
+    id: string
+    </script>
+</head>
+<body>
+    <div>
+        <div if="treeType===var1">
+            <with-data accessor="tree">
+                <div>
+                    <span ref="title">variant 1:</span><span>{value}</span>
+                </div>
+            </with-data>
+        </div>
+        <div if="treeType===var2">
+            <with-data accessor="tree">
+                <div>
+                    <span ref="title">variant 1:</span><span>{value}</span>
+                </div>
+            </with-data>
+        </div>
+    </div>
+</body>
+</html>
+

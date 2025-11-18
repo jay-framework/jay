@@ -10,7 +10,8 @@ The `@jay-framework/fullstack-component` package provides a fluent builder API f
 - **Fast Changing Server-side render** with dynamic data on the server
 - **Client-side interactivity** with reactive state management
 - **Type-safe** component contracts using Jay HTML and Jay Contracts
-- **Context-aware** rendering with server and client contexts
+- **Service injection** for server-side dependencies (database, API clients, etc.)
+- **Context support** for client-side hierarchical state
 
 ## Features
 
@@ -18,7 +19,8 @@ The `@jay-framework/fullstack-component` package provides a fluent builder API f
 - ⚡ **Interactive Client**: Seamless client-side interactivity with reactive signals
 - 🎯 **Type Safety**: Full TypeScript support with generated contracts from Jay HTML
 - 🔧 **Fluent Builder API**: Intuitive chainable API for component configuration
-- 🌐 **Context Support**: Server and client context injection
+- 💉 **Service Injection**: Type-safe dependency injection for server-side services
+- 🌐 **Context Support**: Client-side hierarchical context injection
 - 📦 **URL Parameter Loading**: Built-in support for dynamic URL parameter handling
 - 🚀 **Performance Optimized**: Efficient rendering with partial state updates
 
@@ -109,46 +111,58 @@ jay-cli definitions <path to your sources>
 ```typescript
 import { MyComponentContract } from './my-component.jay-html';
 // or import { MyComponentContract } from './my-component.jay-contract';
-import { makeJayStackComponent, partialRender } from '@jay-framework/fullstack-component';
+import {
+  makeJayStackComponent,
+  partialRender,
+  createJayService,
+} from '@jay-framework/fullstack-component';
 import { createJayContext } from '@jay-framework/runtime';
 
-// Define your props and contexts
+// Define your props
 interface MyComponentProps {}
 
-interface MyContext {
-  userId: string;
+// Define services (server-side)
+interface DatabaseService {
+  getUser(id: string): Promise<User>;
 }
+const DATABASE_SERVICE = createJayService<DatabaseService>('Database');
 
-const MyContextMarker = createJayContext<MyContext>();
+// Define contexts (client-side)
+interface ThemeContext {
+  theme: string;
+}
+const ThemeContextMarker = createJayContext<ThemeContext>();
 
 // Create the full-stack component
 export const myComponent = makeJayStackComponent<MyComponentContract>()
   .withProps<MyComponentProps>()
-  .withServerContext(MyContextMarker)
-  .withSlowlyRender(async (props, myContext) => {
+  .withServices(DATABASE_SERVICE)
+  .withContexts(ThemeContextMarker)
+  .withSlowlyRender(async (props, database) => {
     // Slow rendering - static data that doesn't change often
+    const user = await database.getUser('1');
     return partialRender(
       {
-        id: '1',
-        name: 'John Doe',
-        age: 30,
-        address: '123 Main St, City, State',
+        id: user.id,
+        name: user.name,
+        age: user.age,
+        address: user.address,
       },
-      { id: '1' }, // Carry forward data to fast render
+      { id: user.id }, // Carry forward data to fast render
     );
   })
-  .withFastRender(async (props, myContext) => {
+  .withFastRender(async (props, carryForward) => {
     // Fast rendering - dynamic data that can change
     return partialRender(
       {
         stars: 4.5,
         rating: 92,
       },
-      { id: '1' }, // Carry forward data to interactive
+      { id: carryForward.id }, // Carry forward data to interactive
     );
   })
-  .withInteractive((props, refs) => {
-    // Client-side interactivity
+  .withInteractive((props, refs, theme) => {
+    // Client-side interactivity with context
     return {
       render: () => ({
         stars: 4.5,
@@ -181,28 +195,42 @@ Full-stack components that are Jay Stack pages use `PageProps` as the props.
 makeJayStackComponent<MyComponentContract>().withProps<{ userId: string }>();
 ```
 
-#### `.withServerContext(...contextMarkers)`
+#### `.withServices(...serviceMarkers)`
 
-Adds server-side context markers for dependency injection.
+Adds server-side service markers for dependency injection.
 
 ```typescript
-makeJayStackComponent<MyComponentContract>().withServerContext(DatabaseContext, AuthContext);
+import { createJayService } from '@jay-framework/fullstack-component';
+
+const DATABASE_SERVICE = createJayService<Database>('Database');
+const AUTH_SERVICE = createJayService<AuthService>('Auth');
+
+makeJayStackComponent<MyComponentContract>().withServices(DATABASE_SERVICE, AUTH_SERVICE);
 ```
 
-#### `.withClientContext(...contextMarkers)`
+Services are global singletons registered in `src/jay.init.ts`.
+
+#### `.withContexts(...contextMarkers)`
 
 Adds client-side context markers for dependency injection.
 
 ```typescript
-makeJayStackComponent<MyComponentContract>().withClientContext(ThemeContext, UserContext);
+import { createJayContext } from '@jay-framework/runtime';
+
+const ThemeContext = createJayContext<Theme>();
+const UserContext = createJayContext<User>();
+
+makeJayStackComponent<MyComponentContract>().withContexts(ThemeContext, UserContext);
 ```
+
+Contexts are hierarchical and reactive, provided by parent components using `provideContext` or `provideReactiveContext`.
 
 #### `.withLoadParams(loadParams)`
 
 Defines how URL parameters are loaded and converted to additional props,
 on top of the props defined in `withProps`.
 
-The function receives the server contexts declared using `withServerContext`.
+The function receives the services declared using `withServices`.
 
 The function should return a generator that yields arrays of a subtype of `UrlParams`.
 
@@ -211,11 +239,12 @@ interface IdParams extends UrlParams {
   id: string;
 }
 
-makeJayStackComponent<MyComponentContract>().withLoadParams(
-  async function* (contexts): AsyncIterable<IdParams[]> {
-    yield [{ id: '1' }, { id: '2' }];
-  },
-);
+makeJayStackComponent<MyComponentContract>()
+  .withServices(DATABASE_SERVICE)
+  .withLoadParams(async function* (database: Database): AsyncIterable<IdParams[]> {
+    const items = await database.getAllItems();
+    yield items.map((item) => ({ id: item.id }));
+  });
 ```
 
 #### `.withSlowlyRender(slowlyRender)`
@@ -225,6 +254,8 @@ Defines the slow rendering function for semi-static data.
 The function's `props` parameter is a composition of the props from `.withProps`,
 with the subtype of `UrlParams` if using `.withLoadParams`.
 
+After props, the function receives the services declared using `withServices`.
+
 The function should return one of:
 
 - `PartialRender<ViewState, CarryForward>` - for partial rendering
@@ -232,18 +263,24 @@ The function should return one of:
 - `Redirect3xx` - for semi-static redirects
 
 ```typescript
-makeJayStackComponent<MyComponentContract>().withSlowlyRender(async (props, ...contexts) => {
-  return partialRender({ someKey: 'value' }, { carryForwardKey: 'data' });
-});
+makeJayStackComponent<MyComponentContract>()
+  .withServices(DATABASE_SERVICE)
+  .withSlowlyRender(async (props, database: Database) => {
+    const data = await database.getData();
+    return partialRender({ someKey: data.value }, { carryForwardKey: data.id });
+  });
 ```
 
 #### `.withFastRender(fastRender)`
 
 Defines the fast rendering function for dynamic data.
 
-The function's `props` parameter is a composition of the props from `.withProps`,
-with the subtype of `UrlParams` if using `.withLoadParams`,
-with the `carryForward` from `.withSlowlyRender` if used.
+The function's first parameter is `props` - a composition of the props from `.withProps`
+with the subtype of `UrlParams` if using `.withLoadParams`.
+
+The second parameter is `carryForward` from `.withSlowlyRender` if used.
+
+After that, the function receives the services declared using `withServices`.
 
 The function should return one of:
 
@@ -253,9 +290,12 @@ The function should return one of:
 - `Redirect3xx` - for dynamic redirects
 
 ```typescript
-makeJayStackComponent<MyComponentContract>().withFastRender(async (props, ...contexts) => {
-  return partialRender({ anotherKey: 'value' }, { carryForwardKey: 'data' });
-});
+makeJayStackComponent<MyComponentContract>()
+  .withServices(INVENTORY_SERVICE)
+  .withFastRender(async (props, carryForward, inventory: InventoryService) => {
+    const status = await inventory.getStatus(carryForward.productId);
+    return partialRender({ inStock: status.available > 0 }, { carryForwardKey: 'data' });
+  });
 ```
 
 #### `.withInteractive(componentConstructor)`
@@ -267,14 +307,18 @@ The function's `props` parameter is a composition of the props from `.withProps`
 with the subtype of `UrlParams` if using `.withLoadParams`,
 with the `carryForward` from `.withFastRender` if used.
 
+After props and refs, the function receives the client-side contexts declared using `withContexts`.
+
 The function is expected to return an object with a reactive `render` function as well as the client component API.
 
 ```typescript
-makeJayStackComponent<MyComponentContract>().withInteractive((props, refs) => {
-  return {
-    render: () => ({ interactiveData: 'value' }),
-  };
-});
+makeJayStackComponent<MyComponentContract>()
+  .withContexts(ThemeContext)
+  .withInteractive((props, refs, theme: Theme) => {
+    return {
+      render: () => ({ interactiveData: 'value', currentTheme: theme.current }),
+    };
+  });
 ```
 
 ## Render Response Builders
@@ -323,11 +367,12 @@ import {
   PageProps,
   partialRender,
   UrlParams,
+  createJayService,
 } from '@jay-framework/fullstack-component';
 import { render, PageElementRefs } from './page.jay-html';
 import { Props } from '@jay-framework/component';
-import { getProductBySlug, getProducts } from '../../../products-database';
-import { getAvailableUnits } from '../../../inventory-service';
+import { PRODUCTS_DATABASE_SERVICE, ProductsDatabase } from '../../../services/products-database';
+import { INVENTORY_SERVICE, InventoryService } from '../../../services/inventory';
 
 interface ProductPageParams extends UrlParams {
   slug: string;
@@ -342,23 +387,30 @@ interface ProductAndInventoryCarryForward {
   inStock: boolean;
 }
 
-async function* urlLoader(): AsyncIterable<ProductPageParams[]> {
-  const products = await getProducts();
+async function* urlLoader(productsDb: ProductsDatabase): AsyncIterable<ProductPageParams[]> {
+  const products = await productsDb.getAllProducts();
   yield products.map(({ slug }) => ({ slug }));
 }
 
-async function renderSlowlyChanging(props: PageProps & ProductPageParams) {
-  const { name, sku, price, id } = await getProductBySlug(props.slug);
+async function renderSlowlyChanging(
+  props: PageProps & ProductPageParams,
+  productsDb: ProductsDatabase,
+) {
+  const { name, sku, price, id } = await productsDb.getProductBySlug(props.slug);
   return partialRender({ name, sku, price, id }, { productId: id });
 }
 
-async function renderFastChanging(props: PageProps & ProductPageParams & ProductsCarryForward) {
-  const availableProducts = await getAvailableUnits(props.productId);
+async function renderFastChanging(
+  props: PageProps & ProductPageParams,
+  carryForward: ProductsCarryForward,
+  inventory: InventoryService,
+) {
+  const availableProducts = await inventory.getAvailableUnits(carryForward.productId);
   const inStock = availableProducts > 0;
   return partialRender(
     { inStock },
     {
-      productId: props.productId,
+      productId: carryForward.productId,
       inStock,
     },
   );
@@ -375,6 +427,7 @@ function ProductsPageConstructor(
 
 export const page = makeJayStackComponent<typeof render>()
   .withProps<PageProps>()
+  .withServices(PRODUCTS_DATABASE_SERVICE, INVENTORY_SERVICE)
   .withLoadParams(urlLoader)
   .withSlowlyRender(renderSlowlyChanging)
   .withFastRender(renderFastChanging)

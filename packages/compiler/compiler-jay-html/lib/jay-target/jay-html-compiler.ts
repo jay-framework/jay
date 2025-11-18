@@ -493,18 +493,10 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 // Parse the accessor to get the new context type
                 const accessorExpr = parseAccessor(accessor, variables);
 
-                // Create new variables context with the resolved type
-                // For arrays, this allows forEach="." to iterate over the array
-                // For objects, this allows direct property access
-                // Count depth by traversing parent chain
-                let depth = 1;
-                let parent = variables;
-                const maxDepth = 100; // Safety limit
-                while (parent && parent.parent && depth < maxDepth) {
-                    depth++;
-                    parent = parent.parent;
-                }
-                const newVariables = new Variables(accessorExpr.resolvedType, variables, depth);
+                // Use cached child variables for the accessor path
+                // This ensures that multiple with-data blocks with the same accessor
+                // share the same Variables instance and thus share ref names
+                const newVariables = variables.childVariableForWithData(accessorExpr);
 
                 // Render children (not the with-data element itself) with new context
                 const childNodes = htmlElement.childNodes.filter(

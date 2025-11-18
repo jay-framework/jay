@@ -6,8 +6,8 @@ import {
 } from '@jay-framework/fullstack-component';
 import { PageElementRefs, PageContract, TypeOfPageViewState } from './page.jay-html';
 import { Props } from '@jay-framework/component';
-import { getProductBySlug, getProducts } from '../../../products-database';
-import { getAvailableUnits } from '../../../inventory-service';
+import { PRODUCTS_DATABASE_SERVICE, ProductsDatabaseService } from '../../../products-database';
+import { INVENTORY_SERVICE, InventoryService } from '../../../inventory-service';
 
 interface ProductPageParams extends UrlParams {
     slug: string;
@@ -21,21 +21,37 @@ interface ProductAndInventoryCarryForward {
     inStock: boolean;
 }
 
-async function* urlLoader(): AsyncIterable<ProductPageParams[]> {
-    const products = await getProducts();
+async function* urlLoader([productsDb, inventory]: [
+    ProductsDatabaseService,
+    InventoryService,
+]): AsyncIterable<ProductPageParams[]> {
+    const products = await productsDb.getProducts();
     yield products.map(({ slug }) => ({ slug }));
 }
 
-async function renderSlowlyChanging(props: PageProps & ProductPageParams) {
-    const { name, sku, price, id } = await getProductBySlug(props.slug);
+async function renderSlowlyChanging(
+    props: PageProps & ProductPageParams,
+    productsDb: ProductsDatabaseService,
+) {
+    const product = await productsDb.getProductBySlug(props.slug);
+    if (!product) {
+        throw new Error(`Product not found: ${props.slug}`);
+    }
+
+    const { name, sku, price, id } = product;
     return partialRender(
         { name, sku, price, id, type: TypeOfPageViewState.physical },
         { productId: id },
     );
 }
 
-async function renderFastChanging(props: PageProps & ProductPageParams & ProductsCarryForward) {
-    const availableProducts = await getAvailableUnits(props.productId);
+async function renderFastChanging(
+    props: PageProps & ProductPageParams & ProductsCarryForward,
+    carryForward: ProductsCarryForward,
+    productsDb: ProductsDatabaseService,
+    inventory: InventoryService,
+) {
+    const availableProducts = await inventory.getAvailableUnits(props.productId);
     const inStock = availableProducts > 0;
     return partialRender(
         { inStock },
@@ -57,6 +73,7 @@ function ProductsPageConstructor(
 
 export const page = makeJayStackComponent<PageContract>()
     .withProps<PageProps>()
+    .withServices(PRODUCTS_DATABASE_SERVICE, INVENTORY_SERVICE)
     .withLoadParams(urlLoader)
     .withSlowlyRender(renderSlowlyChanging)
     .withFastRender(renderFastChanging)

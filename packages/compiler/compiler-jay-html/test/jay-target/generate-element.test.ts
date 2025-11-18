@@ -172,6 +172,13 @@ describe('generate jay-html element', () => {
             expect(elementFile.validations).toEqual([]);
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
+
+        it('for nested arrays with students', async () => {
+            const folder = 'collections/nested-arrays-with-students';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
     });
 
     describe('components', () => {
@@ -439,6 +446,13 @@ describe('generate jay-html element', () => {
             expect(childrenError).toContain('the data field [children] not found in Jay data');
         });
 
+        it('two with-data, conditions and refs', async () => {
+            // Test that <with-data> at the root level generates proper code wrapped in de()
+            const folder = 'recursive-html/two-with-data';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
         it('with-data at root of body', async () => {
             // Test that <with-data> at the root level generates proper code wrapped in de()
             const folder = 'recursive-html/with-data-at-root';

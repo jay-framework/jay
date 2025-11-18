@@ -91,7 +91,7 @@ function MyComponentConstructor(props: Props<MyComponentProps>, refs: MyComponen
 The constructor function:
 
 - receives props
-- receives contexts requested with `makeJayComponent` or `makeJayStackComponent.withClientContexts`
+- receives contexts requested with `makeJayComponent` or `makeJayStackComponent.withContexts`
 - must return an object with a `render` function
 - can also return component API as part of the returned object - functions and events.
 

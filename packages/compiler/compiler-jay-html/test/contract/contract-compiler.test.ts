@@ -887,5 +887,115 @@ export interface FolderTreeRepeatedRefs {
 export type FolderTreeContract = JayContract<FolderTreeViewState, FolderTreeRefs>`),
             );
         });
+
+        it('should compile link to array property (resolves as array type)', async () => {
+            const contract = `
+name: product-list
+tags:
+  - tag: title
+    type: data
+    dataType: string
+  - tag: products
+    type: sub-contract
+    repeated: true
+    tags:
+      - tag: id
+        type: data
+        dataType: string
+      - tag: name
+        type: data
+        dataType: string
+      - tag: price
+        type: data
+        dataType: number
+  - tag: featuredProduct
+    type: sub-contract
+    link: $/products
+    description: Link to the products array (will be Array<Product> type)
+`;
+            const parsedContract = parseContract(contract, 'product-list.jay-contract');
+            const result = await compileContract(parsedContract, './product-list', noHopResolver);
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+import { JayContract } from '@jay-framework/runtime';
+
+export interface ProductOfProductListViewState {
+    id: string;
+    name: string;
+    price: number;
+}
+
+export interface ProductListViewState {
+    title: string;
+    products: Array<ProductOfProductListViewState>;
+    featuredProduct: Array<ProductOfProductListViewState>;
+}
+
+export interface ProductListRefs {}
+
+export interface ProductListRepeatedRefs {}
+
+export type ProductListContract = JayContract<ProductListViewState, ProductListRefs>`),
+            );
+        });
+
+        it('should compile link with [] to unwrap array item type', async () => {
+            const contract = `
+name: product-list-unwrapped
+tags:
+  - tag: title
+    type: data
+    dataType: string
+  - tag: products
+    type: sub-contract
+    repeated: true
+    tags:
+      - tag: id
+        type: data
+        dataType: string
+      - tag: name
+        type: data
+        dataType: string
+      - tag: price
+        type: data
+        dataType: number
+  - tag: featuredProduct
+    type: sub-contract
+    link: $/products[]
+    description: Link to the products array item type (will be Product, not Array<Product>)
+`;
+            const parsedContract = parseContract(contract, 'product-list-unwrapped.jay-contract');
+            const result = await compileContract(
+                parsedContract,
+                './product-list-unwrapped',
+                noHopResolver,
+            );
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+import { JayContract } from '@jay-framework/runtime';
+
+export interface ProductOfProductListUnwrappedViewState {
+    id: string;
+    name: string;
+    price: number;
+}
+
+export interface ProductListUnwrappedViewState {
+    title: string;
+    products: Array<ProductOfProductListUnwrappedViewState>;
+    featuredProduct: ProductOfProductListUnwrappedViewState | null;
+}
+
+export interface ProductListUnwrappedRefs {}
+
+export interface ProductListUnwrappedRepeatedRefs {}
+
+export type ProductListUnwrappedContract = JayContract<ProductListUnwrappedViewState, ProductListUnwrappedRefs>`),
+            );
+        });
     });
 });

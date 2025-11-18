@@ -387,6 +387,82 @@ describe('compiler', () => {
                 expect(recursive.resolvedType).toBe(arrayObject3);
             });
 
+            it('should parse link to array property (resolves as array type)', async () => {
+                let jayFile = await parseJayFile(
+                    jayFileWith(
+                        ` data:
+                            |   title: string
+                            |   products:
+                            |     - id: string
+                            |       name: string
+                            |       price: number
+                            |   featuredProduct: $/data/products`,
+                        '<body></body>',
+                    ),
+                    'ProductList',
+                    '',
+                    {},
+                    defaultImportResolver,
+                );
+
+                expect(jayFile.validations).toEqual([]);
+                const types = assertObjectType(jayFile.val.types);
+                expect(types.name).toBe('ProductListViewState');
+                expect(types.props.title).toBe(JayString);
+
+                // products should be an array
+                const productsArray = assertArrayType(types.props.products);
+                const productType = assertObjectType(productsArray.itemType);
+                expect(productType.props.id).toBe(JayString);
+                expect(productType.props.name).toBe(JayString);
+                expect(productType.props.price).toBe(JayNumber);
+
+                // featuredProduct should be a recursive reference that resolves to the products array
+                const recursiveType = assertRecursiveType(
+                    types.props.featuredProduct as JayRecursiveType,
+                );
+                expect(recursiveType.referencePath).toBe('$/data/products');
+                expect(recursiveType.resolvedType).toBe(productsArray);
+            });
+
+            it('should parse link with [] to unwrap array item type', async () => {
+                let jayFile = await parseJayFile(
+                    jayFileWith(
+                        ` data:
+                            |   title: string
+                            |   products:
+                            |     - id: string
+                            |       name: string
+                            |       price: number
+                            |   featuredProduct: $/data/products[]`,
+                        '<body></body>',
+                    ),
+                    'ProductList',
+                    '',
+                    {},
+                    defaultImportResolver,
+                );
+
+                expect(jayFile.validations).toEqual([]);
+                const types = assertObjectType(jayFile.val.types);
+                expect(types.name).toBe('ProductListViewState');
+                expect(types.props.title).toBe(JayString);
+
+                // products should be an array
+                const productsArray = assertArrayType(types.props.products);
+                const productType = assertObjectType(productsArray.itemType);
+                expect(productType.props.id).toBe(JayString);
+                expect(productType.props.name).toBe(JayString);
+                expect(productType.props.price).toBe(JayNumber);
+
+                // featuredProduct should be a recursive reference that resolves to the product item type (not the array)
+                const recursiveType = assertRecursiveType(
+                    types.props.featuredProduct as JayRecursiveType,
+                );
+                expect(recursiveType.referencePath).toBe('$/data/products[]');
+                expect(recursiveType.resolvedType).toBe(productType);
+            });
+
             it('should report error for invalid recursive reference path', async () => {
                 let jayFile = await parseJayFile(
                     jayFileWith(

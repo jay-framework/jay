@@ -275,6 +275,28 @@ export function renderReferenceManager(
     const { referenceManagerInit, imports } = REFERENCE_MANAGER_TYPES[target];
     const options = target === ReferenceManagerTarget.element ? 'options, ' : '';
 
+    // Track used ref manager names to avoid duplicates
+    const usedRefManagerNames = new Set<string>();
+
+    const getUniqueRefManagerName = (baseName: string): string => {
+        const baseCamelCase = camelCase(`${baseName}RefManager`);
+
+        if (!usedRefManagerNames.has(baseCamelCase)) {
+            usedRefManagerNames.add(baseCamelCase);
+            return baseCamelCase;
+        }
+
+        // If name is already used, append a suffix
+        let suffix = 2;
+        let uniqueName = `${baseCamelCase}${suffix}`;
+        while (usedRefManagerNames.has(uniqueName)) {
+            suffix++;
+            uniqueName = `${baseCamelCase}${suffix}`;
+        }
+        usedRefManagerNames.add(uniqueName);
+        return uniqueName;
+    };
+
     const renderRefManagerNode = (name: string, refsTree: RefsTree) => {
         const elemRefs = refsTree.refs.filter((_) => !isComponentRef(_) && !isCollectionRef(_));
         const elemCollectionRefs = refsTree.refs.filter(
@@ -303,7 +325,7 @@ export function renderReferenceManager(
         const childRenderedRefManagers: string[] = [];
         const childRefManagerMembers: string[] = [];
         Object.entries(refsTree.children).forEach(([childName, childRefNode]) => {
-            const name = camelCase(`${childName}RefManager`);
+            const name = getUniqueRefManagerName(childName);
             const rendered = renderRefManagerNode(name, childRefNode);
             childRefManagerMembers.push(`    ${childName}: ${name}`);
             childRenderedRefManagers.push(rendered);

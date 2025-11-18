@@ -178,6 +178,220 @@ In this example:
 4. **Document dependencies** - Make it clear which contracts are required
 5. **Version contracts** - Consider versioning for breaking changes
 
+## Recursive Links
+
+Recursive links allow you to create self-referential data structures within a contract, such as trees, nested menus, or hierarchical data. They use the special `$/` syntax to reference parts of the same contract.
+
+### Basic Recursive Link
+
+```yaml
+name: folder-tree
+tags:
+  - tag: name
+    type: data
+    dataType: string
+  - tag: children
+    type: sub-contract
+    repeated: true
+    link: $/
+```
+
+The `link: $/` references the root of the current contract, creating a recursive structure.
+
+**Generated TypeScript:**
+
+```typescript
+export interface FolderTreeViewState {
+  name: string;
+  children: Array<FolderTreeViewState>;
+}
+```
+
+### Nested Path Recursive Links
+
+You can reference nested properties within the contract using path syntax:
+
+```yaml
+name: document
+tags:
+  - tag: title
+    type: data
+    dataType: string
+  - tag: metadata
+    type: sub-contract
+    tags:
+      - tag: category
+        type: data
+        dataType: string
+      - tag: tags
+        type: data
+        dataType: string
+  - tag: relatedDocuments
+    type: sub-contract
+    repeated: true
+    link: $/metadata
+```
+
+The `link: $/metadata` references the `metadata` sub-contract within the same contract.
+
+**Generated TypeScript:**
+
+```typescript
+export interface MetadataOfDocumentViewState {
+  category: string;
+  tags: string;
+}
+
+export interface DocumentViewState {
+  title: string;
+  metadata: MetadataOfDocumentViewState;
+  relatedDocuments: Array<MetadataOfDocumentViewState>;
+}
+```
+
+### Array Item Unwrapping with `[]`
+
+When a recursive link points to an array property, you can use the `[]` suffix to unwrap and link to the item type instead of the full array:
+
+```yaml
+name: product-list
+tags:
+  - tag: title
+    type: data
+    dataType: string
+  - tag: products
+    type: sub-contract
+    repeated: true
+    tags:
+      - tag: id
+        type: data
+        dataType: string
+      - tag: name
+        type: data
+        dataType: string
+      - tag: price
+        type: data
+        dataType: number
+  - tag: featuredProduct
+    type: sub-contract
+    link: $/products[]
+    description: Links to a single product item (not the array)
+```
+
+**Without `[]` - Links to the Array:**
+
+- `link: $/products` → `Array<ProductOfProductListViewState>`
+
+**With `[]` - Links to the Array Item:**
+
+- `link: $/products[]` → `ProductOfProductListViewState | null`
+
+**Generated TypeScript:**
+
+```typescript
+export interface ProductOfProductListViewState {
+  id: string;
+  name: string;
+  price: number;
+}
+
+export interface ProductListViewState {
+  title: string;
+  products: Array<ProductOfProductListViewState>;
+  featuredProduct: ProductOfProductListViewState | null;
+}
+```
+
+### Recursive Link Syntax Reference
+
+| Syntax              | Resolves To            | Generated Type              |
+| ------------------- | ---------------------- | --------------------------- |
+| `$/`                | Root contract          | `ContractViewState \| null` |
+| `$/propertyName`    | Nested property        | `PropertyType \| null`      |
+| `$/arrayProperty`   | Array property         | `Array<ItemType>`           |
+| `$/arrayProperty[]` | Array item type        | `ItemType \| null`          |
+| `$/nested/path`     | Deeply nested property | `PropertyType \| null`      |
+
+### Type Nullability Rules
+
+- **Non-array types** get `| null` since they may not exist
+- **Array types** don't get `| null` since an empty array (`[]`) can be used
+- **Repeated tags** with `repeated: true` always generate arrays
+
+### Common Use Cases
+
+**1. Tree Structures (Direct Recursion)**
+
+```yaml
+name: tree-node
+tags:
+  - tag: value
+    type: data
+    dataType: string
+  - tag: children
+    type: sub-contract
+    repeated: true
+    link: $/
+```
+
+**2. Linked Lists (Single Recursion)**
+
+```yaml
+name: linked-list
+tags:
+  - tag: value
+    type: data
+    dataType: string
+  - tag: next
+    type: sub-contract
+    link: $/
+```
+
+**3. Nested Menus (Indirect Recursion)**
+
+```yaml
+name: menu
+tags:
+  - tag: label
+    type: data
+    dataType: string
+  - tag: submenu
+    type: sub-contract
+    tags:
+      - tag: items
+        type: sub-contract
+        repeated: true
+        link: $/
+```
+
+**4. Featured Item from Array (Array Unwrapping)**
+
+```yaml
+name: catalog
+tags:
+  - tag: items
+    type: sub-contract
+    repeated: true
+    tags:
+      - tag: id
+        type: data
+        dataType: string
+      - tag: title
+        type: data
+        dataType: string
+  - tag: featured
+    type: sub-contract
+    link: $/items[]
+```
+
+### Best Practices for Recursive Links
+
+1. **Use descriptive paths** - Make it clear what you're referencing
+2. **Document recursion** - Add descriptions explaining the recursive relationship
+3. **Consider depth limits** - Be aware of potential deeply nested structures
+4. **Use `[]` for single items** - When referencing one item from an array, use `[]` unwrapping
+5. **Validate paths** - Ensure the referenced paths exist in your contract
+
 ## Data Types
 
 ### Basic Types
