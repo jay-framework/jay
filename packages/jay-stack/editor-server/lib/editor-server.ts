@@ -21,6 +21,7 @@ export interface EditorServerOptions {
     editorId?: string;
     onEditorId?: (editorId: string) => void;
     portRange?: [number, number];
+    maxBufferSize?: number;
 }
 
 const ALLOWED_ORIGINS = [
@@ -37,6 +38,7 @@ export class EditorServer implements DevServerProtocol {
     private port: number | null = null;
     private editorId: string | null = null;
     private portRange: [number, number];
+    private maxBufferSize: number;
     private onEditorId: (editorId: string) => void;
     private handlers: {
         publish?: (params: PublishMessage) => Promise<PublishResponse>;
@@ -49,6 +51,7 @@ export class EditorServer implements DevServerProtocol {
 
     constructor(options: EditorServerOptions) {
         this.portRange = options.portRange || [3101, 3200];
+        this.maxBufferSize = options.maxBufferSize || 1e8; // 100 MB - allows large publish messages
         this.onEditorId = options.onEditorId;
         this.editorId = options.editorId || null;
     }
@@ -101,6 +104,7 @@ export class EditorServer implements DevServerProtocol {
                 credentials: true,
             },
             allowEIO3: true,
+            maxHttpBufferSize: this.maxBufferSize,
         });
 
         // Setup Socket.io event handlers
