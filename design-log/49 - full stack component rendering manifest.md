@@ -276,6 +276,22 @@ export function interactiveArray<ItemViewState extends object>(
     itemSchema,
   };
 }
+
+/**
+ * Create a complete rendering manifest schema for a ViewState
+ * Provides type checking that schema keys match ViewState properties
+ * 
+ * @example
+ * const schema = createSchema<ProductPageViewState>({
+ *   name: slow(),
+ *   price: fast(),
+ * });
+ */
+export function createSchema<ViewState extends object>(
+  schema: RenderingManifestSchema<ViewState>
+): RenderingManifestSchema<ViewState> {
+  return schema;
+}
 ```
 
 ### Schema Validation Rules
@@ -369,7 +385,7 @@ interface ProductPageViewState {
  * Schema using factory functions (recommended approach)
  * Much more concise and readable than raw schema objects
  */
-const productPageSchema = {
+const productPageSchema = createSchema<ProductPageViewState>({
   // Static product information - set once at build time
   name: slow(),
   sku: slow(),
@@ -401,7 +417,7 @@ const productPageSchema = {
     amount: fast(),         // Dynamic amount (may vary by user/time)
     applied: interactive(), // User can toggle on client
   }),
-} satisfies RenderingManifestSchema<ProductPageViewState>;
+});
 
 /**
  * Without factory functions (verbose but equivalent)
@@ -456,19 +472,19 @@ const productPageSchemaVerbose = {
  * Benefits of Factory Functions
  */
 
-// ✅ Concise and readable
-const schema1 = {
+// ✅ Concise and readable with createSchema
+const schema1 = createSchema<ProductPageViewState>({
   name: slow(),
   price: fast(),
   quantity: interactive(),
-};
+});
 
 // ❌ Verbose and repetitive (without factories)
 const schema2 = {
   name: { type: 'primitive' as const, mode: 'slow' as const },
   price: { type: 'primitive' as const, mode: 'fast' as const },
   quantity: { type: 'primitive' as const, mode: 'fast+interactive' as const },
-};
+} satisfies RenderingManifestSchema<ProductPageViewState>;
 
 // ✅ Clear semantic meaning
 const reviews = interactiveArray({
@@ -476,25 +492,25 @@ const reviews = interactiveArray({
   comment: interactive(),
 });
 
-// ✅ Type safety is preserved
-const validSchema = {
+// ✅ Type safety is preserved - TypeScript validates schema keys
+const validSchema = createSchema<ProductPageViewState>({
   name: slow(),
   price: slow(),
-} satisfies RenderingManifestSchema<ProductPageViewState>;
+});
 
 // ✗ Invalid schema - 'nonExistentKey' doesn't exist in ViewState
-// TypeScript error: Type does not satisfy the constraint
+// TypeScript error: Type does not match the constraint
 /*
-const invalidSchema = {
+const invalidSchema = createSchema<ProductPageViewState>({
   nonExistentKey: slow(),
-} satisfies RenderingManifestSchema<ProductPageViewState>;
+});
 */
 
 // ✓ Partial schema - not all ViewState keys required
-const partialSchema = {
+const partialSchema = createSchema<ProductPageViewState>({
   name: slow(),
   // other properties can be omitted
-} satisfies RenderingManifestSchema<ProductPageViewState>;
+});
 
 /**
  * Type-level narrowing: Extract ViewState subset for a specific rendering phase
@@ -681,23 +697,34 @@ interface BuilderWithSchemaSet<
 }
 
 /**
- * Example usage with schema
+ * Example usage with schema in builder
  */
-// ViewState comes from the contract
-interface ProductPageViewState {
-  name: string;
-  sku: string;
-  price: number;
-  inStock: boolean;
-  quantity: number;
-  images: Array<{ url: string; alt: string }>;
-  reviews: Array<{ id: string; author: string; rating: number; comment: string }>;
-  discount: { type: string; amount: number; applied: boolean };
-}
 
+// Define the schema using factory functions
+const productPageSchema = createSchema<ProductPageViewState>({
+  name: slow(),
+  sku: slow(),
+  price: slow(),
+  inStock: fast(),
+  quantity: interactive(),
+  images: slowArray({ url: slow(), alt: slow() }),
+  reviews: interactiveArray({
+    id: interactive(),
+    author: interactive(),
+    rating: interactive(),
+    comment: interactive(),
+  }),
+  discount: object({
+    type: slow(),
+    amount: fast(),
+    applied: interactive(),
+  }),
+});
+
+// Use the schema in the builder
 const page = makeJayStackComponent<ProductPageContract>()
   .withProps<PageProps>()
-  .withRenderingManifest(productPageSchema) // Schema annotates the ViewState
+  .withRenderingManifest(productPageSchema)
   .withServices(PRODUCTS_DATABASE_SERVICE, INVENTORY_SERVICE)
   .withLoadParams(urlLoader)
   .withSlowlyRender(async (props, productsDb) => {
@@ -896,6 +923,9 @@ interface ValidationError {
 ### Factory Functions Quick Reference
 
 ```typescript
+// Schema Builder
+createSchema<ViewState>(schema)  // Create complete schema with type checking
+
 // Primitives
 slow()          // mode='slow' - static data, set at build time
 fast()          // mode='fast' - dynamic data, set at request time (not interactive)
@@ -913,7 +943,7 @@ object(properties)  // Nested object with mixed-mode properties
 **Usage Examples:**
 
 ```typescript
-const schema = {
+const schema = createSchema<MyViewState>({
   // Simple primitives
   title: slow(),
   description: slow(),
@@ -939,7 +969,7 @@ const schema = {
     updatedAt: fast(),
     viewCount: interactive(),
   }),
-} satisfies RenderingManifestSchema<MyViewState>;
+});
 ```
 
 ### Benefits of This Approach
