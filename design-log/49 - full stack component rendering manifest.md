@@ -278,16 +278,19 @@ export function interactiveArray<ItemViewState extends object>(
 }
 
 /**
- * Create a complete rendering manifest schema for a ViewState
+ * Create a complete rendering manifest for a ViewState
  * Provides type checking that schema keys match ViewState properties
  * 
+ * Default behavior: Properties not specified in the manifest default to mode='slow'
+ * 
  * @example
- * const schema = createSchema<ProductPageViewState>({
+ * const manifest = createRenderingManifest<ProductPageViewState>({
  *   name: slow(),
  *   price: fast(),
+ *   // unspecified properties default to slow()
  * });
  */
-export function createSchema<ViewState extends object>(
+export function createRenderingManifest<ViewState extends object>(
   schema: RenderingManifestSchema<ViewState>
 ): RenderingManifestSchema<ViewState> {
   return schema;
@@ -382,10 +385,10 @@ interface ProductPageViewState {
 }
 
 /**
- * Schema using factory functions (recommended approach)
+ * Rendering manifest using factory functions (recommended approach)
  * Much more concise and readable than raw schema objects
  */
-const productPageSchema = createSchema<ProductPageViewState>({
+const productPageSchema = createRenderingManifest<ProductPageViewState>({
   // Static product information - set once at build time
   name: slow(),
   sku: slow(),
@@ -472,15 +475,16 @@ const productPageSchemaVerbose = {
  * Benefits of Factory Functions
  */
 
-// ✅ Concise and readable with createSchema
-const schema1 = createSchema<ProductPageViewState>({
+// ✅ Concise and readable with createRenderingManifest
+const manifest1 = createRenderingManifest<ProductPageViewState>({
   name: slow(),
   price: fast(),
   quantity: interactive(),
+  // Unspecified properties default to slow()
 });
 
 // ❌ Verbose and repetitive (without factories)
-const schema2 = {
+const manifest2 = {
   name: { type: 'primitive' as const, mode: 'slow' as const },
   price: { type: 'primitive' as const, mode: 'fast' as const },
   quantity: { type: 'primitive' as const, mode: 'fast+interactive' as const },
@@ -492,24 +496,25 @@ const reviews = interactiveArray({
   comment: interactive(),
 });
 
-// ✅ Type safety is preserved - TypeScript validates schema keys
-const validSchema = createSchema<ProductPageViewState>({
+// ✅ Type safety is preserved - TypeScript validates manifest keys
+const validManifest = createRenderingManifest<ProductPageViewState>({
   name: slow(),
   price: slow(),
 });
 
-// ✗ Invalid schema - 'nonExistentKey' doesn't exist in ViewState
+// ✗ Invalid manifest - 'nonExistentKey' doesn't exist in ViewState
 // TypeScript error: Type does not match the constraint
 /*
-const invalidSchema = createSchema<ProductPageViewState>({
+const invalidManifest = createRenderingManifest<ProductPageViewState>({
   nonExistentKey: slow(),
 });
 */
 
-// ✓ Partial schema - not all ViewState keys required
-const partialSchema = createSchema<ProductPageViewState>({
+// ✓ Partial manifest - unspecified properties default to slow()
+const partialManifest = createRenderingManifest<ProductPageViewState>({
   name: slow(),
-  // other properties can be omitted
+  quantity: interactive(),
+  // price, sku, inStock, etc. all default to slow()
 });
 
 /**
@@ -629,24 +634,29 @@ type InteractiveViewState = NarrowViewStateByPhase<
 
 ```typescript
 /**
- * New builder method to provide the rendering manifest schema
- * The schema annotates the ViewState (which comes from the contract)
+ * New builder method to provide the rendering manifest
+ * The manifest annotates the ViewState (which comes from the contract)
  */
-interface BuilderWithSchema<ViewState extends object> {
+interface BuilderWithManifest<ViewState extends object> {
   /**
-   * Define the rendering manifest schema for the ViewState
-   * The schema must match the ViewState structure from the contract
-   * TypeScript will error if schema keys don't match ViewState properties
+   * Define the rendering manifest for the ViewState
+   * 
+   * The manifest is OPTIONAL:
+   * - If not provided: all properties default to mode='slow'
+   * - If partial: unspecified properties default to mode='slow'
+   * - If complete: explicit control over each property's rendering mode
+   * 
+   * TypeScript will error if manifest keys don't match ViewState properties
    */
   withRenderingManifest<Schema extends RenderingManifestSchema<ViewState>>(
-    schema: Schema
-  ): BuilderWithSchemaSet<ViewState, Schema>;
+    manifest: Schema
+  ): BuilderWithManifestSet<ViewState, Schema>;
 }
 
 /**
- * Updated builder interface with schema-aware rendering phases
+ * Updated builder interface with manifest-aware rendering phases
  */
-interface BuilderWithSchemaSet<
+interface BuilderWithManifestSet<
   ViewState extends object,
   Schema extends RenderingManifestSchema<ViewState>
 > {
@@ -697,11 +707,11 @@ interface BuilderWithSchemaSet<
 }
 
 /**
- * Example usage with schema in builder
+ * Example usage with rendering manifest in builder
  */
 
-// Define the schema using factory functions
-const productPageSchema = createSchema<ProductPageViewState>({
+// Define the rendering manifest using factory functions
+const productPageManifest = createRenderingManifest<ProductPageViewState>({
   name: slow(),
   sku: slow(),
   price: slow(),
@@ -721,10 +731,10 @@ const productPageSchema = createSchema<ProductPageViewState>({
   }),
 });
 
-// Use the schema in the builder
+// Use the manifest in the builder
 const page = makeJayStackComponent<ProductPageContract>()
   .withProps<PageProps>()
-  .withRenderingManifest(productPageSchema)
+  .withRenderingManifest(productPageManifest)
   .withServices(PRODUCTS_DATABASE_SERVICE, INVENTORY_SERVICE)
   .withLoadParams(urlLoader)
   .withSlowlyRender(async (props, productsDb) => {
@@ -923,8 +933,9 @@ interface ValidationError {
 ### Factory Functions Quick Reference
 
 ```typescript
-// Schema Builder
-createSchema<ViewState>(schema)  // Create complete schema with type checking
+// Rendering Manifest Builder
+createRenderingManifest<ViewState>(schema)  // Create manifest with type checking
+                                            // Unspecified properties default to slow()
 
 // Primitives
 slow()          // mode='slow' - static data, set at build time
@@ -943,7 +954,7 @@ object(properties)  // Nested object with mixed-mode properties
 **Usage Examples:**
 
 ```typescript
-const schema = createSchema<MyViewState>({
+const manifest = createRenderingManifest<MyViewState>({
   // Simple primitives
   title: slow(),
   description: slow(),
@@ -970,6 +981,116 @@ const schema = createSchema<MyViewState>({
     viewCount: interactive(),
   }),
 });
+```
+
+### Default Behavior for Unspecified Properties
+
+**Key Principle**: Properties not included in the manifest default to `mode='slow'`
+
+This design choice makes sense because:
+1. **Safe default**: Static/slow rendering is the safest, most cacheable option
+2. **Progressive enhancement**: Start with static data, opt-in to dynamic/interactive
+3. **Backward compatibility**: Components without manifests work (everything is slow)
+
+#### Scenarios
+
+**1. No Manifest Provided**
+
+```typescript
+// No manifest - all properties default to slow
+const page = makeJayStackComponent<ProductPageContract>()
+  .withProps<PageProps>()
+  // No .withRenderingManifest() call
+  .withSlowlyRender(async (props) => {
+    // Can return ALL ViewState properties
+    return partialRender({ name, sku, price, inStock, quantity, ... });
+  })
+  .withFastRender(async (props) => {
+    // Empty ViewState - nothing to render in fast phase
+    return partialRender({});
+  })
+  .withInteractive((props, refs) => {
+    return {
+      render: () => ({}) // Empty - nothing interactive
+    };
+  });
+```
+
+**2. Partial Manifest**
+
+```typescript
+// Only specify what's NOT slow
+const manifest = createRenderingManifest<ProductPageViewState>({
+  quantity: interactive(),
+  inStock: fast(),
+  // name, sku, price, images, etc. all default to slow()
+});
+
+const page = makeJayStackComponent<ProductPageContract>()
+  .withProps<PageProps>()
+  .withRenderingManifest(manifest)
+  .withSlowlyRender(async (props) => {
+    // Returns: name, sku, price, images, discount.type (all unspecified = slow)
+    return partialRender({ name, sku, price, images, discount: { type } });
+  })
+  .withFastRender(async (props) => {
+    // Returns: only inStock, quantity (explicitly specified)
+    return partialRender({ inStock, quantity });
+  })
+  .withInteractive((props, refs) => {
+    return {
+      render: () => ({ quantity }) // Only quantity is interactive
+    };
+  });
+```
+
+**3. Complete Manifest**
+
+```typescript
+// Explicitly specify every property's rendering mode
+const manifest = createRenderingManifest<ProductPageViewState>({
+  name: slow(),
+  sku: slow(),
+  price: slow(),
+  inStock: fast(),
+  quantity: interactive(),
+  images: slowArray({ url: slow(), alt: slow() }),
+  reviews: interactiveArray({ id: interactive(), comment: interactive() }),
+  discount: object({ type: slow(), amount: fast(), applied: interactive() }),
+});
+```
+
+**4. Everything Dynamic**
+
+```typescript
+// Opt-in to make everything dynamic
+const manifest = createRenderingManifest<ProductPageViewState>({
+  name: fast(),
+  sku: fast(),
+  price: fast(),
+  inStock: fast(),
+  quantity: interactive(),
+  images: fastArray({ url: fast(), alt: fast() }),
+  reviews: interactiveArray({ id: interactive(), comment: interactive() }),
+  discount: object({ type: fast(), amount: fast(), applied: interactive() }),
+});
+
+const page = makeJayStackComponent<ProductPageContract>()
+  .withProps<PageProps>()
+  .withRenderingManifest(manifest)
+  .withSlowlyRender(async (props) => {
+    // Empty - nothing is slow
+    return partialRender({});
+  })
+  .withFastRender(async (props) => {
+    // Returns everything except interactive properties
+    return partialRender({ name, sku, price, inStock, images, discount: { type, amount } });
+  })
+  .withInteractive((props, refs) => {
+    return {
+      render: () => ({ quantity, reviews, discount: { applied } })
+    };
+  });
 ```
 
 ### Benefits of This Approach
@@ -1002,14 +1123,29 @@ const schema = createSchema<MyViewState>({
 
 7. **Developer Experience**:
    - Factory functions eliminate boilerplate and reduce verbosity
-   - Schema definitions are concise and easy to write
+   - Manifest definitions are concise and easy to write
    - Semantic function names (`slow()`, `fast()`, `interactive()`) are intuitive
+   - Consistent naming: `createRenderingManifest()` pairs with `withRenderingManifest()`
+
+8. **Sensible Defaults**:
+   - Unspecified properties default to `mode='slow'` (safest, most cacheable)
+   - Manifest is optional - components without manifests work (all slow)
+   - Partial manifests supported - only specify what's NOT slow
+   - Progressive enhancement pattern: start static, opt-in to dynamic/interactive
+
+### Design Decisions Made
+
+1. ✅ **Naming Consistency**: `createRenderingManifest()` pairs with `withRenderingManifest()`
+2. ✅ **Default Behavior**: Unspecified properties default to `mode='slow'`
+   - Safest option (static, cacheable)
+   - Progressive enhancement pattern
+   - Manifest is optional
 
 ### Open Questions
 
-1. **Schema Definition Approach**: Two options:
-   - **Option A**: Explicit schema object (as shown above) - More verbose but clear
-   - **Option B**: Schema inference with type annotations on ViewState properties
+1. **Manifest Definition Approach**: Two options:
+   - **Option A**: Explicit manifest object with factory functions (as shown above) - Clear and concise
+   - **Option B**: Manifest inference with type annotations on ViewState properties
    ```typescript
    interface ProductPageViewState {
      name: string & { __renderMode: 'slow' };  // Type-level annotation
@@ -1018,38 +1154,45 @@ const schema = createSchema<MyViewState>({
    ```
    Which approach provides better DX?
 
-2. **Schema Location**: Should schema be:
-   - Inline with component definition (co-located)
-   - Separate `.schema.ts` file next to contract
+   Answer: we prefer the first one, as the ViewState is generated from the contract and only includes concerns that 
+   the both the designer and developer have to be aware of.
+
+2. **Manifest Location**: Should manifest be:
+   - Inline with component definition (co-located) - Recommended
+   - Separate `.manifest.ts` file next to contract
    - Generated from ViewState type with decorators/comments
 
-3. **Schema Reuse**: How to share common patterns?
+   Answer: co-located is recommended. However the full stack component API can import the manifest from any other code file. 
+
+3. **Manifest Reuse**: How to share common patterns?
    ```typescript
-   // Common schema fragments
-   const addressSchema = { /* ... */ } satisfies RenderingManifestSchema;
+   // Common manifest fragments
+   const addressManifest = { /* ... */ } satisfies RenderingManifestSchema;
    
    // Reuse in multiple components
-   const userSchema = {
-     name: { type: 'primitive', mode: 'slow' },
-     address: { type: 'object', properties: addressSchema },
-   };
+   const userManifest = createRenderingManifest<UserViewState>({
+     name: slow(),
+     address: object(addressManifest),
+   });
    ```
+   
+   Answer: As the manifest is just a TS object, it can be composed and reused as any other TS object. 
 
-4. **Partial Schemas**: Should developers be required to define schema for ALL properties?
-   - Or can they define schema for subset and let others default to a mode?
-   - Default mode for unspecified properties?
-
-5. **Schema Validation Timing**: When to validate schema?
+4. **Manifest Validation Timing**: When to validate manifest?
    - Compile-time only (TypeScript errors)
    - Runtime on component registration (dev mode)
    - Build-time validation (during compilation)
 
-6. **Migration Path**: For existing components without schemas:
-   - Generate schema from usage patterns (which render functions return which props)
-   - Require explicit schema (breaking change with migration tool)
-   - Optional schema with gradual adoption
+   Answer: In the dev server `mkRoute` function at /Users/yoav/work/jay/jay/packages/jay-stack/dev-server/lib/dev-server.ts 
+   we can validate the manifest and give feedback to the developer at the right timing and context.
 
-7. **Async Properties**: Contract files support `async: true` for Promise properties.
+5. **Migration Path**: For existing components without manifests:
+   - ✅ Manifest is optional - existing components work (all slow by default)
+   - Generate manifest from usage patterns (which render functions return which props)
+   - Provide migration tool to analyze components and suggest manifests
+   - Gradual adoption - add manifests incrementally
+
+6. **Async Properties**: Contract files support `async: true` for Promise properties.
    How does this interact with rendering modes?
    ```typescript
    // ViewState from contract
@@ -1058,21 +1201,36 @@ const schema = createSchema<MyViewState>({
    }
    
    // How to specify mode for async property?
-   schema = {
-     user: {
-       type: 'primitive',
-       mode: 'fast',  // Promise resolved in fast phase?
-       async: true,
-     }
-   };
+   const manifest = createRenderingManifest<ViewState>({
+     user: fast(),  // Promise resolved in fast phase?
+     // Or special asyncSlow(), asyncFast(), asyncInteractive() factories?
+   });
    ```
+   
+   Answer: the assumption is that each phase (slow, fast, interactive) has to resolve `async:true` independently
+   * interactive - will render the loading state (using the `loading` jay-html keyword), then render the ready state
+     (using the `resolved` keyword)
+   * fast - will render the loading state (using the `loading` jay-html keyword), then at the end of the html page request 
+     render the ready state (using the `resolved` keyword)
+   * slow - will have to wait for the `async` to resolve. 
 
-8. **Conditional Rendering**: What about properties that exist in ViewState but are conditionally set?
+7. **Conditional/Optional Properties**: What about properties that exist in ViewState but are conditionally set?
    ```typescript
    // Some users have discount, others don't
    interface ViewState {
      discount?: { type: string; amount: number };
    }
+   
+   // Manifest still specifies mode for optional properties
+   const manifest = createRenderingManifest<ViewState>({
+     discount: object({
+       type: slow(),
+       amount: fast(),
+     }),
+     // Optional properties can be omitted from render functions
+   });
    ```
+   
+   Answer: optional properties will be considered optional at each phase individually. Nothing special needs to be done to support them.
 
 
