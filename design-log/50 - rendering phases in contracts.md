@@ -194,6 +194,108 @@ export interface ProductPageInteractiveViewState {
 - **Interactive Elements**: Interactive tags (type: `interactive`) go into `<Component>Refs`, NOT ViewState (existing pattern, unchanged)
 - **ViewState Phases**: Only contain `data` and `variant` properties for each respective phase
 
+### JayContract Type Extension
+
+The `JayContract` type will be extended to include the full ViewState and three phase-specific ViewState types:
+
+```typescript
+// Before (current - 2 type parameters)
+export type CounterContract = JayContract<
+  CounterViewState,  // ViewState (from render function in .jay-html)
+  CounterRefs
+>;
+
+// After (with phase-specific types - 5 type parameters)
+export type ProductPageContract = JayContract<
+  ProductPageViewState,             // Position 1: Full ViewState (all data/variant properties)
+  ProductPageRefs,                  // Position 2: Interactive element refs
+  ProductPageSlowViewState,         // Position 3: NEW - Slow phase ViewState
+  ProductPageFastViewState,         // Position 4: NEW - Fast phase ViewState
+  ProductPageInteractiveViewState   // Position 5: NEW - Interactive phase ViewState
+>;
+```
+
+**Key Design Decisions:**
+- **Position 1 (ViewState)**: 
+  - For `.jay-contract`: Full ViewState (all data/variant properties)
+  - For `.jay-html`: ViewState from render function (backward compatible)
+- **Positions 3-5 (Phase-specific)**:
+  - For `.jay-contract`: Explicit types generated from contract
+  - For `.jay-html`: Default to `never` or `{}` (not used)
+- **Backward Compatibility**: Existing `.jay-html` files only provide first 2 parameters
+
+**Complete Example:**
+
+```typescript
+// Generated from ProductPage.jay-contract
+import { HTMLElementProxy, JayContract } from '@jay-framework/runtime';
+
+// Full ViewState - all data and variant properties
+export interface ProductPageViewState {
+  name: string;
+  sku: string;
+  price: number;
+  inStock: boolean;
+  quantity: number;
+  images: Array<{ url: string; alt: string }>;
+  discount: { type: string; amount: number; applied: boolean };
+}
+
+// Phase-specific ViewState types
+export interface ProductPageSlowViewState {
+  name: string;
+  sku: string;
+  price: number;
+  images: Array<{ url: string; alt: string }>;
+  discount: { type: string };
+}
+
+export interface ProductPageFastViewState {
+  inStock: boolean;
+  quantity: number;
+  discount: { amount: number; applied: boolean };
+}
+
+export interface ProductPageInteractiveViewState {
+  quantity: number;
+  discount: { applied: boolean };
+}
+
+// Interactive element refs
+export interface ProductPageRefs {
+  addToCart: HTMLElementProxy<ProductPageViewState, HTMLButtonElement>;
+}
+
+// Contract type with all 5 type parameters
+export type ProductPageContract = JayContract<
+  ProductPageViewState,             // Full ViewState
+  ProductPageRefs,                  // Refs
+  ProductPageSlowViewState,         // Slow phase
+  ProductPageFastViewState,         // Fast phase
+  ProductPageInteractiveViewState   // Interactive phase
+>;
+```
+
+**Comparison: .jay-contract vs .jay-html**
+
+```typescript
+// .jay-contract file (static - all 5 parameters explicit)
+export type ProductPageContract = JayContract<
+  ProductPageViewState,             // Full ViewState (all properties)
+  ProductPageRefs,                  // Interactive element refs
+  ProductPageSlowViewState,         // Slow phase properties
+  ProductPageFastViewState,         // Fast phase properties
+  ProductPageInteractiveViewState   // Interactive phase properties
+>;
+
+// .jay-html file (dynamic - only first 2 parameters)
+export type DynamicPageContract = JayContract<
+  DynamicViewState,  // From render function (backward compatible)
+  DynamicRefs        // Inferred from interactive elements
+  // Slow, Fast, Interactive default to 'never' (not used)
+>;
+```
+
 ### Render Function Signatures
 
 With generated types, render functions become type-safe:
@@ -417,20 +519,30 @@ Generate TypeScript interfaces:
 ```typescript
 class PhaseTypeGenerator {
   /**
-   * Generate phase-specific ViewState types from contract
+   * Generate full ViewState and phase-specific ViewState types from contract
    */
-  generatePhaseTypes(contract: Contract): string {
-    const fullType = this.generateFullViewState(contract);
-    const slowType = this.generatePhaseViewState(contract, 'slow');
-    const fastType = this.generatePhaseViewState(contract, 'fast');
-    const interactiveType = this.generatePhaseViewState(contract, 'fast+interactive');
+  generateAllTypes(contract: Contract): string {
+    const fullViewState = this.generateFullViewState(contract);
+    const refsType = this.generateRefsType(contract);
+    const slowViewState = this.generatePhaseViewState(contract, 'slow');
+    const fastViewState = this.generatePhaseViewState(contract, 'fast');
+    const interactiveViewState = this.generatePhaseViewState(contract, 'fast+interactive');
+    const contractType = this.generateContractType(contract);
     
     return `
-      ${fullType}
-      ${slowType}
-      ${fastType}
-      ${interactiveType}
+      ${fullViewState}
+      ${refsType}
+      ${slowViewState}
+      ${fastViewState}
+      ${interactiveViewState}
+      ${contractType}
     `;
+  }
+  
+  private generateFullViewState(contract: Contract): string {
+    // Generate interface with ALL data and variant properties
+    // This is the union of all phases (excluding interactive elements)
+    // Example: ProductPageViewState
   }
   
   private generatePhaseViewState(
@@ -438,25 +550,142 @@ class PhaseTypeGenerator {
     phase: Phase
   ): string {
     // Filter contract tags by phase
-    // Generate TypeScript interface
+    // Generate TypeScript interface for specific phase
     // Handle nested objects recursively
+    // Example: ProductPageSlowViewState
+  }
+  
+  private generateRefsType(contract: Contract): string {
+    // Generate refs for interactive elements (existing logic)
+    // Example: ProductPageRefs
+  }
+  
+  private generateContractType(contract: Contract): string {
+    const name = contract.name;
+    return `
+      export type ${name}Contract = JayContract<
+        ${name}ViewState,            // Full ViewState (all properties)
+        ${name}Refs,                 // Interactive element refs
+        ${name}SlowViewState,        // Slow phase properties
+        ${name}FastViewState,        // Fast phase properties
+        ${name}InteractiveViewState  // Interactive phase properties
+      >;
+    `;
   }
 }
 ```
 
-Output file: `<contract-name>.phases.generated.ts`
+**Output:** All types integrated into existing `<contract-name>.jay-contract.d.ts` file
 
-### Phase 4: Compiler Integration
+**Type Generation Order:**
+1. Full ViewState (all data/variant properties)
+2. Refs (interactive elements)
+3. SlowViewState (filtered by slow phase)
+4. FastViewState (filtered by fast phase)
+5. InteractiveViewState (filtered by interactive phase)
+6. Contract type (combines all 5)
+
+### Phase 4: Runtime Type Extension
+**Location:** `packages/runtime/lib/jay-contract.ts`
+
+Extend the `JayContract` type definition to accept the full ViewState and phase-specific ViewState types:
+
+```typescript
+// Before (current - 2 type parameters)
+export type JayContract<ViewState, Refs> = {
+  viewState: ViewState;
+  refs: Refs;
+};
+
+// After (with phase-specific types - 5 type parameters)
+export type JayContract<
+  ViewState,
+  Refs,
+  SlowViewState = never,         // Default to 'never' for .jay-html files
+  FastViewState = never,         // Default to 'never' for .jay-html files
+  InteractiveViewState = never   // Default to 'never' for .jay-html files
+> = {
+  viewState: ViewState;
+  refs: Refs;
+  slowViewState: SlowViewState;
+  fastViewState: FastViewState;
+  interactiveViewState: InteractiveViewState;
+};
+```
+
+**Backward Compatibility:**
+- Default type parameters (`never`) ensure existing `.jay-html` files continue to work
+- `.jay-html` files: Only provide first 2 parameters (ViewState from render, Refs from interactive elements)
+- `.jay-contract` files: Provide all 5 parameters explicitly
+
+**Usage Examples:**
+
+```typescript
+// .jay-html file (backward compatible)
+const contract: JayContract<DynamicViewState, DynamicRefs> = {
+  viewState: { /* ... */ },
+  refs: { /* ... */ },
+  slowViewState: undefined as never,      // Not used
+  fastViewState: undefined as never,      // Not used
+  interactiveViewState: undefined as never // Not used
+};
+
+// .jay-contract file (full type safety)
+const contract: ProductPageContract = {
+  viewState: { /* all properties */ },
+  refs: { /* interactive elements */ },
+  slowViewState: { /* slow properties */ },
+  fastViewState: { /* fast properties */ },
+  interactiveViewState: { /* interactive properties */ }
+};
+```
+
+### Phase 5: Compiler Integration
 **Location:** `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts`
 
-1. After parsing contract, validate phases
-2. Generate phase-specific types alongside existing types
-3. Export generated types from contract file:
+1. After parsing contract, validate phases using the contract validator
+2. Generate the following types in the existing `.jay-contract.d.ts` file:
+   - Full ViewState (all data/variant properties)
+   - Refs (interactive elements - existing)
+   - SlowViewState (slow phase properties)
+   - FastViewState (fast phase properties)
+   - InteractiveViewState (interactive phase properties)
+   - Contract type combining all 5
+
+3. Example generated output:
    ```typescript
-   export { ProductPageViewState_Slow, ProductPageViewState_Fast, ProductPageViewState_Interactive } from './product-page.phases.generated';
+   // Full ViewState
+   export interface ProductPageViewState {
+     name: string;
+     sku: string;
+     price: number;
+     inStock: boolean;
+     quantity: number;
+     images: Array<{ url: string; alt: string }>;
+     discount: { type: string; amount: number; applied: boolean };
+   }
+   
+   // Refs (existing pattern)
+   export interface ProductPageRefs {
+     addToCart: HTMLElementProxy<ProductPageViewState, HTMLButtonElement>;
+   }
+   
+   // Phase-specific ViewStates
+   export interface ProductPageSlowViewState { /* ... */ }
+   export interface ProductPageFastViewState { /* ... */ }
+   export interface ProductPageInteractiveViewState { /* ... */ }
+   
+   // Contract type with all 5 type parameters
+   export type ProductPageContract = JayContract<
+     ProductPageViewState,
+     ProductPageRefs,
+     ProductPageSlowViewState,
+     ProductPageFastViewState,
+     ProductPageInteractiveViewState
+   >;
    ```
 
-### Phase 5: Builder API Update
+### Phase 6: Builder API Update
 **Location:** `packages/jay-stack/full-stack-component/lib/jay-stack-builder.ts`
 
 Update builder to use generated types:
@@ -494,10 +723,11 @@ const page = makeJayStackComponent<typeof render>()
 - All `data` and `variant` tags default to `slow` phase
 - `interactive` tags go into `Refs` (existing behavior, unchanged)
 - Generated types:
-  - `<Component>SlowViewState` = all data/variant properties
+  - `<Component>ViewState` = all data/variant properties (full ViewState)
+  - `<Component>Refs` = all interactive elements (existing)
+  - `<Component>SlowViewState` = all data/variant properties (same as full ViewState)
   - `<Component>FastViewState` = empty `{}`
   - `<Component>InteractiveViewState` = empty `{}`
-  - `<Component>Refs` = all interactive elements (existing)
 
 **Example:**
 ```jay-contract
@@ -517,18 +747,21 @@ tags:
 
 Generates:
 ```typescript
+// Full ViewState (all properties)
 interface ProductPageViewState {
   name: string;
   price: number;
 }
 
+// Interactive element refs
 interface ProductPageRefs {
   addToCart: HTMLElementProxy<ProductPageViewState, HTMLButtonElement>;
 }
 
+// Phase-specific ViewStates
 interface ProductPageSlowViewState {
   name: string;
-  price: number;
+  price: number;  // All properties default to slow
 }
 
 interface ProductPageFastViewState {
@@ -536,11 +769,20 @@ interface ProductPageFastViewState {
 }
 
 interface ProductPageInteractiveViewState {
-  // Empty - no interactive properties declared
+  // Empty - no interactive data/variant properties declared
 }
+
+// Contract type
+export type ProductPageContract = JayContract<
+  ProductPageViewState,
+  ProductPageRefs,
+  ProductPageSlowViewState,
+  ProductPageFastViewState,
+  ProductPageInteractiveViewState
+>;
 ```
 
-This ensures existing code continues to work.
+This ensures existing code continues to work. The full ViewState remains available for reference, and all properties default to slow phase.
 
 ### Gradual Adoption
 
@@ -694,11 +936,13 @@ contract BlogPost
 
 ## Next Steps
 
-1. Create Phase 1: Extend contract parser
-2. Create Phase 2: Add contract validator
-3. Create Phase 3: Implement type generator
-4. Create Phase 4: Integrate with compiler
-5. Create Phase 5: Update builder API
-6. Test with real contracts
-7. Document in Jay docs
+1. **Phase 1**: Extend contract parser to parse `phase` attribute
+2. **Phase 2**: Add contract validator to enforce phase rules
+3. **Phase 3**: Implement type generator for phase-specific ViewStates
+4. **Phase 4**: Extend `JayContract` type in runtime package
+5. **Phase 5**: Integrate with compiler to generate types
+6. **Phase 6**: Update builder API to use phase-specific types
+7. Test with real contracts (product page, counter, etc.)
+8. Document in Jay docs
+9. Add migration guide for existing contracts
 
