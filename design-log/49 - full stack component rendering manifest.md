@@ -1136,101 +1136,62 @@ const page = makeJayStackComponent<ProductPageContract>()
 ### Design Decisions Made
 
 1. ✅ **Naming Consistency**: `createRenderingManifest()` pairs with `withRenderingManifest()`
+
 2. ✅ **Default Behavior**: Unspecified properties default to `mode='slow'`
    - Safest option (static, cacheable)
    - Progressive enhancement pattern
    - Manifest is optional
 
-### Open Questions
+3. ✅ **Manifest Definition Approach**: Explicit manifest object with factory functions
+   - ViewState is generated from the contract and only includes concerns that both designer and developer need to be aware of
+   - Factory functions (`slow()`, `fast()`, `interactive()`) provide clear, concise syntax
+   - Type safety is preserved through generic constraints
 
-1. **Manifest Definition Approach**: Two options:
-   - **Option A**: Explicit manifest object with factory functions (as shown above) - Clear and concise
-   - **Option B**: Manifest inference with type annotations on ViewState properties
+4. ✅ **Manifest Location**: Co-located with component definition (recommended)
+   - Manifest can be defined inline or imported from any code file
+   - Co-location improves discoverability and maintainability
+   - Flexibility allows for reuse across components
+
+5. ✅ **Manifest Reuse**: Manifests are composable TypeScript objects
+   - Can be composed and reused like any other TypeScript object
+   - Example:
    ```typescript
-   interface ProductPageViewState {
-     name: string & { __renderMode: 'slow' };  // Type-level annotation
-     quantity: number & { __renderMode: 'fast+interactive' };
-   }
-   ```
-   Which approach provides better DX?
-
-   Answer: we prefer the first one, as the ViewState is generated from the contract and only includes concerns that 
-   the both the designer and developer have to be aware of.
-
-2. **Manifest Location**: Should manifest be:
-   - Inline with component definition (co-located) - Recommended
-   - Separate `.manifest.ts` file next to contract
-   - Generated from ViewState type with decorators/comments
-
-   Answer: co-located is recommended. However the full stack component API can import the manifest from any other code file. 
-
-3. **Manifest Reuse**: How to share common patterns?
-   ```typescript
-   // Common manifest fragments
-   const addressManifest = { /* ... */ } satisfies RenderingManifestSchema;
+   // Reusable manifest fragment
+   const addressManifest = {
+     street: slow(),
+     city: slow(),
+     country: slow(),
+   };
    
-   // Reuse in multiple components
+   // Compose into larger manifest
    const userManifest = createRenderingManifest<UserViewState>({
      name: slow(),
+     email: fast(),
      address: object(addressManifest),
    });
    ```
-   
-   Answer: As the manifest is just a TS object, it can be composed and reused as any other TS object. 
 
-4. **Manifest Validation Timing**: When to validate manifest?
-   - Compile-time only (TypeScript errors)
-   - Runtime on component registration (dev mode)
-   - Build-time validation (during compilation)
+6. ✅ **Manifest Validation Timing**: Dev server validation
+   - Validate in `mkRoute` function at dev server startup
+   - Location: `packages/jay-stack/dev-server/lib/dev-server.ts`
+   - Provides immediate feedback to developers at the right timing and context
+   - TypeScript also validates at compile-time
 
-   Answer: In the dev server `mkRoute` function at /Users/yoav/work/jay/jay/packages/jay-stack/dev-server/lib/dev-server.ts 
-   we can validate the manifest and give feedback to the developer at the right timing and context.
-
-5. **Migration Path**: For existing components without manifests:
-   - ✅ Manifest is optional - existing components work (all slow by default)
-   - Generate manifest from usage patterns (which render functions return which props)
-   - Provide migration tool to analyze components and suggest manifests
+7. ✅ **Migration Path**: Optional manifests with sensible defaults
+   - Manifest is optional - existing components work without changes (all properties default to slow)
    - Gradual adoption - add manifests incrementally
+   - Tools can analyze components and suggest manifests based on usage patterns
 
-6. **Async Properties**: Contract files support `async: true` for Promise properties.
-   How does this interact with rendering modes?
-   ```typescript
-   // ViewState from contract
-   interface ViewState {
-     user: Promise<User>;  // async property
-   }
-   
-   // How to specify mode for async property?
-   const manifest = createRenderingManifest<ViewState>({
-     user: fast(),  // Promise resolved in fast phase?
-     // Or special asyncSlow(), asyncFast(), asyncInteractive() factories?
-   });
-   ```
-   
-   Answer: the assumption is that each phase (slow, fast, interactive) has to resolve `async:true` independently
-   * interactive - will render the loading state (using the `loading` jay-html keyword), then render the ready state
-     (using the `resolved` keyword)
-   * fast - will render the loading state (using the `loading` jay-html keyword), then at the end of the html page request 
-     render the ready state (using the `resolved` keyword)
-   * slow - will have to wait for the `async` to resolve. 
+8. ✅ **Async Properties**: Each phase resolves `async: true` independently
+   - **Slow phase**: Waits for async to resolve before rendering
+   - **Fast phase**: Renders loading state, then resolved state at end of HTML page request
+   - **Interactive phase**: Renders loading state (using `loading` keyword), then resolved state (using `resolved` keyword)
+   - Same factory functions used: `slow()`, `fast()`, `interactive()`
 
-7. **Conditional/Optional Properties**: What about properties that exist in ViewState but are conditionally set?
-   ```typescript
-   // Some users have discount, others don't
-   interface ViewState {
-     discount?: { type: string; amount: number };
-   }
-   
-   // Manifest still specifies mode for optional properties
-   const manifest = createRenderingManifest<ViewState>({
-     discount: object({
-       type: slow(),
-       amount: fast(),
-     }),
-     // Optional properties can be omitted from render functions
-   });
-   ```
-   
-   Answer: optional properties will be considered optional at each phase individually. Nothing special needs to be done to support them.
+9. ✅ **Conditional/Optional Properties**: Treated as optional at each phase
+   - Optional properties (e.g., `discount?: {...}`) are considered optional at each phase individually
+   - Manifest still specifies mode for optional properties
+   - Render functions can omit optional properties
+   - No special handling required
 
 
