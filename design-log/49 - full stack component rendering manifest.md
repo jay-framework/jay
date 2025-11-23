@@ -1194,4 +1194,169 @@ const page = makeJayStackComponent<ProductPageContract>()
    - Render functions can omit optional properties
    - No special handling required
 
+---
+
+## ⚠️ Implementation Attempt: Type Narrowing Approach - **FAILED**
+
+### What We Tried
+
+We attempted to implement the rendering manifest using TypeScript's advanced type system features:
+
+1. **Manifest Schema**: Used `satisfies` with factory functions (`slow()`, `fast()`, `interactive()`)
+2. **Type Narrowing**: Created `NarrowViewStateByPhase<ViewState, Schema, Phase>` utility type
+3. **Runtime Validation**: Implemented `ManifestValidator` class with comprehensive rules
+
+### Results
+
+✅ **What Worked:**
+- Primitive properties (strings, numbers, booleans) - type narrowing works perfectly
+- Runtime validation - all validation rules work correctly
+- Factory functions - provide good developer experience
+- Simple, flat ViewStates - type safety is excellent
+
+❌ **What Failed:**
+- **Nested objects** - TypeScript cannot properly narrow types through nested object structures
+- **Arrays with object items** - Type inference breaks down for array elements with their own schemas
+- **Complex nested structures** - TypeScript's type system hits fundamental limitations
+
+### Specific Failures
+
+```typescript
+// This works ✅
+interface ViewState {
+  name: string;
+  price: number;
+  quantity: number;
+}
+
+const manifest = {
+  name: slow(),
+  price: slow(),
+  quantity: interactive(),
+} satisfies RenderingManifestSchema<ViewState>;
+
+type SlowPhase = NarrowViewStateByPhase<ViewState, typeof manifest, 'slow'>;
+// ✅ Correctly narrows to: { name: string; price: number }
+
+// This fails ❌
+interface ViewState {
+  discount: {
+    type: string;
+    amount: number;
+  };
+}
+
+const manifest = {
+  discount: object({
+    type: slow(),
+    amount: fast(),
+  }),
+} satisfies RenderingManifestSchema<ViewState>;
+
+type SlowPhase = NarrowViewStateByPhase<ViewState, typeof manifest, 'slow'>;
+// ❌ TypeScript error: Cannot properly infer nested types
+// Expected: { discount: { type: string } }
+// Actual: Type errors about unknown properties
+```
+
+### Root Cause Analysis
+
+**TypeScript's Conditional Type Limitations:**
+
+1. **Deep Recursion**: TypeScript struggles with recursive mapped types that go more than 2-3 levels deep
+2. **Type Inference Through `satisfies`**: While `satisfies` preserves literal types at the top level, it doesn't preserve exact nested structure through helper functions
+3. **Union Type Distribution**: When checking `Schema[K] extends ObjectSchemaNode<any>`, TypeScript can't properly distribute over union types in complex scenarios
+4. **Mapped Type Constraints**: The combination of mapped types, conditional types, and recursive types hits TypeScript's instantiation depth limits
+
+**Concrete Example of the Problem:**
+
+```typescript
+// The object() function signature
+export function object<ViewState extends object>(
+  properties: RenderingManifestSchema<ViewState>
+) {
+  return {
+    type: 'object' as const,
+    properties,
+  };
+}
+
+// When we write:
+discount: object({
+  type: slow(),
+  amount: fast(),
+})
+
+// TypeScript sees the parameter type `RenderingManifestSchema<ViewState>`
+// and WIDENS the nested properties, losing the exact literal types
+// This breaks the type narrowing chain
+```
+
+### Lessons Learned
+
+1. **Type System Limits**: TypeScript's type system, while powerful, has practical limits for complex transformations
+2. **Runtime vs Compile-Time**: Our runtime validation works perfectly - the issue is purely compile-time type safety
+3. **Developer Experience**: Complex type errors are worse than no type errors - they confuse rather than help
+4. **Simpler is Better**: A code generation approach will be more reliable and provide better error messages
+
+### Why This Matters
+
+The type narrowing approach would have been elegant, but:
+- **Unreliable**: Works for simple cases, fails for real-world nested structures
+- **Poor DX**: Cryptic TypeScript errors that developers can't fix
+- **Maintenance burden**: TypeScript updates could break the fragile type inference
+- **Limited value**: If it doesn't work for nested structures, it doesn't solve our core problem
+
+---
+
+## Next Steps: Code Generation Approach
+
+Based on these learnings, we will pursue **Design Log #50: Code Generation for Phase-Specific ViewState Types**
+
+### Proposed Approach
+
+Instead of runtime type narrowing, generate distinct TypeScript types at build time:
+
+```typescript
+// From contract:
+interface ProductPageViewState {
+  name: string;
+  price: number;
+  discount: {
+    type: string;
+    amount: number;
+  };
+}
+
+// Generate (based on manifest):
+interface ProductPageViewState_Slow {
+  name: string;
+  price: number;
+  discount: {
+    type: string;
+  };
+}
+
+interface ProductPageViewState_Fast {
+  discount: {
+    amount: number;
+  };
+}
+
+interface ProductPageViewState_Interactive {
+  // empty or relevant interactive properties
+}
+```
+
+**Benefits:**
+- ✅ Exact type safety at all nesting levels
+- ✅ Clear, simple type definitions
+- ✅ No TypeScript type system limitations
+- ✅ Better IDE autocomplete and error messages
+- ✅ Compiler can optimize better (no complex mapped types)
+
+**Implementation:**
+- Extend the Jay compiler to generate phase-specific types alongside contracts
+- Manifest definition remains the same (good developer experience)
+- Types generated automatically as part of build process
 
