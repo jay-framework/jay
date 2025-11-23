@@ -288,11 +288,11 @@ export type ProductPageContract = JayContract<
   ProductPageInteractiveViewState   // Interactive phase properties
 >;
 
-// .jay-html file (dynamic - only first 2 parameters)
+// .jay-html file (dynamic - only first 2 parameters, rest default to 'never')
 export type DynamicPageContract = JayContract<
-  DynamicViewState,  // From render function (backward compatible)
-  DynamicRefs        // Inferred from interactive elements
-  // Slow, Fast, Interactive default to 'never' (not used)
+  DynamicPageViewState,  // Inferred from render function
+  DynamicPageRefs        // Inferred from interactive elements
+  // SlowViewState, FastViewState, InteractiveViewState default to 'never' (not used)
 >;
 ```
 
@@ -688,7 +688,7 @@ const contract: ProductPageContract = {
 ### Phase 6: Builder API Update
 **Location:** `packages/jay-stack/full-stack-component/lib/jay-stack-builder.ts`
 
-Update builder to use generated types:
+Update builder to use generated types (full ViewState + phase-specific ViewStates):
 
 ```typescript
 interface JayStackBuilder<ViewState, Refs, SlowVS, FastVS, InteractiveVS> {
@@ -705,15 +705,44 @@ interface JayStackBuilder<ViewState, Refs, SlowVS, FastVS, InteractiveVS> {
   ): JayStackComponent<ViewState, Refs>;
 }
 
-// Usage:
-const page = makeJayStackComponent<typeof render>()
+// Usage example (both .jay-contract and .jay-html):
+const page = makeJayStackComponent<ProductPageContract>()
   .withProps<PageProps>()
-  .withSlowlyRender(renderSlowlyChanging)  // Returns ProductPageSlowViewState
-  .withFastRender(renderFastChanging)      // Returns ProductPageFastViewState
+  .withSlowlyRender(renderSlowlyChanging)  // Must return ProductPageSlowViewState
+  .withFastRender(renderFastChanging)      // Must return ProductPageFastViewState
   .withInteractive(ProductPageConstructor); // Receives (ProductPageInteractiveViewState, ProductPageRefs)
 ```
 
-**Note**: The builder already has the `Refs` type parameter - we're just adding the phase-specific ViewState types (`SlowVS`, `FastVS`, `InteractiveVS`).
+**Type Parameters:**
+- `ViewState`: Full ViewState (all data/variant properties) - used for component contract
+- `Refs`: Interactive element refs (existing)
+- `SlowVS`: Slow phase ViewState - enforces correct return type for slow render
+- `FastVS`: Fast phase ViewState - enforces correct return type for fast render
+- `InteractiveVS`: Interactive phase ViewState - enforces correct constructor parameter
+
+**Builder Initialization:**
+
+```typescript
+// For .jay-contract files (explicit types from contract)
+const page = makeJayStackComponent<ProductPageContract>()
+  // Builder knows:
+  //   ViewState = ProductPageViewState
+  //   Refs = ProductPageRefs
+  //   SlowVS = ProductPageSlowViewState
+  //   FastVS = ProductPageFastViewState
+  //   InteractiveVS = ProductPageInteractiveViewState
+
+// For .jay-html files (use generated contract type)
+const page = makeJayStackComponent<DynamicPageContract>()
+  // Builder knows:
+  //   ViewState = DynamicPageViewState (from render function)
+  //   Refs = DynamicPageRefs (from interactive elements)
+  //   SlowVS, FastVS, InteractiveVS = never (not used)
+```
+
+**Note**: Both `.jay-contract` and `.jay-html` files generate a `<ComponentName>Contract` type. The difference is:
+- `.jay-contract`: All 5 type parameters are explicit and generated from the contract
+- `.jay-html`: Only first 2 parameters are inferred, rest default to `never`
 
 ## Migration Path
 
