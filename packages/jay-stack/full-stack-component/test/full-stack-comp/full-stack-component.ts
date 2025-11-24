@@ -22,7 +22,6 @@ export const comp = makeJayStackComponent<FSComponentContract>()
                 name: 'Joe',
                 age: 32,
                 address: '25 W 14 st, NY, NY',
-                // stars: 12, // ✅ Would be a Type error: stars is not in SlowViewState!
             },
             { id: '1' },
         );
@@ -32,7 +31,6 @@ export const comp = makeJayStackComponent<FSComponentContract>()
             {
                 stars: 12,
                 rating: 13,
-                // age: 30, // ✅ Should be a Type error: age is not in FastViewState!
             },
             { id: '1' },
         );
