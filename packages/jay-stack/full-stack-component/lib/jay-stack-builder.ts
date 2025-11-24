@@ -759,23 +759,29 @@ class BuilderImplementation<
  */
 export function makeJayStackComponent<
     Render extends JayContract<any, any, any, any, any>
->() {
-    type Refs = ExtractRefs<Render>;
-    type SlowVS = ExtractSlowViewState<Render>;
-    type FastVS = ExtractFastViewState<Render>;
-    type InteractiveVS = ExtractInteractiveViewState<Render>;
-
-    // Phase types are now enforced in the builder
+>(): Builder<
+    'Props',
+    ExtractRefs<Render>,
+    ExtractSlowViewState<Render>,
+    ExtractFastViewState<Render>,
+    ExtractInteractiveViewState<Render>,
+    [],
+    [],
+    {},
+    {},
+    JayComponentCore<object, ExtractInteractiveViewState<Render>>
+> {
+    // Phase types are now enforced in the builder - inline extractors for type propagation
     return new BuilderImplementation() as unknown as Builder<
         'Props',
-        Refs,
-        SlowVS,
-        FastVS,
-        InteractiveVS,
+        ExtractRefs<Render>,
+        ExtractSlowViewState<Render>,
+        ExtractFastViewState<Render>,
+        ExtractInteractiveViewState<Render>,
         [],
         [],
         {},
         {},
-        JayComponentCore<object, InteractiveVS>
+        JayComponentCore<object, ExtractInteractiveViewState<Render>>
     >;
 }
