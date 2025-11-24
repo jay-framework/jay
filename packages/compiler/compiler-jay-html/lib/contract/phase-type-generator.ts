@@ -127,7 +127,8 @@ function buildPickExpression(
     }
     
     // Build type expression
-    const parts: string[] = [];
+    const pickPart: string[] = [];
+    const nestedProperties: string[] = [];
     
     // Add Pick for direct (leaf) properties
     const directProps = properties.filter(p => !childPropertyNames.has(p));
@@ -136,7 +137,7 @@ function buildPickExpression(
             ? `${baseTypeName}${currentPath.map(p => `['${p}']`).join('')}`
             : baseTypeName;
         
-        parts.push(`Pick<${pathAccess}, ${directProps.map(p => `'${p}'`).join(' | ')}>`);
+        pickPart.push(`Pick<${pathAccess}, ${directProps.map(p => `'${p}'`).join(' | ')}>`);
     }
     
     // Add nested objects/arrays/promises with Pick expressions
@@ -182,17 +183,22 @@ function buildPickExpression(
                 fullExpression = childExpression;
             }
             
-            parts.push(`{\n    ${childName}: ${fullExpression};\n  }`);
+            nestedProperties.push(`    ${childName}: ${fullExpression};`);
         }
     }
     
-    // Combine with intersection
-    if (parts.length === 0) {
+    // Combine Pick part and nested properties
+    if (pickPart.length === 0 && nestedProperties.length === 0) {
         return '{}';
-    } else if (parts.length === 1) {
-        return parts[0];
+    } else if (pickPart.length === 0) {
+        // Only nested properties
+        return `{\n${nestedProperties.join('\n')}\n}`;
+    } else if (nestedProperties.length === 0) {
+        // Only Pick
+        return pickPart[0];
     } else {
-        return parts.join(' & ');
+        // Both Pick and nested properties - combine with single object
+        return `${pickPart[0]} & {\n${nestedProperties.join('\n')}\n}`;
     }
 }
 
