@@ -31,40 +31,19 @@ export interface DataTypesViewState {
     pa1: Promise<Array<Pa1OfDataTypesViewState>>;
 }
 
-export interface O1OfDataTypesSlowViewState {
-    s2: string;
-    n2: number;
-}
+export type DataTypesSlowViewState = Pick<DataTypesViewState, 's1' | 'n1' | 'b1' | 'p1'> & {
+    o1: Pick<DataTypesViewState['o1'], 's2' | 'n2'>;
+} & {
+    a1: Array<Pick<DataTypesViewState['a1'][number], 's3' | 'n3'>>;
+} & {
+    po1: Pick<DataTypesViewState['po1'], 'ps2' | 'pn2'>;
+} & {
+    pa1: Array<Pick<DataTypesViewState['pa1'][number], 'ps3' | 'pn3'>>;
+};
 
-export interface A1OfDataTypesSlowViewState {
-    s3: string;
-    n3: number;
-}
+export type DataTypesFastViewState = {};
 
-export interface Po1OfDataTypesSlowViewState {
-    ps2: string;
-    pn2: number;
-}
-
-export interface Pa1OfDataTypesSlowViewState {
-    ps3: string;
-    pn3: number;
-}
-
-export interface DataTypesSlowViewState {
-    s1: string;
-    n1: number;
-    b1: boolean;
-    o1: O1OfDataTypesSlowViewState;
-    a1: Array<A1OfDataTypesSlowViewState>;
-    p1: Promise<string>;
-    po1: Promise<Po1OfDataTypesSlowViewState>;
-    pa1: Promise<Array<Pa1OfDataTypesSlowViewState>>;
-}
-
-export interface DataTypesFastViewState {}
-
-export interface DataTypesInteractiveViewState {}
+export type DataTypesInteractiveViewState = {};
 
 export interface DataTypesRefs {}
 

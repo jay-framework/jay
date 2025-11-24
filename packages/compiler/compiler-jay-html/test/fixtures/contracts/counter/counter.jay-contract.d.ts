@@ -10,14 +10,11 @@ export interface CounterViewState {
     isPositive: IsPositive;
 }
 
-export interface CounterSlowViewState {}
+export type CounterSlowViewState = {};
 
-export interface CounterFastViewState {}
+export type CounterFastViewState = {};
 
-export interface CounterInteractiveViewState {
-    count: number;
-    isPositive: IsPositive;
-}
+export type CounterInteractiveViewState = Pick<CounterViewState, 'count' | 'isPositive'>;
 
 export interface CounterRefs {
     add: HTMLElementProxy<CounterViewState, HTMLButtonElement>;

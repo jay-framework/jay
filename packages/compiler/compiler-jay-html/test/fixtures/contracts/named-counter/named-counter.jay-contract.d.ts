@@ -10,14 +10,11 @@ export interface NamedContractViewState {
     counter: CounterViewState;
 }
 
-export interface NamedContractSlowViewState {
-    title: string;
-    counter: CounterViewState;
-}
+export type NamedContractSlowViewState = Pick<NamedContractViewState, 'title' | 'counter'>;
 
-export interface NamedContractFastViewState {}
+export type NamedContractFastViewState = {};
 
-export interface NamedContractInteractiveViewState {}
+export type NamedContractInteractiveViewState = {};
 
 export interface NamedContractRefs {
     counter: CounterRefs;
