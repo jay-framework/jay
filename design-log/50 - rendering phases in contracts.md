@@ -958,6 +958,213 @@ contract BlogPost
 5. **Q: Should generated files be committed or .gitignored?**
    - A: **Recommendation**: Commit them (like `.jay-contract.ts` files). Makes code review easier and provides stable types for IDEs.
 
+## Alternative: Type Utilities Approach (Pick/Omit)
+
+### Problem with Current Implementation
+
+The current implementation generates separate interfaces for each phase-specific ViewState, which leads to significant code duplication, especially with nested objects:
+
+```typescript
+// Current approach - lots of duplication
+export interface ProductPageViewState {
+  name: string;
+  sku: string;
+  price: number;
+  inStock: boolean;
+  quantity: number;
+  discount: {
+    type: string;
+    amount: number;
+    applied: boolean;
+  };
+}
+
+export interface DiscountOfProductPageSlowViewState {
+  type: string;
+}
+
+export interface ProductPageSlowViewState {
+  name: string;
+  sku: string;
+  price: number;
+  discount: DiscountOfProductPageSlowViewState;
+}
+
+export interface DiscountOfProductPageFastViewState {
+  amount: number;
+}
+
+export interface ProductPageFastViewState {
+  inStock: boolean;
+  discount: DiscountOfProductPageFastViewState;
+}
+
+export interface DiscountOfProductPageInteractiveViewState {
+  applied: boolean;
+}
+
+export interface ProductPageInteractiveViewState {
+  quantity: number;
+  discount: DiscountOfProductPageInteractiveViewState;
+}
+```
+
+### Proposed Solution: Type Utilities
+
+Instead of generating separate interfaces, use TypeScript's `Pick` and `Omit` to derive phase-specific types from the full ViewState:
+
+```typescript
+// Generate only the full ViewState
+export interface ProductPageViewState {
+  name: string;
+  sku: string;
+  price: number;
+  inStock: boolean;
+  quantity: number;
+  discount: {
+    type: string;
+    amount: number;
+    applied: boolean;
+  };
+}
+
+// Use Pick to derive phase-specific types
+export type ProductPageSlowViewState = Pick<ProductPageViewState, 'name' | 'sku' | 'price'> & {
+  discount: Pick<ProductPageViewState['discount'], 'type'>;
+};
+
+export type ProductPageFastViewState = Pick<ProductPageViewState, 'inStock'>;
+
+export type ProductPageInteractiveViewState = Pick<ProductPageViewState, 'quantity'> & {
+  discount: Pick<ProductPageViewState['discount'], 'applied'>;
+};
+```
+
+### Benefits
+
+1. **Reduced Duplication**: No need to duplicate type definitions for nested objects
+2. **Single Source of Truth**: Full ViewState is the only interface definition
+3. **Automatic Consistency**: If the full ViewState changes, phase-specific types update automatically
+4. **Smaller Generated Files**: Significantly less code generated
+5. **Better Type Errors**: TypeScript errors reference the full ViewState, making debugging easier
+6. **Maintainability**: Easier to understand and maintain generated code
+
+### Implementation Approach
+
+**Phase-Specific Type Generation Algorithm:**
+
+1. Generate the full `ViewState` interface as normal
+2. For each phase (`slow`, `fast`, `fast+interactive`):
+   - Build a mapping of which top-level properties belong to this phase
+   - For each property:
+     - If primitive/array of primitives: include in `Pick<>`
+     - If nested object: recursively build `Pick<>` for nested properties
+   - Generate a type alias using `Pick<>` and intersection types
+
+**Example Algorithm Output:**
+
+```typescript
+// Phase: slow
+// Top-level: name, sku, price
+// Nested: discount.type
+export type ProductPageSlowViewState = 
+  Pick<ProductPageViewState, 'name' | 'sku' | 'price'> & {
+    discount: Pick<ProductPageViewState['discount'], 'type'>;
+  };
+
+// Phase: fast  
+// Top-level: inStock
+// No nested properties
+export type ProductPageFastViewState = 
+  Pick<ProductPageViewState, 'inStock'>;
+
+// Phase: fast+interactive
+// Top-level: quantity
+// Nested: discount.applied
+export type ProductPageInteractiveViewState = 
+  Pick<ProductPageViewState, 'quantity'> & {
+    discount: Pick<ProductPageViewState['discount'], 'applied'>;
+  };
+```
+
+### Edge Cases
+
+**Empty Phase ViewStates:**
+```typescript
+// When no properties in phase
+export type ProductPageFastViewState = {};
+```
+
+**Arrays:**
+```typescript
+export interface ProductPageViewState {
+  items: Array<{
+    id: string;
+    name: string;
+    price: number;
+  }>;
+}
+
+// If items array is in slow phase, but with fast properties inside
+export type ProductPageSlowViewState = {
+  items: Array<Pick<ProductPageViewState['items'][number], 'id'>>;
+};
+
+export type ProductPageFastViewState = {
+  items: Array<Pick<ProductPageViewState['items'][number], 'name' | 'price'>>;
+};
+```
+
+**Deeply Nested Objects:**
+```typescript
+export interface UserViewState {
+  profile: {
+    personal: {
+      name: string;
+      age: number;
+    };
+    contact: {
+      email: string;
+      phone: string;
+    };
+  };
+}
+
+export type UserSlowViewState = {
+  profile: {
+    personal: Pick<UserViewState['profile']['personal'], 'name'>;
+  };
+};
+
+export type UserFastViewState = {
+  profile: {
+    personal: Pick<UserViewState['profile']['personal'], 'age'>;
+    contact: Pick<UserViewState['profile']['contact'], 'email' | 'phone'>;
+  };
+};
+```
+
+### Trade-offs
+
+**Pros:**
+- Much cleaner generated code
+- Reduces file size significantly
+- Single source of truth
+- Automatic consistency
+
+**Cons:**
+- Slightly more complex type expressions (but still readable)
+- IDE hover might show expanded types (though modern IDEs handle this well)
+- Requires more sophisticated code generation logic
+
+### Recommendation
+
+**Implement the Pick/Omit approach** - the benefits far outweigh the costs, especially for complex contracts with deep nesting. The current duplication-based approach works but becomes unwieldy for real-world contracts.
+
+### Implementation Priority
+
+This can be implemented as a **Phase 3.1 improvement** after the basic functionality is working. The type generation infrastructure is already in place - we just need to change the output format from interface declarations to type aliases with Pick.
+
 ## Success Criteria
 
 ✅ **Type Safety**: Compiler enforces correct property usage across phases

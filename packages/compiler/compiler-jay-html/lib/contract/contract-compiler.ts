@@ -12,9 +12,9 @@ import { generateTypes, JayImportResolver, renderRefsType } from '../';
 import { pascalCase } from 'change-case';
 import {
     contractToImportsViewStateAndRefs,
-    contractToAllPhaseViewStates,
     JayContractImportLink,
 } from './contract-to-view-state-and-refs';
+import { generateAllPhaseViewStateTypes } from './phase-type-generator';
 
 function refsToRepeated(refsTreeNode: RefsTree): RefsTree {
     const { refs, children, imported } = refsTreeNode;
@@ -82,85 +82,33 @@ export async function compileContract(
             jayImportResolver,
         );
 
-        // Generate phase-specific ViewStates
-        const phaseViewStatesResult = await contractToAllPhaseViewStates(
-            contract,
-            contractFilePath,
-            jayImportResolver,
-        );
+        return fullViewStateResult.map((fullResult) => {
+            const { type, refs, importLinks } = fullResult;
 
-        return fullViewStateResult.flatMap((fullResult) =>
-            phaseViewStatesResult.map((phaseResults) => {
-                const { type, refs, importLinks } = fullResult;
-                const { slow, fast, interactive } = phaseResults;
+            // Generate full ViewState types
+            const fullViewStateTypes = generateTypes(type);
 
-                // Generate type definitions
-                const fullViewStateTypes = generateTypes(type);
-                const slowViewStateTypes = slow.type ? generateTypes(slow.type) : '';
-                const fastViewStateTypes = fast.type ? generateTypes(fast.type) : '';
-                const interactiveViewStateTypes = interactive.type ? generateTypes(interactive.type) : '';
+            // Generate phase-specific ViewState types using Pick utilities
+            const contractName = pascalCase(contract.name);
+            const viewStateTypeName = `${contractName}ViewState`;
+            const phaseViewStateTypes = generateAllPhaseViewStateTypes(contract, viewStateTypeName);
 
-                // Deduplicate enum declarations
-                // Enums appear in generateTypes output - we need to extract and deduplicate them
-                const allTypesRaw = [
-                    fullViewStateTypes,
-                    slowViewStateTypes,
-                    fastViewStateTypes,
-                    interactiveViewStateTypes,
-                ].filter(Boolean).join('\n\n');
-                
-                // Extract enum declarations and deduplicate
-                const enumPattern = /(export enum \w+ \{[^}]+\})/g;
-                const enumsFound = new Map<string, string>();
-                const enumMatches = allTypesRaw.matchAll(enumPattern);
-                for (const match of enumMatches) {
-                    const enumDecl = match[1];
-                    const enumName = enumDecl.match(/export enum (\w+)/)?.[1];
-                    if (enumName && !enumsFound.has(enumName)) {
-                        enumsFound.set(enumName, enumDecl);
-                    }
-                }
-                
-                // Remove all enum declarations from the combined types
-                let allTypesWithoutEnums = allTypesRaw;
-                for (const enumDecl of enumsFound.values()) {
-                    // Replace all occurrences with empty string
-                    allTypesWithoutEnums = allTypesWithoutEnums.split(enumDecl).join('');
-                }
-                
-                // Clean up extra whitespace
-                allTypesWithoutEnums = allTypesWithoutEnums.replace(/\n{3,}/g, '\n\n').trim();
-                
-                // Combine enums at the top, then the rest of the types
-                const enumsString = Array.from(enumsFound.values()).join('\n\n');
-                const allTypes = enumsString ? `${enumsString}\n\n${allTypesWithoutEnums}` : allTypesWithoutEnums;
+            // Generate refs interface
+            let { imports, renderedRefs } = generateRefsInterface(contract, refs);
+            imports = imports.plus(Import.jayContract);
 
-                // Generate refs interface
-                let { imports, renderedRefs } = generateRefsInterface(contract, refs);
-                imports = imports.plus(Import.jayContract);
+            const renderedImports = renderImports(imports, importLinks);
 
-                // Collect all import links (from all phases)
-                const allImportLinks = [
-                    ...importLinks,
-                    ...slow.importLinks,
-                    ...fast.importLinks,
-                    ...interactive.importLinks,
-                ];
-                const renderedImports = renderImports(imports, allImportLinks);
+            // Generate type names
+            const refsTypeName = `${contractName}Refs`;
+            const slowViewStateTypeName = `${contractName}SlowViewState`;
+            const fastViewStateTypeName = `${contractName}FastViewState`;
+            const interactiveViewStateTypeName = `${contractName}InteractiveViewState`;
 
-                // Generate type names
-                const contractName = pascalCase(contract.name);
-                const viewStateTypeName = `${contractName}ViewState`;
-                const refsTypeName = `${contractName}Refs`;
-                const slowViewStateTypeName = `${contractName}SlowViewState`;
-                const fastViewStateTypeName = `${contractName}FastViewState`;
-                const interactiveViewStateTypeName = `${contractName}InteractiveViewState`;
+            // Generate contract type with all 5 type parameters
+            const contractType = `export type ${contractName}Contract = JayContract<${viewStateTypeName}, ${refsTypeName}, ${slowViewStateTypeName}, ${fastViewStateTypeName}, ${interactiveViewStateTypeName}>`;
 
-                // Generate contract type with all 5 type parameters
-                const contractType = `export type ${contractName}Contract = JayContract<${viewStateTypeName}, ${refsTypeName}, ${slowViewStateTypeName}, ${fastViewStateTypeName}, ${interactiveViewStateTypeName}>`;
-
-                return `${renderedImports}\n\n${allTypes}\n\n${renderedRefs}\n\n${contractType}`;
-            })
-        );
+            return `${renderedImports}\n\n${fullViewStateTypes}\n\n${phaseViewStateTypes}\n\n${renderedRefs}\n\n${contractType}`;
+        });
     });
 }

@@ -56,13 +56,11 @@ describe('compile contract', () => {
             count: number;
         }
         
-        export interface CounterSlowViewState {}
+        export type CounterSlowViewState = {};
         
-        export interface CounterFastViewState {}
+        export type CounterFastViewState = {};
         
-        export interface CounterInteractiveViewState {
-            count: number;
-        }
+        export type CounterInteractiveViewState = Pick<CounterViewState, 'count'>;
 
         export interface CounterRefs {
             add: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
@@ -103,14 +101,11 @@ describe('compile contract', () => {
             countTwo: number;
         }
         
-        export interface CounterSlowViewState {
-            countOne: number;
-            countTwo: number;
-        }
+        export type CounterSlowViewState = Pick<CounterViewState, 'countOne' | 'countTwo'>;
         
-        export interface CounterFastViewState {}
+        export type CounterFastViewState = {};
         
-        export interface CounterInteractiveViewState {}
+        export type CounterInteractiveViewState = {};
 
         export interface CounterRefs {
         }
@@ -154,18 +149,13 @@ describe('compile contract', () => {
             item: ItemOfTodoViewState;
         }
         
-        export interface ItemOfTodoSlowViewState {
-            title: string;
-            completed: boolean;
-        }
+        export type TodoSlowViewState = {
+            item: Pick<TodoViewState['item'], 'title' | 'completed'>;
+        };
         
-        export interface TodoSlowViewState {
-            item: ItemOfTodoSlowViewState;
-        }
+        export type TodoFastViewState = {};
         
-        export interface TodoFastViewState {}
-        
-        export interface TodoInteractiveViewState {}
+        export type TodoInteractiveViewState = {};
 
         export interface TodoRefs {
         }
@@ -212,18 +202,13 @@ describe('compile contract', () => {
             items: Array<ItemOfTodoViewState>;
         }
         
-        export interface ItemOfTodoSlowViewState {
-            title: string;
-            completed: boolean;
-        }
+        export type TodoSlowViewState = {};
         
-        export interface TodoSlowViewState {
-            items: Array<ItemOfTodoSlowViewState>;
-        }
+        export type TodoFastViewState = {};
         
-        export interface TodoFastViewState {}
-        
-        export interface TodoInteractiveViewState {}
+        export type TodoInteractiveViewState = {
+            items: Array<Pick<TodoViewState['items'][number], 'title' | 'completed'>>;
+        };
         
         export interface TodoRefs {
             items: {
@@ -319,6 +304,24 @@ describe('compile contract', () => {
             contactInfo: ContactInfoOfUserFormViewState;
         }
         
+        export type UserFormSlowViewState = {
+            personalInfo: Pick<UserFormViewState['personalInfo'], 'sectionTitle'>;
+        } & {
+            contactInfo: Pick<UserFormViewState['contactInfo'], 'sectionTitle'>;
+        };
+        
+        export type UserFormFastViewState = {};
+        
+        export type UserFormInteractiveViewState = {
+            personalInfo: {
+                nameFields: Pick<UserFormViewState['personalInfo']['nameFields'], 'firstName' | 'lastName'>;
+            };
+        } & {
+            contactInfo: {
+                contactFields: Pick<UserFormViewState['contactInfo']['contactFields'], 'email' | 'phone'>;
+            };
+        };
+        
         export interface UserFormRefs {
             submitButton: HTMLElementProxy<UserFormViewState, HTMLButtonElement>;
             personalInfo: {
@@ -369,12 +372,6 @@ describe('compile contract', () => {
             };
         }
 
-        export interface UserFormSlowViewState {}
-        
-        export interface UserFormFastViewState {}
-        
-        export interface UserFormInteractiveViewState {}
-        
         export type UserFormContract = JayContract<UserFormViewState, UserFormRefs, UserFormSlowViewState, UserFormFastViewState, UserFormInteractiveViewState>`),
         );
     });
@@ -422,17 +419,19 @@ describe('compile contract', () => {
             items: Array<ItemOfTodoViewState>;
         }
 
+        export type TodoSlowViewState = Pick<TodoViewState, 'filter'> & {
+            items: Array<Pick<TodoViewState['items'][number], 'title' | 'completed'>>;
+        };
+        
+        export type TodoFastViewState = {};
+        
+        export type TodoInteractiveViewState = {};
+
         export interface TodoRefs {
         }
 
         export interface TodoRepeatedRefs {
         }
-
-        export interface TodoSlowViewState {}
-        
-        export interface TodoFastViewState {}
-        
-        export interface TodoInteractiveViewState {}
         
         export type TodoContract = JayContract<TodoViewState, TodoRefs, TodoSlowViewState, TodoFastViewState, TodoInteractiveViewState>`),
         );
@@ -466,6 +465,12 @@ describe('compile contract', () => {
             count: number;
         }
 
+        export type CounterSlowViewState = Pick<CounterViewState, 'count'>;
+        
+        export type CounterFastViewState = {};
+        
+        export type CounterInteractiveViewState = {};
+
         export interface CounterRefs {
             add: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
             subtract: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
@@ -475,12 +480,6 @@ describe('compile contract', () => {
             add: HTMLElementCollectionProxy<CounterViewState, HTMLButtonElement>;
             subtract: HTMLElementCollectionProxy<CounterViewState, HTMLButtonElement>;
         }
-
-        export interface CounterSlowViewState {}
-        
-        export interface CounterFastViewState {}
-        
-        export interface CounterInteractiveViewState {}
         
         export type CounterContract = JayContract<CounterViewState, CounterRefs, CounterSlowViewState, CounterFastViewState, CounterInteractiveViewState>`),
         );
@@ -514,6 +513,12 @@ describe('compile contract', () => {
             select: Select;
         }
 
+        export type ChoicesSlowViewState = {};
+        
+        export type ChoicesFastViewState = {};
+        
+        export type ChoicesInteractiveViewState = Pick<ChoicesViewState, 'select'>;
+
         export interface ChoicesRefs {
             select: HTMLElementProxy<ChoicesViewState, HTMLSelectElement | HTMLInputElement>;
         }
@@ -521,12 +526,6 @@ describe('compile contract', () => {
         export interface ChoicesRepeatedRefs {
             select: HTMLElementCollectionProxy<ChoicesViewState, HTMLSelectElement | HTMLInputElement>;
         }
-
-        export interface ChoicesSlowViewState {}
-        
-        export interface ChoicesFastViewState {}
-        
-        export interface ChoicesInteractiveViewState {}
         
         export type ChoicesContract = JayContract<ChoicesViewState, ChoicesRefs, ChoicesSlowViewState, ChoicesFastViewState, ChoicesInteractiveViewState>`),
         );
@@ -587,6 +586,12 @@ describe('compile contract', () => {
             export interface TodoViewState {
                 item: TodoItemViewState;
             }
+
+            export type TodoSlowViewState = Pick<TodoViewState, 'item'>;
+        
+        export type TodoFastViewState = {};
+        
+        export type TodoInteractiveViewState = {};
     
             export interface TodoRefs {
                 addButton: HTMLElementProxy<TodoViewState, HTMLButtonElement>;
@@ -597,12 +602,6 @@ describe('compile contract', () => {
                 addButton: HTMLElementCollectionProxy<TodoViewState, HTMLButtonElement>;
                 item: TodoItemRepeatedRefs;
             }
-
-            export interface TodoSlowViewState {}
-        
-        export interface TodoFastViewState {}
-        
-        export interface TodoInteractiveViewState {}
         
         export type TodoContract = JayContract<TodoViewState, TodoRefs, TodoSlowViewState, TodoFastViewState, TodoInteractiveViewState>`),
             );
@@ -633,6 +632,12 @@ describe('compile contract', () => {
             export interface TodoViewState {
                 items: Array<TodoItemViewState>;
             }
+
+            export type TodoSlowViewState = Pick<TodoViewState, 'items'>;
+        
+        export type TodoFastViewState = {};
+        
+        export type TodoInteractiveViewState = {};
     
             export interface TodoRefs {
                 addButton: HTMLElementProxy<TodoViewState, HTMLButtonElement>;
@@ -643,12 +648,6 @@ describe('compile contract', () => {
                 addButton: HTMLElementCollectionProxy<TodoViewState, HTMLButtonElement>;
                 items: TodoItemRepeatedRefs;
             }
-
-            export interface TodoSlowViewState {}
-        
-        export interface TodoFastViewState {}
-        
-        export interface TodoInteractiveViewState {}
         
         export type TodoContract = JayContract<TodoViewState, TodoRefs, TodoSlowViewState, TodoFastViewState, TodoInteractiveViewState>`),
             );
@@ -683,6 +682,12 @@ describe('compile contract', () => {
                 activeItem: TodoItemViewState;
                 completedItems: Array<TodoItemViewState>;
             }
+
+            export type TodoSlowViewState = Pick<TodoViewState, 'activeItem' | 'completedItems'>;
+        
+        export type TodoFastViewState = {};
+        
+        export type TodoInteractiveViewState = {};
     
             export interface TodoRefs {
                 addButton: HTMLElementProxy<TodoViewState, HTMLButtonElement>;
@@ -695,12 +700,6 @@ describe('compile contract', () => {
                 activeItem: TodoItemRepeatedRefs;
                 completedItems: TodoItemRepeatedRefs;
             }
-
-            export interface TodoSlowViewState {}
-        
-        export interface TodoFastViewState {}
-        
-        export interface TodoInteractiveViewState {}
         
         export type TodoContract = JayContract<TodoViewState, TodoRefs, TodoSlowViewState, TodoFastViewState, TodoInteractiveViewState>`),
             );
@@ -737,15 +736,15 @@ export interface TreeNodeViewState {
     children: Array<TreeNodeViewState>;
 }
 
+export type TreeNodeSlowViewState = Pick<TreeNodeViewState, 'name' | 'id' | 'children'>;
+        
+        export type TreeNodeFastViewState = {};
+        
+        export type TreeNodeInteractiveViewState = {};
+
 export interface TreeNodeRefs {}
 
 export interface TreeNodeRepeatedRefs {}
-
-export interface TreeNodeSlowViewState {}
-        
-        export interface TreeNodeFastViewState {}
-        
-        export interface TreeNodeInteractiveViewState {}
         
         export type TreeNodeContract = JayContract<TreeNodeViewState, TreeNodeRefs, TreeNodeSlowViewState, TreeNodeFastViewState, TreeNodeInteractiveViewState>`),
             );
@@ -783,15 +782,15 @@ export interface BinaryTreeViewState {
     right: BinaryTreeViewState | null;
 }
 
+export type BinaryTreeSlowViewState = Pick<BinaryTreeViewState, 'value' | 'id' | 'left' | 'right'>;
+        
+        export type BinaryTreeFastViewState = {};
+        
+        export type BinaryTreeInteractiveViewState = {};
+
 export interface BinaryTreeRefs {}
 
 export interface BinaryTreeRepeatedRefs {}
-
-export interface BinaryTreeSlowViewState {}
-        
-        export interface BinaryTreeFastViewState {}
-        
-        export interface BinaryTreeInteractiveViewState {}
         
         export type BinaryTreeContract = JayContract<BinaryTreeViewState, BinaryTreeRefs, BinaryTreeSlowViewState, BinaryTreeFastViewState, BinaryTreeInteractiveViewState>`),
             );
@@ -833,15 +832,17 @@ export interface MenuItemViewState {
     submenu: SubmenuOfMenuItemViewState;
 }
 
+export type MenuItemSlowViewState = Pick<MenuItemViewState, 'label' | 'id'> & {
+    submenu: Pick<MenuItemViewState['submenu'], 'items'>;
+};
+        
+        export type MenuItemFastViewState = {};
+        
+        export type MenuItemInteractiveViewState = {};
+
 export interface MenuItemRefs {}
 
 export interface MenuItemRepeatedRefs {}
-
-export interface MenuItemSlowViewState {}
-        
-        export interface MenuItemFastViewState {}
-        
-        export interface MenuItemInteractiveViewState {}
         
         export type MenuItemContract = JayContract<MenuItemViewState, MenuItemRefs, MenuItemSlowViewState, MenuItemFastViewState, MenuItemInteractiveViewState>`),
             );
@@ -892,15 +893,20 @@ export interface ComplexTreeViewState {
     relatedMetadata: Array<MetadatumOfComplexTreeViewState>;
 }
 
+export type ComplexTreeSlowViewState = Pick<
+    ComplexTreeViewState,
+    'name' | 'children' | 'relatedMetadata'
+> & {
+    metadata: Pick<ComplexTreeViewState['metadata'], 'category' | 'tags'>;
+};
+        
+        export type ComplexTreeFastViewState = {};
+        
+        export type ComplexTreeInteractiveViewState = {};
+
 export interface ComplexTreeRefs {}
 
 export interface ComplexTreeRepeatedRefs {}
-
-export interface ComplexTreeSlowViewState {}
-        
-        export interface ComplexTreeFastViewState {}
-        
-        export interface ComplexTreeInteractiveViewState {}
         
         export type ComplexTreeContract = JayContract<ComplexTreeViewState, ComplexTreeRefs, ComplexTreeSlowViewState, ComplexTreeFastViewState, ComplexTreeInteractiveViewState>`),
             );
@@ -946,15 +952,17 @@ export interface DocumentViewState {
     nestedStructure: NestedStructureOfDocumentViewState;
 }
 
+export type DocumentSlowViewState = Pick<DocumentViewState, 'title'> & {
+    nestedStructure: Pick<DocumentViewState['nestedStructure'], 'name' | 'id' | 'children'>;
+};
+        
+        export type DocumentFastViewState = {};
+        
+        export type DocumentInteractiveViewState = {};
+
 export interface DocumentRefs {}
 
 export interface DocumentRepeatedRefs {}
-
-export interface DocumentSlowViewState {}
-        
-        export interface DocumentFastViewState {}
-        
-        export interface DocumentInteractiveViewState {}
         
         export type DocumentContract = JayContract<DocumentViewState, DocumentRefs, DocumentSlowViewState, DocumentFastViewState, DocumentInteractiveViewState>`),
             );
@@ -992,6 +1000,12 @@ export interface FolderTreeViewState {
     children: Array<FolderTreeViewState>;
 }
 
+export type FolderTreeSlowViewState = Pick<FolderTreeViewState, 'name' | 'id' | 'children'>;
+        
+        export type FolderTreeFastViewState = {};
+        
+        export type FolderTreeInteractiveViewState = {};
+
 export interface FolderTreeRefs {
     toggle: HTMLElementProxy<FolderTreeViewState, HTMLButtonElement>;
 }
@@ -999,12 +1013,6 @@ export interface FolderTreeRefs {
 export interface FolderTreeRepeatedRefs {
     toggle: HTMLElementCollectionProxy<FolderTreeViewState, HTMLButtonElement>;
 }
-
-export interface FolderTreeSlowViewState {}
-        
-        export interface FolderTreeFastViewState {}
-        
-        export interface FolderTreeInteractiveViewState {}
         
         export type FolderTreeContract = JayContract<FolderTreeViewState, FolderTreeRefs, FolderTreeSlowViewState, FolderTreeFastViewState, FolderTreeInteractiveViewState>`),
             );
@@ -1055,15 +1063,17 @@ export interface ProductListViewState {
     featuredProduct: Array<ProductOfProductListViewState>;
 }
 
+export type ProductListSlowViewState = Pick<ProductListViewState, 'title' | 'featuredProduct'> & {
+    products: Array<Pick<ProductListViewState['products'][number], 'id' | 'name' | 'price'>>;
+};
+        
+        export type ProductListFastViewState = {};
+        
+        export type ProductListInteractiveViewState = {};
+
 export interface ProductListRefs {}
 
 export interface ProductListRepeatedRefs {}
-
-export interface ProductListSlowViewState {}
-        
-        export interface ProductListFastViewState {}
-        
-        export interface ProductListInteractiveViewState {}
         
         export type ProductListContract = JayContract<ProductListViewState, ProductListRefs, ProductListSlowViewState, ProductListFastViewState, ProductListInteractiveViewState>`),
             );
@@ -1118,15 +1128,22 @@ export interface ProductListUnwrappedViewState {
     featuredProduct: ProductOfProductListUnwrappedViewState | null;
 }
 
+export type ProductListUnwrappedSlowViewState = Pick<
+    ProductListUnwrappedViewState,
+    'title' | 'featuredProduct'
+> & {
+    products: Array<
+        Pick<ProductListUnwrappedViewState['products'][number], 'id' | 'name' | 'price'>
+    >;
+};
+        
+        export type ProductListUnwrappedFastViewState = {};
+        
+        export type ProductListUnwrappedInteractiveViewState = {};
+
 export interface ProductListUnwrappedRefs {}
 
 export interface ProductListUnwrappedRepeatedRefs {}
-
-export interface ProductListUnwrappedSlowViewState {}
-        
-        export interface ProductListUnwrappedFastViewState {}
-        
-        export interface ProductListUnwrappedInteractiveViewState {}
         
         export type ProductListUnwrappedContract = JayContract<ProductListUnwrappedViewState, ProductListUnwrappedRefs, ProductListUnwrappedSlowViewState, ProductListUnwrappedFastViewState, ProductListUnwrappedInteractiveViewState>`),
             );
