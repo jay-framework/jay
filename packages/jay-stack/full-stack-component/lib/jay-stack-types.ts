@@ -88,43 +88,45 @@ export type LoadParams<Services, Params extends UrlParams> = (
 export type RenderSlowly<
     Services extends Array<object>,
     PropsT extends object,
-    StaticViewState extends object,
+    SlowViewState extends object,
     SlowlyCarryForward,
 > = (
     props: PropsT,
     ...services: Services
-) => Promise<SlowlyRenderResult<StaticViewState, SlowlyCarryForward>>;
+) => Promise<SlowlyRenderResult<SlowViewState, SlowlyCarryForward>>;
 
 export type RenderFast<
     Services extends Array<object>,
     PropsT extends object,
-    DynamicViewState extends object,
+    FastViewState extends object,
     FastCarryForward,
 > = (
     props: PropsT,
     ...services: Services
-) => Promise<FastRenderResult<DynamicViewState, FastCarryForward>>;
+) => Promise<FastRenderResult<FastViewState, FastCarryForward>>;
 
 export interface JayStackComponentDefinition<
-    StaticViewState extends object,
-    ViewState extends object,
     Refs extends object,
+    SlowVS extends object,
+    FastVS extends object,
+    InteractiveVS extends object,
     Services extends Array<any>,
     Contexts extends Array<any>,
     PropsT extends object,
     Params extends UrlParams,
-    CompCore extends JayComponentCore<PropsT, ViewState>,
+    CompCore extends JayComponentCore<PropsT, InteractiveVS>,
 > {
     // render: PreRenderElement<ViewState, Refs, JayElement<ViewState, Refs>>;
     services: ServiceMarkers<Services>;
     contexts: ContextMarkers<Contexts>;
     loadParams: LoadParams<Services, Params>;
-    slowlyRender: RenderSlowly<Services, PropsT, StaticViewState, any>;
-    fastRender: RenderFast<Services, PropsT, ViewState, any>;
-    comp: ComponentConstructor<PropsT, Refs, ViewState, Contexts, CompCore>;
+    slowlyRender: RenderSlowly<Services, PropsT, SlowVS, any>;
+    fastRender: RenderFast<Services, PropsT, FastVS, any>;
+    comp: ComponentConstructor<PropsT, Refs, InteractiveVS, Contexts, CompCore>;
 }
 
 export type AnyJayStackComponentDefinition = JayStackComponentDefinition<
+    object,
     object,
     object,
     object,
