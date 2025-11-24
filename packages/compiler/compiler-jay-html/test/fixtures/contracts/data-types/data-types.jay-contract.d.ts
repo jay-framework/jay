@@ -36,9 +36,9 @@ export type DataTypesSlowViewState = Pick<DataTypesViewState, 's1' | 'n1' | 'b1'
 } & {
     a1: Array<Pick<DataTypesViewState['a1'][number], 's3' | 'n3'>>;
 } & {
-    po1: Pick<DataTypesViewState['po1'], 'ps2' | 'pn2'>;
+    po1: Promise<Pick<Awaited<DataTypesViewState['po1']>, 'ps2' | 'pn2'>>;
 } & {
-    pa1: Array<Pick<DataTypesViewState['pa1'][number], 'ps3' | 'pn3'>>;
+    pa1: Promise<Array<Pick<Awaited<DataTypesViewState['pa1']>[number], 'ps3' | 'pn3'>>>;
 };
 
 export type DataTypesFastViewState = {};
