@@ -11,18 +11,23 @@ interface ArrayInfo {
     path: string; // full path to the array property (e.g., "items" or "user.addresses")
 }
 
+interface AsyncInfo {
+    path: string; // full path to the async (Promise) property
+}
+
 /**
  * Extract property paths for a specific phase from contract tags
- * Returns both the property paths and information about which properties are arrays
+ * Returns property paths, arrays info, and async (Promise) info
  */
 function extractPropertyPathsAndArrays(
     tags: ContractTag[],
     targetPhase: RenderingPhase,
     parentPath: string[] = [],
     parentPhase?: RenderingPhase
-): { paths: PropertyPath[]; arrays: ArrayInfo[] } {
+): { paths: PropertyPath[]; arrays: ArrayInfo[]; asyncProps: AsyncInfo[] } {
     const paths: PropertyPath[] = [];
     const arrays: ArrayInfo[] = [];
+    const asyncProps: AsyncInfo[] = [];
     
     for (const tag of tags) {
         // Skip interactive tags without dataType (they go into Refs)
@@ -34,6 +39,7 @@ function extractPropertyPathsAndArrays(
         const propertyName = camelCase(tag.tag);
         const currentPath = [...parentPath, propertyName];
         const isArray = tag.repeated || false;
+        const isAsync = tag.async || false;
         
         // Check if this tag has nested tags (sub-contract)
         if (tag.type.includes(ContractTagType.subContract) && tag.tags) {
@@ -49,10 +55,16 @@ function extractPropertyPathsAndArrays(
             if (result.paths.length > 0) {
                 paths.push(...result.paths);
                 arrays.push(...result.arrays);
+                asyncProps.push(...result.asyncProps);
                 
                 // If this is an array, record it
                 if (isArray) {
                     arrays.push({ path: currentPath.join('.') });
+                }
+                
+                // If this is async, record it
+                if (isAsync) {
+                    asyncProps.push({ path: currentPath.join('.') });
                 }
             }
         } else {
@@ -66,7 +78,7 @@ function extractPropertyPathsAndArrays(
         }
     }
     
-    return { paths, arrays };
+    return { paths, arrays, asyncProps };
 }
 
 /**
@@ -93,6 +105,7 @@ function buildPickExpression(
     baseTypeName: string,
     pathGroups: Map<string, string[]>,
     arrays: Set<string>,
+    asyncProps: Set<string>,
     currentPath: string[] = []
 ): string {
     const currentKey = currentPath.join('.');
@@ -126,29 +139,46 @@ function buildPickExpression(
         parts.push(`Pick<${pathAccess}, ${directProps.map(p => `'${p}'`).join(' | ')}>`);
     }
     
-    // Add nested objects/arrays with Pick expressions
+    // Add nested objects/arrays/promises with Pick expressions
     for (const childName of childPropertyNames) {
         const childPath = [...currentPath, childName];
         const childPathKey = childPath.join('.');
         const isArray = arrays.has(childPathKey);
+        const isAsync = asyncProps.has(childPathKey);
         
         // Recursively build child expression
         const childExpression = buildPickExpression(
             baseTypeName,
             pathGroups,
             arrays,
+            asyncProps,
             childPath
         );
         
         if (childExpression) {
-            // For arrays, wrap the Pick expression with Array<> and use [number] to access element type
             let fullExpression: string;
-            if (isArray) {
-                // Replace the path access in the child expression to use [number]
-                const originalPathAccess = `${baseTypeName}${childPath.map(p => `['${p}']`).join('')}`;
+            const originalPathAccess = `${baseTypeName}${childPath.map(p => `['${p}']`).join('')}`;
+            
+            // Handle async properties (Promises)
+            if (isAsync) {
+                // For Promise properties, unwrap with Awaited first, then apply [number] for arrays
+                if (isArray) {
+                    // Promise<Array<...>> - unwrap Promise, then access array element
+                    const unwrappedArrayAccess = `Awaited<${originalPathAccess}>[number]`;
+                    const unwrappedExpression = childExpression.replace(originalPathAccess, unwrappedArrayAccess);
+                    fullExpression = `Promise<Array<${unwrappedExpression}>>`;
+                } else {
+                    // Promise<Object> - just unwrap Promise
+                    const unwrappedAccess = `Awaited<${originalPathAccess}>`;
+                    const unwrappedExpression = childExpression.replace(originalPathAccess, unwrappedAccess);
+                    fullExpression = `Promise<${unwrappedExpression}>`;
+                }
+            } else if (isArray) {
+                // For arrays (non-Promise), wrap with Array<> and use [number] to access element type
                 const arrayElementAccess = `${originalPathAccess}[number]`;
                 fullExpression = `Array<${childExpression.replace(originalPathAccess, arrayElementAccess)}>`;
             } else {
+                // Regular nested object
                 fullExpression = childExpression;
             }
             
@@ -177,8 +207,8 @@ export function generatePhaseViewStateType(
     const phaseName = phase === 'fast+interactive' ? 'Interactive' : pascalCase(phase);
     const typeName = `${pascalCase(contract.name)}${phaseName}ViewState`;
     
-    // Extract property paths and array info for this phase
-    const { paths, arrays } = extractPropertyPathsAndArrays(contract.tags, phase);
+    // Extract property paths, array info, and async info for this phase
+    const { paths, arrays, asyncProps } = extractPropertyPathsAndArrays(contract.tags, phase);
     
     // If no properties, return empty type
     if (paths.length === 0) {
@@ -188,11 +218,12 @@ export function generatePhaseViewStateType(
     // Group paths by parent
     const pathGroups = groupPathsByParent(paths);
     
-    // Create a set of array paths for quick lookup
+    // Create sets for quick lookup
     const arraySet = new Set(arrays.map(a => a.path));
+    const asyncSet = new Set(asyncProps.map(a => a.path));
     
     // Build Pick expression
-    const pickExpression = buildPickExpression(baseTypeName, pathGroups, arraySet);
+    const pickExpression = buildPickExpression(baseTypeName, pathGroups, arraySet, asyncSet);
     
     return `export type ${typeName} = ${pickExpression};`;
 }
