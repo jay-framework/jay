@@ -306,7 +306,6 @@ describe('compile contract', () => {
         
         export type UserFormSlowViewState = {
             personalInfo: Pick<UserFormViewState['personalInfo'], 'sectionTitle'>;
-        } & {
             contactInfo: Pick<UserFormViewState['contactInfo'], 'sectionTitle'>;
         };
         
@@ -316,7 +315,6 @@ describe('compile contract', () => {
             personalInfo: {
                 nameFields: Pick<UserFormViewState['personalInfo']['nameFields'], 'firstName' | 'lastName'>;
             };
-        } & {
             contactInfo: {
                 contactFields: Pick<UserFormViewState['contactInfo']['contactFields'], 'email' | 'phone'>;
             };
