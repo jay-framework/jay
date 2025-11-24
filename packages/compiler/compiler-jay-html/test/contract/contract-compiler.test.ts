@@ -35,6 +35,7 @@ describe('compile contract', () => {
           - tag: count
             type: data
             dataType: number
+            phase: fast+interactive
           - tag: add
             type: interactive
             elementType: HTMLButtonElement  
@@ -55,13 +56,13 @@ describe('compile contract', () => {
             count: number;
         }
         
-        export interface CounterSlowViewState {
-            count: number;
-        }
+        export interface CounterSlowViewState {}
         
         export interface CounterFastViewState {}
         
-        export interface CounterInteractiveViewState {}
+        export interface CounterInteractiveViewState {
+            count: number;
+        }
 
         export interface CounterRefs {
             add: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
@@ -101,6 +102,15 @@ describe('compile contract', () => {
             countOne: number;
             countTwo: number;
         }
+        
+        export interface CounterSlowViewState {
+            countOne: number;
+            countTwo: number;
+        }
+        
+        export interface CounterFastViewState {}
+        
+        export interface CounterInteractiveViewState {}
 
         export interface CounterRefs {
         }
@@ -108,7 +118,7 @@ describe('compile contract', () => {
         export interface CounterRepeatedRefs {
         }
         
-        export type CounterContract = JayContract<CounterViewState, CounterRefs>`),
+        export type CounterContract = JayContract<CounterViewState, CounterRefs, CounterSlowViewState, CounterFastViewState, CounterInteractiveViewState>`),
         );
     });
 
@@ -143,6 +153,19 @@ describe('compile contract', () => {
         export interface TodoViewState {
             item: ItemOfTodoViewState;
         }
+        
+        export interface ItemOfTodoSlowViewState {
+            title: string;
+            completed: boolean;
+        }
+        
+        export interface TodoSlowViewState {
+            item: ItemOfTodoSlowViewState;
+        }
+        
+        export interface TodoFastViewState {}
+        
+        export interface TodoInteractiveViewState {}
 
         export interface TodoRefs {
         }
@@ -150,7 +173,7 @@ describe('compile contract', () => {
         export interface TodoRepeatedRefs {
         }
         
-        export type TodoContract = JayContract<TodoViewState, TodoRefs>`),
+        export type TodoContract = JayContract<TodoViewState, TodoRefs, TodoSlowViewState, TodoFastViewState, TodoInteractiveViewState>`),
         );
     });
 
@@ -189,6 +212,19 @@ describe('compile contract', () => {
             items: Array<ItemOfTodoViewState>;
         }
         
+        export interface ItemOfTodoSlowViewState {
+            title: string;
+            completed: boolean;
+        }
+        
+        export interface TodoSlowViewState {
+            items: Array<ItemOfTodoSlowViewState>;
+        }
+        
+        export interface TodoFastViewState {}
+        
+        export interface TodoInteractiveViewState {}
+        
         export interface TodoRefs {
             items: {
                 title: HTMLElementCollectionProxy<ItemOfTodoViewState, HTMLInputElement>;
@@ -203,7 +239,7 @@ describe('compile contract', () => {
             };
         }
 
-        export type TodoContract = JayContract<TodoViewState, TodoRefs>`),
+        export type TodoContract = JayContract<TodoViewState, TodoRefs, TodoSlowViewState, TodoFastViewState, TodoInteractiveViewState>`),
         );
     });
 
@@ -333,7 +369,13 @@ describe('compile contract', () => {
             };
         }
 
-        export type UserFormContract = JayContract<UserFormViewState, UserFormRefs>`),
+        export interface UserFormSlowViewState {}
+        
+        export interface UserFormFastViewState {}
+        
+        export interface UserFormInteractiveViewState {}
+        
+        export type UserFormContract = JayContract<UserFormViewState, UserFormRefs, UserFormSlowViewState, UserFormFastViewState, UserFormInteractiveViewState>`),
         );
     });
 
@@ -386,7 +428,13 @@ describe('compile contract', () => {
         export interface TodoRepeatedRefs {
         }
 
-        export type TodoContract = JayContract<TodoViewState, TodoRefs>`),
+        export interface TodoSlowViewState {}
+        
+        export interface TodoFastViewState {}
+        
+        export interface TodoInteractiveViewState {}
+        
+        export type TodoContract = JayContract<TodoViewState, TodoRefs, TodoSlowViewState, TodoFastViewState, TodoInteractiveViewState>`),
         );
     });
 
@@ -428,7 +476,13 @@ describe('compile contract', () => {
             subtract: HTMLElementCollectionProxy<CounterViewState, HTMLButtonElement>;
         }
 
-        export type CounterContract = JayContract<CounterViewState, CounterRefs>`),
+        export interface CounterSlowViewState {}
+        
+        export interface CounterFastViewState {}
+        
+        export interface CounterInteractiveViewState {}
+        
+        export type CounterContract = JayContract<CounterViewState, CounterRefs, CounterSlowViewState, CounterFastViewState, CounterInteractiveViewState>`),
         );
     });
 
@@ -468,7 +522,13 @@ describe('compile contract', () => {
             select: HTMLElementCollectionProxy<ChoicesViewState, HTMLSelectElement | HTMLInputElement>;
         }
 
-        export type ChoicesContract = JayContract<ChoicesViewState, ChoicesRefs>`),
+        export interface ChoicesSlowViewState {}
+        
+        export interface ChoicesFastViewState {}
+        
+        export interface ChoicesInteractiveViewState {}
+        
+        export type ChoicesContract = JayContract<ChoicesViewState, ChoicesRefs, ChoicesSlowViewState, ChoicesFastViewState, ChoicesInteractiveViewState>`),
         );
     });
 
@@ -538,7 +598,13 @@ describe('compile contract', () => {
                 item: TodoItemRepeatedRefs;
             }
 
-            export type TodoContract = JayContract<TodoViewState, TodoRefs>`),
+            export interface TodoSlowViewState {}
+        
+        export interface TodoFastViewState {}
+        
+        export interface TodoInteractiveViewState {}
+        
+        export type TodoContract = JayContract<TodoViewState, TodoRefs, TodoSlowViewState, TodoFastViewState, TodoInteractiveViewState>`),
             );
         });
 
@@ -578,7 +644,13 @@ describe('compile contract', () => {
                 items: TodoItemRepeatedRefs;
             }
 
-            export type TodoContract = JayContract<TodoViewState, TodoRefs>`),
+            export interface TodoSlowViewState {}
+        
+        export interface TodoFastViewState {}
+        
+        export interface TodoInteractiveViewState {}
+        
+        export type TodoContract = JayContract<TodoViewState, TodoRefs, TodoSlowViewState, TodoFastViewState, TodoInteractiveViewState>`),
             );
         });
 
@@ -624,7 +696,13 @@ describe('compile contract', () => {
                 completedItems: TodoItemRepeatedRefs;
             }
 
-            export type TodoContract = JayContract<TodoViewState, TodoRefs>`),
+            export interface TodoSlowViewState {}
+        
+        export interface TodoFastViewState {}
+        
+        export interface TodoInteractiveViewState {}
+        
+        export type TodoContract = JayContract<TodoViewState, TodoRefs, TodoSlowViewState, TodoFastViewState, TodoInteractiveViewState>`),
             );
         });
     });
@@ -663,7 +741,13 @@ export interface TreeNodeRefs {}
 
 export interface TreeNodeRepeatedRefs {}
 
-export type TreeNodeContract = JayContract<TreeNodeViewState, TreeNodeRefs>`),
+export interface TreeNodeSlowViewState {}
+        
+        export interface TreeNodeFastViewState {}
+        
+        export interface TreeNodeInteractiveViewState {}
+        
+        export type TreeNodeContract = JayContract<TreeNodeViewState, TreeNodeRefs, TreeNodeSlowViewState, TreeNodeFastViewState, TreeNodeInteractiveViewState>`),
             );
         });
 
@@ -703,7 +787,13 @@ export interface BinaryTreeRefs {}
 
 export interface BinaryTreeRepeatedRefs {}
 
-export type BinaryTreeContract = JayContract<BinaryTreeViewState, BinaryTreeRefs>`),
+export interface BinaryTreeSlowViewState {}
+        
+        export interface BinaryTreeFastViewState {}
+        
+        export interface BinaryTreeInteractiveViewState {}
+        
+        export type BinaryTreeContract = JayContract<BinaryTreeViewState, BinaryTreeRefs, BinaryTreeSlowViewState, BinaryTreeFastViewState, BinaryTreeInteractiveViewState>`),
             );
         });
 
@@ -747,7 +837,13 @@ export interface MenuItemRefs {}
 
 export interface MenuItemRepeatedRefs {}
 
-export type MenuItemContract = JayContract<MenuItemViewState, MenuItemRefs>`),
+export interface MenuItemSlowViewState {}
+        
+        export interface MenuItemFastViewState {}
+        
+        export interface MenuItemInteractiveViewState {}
+        
+        export type MenuItemContract = JayContract<MenuItemViewState, MenuItemRefs, MenuItemSlowViewState, MenuItemFastViewState, MenuItemInteractiveViewState>`),
             );
         });
 
@@ -800,7 +896,13 @@ export interface ComplexTreeRefs {}
 
 export interface ComplexTreeRepeatedRefs {}
 
-export type ComplexTreeContract = JayContract<ComplexTreeViewState, ComplexTreeRefs>`),
+export interface ComplexTreeSlowViewState {}
+        
+        export interface ComplexTreeFastViewState {}
+        
+        export interface ComplexTreeInteractiveViewState {}
+        
+        export type ComplexTreeContract = JayContract<ComplexTreeViewState, ComplexTreeRefs, ComplexTreeSlowViewState, ComplexTreeFastViewState, ComplexTreeInteractiveViewState>`),
             );
         });
 
@@ -848,7 +950,13 @@ export interface DocumentRefs {}
 
 export interface DocumentRepeatedRefs {}
 
-export type DocumentContract = JayContract<DocumentViewState, DocumentRefs>`),
+export interface DocumentSlowViewState {}
+        
+        export interface DocumentFastViewState {}
+        
+        export interface DocumentInteractiveViewState {}
+        
+        export type DocumentContract = JayContract<DocumentViewState, DocumentRefs, DocumentSlowViewState, DocumentFastViewState, DocumentInteractiveViewState>`),
             );
         });
 
@@ -892,7 +1000,13 @@ export interface FolderTreeRepeatedRefs {
     toggle: HTMLElementCollectionProxy<FolderTreeViewState, HTMLButtonElement>;
 }
 
-export type FolderTreeContract = JayContract<FolderTreeViewState, FolderTreeRefs>`),
+export interface FolderTreeSlowViewState {}
+        
+        export interface FolderTreeFastViewState {}
+        
+        export interface FolderTreeInteractiveViewState {}
+        
+        export type FolderTreeContract = JayContract<FolderTreeViewState, FolderTreeRefs, FolderTreeSlowViewState, FolderTreeFastViewState, FolderTreeInteractiveViewState>`),
             );
         });
 
@@ -945,7 +1059,13 @@ export interface ProductListRefs {}
 
 export interface ProductListRepeatedRefs {}
 
-export type ProductListContract = JayContract<ProductListViewState, ProductListRefs>`),
+export interface ProductListSlowViewState {}
+        
+        export interface ProductListFastViewState {}
+        
+        export interface ProductListInteractiveViewState {}
+        
+        export type ProductListContract = JayContract<ProductListViewState, ProductListRefs, ProductListSlowViewState, ProductListFastViewState, ProductListInteractiveViewState>`),
             );
         });
 
@@ -1002,7 +1122,13 @@ export interface ProductListUnwrappedRefs {}
 
 export interface ProductListUnwrappedRepeatedRefs {}
 
-export type ProductListUnwrappedContract = JayContract<ProductListUnwrappedViewState, ProductListUnwrappedRefs>`),
+export interface ProductListUnwrappedSlowViewState {}
+        
+        export interface ProductListUnwrappedFastViewState {}
+        
+        export interface ProductListUnwrappedInteractiveViewState {}
+        
+        export type ProductListUnwrappedContract = JayContract<ProductListUnwrappedViewState, ProductListUnwrappedRefs, ProductListUnwrappedSlowViewState, ProductListUnwrappedFastViewState, ProductListUnwrappedInteractiveViewState>`),
             );
         });
     });

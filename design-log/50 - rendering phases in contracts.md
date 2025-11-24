@@ -191,6 +191,10 @@ export interface ProductPageInteractiveViewState {
 
 **Key Points:**
 - **Naming Convention**: `<Component>SlowViewState`, `<Component>FastViewState`, `<Component>InteractiveViewState`
+- **Non-Cumulative**: Each phase ViewState contains **only** properties explicitly set to that phase
+  - `SlowViewState`: Only properties with `phase: slow` (or default, which is slow)
+  - `FastViewState`: Only properties with `phase: fast`
+  - `InteractiveViewState`: Only properties with `phase: fast+interactive`
 - **Interactive Elements**: Interactive tags (type: `interactive`) go into `<Component>Refs`, NOT ViewState (existing pattern, unchanged)
 - **ViewState Phases**: Only contain `data` and `variant` properties for each respective phase
 

@@ -185,7 +185,7 @@ tags:
         expect(slowTags[0].tag).toBe('slowField');
     });
 
-    it('should filter tags by fast phase (includes slow + fast)', () => {
+    it('should filter tags by fast phase (only fast properties)', () => {
         const contractYaml = `
 name: TestContract
 tags:
@@ -205,12 +205,11 @@ tags:
         const result = parseContract(contractYaml, 'test.jay-contract');
         const fastTags = filterTagsByPhase(result.val.tags, 'fast');
         
-        expect(fastTags).toHaveLength(2);
-        expect(fastTags.map(t => t.tag)).toContain('slowField');
-        expect(fastTags.map(t => t.tag)).toContain('fastField');
+        expect(fastTags).toHaveLength(1);
+        expect(fastTags[0].tag).toBe('fastField');
     });
 
-    it('should filter tags by interactive phase (includes all)', () => {
+    it('should filter tags by interactive phase (only interactive properties)', () => {
         const contractYaml = `
 name: TestContract
 tags:
@@ -230,7 +229,8 @@ tags:
         const result = parseContract(contractYaml, 'test.jay-contract');
         const interactiveTags = filterTagsByPhase(result.val.tags, 'fast+interactive');
         
-        expect(interactiveTags).toHaveLength(3);
+        expect(interactiveTags).toHaveLength(1);
+        expect(interactiveTags[0].tag).toBe('interactiveField');
     });
 
     it('should exclude interactive elements (without dataType) from ViewState', () => {

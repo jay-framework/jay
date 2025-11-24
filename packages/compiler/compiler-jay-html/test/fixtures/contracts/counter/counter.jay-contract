@@ -3,6 +3,7 @@ tags:
   - tag: count
     type: data
     dataType: number
+    phase: fast+interactive
   - tag: add
     type: interactive
     elementType: HTMLButtonElement
@@ -12,3 +13,4 @@ tags:
   - tag: is positive
     type: variant
     dataType: enum (positive | negative)
+    phase: fast+interactive
