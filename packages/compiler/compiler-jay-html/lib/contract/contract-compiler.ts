@@ -100,6 +100,41 @@ export async function compileContract(
                 const fastViewStateTypes = fast.type ? generateTypes(fast.type) : '';
                 const interactiveViewStateTypes = interactive.type ? generateTypes(interactive.type) : '';
 
+                // Deduplicate enum declarations
+                // Enums appear in generateTypes output - we need to extract and deduplicate them
+                const allTypesRaw = [
+                    fullViewStateTypes,
+                    slowViewStateTypes,
+                    fastViewStateTypes,
+                    interactiveViewStateTypes,
+                ].filter(Boolean).join('\n\n');
+                
+                // Extract enum declarations and deduplicate
+                const enumPattern = /(export enum \w+ \{[^}]+\})/g;
+                const enumsFound = new Map<string, string>();
+                const enumMatches = allTypesRaw.matchAll(enumPattern);
+                for (const match of enumMatches) {
+                    const enumDecl = match[1];
+                    const enumName = enumDecl.match(/export enum (\w+)/)?.[1];
+                    if (enumName && !enumsFound.has(enumName)) {
+                        enumsFound.set(enumName, enumDecl);
+                    }
+                }
+                
+                // Remove all enum declarations from the combined types
+                let allTypesWithoutEnums = allTypesRaw;
+                for (const enumDecl of enumsFound.values()) {
+                    // Replace all occurrences with empty string
+                    allTypesWithoutEnums = allTypesWithoutEnums.split(enumDecl).join('');
+                }
+                
+                // Clean up extra whitespace
+                allTypesWithoutEnums = allTypesWithoutEnums.replace(/\n{3,}/g, '\n\n').trim();
+                
+                // Combine enums at the top, then the rest of the types
+                const enumsString = Array.from(enumsFound.values()).join('\n\n');
+                const allTypes = enumsString ? `${enumsString}\n\n${allTypesWithoutEnums}` : allTypesWithoutEnums;
+
                 // Generate refs interface
                 let { imports, renderedRefs } = generateRefsInterface(contract, refs);
                 imports = imports.plus(Import.jayContract);
@@ -123,14 +158,6 @@ export async function compileContract(
 
                 // Generate contract type with all 5 type parameters
                 const contractType = `export type ${contractName}Contract = JayContract<${viewStateTypeName}, ${refsTypeName}, ${slowViewStateTypeName}, ${fastViewStateTypeName}, ${interactiveViewStateTypeName}>`;
-
-                // Combine all generated code
-                const allTypes = [
-                    fullViewStateTypes,
-                    slowViewStateTypes,
-                    fastViewStateTypes,
-                    interactiveViewStateTypes,
-                ].filter(Boolean).join('\n\n');
 
                 return `${renderedImports}\n\n${allTypes}\n\n${renderedRefs}\n\n${contractType}`;
             })
