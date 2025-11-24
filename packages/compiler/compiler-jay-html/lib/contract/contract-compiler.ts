@@ -12,6 +12,7 @@ import { generateTypes, JayImportResolver, renderRefsType } from '../';
 import { pascalCase } from 'change-case';
 import {
     contractToImportsViewStateAndRefs,
+    contractToAllPhaseViewStates,
     JayContractImportLink,
 } from './contract-to-view-state-and-refs';
 
@@ -74,24 +75,65 @@ export async function compileContract(
     jayImportResolver: JayImportResolver,
 ): Promise<WithValidations<string>> {
     return contractWithValidations.flatMapAsync(async (contract) => {
-        const contractTypes = await contractToImportsViewStateAndRefs(
+        // Generate full ViewState (for backward compatibility and full type)
+        const fullViewStateResult = await contractToImportsViewStateAndRefs(
             contract,
             contractFilePath,
             jayImportResolver,
         );
 
-        return contractTypes.map((contractTypesResult) => {
-            const { type, refs, importLinks } = contractTypesResult;
-            const types = generateTypes(type);
-            let { imports, renderedRefs } = generateRefsInterface(contract, refs);
-            imports = imports.plus(Import.jayContract);
-            const renderedImports = renderImports(imports, importLinks);
+        // Generate phase-specific ViewStates
+        const phaseViewStatesResult = await contractToAllPhaseViewStates(
+            contract,
+            contractFilePath,
+            jayImportResolver,
+        );
 
-            const viewStateTypeName = `${pascalCase(contract.name)}ViewState`;
-            const refsTypeName = `${pascalCase(contract.name)}Refs`;
-            const contractType = `export type ${pascalCase(contract.name)}Contract = JayContract<${viewStateTypeName}, ${refsTypeName}>`;
+        return fullViewStateResult.flatMap((fullResult) =>
+            phaseViewStatesResult.map((phaseResults) => {
+                const { type, refs, importLinks } = fullResult;
+                const { slow, fast, interactive } = phaseResults;
 
-            return `${renderedImports}\n\n${types}\n\n${renderedRefs}\n\n${contractType}`;
-        });
+                // Generate type definitions
+                const fullViewStateTypes = generateTypes(type);
+                const slowViewStateTypes = slow.type ? generateTypes(slow.type) : '';
+                const fastViewStateTypes = fast.type ? generateTypes(fast.type) : '';
+                const interactiveViewStateTypes = interactive.type ? generateTypes(interactive.type) : '';
+
+                // Generate refs interface
+                let { imports, renderedRefs } = generateRefsInterface(contract, refs);
+                imports = imports.plus(Import.jayContract);
+
+                // Collect all import links (from all phases)
+                const allImportLinks = [
+                    ...importLinks,
+                    ...slow.importLinks,
+                    ...fast.importLinks,
+                    ...interactive.importLinks,
+                ];
+                const renderedImports = renderImports(imports, allImportLinks);
+
+                // Generate type names
+                const contractName = pascalCase(contract.name);
+                const viewStateTypeName = `${contractName}ViewState`;
+                const refsTypeName = `${contractName}Refs`;
+                const slowViewStateTypeName = `${contractName}SlowViewState`;
+                const fastViewStateTypeName = `${contractName}FastViewState`;
+                const interactiveViewStateTypeName = `${contractName}InteractiveViewState`;
+
+                // Generate contract type with all 5 type parameters
+                const contractType = `export type ${contractName}Contract = JayContract<${viewStateTypeName}, ${refsTypeName}, ${slowViewStateTypeName}, ${fastViewStateTypeName}, ${interactiveViewStateTypeName}>`;
+
+                // Combine all generated code
+                const allTypes = [
+                    fullViewStateTypes,
+                    slowViewStateTypes,
+                    fastViewStateTypes,
+                    interactiveViewStateTypes,
+                ].filter(Boolean).join('\n\n');
+
+                return `${renderedImports}\n\n${allTypes}\n\n${renderedRefs}\n\n${contractType}`;
+            })
+        );
     });
 }

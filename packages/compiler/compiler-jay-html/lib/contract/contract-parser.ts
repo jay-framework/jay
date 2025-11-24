@@ -5,10 +5,11 @@ import {
     JayEnumType,
     JayPromiseType,
 } from '@jay-framework/compiler-shared';
-import { Contract, ContractTag, ContractTagType } from './contract';
+import { Contract, ContractTag, ContractTagType, RenderingPhase } from './contract';
 import yaml from 'js-yaml';
 import { parseIsEnum, parseEnumValues } from '../';
 import { pascalCase } from 'change-case';
+import { validateContractPhases } from './contract-phase-validator';
 
 interface ParsedYamlTag {
     tag: string;
@@ -21,6 +22,7 @@ interface ParsedYamlTag {
     repeated?: boolean;
     link?: string;
     async?: boolean;
+    phase?: string;
 }
 
 interface ParsedYaml {
@@ -61,6 +63,33 @@ function parseType(
     else if (type === 'interactive') return new WithValidations([ContractTagType.interactive]);
     else if (type === 'sub-contract') return new WithValidations([ContractTagType.subContract]);
     else return new WithValidations([], [`Tag [${tagName}] has an unknown tag type [${type}]`]);
+}
+
+function parsePhase(phase: string | undefined, tagName: string, tagTypes: ContractTagType[]): WithValidations<RenderingPhase | undefined> {
+    const validations: string[] = [];
+    
+    if (!phase) {
+        return new WithValidations(undefined, validations);
+    }
+    
+    const validPhases: RenderingPhase[] = ['slow', 'fast', 'fast+interactive'];
+    
+    if (!validPhases.includes(phase as RenderingPhase)) {
+        validations.push(
+            `Tag [${tagName}] has invalid phase [${phase}]. Valid phases are: ${validPhases.join(', ')}`
+        );
+        return new WithValidations(undefined, validations);
+    }
+    
+    // Validate that interactive tags don't have explicit phase (they're implicitly fast+interactive)
+    if (tagTypes.includes(ContractTagType.interactive)) {
+        validations.push(
+            `Tag [${tagName}] of type [interactive] cannot have an explicit phase attribute (implicitly fast+interactive)`
+        );
+        return new WithValidations(undefined, validations);
+    }
+    
+    return new WithValidations(phase as RenderingPhase, validations);
 }
 
 function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
@@ -113,6 +142,11 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
     const description = parseDescription(tag.description);
     const elementType = parseElementType(tag.elementType);
     const required = tag.required;
+    
+    // Parse phase attribute
+    const phaseResult = parsePhase(tag.phase, tag.tag, types.val);
+    validations.push(...phaseResult.validations);
+    const phase = phaseResult.val;
 
     if (validations.length > 0) return new WithValidations(undefined, validations);
 
@@ -125,6 +159,7 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
                     ...(required && { required }),
                     ...(description && { description }),
                     ...(tag.repeated && { repeated: tag.repeated }),
+                    ...(phase && { phase }),
                     link: tag.link,
                 },
                 validations,
@@ -159,6 +194,7 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
                 tags: parsedSubTags,
                 ...(tag.repeated && { repeated: tag.repeated }),
                 ...(tag.async && { async: tag.async }),
+                ...(phase && { phase }),
             },
             [...validations, ...subTagValidations, ...duplicateTagValidations],
         );
@@ -177,6 +213,7 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
             ...(description && { description }),
             ...(elementType && { elementType }),
             ...(tag.async && { async: tag.async }),
+            ...(phase && { phase }),
         };
 
         return new WithValidations<ContractTag>(contractTag, validations);
@@ -215,10 +252,14 @@ export function parseContract(contractYaml: string, fileName: string): WithValid
             tags: parsedTags,
         };
 
+        // Validate phase constraints
+        const phaseValidations = validateContractPhases(contract);
+
         return new WithValidations<Contract>(contract, [
             ...tagValidations,
             ...duplicateTagValidations,
             ...nameValidations,
+            ...phaseValidations,
         ]);
     } catch (e) {
         throw new Error(`failed to parse contract YAML for ${fileName}, ${e.message}.`);

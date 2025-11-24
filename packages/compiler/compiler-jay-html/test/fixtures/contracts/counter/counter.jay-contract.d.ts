@@ -10,6 +10,15 @@ export interface CounterViewState {
     isPositive: IsPositive;
 }
 
+export interface CounterSlowViewState {
+    count: number;
+    isPositive: IsPositive;
+}
+
+export interface CounterFastViewState {}
+
+export interface CounterInteractiveViewState {}
+
 export interface CounterRefs {
     add: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
     subtract: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
@@ -20,4 +29,10 @@ export interface CounterRepeatedRefs {
     subtract: HTMLElementCollectionProxy<CounterViewState, HTMLButtonElement>;
 }
 
-export type CounterContract = JayContract<CounterViewState, CounterRefs>;
+export type CounterContract = JayContract<
+    CounterViewState,
+    CounterRefs,
+    CounterSlowViewState,
+    CounterFastViewState,
+    CounterInteractiveViewState
+>;

@@ -54,6 +54,14 @@ describe('compile contract', () => {
         export interface CounterViewState {
             count: number;
         }
+        
+        export interface CounterSlowViewState {
+            count: number;
+        }
+        
+        export interface CounterFastViewState {}
+        
+        export interface CounterInteractiveViewState {}
 
         export interface CounterRefs {
             add: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
@@ -65,7 +73,7 @@ describe('compile contract', () => {
             subtract: HTMLElementCollectionProxy<CounterViewState, HTMLButtonElement>;
         }
         
-        export type CounterContract = JayContract<CounterViewState, CounterRefs>`),
+        export type CounterContract = JayContract<CounterViewState, CounterRefs, CounterSlowViewState, CounterFastViewState, CounterInteractiveViewState>`),
         );
     });
 
