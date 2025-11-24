@@ -10,6 +10,15 @@ export interface NamedContractViewState {
     counter: CounterViewState;
 }
 
+export interface NamedContractSlowViewState {
+    title: string;
+    counter: CounterViewState;
+}
+
+export interface NamedContractFastViewState {}
+
+export interface NamedContractInteractiveViewState {}
+
 export interface NamedContractRefs {
     counter: CounterRefs;
 }
@@ -18,4 +27,10 @@ export interface NamedContractRepeatedRefs {
     counter: CounterRepeatedRefs;
 }
 
-export type NamedContractContract = JayContract<NamedContractViewState, NamedContractRefs>;
+export type NamedContractContract = JayContract<
+    NamedContractViewState,
+    NamedContractRefs,
+    NamedContractSlowViewState,
+    NamedContractFastViewState,
+    NamedContractInteractiveViewState
+>;

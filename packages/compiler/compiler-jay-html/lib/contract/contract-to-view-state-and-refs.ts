@@ -1,5 +1,5 @@
 import { JayImportResolver } from '../jay-target/jay-import-resolver';
-import { Contract, ContractTag, ContractTagType } from './contract';
+import { Contract, ContractTag, ContractTagType, RenderingPhase } from './contract';
 import {
     isArrayType,
     JAY_CONTRACT_EXTENSION,
@@ -26,6 +26,7 @@ import {
 import { camelCase, pascalCase } from 'change-case';
 import path from 'path';
 import { toInterfaceName } from '../jay-target/jay-html-parser';
+import { createPhaseContract } from './contract-phase-validator';
 
 export interface JayContractImportLink {
     module: string;
@@ -340,4 +341,83 @@ export async function contractToImportsViewStateAndRefs(
         }
         return r;
     });
+}
+
+/**
+ * Generate phase-specific ViewState type
+ */
+export async function contractToPhaseViewState(
+    contract: Contract,
+    contractFilePath: string,
+    jayImportResolver: JayImportResolver,
+    phase: RenderingPhase,
+    isRepeated: boolean = false,
+    isAsync: boolean = false,
+): Promise<WithValidations<SubContractTraverseResult>> {
+    // Filter contract to only include tags for this phase
+    const phaseContract = createPhaseContract(contract, phase);
+    
+    // Generate ViewState type name based on phase
+    const phaseName = phase === 'fast+interactive' ? 'Interactive' : pascalCase(phase);
+    const viewStateName = pascalCase(`${contract.name} ${phaseName} ViewState`);
+    
+    const result = await traverseTags(phaseContract.tags, viewStateName, {
+        viewStateType: undefined,
+        isRepeated,
+        contractFilePath,
+        importResolver: jayImportResolver,
+        isAsync,
+    });
+
+    // Resolve recursive references
+    return result.map((r) => {
+        if (r.type) {
+            // Find the root object type (unwrap arrays and promises)
+            const rootType = getRootObjectType(r.type);
+            if (rootType) {
+                resolveRecursiveReferences(r.type, rootType);
+            }
+        }
+        return r;
+    });
+}
+
+export interface PhaseViewStates {
+    slow: SubContractTraverseResult;
+    fast: SubContractTraverseResult;
+    interactive: SubContractTraverseResult;
+}
+
+/**
+ * Generate all three phase-specific ViewState types
+ */
+export async function contractToAllPhaseViewStates(
+    contract: Contract,
+    contractFilePath: string,
+    jayImportResolver: JayImportResolver,
+): Promise<WithValidations<PhaseViewStates>> {
+    const [slowResult, fastResult, interactiveResult] = await Promise.all([
+        contractToPhaseViewState(contract, contractFilePath, jayImportResolver, 'slow'),
+        contractToPhaseViewState(contract, contractFilePath, jayImportResolver, 'fast'),
+        contractToPhaseViewState(contract, contractFilePath, jayImportResolver, 'fast+interactive'),
+    ]);
+
+    const validations = [
+        ...slowResult.validations,
+        ...fastResult.validations,
+        ...interactiveResult.validations,
+    ];
+
+    if (validations.length > 0 || !slowResult.val || !fastResult.val || !interactiveResult.val) {
+        return new WithValidations(undefined, validations);
+    }
+
+    return new WithValidations<PhaseViewStates>(
+        {
+            slow: slowResult.val,
+            fast: fastResult.val,
+            interactive: interactiveResult.val,
+        },
+        validations,
+    );
 }
