@@ -5,11 +5,16 @@ import type {
     SaveImageMessage,
     HasImageMessage,
     GetProjectConfigurationMessage,
+    GetContractsMessage,
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
     GetProjectConfigurationResponse,
+    GetContractsResponse,
     ProjectConfiguration,
+    PageContractSchema,
+    InstalledAppContracts,
+    FullPageContract,
     EditorProtocolMessageTypes,
     EditorProtocolResponseTypes,
 } from './protocol';
@@ -44,6 +49,12 @@ export function createHasImageMessage(imageId: string): HasImageMessage {
 export function createGetProjectConfigurationMessage(): GetProjectConfigurationMessage {
     return {
         type: 'getProjectConfiguration',
+    };
+}
+
+export function createGetContractsMessage(): GetContractsMessage {
+    return {
+        type: 'getContracts',
     };
 }
 
@@ -87,6 +98,23 @@ export function createGetProjectConfigurationResponse(
         type: 'getProjectConfiguration',
         success,
         configuration,
+        error,
+    };
+}
+
+export function createGetContractsResponse(
+    pageContracts: { [pageId: string]: PageContractSchema },
+    installedAppContracts: { [appName: string]: InstalledAppContracts },
+    fullPageContracts: { [pageId: string]: FullPageContract },
+    success: boolean = true,
+    error?: string,
+): GetContractsResponse {
+    return {
+        type: 'getContracts',
+        success,
+        pageContracts,
+        installedAppContracts,
+        fullPageContracts,
         error,
     };
 }

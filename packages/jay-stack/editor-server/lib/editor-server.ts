@@ -10,10 +10,12 @@ import type {
     SaveImageMessage,
     HasImageMessage,
     GetProjectConfigurationMessage,
+    GetContractsMessage,
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
     GetProjectConfigurationResponse,
+    GetContractsResponse,
 } from '@jay-framework/editor-protocol';
 import { createProtocolResponse } from '@jay-framework/editor-protocol';
 
@@ -47,6 +49,7 @@ export class EditorServer implements DevServerProtocol {
         getProjectConfiguration?: (
             params: GetProjectConfigurationMessage,
         ) => Promise<GetProjectConfigurationResponse>;
+        getContracts?: (params: GetContractsMessage) => Promise<GetContractsResponse>;
     } = {};
 
     constructor(options: EditorServerOptions) {
@@ -151,6 +154,10 @@ export class EditorServer implements DevServerProtocol {
         this.handlers.getProjectConfiguration = callback;
     }
 
+    onGetContracts(callback: (params: GetContractsMessage) => Promise<GetContractsResponse>): void {
+        this.handlers.getContracts = callback;
+    }
+
     private handlePortDiscovery(req: any, res: any): void {
         const url = new URL(req.url, `http://localhost:${this.port}`);
         const tabId = url.searchParams.get('id');
@@ -252,6 +259,15 @@ export class EditorServer implements DevServerProtocol {
                     payload as GetProjectConfigurationMessage,
                 );
                 return createProtocolResponse(id, configResult);
+
+            case 'getContracts':
+                if (!this.handlers.getContracts) {
+                    throw new Error('Get contracts handler not registered');
+                }
+                const contractsResult = await this.handlers.getContracts(
+                    payload as GetContractsMessage,
+                );
+                return createProtocolResponse(id, contractsResult);
 
             default:
                 throw new Error(`Unknown message type: ${(payload as any).type}`);

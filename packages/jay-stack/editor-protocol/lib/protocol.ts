@@ -45,6 +45,10 @@ export interface GetProjectConfigurationMessage
     type: 'getProjectConfiguration';
 }
 
+export interface GetContractsMessage extends BaseMessage<GetContractsResponse> {
+    type: 'getContracts';
+}
+
 // Response types with discriminators
 export interface PublishResponse extends BaseResponse {
     type: 'publish';
@@ -128,17 +132,79 @@ export interface GetProjectConfigurationResponse extends BaseResponse {
     configuration: ProjectConfiguration;
 }
 
+export interface ContractTag {
+    tag: string; // tag ID
+    type: string | string[]; // tag type(s)
+    dataType?: string;
+    elementType?: string;
+    required?: boolean;
+    repeated?: boolean;
+    tags?: ContractTag[]; // for sub-contracts
+    link?: string; // for linked sub-contracts
+}
+
+export interface ContractSchema {
+    name: string;
+    tags: ContractTag[];
+}
+
+export interface PageContractSchema {
+    pageId: string;
+    pageName: string;
+    pageUrl: string;
+    contractSchema?: ContractSchema; // Optional - only if page has its own contract file
+}
+
+export interface InstalledAppPageContract {
+    pageName: string;
+    contractSchema: ContractSchema;
+}
+
+export interface InstalledAppComponentContract {
+    componentName: string;
+    contractSchema: ContractSchema;
+}
+
+export interface InstalledAppContracts {
+    appName: string;
+    module: string;
+    pages: InstalledAppPageContract[];
+    components: InstalledAppComponentContract[];
+}
+
+export interface FullPageContract {
+    pageId: string;
+    pageName: string;
+    pageUrl: string;
+    contractSchema: ContractSchema; // Combined schema with all tags from page + installed apps
+}
+
+export interface GetContractsResponse extends BaseResponse {
+    type: 'getContracts';
+    pageContracts: {
+        [pageId: string]: PageContractSchema;
+    };
+    installedAppContracts: {
+        [appName: string]: InstalledAppContracts;
+    };
+    fullPageContracts: {
+        [pageId: string]: FullPageContract;
+    };
+}
+
 // Union types for all messages and responses
 export type EditorProtocolMessageTypes =
     | PublishMessage
     | SaveImageMessage
     | HasImageMessage
-    | GetProjectConfigurationMessage;
+    | GetProjectConfigurationMessage
+    | GetContractsMessage;
 export type EditorProtocolResponseTypes =
     | PublishResponse
     | SaveImageResponse
     | HasImageResponse
-    | GetProjectConfigurationResponse;
+    | GetProjectConfigurationResponse
+    | GetContractsResponse;
 
 export interface ProtocolMessage {
     id: string;
@@ -166,6 +232,9 @@ export interface EditorProtocol {
     getProjectConfiguration(
         params: GetProjectConfigurationMessage,
     ): Promise<GetProjectConfigurationResponse>;
+
+    // Get all contracts (pages and installed apps)
+    getContracts(params: GetContractsMessage): Promise<GetContractsResponse>;
 }
 
 // Dev server side interface for handling editor requests
@@ -181,4 +250,7 @@ export interface DevServerProtocol {
 
     // Handle project configuration requests
     onGetProjectConfiguration(callback: EditorProtocol['getProjectConfiguration']): void;
+
+    // Handle contracts requests
+    onGetContracts(callback: EditorProtocol['getContracts']): void;
 }

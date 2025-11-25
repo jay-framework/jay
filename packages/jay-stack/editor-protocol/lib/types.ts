@@ -5,11 +5,22 @@ export type {
     PublishMessage,
     SaveImageMessage,
     HasImageMessage,
+    GetProjectConfigurationMessage,
+    GetContractsMessage,
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
+    GetProjectConfigurationResponse,
+    GetContractsResponse,
     BaseMessage,
     BaseResponse,
+    ContractTag,
+    ContractSchema,
+    PageContractSchema,
+    InstalledAppPageContract,
+    InstalledAppComponentContract,
+    InstalledAppContracts,
+    FullPageContract,
 } from './protocol';
 
 // Connection configuration

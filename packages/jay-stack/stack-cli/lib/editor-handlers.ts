@@ -2,6 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import YAML from 'yaml';
 import { parse } from 'node-html-parser';
+import { createRequire } from 'module';
 import type {
     PublishMessage,
     PublishComponent,
@@ -11,23 +12,483 @@ import type {
     SaveImageMessage,
     HasImageMessage,
     GetProjectConfigurationMessage,
+    GetContractsMessage,
     SaveImageResponse,
     HasImageResponse,
     GetProjectConfigurationResponse,
+    GetContractsResponse,
     ProjectConfiguration,
     ProjectPage,
     ProjectComponent,
     InstalledApp,
+    PageContractSchema,
+    ContractTag as ProtocolContractTag,
+    ContractSchema,
+    InstalledAppContracts,
+    FullPageContract,
 } from '@jay-framework/editor-protocol';
 import type { JayConfig } from './config';
 import {
     generateElementDefinitionFile,
     JAY_IMPORT_RESOLVER,
     parseJayFile,
+    parseContract,
+    ContractTag,
+    ContractTagType,
 } from '@jay-framework/compiler-jay-html';
-import { JAY_EXTENSION, JAY_CONTRACT_EXTENSION } from '@jay-framework/compiler-shared';
+import {
+    JayType,
+    JayEnumType,
+    JayAtomicType,
+    JAY_EXTENSION,
+    JAY_CONTRACT_EXTENSION,
+} from '@jay-framework/compiler-shared';
 
 const PAGE_FILENAME = `page${JAY_EXTENSION}`;
+const PAGE_CONTRACT_FILENAME = `page${JAY_CONTRACT_EXTENSION}`;
+
+// Helper function to convert JayType to string representation
+function jayTypeToString(jayType: JayType | undefined): string | undefined {
+    if (!jayType) return undefined;
+
+    if (jayType instanceof JayAtomicType) {
+        return jayType.name;
+    } else if (jayType instanceof JayEnumType) {
+        return `enum (${jayType.values.join(' | ')})`;
+    } else {
+        // For other types, try to get a string representation
+        return (jayType as any).name || 'unknown';
+    }
+}
+
+// Helper function to convert ContractTag to protocol format
+function convertContractTagToProtocol(tag: ContractTag): ProtocolContractTag {
+    const protocolTag: ProtocolContractTag = {
+        tag: tag.tag,
+        type:
+            tag.type.length === 1
+                ? ContractTagType[tag.type[0]]
+                : tag.type.map((t) => ContractTagType[t]),
+    };
+
+    if (tag.dataType) {
+        protocolTag.dataType = jayTypeToString(tag.dataType);
+    }
+
+    if (tag.elementType) {
+        protocolTag.elementType = tag.elementType.join(' | ');
+    }
+
+    if (tag.required !== undefined) {
+        protocolTag.required = tag.required;
+    }
+
+    if (tag.repeated !== undefined) {
+        protocolTag.repeated = tag.repeated;
+    }
+
+    if (tag.link) {
+        protocolTag.link = tag.link;
+    }
+
+    if (tag.tags) {
+        protocolTag.tags = tag.tags.map(convertContractTagToProtocol);
+    }
+
+    return protocolTag;
+}
+
+// Helper function to scan page contracts (only checks for .jay-contract files, doesn't parse HTML)
+async function scanPageContracts(
+    pagesBasePath: string,
+): Promise<{ [pageId: string]: PageContractSchema }> {
+    const contracts: { [pageId: string]: PageContractSchema } = {};
+    let pageIdCounter = 0;
+
+    async function scanDirectory(dirPath: string, urlPath: string = '') {
+        try {
+            const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+
+            for (const entry of entries) {
+                const fullPath = path.join(dirPath, entry.name);
+
+                if (entry.isDirectory()) {
+                    // Handle parameterized routes like [slug]
+                    const isParam = entry.name.startsWith('[') && entry.name.endsWith(']');
+                    const segmentUrl = isParam ? `:${entry.name.slice(1, -1)}` : entry.name;
+                    const newUrlPath = urlPath + '/' + segmentUrl;
+                    await scanDirectory(fullPath, newUrlPath);
+                } else if (entry.name === PAGE_FILENAME) {
+                    // Found a page file - check if there's a contract file next to it
+                    const pageUrl = urlPath || '/';
+                    const pageName = path.basename(dirPath) || 'home';
+                    const pageId = `page-${pageIdCounter++}`;
+                    const contractPath = path.join(dirPath, PAGE_CONTRACT_FILENAME);
+
+                    const pageContract: PageContractSchema = {
+                        pageId,
+                        pageName,
+                        pageUrl,
+                    };
+
+                    // Check if contract file exists
+                    if (fs.existsSync(contractPath)) {
+                        try {
+                            const contractSchema = await parseContractFile(contractPath);
+                            if (contractSchema) {
+                                pageContract.contractSchema = contractSchema;
+                            }
+                        } catch (error) {
+                            console.warn(`Failed to parse contract file ${contractPath}:`, error);
+                        }
+                    }
+
+                    contracts[pageId] = pageContract;
+                }
+            }
+        } catch (error) {
+            console.warn(`Failed to scan directory ${dirPath}:`, error);
+        }
+    }
+
+    await scanDirectory(pagesBasePath);
+    return contracts;
+}
+
+// Helper function to parse a contract file and return ContractSchema
+async function parseContractFile(contractFilePath: string): Promise<ContractSchema | null> {
+    try {
+        const contractYaml = await fs.promises.readFile(contractFilePath, 'utf-8');
+        const parsedContract = parseContract(contractYaml, contractFilePath);
+
+        if (parsedContract.validations.length > 0) {
+            console.warn(
+                `Contract validation errors in ${contractFilePath}:`,
+                parsedContract.validations,
+            );
+        }
+
+        if (parsedContract.val) {
+            // Resolve any linked sub-contracts
+            const resolvedTags = await resolveLinkedTags(
+                parsedContract.val.tags,
+                path.dirname(contractFilePath),
+            );
+
+            return {
+                name: parsedContract.val.name,
+                tags: resolvedTags,
+            };
+        }
+    } catch (error) {
+        console.warn(`Failed to parse contract file ${contractFilePath}:`, error);
+    }
+    return null;
+}
+
+// Helper function to recursively resolve linked sub-contracts
+async function resolveLinkedTags(
+    tags: ContractTag[],
+    baseDir: string,
+): Promise<ProtocolContractTag[]> {
+    const resolvedTags: ProtocolContractTag[] = [];
+
+    for (const tag of tags) {
+        if (tag.link) {
+            // This is a linked sub-contract - load it from the file
+            try {
+                const linkedPath = path.resolve(baseDir, tag.link);
+                const linkedContract = await parseContractFile(linkedPath);
+
+                if (linkedContract) {
+                    // Create a sub-contract tag with the linked contract's tags
+                    const resolvedTag: ProtocolContractTag = {
+                        tag: tag.tag,
+                        type:
+                            tag.type.length === 1
+                                ? ContractTagType[tag.type[0]]
+                                : tag.type.map((t) => ContractTagType[t]),
+                        tags: linkedContract.tags, // Use tags from linked contract
+                    };
+
+                    if (tag.required !== undefined) {
+                        resolvedTag.required = tag.required;
+                    }
+
+                    if (tag.repeated !== undefined) {
+                        resolvedTag.repeated = tag.repeated;
+                    }
+
+                    resolvedTags.push(resolvedTag);
+                } else {
+                    console.warn(`Failed to load linked contract: ${tag.link} from ${baseDir}`);
+                    // Fall back to including the link reference
+                    resolvedTags.push(convertContractTagToProtocol(tag));
+                }
+            } catch (error) {
+                console.warn(`Error resolving linked contract ${tag.link}:`, error);
+                // Fall back to including the link reference
+                resolvedTags.push(convertContractTagToProtocol(tag));
+            }
+        } else if (tag.tags) {
+            // This is an inline sub-contract - recursively resolve its tags
+            const resolvedSubTags = await resolveLinkedTags(tag.tags, baseDir);
+            const protocolTag = convertContractTagToProtocol(tag);
+            protocolTag.tags = resolvedSubTags;
+            resolvedTags.push(protocolTag);
+        } else {
+            // Regular tag (data, interactive, variant)
+            resolvedTags.push(convertContractTagToProtocol(tag));
+        }
+    }
+
+    return resolvedTags;
+}
+
+// Helper function to resolve contract files from installed apps using Node.js module resolution
+function resolveAppContractPath(
+    appModule: string,
+    contractFileName: string,
+    projectRootPath: string,
+): string | null {
+    try {
+        // Create a require function relative to the project root
+        const require = createRequire(path.join(projectRootPath, 'package.json'));
+
+        // Use Node.js module resolution with the module name
+        const modulePath = `${appModule}/${contractFileName}`;
+        const resolvedPath = require.resolve(modulePath);
+
+        return resolvedPath;
+    } catch (error) {
+        console.warn(
+            `Failed to resolve contract: ${appModule}/${contractFileName}`,
+            error instanceof Error ? error.message : error,
+        );
+        return null;
+    }
+}
+
+// Helper function to scan installed app contracts
+async function scanInstalledAppContracts(
+    projectRootPath: string,
+): Promise<{ [appName: string]: InstalledAppContracts }> {
+    const installedAppContracts: { [appName: string]: InstalledAppContracts } = {};
+    const configBasePath = path.join(projectRootPath, 'config');
+    const installedAppsPath = path.join(configBasePath, 'installedApps');
+
+    try {
+        if (!fs.existsSync(installedAppsPath)) {
+            return installedAppContracts;
+        }
+
+        const appDirs = await fs.promises.readdir(installedAppsPath, { withFileTypes: true });
+
+        for (const appDir of appDirs) {
+            if (appDir.isDirectory()) {
+                const appConfigPath = path.join(installedAppsPath, appDir.name, 'app.conf.yaml');
+
+                try {
+                    if (fs.existsSync(appConfigPath)) {
+                        const configContent = await fs.promises.readFile(appConfigPath, 'utf-8');
+                        const appConfig = YAML.parse(configContent);
+                        const appName = appConfig.name || appDir.name;
+                        const appModule = appConfig.module || appDir.name;
+
+                        const appContracts: InstalledAppContracts = {
+                            appName,
+                            module: appModule,
+                            pages: [],
+                            components: [],
+                        };
+
+                        // Scan app pages and their contracts
+                        if (appConfig.pages && Array.isArray(appConfig.pages)) {
+                            for (const page of appConfig.pages) {
+                                if (
+                                    page.headless_components &&
+                                    Array.isArray(page.headless_components)
+                                ) {
+                                    for (const component of page.headless_components) {
+                                        if (component.contract) {
+                                            // Resolve contract path using Node.js module resolution
+                                            const contractPath = resolveAppContractPath(
+                                                appModule,
+                                                component.contract,
+                                                projectRootPath,
+                                            );
+
+                                            if (contractPath) {
+                                                const contractSchema =
+                                                    await parseContractFile(contractPath);
+                                                if (contractSchema) {
+                                                    appContracts.pages.push({
+                                                        pageName: page.name,
+                                                        contractSchema,
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Scan app components and their contracts
+                        if (appConfig.components && Array.isArray(appConfig.components)) {
+                            for (const component of appConfig.components) {
+                                if (
+                                    component.headless_components &&
+                                    Array.isArray(component.headless_components)
+                                ) {
+                                    for (const headlessComp of component.headless_components) {
+                                        if (headlessComp.contract) {
+                                            // Resolve contract path using Node.js module resolution
+                                            const contractPath = resolveAppContractPath(
+                                                appModule,
+                                                headlessComp.contract,
+                                                projectRootPath,
+                                            );
+
+                                            if (contractPath) {
+                                                const contractSchema =
+                                                    await parseContractFile(contractPath);
+                                                if (contractSchema) {
+                                                    appContracts.components.push({
+                                                        componentName: component.name,
+                                                        contractSchema,
+                                                    });
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        installedAppContracts[appName] = appContracts;
+                    }
+                } catch (error) {
+                    console.warn(`Failed to parse app config ${appConfigPath}:`, error);
+                }
+            }
+        }
+    } catch (error) {
+        console.warn(`Failed to scan installed apps directory ${installedAppsPath}:`, error);
+    }
+
+    return installedAppContracts;
+}
+
+// Helper function to build full page contracts (combines page contracts with installed app components)
+async function buildFullPageContracts(
+    pagesBasePath: string,
+    pageContracts: { [pageId: string]: PageContractSchema },
+    installedApps: InstalledApp[],
+    installedAppContracts: { [appName: string]: InstalledAppContracts },
+): Promise<{ [pageId: string]: FullPageContract }> {
+    console.log('building full page contracts ###');
+    const fullPageContracts: { [pageId: string]: FullPageContract } = {};
+
+    // Create full contracts for all pages
+    for (const [pageId, pageContract] of Object.entries(pageContracts)) {
+        // Start with an array to collect all tags from different sources
+        const allTags: ProtocolContractTag[] = [];
+
+        // Add tags from the page's own contract if it exists
+        if (pageContract.contractSchema) {
+            allTags.push(...pageContract.contractSchema.tags);
+        }
+
+        // Now find which installed app components are used by this page
+        // We need to read the page's jay-html file to extract headless components
+        const pageDir = path.join(
+            pagesBasePath,
+            pageContract.pageUrl === '/' ? '' : pageContract.pageUrl,
+        );
+        const pageFilePath = path.join(pageDir, PAGE_FILENAME);
+
+        try {
+            if (fs.existsSync(pageFilePath)) {
+                const jayHtmlContent = await fs.promises.readFile(pageFilePath, 'utf-8');
+                const usedComponents = extractHeadlessComponents(jayHtmlContent);
+
+                console.log('usedComponents ###', pageFilePath, '\n##\n', usedComponents);
+                // For each used component, find its contract in the installed apps
+                for (const usedComp of usedComponents) {
+                    // Find which app provides this component
+                    for (const app of installedApps) {
+                        // Check in app pages
+                        for (const appPage of app.pages) {
+                            for (const headlessComp of appPage.headless_components) {
+                                if (
+                                    headlessComp.name === usedComp.name &&
+                                    headlessComp.key === usedComp.key
+                                ) {
+                                    // Found the component! Now get its contract from installedAppContracts
+                                    const appContracts = installedAppContracts[app.name];
+                                    if (appContracts) {
+                                        // Find the matching contract in the app's page contracts
+                                        const matchingPageContract = appContracts.pages.find(
+                                            (pc) => pc.pageName === appPage.name,
+                                        );
+                                        if (matchingPageContract) {
+                                            // Merge the tags from this installed app component
+                                            allTags.push(
+                                                ...matchingPageContract.contractSchema.tags,
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Check in app components
+                        for (const appComponent of app.components) {
+                            for (const headlessComp of appComponent.headless_components) {
+                                if (
+                                    headlessComp.name === usedComp.name &&
+                                    headlessComp.key === usedComp.key
+                                ) {
+                                    // Found the component! Now get its contract from installedAppContracts
+                                    const appContracts = installedAppContracts[app.name];
+                                    if (appContracts) {
+                                        // Find the matching contract in the app's component contracts
+                                        const matchingComponentContract =
+                                            appContracts.components.find(
+                                                (cc) => cc.componentName === appComponent.name,
+                                            );
+                                        if (matchingComponentContract) {
+                                            // Merge the tags from this installed app component
+                                            allTags.push(
+                                                ...matchingComponentContract.contractSchema.tags,
+                                            );
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn(`Failed to read page file ${pageFilePath}:`, error);
+        }
+
+        // Create the full contract with all merged tags
+        fullPageContracts[pageId] = {
+            pageId: pageContract.pageId,
+            pageName: pageContract.pageName,
+            pageUrl: pageContract.pageUrl,
+            contractSchema: {
+                name: pageContract.pageName,
+                tags: allTags,
+            },
+        };
+    }
+
+    return fullPageContracts;
+}
 
 // Helper function to extract headless components from jay-html content
 function extractHeadlessComponents(jayHtmlContent: string): {
@@ -72,6 +533,8 @@ async function scanProjectPages(pagesBasePath: string): Promise<ProjectPage[]> {
                     try {
                         const jayHtmlContent = await fs.promises.readFile(fullPath, 'utf-8');
                         const usedComponents = extractHeadlessComponents(jayHtmlContent);
+
+                        console.log(':::scanProjectPages:::usedComponents ###', fullPath, '\n##\n', usedComponents, '\n:::end:::');
 
                         pages.push({
                             name: pageName,
@@ -454,10 +917,60 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
         }
     };
 
+    const onGetContracts = async (params: GetContractsMessage): Promise<GetContractsResponse> => {
+        try {
+            const pagesBasePath = path.resolve(config.devServer.pagesBase);
+            const projectRootPath = process.cwd();
+            const configBasePath = path.resolve('./config');
+
+            // Scan for page contracts (only their own contract files)
+            const pageContracts = await scanPageContracts(pagesBasePath);
+
+            // Scan for installed apps to get their list
+            const installedApps = await scanInstalledApps(configBasePath);
+
+            // Scan for installed app contracts
+            const installedAppContracts = await scanInstalledAppContracts(projectRootPath);
+
+            // Build full page contracts (combination of page + installed app contracts)
+            const fullPageContracts = await buildFullPageContracts(
+                pagesBasePath,
+                pageContracts,
+                installedApps,
+                installedAppContracts,
+            );
+
+            console.log(`📋 Retrieved ${Object.keys(pageContracts).length} page contracts`);
+            console.log(
+                `📦 Retrieved contracts from ${Object.keys(installedAppContracts).length} installed apps`,
+            );
+            console.log(`📄 Built ${Object.keys(fullPageContracts).length} full page contracts`);
+
+            return {
+                type: 'getContracts',
+                success: true,
+                pageContracts,
+                installedAppContracts,
+                fullPageContracts,
+            };
+        } catch (error) {
+            console.error('Failed to get contracts:', error);
+            return {
+                type: 'getContracts',
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error',
+                pageContracts: {},
+                installedAppContracts: {},
+                fullPageContracts: {},
+            };
+        }
+    };
+
     return {
         onPublish,
         onSaveImage,
         onHasImage,
         onGetProjectConfiguration,
+        onGetContracts,
     };
 }

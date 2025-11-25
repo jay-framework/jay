@@ -47,6 +47,7 @@ async function initApp() {
     editorServer.onSaveImage(handlers.onSaveImage);
     editorServer.onHasImage(handlers.onHasImage);
     editorServer.onGetProjectConfiguration(handlers.onGetProjectConfiguration);
+    editorServer.onGetContracts(handlers.onGetContracts);
 
     // Start dev server
     const { server, viteServer, routes } = await mkDevServer({
