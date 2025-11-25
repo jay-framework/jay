@@ -387,7 +387,6 @@ async function buildFullPageContracts(
     installedApps: InstalledApp[],
     installedAppContracts: { [appName: string]: InstalledAppContracts },
 ): Promise<{ [pageId: string]: FullPageContract }> {
-    console.log('building full page contracts ###');
     const fullPageContracts: { [pageId: string]: FullPageContract } = {};
 
     // Create full contracts for all pages
@@ -413,7 +412,6 @@ async function buildFullPageContracts(
                 const jayHtmlContent = await fs.promises.readFile(pageFilePath, 'utf-8');
                 const usedComponents = extractHeadlessComponents(jayHtmlContent);
 
-                console.log('usedComponents ###', pageFilePath, '\n##\n', usedComponents);
                 // For each used component, find its contract in the installed apps
                 for (const usedComp of usedComponents) {
                     // Find which app provides this component
@@ -533,8 +531,6 @@ async function scanProjectPages(pagesBasePath: string): Promise<ProjectPage[]> {
                     try {
                         const jayHtmlContent = await fs.promises.readFile(fullPath, 'utf-8');
                         const usedComponents = extractHeadlessComponents(jayHtmlContent);
-
-                        console.log(':::scanProjectPages:::usedComponents ###', fullPath, '\n##\n', usedComponents, '\n:::end:::');
 
                         pages.push({
                             name: pageName,
