@@ -19,6 +19,10 @@ export interface CollectionsViewState {
 
 export interface CollectionsElementRefs {}
 
+export type CollectionsSlowViewState = {};
+export type CollectionsFastViewState = {};
+export type CollectionsInteractiveViewState = CollectionsViewState;
+
 export type CollectionsElement = JayElement<CollectionsViewState, CollectionsElementRefs>;
 export type CollectionsElementRender = RenderElement<
     CollectionsViewState,
@@ -26,6 +30,12 @@ export type CollectionsElementRender = RenderElement<
     CollectionsElement
 >;
 export type CollectionsElementPreRender = [CollectionsElementRefs, CollectionsElementRender];
-export type CollectionsContract = JayContract<CollectionsViewState, CollectionsElementRefs>;
+export type CollectionsContract = JayContract<
+    CollectionsViewState,
+    CollectionsElementRefs,
+    CollectionsSlowViewState,
+    CollectionsFastViewState,
+    CollectionsInteractiveViewState
+>;
 
 export declare function render(options?: RenderElementOptions): CollectionsElementPreRender;

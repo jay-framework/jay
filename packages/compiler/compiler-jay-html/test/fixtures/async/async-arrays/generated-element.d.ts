@@ -22,6 +22,10 @@ export interface AsyncArraysViewState {
 
 export interface AsyncArraysElementRefs {}
 
+export type AsyncArraysSlowViewState = {};
+export type AsyncArraysFastViewState = {};
+export type AsyncArraysInteractiveViewState = AsyncArraysViewState;
+
 export type AsyncArraysElement = JayElement<AsyncArraysViewState, AsyncArraysElementRefs>;
 export type AsyncArraysElementRender = RenderElement<
     AsyncArraysViewState,
@@ -29,6 +33,12 @@ export type AsyncArraysElementRender = RenderElement<
     AsyncArraysElement
 >;
 export type AsyncArraysElementPreRender = [AsyncArraysElementRefs, AsyncArraysElementRender];
-export type AsyncArraysContract = JayContract<AsyncArraysViewState, AsyncArraysElementRefs>;
+export type AsyncArraysContract = JayContract<
+    AsyncArraysViewState,
+    AsyncArraysElementRefs,
+    AsyncArraysSlowViewState,
+    AsyncArraysFastViewState,
+    AsyncArraysInteractiveViewState
+>;
 
 export declare function render(options?: RenderElementOptions): AsyncArraysElementPreRender;

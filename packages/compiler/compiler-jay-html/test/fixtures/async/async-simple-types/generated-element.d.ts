@@ -12,6 +12,10 @@ export interface AsyncSimpleTypesViewState {
 
 export interface AsyncSimpleTypesElementRefs {}
 
+export type AsyncSimpleTypesSlowViewState = {};
+export type AsyncSimpleTypesFastViewState = {};
+export type AsyncSimpleTypesInteractiveViewState = AsyncSimpleTypesViewState;
+
 export type AsyncSimpleTypesElement = JayElement<
     AsyncSimpleTypesViewState,
     AsyncSimpleTypesElementRefs
@@ -27,7 +31,10 @@ export type AsyncSimpleTypesElementPreRender = [
 ];
 export type AsyncSimpleTypesContract = JayContract<
     AsyncSimpleTypesViewState,
-    AsyncSimpleTypesElementRefs
+    AsyncSimpleTypesElementRefs,
+    AsyncSimpleTypesSlowViewState,
+    AsyncSimpleTypesFastViewState,
+    AsyncSimpleTypesInteractiveViewState
 >;
 
 export declare function render(options?: RenderElementOptions): AsyncSimpleTypesElementPreRender;

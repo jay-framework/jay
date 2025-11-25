@@ -32,4 +32,7 @@ export interface JayHtmlSourceFile extends CompilerSourceFile {
     headLinks: JayHtmlHeadLink[];
     css?: string;
     filename?: string;
+    contract?: any;  // The parsed contract if using contract reference
+    contractRef?: string;  // Path to contract file if using contract reference
+    hasInlineData?: boolean;  // True if using inline data structure
 }
