@@ -170,31 +170,40 @@ export interface ProductPageSlowViewState {
   };
 }
 
-/** Properties available in fast (request-time) phase */
+/** Properties available in fast (request-time) phase 
+ * Includes:
+ * - Properties with phase: fast
+ * - Properties with phase: fast+interactive (since they're SET at request time)
+ */
 export interface ProductPageFastViewState {
-  inStock: boolean;
-  quantity: number;
+  inStock: boolean;  // phase: fast
+  quantity: number;  // phase: fast+interactive (also in InteractiveViewState)
   discount: {
-    amount: number;
-    applied: boolean;
+    amount: number;  // phase: fast
+    applied: boolean;  // phase: fast+interactive (also in InteractiveViewState)
   };
 }
 
-/** Properties available in interactive (client-side) phase */
+/** Properties available in interactive (client-side) phase 
+ * Includes ONLY properties with phase: fast+interactive
+ * (can be modified on the client)
+ */
 export interface ProductPageInteractiveViewState {
-  quantity: number;
+  quantity: number;  // phase: fast+interactive (also in FastViewState)
   discount: {
-    applied: boolean;
+    applied: boolean;  // phase: fast+interactive (also in FastViewState)
   };
 }
 ```
 
 **Key Points:**
 - **Naming Convention**: `<Component>SlowViewState`, `<Component>FastViewState`, `<Component>InteractiveViewState`
-- **Non-Cumulative**: Each phase ViewState contains **only** properties explicitly set to that phase
+- **Phase Inclusion Logic**: Properties appear in ViewStates based on when they're used:
   - `SlowViewState`: Only properties with `phase: slow` (or default, which is slow)
-  - `FastViewState`: Only properties with `phase: fast`
+  - `FastViewState`: Properties with `phase: fast` **OR** `phase: fast+interactive`
+    - Rationale: `fast+interactive` properties are SET at request time (fast phase), then can be modified on client
   - `InteractiveViewState`: Only properties with `phase: fast+interactive`
+- **Important**: Properties with `phase: fast+interactive` appear in **BOTH** `FastViewState` and `InteractiveViewState`
 - **Interactive Elements**: Interactive tags (type: `interactive`) go into `<Component>Refs`, NOT ViewState (existing pattern, unchanged)
 - **ViewState Phases**: Only contain `data` and `variant` properties for each respective phase
 

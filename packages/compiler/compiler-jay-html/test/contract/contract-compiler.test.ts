@@ -58,7 +58,7 @@ describe('compile contract', () => {
         
         export type CounterSlowViewState = {};
         
-        export type CounterFastViewState = {};
+        export type CounterFastViewState = Pick<CounterViewState, 'count'>;
         
         export type CounterInteractiveViewState = Pick<CounterViewState, 'count'>;
 
@@ -204,7 +204,9 @@ describe('compile contract', () => {
         
         export type TodoSlowViewState = {};
         
-        export type TodoFastViewState = {};
+        export type TodoFastViewState = {
+            items: Array<Pick<TodoViewState['items'][number], 'title' | 'completed'>>;
+        };
         
         export type TodoInteractiveViewState = {
             items: Array<Pick<TodoViewState['items'][number], 'title' | 'completed'>>;
@@ -309,7 +311,14 @@ describe('compile contract', () => {
             contactInfo: Pick<UserFormViewState['contactInfo'], 'sectionTitle'>;
         };
         
-        export type UserFormFastViewState = {};
+        export type UserFormFastViewState = {
+            personalInfo: {
+                nameFields: Pick<UserFormViewState['personalInfo']['nameFields'], 'firstName' | 'lastName'>;
+            };
+            contactInfo: {
+                contactFields: Pick<UserFormViewState['contactInfo']['contactFields'], 'email' | 'phone'>;
+            };
+        };
         
         export type UserFormInteractiveViewState = {
             personalInfo: {
@@ -513,7 +522,7 @@ describe('compile contract', () => {
 
         export type ChoicesSlowViewState = {};
         
-        export type ChoicesFastViewState = {};
+        export type ChoicesFastViewState = Pick<ChoicesViewState, 'select'>;
         
         export type ChoicesInteractiveViewState = Pick<ChoicesViewState, 'select'>;
 

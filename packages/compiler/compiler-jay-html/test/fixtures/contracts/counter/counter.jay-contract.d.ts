@@ -12,7 +12,7 @@ export interface CounterViewState {
 
 export type CounterSlowViewState = {};
 
-export type CounterFastViewState = {};
+export type CounterFastViewState = Pick<CounterViewState, 'count' | 'isPositive'>;
 
 export type CounterInteractiveViewState = Pick<CounterViewState, 'count' | 'isPositive'>;
 
