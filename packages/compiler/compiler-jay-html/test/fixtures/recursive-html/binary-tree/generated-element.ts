@@ -28,6 +28,11 @@ export interface BinaryTreeElementRefs {
     treeNode: HTMLElementProxy<BinaryTreeViewState, HTMLDivElement>;
 }
 
+export type BinaryTreeSlowViewState = {};
+export type BinaryTreeFastViewState = {};
+export type BinaryTreeInteractiveViewState = BinaryTreeViewState;
+
+
 export type BinaryTreeElement = JayElement<BinaryTreeViewState, BinaryTreeElementRefs>;
 export type BinaryTreeElementRender = RenderElement<
     BinaryTreeViewState,
@@ -35,7 +40,13 @@ export type BinaryTreeElementRender = RenderElement<
     BinaryTreeElement
 >;
 export type BinaryTreeElementPreRender = [BinaryTreeElementRefs, BinaryTreeElementRender];
-export type BinaryTreeContract = JayContract<BinaryTreeViewState, BinaryTreeElementRefs>;
+export type BinaryTreeContract = JayContract<
+    BinaryTreeViewState,
+    BinaryTreeElementRefs,
+    BinaryTreeSlowViewState,
+    BinaryTreeFastViewState,
+    BinaryTreeInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): BinaryTreeElementPreRender {
     const [refManager, [refNodeValue, refTreeNode]] = ReferencesManager.for(

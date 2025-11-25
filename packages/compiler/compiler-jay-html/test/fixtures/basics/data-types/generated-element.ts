@@ -42,6 +42,10 @@ export interface DataTypesViewState {
 
 export interface DataTypesElementRefs {}
 
+export type DataTypesSlowViewState = {};
+export type DataTypesFastViewState = {};
+export type DataTypesInteractiveViewState = DataTypesViewState;
+
 export type DataTypesElement = JayElement<DataTypesViewState, DataTypesElementRefs>;
 export type DataTypesElementRender = RenderElement<
     DataTypesViewState,
@@ -49,7 +53,13 @@ export type DataTypesElementRender = RenderElement<
     DataTypesElement
 >;
 export type DataTypesElementPreRender = [DataTypesElementRefs, DataTypesElementRender];
-export type DataTypesContract = JayContract<DataTypesViewState, DataTypesElementRefs>;
+export type DataTypesContract = JayContract<
+    DataTypesViewState,
+    DataTypesElementRefs,
+    DataTypesSlowViewState,
+    DataTypesFastViewState,
+    DataTypesInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): DataTypesElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

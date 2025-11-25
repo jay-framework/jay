@@ -38,6 +38,10 @@ export interface DynamicComponentInComponentElementRefs {
     };
 }
 
+export type DynamicComponentInComponentSlowViewState = {};
+export type DynamicComponentInComponentFastViewState = {};
+export type DynamicComponentInComponentInteractiveViewState = DynamicComponentInComponentViewState;
+
 export type DynamicComponentInComponentElement = JayElement<
     DynamicComponentInComponentViewState,
     DynamicComponentInComponentElementRefs
@@ -53,7 +57,10 @@ export type DynamicComponentInComponentElementPreRender = [
 ];
 export type DynamicComponentInComponentContract = JayContract<
     DynamicComponentInComponentViewState,
-    DynamicComponentInComponentElementRefs
+    DynamicComponentInComponentElementRefs,
+    DynamicComponentInComponentSlowViewState,
+    DynamicComponentInComponentFastViewState,
+    DynamicComponentInComponentInteractiveViewState
 >;
 
 export function render(

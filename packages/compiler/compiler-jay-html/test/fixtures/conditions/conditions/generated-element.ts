@@ -19,6 +19,11 @@ export interface ConditionsViewState {
 
 export interface ConditionsElementRefs {}
 
+export type ConditionsSlowViewState = {};
+export type ConditionsFastViewState = {};
+export type ConditionsInteractiveViewState = ConditionsViewState;
+
+
 export type ConditionsElement = JayElement<ConditionsViewState, ConditionsElementRefs>;
 export type ConditionsElementRender = RenderElement<
     ConditionsViewState,
@@ -26,7 +31,13 @@ export type ConditionsElementRender = RenderElement<
     ConditionsElement
 >;
 export type ConditionsElementPreRender = [ConditionsElementRefs, ConditionsElementRender];
-export type ConditionsContract = JayContract<ConditionsViewState, ConditionsElementRefs>;
+export type ConditionsContract = JayContract<
+    ConditionsViewState,
+    ConditionsElementRefs,
+    ConditionsSlowViewState,
+    ConditionsFastViewState,
+    ConditionsInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): ConditionsElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

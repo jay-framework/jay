@@ -76,6 +76,10 @@ export interface NestedArraysWithStudentsElementRefs {
     };
 }
 
+export type NestedArraysWithStudentsSlowViewState = {};
+export type NestedArraysWithStudentsFastViewState = {};
+export type NestedArraysWithStudentsInteractiveViewState = NestedArraysWithStudentsViewState;
+
 export type NestedArraysWithStudentsElement = JayElement<
     NestedArraysWithStudentsViewState,
     NestedArraysWithStudentsElementRefs
@@ -91,7 +95,10 @@ export type NestedArraysWithStudentsElementPreRender = [
 ];
 export type NestedArraysWithStudentsContract = JayContract<
     NestedArraysWithStudentsViewState,
-    NestedArraysWithStudentsElementRefs
+    NestedArraysWithStudentsElementRefs,
+    NestedArraysWithStudentsSlowViewState,
+    NestedArraysWithStudentsFastViewState,
+    NestedArraysWithStudentsInteractiveViewState
 >;
 
 export function render(options?: RenderElementOptions): NestedArraysWithStudentsElementPreRender {

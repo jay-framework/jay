@@ -1202,7 +1202,7 @@ export function generateElementFile(
     importerMode: MainRuntimeModes,
 ): WithValidations<string> {
     const types = generateTypes(jayFile.types);
-    const { renderedRefs, renderedElement, renderedImplementation } = renderFunctionImplementation(
+    let { renderedRefs, renderedElement, renderedImplementation } = renderFunctionImplementation(
         jayFile.types,
         jayFile.body,
         jayFile.imports,
@@ -1213,6 +1213,22 @@ export function generateElementFile(
         jayFile.headLinks,
     );
     const cssImport = generateCssImport(jayFile);
+    const phaseTypes = generatePhaseSpecificTypes(jayFile);
+    
+    // If we have contract or inline data, replace the 2-parameter JayContract with 5-parameter version
+    if (jayFile.contract || jayFile.hasInlineData) {
+        const baseName = jayFile.baseElementName;
+        const old2ParamContract = `export type ${baseName}Contract = JayContract<${baseName}ViewState, ${baseName}ElementRefs>;`;
+        const new5ParamContract = `export type ${baseName}Contract = JayContract<
+    ${baseName}ViewState,
+    ${baseName}ElementRefs,
+    ${baseName}SlowViewState,
+    ${baseName}FastViewState,
+    ${baseName}InteractiveViewState
+>;`;
+        renderedElement = renderedElement.replace(old2ParamContract, new5ParamContract);
+    }
+    
     const renderedFile = [
         renderImports(
             renderedImplementation.imports.plus(Import.element).plus(Import.jayElement),
@@ -1223,6 +1239,7 @@ export function generateElementFile(
         cssImport,
         types,
         renderedRefs,
+        phaseTypes,
         renderedElement,
         renderedImplementation.rendered,
     ]
@@ -1259,6 +1276,22 @@ export function generateElementBridgeFile(jayFile: JayHtmlSourceFile): string {
         refsType,
         jayFile.headlessImports,
     );
+    const phaseTypes = generatePhaseSpecificTypes(jayFile);
+    
+    // If we have contract or inline data, replace the 2-parameter JayContract with 5-parameter version
+    if (jayFile.contract || jayFile.hasInlineData) {
+        const baseName = jayFile.baseElementName;
+        const old2ParamContract = `export type ${baseName}Contract = JayContract<${baseName}ViewState, ${baseName}ElementRefs>;`;
+        const new5ParamContract = `export type ${baseName}Contract = JayContract<
+    ${baseName}ViewState,
+    ${baseName}ElementRefs,
+    ${baseName}SlowViewState,
+    ${baseName}FastViewState,
+    ${baseName}InteractiveViewState
+>;`;
+        renderedElement = renderedElement.replace(old2ParamContract, new5ParamContract);
+    }
+    
     return [
         renderImports(
             renderedImplementation.imports
@@ -1271,6 +1304,7 @@ export function generateElementBridgeFile(jayFile: JayHtmlSourceFile): string {
         ),
         types,
         renderedRefs,
+        phaseTypes,
         renderedElement,
         renderedBridge.rendered,
     ]

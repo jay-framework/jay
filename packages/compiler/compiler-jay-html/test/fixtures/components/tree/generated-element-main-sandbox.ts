@@ -26,6 +26,10 @@ export interface TreeNodeElementRefs {
     head: HTMLElementProxy<TreeNodeViewState, HTMLDivElement>;
 }
 
+export type TreeNodeSlowViewState = {};
+export type TreeNodeFastViewState = {};
+export type TreeNodeInteractiveViewState = TreeNodeViewState;
+
 export type TreeNodeElement = JayElement<TreeNodeViewState, TreeNodeElementRefs>;
 export type TreeNodeElementRender = RenderElement<
     TreeNodeViewState,
@@ -33,7 +37,13 @@ export type TreeNodeElementRender = RenderElement<
     TreeNodeElement
 >;
 export type TreeNodeElementPreRender = [TreeNodeElementRefs, TreeNodeElementRender];
-export type TreeNodeContract = JayContract<TreeNodeViewState, TreeNodeElementRefs>;
+export type TreeNodeContract = JayContract<
+    TreeNodeViewState,
+    TreeNodeElementRefs,
+    TreeNodeSlowViewState,
+    TreeNodeFastViewState,
+    TreeNodeInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): TreeNodeElementPreRender {
     const [childrenRefManager, [refAR1]] = ReferencesManager.for(options, [], [], [], ['aR1']);

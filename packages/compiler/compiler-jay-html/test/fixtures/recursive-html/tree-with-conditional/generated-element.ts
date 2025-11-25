@@ -32,6 +32,10 @@ export interface TreeWithConditionalElementRefs {
     treeItem: HTMLElementProxy<TreeWithConditionalViewState, HTMLDivElement>;
 }
 
+export type TreeWithConditionalSlowViewState = {};
+export type TreeWithConditionalFastViewState = {};
+export type TreeWithConditionalInteractiveViewState = TreeWithConditionalViewState;
+
 export type TreeWithConditionalElement = JayElement<
     TreeWithConditionalViewState,
     TreeWithConditionalElementRefs
@@ -47,7 +51,10 @@ export type TreeWithConditionalElementPreRender = [
 ];
 export type TreeWithConditionalContract = JayContract<
     TreeWithConditionalViewState,
-    TreeWithConditionalElementRefs
+    TreeWithConditionalElementRefs,
+    TreeWithConditionalSlowViewState,
+    TreeWithConditionalFastViewState,
+    TreeWithConditionalInteractiveViewState
 >;
 
 export function render(options?: RenderElementOptions): TreeWithConditionalElementPreRender {

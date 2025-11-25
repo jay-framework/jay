@@ -22,6 +22,11 @@ export interface AttributesViewState {
 
 export interface AttributesElementRefs {}
 
+export type AttributesSlowViewState = {};
+export type AttributesFastViewState = {};
+export type AttributesInteractiveViewState = AttributesViewState;
+
+
 export type AttributesElement = JayElement<AttributesViewState, AttributesElementRefs>;
 export type AttributesElementRender = RenderElement<
     AttributesViewState,
@@ -29,7 +34,13 @@ export type AttributesElementRender = RenderElement<
     AttributesElement
 >;
 export type AttributesElementPreRender = [AttributesElementRefs, AttributesElementRender];
-export type AttributesContract = JayContract<AttributesViewState, AttributesElementRefs>;
+export type AttributesContract = JayContract<
+    AttributesViewState,
+    AttributesElementRefs,
+    AttributesSlowViewState,
+    AttributesFastViewState,
+    AttributesInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): AttributesElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

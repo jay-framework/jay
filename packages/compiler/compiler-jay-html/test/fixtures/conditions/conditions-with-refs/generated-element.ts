@@ -23,6 +23,11 @@ export interface ConditionsWithRefsElementRefs {
     text2: HTMLElementProxy<ConditionsWithRefsViewState, HTMLSpanElement>;
 }
 
+export type ConditionsWithRefsSlowViewState = {};
+export type ConditionsWithRefsFastViewState = {};
+export type ConditionsWithRefsInteractiveViewState = ConditionsWithRefsViewState;
+
+
 export type ConditionsWithRefsElement = JayElement<
     ConditionsWithRefsViewState,
     ConditionsWithRefsElementRefs
@@ -38,7 +43,10 @@ export type ConditionsWithRefsElementPreRender = [
 ];
 export type ConditionsWithRefsContract = JayContract<
     ConditionsWithRefsViewState,
-    ConditionsWithRefsElementRefs
+    ConditionsWithRefsElementRefs,
+    ConditionsWithRefsSlowViewState,
+    ConditionsWithRefsFastViewState,
+    ConditionsWithRefsInteractiveViewState
 >;
 
 export function render(options?: RenderElementOptions): ConditionsWithRefsElementPreRender {

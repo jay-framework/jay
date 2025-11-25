@@ -27,6 +27,10 @@ export interface RecursiveComponentsElementRefs {
     };
 }
 
+export type RecursiveComponentsSlowViewState = {};
+export type RecursiveComponentsFastViewState = {};
+export type RecursiveComponentsInteractiveViewState = Node;
+
 export type RecursiveComponentsElement = JayElement<Node, RecursiveComponentsElementRefs>;
 export type RecursiveComponentsElementRender = RenderElement<
     Node,
@@ -37,7 +41,13 @@ export type RecursiveComponentsElementPreRender = [
     RecursiveComponentsElementRefs,
     RecursiveComponentsElementRender,
 ];
-export type RecursiveComponentsContract = JayContract<Node, RecursiveComponentsElementRefs>;
+export type RecursiveComponentsContract = JayContract<
+    Node,
+    RecursiveComponentsElementRefs,
+    RecursiveComponentsSlowViewState,
+    RecursiveComponentsFastViewState,
+    RecursiveComponentsInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): RecursiveComponentsElementPreRender {
     const [childrenRefManager, [refCounter1, refCounterTwo]] = ReferencesManager.for(

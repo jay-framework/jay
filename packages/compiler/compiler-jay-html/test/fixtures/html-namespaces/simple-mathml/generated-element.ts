@@ -15,6 +15,11 @@ export interface SimpleMathmlViewState {
 
 export interface SimpleMathmlElementRefs {}
 
+export type SimpleMathmlSlowViewState = {};
+export type SimpleMathmlFastViewState = {};
+export type SimpleMathmlInteractiveViewState = SimpleMathmlViewState;
+
+
 export type SimpleMathmlElement = JayElement<SimpleMathmlViewState, SimpleMathmlElementRefs>;
 export type SimpleMathmlElementRender = RenderElement<
     SimpleMathmlViewState,
@@ -22,7 +27,13 @@ export type SimpleMathmlElementRender = RenderElement<
     SimpleMathmlElement
 >;
 export type SimpleMathmlElementPreRender = [SimpleMathmlElementRefs, SimpleMathmlElementRender];
-export type SimpleMathmlContract = JayContract<SimpleMathmlViewState, SimpleMathmlElementRefs>;
+export type SimpleMathmlContract = JayContract<
+    SimpleMathmlViewState,
+    SimpleMathmlElementRefs,
+    SimpleMathmlSlowViewState,
+    SimpleMathmlFastViewState,
+    SimpleMathmlInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): SimpleMathmlElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

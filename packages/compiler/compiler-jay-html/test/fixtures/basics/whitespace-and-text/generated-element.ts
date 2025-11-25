@@ -16,6 +16,11 @@ export interface WhitespaceAndTextViewState {
 
 export interface WhitespaceAndTextElementRefs {}
 
+export type WhitespaceAndTextSlowViewState = {};
+export type WhitespaceAndTextFastViewState = {};
+export type WhitespaceAndTextInteractiveViewState = WhitespaceAndTextViewState;
+
+
 export type WhitespaceAndTextElement = JayElement<
     WhitespaceAndTextViewState,
     WhitespaceAndTextElementRefs
@@ -31,7 +36,10 @@ export type WhitespaceAndTextElementPreRender = [
 ];
 export type WhitespaceAndTextContract = JayContract<
     WhitespaceAndTextViewState,
-    WhitespaceAndTextElementRefs
+    WhitespaceAndTextElementRefs,
+    WhitespaceAndTextSlowViewState,
+    WhitespaceAndTextFastViewState,
+    WhitespaceAndTextInteractiveViewState
 >;
 
 export function render(options?: RenderElementOptions): WhitespaceAndTextElementPreRender {

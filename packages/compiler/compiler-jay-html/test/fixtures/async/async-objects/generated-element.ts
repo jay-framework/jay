@@ -29,6 +29,10 @@ export interface AsyncObjectsViewState {
 
 export interface AsyncObjectsElementRefs {}
 
+export type AsyncObjectsSlowViewState = {};
+export type AsyncObjectsFastViewState = {};
+export type AsyncObjectsInteractiveViewState = AsyncObjectsViewState;
+
 export type AsyncObjectsElement = JayElement<AsyncObjectsViewState, AsyncObjectsElementRefs>;
 export type AsyncObjectsElementRender = RenderElement<
     AsyncObjectsViewState,
@@ -36,7 +40,13 @@ export type AsyncObjectsElementRender = RenderElement<
     AsyncObjectsElement
 >;
 export type AsyncObjectsElementPreRender = [AsyncObjectsElementRefs, AsyncObjectsElementRender];
-export type AsyncObjectsContract = JayContract<AsyncObjectsViewState, AsyncObjectsElementRefs>;
+export type AsyncObjectsContract = JayContract<
+    AsyncObjectsViewState,
+    AsyncObjectsElementRefs,
+    AsyncObjectsSlowViewState,
+    AsyncObjectsFastViewState,
+    AsyncObjectsInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): AsyncObjectsElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
