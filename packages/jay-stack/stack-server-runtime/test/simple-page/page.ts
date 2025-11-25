@@ -64,6 +64,6 @@ function ProductsPageConstructor(
 
 export const page = makeJayStackComponent<PageContract>()
     .withProps<PageProps>()
-    .withSlowlyRender<SlowlyViewState, SlowlyCarryForward>(renderSlowlyChanging)
-    .withFastRender<FastCarryForward>(renderFastChanging)
+    .withSlowlyRender(renderSlowlyChanging)
+    .withFastRender(renderFastChanging)
     .withInteractive(ProductsPageConstructor);
