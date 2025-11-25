@@ -33,6 +33,10 @@ export interface WithDataAtRootElementRefs {
     };
 }
 
+export type WithDataAtRootSlowViewState = {};
+export type WithDataAtRootFastViewState = {};
+export type WithDataAtRootInteractiveViewState = WithDataAtRootViewState;
+
 export type WithDataAtRootElement = JayElement<WithDataAtRootViewState, WithDataAtRootElementRefs>;
 export type WithDataAtRootElementRender = RenderElement<
     WithDataAtRootViewState,
@@ -45,7 +49,10 @@ export type WithDataAtRootElementPreRender = [
 ];
 export type WithDataAtRootContract = JayContract<
     WithDataAtRootViewState,
-    WithDataAtRootElementRefs
+    WithDataAtRootElementRefs,
+    WithDataAtRootSlowViewState,
+    WithDataAtRootFastViewState,
+    WithDataAtRootInteractiveViewState
 >;
 
 export function render(options?: RenderElementOptions): WithDataAtRootElementPreRender {

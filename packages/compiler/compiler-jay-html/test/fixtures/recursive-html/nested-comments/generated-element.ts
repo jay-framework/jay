@@ -27,6 +27,11 @@ export interface NestedCommentsElementRefs {
     comment: HTMLElementProxy<NestedCommentsViewState, HTMLElement>;
 }
 
+export type NestedCommentsSlowViewState = {};
+export type NestedCommentsFastViewState = {};
+export type NestedCommentsInteractiveViewState = NestedCommentsViewState;
+
+
 export type NestedCommentsElement = JayElement<NestedCommentsViewState, NestedCommentsElementRefs>;
 export type NestedCommentsElementRender = RenderElement<
     NestedCommentsViewState,
@@ -39,7 +44,10 @@ export type NestedCommentsElementPreRender = [
 ];
 export type NestedCommentsContract = JayContract<
     NestedCommentsViewState,
-    NestedCommentsElementRefs
+    NestedCommentsElementRefs,
+    NestedCommentsSlowViewState,
+    NestedCommentsFastViewState,
+    NestedCommentsInteractiveViewState
 >;
 
 export function render(options?: RenderElementOptions): NestedCommentsElementPreRender {

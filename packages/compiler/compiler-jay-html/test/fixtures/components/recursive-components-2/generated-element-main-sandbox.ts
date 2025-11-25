@@ -21,6 +21,10 @@ export interface RecursiveComponents2ViewState {
 
 export interface RecursiveComponents2ElementRefs {}
 
+export type RecursiveComponents2SlowViewState = {};
+export type RecursiveComponents2FastViewState = {};
+export type RecursiveComponents2InteractiveViewState = RecursiveComponents2ViewState;
+
 export type RecursiveComponents2Element = JayElement<
     RecursiveComponents2ViewState,
     RecursiveComponents2ElementRefs
@@ -36,7 +40,10 @@ export type RecursiveComponents2ElementPreRender = [
 ];
 export type RecursiveComponents2Contract = JayContract<
     RecursiveComponents2ViewState,
-    RecursiveComponents2ElementRefs
+    RecursiveComponents2ElementRefs,
+    RecursiveComponents2SlowViewState,
+    RecursiveComponents2FastViewState,
+    RecursiveComponents2InteractiveViewState
 >;
 
 export function render(options?: RenderElementOptions): RecursiveComponents2ElementPreRender {

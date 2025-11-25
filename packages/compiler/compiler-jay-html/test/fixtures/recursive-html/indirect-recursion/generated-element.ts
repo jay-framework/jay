@@ -31,6 +31,10 @@ export interface IndirectRecursionElementRefs {
     menuItem: HTMLElementProxy<IndirectRecursionViewState, HTMLLIElement>;
 }
 
+export type IndirectRecursionSlowViewState = {};
+export type IndirectRecursionFastViewState = {};
+export type IndirectRecursionInteractiveViewState = IndirectRecursionViewState;
+
 export type IndirectRecursionElement = JayElement<
     IndirectRecursionViewState,
     IndirectRecursionElementRefs
@@ -46,7 +50,10 @@ export type IndirectRecursionElementPreRender = [
 ];
 export type IndirectRecursionContract = JayContract<
     IndirectRecursionViewState,
-    IndirectRecursionElementRefs
+    IndirectRecursionElementRefs,
+    IndirectRecursionSlowViewState,
+    IndirectRecursionFastViewState,
+    IndirectRecursionInteractiveViewState
 >;
 
 export function render(options?: RenderElementOptions): IndirectRecursionElementPreRender {

@@ -16,6 +16,11 @@ export interface CompositeViewState {
 
 export interface CompositeElementRefs {}
 
+export type CompositeSlowViewState = {};
+export type CompositeFastViewState = {};
+export type CompositeInteractiveViewState = CompositeViewState;
+
+
 export type CompositeElement = JayElement<CompositeViewState, CompositeElementRefs>;
 export type CompositeElementRender = RenderElement<
     CompositeViewState,
@@ -23,7 +28,13 @@ export type CompositeElementRender = RenderElement<
     CompositeElement
 >;
 export type CompositeElementPreRender = [CompositeElementRefs, CompositeElementRender];
-export type CompositeContract = JayContract<CompositeViewState, CompositeElementRefs>;
+export type CompositeContract = JayContract<
+    CompositeViewState,
+    CompositeElementRefs,
+    CompositeSlowViewState,
+    CompositeFastViewState,
+    CompositeInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): CompositeElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

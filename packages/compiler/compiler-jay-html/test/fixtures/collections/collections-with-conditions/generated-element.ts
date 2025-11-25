@@ -26,6 +26,10 @@ export interface CollectionsWithConditionsViewState {
 
 export interface CollectionsWithConditionsElementRefs {}
 
+export type CollectionsWithConditionsSlowViewState = {};
+export type CollectionsWithConditionsFastViewState = {};
+export type CollectionsWithConditionsInteractiveViewState = CollectionsWithConditionsViewState;
+
 export type CollectionsWithConditionsElement = JayElement<
     CollectionsWithConditionsViewState,
     CollectionsWithConditionsElementRefs
@@ -41,7 +45,10 @@ export type CollectionsWithConditionsElementPreRender = [
 ];
 export type CollectionsWithConditionsContract = JayContract<
     CollectionsWithConditionsViewState,
-    CollectionsWithConditionsElementRefs
+    CollectionsWithConditionsElementRefs,
+    CollectionsWithConditionsSlowViewState,
+    CollectionsWithConditionsFastViewState,
+    CollectionsWithConditionsInteractiveViewState
 >;
 
 export function render(options?: RenderElementOptions): CollectionsWithConditionsElementPreRender {

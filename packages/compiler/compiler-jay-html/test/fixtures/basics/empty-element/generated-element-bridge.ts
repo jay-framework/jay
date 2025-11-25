@@ -5,6 +5,11 @@ export interface EmptyElementViewState {}
 
 export interface EmptyElementElementRefs {}
 
+export type EmptyElementSlowViewState = {};
+export type EmptyElementFastViewState = {};
+export type EmptyElementInteractiveViewState = EmptyElementViewState;
+
+
 export type EmptyElementElement = JayElement<EmptyElementViewState, EmptyElementElementRefs>;
 export type EmptyElementElementRender = RenderElement<
     EmptyElementViewState,
@@ -12,7 +17,13 @@ export type EmptyElementElementRender = RenderElement<
     EmptyElementElement
 >;
 export type EmptyElementElementPreRender = [EmptyElementElementRefs, EmptyElementElementRender];
-export type EmptyElementContract = JayContract<EmptyElementViewState, EmptyElementElementRefs>;
+export type EmptyElementContract = JayContract<
+    EmptyElementViewState,
+    EmptyElementElementRefs,
+    EmptyElementSlowViewState,
+    EmptyElementFastViewState,
+    EmptyElementInteractiveViewState
+>;
 
 export function render(): EmptyElementElementPreRender {
     const [refManager, []] = SecureReferencesManager.forElement([], [], [], []);

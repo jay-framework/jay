@@ -26,6 +26,11 @@ export interface LinkedListElementRefs {
     listNode: HTMLElementProxy<LinkedListViewState, HTMLDivElement>;
 }
 
+export type LinkedListSlowViewState = {};
+export type LinkedListFastViewState = {};
+export type LinkedListInteractiveViewState = LinkedListViewState;
+
+
 export type LinkedListElement = JayElement<LinkedListViewState, LinkedListElementRefs>;
 export type LinkedListElementRender = RenderElement<
     LinkedListViewState,
@@ -33,7 +38,13 @@ export type LinkedListElementRender = RenderElement<
     LinkedListElement
 >;
 export type LinkedListElementPreRender = [LinkedListElementRefs, LinkedListElementRender];
-export type LinkedListContract = JayContract<LinkedListViewState, LinkedListElementRefs>;
+export type LinkedListContract = JayContract<
+    LinkedListViewState,
+    LinkedListElementRefs,
+    LinkedListSlowViewState,
+    LinkedListFastViewState,
+    LinkedListInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): LinkedListElementPreRender {
     const [refManager, [refNodeContent, refListNode]] = ReferencesManager.for(

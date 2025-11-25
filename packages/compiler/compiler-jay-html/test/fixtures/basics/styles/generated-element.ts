@@ -16,10 +16,21 @@ export interface StylesViewState {
 
 export interface StylesElementRefs {}
 
+export type StylesSlowViewState = {};
+export type StylesFastViewState = {};
+export type StylesInteractiveViewState = StylesViewState;
+
+
 export type StylesElement = JayElement<StylesViewState, StylesElementRefs>;
 export type StylesElementRender = RenderElement<StylesViewState, StylesElementRefs, StylesElement>;
 export type StylesElementPreRender = [StylesElementRefs, StylesElementRender];
-export type StylesContract = JayContract<StylesViewState, StylesElementRefs>;
+export type StylesContract = JayContract<
+    StylesViewState,
+    StylesElementRefs,
+    StylesSlowViewState,
+    StylesFastViewState,
+    StylesInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): StylesElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

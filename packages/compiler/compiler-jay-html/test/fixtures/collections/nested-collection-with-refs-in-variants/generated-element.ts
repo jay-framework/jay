@@ -45,6 +45,11 @@ export interface NestedCollectionWithRefsInVariantsElementRefs {
     };
 }
 
+export type NestedCollectionWithRefsInVariantsSlowViewState = {};
+export type NestedCollectionWithRefsInVariantsFastViewState = {};
+export type NestedCollectionWithRefsInVariantsInteractiveViewState =
+    NestedCollectionWithRefsInVariantsViewState;
+
 export type NestedCollectionWithRefsInVariantsElement = JayElement<
     NestedCollectionWithRefsInVariantsViewState,
     NestedCollectionWithRefsInVariantsElementRefs
@@ -60,7 +65,10 @@ export type NestedCollectionWithRefsInVariantsElementPreRender = [
 ];
 export type NestedCollectionWithRefsInVariantsContract = JayContract<
     NestedCollectionWithRefsInVariantsViewState,
-    NestedCollectionWithRefsInVariantsElementRefs
+    NestedCollectionWithRefsInVariantsElementRefs,
+    NestedCollectionWithRefsInVariantsSlowViewState,
+    NestedCollectionWithRefsInVariantsFastViewState,
+    NestedCollectionWithRefsInVariantsInteractiveViewState
 >;
 
 export function render(

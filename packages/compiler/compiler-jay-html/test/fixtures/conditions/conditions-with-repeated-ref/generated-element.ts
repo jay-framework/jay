@@ -22,6 +22,11 @@ export interface ConditionsWithRepeatedRefElementRefs {
     text1: HTMLElementProxy<ConditionsWithRepeatedRefViewState, HTMLDivElement>;
 }
 
+export type ConditionsWithRepeatedRefSlowViewState = {};
+export type ConditionsWithRepeatedRefFastViewState = {};
+export type ConditionsWithRepeatedRefInteractiveViewState = ConditionsWithRepeatedRefViewState;
+
+
 export type ConditionsWithRepeatedRefElement = JayElement<
     ConditionsWithRepeatedRefViewState,
     ConditionsWithRepeatedRefElementRefs
@@ -37,7 +42,10 @@ export type ConditionsWithRepeatedRefElementPreRender = [
 ];
 export type ConditionsWithRepeatedRefContract = JayContract<
     ConditionsWithRepeatedRefViewState,
-    ConditionsWithRepeatedRefElementRefs
+    ConditionsWithRepeatedRefElementRefs,
+    ConditionsWithRepeatedRefSlowViewState,
+    ConditionsWithRepeatedRefFastViewState,
+    ConditionsWithRepeatedRefInteractiveViewState
 >;
 
 export function render(options?: RenderElementOptions): ConditionsWithRepeatedRefElementPreRender {

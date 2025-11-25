@@ -35,6 +35,10 @@ export interface NestedBtreeElementRefs {
     };
 }
 
+export type NestedBtreeSlowViewState = {};
+export type NestedBtreeFastViewState = {};
+export type NestedBtreeInteractiveViewState = NestedBtreeViewState;
+
 export type NestedBtreeElement = JayElement<NestedBtreeViewState, NestedBtreeElementRefs>;
 export type NestedBtreeElementRender = RenderElement<
     NestedBtreeViewState,
@@ -42,7 +46,13 @@ export type NestedBtreeElementRender = RenderElement<
     NestedBtreeElement
 >;
 export type NestedBtreeElementPreRender = [NestedBtreeElementRefs, NestedBtreeElementRender];
-export type NestedBtreeContract = JayContract<NestedBtreeViewState, NestedBtreeElementRefs>;
+export type NestedBtreeContract = JayContract<
+    NestedBtreeViewState,
+    NestedBtreeElementRefs,
+    NestedBtreeSlowViewState,
+    NestedBtreeFastViewState,
+    NestedBtreeInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): NestedBtreeElementPreRender {
     const [btreeRefManager, [refTreeNode]] = ReferencesManager.for(

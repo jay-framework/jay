@@ -34,6 +34,10 @@ export interface TwoWithDataElementRefs {
     };
 }
 
+export type TwoWithDataSlowViewState = {};
+export type TwoWithDataFastViewState = {};
+export type TwoWithDataInteractiveViewState = TwoWithDataViewState;
+
 export type TwoWithDataElement = JayElement<TwoWithDataViewState, TwoWithDataElementRefs>;
 export type TwoWithDataElementRender = RenderElement<
     TwoWithDataViewState,
@@ -41,7 +45,13 @@ export type TwoWithDataElementRender = RenderElement<
     TwoWithDataElement
 >;
 export type TwoWithDataElementPreRender = [TwoWithDataElementRefs, TwoWithDataElementRender];
-export type TwoWithDataContract = JayContract<TwoWithDataViewState, TwoWithDataElementRefs>;
+export type TwoWithDataContract = JayContract<
+    TwoWithDataViewState,
+    TwoWithDataElementRefs,
+    TwoWithDataSlowViewState,
+    TwoWithDataFastViewState,
+    TwoWithDataInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): TwoWithDataElementPreRender {
     const [treeRefManager, [refTitle]] = ReferencesManager.for(options, ['title'], [], [], []);

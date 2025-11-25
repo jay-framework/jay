@@ -51,6 +51,10 @@ export interface CollectionWithRefsElementRefs {
     };
 }
 
+export type CollectionWithRefsSlowViewState = {};
+export type CollectionWithRefsFastViewState = {};
+export type CollectionWithRefsInteractiveViewState = CollectionWithRefsViewState;
+
 export type CollectionWithRefsElement = JayElement<
     CollectionWithRefsViewState,
     CollectionWithRefsElementRefs
@@ -66,7 +70,10 @@ export type CollectionWithRefsElementPreRender = [
 ];
 export type CollectionWithRefsContract = JayContract<
     CollectionWithRefsViewState,
-    CollectionWithRefsElementRefs
+    CollectionWithRefsElementRefs,
+    CollectionWithRefsSlowViewState,
+    CollectionWithRefsFastViewState,
+    CollectionWithRefsInteractiveViewState
 >;
 
 export function render(): CollectionWithRefsElementPreRender {

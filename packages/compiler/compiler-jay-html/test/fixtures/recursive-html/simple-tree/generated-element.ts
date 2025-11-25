@@ -26,6 +26,11 @@ export interface SimpleTreeElementRefs {
     treeNode: HTMLElementProxy<SimpleTreeViewState, HTMLDivElement>;
 }
 
+export type SimpleTreeSlowViewState = {};
+export type SimpleTreeFastViewState = {};
+export type SimpleTreeInteractiveViewState = SimpleTreeViewState;
+
+
 export type SimpleTreeElement = JayElement<SimpleTreeViewState, SimpleTreeElementRefs>;
 export type SimpleTreeElementRender = RenderElement<
     SimpleTreeViewState,
@@ -33,7 +38,13 @@ export type SimpleTreeElementRender = RenderElement<
     SimpleTreeElement
 >;
 export type SimpleTreeElementPreRender = [SimpleTreeElementRefs, SimpleTreeElementRender];
-export type SimpleTreeContract = JayContract<SimpleTreeViewState, SimpleTreeElementRefs>;
+export type SimpleTreeContract = JayContract<
+    SimpleTreeViewState,
+    SimpleTreeElementRefs,
+    SimpleTreeSlowViewState,
+    SimpleTreeFastViewState,
+    SimpleTreeInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): SimpleTreeElementPreRender {
     const [childrenRefManager, []] = ReferencesManager.for(options, [], [], [], []);
