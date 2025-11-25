@@ -1125,11 +1125,12 @@ ${renderedRefsManager}
 
 function generatePhaseSpecificTypes(jayFile: JayHtmlSourceFile): string {
     const baseName = jayFile.baseElementName;
-    const viewStateTypeName = `${baseName}ViewState`;
+    // Get the actual ViewState type name from the JayType (might be imported, like "Node")
+    const actualViewStateTypeName = jayFile.types.name;
     
     // If we have a contract reference, generate phase types from contract
     if (jayFile.contract) {
-        return generateAllPhaseViewStateTypes(jayFile.contract, viewStateTypeName);
+        return generateAllPhaseViewStateTypes(jayFile.contract, actualViewStateTypeName);
     }
     
     // If inline data, default to interactive phase
@@ -1137,7 +1138,7 @@ function generatePhaseSpecificTypes(jayFile: JayHtmlSourceFile): string {
         return [
             `export type ${baseName}SlowViewState = {};`,
             `export type ${baseName}FastViewState = {};`,
-            `export type ${baseName}InteractiveViewState = ${baseName}ViewState;`,
+            `export type ${baseName}InteractiveViewState = ${actualViewStateTypeName};`,
         ].join('\n');
     }
     
@@ -1218,15 +1219,22 @@ export function generateElementFile(
     // If we have contract or inline data, replace the 2-parameter JayContract with 5-parameter version
     if (jayFile.contract || jayFile.hasInlineData) {
         const baseName = jayFile.baseElementName;
-        const old2ParamContract = `export type ${baseName}Contract = JayContract<${baseName}ViewState, ${baseName}ElementRefs>;`;
-        const new5ParamContract = `export type ${baseName}Contract = JayContract<
-    ${baseName}ViewState,
+        // Use regex to match any ViewState type name (not just ${baseName}ViewState)
+        // This handles cases like imported types (e.g., "Node" instead of "RecursiveComponentsViewState")
+        const contractPattern = new RegExp(
+            `export type ${baseName}Contract = JayContract<([^,]+), ${baseName}ElementRefs>;`,
+            'g'
+        );
+        
+        renderedElement = renderedElement.replace(contractPattern, (match, viewStateType) => {
+            return `export type ${baseName}Contract = JayContract<
+    ${viewStateType},
     ${baseName}ElementRefs,
     ${baseName}SlowViewState,
     ${baseName}FastViewState,
     ${baseName}InteractiveViewState
 >;`;
-        renderedElement = renderedElement.replace(old2ParamContract, new5ParamContract);
+        });
     }
     
     const renderedFile = [
@@ -1281,15 +1289,22 @@ export function generateElementBridgeFile(jayFile: JayHtmlSourceFile): string {
     // If we have contract or inline data, replace the 2-parameter JayContract with 5-parameter version
     if (jayFile.contract || jayFile.hasInlineData) {
         const baseName = jayFile.baseElementName;
-        const old2ParamContract = `export type ${baseName}Contract = JayContract<${baseName}ViewState, ${baseName}ElementRefs>;`;
-        const new5ParamContract = `export type ${baseName}Contract = JayContract<
-    ${baseName}ViewState,
+        // Use regex to match any ViewState type name (not just ${baseName}ViewState)
+        // This handles cases like imported types (e.g., "Node" instead of "RecursiveComponentsViewState")
+        const contractPattern = new RegExp(
+            `export type ${baseName}Contract = JayContract<([^,]+), ${baseName}ElementRefs>;`,
+            'g'
+        );
+        
+        renderedElement = renderedElement.replace(contractPattern, (match, viewStateType) => {
+            return `export type ${baseName}Contract = JayContract<
+    ${viewStateType},
     ${baseName}ElementRefs,
     ${baseName}SlowViewState,
     ${baseName}FastViewState,
     ${baseName}InteractiveViewState
 >;`;
-        renderedElement = renderedElement.replace(old2ParamContract, new5ParamContract);
+        });
     }
     
     return [
