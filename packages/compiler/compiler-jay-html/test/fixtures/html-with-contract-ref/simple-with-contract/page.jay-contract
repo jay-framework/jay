@@ -1,0 +1,23 @@
+name: Page
+tags:
+  # Static content - rendered at build time
+  - tag: slowlyRendered
+    type: data
+    dataType: string
+    phase: slow
+  
+  # Dynamic content - rendered per request
+  - tag: fastRendered
+    type: data
+    dataType: string
+    phase: fast
+  
+  - tag: fastDynamicRendered
+    type: data
+    dataType: string
+    phase: fast+interactive
+
+interactive:
+  - tag: button
+    elementType: [button]
+

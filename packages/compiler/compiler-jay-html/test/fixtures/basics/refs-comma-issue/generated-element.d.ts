@@ -25,6 +25,10 @@ export interface RefsCommaIssueElementRefs {
     };
 }
 
+export type RefsCommaIssueSlowViewState = {};
+export type RefsCommaIssueFastViewState = {};
+export type RefsCommaIssueInteractiveViewState = RefsCommaIssueViewState;
+
 export type RefsCommaIssueElement = JayElement<RefsCommaIssueViewState, RefsCommaIssueElementRefs>;
 export type RefsCommaIssueElementRender = RenderElement<
     RefsCommaIssueViewState,
@@ -37,7 +41,10 @@ export type RefsCommaIssueElementPreRender = [
 ];
 export type RefsCommaIssueContract = JayContract<
     RefsCommaIssueViewState,
-    RefsCommaIssueElementRefs
+    RefsCommaIssueElementRefs,
+    RefsCommaIssueSlowViewState,
+    RefsCommaIssueFastViewState,
+    RefsCommaIssueInteractiveViewState
 >;
 
 export declare function render(options?: RenderElementOptions): RefsCommaIssueElementPreRender;

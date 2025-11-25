@@ -24,6 +24,7 @@ import {
     RuntimeMode,
     WithValidations,
 } from '@jay-framework/compiler-shared';
+import { generateAllPhaseViewStateTypes } from '../contract/phase-type-generator';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
 import {
@@ -1122,6 +1123,28 @@ ${renderedRefsManager}
     );
 }
 
+function generatePhaseSpecificTypes(jayFile: JayHtmlSourceFile): string {
+    const baseName = jayFile.baseElementName;
+    const viewStateTypeName = `${baseName}ViewState`;
+    
+    // If we have a contract reference, generate phase types from contract
+    if (jayFile.contract) {
+        return generateAllPhaseViewStateTypes(jayFile.contract, viewStateTypeName);
+    }
+    
+    // If inline data, default to interactive phase
+    if (jayFile.hasInlineData) {
+        return [
+            `export type ${baseName}SlowViewState = {};`,
+            `export type ${baseName}FastViewState = {};`,
+            `export type ${baseName}InteractiveViewState = ${baseName}ViewState;`,
+        ].join('\n');
+    }
+    
+    // Fallback (shouldn't happen)
+    return '';
+}
+
 export function generateElementDefinitionFile(
     parsedFile: WithValidations<JayHtmlSourceFile>,
 ): WithValidations<string> {
@@ -1139,6 +1162,22 @@ export function generateElementDefinitionFile(
                 jayFile.headLinks,
             );
         const cssImport = generateCssImport(jayFile);
+        const phaseTypes = generatePhaseSpecificTypes(jayFile);
+        
+        // If we have contract or inline data, replace the 2-parameter JayContract with 5-parameter version
+        if (jayFile.contract || jayFile.hasInlineData) {
+            const baseName = jayFile.baseElementName;
+            const old2ParamContract = `export type ${baseName}Contract = JayContract<${baseName}ViewState, ${baseName}ElementRefs>;`;
+            const new5ParamContract = `export type ${baseName}Contract = JayContract<
+    ${baseName}ViewState,
+    ${baseName}ElementRefs,
+    ${baseName}SlowViewState,
+    ${baseName}FastViewState,
+    ${baseName}InteractiveViewState
+>;`;
+            renderedElement = renderedElement.replace(old2ParamContract, new5ParamContract);
+        }
+        
         return [
             renderImports(
                 renderedImplementation.imports.plus(Import.jayElement),
@@ -1149,6 +1188,7 @@ export function generateElementDefinitionFile(
             cssImport,
             types,
             renderedRefs,
+            phaseTypes,
             renderedElement,
             renderFunctionDeclaration(preRenderType),
         ]
