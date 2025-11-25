@@ -2,6 +2,25 @@ import { Contract, ContractTag, ContractTagType, RenderingPhase } from './contra
 import { filterTagsByPhase, getEffectivePhase } from './contract-phase-validator';
 import { pascalCase, camelCase } from 'change-case';
 
+/**
+ * Check if a property should be included in a target phase's ViewState
+ * 
+ * Rules:
+ * - slow: only properties with phase 'slow'
+ * - fast: properties with phase 'fast' OR 'fast+interactive' (since they're set at request time)
+ * - fast+interactive: only properties with phase 'fast+interactive'
+ */
+function shouldIncludeInPhase(propertyPhase: RenderingPhase, targetPhase: RenderingPhase): boolean {
+    if (targetPhase === 'slow') {
+        return propertyPhase === 'slow';
+    } else if (targetPhase === 'fast') {
+        return propertyPhase === 'fast' || propertyPhase === 'fast+interactive';
+    } else if (targetPhase === 'fast+interactive') {
+        return propertyPhase === 'fast+interactive';
+    }
+    return false;
+}
+
 interface PropertyPath {
     path: string[];
     propertyName: string;
@@ -68,8 +87,8 @@ function extractPropertyPathsAndArrays(
                 }
             }
         } else {
-            // Leaf property - include if it matches the target phase
-            if (effectivePhase === targetPhase) {
+            // Leaf property - include if it should be in the target phase
+            if (shouldIncludeInPhase(effectivePhase, targetPhase)) {
                 paths.push({
                     path: parentPath,
                     propertyName
