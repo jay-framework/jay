@@ -1,4 +1,5 @@
-data:
+name: page
+tags:
   - tag: title
     type: data
     dataType: string

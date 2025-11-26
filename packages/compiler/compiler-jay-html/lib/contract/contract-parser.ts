@@ -223,6 +223,18 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
 export function parseContract(contractYaml: string, fileName: string): WithValidations<Contract> {
     try {
         const parsedYaml = yaml.load(contractYaml) as ParsedYaml;
+        const validations: string[] = [];
+
+        if (!parsedYaml.name) {
+            validations.push('Contract must have a name');
+        }
+        if (!parsedYaml.tags && !Array.isArray(parsedYaml.tags)) {
+            validations.push('Contract must have tags as an array of the contract tags');
+        }
+
+        if (validations.length > 0) {
+            return new WithValidations(undefined, validations);
+        }
 
         const tagResults = parsedYaml.tags.map((tag) => parseTag(tag));
         const tagValidations = tagResults.flatMap((tr) => tr.validations);
@@ -232,20 +244,13 @@ export function parseContract(contractYaml: string, fileName: string): WithValid
 
         // Check for duplicate tag names at root level
         const tagNames = new Set<string>();
-        const duplicateTagValidations: string[] = [];
 
         parsedTags.forEach((tag) => {
             if (tagNames.has(tag.tag)) {
-                duplicateTagValidations.push(`Duplicate tag name [${tag.tag}]`);
+                validations.push(`Duplicate tag name [${tag.tag}]`);
             }
             tagNames.add(tag.tag);
         });
-
-        // Check if contract has a name
-        const nameValidations: string[] = [];
-        if (!parsedYaml.name) {
-            nameValidations.push('Contract must have a name');
-        }
 
         const contract: Contract = {
             name: parsedYaml.name,
@@ -257,8 +262,7 @@ export function parseContract(contractYaml: string, fileName: string): WithValid
 
         return new WithValidations<Contract>(contract, [
             ...tagValidations,
-            ...duplicateTagValidations,
-            ...nameValidations,
+            ...validations,
             ...phaseValidations,
         ]);
     } catch (e) {
