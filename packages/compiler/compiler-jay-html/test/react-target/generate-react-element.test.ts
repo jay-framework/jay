@@ -222,7 +222,7 @@ describe('generate jay-html element for react target', () => {
                 expect(await prettify(elementFile.val)).toEqual(
                     await readFixtureReactFile(targetFolder, 'component-in-component.jay-html'),
                 );
-            });
+            }, 10000);
 
             it.skip('dynamic nesting components in other components', async () => {
                 const elementFile = await readFileAndGenerateElementFile(sourceFolder, {

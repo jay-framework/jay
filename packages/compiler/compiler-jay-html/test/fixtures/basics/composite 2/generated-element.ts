@@ -21,7 +21,6 @@ export type Composite2SlowViewState = {};
 export type Composite2FastViewState = {};
 export type Composite2InteractiveViewState = Composite2ViewState;
 
-
 export type Composite2Element = JayElement<Composite2ViewState, Composite2ElementRefs>;
 export type Composite2ElementRender = RenderElement<
     Composite2ViewState,

@@ -20,7 +20,6 @@ export type SimpleSvgSlowViewState = {};
 export type SimpleSvgFastViewState = {};
 export type SimpleSvgInteractiveViewState = SimpleSvgViewState;
 
-
 export type SimpleSvgElement = JayElement<SimpleSvgViewState, SimpleSvgElementRefs>;
 export type SimpleSvgElementRender = RenderElement<
     SimpleSvgViewState,

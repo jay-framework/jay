@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { parseContract } from '../lib/contract/contract-parser';
-import { validateContractPhases, filterTagsByPhase, getEffectivePhase } from '../lib/contract/contract-phase-validator';
+import {
+    validateContractPhases,
+    filterTagsByPhase,
+    getEffectivePhase,
+} from '../lib/contract/contract-phase-validator';
 import { ContractTagType } from '../lib/contract/contract';
 
 describe('Contract Phase Parsing', () => {
@@ -42,7 +46,7 @@ tags:
         expect(result.validations).toEqual([]);
         expect(result.val).toBeDefined();
         expect(result.val.tags[0].phase).toBeUndefined(); // Not set in YAML
-        
+
         // But effective phase should be slow
         const effectivePhase = getEffectivePhase(result.val.tags[0]);
         expect(effectivePhase).toBe('slow');
@@ -180,7 +184,7 @@ tags:
 `;
         const result = parseContract(contractYaml, 'test.jay-contract');
         const slowTags = filterTagsByPhase(result.val.tags, 'slow');
-        
+
         expect(slowTags).toHaveLength(1);
         expect(slowTags[0].tag).toBe('slowField');
     });
@@ -204,7 +208,7 @@ tags:
 `;
         const result = parseContract(contractYaml, 'test.jay-contract');
         const fastTags = filterTagsByPhase(result.val.tags, 'fast');
-        
+
         expect(fastTags).toHaveLength(1);
         expect(fastTags[0].tag).toBe('fastField');
     });
@@ -228,7 +232,7 @@ tags:
 `;
         const result = parseContract(contractYaml, 'test.jay-contract');
         const interactiveTags = filterTagsByPhase(result.val.tags, 'fast+interactive');
-        
+
         expect(interactiveTags).toHaveLength(1);
         expect(interactiveTags[0].tag).toBe('interactiveField');
     });
@@ -246,7 +250,7 @@ tags:
 `;
         const result = parseContract(contractYaml, 'test.jay-contract');
         const slowTags = filterTagsByPhase(result.val.tags, 'slow');
-        
+
         // Should only include the data field, not the interactive button
         expect(slowTags).toHaveLength(1);
         expect(slowTags[0].tag).toBe('slowField');
@@ -270,11 +274,10 @@ tags:
 `;
         const result = parseContract(contractYaml, 'test.jay-contract');
         const slowTags = filterTagsByPhase(result.val.tags, 'slow');
-        
+
         expect(slowTags).toHaveLength(1);
         expect(slowTags[0].tag).toBe('product');
         expect(slowTags[0].tags).toHaveLength(1);
         expect(slowTags[0].tags[0].tag).toBe('name');
     });
 });
-

@@ -19,7 +19,6 @@ export type SimpleMathmlSlowViewState = {};
 export type SimpleMathmlFastViewState = {};
 export type SimpleMathmlInteractiveViewState = SimpleMathmlViewState;
 
-
 export type SimpleMathmlElement = JayElement<SimpleMathmlViewState, SimpleMathmlElementRefs>;
 export type SimpleMathmlElementRender = RenderElement<
     SimpleMathmlViewState,

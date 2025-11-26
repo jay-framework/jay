@@ -12,7 +12,10 @@ export interface FSComponentViewState {
 export interface FSComponentElementRefs {}
 
 // Phase-specific ViewStates for testing
-export type FSComponentSlowViewState = Pick<FSComponentViewState, 'id' | 'name' | 'age' | 'address'>;
+export type FSComponentSlowViewState = Pick<
+    FSComponentViewState,
+    'id' | 'name' | 'age' | 'address'
+>;
 export type FSComponentFastViewState = Pick<FSComponentViewState, 'stars' | 'rating'>;
 export type FSComponentInteractiveViewState = {};
 

@@ -340,26 +340,26 @@ async function parseTypes(
         // Load the referenced contract
         // filePath is already the directory containing the HTML file
         const contractPath = path.resolve(filePath, jayYaml.contractRef);
-        
+
         try {
             const contractResult = importResolver.loadContract(contractPath);
-            
+
             // Add contract validations to our validations
             validations.push(...contractResult.validations);
-            
+
             if (contractResult.val) {
                 // Store the parsed contract for later use in type generation
                 jayYaml.parsedContract = contractResult.val;
-                
+
                 // Extract ViewState type from contract using the existing converter
                 const viewStateResult = await contractToImportsViewStateAndRefs(
                     contractResult.val,
                     contractPath,
                     importResolver,
                 );
-                
+
                 validations.push(...viewStateResult.validations);
-                
+
                 if (viewStateResult.val && viewStateResult.val.type) {
                     // Rename the type to match the HTML element name
                     const contractType = viewStateResult.val.type;
@@ -368,7 +368,9 @@ async function parseTypes(
                     }
                     return contractType;
                 } else {
-                    validations.push(`Failed to extract ViewState from contract ${jayYaml.contractRef}`);
+                    validations.push(
+                        `Failed to extract ViewState from contract ${jayYaml.contractRef}`,
+                    );
                     return new JayObjectType(baseElementName + 'ViewState', {});
                 }
             } else {
@@ -376,11 +378,13 @@ async function parseTypes(
                 return new JayObjectType(baseElementName + 'ViewState', {});
             }
         } catch (error) {
-            validations.push(`Referenced contract file not found: ${jayYaml.contractRef} - ${error.message}`);
+            validations.push(
+                `Referenced contract file not found: ${jayYaml.contractRef} - ${error.message}`,
+            );
             return new JayObjectType(baseElementName + 'ViewState', {});
         }
     }
-    
+
     // Handle inline data
     if (typeof jayYaml.data === 'object') {
         const resolvedType = resolveType(
@@ -428,33 +432,36 @@ function parseYaml(root: HTMLElement): WithValidations<JayYamlStructure> {
         );
         return new WithValidations(undefined, validations);
     }
-    
+
     const jayYamlElement = jayYamlElements[0];
     const contractAttr = jayYamlElement.getAttribute('contract');
     const jayYamlText = jayYamlElement.text.trim();
-    
+
     // Check for contract reference
     if (contractAttr) {
         // Validate that script body is empty when contract attribute is present
         if (jayYamlText && jayYamlText.length > 0) {
             validations.push(
                 `Cannot have both 'contract' attribute and inline data structure. ` +
-                `Either reference a contract file or define data inline, not both.`
+                    `Either reference a contract file or define data inline, not both.`,
             );
             return new WithValidations(undefined, validations);
         }
-        
+
         // Return structure with contract reference
-        return new WithValidations({
-            contractRef: contractAttr,
-            imports: {},
-            examples: undefined,
-        }, validations);
+        return new WithValidations(
+            {
+                contractRef: contractAttr,
+                imports: {},
+                examples: undefined,
+            },
+            validations,
+        );
     }
-    
+
     // Parse inline data structure
     let jayYamlParsed = yaml.load(jayYamlText) as JayYamlStructure;
-    jayYamlParsed.hasInlineData = true;  // Mark as inline data
+    jayYamlParsed.hasInlineData = true; // Mark as inline data
     return new WithValidations(jayYamlParsed, validations);
 }
 
@@ -738,7 +745,15 @@ export async function parseJayFile(
         linkedContractResolver,
     );
     const importNames = headfullImports.flatMap((_) => _.names);
-    const types = await parseTypes(jayYaml, validations, baseElementName, importNames, headlessImports, filePath, linkedContractResolver);
+    const types = await parseTypes(
+        jayYaml,
+        validations,
+        baseElementName,
+        importNames,
+        headlessImports,
+        filePath,
+        linkedContractResolver,
+    );
     const imports: JayImportLink[] = [
         ...headfullImports,
         ...headlessImports.flatMap((_) => _.contractLinks),

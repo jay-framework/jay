@@ -23,7 +23,6 @@ export type ConditionsSlowViewState = {};
 export type ConditionsFastViewState = {};
 export type ConditionsInteractiveViewState = ConditionsViewState;
 
-
 export type ConditionsElement = JayElement<ConditionsViewState, ConditionsElementRefs>;
 export type ConditionsElementRender = RenderElement<
     ConditionsViewState,

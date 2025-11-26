@@ -1,10 +1,15 @@
 import {
-    FSComponentContract, FSComponentFastViewState, FSComponentSlowViewState,
+    FSComponentContract,
+    FSComponentFastViewState,
+    FSComponentSlowViewState,
 } from './full-stack-component.jay-html';
 import {
     makeJayStackComponent,
     partialRender,
-    createJayService, RenderSlowly, SlowlyRenderResult, FastRenderResult,
+    createJayService,
+    RenderSlowly,
+    SlowlyRenderResult,
+    FastRenderResult,
 } from '../../lib';
 
 interface FSCProps {}
@@ -12,7 +17,10 @@ interface FSCProps {}
 interface MyContext {}
 const MyContextMarker = createJayService<MyContext>();
 
-async function slowlyRender(props, myContext): Promise<SlowlyRenderResult<FSComponentSlowViewState, {id: string}>> {
+async function slowlyRender(
+    props,
+    myContext,
+): Promise<SlowlyRenderResult<FSComponentSlowViewState, { id: string }>> {
     return partialRender(
         {
             id: '1',
@@ -20,21 +28,22 @@ async function slowlyRender(props, myContext): Promise<SlowlyRenderResult<FSComp
             age: 32,
             address: '25 W 14 st, NY, NY',
         },
-        {id: '1'},
+        { id: '1' },
     );
 }
 
-
-async function fastRender(props, myContext): Promise<FastRenderResult<FSComponentFastViewState, {id: string }>>{
+async function fastRender(
+    props,
+    myContext,
+): Promise<FastRenderResult<FSComponentFastViewState, { id: string }>> {
     return partialRender(
         {
             stars: 12,
             rating: 13,
         },
-        {id: '1'},
+        { id: '1' },
     );
 }
-
 
 function interactive(props, refs) {
     return {

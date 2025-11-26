@@ -13,8 +13,11 @@ export interface SimplePluginViewState {
 }
 
 export type SimplePluginSlowViewState = Pick<SimplePluginViewState, 'pluginSlowlyRendered'>;
-export type SimplePluginFastViewState = Pick<SimplePluginViewState, 'pluginInteractiveRendered'>;;
-export type SimplePluginInteractiveViewState = Pick<SimplePluginViewState, 'pluginInteractiveRendered'>;
+export type SimplePluginFastViewState = Pick<SimplePluginViewState, 'pluginInteractiveRendered'>;
+export type SimplePluginInteractiveViewState = Pick<
+    SimplePluginViewState,
+    'pluginInteractiveRendered'
+>;
 
 export interface SimplePluginRefs {
     pluginButton: HTMLElementProxy<SimplePluginViewState, HTMLButtonElement>;
@@ -29,4 +32,5 @@ export type SimplePluginContract = JayContract<
     SimplePluginRefs,
     SimplePluginSlowViewState,
     SimplePluginFastViewState,
-    SimplePluginInteractiveViewState>;
+    SimplePluginInteractiveViewState
+>;

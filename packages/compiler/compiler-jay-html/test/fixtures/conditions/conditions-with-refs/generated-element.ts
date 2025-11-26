@@ -27,7 +27,6 @@ export type ConditionsWithRefsSlowViewState = {};
 export type ConditionsWithRefsFastViewState = {};
 export type ConditionsWithRefsInteractiveViewState = ConditionsWithRefsViewState;
 
-
 export type ConditionsWithRefsElement = JayElement<
     ConditionsWithRefsViewState,
     ConditionsWithRefsElementRefs

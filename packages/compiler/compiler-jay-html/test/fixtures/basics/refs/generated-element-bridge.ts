@@ -15,7 +15,6 @@ export type RefsSlowViewState = {};
 export type RefsFastViewState = {};
 export type RefsInteractiveViewState = RefsViewState;
 
-
 export type RefsElement = JayElement<RefsViewState, RefsElementRefs>;
 export type RefsElementRender = RenderElement<RefsViewState, RefsElementRefs, RefsElement>;
 export type RefsElementPreRender = [RefsElementRefs, RefsElementRender];

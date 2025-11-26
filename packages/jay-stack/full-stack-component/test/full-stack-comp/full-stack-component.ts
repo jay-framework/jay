@@ -1,11 +1,5 @@
-import {
-    FSComponentContract,
-} from './full-stack-component.jay-html';
-import {
-    makeJayStackComponent,
-    partialRender,
-    createJayService,
-} from '../../lib';
+import { FSComponentContract } from './full-stack-component.jay-html';
+import { makeJayStackComponent, partialRender, createJayService } from '../../lib';
 
 interface FSCProps {}
 

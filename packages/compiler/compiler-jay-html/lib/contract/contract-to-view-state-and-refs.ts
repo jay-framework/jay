@@ -356,11 +356,11 @@ export async function contractToPhaseViewState(
 ): Promise<WithValidations<SubContractTraverseResult>> {
     // Filter contract to only include tags for this phase
     const phaseContract = createPhaseContract(contract, phase);
-    
+
     // Generate ViewState type name based on phase
     const phaseName = phase === 'fast+interactive' ? 'Interactive' : pascalCase(phase);
     const viewStateName = pascalCase(`${contract.name} ${phaseName} ViewState`);
-    
+
     const result = await traverseTags(phaseContract.tags, viewStateName, {
         viewStateType: undefined,
         isRepeated,

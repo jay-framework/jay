@@ -10,7 +10,6 @@ export interface CounterElementRefs {
     adderButton: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
 }
 
-
 export type CounterSlowViewState = {};
 export type CounterFastViewState = {};
 export type CounterInteractiveViewState = CounterViewState;

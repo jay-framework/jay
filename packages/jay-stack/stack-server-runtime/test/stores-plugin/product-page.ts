@@ -2,8 +2,10 @@ import { getProductBySlug, getProducts } from './products-database';
 import { getAvailableUnits } from './inventory-service';
 import { Props } from '@jay-framework/component';
 import {
-    ProductPageContract, ProductPageFastViewState,
-    ProductPageRefs, ProductPageSlowViewState,
+    ProductPageContract,
+    ProductPageFastViewState,
+    ProductPageRefs,
+    ProductPageSlowViewState,
 } from './compiled/product-page.jay-contract';
 import {
     makeJayStackComponent,

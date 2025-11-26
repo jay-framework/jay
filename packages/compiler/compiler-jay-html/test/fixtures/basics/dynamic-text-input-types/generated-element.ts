@@ -20,7 +20,6 @@ export type DynamicTextInputTypesSlowViewState = {};
 export type DynamicTextInputTypesFastViewState = {};
 export type DynamicTextInputTypesInteractiveViewState = DynamicTextInputTypesViewState;
 
-
 export type DynamicTextInputTypesElement = JayElement<
     DynamicTextInputTypesViewState,
     DynamicTextInputTypesElementRefs

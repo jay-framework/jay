@@ -1,4 +1,4 @@
-import {JayContract} from '@jay-framework/runtime';
+import { JayContract } from '@jay-framework/runtime';
 
 export enum MediaType {
     audio,
@@ -59,5 +59,5 @@ export type MediaItemContract = JayContract<
     MediaItemRefs,
     MediaItemSlowViewState,
     MediaItemFastViewState,
-    MediaItemInteractiveViewState>;
-
+    MediaItemInteractiveViewState
+>;

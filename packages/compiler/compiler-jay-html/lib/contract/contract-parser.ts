@@ -65,30 +65,34 @@ function parseType(
     else return new WithValidations([], [`Tag [${tagName}] has an unknown tag type [${type}]`]);
 }
 
-function parsePhase(phase: string | undefined, tagName: string, tagTypes: ContractTagType[]): WithValidations<RenderingPhase | undefined> {
+function parsePhase(
+    phase: string | undefined,
+    tagName: string,
+    tagTypes: ContractTagType[],
+): WithValidations<RenderingPhase | undefined> {
     const validations: string[] = [];
-    
+
     if (!phase) {
         return new WithValidations(undefined, validations);
     }
-    
+
     const validPhases: RenderingPhase[] = ['slow', 'fast', 'fast+interactive'];
-    
+
     if (!validPhases.includes(phase as RenderingPhase)) {
         validations.push(
-            `Tag [${tagName}] has invalid phase [${phase}]. Valid phases are: ${validPhases.join(', ')}`
+            `Tag [${tagName}] has invalid phase [${phase}]. Valid phases are: ${validPhases.join(', ')}`,
         );
         return new WithValidations(undefined, validations);
     }
-    
+
     // Validate that interactive tags don't have explicit phase (they're implicitly fast+interactive)
     if (tagTypes.includes(ContractTagType.interactive)) {
         validations.push(
-            `Tag [${tagName}] of type [interactive] cannot have an explicit phase attribute (implicitly fast+interactive)`
+            `Tag [${tagName}] of type [interactive] cannot have an explicit phase attribute (implicitly fast+interactive)`,
         );
         return new WithValidations(undefined, validations);
     }
-    
+
     return new WithValidations(phase as RenderingPhase, validations);
 }
 
@@ -142,7 +146,7 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
     const description = parseDescription(tag.description);
     const elementType = parseElementType(tag.elementType);
     const required = tag.required;
-    
+
     // Parse phase attribute
     const phaseResult = parsePhase(tag.phase, tag.tag, types.val);
     validations.push(...phaseResult.validations);

@@ -31,7 +31,6 @@ export type ComponentInComponentSlowViewState = {};
 export type ComponentInComponentFastViewState = {};
 export type ComponentInComponentInteractiveViewState = ComponentInComponentViewState;
 
-
 export type ComponentInComponentElement = JayElement<
     ComponentInComponentViewState,
     ComponentInComponentElementRefs

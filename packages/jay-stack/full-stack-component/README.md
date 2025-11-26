@@ -28,24 +28,26 @@ The `@jay-framework/fullstack-component` package provides a fluent builder API f
 
 Jay Stack components support three rendering phases, each optimized for different data lifecycles:
 
-| Rendering Phase        | Rendered Where | When Rendered                  | Use Case                          |
-| ---------------------- | -------------- | ------------------------------ | --------------------------------- |
-| **Slow (Static)**      | SSR            | Build time or data change time | Product names, descriptions, SKUs |
-| **Fast (Dynamic)**     | SSR            | Page serving (per request)     | Inventory, pricing, availability  |
-| **Interactive**        | CSR            | User interaction               | Cart count, user selections       |
+| Rendering Phase    | Rendered Where | When Rendered                  | Use Case                          |
+| ------------------ | -------------- | ------------------------------ | --------------------------------- |
+| **Slow (Static)**  | SSR            | Build time or data change time | Product names, descriptions, SKUs |
+| **Fast (Dynamic)** | SSR            | Page serving (per request)     | Inventory, pricing, availability  |
+| **Interactive**    | CSR            | User interaction               | Cart count, user selections       |
 
 ### Phase-Based Type Validation
 
 Jay Stack automatically generates **phase-specific ViewState types** from your contracts, ensuring that each render function can only return properties appropriate for its phase. This prevents accidentally including fast-changing data in slow renders or slow data in fast renders.
 
 **Benefits:**
+
 - 🛡️ **Compile-time safety**: TypeScript catches phase violations before deployment
 - 📝 **Self-documenting**: The contract explicitly shows which data is static vs dynamic
 - ⚡ **Performance**: Ensures optimal caching and rendering strategies
 - 🎯 **Intent clarity**: Makes data lifecycle explicit in the contract
 
 **Example:**
-```typescript
+
+````typescript
 // TypeScript automatically knows which properties are valid in each phase
 .withSlowlyRender(async () => {
     return partialRender({
@@ -75,11 +77,11 @@ You can annotate your contract properties with the `phase` attribute to control 
         - {tag: productName, dataType: string, phase: slow}
         - {tag: description, dataType: string, phase: slow}
         - {tag: sku, dataType: string, phase: slow}
-        
+
         # Dynamic data - rendered per request
         - {tag: price, dataType: number, phase: fast}
         - {tag: inStock, dataType: boolean, phase: fast}
-        
+
         # No phase specified = defaults to 'slow'
         - {tag: category, dataType: string}
     </script>
@@ -92,7 +94,7 @@ You can annotate your contract properties with the `phase` attribute to control 
     </div>
   </body>
 </html>
-```
+````
 
 #### Jay Contract (Headless)
 
@@ -103,24 +105,24 @@ tags:
   - tag: productName
     dataType: string
     phase: slow
-  
+
   - tag: description
     dataType: string
     phase: slow
-  
+
   - tag: sku
     dataType: string
     phase: slow
-  
+
   # Dynamic pricing and availability
   - tag: price
     dataType: number
     phase: fast
-  
+
   - tag: inStock
     dataType: boolean
     phase: fast
-  
+
   # Interactive elements go in refs, not data
   interactive:
     - tag: addToCartButton
@@ -128,6 +130,7 @@ tags:
 ```
 
 **Phase Rules:**
+
 - `slow`: Value is set at build time (default if not specified)
 - `fast`: Value is set at request time
 - `fast+interactive`: Value is set at request time and can be modified on the client
@@ -160,7 +163,7 @@ For headless components, create a Jay Contract file (`my-contract.jay-contract`)
         - {tag: name, dataType: string, phase: slow}
         - {tag: age, dataType: number, phase: slow}
         - {tag: address, dataType: string, phase: slow}
-        
+
         # User ratings - fast changing
         - {tag: stars, dataType: number, phase: fast}
         - {tag: rating, dataType: number, phase: fast}
@@ -189,24 +192,24 @@ tags:
   - tag: id
     dataType: string
     phase: slow
-  
+
   - tag: name
     dataType: string
     phase: slow
-  
+
   - tag: age
     dataType: number
     phase: slow
-  
+
   - tag: address
     dataType: string
     phase: slow
-  
+
   # User ratings - fast changing
   - tag: stars
     dataType: number
     phase: fast
-  
+
   - tag: rating
     dataType: number
     phase: fast
@@ -221,6 +224,7 @@ jay-cli definitions <path to your sources>
 ```
 
 This will generate a `.d.ts` file with:
+
 - **Full ViewState**: All properties from your contract
 - **Phase-specific ViewStates**: Separate types for `Slow`, `Fast`, and `Interactive` phases
 - **Contract type**: A `JayContract` type that includes all ViewState types
@@ -232,28 +236,31 @@ import { JayContract } from '@jay-framework/fullstack-component';
 
 // Full ViewState - all properties
 export interface MyComponentViewState {
-    id: string;
-    name: string;
-    age: number;
-    address: string;
-    stars: number;
-    rating: number;
+  id: string;
+  name: string;
+  age: number;
+  address: string;
+  stars: number;
+  rating: number;
 }
 
 export interface MyComponentElementRefs {}
 
 // Phase-specific ViewStates (automatically generated)
-export type MyComponentSlowViewState = Pick<MyComponentViewState, 'id' | 'name' | 'age' | 'address'>;
+export type MyComponentSlowViewState = Pick<
+  MyComponentViewState,
+  'id' | 'name' | 'age' | 'address'
+>;
 export type MyComponentFastViewState = Pick<MyComponentViewState, 'stars' | 'rating'>;
 export type MyComponentInteractiveViewState = {};
 
 // Contract type with all ViewState types
 export type MyComponentContract = JayContract<
-    MyComponentViewState,
-    MyComponentElementRefs,
-    MyComponentSlowViewState,
-    MyComponentFastViewState,
-    MyComponentInteractiveViewState
+  MyComponentViewState,
+  MyComponentElementRefs,
+  MyComponentSlowViewState,
+  MyComponentFastViewState,
+  MyComponentInteractiveViewState
 >;
 ```
 
@@ -421,11 +428,11 @@ makeJayStackComponent<MyComponentContract>()
   .withSlowlyRender(async (props, database: Database) => {
     const data = await database.getData();
     return partialRender(
-      { 
-        productName: data.name,    // ✅ OK if phase: slow
+      {
+        productName: data.name, // ✅ OK if phase: slow
         // price: data.price,      // ❌ TypeScript error if phase: fast
-      }, 
-      { carryForwardKey: data.id }
+      },
+      { carryForwardKey: data.id },
     );
   });
 ```
@@ -456,12 +463,12 @@ makeJayStackComponent<MyComponentContract>()
   .withFastRender(async (props, carryForward, inventory: InventoryService) => {
     const status = await inventory.getStatus(carryForward.productId);
     return partialRender(
-      { 
-        inStock: status.available > 0,  // ✅ OK if phase: fast
-        price: 29.99,                    // ✅ OK if phase: fast
+      {
+        inStock: status.available > 0, // ✅ OK if phase: fast
+        price: 29.99, // ✅ OK if phase: fast
         // productName: 'Widget',        // ❌ TypeScript error if phase: slow
-      }, 
-      { carryForwardKey: 'data' }
+      },
+      { carryForwardKey: 'data' },
     );
   });
 ```
@@ -532,6 +539,7 @@ Here's a complete example showing how phase annotations in your contract provide
 ### 1. Define Contract with Phases
 
 **`user-profile.jay-html`**:
+
 ```html
 <html>
   <head>
@@ -541,7 +549,7 @@ Here's a complete example showing how phase annotations in your contract provide
         - {tag: userId, dataType: string, phase: slow}
         - {tag: username, dataType: string, phase: slow}
         - {tag: bio, dataType: string, phase: slow}
-        
+
         # Dynamic activity - rendered per request
         - {tag: lastSeen, dataType: string, phase: fast}
         - {tag: isOnline, dataType: boolean, phase: fast}
@@ -562,87 +570,96 @@ Here's a complete example showing how phase annotations in your contract provide
 ### 2. Generated Types
 
 **`user-profile.jay-html.d.ts`** (auto-generated):
+
 ```typescript
 export interface UserProfileViewState {
-    userId: string;
-    username: string;
-    bio: string;
-    lastSeen: string;
-    isOnline: boolean;
-    followerCount: number;
+  userId: string;
+  username: string;
+  bio: string;
+  lastSeen: string;
+  isOnline: boolean;
+  followerCount: number;
 }
 
 export interface UserProfileElementRefs {}
 
 // Phase-specific types - automatically generated
 export type UserProfileSlowViewState = Pick<UserProfileViewState, 'userId' | 'username' | 'bio'>;
-export type UserProfileFastViewState = Pick<UserProfileViewState, 'lastSeen' | 'isOnline' | 'followerCount'>;
+export type UserProfileFastViewState = Pick<
+  UserProfileViewState,
+  'lastSeen' | 'isOnline' | 'followerCount'
+>;
 export type UserProfileInteractiveViewState = {};
 
 export type UserProfileContract = JayContract<
-    UserProfileViewState,
-    UserProfileElementRefs,
-    UserProfileSlowViewState,
-    UserProfileFastViewState,
-    UserProfileInteractiveViewState
+  UserProfileViewState,
+  UserProfileElementRefs,
+  UserProfileSlowViewState,
+  UserProfileFastViewState,
+  UserProfileInteractiveViewState
 >;
 ```
 
 ### 3. Implement with Type Safety
 
 ```typescript
-import { makeJayStackComponent, partialRender, createJayService } from '@jay-framework/fullstack-component';
+import {
+  makeJayStackComponent,
+  partialRender,
+  createJayService,
+} from '@jay-framework/fullstack-component';
 import { UserProfileContract } from './user-profile.jay-html';
 
 interface UserDatabase {
-    getUser(id: string): Promise<{ id: string; name: string; bio: string }>;
+  getUser(id: string): Promise<{ id: string; name: string; bio: string }>;
 }
 const USER_DB = createJayService<UserDatabase>('UserDB');
 
 interface ActivityService {
-    getUserActivity(id: string): Promise<{ lastSeen: string; isOnline: boolean; followers: number }>;
+  getUserActivity(id: string): Promise<{ lastSeen: string; isOnline: boolean; followers: number }>;
 }
 const ACTIVITY_SERVICE = createJayService<ActivityService>('Activity');
 
 export const userProfile = makeJayStackComponent<UserProfileContract>()
-    .withProps()
-    .withServices(USER_DB, ACTIVITY_SERVICE)
-    .withSlowlyRender(async (props, userDb) => {
-        // ✅ TypeScript knows only slow properties are allowed
-        const user = await userDb.getUser('123');
-        return partialRender(
-            {
-                userId: user.id,
-                username: user.name,
-                bio: user.bio,
-                // followerCount: 100,  // ❌ TypeScript Error: Property 'followerCount' 
-                                        //    does not exist in type 'UserProfileSlowViewState'
-            },
-            { userId: user.id }
-        );
-    })
-    .withFastRender(async (props, carryForward, userDb, activityService) => {
-        // ✅ TypeScript knows only fast properties are allowed
-        const activity = await activityService.getUserActivity(carryForward.userId);
-        return partialRender(
-            {
-                lastSeen: activity.lastSeen,
-                isOnline: activity.isOnline,
-                followerCount: activity.followers,
-                // username: 'John',     // ❌ TypeScript Error: Property 'username' 
-                                         //    does not exist in type 'UserProfileFastViewState'
-            },
-            {}
-        );
-    })
-    .withInteractive((props, refs) => {
-        return {
-            render: () => ({}),
-        };
-    });
+  .withProps()
+  .withServices(USER_DB, ACTIVITY_SERVICE)
+  .withSlowlyRender(async (props, userDb) => {
+    // ✅ TypeScript knows only slow properties are allowed
+    const user = await userDb.getUser('123');
+    return partialRender(
+      {
+        userId: user.id,
+        username: user.name,
+        bio: user.bio,
+        // followerCount: 100,  // ❌ TypeScript Error: Property 'followerCount'
+        //    does not exist in type 'UserProfileSlowViewState'
+      },
+      { userId: user.id },
+    );
+  })
+  .withFastRender(async (props, carryForward, userDb, activityService) => {
+    // ✅ TypeScript knows only fast properties are allowed
+    const activity = await activityService.getUserActivity(carryForward.userId);
+    return partialRender(
+      {
+        lastSeen: activity.lastSeen,
+        isOnline: activity.isOnline,
+        followerCount: activity.followers,
+        // username: 'John',     // ❌ TypeScript Error: Property 'username'
+        //    does not exist in type 'UserProfileFastViewState'
+      },
+      {},
+    );
+  })
+  .withInteractive((props, refs) => {
+    return {
+      render: () => ({}),
+    };
+  });
 ```
 
 **Key Benefits:**
+
 - 🔒 **Compile-time guarantees**: TypeScript prevents phase violations before deployment
 - 📊 **Clear separation**: Slow (static) data is visually separated from fast (dynamic) data
 - ⚡ **Optimal performance**: Framework can cache slow data aggressively

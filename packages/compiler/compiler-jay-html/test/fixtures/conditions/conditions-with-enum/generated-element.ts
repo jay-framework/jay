@@ -30,7 +30,6 @@ export type ConditionsWithEnumSlowViewState = {};
 export type ConditionsWithEnumFastViewState = {};
 export type ConditionsWithEnumInteractiveViewState = ConditionsWithEnumViewState;
 
-
 export type ConditionsWithEnumElement = JayElement<
     ConditionsWithEnumViewState,
     ConditionsWithEnumElementRefs
