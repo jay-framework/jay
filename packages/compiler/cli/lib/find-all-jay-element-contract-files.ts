@@ -5,10 +5,16 @@ import { JAY_CONTRACT_EXTENSION, JAY_EXTENSION } from '@jay-framework/compiler-s
 export function getJayHtmlOrContractFileInputs(source: string): { [file: string]: string } {
     return Object.fromEntries(
         glob.sync(`${source}/**/*{${JAY_EXTENSION},${JAY_CONTRACT_EXTENSION}}`).map((file) => {
-            const moduleName = file.includes(JAY_EXTENSION)
-                ? file.slice(0, file.length - JAY_EXTENSION.length)
-                : file.slice(0, file.length - JAY_CONTRACT_EXTENSION.length);
-            return [path.relative(source, moduleName), file];
+            // Use relative path without extension as key, but preserve distinction between
+            // .jay-html and .jay-contract files with the same base name
+            const relativePath = path.relative(source, file);
+            let moduleName: string;
+            if (file.endsWith(JAY_CONTRACT_EXTENSION)) {
+                moduleName = relativePath.slice(0, -JAY_CONTRACT_EXTENSION.length) + '.contract';
+            } else {
+                moduleName = relativePath.slice(0, -JAY_EXTENSION.length);
+            }
+            return [moduleName, file];
         }),
     );
 }

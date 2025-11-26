@@ -17,8 +17,8 @@
     "build:cli-link": "cd ../../../node_modules/.bin && ln -sf ../../../packages/cli/dist/index.js jay-cli",
     "clean": "rimraf dist",
     "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
-    "test": ":",
-    "test:watch": ":"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@jay-framework/compiler": "workspace:^",
@@ -35,6 +35,7 @@
     "rimraf": "^5.0.5",
     "shelljs": "^0.8.5",
     "typescript": "^5.3.3",
-    "vite": "^5.0.11"
+    "vite": "^5.0.11",
+    "vitest": "^1.2.1"
   }
 }
