@@ -149,10 +149,13 @@ export interface ContractSchema {
 }
 
 export interface PageContractSchema {
-    pageId: string;
     pageName: string;
-    pageUrl: string;
-    contractSchema?: ContractSchema; // Optional - only if page has its own contract file
+    pageUrl: string; // Unique identifier for the page
+    contractSchema?: ContractSchema; // Optional - page's own contract if it has a .jay-contract file
+    usedComponentContracts: {
+        appName: string;
+        componentName: string;
+    }[];
 }
 
 export interface InstalledAppPageContract {
@@ -172,23 +175,11 @@ export interface InstalledAppContracts {
     components: InstalledAppComponentContract[];
 }
 
-export interface FullPageContract {
-    pageId: string;
-    pageName: string;
-    pageUrl: string;
-    contractSchema: ContractSchema; // Combined schema with all tags from page + installed apps
-}
-
 export interface GetContractsResponse extends BaseResponse {
     type: 'getContracts';
-    pageContracts: {
-        [pageId: string]: PageContractSchema;
-    };
+    pages: PageContractSchema[];
     installedAppContracts: {
         [appName: string]: InstalledAppContracts;
-    };
-    fullPageContracts: {
-        [pageId: string]: FullPageContract;
     };
 }
 

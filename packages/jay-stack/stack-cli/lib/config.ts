@@ -8,6 +8,7 @@ export interface JayConfig {
         pagesBase?: string;
         componentsBase?: string;
         publicFolder?: string;
+        configBase?: string;
     };
     editorServer?: {
         portRange?: [number, number];
@@ -21,6 +22,7 @@ const DEFAULT_CONFIG: JayConfig = {
         pagesBase: './src/pages',
         componentsBase: './src/components',
         publicFolder: './public',
+        configBase: './config',
     },
     editorServer: {
         portRange: [3101, 3200],
@@ -63,6 +65,7 @@ export function getConfigWithDefaults(config: JayConfig): Required<JayConfig> {
             componentsBase:
                 config.devServer?.componentsBase || DEFAULT_CONFIG.devServer!.componentsBase!,
             publicFolder: config.devServer?.publicFolder || DEFAULT_CONFIG.devServer!.publicFolder!,
+            configBase: config.devServer?.configBase || DEFAULT_CONFIG.devServer!.configBase!,
         },
         editorServer: {
             portRange: config.editorServer?.portRange || DEFAULT_CONFIG.editorServer!.portRange!,

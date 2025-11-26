@@ -2,7 +2,12 @@
 
 ## Overview
 
-The `getContracts` endpoint retrieves all contract schemas from a Jay Stack project, including page contracts, installed application contracts, and fully merged page contracts. This API provides a complete view of all available contracts in the project for design tools and editors.
+The `getContracts` endpoint retrieves all contract schemas from a Jay Stack project, including:
+
+- Pages with their own contracts and references to used installed application components
+- All installed application contracts (pages, components, and sub-contracts)
+
+This API provides a complete view of all available contracts in the project for design tools and editors.
 
 ## Request
 
@@ -24,7 +29,7 @@ const response = await editorClient.getContracts({
 
 ## Response Structure
 
-The response contains three separate data structures, each serving a different purpose:
+The response contains two main data structures:
 
 ```typescript
 interface GetContractsResponse {
@@ -32,87 +37,118 @@ interface GetContractsResponse {
   success: boolean;
   error?: string;
 
-  // 1. Individual page contracts (their own .jay-contract files only)
-  pageContracts: {
-    [pageId: string]: PageContractSchema;
-  };
+  // 1. Array of pages with their contracts and used component references
+  pages: PageContractSchema[];
 
-  // 2. Installed app contracts (organized by app)
+  // 2. All installed app contracts (organized by app)
   installedAppContracts: {
     [appName: string]: InstalledAppContracts;
-  };
-
-  // 3. Full page contracts (merged: page + installed apps)
-  fullPageContracts: {
-    [pageId: string]: FullPageContract;
   };
 }
 ```
 
 ---
 
-## 1. Page Contracts (`pageContracts`)
+## 1. Pages (`pages`)
 
-Contains contracts defined in `page.jay-contract` files next to each page.
+An array of all pages in the project. Each page includes:
+
+- Its own contract (if it has a `.jay-contract` file)
+- References to installed application components used on that page
 
 ### Structure
 
 ```typescript
 interface PageContractSchema {
-  pageId: string; // Unique identifier: "page-0", "page-1", etc.
   pageName: string; // Directory name: "home", "products", etc.
-  pageUrl: string; // Route path: "/", "/products", "/products/:id"
-  contractSchema?: {
-    // Optional - only if page has a contract file
-    name: string; // Contract name
-    tags: ContractTag[]; // Array of contract tags
-  };
+  pageUrl: string; // Route path (unique identifier): "/", "/products", "/products/:id"
+  contractSchema?: ContractSchema; // Optional - page's own contract if it has a .jay-contract file
+  usedComponentContracts: {
+    appName: string; // Name of the app providing this component
+    componentName: string; // Name of the component (reference only - look up full contract in installedAppContracts)
+  }[];
 }
 ```
 
 ### Use Case
 
-- View which pages have their own contracts
-- Inspect a specific page's contract definition
-- Understand the page's native data structure
+- View all pages in the project
+- Access each page's own contract tags (from its `.jay-contract` file)
+- See which installed application components are used on each page
+- Look up the full contract for used components in `installedAppContracts`
 
 ### Example
 
 ```typescript
-{
-    "page-0": {
-        pageId: "page-0",
-        pageName: "products",
-        pageUrl: "/products",
-        contractSchema: {
-            name: "products-page",
-            tags: [
-                {
-                    tag: "title",
-                    type: "data",
-                    dataType: "string",
-                    required: true
-                },
-                {
-                    tag: "items",
-                    type: "sub-contract",
-                    repeated: true,
-                    tags: [
-                        { tag: "name", type: "data", dataType: "string" },
-                        { tag: "price", type: "data", dataType: "number" }
-                    ]
-                }
-            ]
-        }
-    }
-}
+[
+  {
+    pageName: 'home',
+    pageUrl: '/',
+    contractSchema: {
+      name: 'home',
+      tags: [
+        {
+          tag: 'siteTitle',
+          type: 'data',
+          dataType: 'string',
+        },
+        {
+          tag: 'address',
+          type: 'data',
+          dataType: 'string',
+        },
+        {
+          tag: 'featured',
+          type: 'sub-contract',
+          tags: [
+            { tag: 'title', type: 'data', dataType: 'string' },
+            { tag: 'description', type: 'data', dataType: 'string' },
+          ],
+        },
+      ],
+    },
+    usedComponentContracts: [
+      {
+        appName: 'wix-jay-headless-store',
+        componentName: 'productPage',
+      },
+    ],
+  },
+  {
+    pageName: '[categoryId]',
+    pageUrl: '/categorypage/:categoryId',
+    contractSchema: {
+      name: 'category-page-data',
+      tags: [{ tag: 'categoryId', type: 'data', dataType: 'string' }],
+    },
+    usedComponentContracts: [
+      {
+        appName: 'wix-jay-headless-store',
+        componentName: 'categoryPage',
+      },
+    ],
+  },
+  {
+    pageName: '[productId]',
+    pageUrl: '/productpage/:productId',
+    // No contractSchema - this page doesn't have a .jay-contract file
+    usedComponentContracts: [],
+  },
+];
 ```
+
+**Key Points:**
+
+- `pageUrl` serves as the unique identifier for each page
+- `contractSchema` contains the page's own contract tags (optional - only if the page has a `.jay-contract` file)
+- `usedComponentContracts` contains **references only** (appName + componentName)
+- To get the full contract schema for a used component, look it up in `installedAppContracts[appName].pages` or `installedAppContracts[appName].components`
 
 ---
 
 ## 2. Installed App Contracts (`installedAppContracts`)
 
-Contains all contracts from installed third-party applications, organized by app name.
+Contains all contracts from all installed applications, organized by app name. This includes both page-level and component-level contracts with all their sub-contracts fully expanded.
 
 ### Structure
 
@@ -135,102 +171,199 @@ interface InstalledAppContracts {
 
 ### Use Case
 
-- Browse available third-party contracts
-- Understand what data installed apps provide
-- Select app components to use on pages
+- Browse all available contracts from installed applications
+- Look up the full contract schema for components used on pages
+- Understand what data each installed app provides
+- Access complete contract definitions including all nested sub-contracts
 
 ### Example
 
 ```typescript
 {
-    "ShopifyApp": {
-        appName: "ShopifyApp",
-        module: "@shopify/jay-app",
-        pages: [
+  "wix-jay-headless-store": {
+    appName: "wix-jay-headless-store",
+    module: "wix-jay-headless-store",
+    pages: [
+      {
+        pageName: "productPage",
+        contractSchema: {
+          name: "product-page",
+          tags: [
             {
-                pageName: "product-catalog",
-                contractSchema: {
-                    name: "shopify-catalog",
-                    tags: [
-                        { tag: "products", type: "sub-contract", repeated: true, tags: [...] },
-                        { tag: "categories", type: "data", dataType: "string[]" }
-                    ]
-                }
-            }
-        ],
-        components: [
+              tag: "title",
+              type: "data",
+              dataType: "string"
+            },
             {
-                componentName: "shopping-cart",
-                contractSchema: {
-                    name: "cart",
-                    tags: [
-                        { tag: "items", type: "sub-contract", repeated: true, tags: [...] },
-                        { tag: "total", type: "data", dataType: "number" }
-                    ]
-                }
+              tag: "serverData",
+              type: "data",
+              dataType: "string"
+            },
+            {
+              tag: "product",
+              type: "sub-contract",
+              tags: [
+                { tag: "title", type: "data", dataType: "string" },
+                { tag: "description", type: "data", dataType: "string" }
+              ]
             }
-        ]
-    }
+          ]
+        }
+      },
+      {
+        pageName: "categoryPage",
+        contractSchema: {
+          name: "category-page",
+          tags: [
+            {
+              tag: "categoryName",
+              type: "data",
+              dataType: "string",
+              required: true
+            },
+            {
+              tag: "products",
+              type: "sub-contract",
+              repeated: true,
+              required: true,
+              tags: [
+                { tag: "title", type: "data", dataType: "string" },
+                { tag: "description", type: "data", dataType: "string" }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    components: [
+      {
+        componentName: "cartDrawer",
+        contractSchema: {
+          name: "cart",
+          tags: [
+            {
+              tag: "items",
+              type: "sub-contract",
+              repeated: true,
+              tags: [
+                { tag: "productId", type: "data", dataType: "string" },
+                { tag: "quantity", type: "data", dataType: "number" }
+              ]
+            },
+            { tag: "total", type: "data", dataType: "number" }
+          ]
+        }
+      }
+    ]
+  }
 }
 ```
+
+**Key Points:**
+
+- All contracts from all installed apps are included
+- Both page-level and component-level contracts are provided
+- All sub-contracts are fully expanded and included
+- Linked sub-contracts are automatically resolved
 
 ---
 
-## 3. Full Page Contracts (`fullPageContracts`)
+## Working with Contracts
 
-Contains the complete, merged contract for each page - combining the page's own contract with all installed app contracts used on that page.
-
-### Structure
+### Example 1: Get Full Contract for a Page
 
 ```typescript
-interface FullPageContract {
-  pageId: string;
-  pageName: string;
-  pageUrl: string;
-  contractSchema: {
-    // Single merged schema with ALL tags
-    name: string;
-    tags: ContractTag[]; // Page tags + all installed app tags
-  };
+const response = await client.getContracts({ type: 'getContracts' });
+
+// Find a specific page
+const homePage = response.pages.find((p) => p.pageUrl === '/');
+
+if (homePage) {
+  // 1. Page's own contract
+  if (homePage.contractSchema) {
+    console.log('Page contract:', homePage.contractSchema.name);
+    homePage.contractSchema.tags.forEach((tag) => {
+      console.log(`  - ${tag.tag} (${tag.type})`);
+    });
+  }
+
+  // 2. Used component contracts
+  homePage.usedComponentContracts.forEach((ref) => {
+    // Look up the full contract in installedAppContracts
+    const app = response.installedAppContracts[ref.appName];
+
+    // Check if it's a page contract
+    const pageContract = app.pages.find((p) => p.pageName === ref.componentName);
+    if (pageContract) {
+      console.log(`\nUsed component: ${ref.appName}.${ref.componentName}`);
+      pageContract.contractSchema.tags.forEach((tag) => {
+        console.log(`  - ${tag.tag} (${tag.type})`);
+      });
+    }
+
+    // Check if it's a component contract
+    const componentContract = app.components.find((c) => c.componentName === ref.componentName);
+    if (componentContract) {
+      console.log(`\nUsed component: ${ref.appName}.${ref.componentName}`);
+      componentContract.contractSchema.tags.forEach((tag) => {
+        console.log(`  - ${tag.tag} (${tag.type})`);
+      });
+    }
+  });
 }
 ```
 
-### Use Case
-
-- **Primary use case for design tools**
-- Get the complete picture of all data available on a page
-- Design UIs with access to both page and app data
-- Single source of truth for what's available
-
-### Example
+### Example 2: Build Complete Tag List for a Page
 
 ```typescript
-{
-    "page-0": {
-        pageId: "page-0",
-        pageName: "products",
-        pageUrl: "/products",
-        contractSchema: {
-            name: "products",
-            tags: [
-                // From page's own contract:
-                { tag: "pageTitle", type: "data", dataType: "string" },
-                { tag: "description", type: "data", dataType: "string" },
+function getPageTags(
+  page: PageContractSchema,
+  installedAppContracts: { [appName: string]: InstalledAppContracts },
+): ContractTag[] {
+  const allTags: ContractTag[] = [];
 
-                // From ShopifyApp used on this page:
-                { tag: "products", type: "sub-contract", repeated: true, tags: [
-                    { tag: "name", type: "data", dataType: "string" },
-                    { tag: "price", type: "data", dataType: "number" },
-                    { tag: "image", type: "data", dataType: "string" }
-                ]},
+  // 1. Add page's own tags
+  if (page.contractSchema) {
+    allTags.push(...page.contractSchema.tags);
+  }
 
-                // From AnalyticsApp used on this page:
-                { tag: "viewCount", type: "data", dataType: "number" },
-                { tag: "lastViewed", type: "data", dataType: "string" }
-            ]
-        }
+  // 2. Add tags from used components
+  page.usedComponentContracts.forEach((ref) => {
+    const app = installedAppContracts[ref.appName];
+    if (!app) return;
+
+    // Look up in pages
+    const pageContract = app.pages.find((p) => p.pageName === ref.componentName);
+    if (pageContract) {
+      allTags.push(...pageContract.contractSchema.tags);
     }
+
+    // Look up in components
+    const componentContract = app.components.find((c) => c.componentName === ref.componentName);
+    if (componentContract) {
+      allTags.push(...componentContract.contractSchema.tags);
+    }
+  });
+
+  return allTags;
 }
+
+// Usage
+const response = await client.getContracts({ type: 'getContracts' });
+const homePage = response.pages.find((p) => p.pageUrl === '/');
+const allTags = getPageTags(homePage, response.installedAppContracts);
+```
+
+### Example 3: List All Available Apps
+
+```typescript
+const response = await client.getContracts({ type: 'getContracts' });
+
+Object.values(response.installedAppContracts).forEach((app) => {
+  console.log(`\nApp: ${app.appName} (${app.module})`);
+  console.log(`  Pages: ${app.pages.map((p) => p.pageName).join(', ')}`);
+  console.log(`  Components: ${app.components.map((c) => c.componentName).join(', ')}`);
+});
 ```
 
 ---
@@ -248,7 +381,7 @@ interface ContractTag {
   required?: boolean; // Whether the tag is required
   repeated?: boolean; // Whether the tag is an array/repeated
   tags?: ContractTag[]; // For sub-contracts: nested tags
-  link?: string; // For linked sub-contracts: path to contract file (resolved automatically)
+  link?: string; // For linked sub-contracts (resolved automatically)
 }
 ```
 
@@ -273,6 +406,7 @@ interface ContractTag {
    ```
 
 4. **`sub-contract`** - Nested data structures
+
    ```typescript
    {
      tag: "items",
@@ -287,45 +421,116 @@ interface ContractTag {
 
 ---
 
-## Linked Sub-Contracts
+## Best Practices
 
-Contracts can reference other contract files using the `link` property. **These are automatically resolved** by the API - you'll receive the fully expanded tags.
+### For Design Tools
 
-### In the Contract File (YAML)
-
-```yaml
-name: product-page
-tags:
-  - tag: product
-    type: sub-contract
-    link: './product-item.jay-contract' # Reference to another file
-    required: true
-```
-
-### In the API Response
-
-The `link` is resolved and replaced with actual tags:
+**1. Always check both page contracts and used component contracts:**
 
 ```typescript
-{
-    tag: "product",
-    type: "sub-contract",
-    required: true,
-    tags: [  // ← Automatically loaded from product-item.jay-contract
-        { tag: "name", type: "data", dataType: "string" },
-        { tag: "price", type: "data", dataType: "number" },
-        { tag: "image", type: "data", dataType: "string" }
-    ]
+const page = response.pages.find((p) => p.pageUrl === targetUrl);
+
+// Page's own data
+if (page.contractSchema) {
+  // Show page-level tags in the UI
+  displayContract(page.contractSchema);
+}
+
+// Used component data
+page.usedComponentContracts.forEach((ref) => {
+  const contract = lookupContract(ref, response.installedAppContracts);
+  if (contract) {
+    displayContract(contract);
+  }
+});
+```
+
+**2. Create a helper function to resolve component references:**
+
+```typescript
+function lookupComponentContract(
+  ref: { appName: string; componentName: string },
+  installedAppContracts: { [appName: string]: InstalledAppContracts },
+): ContractSchema | null {
+  const app = installedAppContracts[ref.appName];
+  if (!app) return null;
+
+  // Check pages
+  const pageContract = app.pages.find((p) => p.pageName === ref.componentName);
+  if (pageContract) return pageContract.contractSchema;
+
+  // Check components
+  const componentContract = app.components.find((c) => c.componentName === ref.componentName);
+  if (componentContract) return componentContract.contractSchema;
+
+  return null;
 }
 ```
 
-**Features:**
+### For Contract Browsers/Explorers
 
-- ✅ Works in page contracts
-- ✅ Works in installed app contracts
-- ✅ Supports nested/recursive links
-- ✅ Paths resolved relative to the contract file's directory
-- ✅ Graceful fallback if link cannot be resolved
+**Display comprehensive contract information:**
+
+```typescript
+// 1. Show all pages with their contracts
+response.pages.forEach((page) => {
+  console.log(`\n${page.pageUrl}:`);
+
+  if (page.contractSchema) {
+    console.log(`  Own contract: ${page.contractSchema.name}`);
+  }
+
+  if (page.usedComponentContracts.length > 0) {
+    console.log('  Uses:');
+    page.usedComponentContracts.forEach((ref) => {
+      console.log(`    - ${ref.appName}.${ref.componentName}`);
+    });
+  }
+});
+
+// 2. Show all installed apps
+Object.values(response.installedAppContracts).forEach((app) => {
+  console.log(`\nApp: ${app.appName}`);
+  app.pages.forEach((page) => {
+    console.log(`  Page: ${page.pageName}`);
+  });
+  app.components.forEach((comp) => {
+    console.log(`  Component: ${comp.componentName}`);
+  });
+});
+```
+
+---
+
+## Response Guarantee
+
+- **Always returns both data structures** (even if empty)
+- **Linked sub-contracts are always resolved** before response
+- **No manual link resolution needed** on the client side
+- **All sub-contracts are fully expanded** in `installedAppContracts`
+- **Page contracts include the page's own .jay-contract file** (if it exists)
+- **usedComponentContracts are references only** - look up full schema in `installedAppContracts`
+
+---
+
+## Error Handling
+
+```typescript
+const response = await client.getContracts({ type: 'getContracts' });
+
+if (!response.success) {
+  console.error('Error:', response.error);
+  // response will still contain empty structures:
+  // - pages: []
+  // - installedAppContracts: {}
+}
+```
+
+**Partial failures are logged but don't fail the entire request:**
+
+- Invalid contract file → Warning logged, page/component included without contract
+- Unresolved link → Warning logged, link reference preserved in contract
+- Missing installed app → Warning logged, app skipped
 
 ---
 
@@ -350,37 +555,47 @@ const response = await client.getContracts({
 });
 
 if (response.success) {
-  // 1. List all pages and their contracts
-  Object.values(response.pageContracts).forEach((page) => {
-    console.log(`Page: ${page.pageName} (${page.pageUrl})`);
-    if (page.contractSchema) {
-      console.log(`  Contract: ${page.contractSchema.name}`);
-      console.log(`  Tags: ${page.contractSchema.tags.length}`);
-    } else {
-      console.log(`  No contract`);
-    }
-  });
+  // Find a specific page
+  const productPage = response.pages.find((p) => p.pageUrl === '/products');
 
-  // 2. List all installed apps
+  if (productPage) {
+    console.log(`\nPage: ${productPage.pageName} (${productPage.pageUrl})`);
+
+    // Show page's own contract
+    if (productPage.contractSchema) {
+      console.log('\nPage Contract:');
+      console.log(`  Name: ${productPage.contractSchema.name}`);
+      productPage.contractSchema.tags.forEach((tag) => {
+        console.log(`  - ${tag.tag}: ${tag.type}`);
+      });
+    }
+
+    // Show used components
+    if (productPage.usedComponentContracts.length > 0) {
+      console.log('\nUsed Components:');
+      productPage.usedComponentContracts.forEach((ref) => {
+        const app = response.installedAppContracts[ref.appName];
+        const contract =
+          app.pages.find((p) => p.pageName === ref.componentName) ||
+          app.components.find((c) => c.componentName === ref.componentName);
+
+        if (contract) {
+          console.log(`\n  ${ref.appName}.${ref.componentName}:`);
+          contract.contractSchema.tags.forEach((tag) => {
+            console.log(`    - ${tag.tag}: ${tag.type}`);
+          });
+        }
+      });
+    }
+  }
+
+  // List all installed apps
+  console.log('\n\nInstalled Apps:');
   Object.values(response.installedAppContracts).forEach((app) => {
-    console.log(`App: ${app.appName}`);
+    console.log(`\n${app.appName} (${app.module}):`);
     console.log(`  Pages: ${app.pages.length}`);
     console.log(`  Components: ${app.components.length}`);
   });
-
-  // 3. Get complete contract for a specific page (RECOMMENDED)
-  const productPage = Object.values(response.fullPageContracts).find(
-    (p) => p.pageUrl === '/products',
-  );
-
-  if (productPage) {
-    // This includes everything: page contract + all installed app contracts
-    const allTags = productPage.contractSchema.tags;
-    console.log(`Complete contract for ${productPage.pageName}:`);
-    allTags.forEach((tag) => {
-      console.log(`  - ${tag.tag} (${tag.type})`);
-    });
-  }
 } else {
   console.error('Failed to get contracts:', response.error);
 }
@@ -388,74 +603,33 @@ if (response.success) {
 
 ---
 
-## Best Practices
+## Key Design Decisions
 
-### For Design Tools
+### Why Store References Instead of Full Schemas in `usedComponentContracts`?
 
-**Use `fullPageContracts` as your primary data source:**
+1. **Avoids data duplication** - If the same component is used on multiple pages, its contract is stored only once in `installedAppContracts`
+2. **Single source of truth** - All contract schemas live in `installedAppContracts`, making updates and consistency easier
+3. **Smaller response size** - References are much smaller than full contract schemas
+4. **Clear separation** - Page contracts vs. app contracts are clearly separated
 
-- Contains the complete, merged view of all available data
-- Single source of truth for UI design
-- No need to manually merge page + app contracts
+### Why Include Page's Own Contract?
 
-```typescript
-// ✅ Recommended
-const pageContract = response.fullPageContracts[pageId];
-const availableTags = pageContract.contractSchema.tags;
+1. **Complete picture** - Pages often have their own data requirements (like URL params, page-specific state)
+2. **Composability** - Page contract + used component contracts = full page data model
+3. **Flexibility** - Pages can work with or without installed applications
 
-// Design UI using all available tags
-availableTags.forEach((tag) => {
-  if (tag.type === 'data') {
-    // Add data binding option
-  } else if (tag.type === 'interactive') {
-    // Add interactive element
-  }
-});
-```
+### Finding Page by URL
 
-### For Contract Browsers/Explorers
-
-**Use all three structures:**
-
-- `pageContracts` - Show page-specific contracts
-- `installedAppContracts` - Browse available app contracts
-- `fullPageContracts` - Show the complete picture per page
-
-### For Contract Editors
-
-**Use `pageContracts` and `installedAppContracts` separately:**
-
-- Edit page contracts independently
-- Browse app contracts (read-only)
-- Understand what each source provides
-
----
-
-## Response Guarantee
-
-- **Always returns all three data structures** (even if empty)
-- **Linked sub-contracts are always resolved** before response
-- **No manual link resolution needed** on the client side
-- **Path resolution is automatic** and works for all contract locations
-
----
-
-## Error Handling
+Since `pageUrl` is the unique identifier, you can easily find pages:
 
 ```typescript
-const response = await client.getContracts({ type: 'getContracts' });
+// Using array find
+const homePage = response.pages.find((p) => p.pageUrl === '/');
+const productPage = response.pages.find((p) => p.pageUrl === '/products/:id');
 
-if (!response.success) {
-  console.error('Error:', response.error);
-  // response will still contain empty structures:
-  // - pageContracts: {}
-  // - installedAppContracts: {}
-  // - fullPageContracts: {}
-}
+// Or create a map for faster lookups
+const pagesByUrl = new Map(response.pages.map((page) => [page.pageUrl, page]));
+
+const homePage = pagesByUrl.get('/');
+const productPage = pagesByUrl.get('/products/:id');
 ```
-
-**Partial failures are logged but don't fail the entire request:**
-
-- Invalid contract file → Warning logged, page included without contract
-- Unresolved link → Warning logged, link reference preserved
-- Missing installed app → Warning logged, app skipped

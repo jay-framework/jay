@@ -14,7 +14,6 @@ import type {
     ProjectConfiguration,
     PageContractSchema,
     InstalledAppContracts,
-    FullPageContract,
     EditorProtocolMessageTypes,
     EditorProtocolResponseTypes,
 } from './protocol';
@@ -103,18 +102,16 @@ export function createGetProjectConfigurationResponse(
 }
 
 export function createGetContractsResponse(
-    pageContracts: { [pageId: string]: PageContractSchema },
+    pages: PageContractSchema[],
     installedAppContracts: { [appName: string]: InstalledAppContracts },
-    fullPageContracts: { [pageId: string]: FullPageContract },
     success: boolean = true,
     error?: string,
 ): GetContractsResponse {
     return {
         type: 'getContracts',
         success,
-        pageContracts,
+        pages,
         installedAppContracts,
-        fullPageContracts,
         error,
     };
 }

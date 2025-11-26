@@ -20,7 +20,6 @@ export type {
     InstalledAppPageContract,
     InstalledAppComponentContract,
     InstalledAppContracts,
-    FullPageContract,
 } from './protocol';
 
 // Connection configuration

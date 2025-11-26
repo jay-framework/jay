@@ -25,7 +25,6 @@ import type {
     ContractTag as ProtocolContractTag,
     ContractSchema,
     InstalledAppContracts,
-    FullPageContract,
 } from '@jay-framework/editor-protocol';
 import type { JayConfig } from './config';
 import {
@@ -99,11 +98,8 @@ function convertContractTagToProtocol(tag: ContractTag): ProtocolContractTag {
 }
 
 // Helper function to scan page contracts (only checks for .jay-contract files, doesn't parse HTML)
-async function scanPageContracts(
-    pagesBasePath: string,
-): Promise<{ [pageId: string]: PageContractSchema }> {
-    const contracts: { [pageId: string]: PageContractSchema } = {};
-    let pageIdCounter = 0;
+async function scanPageContracts(pagesBasePath: string): Promise<PageContractSchema[]> {
+    const contracts: PageContractSchema[] = [];
 
     async function scanDirectory(dirPath: string, urlPath: string = '') {
         try {
@@ -121,14 +117,14 @@ async function scanPageContracts(
                 } else if (entry.name === PAGE_FILENAME) {
                     // Found a page file - check if there's a contract file next to it
                     const pageUrl = urlPath || '/';
-                    const pageName = path.basename(dirPath) || 'home';
-                    const pageId = `page-${pageIdCounter++}`;
+                    // Get the page name from the current directory, but special case for root pages
+                    const pageName = dirPath === pagesBasePath ? 'pages' : path.basename(dirPath);
                     const contractPath = path.join(dirPath, PAGE_CONTRACT_FILENAME);
 
                     const pageContract: PageContractSchema = {
-                        pageId,
                         pageName,
                         pageUrl,
+                        usedComponentContracts: [],
                     };
 
                     // Check if contract file exists
@@ -143,7 +139,7 @@ async function scanPageContracts(
                         }
                     }
 
-                    contracts[pageId] = pageContract;
+                    contracts.push(pageContract);
                 }
             }
         } catch (error) {
@@ -271,10 +267,10 @@ function resolveAppContractPath(
 
 // Helper function to scan installed app contracts
 async function scanInstalledAppContracts(
+    configBasePath: string,
     projectRootPath: string,
 ): Promise<{ [appName: string]: InstalledAppContracts }> {
     const installedAppContracts: { [appName: string]: InstalledAppContracts } = {};
-    const configBasePath = path.join(projectRootPath, 'config');
     const installedAppsPath = path.join(configBasePath, 'installedApps');
 
     try {
@@ -383,24 +379,12 @@ async function scanInstalledAppContracts(
 // Helper function to build full page contracts (combines page contracts with installed app components)
 async function buildFullPageContracts(
     pagesBasePath: string,
-    pageContracts: { [pageId: string]: PageContractSchema },
+    pageContracts: PageContractSchema[],
     installedApps: InstalledApp[],
     installedAppContracts: { [appName: string]: InstalledAppContracts },
-): Promise<{ [pageId: string]: FullPageContract }> {
-    const fullPageContracts: { [pageId: string]: FullPageContract } = {};
-
-    // Create full contracts for all pages
-    for (const [pageId, pageContract] of Object.entries(pageContracts)) {
-        // Start with an array to collect all tags from different sources
-        const allTags: ProtocolContractTag[] = [];
-
-        // Add tags from the page's own contract if it exists
-        if (pageContract.contractSchema) {
-            allTags.push(...pageContract.contractSchema.tags);
-        }
-
-        // Now find which installed app components are used by this page
-        // We need to read the page's jay-html file to extract headless components
+): Promise<PageContractSchema[]> {
+    // For each page, find which installed app components are used
+    for (const pageContract of pageContracts) {
         const pageDir = path.join(
             pagesBasePath,
             pageContract.pageUrl === '/' ? '' : pageContract.pageUrl,
@@ -423,7 +407,7 @@ async function buildFullPageContracts(
                                     headlessComp.name === usedComp.name &&
                                     headlessComp.key === usedComp.key
                                 ) {
-                                    // Found the component! Now get its contract from installedAppContracts
+                                    // Found the component! Add reference to it
                                     const appContracts = installedAppContracts[app.name];
                                     if (appContracts) {
                                         // Find the matching contract in the app's page contracts
@@ -431,10 +415,10 @@ async function buildFullPageContracts(
                                             (pc) => pc.pageName === appPage.name,
                                         );
                                         if (matchingPageContract) {
-                                            // Merge the tags from this installed app component
-                                            allTags.push(
-                                                ...matchingPageContract.contractSchema.tags,
-                                            );
+                                            pageContract.usedComponentContracts.push({
+                                                appName: app.name,
+                                                componentName: appPage.name,
+                                            });
                                         }
                                     }
                                 }
@@ -448,7 +432,7 @@ async function buildFullPageContracts(
                                     headlessComp.name === usedComp.name &&
                                     headlessComp.key === usedComp.key
                                 ) {
-                                    // Found the component! Now get its contract from installedAppContracts
+                                    // Found the component! Add reference to it
                                     const appContracts = installedAppContracts[app.name];
                                     if (appContracts) {
                                         // Find the matching contract in the app's component contracts
@@ -457,10 +441,10 @@ async function buildFullPageContracts(
                                                 (cc) => cc.componentName === appComponent.name,
                                             );
                                         if (matchingComponentContract) {
-                                            // Merge the tags from this installed app component
-                                            allTags.push(
-                                                ...matchingComponentContract.contractSchema.tags,
-                                            );
+                                            pageContract.usedComponentContracts.push({
+                                                appName: app.name,
+                                                componentName: appComponent.name,
+                                            });
                                         }
                                     }
                                 }
@@ -472,20 +456,9 @@ async function buildFullPageContracts(
         } catch (error) {
             console.warn(`Failed to read page file ${pageFilePath}:`, error);
         }
-
-        // Create the full contract with all merged tags
-        fullPageContracts[pageId] = {
-            pageId: pageContract.pageId,
-            pageName: pageContract.pageName,
-            pageUrl: pageContract.pageUrl,
-            contractSchema: {
-                name: pageContract.pageName,
-                tags: allTags,
-            },
-        };
     }
 
-    return fullPageContracts;
+    return pageContracts;
 }
 
 // Helper function to extract headless components from jay-html content
@@ -871,7 +844,7 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
         try {
             const pagesBasePath = path.resolve(config.devServer.pagesBase);
             const componentsBasePath = path.resolve(config.devServer.componentsBase);
-            const configBasePath = path.resolve('./config');
+            const configBasePath = path.resolve(config.devServer.configBase);
 
             // Scan project structure
             const [projectName, pages, components, installedApps] = await Promise.all([
@@ -917,37 +890,38 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
         try {
             const pagesBasePath = path.resolve(config.devServer.pagesBase);
             const projectRootPath = process.cwd();
-            const configBasePath = path.resolve('./config');
+            const configBasePath = path.resolve(config.devServer.configBase);
 
-            // Scan for page contracts (only their own contract files)
+            // Scan for pages (without full contract data yet)
             const pageContracts = await scanPageContracts(pagesBasePath);
 
             // Scan for installed apps to get their list
             const installedApps = await scanInstalledApps(configBasePath);
 
             // Scan for installed app contracts
-            const installedAppContracts = await scanInstalledAppContracts(projectRootPath);
+            const installedAppContracts = await scanInstalledAppContracts(
+                configBasePath,
+                projectRootPath,
+            );
 
-            // Build full page contracts (combination of page + installed app contracts)
-            const fullPageContracts = await buildFullPageContracts(
+            // Build full page contracts (with used component contracts)
+            const pages = await buildFullPageContracts(
                 pagesBasePath,
                 pageContracts,
                 installedApps,
                 installedAppContracts,
             );
 
-            console.log(`📋 Retrieved ${Object.keys(pageContracts).length} page contracts`);
+            console.log(`📋 Retrieved ${pages.length} pages with their used component contracts`);
             console.log(
                 `📦 Retrieved contracts from ${Object.keys(installedAppContracts).length} installed apps`,
             );
-            console.log(`📄 Built ${Object.keys(fullPageContracts).length} full page contracts`);
 
             return {
                 type: 'getContracts',
                 success: true,
-                pageContracts,
+                pages,
                 installedAppContracts,
-                fullPageContracts,
             };
         } catch (error) {
             console.error('Failed to get contracts:', error);
@@ -955,9 +929,8 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
                 type: 'getContracts',
                 success: false,
                 error: error instanceof Error ? error.message : 'Unknown error',
-                pageContracts: {},
+                pages: [],
                 installedAppContracts: {},
-                fullPageContracts: {},
             };
         }
     };
