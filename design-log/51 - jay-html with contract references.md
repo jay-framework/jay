@@ -1326,6 +1326,86 @@ export const page = makeJayStackComponent<PageContract>()
 4. **Deferred validation is ok**: Shipping core functionality first, adding validation later is a valid strategy
 5. **Type safety wins**: Compile-time phase validation caught several bugs during implementation
 
+### Type Deduplication Optimization
+
+**Problem Identified:** When a `.jay-html` file references a contract, both the HTML `.d.ts` and contract `.d.ts` were generating duplicate type definitions (ViewState, phase-specific types, etc.). This led to:
+- Code duplication and larger bundle sizes
+- Potential inconsistencies if types diverged
+- Confusion about which file is the source of truth
+
+**Solution Implemented:** Modified `generateElementDefinitionFile` to detect when a `.jay-html` file references an external contract and generate imports instead of duplicating type definitions.
+
+**Before (Duplication):**
+
+`page.jay-contract.d.ts`:
+```typescript
+export interface PageViewState { /* ... */ }
+export type PageSlowViewState = Pick<PageViewState, ...>;
+export type PageFastViewState = Pick<PageViewState, ...>;
+export type PageContract = JayContract<...>;
+```
+
+`page.jay-html.d.ts`:
+```typescript
+// DUPLICATE definitions!
+export interface PageViewState { /* ... */ }
+export type PageSlowViewState = Pick<PageViewState, ...>;
+export type PageFastViewState = Pick<PageViewState, ...>;
+export type PageContract = JayContract<...>;
+
+// HTML-specific types
+export type PageElement = JayElement<...>;
+export declare function render(...);
+```
+
+**After (Import-Based):**
+
+`page.jay-contract.d.ts`:
+```typescript
+// Source of truth for all types
+export interface PageViewState { /* ... */ }
+export type PageSlowViewState = Pick<PageViewState, ...>;
+export type PageFastViewState = Pick<PageViewState, ...>;
+export interface PageRefs { /* ... */ }
+export type PageContract = JayContract<...>;
+```
+
+`page.jay-html.d.ts`:
+```typescript
+// Import types from contract (no duplication!)
+import {
+    PageViewState,
+    PageRefs as PageElementRefs,
+    PageSlowViewState,
+    PageFastViewState,
+    PageInteractiveViewState,
+    PageContract
+} from './page.jay-contract';
+
+// Re-export for convenience
+export { PageViewState, PageElementRefs, PageSlowViewState, PageFastViewState, PageInteractiveViewState, PageContract };
+
+// Only HTML-specific types
+export type PageElement = JayElement<PageViewState, PageElementRefs>;
+export type PageElementRender = RenderElement<PageViewState, PageElementRefs, PageElement>;
+export declare function render(options?: RenderElementOptions): PageElementPreRender;
+```
+
+**Benefits:**
+- ✅ **Single Source of Truth**: Contract is the authoritative source for all ViewState types
+- ✅ **No Duplication**: Types are defined once and imported where needed
+- ✅ **Type Safety**: Changes to contract automatically propagate to HTML
+- ✅ **Smaller Bundles**: Less code duplication
+- ✅ **Backward Compatible**: Inline HTML files still work as before
+- ✅ **Better DX**: Clear separation between contract types and HTML-specific types
+
+**Implementation:** Modified `/packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts` in the `generateElementDefinitionFile` function to:
+1. Detect when `jayFile.contract && jayFile.contractRef` exist
+2. Generate import statement from contract `.d.ts` file
+3. Re-export imported types for backward compatibility
+4. Only generate HTML-specific types (Element, ElementRender, render function)
+5. Skip generation of ViewState and phase-specific types (already in contract)
+
 ### Future Enhancements
 
 **Potential additions (not blocking, can be added later):**

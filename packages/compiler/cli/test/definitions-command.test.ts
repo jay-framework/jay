@@ -121,29 +121,34 @@ describe('definitions command', () => {
         const htmlContent = await fsp.readFile(htmlGeneratedFile, 'utf-8');
         const contractContent = await fsp.readFile(contractGeneratedFile, 'utf-8');
 
-        // Verify HTML .d.ts uses contract's ViewState
-        expect(htmlContent).toContain('export interface PageViewState');
-        expect(htmlContent).toContain('title: string');
-        expect(htmlContent).toContain('description: string');
-        expect(htmlContent).toContain('price: number');
-        expect(htmlContent).toContain('stock: number');
-        
-        // Verify HTML .d.ts has refs
-        expect(htmlContent).toContain('export interface PageElementRefs');
-        expect(htmlContent).toContain('buyButton: HTMLElementProxy');
-        
-        // Verify HTML .d.ts has phase-specific types from contract
-        expect(htmlContent).toContain('export type PageSlowViewState = Pick<PageViewState, \'title\' | \'description\'>');
-        expect(htmlContent).toContain('export type PageFastViewState = Pick<PageViewState, \'price\' | \'stock\'>');
-        expect(htmlContent).toContain('export type PageInteractiveViewState = Pick<PageViewState, \'stock\'>');
-        
-        // Verify HTML .d.ts has 5-parameter JayContract
-        expect(htmlContent).toContain('export type PageContract = JayContract<');
+        // Verify HTML .d.ts IMPORTS types from contract instead of redefining them
+        expect(htmlContent).toContain('import {');
         expect(htmlContent).toContain('PageViewState,');
-        expect(htmlContent).toContain('PageElementRefs,');
+        expect(htmlContent).toContain('PageRefs as PageElementRefs,');
         expect(htmlContent).toContain('PageSlowViewState,');
         expect(htmlContent).toContain('PageFastViewState,');
-        expect(htmlContent).toContain('PageInteractiveViewState');
+        expect(htmlContent).toContain('PageInteractiveViewState,');
+        expect(htmlContent).toContain('PageContract');
+        expect(htmlContent).toContain('} from \'./page.jay-contract\';');
+        
+        // Verify HTML .d.ts re-exports the imported types
+        expect(htmlContent).toContain('export { PageViewState, PageElementRefs, PageSlowViewState, PageFastViewState, PageInteractiveViewState, PageContract }');
+        
+        // Verify HTML .d.ts does NOT redefine ViewState (no duplication!)
+        expect(htmlContent).not.toContain('export interface PageViewState');
+        expect(htmlContent).not.toContain('export type PageSlowViewState = Pick<');
+        expect(htmlContent).not.toContain('export type PageFastViewState = Pick<');
+        expect(htmlContent).not.toContain('export type PageInteractiveViewState = Pick<');
+        
+        // Verify HTML .d.ts still has HTML-specific types
+        expect(htmlContent).toContain('export type PageElement = JayElement<');
+        expect(htmlContent).toContain('export type PageElementRender = RenderElement<');
+        expect(htmlContent).toContain('export declare function render(');
+        
+        // Verify contract .d.ts still exists and has the original definitions
+        expect(contractContent).toContain('export interface PageViewState');
+        expect(contractContent).toContain('export type PageSlowViewState = Pick<PageViewState');
+        expect(contractContent).toContain('export type PageContract = JayContract<');
         
         // Verify contract .d.ts also exists
         expect(contractContent).toContain('export interface PageViewState');

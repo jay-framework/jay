@@ -286,6 +286,22 @@ export class Imports {
         }
     }
 
+    minus(removeImport: ImportName | Imports): Imports {
+        if (removeImport instanceof Imports) {
+            let newImports: Array<boolean> = [...this.imports];
+            for (let i = 0; i < removeImport.imports.length; i++) {
+                if (removeImport.imports[i]) {
+                    newImports[i] = false;
+                }
+            }
+            return new Imports(newImports);
+        } else {
+            let newImports: Array<boolean> = [...this.imports];
+            newImports[removeImport.index] = false;
+            return new Imports(newImports);
+        }
+    }
+
     has(anImport: ImportName) {
         return !!this.imports[anImport.index];
     }

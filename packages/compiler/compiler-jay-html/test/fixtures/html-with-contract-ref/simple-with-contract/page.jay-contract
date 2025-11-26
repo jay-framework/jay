@@ -16,8 +16,8 @@ tags:
     type: data
     dataType: string
     phase: fast+interactive
-
-interactive:
+  
+  # Interactive element
   - tag: button
-    elementType: [button]
-
+    type: interactive
+    elementType: HTMLButtonElement
