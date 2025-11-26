@@ -26,10 +26,20 @@ export interface AppElementRefs {
     a: AutoCounterRef<AppViewState>;
 }
 
+export type AppSlowViewState = {};
+export type AppFastViewState = {};
+export type AppInteractiveViewState = AppViewState;
+
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
 export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>;
 export type AppElementPreRender = [AppElementRefs, AppElementRender];
-export type AppContract = JayContract<AppViewState, AppElementRefs>;
+export type AppContract = JayContract<
+    AppViewState,
+    AppElementRefs,
+    AppSlowViewState,
+    AppFastViewState,
+    AppInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): AppElementPreRender {
     const [refManager, [refA]] = ReferencesManager.for(options, [], [], ['a'], []);
