@@ -1,11 +1,7 @@
 <html>
 <head>
     <script type="application/jay-headless" src="../../simple-plugin/simple-plugin.ts" name="plugin" key="plugin" ></script>
-    <script type="application/jay-data">
-data:
-    pageSlowlyRendered: string
-    pageFastDynamicRendered: string
-    </script>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
 </head>
 <body>
 <div>

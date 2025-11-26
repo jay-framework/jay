@@ -25,10 +25,20 @@ export interface PageElementRefs {
     button: HTMLElementProxy<PageViewState, HTMLButtonElement>;
 }
 
+export type PageSlowViewState = Pick<PageViewState, 'pageSlowlyRendered'>;
+export type PageFastViewState = Pick<PageViewState, 'pageFastDynamicRendered'>;
+export type PageInteractiveViewState = Pick<PageViewState, 'pageFastDynamicRendered'>;
+
 export type PageElement = JayElement<PageViewState, PageElementRefs>;
 export type PageElementRender = RenderElement<PageViewState, PageElementRefs, PageElement>;
 export type PageElementPreRender = [PageElementRefs, PageElementRender];
-export type PageContract = JayContract<PageViewState, PageElementRefs>;
+export type PageContract = JayContract<
+    PageViewState,
+    PageElementRefs,
+    PageSlowViewState,
+    PageFastViewState,
+    PageInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): PageElementPreRender {
     const [pluginRefManager, [refPluginButton]] = ReferencesManager.for(

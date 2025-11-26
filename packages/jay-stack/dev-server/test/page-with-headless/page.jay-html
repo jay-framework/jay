@@ -7,10 +7,7 @@
             name="headless"
             contract="./headless-component.jay-contract"
             key="headless" ></script>
-    <script type="application/jay-data">
-        data:
-          title: string
-          content: string
+    <script type="application/jay-data" contract="./page.jay-contract">
     </script>
 </head>
 <body>

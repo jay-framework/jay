@@ -1,4 +1,12 @@
-import { render, PageElementRefs, PageViewState, PageContract } from './compiled/page.jay-html';
+import { 
+    render, 
+    PageElementRefs, 
+    PageViewState, 
+    PageContract,
+    PageSlowViewState,
+    PageFastViewState,
+    PageInteractiveViewState,
+} from './compiled/page.jay-html';
 import { Props } from '@jay-framework/component';
 import {
     makeJayStackComponent,
@@ -7,9 +15,6 @@ import {
     PartialRender,
     Signals,
 } from '@jay-framework/fullstack-component';
-
-type SlowlyViewState = Pick<PageViewState, 'slowlyRendered'>;
-type FastViewState = Omit<PageViewState, keyof SlowlyViewState>;
 
 interface SlowlyCarryForward {
     carryForwardSlowly: string;
@@ -27,7 +32,7 @@ interface PageParams {
 
 async function renderSlowlyChanging(
     props: PageProps & PageParams,
-): Promise<PartialRender<SlowlyViewState, SlowlyCarryForward>> {
+): Promise<PartialRender<PageSlowViewState, SlowlyCarryForward>> {
     const slowlyRendered = `SLOWLY RENDERED ${props.variant}`;
     const carryForwardSlowly = `SLOWLY -> FAST CARRY FORWARD ${props.variant}`;
     return partialRender({ slowlyRendered }, { carryForwardSlowly });
@@ -36,7 +41,7 @@ async function renderSlowlyChanging(
 async function renderFastChanging(
     props: PageProps & PageParams,
     carryForward: SlowlyCarryForward,
-): Promise<PartialRender<FastViewState, FastCarryForward>> {
+): Promise<PartialRender<PageFastViewState, FastCarryForward>> {
     const fastDynamicRendered = `FAST RENDERED ${props.variant}, using ${carryForward.carryForwardSlowly}`;
     const carryForwardFast = `FAST -> INTERACTIVE CARRY FORWARD ${props.variant}`;
     return partialRender(
@@ -72,6 +77,6 @@ export const page = makeJayStackComponent<PageContract>()
     .withLoadParams<PageParams>(async function* () {
         yield [{ variant: 'A' }, { variant: 'B' }];
     })
-    .withSlowlyRender<SlowlyViewState, SlowlyCarryForward>(renderSlowlyChanging)
-    .withFastRender<FastCarryForward>(renderFastChanging)
+    .withSlowlyRender(renderSlowlyChanging)
+    .withFastRender(renderFastChanging)
     .withInteractive(ProductsPageConstructor);

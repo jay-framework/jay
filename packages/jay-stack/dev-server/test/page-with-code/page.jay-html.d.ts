@@ -12,9 +12,19 @@ export interface PageViewState {
 
 export interface PageElementRefs {}
 
+export type PageSlowViewState = {};
+export type PageFastViewState = {};
+export type PageInteractiveViewState = PageViewState;
+
 export type PageElement = JayElement<PageViewState, PageElementRefs>;
 export type PageElementRender = RenderElement<PageViewState, PageElementRefs, PageElement>;
 export type PageElementPreRender = [PageElementRefs, PageElementRender];
-export type PageContract = JayContract<PageViewState, PageElementRefs>;
+export type PageContract = JayContract<
+    PageViewState,
+    PageElementRefs,
+    PageSlowViewState,
+    PageFastViewState,
+    PageInteractiveViewState
+>;
 
 export declare function render(options?: RenderElementOptions): PageElementPreRender;

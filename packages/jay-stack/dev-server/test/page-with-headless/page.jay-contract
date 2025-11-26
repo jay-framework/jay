@@ -1,0 +1,11 @@
+data:
+  - tag: title
+    type: data
+    dataType: string
+    phase: slow
+
+  - tag: content
+    type: data
+    dataType: string
+    phase: slow
+
