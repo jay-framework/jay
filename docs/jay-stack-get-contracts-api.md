@@ -77,6 +77,20 @@ interface PageContractSchema {
 - See which installed application components are used on each page
 - Look up the full contract for used components in `installedAppContracts`
 
+### Page Detection & Configuration
+
+The API detects pages by scanning the `src/pages` directory. A directory is considered a page if it contains any of:
+
+- `page.jay-html`
+- `page.jay-contract`
+- `page.conf.yaml`
+
+**Used Components Resolution:**
+The list of `usedComponentContracts` is derived with the following priority:
+
+1. **`page.jay-html`**: If present, `<script type="application/jay-headless">` tags are parsed.
+2. **`page.conf.yaml`**: If `jay-html` is missing, this file is checked for a `used_components` list.
+
 ### Example
 
 ```typescript
