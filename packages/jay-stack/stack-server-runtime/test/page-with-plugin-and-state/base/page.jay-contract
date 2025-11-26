@@ -1,0 +1,11 @@
+data:
+  - tag: pageSlowlyRendered
+    type: data
+    dataType: string
+    phase: slow
+    
+  - tag: pageFastDynamicRendered
+    type: data
+    dataType: string
+    phase: fast+interactive
+

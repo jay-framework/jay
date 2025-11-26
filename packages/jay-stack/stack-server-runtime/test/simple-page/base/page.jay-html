@@ -1,15 +1,11 @@
-<html>
+x<html>
 <head>
-    <script type="application/jay-data">
-        data:
-          slowlyRendered: string
-          fastRendered: string
-          fastDynamicRendered: string
-    </script>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
 </head>
 <body>
 <div>
     <div>{slowlyRendered}</div>
+    <div>{fastRendered}</div>
     <div>{fastDynamicRendered}</div>
     <button ref="button" data-id="button">click</button>
 </div>

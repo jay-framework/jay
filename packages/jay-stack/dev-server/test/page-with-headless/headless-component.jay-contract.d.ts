@@ -13,6 +13,10 @@ export interface HeadlessComponentRefs {}
 
 export interface HeadlessComponentRepeatedRefs {}
 
+export type HeadlessComponentSlowViewState = HeadlessComponentViewState;
+export type HeadlessComponentFastViewState = {};
+export type HeadlessComponentInteractiveViewState = {};
+
 export type HeadlessComponentElement = JayElement<
     HeadlessComponentViewState,
     HeadlessComponentRefs
@@ -28,7 +32,10 @@ export type HeadlessComponentElementPreRender = [
 ];
 export type HeadlessComponentContract = JayContract<
     HeadlessComponentViewState,
-    HeadlessComponentRefs
+    HeadlessComponentRefs,
+    HeadlessComponentSlowViewState,
+    HeadlessComponentFastViewState,
+    HeadlessComponentInteractiveViewState
 >;
 
 export declare function render(options?: RenderElementOptions): HeadlessComponentElementPreRender;

@@ -26,7 +26,7 @@ export interface SimplePluginRepeatedRefs {
 
 export type SimplePluginContract = JayContract<
     SimplePluginViewState,
-    SimplePluginElementRefs,
+    SimplePluginRefs,
     SimplePluginSlowViewState,
     SimplePluginFastViewState,
     SimplePluginInteractiveViewState>;
