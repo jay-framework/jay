@@ -1,0 +1,26 @@
+name: Page
+tags:
+  - tag: title
+    type: data
+    dataType: string
+    phase: slow
+  
+  - tag: description
+    type: data
+    dataType: string
+    phase: slow
+  
+  - tag: price
+    type: data
+    dataType: number
+    phase: fast
+  
+  - tag: stock
+    type: data
+    dataType: number
+    phase: fast+interactive
+  
+  - tag: buyButton
+    type: interactive
+    elementType: HTMLButtonElement
+
