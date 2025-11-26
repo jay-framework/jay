@@ -22,7 +22,6 @@ export interface AppElementRefs {
     a: CounterRef<AppViewState>;
 }
 
-
 export type AppSlowViewState = {};
 export type AppFastViewState = {};
 export type AppInteractiveViewState = AppViewState;

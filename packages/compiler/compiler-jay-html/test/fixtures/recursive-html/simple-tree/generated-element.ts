@@ -30,7 +30,6 @@ export type SimpleTreeSlowViewState = {};
 export type SimpleTreeFastViewState = {};
 export type SimpleTreeInteractiveViewState = SimpleTreeViewState;
 
-
 export type SimpleTreeElement = JayElement<SimpleTreeViewState, SimpleTreeElementRefs>;
 export type SimpleTreeElementRender = RenderElement<
     SimpleTreeViewState,

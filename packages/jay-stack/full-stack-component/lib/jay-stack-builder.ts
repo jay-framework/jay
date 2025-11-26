@@ -124,9 +124,7 @@ export type Builder<
                 CompCore
             >;
 
-            withSlowlyRender<
-                NewCarryForward extends object
-            >(
+            withSlowlyRender<NewCarryForward extends object>(
                 slowlyRender: RenderSlowly<Services, PropsT, SlowVS, NewCarryForward>,
             ): Builder<
                 'FastRender',
@@ -138,10 +136,7 @@ export type Builder<
                 Contexts,
                 PropsT,
                 Params,
-                JayComponentCore<
-                    PropsT,
-                    InteractiveVS
-                >
+                JayComponentCore<PropsT, InteractiveVS>
             >;
 
             withFastRender<NewCarryForward extends object>(
@@ -216,9 +211,7 @@ export type Builder<
                   CompCore
               >;
 
-              withSlowlyRender<
-                NewCarryForward extends object
-            >(
+              withSlowlyRender<NewCarryForward extends object>(
                   slowlyRender: RenderSlowly<Services, PropsT, SlowVS, NewCarryForward>,
               ): Builder<
                   'FastRender',
@@ -230,14 +223,11 @@ export type Builder<
                   Contexts,
                   PropsT,
                   Params,
-                  JayComponentCore<
-                      PropsT,
-                      InteractiveVS
-                  >
+                  JayComponentCore<PropsT, InteractiveVS>
               >;
 
               withFastRender<NewCarryForward extends object>(
-                fastRender: RenderFast<Services, PropsT, FastVS, NewCarryForward>,
+                  fastRender: RenderFast<Services, PropsT, FastVS, NewCarryForward>,
               ): Builder<
                   'InteractiveRender',
                   Refs,
@@ -252,7 +242,7 @@ export type Builder<
               >;
 
               withInteractive(
-                comp: ComponentConstructor<PropsT, Refs, InteractiveVS, Contexts, CompCore>,
+                  comp: ComponentConstructor<PropsT, Refs, InteractiveVS, Contexts, CompCore>,
               ): Builder<
                   'Done',
                   Refs,
@@ -293,15 +283,8 @@ export type Builder<
                     CompCore
                 >;
 
-                withSlowlyRender<
-                NewCarryForward extends object
-            >(
-                    slowlyRender: RenderSlowly<
-                        Services,
-                        PropsT,
-                        SlowVS,
-                        NewCarryForward
-                    >,
+                withSlowlyRender<NewCarryForward extends object>(
+                    slowlyRender: RenderSlowly<Services, PropsT, SlowVS, NewCarryForward>,
                 ): Builder<
                     'FastRender',
                     Refs,
@@ -312,14 +295,11 @@ export type Builder<
                     Contexts,
                     PropsT,
                     Params,
-                    JayComponentCore<
-                        PropsT,
-                        InteractiveVS
-                    >
+                    JayComponentCore<PropsT, InteractiveVS>
                 >;
 
                 withFastRender<NewCarryForward extends object>(
-                fastRender: RenderFast<Services, PropsT, FastVS, NewCarryForward>,
+                    fastRender: RenderFast<Services, PropsT, FastVS, NewCarryForward>,
                 ): Builder<
                     'InteractiveRender',
                     Refs,
@@ -334,7 +314,7 @@ export type Builder<
                 >;
 
                 withInteractive(
-                comp: ComponentConstructor<PropsT, Refs, InteractiveVS, Contexts, CompCore>,
+                    comp: ComponentConstructor<PropsT, Refs, InteractiveVS, Contexts, CompCore>,
                 ): Builder<
                     'Done',
                     Refs,
@@ -360,15 +340,8 @@ export type Builder<
                   Params,
                   CompCore
               > & {
-                  withSlowlyRender<
-                NewCarryForward extends object
-            >(
-                      slowlyRender: RenderSlowly<
-                          Services,
-                          PropsT,
-                          SlowVS,
-                          NewCarryForward
-                      >,
+                  withSlowlyRender<NewCarryForward extends object>(
+                      slowlyRender: RenderSlowly<Services, PropsT, SlowVS, NewCarryForward>,
                   ): Builder<
                       'FastRender',
                       Refs,
@@ -379,14 +352,11 @@ export type Builder<
                       Contexts,
                       PropsT,
                       Params,
-                      JayComponentCore<
-                          PropsT,
-                          InteractiveVS
-                      >
+                      JayComponentCore<PropsT, InteractiveVS>
                   >;
 
                   withFastRender<NewCarryForward extends object>(
-                fastRender: RenderFast<Services, PropsT, FastVS, NewCarryForward>,
+                      fastRender: RenderFast<Services, PropsT, FastVS, NewCarryForward>,
                   ): Builder<
                       'InteractiveRender',
                       Refs,
@@ -401,7 +371,7 @@ export type Builder<
                   >;
 
                   withInteractive(
-                comp: ComponentConstructor<PropsT, Refs, InteractiveVS, Contexts, CompCore>,
+                      comp: ComponentConstructor<PropsT, Refs, InteractiveVS, Contexts, CompCore>,
                   ): Builder<
                       'Done',
                       Refs,
@@ -428,7 +398,7 @@ export type Builder<
                     CompCore
                 > & {
                     withFastRender<NewCarryForward extends object>(
-                fastRender: RenderFast<Services, PropsT, FastVS, NewCarryForward>,
+                        fastRender: RenderFast<Services, PropsT, FastVS, NewCarryForward>,
                     ): Builder<
                         'InteractiveRender',
                         Refs,
@@ -443,7 +413,7 @@ export type Builder<
                     >;
 
                     withInteractive(
-                comp: ComponentConstructor<PropsT, Refs, InteractiveVS, Contexts, CompCore>,
+                        comp: ComponentConstructor<PropsT, Refs, InteractiveVS, Contexts, CompCore>,
                     ): Builder<
                         'Done',
                         Refs,
@@ -470,7 +440,13 @@ export type Builder<
                       CompCore
                   > & {
                       withInteractive(
-                comp: ComponentConstructor<PropsT, Refs, InteractiveVS, Contexts, CompCore>,
+                          comp: ComponentConstructor<
+                              PropsT,
+                              Refs,
+                              InteractiveVS,
+                              Contexts,
+                              CompCore
+                          >,
                       ): Builder<
                           'Done',
                           Refs,
@@ -676,7 +652,7 @@ class BuilderImplementation<
     }
 
     withFastRender<NewCarryForward extends object>(
-                fastRender: RenderFast<Services, PropsT, FastVS, NewCarryForward>,
+        fastRender: RenderFast<Services, PropsT, FastVS, NewCarryForward>,
     ): Builder<
         'InteractiveRender',
         Refs,
@@ -741,24 +717,24 @@ class BuilderImplementation<
 
 /**
  * Create a Jay Stack component from a contract.
- * 
+ *
  * For .jay-contract files with explicit phase annotations:
  * - SlowViewState: Properties with phase: slow (or default)
- * - FastViewState: Properties with phase: fast  
+ * - FastViewState: Properties with phase: fast
  * - InteractiveViewState: Properties with phase: fast+interactive
- * 
+ *
  * For .jay-html files (backward compatible):
  * - SlowViewState, FastViewState, InteractiveViewState default to `never`
- * 
+ *
  * Note: Full type enforcement for phase-specific render functions requires
  * extensive refactoring of the Builder type system. Currently, the phase types
  * are extracted but not yet enforced. See design-log/50 for full implementation plan.
- * 
+ *
  * TODO: Add type constraints to withSlowlyRender, withFastRender, withInteractive
  * to enforce that returned/received ViewStates match the phase-specific types.
  */
 export function makeJayStackComponent<
-    Render extends JayContract<any, any, any, any, any>
+    Render extends JayContract<any, any, any, any, any>,
 >(): Builder<
     'Props',
     ExtractRefs<Render>,

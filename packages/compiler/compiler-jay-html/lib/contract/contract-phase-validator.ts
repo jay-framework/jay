@@ -4,8 +4,8 @@ import { Contract, ContractTag, ContractTagType, RenderingPhase } from './contra
  * Phase ordering: slow < fast < fast+interactive
  */
 const PHASE_ORDER: Record<RenderingPhase, number> = {
-    'slow': 0,
-    'fast': 1,
+    slow: 0,
+    fast: 1,
     'fast+interactive': 2,
 };
 
@@ -22,17 +22,17 @@ export function getEffectivePhase(tag: ContractTag, parentPhase?: RenderingPhase
     if (tag.type.includes(ContractTagType.interactive)) {
         return 'fast+interactive';
     }
-    
+
     // Use explicit phase if provided
     if (tag.phase) {
         return tag.phase;
     }
-    
+
     // Inherit from parent phase for nested tags
     if (parentPhase) {
         return parentPhase;
     }
-    
+
     // Default to slow
     return DEFAULT_PHASE;
 }
@@ -52,13 +52,13 @@ function isPhaseCompatible(childPhase: RenderingPhase, parentPhase: RenderingPha
 export function isTagInPhase(
     tag: ContractTag,
     targetPhase: RenderingPhase,
-    parentPhase?: RenderingPhase
+    parentPhase?: RenderingPhase,
 ): boolean {
     // Skip interactive tags - they go into Refs, not ViewState
     if (tag.type.includes(ContractTagType.interactive) && !tag.dataType) {
         return false;
     }
-    
+
     const effectivePhase = getEffectivePhase(tag, parentPhase);
     // Include only if effective phase exactly matches target phase
     return effectivePhase === targetPhase;
@@ -70,20 +70,20 @@ export function isTagInPhase(
 function validateTagPhases(
     tag: ContractTag,
     parentPhase?: RenderingPhase,
-    tagPath: string = ''
+    tagPath: string = '',
 ): string[] {
     const validations: string[] = [];
     const currentPath = tagPath ? `${tagPath}.${tag.tag}` : tag.tag;
     const effectivePhase = getEffectivePhase(tag, parentPhase);
-    
+
     // Validate that child phase >= parent phase (if parent exists)
     if (parentPhase && !isPhaseCompatible(effectivePhase, parentPhase)) {
         validations.push(
             `Tag [${currentPath}] has phase [${effectivePhase}] which is earlier than parent phase [${parentPhase}]. ` +
-            `Child phases must be same or later than parent (slow < fast < fast+interactive)`
+                `Child phases must be same or later than parent (slow < fast < fast+interactive)`,
         );
     }
-    
+
     // Validate nested tags (sub-contracts)
     if (tag.type.includes(ContractTagType.subContract) && tag.tags) {
         if (tag.repeated) {
@@ -103,7 +103,7 @@ function validateTagPhases(
             });
         }
     }
-    
+
     return validations;
 }
 
@@ -112,12 +112,12 @@ function validateTagPhases(
  */
 export function validateContractPhases(contract: Contract): string[] {
     const validations: string[] = [];
-    
+
     contract.tags.forEach((tag) => {
         const tagValidations = validateTagPhases(tag);
         validations.push(...tagValidations);
     });
-    
+
     return validations;
 }
 
@@ -128,22 +128,22 @@ export function validateContractPhases(contract: Contract): string[] {
 export function filterTagsByPhase(
     tags: ContractTag[],
     targetPhase: RenderingPhase,
-    parentPhase?: RenderingPhase
+    parentPhase?: RenderingPhase,
 ): ContractTag[] {
     const filteredTags: ContractTag[] = [];
-    
+
     for (const tag of tags) {
         // Check if this tag should be included in this phase
         if (!isTagInPhase(tag, targetPhase, parentPhase)) {
             continue;
         }
-        
+
         const effectivePhase = getEffectivePhase(tag, parentPhase);
-        
+
         // If it's a sub-contract with nested tags, filter them recursively
         if (tag.type.includes(ContractTagType.subContract) && tag.tags) {
             const filteredNestedTags = filterTagsByPhase(tag.tags, targetPhase, effectivePhase);
-            
+
             // Only include the sub-contract if it has children in this phase
             if (filteredNestedTags.length > 0) {
                 filteredTags.push({
@@ -156,7 +156,7 @@ export function filterTagsByPhase(
             filteredTags.push(tag);
         }
     }
-    
+
     return filteredTags;
 }
 
@@ -164,13 +164,9 @@ export function filterTagsByPhase(
  * Create a phase-specific contract
  * Returns a contract with only tags that belong to the target phase
  */
-export function createPhaseContract(
-    contract: Contract,
-    targetPhase: RenderingPhase
-): Contract {
+export function createPhaseContract(contract: Contract, targetPhase: RenderingPhase): Contract {
     return {
         ...contract,
         tags: filterTagsByPhase(contract.tags, targetPhase),
     };
 }
-

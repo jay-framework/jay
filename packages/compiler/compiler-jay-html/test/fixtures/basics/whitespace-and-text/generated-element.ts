@@ -20,7 +20,6 @@ export type WhitespaceAndTextSlowViewState = {};
 export type WhitespaceAndTextFastViewState = {};
 export type WhitespaceAndTextInteractiveViewState = WhitespaceAndTextViewState;
 
-
 export type WhitespaceAndTextElement = JayElement<
     WhitespaceAndTextViewState,
     WhitespaceAndTextElementRefs

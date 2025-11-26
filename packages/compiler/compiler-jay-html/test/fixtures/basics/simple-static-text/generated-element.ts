@@ -18,7 +18,6 @@ export type SimpleStaticTextSlowViewState = {};
 export type SimpleStaticTextFastViewState = {};
 export type SimpleStaticTextInteractiveViewState = SimpleStaticTextViewState;
 
-
 export type SimpleStaticTextElement = JayElement<
     SimpleStaticTextViewState,
     SimpleStaticTextElementRefs

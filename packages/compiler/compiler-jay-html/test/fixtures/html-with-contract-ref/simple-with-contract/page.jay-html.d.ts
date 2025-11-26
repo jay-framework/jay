@@ -34,4 +34,3 @@ export type PageContract = JayContract<
 >;
 
 export declare function render(options?: RenderElementOptions): PageElementPreRender;
-

@@ -19,7 +19,6 @@ export type SimpleDynamicTextSlowViewState = {};
 export type SimpleDynamicTextFastViewState = {};
 export type SimpleDynamicTextInteractiveViewState = SimpleDynamicTextViewState;
 
-
 export type SimpleDynamicTextElement = JayElement<
     SimpleDynamicTextViewState,
     SimpleDynamicTextElementRefs

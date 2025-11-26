@@ -20,7 +20,6 @@ export type StylesWithUrlsSlowViewState = {};
 export type StylesWithUrlsFastViewState = {};
 export type StylesWithUrlsInteractiveViewState = StylesWithUrlsViewState;
 
-
 export type StylesWithUrlsElement = JayElement<StylesWithUrlsViewState, StylesWithUrlsElementRefs>;
 export type StylesWithUrlsElementRender = RenderElement<
     StylesWithUrlsViewState,

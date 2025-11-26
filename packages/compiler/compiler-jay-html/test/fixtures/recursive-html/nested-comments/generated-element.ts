@@ -31,7 +31,6 @@ export type NestedCommentsSlowViewState = {};
 export type NestedCommentsFastViewState = {};
 export type NestedCommentsInteractiveViewState = NestedCommentsViewState;
 
-
 export type NestedCommentsElement = JayElement<NestedCommentsViewState, NestedCommentsElementRefs>;
 export type NestedCommentsElementRender = RenderElement<
     NestedCommentsViewState,

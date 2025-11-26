@@ -1,7 +1,7 @@
-import { 
-    render, 
-    PageElementRefs, 
-    PageViewState, 
+import {
+    render,
+    PageElementRefs,
+    PageViewState,
     PageContract,
     PageSlowViewState,
     PageFastViewState,

@@ -18,7 +18,6 @@ export interface AppViewState {
 
 export interface AppElementRefs {}
 
-
 export type AppSlowViewState = {};
 export type AppFastViewState = {};
 export type AppInteractiveViewState = AppViewState;

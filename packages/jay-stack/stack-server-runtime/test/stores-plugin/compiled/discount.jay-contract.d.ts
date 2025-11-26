@@ -1,4 +1,9 @@
-import {JayContract, JayElement, RenderElement, RenderElementOptions} from '@jay-framework/runtime';
+import {
+    JayContract,
+    JayElement,
+    RenderElement,
+    RenderElementOptions,
+} from '@jay-framework/runtime';
 
 export enum Type {
     amount,
@@ -23,5 +28,5 @@ export type DiscountContract = JayContract<
     DiscountRefs,
     DiscountSlowViewState,
     DiscountFastViewState,
-    DiscountInteractiveViewState>;
-
+    DiscountInteractiveViewState
+>;

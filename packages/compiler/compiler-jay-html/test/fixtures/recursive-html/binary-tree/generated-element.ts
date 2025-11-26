@@ -32,7 +32,6 @@ export type BinaryTreeSlowViewState = {};
 export type BinaryTreeFastViewState = {};
 export type BinaryTreeInteractiveViewState = BinaryTreeViewState;
 
-
 export type BinaryTreeElement = JayElement<BinaryTreeViewState, BinaryTreeElementRefs>;
 export type BinaryTreeElementRender = RenderElement<
     BinaryTreeViewState,

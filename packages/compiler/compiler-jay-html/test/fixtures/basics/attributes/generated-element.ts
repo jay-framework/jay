@@ -26,7 +26,6 @@ export type AttributesSlowViewState = {};
 export type AttributesFastViewState = {};
 export type AttributesInteractiveViewState = AttributesViewState;
 
-
 export type AttributesElement = JayElement<AttributesViewState, AttributesElementRefs>;
 export type AttributesElementRender = RenderElement<
     AttributesViewState,

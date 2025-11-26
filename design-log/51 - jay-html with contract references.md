@@ -13,18 +13,18 @@ Consider this `.jay-html` file:
 
 ```html
 <html>
-<head>
+  <head>
     <script type="application/jay-data">
-        data:
-          slowlyRendered: string
-          fastRendered: string
-          fastDynamicRendered: string
+      data:
+        slowlyRendered: string
+        fastRendered: string
+        fastDynamicRendered: string
     </script>
-</head>
-<body>
+  </head>
+  <body>
     <div>{slowlyRendered}</div>
     <div>{fastDynamicRendered}</div>
-</body>
+  </body>
 </html>
 ```
 
@@ -53,9 +53,9 @@ import { render, PageElementRefs, PageViewState, PageContract } from './compiled
 
 // Line 65 uses PageContract, but it has no phase-specific ViewState types
 export const page = makeJayStackComponent<PageContract>()
-    .withProps<PageProps>()
-    .withSlowlyRender(renderSlowlyChanging)  // No type validation!
-    .withFastRender(renderFastChanging);     // No type validation!
+  .withProps<PageProps>()
+  .withSlowlyRender(renderSlowlyChanging) // No type validation!
+  .withFastRender(renderFastChanging); // No type validation!
 ```
 
 ## Proposed Solution: Contract References
@@ -64,7 +64,8 @@ Allow `.jay-html` files to **reference an external `.jay-contract` file** for th
 
 ### Core Design Principles
 
-1. **Separation of Concerns**: 
+1. **Separation of Concerns**:
+
    - `.jay-contract` = Data structure + phase annotations (what to render)
    - `.jay-html` = Template + rendering logic (how to render)
 
@@ -82,50 +83,53 @@ Allow `.jay-html` files to **reference an external `.jay-contract` file** for th
 
 ```html
 <html>
-<head>
+  <head>
     <!-- Reference external contract file -->
-    <script type="application/jay-data" contract="./page.jay-contract">
-    </script>
-</head>
-<body>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
+  </head>
+  <body>
     <div>{slowlyRendered}</div>
     <div>{fastDynamicRendered}</div>
-</body>
+  </body>
 </html>
 ```
 
 **Pros:**
+
 - Minimal syntax change
 - Uses existing `<script type="application/jay-data">` tag
 - Empty script body clearly indicates "defined elsewhere"
 - `contract` attribute is explicit and discoverable
 
 **Cons:**
+
 - Script tag is empty (might be confusing initially)
 
 #### Option B: Import-style reference at top
 
 ```html
 <html>
-<head>
+  <head>
     <jay-import contract="./page.jay-contract" />
-    
+
     <script type="application/jay-data">
-        <!-- Data structure defined in referenced contract -->
+      <!-- Data structure defined in referenced contract -->
     </script>
-</head>
-<body>
+  </head>
+  <body>
     <div>{slowlyRendered}</div>
     <div>{fastDynamicRendered}</div>
-</body>
+  </body>
 </html>
 ```
 
 **Pros:**
+
 - More explicit "import" semantics
 - Separates concern: import vs data declaration
 
 **Cons:**
+
 - Introduces new tag (`<jay-import>`)
 - More verbose
 - Two tags instead of one
@@ -134,23 +138,25 @@ Allow `.jay-html` files to **reference an external `.jay-contract` file** for th
 
 ```html
 <html>
-<head>
+  <head>
     <script type="application/jay-data">
-        contract: ./page.jay-contract
+      contract: ./page.jay-contract
     </script>
-</head>
-<body>
+  </head>
+  <body>
     <div>{slowlyRendered}</div>
     <div>{fastDynamicRendered}</div>
-</body>
+  </body>
 </html>
 ```
 
 **Pros:**
+
 - Compact
 - Uses existing YAML structure
 
 **Cons:**
+
 - Mixes contract reference with data definition syntax
 - Less clear that it's a file reference
 
@@ -170,18 +176,18 @@ tags:
     type: data
     dataType: string
     phase: slow
-  
+
   # Dynamic content - rendered per request
   - tag: fastRendered
     type: data
     dataType: string
     phase: fast
-  
+
   - tag: fastDynamicRendered
     type: data
     dataType: string
     phase: fast
-  
+
   # Interactive element
   interactive:
     - tag: button
@@ -194,18 +200,17 @@ tags:
 
 ```html
 <html>
-<head>
+  <head>
     <!-- Reference external contract -->
-    <script type="application/jay-data" contract="./page.jay-contract">
-    </script>
-</head>
-<body>
-<div>
-    <div>{slowlyRendered}</div>
-    <div>{fastDynamicRendered}</div>
-    <button ref="button" data-id="button">click</button>
-</div>
-</body>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
+  </head>
+  <body>
+    <div>
+      <div>{slowlyRendered}</div>
+      <div>{fastDynamicRendered}</div>
+      <button ref="button" data-id="button">click</button>
+    </div>
+  </body>
 </html>
 ```
 
@@ -218,14 +223,14 @@ import { JayElement, HTMLElementProxy, JayContract } from '@jay-framework/runtim
 
 // Full ViewState (from contract)
 export interface PageViewState {
-    slowlyRendered: string;
-    fastRendered: string;
-    fastDynamicRendered: string;
+  slowlyRendered: string;
+  fastRendered: string;
+  fastDynamicRendered: string;
 }
 
 // Interactive element refs (from contract)
 export interface PageElementRefs {
-    button: HTMLElementProxy<PageViewState, HTMLButtonElement>;
+  button: HTMLElementProxy<PageViewState, HTMLButtonElement>;
 }
 
 // Phase-specific ViewStates (from contract phase annotations)
@@ -235,11 +240,11 @@ export type PageInteractiveViewState = {};
 
 // Contract type with all 5 type parameters
 export type PageContract = JayContract<
-    PageViewState,
-    PageElementRefs,
-    PageSlowViewState,
-    PageFastViewState,
-    PageInteractiveViewState
+  PageViewState,
+  PageElementRefs,
+  PageSlowViewState,
+  PageFastViewState,
+  PageInteractiveViewState
 >;
 
 // Legacy exports for backward compatibility
@@ -253,37 +258,48 @@ export type PageElement = JayElement<PageViewState, PageElementRefs>;
 
 ```typescript
 import { PageContract } from './compiled/page.jay-html';
-import { makeJayStackComponent, PageProps, partialRender } from '@jay-framework/fullstack-component';
+import {
+  makeJayStackComponent,
+  PageProps,
+  partialRender,
+} from '@jay-framework/fullstack-component';
 
 // ✅ No manual type definitions needed!
 // ✅ Phase-specific types come from contract
 
 export const page = makeJayStackComponent<PageContract>()
-    .withProps<PageProps>()
-    .withSlowlyRender(async (props) => {
-        return partialRender({
-            slowlyRendered: 'SLOWLY RENDERED',
-            // fastRendered: 'test',  // ❌ TypeScript Error: Not in SlowViewState
-        }, { carryForwardSlowly: 'data' });
-    })
-    .withFastRender(async (props, carryForward) => {
-        return partialRender({
-            fastRendered: 'FAST RENDERED',
-            fastDynamicRendered: 'FAST DYNAMIC',
-            // slowlyRendered: 'test',  // ❌ TypeScript Error: Not in FastViewState
-        }, { carryForwardFast: 'data' });
-    })
-    .withInteractive((props, refs, carryForward) => {
-        refs.button.onclick(() => {
-            // Interactive logic
-        });
-        return {
-            render: () => ({}),
-        };
+  .withProps<PageProps>()
+  .withSlowlyRender(async (props) => {
+    return partialRender(
+      {
+        slowlyRendered: 'SLOWLY RENDERED',
+        // fastRendered: 'test',  // ❌ TypeScript Error: Not in SlowViewState
+      },
+      { carryForwardSlowly: 'data' },
+    );
+  })
+  .withFastRender(async (props, carryForward) => {
+    return partialRender(
+      {
+        fastRendered: 'FAST RENDERED',
+        fastDynamicRendered: 'FAST DYNAMIC',
+        // slowlyRendered: 'test',  // ❌ TypeScript Error: Not in FastViewState
+      },
+      { carryForwardFast: 'data' },
+    );
+  })
+  .withInteractive((props, refs, carryForward) => {
+    refs.button.onclick(() => {
+      // Interactive logic
     });
+    return {
+      render: () => ({}),
+    };
+  });
 ```
 
 **Key Benefits:**
+
 - ✅ No manual type definitions
 - ✅ Compile-time phase validation
 - ✅ IDE autocomplete works perfectly
@@ -295,6 +311,7 @@ export const page = makeJayStackComponent<PageContract>()
 ### Rule 1: Contract vs Inline Data (Mutually Exclusive)
 
 A `.jay-html` file can have **either**:
+
 - A contract reference: `<script type="application/jay-data" contract="./file.jay-contract">`
 - Inline data structure: `<script type="application/jay-data">data:\n  prop: string</script>`
 
@@ -303,22 +320,22 @@ A `.jay-html` file can have **either**:
 ```html
 <!-- ❌ Invalid: Both contract and inline data -->
 <script type="application/jay-data" contract="./page.jay-contract">
-    data:
-      extraProp: string
+  data:
+    extraProp: string
 </script>
 
 <!-- ✅ Valid: Contract reference only -->
-<script type="application/jay-data" contract="./page.jay-contract">
-</script>
+<script type="application/jay-data" contract="./page.jay-contract"></script>
 
 <!-- ✅ Valid: Inline data only -->
 <script type="application/jay-data">
-    data:
-      prop: string
+  data:
+    prop: string
 </script>
 ```
 
 **Validation Error:**
+
 ```
 Error: page.jay-html (line 3): Cannot have both 'contract' attribute and inline data structure.
 Either reference a contract file or define data inline, not both.
@@ -346,6 +363,7 @@ Contract paths are resolved **relative to the `.jay-html` file location**:
 Interactive elements (`ref` attributes) in the HTML **must be defined** as interactive elements in the referenced contract:
 
 **Contract:**
+
 ```yaml
 interactive:
   - tag: submitButton
@@ -355,6 +373,7 @@ interactive:
 ```
 
 **HTML:**
+
 ```html
 <!-- ✅ Valid: Matches contract -->
 <button ref="submitButton">Submit</button>
@@ -368,6 +387,7 @@ interactive:
 ```
 
 **Validation Errors:**
+
 ```
 Error: page.jay-html (line 15): Unknown ref 'deleteButton' not defined in page.jay-contract
 ```
@@ -377,6 +397,7 @@ Error: page.jay-html (line 15): Unknown ref 'deleteButton' not defined in page.j
 All template variables (`{varName}`) in the HTML **must be defined** in the referenced contract:
 
 **Contract:**
+
 ```yaml
 tags:
   - tag: title
@@ -388,6 +409,7 @@ tags:
 ```
 
 **HTML:**
+
 ```html
 <!-- ✅ Valid: Both variables defined in contract -->
 <h1>{title}</h1>
@@ -398,6 +420,7 @@ tags:
 ```
 
 **Validation Error:**
+
 ```
 Error: page.jay-html (line 8): Template variable '{author}' not defined in referenced contract page.jay-contract
 ```
@@ -436,17 +459,17 @@ Existing `.jay-html` files with inline data structures **continue to work** with
 ```html
 <!-- ✅ Still valid: Inline data (no phase annotations) -->
 <html>
-<head>
+  <head>
     <script type="application/jay-data">
-        data:
-          title: string
-          content: string
+      data:
+        title: string
+        content: string
     </script>
-</head>
-<body>
+  </head>
+  <body>
     <h1>{title}</h1>
     <p>{content}</p>
-</body>
+  </body>
 </html>
 ```
 
@@ -456,23 +479,23 @@ data types defined in the jay-html are considered interactive by default, contra
 
 ```typescript
 export interface PageViewState {
-    title: string;
-    content: string;
+  title: string;
+  content: string;
 }
 
 export interface PageElementRefs {}
 
 // Phase-specific types default to full ViewState / empty
-export type PageSlowViewState = {};  // Empty
-export type PageFastViewState = {};              // Empty
-export type PageInteractiveViewState = PageViewState;       // all the PageViewState propeties
+export type PageSlowViewState = {}; // Empty
+export type PageFastViewState = {}; // Empty
+export type PageInteractiveViewState = PageViewState; // all the PageViewState propeties
 
 export type PageContract = JayContract<
-    PageViewState,
-    PageElementRefs,
-    PageSlowViewState,
-    PageFastViewState,
-    PageInteractiveViewState
+  PageViewState,
+  PageElementRefs,
+  PageSlowViewState,
+  PageFastViewState,
+  PageInteractiveViewState
 >;
 ```
 
@@ -483,57 +506,52 @@ export type PageContract = JayContract<
 **Location:** `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-parser.ts`
 
 1. **Detect contract reference:**
+
    ```typescript
    interface ParsedJayData {
-       type: 'inline' | 'contract-ref';
-       data?: InlineDataStructure;      // For inline data
-       contractPath?: string;            // For contract reference
+     type: 'inline' | 'contract-ref';
+     data?: InlineDataStructure; // For inline data
+     contractPath?: string; // For contract reference
    }
    ```
 
 2. **Parse `contract` attribute:**
+
    ```typescript
    function parseJayDataScript(scriptElement: HTMLScriptElement): ParsedJayData {
-       const contractAttr = scriptElement.getAttribute('contract');
-       
-       if (contractAttr) {
-           // Contract reference
-           const scriptBody = scriptElement.textContent?.trim();
-           if (scriptBody && scriptBody.length > 0) {
-               throw new ValidationError(
-                   'Cannot have both contract attribute and inline data structure'
-               );
-           }
-           return {
-               type: 'contract-ref',
-               contractPath: contractAttr,
-           };
-       } else {
-           // Inline data (existing logic)
-           return {
-               type: 'inline',
-               data: parseInlineDataStructure(scriptElement),
-           };
+     const contractAttr = scriptElement.getAttribute('contract');
+
+     if (contractAttr) {
+       // Contract reference
+       const scriptBody = scriptElement.textContent?.trim();
+       if (scriptBody && scriptBody.length > 0) {
+         throw new ValidationError('Cannot have both contract attribute and inline data structure');
        }
+       return {
+         type: 'contract-ref',
+         contractPath: contractAttr,
+       };
+     } else {
+       // Inline data (existing logic)
+       return {
+         type: 'inline',
+         data: parseInlineDataStructure(scriptElement),
+       };
+     }
    }
    ```
 
 3. **Resolve contract path:**
    ```typescript
-   function resolveContractPath(
-       htmlFilePath: string,
-       contractPath: string
-   ): string {
-       const htmlDir = path.dirname(htmlFilePath);
-       const resolvedPath = path.resolve(htmlDir, contractPath);
-       
-       if (!fs.existsSync(resolvedPath)) {
-           throw new ValidationError(
-               `Referenced contract file not found: ${contractPath}`
-           );
-       }
-       
-       return resolvedPath;
+   function resolveContractPath(htmlFilePath: string, contractPath: string): string {
+     const htmlDir = path.dirname(htmlFilePath);
+     const resolvedPath = path.resolve(htmlDir, contractPath);
+
+     if (!fs.existsSync(resolvedPath)) {
+       throw new ValidationError(`Referenced contract file not found: ${contractPath}`);
+     }
+
+     return resolvedPath;
    }
    ```
 
@@ -542,21 +560,20 @@ export type PageContract = JayContract<
 **Location:** `packages/compiler/compiler-jay-html/lib/jay-target/contract-loader.ts` (new file)
 
 1. **Load and parse referenced contract:**
+
    ```typescript
-   async function loadReferencedContract(
-       contractPath: string
-   ): Promise<Contract> {
-       const contractContent = await fs.promises.readFile(contractPath, 'utf-8');
-       const contract = parseContract(contractContent);  // Reuse existing parser
-       return contract;
+   async function loadReferencedContract(contractPath: string): Promise<Contract> {
+     const contractContent = await fs.promises.readFile(contractPath, 'utf-8');
+     const contract = parseContract(contractContent); // Reuse existing parser
+     return contract;
    }
    ```
 
 2. **Validate contract:**
    ```typescript
    function validateContract(contract: Contract): void {
-       // Use existing contract validator
-       validatePhaseRules(contract);  // From Design Log #50
+     // Use existing contract validator
+     validatePhaseRules(contract); // From Design Log #50
    }
    ```
 
@@ -568,48 +585,48 @@ export type PageContract = JayContract<
 
 ```typescript
 class HtmlContractValidator {
-    /**
-     * Validate that HTML template matches the referenced contract
-     */
-    validate(html: ParsedHTML, contract: Contract): ValidationErrors {
-        const errors: ValidationErrors = [];
-        
-        // 1. Validate template variables
-        const templateVars = extractTemplateVariables(html);
-        for (const varName of templateVars) {
-            if (!contractHasField(contract, varName)) {
-                errors.push({
-                    line: getLineNumber(html, varName),
-                    message: `Template variable '{${varName}}' not defined in contract`,
-                });
-            }
-        }
-        
-        // 2. Validate interactive element refs
-        const htmlRefs = extractRefs(html);
-        const contractRefs = extractInteractiveTags(contract);
-        
-        // Check for missing refs
-        for (const refName of contractRefs) {
-            if (!htmlRefs.has(refName)) {
-                errors.push({
-                    message: `Missing required ref '${refName}' defined in contract`,
-                });
-            }
-        }
-        
-        // Check for extra refs
-        for (const refName of htmlRefs) {
-            if (!contractRefs.has(refName)) {
-                errors.push({
-                    line: getLineNumber(html, `ref="${refName}"`),
-                    message: `Unknown ref '${refName}' not defined in contract`,
-                });
-            }
-        }
-        
-        return errors;
+  /**
+   * Validate that HTML template matches the referenced contract
+   */
+  validate(html: ParsedHTML, contract: Contract): ValidationErrors {
+    const errors: ValidationErrors = [];
+
+    // 1. Validate template variables
+    const templateVars = extractTemplateVariables(html);
+    for (const varName of templateVars) {
+      if (!contractHasField(contract, varName)) {
+        errors.push({
+          line: getLineNumber(html, varName),
+          message: `Template variable '{${varName}}' not defined in contract`,
+        });
+      }
     }
+
+    // 2. Validate interactive element refs
+    const htmlRefs = extractRefs(html);
+    const contractRefs = extractInteractiveTags(contract);
+
+    // Check for missing refs
+    for (const refName of contractRefs) {
+      if (!htmlRefs.has(refName)) {
+        errors.push({
+          message: `Missing required ref '${refName}' defined in contract`,
+        });
+      }
+    }
+
+    // Check for extra refs
+    for (const refName of htmlRefs) {
+      if (!contractRefs.has(refName)) {
+        errors.push({
+          line: getLineNumber(html, `ref="${refName}"`),
+          message: `Unknown ref '${refName}' not defined in contract`,
+        });
+      }
+    }
+
+    return errors;
+  }
 }
 ```
 
@@ -621,41 +638,42 @@ class HtmlContractValidator {
 
 ```typescript
 function compileJayHtml(htmlFile: string): GeneratedTypes {
-    const parsed = parseJayHtml(htmlFile);
-    
-    if (parsed.jayData.type === 'contract-ref') {
-        // Load referenced contract
-        const contractPath = resolveContractPath(htmlFile, parsed.jayData.contractPath);
-        const contract = loadReferencedContract(contractPath);
-        
-        // Validate contract
-        validateContract(contract);
-        
-        // Validate HTML against contract
-        const htmlValidator = new HtmlContractValidator();
-        const errors = htmlValidator.validate(parsed.html, contract);
-        if (errors.length > 0) {
-            throw new CompilationError(errors);
-        }
-        
-        // Generate types from contract (reuse existing logic from Design Log #50)
-        const types = generateTypesFromContract(contract, {
-            componentName: getComponentName(htmlFile),
-            includePhaseTypes: true,  // ✅ Generate phase-specific types
-        });
-        
-        return types;
-    } else {
-        // Inline data (existing logic)
-        return generateTypesFromInlineData(parsed.jayData.data, {
-            componentName: getComponentName(htmlFile),
-            includePhaseTypes: false,  // ❌ No phase annotations in inline data
-        });
+  const parsed = parseJayHtml(htmlFile);
+
+  if (parsed.jayData.type === 'contract-ref') {
+    // Load referenced contract
+    const contractPath = resolveContractPath(htmlFile, parsed.jayData.contractPath);
+    const contract = loadReferencedContract(contractPath);
+
+    // Validate contract
+    validateContract(contract);
+
+    // Validate HTML against contract
+    const htmlValidator = new HtmlContractValidator();
+    const errors = htmlValidator.validate(parsed.html, contract);
+    if (errors.length > 0) {
+      throw new CompilationError(errors);
     }
+
+    // Generate types from contract (reuse existing logic from Design Log #50)
+    const types = generateTypesFromContract(contract, {
+      componentName: getComponentName(htmlFile),
+      includePhaseTypes: true, // ✅ Generate phase-specific types
+    });
+
+    return types;
+  } else {
+    // Inline data (existing logic)
+    return generateTypesFromInlineData(parsed.jayData.data, {
+      componentName: getComponentName(htmlFile),
+      includePhaseTypes: false, // ❌ No phase annotations in inline data
+    });
+  }
 }
 ```
 
 **Key Points:**
+
 - Contract reference → Use contract parser (with phase support)
 - Inline data → Use existing inline parser (no phase support)
 - Same type generation output format for both
@@ -679,19 +697,21 @@ function compileJayHtml(htmlFile: string): GeneratedTypes {
 ### Before: Inline Data (No Phase Support)
 
 **`page.jay-html`:**
+
 ```html
 <script type="application/jay-data">
-    data:
-      slowlyRendered: string
-      fastRendered: string
+  data:
+    slowlyRendered: string
+    fastRendered: string
 </script>
 ```
 
 **Generated `page.jay-html.d.ts`:**
+
 ```typescript
 export interface PageViewState {
-    slowlyRendered: string;
-    fastRendered: string;
+  slowlyRendered: string;
+  fastRendered: string;
 }
 
 export interface PageElementRefs {}
@@ -702,34 +722,37 @@ export type PageFastViewState = {};
 export type PageInteractiveViewState = PageViewState;
 
 export type PageContract = JayContract<
-    PageViewState,
-    PageElementRefs,
-    PageSlowViewState,
-    PageFastViewState,
-    PageInteractiveViewState
+  PageViewState,
+  PageElementRefs,
+  PageSlowViewState,
+  PageFastViewState,
+  PageInteractiveViewState
 >;
 ```
 
 ### After: Contract Reference (With Phase Support)
 
 **`page.jay-contract`:**
+
 ```yaml
 name: Page
 tags:
-  - {tag: slowlyRendered, type: data, dataType: string, phase: slow}
-  - {tag: fastRendered, type: data, dataType: string, phase: fast}
+  - { tag: slowlyRendered, type: data, dataType: string, phase: slow }
+  - { tag: fastRendered, type: data, dataType: string, phase: fast }
 ```
 
 **`page.jay-html`:**
+
 ```html
 <script type="application/jay-data" contract="./page.jay-contract"></script>
 ```
 
 **Generated `page.jay-html.d.ts`:**
+
 ```typescript
 export interface PageViewState {
-    slowlyRendered: string;
-    fastRendered: string;
+  slowlyRendered: string;
+  fastRendered: string;
 }
 
 export interface PageElementRefs {}
@@ -740,11 +763,11 @@ export type PageFastViewState = Pick<PageViewState, 'fastRendered'>;
 export type PageInteractiveViewState = {};
 
 export type PageContract = JayContract<
-    PageViewState,
-    PageElementRefs,
-    PageSlowViewState,
-    PageFastViewState,
-    PageInteractiveViewState
+  PageViewState,
+  PageElementRefs,
+  PageSlowViewState,
+  PageFastViewState,
+  PageInteractiveViewState
 >;
 ```
 
@@ -776,6 +799,7 @@ For existing projects, migrate one component at a time:
 ## Trade-offs
 
 **Pros:**
+
 - ✅ Enables phase annotations in `.jay-html` components
 - ✅ Reuses existing contract infrastructure
 - ✅ Clear separation of concerns
@@ -783,11 +807,13 @@ For existing projects, migrate one component at a time:
 - ✅ Backward compatible
 
 **Cons:**
+
 - ❌ Requires two files per component (`.jay-html` + `.jay-contract`)
 - ❌ Extra step in development (but can be automated)
 - ❌ Potential for HTML-contract mismatch (mitigated by validation)
 
 **Mitigation:**
+
 - Compiler validates HTML matches contract at build time
 - Clear error messages guide developers
 
@@ -796,16 +822,18 @@ For existing projects, migrate one component at a time:
 ### Q1: Should we allow inline data with phase annotations?
 
 **Option A: No (Recommended)**
+
 - Keep it simple: inline data = no phases, contract reference = phases
 - Avoids duplicating phase annotation syntax in two formats
 - Encourages contract-first design
 
 **Option B: Yes**
+
 - Add phase annotations to inline YAML:
   ```yaml
   data:
-    - {tag: title, dataType: string, phase: slow}
-    - {tag: price, dataType: number, phase: fast}
+    - { tag: title, dataType: string, phase: slow }
+    - { tag: price, dataType: number, phase: fast }
   ```
 - More flexible
 - But increases complexity and maintenance burden
@@ -833,15 +861,17 @@ All three HTML files use the same data structure but render it differently.
 **Answer: That's fine** - the contract is the full data structure, HTML is one view of it:
 
 **Contract:**
+
 ```yaml
 tags:
-  - {tag: id, type: data, dataType: string}
-  - {tag: name, type: data, dataType: string}
-  - {tag: description, type: data, dataType: string}
-  - {tag: price, type: data, dataType: number}
+  - { tag: id, type: data, dataType: string }
+  - { tag: name, type: data, dataType: string }
+  - { tag: description, type: data, dataType: string }
+  - { tag: price, type: data, dataType: number }
 ```
 
 **HTML (uses subset):**
+
 ```html
 <div>
   <h1>{name}</h1>
@@ -874,7 +904,7 @@ No special versioning mechanism needed - just file references.
 ✅ **Backward Compatible**: Existing inline data structures continue to work  
 ✅ **Clear Errors**: Helpful validation messages for HTML-contract mismatches  
 ✅ **Developer Experience**: IDE support, autocomplete, refactoring work seamlessly  
-✅ **Documentation**: Clear migration guide and examples  
+✅ **Documentation**: Clear migration guide and examples
 
 ## Next Steps
 
@@ -890,4 +920,3 @@ No special versioning mechanism needed - just file references.
 
 - **Design Log #50**: Rendering phases in contracts (foundation for this design)
 - **Design Log #49**: Initial type-narrowing approach (findings informed both #50 and #51)
-

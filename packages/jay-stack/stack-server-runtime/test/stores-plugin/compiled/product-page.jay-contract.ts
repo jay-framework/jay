@@ -1,8 +1,4 @@
-import {
-    HTMLElementCollectionProxy,
-    HTMLElementProxy,
-    JayContract,
-} from '@jay-framework/runtime';
+import { HTMLElementCollectionProxy, HTMLElementProxy, JayContract } from '@jay-framework/runtime';
 import { DiscountViewState, DiscountRefs, DiscountRepeatedRefs } from './discount.jay-contract';
 import {
     MediaItemViewState,
@@ -72,5 +68,5 @@ export type ProductPageContract = JayContract<
     ProductPageRefs,
     ProductPageSlowViewState,
     ProductPageFastViewState,
-    ProductPageInteractiveViewState>;
-
+    ProductPageInteractiveViewState
+>;

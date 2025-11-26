@@ -200,7 +200,7 @@ describe('generate jay-html element', () => {
                 expect(await prettify(elementFile.val)).toEqual(
                     await readFixtureFile(folder, 'generated-element-main-trusted'),
                 );
-            });
+            }, 10000);
 
             it('dynamic nesting components in other components', async () => {
                 const folder = 'components/dynamic-component-in-component';

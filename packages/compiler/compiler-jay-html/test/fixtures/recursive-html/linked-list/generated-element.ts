@@ -30,7 +30,6 @@ export type LinkedListSlowViewState = {};
 export type LinkedListFastViewState = {};
 export type LinkedListInteractiveViewState = LinkedListViewState;
 
-
 export type LinkedListElement = JayElement<LinkedListViewState, LinkedListElementRefs>;
 export type LinkedListElementRender = RenderElement<
     LinkedListViewState,

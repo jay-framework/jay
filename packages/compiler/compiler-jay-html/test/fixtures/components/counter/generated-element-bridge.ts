@@ -14,7 +14,6 @@ export type CounterSlowViewState = {};
 export type CounterFastViewState = {};
 export type CounterInteractiveViewState = CounterViewState;
 
-
 export type CounterElement = JayElement<CounterViewState, CounterElementRefs>;
 export type CounterElementRender = RenderElement<
     CounterViewState,

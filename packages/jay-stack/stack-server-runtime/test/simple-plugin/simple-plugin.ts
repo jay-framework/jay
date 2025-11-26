@@ -1,6 +1,8 @@
 import {
     SimplePluginRefs,
-    SimplePluginContract, SimplePluginSlowViewState, SimplePluginFastViewState,
+    SimplePluginContract,
+    SimplePluginSlowViewState,
+    SimplePluginFastViewState,
 } from './compiled/simple-plugin.jay-contract';
 import { Props } from '@jay-framework/component';
 import {
@@ -9,7 +11,8 @@ import {
     PageProps,
     PartialRender,
     partialRender,
-    Signals, SlowlyRenderResult,
+    Signals,
+    SlowlyRenderResult,
 } from '@jay-framework/fullstack-component';
 
 // Define carry forward interfaces
@@ -28,9 +31,12 @@ async function slowRender(
 ): Promise<SlowlyRenderResult<SimplePluginSlowViewState, StaticCarryForward>> {
     const pluginSlowlyRendered = 'SLOWLY RENDERED';
     const staticData = 'SLOWLY -> FAST CARRY FORWARD';
-    return partialRender({
-        pluginSlowlyRendered
-    }, { staticData });
+    return partialRender(
+        {
+            pluginSlowlyRendered,
+        },
+        { staticData },
+    );
 }
 
 // Dynamic rendering function
@@ -40,9 +46,12 @@ async function fastRender(
 ): Promise<FastRenderResult<SimplePluginFastViewState, DynamicCarryForward>> {
     const pluginInteractiveRendered = `FAST RENDERED, using ${carryForward.staticData}`;
     const dynamicData = 'FAST -> INTERACTIVE CARRY FORWARD';
-    return partialRender({
-        pluginInteractiveRendered
-    }, { dynamicData, pluginInteractiveRendered });
+    return partialRender(
+        {
+            pluginInteractiveRendered,
+        },
+        { dynamicData, pluginInteractiveRendered },
+    );
 }
 
 // Interactive component constructor

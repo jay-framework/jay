@@ -9,7 +9,6 @@ export type EmptyElementSlowViewState = {};
 export type EmptyElementFastViewState = {};
 export type EmptyElementInteractiveViewState = EmptyElementViewState;
 
-
 export type EmptyElementElement = JayElement<EmptyElementViewState, EmptyElementElementRefs>;
 export type EmptyElementElementRender = RenderElement<
     EmptyElementViewState,

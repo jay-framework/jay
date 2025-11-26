@@ -8,11 +8,10 @@ describe('Jay HTML with Contract References', () => {
         const folder = 'html-with-contract-ref/simple-with-contract';
         const parsedFile = await readAndParseJayFile(folder, 'page');
         const definitionFile = generateElementDefinitionFile(parsedFile);
-        
+
         expect(definitionFile.validations).toEqual([]);
         expect(await prettify(definitionFile.val)).toEqual(
             await readFixtureElementDefinitionFile(folder, 'page.jay-html.d.ts'),
         );
     });
 });
-

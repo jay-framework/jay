@@ -20,7 +20,6 @@ export interface ItemElementRefs {
     title: HTMLElementProxy<ItemViewState, HTMLInputElement>;
 }
 
-
 export type ItemSlowViewState = {};
 export type ItemFastViewState = {};
 export type ItemInteractiveViewState = ItemViewState;

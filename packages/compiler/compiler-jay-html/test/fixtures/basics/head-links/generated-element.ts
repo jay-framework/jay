@@ -22,7 +22,6 @@ export type HeadLinksSlowViewState = {};
 export type HeadLinksFastViewState = {};
 export type HeadLinksInteractiveViewState = HeadLinksViewState;
 
-
 export type HeadLinksElement = JayElement<HeadLinksViewState, HeadLinksElementRefs>;
 export type HeadLinksElementRender = RenderElement<
     HeadLinksViewState,

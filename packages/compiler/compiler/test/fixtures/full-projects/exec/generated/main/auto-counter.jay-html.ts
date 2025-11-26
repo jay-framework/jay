@@ -19,7 +19,6 @@ export interface AutoCounterElementRefs {
     autoCount2: HTMLElementProxy<AutoCounterViewState, HTMLButtonElement>;
 }
 
-
 export type AutoCounterSlowViewState = {};
 export type AutoCounterFastViewState = {};
 export type AutoCounterInteractiveViewState = AutoCounterViewState;

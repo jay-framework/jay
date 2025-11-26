@@ -1127,12 +1127,12 @@ function generatePhaseSpecificTypes(jayFile: JayHtmlSourceFile): string {
     const baseName = jayFile.baseElementName;
     // Get the actual ViewState type name from the JayType (might be imported, like "Node")
     const actualViewStateTypeName = jayFile.types.name;
-    
+
     // If we have a contract reference, generate phase types from contract
     if (jayFile.contract) {
         return generateAllPhaseViewStateTypes(jayFile.contract, actualViewStateTypeName);
     }
-    
+
     // If inline data, default to interactive phase
     if (jayFile.hasInlineData) {
         return [
@@ -1141,7 +1141,7 @@ function generatePhaseSpecificTypes(jayFile: JayHtmlSourceFile): string {
             `export type ${baseName}InteractiveViewState = ${actualViewStateTypeName};`,
         ].join('\n');
     }
-    
+
     // Fallback (shouldn't happen)
     return '';
 }
@@ -1164,7 +1164,7 @@ export function generateElementDefinitionFile(
             );
         const cssImport = generateCssImport(jayFile);
         const phaseTypes = generatePhaseSpecificTypes(jayFile);
-        
+
         // If we have contract or inline data, replace the 2-parameter JayContract with 5-parameter version
         if (jayFile.contract || jayFile.hasInlineData) {
             const baseName = jayFile.baseElementName;
@@ -1178,7 +1178,7 @@ export function generateElementDefinitionFile(
 >;`;
             renderedElement = renderedElement.replace(old2ParamContract, new5ParamContract);
         }
-        
+
         return [
             renderImports(
                 renderedImplementation.imports.plus(Import.jayElement),
@@ -1215,7 +1215,7 @@ export function generateElementFile(
     );
     const cssImport = generateCssImport(jayFile);
     const phaseTypes = generatePhaseSpecificTypes(jayFile);
-    
+
     // If we have contract or inline data, replace the 2-parameter JayContract with 5-parameter version
     if (jayFile.contract || jayFile.hasInlineData) {
         const baseName = jayFile.baseElementName;
@@ -1223,9 +1223,9 @@ export function generateElementFile(
         // This handles cases like imported types (e.g., "Node" instead of "RecursiveComponentsViewState")
         const contractPattern = new RegExp(
             `export type ${baseName}Contract = JayContract<([^,]+), ${baseName}ElementRefs>;`,
-            'g'
+            'g',
         );
-        
+
         renderedElement = renderedElement.replace(contractPattern, (match, viewStateType) => {
             return `export type ${baseName}Contract = JayContract<
     ${viewStateType},
@@ -1236,7 +1236,7 @@ export function generateElementFile(
 >;`;
         });
     }
-    
+
     const renderedFile = [
         renderImports(
             renderedImplementation.imports.plus(Import.element).plus(Import.jayElement),
@@ -1285,7 +1285,7 @@ export function generateElementBridgeFile(jayFile: JayHtmlSourceFile): string {
         jayFile.headlessImports,
     );
     const phaseTypes = generatePhaseSpecificTypes(jayFile);
-    
+
     // If we have contract or inline data, replace the 2-parameter JayContract with 5-parameter version
     if (jayFile.contract || jayFile.hasInlineData) {
         const baseName = jayFile.baseElementName;
@@ -1293,9 +1293,9 @@ export function generateElementBridgeFile(jayFile: JayHtmlSourceFile): string {
         // This handles cases like imported types (e.g., "Node" instead of "RecursiveComponentsViewState")
         const contractPattern = new RegExp(
             `export type ${baseName}Contract = JayContract<([^,]+), ${baseName}ElementRefs>;`,
-            'g'
+            'g',
         );
-        
+
         renderedElement = renderedElement.replace(contractPattern, (match, viewStateType) => {
             return `export type ${baseName}Contract = JayContract<
     ${viewStateType},
@@ -1306,7 +1306,7 @@ export function generateElementBridgeFile(jayFile: JayHtmlSourceFile): string {
 >;`;
         });
     }
-    
+
     return [
         renderImports(
             renderedImplementation.imports
