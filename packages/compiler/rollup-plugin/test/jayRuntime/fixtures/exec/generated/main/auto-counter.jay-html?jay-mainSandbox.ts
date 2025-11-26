@@ -19,6 +19,10 @@ export interface AutoCounterElementRefs {
     autoCount2: HTMLElementProxy<AutoCounterViewState, HTMLButtonElement>;
 }
 
+export type AutoCounterSlowViewState = {};
+export type AutoCounterFastViewState = {};
+export type AutoCounterInteractiveViewState = AutoCounterViewState;
+
 export type AutoCounterElement = JayElement<AutoCounterViewState, AutoCounterElementRefs>;
 export type AutoCounterElementRender = RenderElement<
     AutoCounterViewState,
@@ -26,7 +30,13 @@ export type AutoCounterElementRender = RenderElement<
     AutoCounterElement
 >;
 export type AutoCounterElementPreRender = [AutoCounterElementRefs, AutoCounterElementRender];
-export type AutoCounterContract = JayContract<AutoCounterViewState, AutoCounterElementRefs>;
+export type AutoCounterContract = JayContract<
+    AutoCounterViewState,
+    AutoCounterElementRefs,
+    AutoCounterSlowViewState,
+    AutoCounterFastViewState,
+    AutoCounterInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): AutoCounterElementPreRender {
     const [refManager, [refAutoCount1, refAutoCount2]] = ReferencesManager.for(

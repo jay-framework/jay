@@ -15,9 +15,19 @@ export interface AppElementRefs {
     a: CounterRef<AppViewState>;
 }
 
+export type AppSlowViewState = {};
+export type AppFastViewState = {};
+export type AppInteractiveViewState = AppViewState;
+
 export type AppElement = JayElement<AppViewState, AppElementRefs>;
 export type AppElementRender = RenderElement<AppViewState, AppElementRefs, AppElement>;
 export type AppElementPreRender = [AppElementRefs, AppElementRender];
-export type AppContract = JayContract<AppViewState, AppElementRefs>;
+export type AppContract = JayContract<
+    AppViewState,
+    AppElementRefs,
+    AppSlowViewState,
+    AppFastViewState,
+    AppInteractiveViewState
+>;
 
 export declare function render(options?: RenderElementOptions): AppElementPreRender;
