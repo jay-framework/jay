@@ -9,13 +9,11 @@ import type {
     PublishMessage,
     SaveImageMessage,
     HasImageMessage,
-    GetProjectConfigurationMessage,
-    GetContractsMessage,
+    GetProjectInfoMessage,
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
-    GetProjectConfigurationResponse,
-    GetContractsResponse,
+    GetProjectInfoResponse,
 } from '@jay-framework/editor-protocol';
 import { createProtocolResponse } from '@jay-framework/editor-protocol';
 
@@ -46,10 +44,7 @@ export class EditorServer implements DevServerProtocol {
         publish?: (params: PublishMessage) => Promise<PublishResponse>;
         saveImage?: (params: SaveImageMessage) => Promise<SaveImageResponse>;
         hasImage?: (params: HasImageMessage) => Promise<HasImageResponse>;
-        getProjectConfiguration?: (
-            params: GetProjectConfigurationMessage,
-        ) => Promise<GetProjectConfigurationResponse>;
-        getContracts?: (params: GetContractsMessage) => Promise<GetContractsResponse>;
+        getProjectInfo?: (params: GetProjectInfoMessage) => Promise<GetProjectInfoResponse>;
     } = {};
 
     constructor(options: EditorServerOptions) {
@@ -146,16 +141,10 @@ export class EditorServer implements DevServerProtocol {
         this.handlers.hasImage = callback;
     }
 
-    onGetProjectConfiguration(
-        callback: (
-            params: GetProjectConfigurationMessage,
-        ) => Promise<GetProjectConfigurationResponse>,
+    onGetProjectInfo(
+        callback: (params: GetProjectInfoMessage) => Promise<GetProjectInfoResponse>,
     ): void {
-        this.handlers.getProjectConfiguration = callback;
-    }
-
-    onGetContracts(callback: (params: GetContractsMessage) => Promise<GetContractsResponse>): void {
-        this.handlers.getContracts = callback;
+        this.handlers.getProjectInfo = callback;
     }
 
     private handlePortDiscovery(req: any, res: any): void {
@@ -251,23 +240,14 @@ export class EditorServer implements DevServerProtocol {
                 const hasResult = await this.handlers.hasImage(payload as HasImageMessage);
                 return createProtocolResponse(id, hasResult);
 
-            case 'getProjectConfiguration':
-                if (!this.handlers.getProjectConfiguration) {
-                    throw new Error('Get project configuration handler not registered');
+            case 'getProjectInfo':
+                if (!this.handlers.getProjectInfo) {
+                    throw new Error('Get project info handler not registered');
                 }
-                const configResult = await this.handlers.getProjectConfiguration(
-                    payload as GetProjectConfigurationMessage,
+                const infoResult = await this.handlers.getProjectInfo(
+                    payload as GetProjectInfoMessage,
                 );
-                return createProtocolResponse(id, configResult);
-
-            case 'getContracts':
-                if (!this.handlers.getContracts) {
-                    throw new Error('Get contracts handler not registered');
-                }
-                const contractsResult = await this.handlers.getContracts(
-                    payload as GetContractsMessage,
-                );
-                return createProtocolResponse(id, contractsResult);
+                return createProtocolResponse(id, infoResult);
 
             default:
                 throw new Error(`Unknown message type: ${(payload as any).type}`);

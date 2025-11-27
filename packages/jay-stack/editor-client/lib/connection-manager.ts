@@ -7,11 +7,11 @@ import type {
     PublishMessage,
     SaveImageMessage,
     HasImageMessage,
-    GetProjectConfigurationMessage,
+    GetProjectInfoMessage,
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
-    GetProjectConfigurationResponse,
+    GetProjectInfoResponse,
     EditorProtocolMessageTypes,
     EditorProtocolResponseTypes,
 } from '@jay-framework/editor-protocol';
@@ -112,8 +112,8 @@ export class ConnectionManager {
               ? SaveImageResponse
               : T extends HasImageMessage
                 ? HasImageResponse
-                : T extends GetProjectConfigurationMessage
-                  ? GetProjectConfigurationResponse
+                : T extends GetProjectInfoMessage
+                  ? GetProjectInfoResponse
                   : never
     > {
         if (this.connectionState !== 'connected') {

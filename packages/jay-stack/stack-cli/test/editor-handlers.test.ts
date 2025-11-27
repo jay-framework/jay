@@ -692,13 +692,13 @@ tags:
         it('should return empty arrays when no pages or installed apps exist', async () => {
             const handlers = createEditorHandlers(testConfig, TS_CONFIG);
 
-            const result = await handlers.onGetContracts({
-                type: 'getContracts',
+            const result = await handlers.onGetProjectInfo({
+                type: 'getProjectInfo',
             });
 
             expect(result.success).toBe(true);
-            expect(result.pages).toEqual([]);
-            expect(result.installedAppContracts).toEqual({});
+            expect(result.info.pages).toEqual([]);
+            expect(result.info.installedAppContracts).toEqual({});
         });
 
         it('should return pages without contracts', async () => {
@@ -717,24 +717,24 @@ tags:
                 createValidJayHtml('<div>About</div>'),
             );
 
-            const result = await handlers.onGetContracts({
-                type: 'getContracts',
+            const result = await handlers.onGetProjectInfo({
+                type: 'getProjectInfo',
             });
 
             expect(result.success).toBe(true);
-            expect(result.pages).toHaveLength(2);
+            expect(result.info.pages).toHaveLength(2);
 
-            const homePage = result.pages.find((p) => p.pageUrl === '/');
+            const homePage = result.info.pages.find((p) => p.url === '/');
             expect(homePage).toBeDefined();
-            expect(homePage.pageName).toBe('pages');
+            expect(homePage.name).toBe('pages');
             expect(homePage.contractSchema).toBeUndefined();
-            expect(homePage.usedComponentContracts).toEqual([]);
+            expect(homePage.usedComponents).toEqual([]);
 
-            const aboutPage = result.pages.find((p) => p.pageUrl === '/about');
+            const aboutPage = result.info.pages.find((p) => p.url === '/about');
             expect(aboutPage).toBeDefined();
-            expect(aboutPage.pageName).toBe('about');
+            expect(aboutPage.name).toBe('about');
             expect(aboutPage.contractSchema).toBeUndefined();
-            expect(aboutPage.usedComponentContracts).toEqual([]);
+            expect(aboutPage.usedComponents).toEqual([]);
         });
 
         it('should return pages with their own contracts', async () => {
@@ -779,15 +779,15 @@ tags:
         dataType: number`,
             );
 
-            const result = await handlers.onGetContracts({
-                type: 'getContracts',
+            const result = await handlers.onGetProjectInfo({
+                type: 'getProjectInfo',
             });
 
             expect(result.success).toBe(true);
-            expect(result.pages).toHaveLength(2);
+            expect(result.info.pages).toHaveLength(2);
 
             // Check home page
-            const homePage = result.pages.find((p) => p.pageUrl === '/');
+            const homePage = result.info.pages.find((p) => p.url === '/');
             expect(homePage).toBeDefined();
             expect(homePage.contractSchema).toBeDefined();
             expect(homePage.contractSchema.name).toBe('home');
@@ -800,7 +800,7 @@ tags:
             expect(homePage.contractSchema.tags[1].dataType).toBe('string');
 
             // Check products page
-            const productsPage = result.pages.find((p) => p.pageUrl === '/products');
+            const productsPage = result.info.pages.find((p) => p.url === '/products');
             expect(productsPage).toBeDefined();
             expect(productsPage.contractSchema).toBeDefined();
             expect(productsPage.contractSchema.name).toBe('products');
@@ -873,26 +873,28 @@ tags:
                 JSON.stringify({ name: 'test-app', version: '1.0.0' }),
             );
 
-            const result = await handlers.onGetContracts({
-                type: 'getContracts',
+            const result = await handlers.onGetProjectInfo({
+                type: 'getProjectInfo',
             });
 
             expect(result.success).toBe(true);
-            expect(result.pages).toHaveLength(1);
+            expect(result.info.pages).toHaveLength(1);
 
-            const homePage = result.pages[0];
-            expect(homePage.pageUrl).toBe('/');
-            expect(homePage.usedComponentContracts).toHaveLength(1);
-            expect(homePage.usedComponentContracts[0]).toEqual({
+            const homePage = result.info.pages[0];
+            expect(homePage.url).toBe('/');
+            expect(homePage.usedComponents).toHaveLength(1);
+            expect(homePage.usedComponents[0]).toMatchObject({
                 appName: 'test-app',
                 componentName: 'productPage',
             });
 
             // Verify full contract is in installedAppContracts
-            expect(result.installedAppContracts['test-app']).toBeDefined();
-            expect(result.installedAppContracts['test-app'].pages).toHaveLength(1);
-            expect(result.installedAppContracts['test-app'].pages[0].pageName).toBe('productPage');
-            expect(result.installedAppContracts['test-app'].pages[0].contractSchema.name).toBe(
+            expect(result.info.installedAppContracts['test-app']).toBeDefined();
+            expect(result.info.installedAppContracts['test-app'].pages).toHaveLength(1);
+            expect(result.info.installedAppContracts['test-app'].pages[0].pageName).toBe(
+                'productPage',
+            );
+            expect(result.info.installedAppContracts['test-app'].pages[0].contractSchema.name).toBe(
                 'product-page',
             );
 
@@ -989,14 +991,14 @@ tags:
                 JSON.stringify({ name: 'shop-app', version: '1.0.0' }),
             );
 
-            const result = await handlers.onGetContracts({
-                type: 'getContracts',
+            const result = await handlers.onGetProjectInfo({
+                type: 'getProjectInfo',
             });
 
             expect(result.success).toBe(true);
-            expect(result.installedAppContracts['shop-app']).toBeDefined();
+            expect(result.info.installedAppContracts['shop-app']).toBeDefined();
 
-            const shopApp = result.installedAppContracts['shop-app'];
+            const shopApp = result.info.installedAppContracts['shop-app'];
             expect(shopApp.appName).toBe('shop-app');
             expect(shopApp.module).toBe('shop-app');
             expect(shopApp.pages).toHaveLength(2);
@@ -1043,14 +1045,14 @@ tags:
     dataType: string`,
             );
 
-            const result = await handlers.onGetContracts({
-                type: 'getContracts',
+            const result = await handlers.onGetProjectInfo({
+                type: 'getProjectInfo',
             });
 
             expect(result.success).toBe(true);
-            const productPage = result.pages.find((p) => p.pageUrl === '/products/:productId');
+            const productPage = result.info.pages.find((p) => p.url === '/products/:productId');
             expect(productPage).toBeDefined();
-            expect(productPage.pageName).toBe('[productId]');
+            expect(productPage.name).toBe('[productId]');
             expect(productPage.contractSchema).toBeDefined();
             expect(productPage.contractSchema.tags[0].tag).toBe('productId');
         });
@@ -1075,16 +1077,16 @@ tags:
                 createValidJayHtml('<div>Nested Product</div>'),
             );
 
-            const result = await handlers.onGetContracts({
-                type: 'getContracts',
+            const result = await handlers.onGetProjectInfo({
+                type: 'getProjectInfo',
             });
 
             expect(result.success).toBe(true);
-            const nestedPage = result.pages.find(
-                (p) => p.pageUrl === '/categories/:categoryId/products/:productId',
+            const nestedPage = result.info.pages.find(
+                (p) => p.url === '/categories/:categoryId/products/:productId',
             );
             expect(nestedPage).toBeDefined();
-            expect(nestedPage.pageName).toBe('[productId]');
+            expect(nestedPage.name).toBe('[productId]');
         });
 
         it('should handle pages with linked sub-contracts', async () => {
@@ -1121,12 +1123,12 @@ tags:
     link: ./product.jay-contract`,
             );
 
-            const result = await handlers.onGetContracts({
-                type: 'getContracts',
+            const result = await handlers.onGetProjectInfo({
+                type: 'getProjectInfo',
             });
 
             expect(result.success).toBe(true);
-            const homePage = result.pages[0];
+            const homePage = result.info.pages[0];
             expect(homePage.contractSchema).toBeDefined();
             expect(homePage.contractSchema.tags).toHaveLength(2);
 
@@ -1208,29 +1210,29 @@ tags:
                 JSON.stringify({ name: 'test-app', version: '1.0.0' }),
             );
 
-            const result = await handlers.onGetContracts({
-                type: 'getContracts',
+            const result = await handlers.onGetProjectInfo({
+                type: 'getProjectInfo',
             });
 
             expect(result.success).toBe(true);
-            expect(result.pages).toHaveLength(2);
+            expect(result.info.pages).toHaveLength(2);
 
             // Both pages should reference the same component
-            expect(result.pages[0].usedComponentContracts).toHaveLength(1);
-            expect(result.pages[0].usedComponentContracts[0]).toEqual({
+            expect(result.info.pages[0].usedComponents).toHaveLength(1);
+            expect(result.info.pages[0].usedComponents[0]).toMatchObject({
                 appName: 'test-app',
                 componentName: 'analytics',
             });
 
-            expect(result.pages[1].usedComponentContracts).toHaveLength(1);
-            expect(result.pages[1].usedComponentContracts[0]).toEqual({
+            expect(result.info.pages[1].usedComponents).toHaveLength(1);
+            expect(result.info.pages[1].usedComponents[0]).toMatchObject({
                 appName: 'test-app',
                 componentName: 'analytics',
             });
 
             // Contract should only exist once in installedAppContracts
-            expect(result.installedAppContracts['test-app'].components).toHaveLength(1);
-            expect(result.installedAppContracts['test-app'].components[0].componentName).toBe(
+            expect(result.info.installedAppContracts['test-app'].components).toHaveLength(1);
+            expect(result.info.installedAppContracts['test-app'].components[0].componentName).toBe(
                 'analytics',
             );
 
@@ -1342,14 +1344,14 @@ tags:
                 JSON.stringify({ name: 'analytics-app', version: '1.0.0' }),
             );
 
-            const result = await handlers.onGetContracts({
-                type: 'getContracts',
+            const result = await handlers.onGetProjectInfo({
+                type: 'getProjectInfo',
             });
 
             expect(result.success).toBe(true);
-            expect(result.pages).toHaveLength(1);
+            expect(result.info.pages).toHaveLength(1);
 
-            const homePage = result.pages[0];
+            const homePage = result.info.pages[0];
 
             // Check page's own contract
             expect(homePage.contractSchema).toBeDefined();
@@ -1359,30 +1361,34 @@ tags:
             expect(homePage.contractSchema.tags[1].tag).toBe('description');
 
             // Check used component references
-            expect(homePage.usedComponentContracts).toHaveLength(2);
-            expect(homePage.usedComponentContracts).toContainEqual({
-                appName: 'shop-app',
-                componentName: 'productPage',
-            });
-            expect(homePage.usedComponentContracts).toContainEqual({
-                appName: 'analytics-app',
-                componentName: 'tracker',
-            });
+            expect(homePage.usedComponents).toHaveLength(2);
+            expect(homePage.usedComponents).toContainEqual(
+                expect.objectContaining({
+                    appName: 'shop-app',
+                    componentName: 'productPage',
+                }),
+            );
+            expect(homePage.usedComponents).toContainEqual(
+                expect.objectContaining({
+                    appName: 'analytics-app',
+                    componentName: 'tracker',
+                }),
+            );
 
             // Check installed app contracts
-            expect(Object.keys(result.installedAppContracts)).toHaveLength(2);
-            expect(result.installedAppContracts['shop-app']).toBeDefined();
-            expect(result.installedAppContracts['analytics-app']).toBeDefined();
+            expect(Object.keys(result.info.installedAppContracts)).toHaveLength(2);
+            expect(result.info.installedAppContracts['shop-app']).toBeDefined();
+            expect(result.info.installedAppContracts['analytics-app']).toBeDefined();
 
             // Verify full contracts are available
-            const shopProduct = result.installedAppContracts['shop-app'].pages.find(
+            const shopProduct = result.info.installedAppContracts['shop-app'].pages.find(
                 (p) => p.pageName === 'productPage',
             );
             expect(shopProduct.contractSchema.tags).toHaveLength(2);
 
-            const analyticsTracker = result.installedAppContracts['analytics-app'].components.find(
-                (c) => c.componentName === 'tracker',
-            );
+            const analyticsTracker = result.info.installedAppContracts[
+                'analytics-app'
+            ].components.find((c) => c.componentName === 'tracker');
             expect(analyticsTracker.contractSchema.tags).toHaveLength(2);
 
             // Clean up

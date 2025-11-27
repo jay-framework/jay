@@ -40,13 +40,8 @@ export interface HasImageMessage extends BaseMessage<HasImageResponse> {
     imageId: string;
 }
 
-export interface GetProjectConfigurationMessage
-    extends BaseMessage<GetProjectConfigurationResponse> {
-    type: 'getProjectConfiguration';
-}
-
-export interface GetContractsMessage extends BaseMessage<GetContractsResponse> {
-    type: 'getContracts';
+export interface GetProjectInfoMessage extends BaseMessage<GetProjectInfoResponse> {
+    type: 'getProjectInfo';
 }
 
 // Response types with discriminators
@@ -79,10 +74,10 @@ export interface ProjectPage {
     name: string;
     url: string;
     filePath: string;
+    contractSchema?: ContractSchema; // Page's own contract if it has a .jay-contract file
     usedComponents: {
-        contract: string;
-        src: string;
-        name: string;
+        appName: string;
+        componentName: string;
         key: string;
     }[];
 }
@@ -119,17 +114,20 @@ export interface InstalledApp {
     }[];
 }
 
-export interface ProjectConfiguration {
+export interface ProjectInfo {
     name: string;
     localPath: string;
     pages: ProjectPage[];
     components: ProjectComponent[];
     installedApps: InstalledApp[];
+    installedAppContracts: {
+        [appName: string]: InstalledAppContracts;
+    };
 }
 
-export interface GetProjectConfigurationResponse extends BaseResponse {
-    type: 'getProjectConfiguration';
-    configuration: ProjectConfiguration;
+export interface GetProjectInfoResponse extends BaseResponse {
+    type: 'getProjectInfo';
+    info: ProjectInfo;
 }
 
 export interface ContractTag {
@@ -148,39 +146,17 @@ export interface ContractSchema {
     tags: ContractTag[];
 }
 
-export interface PageContractSchema {
-    pageName: string;
-    pageUrl: string; // Unique identifier for the page
-    contractSchema?: ContractSchema; // Optional - page's own contract if it has a .jay-contract file
-    usedComponentContracts: {
-        appName: string;
-        componentName: string;
-    }[];
-}
-
-export interface InstalledAppPageContract {
-    pageName: string;
-    contractSchema: ContractSchema;
-}
-
-export interface InstalledAppComponentContract {
-    componentName: string;
-    contractSchema: ContractSchema;
-}
-
 export interface InstalledAppContracts {
     appName: string;
     module: string;
-    pages: InstalledAppPageContract[];
-    components: InstalledAppComponentContract[];
-}
-
-export interface GetContractsResponse extends BaseResponse {
-    type: 'getContracts';
-    pages: PageContractSchema[];
-    installedAppContracts: {
-        [appName: string]: InstalledAppContracts;
-    };
+    pages: Array<{
+        pageName: string;
+        contractSchema: ContractSchema;
+    }>;
+    components: Array<{
+        componentName: string;
+        contractSchema: ContractSchema;
+    }>;
 }
 
 // Union types for all messages and responses
@@ -188,14 +164,12 @@ export type EditorProtocolMessageTypes =
     | PublishMessage
     | SaveImageMessage
     | HasImageMessage
-    | GetProjectConfigurationMessage
-    | GetContractsMessage;
+    | GetProjectInfoMessage;
 export type EditorProtocolResponseTypes =
     | PublishResponse
     | SaveImageResponse
     | HasImageResponse
-    | GetProjectConfigurationResponse
-    | GetContractsResponse;
+    | GetProjectInfoResponse;
 
 export interface ProtocolMessage {
     id: string;
@@ -219,13 +193,8 @@ export interface EditorProtocol {
     // Check if a previously saved image exists
     hasImage(params: HasImageMessage): Promise<HasImageResponse>;
 
-    // Get the project configuration including pages, components, and installed apps
-    getProjectConfiguration(
-        params: GetProjectConfigurationMessage,
-    ): Promise<GetProjectConfigurationResponse>;
-
-    // Get all contracts (pages and installed apps)
-    getContracts(params: GetContractsMessage): Promise<GetContractsResponse>;
+    // Get comprehensive project information including configuration and contracts
+    getProjectInfo(params: GetProjectInfoMessage): Promise<GetProjectInfoResponse>;
 }
 
 // Dev server side interface for handling editor requests
@@ -239,9 +208,6 @@ export interface DevServerProtocol {
     // Handle image existence check requests
     onHasImage(callback: EditorProtocol['hasImage']): void;
 
-    // Handle project configuration requests
-    onGetProjectConfiguration(callback: EditorProtocol['getProjectConfiguration']): void;
-
-    // Handle contracts requests
-    onGetContracts(callback: EditorProtocol['getContracts']): void;
+    // Handle project info requests
+    onGetProjectInfo(callback: EditorProtocol['getProjectInfo']): void;
 }

@@ -4,15 +4,12 @@ import type {
     PublishMessage,
     SaveImageMessage,
     HasImageMessage,
-    GetProjectConfigurationMessage,
-    GetContractsMessage,
+    GetProjectInfoMessage,
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
-    GetProjectConfigurationResponse,
-    GetContractsResponse,
-    ProjectConfiguration,
-    PageContractSchema,
+    GetProjectInfoResponse,
+    ProjectInfo,
     InstalledAppContracts,
     EditorProtocolMessageTypes,
     EditorProtocolResponseTypes,
@@ -45,15 +42,9 @@ export function createHasImageMessage(imageId: string): HasImageMessage {
     };
 }
 
-export function createGetProjectConfigurationMessage(): GetProjectConfigurationMessage {
+export function createGetProjectInfoMessage(): GetProjectInfoMessage {
     return {
-        type: 'getProjectConfiguration',
-    };
-}
-
-export function createGetContractsMessage(): GetContractsMessage {
-    return {
-        type: 'getContracts',
+        type: 'getProjectInfo',
     };
 }
 
@@ -88,30 +79,15 @@ export function createHasImageResponse(exists: boolean, imageUrl?: string): HasI
     };
 }
 
-export function createGetProjectConfigurationResponse(
-    configuration: ProjectConfiguration,
+export function createGetProjectInfoResponse(
+    info: ProjectInfo,
     success: boolean = true,
     error?: string,
-): GetProjectConfigurationResponse {
+): GetProjectInfoResponse {
     return {
-        type: 'getProjectConfiguration',
+        type: 'getProjectInfo',
         success,
-        configuration,
-        error,
-    };
-}
-
-export function createGetContractsResponse(
-    pages: PageContractSchema[],
-    installedAppContracts: { [appName: string]: InstalledAppContracts },
-    success: boolean = true,
-    error?: string,
-): GetContractsResponse {
-    return {
-        type: 'getContracts',
-        success,
-        pages,
-        installedAppContracts,
+        info,
         error,
     };
 }

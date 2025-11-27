@@ -11,17 +11,14 @@ import type {
     PublishStatus,
     SaveImageMessage,
     HasImageMessage,
-    GetProjectConfigurationMessage,
-    GetContractsMessage,
+    GetProjectInfoMessage,
     SaveImageResponse,
     HasImageResponse,
-    GetProjectConfigurationResponse,
-    GetContractsResponse,
-    ProjectConfiguration,
+    GetProjectInfoResponse,
+    ProjectInfo,
     ProjectPage,
     ProjectComponent,
     InstalledApp,
-    PageContractSchema,
     ContractTag as ProtocolContractTag,
     ContractSchema,
     InstalledAppContracts,
@@ -98,46 +95,58 @@ function convertContractTagToProtocol(tag: ContractTag): ProtocolContractTag {
     return protocolTag;
 }
 
-// Helper function to scan page contracts (only checks for .jay-contract files, doesn't parse HTML)
-async function scanPageContracts(pagesBasePath: string): Promise<PageContractSchema[]> {
-    const contracts: PageContractSchema[] = [];
+// Helper function to check if a directory is a page
+// A directory is a page if it has .jay-html OR .jay-contract OR page.conf.yaml
+function isPageDirectory(entries: fs.Dirent[]): {
+    isPage: boolean;
+    hasPageHtml: boolean;
+    hasPageContract: boolean;
+    hasPageConfig: boolean;
+} {
+    const hasPageHtml = entries.some((e) => e.name === PAGE_FILENAME);
+    const hasPageContract = entries.some((e) => e.name === PAGE_CONTRACT_FILENAME);
+    const hasPageConfig = entries.some((e) => e.name === PAGE_CONFIG_FILENAME);
+    const isPage = hasPageHtml || hasPageContract || hasPageConfig;
 
+    return { isPage, hasPageHtml, hasPageContract, hasPageConfig };
+}
+
+// Generic page directory scanner that accepts a callback for processing each page
+async function scanPageDirectories(
+    pagesBasePath: string,
+    onPageFound: (context: {
+        dirPath: string;
+        pageUrl: string;
+        pageName: string;
+        hasPageHtml: boolean;
+        hasPageContract: boolean;
+        hasPageConfig: boolean;
+    }) => Promise<void>,
+): Promise<void> {
     async function scanDirectory(dirPath: string, urlPath: string = '') {
         try {
             const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
 
             // Check if this directory is a page (has .jay-html OR .jay-contract OR page.conf.yaml)
-            const hasPageHtml = entries.some((e) => e.name === PAGE_FILENAME);
-            const hasPageContract = entries.some((e) => e.name === PAGE_CONTRACT_FILENAME);
-            const hasPageConfig = entries.some((e) => e.name === PAGE_CONFIG_FILENAME);
+            const { isPage, hasPageHtml, hasPageContract, hasPageConfig } =
+                isPageDirectory(entries);
 
-            if (hasPageHtml || hasPageContract || hasPageConfig) {
+            if (isPage) {
                 const pageUrl = urlPath || '/';
                 // Get the page name from the current directory, but special case for root pages
                 const pageName = dirPath === pagesBasePath ? 'pages' : path.basename(dirPath);
-                const contractPath = path.join(dirPath, PAGE_CONTRACT_FILENAME);
 
-                const pageContract: PageContractSchema = {
-                    pageName,
+                await onPageFound({
+                    dirPath,
                     pageUrl,
-                    usedComponentContracts: [],
-                };
-
-                // Check if contract file exists and parse it
-                if (hasPageContract) {
-                    try {
-                        const contractSchema = await parseContractFile(contractPath);
-                        if (contractSchema) {
-                            pageContract.contractSchema = contractSchema;
-                        }
-                    } catch (error) {
-                        console.warn(`Failed to parse contract file ${contractPath}:`, error);
-                    }
-                }
-
-                contracts.push(pageContract);
+                    pageName,
+                    hasPageHtml,
+                    hasPageContract,
+                    hasPageConfig,
+                });
             }
 
+            // Recursively scan subdirectories
             for (const entry of entries) {
                 const fullPath = path.join(dirPath, entry.name);
 
@@ -155,9 +164,9 @@ async function scanPageContracts(pagesBasePath: string): Promise<PageContractSch
     }
 
     await scanDirectory(pagesBasePath);
-    return contracts;
 }
 
+// Helper function to scan page contracts (only checks for .jay-contract files, doesn't parse HTML)
 // Helper function to parse a contract file and return ContractSchema
 async function parseContractFile(contractFilePath: string): Promise<ContractSchema | null> {
     try {
@@ -384,183 +393,100 @@ async function scanInstalledAppContracts(
 }
 
 // Helper function to build full page contracts (combines page contracts with installed app components)
-async function buildFullPageContracts(
-    pagesBasePath: string,
-    pageContracts: PageContractSchema[],
+// Helper function to extract headless components from jay-html content and resolve to app/component names
+function extractHeadlessComponents(
+    jayHtmlContent: string,
     installedApps: InstalledApp[],
     installedAppContracts: { [appName: string]: InstalledAppContracts },
-): Promise<PageContractSchema[]> {
-    // For each page, find which installed app components are used
-    for (const pageContract of pageContracts) {
-        const pageDir = path.join(
-            pagesBasePath,
-            pageContract.pageUrl === '/' ? '' : pageContract.pageUrl,
-        );
-        const pageFilePath = path.join(pageDir, PAGE_FILENAME);
-        const pageConfigPath = path.join(pageDir, PAGE_CONFIG_FILENAME);
-
-        try {
-            let usedComponents: {
-                contract: string;
-                src: string;
-                name: string;
-                key: string;
-            }[] = [];
-
-            // Priority 1: Check for jay-html file
-            if (fs.existsSync(pageFilePath)) {
-                const jayHtmlContent = await fs.promises.readFile(pageFilePath, 'utf-8');
-                usedComponents = extractHeadlessComponents(jayHtmlContent);
-            }
-            // Priority 2: Check for page.conf.yaml file (if jay-html doesn't exist)
-            else if (fs.existsSync(pageConfigPath)) {
-                try {
-                    const configContent = await fs.promises.readFile(pageConfigPath, 'utf-8');
-                    const pageConfig = YAML.parse(configContent);
-                    if (pageConfig.used_components && Array.isArray(pageConfig.used_components)) {
-                        usedComponents = pageConfig.used_components.map((comp: any) => ({
-                            contract: '', // Not needed for lookup
-                            src: comp.src || '',
-                            name: comp.name || '',
-                            key: comp.key || '',
-                        }));
-                    }
-                } catch (error) {
-                    console.warn(`Failed to parse page config ${pageConfigPath}:`, error);
-                }
-            }
-
-            // For each used component, find its contract in the installed apps
-            for (const usedComp of usedComponents) {
-                // Find which app provides this component
-                for (const app of installedApps) {
-                    // Check if app module matches src
-                    // Some implementations use module name as src, others use app name
-                    if (app.module !== usedComp.src && app.name !== usedComp.src) {
-                        continue;
-                    }
-
-                    // Check in app pages
-                    for (const appPage of app.pages) {
-                        for (const headlessComp of appPage.headless_components) {
-                            if (
-                                headlessComp.name === usedComp.name &&
-                                headlessComp.key === usedComp.key
-                            ) {
-                                // Found the component! Add reference to it
-                                const appContracts = installedAppContracts[app.name];
-                                if (appContracts) {
-                                    // Find the matching contract in the app's page contracts
-                                    const matchingPageContract = appContracts.pages.find(
-                                        (pc) => pc.pageName === appPage.name,
-                                    );
-                                    if (matchingPageContract) {
-                                        pageContract.usedComponentContracts.push({
-                                            appName: app.name,
-                                            componentName: appPage.name,
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Check in app components
-                    for (const appComponent of app.components) {
-                        for (const headlessComp of appComponent.headless_components) {
-                            if (
-                                headlessComp.name === usedComp.name &&
-                                headlessComp.key === usedComp.key
-                            ) {
-                                // Found the component! Add reference to it
-                                const appContracts = installedAppContracts[app.name];
-                                if (appContracts) {
-                                    // Find the matching contract in the app's component contracts
-                                    const matchingComponentContract = appContracts.components.find(
-                                        (cc) => cc.componentName === appComponent.name,
-                                    );
-                                    if (matchingComponentContract) {
-                                        pageContract.usedComponentContracts.push({
-                                            appName: app.name,
-                                            componentName: appComponent.name,
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (error) {
-            console.warn(`Failed to process page components for ${pageDir}:`, error);
-        }
-    }
-
-    return pageContracts;
-}
-
-// Helper function to extract headless components from jay-html content
-function extractHeadlessComponents(jayHtmlContent: string): {
-    contract: string;
-    src: string;
-    name: string;
+): {
+    appName: string;
+    componentName: string;
     key: string;
 }[] {
     const root = parse(jayHtmlContent);
     const headlessScripts = root.querySelectorAll('script[type="application/jay-headless"]');
 
-    return headlessScripts.map((script) => ({
-        contract: script.getAttribute('contract') || '',
-        src: script.getAttribute('src') || '',
-        name: script.getAttribute('name') || '',
-        key: script.getAttribute('key') || '',
-    }));
-}
+    const resolvedComponents: {
+        appName: string;
+        componentName: string;
+        key: string;
+    }[] = [];
 
-// Helper function to scan pages in the project
-async function scanProjectPages(pagesBasePath: string): Promise<ProjectPage[]> {
-    const pages: ProjectPage[] = [];
+    for (const script of headlessScripts) {
+        const src = script.getAttribute('src') || '';
+        const name = script.getAttribute('name') || '';
+        const key = script.getAttribute('key') || '';
 
-    async function scanDirectory(dirPath: string, urlPath: string = '') {
-        try {
-            const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+        // Resolve src and name to appName and componentName
+        let resolved = false;
+        for (const app of installedApps) {
+            // Check if app module matches src
+            if (app.module !== src && app.name !== src) {
+                continue;
+            }
 
-            for (const entry of entries) {
-                const fullPath = path.join(dirPath, entry.name);
-
-                if (entry.isDirectory()) {
-                    // Handle parameterized routes like [slug]
-                    const isParam = entry.name.startsWith('[') && entry.name.endsWith(']');
-                    const segmentUrl = isParam ? `:${entry.name.slice(1, -1)}` : entry.name;
-                    const newUrlPath = urlPath + '/' + segmentUrl;
-                    await scanDirectory(fullPath, newUrlPath);
-                } else if (entry.name === PAGE_FILENAME) {
-                    // Found a page file
-                    const pageUrl = urlPath || '/';
-                    const pageName = path.basename(dirPath) || 'home';
-
-                    try {
-                        const jayHtmlContent = await fs.promises.readFile(fullPath, 'utf-8');
-                        const usedComponents = extractHeadlessComponents(jayHtmlContent);
-
-                        pages.push({
-                            name: pageName,
-                            url: pageUrl,
-                            filePath: fullPath,
-                            usedComponents,
-                        });
-                    } catch (error) {
-                        console.warn(`Failed to read page file ${fullPath}:`, error);
+            // Check in app pages
+            for (const appPage of app.pages) {
+                for (const headlessComp of appPage.headless_components) {
+                    if (headlessComp.name === name && headlessComp.key === key) {
+                        const appContracts = installedAppContracts[app.name];
+                        if (appContracts) {
+                            const matchingPageContract = appContracts.pages.find(
+                                (pc) => pc.pageName === appPage.name,
+                            );
+                            if (matchingPageContract) {
+                                resolvedComponents.push({
+                                    appName: app.name,
+                                    componentName: appPage.name,
+                                    key,
+                                });
+                                resolved = true;
+                                break;
+                            }
+                        }
                     }
                 }
+                if (resolved) break;
             }
-        } catch (error) {
-            console.warn(`Failed to scan directory ${dirPath}:`, error);
+            if (resolved) break;
+
+            // Check in app components
+            for (const appComponent of app.components) {
+                for (const headlessComp of appComponent.headless_components) {
+                    if (headlessComp.name === name && headlessComp.key === key) {
+                        const appContracts = installedAppContracts[app.name];
+                        if (appContracts) {
+                            const matchingComponentContract = appContracts.components.find(
+                                (cc) => cc.componentName === appComponent.name,
+                            );
+                            if (matchingComponentContract) {
+                                resolvedComponents.push({
+                                    appName: app.name,
+                                    componentName: appComponent.name,
+                                    key,
+                                });
+                                resolved = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (resolved) break;
+            }
+            if (resolved) break;
+        }
+
+        // If not resolved, keep original values (this shouldn't happen in normal cases)
+        if (!resolved) {
+            resolvedComponents.push({
+                appName: src,
+                componentName: name,
+                key,
+            });
         }
     }
 
-    await scanDirectory(pagesBasePath);
-    return pages;
+    return resolvedComponents;
 }
 
 // Helper function to scan components in the project
@@ -651,6 +577,169 @@ async function getProjectName(configBasePath: string): Promise<string> {
     }
 
     return 'Unnamed Project';
+}
+
+// Comprehensive function to scan all project information in one pass
+async function scanProjectInfo(
+    pagesBasePath: string,
+    componentsBasePath: string,
+    configBasePath: string,
+    projectRootPath: string,
+): Promise<ProjectInfo> {
+    // Scan basic project info
+    const [projectName, components, installedApps] = await Promise.all([
+        getProjectName(configBasePath),
+        scanProjectComponents(componentsBasePath),
+        scanInstalledApps(configBasePath),
+    ]);
+
+    // Scan installed app contracts
+    const installedAppContracts = await scanInstalledAppContracts(configBasePath, projectRootPath);
+
+    // Scan pages with full information (basic info + contracts + used components)
+    const pages: ProjectPage[] = [];
+
+    await scanPageDirectories(pagesBasePath, async (context) => {
+        const { dirPath, pageUrl, pageName, hasPageHtml, hasPageContract, hasPageConfig } = context;
+        const pageFilePath = path.join(dirPath, PAGE_FILENAME);
+        const pageConfigPath = path.join(dirPath, PAGE_CONFIG_FILENAME);
+        const contractPath = path.join(dirPath, PAGE_CONTRACT_FILENAME);
+
+        let usedComponents: {
+            appName: string;
+            componentName: string;
+            key: string;
+        }[] = [];
+        let contractSchema: ContractSchema | undefined;
+
+        // Parse contract if exists
+        if (hasPageContract) {
+            try {
+                const parsedContract = await parseContractFile(contractPath);
+                if (parsedContract) {
+                    contractSchema = parsedContract;
+                }
+            } catch (error) {
+                console.warn(`Failed to parse contract file ${contractPath}:`, error);
+            }
+        }
+
+        // Parse used components - Priority 1: jay-html
+        if (hasPageHtml) {
+            try {
+                const jayHtmlContent = await fs.promises.readFile(pageFilePath, 'utf-8');
+                usedComponents = extractHeadlessComponents(
+                    jayHtmlContent,
+                    installedApps,
+                    installedAppContracts,
+                );
+            } catch (error) {
+                console.warn(`Failed to read page file ${pageFilePath}:`, error);
+            }
+        }
+        // Priority 2: page.conf.yaml
+        else if (hasPageConfig) {
+            try {
+                const configContent = await fs.promises.readFile(pageConfigPath, 'utf-8');
+                const pageConfig = YAML.parse(configContent);
+                if (pageConfig.used_components && Array.isArray(pageConfig.used_components)) {
+                    // Resolve src and name to appName and componentName
+                    for (const comp of pageConfig.used_components) {
+                        const src = comp.src || '';
+                        const name = comp.name || '';
+                        const key = comp.key || '';
+
+                        let resolved = false;
+                        for (const app of installedApps) {
+                            // Check if app module matches src
+                            if (app.module !== src && app.name !== src) {
+                                continue;
+                            }
+
+                            // Check in app pages
+                            for (const appPage of app.pages) {
+                                for (const headlessComp of appPage.headless_components) {
+                                    if (headlessComp.name === name && headlessComp.key === key) {
+                                        const appContracts = installedAppContracts[app.name];
+                                        if (appContracts) {
+                                            const matchingPageContract = appContracts.pages.find(
+                                                (pc) => pc.pageName === appPage.name,
+                                            );
+                                            if (matchingPageContract) {
+                                                usedComponents.push({
+                                                    appName: app.name,
+                                                    componentName: appPage.name,
+                                                    key,
+                                                });
+                                                resolved = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                                if (resolved) break;
+                            }
+                            if (resolved) break;
+
+                            // Check in app components
+                            for (const appComponent of app.components) {
+                                for (const headlessComp of appComponent.headless_components) {
+                                    if (headlessComp.name === name && headlessComp.key === key) {
+                                        const appContracts = installedAppContracts[app.name];
+                                        if (appContracts) {
+                                            const matchingComponentContract =
+                                                appContracts.components.find(
+                                                    (cc) => cc.componentName === appComponent.name,
+                                                );
+                                            if (matchingComponentContract) {
+                                                usedComponents.push({
+                                                    appName: app.name,
+                                                    componentName: appComponent.name,
+                                                    key,
+                                                });
+                                                resolved = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                                if (resolved) break;
+                            }
+                            if (resolved) break;
+                        }
+
+                        // If not resolved, keep original values
+                        if (!resolved) {
+                            usedComponents.push({
+                                appName: src,
+                                componentName: name,
+                                key,
+                            });
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn(`Failed to parse page config ${pageConfigPath}:`, error);
+            }
+        }
+
+        pages.push({
+            name: pageName,
+            url: pageUrl,
+            filePath: pageFilePath,
+            contractSchema,
+            usedComponents,
+        });
+    });
+
+    return {
+        name: projectName,
+        localPath: projectRootPath,
+        pages,
+        components,
+        installedApps,
+        installedAppContracts,
+    };
 }
 
 type CreatedJayHtml = {
@@ -876,99 +965,48 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
         }
     };
 
-    const onGetProjectConfiguration = async (
-        params: GetProjectConfigurationMessage,
-    ): Promise<GetProjectConfigurationResponse> => {
+    const onGetProjectInfo = async (
+        params: GetProjectInfoMessage,
+    ): Promise<GetProjectInfoResponse> => {
         try {
             const pagesBasePath = path.resolve(config.devServer.pagesBase);
             const componentsBasePath = path.resolve(config.devServer.componentsBase);
             const configBasePath = path.resolve(config.devServer.configBase);
+            const projectRootPath = process.cwd();
 
-            // Scan project structure
-            const [projectName, pages, components, installedApps] = await Promise.all([
-                getProjectName(configBasePath),
-                scanProjectPages(pagesBasePath),
-                scanProjectComponents(componentsBasePath),
-                scanInstalledApps(configBasePath),
-            ]);
+            // Scan all project information in one comprehensive pass
+            const info = await scanProjectInfo(
+                pagesBasePath,
+                componentsBasePath,
+                configBasePath,
+                projectRootPath,
+            );
 
-            const projectConfiguration: ProjectConfiguration = {
-                name: projectName,
-                localPath: process.cwd(),
-                pages,
-                components,
-                installedApps,
-            };
-
-            console.log(`📋 Retrieved project configuration: ${projectName}`);
+            console.log(`📋 Retrieved project info: ${info.name}`);
+            console.log(`   Pages: ${info.pages.length}`);
+            console.log(`   Components: ${info.components.length}`);
+            console.log(`   Installed Apps: ${info.installedApps.length}`);
+            console.log(`   App Contracts: ${Object.keys(info.installedAppContracts).length}`);
 
             return {
-                type: 'getProjectConfiguration',
+                type: 'getProjectInfo',
                 success: true,
-                configuration: projectConfiguration,
+                info,
             };
         } catch (error) {
-            console.error('Failed to get project configuration:', error);
+            console.error('Failed to get project info:', error);
             return {
-                type: 'getProjectConfiguration',
+                type: 'getProjectInfo',
                 success: false,
                 error: error instanceof Error ? error.message : 'Unknown error',
-                configuration: {
+                info: {
                     name: 'Error',
                     localPath: process.cwd(),
                     pages: [],
                     components: [],
                     installedApps: [],
+                    installedAppContracts: {},
                 },
-            };
-        }
-    };
-
-    const onGetContracts = async (params: GetContractsMessage): Promise<GetContractsResponse> => {
-        try {
-            const pagesBasePath = path.resolve(config.devServer.pagesBase);
-            const projectRootPath = process.cwd();
-            const configBasePath = path.resolve(config.devServer.configBase);
-
-            // Scan for pages (without full contract data yet)
-            const pageContracts = await scanPageContracts(pagesBasePath);
-
-            // Scan for installed apps to get their list
-            const installedApps = await scanInstalledApps(configBasePath);
-
-            // Scan for installed app contracts
-            const installedAppContracts = await scanInstalledAppContracts(
-                configBasePath,
-                projectRootPath,
-            );
-
-            // Build full page contracts (with used component contracts)
-            const pages = await buildFullPageContracts(
-                pagesBasePath,
-                pageContracts,
-                installedApps,
-                installedAppContracts,
-            );
-
-            console.log(`📋 Retrieved ${pages.length} pages with their used component contracts`);
-            console.log(
-                `📦 Retrieved contracts from ${Object.keys(installedAppContracts).length} installed apps`,
-            );
-
-            return {
-                type: 'getContracts',
-                success: true,
-                pages,
-                installedAppContracts,
-            };
-        } catch (error) {
-            console.error('Failed to get contracts:', error);
-            return {
-                type: 'getContracts',
-                success: false,
-                error: error instanceof Error ? error.message : 'Unknown error',
-                pages: [],
-                installedAppContracts: {},
             };
         }
     };
@@ -977,7 +1015,6 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
         onPublish,
         onSaveImage,
         onHasImage,
-        onGetProjectConfiguration,
-        onGetContracts,
+        onGetProjectInfo,
     };
 }

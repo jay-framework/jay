@@ -12,6 +12,7 @@ The `page.conf.yaml` file allows you to define a page's dependencies and configu
 The file must be named `page.conf.yaml` and placed directly inside the page's directory, alongside `page.jay-contract` (if it exists).
 
 **Example Structure:**
+
 ```
 src/pages/
   ├── home/
@@ -37,17 +38,17 @@ used_components:
 
 ### Fields
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `used_components` | Array | No | A list of components from installed apps that this page consumes. |
+| Field             | Type  | Required | Description                                                       |
+| ----------------- | ----- | -------- | ----------------------------------------------------------------- |
+| `used_components` | Array | No       | A list of components from installed apps that this page consumes. |
 
 ### Component Definition
 
 Each item in `used_components` requires:
 
-*   **`name`**: The name of the component as defined in the installed app's configuration.
-*   **`src`**: The module name or app name of the installed application providing the component (e.g., `wix-jay-headless-store`).
-*   **`key`**: The unique key used to identify this component's data in the page's data context.
+- **`name`**: The name of the component as defined in the installed app's configuration.
+- **`src`**: The module name or app name of the installed application providing the component (e.g., `wix-jay-headless-store`).
+- **`key`**: The unique key used to identify this component's data in the page's data context.
 
 ## Precedence Rules
 
@@ -75,4 +76,3 @@ used_components:
 ```
 
 This configuration declares that the page requires data from `productPage` (bound to `product`) and `reviewList` (bound to `reviews`). When the `getContracts` API is called, it will return the full contracts for these components as part of the page's requirements.
-
