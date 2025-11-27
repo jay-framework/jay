@@ -150,7 +150,7 @@ describe('compile contract', () => {
         }
         
         export type TodoSlowViewState = {
-            item: Pick<TodoViewState['item'], 'title' | 'completed'>;
+            item: TodoViewState['item'];
         };
         
         export type TodoFastViewState = {};
@@ -205,11 +205,11 @@ describe('compile contract', () => {
         export type TodoSlowViewState = {};
         
         export type TodoFastViewState = {
-            items: Array<Pick<TodoViewState['items'][number], 'title' | 'completed'>>;
+            items: Array<TodoViewState['items'][number]>;
         };
         
         export type TodoInteractiveViewState = {
-            items: Array<Pick<TodoViewState['items'][number], 'title' | 'completed'>>;
+            items: Array<TodoViewState['items'][number]>;
         };
         
         export interface TodoRefs {
@@ -313,19 +313,19 @@ describe('compile contract', () => {
         
         export type UserFormFastViewState = {
             personalInfo: {
-                nameFields: Pick<UserFormViewState['personalInfo']['nameFields'], 'firstName' | 'lastName'>;
+                nameFields: UserFormViewState['personalInfo']['nameFields'];
             };
             contactInfo: {
-                contactFields: Pick<UserFormViewState['contactInfo']['contactFields'], 'email' | 'phone'>;
+                contactFields: UserFormViewState['contactInfo']['contactFields'];
             };
         };
         
         export type UserFormInteractiveViewState = {
             personalInfo: {
-                nameFields: Pick<UserFormViewState['personalInfo']['nameFields'], 'firstName' | 'lastName'>;
+                nameFields: UserFormViewState['personalInfo']['nameFields'];
             };
             contactInfo: {
-                contactFields: Pick<UserFormViewState['contactInfo']['contactFields'], 'email' | 'phone'>;
+                contactFields: UserFormViewState['contactInfo']['contactFields'];
             };
         };
         
@@ -427,7 +427,7 @@ describe('compile contract', () => {
         }
 
         export type TodoSlowViewState = Pick<TodoViewState, 'filter'> & {
-            items: Array<Pick<TodoViewState['items'][number], 'title' | 'completed'>>;
+            items: Array<TodoViewState['items'][number]>;
         };
         
         export type TodoFastViewState = {};
@@ -840,7 +840,7 @@ export interface MenuItemViewState {
 }
 
 export type MenuItemSlowViewState = Pick<MenuItemViewState, 'label' | 'id'> & {
-    submenu: Pick<MenuItemViewState['submenu'], 'items'>;
+    submenu: MenuItemViewState['submenu'];
 };
         
         export type MenuItemFastViewState = {};
@@ -904,7 +904,7 @@ export type ComplexTreeSlowViewState = Pick<
     ComplexTreeViewState,
     'name' | 'children' | 'relatedMetadata'
 > & {
-    metadata: Pick<ComplexTreeViewState['metadata'], 'category' | 'tags'>;
+    metadata: ComplexTreeViewState['metadata'];
 };
         
         export type ComplexTreeFastViewState = {};
@@ -960,7 +960,7 @@ export interface DocumentViewState {
 }
 
 export type DocumentSlowViewState = Pick<DocumentViewState, 'title'> & {
-    nestedStructure: Pick<DocumentViewState['nestedStructure'], 'name' | 'id' | 'children'>;
+    nestedStructure: DocumentViewState['nestedStructure'];
 };
         
         export type DocumentFastViewState = {};
@@ -1071,7 +1071,7 @@ export interface ProductListViewState {
 }
 
 export type ProductListSlowViewState = Pick<ProductListViewState, 'title' | 'featuredProduct'> & {
-    products: Array<Pick<ProductListViewState['products'][number], 'id' | 'name' | 'price'>>;
+    products: Array<ProductListViewState['products'][number]>;
 };
         
         export type ProductListFastViewState = {};
@@ -1139,9 +1139,7 @@ export type ProductListUnwrappedSlowViewState = Pick<
     ProductListUnwrappedViewState,
     'title' | 'featuredProduct'
 > & {
-    products: Array<
-        Pick<ProductListUnwrappedViewState['products'][number], 'id' | 'name' | 'price'>
-    >;
+    products: Array<ProductListUnwrappedViewState['products'][number]>;
 };
         
         export type ProductListUnwrappedFastViewState = {};

@@ -118,6 +118,50 @@ function groupPathsByParent(paths: PropertyPath[]): Map<string, string[]> {
 }
 
 /**
+ * Count total properties in a contract object/array
+ */
+function countTotalProperties(
+    tags: ContractTag[],
+    targetPath: string[],
+    currentPath: string[] = [],
+): number {
+    let count = 0;
+    
+    for (const tag of tags) {
+        // Skip interactive tags without dataType
+        if (tag.type.includes(ContractTagType.interactive) && !tag.dataType) {
+            continue;
+        }
+        
+        const propertyName = camelCase(tag.tag);
+        const newPath = [...currentPath, propertyName];
+        const pathKey = newPath.join('.');
+        const targetKey = targetPath.join('.');
+        
+        // If this is the target path, count its direct children
+        if (pathKey === targetKey && tag.type.includes(ContractTagType.subContract) && tag.tags) {
+            for (const childTag of tag.tags) {
+                if (childTag.type.includes(ContractTagType.interactive) && !childTag.dataType) {
+                    continue;
+                }
+                count++;
+            }
+            return count;
+        }
+        
+        // Continue searching if we haven't reached the target yet
+        if (tag.type.includes(ContractTagType.subContract) && tag.tags) {
+            const result = countTotalProperties(tag.tags, targetPath, newPath);
+            if (result > 0) {
+                return result;
+            }
+        }
+    }
+    
+    return count;
+}
+
+/**
  * Build nested Pick type expression
  */
 function buildPickExpression(
@@ -125,6 +169,7 @@ function buildPickExpression(
     pathGroups: Map<string, string[]>,
     arrays: Set<string>,
     asyncProps: Set<string>,
+    contractTags: ContractTag[],
     currentPath: string[] = [],
 ): string {
     const currentKey = currentPath.join('.');
@@ -167,12 +212,18 @@ function buildPickExpression(
         const isArray = arrays.has(childPathKey);
         const isAsync = asyncProps.has(childPathKey);
 
+        // Check if we're picking ALL properties of this nested object
+        const childProperties = pathGroups.get(childPathKey) || [];
+        const totalProperties = countTotalProperties(contractTags, childPath);
+        const isPickingAllProperties = totalProperties > 0 && childProperties.length === totalProperties;
+
         // Recursively build child expression
         const childExpression = buildPickExpression(
             baseTypeName,
             pathGroups,
             arrays,
             asyncProps,
+            contractTags,
             childPath,
         );
 
@@ -180,33 +231,53 @@ function buildPickExpression(
             let fullExpression: string;
             const originalPathAccess = `${baseTypeName}${childPath.map((p) => `['${p}']`).join('')}`;
 
-            // Handle async properties (Promises)
-            if (isAsync) {
-                // For Promise properties, unwrap with Awaited first, then apply [number] for arrays
-                if (isArray) {
-                    // Promise<Array<...>> - unwrap Promise, then access array element
-                    const unwrappedArrayAccess = `Awaited<${originalPathAccess}>[number]`;
-                    const unwrappedExpression = childExpression.replace(
-                        originalPathAccess,
-                        unwrappedArrayAccess,
-                    );
-                    fullExpression = `Promise<Array<${unwrappedExpression}>>`;
+            // If we're picking all properties of a leaf object (no further nesting), just use the type reference
+            if (isPickingAllProperties && childExpression === `Pick<${originalPathAccess}, ${childProperties.map((p) => `'${p}'`).join(' | ')}>`) {
+                // Use direct type reference instead of Pick
+                const directTypeRef = originalPathAccess;
+
+                // Handle async properties (Promises)
+                if (isAsync) {
+                    if (isArray) {
+                        fullExpression = `Promise<Array<${directTypeRef}[number]>>`;
+                    } else {
+                        fullExpression = `Promise<${directTypeRef}>`;
+                    }
+                } else if (isArray) {
+                    fullExpression = `Array<${directTypeRef}[number]>`;
                 } else {
-                    // Promise<Object> - just unwrap Promise
-                    const unwrappedAccess = `Awaited<${originalPathAccess}>`;
-                    const unwrappedExpression = childExpression.replace(
-                        originalPathAccess,
-                        unwrappedAccess,
-                    );
-                    fullExpression = `Promise<${unwrappedExpression}>`;
+                    fullExpression = directTypeRef;
                 }
-            } else if (isArray) {
-                // For arrays (non-Promise), wrap with Array<> and use [number] to access element type
-                const arrayElementAccess = `${originalPathAccess}[number]`;
-                fullExpression = `Array<${childExpression.replace(originalPathAccess, arrayElementAccess)}>`;
             } else {
-                // Regular nested object
-                fullExpression = childExpression;
+                // Use Pick expression as before
+                // Handle async properties (Promises)
+                if (isAsync) {
+                    // For Promise properties, unwrap with Awaited first, then apply [number] for arrays
+                    if (isArray) {
+                        // Promise<Array<...>> - unwrap Promise, then access array element
+                        const unwrappedArrayAccess = `Awaited<${originalPathAccess}>[number]`;
+                        const unwrappedExpression = childExpression.replace(
+                            originalPathAccess,
+                            unwrappedArrayAccess,
+                        );
+                        fullExpression = `Promise<Array<${unwrappedExpression}>>`;
+                    } else {
+                        // Promise<Object> - just unwrap Promise
+                        const unwrappedAccess = `Awaited<${originalPathAccess}>`;
+                        const unwrappedExpression = childExpression.replace(
+                            originalPathAccess,
+                            unwrappedAccess,
+                        );
+                        fullExpression = `Promise<${unwrappedExpression}>`;
+                    }
+                } else if (isArray) {
+                    // For arrays (non-Promise), wrap with Array<> and use [number] to access element type
+                    const arrayElementAccess = `${originalPathAccess}[number]`;
+                    fullExpression = `Array<${childExpression.replace(originalPathAccess, arrayElementAccess)}>`;
+                } else {
+                    // Regular nested object
+                    fullExpression = childExpression;
+                }
             }
 
             nestedProperties.push(`    ${childName}: ${fullExpression};`);
@@ -255,7 +326,7 @@ export function generatePhaseViewStateType(
     const asyncSet = new Set(asyncProps.map((a) => a.path));
 
     // Build Pick expression
-    const pickExpression = buildPickExpression(baseTypeName, pathGroups, arraySet, asyncSet);
+    const pickExpression = buildPickExpression(baseTypeName, pathGroups, arraySet, asyncSet, contract.tags);
 
     return `export type ${typeName} = ${pickExpression};`;
 }
