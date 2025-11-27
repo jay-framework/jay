@@ -79,7 +79,8 @@ async function traverseTags(
             const subContractTypes = await traverseSubContractTag(subTag, {
                 ...context,
                 viewStateType: objectType,
-                isRepeated: isRepeated || subTag.repeated,
+                // For ViewState: only use the tag's own repeated flag (don't inherit from parent)
+                isRepeated: subTag.repeated || false,
                 isAsync: subTag.async,
             });
             if (subContractTypes.val) {
@@ -94,6 +95,7 @@ async function traverseTags(
             const result = await traverseTag(subTag, {
                 ...context,
                 viewStateType: objectType,
+                // For Refs: inherit repeated from parent (child refs in repeated parent should be collections)
                 isRepeated: isRepeated || subTag.repeated,
             });
             if (result.type && isEnumType(result.type))
