@@ -1,4 +1,5 @@
 import {
+    HTMLElementCollectionProxy,
     HTMLElementProxy,
     JayContract,
     JayElement,
@@ -11,19 +12,25 @@ export interface SimplePluginViewState {
     pluginInteractiveRendered: string;
 }
 
+export type SimplePluginSlowViewState = Pick<SimplePluginViewState, 'pluginSlowlyRendered'>;
+export type SimplePluginFastViewState = Pick<SimplePluginViewState, 'pluginInteractiveRendered'>;
+export type SimplePluginInteractiveViewState = Pick<
+    SimplePluginViewState,
+    'pluginInteractiveRendered'
+>;
+
 export interface SimplePluginRefs {
     pluginButton: HTMLElementProxy<SimplePluginViewState, HTMLButtonElement>;
 }
 
-export interface SimplePluginRepeatedRefs {}
+export interface SimplePluginRepeatedRefs {
+    pluginButton: HTMLElementCollectionProxy<SimplePluginViewState, HTMLButtonElement>;
+}
 
-export type SimplePluginElement = JayElement<SimplePluginViewState, SimplePluginRefs>;
-export type SimplePluginElementRender = RenderElement<
+export type SimplePluginContract = JayContract<
     SimplePluginViewState,
     SimplePluginRefs,
-    SimplePluginElement
+    SimplePluginSlowViewState,
+    SimplePluginFastViewState,
+    SimplePluginInteractiveViewState
 >;
-export type SimplePluginElementPreRender = [SimplePluginRefs, SimplePluginElementRender];
-export type SimplePluginContract = JayContract<SimplePluginViewState, SimplePluginElementRefs>;
-
-export declare function render(options?: RenderElementOptions): SimplePluginElementPreRender;

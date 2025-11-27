@@ -1,4 +1,4 @@
-import { JayElement, RenderElement, RenderElementOptions } from '@jay-framework/runtime';
+import { JayContract } from '@jay-framework/runtime';
 
 export enum MediaType {
     audio,
@@ -50,12 +50,14 @@ export interface MediaItemRefs {}
 
 export interface MediaItemRepeatedRefs {}
 
-export type MediaItemElement = JayElement<MediaItemViewState, MediaItemRefs>;
-export type MediaItemElementRender = RenderElement<
+export type MediaItemSlowViewState = MediaItemViewState;
+export type MediaItemFastViewState = {};
+export type MediaItemInteractiveViewState = {};
+
+export type MediaItemContract = JayContract<
     MediaItemViewState,
     MediaItemRefs,
-    MediaItemElement
+    MediaItemSlowViewState,
+    MediaItemFastViewState,
+    MediaItemInteractiveViewState
 >;
-export type MediaItemElementPreRender = [MediaItemRefs, MediaItemElementRender];
-
-export declare function render(options?: RenderElementOptions): MediaItemElementPreRender;

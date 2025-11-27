@@ -14,6 +14,7 @@ import {
     contractToImportsViewStateAndRefs,
     JayContractImportLink,
 } from './contract-to-view-state-and-refs';
+import { generateAllPhaseViewStateTypes } from './phase-type-generator';
 
 function refsToRepeated(refsTreeNode: RefsTree): RefsTree {
     const { refs, children, imported } = refsTreeNode;
@@ -74,24 +75,40 @@ export async function compileContract(
     jayImportResolver: JayImportResolver,
 ): Promise<WithValidations<string>> {
     return contractWithValidations.flatMapAsync(async (contract) => {
-        const contractTypes = await contractToImportsViewStateAndRefs(
+        // Generate full ViewState (for backward compatibility and full type)
+        const fullViewStateResult = await contractToImportsViewStateAndRefs(
             contract,
             contractFilePath,
             jayImportResolver,
         );
 
-        return contractTypes.map((contractTypesResult) => {
-            const { type, refs, importLinks } = contractTypesResult;
-            const types = generateTypes(type);
+        return fullViewStateResult.map((fullResult) => {
+            const { type, refs, importLinks } = fullResult;
+
+            // Generate full ViewState types
+            const fullViewStateTypes = generateTypes(type);
+
+            // Generate phase-specific ViewState types using Pick utilities
+            const contractName = pascalCase(contract.name);
+            const viewStateTypeName = `${contractName}ViewState`;
+            const phaseViewStateTypes = generateAllPhaseViewStateTypes(contract, viewStateTypeName);
+
+            // Generate refs interface
             let { imports, renderedRefs } = generateRefsInterface(contract, refs);
             imports = imports.plus(Import.jayContract);
+
             const renderedImports = renderImports(imports, importLinks);
 
-            const viewStateTypeName = `${pascalCase(contract.name)}ViewState`;
-            const refsTypeName = `${pascalCase(contract.name)}Refs`;
-            const contractType = `export type ${pascalCase(contract.name)}Contract = JayContract<${viewStateTypeName}, ${refsTypeName}>`;
+            // Generate type names
+            const refsTypeName = `${contractName}Refs`;
+            const slowViewStateTypeName = `${contractName}SlowViewState`;
+            const fastViewStateTypeName = `${contractName}FastViewState`;
+            const interactiveViewStateTypeName = `${contractName}InteractiveViewState`;
 
-            return `${renderedImports}\n\n${types}\n\n${renderedRefs}\n\n${contractType}`;
+            // Generate contract type with all 5 type parameters
+            const contractType = `export type ${contractName}Contract = JayContract<${viewStateTypeName}, ${refsTypeName}, ${slowViewStateTypeName}, ${fastViewStateTypeName}, ${interactiveViewStateTypeName}>`;
+
+            return `${renderedImports}\n\n${fullViewStateTypes}\n\n${phaseViewStateTypes}\n\n${renderedRefs}\n\n${contractType}`;
         });
     });
 }

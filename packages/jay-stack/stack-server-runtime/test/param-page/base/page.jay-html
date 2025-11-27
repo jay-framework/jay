@@ -1,10 +1,6 @@
 <html>
 <head>
-    <script type="application/jay-data">
-        data:
-          slowlyRendered: string
-          fastDynamicRendered: string
-    </script>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
 </head>
 <body>
 <div>

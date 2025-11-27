@@ -19,6 +19,10 @@ export interface CounterElementRefs {
     adderButton: HTMLElementProxy<CounterViewState, HTMLButtonElement>;
 }
 
+export type CounterSlowViewState = {};
+export type CounterFastViewState = {};
+export type CounterInteractiveViewState = CounterViewState;
+
 export type CounterElement = JayElement<CounterViewState, CounterElementRefs>;
 export type CounterElementRender = RenderElement<
     CounterViewState,
@@ -26,7 +30,13 @@ export type CounterElementRender = RenderElement<
     CounterElement
 >;
 export type CounterElementPreRender = [CounterElementRefs, CounterElementRender];
-export type CounterContract = JayContract<CounterViewState, CounterElementRefs>;
+export type CounterContract = JayContract<
+    CounterViewState,
+    CounterElementRefs,
+    CounterSlowViewState,
+    CounterFastViewState,
+    CounterInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): CounterElementPreRender {
     const [refManager, [refSubtracter, refAdderButton]] = ReferencesManager.for(

@@ -1,0 +1,30 @@
+name: ProductPage
+tags:
+  - tag: name
+    type: data
+    dataType: string
+    description: Product name
+  - tag: sku
+    type: data
+    dataType: string
+    description: Product SKU
+  - tag: price
+    type: data
+    dataType: number
+    description: Product price
+    phase: slow
+  - tag: inStock
+    type: data
+    dataType: boolean
+    description: Whether product is in stock
+    phase: fast
+  - tag: quantity
+    type: data
+    dataType: number
+    description: Selected quantity
+    phase: fast+interactive
+  - tag: addToCart
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Add to cart button
+

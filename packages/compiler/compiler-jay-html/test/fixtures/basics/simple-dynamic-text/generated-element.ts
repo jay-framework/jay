@@ -15,6 +15,10 @@ export interface SimpleDynamicTextViewState {
 
 export interface SimpleDynamicTextElementRefs {}
 
+export type SimpleDynamicTextSlowViewState = {};
+export type SimpleDynamicTextFastViewState = {};
+export type SimpleDynamicTextInteractiveViewState = SimpleDynamicTextViewState;
+
 export type SimpleDynamicTextElement = JayElement<
     SimpleDynamicTextViewState,
     SimpleDynamicTextElementRefs
@@ -30,7 +34,10 @@ export type SimpleDynamicTextElementPreRender = [
 ];
 export type SimpleDynamicTextContract = JayContract<
     SimpleDynamicTextViewState,
-    SimpleDynamicTextElementRefs
+    SimpleDynamicTextElementRefs,
+    SimpleDynamicTextSlowViewState,
+    SimpleDynamicTextFastViewState,
+    SimpleDynamicTextInteractiveViewState
 >;
 
 export function render(options?: RenderElementOptions): SimpleDynamicTextElementPreRender {

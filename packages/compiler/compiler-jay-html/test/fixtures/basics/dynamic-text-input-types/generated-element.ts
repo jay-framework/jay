@@ -16,6 +16,10 @@ export interface DynamicTextInputTypesViewState {
 
 export interface DynamicTextInputTypesElementRefs {}
 
+export type DynamicTextInputTypesSlowViewState = {};
+export type DynamicTextInputTypesFastViewState = {};
+export type DynamicTextInputTypesInteractiveViewState = DynamicTextInputTypesViewState;
+
 export type DynamicTextInputTypesElement = JayElement<
     DynamicTextInputTypesViewState,
     DynamicTextInputTypesElementRefs
@@ -31,7 +35,10 @@ export type DynamicTextInputTypesElementPreRender = [
 ];
 export type DynamicTextInputTypesContract = JayContract<
     DynamicTextInputTypesViewState,
-    DynamicTextInputTypesElementRefs
+    DynamicTextInputTypesElementRefs,
+    DynamicTextInputTypesSlowViewState,
+    DynamicTextInputTypesFastViewState,
+    DynamicTextInputTypesInteractiveViewState
 >;
 
 export function render(options?: RenderElementOptions): DynamicTextInputTypesElementPreRender {

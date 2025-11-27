@@ -38,6 +38,10 @@ export interface IndirectRecursion2ElementRefs {
     };
 }
 
+export type IndirectRecursion2SlowViewState = {};
+export type IndirectRecursion2FastViewState = {};
+export type IndirectRecursion2InteractiveViewState = IndirectRecursion2ViewState;
+
 export type IndirectRecursion2Element = JayElement<
     IndirectRecursion2ViewState,
     IndirectRecursion2ElementRefs
@@ -53,7 +57,10 @@ export type IndirectRecursion2ElementPreRender = [
 ];
 export type IndirectRecursion2Contract = JayContract<
     IndirectRecursion2ViewState,
-    IndirectRecursion2ElementRefs
+    IndirectRecursion2ElementRefs,
+    IndirectRecursion2SlowViewState,
+    IndirectRecursion2FastViewState,
+    IndirectRecursion2InteractiveViewState
 >;
 
 export function render(options?: RenderElementOptions): IndirectRecursion2ElementPreRender {

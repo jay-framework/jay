@@ -4,6 +4,7 @@ import {
     HTMLElementCollectionProxy,
     HTMLElementProxy,
     RenderElementOptions,
+    JayContract,
 } from '@jay-framework/runtime';
 import { DiscountViewState, DiscountRefs, DiscountRepeatedRefs } from './discount.jay-contract';
 import {
@@ -65,12 +66,14 @@ export interface ProductPageRepeatedRefs {
     addToCart: HTMLElementCollectionProxy<ProductPageViewState, HTMLButtonElement>;
 }
 
-export type ProductPageElement = JayElement<ProductPageViewState, ProductPageRefs>;
-export type ProductPageElementRender = RenderElement<
+export type ProductPageSlowViewState = Omit<ProductPageViewState, 'inStock'>;
+export type ProductPageFastViewState = Pick<ProductPageViewState, 'inStock'>;
+export type ProductPageInteractiveViewState = {};
+
+export type ProductPageContract = JayContract<
     ProductPageViewState,
     ProductPageRefs,
-    ProductPageElement
+    ProductPageSlowViewState,
+    ProductPageFastViewState,
+    ProductPageInteractiveViewState
 >;
-export type ProductPageElementPreRender = [ProductPageRefs, ProductPageElementRender];
-
-export declare function render(options?: RenderElementOptions): ProductPageElementPreRender;

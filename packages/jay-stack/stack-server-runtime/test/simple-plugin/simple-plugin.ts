@@ -1,20 +1,19 @@
 import {
-    SimplePluginViewState,
     SimplePluginRefs,
     SimplePluginContract,
+    SimplePluginSlowViewState,
+    SimplePluginFastViewState,
 } from './compiled/simple-plugin.jay-contract';
 import { Props } from '@jay-framework/component';
 import {
+    FastRenderResult,
     makeJayStackComponent,
     PageProps,
     PartialRender,
     partialRender,
     Signals,
+    SlowlyRenderResult,
 } from '@jay-framework/fullstack-component';
-
-// Define view states
-type StaticViewState = Pick<SimplePluginViewState, 'pluginSlowlyRendered'>;
-type DynamicViewState = Omit<SimplePluginViewState, keyof StaticViewState>;
 
 // Define carry forward interfaces
 interface StaticCarryForward {
@@ -27,22 +26,32 @@ interface DynamicCarryForward {
 }
 
 // Static rendering function
-async function renderStaticContent(
+async function slowRender(
     props: PageProps,
-): Promise<PartialRender<StaticViewState, StaticCarryForward>> {
+): Promise<SlowlyRenderResult<SimplePluginSlowViewState, StaticCarryForward>> {
     const pluginSlowlyRendered = 'SLOWLY RENDERED';
     const staticData = 'SLOWLY -> FAST CARRY FORWARD';
-    return partialRender({ pluginSlowlyRendered }, { staticData });
+    return partialRender(
+        {
+            pluginSlowlyRendered,
+        },
+        { staticData },
+    );
 }
 
 // Dynamic rendering function
-async function renderDynamicContent(
+async function fastRender(
     props: PageProps,
     carryForward: StaticCarryForward,
-): Promise<PartialRender<DynamicViewState, DynamicCarryForward>> {
+): Promise<FastRenderResult<SimplePluginFastViewState, DynamicCarryForward>> {
     const pluginInteractiveRendered = `FAST RENDERED, using ${carryForward.staticData}`;
     const dynamicData = 'FAST -> INTERACTIVE CARRY FORWARD';
-    return partialRender({ pluginInteractiveRendered }, { dynamicData, pluginInteractiveRendered });
+    return partialRender(
+        {
+            pluginInteractiveRendered,
+        },
+        { dynamicData, pluginInteractiveRendered },
+    );
 }
 
 // Interactive component constructor
@@ -67,6 +76,6 @@ function SimplePluginConstructor(
 
 export const plugin = makeJayStackComponent<SimplePluginContract>()
     .withProps<PageProps>()
-    .withSlowlyRender<StaticViewState, StaticCarryForward>(renderStaticContent)
-    .withFastRender<DynamicCarryForward>(renderDynamicContent)
+    .withSlowlyRender(slowRender)
+    .withFastRender(fastRender)
     .withInteractive(SimplePluginConstructor);

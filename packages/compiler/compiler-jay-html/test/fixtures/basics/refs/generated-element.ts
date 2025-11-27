@@ -20,10 +20,20 @@ export interface RefsElementRefs {
     ref3: HTMLElementProxy<RefsViewState, HTMLDivElement>;
 }
 
+export type RefsSlowViewState = {};
+export type RefsFastViewState = {};
+export type RefsInteractiveViewState = RefsViewState;
+
 export type RefsElement = JayElement<RefsViewState, RefsElementRefs>;
 export type RefsElementRender = RenderElement<RefsViewState, RefsElementRefs, RefsElement>;
 export type RefsElementPreRender = [RefsElementRefs, RefsElementRender];
-export type RefsContract = JayContract<RefsViewState, RefsElementRefs>;
+export type RefsContract = JayContract<
+    RefsViewState,
+    RefsElementRefs,
+    RefsSlowViewState,
+    RefsFastViewState,
+    RefsInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): RefsElementPreRender {
     const [refManager, [refRef1, refRef, refRef3]] = ReferencesManager.for(

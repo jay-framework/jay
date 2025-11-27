@@ -6,50 +6,64 @@ import {
     JayContract,
 } from '@jay-framework/runtime';
 
-export interface SubItemOfItemOfJCompWithNestedRefsIssueViewState {
+export enum ItemStateOfItemOfNestedCollectionWithRefsInVariantsViewState {
+    state1,
+    state2,
+}
+
+export interface SubItemOfItemOfNestedCollectionWithRefsInVariantsViewState {
     id: string;
     subTitle: string;
 }
 
-export interface ItemOfJCompWithNestedRefsIssueViewState {
+export interface ItemOfNestedCollectionWithRefsInVariantsViewState {
     id: string;
+    itemState: ItemStateOfItemOfNestedCollectionWithRefsInVariantsViewState;
     title: string;
-    subItems: Array<SubItemOfItemOfJCompWithNestedRefsIssueViewState>;
+    subItems: Array<SubItemOfItemOfNestedCollectionWithRefsInVariantsViewState>;
 }
 
-export interface JCompWithNestedRefsIssueViewState {
-    items: Array<ItemOfJCompWithNestedRefsIssueViewState>;
+export interface NestedCollectionWithRefsInVariantsViewState {
+    items: Array<ItemOfNestedCollectionWithRefsInVariantsViewState>;
 }
 
-export interface JCompWithNestedRefsIssueElementRefs {
+export interface NestedCollectionWithRefsInVariantsElementRefs {
     items: {
         subItems: {
             nestedRef: HTMLElementCollectionProxy<
-                SubItemOfItemOfJCompWithNestedRefsIssueViewState,
+                SubItemOfItemOfNestedCollectionWithRefsInVariantsViewState,
                 HTMLDivElement
             >;
         };
     };
 }
 
-export type JCompWithNestedRefsIssueElement = JayElement<
-    JCompWithNestedRefsIssueViewState,
-    JCompWithNestedRefsIssueElementRefs
+export type NestedCollectionWithRefsInVariantsSlowViewState = {};
+export type NestedCollectionWithRefsInVariantsFastViewState = {};
+export type NestedCollectionWithRefsInVariantsInteractiveViewState =
+    NestedCollectionWithRefsInVariantsViewState;
+
+export type NestedCollectionWithRefsInVariantsElement = JayElement<
+    NestedCollectionWithRefsInVariantsViewState,
+    NestedCollectionWithRefsInVariantsElementRefs
 >;
-export type JCompWithNestedRefsIssueElementRender = RenderElement<
-    JCompWithNestedRefsIssueViewState,
-    JCompWithNestedRefsIssueElementRefs,
-    JCompWithNestedRefsIssueElement
+export type NestedCollectionWithRefsInVariantsElementRender = RenderElement<
+    NestedCollectionWithRefsInVariantsViewState,
+    NestedCollectionWithRefsInVariantsElementRefs,
+    NestedCollectionWithRefsInVariantsElement
 >;
-export type JCompWithNestedRefsIssueElementPreRender = [
-    JCompWithNestedRefsIssueElementRefs,
-    JCompWithNestedRefsIssueElementRender,
+export type NestedCollectionWithRefsInVariantsElementPreRender = [
+    NestedCollectionWithRefsInVariantsElementRefs,
+    NestedCollectionWithRefsInVariantsElementRender,
 ];
-export type JCompWithNestedRefsIssueContract = JayContract<
-    JCompWithNestedRefsIssueViewState,
-    JCompWithNestedRefsIssueElementRefs
+export type NestedCollectionWithRefsInVariantsContract = JayContract<
+    NestedCollectionWithRefsInVariantsViewState,
+    NestedCollectionWithRefsInVariantsElementRefs,
+    NestedCollectionWithRefsInVariantsSlowViewState,
+    NestedCollectionWithRefsInVariantsFastViewState,
+    NestedCollectionWithRefsInVariantsInteractiveViewState
 >;
 
 export declare function render(
     options?: RenderElementOptions,
-): JCompWithNestedRefsIssueElementPreRender;
+): NestedCollectionWithRefsInVariantsElementPreRender;

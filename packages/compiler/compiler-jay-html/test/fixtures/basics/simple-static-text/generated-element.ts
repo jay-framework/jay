@@ -14,6 +14,10 @@ export interface SimpleStaticTextViewState {
 
 export interface SimpleStaticTextElementRefs {}
 
+export type SimpleStaticTextSlowViewState = {};
+export type SimpleStaticTextFastViewState = {};
+export type SimpleStaticTextInteractiveViewState = SimpleStaticTextViewState;
+
 export type SimpleStaticTextElement = JayElement<
     SimpleStaticTextViewState,
     SimpleStaticTextElementRefs
@@ -29,7 +33,10 @@ export type SimpleStaticTextElementPreRender = [
 ];
 export type SimpleStaticTextContract = JayContract<
     SimpleStaticTextViewState,
-    SimpleStaticTextElementRefs
+    SimpleStaticTextElementRefs,
+    SimpleStaticTextSlowViewState,
+    SimpleStaticTextFastViewState,
+    SimpleStaticTextInteractiveViewState
 >;
 
 export function render(options?: RenderElementOptions): SimpleStaticTextElementPreRender {

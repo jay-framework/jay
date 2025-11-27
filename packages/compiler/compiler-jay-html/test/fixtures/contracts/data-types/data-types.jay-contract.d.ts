@@ -31,8 +31,25 @@ export interface DataTypesViewState {
     pa1: Promise<Array<Pa1OfDataTypesViewState>>;
 }
 
+export type DataTypesSlowViewState = Pick<DataTypesViewState, 's1' | 'n1' | 'b1' | 'p1'> & {
+    o1: DataTypesViewState['o1'];
+    a1: Array<DataTypesViewState['a1'][number]>;
+    po1: Promise<DataTypesViewState['po1']>;
+    pa1: Promise<Array<DataTypesViewState['pa1'][number]>>;
+};
+
+export type DataTypesFastViewState = {};
+
+export type DataTypesInteractiveViewState = {};
+
 export interface DataTypesRefs {}
 
 export interface DataTypesRepeatedRefs {}
 
-export type DataTypesContract = JayContract<DataTypesViewState, DataTypesRefs>;
+export type DataTypesContract = JayContract<
+    DataTypesViewState,
+    DataTypesRefs,
+    DataTypesSlowViewState,
+    DataTypesFastViewState,
+    DataTypesInteractiveViewState
+>;

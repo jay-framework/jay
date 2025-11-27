@@ -18,6 +18,10 @@ export interface HeadLinksViewState {
 
 export interface HeadLinksElementRefs {}
 
+export type HeadLinksSlowViewState = {};
+export type HeadLinksFastViewState = {};
+export type HeadLinksInteractiveViewState = HeadLinksViewState;
+
 export type HeadLinksElement = JayElement<HeadLinksViewState, HeadLinksElementRefs>;
 export type HeadLinksElementRender = RenderElement<
     HeadLinksViewState,
@@ -25,7 +29,13 @@ export type HeadLinksElementRender = RenderElement<
     HeadLinksElement
 >;
 export type HeadLinksElementPreRender = [HeadLinksElementRefs, HeadLinksElementRender];
-export type HeadLinksContract = JayContract<HeadLinksViewState, HeadLinksElementRefs>;
+export type HeadLinksContract = JayContract<
+    HeadLinksViewState,
+    HeadLinksElementRefs,
+    HeadLinksSlowViewState,
+    HeadLinksFastViewState,
+    HeadLinksInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): HeadLinksElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

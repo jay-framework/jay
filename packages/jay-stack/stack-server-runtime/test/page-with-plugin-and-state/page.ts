@@ -1,4 +1,11 @@
-import { PageElementRefs, PageViewState, PageContract } from './compiled/page.jay-html';
+import {
+    PageElementRefs,
+    PageViewState,
+    PageContract,
+    PageSlowViewState,
+    PageFastViewState,
+    PageInteractiveViewState,
+} from './compiled/page.jay-html';
 import { Props } from '@jay-framework/component';
 import {
     makeJayStackComponent,
@@ -7,9 +14,6 @@ import {
     PartialRender,
     Signals,
 } from '@jay-framework/fullstack-component';
-
-type SlowlyViewState = Pick<PageViewState, 'pageSlowlyRendered'>;
-type FastViewState = Omit<PageViewState, keyof SlowlyViewState>;
 
 interface SlowlyCarryForward {
     carryForwardSlowly: string;
@@ -21,7 +25,7 @@ interface FastCarryForward {
 
 async function renderSlowlyChanging(
     props: PageProps,
-): Promise<PartialRender<SlowlyViewState, SlowlyCarryForward>> {
+): Promise<PartialRender<PageSlowViewState, SlowlyCarryForward>> {
     const pageSlowlyRendered = 'SLOWLY RENDERED';
     const carryForwardSlowly = 'SLOWLY -> FAST CARRY FORWARD';
     return partialRender({ pageSlowlyRendered }, { carryForwardSlowly });
@@ -30,7 +34,7 @@ async function renderSlowlyChanging(
 async function renderFastChanging(
     props: PageProps,
     carryForward: SlowlyCarryForward,
-): Promise<PartialRender<FastViewState, FastCarryForward>> {
+): Promise<PartialRender<PageFastViewState, FastCarryForward>> {
     const pageFastDynamicRendered = `FAST RENDERED, using '${carryForward.carryForwardSlowly}'`;
     const carryForwardFast = 'FAST -> INTERACTIVE CARRY FORWARD';
     return partialRender(
@@ -61,6 +65,6 @@ function PageConstructor(
 
 export const page = makeJayStackComponent<PageContract>()
     .withProps<PageProps>()
-    .withSlowlyRender<SlowlyViewState, SlowlyCarryForward>(renderSlowlyChanging)
-    .withFastRender<FastCarryForward>(renderFastChanging)
+    .withSlowlyRender(renderSlowlyChanging)
+    .withFastRender(renderFastChanging)
     .withInteractive(PageConstructor);

@@ -2,6 +2,7 @@ name: simple-plugin
 tags:
   - tag: pluginSlowlyRendered
   - tag: pluginInteractiveRendered
+    phase: fast+interactive
   - tag: pluginButton
     type: interactive
     elementType: HTMLButtonElement

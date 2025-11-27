@@ -14,6 +14,10 @@ export interface PageUsingCounterElementRefs {
     counter: CounterRefs;
 }
 
+export type PageUsingCounterSlowViewState = {};
+export type PageUsingCounterFastViewState = {};
+export type PageUsingCounterInteractiveViewState = PageUsingCounterViewState;
+
 export type PageUsingCounterElement = JayElement<
     PageUsingCounterViewState,
     PageUsingCounterElementRefs
@@ -29,7 +33,10 @@ export type PageUsingCounterElementPreRender = [
 ];
 export type PageUsingCounterContract = JayContract<
     PageUsingCounterViewState,
-    PageUsingCounterElementRefs
+    PageUsingCounterElementRefs,
+    PageUsingCounterSlowViewState,
+    PageUsingCounterFastViewState,
+    PageUsingCounterInteractiveViewState
 >;
 
 export declare function render(options?: RenderElementOptions): PageUsingCounterElementPreRender;

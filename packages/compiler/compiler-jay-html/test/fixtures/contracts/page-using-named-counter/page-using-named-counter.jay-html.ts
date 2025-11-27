@@ -24,6 +24,10 @@ export interface PageUsingNamedCounterElementRefs {
     namedCounter: NamedContractRefs;
 }
 
+export type PageUsingNamedCounterSlowViewState = {};
+export type PageUsingNamedCounterFastViewState = {};
+export type PageUsingNamedCounterInteractiveViewState = PageUsingNamedCounterViewState;
+
 export type PageUsingNamedCounterElement = JayElement<
     PageUsingNamedCounterViewState,
     PageUsingNamedCounterElementRefs
@@ -39,7 +43,10 @@ export type PageUsingNamedCounterElementPreRender = [
 ];
 export type PageUsingNamedCounterContract = JayContract<
     PageUsingNamedCounterViewState,
-    PageUsingNamedCounterElementRefs
+    PageUsingNamedCounterElementRefs,
+    PageUsingNamedCounterSlowViewState,
+    PageUsingNamedCounterFastViewState,
+    PageUsingNamedCounterInteractiveViewState
 >;
 
 export function render(options?: RenderElementOptions): PageUsingNamedCounterElementPreRender {

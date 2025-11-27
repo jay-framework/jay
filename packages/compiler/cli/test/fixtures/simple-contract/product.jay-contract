@@ -1,0 +1,21 @@
+name: Product
+tags:
+  - tag: name
+    type: data
+    dataType: string
+    phase: slow
+  
+  - tag: price
+    type: data
+    dataType: number
+    phase: fast
+  
+  - tag: quantity
+    type: data
+    dataType: number
+    phase: fast+interactive
+  
+  - tag: addToCart
+    type: interactive
+    elementType: HTMLButtonElement
+

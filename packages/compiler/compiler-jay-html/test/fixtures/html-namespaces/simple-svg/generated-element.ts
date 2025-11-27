@@ -16,6 +16,10 @@ export interface SimpleSvgViewState {
 
 export interface SimpleSvgElementRefs {}
 
+export type SimpleSvgSlowViewState = {};
+export type SimpleSvgFastViewState = {};
+export type SimpleSvgInteractiveViewState = SimpleSvgViewState;
+
 export type SimpleSvgElement = JayElement<SimpleSvgViewState, SimpleSvgElementRefs>;
 export type SimpleSvgElementRender = RenderElement<
     SimpleSvgViewState,
@@ -23,7 +27,13 @@ export type SimpleSvgElementRender = RenderElement<
     SimpleSvgElement
 >;
 export type SimpleSvgElementPreRender = [SimpleSvgElementRefs, SimpleSvgElementRender];
-export type SimpleSvgContract = JayContract<SimpleSvgViewState, SimpleSvgElementRefs>;
+export type SimpleSvgContract = JayContract<
+    SimpleSvgViewState,
+    SimpleSvgElementRefs,
+    SimpleSvgSlowViewState,
+    SimpleSvgFastViewState,
+    SimpleSvgInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): SimpleSvgElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);

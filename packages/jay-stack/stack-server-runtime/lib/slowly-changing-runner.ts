@@ -88,19 +88,21 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
 }
 
 export async function runLoadParams<
-    StaticViewState extends object,
-    ViewState extends object,
     Refs extends object,
+    SlowVS extends object,
+    FastVS extends object,
+    InteractiveVS extends object,
     Services extends Array<any>,
     Contexts extends Array<any>,
     PropsT extends object,
     Params extends UrlParams,
-    CompCore extends JayComponentCore<PropsT, ViewState>,
+    CompCore extends JayComponentCore<PropsT, InteractiveVS>,
 >(
     compDefinition: JayStackComponentDefinition<
-        StaticViewState,
-        ViewState,
         Refs,
+        SlowVS,
+        FastVS,
+        InteractiveVS,
         Services,
         Contexts,
         PropsT,
@@ -113,19 +115,21 @@ export async function runLoadParams<
 }
 
 export function runSlowlyChangingRender<
-    StaticViewState extends object,
-    ViewState extends object,
     Refs extends object,
+    SlowVS extends object,
+    FastVS extends object,
+    InteractiveVS extends object,
     Services extends Array<any>,
     Contexts extends Array<any>,
     PropsT extends object,
     Params extends UrlParams,
-    CompCore extends JayComponentCore<PropsT, ViewState>,
+    CompCore extends JayComponentCore<PropsT, InteractiveVS>,
 >(
     compDefinition: JayStackComponentDefinition<
-        StaticViewState,
-        ViewState,
         Refs,
+        SlowVS,
+        FastVS,
+        InteractiveVS,
         Services,
         Contexts,
         PropsT,

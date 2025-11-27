@@ -1,4 +1,4 @@
-import { JayElement, RenderElement, RenderElementOptions } from '@jay-framework/runtime';
+import { JayContract } from '@jay-framework/runtime';
 
 export enum Type {
     amount,
@@ -14,8 +14,14 @@ export interface DiscountRefs {}
 
 export interface DiscountRepeatedRefs {}
 
-export type DiscountElement = JayElement<DiscountViewState, DiscountRefs>;
-export type DiscountElementRender = RenderElement<DiscountViewState, DiscountRefs, DiscountElement>;
-export type DiscountElementPreRender = [DiscountRefs, DiscountElementRender];
+export type DiscountSlowViewState = Pick<DiscountViewState, 'type' | 'value'>;
+export type DiscountFastViewState = {};
+export type DiscountInteractiveViewState = {};
 
-export declare function render(options?: RenderElementOptions): DiscountElementPreRender;
+export type DiscountContract = JayContract<
+    DiscountViewState,
+    DiscountRefs,
+    DiscountSlowViewState,
+    DiscountFastViewState,
+    DiscountInteractiveViewState
+>;

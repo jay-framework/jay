@@ -26,6 +26,10 @@ export interface ConditionsWithEnumViewState {
 
 export interface ConditionsWithEnumElementRefs {}
 
+export type ConditionsWithEnumSlowViewState = {};
+export type ConditionsWithEnumFastViewState = {};
+export type ConditionsWithEnumInteractiveViewState = ConditionsWithEnumViewState;
+
 export type ConditionsWithEnumElement = JayElement<
     ConditionsWithEnumViewState,
     ConditionsWithEnumElementRefs
@@ -41,7 +45,10 @@ export type ConditionsWithEnumElementPreRender = [
 ];
 export type ConditionsWithEnumContract = JayContract<
     ConditionsWithEnumViewState,
-    ConditionsWithEnumElementRefs
+    ConditionsWithEnumElementRefs,
+    ConditionsWithEnumSlowViewState,
+    ConditionsWithEnumFastViewState,
+    ConditionsWithEnumInteractiveViewState
 >;
 
 export function render(options?: RenderElementOptions): ConditionsWithEnumElementPreRender {

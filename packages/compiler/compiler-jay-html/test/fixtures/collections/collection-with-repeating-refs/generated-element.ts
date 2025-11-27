@@ -40,6 +40,10 @@ export interface CollectionWithRepeatingRefsElementRefs {
     };
 }
 
+export type CollectionWithRepeatingRefsSlowViewState = {};
+export type CollectionWithRepeatingRefsFastViewState = {};
+export type CollectionWithRepeatingRefsInteractiveViewState = CollectionWithRepeatingRefsViewState;
+
 export type CollectionWithRepeatingRefsElement = JayElement<
     CollectionWithRepeatingRefsViewState,
     CollectionWithRepeatingRefsElementRefs
@@ -55,7 +59,10 @@ export type CollectionWithRepeatingRefsElementPreRender = [
 ];
 export type CollectionWithRepeatingRefsContract = JayContract<
     CollectionWithRepeatingRefsViewState,
-    CollectionWithRepeatingRefsElementRefs
+    CollectionWithRepeatingRefsElementRefs,
+    CollectionWithRepeatingRefsSlowViewState,
+    CollectionWithRepeatingRefsFastViewState,
+    CollectionWithRepeatingRefsInteractiveViewState
 >;
 
 export function render(

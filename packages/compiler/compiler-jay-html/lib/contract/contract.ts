@@ -7,6 +7,8 @@ export enum ContractTagType {
     subContract,
 }
 
+export type RenderingPhase = 'slow' | 'fast' | 'fast+interactive';
+
 export interface ContractTag {
     tag: string;
     required?: boolean;
@@ -18,6 +20,7 @@ export interface ContractTag {
     repeated?: boolean;
     link?: string;
     async?: boolean;
+    phase?: RenderingPhase;
 }
 
 export interface Contract {

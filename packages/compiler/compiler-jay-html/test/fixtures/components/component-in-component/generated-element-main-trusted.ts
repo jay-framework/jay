@@ -25,6 +25,10 @@ export interface ComponentInComponentElementRefs {
     counterTwo: CounterRef<ComponentInComponentViewState>;
 }
 
+export type ComponentInComponentSlowViewState = {};
+export type ComponentInComponentFastViewState = {};
+export type ComponentInComponentInteractiveViewState = ComponentInComponentViewState;
+
 export type ComponentInComponentElement = JayElement<
     ComponentInComponentViewState,
     ComponentInComponentElementRefs
@@ -40,7 +44,10 @@ export type ComponentInComponentElementPreRender = [
 ];
 export type ComponentInComponentContract = JayContract<
     ComponentInComponentViewState,
-    ComponentInComponentElementRefs
+    ComponentInComponentElementRefs,
+    ComponentInComponentSlowViewState,
+    ComponentInComponentFastViewState,
+    ComponentInComponentInteractiveViewState
 >;
 
 export function render(options?: RenderElementOptions): ComponentInComponentElementPreRender {

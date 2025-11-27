@@ -61,10 +61,20 @@ export interface TodoElementRefs {
     };
 }
 
+export type TodoSlowViewState = {};
+export type TodoFastViewState = {};
+export type TodoInteractiveViewState = TodoViewState;
+
 export type TodoElement = JayElement<TodoViewState, TodoElementRefs>;
 export type TodoElementRender = RenderElement<TodoViewState, TodoElementRefs, TodoElement>;
 export type TodoElementPreRender = [TodoElementRefs, TodoElementRender];
-export type TodoContract = JayContract<TodoViewState, TodoElementRefs>;
+export type TodoContract = JayContract<
+    TodoViewState,
+    TodoElementRefs,
+    TodoSlowViewState,
+    TodoFastViewState,
+    TodoInteractiveViewState
+>;
 
 export function render(options?: RenderElementOptions): TodoElementPreRender {
     const [shownTodosRefManager, [refItems]] = ReferencesManager.for(

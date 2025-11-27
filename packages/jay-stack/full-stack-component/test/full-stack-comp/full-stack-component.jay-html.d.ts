@@ -11,4 +11,18 @@ export interface FSComponentViewState {
 
 export interface FSComponentElementRefs {}
 
-export type FSComponentContract = JayContract<FSComponentViewState, FSComponentElementRefs>;
+// Phase-specific ViewStates for testing
+export type FSComponentSlowViewState = Pick<
+    FSComponentViewState,
+    'id' | 'name' | 'age' | 'address'
+>;
+export type FSComponentFastViewState = Pick<FSComponentViewState, 'stars' | 'rating'>;
+export type FSComponentInteractiveViewState = {};
+
+export type FSComponentContract = JayContract<
+    FSComponentViewState,
+    FSComponentElementRefs,
+    FSComponentSlowViewState,
+    FSComponentFastViewState,
+    FSComponentInteractiveViewState
+>;

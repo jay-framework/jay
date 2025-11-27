@@ -69,14 +69,32 @@ export type JayEventHandlerWrapper<EventType, ViewState, Returns> = (
 export interface ContextMarker<ContextType> {}
 
 declare const _jayContractBrand: unique symbol;
-export type JayContract<ViewState extends object, Refs extends object> = {
+export type JayContract<
+    ViewState extends object,
+    Refs extends object,
+    SlowViewState extends object = never,
+    FastViewState extends object = never,
+    InteractiveViewState extends object = never,
+> = {
     readonly [_jayContractBrand]: {
         viewState: ViewState;
         refs: Refs;
+        slowViewState: SlowViewState;
+        fastViewState: FastViewState;
+        interactiveViewState: InteractiveViewState;
     };
 };
-export type ExtractViewState<A> = A extends JayContract<infer ViewState, any> ? ViewState : never;
-export type ExtractRefs<A> = A extends JayContract<any, infer Refs> ? Refs : never;
+export type ExtractViewState<A> =
+    A extends JayContract<infer ViewState, any, any, any, any> ? ViewState : never;
+export type ExtractRefs<A> = A extends JayContract<any, infer Refs, any, any, any> ? Refs : never;
+export type ExtractSlowViewState<A> =
+    A extends JayContract<any, any, infer SlowViewState, any, any> ? SlowViewState : never;
+export type ExtractFastViewState<A> =
+    A extends JayContract<any, any, any, infer FastViewState, any> ? FastViewState : never;
+export type ExtractInteractiveViewState<A> =
+    A extends JayContract<any, any, any, any, infer InteractiveViewState>
+        ? InteractiveViewState
+        : never;
 
 export enum LogType {
     ASYNC_ERROR,

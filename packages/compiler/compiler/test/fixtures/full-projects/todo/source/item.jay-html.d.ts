@@ -20,9 +20,19 @@ export interface ItemElementRefs {
     title: HTMLElementProxy<ItemViewState, HTMLInputElement>;
 }
 
+export type ItemSlowViewState = {};
+export type ItemFastViewState = {};
+export type ItemInteractiveViewState = ItemViewState;
+
 export type ItemElement = JayElement<ItemViewState, ItemElementRefs>;
 export type ItemElementRender = RenderElement<ItemViewState, ItemElementRefs, ItemElement>;
 export type ItemElementPreRender = [ItemElementRefs, ItemElementRender];
-export type ItemContract = JayContract<ItemViewState, ItemElementRefs>;
+export type ItemContract = JayContract<
+    ItemViewState,
+    ItemElementRefs,
+    ItemSlowViewState,
+    ItemFastViewState,
+    ItemInteractiveViewState
+>;
 
 export declare function render(options?: RenderElementOptions): ItemElementPreRender;

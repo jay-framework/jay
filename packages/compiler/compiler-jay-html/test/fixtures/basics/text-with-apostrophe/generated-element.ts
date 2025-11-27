@@ -14,6 +14,10 @@ export interface TextWithApostropheViewState {
 
 export interface TextWithApostropheElementRefs {}
 
+export type TextWithApostropheSlowViewState = {};
+export type TextWithApostropheFastViewState = {};
+export type TextWithApostropheInteractiveViewState = TextWithApostropheViewState;
+
 export type TextWithApostropheElement = JayElement<
     TextWithApostropheViewState,
     TextWithApostropheElementRefs
@@ -29,7 +33,10 @@ export type TextWithApostropheElementPreRender = [
 ];
 export type TextWithApostropheContract = JayContract<
     TextWithApostropheViewState,
-    TextWithApostropheElementRefs
+    TextWithApostropheElementRefs,
+    TextWithApostropheSlowViewState,
+    TextWithApostropheFastViewState,
+    TextWithApostropheInteractiveViewState
 >;
 
 export function render(options?: RenderElementOptions): TextWithApostropheElementPreRender {

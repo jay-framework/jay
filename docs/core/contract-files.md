@@ -35,6 +35,7 @@ Data tags define the component's view state properties.
   dataType: number
   required: true
   description: The current count value
+  phase: fast+interactive
 ```
 
 **Properties**:
@@ -43,6 +44,7 @@ Data tags define the component's view state properties.
 - `dataType` - The data type (string, number, boolean, enum)
 - `required` - (Optional) Whether this property is required
 - `description` - (Optional) Documentation for the property
+- `phase` - (Optional) The rendering phase for this property (see [Rendering Phases](#rendering-phases))
 
 ### Interactive Tags
 
@@ -122,6 +124,397 @@ Any tag can have additional metadata to be used by design tools. The supported m
 - `required` - Whether the tag is required. This tells a design tool to give feedback to the designer if this tag is not used. For instance, a checkout button may be required in e-commerce product pages.
 - `repeated` - Whether this tag is a repeated data entity, or an array when transformed to coding types.
 - `async` - Whether this tag represents asynchronous data (promises). Available for `data` and `sub-contract` tags.
+- `phase` - The rendering phase for this property (slow, fast, or fast+interactive). See [Rendering Phases](#rendering-phases) for details.
+
+## Rendering Phases
+
+Rendering phases allow you to specify when each property in your contract is rendered, enabling optimal performance in full-stack applications. This feature is especially powerful with Jay Stack components, which support three-phase rendering.
+
+### Phase Types
+
+| Phase              | When Set       | Mutability | Use Case                          |
+| ------------------ | -------------- | ---------- | --------------------------------- |
+| `slow`             | Build time     | Static     | Content that rarely changes       |
+| `fast`             | Request time   | Dynamic    | Per-request data (no client mods) |
+| `fast+interactive` | Request/Client | Dynamic    | Client-modifiable data            |
+
+### Phase Semantics
+
+#### Slow Phase (Build Time)
+
+Properties marked as `slow` are rendered at **build time** or when static data changes. These values are baked into the HTML and don't change per request.
+
+**Use Cases:**
+
+- Product names and descriptions
+- Blog post content
+- Static images and assets
+- SEO metadata
+
+**Example:**
+
+```yaml
+- tag: productName
+  type: data
+  dataType: string
+  phase: slow
+  description: Static product name
+```
+
+#### Fast Phase (Request Time)
+
+Properties marked as `fast` are rendered at **request time** on the server. These values can change per request but are not modifiable on the client.
+
+**Use Cases:**
+
+- Inventory status
+- Current prices
+- User-specific content (names, avatars)
+- Dynamic recommendations
+
+**Example:**
+
+```yaml
+- tag: inStock
+  type: data
+  dataType: boolean
+  phase: fast
+  description: Current inventory status
+```
+
+#### Fast+Interactive Phase (Request Time + Client)
+
+Properties marked as `fast+interactive` are initially rendered at **request time** but can be **modified on the client**. These properties appear in both `FastViewState` and `InteractiveViewState`.
+
+**Use Cases:**
+
+- Shopping cart quantity
+- Form input values
+- UI toggles and selections
+- Client-side counters
+
+**Example:**
+
+```yaml
+- tag: quantity
+  type: data
+  dataType: number
+  phase: fast+interactive
+  description: Product quantity (modifiable on client)
+```
+
+### Default Phases
+
+If no `phase` is specified:
+
+**For `.jay-contract` files:**
+
+- **Data tags** default to `slow` (static)
+- **Interactive tags** are implicitly `fast+interactive` (cannot specify phase)
+
+**For inline data in `.jay-html` files:**
+
+- All properties default to `fast+interactive` (interactive phase)
+
+### Phase Rules and Validation
+
+#### Rule 1: Interactive Tags Have Implicit Phase
+
+Interactive tags (refs) are **implicitly `fast+interactive`** and cannot have an explicit `phase` attribute:
+
+```yaml
+# ✅ Correct: No phase on interactive tag
+interactive:
+  - tag: addButton
+    elementType: [button]
+
+# ❌ Invalid: Cannot specify phase on interactive tag
+interactive:
+  - tag: addButton
+    elementType: [button]
+    phase: fast+interactive  # Error!
+```
+
+#### Rule 2: Object Phase as Default
+
+For nested objects, the `phase` attribute acts as a **default** for child properties. It has no semantic meaning for the object itself:
+
+```yaml
+- tag: pricing
+  type: sub-contract
+  phase: slow # Default for children
+  tags:
+    - tag: basePrice
+      type: data
+      dataType: number
+      # Inherits 'slow' from parent
+
+    - tag: currentPrice
+      type: data
+      dataType: number
+      phase: fast # Overrides parent default
+```
+
+#### Rule 3: Array Phase Hierarchy
+
+For arrays, the `phase` indicates when the **array structure is set**. Child properties can have a later phase than the array, but not an earlier one:
+
+```yaml
+# ✅ Valid: Array is slow, children can be fast or interactive
+- tag: products
+  type: sub-contract
+  repeated: true
+  phase: slow # Array structure is static
+  tags:
+    - tag: name
+      type: data
+      dataType: string
+      phase: slow
+
+    - tag: price
+      type: data
+      dataType: number
+      phase: fast # OK: fast >= slow
+
+# ❌ Invalid: Child has earlier phase than parent array
+- tag: products
+  type: sub-contract
+  repeated: true
+  phase: fast # Array structure is dynamic
+  tags:
+    - tag: sku
+      type: data
+      dataType: string
+      phase: slow # Error: slow < fast
+```
+
+**Rule:** `child.phase >= parent.phase`
+
+### Generated Types
+
+When you use rendering phases, the compiler generates phase-specific ViewState types:
+
+```yaml
+name: ProductPage
+tags:
+  - tag: name
+    type: data
+    dataType: string
+    phase: slow
+
+  - tag: price
+    type: data
+    dataType: number
+    phase: fast
+
+  - tag: quantity
+    type: data
+    dataType: number
+    phase: fast+interactive
+```
+
+**Generated TypeScript:**
+
+```typescript
+// Full ViewState (all properties)
+export interface ProductPageViewState {
+  name: string;
+  price: number;
+  quantity: number;
+}
+
+// Slow ViewState (build-time properties only)
+export type ProductPageSlowViewState = Pick<ProductPageViewState, 'name'>;
+
+// Fast ViewState (request-time properties)
+export type ProductPageFastViewState = Pick<ProductPageViewState, 'price' | 'quantity'>;
+
+// Interactive ViewState (client-modifiable properties)
+export type ProductPageInteractiveViewState = Pick<ProductPageViewState, 'quantity'>;
+
+// 5-parameter contract with phase types
+export type ProductPageContract = JayContract<
+  ProductPageViewState,
+  ProductPageRefs,
+  ProductPageSlowViewState,
+  ProductPageFastViewState,
+  ProductPageInteractiveViewState
+>;
+```
+
+### Using Phases with Jay Stack
+
+Rendering phases enable type-safe full-stack components with Jay Stack:
+
+```typescript
+import { makeJayStackComponent, partialRender } from '@jay-framework/fullstack-component';
+import { ProductPageContract } from './product-page.jay-contract';
+
+export const page = makeJayStackComponent<ProductPageContract>()
+  .withProps<Props>()
+
+  // Slow render: Only 'name' is valid (SlowViewState)
+  .withSlowlyRender(async (props) => {
+    return partialRender({ name: 'Product' }, { productId: '123' });
+  })
+
+  // Fast render: 'price' and 'quantity' are valid (FastViewState)
+  .withFastRender(async (props) => {
+    return partialRender({ price: 99.99, quantity: 1 }, {});
+  })
+
+  // Interactive: Only 'quantity' is modifiable (InteractiveViewState)
+  .withInteractive((props, refs) => {
+    const [qty, setQty] = createSignal(props.quantity);
+
+    return {
+      render: () => ({ quantity: qty() }),
+    };
+  });
+```
+
+**Type Safety:**
+
+- ✅ TypeScript validates each phase returns only allowed properties
+- ✅ IDE autocomplete shows only valid properties for each phase
+- ✅ Refactoring in contract propagates to all usage
+
+### Contract References in Jay HTML
+
+You can reference contracts from `.jay-html` files to get phase-aware type validation:
+
+**`product.jay-contract`:**
+
+```yaml
+name: Product
+tags:
+  - tag: name
+    type: data
+    dataType: string
+    phase: slow
+  - tag: price
+    type: data
+    dataType: number
+    phase: fast
+```
+
+**`product.jay-html`:**
+
+```html
+<html>
+  <head>
+    <script type="application/jay-data" contract="./product.jay-contract"></script>
+  </head>
+  <body>
+    <h1>{name}</h1>
+    <p>${price}</p>
+  </body>
+</html>
+```
+
+The generated types will include phase-specific ViewStates, enabling compile-time validation.
+
+### Best Practices
+
+#### 1. Start with Defaults
+
+Begin without phase annotations and add them only when you need to optimize:
+
+```yaml
+# Start simple (everything defaults to slow)
+- tag: title
+  type: data
+  dataType: string
+
+# Add phases as you optimize
+- tag: title
+  type: data
+  dataType: string
+  phase: slow # Explicit for documentation
+```
+
+#### 2. Use Slow for Static Content
+
+Mark truly static content as `slow` to enable build-time optimization:
+
+```yaml
+# Static content
+- tag: productDescription
+  type: data
+  dataType: string
+  phase: slow
+
+# Dynamic content
+- tag: inventory
+  type: data
+  dataType: number
+  phase: fast
+```
+
+#### 3. Mark Client-Modifiable Data
+
+Use `fast+interactive` for data that users can change:
+
+```yaml
+# Read-only
+- tag: productId
+  type: data
+  dataType: string
+  phase: fast
+
+# Client-modifiable
+- tag: selectedQuantity
+  type: data
+  dataType: number
+  phase: fast+interactive
+```
+
+#### 4. Document Phase Decisions
+
+Use descriptions to explain why a particular phase was chosen:
+
+```yaml
+- tag: recommendedProducts
+  type: sub-contract
+  repeated: true
+  phase: fast
+  description: Personalized recommendations (generated per request)
+  link: ./product-card
+```
+
+#### 5. Group by Phase
+
+Organize contract tags by phase for better readability:
+
+```yaml
+name: ProductPage
+tags:
+  # Slow phase (build time)
+  - tag: sku
+    type: data
+    dataType: string
+    phase: slow
+  - tag: name
+    type: data
+    dataType: string
+    phase: slow
+
+  # Fast phase (request time)
+  - tag: price
+    type: data
+    dataType: number
+    phase: fast
+  - tag: inStock
+    type: data
+    dataType: boolean
+    phase: fast
+
+  # Interactive phase
+  - tag: quantity
+    type: data
+    dataType: number
+    phase: fast+interactive
+```
 
 ## Data Types
 

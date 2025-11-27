@@ -16,6 +16,10 @@ export interface StylesWithUrlsViewState {
 
 export interface StylesWithUrlsElementRefs {}
 
+export type StylesWithUrlsSlowViewState = {};
+export type StylesWithUrlsFastViewState = {};
+export type StylesWithUrlsInteractiveViewState = StylesWithUrlsViewState;
+
 export type StylesWithUrlsElement = JayElement<StylesWithUrlsViewState, StylesWithUrlsElementRefs>;
 export type StylesWithUrlsElementRender = RenderElement<
     StylesWithUrlsViewState,
@@ -28,7 +32,10 @@ export type StylesWithUrlsElementPreRender = [
 ];
 export type StylesWithUrlsContract = JayContract<
     StylesWithUrlsViewState,
-    StylesWithUrlsElementRefs
+    StylesWithUrlsElementRefs,
+    StylesWithUrlsSlowViewState,
+    StylesWithUrlsFastViewState,
+    StylesWithUrlsInteractiveViewState
 >;
 
 export function render(options?: RenderElementOptions): StylesWithUrlsElementPreRender {
