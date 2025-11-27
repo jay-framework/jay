@@ -1451,13 +1451,91 @@ export declare function render(options?: RenderElementOptions): PageElementPreRe
 - ✅ **Backward Compatible**: Inline HTML files still work as before
 - ✅ **Better DX**: Clear separation between contract types and HTML-specific types
 
-**Implementation:** Modified `/packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts` in the `generateElementDefinitionFile` function to:
+**Implementation:** 
 
-1. Detect when `jayFile.contract && jayFile.contractRef` exist
-2. Generate import statement from contract `.d.ts` file
-3. Re-export imported types for backward compatibility
-4. Only generate HTML-specific types (Element, ElementRender, render function)
-5. Skip generation of ViewState and phase-specific types (already in contract)
+1. **Added `.minus()` method to `Imports` class** (`/packages/compiler/compiler-shared/lib/imports.ts`):
+   ```typescript
+   minus(removeImport: ImportName | Imports): Imports {
+       // Removes imports from the import set without string manipulation
+   }
+   ```
+
+2. **Modified `generateElementDefinitionFile`** (`/packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts`):
+   - Detect when `jayFile.contract && jayFile.contractRef` exist
+   - Generate import statement from contract `.d.ts` file
+   - Use `.minus()` to exclude contract types from runtime imports (JayContract, HTMLElementProxy, HTMLElementCollectionProxy)
+   - Re-export imported types for backward compatibility
+   - Only generate HTML-specific types (Element, ElementRender, render function)
+   - Skip generation of ViewState and phase-specific types (already in contract)
+
+### Pick Optimization for Nested Objects
+
+**Problem Identified:** When generating phase-specific ViewState types, we were using `Pick` even when selecting ALL properties of a nested object:
+
+```typescript
+// Verbose (picking all 2 properties)
+export type TodoSlowViewState = {
+    item: Pick<TodoViewState['item'], 'title' | 'completed'>;
+};
+
+// Cleaner (when all properties are selected)
+export type TodoSlowViewState = {
+    item: TodoViewState['item'];
+};
+```
+
+**Solution Implemented:** Modified `phase-type-generator.ts` to:
+
+1. **Added `countTotalProperties()`**: Counts total properties in a contract object at a specific path
+2. **Enhanced `buildPickExpression()`**: Detects when ALL properties of a nested object are being selected
+3. **Optimization**: Uses direct type reference instead of `Pick` when all properties are included
+
+**Code Logic:**
+```typescript
+// Check if we're picking ALL properties of this nested object
+const childProperties = pathGroups.get(childPathKey) || [];
+const totalProperties = countTotalProperties(contractTags, childPath);
+const isPickingAllProperties = totalProperties > 0 && childProperties.length === totalProperties;
+
+if (isPickingAllProperties) {
+    // Use direct type reference
+    fullExpression = originalPathAccess; // e.g., TodoViewState['item']
+} else {
+    // Use Pick expression
+    fullExpression = `Pick<${originalPathAccess}, 'prop1' | 'prop2'>`
+}
+```
+
+**Before Optimization:**
+```typescript
+export type DataTypesSlowViewState = Pick<DataTypesViewState, 's1' | 'n1' | 'b1' | 'p1'> & {
+    o1: Pick<DataTypesViewState['o1'], 's2' | 'n2'>;
+    a1: Array<Pick<DataTypesViewState['a1'][number], 's3' | 'n3'>>;
+    po1: Promise<Pick<Awaited<DataTypesViewState['po1']>, 'ps2' | 'pn2'>>;
+    pa1: Promise<Array<Pick<Awaited<DataTypesViewState['pa1']>[number], 'ps3' | 'pn3'>>>;
+};
+```
+
+**After Optimization:**
+```typescript
+export type DataTypesSlowViewState = Pick<DataTypesViewState, 's1' | 'n1' | 'b1' | 'p1'> & {
+    o1: DataTypesViewState['o1'];
+    a1: Array<DataTypesViewState['a1'][number]>;
+    po1: Promise<DataTypesViewState['po1']>;
+    pa1: Promise<Array<DataTypesViewState['pa1'][number]>>;
+};
+```
+
+**Benefits:**
+- ✅ **More Readable**: Simpler type expressions when all properties are included
+- ✅ **Fewer Type Operations**: Less work for TypeScript compiler
+- ✅ **Cleaner Output**: Generated `.d.ts` files are easier to understand
+- ✅ **Semantically Correct**: Direct type reference when there's no actual filtering
+
+**Examples of Optimization:**
+- `Pick<User['address'], 'street' | 'city' | 'zip'>` → `User['address']` (if address only has those 3 properties)
+- `Array<Pick<Items[number], 'id' | 'name'>>` → `Array<Items[number]>` (if item only has 2 properties)
+- `Promise<Pick<Awaited<Data>, 'x' | 'y'>>` → `Promise<Data>` (if Data only has x and y)
 
 ### Future Enhancements
 
