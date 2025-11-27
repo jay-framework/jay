@@ -27,4 +27,3 @@ export type PageContract = JayContract<
     PageFastViewState,
     PageInteractiveViewState
 >;
-

@@ -10,11 +10,7 @@ describe('definitions command', () => {
 
     // Clean up generated files after each test
     afterEach(async () => {
-        const cleanupDirs = [
-            'simple-html',
-            'simple-contract',
-            'html-with-contract',
-        ];
+        const cleanupDirs = ['simple-html', 'simple-contract', 'html-with-contract'];
 
         for (const dir of cleanupDirs) {
             const fullDir = path.join(fixturesDir, dir);
@@ -33,12 +29,12 @@ describe('definitions command', () => {
 
     it('should generate .d.ts for jay-html with inline data', async () => {
         const sourceDir = path.join(fixturesDir, 'simple-html');
-        
+
         const build = await rollup({
             input: getJayHtmlOrContractFileInputs(sourceDir),
             plugins: [jayDefinitions()],
         });
-        
+
         // Close the bundle to complete the build
         await build.close();
 
@@ -51,12 +47,12 @@ describe('definitions command', () => {
         expect(content).toContain('title: string');
         expect(content).toContain('content: string');
         expect(content).toContain('export interface SimpleElementRefs');
-        
+
         // Verify phase-specific types (inline data defaults to interactive)
         expect(content).toContain('export type SimpleSlowViewState = {}');
         expect(content).toContain('export type SimpleFastViewState = {}');
         expect(content).toContain('export type SimpleInteractiveViewState = SimpleViewState');
-        
+
         // Verify 5-parameter JayContract
         expect(content).toContain('export type SimpleContract = JayContract<');
         expect(content).toContain('SimpleViewState,');
@@ -68,12 +64,12 @@ describe('definitions command', () => {
 
     it('should generate .d.ts for jay-contract', async () => {
         const sourceDir = path.join(fixturesDir, 'simple-contract');
-        
+
         const build = await rollup({
             input: getJayHtmlOrContractFileInputs(sourceDir),
             plugins: [jayDefinitions()],
         });
-        
+
         // Close the bundle to complete the build
         await build.close();
 
@@ -88,12 +84,18 @@ describe('definitions command', () => {
         expect(content).toContain('quantity: number');
         expect(content).toContain('export interface ProductRefs');
         expect(content).toContain('addToCart: HTMLElementProxy');
-        
+
         // Verify phase-specific types (from contract phase annotations)
-        expect(content).toContain('export type ProductSlowViewState = Pick<ProductViewState, \'name\'>');
-        expect(content).toContain('export type ProductFastViewState = Pick<ProductViewState, \'price\' | \'quantity\'>');
-        expect(content).toContain('export type ProductInteractiveViewState = Pick<ProductViewState, \'quantity\'>');
-        
+        expect(content).toContain(
+            "export type ProductSlowViewState = Pick<ProductViewState, 'name'>",
+        );
+        expect(content).toContain(
+            "export type ProductFastViewState = Pick<ProductViewState, 'price' | 'quantity'>",
+        );
+        expect(content).toContain(
+            "export type ProductInteractiveViewState = Pick<ProductViewState, 'quantity'>",
+        );
+
         // Verify 5-parameter JayContract
         expect(content).toContain('export type ProductContract = JayContract<');
         expect(content).toContain('ProductViewState,');
@@ -105,19 +107,19 @@ describe('definitions command', () => {
 
     it('should generate .d.ts for jay-html with contract reference', async () => {
         const sourceDir = path.join(fixturesDir, 'html-with-contract');
-        
+
         const build = await rollup({
             input: getJayHtmlOrContractFileInputs(sourceDir),
             plugins: [jayDefinitions()],
         });
-        
+
         // Close the bundle to complete the build
         await build.close();
 
         // Check that .d.ts files were generated for both HTML and contract
         const htmlGeneratedFile = path.join(sourceDir, 'page.jay-html.d.ts');
         const contractGeneratedFile = path.join(sourceDir, 'page.jay-contract.d.ts');
-        
+
         const htmlContent = await fsp.readFile(htmlGeneratedFile, 'utf-8');
         const contractContent = await fsp.readFile(contractGeneratedFile, 'utf-8');
 
@@ -129,30 +131,31 @@ describe('definitions command', () => {
         expect(htmlContent).toContain('PageFastViewState,');
         expect(htmlContent).toContain('PageInteractiveViewState,');
         expect(htmlContent).toContain('PageContract');
-        expect(htmlContent).toContain('} from \'./page.jay-contract\';');
-        
+        expect(htmlContent).toContain("} from './page.jay-contract';");
+
         // Verify HTML .d.ts re-exports the imported types
-        expect(htmlContent).toContain('export { PageViewState, PageElementRefs, PageSlowViewState, PageFastViewState, PageInteractiveViewState, PageContract }');
-        
+        expect(htmlContent).toContain(
+            'export { PageViewState, PageElementRefs, PageSlowViewState, PageFastViewState, PageInteractiveViewState, PageContract }',
+        );
+
         // Verify HTML .d.ts does NOT redefine ViewState (no duplication!)
         expect(htmlContent).not.toContain('export interface PageViewState');
         expect(htmlContent).not.toContain('export type PageSlowViewState = Pick<');
         expect(htmlContent).not.toContain('export type PageFastViewState = Pick<');
         expect(htmlContent).not.toContain('export type PageInteractiveViewState = Pick<');
-        
+
         // Verify HTML .d.ts still has HTML-specific types
         expect(htmlContent).toContain('export type PageElement = JayElement<');
         expect(htmlContent).toContain('export type PageElementRender = RenderElement<');
         expect(htmlContent).toContain('export declare function render(');
-        
+
         // Verify contract .d.ts still exists and has the original definitions
         expect(contractContent).toContain('export interface PageViewState');
         expect(contractContent).toContain('export type PageSlowViewState = Pick<PageViewState');
         expect(contractContent).toContain('export type PageContract = JayContract<');
-        
+
         // Verify contract .d.ts also exists
         expect(contractContent).toContain('export interface PageViewState');
         expect(contractContent).toContain('export type PageContract = JayContract<');
     });
 });
-

@@ -21,14 +21,18 @@ describe('Jay HTML with Contract References', () => {
     it('should compile contract definition file correctly', async () => {
         const folder = 'html-with-contract-ref/simple-with-contract';
         const contractPath = path.join(__dirname, 'fixtures', folder, 'page.jay-contract');
-        
+
         // Read and parse the contract
         const contractContent = await fsp.readFile(contractPath, 'utf-8');
         const parsedContract = parseContract(contractContent, 'page.jay-contract');
-        
+
         // Compile the contract
-        const compiledContract = await compileContract(parsedContract, contractPath, JAY_IMPORT_RESOLVER);
-        
+        const compiledContract = await compileContract(
+            parsedContract,
+            contractPath,
+            JAY_IMPORT_RESOLVER,
+        );
+
         expect(compiledContract.validations).toEqual([]);
         expect(await prettify(compiledContract.val)).toEqual(
             await readFixtureElementDefinitionFile(folder, 'page.jay-contract.d.ts'),
