@@ -44,6 +44,15 @@ describe('contract definitions', () => {
             const folder = 'contracts/data-types';
             await testContractDefinitionFile(folder);
         });
+
+        it('for repeated object with imported sub-contract link', async () => {
+            // This test verifies the bug fix where a repeated parent tag incorrectly
+            // causes a linked sub-contract child to also be treated as repeated.
+            // Expected: product should be ItemViewState (not Array<ItemViewState>)
+            // Expected: product refs should be ItemRefs (not ItemRepeatedRefs)
+            const folder = 'contracts/repeated-with-link';
+            await testContractDefinitionFile(folder);
+        });
     });
 
     describe('generate jay-html definition linked to contract', () => {

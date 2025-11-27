@@ -1,0 +1,12 @@
+name: Item
+tags:
+  - tag: id
+    type: data
+    dataType: string
+  - tag: name
+    type: data
+    dataType: string
+  - tag: price
+    type: data
+    dataType: number
+

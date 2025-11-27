@@ -1,0 +1,19 @@
+name: RepeatedWithLink
+tags:
+  - tag: title
+    type: data
+    dataType: string
+    phase: slow
+  
+  - tag: items
+    type: sub-contract
+    repeated: true
+    phase: fast
+    tags:
+      - tag: product
+        type: sub-contract
+        link: ./item.jay-contract
+      - tag: quantity
+        type: data
+        dataType: number
+
