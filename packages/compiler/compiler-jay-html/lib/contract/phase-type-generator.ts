@@ -126,18 +126,18 @@ function countTotalProperties(
     currentPath: string[] = [],
 ): number {
     let count = 0;
-    
+
     for (const tag of tags) {
         // Skip interactive tags without dataType
         if (tag.type.includes(ContractTagType.interactive) && !tag.dataType) {
             continue;
         }
-        
+
         const propertyName = camelCase(tag.tag);
         const newPath = [...currentPath, propertyName];
         const pathKey = newPath.join('.');
         const targetKey = targetPath.join('.');
-        
+
         // If this is the target path, count its direct children
         if (pathKey === targetKey && tag.type.includes(ContractTagType.subContract) && tag.tags) {
             for (const childTag of tag.tags) {
@@ -148,7 +148,7 @@ function countTotalProperties(
             }
             return count;
         }
-        
+
         // Continue searching if we haven't reached the target yet
         if (tag.type.includes(ContractTagType.subContract) && tag.tags) {
             const result = countTotalProperties(tag.tags, targetPath, newPath);
@@ -157,7 +157,7 @@ function countTotalProperties(
             }
         }
     }
-    
+
     return count;
 }
 
@@ -215,7 +215,8 @@ function buildPickExpression(
         // Check if we're picking ALL properties of this nested object
         const childProperties = pathGroups.get(childPathKey) || [];
         const totalProperties = countTotalProperties(contractTags, childPath);
-        const isPickingAllProperties = totalProperties > 0 && childProperties.length === totalProperties;
+        const isPickingAllProperties =
+            totalProperties > 0 && childProperties.length === totalProperties;
 
         // Recursively build child expression
         const childExpression = buildPickExpression(
@@ -232,7 +233,11 @@ function buildPickExpression(
             const originalPathAccess = `${baseTypeName}${childPath.map((p) => `['${p}']`).join('')}`;
 
             // If we're picking all properties of a leaf object (no further nesting), just use the type reference
-            if (isPickingAllProperties && childExpression === `Pick<${originalPathAccess}, ${childProperties.map((p) => `'${p}'`).join(' | ')}>`) {
+            if (
+                isPickingAllProperties &&
+                childExpression ===
+                    `Pick<${originalPathAccess}, ${childProperties.map((p) => `'${p}'`).join(' | ')}>`
+            ) {
                 // Use direct type reference instead of Pick
                 const directTypeRef = originalPathAccess;
 
@@ -326,7 +331,13 @@ export function generatePhaseViewStateType(
     const asyncSet = new Set(asyncProps.map((a) => a.path));
 
     // Build Pick expression
-    const pickExpression = buildPickExpression(baseTypeName, pathGroups, arraySet, asyncSet, contract.tags);
+    const pickExpression = buildPickExpression(
+        baseTypeName,
+        pathGroups,
+        arraySet,
+        asyncSet,
+        contract.tags,
+    );
 
     return `export type ${typeName} = ${pickExpression};`;
 }
