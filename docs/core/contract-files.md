@@ -132,11 +132,11 @@ Rendering phases allow you to specify when each property in your contract is ren
 
 ### Phase Types
 
-| Phase              | When Set           | Mutability | Use Case                          |
-| ------------------ | ------------------ | ---------- | --------------------------------- |
-| `slow`             | Build time         | Static     | Content that rarely changes       |
-| `fast`             | Request time       | Dynamic    | Per-request data (no client mods) |
-| `fast+interactive` | Request/Client     | Dynamic    | Client-modifiable data            |
+| Phase              | When Set       | Mutability | Use Case                          |
+| ------------------ | -------------- | ---------- | --------------------------------- |
+| `slow`             | Build time     | Static     | Content that rarely changes       |
+| `fast`             | Request time   | Dynamic    | Per-request data (no client mods) |
+| `fast+interactive` | Request/Client | Dynamic    | Client-modifiable data            |
 
 ### Phase Semantics
 
@@ -145,12 +145,14 @@ Rendering phases allow you to specify when each property in your contract is ren
 Properties marked as `slow` are rendered at **build time** or when static data changes. These values are baked into the HTML and don't change per request.
 
 **Use Cases:**
+
 - Product names and descriptions
 - Blog post content
 - Static images and assets
 - SEO metadata
 
 **Example:**
+
 ```yaml
 - tag: productName
   type: data
@@ -164,12 +166,14 @@ Properties marked as `slow` are rendered at **build time** or when static data c
 Properties marked as `fast` are rendered at **request time** on the server. These values can change per request but are not modifiable on the client.
 
 **Use Cases:**
+
 - Inventory status
 - Current prices
 - User-specific content (names, avatars)
 - Dynamic recommendations
 
 **Example:**
+
 ```yaml
 - tag: inStock
   type: data
@@ -183,12 +187,14 @@ Properties marked as `fast` are rendered at **request time** on the server. Thes
 Properties marked as `fast+interactive` are initially rendered at **request time** but can be **modified on the client**. These properties appear in both `FastViewState` and `InteractiveViewState`.
 
 **Use Cases:**
+
 - Shopping cart quantity
 - Form input values
 - UI toggles and selections
 - Client-side counters
 
 **Example:**
+
 ```yaml
 - tag: quantity
   type: data
@@ -202,10 +208,12 @@ Properties marked as `fast+interactive` are initially rendered at **request time
 If no `phase` is specified:
 
 **For `.jay-contract` files:**
+
 - **Data tags** default to `slow` (static)
 - **Interactive tags** are implicitly `fast+interactive` (cannot specify phase)
 
 **For inline data in `.jay-html` files:**
+
 - All properties default to `fast+interactive` (interactive phase)
 
 ### Phase Rules and Validation
@@ -234,17 +242,17 @@ For nested objects, the `phase` attribute acts as a **default** for child proper
 ```yaml
 - tag: pricing
   type: sub-contract
-  phase: slow  # Default for children
+  phase: slow # Default for children
   tags:
     - tag: basePrice
       type: data
       dataType: number
       # Inherits 'slow' from parent
-    
+
     - tag: currentPrice
       type: data
       dataType: number
-      phase: fast  # Overrides parent default
+      phase: fast # Overrides parent default
 ```
 
 #### Rule 3: Array Phase Hierarchy
@@ -256,28 +264,28 @@ For arrays, the `phase` indicates when the **array structure is set**. Child pro
 - tag: products
   type: sub-contract
   repeated: true
-  phase: slow  # Array structure is static
+  phase: slow # Array structure is static
   tags:
     - tag: name
       type: data
       dataType: string
       phase: slow
-    
+
     - tag: price
       type: data
       dataType: number
-      phase: fast  # OK: fast >= slow
+      phase: fast # OK: fast >= slow
 
 # ❌ Invalid: Child has earlier phase than parent array
 - tag: products
   type: sub-contract
   repeated: true
-  phase: fast  # Array structure is dynamic
+  phase: fast # Array structure is dynamic
   tags:
     - tag: sku
       type: data
       dataType: string
-      phase: slow  # Error: slow < fast
+      phase: slow # Error: slow < fast
 ```
 
 **Rule:** `child.phase >= parent.phase`
@@ -293,12 +301,12 @@ tags:
     type: data
     dataType: string
     phase: slow
-  
+
   - tag: price
     type: data
     dataType: number
     phase: fast
-  
+
   - tag: quantity
     type: data
     dataType: number
@@ -306,6 +314,7 @@ tags:
 ```
 
 **Generated TypeScript:**
+
 ```typescript
 // Full ViewState (all properties)
 export interface ProductPageViewState {
@@ -343,34 +352,29 @@ import { ProductPageContract } from './product-page.jay-contract';
 
 export const page = makeJayStackComponent<ProductPageContract>()
   .withProps<Props>()
-  
+
   // Slow render: Only 'name' is valid (SlowViewState)
   .withSlowlyRender(async (props) => {
-    return partialRender(
-      { name: 'Product' },
-      { productId: '123' }
-    );
+    return partialRender({ name: 'Product' }, { productId: '123' });
   })
-  
+
   // Fast render: 'price' and 'quantity' are valid (FastViewState)
   .withFastRender(async (props) => {
-    return partialRender(
-      { price: 99.99, quantity: 1 },
-      {}
-    );
+    return partialRender({ price: 99.99, quantity: 1 }, {});
   })
-  
+
   // Interactive: Only 'quantity' is modifiable (InteractiveViewState)
   .withInteractive((props, refs) => {
     const [qty, setQty] = createSignal(props.quantity);
-    
+
     return {
-      render: () => ({ quantity: qty() })
+      render: () => ({ quantity: qty() }),
     };
   });
 ```
 
 **Type Safety:**
+
 - ✅ TypeScript validates each phase returns only allowed properties
 - ✅ IDE autocomplete shows only valid properties for each phase
 - ✅ Refactoring in contract propagates to all usage
@@ -380,6 +384,7 @@ export const page = makeJayStackComponent<ProductPageContract>()
 You can reference contracts from `.jay-html` files to get phase-aware type validation:
 
 **`product.jay-contract`:**
+
 ```yaml
 name: Product
 tags:
@@ -394,6 +399,7 @@ tags:
 ```
 
 **`product.jay-html`:**
+
 ```html
 <html>
   <head>
@@ -424,7 +430,7 @@ Begin without phase annotations and add them only when you need to optimize:
 - tag: title
   type: data
   dataType: string
-  phase: slow  # Explicit for documentation
+  phase: slow # Explicit for documentation
 ```
 
 #### 2. Use Slow for Static Content
@@ -492,7 +498,7 @@ tags:
     type: data
     dataType: string
     phase: slow
-  
+
   # Fast phase (request time)
   - tag: price
     type: data
@@ -502,7 +508,7 @@ tags:
     type: data
     dataType: boolean
     phase: fast
-  
+
   # Interactive phase
   - tag: quantity
     type: data

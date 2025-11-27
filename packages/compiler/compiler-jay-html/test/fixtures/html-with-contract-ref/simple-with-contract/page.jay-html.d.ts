@@ -7,11 +7,7 @@ import {
     PageContract,
 } from './page.jay-contract';
 
-import {
-    JayElement,
-    RenderElement,
-    RenderElementOptions,
-} from '@jay-framework/runtime';
+import { JayElement, RenderElement, RenderElementOptions } from '@jay-framework/runtime';
 
 // Re-export contract types for convenience
 export {

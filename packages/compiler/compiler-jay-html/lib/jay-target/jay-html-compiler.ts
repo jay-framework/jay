@@ -1152,7 +1152,7 @@ export function generateElementDefinitionFile(
 ): WithValidations<string> {
     return parsedFile.map((jayFile) => {
         const baseName = jayFile.baseElementName;
-        
+
         // If jay-html references an external contract, import types from it instead of duplicating
         if (jayFile.contract && jayFile.contractRef) {
             const contractFileName = path.basename(jayFile.contractRef, '.jay-contract');
@@ -1164,7 +1164,7 @@ export function generateElementDefinitionFile(
     ${baseName}InteractiveViewState,
     ${baseName}Contract
 } from './${contractFileName}.jay-contract';`;
-            
+
             const { renderedElement, preRenderType, renderedImplementation } =
                 renderFunctionImplementation(
                     jayFile.types,
@@ -1176,9 +1176,9 @@ export function generateElementDefinitionFile(
                     RuntimeMode.WorkerTrusted,
                     jayFile.headLinks,
                 );
-            
+
             const cssImport = generateCssImport(jayFile);
-            
+
             // Import JayElement etc from runtime, but exclude types that come from the contract
             const runtimeImports = renderImports(
                 renderedImplementation.imports
@@ -1190,20 +1190,23 @@ export function generateElementDefinitionFile(
                 jayFile.imports,
                 RuntimeMode.MainTrusted,
             );
-            
+
             // Re-export the imported types for backward compatibility
             const reExports = `
 // Re-export contract types for convenience
 export { ${baseName}ViewState, ${baseName}ElementRefs, ${baseName}SlowViewState, ${baseName}FastViewState, ${baseName}InteractiveViewState, ${baseName}Contract };
 `;
-            
+
             // Only include HTML-specific element types (PageElement, PageElementRender, etc.)
             // Remove ViewState, ElementRefs definitions and Contract definition from renderedElement
             let htmlOnlyTypes = renderedElement
                 .replace(new RegExp(`export interface ${baseName}ViewState[\\s\\S]*?\\n}`, 'g'), '')
-                .replace(new RegExp(`export interface ${baseName}ElementRefs[\\s\\S]*?\\n}`, 'g'), '')
+                .replace(
+                    new RegExp(`export interface ${baseName}ElementRefs[\\s\\S]*?\\n}`, 'g'),
+                    '',
+                )
                 .replace(new RegExp(`export type ${baseName}Contract = [\\s\\S]*?;`, 'g'), '');
-            
+
             return [
                 contractImport,
                 runtimeImports,
@@ -1215,7 +1218,7 @@ export { ${baseName}ViewState, ${baseName}ElementRefs, ${baseName}SlowViewState,
                 .filter((_) => _ !== null && _ !== '')
                 .join('\n\n');
         }
-        
+
         // Original logic for inline data or no contract reference
         let types = generateTypes(jayFile.types);
         let { renderedRefs, renderedElement, preRenderType, renderedImplementation } =
