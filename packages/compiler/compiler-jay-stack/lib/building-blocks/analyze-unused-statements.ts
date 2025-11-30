@@ -26,6 +26,12 @@ export function analyzeUnusedStatements(
     // Find statements that define the removed variables
     for (const variable of removedVariables) {
         if (variable?.definingStatement) {
+            // Never remove import declarations here - they're handled separately
+            // via the unusedImports mechanism
+            if (isImportDeclaration(variable.definingStatement)) {
+                continue;
+            }
+            
             // Only remove if it's not an export
             if (!isExportStatement(variable.definingStatement)) {
                 statementsToRemove.add(variable.definingStatement);
