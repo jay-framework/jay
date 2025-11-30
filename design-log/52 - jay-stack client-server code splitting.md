@@ -1958,3 +1958,22 @@ Required test coverage:
 - Pages with contexts
 - Inline arrow functions (in `.withSlowlyRender(async () => {})`)
 - Regular functions in same file (must be preserved if used elsewhere)
+
+### Implementation Results - Key Bug Fix
+
+**Critical Bug**: Import statements were being completely removed instead of filtered.
+
+**Root Cause**: When tracking removed variables (from deleted method calls), the `definingStatement` of those variables pointed to their import declarations. This caused entire import statements to be added to `statementsToRemove`, bypassing the import filtering logic.
+
+**Solution**: Modified `analyzeUnusedStatements` to skip import declarations when building `statementsToRemove`:
+```typescript
+// Never remove import declarations via statementsToRemove
+// They're handled separately via the unusedImports mechanism
+if (isImportDeclaration(variable.definingStatement)) {
+    continue;
+}
+```
+
+This ensures imports are only processed through the proper filtering mechanism that removes individual unused imports while preserving used ones.
+
+**Test Results**: ✅ All 8 tests passing with proper separation of concerns in building blocks.

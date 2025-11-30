@@ -70,29 +70,32 @@ function mkJayStackCodeSplitTransformer({
     // Step 1: Create binding resolver
     const bindingResolver = new SourceFileBindingResolver(sourceFile);
 
-    // Step 2: Define which methods belong to which environment
-    const SERVER_METHODS = new Set(['withServices', 'withLoadParams', 'withSlowlyRender', 'withFastRender']);
-    const CLIENT_METHODS = new Set(['withInteractive', 'withContexts']);
+    // Step 2: Find all builder methods that should be removed
+    const { callsToRemove, removedVariables } = findBuilderMethodsToRemove(
+        sourceFile,
+        bindingResolver,
+        environment,
+    );
 
-    // Track removed variables during transformation
-    const removedVariables = new Set<ReturnType<SourceFileBindingResolver['explain']>>();
-
-    // Step 3: Transform the AST - check and remove method calls during traversal
+    // Step 3: Transform the AST - check during traversal if methods should be removed
     const transformVisitor = (node: ts.Node): ts.Node => {
         // First, visit children to handle nested calls
         const visitedNode = visitEachChild(node, transformVisitor, context);
         
         // Then check if THIS node is a builder method call that should be removed
+        // We check by method name since the node objects change during transformation
         if (isCallExpression(visitedNode) && isPropertyAccessExpression(visitedNode.expression)) {
             const methodName = visitedNode.expression.name.text;
+            
+            // Define which methods belong to which environment
+            const SERVER_METHODS = new Set(['withServices', 'withLoadParams', 'withSlowlyRender', 'withFastRender']);
+            const CLIENT_METHODS = new Set(['withInteractive', 'withContexts']);
+            
             const shouldRemove =
                 (environment === 'client' && SERVER_METHODS.has(methodName)) ||
                 (environment === 'server' && CLIENT_METHODS.has(methodName));
 
             if (shouldRemove) {
-                // Collect variables from arguments for later cleanup
-                collectVariablesFromArguments(visitedNode.arguments, bindingResolver, removedVariables);
-                
                 // Return the receiver (left side of the dot), effectively removing this method call
                 return visitedNode.expression.expression;
             }
@@ -127,29 +130,6 @@ function mkJayStackCodeSplitTransformer({
         .filter((s): s is ts.Statement => s !== undefined);
 
     return factory.updateSourceFile(transformedSourceFile, transformedStatements);
-}
-
-/**
- * Collect variables from method arguments
- */
-function collectVariablesFromArguments(
-    args: ts.NodeArray<ts.Expression>,
-    bindingResolver: SourceFileBindingResolver,
-    variables: Set<ReturnType<SourceFileBindingResolver['explain']>>,
-) {
-    const { isIdentifier } = tsBridge;
-    
-    const visitor = (node: ts.Node) => {
-        if (isIdentifier(node)) {
-            const variable = bindingResolver.explain(node);
-            if (variable && (variable.name || variable.root)) {
-                variables.add(variable);
-            }
-        }
-        node.forEachChild(visitor);
-    };
-
-    args.forEach(arg => visitor(arg));
 }
 
 /**
