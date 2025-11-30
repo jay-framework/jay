@@ -11,6 +11,7 @@
   ],
   "exports": {
     ".": "./dist/index.js",
+    "./client": "./dist/index.client.js",
     "./mood-tracker.jay-contract": "./dist/mood-tracker.jay-contract"
   },
   "scripts": {
@@ -36,9 +37,9 @@
     "@babel/core": "^7.23.7",
     "@babel/preset-env": "^7.23.8",
     "@babel/preset-typescript": "^7.23.3",
+    "@jay-framework/compiler-jay-stack": "workspace:^",
     "@jay-framework/dev-environment": "workspace:^",
     "@jay-framework/jay-cli": "workspace:^",
-    "@jay-framework/vite-plugin": "workspace:^",
     "nodemon": "^3.0.3",
     "rimraf": "^5.0.5",
     "tslib": "^2.6.2",

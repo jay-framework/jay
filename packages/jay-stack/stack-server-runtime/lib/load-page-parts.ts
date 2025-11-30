@@ -30,10 +30,12 @@ export async function loadPageParts(
 
     const parts: DevServerPagePart[] = [];
     if (exists) {
-        const pageComponent = (await vite.ssrLoadModule(route.compPath)).page;
+        // Load page component with server-only code (client code stripped)
+        const pageComponent = (await vite.ssrLoadModule(route.compPath + '?jay-server')).page;
         parts.push({
             compDefinition: pageComponent,
-            clientImport: `import {page} from '${route.compPath}'`,
+            // Client import uses client-only code (server code stripped)
+            clientImport: `import {page} from '${route.compPath}?jay-client'`,
             clientPart: `{comp: page.comp, contextMarkers: []}`,
         });
     }
@@ -57,17 +59,28 @@ export async function loadPageParts(
         for await (const headlessImport of jayHtml.headlessImports) {
             const module = headlessImport.codeLink.module;
             const name = headlessImport.codeLink.names[0].name;
+            const isLocalModule = module[0] === '.' || module[0] === '/';
             const modulePath =
-                module[0] === '.'
+                isLocalModule
                     ? path.resolve(dirName, module)
                     : require.resolve(module, { paths: require.resolve.paths(dirName) });
-            const compDefinition = (await vite.ssrLoadModule(modulePath))[name];
+            
+            // Load component with server-only code (client code stripped)
+            const serverModulePath = isLocalModule ? modulePath + '?jay-server' : modulePath;
+            const compDefinition = (await vite.ssrLoadModule(serverModulePath))[name];
+            
+            // Generate client import path
             const moduleImport = module.startsWith('./') ? path.resolve(pagesBase, module) : module;
+            const isNpmPackage = !module.startsWith('./') && !module.startsWith('../');
+            const clientModuleImport = isNpmPackage
+                ? `${moduleImport}/client`        // npm packages: use /client export
+                : `${moduleImport}?jay-client`;   // local files: use ?jay-client query
+            
             const key = headlessImport.key;
             const part: DevServerPagePart = {
                 key,
                 compDefinition,
-                clientImport: `import {${name}} from '${moduleImport}'`,
+                clientImport: `import {${name}} from '${clientModuleImport}'`,
                 clientPart: `{comp: ${name}.comp, contextMarkers: [], key: '${headlessImport.key}'}`,
             };
             parts.push(part);

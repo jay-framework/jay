@@ -1,6 +1,6 @@
 import { resolve } from 'path';
 import { defineConfig } from 'vitest/config';
-import { JayRollupConfig, jayRuntime } from '@jay-framework/vite-plugin';
+import { JayRollupConfig, jayStackCompiler } from '@jay-framework/compiler-jay-stack';
 
 const root = resolve(__dirname);
 const jayOptions: JayRollupConfig = {
@@ -9,14 +9,17 @@ const jayOptions: JayRollupConfig = {
 };
 
 export default defineConfig({
-    plugins: [jayRuntime(jayOptions)],
+    plugins: [...jayStackCompiler(jayOptions)],
     build: {
         minify: false,
         target: 'es2020',
         lib: {
-            entry: resolve(__dirname, 'lib/index.ts'),
-            name: 'jayComponent',
-            fileName: 'index',
+            entry: {
+                // Server build (client code stripped)
+                'index': resolve(__dirname, 'lib/index.ts?jay-server'),
+                // Client build (server code stripped)
+                'index.client': resolve(__dirname, 'lib/index.ts?jay-client'),
+            },
             formats: ['es'],
         },
         rollupOptions: {
