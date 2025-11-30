@@ -9,4 +9,8 @@ export { transformComponentImports } from './components-files/building-blocks/tr
 export { compileFunctionSplitPatternsBlock } from './components-files/basic-analyzers/compile-function-split-patterns';
 export { createTsSourceFileFromSource } from './components-files/building-blocks/create-ts-source-file-from-source';
 export { FunctionRepositoryBuilder } from './components-files/building-blocks/function-repository-builder';
+export { SourceFileBindingResolver } from './components-files/basic-analyzers/source-file-binding-resolver';
+export { SourceFileStatementDependencies } from './components-files/basic-analyzers/source-file-statement-dependencies';
+export { mkTransformer } from './components-files/ts-utils/mk-transformer';
+export type { SourceFileTransformerContext } from './components-files/ts-utils/mk-transformer';
 export * from './jay-html';

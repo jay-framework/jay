@@ -1,38 +1,29 @@
 import type * as ts from 'typescript';
 import tsBridge from '@jay-framework/typescript-bridge';
-import { SourceFileBindingResolver } from '@jay-framework/compiler/lib/components-files/basic-analyzers/source-file-binding-resolver';
-import { SourceFileStatementDependencies } from '@jay-framework/compiler/lib/components-files/basic-analyzers/source-file-statement-dependencies';
+import {
+    SourceFileBindingResolver,
+    mkTransformer,
+    SourceFileTransformerContext,
+} from '@jay-framework/compiler';
+import { findBuilderMethodsToRemove } from './building-blocks/find-builder-methods-to-remove';
+import { analyzeUnusedStatements } from './building-blocks/analyze-unused-statements';
 
 const {
-    transform,
     createPrinter,
     createSourceFile,
     ScriptTarget,
     visitEachChild,
     isCallExpression,
     isPropertyAccessExpression,
-    isIdentifier,
     isImportDeclaration,
-    factory,
+    isNamedImports,
 } = tsBridge;
 
 export type BuildEnvironment = 'client' | 'server';
 
-const SERVER_METHODS = new Set([
-    'withServices',
-    'withLoadParams',
-    'withSlowlyRender',
-    'withFastRender',
-]);
-
-const CLIENT_METHODS = new Set([
-    'withInteractive',
-    'withContexts',
-]);
-
-const SHARED_METHODS = new Set([
-    'withProps',
-]);
+type JayStackTransformerConfig = SourceFileTransformerContext & {
+    environment: BuildEnvironment;
+};
 
 /**
  * Transform Jay Stack component builder chains to strip environment-specific code
@@ -55,18 +46,11 @@ export function transformJayStackBuilder(
         true,
     );
 
-    // Create binding resolver to track identifiers
-    const bindingResolver = new SourceFileBindingResolver(sourceFile);
-
-    // Create statement dependencies tracker
-    const statementDeps = new SourceFileStatementDependencies(sourceFile, bindingResolver);
-
-    // Transform based on environment
-    const result = transform(sourceFile, [
-        (context) => mkCodeSplitTransformer(context, bindingResolver, statementDeps, environment),
-    ]);
+    // Transform using mkTransformer pattern
+    const transformers = [mkTransformer(mkJayStackCodeSplitTransformer, { environment })];
 
     const printer = createPrinter();
+    const result = tsBridge.transform(sourceFile, transformers);
     const transformedFile = result.transformed[0];
     const transformedCode = printer.printFile(transformedFile as ts.SourceFile);
 
@@ -74,70 +58,92 @@ export function transformJayStackBuilder(
 
     return {
         code: transformedCode,
-        // TODO: Generate source map for better debugging
     };
 }
 
-function mkCodeSplitTransformer(
-    context: ts.TransformationContext,
-    bindingResolver: SourceFileBindingResolver,
-    statementDeps: SourceFileStatementDependencies,
-    environment: BuildEnvironment,
-) {
-    return (sourceFile: ts.SourceFile): ts.SourceFile => {
-        // Track which identifiers are referenced by removed methods
-        const removedIdentifiers = new Set<string>();
+function mkJayStackCodeSplitTransformer({
+    factory,
+    sourceFile,
+    context,
+    environment,
+}: JayStackTransformerConfig): ts.SourceFile {
+    // Step 1: Create binding resolver
+    const bindingResolver = new SourceFileBindingResolver(sourceFile);
 
-        // First pass: identify and strip unwanted methods
-        const stripMethodsVisitor = (node: ts.Node): ts.Node | undefined => {
-            if (isCallExpression(node) && isPropertyAccessExpression(node.expression)) {
-                const methodName = node.expression.name.text;
+    // Step 2: Define which methods belong to which environment
+    const SERVER_METHODS = new Set(['withServices', 'withLoadParams', 'withSlowlyRender', 'withFastRender']);
+    const CLIENT_METHODS = new Set(['withInteractive', 'withContexts']);
 
-                const shouldRemove =
-                    (environment === 'client' && SERVER_METHODS.has(methodName)) ||
-                    (environment === 'server' && CLIENT_METHODS.has(methodName));
+    // Track removed variables during transformation
+    const removedVariables = new Set<ReturnType<SourceFileBindingResolver['explain']>>();
 
-                if (shouldRemove) {
-                    // Track identifiers used in this method call's arguments
-                    trackRemovedIdentifiers(node.arguments, bindingResolver, removedIdentifiers);
+    // Step 3: Transform the AST - check and remove method calls during traversal
+    const transformVisitor = (node: ts.Node): ts.Node => {
+        // First, visit children to handle nested calls
+        const visitedNode = visitEachChild(node, transformVisitor, context);
+        
+        // Then check if THIS node is a builder method call that should be removed
+        if (isCallExpression(visitedNode) && isPropertyAccessExpression(visitedNode.expression)) {
+            const methodName = visitedNode.expression.name.text;
+            const shouldRemove =
+                (environment === 'client' && SERVER_METHODS.has(methodName)) ||
+                (environment === 'server' && CLIENT_METHODS.has(methodName));
 
-                    // Return the object being called on (strip this method call)
-                    return visitEachChild(node.expression.expression, stripMethodsVisitor, context);
-                }
+            if (shouldRemove) {
+                // Collect variables from arguments for later cleanup
+                collectVariablesFromArguments(visitedNode.arguments, bindingResolver, removedVariables);
+                
+                // Return the receiver (left side of the dot), effectively removing this method call
+                return visitedNode.expression.expression;
+            }
+        }
+
+        return visitedNode;
+    };
+
+    let transformedSourceFile = visitEachChild(sourceFile, transformVisitor, context) as ts.SourceFile;
+
+    // Step 4: Analyze which statements are now unused
+    const { statementsToRemove, unusedImports } = analyzeUnusedStatements(
+        transformedSourceFile,
+        removedVariables,
+    );
+
+    // Step 5: Remove unused statements and filter imports
+    const transformedStatements = transformedSourceFile.statements
+        .map((statement) => {
+            // Remove statements that are no longer needed
+            if (statementsToRemove.has(statement)) {
+                return undefined;
             }
 
-            return visitEachChild(node, stripMethodsVisitor, context);
-        };
+            // Filter import declarations
+            if (isImportDeclaration(statement)) {
+                return filterImportDeclaration(statement, unusedImports, factory);
+            }
 
-        let transformedSourceFile = visitEachChild(sourceFile, stripMethodsVisitor, context);
+            return statement;
+        })
+        .filter((s): s is ts.Statement => s !== undefined);
 
-        // Second pass: remove unused imports using statement dependencies
-        transformedSourceFile = removeUnusedImports(
-            transformedSourceFile,
-            context,
-            bindingResolver,
-            statementDeps,
-            removedIdentifiers,
-        );
-
-        return transformedSourceFile;
-    };
+    return factory.updateSourceFile(transformedSourceFile, transformedStatements);
 }
 
 /**
- * Track identifiers used in removed method arguments
- * These identifiers' imports may need to be removed
+ * Collect variables from method arguments
  */
-function trackRemovedIdentifiers(
+function collectVariablesFromArguments(
     args: ts.NodeArray<ts.Expression>,
     bindingResolver: SourceFileBindingResolver,
-    removedIdentifiers: Set<string>,
+    variables: Set<ReturnType<SourceFileBindingResolver['explain']>>,
 ) {
+    const { isIdentifier } = tsBridge;
+    
     const visitor = (node: ts.Node) => {
         if (isIdentifier(node)) {
             const variable = bindingResolver.explain(node);
-            if (variable?.name) {
-                removedIdentifiers.add(variable.name);
+            if (variable && (variable.name || variable.root)) {
+                variables.add(variable);
             }
         }
         node.forEachChild(visitor);
@@ -147,90 +153,44 @@ function trackRemovedIdentifiers(
 }
 
 /**
- * Remove imports that are no longer used after stripping methods
+ * Filter unused imports from an import declaration
  */
-function removeUnusedImports(
-    sourceFile: ts.SourceFile,
-    context: ts.TransformationContext,
-    bindingResolver: SourceFileBindingResolver,
-    statementDeps: SourceFileStatementDependencies,
-    removedIdentifiers: Set<string>,
-): ts.SourceFile {
-    // Collect all identifiers still used in the transformed code
-    const stillUsedIdentifiers = new Set<string>();
+function filterImportDeclaration(
+    statement: ts.ImportDeclaration,
+    unusedImports: Set<string>,
+    factory: ts.NodeFactory,
+): ts.ImportDeclaration | undefined {
+    const importClause = statement.importClause;
     
-    const collectStillUsed = (node: ts.Node) => {
-        if (isIdentifier(node)) {
-            stillUsedIdentifiers.add(node.text);
-        }
-        node.forEachChild(collectStillUsed);
-    };
-    
-    sourceFile.forEachChild(collectStillUsed);
-
-    // Track which import statements to remove
-    const statementsToRemove = new Set<ts.Statement>();
-
-    // Check each statement's dependencies
-    for (const statementDep of statementDeps.getAllStatements()) {
-        const statement = statementDep.statement;
-
-        // Check if this is an import declaration
-        if (isImportDeclaration(statement)) {
-            const importClause = statement.importClause;
-            if (importClause?.namedBindings && tsBridge.isNamedImports(importClause.namedBindings)) {
-                const usedElements = importClause.namedBindings.elements.filter(
-                    element => stillUsedIdentifiers.has(element.name.text)
-                );
-
-                if (usedElements.length === 0) {
-                    // No elements from this import are used anymore
-                    statementsToRemove.add(statement);
-                }
-            }
-        }
+    if (!importClause?.namedBindings || !isNamedImports(importClause.namedBindings)) {
+        // Keep default imports or namespace imports
+        return statement;
     }
 
-    // Filter and transform statements
-    const visitor = (node: ts.Node): ts.Node | undefined => {
-        if (statementsToRemove.has(node as ts.Statement)) {
-            return undefined; // Remove entire import
-        }
+    // Filter named imports to exclude unused ones
+    const usedElements = importClause.namedBindings.elements.filter(
+        element => !unusedImports.has(element.name.text)
+    );
 
-        // Handle partially removed imports
-        if (isImportDeclaration(node)) {
-            const importClause = node.importClause;
-            if (importClause?.namedBindings && tsBridge.isNamedImports(importClause.namedBindings)) {
-                const usedElements = importClause.namedBindings.elements.filter(
-                    element => stillUsedIdentifiers.has(element.name.text)
-                );
+    if (usedElements.length === 0) {
+        // Remove entire import - no elements are used
+        return undefined;
+    }
 
-                const originalCount = importClause.namedBindings.elements.length;
-                
-                if (usedElements.length > 0 && usedElements.length < originalCount) {
-                    // Update import to only include used elements
-                    return factory.updateImportDeclaration(
-                        node,
-                        node.modifiers,
-                        factory.updateImportClause(
-                            importClause,
-                            importClause.isTypeOnly,
-                            importClause.name,
-                            factory.updateNamedImports(
-                                importClause.namedBindings,
-                                usedElements
-                            )
-                        ),
-                        node.moduleSpecifier,
-                        node.assertClause
-                    );
-                }
-            }
-        }
-
-        return visitEachChild(node, visitor, context);
-    };
-
-    return visitEachChild(sourceFile, visitor, context) as ts.SourceFile;
+    // Always rebuild the import to ensure proper structure
+    return factory.updateImportDeclaration(
+        statement,
+        statement.modifiers,
+        factory.updateImportClause(
+            importClause,
+            importClause.isTypeOnly,
+            importClause.name,
+            factory.updateNamedImports(
+                importClause.namedBindings,
+                usedElements,
+            ),
+        ),
+        statement.moduleSpecifier,
+        statement.assertClause,
+    );
 }
-

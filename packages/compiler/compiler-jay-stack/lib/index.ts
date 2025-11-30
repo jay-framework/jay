@@ -4,6 +4,7 @@ import { transformJayStackBuilder, BuildEnvironment } from './transform-jay-stac
 
 export type { BuildEnvironment } from './transform-jay-stack-builder';
 export { transformJayStackBuilder } from './transform-jay-stack-builder';
+export type { JayRollupConfig } from '@jay-framework/vite-plugin';
 
 /**
  * Jay Stack Compiler - Handles both Jay runtime compilation and Jay Stack code splitting
