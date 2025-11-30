@@ -18,6 +18,7 @@ The project follows a rigorous design log methodology for all significant featur
 
 ### When Implementing
 1. **Follow the implementation plan** phases from the design log
+2. **Write tests first** or update existing tests to match new behavior
 3. **Update design log** with "Implementation Results" section as you go
 4. **Document deviations**: Explain why implementation differs from design
 5. **Run tests**: Include test results (X/Y passing) in implementation notes
@@ -35,17 +36,48 @@ The project follows a rigorous design log methodology for all significant featur
 - Include JSDoc comments for complex types
 - Use factory functions for better DX (e.g., `slow()`, `fast()`, `interactive()`)
 
-## Key Codebase Concepts
+## Key Concepts
 
-Jay is a new full stack web framework. 
+Jay is a new full-stack web framework (see `./docs` for details):
 
-Key Concepts are documented in ./docs
+- **Contract files** (`.jay-contract`): Define component interfaces with phase annotations (`slow`/`fast`/`fast+interactive`)
+- **Jay HTML** (`.jay-html`): Extended HTML templates with reactive bindings
+- **ViewState**: Data/variant properties. Interactive elements go in **Refs**, not ViewState
+- **Not React**: Jay doesn't use JSX or virtual DOM
+- **Three main areas**: Compiler (`/packages/compiler`), Runtime (`/packages/runtime`), Full-stack (`/packages/jay-stack`)
 
-- **Contract files** (`.jay-contract`): Define data structure with phase annotations
-- **Jay HTML** (`.jay-html`): Templates that can reference contracts
-- **Jay Runtime** (`/packages/runtime`): Runtime code that runs in the browser
-- **Jay Compiler** (`/packages/compiler`): Compiler transforms jay-html files to code and 
-  composes applications using the jay framework
-- **Jay Runtime** (`/packages/jay-stack`): The full stack application runtime
-- **ViewState**: Data properties, **NOT** interactive elements (those go in Refs)
-- **Not React**: Jay is not react and does not use JSX
+## Project Structure
+
+**Yarn monorepo** with packages organized by purpose:
+- `/packages/compiler/` - Parsing, type generation, build tools (compiler-jay-html, rollup-plugin, vite-plugin, cli)
+- `/packages/runtime/` - Browser runtime, reactivity, security (runtime, component, reactive, secure)
+- `/packages/jay-stack/` - Full-stack framework (full-stack-component, dev-server, stack-server-runtime)
+- `/examples/` - Working examples: `jay/counter` (start here), `jay/todo`, `jay-stack/fake-shop`
+- `/design-log/` - Design documents (01-51+) with implementation history
+
+## Testing
+
+- **TDD approach**: Write tests before/alongside implementation
+- **Location**: `test/` folders within each package
+- **Runner**: `vitest` (run `yarn test` in package or root)
+- **Coverage**: See design logs for test result examples (e.g., "451 tests passing")
+
+## Common File Locations
+
+- Type generation: `packages/compiler/compiler-jay-html/lib/contract/`
+- Full-stack builder: `packages/jay-stack/full-stack-component/lib/jay-stack-builder.ts`
+- Reactive primitives: `packages/runtime/reactive/lib/`
+- Simplest example: `examples/jay/counter`
+
+## File Extensions
+
+- `.jay-html` - Template files (extended HTML with reactive bindings)
+- `.jay-contract` - Contract files (YAML, defines component interface)
+- `.jay-html.d.ts` / `.jay-contract.d.ts` - Generated TypeScript types
+- `.test.ts` - Vitest tests
+
+## Build Tools
+
+- **Vite** - Primary (most examples)
+- **Rollup** - Alternative (see `examples/jay/todo-rollup-build`)
+- **TypeScript** - Strict mode everywhere
