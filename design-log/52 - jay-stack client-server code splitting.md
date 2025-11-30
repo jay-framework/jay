@@ -270,44 +270,61 @@ After reviewing the existing compiler infrastructure, we have two options:
 - Simplifies the mental model: "Use `jayStackCompiler()` for Jay Stack projects"
 - Still maintains separation of concerns at the code level
 
-### Phase 1: Create the Transformation Logic Using Existing Utilities
+### Phase 1: Create the Jay Stack Compiler Plugin
+
+**Package Location:** `packages/jay-stack/jay-stack-compiler/`
 
 **Files to Create:**
-- `packages/jay-stack/vite-plugin-code-split/lib/index.ts` - Main plugin export
-- `packages/jay-stack/vite-plugin-code-split/lib/transform-jay-stack-builder.ts` - AST transformation logic
-- `packages/jay-stack/vite-plugin-code-split/lib/find-builder-methods.ts` - Find and classify builder methods
-- `packages/jay-stack/vite-plugin-code-split/package.json` - Package definition
-- `packages/jay-stack/vite-plugin-code-split/tsconfig.json` - TypeScript config
-- `packages/jay-stack/vite-plugin-code-split/vite.config.ts` - Build config
+- `packages/jay-stack/jay-stack-compiler/lib/index.ts` - Main plugin export (composes jay:runtime)
+- `packages/jay-stack/jay-stack-compiler/lib/transform-jay-stack-builder.ts` - AST transformation logic
+- `packages/jay-stack/jay-stack-compiler/lib/find-builder-methods.ts` - Find and classify builder methods
+- `packages/jay-stack/jay-stack-compiler/package.json` - Package definition
+- `packages/jay-stack/jay-stack-compiler/tsconfig.json` - TypeScript config
+- `packages/jay-stack/jay-stack-compiler/vite.config.ts` - Build config
 
-**Plugin Structure (leveraging existing utilities):**
+**Plugin Structure (composing jay:runtime internally):**
 ```typescript
 // lib/index.ts
 import { Plugin } from 'vite';
+import { jayRuntime, JayRollupConfig } from '@jay-framework/vite-plugin';
 import { transformJayStackBuilder } from './transform-jay-stack-builder';
 
 export type BuildEnvironment = 'client' | 'server';
 
-export function jayStackCodeSplit(): Plugin {
-    return {
-        name: 'jay-stack:code-split',
-        enforce: 'pre', // Run before other transformations
-        
-        transform(code: string, id: string) {
-            // Check for environment query params
-            const isClientBuild = id.includes('?jay-client');
-            const isServerBuild = id.includes('?jay-server');
+/**
+ * Jay Stack Compiler - Handles both Jay runtime compilation and Jay Stack code splitting
+ * 
+ * This plugin internally uses the jay:runtime plugin and adds Jay Stack-specific
+ * transformations for client/server code splitting.
+ * 
+ * @param jayOptions - Configuration for Jay runtime (passed to jay:runtime plugin)
+ */
+export function jayStackCompiler(jayOptions: JayRollupConfig = {}): Plugin[] {
+    return [
+        // First: Jay Stack code splitting transformation
+        {
+            name: 'jay-stack:code-split',
+            enforce: 'pre', // Run before jay:runtime
             
-            if (!isClientBuild && !isServerBuild) {
-                return null; // No transformation needed
-            }
-            
-            const environment: BuildEnvironment = isClientBuild ? 'client' : 'server';
-            
-            // Transform using existing compiler utilities
-            return transformJayStackBuilder(code, id, environment);
+            transform(code: string, id: string) {
+                // Check for environment query params
+                const isClientBuild = id.includes('?jay-client');
+                const isServerBuild = id.includes('?jay-server');
+                
+                if (!isClientBuild && !isServerBuild) {
+                    return null; // No transformation needed
+                }
+                
+                const environment: BuildEnvironment = isClientBuild ? 'client' : 'server';
+                
+                // Transform using existing compiler utilities
+                return transformJayStackBuilder(code, id, environment);
+            },
         },
-    };
+        
+        // Second: Jay runtime compilation (existing plugin)
+        jayRuntime(jayOptions),
+    ];
 }
 ```
 
@@ -565,20 +582,40 @@ function isBuilderMethod(methodName: string): boolean {
 
 **Package Configuration:**
 ```json
-// packages/jay-stack/vite-plugin-code-split/package.json
+// packages/jay-stack/jay-stack-compiler/package.json
 {
-  "name": "@jay-framework/vite-plugin-code-split",
+  "name": "@jay-framework/jay-stack-compiler",
   "version": "0.8.0",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "readme.md"
+  ],
+  "scripts": {
+    "build": "npm run build:js && npm run build:types",
+    "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
+    "build:js": "vite build",
+    "build:types": "tsup lib/index.ts --dts-only --format esm",
+    "build:check-types": "tsc",
+    "clean": "rimraf dist",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
   "dependencies": {
     "@jay-framework/compiler": "workspace:^",
     "@jay-framework/typescript-bridge": "workspace:^",
+    "@jay-framework/vite-plugin": "workspace:^",
     "vite": "^5.0.11"
   },
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",
+    "rimraf": "^5.0.5",
+    "tsup": "^8.0.1",
     "typescript": "^5.3.3",
     "vitest": "^1.2.1"
   }
@@ -619,36 +656,74 @@ clientImport: `import {${name}} from '${moduleImport}?jay-client'`,
 
 **File to Modify:** `packages/jay-stack/dev-server/lib/dev-server.ts`
 
+**Before:**
 ```typescript
 import { jayRuntime } from '@jay-framework/vite-plugin';
-import { jayStackCodeSplit } from '@jay-framework/vite-plugin-code-split';
 
 const vite = await createServer({
     server: { middlewareMode: true },
     plugins: [
         jayRuntime(jayRollupConfig),
-        jayStackCodeSplit(), // ✅ Add plugin - no config needed (detects from query params)
     ],
     // ...
 });
 ```
 
-**Plugin Ordering Considerations:**
-- `jayStackCodeSplit` should run **before** `jayRuntime` for optimal performance
-- Set `enforce: 'pre'` to ensure early transformation
-- Both plugins can coexist without conflicts since they target different code patterns
+**After:**
+```typescript
+import { jayStackCompiler } from '@jay-framework/jay-stack-compiler';
+
+const vite = await createServer({
+    server: { middlewareMode: true },
+    plugins: [
+        // ✅ Replaces jayRuntime - includes both code splitting and runtime compilation
+        ...jayStackCompiler(jayRollupConfig),
+    ],
+    // ...
+});
+```
+
+**Benefits of This Approach:**
+- ✅ **Simple API**: Only one plugin for developers to think about
+- ✅ **Correct ordering**: Code splitting automatically runs before jay:runtime
+- ✅ **No conflicts**: Plugin composition handled internally
+- ✅ **Backward compatible**: Same `JayRollupConfig` options
+- ✅ **Clean migration**: Replace `jayRuntime()` with `...jayStackCompiler()`
+
+**Alternative (if fine-grained control needed):**
+```typescript
+import { jayStackCompiler } from '@jay-framework/jay-stack-compiler';
+
+// Can still pass all the same options
+const vite = await createServer({
+    plugins: [
+        ...jayStackCompiler({
+            tsConfigFilePath: './tsconfig.json',
+            generationTarget: 'browser',
+            // ... other JayRollupConfig options
+        }),
+    ],
+});
+```
 
 **File to Consider:** `packages/jay-stack/stack-cli/lib/server.ts`
-- Similar integration for production builds
+- Same integration pattern for production builds
 
 **Update dev-server package.json:**
 ```json
 {
   "dependencies": {
-    "@jay-framework/vite-plugin-code-split": "workspace:^",
+    "@jay-framework/jay-stack-compiler": "workspace:^",
+    // Can remove @jay-framework/vite-plugin (it's now a transitive dependency)
     // ... other deps
   }
 }
+```
+
+**Note on Plugin Array:**
+The spread operator (`...jayStackCompiler()`) is needed because the function returns an array of plugins:
+```typescript
+[codeSplitPlugin, jayRuntimePlugin]
 ```
 
 ### Phase 4: Testing
@@ -1114,22 +1189,25 @@ No migration needed! This is a **build-time enhancement**:
 ## Implementation Checklist
 
 ### Phase 1: Core Plugin
-- [ ] Create plugin package structure (`packages/jay-stack/vite-plugin-code-split/`)
-- [ ] Set up package.json with dependencies on `@jay-framework/compiler` and `@jay-framework/typescript-bridge`
+- [ ] Create plugin package structure (`packages/jay-stack/jay-stack-compiler/`)
+- [ ] Set up package.json with dependencies on:
+  - `@jay-framework/compiler` (for utilities)
+  - `@jay-framework/typescript-bridge` (for AST operations)
+  - `@jay-framework/vite-plugin` (for composing jay:runtime)
 - [ ] Implement `transform-jay-stack-builder.ts` using `SourceFileBindingResolver` and `SourceFileStatementDependencies`
 - [ ] Implement `find-builder-methods.ts` to locate builder method chains
-- [ ] Create main plugin export in `index.ts`
+- [ ] Create main plugin export in `index.ts` that returns array of plugins
 - [ ] Add unit tests for transformation logic
 - [ ] Generate source maps for debugging
 - [ ] Configure build with vite.config.ts and tsconfig.json
 
 ### Phase 2: Integration
 - [ ] Update `load-page-parts.ts` to use `?jay-client` and `?jay-server` query params
-- [ ] Add plugin to dev-server vite configuration
-- [ ] Add plugin to stack-cli production build
-- [ ] Update package.json dependencies in dev-server and stack-cli
+- [ ] Replace `jayRuntime()` with `...jayStackCompiler()` in dev-server
+- [ ] Replace `jayRuntime()` with `...jayStackCompiler()` in stack-cli
+- [ ] Update package.json dependencies in dev-server and stack-cli (replace vite-plugin with jay-stack-compiler)
 - [ ] Test with dev server hot reload
-- [ ] Verify plugin ordering with `jay:runtime` plugin
+- [ ] Verify plugin composition works correctly (both transformations run)
 
 ### Phase 3: Validation
 - [ ] Create integration test suite that builds actual components
@@ -1157,8 +1235,12 @@ No migration needed! This is a **build-time enhancement**:
 ## Open Questions for Review
 
 1. ~~Should we extend `jay:runtime` plugin or create a new standalone plugin?~~
-   - **Decision**: Create standalone `@jay-framework/vite-plugin-code-split` plugin that imports utilities from `@jay-framework/compiler`
-   - **Rationale**: Separation of concerns, jay-stack specific logic
+   - **Decision**: Create `@jay-framework/jay-stack-compiler` that composes `jay:runtime` internally
+   - **Rationale**: 
+     - Separation of concerns at code level
+     - Simpler API for developers (one plugin instead of two)
+     - Automatic correct plugin ordering
+     - Jay-stack specific logic isolated in its own package
 
 2. Should we also strip client code from server bundles?
    - **Current design**: Yes, using `?jay-server` query param
@@ -1233,14 +1315,21 @@ const {
 
 ## Summary
 
-This design proposes a **build-time code splitting solution** for Jay Stack components using a custom Vite plugin that leverages existing compiler utilities.
+This design proposes a **build-time code splitting solution** for Jay Stack components using a composite Vite plugin that leverages existing compiler utilities.
 
 ### Key Decisions
 
-1. **Standalone Plugin**: Create `@jay-framework/vite-plugin-code-split` instead of extending `jay:runtime`
+1. **Composite Plugin Architecture**: Create `@jay-framework/jay-stack-compiler` that internally composes the `jay:runtime` plugin
+   - Developers use one plugin: `...jayStackCompiler()`
+   - Replaces standalone `jayRuntime()` in Jay Stack projects
+   - Handles both Jay runtime compilation AND code splitting
+   
 2. **Reuse Existing Utilities**: Leverage `SourceFileBindingResolver` and `SourceFileStatementDependencies` from `@jay-framework/compiler`
+
 3. **Virtual Modules**: Use `?jay-client` and `?jay-server` query parameters to trigger transformations
+
 4. **AST Transformation**: Strip unwanted builder methods and remove unused imports
+
 5. **Method Classification**:
    - **Server-only**: `withServices`, `withLoadParams`, `withSlowlyRender`, `withFastRender`
    - **Client-only**: `withInteractive`, `withContexts`
@@ -1254,6 +1343,8 @@ This design proposes a **build-time code splitting solution** for Jay Stack comp
 - ✅ **Type Safety**: Full TypeScript support maintained
 - ✅ **Reliability**: Reuses proven compiler infrastructure
 - ✅ **Maintainability**: Follows existing Jay patterns
+- ✅ **Simple API**: One plugin replaces `jayRuntime()` - no need to configure multiple plugins
+- ✅ **Correct ordering**: Code splitting automatically runs before jay:runtime compilation
 
 ### Risks & Mitigations
 
@@ -1274,10 +1365,23 @@ This design proposes a **build-time code splitting solution** for Jay Stack comp
 3. Begin Phase 1 implementation
 4. Update this document with implementation results and lessons learned
 
+**Migration Path for Existing Projects**:
+```typescript
+// Before (using jay:runtime directly)
+import { jayRuntime } from '@jay-framework/vite-plugin';
+plugins: [jayRuntime(config)]
+
+// After (using jay-stack-compiler)
+import { jayStackCompiler } from '@jay-framework/jay-stack-compiler';
+plugins: [...jayStackCompiler(config)]
+```
+
 **Estimated Effort**: 
-- Phase 1 (Core Plugin): 2-3 days
-- Phase 2 (Integration): 1 day
+- Phase 1 (Core Plugin + Composition): 2-3 days
+- Phase 2 (Integration): 1 day  
 - Phase 3 (Validation): 1-2 days
 - Phase 4 (Documentation): 1 day
 - **Total**: ~5-7 days
+
+**Note**: The composite plugin architecture simplifies integration, potentially reducing Phase 2 effort.
 
