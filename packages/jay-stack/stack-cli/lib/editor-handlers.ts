@@ -134,7 +134,7 @@ async function scanPageDirectories(
             if (isPage) {
                 const pageUrl = urlPath || '/';
                 // Get the page name from the current directory, but special case for root pages
-                const pageName = dirPath === pagesBasePath ? 'pages' : path.basename(dirPath);
+                const pageName = dirPath === pagesBasePath ? 'Home' : path.basename(dirPath);
 
                 await onPageFound({
                     dirPath,

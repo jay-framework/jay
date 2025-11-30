@@ -726,7 +726,7 @@ tags:
 
             const homePage = result.info.pages.find((p) => p.url === '/');
             expect(homePage).toBeDefined();
-            expect(homePage.name).toBe('pages');
+            expect(homePage.name).toBe('Home');
             expect(homePage.contractSchema).toBeUndefined();
             expect(homePage.usedComponents).toEqual([]);
 
