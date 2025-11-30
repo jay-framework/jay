@@ -1831,3 +1831,130 @@ import { component } from 'my-plugin/client';
 - ✅ Package authors use same plugin for both builds
 - ✅ Standard npm package patterns (export maps)
 
+
+---
+
+## Implementation Results
+
+### Learnings
+
+#### Test Structure Insights
+
+Following the pattern from `compiler-jay-html`:
+- Use **fixtures** with `source.ts`, `expected-client.ts`, `expected-server.ts`
+- Use `prettify()` from `@jay-framework/compiler-shared` for comparing output
+- Create test utilities (`test-utils/file-utils.ts`) for reading fixtures
+- Avoid `.not.toContain()` - use exact comparison with prettified expected output
+
+Test coverage includes:
+- Basic page with all builder methods
+- Pages with contexts
+- Inline arrow functions in builder methods  
+- Regular functions in same file (preserved when used elsewhere)
+
+#### Plugin Composition Pattern
+
+Successfully implemented composite plugin pattern:
+```typescript
+export function jayStackCompiler(jayOptions: JayRollupConfig = {}): Plugin[] {
+    return [
+        {
+            name: 'jay-stack:code-split',
+            enforce: 'pre',  // Runs before jay:runtime
+            transform(code, id) { /* ... */ }
+        },
+        jayRuntime(jayOptions),  // Existing plugin
+    ];
+}
+```
+
+Benefits:
+- Single import for developers
+- Automatic correct ordering
+- Backward compatible (same config options)
+
+### Next Steps
+
+1. **Resolve TypeScript Compatibility**:
+   - Export utilities from `@jay-framework/compiler` main index
+   - Or align TypeScript versions across all packages
+
+2. **Build and Test**:
+   ```bash
+   cd packages/jay-stack/jay-stack-compiler
+   yarn build
+   yarn test
+   ```
+
+3. **Validate with Examples**:
+   - Build mood-tracker-plugin with dual outputs
+   - Run dev-server with fake-shop example
+   - Verify bundle sizes reduced
+
+4. **Update Additional Packages**:
+   - `@jay-framework/wix-stores` - dual builds
+   - `stack-cli` - use `jayStackCompiler()`
+
+### Open Questions Discovered During Implementation
+
+1. **How to handle dynamic composition?**
+   ```typescript
+   let builder = makeJayStackComponent();
+   if (condition) builder.withSlowlyRender(fn);
+   ```
+   Current implementation only handles method chaining.
+
+2. **Should we cache transformation results?**
+   AST transformation adds build overhead - caching might help.
+
+3. **What about source maps?**
+   Currently returning `{ code, map: undefined }` - need to generate proper source maps for debugging.
+
+---
+
+**Implementation Progress**: ~80% complete  
+**Blocking Issue**: TypeScript version compatibility  
+**Estimated Time to Complete**: 1-2 hours (once TS compatibility resolved)
+
+### New Findings from Implementation
+
+#### Transform Pattern Requirements
+
+The transformation needs to follow the `mkTransformer` pattern used by existing Jay compiler code:
+
+```typescript
+// Use mkTransformer utility from @jay-framework/compiler
+const transformers = [
+    mkTransformer(mkJayStackCodeSplitTransformer, { environment }),
+];
+```
+
+Key differences from initial approach:
+- Use `mkTransformer` instead of raw `transform()` call
+- Follow `SourceFileTransformerContext` pattern with `{ factory, sourceFile, context }`
+- Use **replace map pattern** for expression transformations
+- Use `factory.updateSourceFile()` for statement-level changes
+
+#### Import Removal Strategy
+
+Instead of using `SourceFileStatementDependencies` for removal decisions, simpler to:
+1. Collect all identifiers still used after transformation
+2. Filter import statements based on usage
+3. Rebuild source file with `factory.updateSourceFile(sourceFile, filteredStatements)`
+
+This is more reliable and matches the pattern in `transform-component-bridge.ts`.
+
+#### Test Fixture Pattern Requirements
+
+Tests must follow the pattern from `compiler-jay-html`:
+- Fixtures in `test/fixtures/` with subdirectories per scenario
+- Each fixture has: `source.ts`, `expected-client.ts`, `expected-server.ts`
+- Use `prettify()` for exact comparison
+- Test utilities in `test/test-utils/file-utils.ts`
+- No `.not.toContain()` - use exact string matching with prettified output
+
+Required test coverage:
+- Basic page with all builder methods
+- Pages with contexts
+- Inline arrow functions (in `.withSlowlyRender(async () => {})`)
+- Regular functions in same file (must be preserved if used elsewhere)
