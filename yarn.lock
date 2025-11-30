@@ -4126,6 +4126,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@jay-framework/compiler-jay-stack@workspace:^, @jay-framework/compiler-jay-stack@workspace:packages/compiler/compiler-jay-stack":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/compiler-jay-stack@workspace:packages/compiler/compiler-jay-stack"
+  dependencies:
+    "@jay-framework/compiler": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/typescript-bridge": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
 "@jay-framework/compiler-shared@workspace:^, @jay-framework/compiler-shared@workspace:packages/compiler/compiler-shared":
   version: 0.0.0-use.local
   resolution: "@jay-framework/compiler-shared@workspace:packages/compiler/compiler-shared"
@@ -4221,6 +4237,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@jay-framework/dev-server@workspace:packages/jay-stack/dev-server"
   dependencies:
+    "@jay-framework/compiler-jay-stack": "workspace:^"
     "@jay-framework/compiler-shared": "workspace:^"
     "@jay-framework/component": "workspace:^"
     "@jay-framework/dev-environment": "workspace:^"
@@ -4230,7 +4247,6 @@ __metadata:
     "@jay-framework/stack-client-runtime": "workspace:^"
     "@jay-framework/stack-route-scanner": "workspace:^"
     "@jay-framework/stack-server-runtime": "workspace:^"
-    "@jay-framework/vite-plugin": "workspace:^"
     "@types/express": ^5.0.2
     "@types/node": ^22.15.21
     nodemon: ^3.0.3
@@ -11003,6 +11019,7 @@ __metadata:
     "@babel/core": ^7.23.7
     "@babel/preset-env": ^7.23.8
     "@babel/preset-typescript": ^7.23.3
+    "@jay-framework/compiler-jay-stack": "workspace:^"
     "@jay-framework/component": "workspace:^"
     "@jay-framework/dev-environment": "workspace:^"
     "@jay-framework/fullstack-component": "workspace:^"
@@ -11010,7 +11027,6 @@ __metadata:
     "@jay-framework/reactive": "workspace:^"
     "@jay-framework/runtime": "workspace:^"
     "@jay-framework/secure": "workspace:^"
-    "@jay-framework/vite-plugin": "workspace:^"
     nodemon: ^3.0.3
     rimraf: ^5.0.5
     tslib: ^2.6.2

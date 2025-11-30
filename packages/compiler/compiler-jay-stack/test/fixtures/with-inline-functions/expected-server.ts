@@ -1,0 +1,10 @@
+import { DATABASE } from './database';
+import { makeJayStackComponent, partialRender } from '@jay-framework/fullstack-component';
+export const page = makeJayStackComponent()
+    .withProps()
+    .withServices(DATABASE)
+    .withSlowlyRender(async (props, database) => {
+        const data = await database.query('SELECT * FROM users');
+        return partialRender({ users: data }, {});
+    });
+

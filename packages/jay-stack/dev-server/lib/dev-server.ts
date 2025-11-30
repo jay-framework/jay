@@ -12,7 +12,7 @@ import type {
     Redirect3xx,
     ServerError5xx,
 } from '@jay-framework/fullstack-component';
-import { jayRuntime } from '@jay-framework/vite-plugin';
+import { jayStackCompiler } from '@jay-framework/compiler-jay-stack';
 import path from 'node:path';
 import { RequestHandler } from 'express-serve-static-core';
 import { renderFastChangingData } from '@jay-framework/stack-server-runtime';
@@ -165,7 +165,7 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
 
     const vite = await createServer({
         server: { middlewareMode: true },
-        plugins: [jayRuntime(jayRollupConfig)],
+        plugins: [...jayStackCompiler(jayRollupConfig)],
         appType: 'custom',
         base: publicBaseUrlPath,
         root: pagesRootFolder,
