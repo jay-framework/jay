@@ -124,24 +124,26 @@ Create a custom Vite plugin that performs **AST-based code transformation** to g
 
 ```
 Source File (page.ts)
-├── Server Build 
-│   ├── Vite Plugin: Strip client code
+├── Server Build (?jay-server or default)
+│   ├── Vite Plugin: Strip client code ✅
 │   └── Output: Server-only bundle
+│       ├── withProps ✅
 │       ├── withServices ✅
-│       ├── withContexts ❌ (removed)
+│       ├── withContexts ❌ (removed - client-only)
 │       ├── withLoadParams ✅
 │       ├── withSlowlyRender ✅
 │       ├── withFastRender ✅
-│       └── withInteractive ❌ (removed)
+│       └── withInteractive ❌ (removed - may use browser APIs)
 │
-└── Client Build
-    ├── Vite Plugin: Strip server code
+└── Client Build (?jay-client)
+    ├── Vite Plugin: Strip server code ✅
     └── Output: Client-only bundle
-        ├── withServices ❌ (removed)
-│       ├── withContexts ✅
-        ├── withLoadParams ❌ (removed)
-        ├── withSlowlyRender ❌ (removed)
-        ├── withFastRender ❌ (removed)
+        ├── withProps ✅
+        ├── withServices ❌ (removed - server-only)
+        ├── withContexts ✅
+        ├── withLoadParams ❌ (removed - server-only)
+        ├── withSlowlyRender ❌ (removed - server-only)
+        ├── withFastRender ❌ (removed - server-only)
         └── withInteractive ✅
 ```
 
@@ -159,8 +161,10 @@ import { page } from './page.ts';
 import { page } from './page.ts?jay-client';
 ```
 
-The `?jay-client` query param signals to our plugin to strip server code.
-The `?jay-server` query param signals to our plugin to strip client code.
+**Query Parameter Strategy:**
+- `?jay-client` → Strip server code (withServices, withLoadParams, withSlowlyRender, withFastRender)
+- `?jay-server` → Strip client code (withInteractive, withContexts)
+- No query param → Use original code (for server, but with potential runtime issues)
 
 #### 2. AST Transformation Strategy
 
@@ -665,11 +669,12 @@ clientImport: `import {${name}} from '${clientModuleImport}'`,
 - **npm packages** (like `mood-tracker-plugin`): Use `/client` export path
 - **Rationale**: Query parameters work well with Vite's virtual modules for local files, but package exports are more standard for npm packages
 
-### Phase 2B: Support for Jay Stack Packages (Dual Builds)
+### Phase 2B: Support for Jay Stack Packages (Triple Builds)
 
-Jay Stack packages (like `mood-tracker-plugin`) that export reusable components need to build **two separate bundles**:
-1. **Full build** (for server imports): Contains all server and client code
-2. **Client build** (for client imports): Contains only client code
+Jay Stack packages (like `mood-tracker-plugin`) that export reusable components need to build **three separate bundles**:
+1. **Server build** (for server imports): Contains only server code (client code stripped)
+2. **Client build** (for client imports): Contains only client code (server code stripped)
+3. **Full build** (optional, for compatibility): Contains all code (not recommended)
 
 **Current Example - Mood Tracker Plugin:**
 
@@ -686,13 +691,13 @@ export const moodTracker = makeJayStackComponent<MoodTrackerContract>()
 {
   "main": "dist/index.js",
   "exports": {
-    ".": "./dist/index.js",
+    ".": "./dist/index.js",  // ❌ Has both client + server code
     "./mood-tracker.jay-contract": "./dist/mood-tracker.jay-contract"
   }
 }
 ```
 
-**New Build (Dual Outputs):**
+**New Build (Triple Outputs):**
 
 **Updated vite.config.ts for Plugin Packages:**
 ```typescript
@@ -713,13 +718,15 @@ export default defineConfig({
         minify: false,
         target: 'es2020',
         
-        // Build library with dual outputs
+        // Build library with triple outputs
         lib: {
             entry: {
-                // Full build (server + client)
-                'index': resolve(__dirname, 'lib/index.ts'),
+                // Server-only build (default)
+                'index': resolve(__dirname, 'lib/index.ts?jay-server'),
                 // Client-only build
                 'index.client': resolve(__dirname, 'lib/index.ts?jay-client'),
+                // Full build (for compatibility, not recommended)
+                // 'index.full': resolve(__dirname, 'lib/index.ts'),
             },
             formats: ['es'],
         },
@@ -743,56 +750,62 @@ export default defineConfig({
   "name": "example-jay-mood-tracker-plugin",
   "main": "dist/index.js",
   "exports": {
-    ".": {
-      "jay-client": "./dist/index.client.js",
-      "default": "./dist/index.js"
-    },
+    ".": "./dist/index.js",              // Server build (default) ✅
+    "./client": "./dist/index.client.js", // Client build ✅
     "./mood-tracker.jay-contract": "./dist/mood-tracker.jay-contract"
   }
 }
 ```
+
+**Note:** The main export (`"."`) now points to the **server build** (`index.js`) which has client code stripped.
 
 **How It Works:**
 
 1. **Server-side imports** (in page.ts):
    ```typescript
    import { moodTracker } from 'mood-tracker-plugin';
-   // Resolves to: dist/index.js (full build)
+   // Resolves to: dist/index.js (server build - NO browser APIs) ✅
    ```
 
 2. **Client-side imports** (via load-page-parts.ts):
    ```typescript
-   import { moodTracker } from 'mood-tracker-plugin?jay-client';
-   // Resolves to: dist/index.client.js (client-only build)
+   import { moodTracker } from 'mood-tracker-plugin/client';
+   // Resolves to: dist/index.client.js (client build - NO server code) ✅
    ```
 
-3. **Package.json conditional exports**:
-   - When imported with `?jay-client`, Node.js export conditions resolve to `index.client.js`
-   - When imported normally, resolves to `index.js`
+**Why Both Directions?**
 
-**Alternative Approach Using Export Conditions:**
-
-If Vite/Node.js doesn't support custom conditions for query params, we can use a different pattern:
-
-```json
-{
-  "exports": {
-    ".": "./dist/index.js",
-    "./client": "./dist/index.client.js",
-    "./mood-tracker.jay-contract": "./dist/mood-tracker.jay-contract"
-  }
-}
-```
-
-Then in `load-page-parts.ts`:
 ```typescript
-// For npm packages, append /client
-const moduleImport = module.startsWith('./') 
-    ? path.resolve(pagesBase, module) + '?jay-client'
-    : module + '/client';  // e.g., 'mood-tracker-plugin/client'
+// WITHOUT server-side stripping:
+export const moodTracker = makeJayStackComponent<MoodTrackerContract>()
+    .withInteractive((props, refs) => {
+        document.getElementById('root'); // ❌ CRASH on Node.js!
+        return { render: () => ({}) };
+    });
 
-clientImport: `import {${name}} from '${moduleImport}'`
+// Server tries to import this, Node.js doesn't have document → CRASH
+
+// WITH server-side stripping:
+export const moodTracker = makeJayStackComponent<MoodTrackerContract>()
+    // .withInteractive removed during build ✅
+    // Safe to import on server, no browser APIs
 ```
+
+**Server Import Strategy:**
+
+For local page files imported on the server, we should also use `?jay-server`:
+
+```typescript
+// In dev-server.ts or wherever pages are loaded on server
+const pageComponent = (await vite.ssrLoadModule(route.compPath + '?jay-server')).page;
+// This strips withInteractive, preventing browser API crashes
+```
+
+**Benefits of Bidirectional Stripping:**
+- ✅ **Prevents runtime crashes**: Server doesn't try to execute browser APIs
+- ✅ **Smaller server bundles**: No unnecessary client code
+- ✅ **Faster server startup**: Less code to parse and load
+- ✅ **Better error messages**: Build fails if browser APIs used, not runtime crash
 
 **Build Script Updates:**
 
@@ -1445,7 +1458,29 @@ A: Each entry point needs dual builds:
 ```
 
 **Q: Do we need a server-only build too?**
-A: Not initially. Server always uses the full build (which includes both client and server code). Server-only builds could be added later for optimization, but the main problem is client bundle bloat.
+A: ✅ **YES!** This is critical to prevent runtime crashes. If `withInteractive` uses browser APIs like `document` or `window`, the server will crash when it tries to import that code. The server build MUST strip client code.
+
+**Example of the problem:**
+```typescript
+// mood-tracker.ts
+export const moodTracker = makeJayStackComponent<MoodTrackerContract>()
+    .withInteractive((props, refs) => {
+        // This crashes on Node.js!
+        const root = document.getElementById('root');
+        window.addEventListener('resize', ...);
+        return { render: () => ({}) };
+    });
+
+// page.ts (runs on server)
+import { moodTracker } from './mood-tracker';  // ❌ CRASH!
+```
+
+**With server build:**
+```typescript
+// dist/index.js (server build)
+export const moodTracker = makeJayStackComponent<MoodTrackerContract>()
+    // withInteractive removed - no browser APIs ✅
+```
 
 ## Migration Path
 
@@ -1511,15 +1546,18 @@ No migration needed! This is a **build-time enhancement**:
 - [ ] Configure build with vite.config.ts and tsconfig.json
 
 ### Phase 2: Integration
-- [ ] Update `load-page-parts.ts` to use `?jay-client` query params for local files
-- [ ] Update `load-page-parts.ts` to use `/client` export for npm packages
+- [ ] Update `load-page-parts.ts` to use `?jay-client` query params for local files (client imports)
+- [ ] Update `load-page-parts.ts` to use `/client` export for npm packages (client imports)
+- [ ] Update server-side page loading to use `?jay-server` query params (server imports) ✅ NEW
+- [ ] Update npm package server imports to use default export (already server build) ✅ NEW
 - [ ] Replace `jayRuntime()` with `...jayStackCompiler()` in dev-server
 - [ ] Replace `jayRuntime()` with `...jayStackCompiler()` in stack-cli
 - [ ] Update package.json dependencies in dev-server and stack-cli (replace vite-plugin with jay-stack-compiler)
 - [ ] Test with dev server hot reload
 - [ ] Verify plugin composition works correctly (both transformations run)
-- [ ] Update mood-tracker-plugin to use dual build pattern
-- [ ] Test importing mood-tracker-plugin from a page (verify client bundle is smaller)
+- [ ] Verify server doesn't crash when importing files with browser APIs ✅ NEW
+- [ ] Update mood-tracker-plugin to use triple build pattern (server, client, optional full) ✅ NEW
+- [ ] Test importing mood-tracker-plugin from a page (verify both bundles are optimized) ✅ NEW
 
 ### Phase 3: Validation
 - [ ] Create integration test suite that builds actual components
@@ -1647,42 +1685,50 @@ This design proposes a **build-time code splitting solution** for Jay Stack comp
    
 2. **Reuse Existing Utilities**: Leverage `SourceFileBindingResolver` and `SourceFileStatementDependencies` from `@jay-framework/compiler`
 
-3. **Dual Build Strategy**:
-   - **Local files** (pages): Use `?jay-client` query parameter for virtual modules
-   - **npm packages** (plugins): Use `/client` export path pattern
-   - Both approaches use the same AST transformation under the hood
+3. **Bidirectional Transformation** (CRITICAL):
+   - **Client builds** (`?jay-client`): Strip server methods → Prevents server code in browser
+   - **Server builds** (`?jay-server`): Strip client methods → Prevents browser APIs on Node.js
+   - Both transformations use the same AST utilities
 
-4. **AST Transformation**: Strip unwanted builder methods and remove unused imports
+4. **Dual Import Strategy**:
+   - **Local files** (pages): Use `?jay-client` / `?jay-server` query parameters
+   - **npm packages** (plugins): Use export paths (`"."` for server, `"/client"` for client)
 
-5. **Method Classification**:
+5. **AST Transformation**: Strip unwanted builder methods and remove unused imports
+
+6. **Method Classification**:
    - **Server-only**: `withServices`, `withLoadParams`, `withSlowlyRender`, `withFastRender`
    - **Client-only**: `withInteractive`, `withContexts`
    - **Shared**: `withProps`
 
-6. **Jay Stack Package Pattern**: Reusable components export two builds
-   - `"."` → `dist/index.js` (full build for server)
-   - `"./client"` → `dist/index.client.js` (client-only build)
-   - Built using same plugin with different entry points
+7. **Jay Stack Package Pattern**: Reusable components export optimized builds
+   - `"."` → `dist/index.js` (server build - client code stripped)
+   - `"./client"` → `dist/index.client.js` (client build - server code stripped)
+   - Built using same plugin with `?jay-server` and `?jay-client` entry points
 
 ### Benefits
 
+- ✅ **Prevents Runtime Crashes**: Server doesn't execute browser APIs (CRITICAL!)
 - ✅ **Security**: Server code physically cannot leak to client
-- ✅ **Performance**: Smaller client bundles  
+- ✅ **Performance**: Smaller bundles on BOTH client and server
 - ✅ **DX**: Developers write components in one place
 - ✅ **Type Safety**: Full TypeScript support maintained
 - ✅ **Reliability**: Reuses proven compiler infrastructure
 - ✅ **Maintainability**: Follows existing Jay patterns
 - ✅ **Simple API**: One plugin replaces `jayRuntime()` - no need to configure multiple plugins
 - ✅ **Correct ordering**: Code splitting automatically runs before jay:runtime compilation
+- ✅ **Bidirectional**: Strips server code from client AND client code from server
 
 ### Risks & Mitigations
 
 | Risk | Mitigation |
 |------|-----------|
+| Runtime crashes from browser APIs on server | Strip client code from server builds (`?jay-server`) ✅ |
 | Build time increase | Reuse existing AST analysis, cache when possible |
 | Complex edge cases | Start with method chaining only, expand later |
 | Plugin conflicts | Enforce plugin ordering, test integration |
 | Debug difficulty | Generate source maps, provide helpful errors |
+| Breaking existing packages | Provide migration guide and backwards compatibility |
 
 ---
 
@@ -1716,16 +1762,19 @@ plugins: [...jayStackCompiler(config)]
 
 ---
 
-## Jay Stack Package Dual Build Pattern
+## Jay Stack Package Triple Build Pattern
 
 ### Summary
 
-Jay Stack packages (reusable components like `mood-tracker-plugin`) need to export **two builds**:
+Jay Stack packages (reusable components like `mood-tracker-plugin`) need to export **three builds** (or two optimized builds):
 
-| Build | Entry | Output | Used By | Contains |
-|-------|-------|--------|---------|----------|
-| **Full** | `lib/index.ts` | `dist/index.js` | Server imports | Client + Server code |
-| **Client** | `lib/index.ts?jay-client` | `dist/index.client.js` | Client imports | Client code only |
+| Build | Entry | Output | Export Path | Used By | Contains |
+|-------|-------|--------|-------------|---------|----------|
+| **Server** | `lib/index.ts?jay-server` | `dist/index.js` | `"."` (default) | Server imports | Server code only ✅ |
+| **Client** | `lib/index.ts?jay-client` | `dist/index.client.js` | `"./client"` | Client imports | Client code only ✅ |
+| **Full** | `lib/index.ts` | `dist/index.full.js` | `"./full"` (optional) | Legacy/debug | All code ⚠️ |
+
+**Recommended:** Only build Server + Client (skip Full build)
 
 ### Vite Configuration
 
@@ -1738,8 +1787,8 @@ export default defineConfig({
     build: {
         lib: {
             entry: {
-                'index': resolve(__dirname, 'lib/index.ts'),
-                'index.client': resolve(__dirname, 'lib/index.ts?jay-client'),
+                'index': resolve(__dirname, 'lib/index.ts?jay-server'),      // Server build ✅
+                'index.client': resolve(__dirname, 'lib/index.ts?jay-client'), // Client build ✅
             },
             formats: ['es'],
         },
@@ -1762,17 +1811,22 @@ export default defineConfig({
 
 **Server (page.ts):**
 ```typescript
-import { component } from 'my-plugin';  // → dist/index.js
+import { component } from 'my-plugin';  
+// → dist/index.js (server build - no browser APIs) ✅
 ```
 
 **Client (generated):**
 ```typescript
-import { component } from 'my-plugin/client';  // → dist/index.client.js
+import { component } from 'my-plugin/client';  
+// → dist/index.client.js (client build - no server code) ✅
 ```
 
 ### Benefits
 
-- ✅ Consumers automatically get optimized client bundles
+- ✅ **Server doesn't crash** on browser APIs (critical!)
+- ✅ **Client bundles** are smaller (no server code)
+- ✅ **Server bundles** are smaller (no client code)
+- ✅ Consumers automatically get optimized builds
 - ✅ No configuration needed by consumers
 - ✅ Package authors use same plugin for both builds
 - ✅ Standard npm package patterns (export maps)
