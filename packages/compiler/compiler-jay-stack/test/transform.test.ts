@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { transformJayStackBuilder } from '../lib/transform-jay-stack-builder';
+import { transformJayStackBuilder } from '../lib';
 import {
     readFixtureSource,
     readFixtureExpectedClient,
