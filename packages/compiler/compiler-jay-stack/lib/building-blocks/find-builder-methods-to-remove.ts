@@ -16,7 +16,7 @@ const { isCallExpression, isPropertyAccessExpression, isIdentifier, isStringLite
  */
 export interface BuilderMethodsToRemove {
     /** Set of call expressions to remove */
-    callsToRemove: Set<FlattenedAccessChain>;
+    callsToRemove: Array<FlattenedAccessChain>;
     /** Variables used in removed methods */
     removedVariables: Set<ReturnType<SourceFileBindingResolver['explain']>>;
 }
@@ -31,7 +31,7 @@ export function findBuilderMethodsToRemove(
     bindingResolver: SourceFileBindingResolver,
     environment: BuildEnvironment,
 ): BuilderMethodsToRemove {
-    const callsToRemove = new Set<FlattenedAccessChain>();
+    const callsToRemove: Array<FlattenedAccessChain> = [];
     const removedVariables = new Set<ReturnType<SourceFileBindingResolver['explain']>>();
 
     const visit = (node: ts.Node) => {
@@ -43,7 +43,7 @@ export function findBuilderMethodsToRemove(
             if (shouldRemoveMethod(methodName, environment)) {
                 const variable = bindingResolver.explain(node.expression);
                 const flattened = flattenVariable(variable);
-                callsToRemove.add(flattened);
+                callsToRemove.push(flattened);
                 // Collect variables from arguments
                 collectVariablesFromArguments(node.arguments, bindingResolver, removedVariables);
             }

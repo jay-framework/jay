@@ -3,11 +3,12 @@ import tsBridge from '@jay-framework/typescript-bridge';
 import {
     SourceFileBindingResolver,
     mkTransformer,
-    SourceFileTransformerContext, flattenVariable,
+    SourceFileTransformerContext, flattenVariable, FlattenedAccessChain,
 } from '@jay-framework/compiler';
 import { findBuilderMethodsToRemove } from './building-blocks/find-builder-methods-to-remove';
 import { analyzeUnusedStatements } from './building-blocks/analyze-unused-statements';
 import { shouldRemoveMethod } from './building-blocks/check-method-should-remove';
+import {visitNode} from "typescript";
 
 const {
     createPrinter,
@@ -62,6 +63,16 @@ export function transformJayStackBuilder(
     };
 }
 
+function isCallToRemove(flattened: FlattenedAccessChain, callsToRemove: Array<FlattenedAccessChain>) {
+    const found = callsToRemove.find(_ => {
+        const samePath = flattened.path.length === _.path.length &&
+            flattened.path.map((key, index) => key === _.path[index])
+                .every(_ => _);
+        return samePath;
+    })
+    return !!found
+}
+
 function mkJayStackCodeSplitTransformer({
     factory,
     sourceFile,
@@ -78,32 +89,34 @@ function mkJayStackCodeSplitTransformer({
         environment,
     );
 
-    callsToRemove.forEach((call) => {console.log(call)})
-
     // Step 3: Transform the AST - remove identified method calls
     // Note: We can't use callsToRemove Set directly because visitEachChild creates new node objects
     // Instead, we check if each method call should be removed using the same validation logic
     const transformVisitor = (node: ts.Node): ts.Node => {
-        // First, visit children to handle nested calls
-        const visitedNode = visitEachChild(node, transformVisitor, context);
-        
+
         // Then check if THIS node is a builder method call that should be removed
-        if (isCallExpression(visitedNode) && isPropertyAccessExpression(visitedNode.expression)) {
+        if (isCallExpression(node) && isPropertyAccessExpression(node.expression)) {
             // if (callsToRemove.has(visitedNode))
             //     return visitedNode.expression.expression;
             //     console.log(visitedNode.expression.name.text)
-            const variable = bindingResolver.explain(visitedNode.expression);
+            const variable = bindingResolver.explain(node.expression);
             const flattened = flattenVariable(variable);
 
-
-            const methodName = visitedNode.expression.name.text;
-
-            if (shouldRemoveMethod(methodName, environment)) {
-                console.log(flattened)
-                // Return the receiver (left side of the dot), effectively removing this method call
-                return visitedNode.expression.expression;
+            if (isCallToRemove(flattened, callsToRemove)) {
+                const priorCall = node.expression.expression
+                return visitNode(priorCall, transformVisitor, context);
             }
+
+            // const methodName = node.expression.name.text;
+
+            // if (shouldRemoveMethod(methodName, environment)) {
+            //     // Return the receiver (left side of the dot), effectively removing this method call
+            //     return node.expression.expression;
+            // }
         }
+
+        // First, visit children to handle nested calls
+        const visitedNode = visitEachChild(node, transformVisitor, context);
 
         return visitedNode;
     };
