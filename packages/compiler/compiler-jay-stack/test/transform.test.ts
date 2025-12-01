@@ -95,4 +95,26 @@ describe('Jay Stack Builder Code Splitting', () => {
             expect(actual).toEqual(expected);
         });
     });
+
+    describe('Complex Page', () => {
+        it('should strip server methods for client build', async () => {
+            const source = await readFixtureSource('complex-page');
+            const expected = await readFixtureExpectedClient('complex-page');
+
+            const result = transformJayStackBuilder(source, 'test.ts', 'client');
+            const actual = await prettify(result.code);
+
+            expect(actual).toEqual(expected);
+        });
+
+        it('should strip client methods for server build', async () => {
+            const source = await readFixtureSource('complex-page');
+            const expected = await readFixtureExpectedServer('complex-page');
+
+            const result = transformJayStackBuilder(source, 'test.ts', 'server');
+            const actual = await prettify(result.code);
+
+            expect(actual).toEqual(expected);
+        });
+    })
 });
