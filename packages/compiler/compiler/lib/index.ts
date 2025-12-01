@@ -10,6 +10,7 @@ export { compileFunctionSplitPatternsBlock } from './components-files/basic-anal
 export { createTsSourceFileFromSource } from './components-files/building-blocks/create-ts-source-file-from-source';
 export { FunctionRepositoryBuilder } from './components-files/building-blocks/function-repository-builder';
 export { SourceFileBindingResolver } from './components-files/basic-analyzers/source-file-binding-resolver';
+export * from './components-files/basic-analyzers/name-binding-resolver';
 export { SourceFileStatementDependencies } from './components-files/basic-analyzers/source-file-statement-dependencies';
 export { mkTransformer } from './components-files/ts-utils/mk-transformer';
 export type { SourceFileTransformerContext } from './components-files/ts-utils/mk-transformer';

@@ -3,10 +3,11 @@ import tsBridge from '@jay-framework/typescript-bridge';
 import {
     SourceFileBindingResolver,
     mkTransformer,
-    SourceFileTransformerContext,
+    SourceFileTransformerContext, flattenVariable,
 } from '@jay-framework/compiler';
 import { findBuilderMethodsToRemove } from './building-blocks/find-builder-methods-to-remove';
 import { analyzeUnusedStatements } from './building-blocks/analyze-unused-statements';
+import { shouldRemoveMethod } from './building-blocks/check-method-should-remove';
 
 const {
     createPrinter,
@@ -77,25 +78,28 @@ function mkJayStackCodeSplitTransformer({
         environment,
     );
 
-    // Step 3: Transform the AST - check during traversal if methods should be removed
+    callsToRemove.forEach((call) => {console.log(call)})
+
+    // Step 3: Transform the AST - remove identified method calls
+    // Note: We can't use callsToRemove Set directly because visitEachChild creates new node objects
+    // Instead, we check if each method call should be removed using the same validation logic
     const transformVisitor = (node: ts.Node): ts.Node => {
         // First, visit children to handle nested calls
         const visitedNode = visitEachChild(node, transformVisitor, context);
         
         // Then check if THIS node is a builder method call that should be removed
-        // We check by method name since the node objects change during transformation
         if (isCallExpression(visitedNode) && isPropertyAccessExpression(visitedNode.expression)) {
-            const methodName = visitedNode.expression.name.text;
-            
-            // Define which methods belong to which environment
-            const SERVER_METHODS = new Set(['withServices', 'withLoadParams', 'withSlowlyRender', 'withFastRender']);
-            const CLIENT_METHODS = new Set(['withInteractive', 'withContexts']);
-            
-            const shouldRemove =
-                (environment === 'client' && SERVER_METHODS.has(methodName)) ||
-                (environment === 'server' && CLIENT_METHODS.has(methodName));
+            // if (callsToRemove.has(visitedNode))
+            //     return visitedNode.expression.expression;
+            //     console.log(visitedNode.expression.name.text)
+            const variable = bindingResolver.explain(visitedNode.expression);
+            const flattened = flattenVariable(variable);
 
-            if (shouldRemove) {
+
+            const methodName = visitedNode.expression.name.text;
+
+            if (shouldRemoveMethod(methodName, environment)) {
+                console.log(flattened)
                 // Return the receiver (left side of the dot), effectively removing this method call
                 return visitedNode.expression.expression;
             }
