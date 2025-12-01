@@ -1,28 +1,22 @@
 import type * as ts from 'typescript';
 import tsBridge from '@jay-framework/typescript-bridge';
-import { SourceFileBindingResolver } from '@jay-framework/compiler';
+import {
+    flattenVariable,
+    SourceFileBindingResolver,
+    FlattenedAccessChain,
+    VariableRootType, isImportModuleVariableRoot, Variable
+} from '@jay-framework/compiler';
 import type { BuildEnvironment } from '../transform-jay-stack-builder';
+import { shouldRemoveMethod } from './check-method-should-remove';
 
 const { isCallExpression, isPropertyAccessExpression, isIdentifier, isStringLiteral } = tsBridge;
-
-const SERVER_METHODS = new Set([
-    'withServices',
-    'withLoadParams',
-    'withSlowlyRender',
-    'withFastRender',
-]);
-
-const CLIENT_METHODS = new Set([
-    'withInteractive',
-    'withContexts',
-]);
 
 /**
  * Analysis result for methods to remove
  */
 export interface BuilderMethodsToRemove {
     /** Set of call expressions to remove */
-    callsToRemove: Set<ts.CallExpression>;
+    callsToRemove: Set<FlattenedAccessChain>;
     /** Variables used in removed methods */
     removedVariables: Set<ReturnType<SourceFileBindingResolver['explain']>>;
 }
@@ -37,28 +31,21 @@ export function findBuilderMethodsToRemove(
     bindingResolver: SourceFileBindingResolver,
     environment: BuildEnvironment,
 ): BuilderMethodsToRemove {
-    const callsToRemove = new Set<ts.CallExpression>();
+    const callsToRemove = new Set<FlattenedAccessChain>();
     const removedVariables = new Set<ReturnType<SourceFileBindingResolver['explain']>>();
 
     const visit = (node: ts.Node) => {
-        // Check if this is a builder method call that should be removed
-        if (isCallExpression(node) && isPropertyAccessExpression(node.expression)) {
+        if (isCallExpression(node) &&
+            isPropertyAccessExpression(node.expression) &&
+            isPartOfJayStackChain(node, bindingResolver)) {
             const methodName = node.expression.name.text;
-            
-            // Check if this method should be removed for this environment
-            const shouldRemove =
-                (environment === 'client' && SERVER_METHODS.has(methodName)) ||
-                (environment === 'server' && CLIENT_METHODS.has(methodName));
 
-            if (shouldRemove) {
-                // Verify this is part of a makeJayStackComponent chain
-                // TODO: Re-enable validation once basic transformation works
-                // if (isPartOfJayStackChain(node, bindingResolver)) {
-                    callsToRemove.add(node);
-                    
-                    // Collect variables from arguments
-                    collectVariablesFromArguments(node.arguments, bindingResolver, removedVariables);
-                // }
+            if (shouldRemoveMethod(methodName, environment)) {
+                const variable = bindingResolver.explain(node.expression);
+                const flattened = flattenVariable(variable);
+                callsToRemove.add(flattened);
+                // Collect variables from arguments
+                collectVariablesFromArguments(node.arguments, bindingResolver, removedVariables);
             }
         }
 
@@ -88,20 +75,13 @@ function isPartOfJayStackChain(
             // Check if this is the makeJayStackComponent() call
             if (isIdentifier(current.expression)) {
                 const variable = bindingResolver.explain(current.expression);
-                
-                // Check if it's imported from the correct module
-                if (variable?.root && 'module' in variable.root) {
-                    const importRoot = variable.root as any;
-                    const moduleSpecifier = importRoot.module;
-                    
-                    if (
-                        isStringLiteral(moduleSpecifier) &&
-                        moduleSpecifier.text === '@jay-framework/fullstack-component' &&
-                        variable.name === 'makeJayStackComponent'
-                    ) {
-                        return true;
-                    }
-                }
+                const flattened: FlattenedAccessChain = flattenVariable(variable);
+                if (flattened.path.length === 1 &&
+                    flattened.path[0] === 'makeJayStackComponent' &&
+                    isImportModuleVariableRoot(flattened.root) &&
+                    isStringLiteral(flattened.root.module) &&
+                    flattened.root.module.text === '@jay-framework/fullstack-component')
+                    return true;
             }
             
             // Continue down the chain if this call has a property access
@@ -109,16 +89,15 @@ function isPartOfJayStackChain(
                 current = current.expression.expression;
                 continue; // Keep searching down the chain
             } else {
-                // This call doesn't have a property access, break
+                // This call doesn't have a property access, reached the end
                 break;
             }
         } else {
-            // Not a property access or call expression, we've reached the end
+            // Not a property access or call expression
             break;
         }
     }
 
-    // Didn't find makeJayStackComponent
     return false;
 }
 
