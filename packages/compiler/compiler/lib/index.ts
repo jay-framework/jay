@@ -14,4 +14,5 @@ export * from './components-files/basic-analyzers/name-binding-resolver';
 export { SourceFileStatementDependencies } from './components-files/basic-analyzers/source-file-statement-dependencies';
 export { mkTransformer } from './components-files/ts-utils/mk-transformer';
 export type { SourceFileTransformerContext } from './components-files/ts-utils/mk-transformer';
+export { areFlattenedAccessChainsEqual } from './components-files/basic-analyzers/flattened-access-chain-utils';
 export * from './jay-html';

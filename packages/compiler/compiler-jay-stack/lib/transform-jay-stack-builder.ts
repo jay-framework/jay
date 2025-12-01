@@ -3,7 +3,10 @@ import tsBridge from '@jay-framework/typescript-bridge';
 import {
     SourceFileBindingResolver,
     mkTransformer,
-    SourceFileTransformerContext, flattenVariable, FlattenedAccessChain,
+    SourceFileTransformerContext,
+    flattenVariable,
+    FlattenedAccessChain,
+    areFlattenedAccessChainsEqual,
 } from '@jay-framework/compiler';
 import { findBuilderMethodsToRemove } from './building-blocks/find-builder-methods-to-remove';
 import { analyzeUnusedStatements } from './building-blocks/analyze-unused-statements';
@@ -19,6 +22,7 @@ const {
     isPropertyAccessExpression,
     isImportDeclaration,
     isNamedImports,
+    isIdentifier,
 } = tsBridge;
 
 export type BuildEnvironment = 'client' | 'server';
@@ -63,14 +67,8 @@ export function transformJayStackBuilder(
     };
 }
 
-function isCallToRemove(flattened: FlattenedAccessChain, callsToRemove: Array<FlattenedAccessChain>) {
-    const found = callsToRemove.find(_ => {
-        const samePath = flattened.path.length === _.path.length &&
-            flattened.path.map((key, index) => key === _.path[index])
-                .every(_ => _);
-        return samePath;
-    })
-    return !!found
+function isCallToRemove(flattened: FlattenedAccessChain, callsToRemove: Array<FlattenedAccessChain>): boolean {
+    return callsToRemove.some(call => areFlattenedAccessChainsEqual(flattened, call));
 }
 
 function mkJayStackCodeSplitTransformer({
@@ -90,35 +88,23 @@ function mkJayStackCodeSplitTransformer({
     );
 
     // Step 3: Transform the AST - remove identified method calls
-    // Note: We can't use callsToRemove Set directly because visitEachChild creates new node objects
-    // Instead, we check if each method call should be removed using the same validation logic
+    // We compare flattened access chains to identify calls that should be removed
     const transformVisitor = (node: ts.Node): ts.Node => {
-
-        // Then check if THIS node is a builder method call that should be removed
+        // Check if THIS node (BEFORE transformation) is a call that should be removed
+        // We must check before visitEachChild because binding resolver only works on original nodes
         if (isCallExpression(node) && isPropertyAccessExpression(node.expression)) {
-            // if (callsToRemove.has(visitedNode))
-            //     return visitedNode.expression.expression;
-            //     console.log(visitedNode.expression.name.text)
             const variable = bindingResolver.explain(node.expression);
             const flattened = flattenVariable(variable);
 
             if (isCallToRemove(flattened, callsToRemove)) {
-                const priorCall = node.expression.expression
-                return visitNode(priorCall, transformVisitor, context);
+                // Return the TRANSFORMED receiver (left side of the dot) to handle nested removals
+                const receiver = node.expression.expression;
+                return transformVisitor(receiver);
             }
-
-            // const methodName = node.expression.name.text;
-
-            // if (shouldRemoveMethod(methodName, environment)) {
-            //     // Return the receiver (left side of the dot), effectively removing this method call
-            //     return node.expression.expression;
-            // }
         }
 
-        // First, visit children to handle nested calls
-        const visitedNode = visitEachChild(node, transformVisitor, context);
-
-        return visitedNode;
+        // For all other nodes, visit children normally
+        return visitEachChild(node, transformVisitor, context);
     };
 
     let transformedSourceFile = visitEachChild(sourceFile, transformVisitor, context) as ts.SourceFile;
