@@ -1,3 +1,4 @@
+//@ts-ignore
 import { DATABASE } from './database';
 import { makeJayStackComponent, partialRender } from '@jay-framework/fullstack-component';
 

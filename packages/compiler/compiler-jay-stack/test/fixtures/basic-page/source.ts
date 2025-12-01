@@ -1,6 +1,10 @@
+//@ts-ignore
 import { DATABASE } from './database';
+//@ts-ignore
 import { loadParams } from './loaders';
+//@ts-ignore
 import { renderSlowly, renderFast } from './renderers';
+//@ts-ignore
 import { InteractiveComponent } from './interactive';
 import { makeJayStackComponent } from '@jay-framework/fullstack-component';
 
