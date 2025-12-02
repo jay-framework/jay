@@ -2079,3 +2079,27 @@ if (isImportDeclaration(variable.definingStatement)) {
 This ensures imports are only processed through the proper filtering mechanism that removes individual unused imports while preserving used ones.
 
 **Test Results**: ✅ All 8 tests passing with proper separation of concerns in building blocks.
+
+### Implementation Changes from Design
+
+**Key Deviations**:
+
+1. **Package Location**: Moved from `packages/jay-stack/jay-stack-compiler/` to `packages/compiler/compiler-jay-stack/` to align with other compiler packages.
+
+2. **Unused Code Removal Approach**: Initial design proposed using `SourceFileStatementDependencies` to track and remove unused statements. Implementation uses a simpler iterative approach:
+   - Transform AST to remove builder methods
+   - Create fresh `SourceFileBindingResolver` on transformed file
+   - Iteratively collect used identifiers and remove unused statements
+   - This proved more reliable than tracking dependencies across original and transformed ASTs
+
+3. **Dependency Detection Algorithm**: The unused code removal algorithm is based on **identifier name matching** rather than using `Variable` objects from `BindingResolver`. This is less resilient and may incorrectly remove/keep code in edge cases with shadowed variables or complex scoping. Needs more real-world testing and may require refinement to use proper variable tracking.
+
+4. **Builder Method Detection**: Used `FlattenedAccessChain` comparison to reliably identify builder method calls across AST transformations. Added `areFlattenedAccessChainsEqual` utility to `@jay-framework/compiler` for robust comparison including `root` property.
+
+5. **Test Fixture Approach**: Followed `compiler-jay-html` pattern with fixture files and `prettify()` for exact comparison, rather than the `.not.toContain()` approach initially sketched in the design.
+
+**What Worked Well**:
+- Building block pattern (separate analysis and transformation functions)
+- Composite plugin pattern (`jayStackCompiler` returning array of plugins)
+- Dual build support for packages using query parameters (`?jay-client`, `?jay-server`)
+- Recursive removal of unused helper functions, types, and interfaces
