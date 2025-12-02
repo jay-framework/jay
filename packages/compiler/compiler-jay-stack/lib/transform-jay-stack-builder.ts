@@ -23,6 +23,10 @@ const {
     isImportDeclaration,
     isNamedImports,
     isIdentifier,
+    isFunctionDeclaration,
+    isVariableStatement,
+    isInterfaceDeclaration,
+    isTypeAliasDeclaration,
 } = tsBridge;
 
 export type BuildEnvironment = 'client' | 'server';
@@ -109,10 +113,13 @@ function mkJayStackCodeSplitTransformer({
 
     let transformedSourceFile = visitEachChild(sourceFile, transformVisitor, context) as ts.SourceFile;
 
-    // Step 4: Analyze which statements are now unused
+    // Step 4: Analyze the transformed file and recursively remove unused statements
+    // Create a fresh binding resolver on the transformed file
+    const transformedBindingResolver = new SourceFileBindingResolver(transformedSourceFile);
+    
     const { statementsToRemove, unusedImports } = analyzeUnusedStatements(
         transformedSourceFile,
-        removedVariables,
+        transformedBindingResolver,
     );
 
     // Step 5: Remove unused statements and filter imports

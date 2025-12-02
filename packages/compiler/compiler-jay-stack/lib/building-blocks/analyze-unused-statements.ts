@@ -2,7 +2,17 @@ import type * as ts from 'typescript';
 import tsBridge from '@jay-framework/typescript-bridge';
 import { SourceFileBindingResolver } from '@jay-framework/compiler';
 
-const { isIdentifier, isImportDeclaration, SyntaxKind } = tsBridge;
+const {
+    isIdentifier,
+    isImportDeclaration,
+    isFunctionDeclaration,
+    isVariableStatement,
+    isInterfaceDeclaration,
+    isTypeAliasDeclaration,
+    isClassDeclaration,
+    isEnumDeclaration,
+    SyntaxKind,
+} = tsBridge;
 
 /**
  * Analysis result for unused statements
@@ -15,43 +25,72 @@ export interface UnusedStatementsAnalysis {
 }
 
 /**
- * Analyze which statements and imports are no longer needed after removing variables
+ * Analyze which statements and imports are no longer needed in the transformed file
+ * Recursively removes statements that are only used by other removed statements
+ * 
+ * @param sourceFile - The transformed source file to analyze
+ * @param bindingResolver - Binding resolver for the source file
  */
 export function analyzeUnusedStatements(
     sourceFile: ts.SourceFile,
-    removedVariables: Set<ReturnType<SourceFileBindingResolver['explain']>>,
+    bindingResolver: SourceFileBindingResolver,
 ): UnusedStatementsAnalysis {
     const statementsToRemove = new Set<ts.Statement>();
 
-    // Find statements that define the removed variables
-    for (const variable of removedVariables) {
-        if (variable?.definingStatement) {
-            // Never remove import declarations here - they're handled separately
-            // via the unusedImports mechanism
-            if (isImportDeclaration(variable.definingStatement)) {
+    // Collect all identifiers that are used in non-import, non-removed statements
+    const collectUsedIdentifiers = (): Set<string> => {
+        const used = new Set<string>();
+        
+        for (const statement of sourceFile.statements) {
+            // Skip imports (handled separately) and statements marked for removal
+            if (isImportDeclaration(statement) || statementsToRemove.has(statement)) {
                 continue;
             }
-            
-            // Only remove if it's not an export
-            if (!isExportStatement(variable.definingStatement)) {
-                statementsToRemove.add(variable.definingStatement);
+
+            // Skip the identifier that's being DEFINED by this statement
+            const definedName = getStatementDefinedName(statement);
+
+            // Collect all identifiers in this statement
+            const visitor = (node: ts.Node, parent?: ts.Node) => {
+                if (isIdentifier(node)) {
+                    // Skip the function/variable/interface name itself (the definition)
+                    if (node.text !== definedName) {
+                        used.add(node.text);
+                    }
+                }
+                node.forEachChild(child => visitor(child, node));
+            };
+            statement.forEachChild(child => visitor(child, statement));
+        }
+        
+        return used;
+    };
+
+    // Iteratively remove statements that define identifiers not in use
+    let changed = true;
+    while (changed) {
+        changed = false;
+        const stillUsedIdentifiers = collectUsedIdentifiers();
+
+        for (const statement of sourceFile.statements) {
+            // Skip already removed, imports, and exports
+            if (statementsToRemove.has(statement) ||
+                isImportDeclaration(statement) ||
+                isExportStatement(statement)) {
+                continue;
+            }
+
+            // Check if this statement defines an identifier that's not used
+            const definedName = getStatementDefinedName(statement);
+            if (definedName && !stillUsedIdentifiers.has(definedName)) {
+                statementsToRemove.add(statement);
+                changed = true;
             }
         }
-    }
-
-    // Collect all identifiers still used in non-removed, non-import statements
-    const stillUsedIdentifiers = new Set<string>();
-
-    for (const statement of sourceFile.statements) {
-        // Skip import declarations and statements we're removing
-        if (isImportDeclaration(statement) || statementsToRemove.has(statement)) {
-            continue;
-        }
-
-        collectUsedIdentifiers(statement, stillUsedIdentifiers);
     }
 
     // Find import identifiers that are no longer used
+    const finalUsedIdentifiers = collectUsedIdentifiers();
     const unusedImports = new Set<string>();
     
     for (const statement of sourceFile.statements) {
@@ -62,7 +101,7 @@ export function analyzeUnusedStatements(
                     const importName = element.name.text;
                     
                     // Only mark as unused if it's really not used anywhere
-                    if (!stillUsedIdentifiers.has(importName)) {
+                    if (!finalUsedIdentifiers.has(importName)) {
                         unusedImports.add(importName);
                     }
                 }
@@ -74,16 +113,6 @@ export function analyzeUnusedStatements(
 }
 
 /**
- * Collect all identifiers used in a node
- */
-function collectUsedIdentifiers(node: ts.Node, identifiers: Set<string>) {
-    if (isIdentifier(node)) {
-        identifiers.add(node.text);
-    }
-    node.forEachChild(child => collectUsedIdentifiers(child, identifiers));
-}
-
-/**
  * Check if a statement is exported
  */
 function isExportStatement(statement: ts.Statement): boolean {
@@ -92,5 +121,34 @@ function isExportStatement(statement: ts.Statement): boolean {
         return modifiers.some((mod: ts.Modifier) => mod.kind === SyntaxKind.ExportKeyword);
     }
     return false;
+}
+
+/**
+ * Get the identifier name defined by a statement (function, variable, interface, type, etc.)
+ */
+function getStatementDefinedName(statement: ts.Statement): string | undefined {
+    if (isFunctionDeclaration(statement) && statement.name) {
+        return statement.name.text;
+    }
+    if (isVariableStatement(statement)) {
+        // Get the first variable declaration's name
+        const firstDecl = statement.declarationList.declarations[0];
+        if (firstDecl && isIdentifier(firstDecl.name)) {
+            return firstDecl.name.text;
+        }
+    }
+    if (isInterfaceDeclaration(statement) && statement.name) {
+        return statement.name.text;
+    }
+    if (isTypeAliasDeclaration(statement) && statement.name) {
+        return statement.name.text;
+    }
+    if (isClassDeclaration(statement) && statement.name) {
+        return statement.name.text;
+    }
+    if (isEnumDeclaration(statement) && statement.name) {
+        return statement.name.text;
+    }
+    return undefined;
 }
 
