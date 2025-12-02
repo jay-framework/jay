@@ -11,4 +11,3 @@ export const page = makeJayStackComponent()
     .withLoadParams(loadParams)
     .withSlowlyRender(renderSlowly)
     .withFastRender(renderFast);
-

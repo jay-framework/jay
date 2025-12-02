@@ -23,4 +23,3 @@ export const otherPage = makeJayStackComponent()
     .withProps()
     .withServices(DATABASE)
     .withSlowlyRender(renderSlowly);
-

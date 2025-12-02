@@ -5,5 +5,3 @@ export const page = makeJayStackComponent()
     .withProps()
     .withContexts(ThemeContext, UserContext)
     .withInteractive(Component);
-
-

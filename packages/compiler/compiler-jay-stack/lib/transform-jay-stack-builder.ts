@@ -11,7 +11,7 @@ import {
 import { findBuilderMethodsToRemove } from './building-blocks/find-builder-methods-to-remove';
 import { analyzeUnusedStatements } from './building-blocks/analyze-unused-statements';
 import { shouldRemoveMethod } from './building-blocks/check-method-should-remove';
-import {visitNode} from "typescript";
+import { visitNode } from 'typescript';
 
 const {
     createPrinter,
@@ -37,7 +37,7 @@ type JayStackTransformerConfig = SourceFileTransformerContext & {
 
 /**
  * Transform Jay Stack component builder chains to strip environment-specific code
- * 
+ *
  * @param code - Source code to transform
  * @param filePath - File path (for source file creation)
  * @param environment - Target environment ('client' or 'server')
@@ -49,12 +49,7 @@ export function transformJayStackBuilder(
     environment: BuildEnvironment,
 ): { code: string; map?: any } {
     // Parse to AST
-    const sourceFile = createSourceFile(
-        filePath,
-        code,
-        ScriptTarget.Latest,
-        true,
-    );
+    const sourceFile = createSourceFile(filePath, code, ScriptTarget.Latest, true);
 
     // Transform using mkTransformer pattern
     const transformers = [mkTransformer(mkJayStackCodeSplitTransformer, { environment })];
@@ -71,8 +66,11 @@ export function transformJayStackBuilder(
     };
 }
 
-function isCallToRemove(flattened: FlattenedAccessChain, callsToRemove: Array<FlattenedAccessChain>): boolean {
-    return callsToRemove.some(call => areFlattenedAccessChainsEqual(flattened, call));
+function isCallToRemove(
+    flattened: FlattenedAccessChain,
+    callsToRemove: Array<FlattenedAccessChain>,
+): boolean {
+    return callsToRemove.some((call) => areFlattenedAccessChainsEqual(flattened, call));
 }
 
 function mkJayStackCodeSplitTransformer({
@@ -111,12 +109,16 @@ function mkJayStackCodeSplitTransformer({
         return visitEachChild(node, transformVisitor, context);
     };
 
-    let transformedSourceFile = visitEachChild(sourceFile, transformVisitor, context) as ts.SourceFile;
+    let transformedSourceFile = visitEachChild(
+        sourceFile,
+        transformVisitor,
+        context,
+    ) as ts.SourceFile;
 
     // Step 4: Analyze the transformed file and recursively remove unused statements
     // Create a fresh binding resolver on the transformed file
     const transformedBindingResolver = new SourceFileBindingResolver(transformedSourceFile);
-    
+
     const { statementsToRemove, unusedImports } = analyzeUnusedStatements(
         transformedSourceFile,
         transformedBindingResolver,
@@ -151,7 +153,7 @@ function filterImportDeclaration(
     factory: ts.NodeFactory,
 ): ts.ImportDeclaration | undefined {
     const importClause = statement.importClause;
-    
+
     if (!importClause?.namedBindings || !isNamedImports(importClause.namedBindings)) {
         // Keep default imports or namespace imports
         return statement;
@@ -159,7 +161,7 @@ function filterImportDeclaration(
 
     // Filter named imports to exclude unused ones
     const usedElements = importClause.namedBindings.elements.filter(
-        element => !unusedImports.has(element.name.text)
+        (element) => !unusedImports.has(element.name.text),
     );
 
     if (usedElements.length === 0) {
@@ -175,10 +177,7 @@ function filterImportDeclaration(
             importClause,
             importClause.isTypeOnly,
             importClause.name,
-            factory.updateNamedImports(
-                importClause.namedBindings,
-                usedElements,
-            ),
+            factory.updateNamedImports(importClause.namedBindings, usedElements),
         ),
         statement.moduleSpecifier,
         statement.assertClause,
