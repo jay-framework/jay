@@ -14,7 +14,9 @@ export function fixtureDir(folder: string): string {
 }
 
 export async function readFixtureFileRaw(folder: string, filename: string): Promise<string> {
-    return (await readFile(fixtureFilePath(folder, filename))).toString();
+    const content = (await readFile(fixtureFilePath(folder, filename))).toString();
+    // Strip //@ts-ignore comments from fixture files
+    return content.replace(/\/\/@ts-ignore\s*\n/g, '');
 }
 
 export async function readFixtureSource(folder: string): Promise<string> {
