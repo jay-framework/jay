@@ -1,0 +1,266 @@
+# Design Log #53: Jay Stack Environment Query Parameter Handling
+
+## Problem Statement
+
+The `@jay-framework/compiler-jay-stack` plugin adds `?jay-client` and `?jay-server` query parameters to local imports to propagate the transformation environment through the import chain. However, this breaks the `jay-plugin` (jay:runtime) because:
+
+1. **Contract file detection fails**: Files like `mood-tracker.jay-contract?jay-client` are not recognized as contract files because `hasExtension(source, JAY_CONTRACT_EXTENSION)` looks for `.jay-contract` at the end.
+
+2. **Jay-html file detection fails**: Same issue with `.jay-html` files.
+
+3. **Potential collision with sandbox parameters**: The `jay-plugin` already uses similar query parameters (`?jay-main-sandbox`, `?jay-worker-trusted`, `?jay-worker-sandbox`) for security transformations. These could collide or interfere with the new `?jay-client`/`?jay-server` parameters.
+
+### Example of the Problem
+
+```typescript
+// In mood-tracker-plugin/lib/index.ts
+import { MoodTrackerContract } from './mood-tracker.jay-contract';
+
+// After jay-stack-compiler transformation:
+import { MoodTrackerContract } from './mood-tracker.jay-contract?jay-client';
+
+// jay-plugin sees: 'mood-tracker.jay-contract?jay-client'
+// jay-plugin checks: hasExtension(source, '.jay-contract') → FALSE ❌
+// Contract file is NOT processed!
+```
+
+## Options Analysis
+
+### Option 1: Post-Processing Plugin to Strip Query Parameters
+
+Add a third plugin that runs after `jay-stack:code-split` but before `jay:runtime` to strip the `?jay-client`/`?jay-server` suffixes.
+
+**Implementation:**
+
+```typescript
+export function jayStackCompiler(jayOptions: JayRollupConfig = {}): Plugin[] {
+    return [
+        {
+            name: 'jay-stack:code-split',
+            enforce: 'pre',
+            transform(code, id) { /* ... add ?jay-client/server to imports */ }
+        },
+        {
+            name: 'jay-stack:strip-query-params',
+            enforce: 'pre',
+            transform(code, id) {
+                // Strip ?jay-client and ?jay-server from import paths
+                // before jay:runtime sees them
+                return code
+                    .replace(/\?jay-client/g, '')
+                    .replace(/\?jay-server/g, '');
+            }
+        },
+        jayRuntime(jayOptions),
+    ];
+}
+```
+
+**Pros:**
+- ✅ Simple to implement
+- ✅ Minimal changes to existing code
+- ✅ Quick fix for the immediate problem
+
+**Cons:**
+- ❌ Feels like a workaround, not a proper solution
+- ❌ Plugin chain becomes more complex (3 plugins instead of 2)
+- ❌ Fragile - relies on plugin ordering
+- ❌ Doesn't solve the underlying architectural issue
+- ❌ Code does a lot of work adding query params just to remove them immediately
+- ❌ The `resolveId` hook still sees the query params - only `transform` is fixed
+
+### Option 2: Universal Utility for Environment Metadata on Imports
+
+Create a shared utility in `@jay-framework/compiler-shared` that:
+1. Provides a consistent API for adding/removing/detecting environment query parameters
+2. Works for both `?jay-client`/`?jay-server` AND `?jay-main-sandbox`/`?jay-worker-*`
+3. Is used by both `jay-stack-compiler` and `jay-plugin`
+
+**Implementation:**
+
+```typescript
+// In @jay-framework/compiler-shared
+
+export enum JayEnvironment {
+    Client = 'client',
+    Server = 'server',
+    MainSandbox = 'main-sandbox',
+    WorkerTrusted = 'worker-trusted',
+    WorkerSandbox = 'worker-sandbox',
+}
+
+export const JAY_QUERY_PREFIX = '?jay-';
+
+/**
+ * Parse a module specifier to extract the base path and any jay environment
+ */
+export function parseJayModuleSpecifier(specifier: string): {
+    basePath: string;
+    environment?: JayEnvironment;
+    queryParams: string;
+} {
+    const queryIndex = specifier.indexOf('?');
+    if (queryIndex === -1) {
+        return { basePath: specifier, queryParams: '' };
+    }
+    
+    const basePath = specifier.substring(0, queryIndex);
+    const queryString = specifier.substring(queryIndex);
+    
+    // Extract jay environment from query
+    for (const env of Object.values(JayEnvironment)) {
+        const jayQuery = `${JAY_QUERY_PREFIX}${env}`;
+        if (queryString.includes(jayQuery)) {
+            // Remove jay query from remaining params
+            const remainingParams = queryString
+                .replace(jayQuery, '')
+                .replace(/^\?&/, '?')
+                .replace(/&$/, '')
+                .replace(/^&/, '');
+            return { 
+                basePath, 
+                environment: env, 
+                queryParams: remainingParams || '' 
+            };
+        }
+    }
+    
+    return { basePath, queryParams: queryString };
+}
+
+/**
+ * Add jay environment to a module specifier
+ */
+export function addJayEnvironment(specifier: string, environment: JayEnvironment): string {
+    const { basePath, queryParams } = parseJayModuleSpecifier(specifier);
+    const jayQuery = `${JAY_QUERY_PREFIX}${environment}`;
+    
+    if (queryParams) {
+        return `${basePath}${jayQuery}&${queryParams.substring(1)}`;
+    }
+    return `${basePath}${jayQuery}`;
+}
+
+/**
+ * Check if a module specifier has a jay extension (ignoring query params)
+ */
+export function hasJayExtension(specifier: string, extension: string): boolean {
+    const { basePath } = parseJayModuleSpecifier(specifier);
+    return basePath.endsWith(extension);
+}
+```
+
+**Updated jay-plugin usage:**
+
+```typescript
+// In rollup-plugin/lib/runtime/runtime-compiler.ts
+async resolveId(source, importer, options) {
+    // Use the new utility to check extensions
+    if (hasJayExtension(source, JAY_EXTENSION)) {
+        return await resolveJayHtml(this, source, importer, options, ...);
+    }
+    if (hasJayExtension(source, JAY_CONTRACT_EXTENSION)) {
+        return await resolveJayContract(this, source, importer, options);
+    }
+    // ... etc
+}
+```
+
+**Pros:**
+- ✅ Clean architecture - single source of truth
+- ✅ Both plugins use the same logic
+- ✅ Extensible for future environments
+- ✅ Properly handles all edge cases
+- ✅ Makes extension detection work correctly with any query params
+- ✅ Can combine multiple environments if needed (e.g., `?jay-client&jay-worker-trusted`)
+
+**Cons:**
+- ❌ More upfront work
+- ❌ Requires changes to both plugins
+- ❌ Need to update all places that check for extensions
+
+### Option 3: Hybrid - Exclude Certain Files from Query Param Addition
+
+Instead of adding query params to ALL local imports, be selective:
+
+```typescript
+function shouldAddQueryParam(modulePath: string): boolean {
+    // Don't add query params to contract files - they're just types
+    if (modulePath.endsWith('.jay-contract')) return false;
+    // Don't add to jay-html files - they're templates
+    if (modulePath.endsWith('.jay-html') || modulePath.endsWith('.jay')) return false;
+    // Add to everything else
+    return true;
+}
+```
+
+**Pros:**
+- ✅ Quick to implement
+- ✅ Minimal changes
+- ✅ Contract files work correctly
+
+**Cons:**
+- ❌ Inconsistent - some imports get query params, some don't
+- ❌ If a contract file imports another local file, that file won't get the query param
+- ❌ Doesn't solve the collision issue with sandbox params
+- ❌ Requires maintaining a list of exceptions
+
+## Recommendation
+
+**Option 2: Universal Utility** is the recommended approach.
+
+### Rationale
+
+1. **Architectural Consistency**: Both the security sandbox transformations and the client/server code splitting are fundamentally the same pattern - adding environment metadata to imports. They should use the same infrastructure.
+
+2. **Future-Proof**: As Jay evolves, there may be more environment dimensions (e.g., SSR vs CSR, development vs production). A universal utility makes it easy to add these.
+
+3. **Correctness**: The current `hasExtension()` function is brittle - it doesn't handle query parameters at all. This bug exists independently of our changes and should be fixed.
+
+4. **Composability**: With a proper utility, you could have a file that's both `?jay-client` and `?jay-worker-trusted` - the environments are orthogonal.
+
+5. **Maintainability**: One place to understand and modify, rather than scattered string manipulation.
+
+### Implementation Plan
+
+**Phase 1: Create Shared Utility**
+- Add `parseJayModuleSpecifier()`, `addJayEnvironment()`, `hasJayExtension()` to `compiler-shared`
+- Add unit tests for the utility
+
+**Phase 2: Update jay-plugin**
+- Replace direct `hasExtension()` calls with `hasJayExtension()` for jay-specific extensions
+- Update `resolveId` to use the new parsing
+- Ensure existing sandbox query params still work
+
+**Phase 3: Update jay-stack-compiler**
+- Use `addJayEnvironment()` instead of string concatenation
+- Remove hardcoded `?jay-client` / `?jay-server` strings
+
+**Phase 4: Testing**
+- Test mood-tracker-plugin build
+- Test contract file imports with query params
+- Test combination of client/server + sandbox environments
+
+## Alternative Consideration
+
+If Option 2 is too much work for immediate needs, **Option 3 (Hybrid)** could be a quick interim solution. Contract files are type-only imports that don't contain runtime code, so they don't need the environment query param. However, this should be considered technical debt to be addressed later.
+
+## Open Questions
+
+1. **Should contract files get environment query params at all?** They're type-only - the answer might be "no" regardless of the solution we choose.
+
+2. **How do we handle the case where both sandbox AND client/server params are needed?** Option 2 handles this naturally; other options might struggle.
+
+3. **Should we consolidate all environment-related query params into a single query param format?** e.g., `?jay-env=client,worker-trusted` instead of multiple `?jay-*` params.
+
+---
+
+**Status**: Analysis Complete - Awaiting Decision
+
+**Estimated Effort**:
+- Option 1: ~1 hour
+- Option 2: ~4-6 hours  
+- Option 3: ~30 minutes
+
+**Recommended**: Option 2 for long-term architecture, with Option 3 as a possible interim fix if time is critical.
+
