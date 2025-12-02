@@ -1,6 +1,5 @@
 import { prettify } from '@jay-framework/compiler-shared';
 import { promises } from 'node:fs';
-// @ts-ignore
 import path from 'path';
 
 const { readFile } = promises;
@@ -28,4 +27,5 @@ export async function readFixtureExpectedClient(folder: string): Promise<string>
 export async function readFixtureExpectedServer(folder: string): Promise<string> {
     return prettify(await readFixtureFileRaw(folder, 'expected-server.ts'));
 }
+
 

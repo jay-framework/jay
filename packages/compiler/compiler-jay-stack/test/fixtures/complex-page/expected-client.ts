@@ -1,20 +1,10 @@
-import {
-    makeJayStackComponent,
-    PageProps,
-    UrlParams
-} from '@jay-framework/fullstack-component';
-import {createSignal, Props} from '@jay-framework/component';
+import { makeJayStackComponent, PageProps, UrlParams } from '@jay-framework/fullstack-component';
+import { createSignal, Props } from '@jay-framework/component';
 import {
     ProductPageContract,
     ProductPageFastViewState,
     ProductPageRefs,
-//@ts-ignore
 } from '../contracts/product-page.jay-contract';
-//@ts-ignore
-import {WixStoresContext, WIX_STORES_SERVICE_MARKER} from '../stores-client/wix-stores-context';
-//@ts-ignore
-import {MediaGalleryViewState, Selected} from "../contracts/media-gallery.jay-contract";
-
 /**
  * URL parameters for product page routes
  * Supports dynamic routing like /products/[slug]
@@ -22,14 +12,12 @@ import {MediaGalleryViewState, Selected} from "../contracts/media-gallery.jay-co
 export interface ProductPageParams extends UrlParams {
     slug: string;
 }
-
 /**
  * Data carried forward from fast rendering to interactive phase
  */
 interface ProductFastCarryForward {
-    defaultVS: ProductPageFastViewState
+    defaultVS: ProductPageFastViewState;
 }
-
 /**
  * Interactive Phase (Client-Side)
  * Handles user interactions:
@@ -39,9 +27,8 @@ interface ProductFastCarryForward {
  */
 function ProductPageInteractive(
     props: Props<PageProps & ProductPageParams & ProductFastCarryForward>,
-    refs: ProductPageRefs
+    refs: ProductPageRefs,
 ) {
-
     const [quantity, setQuantity] = createSignal(props.defaultVS().quantity.quantity);
     const [actionsEnabled, setActionsEnabled] = createSignal(props.defaultVS().actionsEnabled);
     const [options, setOptions] = createSignal(props.defaultVS().options);
@@ -51,51 +38,45 @@ function ProductPageInteractive(
     const [price, setPrice] = createSignal(props.defaultVS().price);
     const [pricePerUnit, setPricePerUnit] = createSignal(props.defaultVS().pricePerUnit);
     const [stockStatus, setStockStatus] = createSignal(props.defaultVS().stockStatus);
-    const [strikethroughPrice, setStrikethroughPrice] = createSignal(props.defaultVS().strikethroughPrice);
-
+    const [strikethroughPrice, setStrikethroughPrice] = createSignal(
+        props.defaultVS().strikethroughPrice,
+    );
     const [isAddingToCart, setIsAddingToCart] = createSignal(false);
     const [selectedChoices, setSelectedChoices] = createSignal<Map<string, string>>(new Map());
-
     // Quantity controls
     refs.quantity.decrementButton.onclick(() => {
-        setQuantity(prev => Math.max(1, prev - 1));
+        setQuantity((prev) => Math.max(1, prev - 1));
     });
-
     refs.quantity.incrementButton.onclick(() => {
-        setQuantity(prev => prev + 1);
+        setQuantity((prev) => prev + 1);
     });
-
-    refs.quantity.quantity.oninput(({event}) => {
+    refs.quantity.quantity.oninput(({ event }) => {
         const value = parseInt((event.target as HTMLInputElement).value, 10);
         if (!isNaN(value) && value > 0) {
             setQuantity(value);
         }
     });
-
     // Handle option choice selection
-    refs.options.choices.choiceButton.onclick(({event, viewState, coordinate}) => {
+    refs.options.choices.choiceButton.onclick(({ event, viewState, coordinate }) => {
         const choices = new Map(selectedChoices());
         const [optionId, choiceId] = coordinate;
         choices.set(optionId, choiceId);
         setSelectedChoices(choices);
     });
-
     // Handle add to cart
     refs.addToCartButton.onclick(async () => {
         if (!props.inStock()) {
             console.warn('Product is out of stock');
             return;
         }
-
         setIsAddingToCart(true);
         try {
             // TODO: Implement cart API call
-            await new Promise(resolve => setTimeout(resolve, 500));
-
+            await new Promise((resolve) => setTimeout(resolve, 500));
             console.log('Adding to cart:', {
                 productId: props.productId(),
                 quantity: quantity(),
-                selectedChoices: Array.from(selectedChoices().entries())
+                selectedChoices: Array.from(selectedChoices().entries()),
             });
         } catch (error) {
             console.error('Failed to add to cart:', error);
@@ -103,7 +84,6 @@ function ProductPageInteractive(
             setIsAddingToCart(false);
         }
     });
-
     return {
         render: () => ({
             quantity: {
@@ -118,10 +98,9 @@ function ProductPageInteractive(
             pricePerUnit,
             stockStatus,
             strikethroughPrice,
-        })
+        }),
     };
 }
-
 /**
  * Product Page Full-Stack Component
  *
@@ -138,4 +117,3 @@ function ProductPageInteractive(
 export const productPage = makeJayStackComponent<ProductPageContract>()
     .withProps<PageProps>()
     .withInteractive(ProductPageInteractive);
-
