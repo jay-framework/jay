@@ -117,4 +117,26 @@ describe('Jay Stack Builder Code Splitting', () => {
             expect(actual).toEqual(expected);
         });
     });
+
+    describe('Re-export Pattern', () => {
+        it('should add query parameter to local imports for client build', async () => {
+            const source = await readFixtureSource('re-export');
+            const expected = await readFixtureExpectedClient('re-export');
+
+            const result = transformJayStackBuilder(source, 'test.ts', 'client');
+            const actual = await prettify(result.code);
+
+            expect(actual).toEqual(expected);
+        });
+
+        it('should add query parameter to local imports for server build', async () => {
+            const source = await readFixtureSource('re-export');
+            const expected = await readFixtureExpectedServer('re-export');
+
+            const result = transformJayStackBuilder(source, 'test.ts', 'server');
+            const actual = await prettify(result.code);
+
+            expect(actual).toEqual(expected);
+        });
+    });
 });
