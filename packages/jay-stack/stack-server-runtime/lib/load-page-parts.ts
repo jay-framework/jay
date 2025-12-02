@@ -60,22 +60,21 @@ export async function loadPageParts(
             const module = headlessImport.codeLink.module;
             const name = headlessImport.codeLink.names[0].name;
             const isLocalModule = module[0] === '.' || module[0] === '/';
-            const modulePath =
-                isLocalModule
-                    ? path.resolve(dirName, module)
-                    : require.resolve(module, { paths: require.resolve.paths(dirName) });
-            
+            const modulePath = isLocalModule
+                ? path.resolve(dirName, module)
+                : require.resolve(module, { paths: require.resolve.paths(dirName) });
+
             // Load component with server-only code (client code stripped)
             const serverModulePath = isLocalModule ? modulePath + '?jay-server' : modulePath;
             const compDefinition = (await vite.ssrLoadModule(serverModulePath))[name];
-            
+
             // Generate client import path
             const moduleImport = module.startsWith('./') ? path.resolve(pagesBase, module) : module;
             const isNpmPackage = !module.startsWith('./') && !module.startsWith('../');
             const clientModuleImport = isNpmPackage
-                ? `${moduleImport}/client`        // npm packages: use /client export
-                : `${moduleImport}?jay-client`;   // local files: use ?jay-client query
-            
+                ? `${moduleImport}/client` // npm packages: use /client export
+                : `${moduleImport}?jay-client`; // local files: use ?jay-client query
+
             const key = headlessImport.key;
             const part: DevServerPagePart = {
                 key,

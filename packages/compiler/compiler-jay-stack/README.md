@@ -10,6 +10,7 @@ This plugin automatically splits Jay Stack component builder chains into environ
 - **Server builds**: Strips client-only code (`withInteractive`, `withContexts`)
 
 This prevents:
+
 - ❌ Server secrets leaking to client bundles
 - ❌ Browser APIs crashing Node.js server
 - ❌ Unnecessary code bloat in both environments
@@ -62,7 +63,7 @@ export default defineConfig({
     lib: {
       entry: {
         // Server build (client code stripped)
-        'index': resolve(__dirname, 'lib/index.ts?jay-server'),
+        index: resolve(__dirname, 'lib/index.ts?jay-server'),
         // Client build (server code stripped)
         'index.client': resolve(__dirname, 'lib/index.ts?jay-client'),
       },
@@ -94,52 +95,59 @@ Update `package.json` exports:
 ### Example Transformation
 
 **Input (page.ts):**
+
 ```typescript
 import { DATABASE } from './database';
 import { Interactive } from './interactive';
 
 export const page = makeJayStackComponent()
-    .withServices(DATABASE)
-    .withSlowlyRender(async () => { /* ... */ })
-    .withInteractive(Interactive);
+  .withServices(DATABASE)
+  .withSlowlyRender(async () => {
+    /* ... */
+  })
+  .withInteractive(Interactive);
 ```
 
 **Server Build (`?jay-server`):**
+
 ```typescript
 import { DATABASE } from './database';
 
 export const page = makeJayStackComponent()
-    .withServices(DATABASE)
-    .withSlowlyRender(async () => { /* ... */ });
+  .withServices(DATABASE)
+  .withSlowlyRender(async () => {
+    /* ... */
+  });
 // ✅ No withInteractive - prevents browser API crashes
 ```
 
 **Client Build (`?jay-client`):**
+
 ```typescript
 import { Interactive } from './interactive';
 
-export const page = makeJayStackComponent()
-    .withInteractive(Interactive);
+export const page = makeJayStackComponent().withInteractive(Interactive);
 // ✅ No server code - smaller bundle, no secrets
 ```
 
 ## Method Classification
 
-| Method | Server | Client | Shared |
-|--------|--------|--------|--------|
-| `withProps()` | ✅ | ✅ | ✅ |
-| `withServices()` | ✅ | ❌ | |
-| `withContexts()` | ❌ | ✅ | |
-| `withLoadParams()` | ✅ | ❌ | |
-| `withSlowlyRender()` | ✅ | ❌ | |
-| `withFastRender()` | ✅ | ❌ | |
-| `withInteractive()` | ❌ | ✅ | |
+| Method               | Server | Client | Shared |
+| -------------------- | ------ | ------ | ------ |
+| `withProps()`        | ✅     | ✅     | ✅     |
+| `withServices()`     | ✅     | ❌     |        |
+| `withContexts()`     | ❌     | ✅     |        |
+| `withLoadParams()`   | ✅     | ❌     |        |
+| `withSlowlyRender()` | ✅     | ❌     |        |
+| `withFastRender()`   | ✅     | ❌     |        |
+| `withInteractive()`  | ❌     | ✅     |        |
 
 ## Architecture
 
 This plugin is a composite of two plugins:
 
 1. **jay-stack:code-split** (runs first, `enforce: 'pre'`)
+
    - Strips environment-specific builder methods
    - Removes unused imports
    - Uses TypeScript AST transformation
@@ -151,17 +159,20 @@ This plugin is a composite of two plugins:
 ## Benefits
 
 ### For Developers
+
 - ✅ Write components in one place
 - ✅ Full TypeScript type safety
 - ✅ No manual code organization needed
 
 ### For Applications
+
 - ✅ Prevents runtime crashes (no browser APIs on server)
 - ✅ Smaller client bundles (no server code)
 - ✅ Smaller server bundles (no client code)
 - ✅ Better security (server secrets can't leak)
 
 ### For Package Authors
+
 - ✅ One plugin handles both builds
 - ✅ Standard npm export patterns
 - ✅ Automatic optimization for consumers
@@ -198,6 +209,7 @@ export default defineConfig({
 ### AST Transformation
 
 The plugin uses:
+
 - `SourceFileBindingResolver` - Tracks identifier origins
 - `SourceFileStatementDependencies` - Builds dependency graph
 - TypeScript compiler API - Safe AST transformations
@@ -207,10 +219,12 @@ These utilities are battle-tested from Jay's security transformations.
 ### Import Detection
 
 For headless components:
+
 - **Local files** (`./`, `../`): Use `?jay-client` query
 - **npm packages**: Use `/client` export path
 
 Example:
+
 ```typescript
 // Local component
 import { comp } from './my-component?jay-client';
@@ -222,6 +236,7 @@ import { comp } from 'my-plugin/client';
 ## Debugging
 
 If transformation fails, check:
+
 1. Are you using method chaining? (Conditional composition not supported yet)
 2. Are your imports used elsewhere? (They won't be removed)
 3. Check console for transformation errors
@@ -235,4 +250,3 @@ If transformation fails, check:
 ## License
 
 Apache-2.0
-

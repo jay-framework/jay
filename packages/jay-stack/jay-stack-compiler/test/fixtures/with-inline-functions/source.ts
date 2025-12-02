@@ -13,5 +13,3 @@ export const page = makeJayStackComponent()
             render: () => ({ count: 42 }),
         };
     });
-
-

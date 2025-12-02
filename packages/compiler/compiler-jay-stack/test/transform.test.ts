@@ -116,5 +116,5 @@ describe('Jay Stack Builder Code Splitting', () => {
 
             expect(actual).toEqual(expected);
         });
-    })
+    });
 });

@@ -7,10 +7,7 @@ const SERVER_METHODS = new Set([
     'withFastRender',
 ]);
 
-const CLIENT_METHODS = new Set([
-    'withInteractive',
-    'withContexts',
-]);
+const CLIENT_METHODS = new Set(['withInteractive', 'withContexts']);
 
 /**
  * Check if a builder method should be removed for the given environment
@@ -21,5 +18,3 @@ export function shouldRemoveMethod(methodName: string, environment: BuildEnviron
         (environment === 'server' && CLIENT_METHODS.has(methodName))
     );
 }
-
-

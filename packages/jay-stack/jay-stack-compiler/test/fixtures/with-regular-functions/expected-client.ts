@@ -6,5 +6,3 @@ function InteractiveComponent(props, refs) {
 }
 export const page = makeJayStackComponent().withProps().withInteractive(InteractiveComponent);
 export const otherPage = makeJayStackComponent().withProps();
-
-

@@ -16,7 +16,7 @@ export default defineConfig({
         lib: {
             entry: {
                 // Server build (client code stripped)
-                'index': resolve(__dirname, 'lib/index.ts?jay-server'),
+                index: resolve(__dirname, 'lib/index.ts?jay-server'),
                 // Client build (server code stripped)
                 'index.client': resolve(__dirname, 'lib/index.ts?jay-client'),
             },

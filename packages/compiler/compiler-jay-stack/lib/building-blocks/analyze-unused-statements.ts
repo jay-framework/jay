@@ -27,7 +27,7 @@ export interface UnusedStatementsAnalysis {
 /**
  * Analyze which statements and imports are no longer needed in the transformed file
  * Recursively removes statements that are only used by other removed statements
- * 
+ *
  * @param sourceFile - The transformed source file to analyze
  * @param bindingResolver - Binding resolver for the source file
  */
@@ -40,7 +40,7 @@ export function analyzeUnusedStatements(
     // Collect all identifiers that are used in non-import, non-removed statements
     const collectUsedIdentifiers = (): Set<string> => {
         const used = new Set<string>();
-        
+
         for (const statement of sourceFile.statements) {
             // Skip imports (handled separately) and statements marked for removal
             if (isImportDeclaration(statement) || statementsToRemove.has(statement)) {
@@ -58,11 +58,11 @@ export function analyzeUnusedStatements(
                         used.add(node.text);
                     }
                 }
-                node.forEachChild(child => visitor(child, node));
+                node.forEachChild((child) => visitor(child, node));
             };
-            statement.forEachChild(child => visitor(child, statement));
+            statement.forEachChild((child) => visitor(child, statement));
         }
-        
+
         return used;
     };
 
@@ -74,9 +74,11 @@ export function analyzeUnusedStatements(
 
         for (const statement of sourceFile.statements) {
             // Skip already removed, imports, and exports
-            if (statementsToRemove.has(statement) ||
+            if (
+                statementsToRemove.has(statement) ||
                 isImportDeclaration(statement) ||
-                isExportStatement(statement)) {
+                isExportStatement(statement)
+            ) {
                 continue;
             }
 
@@ -92,14 +94,14 @@ export function analyzeUnusedStatements(
     // Find import identifiers that are no longer used
     const finalUsedIdentifiers = collectUsedIdentifiers();
     const unusedImports = new Set<string>();
-    
+
     for (const statement of sourceFile.statements) {
         if (isImportDeclaration(statement) && statement.importClause?.namedBindings) {
             const namedBindings = statement.importClause.namedBindings;
             if ('elements' in namedBindings) {
                 for (const element of namedBindings.elements) {
                     const importName = element.name.text;
-                    
+
                     // Only mark as unused if it's really not used anywhere
                     if (!finalUsedIdentifiers.has(importName)) {
                         unusedImports.add(importName);
@@ -151,4 +153,3 @@ function getStatementDefinedName(statement: ts.Statement): string | undefined {
     }
     return undefined;
 }
-

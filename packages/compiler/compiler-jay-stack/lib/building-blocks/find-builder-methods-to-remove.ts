@@ -4,7 +4,9 @@ import {
     flattenVariable,
     SourceFileBindingResolver,
     FlattenedAccessChain,
-    VariableRootType, isImportModuleVariableRoot, Variable
+    VariableRootType,
+    isImportModuleVariableRoot,
+    Variable,
 } from '@jay-framework/compiler';
 import type { BuildEnvironment } from '../transform-jay-stack-builder';
 import { shouldRemoveMethod } from './check-method-should-remove';
@@ -35,9 +37,11 @@ export function findBuilderMethodsToRemove(
     const removedVariables = new Set<ReturnType<SourceFileBindingResolver['explain']>>();
 
     const visit = (node: ts.Node) => {
-        if (isCallExpression(node) &&
+        if (
+            isCallExpression(node) &&
             isPropertyAccessExpression(node.expression) &&
-            isPartOfJayStackChain(node, bindingResolver)) {
+            isPartOfJayStackChain(node, bindingResolver)
+        ) {
             const methodName = node.expression.name.text;
 
             if (shouldRemoveMethod(methodName, environment)) {
@@ -76,14 +80,16 @@ function isPartOfJayStackChain(
             if (isIdentifier(current.expression)) {
                 const variable = bindingResolver.explain(current.expression);
                 const flattened: FlattenedAccessChain = flattenVariable(variable);
-                if (flattened.path.length === 1 &&
+                if (
+                    flattened.path.length === 1 &&
                     flattened.path[0] === 'makeJayStackComponent' &&
                     isImportModuleVariableRoot(flattened.root) &&
                     isStringLiteral(flattened.root.module) &&
-                    flattened.root.module.text === '@jay-framework/fullstack-component')
+                    flattened.root.module.text === '@jay-framework/fullstack-component'
+                )
                     return true;
             }
-            
+
             // Continue down the chain if this call has a property access
             if (isPropertyAccessExpression(current.expression)) {
                 current = current.expression.expression;
@@ -120,6 +126,5 @@ function collectVariablesFromArguments(
         node.forEachChild(visitor);
     };
 
-    args.forEach(arg => visitor(arg));
+    args.forEach((arg) => visitor(arg));
 }
-
