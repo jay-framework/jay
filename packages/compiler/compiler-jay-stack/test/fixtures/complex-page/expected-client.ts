@@ -4,6 +4,7 @@ import {
     ProductPageContract,
     ProductPageFastViewState,
     ProductPageRefs,
+//@ts-ignore
 } from '../contracts/product-page.jay-contract';
 /**
  * URL parameters for product page routes
