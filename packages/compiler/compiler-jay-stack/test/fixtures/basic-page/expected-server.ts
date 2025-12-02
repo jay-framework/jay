@@ -1,9 +1,9 @@
 //@ts-ignore
-import { DATABASE } from './database';
+import { DATABASE } from './database?jay-server';
 //@ts-ignore
-import { loadParams } from './loaders';
+import { loadParams } from './loaders?jay-server';
 //@ts-ignore
-import { renderSlowly, renderFast } from './renderers';
+import { renderSlowly, renderFast } from './renderers?jay-server';
 import { makeJayStackComponent } from '@jay-framework/fullstack-component';
 export const page = makeJayStackComponent()
     .withProps()

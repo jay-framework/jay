@@ -21,12 +21,14 @@ const {
     isCallExpression,
     isPropertyAccessExpression,
     isImportDeclaration,
+    isExportDeclaration,
     isNamedImports,
     isIdentifier,
     isFunctionDeclaration,
     isVariableStatement,
     isInterfaceDeclaration,
     isTypeAliasDeclaration,
+    isStringLiteral,
 } = tsBridge;
 
 export type BuildEnvironment = 'client' | 'server';
@@ -124,7 +126,7 @@ function mkJayStackCodeSplitTransformer({
         transformedBindingResolver,
     );
 
-    // Step 5: Remove unused statements and filter imports
+    // Step 5: Remove unused statements and filter/rewrite imports
     const transformedStatements = transformedSourceFile.statements
         .map((statement) => {
             // Remove statements that are no longer needed
@@ -134,7 +136,13 @@ function mkJayStackCodeSplitTransformer({
 
             // Filter import declarations
             if (isImportDeclaration(statement)) {
-                return filterImportDeclaration(statement, unusedImports, factory);
+                const filtered = filterImportDeclaration(statement, unusedImports, factory);
+                return filtered ? rewriteLocalImport(filtered, environment, factory) : undefined;
+            }
+
+            // Rewrite export declarations with local module specifiers
+            if (isExportDeclaration(statement)) {
+                return rewriteLocalExport(statement, environment, factory);
             }
 
             return statement;
@@ -180,6 +188,92 @@ function filterImportDeclaration(
             factory.updateNamedImports(importClause.namedBindings, usedElements),
         ),
         statement.moduleSpecifier,
+        statement.assertClause,
+    );
+}
+
+/**
+ * Check if a module specifier is a local file (relative path)
+ */
+function isLocalModule(moduleSpecifier: string): boolean {
+    return moduleSpecifier.startsWith('./') || moduleSpecifier.startsWith('../');
+}
+
+/**
+ * Add query parameter to local import paths
+ */
+function rewriteLocalImport(
+    statement: ts.ImportDeclaration,
+    environment: BuildEnvironment,
+    factory: ts.NodeFactory,
+): ts.ImportDeclaration {
+    const moduleSpecifier = statement.moduleSpecifier;
+
+    if (!isStringLiteral(moduleSpecifier)) {
+        return statement;
+    }
+
+    const modulePath = moduleSpecifier.text;
+
+    // Only rewrite local imports
+    if (!isLocalModule(modulePath)) {
+        return statement;
+    }
+
+    // Skip if already has query parameter
+    if (modulePath.includes('?jay-')) {
+        return statement;
+    }
+
+    // Add environment-specific query parameter
+    const queryParam = environment === 'client' ? '?jay-client' : '?jay-server';
+    const newModulePath = modulePath + queryParam;
+
+    return factory.updateImportDeclaration(
+        statement,
+        statement.modifiers,
+        statement.importClause,
+        factory.createStringLiteral(newModulePath),
+        statement.assertClause,
+    );
+}
+
+/**
+ * Add query parameter to local export paths
+ */
+function rewriteLocalExport(
+    statement: ts.ExportDeclaration,
+    environment: BuildEnvironment,
+    factory: ts.NodeFactory,
+): ts.ExportDeclaration {
+    const moduleSpecifier = statement.moduleSpecifier;
+
+    if (!moduleSpecifier || !isStringLiteral(moduleSpecifier)) {
+        return statement;
+    }
+
+    const modulePath = moduleSpecifier.text;
+
+    // Only rewrite local exports
+    if (!isLocalModule(modulePath)) {
+        return statement;
+    }
+
+    // Skip if already has query parameter
+    if (modulePath.includes('?jay-')) {
+        return statement;
+    }
+
+    // Add environment-specific query parameter
+    const queryParam = environment === 'client' ? '?jay-client' : '?jay-server';
+    const newModulePath = modulePath + queryParam;
+
+    return factory.updateExportDeclaration(
+        statement,
+        statement.modifiers,
+        statement.isTypeOnly,
+        statement.exportClause,
+        factory.createStringLiteral(newModulePath),
         statement.assertClause,
     );
 }

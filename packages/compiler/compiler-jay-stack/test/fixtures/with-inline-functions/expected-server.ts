@@ -1,5 +1,5 @@
 //@ts-ignore
-import { DATABASE } from './database';
+import { DATABASE } from './database?jay-server';
 import { makeJayStackComponent, partialRender } from '@jay-framework/fullstack-component';
 export const page = makeJayStackComponent()
     .withProps()
