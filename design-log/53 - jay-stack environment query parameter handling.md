@@ -255,11 +255,55 @@ If Option 2 is too much work for immediate needs, **Option 3 (Hybrid)** could be
 
 ---
 
-**Status**: Analysis Complete - Awaiting Decision
+**Status**: ✅ Implemented (Option 2)
+
+---
+
+## Implementation Summary
+
+### Changes Made
+
+**1. New Shared Utilities (`compiler-shared/lib/jay-module-specifier.ts`)**:
+- `JayBuildEnvironment` enum: `Client`, `Server`
+- `parseJayModuleSpecifier()`: Parses module specifiers to separate base path from query params
+- `addBuildEnvironment()`: Adds `?jay-client` or `?jay-server` to a module path
+- `hasJayExtension()`: Query-param-aware extension detection (replaces `hasExtension` for Jay files)
+- `getBasePath()`: Gets the base path without query parameters
+- `isLocalModule()`: Checks if a path is a local file (relative path)
+- `hasBuildEnvironment()`: Checks if a module has a build environment query param
+
+**2. Updated Jay Plugin (`rollup-plugin`)**:
+- `resolveId`: Uses `hasJayExtension()` for detecting `.jay-html` and `.jay-contract` files
+- `resolveJayHtml`/`resolveJayContract`: Parse query params and add `.ts` extension BEFORE the query params
+- `load`: Contract files are now compiled to TypeScript in the `load` hook (not `transform`)
+- `transform`: Uses `hasJayExtension()` for file detection
+- `getFileContext`: Strips query params before extracting filename/dirname
+
+**3. Updated Jay Stack Compiler (`compiler-jay-stack`)**:
+- Uses `addBuildEnvironment()` instead of manual string concatenation
+- Uses `isLocalModule()` from shared utilities
+- Uses `hasBuildEnvironment()` to check if query param already exists
+
+### Key Insight: Contract Compilation in Load Hook
+
+The critical fix was moving contract YAML compilation from `transform` to `load`:
+
+```
+Before: load → (esbuild mangles YAML) → transform → compile
+After:  load → compile to TS → (esbuild sees valid TS) → transform (no-op)
+```
+
+esbuild runs between `load` and `transform` hooks, so the contract must be valid TypeScript by the time esbuild sees it.
+
+### Test Results
+
+- ✅ `compiler-shared`: 45 tests passing (including new module specifier tests)
+- ✅ `compiler-jay-stack`: 12 tests passing
+- ✅ `mood-tracker-plugin`: Builds successfully with dual outputs
 
 **Estimated Effort**:
 - Option 1: ~1 hour
-- Option 2: ~4-6 hours  
+- Option 2: ~4-6 hours (actual: ~3 hours)
 - Option 3: ~30 minutes
 
 **Recommended**: Option 2 for long-term architecture, with Option 3 as a possible interim fix if time is critical.

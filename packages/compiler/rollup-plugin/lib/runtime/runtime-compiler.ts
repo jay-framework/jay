@@ -1,5 +1,6 @@
 import {
     hasExtension,
+    hasJayExtension,
     hasJayModeExtension,
     Import,
     JAY_CONTRACT_EXTENSION,
@@ -22,12 +23,6 @@ import {
 import { loadContractFile, loadCssFile, loadJayFile } from './load';
 import { JayRollupConfig } from '../common/types';
 import { JayPluginContext } from './jay-plugin-context';
-import { getFileContext } from '../common/files';
-import {
-    compileContract,
-    JAY_IMPORT_RESOLVER,
-    parseContract,
-} from '@jay-framework/compiler-jay-html';
 import { ViteDevServer, UserConfig } from 'vite';
 
 const GLOBAL_FUNC_REPOSITORY = 'GLOBAL_FUNC_REPOSITORY.ts';
@@ -65,7 +60,8 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
             importer: string | undefined,
             options: ResolveIdOptions,
         ): Promise<ResolveIdResult> {
-            if (hasExtension(source, JAY_EXTENSION)) {
+            // Use hasJayExtension to handle query params like ?jay-client
+            if (hasJayExtension(source, JAY_EXTENSION)) {
                 return await resolveJayHtml(
                     this,
                     source,
@@ -75,7 +71,7 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
                     jayOptions.generationTarget,
                 );
             }
-            if (hasExtension(source, JAY_CONTRACT_EXTENSION))
+            if (hasJayExtension(source, JAY_CONTRACT_EXTENSION))
                 return await resolveJayContract(this, source, importer, options);
             if (hasJayModeExtension(source))
                 return await resolveJayModeFile(this, source, importer, options);
@@ -92,12 +88,13 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
             return null;
         },
         async load(id: string): Promise<LoadResult> {
+            // Use hasJayExtension to handle query params like ?jay-client
             if (
-                hasExtension(id, JAY_EXTENSION, { withTs: true }) ||
+                hasJayExtension(id, JAY_EXTENSION, { withTs: true }) ||
                 hasJayModeExtension(id, { withTs: true })
             ) {
                 return await loadJayFile(this, id);
-            } else if (hasExtension(id, JAY_CONTRACT_EXTENSION, { withTs: true })) {
+            } else if (hasJayExtension(id, JAY_CONTRACT_EXTENSION, { withTs: true })) {
                 return await loadContractFile(this, id);
             } else if (isResolvedCssFile(id)) {
                 return await loadCssFile(this, jayContext, id, isVite);
@@ -109,26 +106,14 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
             return null;
         },
         async transform(code: string, id: string): Promise<TransformResult> {
+            // Use hasJayExtension to handle query params like ?jay-client
             if (
-                hasExtension(id, JAY_EXTENSION, { withTs: true }) ||
+                hasJayExtension(id, JAY_EXTENSION, { withTs: true }) ||
                 hasJayModeExtension(id, { withTs: true })
             )
                 return await transformJayFile(jayContext, this, code, id);
-            else if (hasExtension(id, JAY_CONTRACT_EXTENSION, { withTs: true })) {
-                const { filename, dirname } = getFileContext(id, JAY_CONTRACT_EXTENSION);
-
-                const parsedFile = parseContract(code, filename);
-                const tsCode = await compileContract(
-                    parsedFile,
-                    `${dirname}/${filename}`,
-                    JAY_IMPORT_RESOLVER,
-                );
-                if (tsCode.val)
-                    return Promise.resolve({
-                        code: tsCode.val,
-                    });
-                else return Promise.reject(tsCode.validations);
-            }
+            // Contract files are now compiled in the load hook to avoid esbuild issues
+            // No transform needed here
             return null;
         },
         watchChange(id: string, change: { event: 'create' | 'update' | 'delete' }): void {

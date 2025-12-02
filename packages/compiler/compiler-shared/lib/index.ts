@@ -3,6 +3,7 @@ export * from './constants';
 export * from './jay-type';
 export * from './jay-imports';
 export * from './runtime-mode';
+export * from './jay-module-specifier';
 export * from './with-validations';
 export * from './source-file-format';
 export * from './render-fragment';

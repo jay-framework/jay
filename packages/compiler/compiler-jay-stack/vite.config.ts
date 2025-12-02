@@ -14,6 +14,7 @@ export default defineConfig({
         rollupOptions: {
             external: [
                 '@jay-framework/compiler',
+                '@jay-framework/compiler-shared',
                 '@jay-framework/typescript-bridge',
                 '@jay-framework/vite-plugin',
                 'vite',

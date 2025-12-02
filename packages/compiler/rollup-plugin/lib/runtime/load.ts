@@ -1,9 +1,9 @@
 import { LoadResult, PluginContext } from 'rollup';
 import { getJayMetadata } from './metadata';
-import { readFileAsString } from '../common/files';
+import { getFileContext, readFileAsString } from '../common/files';
 import { checkCodeErrors } from '../common/errors';
-import { TS_EXTENSION, TSX_EXTENSION } from '@jay-framework/compiler-shared';
-import { JAY_IMPORT_RESOLVER, parseJayFile } from '@jay-framework/compiler-jay-html';
+import { JAY_CONTRACT_EXTENSION, TS_EXTENSION, TSX_EXTENSION } from '@jay-framework/compiler-shared';
+import { compileContract, JAY_IMPORT_RESOLVER, parseContract, parseJayFile } from '@jay-framework/compiler-jay-html';
 import path from 'node:path';
 import { JayPluginContext } from './jay-plugin-context';
 
@@ -26,9 +26,25 @@ export async function loadContractFile(context: PluginContext, id: string): Prom
     let { originId } = getJayMetadata(context, id);
     if (!Boolean(originId)) originId = stripTSExtension(id);
 
-    const code = await readFileAsString(originId);
+    // Load the raw YAML content
+    const yamlCode = await readFileAsString(originId);
+    
+    // Compile the contract YAML to TypeScript in the load hook
+    // This ensures esbuild sees valid TypeScript, not YAML
+    const { filename, dirname } = getFileContext(id, JAY_CONTRACT_EXTENSION);
+    const parsedFile = parseContract(yamlCode, filename);
+    const tsCode = await compileContract(
+        parsedFile,
+        `${dirname}/${filename}`,
+        JAY_IMPORT_RESOLVER,
+    );
+    
+    if (!tsCode.val) {
+        throw new Error(`Failed to compile contract ${id}: ${JSON.stringify(tsCode.validations)}`);
+    }
+    
     console.info(`[load] end ${id}`);
-    return { code };
+    return { code: tsCode.val };
 }
 
 export async function loadCssFile(
