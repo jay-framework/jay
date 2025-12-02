@@ -9,6 +9,7 @@ import {
     JAY_EXTENSION,
     JAY_QUERY_MAIN_SANDBOX,
     JAY_QUERY_WORKER_TRUSTED_TS,
+    parseJayModuleSpecifier,
     SourceFileFormat,
     TS_EXTENSION,
     TSX_EXTENSION,
@@ -40,6 +41,10 @@ export async function resolveJayHtml(
     )
         return null;
 
+    // Parse the resolved id to handle query parameters correctly
+    const parsed = parseJayModuleSpecifier(resolved.id);
+    const resolvedBasePath = parsed.basePath;
+
     const resolvedJayMeta = jayMetadataFromModuleMetadata(resolved.id, resolved.meta);
     const extension = generationTarget === GenerateTarget.react ? TSX_EXTENSION : TS_EXTENSION;
 
@@ -48,15 +53,19 @@ export async function resolveJayHtml(
         format = resolvedJayMeta.format;
         originId = resolvedJayMeta.originId;
     } else {
-        watchChangesFor(context, resolved.id);
+        watchChangesFor(context, resolvedBasePath);
         format = SourceFileFormat.JayHtml;
-        originId = resolved.id;
+        originId = resolvedBasePath;
     }
 
-    const id =
+    // Build the id with extension before query params
+    const idWithExtension =
         context['ssr'] && originId.startsWith(root)
             ? `${originId}${extension}`.slice(root.length)
             : `${originId}${extension}`;
+    
+    // Re-append query params if present
+    const id = parsed.fullQueryString ? `${idWithExtension}${parsed.fullQueryString}` : idWithExtension;
 
     console.info(`[resolveId] resolved ${id} as ${format}`);
     return { id, meta: appendJayMetadata(context, id, { format, originId }) };
@@ -69,13 +78,19 @@ export async function resolveJayContract(
     options: ResolveIdOptions,
 ) {
     const resolved = await context.resolve(source, importer, { ...options, skipSelf: true });
-    const id = `${resolved.id}${TS_EXTENSION}`;
+    
+    // Parse the resolved id to handle query parameters correctly
+    // The .ts extension should come before any query params
+    const parsed = parseJayModuleSpecifier(resolved.id);
+    const idWithTs = `${parsed.basePath}${TS_EXTENSION}`;
+    const id = parsed.fullQueryString ? `${idWithTs}${parsed.fullQueryString}` : idWithTs;
+    
     console.info(`[resolveId] resolved ${id}`);
     return {
         id,
         meta: appendJayMetadata(context, id, {
             format: SourceFileFormat.JayContract,
-            originId: resolved.id,
+            originId: parsed.basePath, // Use basePath without query params for file loading
         }),
     };
 }

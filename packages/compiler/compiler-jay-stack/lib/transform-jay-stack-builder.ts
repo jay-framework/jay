@@ -8,6 +8,12 @@ import {
     FlattenedAccessChain,
     areFlattenedAccessChainsEqual,
 } from '@jay-framework/compiler';
+import {
+    addBuildEnvironment,
+    isLocalModule,
+    hasBuildEnvironment,
+    JayBuildEnvironment,
+} from '@jay-framework/compiler-shared';
 import { findBuilderMethodsToRemove } from './building-blocks/find-builder-methods-to-remove';
 import { analyzeUnusedStatements } from './building-blocks/analyze-unused-statements';
 import { shouldRemoveMethod } from './building-blocks/check-method-should-remove';
@@ -32,6 +38,11 @@ const {
 } = tsBridge;
 
 export type BuildEnvironment = 'client' | 'server';
+
+// Map our BuildEnvironment to JayBuildEnvironment for the shared utility
+function toJayBuildEnvironment(env: BuildEnvironment): JayBuildEnvironment {
+    return env === 'client' ? JayBuildEnvironment.Client : JayBuildEnvironment.Server;
+}
 
 type JayStackTransformerConfig = SourceFileTransformerContext & {
     environment: BuildEnvironment;
@@ -193,14 +204,7 @@ function filterImportDeclaration(
 }
 
 /**
- * Check if a module specifier is a local file (relative path)
- */
-function isLocalModule(moduleSpecifier: string): boolean {
-    return moduleSpecifier.startsWith('./') || moduleSpecifier.startsWith('../');
-}
-
-/**
- * Add query parameter to local import paths
+ * Add query parameter to local import paths using the shared utility
  */
 function rewriteLocalImport(
     statement: ts.ImportDeclaration,
@@ -220,14 +224,13 @@ function rewriteLocalImport(
         return statement;
     }
 
-    // Skip if already has query parameter
-    if (modulePath.includes('?jay-')) {
+    // Skip if already has a build environment query parameter
+    if (hasBuildEnvironment(modulePath)) {
         return statement;
     }
 
-    // Add environment-specific query parameter
-    const queryParam = environment === 'client' ? '?jay-client' : '?jay-server';
-    const newModulePath = modulePath + queryParam;
+    // Add environment-specific query parameter using the shared utility
+    const newModulePath = addBuildEnvironment(modulePath, toJayBuildEnvironment(environment));
 
     return factory.updateImportDeclaration(
         statement,
@@ -239,7 +242,7 @@ function rewriteLocalImport(
 }
 
 /**
- * Add query parameter to local export paths
+ * Add query parameter to local export paths using the shared utility
  */
 function rewriteLocalExport(
     statement: ts.ExportDeclaration,
@@ -259,14 +262,13 @@ function rewriteLocalExport(
         return statement;
     }
 
-    // Skip if already has query parameter
-    if (modulePath.includes('?jay-')) {
+    // Skip if already has a build environment query parameter
+    if (hasBuildEnvironment(modulePath)) {
         return statement;
     }
 
-    // Add environment-specific query parameter
-    const queryParam = environment === 'client' ? '?jay-client' : '?jay-server';
-    const newModulePath = modulePath + queryParam;
+    // Add environment-specific query parameter using the shared utility
+    const newModulePath = addBuildEnvironment(modulePath, toJayBuildEnvironment(environment));
 
     return factory.updateExportDeclaration(
         statement,

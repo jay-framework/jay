@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { PluginContext } from 'rollup';
-import { JAY_DTS_EXTENSION, JAY_EXTENSION } from '@jay-framework/compiler-shared';
+import { getBasePath, JAY_DTS_EXTENSION, JAY_EXTENSION } from '@jay-framework/compiler-shared';
 import { mkdir, readFile } from 'node:fs/promises';
 import { writeFile } from 'fs/promises';
 import { JayPluginContext } from '../runtime/jay-plugin-context';
@@ -9,9 +9,11 @@ export function getFileContext(
     filename: string,
     extension = JAY_EXTENSION,
 ): { filename: string; dirname: string } {
+    // Strip query parameters before extracting file context
+    const basePath = getBasePath(filename);
     return {
-        filename: path.basename(filename).replace(extension, ''),
-        dirname: path.dirname(filename),
+        filename: path.basename(basePath).replace(extension, ''),
+        dirname: path.dirname(basePath),
     };
 }
 
