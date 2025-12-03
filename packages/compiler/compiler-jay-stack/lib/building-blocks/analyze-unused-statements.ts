@@ -32,9 +32,7 @@ export interface UnusedStatementsAnalysis {
  *
  * @param sourceFile - The transformed source file to analyze
  */
-export function analyzeUnusedStatements(
-    sourceFile: ts.SourceFile,
-): UnusedStatementsAnalysis {
+export function analyzeUnusedStatements(sourceFile: ts.SourceFile): UnusedStatementsAnalysis {
     const statementsToRemove = new Set<ts.Statement>();
 
     // Collect all identifiers that are used in non-import, non-removed statements
