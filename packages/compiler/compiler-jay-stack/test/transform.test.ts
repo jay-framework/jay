@@ -16,7 +16,12 @@ describe('Jay Stack Builder Code Splitting', () => {
             const source = await readFixtureSource('basic-page');
             const expected = await readFixtureExpectedClient('basic-page');
 
-            const result = transformJayStackBuilder(source, 'test.ts', 'client', packageBuildOptions);
+            const result = transformJayStackBuilder(
+                source,
+                'test.ts',
+                'client',
+                packageBuildOptions,
+            );
             const actual = await prettify(result.code);
 
             expect(actual).toEqual(expected);
@@ -38,7 +43,12 @@ describe('Jay Stack Builder Code Splitting', () => {
             const source = await readFixtureSource('with-contexts');
             const expected = await readFixtureExpectedClient('with-contexts');
 
-            const result = transformJayStackBuilder(source, 'test.ts', 'client', packageBuildOptions);
+            const result = transformJayStackBuilder(
+                source,
+                'test.ts',
+                'client',
+                packageBuildOptions,
+            );
             const actual = await prettify(result.code);
 
             expect(actual).toEqual(expected);
@@ -60,7 +70,12 @@ describe('Jay Stack Builder Code Splitting', () => {
             const source = await readFixtureSource('with-inline-functions');
             const expected = await readFixtureExpectedClient('with-inline-functions');
 
-            const result = transformJayStackBuilder(source, 'test.ts', 'client', packageBuildOptions);
+            const result = transformJayStackBuilder(
+                source,
+                'test.ts',
+                'client',
+                packageBuildOptions,
+            );
             const actual = await prettify(result.code);
 
             expect(actual).toEqual(expected);
@@ -82,7 +97,12 @@ describe('Jay Stack Builder Code Splitting', () => {
             const source = await readFixtureSource('with-regular-functions');
             const expected = await readFixtureExpectedClient('with-regular-functions');
 
-            const result = transformJayStackBuilder(source, 'test.ts', 'client', packageBuildOptions);
+            const result = transformJayStackBuilder(
+                source,
+                'test.ts',
+                'client',
+                packageBuildOptions,
+            );
             const actual = await prettify(result.code);
 
             expect(actual).toEqual(expected);
@@ -104,7 +124,12 @@ describe('Jay Stack Builder Code Splitting', () => {
             const source = await readFixtureSource('complex-page');
             const expected = await readFixtureExpectedClient('complex-page');
 
-            const result = transformJayStackBuilder(source, 'test.ts', 'client', packageBuildOptions);
+            const result = transformJayStackBuilder(
+                source,
+                'test.ts',
+                'client',
+                packageBuildOptions,
+            );
             const actual = await prettify(result.code);
 
             expect(actual).toEqual(expected);
@@ -126,7 +151,12 @@ describe('Jay Stack Builder Code Splitting', () => {
             const source = await readFixtureSource('re-export');
             const expected = await readFixtureExpectedClient('re-export');
 
-            const result = transformJayStackBuilder(source, 'test.ts', 'client', packageBuildOptions);
+            const result = transformJayStackBuilder(
+                source,
+                'test.ts',
+                'client',
+                packageBuildOptions,
+            );
             const actual = await prettify(result.code);
 
             expect(actual).toEqual(expected);
