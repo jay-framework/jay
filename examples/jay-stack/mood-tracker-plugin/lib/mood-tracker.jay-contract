@@ -14,4 +14,5 @@ tags:
     elementType: HTMLButtonElement
   - tag: current-mood
     type: variant
+    phase: fast+interactive
     dataType: enum (happy | sad | neutral)
