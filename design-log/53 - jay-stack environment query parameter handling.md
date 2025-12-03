@@ -341,6 +341,7 @@ When `page.ts?jay-server` imports `products-database`, Vite treats it as a diffe
 ### Key Changes
 
 1. **`compiler-jay-stack/lib/index.ts`**: Detect environment automatically:
+
    - `?jay-client` → client build (explicit)
    - `?jay-server` → server build (backward compat)
    - SSR mode (`options.ssr === true`) → server build (automatic)
