@@ -79,7 +79,10 @@ describe('addBuildEnvironment', () => {
     });
 
     it('should add jay-client to a contract file', () => {
-        const result = addBuildEnvironment('./mood-tracker.jay-contract', JayBuildEnvironment.Client);
+        const result = addBuildEnvironment(
+            './mood-tracker.jay-contract',
+            JayBuildEnvironment.Client,
+        );
         expect(result).toBe('./mood-tracker.jay-contract?jay-client');
     });
 
@@ -89,7 +92,10 @@ describe('addBuildEnvironment', () => {
     });
 
     it('should preserve runtime mode when adding build environment', () => {
-        const result = addBuildEnvironment('./component?jay-mainSandbox', JayBuildEnvironment.Client);
+        const result = addBuildEnvironment(
+            './component?jay-mainSandbox',
+            JayBuildEnvironment.Client,
+        );
         expect(result).toBe('./component?jay-client?jay-mainSandbox');
     });
 });
@@ -100,11 +106,15 @@ describe('hasJayExtension', () => {
     });
 
     it('should detect jay-contract extension with jay-client query param', () => {
-        expect(hasJayExtension('./mood-tracker.jay-contract?jay-client', '.jay-contract')).toBe(true);
+        expect(hasJayExtension('./mood-tracker.jay-contract?jay-client', '.jay-contract')).toBe(
+            true,
+        );
     });
 
     it('should detect jay-contract extension with jay-server query param', () => {
-        expect(hasJayExtension('./mood-tracker.jay-contract?jay-server', '.jay-contract')).toBe(true);
+        expect(hasJayExtension('./mood-tracker.jay-contract?jay-server', '.jay-contract')).toBe(
+            true,
+        );
     });
 
     it('should detect jay-html extension with query params', () => {
@@ -116,7 +126,9 @@ describe('hasJayExtension', () => {
     });
 
     it('should handle withTs option', () => {
-        expect(hasJayExtension('./page.jay-html.ts?jay-client', '.jay-html', { withTs: true })).toBe(true);
+        expect(
+            hasJayExtension('./page.jay-html.ts?jay-client', '.jay-html', { withTs: true }),
+        ).toBe(true);
     });
 
     it('should not match extension in the middle of path', () => {
@@ -135,7 +147,9 @@ describe('getBasePath', () => {
     });
 
     it('should handle contract files', () => {
-        expect(getBasePath('./mood-tracker.jay-contract?jay-server')).toBe('./mood-tracker.jay-contract');
+        expect(getBasePath('./mood-tracker.jay-contract?jay-server')).toBe(
+            './mood-tracker.jay-contract',
+        );
     });
 });
 
@@ -192,4 +206,3 @@ describe('isLocalModule', () => {
         expect(isLocalModule('some-package?jay-client')).toBe(false);
     });
 });
-

@@ -33,19 +33,33 @@ export function jayStackCompiler(jayOptions: JayRollupConfig = {}): Plugin[] {
             name: 'jay-stack:code-split',
             enforce: 'pre', // Run before jay:runtime
 
-            transform(code: string, id: string) {
-                // Check for environment query params
-                const isClientBuild = id.includes('?jay-client');
-                const isServerBuild = id.includes('?jay-server');
-
-                if (!isClientBuild && !isServerBuild) {
-                    return null; // No transformation needed
-                }
-
-                const environment: BuildEnvironment = isClientBuild ? 'client' : 'server';
-
+            transform(code: string, id: string, options) {
                 // Only transform TypeScript files
                 if (!id.endsWith('.ts') && !id.includes('.ts?')) {
+                    return null;
+                }
+
+                // Quick check: skip files that don't use makeJayStackComponent
+                if (!code.includes('makeJayStackComponent')) {
+                    return null;
+                }
+
+                // Determine environment:
+                // - ?jay-client → client (strip server code)
+                // - ?jay-server → server (strip client code) - for backward compatibility
+                // - SSR mode (no query param) → server (strip client code)
+                // - Client mode (no query param) → no transformation (keep all code)
+                const isClientBuild = id.includes('?jay-client');
+                const isServerBuild = id.includes('?jay-server');
+                const isSSR = options?.ssr === true;
+
+                let environment: BuildEnvironment;
+                if (isClientBuild) {
+                    environment = 'client';
+                } else if (isServerBuild || isSSR) {
+                    environment = 'server';
+                } else {
+                    // Client bundle without explicit query param - no transformation
                     return null;
                 }
 

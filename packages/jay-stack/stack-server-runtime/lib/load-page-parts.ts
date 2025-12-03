@@ -30,8 +30,9 @@ export async function loadPageParts(
 
     const parts: DevServerPagePart[] = [];
     if (exists) {
-        // Load page component with server-only code (client code stripped)
-        const pageComponent = (await vite.ssrLoadModule(route.compPath + '?jay-server')).page;
+        // Load page component - SSR mode automatically triggers server transformation
+        // (client code is stripped because ssrLoadModule sets ssr: true)
+        const pageComponent = (await vite.ssrLoadModule(route.compPath)).page;
         parts.push({
             compDefinition: pageComponent,
             // Client import uses client-only code (server code stripped)
@@ -64,9 +65,9 @@ export async function loadPageParts(
                 ? path.resolve(dirName, module)
                 : require.resolve(module, { paths: require.resolve.paths(dirName) });
 
-            // Load component with server-only code (client code stripped)
-            const serverModulePath = isLocalModule ? modulePath + '?jay-server' : modulePath;
-            const compDefinition = (await vite.ssrLoadModule(serverModulePath))[name];
+            // Load component - SSR mode automatically triggers server transformation
+            // (client code is stripped because ssrLoadModule sets ssr: true)
+            const compDefinition = (await vite.ssrLoadModule(modulePath))[name];
 
             // Generate client import path
             const moduleImport = module.startsWith('./') ? path.resolve(pagesBase, module) : module;

@@ -2,22 +2,41 @@ import { LoadResult, PluginContext } from 'rollup';
 import { getJayMetadata } from './metadata';
 import { getFileContext, readFileAsString } from '../common/files';
 import { checkCodeErrors } from '../common/errors';
-import { JAY_CONTRACT_EXTENSION, TS_EXTENSION, TSX_EXTENSION } from '@jay-framework/compiler-shared';
-import { compileContract, JAY_IMPORT_RESOLVER, parseContract, parseJayFile } from '@jay-framework/compiler-jay-html';
+import {
+    getBasePath,
+    JAY_CONTRACT_EXTENSION,
+    TS_EXTENSION,
+    TSX_EXTENSION,
+} from '@jay-framework/compiler-shared';
+import {
+    compileContract,
+    JAY_IMPORT_RESOLVER,
+    parseContract,
+    parseJayFile,
+} from '@jay-framework/compiler-jay-html';
 import path from 'node:path';
 import { JayPluginContext } from './jay-plugin-context';
 
 export function stripTSExtension(id: string) {
-    return id.replace(TS_EXTENSION, '').replace(TSX_EXTENSION, '');
+    // First get the base path without query parameters
+    const basePath = getBasePath(id);
+    // Then strip .ts/.tsx extension
+    return basePath.replace(TS_EXTENSION, '').replace(TSX_EXTENSION, '');
 }
 
 export async function loadJayFile(context: PluginContext, id: string): Promise<LoadResult> {
     console.info(`[load] start ${id}`);
-    let { originId } = getJayMetadata(context, id);
-    if (!Boolean(originId)) originId = stripTSExtension(id);
+    const metadata = getJayMetadata(context, id);
+    let originId = metadata.originId;
+    console.info(`[load] metadata for ${id}:`, JSON.stringify(metadata));
+    if (!Boolean(originId)) {
+        originId = stripTSExtension(id);
+        console.info(`[load] using stripTSExtension fallback: ${originId}`);
+    }
 
+    console.info(`[load] reading file from: ${originId}`);
     const code = checkCodeErrors(await readFileAsString(originId));
-    console.info(`[load] end ${id}`);
+    console.info(`[load] end ${id}, code length: ${code.length}`);
     return { code };
 }
 
@@ -28,21 +47,17 @@ export async function loadContractFile(context: PluginContext, id: string): Prom
 
     // Load the raw YAML content
     const yamlCode = await readFileAsString(originId);
-    
+
     // Compile the contract YAML to TypeScript in the load hook
     // This ensures esbuild sees valid TypeScript, not YAML
     const { filename, dirname } = getFileContext(id, JAY_CONTRACT_EXTENSION);
     const parsedFile = parseContract(yamlCode, filename);
-    const tsCode = await compileContract(
-        parsedFile,
-        `${dirname}/${filename}`,
-        JAY_IMPORT_RESOLVER,
-    );
-    
+    const tsCode = await compileContract(parsedFile, `${dirname}/${filename}`, JAY_IMPORT_RESOLVER);
+
     if (!tsCode.val) {
         throw new Error(`Failed to compile contract ${id}: ${JSON.stringify(tsCode.validations)}`);
     }
-    
+
     console.info(`[load] end ${id}`);
     return { code: tsCode.val };
 }

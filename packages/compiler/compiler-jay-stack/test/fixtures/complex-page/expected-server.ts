@@ -17,13 +17,13 @@ import {
     ProductType,
     SeoDatumOfProductPageViewState,
     StockStatus,
-// @ts-ignore
-} from '../contracts/product-page.jay-contract?jay-server';
+    // @ts-ignore
+} from '../contracts/product-page.jay-contract';
 import {
     WixStoresContext,
     WIX_STORES_SERVICE_MARKER,
-// @ts-ignore
-} from '../stores-client/wix-stores-context?jay-server';
+    // @ts-ignore
+} from '../stores-client/wix-stores-context';
 import {
     ChoiceTypeWithLiterals,
     ConnectedModifier,
@@ -33,15 +33,15 @@ import {
     MediaTypeWithLiterals,
     ModifierRenderTypeWithLiterals,
     SeoSchema,
-// @ts-ignore
+    // @ts-ignore
 } from '@wix/auto_sdk_stores_products-v-3';
 import {
     MediaGalleryViewState,
     Selected,
-// @ts-ignore
-} from '../contracts/media-gallery.jay-contract?jay-server';
+    // @ts-ignore
+} from '../contracts/media-gallery.jay-contract';
 //@ts-ignore
-import { MediaType } from '../contracts/media.jay-contract?jay-server';
+import { MediaType } from '../contracts/media.jay-contract';
 /**
  * URL parameters for product page routes
  * Supports dynamic routing like /products/[slug]
