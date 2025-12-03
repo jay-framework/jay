@@ -142,13 +142,9 @@ function mkJayStackCodeSplitTransformer({
     ) as ts.SourceFile;
 
     // Step 4: Analyze the transformed file and recursively remove unused statements
-    // Create a fresh binding resolver on the transformed file
-    const transformedBindingResolver = new SourceFileBindingResolver(transformedSourceFile);
-
-    const { statementsToRemove, unusedImports } = analyzeUnusedStatements(
-        transformedSourceFile,
-        transformedBindingResolver,
-    );
+    // NOTE: analyzeUnusedStatements uses forEachChild (not getChildren) because
+    // transformed nodes don't have parent references required by getChildren
+    const { statementsToRemove, unusedImports } = analyzeUnusedStatements(transformedSourceFile);
 
     // Step 5: Remove unused statements and filter/rewrite imports
     // Only propagate query params if explicitly requested (package builds)
