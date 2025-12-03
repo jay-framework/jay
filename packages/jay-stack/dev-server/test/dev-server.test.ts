@@ -101,7 +101,7 @@ target.appendChild(instance.element.dom);
         expect(scriptForMatching).toEqual(`
 import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
 import { render } from "/page.jay-html.ts";
-import {page} from "/page.ts?jay-client"
+import {page} from "/page.ts"
 
 const viewState = {"title":"Page with Code","content":"This page has both a jay-html file and a code file"};
 const fastCarryForward = {};
@@ -149,8 +149,8 @@ target.appendChild(instance.element.dom);
         expect(scriptForMatching).toEqual(`
 import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
 import { render } from "/page.jay-html.ts";
-import {page} from "/page.ts?jay-client"
-import {headless} from "/headless-component.ts?jay-client"
+import {page} from "/page.ts"
+import {headless} from "/headless-component.ts"
 
 const viewState = {"title":"Page with Headless","content":"This page has a headless component","headless":{"content":"This is from the headless component"}};
 const fastCarryForward = {};
