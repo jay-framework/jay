@@ -28,13 +28,10 @@ export async function loadJayFile(context: PluginContext, id: string): Promise<L
     console.info(`[load] start ${id}`);
     const metadata = getJayMetadata(context, id);
     let originId = metadata.originId;
-    console.info(`[load] metadata for ${id}:`, JSON.stringify(metadata));
     if (!Boolean(originId)) {
         originId = stripTSExtension(id);
-        console.info(`[load] using stripTSExtension fallback: ${originId}`);
     }
 
-    console.info(`[load] reading file from: ${originId}`);
     const code = checkCodeErrors(await readFileAsString(originId));
     console.info(`[load] end ${id}, code length: ${code.length}`);
     return { code };
