@@ -20,6 +20,9 @@ export default defineConfig({
                 '@jay-framework/component',
                 '@jay-framework/runtime',
                 '@jay-framework/secure',
+                'module', // Node.js module - createRequire
+                'prettier', // Has Node.js dependencies
+                'js-beautify', // Has Node.js dependencies
             ],
         },
     },
