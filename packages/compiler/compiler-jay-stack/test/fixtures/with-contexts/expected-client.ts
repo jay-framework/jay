@@ -1,7 +1,7 @@
 //@ts-ignore
-import { ThemeContext, UserContext } from './contexts?jay-client';
+import { ThemeContext, UserContext } from './contexts';
 //@ts-ignore
-import { Component } from './component?jay-client';
+import { Component } from './component';
 import { makeJayStackComponent } from '@jay-framework/fullstack-component';
 export const page = makeJayStackComponent()
     .withProps()

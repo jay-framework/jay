@@ -8,18 +8,18 @@ const jayOptions: JayRollupConfig = {
     outputDir: 'build/jay-runtime',
 };
 
-export default defineConfig({
+export default defineConfig(({ isSsrBuild }) => ({
     plugins: [...jayStackCompiler(jayOptions)],
     build: {
         minify: false,
         target: 'es2020',
+        ssr: isSsrBuild,
+        emptyOutDir: false,
         lib: {
-            entry: {
-                // Server build (client code stripped)
-                index: resolve(__dirname, 'lib/index.ts?jay-server'),
-                // Client build (server code stripped)
-                'index.client': resolve(__dirname, 'lib/index.ts?jay-client'),
-            },
+            // Same entry point - environment is detected from build.ssr / options.ssr
+            entry: isSsrBuild
+                ? { index: resolve(__dirname, 'lib/index.ts') }
+                : { 'index.client': resolve(__dirname, 'lib/index.ts') },
             formats: ['es'],
         },
         rollupOptions: {
@@ -37,4 +37,4 @@ export default defineConfig({
         setupFiles: '@jay-framework/dev-environment/library-dom/vitest.setup.ts',
         environment: 'jsdom',
     },
-});
+}));

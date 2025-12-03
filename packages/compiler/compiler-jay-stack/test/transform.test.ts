@@ -7,21 +7,13 @@ import {
 } from './test-utils/file-utils';
 import { prettify } from '@jay-framework/compiler-shared';
 
-// Test options for package builds (where query params need to propagate)
-const packageBuildOptions = { propagateQueryParams: true };
-
 describe('Jay Stack Builder Code Splitting', () => {
     describe('Basic Page', () => {
         it('should strip server methods for client build', async () => {
             const source = await readFixtureSource('basic-page');
             const expected = await readFixtureExpectedClient('basic-page');
 
-            const result = transformJayStackBuilder(
-                source,
-                'test.ts',
-                'client',
-                packageBuildOptions,
-            );
+            const result = transformJayStackBuilder(source, 'test.ts', 'client');
             const actual = await prettify(result.code);
 
             expect(actual).toEqual(expected);
@@ -43,12 +35,7 @@ describe('Jay Stack Builder Code Splitting', () => {
             const source = await readFixtureSource('with-contexts');
             const expected = await readFixtureExpectedClient('with-contexts');
 
-            const result = transformJayStackBuilder(
-                source,
-                'test.ts',
-                'client',
-                packageBuildOptions,
-            );
+            const result = transformJayStackBuilder(source, 'test.ts', 'client');
             const actual = await prettify(result.code);
 
             expect(actual).toEqual(expected);
@@ -70,12 +57,7 @@ describe('Jay Stack Builder Code Splitting', () => {
             const source = await readFixtureSource('with-inline-functions');
             const expected = await readFixtureExpectedClient('with-inline-functions');
 
-            const result = transformJayStackBuilder(
-                source,
-                'test.ts',
-                'client',
-                packageBuildOptions,
-            );
+            const result = transformJayStackBuilder(source, 'test.ts', 'client');
             const actual = await prettify(result.code);
 
             expect(actual).toEqual(expected);
@@ -97,12 +79,7 @@ describe('Jay Stack Builder Code Splitting', () => {
             const source = await readFixtureSource('with-regular-functions');
             const expected = await readFixtureExpectedClient('with-regular-functions');
 
-            const result = transformJayStackBuilder(
-                source,
-                'test.ts',
-                'client',
-                packageBuildOptions,
-            );
+            const result = transformJayStackBuilder(source, 'test.ts', 'client');
             const actual = await prettify(result.code);
 
             expect(actual).toEqual(expected);
@@ -124,12 +101,7 @@ describe('Jay Stack Builder Code Splitting', () => {
             const source = await readFixtureSource('complex-page');
             const expected = await readFixtureExpectedClient('complex-page');
 
-            const result = transformJayStackBuilder(
-                source,
-                'test.ts',
-                'client',
-                packageBuildOptions,
-            );
+            const result = transformJayStackBuilder(source, 'test.ts', 'client');
             const actual = await prettify(result.code);
 
             expect(actual).toEqual(expected);
@@ -138,33 +110,6 @@ describe('Jay Stack Builder Code Splitting', () => {
         it('should strip client methods for server build', async () => {
             const source = await readFixtureSource('complex-page');
             const expected = await readFixtureExpectedServer('complex-page');
-
-            const result = transformJayStackBuilder(source, 'test.ts', 'server');
-            const actual = await prettify(result.code);
-
-            expect(actual).toEqual(expected);
-        });
-    });
-
-    describe('Re-export Pattern', () => {
-        it('should add query parameter to local exports for client build', async () => {
-            const source = await readFixtureSource('re-export');
-            const expected = await readFixtureExpectedClient('re-export');
-
-            const result = transformJayStackBuilder(
-                source,
-                'test.ts',
-                'client',
-                packageBuildOptions,
-            );
-            const actual = await prettify(result.code);
-
-            expect(actual).toEqual(expected);
-        });
-
-        it('should NOT add query parameter to local exports for server build (dev server SSR)', async () => {
-            const source = await readFixtureSource('re-export');
-            const expected = await readFixtureExpectedServer('re-export');
 
             const result = transformJayStackBuilder(source, 'test.ts', 'server');
             const actual = await prettify(result.code);

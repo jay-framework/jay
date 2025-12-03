@@ -361,3 +361,63 @@ page.ts?jay-client imports products-database?jay-client → separate module (OK 
 ```
 
 Server-side code shares module identity, so service tokens work correctly.
+
+---
+
+## Final Simplification: Eliminate Query Parameters Entirely
+
+### Discovery
+
+After implementing the asymmetric query param strategy, we discovered that Vite's native `build.ssr` configuration provides all the environment information we need:
+
+- `vite build` → `options.ssr = false` in transform hook
+- `vite build --ssr` → `options.ssr = true` in transform hook
+
+This applies to **ALL** files in the build, not just the entry point.
+
+### Simplified Approach
+
+**Before** (with query parameters):
+
+```typescript
+// vite.config.ts
+entry: isSsrBuild
+  ? { index: resolve(__dirname, 'lib/index.ts?jay-server') }
+  : { 'index.client': resolve(__dirname, 'lib/index.ts?jay-client') };
+
+// Plugin had to detect and propagate ?jay-client/?jay-server
+```
+
+**After** (using options.ssr):
+
+```typescript
+// vite.config.ts
+entry: isSsrBuild
+  ? { index: resolve(__dirname, 'lib/index.ts') }
+  : { 'index.client': resolve(__dirname, 'lib/index.ts') };
+
+// Plugin uses options.ssr directly
+const environment = options?.ssr ? 'server' : 'client';
+```
+
+### Benefits
+
+1. **No query parameter propagation** - Environment is global per build
+2. **Simpler configuration** - Same entry point for both builds
+3. **Module identity preserved** - No query params means no module duplication
+4. **Works for dev server AND package builds** - Both use `options.ssr`
+
+### Code Removed
+
+- `propagateQueryParams` option in transform
+- `rewriteLocalImport` / `rewriteLocalExport` functions
+- `?jay-client` / `?jay-server` detection in plugin
+- Query param utilities in `compiler-shared` (can be cleaned up if no other uses)
+- Re-export test fixtures
+
+### Test Results After Simplification
+
+- ✅ `compiler-jay-stack`: 10 tests passing
+- ✅ `mood-tracker-plugin`: Builds with code splitting (0.73 kB server, 1.17 kB client)
+- ✅ `wix-stores`: Builds with code splitting (9.17 kB server, 2.38 kB client)
+- ✅ `fake-shop` dev server: Services initialize correctly, pages render

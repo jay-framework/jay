@@ -1,1 +1,0 @@
-export { myComponent } from './component';
