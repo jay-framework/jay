@@ -44,8 +44,14 @@ function toJayBuildEnvironment(env: BuildEnvironment): JayBuildEnvironment {
     return env === 'client' ? JayBuildEnvironment.Client : JayBuildEnvironment.Server;
 }
 
+export interface TransformOptions {
+    /** Whether to propagate query params to imports/exports (default: false for SSR, true for package builds) */
+    propagateQueryParams?: boolean;
+}
+
 type JayStackTransformerConfig = SourceFileTransformerContext & {
     environment: BuildEnvironment;
+    propagateQueryParams: boolean;
 };
 
 /**
@@ -54,18 +60,24 @@ type JayStackTransformerConfig = SourceFileTransformerContext & {
  * @param code - Source code to transform
  * @param filePath - File path (for source file creation)
  * @param environment - Target environment ('client' or 'server')
+ * @param options - Transform options
  * @returns Transformed code
  */
 export function transformJayStackBuilder(
     code: string,
     filePath: string,
     environment: BuildEnvironment,
+    options: TransformOptions = {},
 ): { code: string; map?: any } {
+    const { propagateQueryParams = false } = options;
+
     // Parse to AST
     const sourceFile = createSourceFile(filePath, code, ScriptTarget.Latest, true);
 
     // Transform using mkTransformer pattern
-    const transformers = [mkTransformer(mkJayStackCodeSplitTransformer, { environment })];
+    const transformers = [
+        mkTransformer(mkJayStackCodeSplitTransformer, { environment, propagateQueryParams }),
+    ];
 
     const printer = createPrinter();
     const result = tsBridge.transform(sourceFile, transformers);
@@ -91,6 +103,7 @@ function mkJayStackCodeSplitTransformer({
     sourceFile,
     context,
     environment,
+    propagateQueryParams,
 }: JayStackTransformerConfig): ts.SourceFile {
     // Step 1: Create binding resolver
     const bindingResolver = new SourceFileBindingResolver(sourceFile);
@@ -138,6 +151,8 @@ function mkJayStackCodeSplitTransformer({
     );
 
     // Step 5: Remove unused statements and filter/rewrite imports
+    // Only propagate query params if explicitly requested (package builds)
+    // For dev server SSR, we skip propagation to preserve module identity
     const transformedStatements = transformedSourceFile.statements
         .map((statement) => {
             // Remove statements that are no longer needed
@@ -146,20 +161,17 @@ function mkJayStackCodeSplitTransformer({
             }
 
             // Filter import declarations
-            // Only add query params for client environment (server is the default, no params needed)
             if (isImportDeclaration(statement)) {
                 const filtered = filterImportDeclaration(statement, unusedImports, factory);
-                // Only propagate ?jay-client for client builds
-                // Server builds use no query param to preserve module identity
-                return filtered && environment === 'client'
+                // Only propagate query params when explicitly requested
+                return filtered && propagateQueryParams
                     ? rewriteLocalImport(filtered, environment, factory)
                     : filtered;
             }
 
             // Rewrite export declarations with local module specifiers
-            // Only add query params for client environment
             if (isExportDeclaration(statement)) {
-                return environment === 'client'
+                return propagateQueryParams
                     ? rewriteLocalExport(statement, environment, factory)
                     : statement;
             }

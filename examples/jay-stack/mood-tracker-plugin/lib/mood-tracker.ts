@@ -1,14 +1,36 @@
-import { makeJayStackComponent } from '@jay-framework/fullstack-component';
-import { CurrentMood, MoodTrackerRefs, MoodTrackerContract } from './mood-tracker.jay-contract';
-import { createSignal } from '@jay-framework/component';
+import {FastRenderResult, makeJayStackComponent, partialRender, Signals} from '@jay-framework/fullstack-component';
+import {CurrentMood, MoodTrackerContract, MoodTrackerFastViewState, MoodTrackerRefs} from './mood-tracker.jay-contract';
+import {createSignal} from '@jay-framework/component';
 
 export interface MoodTrackerProps {}
 
-function MoodTracker(props: MoodTrackerProps, refs: MoodTrackerRefs) {
-    const [happy, setHappy] = createSignal(0);
-    const [sad, setSad] = createSignal(0);
-    const [neutral, setNeutral] = createSignal(0);
-    const [currentMood, setCurrentMood] = createSignal(CurrentMood.happy);
+interface MoodTrackerFastCarryForward {
+    sad: number,
+    happy: number,
+    neutral: number,
+    currentMood: number
+}
+
+async function fastRenderMoodTracker(): Promise<FastRenderResult<MoodTrackerFastViewState, MoodTrackerFastCarryForward>> {
+    const serverState = {
+        currentMood: CurrentMood.happy,
+        sad: 2,
+        neutral: 4,
+        happy: 4
+    }
+
+    console.log('**** running on the server environment ****')
+
+    return partialRender(serverState, serverState)
+}
+
+function MoodTracker(props: MoodTrackerProps, refs: MoodTrackerRefs, fastCarryForward: Signals<MoodTrackerFastCarryForward>) {
+    const [happy, setHappy] = fastCarryForward.happy;
+    const [sad, setSad] = fastCarryForward.sad;
+    const [neutral, setNeutral] = fastCarryForward.neutral;
+    const [currentMood, setCurrentMood] = fastCarryForward.currentMood;
+
+    console.log('**** running on the client environment ****')
 
     refs.happy.onclick(() => {
         setHappy((_) => _ + 1);
@@ -32,4 +54,5 @@ function MoodTracker(props: MoodTrackerProps, refs: MoodTrackerRefs) {
 
 export const moodTracker = makeJayStackComponent<MoodTrackerContract>()
     .withProps<MoodTrackerProps>()
+    .withFastRender(fastRenderMoodTracker)
     .withInteractive(MoodTracker);
