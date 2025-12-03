@@ -5,7 +5,7 @@ import {
     ProductPageFastViewState,
     ProductPageRefs,
     // @ts-ignore
-} from '../contracts/product-page.jay-contract?jay-client';
+} from '../contracts/product-page.jay-contract';
 /**
  * URL parameters for product page routes
  * Supports dynamic routing like /products/[slug]

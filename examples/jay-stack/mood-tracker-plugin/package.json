@@ -15,9 +15,10 @@
     "./mood-tracker.jay-contract": "./dist/mood-tracker.jay-contract"
   },
   "scripts": {
-    "build": "npm run definitions && npm run build:js && npm run build:copy-contract",
+    "build": "npm run definitions && npm run build:client && npm run build:server && npm run build:copy-contract",
     "definitions": "jay-cli definitions lib",
-    "build:js": "vite build",
+    "build:client": "vite build",
+    "build:server": "vite build --ssr",
     "build:copy-contract": "cp lib/*.jay-contract* dist/",
     "build:types": "tsup lib/index.ts --dts-only --format esm",
     "build:check-types": "tsc",
