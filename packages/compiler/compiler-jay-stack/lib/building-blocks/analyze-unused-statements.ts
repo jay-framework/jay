@@ -1,6 +1,5 @@
 import type * as ts from 'typescript';
 import tsBridge from '@jay-framework/typescript-bridge';
-import { SourceFileBindingResolver } from '@jay-framework/compiler';
 
 const {
     isIdentifier,
@@ -28,12 +27,13 @@ export interface UnusedStatementsAnalysis {
  * Analyze which statements and imports are no longer needed in the transformed file
  * Recursively removes statements that are only used by other removed statements
  *
+ * NOTE: This function uses forEachChild (not getChildren) to traverse transformed nodes,
+ * since transformed nodes don't have parent references required by getChildren.
+ *
  * @param sourceFile - The transformed source file to analyze
- * @param bindingResolver - Binding resolver for the source file
  */
 export function analyzeUnusedStatements(
     sourceFile: ts.SourceFile,
-    bindingResolver: SourceFileBindingResolver,
 ): UnusedStatementsAnalysis {
     const statementsToRemove = new Set<ts.Statement>();
 

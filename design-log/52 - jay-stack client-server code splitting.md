@@ -2095,9 +2095,11 @@ This ensures imports are only processed through the proper filtering mechanism t
 
 3. **Dependency Detection Algorithm**: The unused code removal algorithm is based on **identifier name matching** rather than using `Variable` objects from `BindingResolver`. This is less resilient and may incorrectly remove/keep code in edge cases with shadowed variables or complex scoping. Needs more real-world testing and may require refinement to use proper variable tracking.
 
-4. **Builder Method Detection**: Used `FlattenedAccessChain` comparison to reliably identify builder method calls across AST transformations. Added `areFlattenedAccessChainsEqual` utility to `@jay-framework/compiler` for robust comparison including `root` property.
+4. **Transformed Node Parent References**: TypeScript's transformer creates new nodes without parent references. Calling `node.getChildren()` on transformed nodes causes `TypeError: Cannot read properties of undefined (reading 'text')` because `getChildren()` internally requires parent references. Solution: `analyzeUnusedStatements` uses `forEachChild` instead of `getChildren`, and does NOT create a `SourceFileBindingResolver` on the transformed source file (it was unused anyway).
 
-5. **Test Fixture Approach**: Followed `compiler-jay-html` pattern with fixture files and `prettify()` for exact comparison, rather than the `.not.toContain()` approach initially sketched in the design.
+5. **Builder Method Detection**: Used `FlattenedAccessChain` comparison to reliably identify builder method calls across AST transformations. Added `areFlattenedAccessChainsEqual` utility to `@jay-framework/compiler` for robust comparison including `root` property.
+
+6. **Test Fixture Approach**: Followed `compiler-jay-html` pattern with fixture files and `prettify()` for exact comparison, rather than the `.not.toContain()` approach initially sketched in the design.
 
 **What Worked Well**:
 
