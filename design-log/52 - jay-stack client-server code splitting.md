@@ -2087,6 +2087,7 @@ This ensures imports are only processed through the proper filtering mechanism t
 1. **Package Location**: Moved from `packages/jay-stack/jay-stack-compiler/` to `packages/compiler/compiler-jay-stack/` to align with other compiler packages.
 
 2. **Unused Code Removal Approach**: Initial design proposed using `SourceFileStatementDependencies` to track and remove unused statements. Implementation uses a simpler iterative approach:
+
    - Transform AST to remove builder methods
    - Create fresh `SourceFileBindingResolver` on transformed file
    - Iteratively collect used identifiers and remove unused statements
@@ -2099,6 +2100,7 @@ This ensures imports are only processed through the proper filtering mechanism t
 5. **Test Fixture Approach**: Followed `compiler-jay-html` pattern with fixture files and `prettify()` for exact comparison, rather than the `.not.toContain()` approach initially sketched in the design.
 
 **What Worked Well**:
+
 - Building block pattern (separate analysis and transformation functions)
 - Composite plugin pattern (`jayStackCompiler` returning array of plugins)
 - Dual build support for packages using query parameters (`?jay-client`, `?jay-server`)

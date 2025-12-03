@@ -1,4 +1,4 @@
-import {makeJayStackComponent, partialRender} from '@jay-framework/fullstack-component';
+import { makeJayStackComponent, partialRender } from '@jay-framework/fullstack-component';
 //@ts-ignore
 import { DATABASE } from './database';
 
@@ -18,4 +18,3 @@ export const myComponent = makeJayStackComponent()
     .withServices(DATABASE)
     .withSlowlyRender(renderSlowly)
     .withInteractive(InteractiveComponent);
-

@@ -1,9 +1,9 @@
 //@ts-ignore
-import { DB, AUTH } from './services?jay-server';
+import { DB, AUTH } from './services';
 //@ts-ignore
-import { loadParams } from './loaders?jay-server';
+import { loadParams } from './loaders';
 //@ts-ignore
-import { renderSlow, renderFast } from './renderers?jay-server';
+import { renderSlow, renderFast } from './renderers';
 import { makeJayStackComponent } from '@jay-framework/fullstack-component';
 export const page = makeJayStackComponent()
     .withProps()

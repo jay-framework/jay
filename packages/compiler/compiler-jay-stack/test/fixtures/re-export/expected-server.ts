@@ -1,3 +1,3 @@
 // @ts-ignore
-export { myComponent } from './component?jay-server';
+export { myComponent } from './component';
 

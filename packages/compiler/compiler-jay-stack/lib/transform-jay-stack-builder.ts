@@ -146,14 +146,22 @@ function mkJayStackCodeSplitTransformer({
             }
 
             // Filter import declarations
+            // Only add query params for client environment (server is the default, no params needed)
             if (isImportDeclaration(statement)) {
                 const filtered = filterImportDeclaration(statement, unusedImports, factory);
-                return filtered ? rewriteLocalImport(filtered, environment, factory) : undefined;
+                // Only propagate ?jay-client for client builds
+                // Server builds use no query param to preserve module identity
+                return filtered && environment === 'client'
+                    ? rewriteLocalImport(filtered, environment, factory)
+                    : filtered;
             }
 
             // Rewrite export declarations with local module specifiers
+            // Only add query params for client environment
             if (isExportDeclaration(statement)) {
-                return rewriteLocalExport(statement, environment, factory);
+                return environment === 'client'
+                    ? rewriteLocalExport(statement, environment, factory)
+                    : statement;
             }
 
             return statement;

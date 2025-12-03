@@ -33,7 +33,29 @@ export async function resolveJayHtml(
     root: string,
     generationTarget: GenerateTarget = GenerateTarget.jay,
 ): Promise<ResolveIdResult> {
-    const resolved = await context.resolve(source, importer, { ...options, skipSelf: true });
+    // Parse source to handle query parameters - resolve only the base path
+    const sourceParsed = parseJayModuleSpecifier(source);
+    const sourceBasePath = sourceParsed.basePath;
+
+    // Skip if source already ends with .ts/.tsx (already resolved)
+    // But we need to still return id with metadata to avoid load errors
+    if (source.endsWith(TS_EXTENSION) || source.endsWith(TSX_EXTENSION)) {
+        // Already resolved - return as-is with metadata so load hook works
+        const originId = sourceBasePath.replace(TS_EXTENSION, '').replace(TSX_EXTENSION, '');
+        console.info(`[resolveId] already resolved ${source}, originId: ${originId}`);
+        return {
+            id: source,
+            meta: appendJayMetadata(context, source, {
+                format: SourceFileFormat.JayHtml,
+                originId,
+            }),
+        };
+    }
+
+    const resolved = await context.resolve(sourceBasePath, importer, {
+        ...options,
+        skipSelf: true,
+    });
     if (
         !resolved ||
         hasExtension(resolved.id, TS_EXTENSION) ||
@@ -41,9 +63,9 @@ export async function resolveJayHtml(
     )
         return null;
 
-    // Parse the resolved id to handle query parameters correctly
-    const parsed = parseJayModuleSpecifier(resolved.id);
-    const resolvedBasePath = parsed.basePath;
+    // Parse the resolved id as well (it shouldn't have query params, but be safe)
+    const resolvedParsed = parseJayModuleSpecifier(resolved.id);
+    const resolvedBasePath = resolvedParsed.basePath;
 
     const resolvedJayMeta = jayMetadataFromModuleMetadata(resolved.id, resolved.meta);
     const extension = generationTarget === GenerateTarget.react ? TSX_EXTENSION : TS_EXTENSION;
@@ -58,14 +80,16 @@ export async function resolveJayHtml(
         originId = resolvedBasePath;
     }
 
-    // Build the id with extension before query params
-    const idWithExtension =
+    // Build the id: originId + query params (if any) + extension
+    // This maintains backwards compatibility with hasJayModeExtension which expects .ts at the end
+    const baseWithQuery = sourceParsed.fullQueryString
+        ? `${originId}${sourceParsed.fullQueryString}`
+        : originId;
+
+    const id =
         context['ssr'] && originId.startsWith(root)
-            ? `${originId}${extension}`.slice(root.length)
-            : `${originId}${extension}`;
-    
-    // Re-append query params if present
-    const id = parsed.fullQueryString ? `${idWithExtension}${parsed.fullQueryString}` : idWithExtension;
+            ? `${baseWithQuery}${extension}`.slice(root.length)
+            : `${baseWithQuery}${extension}`;
 
     console.info(`[resolveId] resolved ${id} as ${format}`);
     return { id, meta: appendJayMetadata(context, id, { format, originId }) };
@@ -77,20 +101,46 @@ export async function resolveJayContract(
     importer: string | undefined,
     options: ResolveIdOptions,
 ) {
-    const resolved = await context.resolve(source, importer, { ...options, skipSelf: true });
-    
-    // Parse the resolved id to handle query parameters correctly
-    // The .ts extension should come before any query params
-    const parsed = parseJayModuleSpecifier(resolved.id);
-    const idWithTs = `${parsed.basePath}${TS_EXTENSION}`;
-    const id = parsed.fullQueryString ? `${idWithTs}${parsed.fullQueryString}` : idWithTs;
-    
+    // Parse source to handle query parameters - resolve only the base path
+    const sourceParsed = parseJayModuleSpecifier(source);
+    const sourceBasePath = sourceParsed.basePath;
+
+    // Skip if source already ends with .ts/.tsx (already resolved)
+    // But we need to still return id with metadata to avoid load errors
+    if (source.endsWith(TS_EXTENSION) || source.endsWith(TSX_EXTENSION)) {
+        // Already resolved - return as-is with metadata so load hook works
+        const originId = sourceBasePath.replace(TS_EXTENSION, '').replace(TSX_EXTENSION, '');
+        console.info(`[resolveId] already resolved contract ${source}, originId: ${originId}`);
+        return {
+            id: source,
+            meta: appendJayMetadata(context, source, {
+                format: SourceFileFormat.JayContract,
+                originId,
+            }),
+        };
+    }
+
+    const resolved = await context.resolve(sourceBasePath, importer, {
+        ...options,
+        skipSelf: true,
+    });
+
+    // Parse the resolved id as well (it shouldn't have query params, but be safe)
+    const resolvedParsed = parseJayModuleSpecifier(resolved.id);
+
+    // Build the id: basePath + query params (if any) + .ts
+    // This maintains backwards compatibility - .ts at the end
+    const baseWithQuery = sourceParsed.fullQueryString
+        ? `${resolvedParsed.basePath}${sourceParsed.fullQueryString}`
+        : resolvedParsed.basePath;
+    const id = `${baseWithQuery}${TS_EXTENSION}`;
+
     console.info(`[resolveId] resolved ${id}`);
     return {
         id,
         meta: appendJayMetadata(context, id, {
             format: SourceFileFormat.JayContract,
-            originId: parsed.basePath, // Use basePath without query params for file loading
+            originId: resolvedParsed.basePath, // Use basePath without query params for file loading
         }),
     };
 }

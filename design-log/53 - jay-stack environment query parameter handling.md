@@ -34,34 +34,36 @@ Add a third plugin that runs after `jay-stack:code-split` but before `jay:runtim
 
 ```typescript
 export function jayStackCompiler(jayOptions: JayRollupConfig = {}): Plugin[] {
-    return [
-        {
-            name: 'jay-stack:code-split',
-            enforce: 'pre',
-            transform(code, id) { /* ... add ?jay-client/server to imports */ }
-        },
-        {
-            name: 'jay-stack:strip-query-params',
-            enforce: 'pre',
-            transform(code, id) {
-                // Strip ?jay-client and ?jay-server from import paths
-                // before jay:runtime sees them
-                return code
-                    .replace(/\?jay-client/g, '')
-                    .replace(/\?jay-server/g, '');
-            }
-        },
-        jayRuntime(jayOptions),
-    ];
+  return [
+    {
+      name: 'jay-stack:code-split',
+      enforce: 'pre',
+      transform(code, id) {
+        /* ... add ?jay-client/server to imports */
+      },
+    },
+    {
+      name: 'jay-stack:strip-query-params',
+      enforce: 'pre',
+      transform(code, id) {
+        // Strip ?jay-client and ?jay-server from import paths
+        // before jay:runtime sees them
+        return code.replace(/\?jay-client/g, '').replace(/\?jay-server/g, '');
+      },
+    },
+    jayRuntime(jayOptions),
+  ];
 }
 ```
 
 **Pros:**
+
 - ✅ Simple to implement
 - ✅ Minimal changes to existing code
 - ✅ Quick fix for the immediate problem
 
 **Cons:**
+
 - ❌ Feels like a workaround, not a proper solution
 - ❌ Plugin chain becomes more complex (3 plugins instead of 2)
 - ❌ Fragile - relies on plugin ordering
@@ -72,6 +74,7 @@ export function jayStackCompiler(jayOptions: JayRollupConfig = {}): Plugin[] {
 ### Option 2: Universal Utility for Environment Metadata on Imports
 
 Create a shared utility in `@jay-framework/compiler-shared` that:
+
 1. Provides a consistent API for adding/removing/detecting environment query parameters
 2. Works for both `?jay-client`/`?jay-server` AND `?jay-main-sandbox`/`?jay-worker-*`
 3. Is used by both `jay-stack-compiler` and `jay-plugin`
@@ -82,11 +85,11 @@ Create a shared utility in `@jay-framework/compiler-shared` that:
 // In @jay-framework/compiler-shared
 
 export enum JayEnvironment {
-    Client = 'client',
-    Server = 'server',
-    MainSandbox = 'main-sandbox',
-    WorkerTrusted = 'worker-trusted',
-    WorkerSandbox = 'worker-sandbox',
+  Client = 'client',
+  Server = 'server',
+  MainSandbox = 'main-sandbox',
+  WorkerTrusted = 'worker-trusted',
+  WorkerSandbox = 'worker-sandbox',
 }
 
 export const JAY_QUERY_PREFIX = '?jay-';
@@ -95,58 +98,58 @@ export const JAY_QUERY_PREFIX = '?jay-';
  * Parse a module specifier to extract the base path and any jay environment
  */
 export function parseJayModuleSpecifier(specifier: string): {
-    basePath: string;
-    environment?: JayEnvironment;
-    queryParams: string;
+  basePath: string;
+  environment?: JayEnvironment;
+  queryParams: string;
 } {
-    const queryIndex = specifier.indexOf('?');
-    if (queryIndex === -1) {
-        return { basePath: specifier, queryParams: '' };
+  const queryIndex = specifier.indexOf('?');
+  if (queryIndex === -1) {
+    return { basePath: specifier, queryParams: '' };
+  }
+
+  const basePath = specifier.substring(0, queryIndex);
+  const queryString = specifier.substring(queryIndex);
+
+  // Extract jay environment from query
+  for (const env of Object.values(JayEnvironment)) {
+    const jayQuery = `${JAY_QUERY_PREFIX}${env}`;
+    if (queryString.includes(jayQuery)) {
+      // Remove jay query from remaining params
+      const remainingParams = queryString
+        .replace(jayQuery, '')
+        .replace(/^\?&/, '?')
+        .replace(/&$/, '')
+        .replace(/^&/, '');
+      return {
+        basePath,
+        environment: env,
+        queryParams: remainingParams || '',
+      };
     }
-    
-    const basePath = specifier.substring(0, queryIndex);
-    const queryString = specifier.substring(queryIndex);
-    
-    // Extract jay environment from query
-    for (const env of Object.values(JayEnvironment)) {
-        const jayQuery = `${JAY_QUERY_PREFIX}${env}`;
-        if (queryString.includes(jayQuery)) {
-            // Remove jay query from remaining params
-            const remainingParams = queryString
-                .replace(jayQuery, '')
-                .replace(/^\?&/, '?')
-                .replace(/&$/, '')
-                .replace(/^&/, '');
-            return { 
-                basePath, 
-                environment: env, 
-                queryParams: remainingParams || '' 
-            };
-        }
-    }
-    
-    return { basePath, queryParams: queryString };
+  }
+
+  return { basePath, queryParams: queryString };
 }
 
 /**
  * Add jay environment to a module specifier
  */
 export function addJayEnvironment(specifier: string, environment: JayEnvironment): string {
-    const { basePath, queryParams } = parseJayModuleSpecifier(specifier);
-    const jayQuery = `${JAY_QUERY_PREFIX}${environment}`;
-    
-    if (queryParams) {
-        return `${basePath}${jayQuery}&${queryParams.substring(1)}`;
-    }
-    return `${basePath}${jayQuery}`;
+  const { basePath, queryParams } = parseJayModuleSpecifier(specifier);
+  const jayQuery = `${JAY_QUERY_PREFIX}${environment}`;
+
+  if (queryParams) {
+    return `${basePath}${jayQuery}&${queryParams.substring(1)}`;
+  }
+  return `${basePath}${jayQuery}`;
 }
 
 /**
  * Check if a module specifier has a jay extension (ignoring query params)
  */
 export function hasJayExtension(specifier: string, extension: string): boolean {
-    const { basePath } = parseJayModuleSpecifier(specifier);
-    return basePath.endsWith(extension);
+  const { basePath } = parseJayModuleSpecifier(specifier);
+  return basePath.endsWith(extension);
 }
 ```
 
@@ -167,6 +170,7 @@ async resolveId(source, importer, options) {
 ```
 
 **Pros:**
+
 - ✅ Clean architecture - single source of truth
 - ✅ Both plugins use the same logic
 - ✅ Extensible for future environments
@@ -175,6 +179,7 @@ async resolveId(source, importer, options) {
 - ✅ Can combine multiple environments if needed (e.g., `?jay-client&jay-worker-trusted`)
 
 **Cons:**
+
 - ❌ More upfront work
 - ❌ Requires changes to both plugins
 - ❌ Need to update all places that check for extensions
@@ -185,21 +190,23 @@ Instead of adding query params to ALL local imports, be selective:
 
 ```typescript
 function shouldAddQueryParam(modulePath: string): boolean {
-    // Don't add query params to contract files - they're just types
-    if (modulePath.endsWith('.jay-contract')) return false;
-    // Don't add to jay-html files - they're templates
-    if (modulePath.endsWith('.jay-html') || modulePath.endsWith('.jay')) return false;
-    // Add to everything else
-    return true;
+  // Don't add query params to contract files - they're just types
+  if (modulePath.endsWith('.jay-contract')) return false;
+  // Don't add to jay-html files - they're templates
+  if (modulePath.endsWith('.jay-html') || modulePath.endsWith('.jay')) return false;
+  // Add to everything else
+  return true;
 }
 ```
 
 **Pros:**
+
 - ✅ Quick to implement
 - ✅ Minimal changes
 - ✅ Contract files work correctly
 
 **Cons:**
+
 - ❌ Inconsistent - some imports get query params, some don't
 - ❌ If a contract file imports another local file, that file won't get the query param
 - ❌ Doesn't solve the collision issue with sandbox params
@@ -224,19 +231,23 @@ function shouldAddQueryParam(modulePath: string): boolean {
 ### Implementation Plan
 
 **Phase 1: Create Shared Utility**
+
 - Add `parseJayModuleSpecifier()`, `addJayEnvironment()`, `hasJayExtension()` to `compiler-shared`
 - Add unit tests for the utility
 
 **Phase 2: Update jay-plugin**
+
 - Replace direct `hasExtension()` calls with `hasJayExtension()` for jay-specific extensions
 - Update `resolveId` to use the new parsing
 - Ensure existing sandbox query params still work
 
 **Phase 3: Update jay-stack-compiler**
+
 - Use `addJayEnvironment()` instead of string concatenation
 - Remove hardcoded `?jay-client` / `?jay-server` strings
 
 **Phase 4: Testing**
+
 - Test mood-tracker-plugin build
 - Test contract file imports with query params
 - Test combination of client/server + sandbox environments
@@ -264,6 +275,7 @@ If Option 2 is too much work for immediate needs, **Option 3 (Hybrid)** could be
 ### Changes Made
 
 **1. New Shared Utilities (`compiler-shared/lib/jay-module-specifier.ts`)**:
+
 - `JayBuildEnvironment` enum: `Client`, `Server`
 - `parseJayModuleSpecifier()`: Parses module specifiers to separate base path from query params
 - `addBuildEnvironment()`: Adds `?jay-client` or `?jay-server` to a module path
@@ -273,6 +285,7 @@ If Option 2 is too much work for immediate needs, **Option 3 (Hybrid)** could be
 - `hasBuildEnvironment()`: Checks if a module has a build environment query param
 
 **2. Updated Jay Plugin (`rollup-plugin`)**:
+
 - `resolveId`: Uses `hasJayExtension()` for detecting `.jay-html` and `.jay-contract` files
 - `resolveJayHtml`/`resolveJayContract`: Parse query params and add `.ts` extension BEFORE the query params
 - `load`: Contract files are now compiled to TypeScript in the `load` hook (not `transform`)
@@ -280,6 +293,7 @@ If Option 2 is too much work for immediate needs, **Option 3 (Hybrid)** could be
 - `getFileContext`: Strips query params before extracting filename/dirname
 
 **3. Updated Jay Stack Compiler (`compiler-jay-stack`)**:
+
 - Uses `addBuildEnvironment()` instead of manual string concatenation
 - Uses `isLocalModule()` from shared utilities
 - Uses `hasBuildEnvironment()` to check if query param already exists
@@ -302,9 +316,47 @@ esbuild runs between `load` and `transform` hooks, so the contract must be valid
 - ✅ `mood-tracker-plugin`: Builds successfully with dual outputs
 
 **Estimated Effort**:
+
 - Option 1: ~1 hour
 - Option 2: ~4-6 hours (actual: ~3 hours)
 - Option 3: ~30 minutes
 
 **Recommended**: Option 2 for long-term architecture, with Option 3 as a possible interim fix if time is critical.
 
+---
+
+## Critical Fix: Module Identity Preservation
+
+### Problem Discovered During Testing
+
+After implementing Option 2, the `fake-shop` example failed with "Service not found" errors. Root cause: **query parameters on imports break module identity**.
+
+When `page.ts?jay-server` imports `products-database`, Vite treats it as a different module than when `jay.init.ts` imports `products-database`. This caused service tokens (symbols) registered in `jay.init.ts` to be different from those looked up in page components.
+
+### Solution: Asymmetric Query Param Strategy
+
+**Server builds**: No query params → preserves module identity
+**Client builds**: `?jay-client` → separate modules (acceptable for client bundles)
+
+### Key Changes
+
+1. **`compiler-jay-stack/lib/index.ts`**: Detect environment automatically:
+   - `?jay-client` → client build (explicit)
+   - `?jay-server` → server build (backward compat)
+   - SSR mode (`options.ssr === true`) → server build (automatic)
+   - No signals → no transformation
+
+2. **`compiler-jay-stack/lib/transform-jay-stack-builder.ts`**: Only propagate `?jay-client` to imports for client builds. Server builds leave imports unchanged.
+
+3. **`stack-server-runtime/lib/load-page-parts.ts`**: Removed `?jay-server` from `ssrLoadModule()` calls. SSR mode is detected automatically by the transformer.
+
+### Why This Works
+
+```
+jay.init.ts imports products-database     → /path/products-database (module A)
+page.ts (SSR) imports products-database   → /path/products-database (module A) ✓ SAME
+
+page.ts?jay-client imports products-database?jay-client → separate module (OK for client)
+```
+
+Server-side code shares module identity, so service tokens work correctly.
