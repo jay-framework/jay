@@ -69,14 +69,16 @@ export function jayStackCompiler(jayOptions: JayRollupConfig = {}): Plugin[] {
                 // But for re-exports (like index.ts), we still need to rewrite the export paths
                 const hasComponent = code.includes('makeJayStackComponent');
                 const hasReExport = code.includes('export *') || code.includes('export {');
-                
+
                 if (!hasComponent && !hasReExport) {
                     return null;
                 }
 
                 // Transform using existing compiler utilities
                 try {
-                    return transformJayStackBuilder(code, id, environment, { propagateQueryParams });
+                    return transformJayStackBuilder(code, id, environment, {
+                        propagateQueryParams,
+                    });
                 } catch (error) {
                     // Log error but don't fail build - let other plugins handle it
                     console.error(`[jay-stack:code-split] Error transforming ${id}:`, error);
