@@ -36,7 +36,7 @@ export async function loadPageParts(
         parts.push({
             compDefinition: pageComponent,
             // Client import uses client-only code (server code stripped)
-            clientImport: `import {page} from '${route.compPath}?jay-client'`,
+            clientImport: `import {page} from '${route.compPath}'`,
             clientPart: `{comp: page.comp, contextMarkers: []}`,
         });
     }
@@ -74,7 +74,7 @@ export async function loadPageParts(
             const isNpmPackage = !module.startsWith('./') && !module.startsWith('../');
             const clientModuleImport = isNpmPackage
                 ? `${moduleImport}/client` // npm packages: use /client export
-                : `${moduleImport}?jay-client`; // local files: use ?jay-client query
+                : `${moduleImport}`; // local files: use ?jay-client query
 
             const key = headlessImport.key;
             const part: DevServerPagePart = {
