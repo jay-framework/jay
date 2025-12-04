@@ -356,43 +356,104 @@ RenderPipeline
 
 ```typescript
 class RenderPipeline<T, TargetVS extends object = object, TargetCF extends object = {}> {
-    // Creates a typed pipeline with target output types
-    static for<TargetVS extends object, TargetCF extends object = {}>(): TypedPipelineStarter<TargetVS, TargetCF>;
+    // Single factory method that returns entry points with types baked in
+    static for<TargetVS extends object, TargetCF extends object = {}>(): {
+        ok<T>(value: T | Promise<T>): RenderPipeline<T, TargetVS, TargetCF>;
+        try<T>(fn: () => T | Promise<T>): RenderPipeline<T, TargetVS, TargetCF>;
+        from<T>(outcome: RenderOutcome<T, any>): RenderPipeline<T, TargetVS, TargetCF>;
+        notFound(...): RenderPipeline<never, TargetVS, TargetCF>;
+        serverError(...): RenderPipeline<never, TargetVS, TargetCF>;
+        // ... other error constructors
+    };
     
-    // Untyped entry points
-    static ok<T>(value: T): RenderPipeline<T>;
-    static tryAsync<T>(fn: () => Promise<T>): Promise<RenderPipeline<T>>;
-}
-
-interface TypedPipelineStarter<TargetVS, TargetCF> {
-    ok<T>(value: T): RenderPipeline<T, TargetVS, TargetCF>;
-    tryAsync<T>(fn: () => Promise<T>): Promise<RenderPipeline<T, TargetVS, TargetCF>>;
-}
-
-class RenderPipeline<T, TargetVS, TargetCF> {
-    // Transform working value (T changes, target types preserved)
-    map<U>(fn: (value: T) => U): RenderPipeline<U, TargetVS, TargetCF>;
-    mapAsync<U>(fn: (value: T) => Promise<U>): Promise<RenderPipeline<U, TargetVS, TargetCF>>;
-    flatMap<U>(fn: (value: T) => RenderPipeline<U, any, any>): RenderPipeline<U, TargetVS, TargetCF>;
+    // Unified map - always sync, handles U | Promise<U> | RenderPipeline<U>
+    map<U>(fn: (value: T) => U | Promise<U> | RenderPipeline<U, TargetVS, TargetCF>): RenderPipeline<U, TargetVS, TargetCF>;
     
-    // Final conversion with explicit mapping - validates output types
+    // Final conversion - ONLY async method, resolves all pending promises
     toPhaseOutput(
         fn: (value: T) => { viewState: TargetVS; carryForward: TargetCF }
-    ): RenderOutcome<TargetVS, TargetCF>;
-    
-    // Alternative: return PhaseOutput directly
-    toPhaseOutput(
-        fn: (value: T) => PhaseOutput<TargetVS, TargetCF>
-    ): RenderOutcome<TargetVS, TargetCF>;
-    
-    // Shorthand: when T extends TargetVS and TargetCF is {}
-    toPhaseOutput(): T extends TargetVS 
-        ? TargetCF extends {} 
-            ? RenderOutcome<TargetVS, TargetCF> 
-            : never 
-        : never;
+    ): Promise<RenderOutcome<TargetVS, TargetCF>>;
 }
 ```
+
+### Q10: Why a unified `map()` with deferred async resolution?
+
+Traditional functional programming has separate methods:
+- `map(fn: T => U)` - transform value
+- `mapAsync(fn: T => Promise<U>)` - async transform
+- `flatMap(fn: T => M<U>)` - chain monads
+
+**Problems with separate methods:**
+1. **Cognitive overhead**: Developers must choose the right method
+2. **Refactoring pain**: Adding async to a sync function requires changing `map` to `mapAsync`
+3. **Conditional branching**: Need to use `flatMap` just to return an error case
+4. **Inconsistent return types**: Sometimes `RenderPipeline`, sometimes `Promise<RenderPipeline>`
+
+**Solution: Lazy/deferred async resolution**
+
+`map()` is always sync - it builds up a chain of transformations. Promises are tracked internally and only resolved when `toPhaseOutput()` is called.
+
+```typescript
+// map() always returns RenderPipeline (sync) - chains naturally
+pipeline
+    .map(x => x * 2)                              // Sync - stored
+    .map(x => fetchDetails(x.id))                 // Async - promise stored, not awaited yet
+    .map(x => x.valid ? x : Pipeline.notFound()) // Conditional - stored
+    .toPhaseOutput(...)                           // ← Only here promises resolve
+```
+
+**Implementation approach:**
+```typescript
+class RenderPipeline<T, TargetVS, TargetCF> {
+    private constructor(
+        // Value can be immediate or a pending promise
+        private readonly _value: T | Promise<T> | ServerError5xx | ClientError4xx | Redirect3xx,
+        private readonly _isSuccess: boolean,
+    ) {}
+    
+    map<U>(fn: (value: T) => U | Promise<U> | RenderPipeline<U, TargetVS, TargetCF>): RenderPipeline<U, TargetVS, TargetCF> {
+        if (!this._isSuccess) {
+            return this as unknown as RenderPipeline<U, TargetVS, TargetCF>;  // Error passthrough
+        }
+        
+        // Chain the transformation - may involve promises
+        const newValue = this._value instanceof Promise
+            ? this._value.then(v => fn(v))  // Chain onto existing promise
+            : fn(this._value as T);          // Apply to immediate value
+        
+        // Normalize the result
+        if (newValue instanceof RenderPipeline) {
+            return newValue;
+        }
+        // Store promise or value - will be resolved at toPhaseOutput()
+        return new RenderPipeline(newValue, true);
+    }
+    
+    async toPhaseOutput(fn: (value: T) => { viewState: TargetVS; carryForward: TargetCF }): Promise<RenderOutcome<TargetVS, TargetCF>> {
+        if (!this._isSuccess) {
+            return this._value as ServerError5xx | ClientError4xx | Redirect3xx;
+        }
+        
+        // Resolve any pending promises
+        const resolvedValue = await this._value;
+        
+        // If resolved to a RenderPipeline (from conditional map), unwrap it
+        if (resolvedValue instanceof RenderPipeline) {
+            return resolvedValue.toPhaseOutput(fn);
+        }
+        
+        // Apply final mapping
+        const { viewState, carryForward } = fn(resolvedValue as T);
+        return { kind: 'PhaseOutput', rendered: viewState, carryForward };
+    }
+}
+```
+
+**Benefits:**
+1. **Consistent API**: `map()` always returns `RenderPipeline`, chains naturally
+2. **Single async point**: Only `toPhaseOutput()` is async
+3. **No method selection**: One `map()` handles sync, async, and conditional
+4. **Cleaner code**: No need to sprinkle `await` throughout the chain
 
 ## Proposed API
 
@@ -463,96 +524,90 @@ export class RenderPipeline<T, TargetVS extends object = object, TargetCF extend
         private readonly _isSuccess: boolean,
     ) {}
 
-    // ===== Typed Pipeline Factory =====
+    // ===== Pipeline Factory =====
     
     /**
      * Create a typed pipeline with target output types declared upfront.
      * TypeScript validates that .toPhaseOutput() produces these types.
+     * 
+     * Returns an object with entry point methods:
+     * - .ok(value) - Start with a success value  
+     * - .try(fn) - Start with a function (sync or async, catches errors)
+     * - .from(outcome) - Start from an existing RenderOutcome
+     * - .notFound(), .serverError(), etc. - Start with an error
      */
-    static for<TargetVS extends object, TargetCF extends object = {}>(): TypedPipelineStarter<TargetVS, TargetCF>;
-
-    // ===== Untyped Static Constructors =====
-    
-    /** Create a success pipeline from a value */
-    static ok<T, TargetVS extends object, TargetCF extends object = {}>(value: T): RenderPipeline<T, TargetVS, TargetCF>;
-    
-    /** Create a pipeline from an async operation, catching errors */
-    static tryAsync<T, TargetVS extends object, TargetCF extends object = {}>(fn: () => Promise<T>): Promise<RenderPipeline<T, TargetVS, TargetCF>>;
-    
-    /** Create from an existing outcome value */
-    static from<T, TargetVS extends object, TargetCF extends object = {}>(outcome: RenderOutcome<T, any>): RenderPipeline<T, TargetVS, TargetCF>;
-    
-    // ===== Error Constructors =====
-    
-    /** 404 Not Found */
-    static notFound(message?: string, details?: Record<string, unknown>): RenderPipeline<never>;
-    
-    /** 400 Bad Request */
-    static badRequest(message?: string, details?: Record<string, unknown>): RenderPipeline<never>;
-    
-    /** 401 Unauthorized */
-    static unauthorized(message?: string, details?: Record<string, unknown>): RenderPipeline<never>;
-    
-    /** 403 Forbidden */
-    static forbidden(message?: string, details?: Record<string, unknown>): RenderPipeline<never>;
-    
-    /** Custom 5xx Server Error */
-    static serverError(status: number, message?: string, details?: Record<string, unknown>): RenderPipeline<never>;
-    
-    /** Custom 4xx Client Error */
-    static clientError(status: number, message?: string, details?: Record<string, unknown>): RenderPipeline<never>;
-    
-    /** 3xx Redirect */
-    static redirect(status: number, location: string): RenderPipeline<never>;
+    static for<TargetVS extends object, TargetCF extends object = {}>(): {
+        /** Start with a success value (can be T or Promise<T>) */
+        ok<T>(value: T | Promise<T>): RenderPipeline<T, TargetVS, TargetCF>;
+        
+        /** 
+         * Start with a function that returns T or Promise<T>.
+         * Catches errors into the pipeline (accessible via recover()).
+         * Always returns RenderPipeline (sync) - promises resolved at toPhaseOutput().
+         */
+        try<T>(fn: () => T | Promise<T>): RenderPipeline<T, TargetVS, TargetCF>;
+        
+        /** Start from an existing outcome */
+        from<T>(outcome: RenderOutcome<T, any>): RenderPipeline<T, TargetVS, TargetCF>;
+        
+        // Error entry points
+        notFound(message?: string, details?: Record<string, unknown>): RenderPipeline<never, TargetVS, TargetCF>;
+        badRequest(message?: string, details?: Record<string, unknown>): RenderPipeline<never, TargetVS, TargetCF>;
+        unauthorized(message?: string, details?: Record<string, unknown>): RenderPipeline<never, TargetVS, TargetCF>;
+        forbidden(message?: string, details?: Record<string, unknown>): RenderPipeline<never, TargetVS, TargetCF>;
+        serverError(status: number, message?: string, details?: Record<string, unknown>): RenderPipeline<never, TargetVS, TargetCF>;
+        clientError(status: number, message?: string, details?: Record<string, unknown>): RenderPipeline<never, TargetVS, TargetCF>;
+        redirect(status: number, location: string): RenderPipeline<never, TargetVS, TargetCF>;
+    };
     
     // ===== Transformation Methods =====
     
-    /** Transform the success value (errors pass through unchanged) */
-    map<U>(fn: (value: T) => U): RenderPipeline<U, TargetVS, TargetCF>;
-    
-    /** Transform the success value with an async function */
-    mapAsync<U>(fn: (value: T) => Promise<U>): Promise<RenderPipeline<U, TargetVS, TargetCF>>;
-    
-    /** Chain with another RenderPipeline-producing function */
-    flatMap<U>(fn: (value: T) => RenderPipeline<U, any, any>): RenderPipeline<U, TargetVS, TargetCF>;
-    
-    /** Chain with an async RenderPipeline-producing function */
-    flatMapAsync<U>(
-        fn: (value: T) => Promise<RenderPipeline<U, any, any>>
-    ): Promise<RenderPipeline<U, TargetVS, TargetCF>>;
+    /**
+     * Transform the working value. Always returns RenderPipeline (sync).
+     * 
+     * The mapping function can return:
+     * - U: Plain value
+     * - Promise<U>: Async value (resolved later at toPhaseOutput)
+     * - RenderPipeline<U>: For conditional errors/branching
+     * 
+     * The pipeline internally tracks pending async operations.
+     * All promises are resolved when toPhaseOutput() is called.
+     * 
+     * Examples:
+     *   .map(x => x * 2)                                    // Sync value
+     *   .map(x => fetchDetails(x.id))                       // Async - resolved at end
+     *   .map(x => x.valid ? x : Pipeline.notFound())        // Conditional error
+     */
+    map<U>(
+        fn: (value: T) => U | Promise<U> | RenderPipeline<U, TargetVS, TargetCF>
+    ): RenderPipeline<U, TargetVS, TargetCF>;
     
     /** Handle the error case, potentially recovering to a success */
     recover<U>(
-        fn: (error: Error) => RenderPipeline<U, any, any>
+        fn: (error: Error) => RenderPipeline<U, TargetVS, TargetCF>
     ): RenderPipeline<T | U, TargetVS, TargetCF>;
     
     // ===== Terminal Methods =====
     
     /**
      * Convert to final PhaseOutput with explicit mapping.
-     * The mapping function receives the final working value and produces both ViewState and CarryForward.
+     * 
+     * This is the ONLY async method in the API.
+     * It resolves all pending promises accumulated via map() calls,
+     * then applies the final mapping to produce ViewState and CarryForward.
+     * 
      * TypeScript validates the output matches TargetVS and TargetCF.
      */
     toPhaseOutput(
         fn: (value: T) => { viewState: TargetVS; carryForward: TargetCF }
-    ): RenderOutcome<TargetVS, TargetCF>;
+    ): Promise<RenderOutcome<TargetVS, TargetCF>>;
     
     /**
      * Alternative: return PhaseOutput directly from the mapping function.
      */
     toPhaseOutput(
         fn: (value: T) => PhaseOutput<TargetVS, TargetCF>
-    ): RenderOutcome<TargetVS, TargetCF>;
-    
-    /**
-     * Shorthand for simple cases where T already matches TargetVS and TargetCF is {}.
-     * Only available when these conditions are met.
-     */
-    toPhaseOutput(): T extends TargetVS 
-        ? TargetCF extends Record<string, never>  // Empty object
-            ? RenderOutcome<TargetVS, TargetCF> 
-            : never 
-        : never;
+    ): Promise<RenderOutcome<TargetVS, TargetCF>>;
     
     // ===== Utility Methods =====
     
@@ -569,20 +624,6 @@ export class RenderPipeline<T, TargetVS extends object = object, TargetCF extend
     unwrapOr<U>(defaultValue: U): T | U;
 }
 
-/**
- * Entry point for creating a typed pipeline.
- * Returns methods to start the pipeline with a value or async operation.
- */
-interface TypedPipelineStarter<TargetVS extends object, TargetCF extends object> {
-    /** Start with a success value */
-    ok<T>(value: T): RenderPipeline<T, TargetVS, TargetCF>;
-    
-    /** Start with an async operation (catches errors into pipeline) */
-    tryAsync<T>(fn: () => Promise<T>): Promise<RenderPipeline<T, TargetVS, TargetCF>>;
-    
-    /** Start from an existing outcome */
-    from<T>(outcome: RenderOutcome<T, any>): RenderPipeline<T, TargetVS, TargetCF>;
-}
 ```
 
 ### Example Usage
@@ -615,97 +656,54 @@ async function renderSlowlyChanging(
 async function renderSlowlyChanging(
     props: PageProps & ProductPageParams,
 ): Promise<SlowlyRenderResult<ProductSlowViewState, ProductsCarryForward>> {
-    // Declare target output types upfront
-    const pipeline = await RenderPipeline
-        .for<ProductSlowViewState, ProductsCarryForward>()
-        .tryAsync(() => getProductBySlug(props.slug));
+    // Create pipeline factory with target output types
+    const Pipeline = RenderPipeline.for<ProductSlowViewState, ProductsCarryForward>();
     
-    return pipeline
-        .recover(err => RenderPipeline.serverError(503, 'Database unavailable'))
-        .flatMap(product => 
-            product 
-                ? RenderPipeline.ok(product)
-                : RenderPipeline.notFound('Product not found', { slug: props.slug })
+    // All map() calls are sync - chain naturally
+    // Only toPhaseOutput() is async
+    return Pipeline
+        .try(() => getProductBySlug(props.slug))  // Start with async fetch
+        .recover(err => Pipeline.serverError(503, 'Database unavailable'))
+        .map(product => product                    // Conditional - returns value or RenderPipeline
+            ? product 
+            : Pipeline.notFound('Product not found', { slug: props.slug })
         )
-        // T is now Product, we can transform it freely
-        .map(product => ({
+        .map(product => ({                         // Sync transformation
             ...product,
             formattedPrice: formatCurrency(product.priceData.price),
         }))
-        // Final mapping produces both ViewState and CarryForward
-        .toPhaseOutput(data => ({
+        .toPhaseOutput(data => ({                  // ← Only async point
             viewState: {
                 id: data.id,
                 brand: data.brand,
                 description: data.description,
                 name: data.name,
                 priceData: data.priceData,
-                // ✅ TypeScript validates this matches ProductSlowViewState
             },
             carryForward: {
                 productId: data.id,
                 inventoryItemId: data.inventoryItemId,
-                // ✅ TypeScript validates this matches ProductsCarryForward
             }
         }));
 }
 ```
 
-**Using phaseOutput helper:**
-```typescript
-async function renderSlowlyChanging(
-    props: PageProps & ProductPageParams,
-): Promise<SlowlyRenderResult<ProductSlowViewState, ProductsCarryForward>> {
-    const pipeline = await RenderPipeline
-        .for<ProductSlowViewState, ProductsCarryForward>()
-        .tryAsync(() => getProductBySlug(props.slug));
-    
-    return pipeline
-        .recover(err => RenderPipeline.serverError(503, 'Database unavailable'))
-        .flatMap(product => 
-            product 
-                ? RenderPipeline.ok(product)
-                : RenderPipeline.notFound('Product not found')
-        )
-        .toPhaseOutput(product => phaseOutput(
-            { id: product.id, brand: product.brand, name: product.name, ... },
-            { productId: product.id, inventoryItemId: product.inventoryItemId }
-        ));
-}
-```
-
-**Simple case (no carryForward):**
-```typescript
-async function renderSimplePage(): Promise<SlowlyRenderResult<SimpleViewState, {}>> {
-    const data = await fetchStaticData();
-    
-    return RenderPipeline
-        .for<SimpleViewState, {}>()
-        .ok(data)
-        .map(d => ({ title: d.title, body: d.body }))
-        .toPhaseOutput(vs => ({ viewState: vs, carryForward: {} }));
-    
-    // Or shorthand when T matches TargetVS and TargetCF is {}:
-    // .toPhaseOutput();
-}
-```
-
-**Multiple async operations:**
+**Multiple async operations - all sync until toPhaseOutput:**
 ```typescript
 async function renderWithMultipleFetches(
     props: PageProps,
 ): Promise<SlowlyRenderResult<DashboardViewState, DashboardCarryForward>> {
-    const pipeline = await RenderPipeline
-        .for<DashboardViewState, DashboardCarryForward>()
-        .tryAsync(() => fetchUser(props.userId));
+    const Pipeline = RenderPipeline.for<DashboardViewState, DashboardCarryForward>();
     
-    return pipeline
-        .flatMapAsync(async user => {
+    // Chain async operations - map() stays sync, promises tracked internally
+    return Pipeline
+        .try(() => fetchUser(props.userId))        // Async fetch stored
+        .map(async user => {                        // Another async - promise chained
             const stats = await fetchUserStats(user.id);
-            return RenderPipeline.ok({ user, stats });
+            return { user, stats };
         })
-        .recover(err => RenderPipeline.serverError(503, 'Service unavailable'))
-        .toPhaseOutput(({ user, stats }) => ({
+        .recover(err => Pipeline.serverError(503, 'Service unavailable'))
+        .toPhaseOutput(({ user, stats }) => ({     // ← All promises resolved here
             viewState: {
                 userName: user.name,
                 totalOrders: stats.orderCount,
@@ -714,6 +712,41 @@ async function renderWithMultipleFetches(
             carryForward: {
                 userId: user.id,
             }
+        }));
+}
+```
+
+**Simple case (no carryForward):**
+```typescript
+async function renderSimplePage(): Promise<SlowlyRenderResult<SimpleViewState, {}>> {
+    return RenderPipeline
+        .for<SimpleViewState, {}>()
+        .try(() => fetchStaticData())
+        .map(d => ({ title: d.title, body: d.body }))
+        .toPhaseOutput(vs => ({ viewState: vs, carryForward: {} }));
+}
+```
+
+**Conditional error in the middle of async chain:**
+```typescript
+async function renderProduct(slug: string) {
+    const Pipeline = RenderPipeline.for<ProductVS, ProductCF>();
+    
+    return Pipeline
+        .try(() => getProductBySlug(slug))                    // Async
+        .map(product => product ? product : Pipeline.notFound()) // Conditional error
+        .map(async product => {                                // More async
+            const inventory = await getInventory(product.id);
+            return { product, inventory };
+        })
+        .map(({ product, inventory }) =>                       // Sync transform
+            inventory.count > 0 
+                ? { product, inventory } 
+                : Pipeline.clientError(410, 'Out of stock')
+        )
+        .toPhaseOutput(({ product, inventory }) => ({         // Resolve all
+            viewState: { name: product.name, stock: inventory.count },
+            carryForward: { productId: product.id }
         }));
 }
 ```
@@ -771,18 +804,14 @@ async function render(props): Promise<SlowlyRenderResult<VS, CF>> {
     );
 }
 
-// After: Using pipeline (optional, for complex cases)
+// After: Using pipeline - clean chain, single async point
 async function render(props): Promise<SlowlyRenderResult<VS, CF>> {
-    const pipeline = await RenderPipeline
-        .for<VS, CF>()
-        .tryAsync(() => fetch());
+    const Pipeline = RenderPipeline.for<VS, CF>();
     
-    return pipeline
-        .flatMap(data => data 
-            ? RenderPipeline.ok(data) 
-            : RenderPipeline.notFound()
-        )
-        .toPhaseOutput(data => ({
+    return Pipeline
+        .try(() => fetch())                           // Async stored
+        .map(data => data ? data : Pipeline.notFound()) // Conditional
+        .toPhaseOutput(data => ({                     // ← Only await here
             viewState: { name: data.name, price: data.price },
             carryForward: { dataId: data.id }
         }));
@@ -791,23 +820,23 @@ async function render(props): Promise<SlowlyRenderResult<VS, CF>> {
 
 ## Open Questions
 
-1. **Should `RenderPipeline` be lazy?** (Only execute on `.toPhaseOutput()`)
-   - Pro: Can compose without immediate execution
-   - Con: More complex, harder to debug
-   - Current recommendation: Eager execution for simplicity
-
-2. **Should we add combinator functions?** (e.g., `all`, `race`, `first`)
+1. **Should we add combinator functions?** (e.g., `all`, `race`, `first`)
    - These could be useful for parallel data fetching
-   - Example: `RenderPipeline.all([fetchA(), fetchB()]).map(([a, b]) => ...)`
+   - Example: `Pipeline.all([fetchA(), fetchB()]).map(([a, b]) => ...)`
 
-3. **Should error types be classes instead of interfaces?**
+2. **Should error types be classes instead of interfaces?**
    - Would allow `instanceof` checks but adds complexity
    - Current recommendation: Keep as interfaces with `kind` discriminator
 
-4. **Should `.toPhaseOutput()` have a shorthand for the common case?**
+3. **Should `.toPhaseOutput()` have a shorthand for the common case?**
    - When `T` already matches `TargetVS` and `TargetCF` is `{}`
    - Could allow `.toPhaseOutput()` with no argument
    - Or require explicit `.toPhaseOutput(vs => ({ viewState: vs, carryForward: {} }))`
+
+4. **How should errors in async map functions be handled?**
+   - If `map(async x => ...)` throws, should it become a ServerError?
+   - Or should `.recover()` be able to catch it?
+   - Current thinking: Caught exceptions become errors that `.recover()` can handle
 
 ## Appendix: Alternative Names Considered
 
