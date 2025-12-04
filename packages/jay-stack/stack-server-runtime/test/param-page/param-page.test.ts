@@ -73,7 +73,7 @@ describe('rendering a parameterized page', () => {
             PAGE_PROPS,
             PAGE_PARTS,
         );
-        if (slowlyRenderResult.kind !== 'PartialRender')
+        if (slowlyRenderResult.kind !== 'PhaseOutput')
             throw new Error('expecting partial render from slowly phase');
 
         const fastRenderResult = await renderFastChangingData(
@@ -103,7 +103,7 @@ describe('rendering a parameterized page', () => {
             PAGE_PROPS,
             PAGE_PARTS,
         );
-        if (slowlyRenderResult.kind !== 'PartialRender')
+        if (slowlyRenderResult.kind !== 'PhaseOutput')
             throw new Error('expecting partial render from slowly phase');
 
         const fastRenderResult = await renderFastChangingData(
@@ -133,7 +133,7 @@ describe('rendering a parameterized page', () => {
             PAGE_PROPS,
             PAGE_PARTS,
         );
-        if (slowlyRenderResult.kind !== 'PartialRender')
+        if (slowlyRenderResult.kind !== 'PhaseOutput')
             throw new Error('expecting partial render from slowly phase');
         const fastRenderResult = await renderFastChangingData(
             PAGE_PARAMS_A,
@@ -141,7 +141,7 @@ describe('rendering a parameterized page', () => {
             slowlyRenderResult.carryForward,
             PAGE_PARTS,
         );
-        if (fastRenderResult.kind !== 'PartialRender')
+        if (fastRenderResult.kind !== 'PhaseOutput')
             throw new Error('expecting partial render from fast phase');
 
         const comp = makeCompositeJayComponent(
@@ -169,7 +169,7 @@ describe('rendering a parameterized page', () => {
             PAGE_PROPS,
             PAGE_PARTS,
         );
-        if (slowlyRenderResult.kind !== 'PartialRender')
+        if (slowlyRenderResult.kind !== 'PhaseOutput')
             throw new Error('expecting partial render from slowly phase');
         const fastRenderResult = await renderFastChangingData(
             PAGE_PARAMS_B,
@@ -177,7 +177,7 @@ describe('rendering a parameterized page', () => {
             slowlyRenderResult.carryForward,
             PAGE_PARTS,
         );
-        if (fastRenderResult.kind !== 'PartialRender')
+        if (fastRenderResult.kind !== 'PhaseOutput')
             throw new Error('expecting partial render from fast phase');
 
         const comp = makeCompositeJayComponent(

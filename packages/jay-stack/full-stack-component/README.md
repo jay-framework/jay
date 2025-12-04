@@ -47,7 +47,7 @@ Jay Stack automatically generates **phase-specific ViewState types** from your c
 
 **Example:**
 
-````typescript
+```typescript
 // TypeScript automatically knows which properties are valid in each phase
 .withSlowlyRender(async () => {
     return partialRender({
@@ -61,6 +61,7 @@ Jay Stack automatically generates **phase-specific ViewState types** from your c
         productName: 'Widget',   // ❌ TypeScript Error: Not in FastViewState
     }, {});
 })
+```
 
 ### Specifying Phases in Contracts
 
@@ -94,7 +95,7 @@ You can annotate your contract properties with the `phase` attribute to control 
     </div>
   </body>
 </html>
-````
+```
 
 #### Jay Contract (Headless)
 
@@ -531,6 +532,208 @@ Creates a redirect response.
 ```typescript
 return redirect3xx(301, 'http://some.domain.com');
 ```
+
+## RenderPipeline - Functional Composition API
+
+The `RenderPipeline` class provides a functional programming approach to building render results with automatic error propagation and type-safe chaining.
+
+### Why Use RenderPipeline?
+
+Traditional render functions require manual error handling:
+
+```typescript
+// Traditional approach - verbose error handling
+async function renderSlowlyChanging(props) {
+  try {
+    const product = await getProductBySlug(props.slug);
+    if (!product) return notFound();
+    return partialRender({ name: product.name }, { productId: product.id });
+  } catch (error) {
+    return serverError5xx(503);
+  }
+}
+```
+
+With `RenderPipeline`, errors propagate automatically and you get clean, chainable code:
+
+```typescript
+// RenderPipeline approach - clean and composable
+async function renderSlowlyChanging(props) {
+  const Pipeline = RenderPipeline.for<ProductSlowVS, ProductCF>();
+
+  return Pipeline.try(() => getProductBySlug(props.slug))
+    .recover((err) => Pipeline.serverError(503, 'Database unavailable'))
+    .map((product) => (product ? product : Pipeline.notFound('Product not found')))
+    .toPhaseOutput((product) => ({
+      viewState: { name: product.name },
+      carryForward: { productId: product.id },
+    }));
+}
+```
+
+### Key Features
+
+- **Type-safe from start**: Declare target `ViewState` and `CarryForward` types upfront
+- **Unified `map()`**: Handles sync values, async values, and conditional errors
+- **Automatic error propagation**: Errors pass through the chain untouched
+- **Single async point**: Only `toPhaseOutput()` is async - all `map()` calls are sync
+- **Clean error recovery**: Handle errors at any point with `recover()`
+
+### Basic Usage
+
+```typescript
+import { RenderPipeline } from '@jay-framework/fullstack-component';
+
+// 1. Create a typed pipeline factory
+const Pipeline = RenderPipeline.for<MyViewState, MyCarryForward>();
+
+// 2. Start the pipeline
+Pipeline.ok(value)                    // Start with a value
+Pipeline.try(() => fetchData())       // Start with a function (catches errors)
+Pipeline.notFound('Not found')        // Start with an error
+
+// 3. Transform with map()
+pipeline
+    .map(x => x * 2)                           // Sync transformation
+    .map(async x => fetchDetails(x))           // Async transformation
+    .map(x => x.valid ? x : Pipeline.notFound()) // Conditional error
+
+// 4. Handle errors with recover()
+pipeline.recover(err => Pipeline.ok({ fallback: true }))
+
+// 5. Produce final output with toPhaseOutput()
+pipeline.toPhaseOutput(data => ({
+    viewState: { ... },
+    carryForward: { ... }
+}))
+```
+
+### Complete Example
+
+```typescript
+import { RenderPipeline, SlowlyRenderResult } from '@jay-framework/fullstack-component';
+
+interface ProductViewState {
+  name: string;
+  price: number;
+}
+
+interface ProductCarryForward {
+  productId: string;
+  inventoryItemId: string;
+}
+
+async function renderSlowlyChanging(
+  props: PageProps & { slug: string },
+): Promise<SlowlyRenderResult<ProductViewState, ProductCarryForward>> {
+  const Pipeline = RenderPipeline.for<ProductViewState, ProductCarryForward>();
+
+  return Pipeline.try(() => getProductBySlug(props.slug))
+    .recover((err) => Pipeline.serverError(503, 'Database unavailable'))
+    .map((product) =>
+      product ? product : Pipeline.notFound('Product not found', { slug: props.slug }),
+    )
+    .map(async (product) => {
+      // Chain additional async operations
+      const pricing = await getPricing(product.id);
+      return { ...product, pricing };
+    })
+    .toPhaseOutput((data) => ({
+      viewState: {
+        name: data.name,
+        price: data.pricing.amount,
+      },
+      carryForward: {
+        productId: data.id,
+        inventoryItemId: data.inventoryItemId,
+      },
+    }));
+}
+```
+
+### API Reference
+
+#### `RenderPipeline.for<ViewState, CarryForward>()`
+
+Creates a typed pipeline factory. Returns an object with entry point methods:
+
+```typescript
+const Pipeline = RenderPipeline.for<MyViewState, MyCarryForward>();
+
+Pipeline.ok(value); // Start with success value
+Pipeline.try(fn); // Start with function (catches errors)
+Pipeline.from(outcome); // Start from existing RenderOutcome
+Pipeline.notFound(msg, details); // Start with 404 error
+Pipeline.badRequest(msg); // Start with 400 error
+Pipeline.unauthorized(msg); // Start with 401 error
+Pipeline.forbidden(msg); // Start with 403 error
+Pipeline.serverError(status, msg); // Start with 5xx error
+Pipeline.clientError(status, msg); // Start with 4xx error
+Pipeline.redirect(status, url); // Start with redirect
+```
+
+#### `pipeline.map(fn)`
+
+Transforms the working value. Always returns `RenderPipeline` (sync).
+
+The function can return:
+
+- `U` - Plain value (sync transformation)
+- `Promise<U>` - Async value (resolved at `toPhaseOutput`)
+- `RenderPipeline<U>` - For conditional errors/branching
+
+```typescript
+pipeline
+  .map((x) => x * 2) // Sync
+  .map(async (x) => fetchData(x)) // Async
+  .map((x) => (x.valid ? x : Pipeline.notFound())); // Conditional
+```
+
+#### `pipeline.recover(fn)`
+
+Handles errors, potentially recovering to success:
+
+```typescript
+pipeline.recover((error) => {
+  console.error('Error:', error.message);
+  return Pipeline.ok({ fallback: true });
+});
+```
+
+#### `pipeline.toPhaseOutput(fn)`
+
+Converts to final `RenderOutcome`. This is the **only async method**.
+
+Resolves all pending promises and applies the final mapping to produce `ViewState` and `CarryForward`:
+
+```typescript
+await pipeline.toPhaseOutput((data) => ({
+  viewState: { name: data.name, value: data.value },
+  carryForward: { id: data.id },
+}));
+```
+
+#### Utility Methods
+
+```typescript
+pipeline.isOk(); // true if success state
+pipeline.isError(); // true if error state
+```
+
+### Error Types with Messages
+
+All error types now support optional `message`, `code`, and `details`:
+
+```typescript
+Pipeline.notFound('Product not found', { slug: 'my-product' });
+Pipeline.serverError(503, 'Database unavailable', { retryAfter: 30 });
+```
+
+The error types are:
+
+- `ServerError5xx` - Server errors (5xx status codes)
+- `ClientError4xx` - Client errors (4xx status codes)
+- `Redirect3xx` - Redirects (3xx status codes)
 
 ## Complete Example with Phase Validation
 

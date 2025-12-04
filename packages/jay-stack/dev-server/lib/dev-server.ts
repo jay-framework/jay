@@ -106,14 +106,14 @@ function mkRoute(
                     pageParts.val,
                 );
 
-                if (renderedSlowly.kind === 'PartialRender') {
+                if (renderedSlowly.kind === 'PhaseOutput') {
                     const renderedFast = await renderFastChangingData(
                         pageParams,
                         pageProps,
                         renderedSlowly.carryForward,
                         pageParts.val,
                     );
-                    if (renderedFast.kind === 'PartialRender') {
+                    if (renderedFast.kind === 'PhaseOutput') {
                         viewState = { ...renderedSlowly.rendered, ...renderedFast.rendered };
                         carryForward = renderedFast.carryForward;
 
