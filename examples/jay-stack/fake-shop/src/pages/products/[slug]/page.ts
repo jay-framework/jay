@@ -1,10 +1,16 @@
 import {
     makeJayStackComponent,
     PageProps,
-    partialRender,
+    RenderPipeline,
     UrlParams,
 } from '@jay-framework/fullstack-component';
-import { PageElementRefs, PageContract, TypeOfPageViewState } from './page.jay-html';
+import {
+    PageElementRefs,
+    PageContract,
+    TypeOfPageViewState,
+    PageSlowViewState,
+    PageFastViewState,
+} from './page.jay-html';
 import { Props } from '@jay-framework/component';
 import { PRODUCTS_DATABASE_SERVICE, ProductsDatabaseService } from '../../../products-database';
 import { INVENTORY_SERVICE, InventoryService } from '../../../inventory-service';
@@ -33,16 +39,23 @@ async function renderSlowlyChanging(
     props: PageProps & ProductPageParams,
     productsDb: ProductsDatabaseService,
 ) {
-    const product = await productsDb.getProductBySlug(props.slug);
-    if (!product) {
-        throw new Error(`Product not found: ${props.slug}`);
-    }
+    const Pipeline = RenderPipeline.for<PageSlowViewState, ProductsCarryForward>();
 
-    const { name, sku, price, id } = product;
-    return partialRender(
-        { name, sku, price, id, type: TypeOfPageViewState.physical },
-        { productId: id },
-    );
+    return Pipeline.try(() => productsDb.getProductBySlug(props.slug))
+        .recover(() => Pipeline.serverError(503, 'Database unavailable'))
+        .map((product) =>
+            product ? product : Pipeline.notFound(`Product not found: ${props.slug}`),
+        )
+        .toPhaseOutput((product) => ({
+            viewState: {
+                name: product.name,
+                sku: product.sku,
+                price: product.price,
+                id: product.id,
+                type: TypeOfPageViewState.physical,
+            },
+            carryForward: { productId: product.id },
+        }));
 }
 
 async function renderFastChanging(
@@ -51,15 +64,18 @@ async function renderFastChanging(
     productsDb: ProductsDatabaseService,
     inventory: InventoryService,
 ) {
-    const availableProducts = await inventory.getAvailableUnits(props.productId);
-    const inStock = availableProducts > 0;
-    return partialRender(
-        { inStock },
-        {
-            productId: props.productId,
-            inStock,
-        },
-    );
+    const Pipeline = RenderPipeline.for<PageFastViewState, ProductAndInventoryCarryForward>();
+
+    return Pipeline.try(() => inventory.getAvailableUnits(props.productId))
+        .recover(() => Pipeline.serverError(503, 'Inventory service unavailable'))
+        .map((availableUnits) => availableUnits > 0)
+        .toPhaseOutput((inStock) => ({
+            viewState: { inStock },
+            carryForward: {
+                productId: props.productId,
+                inStock,
+            },
+        }));
 }
 
 function ProductsPageConstructor(

@@ -1,7 +1,7 @@
 import {
     FastRenderResult,
     makeJayStackComponent,
-    partialRender,
+    RenderPipeline,
     Signals,
 } from '@jay-framework/fullstack-component';
 import {
@@ -10,7 +10,6 @@ import {
     MoodTrackerFastViewState,
     MoodTrackerRefs,
 } from './mood-tracker.jay-contract';
-import { createSignal } from '@jay-framework/component';
 
 export interface MoodTrackerProps {}
 
@@ -24,16 +23,19 @@ interface MoodTrackerFastCarryForward {
 async function fastRenderMoodTracker(): Promise<
     FastRenderResult<MoodTrackerFastViewState, MoodTrackerFastCarryForward>
 > {
-    const serverState = {
+    const Pipeline = RenderPipeline.for<MoodTrackerFastViewState, MoodTrackerFastCarryForward>();
+
+    console.log('**** running on the server environment ****');
+
+    return Pipeline.ok({
         currentMood: CurrentMood.happy,
         sad: 2,
         neutral: 4,
         happy: 4,
-    };
-
-    console.log('**** running on the server environment ****');
-
-    return partialRender(serverState, serverState);
+    }).toPhaseOutput((state) => ({
+        viewState: state,
+        carryForward: state,
+    }));
 }
 
 function MoodTracker(
