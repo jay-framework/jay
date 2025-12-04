@@ -49,7 +49,7 @@ describe('rendering a simple page', () => {
             PAGE_PROPS,
             PAGE_PARTS,
         );
-        if (slowlyRenderResult.kind !== 'PartialRender')
+        if (slowlyRenderResult.kind !== 'PhaseOutput')
             throw new Error('expecting partial render from slowly phase');
 
         const fastRenderResult = await renderFastChangingData(
@@ -80,7 +80,7 @@ describe('rendering a simple page', () => {
             PAGE_PROPS,
             PAGE_PARTS,
         );
-        if (slowlyRenderResult.kind !== 'PartialRender')
+        if (slowlyRenderResult.kind !== 'PhaseOutput')
             throw new Error('expecting partial render from slowly phase');
         const fastRenderResult = await renderFastChangingData(
             PAGE_PARAMS,
@@ -88,7 +88,7 @@ describe('rendering a simple page', () => {
             slowlyRenderResult.carryForward,
             PAGE_PARTS,
         );
-        if (fastRenderResult.kind !== 'PartialRender')
+        if (fastRenderResult.kind !== 'PhaseOutput')
             throw new Error('expecting partial render from fast phase');
         const fastCarryForward = fastRenderResult.carryForward;
 
@@ -118,7 +118,7 @@ describe('rendering a simple page', () => {
             PAGE_PROPS,
             PAGE_PARTS,
         );
-        if (slowlyRenderResult.kind !== 'PartialRender')
+        if (slowlyRenderResult.kind !== 'PhaseOutput')
             throw new Error('expecting partial render from slowly phase');
         const fastRenderResult = await renderFastChangingData(
             PAGE_PARAMS,
@@ -126,7 +126,7 @@ describe('rendering a simple page', () => {
             slowlyRenderResult.carryForward,
             PAGE_PARTS,
         );
-        if (fastRenderResult.kind !== 'PartialRender')
+        if (fastRenderResult.kind !== 'PhaseOutput')
             throw new Error('expecting partial render from fast phase');
         const fastCarryForward = fastRenderResult.carryForward;
 

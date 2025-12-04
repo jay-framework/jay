@@ -46,39 +46,70 @@ export interface PageProps {
 
 export type UrlParams = Record<string, string>;
 
+// ============================================================================
+// Render Result Types
+// ============================================================================
+
 export interface ServerError5xx {
     kind: 'ServerError';
     status: number;
+    message?: string;
+    code?: string;
+    details?: Record<string, unknown>;
 }
 
 export interface ClientError4xx {
     kind: 'ClientError';
     status: number;
+    message?: string;
+    code?: string;
+    details?: Record<string, unknown>;
 }
 
 export interface Redirect3xx {
-    kind: 'redirect';
+    kind: 'Redirect';
     status: number;
     location: string;
+    message?: string;
 }
 
-export interface PartialRender<ViewState extends object, CarryForward> {
-    kind: 'PartialRender';
+/**
+ * Successful output of a rendering phase.
+ * Contains the rendered ViewState and data to carry forward to the next phase.
+ */
+export interface PhaseOutput<ViewState extends object, CarryForward = {}> {
+    kind: 'PhaseOutput';
     rendered: ViewState;
     carryForward: CarryForward;
 }
 
-export type SlowlyRenderResult<ViewState extends object, CarryForward> =
-    | PartialRender<ViewState, CarryForward>
+/**
+ * @deprecated Use PhaseOutput instead. PartialRender is kept for backwards compatibility.
+ */
+export type PartialRender<ViewState extends object, CarryForward> = PhaseOutput<
+    ViewState,
+    CarryForward
+>;
+
+/**
+ * Union of all possible render outcomes.
+ */
+export type RenderOutcome<ViewState extends object, CarryForward = {}> =
+    | PhaseOutput<ViewState, CarryForward>
     | ServerError5xx
     | ClientError4xx
     | Redirect3xx;
+
+export type SlowlyRenderResult<ViewState extends object, CarryForward = {}> = RenderOutcome<
+    ViewState,
+    CarryForward
+>;
 export type AnySlowlyRenderResult = SlowlyRenderResult<object, object>;
-export type FastRenderResult<ViewState extends object, CarryForward> =
-    | PartialRender<ViewState, CarryForward>
-    | ServerError5xx
-    | ClientError4xx
-    | Redirect3xx;
+
+export type FastRenderResult<ViewState extends object, CarryForward = {}> = RenderOutcome<
+    ViewState,
+    CarryForward
+>;
 export type AnyFastRenderResult = FastRenderResult<object, object>;
 
 export type LoadParams<Services, Params extends UrlParams> = (

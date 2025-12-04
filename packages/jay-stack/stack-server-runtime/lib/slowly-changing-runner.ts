@@ -72,7 +72,7 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
                     { ...pageProps, ...pageParams },
                     ...services,
                 );
-                if (slowlyRenderedPart.kind === 'PartialRender') {
+                if (slowlyRenderedPart.kind === 'PhaseOutput') {
                     if (!key) {
                         slowlyViewState = { ...slowlyViewState, ...slowlyRenderedPart.rendered };
                         carryForward = { ...carryForward, ...slowlyRenderedPart.carryForward };

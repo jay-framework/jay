@@ -23,7 +23,7 @@ export async function renderFastChangingData(
                 partSlowlyCarryForward,
                 ...services,
             );
-            if (fastRenderedPart.kind === 'PartialRender') {
+            if (fastRenderedPart.kind === 'PhaseOutput') {
                 if (!key) {
                     fastViewState = { ...fastViewState, ...fastRenderedPart.rendered };
                     fastCarryForward = { ...fastCarryForward, ...fastRenderedPart.carryForward };
