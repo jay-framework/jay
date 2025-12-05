@@ -1,0 +1,44 @@
+name: duplicate-ref-names
+tags:
+  - tag: title
+    type: data
+    dataType: string
+
+  # First branch with 'button' ref in nested 'items'
+  - tag: options
+    type: sub-contract
+    repeated: true
+    tags:
+      - tag: name
+        type: data
+        dataType: string
+      - tag: items
+        type: sub-contract
+        repeated: true
+        tags:
+          - tag: label
+            type: data
+            dataType: string
+          - tag: button
+            type: interactive
+            elementType: HTMLButtonElement
+
+  # Second branch with the same 'button' ref name in nested 'items'
+  - tag: modifiers
+    type: sub-contract
+    repeated: true
+    tags:
+      - tag: name
+        type: data
+        dataType: string
+      - tag: items
+        type: sub-contract
+        repeated: true
+        tags:
+          - tag: label
+            type: data
+            dataType: string
+          - tag: button
+            type: interactive
+            elementType: HTMLButtonElement
+
