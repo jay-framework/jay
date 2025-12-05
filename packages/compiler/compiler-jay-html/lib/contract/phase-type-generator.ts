@@ -162,6 +162,30 @@ function countTotalProperties(
 }
 
 /**
+ * Build a type path access string, inserting [number] after array properties
+ * e.g., for path ['options', 'items'] where 'options' is an array:
+ * returns "BaseType['options'][number]['items']"
+ */
+function buildPathAccess(baseTypeName: string, path: string[], arrays: Set<string>): string {
+    if (path.length === 0) {
+        return baseTypeName;
+    }
+
+    let result = baseTypeName;
+    for (let i = 0; i < path.length; i++) {
+        const segment = path[i];
+        result += `['${segment}']`;
+
+        // Check if this path segment is an array (need to add [number] to access item type)
+        const pathUpToHere = path.slice(0, i + 1).join('.');
+        if (arrays.has(pathUpToHere)) {
+            result += '[number]';
+        }
+    }
+    return result;
+}
+
+/**
  * Build nested Pick type expression
  */
 function buildPickExpression(
@@ -197,11 +221,7 @@ function buildPickExpression(
     // Add Pick for direct (leaf) properties
     const directProps = properties.filter((p) => !childPropertyNames.has(p));
     if (directProps.length > 0) {
-        const pathAccess =
-            currentPath.length > 0
-                ? `${baseTypeName}${currentPath.map((p) => `['${p}']`).join('')}`
-                : baseTypeName;
-
+        const pathAccess = buildPathAccess(baseTypeName, currentPath, arrays);
         pickPart.push(`Pick<${pathAccess}, ${directProps.map((p) => `'${p}'`).join(' | ')}>`);
     }
 
@@ -230,7 +250,9 @@ function buildPickExpression(
 
         if (childExpression) {
             let fullExpression: string;
-            const originalPathAccess = `${baseTypeName}${childPath.map((p) => `['${p}']`).join('')}`;
+            // Build path access with [number] for parent arrays, but NOT including [number] for this property itself
+            // (that will be handled below based on isArray)
+            const originalPathAccess = buildPathAccess(baseTypeName, childPath, arrays);
 
             // If we're picking all properties of a leaf object (no further nesting), just use the type reference
             if (
@@ -244,12 +266,12 @@ function buildPickExpression(
                 // Handle async properties (Promises)
                 if (isAsync) {
                     if (isArray) {
-                        fullExpression = `Promise<Array<${directTypeRef}[number]>>`;
+                        fullExpression = `Promise<Array<${directTypeRef}>>`;
                     } else {
                         fullExpression = `Promise<${directTypeRef}>`;
                     }
                 } else if (isArray) {
-                    fullExpression = `Array<${directTypeRef}[number]>`;
+                    fullExpression = `Array<${directTypeRef}>`;
                 } else {
                     fullExpression = directTypeRef;
                 }
@@ -260,7 +282,7 @@ function buildPickExpression(
                     // For Promise properties, unwrap with Awaited first, then apply [number] for arrays
                     if (isArray) {
                         // Promise<Array<...>> - unwrap Promise, then access array element
-                        const unwrappedArrayAccess = `Awaited<${originalPathAccess}>[number]`;
+                        const unwrappedArrayAccess = `Awaited<${originalPathAccess}>`;
                         const unwrappedExpression = childExpression.replace(
                             originalPathAccess,
                             unwrappedArrayAccess,
@@ -276,9 +298,9 @@ function buildPickExpression(
                         fullExpression = `Promise<${unwrappedExpression}>`;
                     }
                 } else if (isArray) {
-                    // For arrays (non-Promise), wrap with Array<> and use [number] to access element type
-                    const arrayElementAccess = `${originalPathAccess}[number]`;
-                    fullExpression = `Array<${childExpression.replace(originalPathAccess, arrayElementAccess)}>`;
+                    // For arrays (non-Promise), wrap with Array<>
+                    // The path already has [number] from buildPathAccess, so just wrap in Array<>
+                    fullExpression = `Array<${childExpression}>`;
                 } else {
                     // Regular nested object
                     fullExpression = childExpression;
