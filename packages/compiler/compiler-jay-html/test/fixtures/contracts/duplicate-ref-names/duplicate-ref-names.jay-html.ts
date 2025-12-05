@@ -156,4 +156,3 @@ export function render(options?: RenderElementOptions): DuplicateRefNamesElement
         ) as DuplicateRefNamesElement;
     return [refManager.getPublicAPI() as DuplicateRefNamesElementRefs, render];
 }
-
