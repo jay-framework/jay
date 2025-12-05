@@ -278,6 +278,9 @@ export function renderReferenceManager(
     // Track used ref manager names to avoid duplicates
     const usedRefManagerNames = new Set<string>();
 
+    // Track used ref const names to avoid duplicates across different branches
+    const usedRefConstNames = new Set<string>();
+
     const getUniqueRefManagerName = (baseName: string): string => {
         const baseCamelCase = camelCase(`${baseName}RefManager`);
 
@@ -294,6 +297,23 @@ export function renderReferenceManager(
             uniqueName = `${baseCamelCase}${suffix}`;
         }
         usedRefManagerNames.add(uniqueName);
+        return uniqueName;
+    };
+
+    const getUniqueRefConstName = (constName: string): string => {
+        if (!usedRefConstNames.has(constName)) {
+            usedRefConstNames.add(constName);
+            return constName;
+        }
+
+        // If name is already used, append a suffix
+        let suffix = 2;
+        let uniqueName = `${constName}${suffix}`;
+        while (usedRefConstNames.has(uniqueName)) {
+            suffix++;
+            uniqueName = `${constName}${suffix}`;
+        }
+        usedRefConstNames.add(uniqueName);
         return uniqueName;
     };
 
@@ -315,11 +335,12 @@ export function renderReferenceManager(
         const compCollectionRefsDeclarations = compCollectionRefs
             .map((ref) => `'${ref.ref}'`)
             .join(', ');
+        // Use unique const names to avoid duplicate variable declarations across branches
         const refVariables = [
-            ...elemRefs.map((ref) => ref.constName),
-            ...elemCollectionRefs.map((ref) => ref.constName),
-            ...compRefs.map((ref) => ref.constName),
-            ...compCollectionRefs.map((ref) => ref.constName),
+            ...elemRefs.map((ref) => getUniqueRefConstName(ref.constName)),
+            ...elemCollectionRefs.map((ref) => getUniqueRefConstName(ref.constName)),
+            ...compRefs.map((ref) => getUniqueRefConstName(ref.constName)),
+            ...compCollectionRefs.map((ref) => getUniqueRefConstName(ref.constName)),
         ].join(', ');
 
         const childRenderedRefManagers: string[] = [];
