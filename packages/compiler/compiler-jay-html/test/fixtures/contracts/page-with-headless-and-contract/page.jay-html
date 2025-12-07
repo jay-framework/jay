@@ -1,0 +1,21 @@
+<html>
+<head>
+    <script type="application/jay-headless" 
+            src="../counter/counter"
+            name="counter"
+            contract="../counter/counter.jay-contract"
+            key="counter"></script>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+<div>
+    <h1>{title}</h1>
+    <p>{description}</p>
+    <div>Counter value: {counter.count}</div>
+    <button ref="counter.add">Add</button>
+    <button ref="counter.subtract">Subtract</button>
+    <button ref="submitButton">Submit</button>
+</div>
+</body>
+</html>
+

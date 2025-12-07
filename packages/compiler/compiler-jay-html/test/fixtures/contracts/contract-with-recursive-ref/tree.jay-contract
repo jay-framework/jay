@@ -1,0 +1,26 @@
+name: Tree
+tags:
+  - tag: name
+    type: data
+    dataType: string
+    phase: slow
+  
+  - tag: id
+    type: data
+    dataType: string
+    phase: slow
+  
+  - tag: open
+    type: data
+    dataType: boolean
+    phase: fast+interactive
+  
+  - tag: children
+    type: data
+    dataType: array<$/data>
+    phase: slow
+  
+  - tag: node-header
+    type: interactive
+    elementType: HTMLDivElement
+
