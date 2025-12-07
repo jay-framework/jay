@@ -34,5 +34,6 @@ export default defineConfig({
     test: {
         globals: true,
         setupFiles: '@jay-framework/dev-environment/library/vitest.setup.ts',
+        environment: 'jsdom',
     },
 });

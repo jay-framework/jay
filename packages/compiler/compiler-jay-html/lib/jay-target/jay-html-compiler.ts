@@ -1128,19 +1128,22 @@ function generatePhaseSpecificTypes(jayFile: JayHtmlSourceFile): string {
 
     // If we have a contract reference, generate phase types from contract
     if (jayFile.contract) {
-        const basePhaseTypes = generateAllPhaseViewStateTypes(jayFile.contract, actualViewStateTypeName);
-        
+        const basePhaseTypes = generateAllPhaseViewStateTypes(
+            jayFile.contract,
+            actualViewStateTypeName,
+        );
+
         // If we have headless components, we need to extend the Interactive phase to include them
         if (hasHeadlessComponents) {
             const headlessProps = jayFile.headlessImports.map((h) => `'${h.key}'`).join(' | ');
             const interactiveTypeName = `${baseName}InteractiveViewState`;
-            
+
             // Replace the Interactive phase type to include headless components
             const interactivePattern = new RegExp(
                 `export type ${interactiveTypeName} = ([^;]+);`,
                 'g',
             );
-            
+
             return basePhaseTypes.replace(interactivePattern, (match, originalType) => {
                 // If the original type is empty {}, just pick the headless properties
                 if (originalType.trim() === '{}') {
@@ -1150,7 +1153,7 @@ function generatePhaseSpecificTypes(jayFile: JayHtmlSourceFile): string {
                 return `export type ${interactiveTypeName} = ${originalType.trim()} & Pick<${actualViewStateTypeName}, ${headlessProps}>;`;
             });
         }
-        
+
         return basePhaseTypes;
     }
 

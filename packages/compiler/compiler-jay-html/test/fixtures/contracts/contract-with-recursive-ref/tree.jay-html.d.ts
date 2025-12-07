@@ -36,4 +36,3 @@ export type TreeContract = JayContract<
 >;
 
 export declare function render(options?: RenderElementOptions): TreeElementPreRender;
-

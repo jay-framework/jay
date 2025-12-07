@@ -343,19 +343,19 @@ async function parseTypes(
                 new JayImportedType(_.rootType.name, _.rootType, true),
             ]),
         );
-        
+
         if (resolvedType instanceof JayObjectType) {
             const finalType = new JayObjectType(resolvedType.name, {
                 ...headlessImportedTypes,
                 ...resolvedType.props,
             });
-            
+
             // Resolve recursive references now that we have the complete type tree
             resolveRecursiveReferences(finalType, finalType, validations);
-            
+
             return finalType;
         }
-        
+
         return resolvedType;
     };
 
@@ -389,11 +389,14 @@ async function parseTypes(
                     const contractType = viewStateResult.val.type;
                     let resolvedType: JayType;
                     if (contractType instanceof JayObjectType) {
-                        resolvedType = new JayObjectType(baseElementName + 'ViewState', contractType.props);
+                        resolvedType = new JayObjectType(
+                            baseElementName + 'ViewState',
+                            contractType.props,
+                        );
                     } else {
                         resolvedType = contractType;
                     }
-                    
+
                     // Merge headless types and resolve recursive references
                     return mergeHeadlessTypes(resolvedType);
                 } else {
@@ -423,7 +426,7 @@ async function parseTypes(
             imports,
             jayYaml.data, // Pass root data for recursive reference validation
         );
-        
+
         // Merge headless types and resolve recursive references
         return mergeHeadlessTypes(resolvedType);
     } else if (typeof jayYaml.data === 'string') return resolveImportedType(imports, jayYaml.data);

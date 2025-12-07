@@ -99,11 +99,14 @@ describe('Jay HTML with Contract References', () => {
 
             expect(compiledContract.validations).toEqual([]);
             const generatedContract = await prettify(compiledContract.val);
-            const expectedContract = await readFixtureElementDefinitionFile(folder, 'page.jay-contract.d.ts');
+            const expectedContract = await readFixtureElementDefinitionFile(
+                folder,
+                'page.jay-contract.d.ts',
+            );
 
             expect(generatedContract).toEqual(expectedContract);
         });
-    })
+    });
 
     describe('with recursive reference', () => {
         it('should handle recursive references in jay-html.d.ts when using contract reference', async () => {
@@ -138,9 +141,12 @@ describe('Jay HTML with Contract References', () => {
 
             expect(compiledContract.validations).toEqual([]);
             const generatedContract = await prettify(compiledContract.val);
-            const expectedContract = await readFixtureElementDefinitionFile(folder, 'tree.jay-contract.d.ts');
+            const expectedContract = await readFixtureElementDefinitionFile(
+                folder,
+                'tree.jay-contract.d.ts',
+            );
 
             expect(generatedContract).toEqual(expectedContract);
         });
-    })
+    });
 });

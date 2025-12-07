@@ -20,7 +20,10 @@ describe('definitions command', () => {
                 const files = await fsp.readdir(fullDir);
                 for (const file of files) {
                     // Only delete generated files, not committed fixture files (*.expected.*)
-                    if ((file.endsWith('.d.ts') || file.endsWith('.ts.map')) && !file.includes('.expected.')) {
+                    if (
+                        (file.endsWith('.d.ts') || file.endsWith('.ts.map')) &&
+                        !file.includes('.expected.')
+                    ) {
                         await fsp.unlink(path.join(fullDir, file));
                     }
                 }
@@ -34,7 +37,7 @@ describe('definitions command', () => {
         const sourceDir = path.join(fixturesDir, 'simple-html');
         const expectedFile = path.join(sourceDir, 'simple.expected.jay-html.d.ts');
         const generatedFile = path.join(sourceDir, 'simple.jay-html.d.ts');
-        
+
         // Read the expected output
         const expected = await fsp.readFile(expectedFile, 'utf-8');
 
@@ -56,7 +59,7 @@ describe('definitions command', () => {
         const sourceDir = path.join(fixturesDir, 'simple-contract');
         const expectedFile = path.join(sourceDir, 'product.expected.jay-contract.d.ts');
         const generatedFile = path.join(sourceDir, 'product.jay-contract.d.ts');
-        
+
         // Read the expected output
         const expected = await fsp.readFile(expectedFile, 'utf-8');
 

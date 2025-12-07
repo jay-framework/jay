@@ -28,4 +28,3 @@ export type TreeContract = JayContract<
     TreeFastViewState,
     TreeInteractiveViewState
 >;
-
