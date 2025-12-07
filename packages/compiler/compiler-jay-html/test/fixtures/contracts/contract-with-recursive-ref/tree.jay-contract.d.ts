@@ -1,14 +1,16 @@
-import {JayContract, HTMLElementProxy, HTMLElementCollectionProxy} from '@jay-framework/runtime';
+import { HTMLElementCollectionProxy, HTMLElementProxy, JayContract } from '@jay-framework/runtime';
 
 export interface TreeViewState {
     name: string;
     id: string;
     open: boolean;
-    children: TreeViewState[];
+    children: Array<TreeViewState>;
 }
 
 export type TreeSlowViewState = Pick<TreeViewState, 'name' | 'id' | 'children'>;
+
 export type TreeFastViewState = Pick<TreeViewState, 'open'>;
+
 export type TreeInteractiveViewState = Pick<TreeViewState, 'open'>;
 
 export interface TreeRefs {

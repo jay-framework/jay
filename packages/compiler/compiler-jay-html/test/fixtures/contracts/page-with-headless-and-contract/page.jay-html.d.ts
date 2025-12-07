@@ -7,8 +7,9 @@ import {
     PageInteractiveViewState as PageContractInteractiveViewState,
 } from './page.jay-contract';
 
-import { JayElement, RenderElement, RenderElementOptions, JayContract, HTMLElementCollectionProxy } from '@jay-framework/runtime';
 import { CounterViewState, CounterRefs, CounterRepeatedRefs, IsPositive } from '../counter/counter.jay-contract';
+
+import { JayElement, RenderElement, RenderElementOptions, JayContract } from '@jay-framework/runtime';
 
 // Extended ViewState that includes headless component types
 export interface PageViewState extends PageContractViewState {
