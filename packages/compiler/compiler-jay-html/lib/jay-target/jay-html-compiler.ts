@@ -4,12 +4,9 @@ import {
     ImportsFor,
     isArrayType,
     isPromiseType,
-    JayArrayType,
-    JayAtomicType,
     JayComponentType,
     JayErrorType,
     JayImportLink,
-    JayObjectType,
     JayType,
     JayUnknown,
     MainRuntimeModes,
@@ -27,8 +24,6 @@ import {
 import { generateAllPhaseViewStateTypes } from '../contract/phase-type-generator';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
-import path from 'path';
-import { pascalCase } from 'change-case';
 import {
     parseAccessor,
     parseAttributeExpression,
