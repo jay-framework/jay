@@ -1,15 +1,16 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { promises as fsp } from 'fs';
 import path from 'path';
 import { generateFiles } from '../lib/generate-files';
 import { generateElementFile } from '@jay-framework/compiler';
-import { GenerateTarget, RuntimeMode } from '@jay-framework/compiler-shared';
+import { prettify } from '@jay-framework/compiler-shared';
 
 describe('runtime command', () => {
     const fixturesDir = path.join(__dirname, 'fixtures');
     const outputDir = path.join(__dirname, 'output');
 
     // Clean up generated files after each test
+    // Note: We keep the fixture files (*.expected.*) and only clean up generated files
     afterEach(async () => {
         const cleanupDirs = ['simple-html', 'simple-contract', 'html-with-contract'];
 
@@ -19,7 +20,8 @@ describe('runtime command', () => {
             try {
                 const files = await fsp.readdir(fullDir);
                 for (const file of files) {
-                    if (file.endsWith('.ts') && !file.endsWith('.d.ts')) {
+                    // Only delete generated .ts files, not committed fixture files (*.expected.*)
+                    if (file.endsWith('.ts') && !file.endsWith('.d.ts') && !file.includes('.expected.')) {
                         await fsp.unlink(path.join(fullDir, file));
                     }
                 }
@@ -38,6 +40,11 @@ describe('runtime command', () => {
 
     it('should generate .ts for jay-html with inline data', async () => {
         const sourceDir = path.join(fixturesDir, 'simple-html');
+        const expectedFile = path.join(sourceDir, 'simple.expected.jay-html.ts');
+        const generatedFile = path.join(sourceDir, 'simple.jay-html.ts');
+        
+        // Read the expected output
+        const expected = await fsp.readFile(expectedFile, 'utf-8');
 
         await generateFiles(
             sourceDir,
@@ -48,32 +55,10 @@ describe('runtime command', () => {
             'jay',
         );
 
-        // Check that .ts file was generated
-        const generatedFile = path.join(sourceDir, 'simple.jay-html.ts');
-        const content = await fsp.readFile(generatedFile, 'utf-8');
+        // Read the generated file
+        const generated = await fsp.readFile(generatedFile, 'utf-8');
 
-        // Verify content
-        expect(content).toContain('export interface SimpleViewState');
-        expect(content).toContain('title: string');
-        expect(content).toContain('content: string');
-        expect(content).toContain('export interface SimpleElementRefs');
-
-        // Verify phase-specific types
-        expect(content).toContain('export type SimpleSlowViewState = {}');
-        expect(content).toContain('export type SimpleFastViewState = {}');
-        expect(content).toContain('export type SimpleInteractiveViewState = SimpleViewState');
-
-        // Verify 5-parameter JayContract
-        expect(content).toContain('export type SimpleContract = JayContract<');
-        expect(content).toContain('SimpleViewState,');
-        expect(content).toContain('SimpleElementRefs,');
-        expect(content).toContain('SimpleSlowViewState,');
-        expect(content).toContain('SimpleFastViewState,');
-        expect(content).toContain('SimpleInteractiveViewState');
-
-        // Verify render function
-        expect(content).toContain('export function render(');
-        expect(content).toContain('SimpleElementPreRender');
+        expect(await prettify(generated)).toEqual(await prettify(expected));
     });
 
     it('should not generate files for standalone jay-contract (only HTML files)', async () => {
@@ -99,46 +84,18 @@ describe('runtime command', () => {
 
     it('should generate .ts for jay-html with contract reference', async () => {
         const sourceDir = path.join(fixturesDir, 'html-with-contract');
+        const expectedFile = path.join(sourceDir, 'page.expected.jay-html.ts');
+        const generatedFile = path.join(sourceDir, 'page.jay-html.ts');
+        
+        // Read the expected output
+        const expected = await fsp.readFile(expectedFile, 'utf-8');
 
         await generateFiles(sourceDir, generateElementFile, () => {}, '.ts', undefined, 'jay');
 
-        // Check that .ts file was generated for HTML (contract is not compiled separately by runtime command)
-        const htmlGeneratedFile = path.join(sourceDir, 'page.jay-html.ts');
+        // Read the generated file
+        const generated = await fsp.readFile(generatedFile, 'utf-8');
 
-        const htmlContent = await fsp.readFile(htmlGeneratedFile, 'utf-8');
-
-        // Verify HTML .ts uses contract's ViewState
-        expect(htmlContent).toContain('export interface PageViewState');
-        expect(htmlContent).toContain('title: string');
-        expect(htmlContent).toContain('description: string');
-        expect(htmlContent).toContain('price: number');
-        expect(htmlContent).toContain('stock: number');
-
-        // Verify HTML .ts has refs
-        expect(htmlContent).toContain('export interface PageElementRefs');
-        expect(htmlContent).toContain('buyButton: HTMLElementProxy');
-
-        // Verify HTML .ts has phase-specific types from contract
-        expect(htmlContent).toContain(
-            "export type PageSlowViewState = Pick<PageViewState, 'title' | 'description'>",
-        );
-        expect(htmlContent).toContain(
-            "export type PageFastViewState = Pick<PageViewState, 'price' | 'stock'>",
-        );
-        expect(htmlContent).toContain(
-            "export type PageInteractiveViewState = Pick<PageViewState, 'stock'>",
-        );
-
-        // Verify HTML .ts has 5-parameter JayContract
-        expect(htmlContent).toContain('export type PageContract = JayContract<');
-        expect(htmlContent).toContain('PageViewState,');
-        expect(htmlContent).toContain('PageElementRefs,');
-        expect(htmlContent).toContain('PageSlowViewState,');
-        expect(htmlContent).toContain('PageFastViewState,');
-        expect(htmlContent).toContain('PageInteractiveViewState');
-
-        // Verify render function
-        expect(htmlContent).toContain('export function render(');
+        expect(await prettify(generated)).toEqual(await prettify(expected));
 
         // Note: The runtime command does NOT generate standalone .ts files for contracts
         // Contracts are only compiled when referenced by HTML files, and the types are
@@ -148,15 +105,17 @@ describe('runtime command', () => {
     it('should generate files to custom destination directory', async () => {
         const sourceDir = path.join(fixturesDir, 'simple-html');
         const destDir = outputDir;
+        const expectedFile = path.join(fixturesDir, 'simple-html', 'simple.expected.jay-html.ts');
+        
+        // Read the expected output
+        const expected = await fsp.readFile(expectedFile, 'utf-8');
 
         await generateFiles(sourceDir, generateElementFile, () => {}, '.ts', destDir, 'jay');
 
         // Check that .ts file was generated in destination directory
         const generatedFile = path.join(destDir, 'simple.jay-html.ts');
-        const content = await fsp.readFile(generatedFile, 'utf-8');
+        const generated = await fsp.readFile(generatedFile, 'utf-8');
 
-        // Verify file exists and has expected content
-        expect(content).toContain('export interface SimpleViewState');
-        expect(content).toContain('export type SimpleContract = JayContract<');
+        expect(await prettify(generated)).toEqual(await prettify(expected));
     });
 });
