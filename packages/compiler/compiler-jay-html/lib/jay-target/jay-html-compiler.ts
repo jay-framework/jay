@@ -28,6 +28,7 @@ import { generateAllPhaseViewStateTypes } from '../contract/phase-type-generator
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
 import path from 'path';
+import { pascalCase } from 'change-case';
 import {
     parseAccessor,
     parseAttributeExpression,
@@ -1156,7 +1157,102 @@ export function generateElementDefinitionFile(
         // If jay-html references an external contract, import types from it instead of duplicating
         if (jayFile.contract && jayFile.contractRef) {
             const contractFileName = path.basename(jayFile.contractRef, '.jay-contract');
-            const contractImport = `import {
+            const hasHeadlessComponents = jayFile.headlessImports && jayFile.headlessImports.length > 0;
+
+            let contractImport: string;
+            let typeExtensions: string = '';
+            let reExports: string;
+
+            if (hasHeadlessComponents) {
+                // Import contract types with aliases when we need to extend them
+                contractImport = `import {
+    ${baseName}ViewState as ${baseName}ContractViewState,
+    ${baseName}Refs as ${baseName}ContractRefs,
+    ${baseName}RepeatedRefs as ${baseName}ContractRepeatedRefs,
+    ${baseName}SlowViewState as ${baseName}ContractSlowViewState,
+    ${baseName}FastViewState as ${baseName}ContractFastViewState,
+    ${baseName}InteractiveViewState as ${baseName}ContractInteractiveViewState,
+} from './${contractFileName}.jay-contract';`;
+
+                // Generate headless component imports
+                const headlessImports = jayFile.headlessImports
+                    .map((h) => {
+                        const contractPath = path.relative(
+                            path.dirname(jayFile.contractRef),
+                            h.contractLinks[0].module,
+                        );
+                        // Get all names from the contract link and insert RepeatedRefs after Refs
+                        const contractLinkNames = h.contractLinks[0].names.map((n) => n.name);
+                        const refsName = `${pascalCase(h.key)}Refs`;
+                        const repeatedRefsName = `${pascalCase(h.key)}RepeatedRefs`;
+                        
+                        // Insert RepeatedRefs right after Refs
+                        const refsIndex = contractLinkNames.indexOf(refsName);
+                        const allNames = [...contractLinkNames];
+                        if (refsIndex !== -1) {
+                            allNames.splice(refsIndex + 1, 0, repeatedRefsName);
+                        } else {
+                            allNames.push(repeatedRefsName);
+                        }
+                        
+                        return `import { ${allNames.join(', ')} } from '${contractPath}';`;
+                    })
+                    .join('\n');
+
+                contractImport = `${contractImport}\n\n${headlessImports}`;
+
+                // Generate extended types
+                const headlessViewStateExtensions = jayFile.headlessImports
+                    .map((h) => `    ${h.key}?: ${h.rootType.name};`)
+                    .join('\n');
+
+                const headlessRefsExtensions = jayFile.headlessImports
+                    .map((h) => `    ${h.key}: ${pascalCase(h.key)}Refs;`)
+                    .join('\n');
+
+                const headlessRepeatedRefsExtensions = jayFile.headlessImports
+                    .map((h) => `    ${h.key}: ${pascalCase(h.key)}RepeatedRefs;`)
+                    .join('\n');
+
+                const headlessInteractiveExtension = jayFile.headlessImports
+                    .map((h) => `    ${h.key}?: ${h.rootType.name};`)
+                    .join('\n');
+
+                typeExtensions = `
+// Extended ViewState that includes headless component types
+export interface ${baseName}ViewState extends ${baseName}ContractViewState {
+${headlessViewStateExtensions}
+}
+
+// Extended Refs that includes headless component refs
+export interface ${baseName}ElementRefs extends ${baseName}ContractRefs {
+${headlessRefsExtensions}
+}
+
+// Extended RepeatedRefs that includes headless component repeated refs
+export interface ${baseName}ElementRepeatedRefs extends ${baseName}ContractRepeatedRefs {
+${headlessRepeatedRefsExtensions}
+}
+
+// Phase-specific types based on the extended ViewState
+export type ${baseName}SlowViewState = ${baseName}ContractSlowViewState;
+export type ${baseName}FastViewState = ${baseName}ContractFastViewState;
+export type ${baseName}InteractiveViewState = ${baseName}ContractInteractiveViewState & {
+${headlessInteractiveExtension}
+};
+
+export type ${baseName}Contract = JayContract<
+    ${baseName}ViewState,
+    ${baseName}ElementRefs,
+    ${baseName}SlowViewState,
+    ${baseName}FastViewState,
+    ${baseName}InteractiveViewState
+>;`;
+
+                reExports = '';
+            } else {
+                // No headless components - just import and re-export
+                contractImport = `import {
     ${baseName}ViewState,
     ${baseName}Refs as ${baseName}ElementRefs,
     ${baseName}SlowViewState,
@@ -1164,6 +1260,12 @@ export function generateElementDefinitionFile(
     ${baseName}InteractiveViewState,
     ${baseName}Contract
 } from './${contractFileName}.jay-contract';`;
+
+                reExports = `
+// Re-export contract types for convenience
+export { ${baseName}ViewState, ${baseName}ElementRefs, ${baseName}SlowViewState, ${baseName}FastViewState, ${baseName}InteractiveViewState, ${baseName}Contract };
+`;
+            }
 
             const { renderedElement, preRenderType, renderedImplementation } =
                 renderFunctionImplementation(
@@ -1180,22 +1282,33 @@ export function generateElementDefinitionFile(
             const cssImport = generateCssImport(jayFile);
 
             // Import JayElement etc from runtime, but exclude types that come from the contract
+            let runtimeImportsObj = renderedImplementation.imports
+                .plus(Import.jayElement)
+                .minus(Import.HTMLElementProxy)
+                .minus(Import.HTMLElementCollectionProxy);
+
+            // Only exclude JayContract if we're not extending (i.e., no headless components)
+            if (!hasHeadlessComponents) {
+                runtimeImportsObj = runtimeImportsObj.minus(Import.jayContract);
+            }
+
+            // Filter out headless component contract imports since we're generating them manually above
+            let componentImports = jayFile.imports;
+            if (hasHeadlessComponents) {
+                const headlessContractModules = new Set(
+                    jayFile.headlessImports.flatMap((h) => h.contractLinks.map((link) => link.module)),
+                );
+                componentImports = jayFile.imports.filter(
+                    (importLink) => !headlessContractModules.has(importLink.module),
+                );
+            }
+
             const runtimeImports = renderImports(
-                renderedImplementation.imports
-                    .plus(Import.jayElement)
-                    .minus(Import.jayContract)
-                    .minus(Import.HTMLElementProxy)
-                    .minus(Import.HTMLElementCollectionProxy),
+                runtimeImportsObj,
                 ImportsFor.definition,
-                jayFile.imports,
+                componentImports,
                 RuntimeMode.MainTrusted,
             );
-
-            // Re-export the imported types for backward compatibility
-            const reExports = `
-// Re-export contract types for convenience
-export { ${baseName}ViewState, ${baseName}ElementRefs, ${baseName}SlowViewState, ${baseName}FastViewState, ${baseName}InteractiveViewState, ${baseName}Contract };
-`;
 
             // Only include HTML-specific element types (PageElement, PageElementRender, etc.)
             // Remove ViewState, ElementRefs definitions and Contract definition from renderedElement
@@ -1211,6 +1324,7 @@ export { ${baseName}ViewState, ${baseName}ElementRefs, ${baseName}SlowViewState,
                 contractImport,
                 runtimeImports,
                 cssImport,
+                typeExtensions,
                 reExports,
                 htmlOnlyTypes,
                 renderFunctionDeclaration(preRenderType),

@@ -4,6 +4,8 @@ import {
     resolvePrimitiveType,
     JayEnumType,
     JayPromiseType,
+    JayRecursiveType,
+    JayArrayType,
 } from '@jay-framework/compiler-shared';
 import { Contract, ContractTag, ContractTagType, RenderingPhase } from './contract';
 import yaml from 'js-yaml';
@@ -30,11 +32,44 @@ interface ParsedYaml {
     tags: Array<ParsedYamlTag>;
 }
 
+/**
+ * Checks if a type string is a recursive reference (starts with "$/" like "$/data")
+ */
+function isRecursiveReference(typeString: string): boolean {
+    return typeof typeString === 'string' && typeString.startsWith('$/');
+}
+
+/**
+ * Parses array<$/...> syntax to extract the recursive reference
+ * Returns the reference path if valid, null otherwise
+ */
+function parseArrayRecursiveReference(typeString: string): string | null {
+    if (typeof typeString !== 'string') return null;
+
+    const match = typeString.match(/^array<(\$\/.*)>$/);
+    if (match && match[1]) {
+        return match[1];
+    }
+    return null;
+}
+
 function parseDataType(tag: string, dataType: string): JayType | undefined {
     if (!dataType) return undefined;
     if (parseIsEnum(dataType)) {
         return new JayEnumType(pascalCase(tag), parseEnumValues(dataType));
     }
+    
+    // Check for recursive references like "$/data"
+    if (isRecursiveReference(dataType)) {
+        return new JayRecursiveType(dataType);
+    }
+    
+    // Check for array recursive references like "array<$/data>"
+    const arrayRecursiveRef = parseArrayRecursiveReference(dataType);
+    if (arrayRecursiveRef) {
+        return new JayArrayType(new JayRecursiveType(arrayRecursiveRef));
+    }
+    
     return resolvePrimitiveType(dataType);
 }
 

@@ -335,6 +335,30 @@ async function parseTypes(
     filePath: string,
     importResolver: JayImportResolver,
 ): Promise<JayType> {
+    // Merge headless component types into the resolved type
+    const mergeHeadlessTypes = (resolvedType: JayType): JayType => {
+        const headlessImportedTypes = Object.fromEntries(
+            headlessImports.map((_) => [
+                _.key,
+                new JayImportedType(_.rootType.name, _.rootType, true),
+            ]),
+        );
+        
+        if (resolvedType instanceof JayObjectType) {
+            const finalType = new JayObjectType(resolvedType.name, {
+                ...headlessImportedTypes,
+                ...resolvedType.props,
+            });
+            
+            // Resolve recursive references now that we have the complete type tree
+            resolveRecursiveReferences(finalType, finalType, validations);
+            
+            return finalType;
+        }
+        
+        return resolvedType;
+    };
+
     // Handle contract reference
     if (jayYaml.contractRef) {
         // Load the referenced contract
@@ -363,10 +387,15 @@ async function parseTypes(
                 if (viewStateResult.val && viewStateResult.val.type) {
                     // Rename the type to match the HTML element name
                     const contractType = viewStateResult.val.type;
+                    let resolvedType: JayType;
                     if (contractType instanceof JayObjectType) {
-                        return new JayObjectType(baseElementName + 'ViewState', contractType.props);
+                        resolvedType = new JayObjectType(baseElementName + 'ViewState', contractType.props);
+                    } else {
+                        resolvedType = contractType;
                     }
-                    return contractType;
+                    
+                    // Merge headless types and resolve recursive references
+                    return mergeHeadlessTypes(resolvedType);
                 } else {
                     validations.push(
                         `Failed to extract ViewState from contract ${jayYaml.contractRef}`,
@@ -394,21 +423,9 @@ async function parseTypes(
             imports,
             jayYaml.data, // Pass root data for recursive reference validation
         );
-        const headlessImportedTypes = Object.fromEntries(
-            headlessImports.map((_) => [
-                _.key,
-                new JayImportedType(_.rootType.name, _.rootType, true),
-            ]),
-        );
-        const finalType = new JayObjectType(resolvedType.name, {
-            ...headlessImportedTypes,
-            ...resolvedType.props,
-        });
-
-        // Resolve recursive references now that we have the complete type tree
-        resolveRecursiveReferences(finalType, finalType, validations);
-
-        return finalType;
+        
+        // Merge headless types and resolve recursive references
+        return mergeHeadlessTypes(resolvedType);
     } else if (typeof jayYaml.data === 'string') return resolveImportedType(imports, jayYaml.data);
 }
 
