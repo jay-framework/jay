@@ -1,38 +1,32 @@
 import {
-    PageViewState as PageContractViewState,
-    PageRefs as PageContractRefs,
-    PageRepeatedRefs as PageContractRepeatedRefs,
-    PageSlowViewState as PageContractSlowViewState,
-    PageFastViewState as PageContractFastViewState,
-    PageInteractiveViewState as PageContractInteractiveViewState,
-} from './page.jay-contract';
+    JayElement,
+    RenderElement,
+    HTMLElementProxy,
+    RenderElementOptions,
+    JayContract,
+} from '@jay-framework/runtime';
+import { CounterViewState, CounterRefs, IsPositive } from '../counter/counter.jay-contract';
 
-import { CounterViewState, CounterRefs, CounterRepeatedRefs, IsPositive } from '../counter/counter.jay-contract';
-
-import { JayElement, RenderElement, RenderElementOptions, JayContract } from '@jay-framework/runtime';
-
-// Extended ViewState that includes headless component types
-export interface PageViewState extends PageContractViewState {
+export interface PageViewState {
     counter?: CounterViewState;
+    title: string;
+    description: string;
 }
 
-// Extended Refs that includes headless component refs
-export interface PageElementRefs extends PageContractRefs {
+export interface PageElementRefs {
+    submitButton: HTMLElementProxy<PageViewState, HTMLButtonElement>;
     counter: CounterRefs;
 }
 
-// Extended RepeatedRefs that includes headless component repeated refs
-export interface PageElementRepeatedRefs extends PageContractRepeatedRefs {
-    counter: CounterRepeatedRefs;
-}
+export type PageSlowViewState = Pick<PageViewState, 'title'>;
 
-// Phase-specific types based on the extended ViewState
-export type PageSlowViewState = PageContractSlowViewState;
-export type PageFastViewState = PageContractFastViewState;
-export type PageInteractiveViewState = PageContractInteractiveViewState & {
-    counter?: CounterViewState;
-};
+export type PageFastViewState = Pick<PageViewState, 'description'>;
 
+export type PageInteractiveViewState = Pick<PageViewState, 'counter'>;
+
+export type PageElement = JayElement<PageViewState, PageElementRefs>;
+export type PageElementRender = RenderElement<PageViewState, PageElementRefs, PageElement>;
+export type PageElementPreRender = [PageElementRefs, PageElementRender];
 export type PageContract = JayContract<
     PageViewState,
     PageElementRefs,
@@ -41,9 +35,4 @@ export type PageContract = JayContract<
     PageInteractiveViewState
 >;
 
-export type PageElement = JayElement<PageViewState, PageElementRefs>;
-export type PageElementRender = RenderElement<PageViewState, PageElementRefs, PageElement>;
-export type PageElementPreRender = [PageElementRefs, PageElementRender];
-
 export declare function render(options?: RenderElementOptions): PageElementPreRender;
-

@@ -1125,176 +1125,38 @@ ${renderedRefsManager}
     );
 }
 
-/**
- * Generate headless component imports for contract extension
- */
-function generateHeadlessComponentImports(
-    jayFile: JayHtmlSourceFile,
-): string {
-    if (!jayFile.headlessImports || jayFile.headlessImports.length === 0) {
-        return '';
-    }
-
-    return jayFile.headlessImports
-        .map((h) => {
-            const contractPath = path.relative(
-                path.dirname(jayFile.contractRef),
-                h.contractLinks[0].module,
-            );
-            // Get all names from the contract link and insert RepeatedRefs after Refs
-            const contractLinkNames = h.contractLinks[0].names.map((n) => n.name);
-            const refsName = `${pascalCase(h.key)}Refs`;
-            const repeatedRefsName = `${pascalCase(h.key)}RepeatedRefs`;
-
-            // Insert RepeatedRefs right after Refs
-            const refsIndex = contractLinkNames.indexOf(refsName);
-            const allNames = [...contractLinkNames];
-            if (refsIndex !== -1) {
-                allNames.splice(refsIndex + 1, 0, repeatedRefsName);
-            } else {
-                allNames.push(repeatedRefsName);
-            }
-
-            return `import { ${allNames.join(', ')} } from '${contractPath}';`;
-        })
-        .join('\n');
-}
-
-/**
- * Generate extended ViewState/Refs interfaces when headless components are present
- */
-function generateHeadlessTypeExtensions(
-    jayFile: JayHtmlSourceFile,
-): string {
-    if (!jayFile.headlessImports || jayFile.headlessImports.length === 0) {
-        return '';
-    }
-
-    const baseName = jayFile.baseElementName;
-
-    const headlessViewStateExtensions = jayFile.headlessImports
-        .map((h) => `    ${h.key}?: ${h.rootType.name};`)
-        .join('\n');
-
-    const headlessRefsExtensions = jayFile.headlessImports
-        .map((h) => `    ${h.key}: ${pascalCase(h.key)}Refs;`)
-        .join('\n');
-
-    const headlessRepeatedRefsExtensions = jayFile.headlessImports
-        .map((h) => `    ${h.key}: ${pascalCase(h.key)}RepeatedRefs;`)
-        .join('\n');
-
-    const headlessInteractiveExtension = jayFile.headlessImports
-        .map((h) => `    ${h.key}?: ${h.rootType.name};`)
-        .join('\n');
-
-    return `
-// Extended ViewState that includes headless component types
-export interface ${baseName}ViewState extends ${baseName}ContractViewState {
-${headlessViewStateExtensions}
-}
-
-// Extended Refs that includes headless component refs
-export interface ${baseName}ElementRefs extends ${baseName}ContractRefs {
-${headlessRefsExtensions}
-}
-
-// Extended RepeatedRefs that includes headless component repeated refs
-export interface ${baseName}ElementRepeatedRefs extends ${baseName}ContractRepeatedRefs {
-${headlessRepeatedRefsExtensions}
-}
-
-// Phase-specific types based on the extended ViewState
-export type ${baseName}SlowViewState = ${baseName}ContractSlowViewState;
-export type ${baseName}FastViewState = ${baseName}ContractFastViewState;
-export type ${baseName}InteractiveViewState = ${baseName}ContractInteractiveViewState & {
-${headlessInteractiveExtension}
-};
-
-export type ${baseName}Contract = JayContract<
-    ${baseName}ViewState,
-    ${baseName}ElementRefs,
-    ${baseName}SlowViewState,
-    ${baseName}FastViewState,
-    ${baseName}InteractiveViewState
->;`;
-}
-
-/**
- * Generate contract imports and type extensions for jay-html files with contract references
- */
-function generateContractImportsAndExtensions(
-    jayFile: JayHtmlSourceFile,
-): { contractImports: string; typeExtensions: string; reExports: string } {
-    if (!jayFile.contract || !jayFile.contractRef) {
-        return { contractImports: '', typeExtensions: '', reExports: '' };
-    }
-
-    const baseName = jayFile.baseElementName;
-    const contractFileName = path.basename(jayFile.contractRef, '.jay-contract');
-    const hasHeadlessComponents = jayFile.headlessImports && jayFile.headlessImports.length > 0;
-
-    if (hasHeadlessComponents) {
-        // Import contract types with aliases when we need to extend them
-        const contractImport = `import {
-    ${baseName}ViewState as ${baseName}ContractViewState,
-    ${baseName}Refs as ${baseName}ContractRefs,
-    ${baseName}RepeatedRefs as ${baseName}ContractRepeatedRefs,
-    ${baseName}SlowViewState as ${baseName}ContractSlowViewState,
-    ${baseName}FastViewState as ${baseName}ContractFastViewState,
-    ${baseName}InteractiveViewState as ${baseName}ContractInteractiveViewState,
-} from './${contractFileName}.jay-contract';`;
-
-        const headlessImports = generateHeadlessComponentImports(jayFile);
-        const contractImports = headlessImports ? `${contractImport}\n\n${headlessImports}` : contractImport;
-        const typeExtensions = generateHeadlessTypeExtensions(jayFile);
-
-        return { contractImports, typeExtensions, reExports: '' };
-    } else {
-        // No headless components - just import and re-export
-        const contractImports = `import {
-    ${baseName}ViewState,
-    ${baseName}Refs as ${baseName}ElementRefs,
-    ${baseName}SlowViewState,
-    ${baseName}FastViewState,
-    ${baseName}InteractiveViewState,
-    ${baseName}Contract
-} from './${contractFileName}.jay-contract';`;
-
-        const reExports = `
-// Re-export contract types for convenience
-export { ${baseName}ViewState, ${baseName}ElementRefs, ${baseName}SlowViewState, ${baseName}FastViewState, ${baseName}InteractiveViewState, ${baseName}Contract };
-`;
-
-        return { contractImports, typeExtensions: '', reExports };
-    }
-}
-
-/**
- * Filter out headless component imports that are manually generated
- */
-function filterHeadlessComponentImports(
-    jayFile: JayHtmlSourceFile,
-): JayImportLink[] {
-    if (!jayFile.headlessImports || jayFile.headlessImports.length === 0) {
-        return jayFile.imports;
-    }
-
-    const headlessContractModules = new Set(
-        jayFile.headlessImports.flatMap((h) => h.contractLinks.map((link) => link.module)),
-    );
-
-    return jayFile.imports.filter((importLink) => !headlessContractModules.has(importLink.module));
-}
-
 function generatePhaseSpecificTypes(jayFile: JayHtmlSourceFile): string {
     const baseName = jayFile.baseElementName;
     // Get the actual ViewState type name from the JayType (might be imported, like "Node")
     const actualViewStateTypeName = jayFile.types.name;
+    const hasHeadlessComponents = jayFile.headlessImports && jayFile.headlessImports.length > 0;
 
     // If we have a contract reference, generate phase types from contract
     if (jayFile.contract) {
-        return generateAllPhaseViewStateTypes(jayFile.contract, actualViewStateTypeName);
+        const basePhaseTypes = generateAllPhaseViewStateTypes(jayFile.contract, actualViewStateTypeName);
+        
+        // If we have headless components, we need to extend the Interactive phase to include them
+        if (hasHeadlessComponents) {
+            const headlessProps = jayFile.headlessImports.map((h) => `'${h.key}'`).join(' | ');
+            const interactiveTypeName = `${baseName}InteractiveViewState`;
+            
+            // Replace the Interactive phase type to include headless components
+            const interactivePattern = new RegExp(
+                `export type ${interactiveTypeName} = ([^;]+);`,
+                'g',
+            );
+            
+            return basePhaseTypes.replace(interactivePattern, (match, originalType) => {
+                // If the original type is empty {}, just pick the headless properties
+                if (originalType.trim() === '{}') {
+                    return `export type ${interactiveTypeName} = Pick<${actualViewStateTypeName}, ${headlessProps}>;`;
+                }
+                // Otherwise, combine with the existing type
+                return `export type ${interactiveTypeName} = ${originalType.trim()} & Pick<${actualViewStateTypeName}, ${headlessProps}>;`;
+            });
+        }
+        
+        return basePhaseTypes;
     }
 
     // If inline data, default to interactive phase
@@ -1315,7 +1177,7 @@ export function generateElementDefinitionFile(
 ): WithValidations<string> {
     return parsedFile.map((jayFile) => {
         const baseName = jayFile.baseElementName;
-
+        const types = generateTypes(jayFile.types);
         let { renderedRefs, renderedElement, preRenderType, renderedImplementation } =
             renderFunctionImplementation(
                 jayFile.types,
@@ -1328,57 +1190,6 @@ export function generateElementDefinitionFile(
                 jayFile.headLinks,
             );
         const cssImport = generateCssImport(jayFile);
-
-        // If jay-html references an external contract, import types from it instead of duplicating
-        if (jayFile.contract && jayFile.contractRef) {
-            const hasHeadlessComponents = jayFile.headlessImports && jayFile.headlessImports.length > 0;
-            const { contractImports, typeExtensions, reExports } = generateContractImportsAndExtensions(jayFile);
-
-            // Import JayElement etc from runtime, but exclude types that come from the contract
-            let runtimeImportsObj = renderedImplementation.imports
-                .plus(Import.jayElement)
-                .minus(Import.HTMLElementProxy)
-                .minus(Import.HTMLElementCollectionProxy);
-
-            // Only exclude JayContract if we're not extending (i.e., no headless components)
-            if (!hasHeadlessComponents) {
-                runtimeImportsObj = runtimeImportsObj.minus(Import.jayContract);
-            }
-
-            const componentImports = filterHeadlessComponentImports(jayFile);
-
-            const runtimeImports = renderImports(
-                runtimeImportsObj,
-                ImportsFor.definition,
-                componentImports,
-                RuntimeMode.MainTrusted,
-            );
-
-            // Only include HTML-specific element types (PageElement, PageElementRender, etc.)
-            // Remove ViewState, ElementRefs definitions and Contract definition from renderedElement
-            let htmlOnlyTypes = renderedElement
-                .replace(new RegExp(`export interface ${baseName}ViewState[\\s\\S]*?\\n}`, 'g'), '')
-                .replace(
-                    new RegExp(`export interface ${baseName}ElementRefs[\\s\\S]*?\\n}`, 'g'),
-                    '',
-                )
-                .replace(new RegExp(`export type ${baseName}Contract = [\\s\\S]*?;`, 'g'), '');
-
-            return [
-                contractImports,
-                runtimeImports,
-                cssImport,
-                typeExtensions,
-                reExports,
-                htmlOnlyTypes,
-                renderFunctionDeclaration(preRenderType),
-            ]
-                .filter((_) => _ !== null && _ !== '')
-                .join('\n\n');
-        }
-
-        // Original logic for inline data or no contract reference
-        let types = generateTypes(jayFile.types);
         const phaseTypes = generatePhaseSpecificTypes(jayFile);
 
         // If we have contract or inline data, replace the 2-parameter JayContract with 5-parameter version
