@@ -1,0 +1,43 @@
+name: Page
+tags:
+  # Order confirmation - fast phase (loaded from order data)
+  - tag: orderId
+    type: data
+    dataType: string
+    phase: fast
+    description: Order confirmation ID
+
+  - tag: orderDate
+    type: data
+    dataType: string
+    phase: fast
+    description: Order date and time
+
+  - tag: estimatedDelivery
+    type: data
+    dataType: string
+    phase: fast
+    description: Estimated delivery date
+
+  - tag: totalAmount
+    type: data
+    dataType: number
+    phase: fast
+    description: Total order amount
+
+  - tag: customerEmail
+    type: data
+    dataType: string
+    phase: fast
+    description: Customer email for confirmation
+
+  - tag: continue-shopping
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Continue shopping button
+
+  - tag: view-order-details
+    type: interactive
+    elementType: HTMLButtonElement
+    description: View order details button
+
