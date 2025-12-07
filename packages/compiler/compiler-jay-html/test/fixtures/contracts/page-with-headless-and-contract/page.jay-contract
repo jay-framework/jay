@@ -1,0 +1,16 @@
+name: Page
+tags:
+  - tag: title
+    type: data
+    dataType: string
+    phase: slow
+  
+  - tag: description
+    type: data
+    dataType: string
+    phase: fast
+  
+  - tag: submit-button
+    type: interactive
+    elementType: HTMLButtonElement
+

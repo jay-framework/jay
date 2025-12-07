@@ -65,4 +65,92 @@ describe('Jay HTML with Contract References', () => {
             await prettify(await readFixtureFileRaw(folder, 'duplicate-ref-names.jay-html.ts')),
         );
     });
+
+    describe('with headless component', () => {
+        it('should include headless component types in jay-html.d.ts when using contract reference', async () => {
+            // This test verifies that headless component types are properly merged into ViewState
+            // when the jay-html file uses an external contract reference
+            const folder = 'contracts/page-with-headless-and-contract';
+            const parsedFile = await readAndParseJayFile(folder, 'page');
+
+            expect(parsedFile.validations).toEqual([]);
+
+            const definitionFile = generateElementDefinitionFile(parsedFile);
+            expect(definitionFile.validations).toEqual([]);
+
+            const generated = await prettify(definitionFile.val);
+            const expected = await readFixtureElementDefinitionFile(folder, 'page.jay-html.d.ts');
+
+            expect(generated).toEqual(expected);
+
+            // Specifically verify that counter is included in PageViewState
+            expect(generated).toContain('counter?: CounterViewState');
+        });
+
+        it('should include headless component types in jay-contract.d.ts when using contract reference', async () => {
+            // This test verifies that the contract.d.ts includes headless component types
+            // when a jay-html file references it and imports headless components
+            const folder = 'contracts/page-with-headless-and-contract';
+            const contractPath = path.join(__dirname, 'fixtures', folder, 'page.jay-contract');
+            const contractContent = await fsp.readFile(contractPath, 'utf-8');
+            const parsedContract = parseContract(contractContent, 'page.jay-contract');
+            const compiledContract = await compileContract(
+                parsedContract,
+                contractPath,
+                JAY_IMPORT_RESOLVER,
+            );
+
+            expect(compiledContract.validations).toEqual([]);
+            const generatedContract = await prettify(compiledContract.val);
+            const expectedContract = await readFixtureElementDefinitionFile(folder, 'page.jay-contract.d.ts');
+
+            expect(generatedContract).toEqual(expectedContract);
+
+            // Specifically verify that counter is included in the contract's PageViewState
+            expect(generatedContract).toContain('counter?: CounterViewState');
+        });
+    })
+
+    describe('with recursive reference', () => {
+        it('should handle recursive references in jay-html.d.ts when using contract reference', async () => {
+            // This test verifies that recursive type references ($/data) are properly resolved
+            // when the jay-html file uses an external contract reference
+            const folder = 'contracts/contract-with-recursive-ref';
+            const parsedFile = await readAndParseJayFile(folder, 'tree');
+
+            expect(parsedFile.validations).toEqual([]);
+
+            const definitionFile = generateElementDefinitionFile(parsedFile);
+            expect(definitionFile.validations).toEqual([]);
+
+            const generated = await prettify(definitionFile.val);
+            const expected = await readFixtureElementDefinitionFile(folder, 'tree.jay-html.d.ts');
+
+            expect(generated).toEqual(expected);
+
+        });
+
+        it('should handle recursive references in jay-contract.d.ts when using contract reference', async () => {
+            // This test verifies that recursive type references ($/data) are properly resolved
+            // in the contract.d.ts file
+            const folder = 'contracts/contract-with-recursive-ref';
+            const contractPath = path.join(__dirname, 'fixtures', folder, 'tree.jay-contract');
+            const contractContent = await fsp.readFile(contractPath, 'utf-8');
+            const parsedContract = parseContract(contractContent, 'tree.jay-contract');
+            const compiledContract = await compileContract(
+                parsedContract,
+                contractPath,
+                JAY_IMPORT_RESOLVER,
+            );
+
+            expect(compiledContract.validations).toEqual([]);
+            const generatedContract = await prettify(compiledContract.val);
+            const expectedContract = await readFixtureElementDefinitionFile(folder, 'tree.jay-contract.d.ts');
+
+            expect(generatedContract).toEqual(expectedContract);
+
+            // Specifically verify that children is properly typed as recursive in the contract
+            expect(generatedContract).toContain('children: TreeViewState[]');
+        });
+    })
 });
