@@ -1,20 +1,23 @@
-import { JayContract, HTMLElementProxy } from '@jay-framework/runtime';
-import { CounterViewState, CounterRefs } from '../counter/counter.jay-contract';
+import { HTMLElementCollectionProxy, HTMLElementProxy, JayContract } from '@jay-framework/runtime';
 
 export interface PageViewState {
     title: string;
     description: string;
-    counter?: CounterViewState;
-}
-
-export interface PageRefs {
-    submitButton: HTMLElementProxy<PageViewState, HTMLButtonElement>;
-    counter: CounterRefs;
 }
 
 export type PageSlowViewState = Pick<PageViewState, 'title'>;
+
 export type PageFastViewState = Pick<PageViewState, 'description'>;
-export type PageInteractiveViewState = Pick<PageViewState, 'counter'>;
+
+export type PageInteractiveViewState = {};
+
+export interface PageRefs {
+    submitButton: HTMLElementProxy<PageViewState, HTMLButtonElement>;
+}
+
+export interface PageRepeatedRefs {
+    submitButton: HTMLElementCollectionProxy<PageViewState, HTMLButtonElement>;
+}
 
 export type PageContract = JayContract<
     PageViewState,
