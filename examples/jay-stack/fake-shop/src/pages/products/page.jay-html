@@ -1,14 +1,6 @@
 <html>
   <head>
-    <script type="application/jay-data">
-      data:
-        products:
-          - name: string
-            price: number
-            sku: string
-            id: string
-            slug: string
-    </script>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
   </head>
   <body>
     <div>

@@ -1,14 +1,6 @@
 <html>
 <head>
-  <script type="application/jay-data">
-    data:
-      name: string
-      price: number
-      sku: string
-      id: string
-      inStock: boolean
-      type: enum(physical | virtual)
-  </script>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
 </head>
 <body>
 <div>

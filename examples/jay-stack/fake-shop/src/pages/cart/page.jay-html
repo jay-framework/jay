@@ -1,12 +1,12 @@
 <html>
   <head>
-    <script type="application/jay-data">
-      data:
-    </script>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
   </head>
   <body>
     <div>
-      cart
+      <h1>Shopping Cart</h1>
+      <!-- Cart implementation to be added -->
+      <p>Your cart is empty</p>
     </div>
   </body>
 </html>

@@ -1,12 +1,11 @@
 <html>
   <head>
-    <script type="application/jay-data">
-      data:
-    </script>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
   </head>
   <body>
     <div>
-      thank you page
+      <h1>Thank You for Your Order!</h1>
+      <!-- Order confirmation details to be added -->
     </div>
   </body>
 </html>

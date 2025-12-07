@@ -1,0 +1,9 @@
+name: Page
+tags: []
+# Currently empty - homepage only uses headless mood tracker component
+# In a real e-commerce site, this could include:
+# - Featured products (slow phase)
+# - Promotional banners (slow phase)
+# - User-specific recommendations (fast phase)
+# - Interactive search/filters (interactive phase)
+

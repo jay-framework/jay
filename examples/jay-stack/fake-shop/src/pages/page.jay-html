@@ -9,9 +9,7 @@
     <style>
       .main {background-color: lightsteelblue; border: 1px solid #3498db}
     </style>
-    <script type="application/jay-data">
-      data:
-    </script>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
   </head>
   <body>
     <div class="main">

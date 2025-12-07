@@ -1,0 +1,30 @@
+name: Page
+tags:
+  # Product list - loaded at build time (static catalog)
+  - tag: products
+    type: sub-contract
+    repeated: true
+    phase: slow
+    description: List of products in the catalog
+    tags:
+      - tag: name
+        type: data
+        dataType: string
+        description: Product name
+      - tag: price
+        type: data
+        dataType: number
+        description: Product price
+      - tag: sku
+        type: data
+        dataType: string
+        description: Product SKU
+      - tag: id
+        type: data
+        dataType: string
+        description: Product ID
+      - tag: slug
+        type: data
+        dataType: string
+        description: Product URL slug
+

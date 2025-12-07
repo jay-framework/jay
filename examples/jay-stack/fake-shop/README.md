@@ -92,9 +92,38 @@ export const page = makeJayStackComponent<PageContract>()
   });
 ```
 
+## Contract Files
+
+This example demonstrates the use of **contract files** (`.jay-contract`) to define component interfaces with **rendering phases**. Each page has an associated contract file that specifies:
+
+- **View State properties** - What data the component needs
+- **Rendering phases** - When each property is rendered (slow, fast, or fast+interactive)
+- **Interactive elements** - References to UI elements (buttons, inputs, etc.)
+
+### Pages with Contracts
+
+1. **Homepage** (`src/pages/page.jay-contract`) - Basic structure
+2. **Products List** (`src/pages/products/page.jay-contract`) - Product catalog (slow phase)
+3. **Product Detail** (`src/pages/products/[slug]/page.jay-contract`) - Product info (slow) + inventory (fast)
+4. **Shopping Cart** (`src/pages/cart/page.jay-contract`) - Cart items (fast+interactive)
+5. **Checkout** (`src/pages/checkout/page.jay-contract`) - Form fields (fast+interactive) + summary (fast)
+6. **Thank You** (`src/pages/thankyou/page.jay-contract`) - Order confirmation (fast)
+
+### Rendering Phases
+
+- **Slow (build time)** - Static product data, pre-rendered HTML
+- **Fast (request time)** - Dynamic inventory, calculated values  
+- **Fast+Interactive (client)** - Cart items, form inputs, user selections
+
+**For detailed information**, see:
+- [`CONTRACTS.md`](./CONTRACTS.md) - Comprehensive guide to contract files
+- [`CONTRACT_FILES_SUMMARY.md`](./CONTRACT_FILES_SUMMARY.md) - Implementation summary
+
 ## Benefits
 
-- ✅ **Type-safe** - Full TypeScript support for services
+- ✅ **Type-safe** - Full TypeScript support for services and rendering phases
 - ✅ **Testable** - Services can be easily mocked
 - ✅ **Hot reload** - Services reload automatically during development
 - ✅ **Clean architecture** - Clear separation between UI and business logic
+- ✅ **Phase validation** - Compile-time checks for rendering boundaries
+- ✅ **Performance** - Optimal caching strategy with phase separation

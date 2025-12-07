@@ -1,0 +1,79 @@
+name: Page
+tags:
+  # Shipping information - interactive phase (user fills in form)
+  - tag: shippingAddress
+    type: sub-contract
+    phase: fast+interactive
+    description: Shipping address information
+    tags:
+      - tag: fullName
+        type: data
+        dataType: string
+        description: Full name
+      
+      - tag: addressLine1
+        type: data
+        dataType: string
+        description: Address line 1
+      
+      - tag: addressLine2
+        type: data
+        dataType: string
+        description: Address line 2
+      
+      - tag: city
+        type: data
+        dataType: string
+        description: City
+      
+      - tag: state
+        type: data
+        dataType: string
+        description: State/Province
+      
+      - tag: zipCode
+        type: data
+        dataType: string
+        description: ZIP/Postal code
+      
+      - tag: country
+        type: data
+        dataType: string
+        description: Country
+  
+  # Order summary - fast phase (calculated from cart)
+  - tag: orderSummary
+    type: sub-contract
+    phase: fast
+    description: Order summary
+    tags:
+      - tag: subtotal
+        type: data
+        dataType: number
+        description: Subtotal
+      
+      - tag: shipping
+        type: data
+        dataType: number
+        description: Shipping cost
+      
+      - tag: tax
+        type: data
+        dataType: number
+        description: Tax amount
+      
+      - tag: total
+        type: data
+        dataType: number
+        description: Total amount
+
+  - tag: place-order
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Place order button
+  
+  - tag: back-to-cart
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Back to cart button
+

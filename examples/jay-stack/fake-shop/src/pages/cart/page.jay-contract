@@ -1,0 +1,46 @@
+name: Page
+tags:
+  # Shopping cart items - interactive phase (user can add/remove items)
+  - tag: cartItems
+    type: sub-contract
+    repeated: true
+    phase: fast+interactive
+    description: Items in the shopping cart
+    tags:
+      - tag: productId
+        type: data
+        dataType: string
+        description: Product ID
+      
+      - tag: productName
+        type: data
+        dataType: string
+        description: Product name
+      
+      - tag: quantity
+        type: data
+        dataType: number
+        description: Quantity of this product
+      
+      - tag: price
+        type: data
+        dataType: number
+        description: Unit price
+  
+  # Cart total - fast phase (calculated from cart items)
+  - tag: totalAmount
+    type: data
+    dataType: number
+    phase: fast
+    description: Total cart amount
+
+  - tag: checkout-button
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Proceed to checkout button
+  
+  - tag: continue-shopping
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Continue shopping button
+

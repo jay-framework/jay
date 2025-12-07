@@ -1,0 +1,39 @@
+name: Page
+tags:
+  # Static product information - loaded at build time
+  - tag: name
+    type: data
+    dataType: string
+    phase: slow
+    description: Product name
+  
+  - tag: price
+    type: data
+    dataType: number
+    phase: slow
+    description: Product price
+  
+  - tag: sku
+    type: data
+    dataType: string
+    phase: slow
+    description: Product SKU
+
+  - tag: type
+    type: variant
+    dataType: enum (physical | virtual)
+    phase: slow
+    description: Product type
+  
+  # Dynamic inventory data - loaded at request time
+  - tag: inStock
+    type: data
+    dataType: boolean
+    phase: fast
+    description: Whether the product is currently in stock
+
+  - tag: add-to-cart
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Button to add product to cart
+
