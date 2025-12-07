@@ -112,10 +112,11 @@ This example demonstrates the use of **contract files** (`.jay-contract`) to def
 ### Rendering Phases
 
 - **Slow (build time)** - Static product data, pre-rendered HTML
-- **Fast (request time)** - Dynamic inventory, calculated values  
+- **Fast (request time)** - Dynamic inventory, calculated values
 - **Fast+Interactive (client)** - Cart items, form inputs, user selections
 
 **For detailed information**, see:
+
 - [`CONTRACTS.md`](./CONTRACTS.md) - Comprehensive guide to contract files
 - [`CONTRACT_FILES_SUMMARY.md`](./CONTRACT_FILES_SUMMARY.md) - Implementation summary
 

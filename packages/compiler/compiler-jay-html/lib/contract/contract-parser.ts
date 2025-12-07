@@ -58,18 +58,18 @@ function parseDataType(tag: string, dataType: string): JayType | undefined {
     if (parseIsEnum(dataType)) {
         return new JayEnumType(pascalCase(tag), parseEnumValues(dataType));
     }
-    
+
     // Check for recursive references like "$/data"
     if (isRecursiveReference(dataType)) {
         return new JayRecursiveType(dataType);
     }
-    
+
     // Check for array recursive references like "array<$/data>"
     const arrayRecursiveRef = parseArrayRecursiveReference(dataType);
     if (arrayRecursiveRef) {
         return new JayArrayType(new JayRecursiveType(arrayRecursiveRef));
     }
-    
+
     return resolvePrimitiveType(dataType);
 }
 

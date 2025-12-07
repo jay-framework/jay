@@ -21,7 +21,11 @@ describe('runtime command', () => {
                 const files = await fsp.readdir(fullDir);
                 for (const file of files) {
                     // Only delete generated .ts files, not committed fixture files (*.expected.*)
-                    if (file.endsWith('.ts') && !file.endsWith('.d.ts') && !file.includes('.expected.')) {
+                    if (
+                        file.endsWith('.ts') &&
+                        !file.endsWith('.d.ts') &&
+                        !file.includes('.expected.')
+                    ) {
                         await fsp.unlink(path.join(fullDir, file));
                     }
                 }
@@ -42,7 +46,7 @@ describe('runtime command', () => {
         const sourceDir = path.join(fixturesDir, 'simple-html');
         const expectedFile = path.join(sourceDir, 'simple.expected.jay-html.ts');
         const generatedFile = path.join(sourceDir, 'simple.jay-html.ts');
-        
+
         // Read the expected output
         const expected = await fsp.readFile(expectedFile, 'utf-8');
 
@@ -86,7 +90,7 @@ describe('runtime command', () => {
         const sourceDir = path.join(fixturesDir, 'html-with-contract');
         const expectedFile = path.join(sourceDir, 'page.expected.jay-html.ts');
         const generatedFile = path.join(sourceDir, 'page.jay-html.ts');
-        
+
         // Read the expected output
         const expected = await fsp.readFile(expectedFile, 'utf-8');
 
@@ -106,7 +110,7 @@ describe('runtime command', () => {
         const sourceDir = path.join(fixturesDir, 'simple-html');
         const destDir = outputDir;
         const expectedFile = path.join(fixturesDir, 'simple-html', 'simple.expected.jay-html.ts');
-        
+
         // Read the expected output
         const expected = await fsp.readFile(expectedFile, 'utf-8');
 
