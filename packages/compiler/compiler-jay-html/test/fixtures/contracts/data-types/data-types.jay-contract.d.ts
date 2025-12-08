@@ -6,6 +6,7 @@ export interface O1OfDataTypesViewState {
 }
 
 export interface A1OfDataTypesViewState {
+    id: string;
     s3: string;
     n3: number;
 }
@@ -16,6 +17,7 @@ export interface Po1OfDataTypesViewState {
 }
 
 export interface Pa1OfDataTypesViewState {
+    id: string;
     ps3: string;
     pn3: number;
 }

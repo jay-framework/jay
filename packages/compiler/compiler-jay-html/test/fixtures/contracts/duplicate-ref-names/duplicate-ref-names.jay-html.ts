@@ -13,19 +13,23 @@ import {
 } from '@jay-framework/runtime';
 
 export interface ItemOfOptionOfDuplicateRefNamesViewState {
+    id: string;
     label: string;
 }
 
 export interface OptionOfDuplicateRefNamesViewState {
+    id: string;
     name: string;
     items: Array<ItemOfOptionOfDuplicateRefNamesViewState>;
 }
 
 export interface ItemOfModifierOfDuplicateRefNamesViewState {
+    id: string;
     label: string;
 }
 
 export interface ModifierOfDuplicateRefNamesViewState {
+    id: string;
     name: string;
     items: Array<ItemOfModifierOfDuplicateRefNamesViewState>;
 }
@@ -57,12 +61,12 @@ export interface DuplicateRefNamesElementRefs {
 
 export type DuplicateRefNamesSlowViewState = Pick<DuplicateRefNamesViewState, 'title'> & {
     options: Array<
-        Pick<DuplicateRefNamesViewState['options'][number], 'name'> & {
+        Pick<DuplicateRefNamesViewState['options'][number], 'id' | 'name'> & {
             items: Array<DuplicateRefNamesViewState['options'][number]['items'][number]>;
         }
     >;
     modifiers: Array<
-        Pick<DuplicateRefNamesViewState['modifiers'][number], 'name'> & {
+        Pick<DuplicateRefNamesViewState['modifiers'][number], 'id' | 'name'> & {
             items: Array<DuplicateRefNamesViewState['modifiers'][number]['items'][number]>;
         }
     >;
