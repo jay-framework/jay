@@ -18,6 +18,7 @@ export interface ContractTag {
     description?: Array<string>;
     tags?: Array<ContractTag>;
     repeated?: boolean;
+    trackBy?: string; // Required for repeated sub-contracts - references a data tag for array item identity
     link?: string;
     async?: boolean;
     phase?: RenderingPhase;
