@@ -697,8 +697,156 @@ If implicit behavior proves confusing, we can later add Option 2c (`phase: ident
 ### Action Items
 
 1. ✅ Add note to existing validation rules that trackBy fields are in all phases (implicit)
-2. ⏳ Update type generator to include trackBy fields in all phase ViewStates
-3. ⏳ Add test cases verifying trackBy field appears in all phases
+2. ✅ Update type generator to include trackBy fields in all phase ViewStates
+3. ✅ Add test cases verifying trackBy field appears in all phases
 4. ⏳ Document the implicit behavior in contract format guide
-5. ⏳ Add warning if trackBy field has `phase: fast` (should be slow)
+5. ✅ Add warning if trackBy field has `phase: fast` (should be slow)
+
+## Implementation Complete: Option 1 (Implicit Requirement)
+
+### Changes Made:
+
+1. **Type Generator (`packages/compiler/compiler-jay-html/lib/contract/phase-type-generator.ts`)**:
+   - Modified `extractPropertyPathsAndArrays` function to accept a `parentTrackBy` parameter
+   - For repeated sub-contracts, pass the `trackBy` field name to nested tag processing
+   - When processing leaf data tags, check if the tag name matches `parentTrackBy`
+   - If it matches, include the field in the current phase ViewState **regardless of its declared phase**
+   - This ensures trackBy fields automatically appear in all phases (slow, fast, interactive)
+
+2. **Validation (`packages/compiler/compiler-jay-html/lib/contract/contract-parser.ts`)**:
+   - Added validation to warn when a trackBy field has `phase: fast` or `phase: fast+interactive`
+   - Warning message: "trackBy field [x] should have phase 'slow' (or no phase) since identity is slow-changing data. Found phase: [y]. Note: trackBy fields are automatically included in all phases for merging."
+   - Also fixed validation to accept both `string` and `number` as valid trackBy data types
+
+3. **Test Coverage (`packages/compiler/compiler-jay-html/test/contract/contract-compiler.test.ts`)**:
+   - **Test 1**: "should include trackBy field in all phases (slow, fast, interactive)"
+     - Verifies that a trackBy field declared as `phase: slow` appears in `SlowViewState`, `FastViewState`, and `InteractiveViewState`
+     - Uses a product catalog example with `productId` as trackBy
+   - **Test 2**: "should warn when trackBy field has phase: fast"
+     - Verifies that the compiler emits a validation warning when trackBy field has an incorrect phase
+   - **Updated existing test**: "should compile contract with repeated sub-contract"
+     - Updated expected output to show `id` field appearing in all three phase ViewStates
+
+### Behavior:
+
+**Before (incorrect):**
+```typescript
+// Contract with trackBy: id, phase: slow
+SlowViewState = {
+  items: Array<{ id: string, title: string }>
+}
+
+FastViewState = {
+  items: Array<{ completed: boolean }>  // ❌ No id field!
+}
+```
+
+**After (correct):**
+```typescript
+// Contract with trackBy: id, phase: slow
+SlowViewState = {
+  items: Array<{ id: string }>
+}
+
+FastViewState = {
+  items: Array<{ id: string, title: string, completed: boolean }>  // ✅ id is here!
+}
+
+InteractiveViewState = {
+  items: Array<{ id: string, title: string, completed: boolean }>  // ✅ id is here too!
+}
+```
+
+### Benefits:
+
+1. **Automatic Correctness**: Developers don't need to remember special phase rules for trackBy fields
+2. **Seamless Merging**: The deep merge algorithm can now reliably match array items across phases
+3. **Backward Compatible**: Existing contracts continue to work, with improved type generation
+4. **Clear Semantics**: Identity fields being present in all phases is semantically correct
+5. **Simple Mental Model**: "trackBy means identity, identity is always available"
+
+### Next Steps:
+
+- Document this implicit behavior in the contract format guide
+- Consider adding to VS Code extension: highlight trackBy fields differently to show they're special
+- Monitor for any confusion from developers about why trackBy fields appear in all phases
+
+## Optimization: Skip Arrays with Only TrackBy Fields
+
+### The Issue
+
+After implementing automatic trackBy inclusion in all phases, we discovered a problem: some phases would have arrays containing *only* the identity field, which serves no practical purpose.
+
+**Example of the problem:**
+
+```typescript
+// Contract with only slow-phase properties
+FastViewState = {
+  items: Array<Pick<ViewState['items'][number], 'id'>>  // Only identity!
+}
+```
+
+This creates meaningless type structures where arrays only contain identity fields with no actual data.
+
+### The Solution
+
+Modified the type generator to **skip repeated arrays when they would only contain the trackBy field** in a given phase.
+
+**Implementation** (`phase-type-generator.ts`):
+
+```typescript
+// For repeated sub-contracts, skip if only the trackBy field is present
+const hasOnlyTrackBy = 
+    isArray && 
+    trackByForChildren && 
+    result.paths.length === 1 && 
+    result.paths[0].propertyName === camelCase(trackByForChildren);
+
+// Only include if it has properties AND it's not an array with only trackBy
+if (result.paths.length > 0 && !hasOnlyTrackBy) {
+    // Include the array
+}
+```
+
+### Example Results
+
+**Before optimization:**
+
+```typescript
+// productId: phase slow, name: phase fast
+SlowViewState = {
+  items: Array<Pick<ViewState['items'][number], 'productId'>>  // Only id!
+}
+
+FastViewState = {
+  items: Array<Pick<ViewState['items'][number], 'productId' | 'name'>>
+}
+```
+
+**After optimization:**
+
+```typescript
+SlowViewState = {}  // ✅ Omitted - would only have id
+
+FastViewState = {
+  items: Array<ViewState['items'][number]>  // ✅ Has both productId and name
+}
+```
+
+### Benefits
+
+1. **Cleaner Types**: No meaningless array structures with only identity fields
+2. **Better Semantics**: A phase ViewState only includes arrays when they have meaningful data
+3. **Correct Behavior**: The trackBy field is still automatically added when the array *does* appear in a phase
+4. **Type Safety**: Empty ViewStates are correctly typed as `{}`
+
+### When Arrays Are Included
+
+An array appears in a phase's ViewState when it has **at least one non-trackBy property** in that phase:
+
+- ✅ Array has data properties in the phase → included
+- ✅ Array has variant properties in the phase → included
+- ❌ Array only has the trackBy property → **omitted**
+
+This ensures that every included array structure has actual purpose beyond just identity tracking.
 
