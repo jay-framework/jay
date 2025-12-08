@@ -24,11 +24,7 @@ export function deepMergeViewStates(
 /**
  * Deep merge two objects based on contract tags
  */
-function deepMergeObjects(
-    slow: object,
-    fast: object,
-    contractTags: ContractTag[],
-): object {
+function deepMergeObjects(slow: object, fast: object, contractTags: ContractTag[]): object {
     const result: any = {};
 
     // Create a map of contract tags by name for quick lookup
@@ -76,11 +72,7 @@ function deepMergeObjects(
 /**
  * Merge two arrays using trackBy to match items by identity
  */
-function mergeArraysByTrackBy(
-    slowArray: any[],
-    fastArray: any[],
-    contractTag: ContractTag,
-): any[] {
+function mergeArraysByTrackBy(slowArray: any[], fastArray: any[], contractTag: ContractTag): any[] {
     if (!Array.isArray(slowArray) || !Array.isArray(fastArray)) {
         // Type mismatch - return fast value
         return fastArray;
@@ -183,4 +175,3 @@ function isSubContract(tag: ContractTag): boolean {
 function isRepeatedSubContract(tag: ContractTag): boolean {
     return isSubContract(tag) && tag.repeated === true;
 }
-
