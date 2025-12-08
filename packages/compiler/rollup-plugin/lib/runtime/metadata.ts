@@ -17,7 +17,7 @@ export function getJayMetadata(
     // vite does not store module metadata in SSR
     const metadataFromPlugin: JayMetadata = context.getModuleInfo(id)?.meta?.jay;
     const metadata = context['ssr']
-        ? metadataFromPlugin || SSR_METADATA.get(id)
+        ? metadataFromPlugin || SSR_METADATA.get(id) || {}
         : metadataFromPlugin || {};
     validateJayMetadata(id, metadata, checkPresent);
     return metadata;
