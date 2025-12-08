@@ -11,6 +11,7 @@ Current implementation has carry-forward mechanisms but with type safety and com
 ### Current State (as of implementation)
 
 **What Works:**
+
 - ✅ Runtime correctly passes slow carry forward to fast render (`fast-changing-runner.ts` line 20-24)
 - ✅ Fast carry forward is passed to interactive as `Signals<CarryForward>` (tuple `[Getter, Setter]` style)
 - ✅ Builder tracks carry forward types through Services/Contexts arrays
@@ -22,6 +23,7 @@ Current implementation has carry-forward mechanisms but with type safety and com
 2. **Implicit Carry Forward in Services Array**: Carry forward is prepended to Services array (`[CarryForward, ...Services]`) making it `services[0]`, but this is not obvious from the type signature. Could be more explicit.
 
 **Note on Current Design:**
+
 - ✅ Carry forward is passed as first element of Services array (clever type-level manipulation)
 - ✅ `Signals<T>` using `[Getter<T>, Setter<T>]` tuple is correct - uses `@jay-framework/reactive` package
 - Runtime behavior in `fast-changing-runner.ts` correctly destructures: `compDefinition.fastRender(props, slowCarryForward, ...services)`
@@ -78,11 +80,11 @@ const fastRenderedPart = await compDefinition.fastRender(
 function ProductsPageConstructor(
   props: Props<PageProps>,
   refs: PageElementRefs,
-  carryForward: Signals<FastCarryForward>,  // Only carry forward, not view state
+  carryForward: Signals<FastCarryForward>, // Only carry forward, not view state
 ) {
   // Can access carry forward as signals:
   const [fastDynamicRendered, setFastDynamicRendered] = carryForward.fastDynamicRendered;
-  
+
   // ❌ Cannot access fast view state (e.g., fastRendered property)
   // even though it was rendered in the fast phase
 }
@@ -93,6 +95,7 @@ function ProductsPageConstructor(
 ### 1. Slow → Fast: Current Approach is Correct
 
 **Current approach works well:**
+
 - ✅ Carry forward is prepended to Services array: `[SlowCarryForward, ...Services]`
 - ✅ Runtime correctly destructures it as first parameter
 - ✅ Type system tracks it through array manipulation
@@ -110,7 +113,7 @@ export const productPage = makeJayStackComponent<ProductContract>()
     const product = await db.query('SELECT * FROM products WHERE id = $1', [props.productId]);
     return partialRender(
       { name: product.name, sku: product.sku },
-      { productMetadata: { category: product.category, tags: product.tags } }  // Carry forward
+      { productMetadata: { category: product.category, tags: product.tags } }, // Carry forward
     );
   })
   .withFastRender(async (props, slowCarryForward, db, inventory) => {
@@ -118,10 +121,10 @@ export const productPage = makeJayStackComponent<ProductContract>()
     // Builder prepended carry forward automatically!
     const inStock = await inventory.checkStock(props.productId);
     const recommendations = await getRecommendations(slowCarryForward.productMetadata.category);
-    
+
     return partialRender(
       { price: 99.99, inStock },
-      { recommendations }  // Carry forward to interactive
+      { recommendations }, // Carry forward to interactive
     );
   });
 ```
@@ -133,6 +136,7 @@ export const productPage = makeJayStackComponent<ProductContract>()
 **Current Issue**: Interactive only receives carry forward as signals, not the fast-rendered view state.
 
 **Proposed Addition**: Pass BOTH fast view state AND carry forward to interactive phase:
+
 1. **Fast View State as Signals**: All fast-rendered view state properties become reactive signals (MISSING)
 2. **Carry Forward as Plain Object**: Immutable data, no need for signals since it doesn't change during interactive phase
 
@@ -199,13 +203,14 @@ function Constructor(
   const [price, setPrice] = fastViewState.price;
   console.log(price());  // Read value
   setPrice(99.99);       // Update value
-  
+
   // Carry forward is immutable (just read)
   console.log(fastCarryForward.cartId);  // Direct property access, no signals needed
 }
 ```
 
 **Why this is better:**
+
 - ✅ Fast view state needs signals because it's part of the reactive rendering
 - ✅ Carry forward doesn't need signals - it's immutable data passed from server
 - ✅ Simpler API: plain object access for carry forward instead of getter/setter tuples
@@ -217,8 +222,8 @@ export const productPage = makeJayStackComponent<ProductContract>()
   .withProps<{ productId: string }>()
   .withFastRender(async (props) => {
     return partialRender(
-      { price: 99.99, inStock: true, quantity: 1 },  // View state (rendered on server)
-      { cartId: generateCartId(), sessionToken: 'abc123' }  // Carry forward (server data)
+      { price: 99.99, inStock: true, quantity: 1 }, // View state (rendered on server)
+      { cartId: generateCartId(), sessionToken: 'abc123' }, // Carry forward (server data)
     );
   })
   .withInteractive((props, refs, fastViewState, fastCarryForward) => {
@@ -226,31 +231,32 @@ export const productPage = makeJayStackComponent<ProductContract>()
     const [getPrice, setPrice] = fastViewState.price;
     const [getInStock, setInStock] = fastViewState.inStock;
     const [getQuantity, setQuantity] = fastViewState.quantity;
-    
+
     // ✅ fastCarryForward is plain object (immutable)
     const { cartId, sessionToken } = fastCarryForward;
-    
+
     refs.addToCart.onclick(() => {
       // Read fast view state reactively
       console.log('Current price:', getPrice());
       console.log('In stock:', getInStock());
-      
+
       // Update fast view state
       setQuantity(getQuantity() + 1);
-      
+
       // Use carry forward data (no setters, just data)
       addToCart(cartId, { productId: props.productId, quantity: getQuantity() });
     });
-    
+
     return {
       render: () => ({
-        quantity: getQuantity()  // Interactive view state is subset of fast
-      })
+        quantity: getQuantity(), // Interactive view state is subset of fast
+      }),
     };
   });
 ```
 
-**Why**: 
+**Why**:
+
 - **Fast View State as Signals**: Fast-rendered data (like price from API) may need to update reactively on the client without a full page reload
 - **Carry Forward as Object**: Server-computed data (like cart IDs, session tokens) is immutable and doesn't need reactivity
 - **Subset Relationship**: Interactive view state is a subset of fast view state, so those properties are already reactive
@@ -261,19 +267,19 @@ The builder uses array prepending to pass carry forward through Services/Context
 
 **How it works now:**
 
-| Phase | Builder Method | Array Manipulation | Function Receives |
-|-------|---------------|-------------------|-------------------|
-| Slow → Fast | `withSlowlyRender` | Services → `[SlowCF, ...Services]` | `(props, slowCF, ...services)` |
-| Fast → Interactive | `withFastRender` | Contexts → `[Signals<FastCF>, ...Contexts]` | `(props, refs, Signals<fastCF>, ...contexts)` |
+| Phase              | Builder Method     | Array Manipulation                          | Function Receives                             |
+| ------------------ | ------------------ | ------------------------------------------- | --------------------------------------------- |
+| Slow → Fast        | `withSlowlyRender` | Services → `[SlowCF, ...Services]`          | `(props, slowCF, ...services)`                |
+| Fast → Interactive | `withFastRender`   | Contexts → `[Signals<FastCF>, ...Contexts]` | `(props, refs, Signals<fastCF>, ...contexts)` |
 
 **Issue with current approach:** Carry forward is wrapped in Signals unnecessarily.
 
 **Proposed enhancement:**
 
-| Phase | Builder Method | Array Manipulation | Function Receives |
-|-------|---------------|-------------------|-------------------|
-| Slow → Fast | `withSlowlyRender` | Services → `[SlowCF, ...Services]` | `(props, slowCF, ...services)` ✅ No change |
-| Fast → Interactive | `withFastRender` | Contexts → `[Signals<FastVS>, FastCF, ...Contexts]` | `(props, refs, Signals<fastVS>, fastCF, ...contexts)` ✅ Add view state, unwrap carry forward |
+| Phase              | Builder Method     | Array Manipulation                                  | Function Receives                                                                             |
+| ------------------ | ------------------ | --------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| Slow → Fast        | `withSlowlyRender` | Services → `[SlowCF, ...Services]`                  | `(props, slowCF, ...services)` ✅ No change                                                   |
+| Fast → Interactive | `withFastRender`   | Contexts → `[Signals<FastVS>, FastCF, ...Contexts]` | `(props, refs, Signals<fastVS>, fastCF, ...contexts)` ✅ Add view state, unwrap carry forward |
 
 **Example: Interactive-Only Component**
 
@@ -283,13 +289,13 @@ export const counter = makeJayStackComponent<CounterContract>()
   .withInteractive((props, refs) => {
     // ✅ No fast view state or carry forward - not needed
     let count = 0;
-    
+
     refs.increment.onclick(() => {
       count++;
     });
-    
+
     return {
-      render: () => ({ count })
+      render: () => ({ count }),
     };
   });
 ```
@@ -311,9 +317,9 @@ export const fullPage = makeJayStackComponent<PageContract>()
     // ✅ Receives both fast view state as signals and carry forward
     console.log('Content signal:', fastViewState.content);
     console.log('Session:', fastCarryForward.sessionId);
-    
+
     return {
-      render: () => ({})
+      render: () => ({}),
     };
   });
 ```
@@ -333,16 +339,19 @@ type BuilderState = {
 };
 
 // Fast render signature depends on slow render
-type FastRenderFn<State extends BuilderState> = 
-  State['hasSlowRender'] extends true
-    ? (props: Props, slowCarryForward: State['slowCarryForward'], ...services: Services) => FastResult
-    : (props: Props, ...services: Services) => FastResult;
+type FastRenderFn<State extends BuilderState> = State['hasSlowRender'] extends true
+  ? (props: Props, slowCarryForward: State['slowCarryForward'], ...services: Services) => FastResult
+  : (props: Props, ...services: Services) => FastResult;
 
 // Interactive signature depends on fast render
-type InteractiveFn<State extends BuilderState> = 
-  State['hasFastRender'] extends true
-    ? (props: Props, fastViewState: Signals<FastVS>, fastCarryForward: State['fastCarryForward'], refs: Refs) => Component
-    : (props: Props, refs: Refs) => Component;
+type InteractiveFn<State extends BuilderState> = State['hasFastRender'] extends true
+  ? (
+      props: Props,
+      fastViewState: Signals<FastVS>,
+      fastCarryForward: State['fastCarryForward'],
+      refs: Refs,
+    ) => Component
+  : (props: Props, refs: Refs) => Component;
 ```
 
 ### PartialRenderResult Monad
@@ -357,7 +366,7 @@ type PartialRenderResult<ViewState, CarryForward> = {
 
 function partialRender<ViewState, CarryForward>(
   viewState: Partial<ViewState>,
-  carryForward: CarryForward
+  carryForward: CarryForward,
 ): PartialRenderResult<ViewState, CarryForward> {
   return { viewState, carryForward };
 }
@@ -380,15 +389,15 @@ type Setter<T> = (value: T) => void;
 // Example
 type FastViewState = { price: number; inStock: boolean };
 type FastSignals = Signals<FastViewState>;
-// = { 
+// = {
 //   price: [Getter<number>, Setter<number>];
 //   inStock: [Getter<boolean>, Setter<boolean>];
 // }
 
 // Usage in constructor:
 const [getPrice, setPrice] = fastViewState.price;
-console.log(getPrice());  // Read value
-setPrice(99.99);          // Set value
+console.log(getPrice()); // Read value
+setPrice(99.99); // Set value
 ```
 
 **Note**: The tuple `[Getter, Setter]` style is Jay's reactive pattern, not a Vue/React signal object.
@@ -424,7 +433,7 @@ export const page = makeJayStackComponent<PageContract>()
     // ✅ Carry forward already available
     const [sessionId] = carryForward.sessionId;
     console.log(sessionId());
-    
+
     // ❌ MISSING: Cannot access fastViewState
   });
 ```
@@ -444,17 +453,18 @@ export const page = makeJayStackComponent<PageContract>()
   .withInteractive((props, refs, fastViewState, fastCarryForward) => {
     // ✅ NEW: Fast view state available as signals (reactive)
     const [getContent, setContent] = fastViewState.content;
-    console.log(getContent());  // Read fast-rendered content
-    setContent('Updated');      // Update reactively
-    
+    console.log(getContent()); // Read fast-rendered content
+    setContent('Updated'); // Update reactively
+
     // ✅ IMPROVED: Carry forward as plain object (was wrapped in Signals)
-    console.log(fastCarryForward.sessionId);  // Direct access, no getters needed
+    console.log(fastCarryForward.sessionId); // Direct access, no getters needed
   });
 ```
 
 ## Implementation Checklist
 
 ### 1. Add Fast View State to Interactive (PRIMARY CHANGE)
+
 - [ ] Update `withFastRender` in builder to prepend `Signals<FastVS>` AND plain `FastCF` to Contexts array
 - [ ] Modify stack-client-runtime to:
   - Create signals for fast view state properties
@@ -464,18 +474,21 @@ export const page = makeJayStackComponent<PageContract>()
 - [ ] Test that fast view state signals work correctly on client
 
 ### 2. Fix Carry Forward Wrapping (IMPROVEMENT)
+
 - [ ] Remove `Signals<>` wrapper from carry forward in builder (currently line 238: `[Signals<NewCarryForward>, ...Contexts]`)
 - [ ] Update to: `[Signals<FastVS>, NewCarryForward, ...Contexts]`
 - [ ] Update existing test fixtures that use carry forward (change from `const [get, set] = cf.prop` to `cf.prop`)
 - [ ] Verify carry forward is passed as plain object to interactive constructor
 
 ### 2. Documentation and Migration
+
 - [ ] Update full-stack-component README to show new parameter pattern
 - [ ] Document that fast view state is now available as signals in interactive phase
 - [ ] Update examples in test fixtures (simple-page, etc.)
 - [ ] Add examples showing when to use fast view state vs carry forward
 
 ### 3. Ensure Backward Compatibility
+
 - [ ] Verify components without fast render still work (no view state/carry forward parameters)
 - [ ] Ensure type inference still works correctly through builder chain
 
@@ -486,4 +499,3 @@ export const page = makeJayStackComponent<PageContract>()
 - **#50**: Rendering phases in contracts with type validation
 - **#51**: Contract references in Jay HTML for phase annotations
 - **#54**: Render result monads (`PartialRenderResult` type)
-

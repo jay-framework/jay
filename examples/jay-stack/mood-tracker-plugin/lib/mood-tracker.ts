@@ -65,11 +65,11 @@ function MoodTracker(
     });
 
     return {
-        render: () => ({ 
-            happy: getHappy, 
-            sad: getSad, 
-            neutral: getNeutral, 
-            currentMood: getCurrentMood 
+        render: () => ({
+            happy: getHappy,
+            sad: getSad,
+            neutral: getNeutral,
+            currentMood: getCurrentMood,
         }),
     };
 }

@@ -35,17 +35,17 @@ export function makeCompositeJayComponent<
     const comp = (props: Props<any>, refs, ...contexts): CompCore => {
         const instances: Array<[string, JayComponentCore<any, any>]> = parts.map((part) => {
             const partRefs = part.key ? refs[part.key] : refs;
-            
+
             let partContexts: any[];
-            
+
             if (hasFastRendering) {
                 // Create signals for fast view state
                 const partViewState = part.key ? defaultViewState?.[part.key] : defaultViewState;
                 const partFastViewState = partViewState ? makeSignals(partViewState) : undefined;
-                
+
                 // Carry forward as plain object (no signals)
                 const partCarryForward = part.key ? fastCarryForward?.[part.key] : fastCarryForward;
-                
+
                 // Always pass both parameters when fast rendering exists
                 partContexts = [
                     partFastViewState,
@@ -56,7 +56,7 @@ export function makeCompositeJayComponent<
                 // No fast rendering - just pass regular contexts
                 partContexts = [...contexts.splice(0, part.contextMarkers.length)];
             }
-            
+
             return [part.key, part.comp(props, partRefs, ...partContexts)];
         });
 

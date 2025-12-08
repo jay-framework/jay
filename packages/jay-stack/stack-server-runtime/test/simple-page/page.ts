@@ -57,7 +57,9 @@ function ProductsPageConstructor(
     const [getFastDynamicRendered, setFastDynamicRendered] = fastViewState.fastDynamicRendered;
 
     refs.button.onclick(() => {
-        setFastDynamicRendered(`INTERACTIVE RENDERED, using '${fastCarryForward.carryForwardFast}'`);
+        setFastDynamicRendered(
+            `INTERACTIVE RENDERED, using '${fastCarryForward.carryForwardFast}'`,
+        );
     });
 
     return {

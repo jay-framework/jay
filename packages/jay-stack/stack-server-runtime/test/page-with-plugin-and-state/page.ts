@@ -37,10 +37,7 @@ async function renderFastChanging(
 ): Promise<PhaseOutput<PageFastViewState, FastCarryForward>> {
     const pageFastDynamicRendered = `FAST RENDERED, using '${carryForward.carryForwardSlowly}'`;
     const carryForwardFast = 'FAST -> INTERACTIVE CARRY FORWARD';
-    return phaseOutput(
-        { pageFastDynamicRendered },
-        { carryForwardFast, pageFastDynamicRendered },
-    );
+    return phaseOutput({ pageFastDynamicRendered }, { carryForwardFast, pageFastDynamicRendered });
 }
 
 function PageConstructor(
@@ -53,7 +50,9 @@ function PageConstructor(
         fastViewState.pageFastDynamicRendered;
 
     refs.button.onclick(() => {
-        setPageFastDynamicRendered(`INTERACTIVE RENDERED, using '${fastCarryForward.carryForwardFast}'`);
+        setPageFastDynamicRendered(
+            `INTERACTIVE RENDERED, using '${fastCarryForward.carryForwardFast}'`,
+        );
     });
 
     return {
