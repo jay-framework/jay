@@ -136,14 +136,16 @@ export async function resolveJayContract(
     const baseWithQuery = sourceParsed.fullQueryString
         ? `${originId}${sourceParsed.fullQueryString}`
         : originId;
-    
+
     // Handle SSR mode path transformation (same as resolveJayHtml)
     const id =
         context['ssr'] && originId.startsWith(root)
             ? `${baseWithQuery}${TS_EXTENSION}`.slice(root.length)
             : `${baseWithQuery}${TS_EXTENSION}`;
 
-    console.info(`[resolveId] contract  - id: ${id}, originId: ${originId}, ssr: ${context['ssr']}`);
+    console.info(
+        `[resolveId] contract  - id: ${id}, originId: ${originId}, ssr: ${context['ssr']}`,
+    );
     return {
         id,
         meta: appendJayMetadata(context, id, {
