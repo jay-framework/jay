@@ -87,10 +87,10 @@ function ProductsPageConstructor(
 ) {
     // Can access fast view state reactively
     const [getInStock, setInStock] = fastViewState.inStock;
-    
+
     // Can access carry forward as plain object
     const { productId, inStock } = fastCarryForward;
-    
+
     return {
         render: () => ({}),
     };

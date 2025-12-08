@@ -4,12 +4,7 @@ import {
     RenderPipeline,
     Signals,
 } from '@jay-framework/fullstack-component';
-import {
-    PageContract,
-    PageRefs,
-    PageSlowViewState,
-    PageFastViewState,
-} from './page.jay-contract';
+import { PageContract, PageRefs, PageSlowViewState, PageFastViewState } from './page.jay-contract';
 import { Props } from '@jay-framework/component';
 import { PRODUCTS_DATABASE_SERVICE, ProductsDatabaseService } from '../../products-database';
 
