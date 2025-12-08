@@ -2,13 +2,14 @@ import {
     makeJayStackComponent,
     PageProps,
     RenderPipeline,
+    Signals,
 } from '@jay-framework/fullstack-component';
 import {
     PageContract,
-    PageElementRefs,
+    PageRefs,
     PageSlowViewState,
     PageFastViewState,
-} from './page.jay-html';
+} from './page.jay-contract';
 import { Props } from '@jay-framework/component';
 import { PRODUCTS_DATABASE_SERVICE, ProductsDatabaseService } from '../../products-database';
 
@@ -39,7 +40,9 @@ async function renderFastChanging(
 
 function ProductsPageConstructor(
     props: Props<PageProps & ProductsCarryForward>,
-    refs: PageElementRefs,
+    refs: PageRefs,
+    fastViewState: Signals<PageFastViewState>, // Empty in this case
+    fastCarryForward: ProductsCarryForward,
 ) {
     return {
         render: () => ({}),

@@ -3,14 +3,15 @@ import {
     PageProps,
     RenderPipeline,
     UrlParams,
+    Signals,
 } from '@jay-framework/fullstack-component';
 import {
-    PageElementRefs,
+    PageRefs,
     PageContract,
-    TypeOfPageViewState,
+    Type,
     PageSlowViewState,
     PageFastViewState,
-} from './page.jay-html';
+} from './page.jay-contract';
 import { Props } from '@jay-framework/component';
 import { PRODUCTS_DATABASE_SERVICE, ProductsDatabaseService } from '../../../products-database';
 import { INVENTORY_SERVICE, InventoryService } from '../../../inventory-service';
@@ -52,7 +53,7 @@ async function renderSlowlyChanging(
                 sku: product.sku,
                 price: product.price,
                 id: product.id,
-                type: TypeOfPageViewState.physical,
+                type: Type.physical,
             },
             carryForward: { productId: product.id },
         }));
@@ -80,8 +81,16 @@ async function renderFastChanging(
 
 function ProductsPageConstructor(
     props: Props<PageProps & ProductPageParams & ProductAndInventoryCarryForward>,
-    refs: PageElementRefs,
+    refs: PageRefs,
+    fastViewState: Signals<PageFastViewState>,
+    fastCarryForward: ProductAndInventoryCarryForward,
 ) {
+    // Can access fast view state reactively
+    const [getInStock, setInStock] = fastViewState.inStock;
+    
+    // Can access carry forward as plain object
+    const { productId, inStock } = fastCarryForward;
+    
     return {
         render: () => ({}),
     };

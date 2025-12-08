@@ -9,8 +9,8 @@ import {
     FastRenderResult,
     makeJayStackComponent,
     PageProps,
-    PartialRender,
-    partialRender,
+    PhaseOutput,
+    phaseOutput,
     Signals,
     SlowlyRenderResult,
 } from '@jay-framework/fullstack-component';
@@ -31,7 +31,7 @@ async function slowRender(
 ): Promise<SlowlyRenderResult<SimplePluginSlowViewState, StaticCarryForward>> {
     const pluginSlowlyRendered = 'SLOWLY RENDERED';
     const staticData = 'SLOWLY -> FAST CARRY FORWARD';
-    return partialRender(
+    return phaseOutput(
         {
             pluginSlowlyRendered,
         },
@@ -46,7 +46,7 @@ async function fastRender(
 ): Promise<FastRenderResult<SimplePluginFastViewState, DynamicCarryForward>> {
     const pluginInteractiveRendered = `FAST RENDERED, using ${carryForward.staticData}`;
     const dynamicData = 'FAST -> INTERACTIVE CARRY FORWARD';
-    return partialRender(
+    return phaseOutput(
         {
             pluginInteractiveRendered,
         },

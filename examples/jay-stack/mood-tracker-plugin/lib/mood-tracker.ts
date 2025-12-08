@@ -14,10 +14,7 @@ import {
 export interface MoodTrackerProps {}
 
 interface MoodTrackerFastCarryForward {
-    sad: number;
-    happy: number;
-    neutral: number;
-    currentMood: number;
+    // No carry forward needed - all data is in view state
 }
 
 async function fastRenderMoodTracker(): Promise<
@@ -34,19 +31,21 @@ async function fastRenderMoodTracker(): Promise<
         happy: 4,
     }).toPhaseOutput((state) => ({
         viewState: state,
-        carryForward: state,
+        carryForward: {}, // Empty - no server data to carry forward
     }));
 }
 
 function MoodTracker(
     props: MoodTrackerProps,
     refs: MoodTrackerRefs,
-    fastCarryForward: Signals<MoodTrackerFastCarryForward>,
+    fastViewState: Signals<MoodTrackerFastViewState>,
+    fastCarryForward: MoodTrackerFastCarryForward,
 ) {
-    const [happy, setHappy] = fastCarryForward.happy;
-    const [sad, setSad] = fastCarryForward.sad;
-    const [neutral, setNeutral] = fastCarryForward.neutral;
-    const [currentMood, setCurrentMood] = fastCarryForward.currentMood;
+    // Access fast view state as reactive signals
+    const [getHappy, setHappy] = fastViewState.happy;
+    const [getSad, setSad] = fastViewState.sad;
+    const [getNeutral, setNeutral] = fastViewState.neutral;
+    const [getCurrentMood, setCurrentMood] = fastViewState.currentMood;
 
     console.log('**** running on the client environment ****');
 
@@ -66,7 +65,12 @@ function MoodTracker(
     });
 
     return {
-        render: () => ({ happy, sad, neutral, currentMood }),
+        render: () => ({ 
+            happy: getHappy, 
+            sad: getSad, 
+            neutral: getNeutral, 
+            currentMood: getCurrentMood 
+        }),
     };
 }
 
