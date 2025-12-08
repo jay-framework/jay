@@ -198,14 +198,21 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
                         `Tag [${tag.tag}] trackBy must reference a data tag, but [${tag.trackBy}] is not a data tag`,
                     );
                 }
-                // Validate that trackBy references string
+                // Validate that trackBy references string or number
                 if (trackByTag.dataType) {
                     const trackByDataType = trackByTag.dataType.toLowerCase();
-                    if (trackByDataType !== 'string') {
+                    if (trackByDataType !== 'string' && trackByDataType !== 'number') {
                         validations.push(
-                            `Tag [${tag.tag}] trackBy must reference a string property, but [${tag.trackBy}] is type [${trackByTag.dataType}]`,
+                            `Tag [${tag.tag}] trackBy must reference a string or number property, but [${tag.trackBy}] is type [${trackByTag.dataType}]`,
                         );
                     }
+                }
+                // Warn if trackBy field has phase: fast or fast+interactive (should be slow for identity)
+                if (trackByTag.phase && trackByTag.phase !== 'slow') {
+                    validations.push(
+                        `Tag [${tag.tag}] trackBy field [${tag.trackBy}] should have phase 'slow' (or no phase) since identity is slow-changing data. ` +
+                        `Found phase: [${trackByTag.phase}]. Note: trackBy fields are automatically included in all phases for merging.`,
+                    );
                 }
             }
         }
