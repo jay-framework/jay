@@ -3,7 +3,7 @@ import { JayRoute } from '@jay-framework/stack-route-scanner';
 import { WithValidations } from '@jay-framework/compiler-shared';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { parseJayFile } from '@jay-framework/compiler-jay-html';
+import { parseJayFile, Contract } from '@jay-framework/compiler-jay-html';
 import { AnyJayStackComponentDefinition } from '@jay-framework/fullstack-component';
 import { JayRollupConfig } from '@jay-framework/rollup-plugin';
 import { createRequire } from 'module';
@@ -17,12 +17,17 @@ export interface DevServerPagePart {
     clientPart: string;
 }
 
+export interface LoadedPageParts {
+    parts: DevServerPagePart[];
+    contract?: Contract;
+}
+
 export async function loadPageParts(
     vite: ViteDevServer,
     route: JayRoute,
     pagesBase: string,
     jayRollupConfig: JayRollupConfig,
-): Promise<WithValidations<DevServerPagePart[]>> {
+): Promise<WithValidations<LoadedPageParts>> {
     const exists = await fs
         .access(route.compPath, fs.constants.F_OK)
         .then(() => true)
@@ -85,6 +90,9 @@ export async function loadPageParts(
             };
             parts.push(part);
         }
-        return parts;
+        return {
+            parts,
+            contract: jayHtml.contract,
+        };
     });
 }

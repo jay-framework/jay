@@ -21,6 +21,7 @@ import { generateClientScript } from '@jay-framework/stack-server-runtime';
 import { Request, Response } from 'express';
 import { DevServerOptions } from './dev-server-options';
 import { ServiceLifecycleManager } from './service-lifecycle';
+import { deepMergeViewStates } from './view-state-merger';
 
 async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
     return await scanRoutes(pagesBaseFolder, {
@@ -92,18 +93,20 @@ function mkRoute(
             };
 
             let viewState: object, carryForward: object;
-            const pageParts = await loadPageParts(
+            const pagePartsResult = await loadPageParts(
                 vite,
                 route,
                 options.pagesRootFolder,
                 options.jayRollupConfig,
             );
 
-            if (pageParts.val) {
+            if (pagePartsResult.val) {
+                const { parts: pageParts, contract } = pagePartsResult.val;
+                
                 const renderedSlowly = await slowlyPhase.runSlowlyForPage(
                     pageParams,
                     pageProps,
-                    pageParts.val,
+                    pageParts,
                 );
 
                 if (renderedSlowly.kind === 'PhaseOutput') {
@@ -111,16 +114,26 @@ function mkRoute(
                         pageParams,
                         pageProps,
                         renderedSlowly.carryForward,
-                        pageParts.val,
+                        pageParts,
                     );
                     if (renderedFast.kind === 'PhaseOutput') {
-                        viewState = { ...renderedSlowly.rendered, ...renderedFast.rendered };
+                        // Deep merge view states using contract metadata
+                        if (contract) {
+                            viewState = deepMergeViewStates(
+                                renderedSlowly.rendered,
+                                renderedFast.rendered,
+                                contract,
+                            );
+                        } else {
+                            // Fallback to shallow merge if no contract available
+                            viewState = { ...renderedSlowly.rendered, ...renderedFast.rendered };
+                        }
                         carryForward = renderedFast.carryForward;
 
                         const pageHtml = generateClientScript(
                             viewState,
                             carryForward,
-                            pageParts.val,
+                            pageParts,
                             route.jayHtmlPath,
                         );
 
@@ -136,8 +149,8 @@ function mkRoute(
                     handleOtherResponseCodes(res, renderedSlowly);
                 }
             } else {
-                console.log(pageParts.validations.join('\n'));
-                res.status(500).end(pageParts.validations.join('\n'));
+                console.log(pagePartsResult.validations.join('\n'));
+                res.status(500).end(pagePartsResult.validations.join('\n'));
             }
         } catch (e) {
             vite?.ssrFixStacktrace(e);
