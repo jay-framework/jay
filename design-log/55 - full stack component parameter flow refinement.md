@@ -134,7 +134,7 @@ export const productPage = makeJayStackComponent<ProductContract>()
 
 **Proposed Addition**: Pass BOTH fast view state AND carry forward to interactive phase:
 1. **Fast View State as Signals**: All fast-rendered view state properties become reactive signals (MISSING)
-2. **Carry Forward as Signals**: Already works correctly via Contexts array prepending
+2. **Carry Forward as Plain Object**: Immutable data, no need for signals since it doesn't change during interactive phase
 
 **How it currently works:**
 
@@ -149,7 +149,7 @@ withFastRender<NewCarryForward extends object>(
   FastVS,
   InteractiveVS,
   Services,
-  [Signals<NewCarryForward>, ...Contexts],  // ✅ Carry forward prepended to Contexts
+  [Signals<NewCarryForward>, ...Contexts],  // Current: Only carry forward (as signals)
   PropsT,
   Params,
   JayComponentCore<PropsT, InteractiveVS>
@@ -159,12 +159,14 @@ withFastRender<NewCarryForward extends object>(
 function Constructor(
   props: Props<PageProps>,
   refs: PageElementRefs,
-  carryForward: Signals<FastCarryForward>,  // First element of Contexts array
+  carryForward: Signals<FastCarryForward>,  // Carry forward as signals (unnecessary)
   ...contexts: Contexts
 ) {
-  const [value, setValue] = carryForward.someProperty;  // ✅ Works
+  const [value, setValue] = carryForward.someProperty;  // ✅ Works but signals not needed
   // ❌ MISSING: Cannot access fast view state signals
 }
+
+// Issue: Carry forward wrapped in Signals but it's immutable data!
 ```
 
 **Proposed change:**
@@ -179,7 +181,7 @@ withFastRender<NewCarryForward extends object>(
   FastVS,
   InteractiveVS,
   Services,
-  [Signals<FastVS>, Signals<NewCarryForward>, ...Contexts],  // ✅ NEW: Prepend BOTH
+  [Signals<FastVS>, NewCarryForward, ...Contexts],  // ✅ View state as signals, carry forward as object
   PropsT,
   Params,
   JayComponentCore<PropsT, InteractiveVS>
@@ -189,14 +191,24 @@ withFastRender<NewCarryForward extends object>(
 function Constructor(
   props: Props<PageProps>,
   refs: PageElementRefs,
-  fastViewState: Signals<FastVS>,          // ✅ NEW: First element
-  fastCarryForward: Signals<FastCarryForward>,  // ✅ Second element
+  fastViewState: Signals<FastVS>,      // ✅ NEW: Fast view state as reactive signals
+  fastCarryForward: FastCarryForward,  // ✅ NEW: Carry forward as plain object (immutable)
   ...contexts: Contexts
 ) {
-  const [price, setPrice] = fastViewState.price;  // ✅ Can access fast view state
-  const [cartId] = fastCarryForward.cartId;       // ✅ Can access carry forward
+  // Fast view state is reactive (can read and update)
+  const [price, setPrice] = fastViewState.price;
+  console.log(price());  // Read value
+  setPrice(99.99);       // Update value
+  
+  // Carry forward is immutable (just read)
+  console.log(fastCarryForward.cartId);  // Direct property access, no signals needed
 }
 ```
+
+**Why this is better:**
+- ✅ Fast view state needs signals because it's part of the reactive rendering
+- ✅ Carry forward doesn't need signals - it's immutable data passed from server
+- ✅ Simpler API: plain object access for carry forward instead of getter/setter tuples
 
 **Example:**
 
@@ -205,39 +217,43 @@ export const productPage = makeJayStackComponent<ProductContract>()
   .withProps<{ productId: string }>()
   .withFastRender(async (props) => {
     return partialRender(
-      { price: 99.99, inStock: true, quantity: 1 },
-      { cartId: generateCartId() }  // Carry forward
+      { price: 99.99, inStock: true, quantity: 1 },  // View state (rendered on server)
+      { cartId: generateCartId(), sessionToken: 'abc123' }  // Carry forward (server data)
     );
   })
-  .withInteractive((props, fastViewState, fastCarryForward, refs) => {
-    // ✅ fastViewState contains reactive signals
-    // { price: Signal<number>, inStock: Signal<boolean>, quantity: Signal<number> }
+  .withInteractive((props, refs, fastViewState, fastCarryForward) => {
+    // ✅ fastViewState contains reactive signals (mutable)
+    const [getPrice, setPrice] = fastViewState.price;
+    const [getInStock, setInStock] = fastViewState.inStock;
+    const [getQuantity, setQuantity] = fastViewState.quantity;
     
-    // ✅ fastCarryForward is typed
-    const cartId = fastCarryForward.cartId;
+    // ✅ fastCarryForward is plain object (immutable)
+    const { cartId, sessionToken } = fastCarryForward;
     
     refs.addToCart.onclick(() => {
-      // Can read fast view state reactively
-      console.log('Current price:', fastViewState.price.value);
-      console.log('In stock:', fastViewState.inStock.value);
+      // Read fast view state reactively
+      console.log('Current price:', getPrice());
+      console.log('In stock:', getInStock());
       
-      // Interactive view state can modify quantity
-      fastViewState.quantity.value += 1;
+      // Update fast view state
+      setQuantity(getQuantity() + 1);
+      
+      // Use carry forward data (no setters, just data)
+      addToCart(cartId, { productId: props.productId, quantity: getQuantity() });
     });
     
     return {
       render: () => ({
-        // Interactive view state
-        quantity: fastViewState.quantity.value
+        quantity: getQuantity()  // Interactive view state is subset of fast
       })
     };
   });
 ```
 
 **Why**: 
-- **Signals**: Fast-rendered data (like price from API) may need to update reactively on the client without a full page reload
-- **Carry Forward**: Server-side computed data (like session IDs, tokens) needs to be available for client interactions
-- **Subset Relationship**: Interactive view state is a subset of fast view state, so fast properties are already reactive
+- **Fast View State as Signals**: Fast-rendered data (like price from API) may need to update reactively on the client without a full page reload
+- **Carry Forward as Object**: Server-computed data (like cart IDs, session tokens) is immutable and doesn't need reactivity
+- **Subset Relationship**: Interactive view state is a subset of fast view state, so those properties are already reactive
 
 ### 3. Current Parameter Pattern (Via Array Manipulation)
 
@@ -248,14 +264,16 @@ The builder uses array prepending to pass carry forward through Services/Context
 | Phase | Builder Method | Array Manipulation | Function Receives |
 |-------|---------------|-------------------|-------------------|
 | Slow → Fast | `withSlowlyRender` | Services → `[SlowCF, ...Services]` | `(props, slowCF, ...services)` |
-| Fast → Interactive | `withFastRender` | Contexts → `[Signals<FastCF>, ...Contexts]` | `(props, refs, fastCF, ...contexts)` |
+| Fast → Interactive | `withFastRender` | Contexts → `[Signals<FastCF>, ...Contexts]` | `(props, refs, Signals<fastCF>, ...contexts)` |
+
+**Issue with current approach:** Carry forward is wrapped in Signals unnecessarily.
 
 **Proposed enhancement:**
 
 | Phase | Builder Method | Array Manipulation | Function Receives |
 |-------|---------------|-------------------|-------------------|
 | Slow → Fast | `withSlowlyRender` | Services → `[SlowCF, ...Services]` | `(props, slowCF, ...services)` ✅ No change |
-| Fast → Interactive | `withFastRender` | Contexts → `[Signals<FastVS>, Signals<FastCF>, ...Contexts]` | `(props, refs, fastVS, fastCF, ...contexts)` ✅ Add view state |
+| Fast → Interactive | `withFastRender` | Contexts → `[Signals<FastVS>, FastCF, ...Contexts]` | `(props, refs, Signals<fastVS>, fastCF, ...contexts)` ✅ Add view state, unwrap carry forward |
 
 **Example: Interactive-Only Component**
 
@@ -419,29 +437,37 @@ export const page = makeJayStackComponent<PageContract>()
     return partialRender({ title: 'Page' }, { metadata: {} });
   })
   .withFastRender(async (props, slowCarryForward, ...services) => {
-    // ✅ Types now match runtime behavior
+    // ✅ Already works correctly
     console.log(slowCarryForward.metadata);
     return partialRender({ content: 'Text' }, { sessionId: '' });
   })
-  .withInteractive((props, fastViewState, fastCarryForward, refs) => {
-    // ✅ NEW: Fast view state available as signals
-    const [content, setContent] = fastViewState.content;
-    console.log(content());  // Read fast-rendered content
-    setContent('Updated');   // Update reactively
+  .withInteractive((props, refs, fastViewState, fastCarryForward) => {
+    // ✅ NEW: Fast view state available as signals (reactive)
+    const [getContent, setContent] = fastViewState.content;
+    console.log(getContent());  // Read fast-rendered content
+    setContent('Updated');      // Update reactively
     
-    // ✅ Carry forward still available (unchanged)
-    console.log(fastCarryForward.sessionId);
+    // ✅ IMPROVED: Carry forward as plain object (was wrapped in Signals)
+    console.log(fastCarryForward.sessionId);  // Direct access, no getters needed
   });
 ```
 
 ## Implementation Checklist
 
 ### 1. Add Fast View State to Interactive (PRIMARY CHANGE)
-- [ ] Update `withFastRender` in builder to prepend BOTH `Signals<FastVS>` and `Signals<FastCF>` to Contexts array
-- [ ] Modify stack-client-runtime to create signals for fast view state (in addition to carry forward)
-- [ ] Update interactive constructor signature pattern to receive both parameters
+- [ ] Update `withFastRender` in builder to prepend `Signals<FastVS>` AND plain `FastCF` to Contexts array
+- [ ] Modify stack-client-runtime to:
+  - Create signals for fast view state properties
+  - Pass carry forward as plain object (NOT wrapped in signals)
+- [ ] Update interactive constructor signature: `(props, refs, fastViewState: Signals<FastVS>, fastCarryForward: FastCF, ...contexts)`
 - [ ] Ensure interactive view state remains a subset of fast view state for type safety
 - [ ] Test that fast view state signals work correctly on client
+
+### 2. Fix Carry Forward Wrapping (IMPROVEMENT)
+- [ ] Remove `Signals<>` wrapper from carry forward in builder (currently line 238: `[Signals<NewCarryForward>, ...Contexts]`)
+- [ ] Update to: `[Signals<FastVS>, NewCarryForward, ...Contexts]`
+- [ ] Update existing test fixtures that use carry forward (change from `const [get, set] = cf.prop` to `cf.prop`)
+- [ ] Verify carry forward is passed as plain object to interactive constructor
 
 ### 2. Documentation and Migration
 - [ ] Update full-stack-component README to show new parameter pattern
