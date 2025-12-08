@@ -317,7 +317,7 @@ describe('compile contract', () => {
 
         expect(result.validations.length).toBeGreaterThan(0);
         expect(result.validations[0]).toContain('trackBy field');
-        expect(result.validations[0]).toContain('should have phase \'slow\'');
+        expect(result.validations[0]).toContain("should have phase 'slow'");
     });
 
     it('should compile form contract with nested sections', async () => {

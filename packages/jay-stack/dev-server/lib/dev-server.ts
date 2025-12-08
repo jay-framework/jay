@@ -102,7 +102,7 @@ function mkRoute(
 
             if (pagePartsResult.val) {
                 const { parts: pageParts, contract } = pagePartsResult.val;
-                
+
                 const renderedSlowly = await slowlyPhase.runSlowlyForPage(
                     pageParams,
                     pageProps,

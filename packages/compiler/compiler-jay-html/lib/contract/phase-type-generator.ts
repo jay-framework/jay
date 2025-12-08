@@ -65,7 +65,7 @@ function extractPropertyPathsAndArrays(
         if (tag.type.includes(ContractTagType.subContract) && tag.tags) {
             // For repeated sub-contracts, pass trackBy to children
             const trackByForChildren = isArray ? tag.trackBy : undefined;
-            
+
             // Recursively process nested tags
             const result = extractPropertyPathsAndArrays(
                 tag.tags,
@@ -77,10 +77,10 @@ function extractPropertyPathsAndArrays(
 
             // For repeated sub-contracts, skip if only the trackBy field is present
             // (no point having an array with only identity fields)
-            const hasOnlyTrackBy = 
-                isArray && 
-                trackByForChildren && 
-                result.paths.length === 1 && 
+            const hasOnlyTrackBy =
+                isArray &&
+                trackByForChildren &&
+                result.paths.length === 1 &&
                 result.paths[0].propertyName === camelCase(trackByForChildren);
 
             // Only include this object/array if it has properties in this phase
@@ -104,7 +104,7 @@ function extractPropertyPathsAndArrays(
             // Leaf property - include if it should be in the target phase
             // OR if it's the trackBy field (always included in all phases)
             const isTrackByField = parentTrackBy === tag.tag;
-            
+
             if (shouldIncludeInPhase(effectivePhase, targetPhase) || isTrackByField) {
                 paths.push({
                     path: parentPath,
@@ -207,12 +207,12 @@ function buildPathAccess(
         const isArray = arrays.has(pathUpToHere);
         const isAsync = asyncProps?.has(pathUpToHere);
         const isFinalSegment = i === path.length - 1;
-        
+
         // Skip [number] for the final segment if:
         // 1. skipFinalArrayAccess is true, OR
         // 2. This is an async array (needs Awaited first)
         const shouldSkip = isFinalSegment && (skipFinalArrayAccess || (isArray && isAsync));
-        
+
         if (isArray && !shouldSkip) {
             result += '[number]';
         }

@@ -179,9 +179,7 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
             );
         }
         if (tag.trackBy && !tag.repeated) {
-            validations.push(
-                `Tag [${tag.tag}] has trackBy but is not marked as repeated`,
-            );
+            validations.push(`Tag [${tag.tag}] has trackBy but is not marked as repeated`);
         }
         // Validate that trackBy references a valid tag
         if (tag.trackBy && tag.tags) {
@@ -211,7 +209,7 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
                 if (trackByTag.phase && trackByTag.phase !== 'slow') {
                     validations.push(
                         `Tag [${tag.tag}] trackBy field [${tag.trackBy}] should have phase 'slow' (or no phase) since identity is slow-changing data. ` +
-                        `Found phase: [${trackByTag.phase}]. Note: trackBy fields are automatically included in all phases for merging.`,
+                            `Found phase: [${trackByTag.phase}]. Note: trackBy fields are automatically included in all phases for merging.`,
                     );
                 }
             }

@@ -85,7 +85,7 @@ tags:
   - tag: images
     type: repeated
     phase: slow
-    trackBy: id  # NEW: Required for repeated sub-contracts
+    trackBy: id # NEW: Required for repeated sub-contracts
     tags:
       - tag: id
         type: data
@@ -128,18 +128,18 @@ Implement a deep merge function in `dev-server.ts` that:
 function deepMerge(
   slow: object,
   fast: object,
-  contract: Contract // Contains trackBy metadata
+  contract: Contract, // Contains trackBy metadata
 ): object {
   const result = {};
-  
+
   // Merge all keys from both objects
   const allKeys = new Set([...Object.keys(slow), ...Object.keys(fast)]);
-  
+
   for (const key of allKeys) {
     const slowValue = slow[key];
     const fastValue = fast[key];
     const contractTag = contract.getTag(key);
-    
+
     if (fastValue === undefined) {
       // Only in slow
       result[key] = slowValue;
@@ -152,7 +152,7 @@ function deepMerge(
         slowValue,
         fastValue,
         contractTag.trackBy,
-        contractTag.subContract
+        contractTag.subContract,
       );
     } else if (typeof slowValue === 'object' && typeof fastValue === 'object') {
       // Nested object: recurse
@@ -162,7 +162,7 @@ function deepMerge(
       result[key] = fastValue;
     }
   }
-  
+
   return result;
 }
 
@@ -170,23 +170,19 @@ function mergeArraysByTrackBy(
   slowArray: any[],
   fastArray: any[],
   trackBy: string,
-  itemContract: Contract
+  itemContract: Contract,
 ): any[] {
   // Build index of slow items by trackBy key
-  const slowByKey = new Map(
-    slowArray.map(item => [item[trackBy], item])
-  );
-  
+  const slowByKey = new Map(slowArray.map((item) => [item[trackBy], item]));
+
   // Build index of fast items by trackBy key
-  const fastByKey = new Map(
-    fastArray.map(item => [item[trackBy], item])
-  );
-  
+  const fastByKey = new Map(fastArray.map((item) => [item[trackBy], item]));
+
   // Merge: Start with slow array order, merge matching fast items
-  const result = slowArray.map(slowItem => {
+  const result = slowArray.map((slowItem) => {
     const key = slowItem[trackBy];
     const fastItem = fastByKey.get(key);
-    
+
     if (fastItem) {
       // Item exists in both: deep merge
       return deepMerge(slowItem, fastItem, itemContract);
@@ -195,14 +191,14 @@ function mergeArraysByTrackBy(
       return slowItem;
     }
   });
-  
+
   // Add items that only exist in fast (should be rare based on phase semantics)
   for (const [key, fastItem] of fastByKey) {
     if (!slowByKey.has(key)) {
       result.push(fastItem);
     }
   }
-  
+
   return result;
 }
 ```
@@ -217,10 +213,12 @@ function mergeArraysByTrackBy(
 **Supporting Changes:**
 
 - `packages/compiler/compiler-jay-html/lib/contract/contract.ts`
+
   - Add `trackBy?: string` to `RepeatedContractTag` type
   - Add validation: `trackBy` is required for repeated contracts
 
 - `packages/compiler/compiler-jay-html/lib/contract/contract-parser.ts`
+
   - Parse `trackBy` attribute from YAML
   - Validate that `trackBy` references a valid data tag
 
@@ -234,11 +232,13 @@ function mergeArraysByTrackBy(
 Beyond solving the immediate merge problem, `trackBy` metadata enables:
 
 1. **Editor Integration** (out of scope for this task)
+
    - Design tools can track item identity across design iterations
    - Enables fine-grained updates to array items without losing identity
    - Example: Reorder images in design tool without breaking developer's property overrides
 
 2. **Optimized Runtime Updates**
+
    - Jay runtime already uses `trackBy` in `forEach` for efficient DOM updates
    - Contract-level `trackBy` ensures consistency across all tooling
 
@@ -271,7 +271,7 @@ When parsing contracts, validate:
 # ❌ trackBy references non-existent tag
 - tag: items
   type: repeated
-  trackBy: key  # 'key' doesn't exist
+  trackBy: key # 'key' doesn't exist
   tags:
     - tag: id
       type: data
@@ -366,7 +366,7 @@ For existing repeated contracts, identify identity property:
 # After
 - tag: todos
   type: repeated
-  trackBy: id  # Add this
+  trackBy: id # Add this
   tags:
     - tag: id
       type: data
@@ -379,6 +379,7 @@ For existing repeated contracts, identify identity property:
 ## Testing Strategy
 
 1. **Unit Tests for `deepMerge`**
+
    - Primitive values
    - Nested objects (2-3 levels deep)
    - Arrays with matching trackBy keys
@@ -386,6 +387,7 @@ For existing repeated contracts, identify identity property:
    - Mixed nested structures
 
 2. **Integration Tests**
+
    - Dev server with sample page
    - Slow render → Fast render → Verify merged ViewState
    - Edge cases: empty arrays, null values, undefined properties
@@ -400,18 +402,21 @@ For existing repeated contracts, identify identity property:
 
 **Problem:** Shallow merge of slow/fast ViewStates loses nested properties.
 
-**Solution:** 
+**Solution:**
+
 1. Add `trackBy` attribute to repeated sub-contracts in jay-contract format
 2. Implement deep merge algorithm that uses `trackBy` for array merging
 3. Enable future editor integration with item identity tracking
 
 **Benefits:**
+
 - Correctly combines multi-phase ViewStates
 - Maintains type structure across phases
 - Enables editor tools to track item identity
 - Consistent with existing `forEach trackBy` concept
 
 **Next Steps:**
+
 1. Update contract parser to support `trackBy` attribute
 2. Add validation for `trackBy` requirements
 3. Implement deep merge algorithm in dev-server
@@ -439,11 +444,11 @@ The merge algorithm needs to build maps of items by their identity:
 ```typescript
 // In mergeArraysByTrackBy:
 const slowByKey = new Map(
-  slowArray.map(item => [item[trackBy], item])  // ❌ Needs item[trackBy]
+  slowArray.map((item) => [item[trackBy], item]), // ❌ Needs item[trackBy]
 );
 
 const fastByKey = new Map(
-  fastArray.map(item => [item[trackBy], item])  // ❌ Needs item[trackBy]
+  fastArray.map((item) => [item[trackBy], item]), // ❌ Needs item[trackBy]
 );
 ```
 
@@ -460,7 +465,7 @@ If `id` has `phase: slow`, it won't be in `FastViewState`, so `fastArray` items 
     - tag: id
       type: data
       dataType: string
-      phase: slow  # ❌ Only in slow phase!
+      phase: slow # ❌ Only in slow phase!
     - tag: url
       type: data
       dataType: string
@@ -472,14 +477,15 @@ If `id` has `phase: slow`, it won't be in `FastViewState`, so `fastArray` items 
 ```
 
 Generated types:
+
 ```typescript
 SlowViewState = {
-  images: Array<{ id: string, url: string }>  // ✅ Has id
-}
+  images: Array<{ id: string; url: string }>, // ✅ Has id
+};
 
 FastViewState = {
-  images: Array<{ loading: boolean }>  // ❌ No id field!
-}
+  images: Array<{ loading: boolean }>, // ❌ No id field!
+};
 ```
 
 When merging, we can't match items because `fastArray` items don't have `id`.
@@ -491,6 +497,7 @@ When merging, we can't match items because `fastArray` items don't have `id`.
 **Approach:** Mandate that `trackBy` fields are automatically included in **all phases** where the array appears.
 
 **Contract Syntax (Unchanged):**
+
 ```yaml
 - tag: images
   type: repeated
@@ -500,7 +507,7 @@ When merging, we can't match items because `fastArray` items don't have `id`.
     - tag: id
       type: data
       dataType: string
-      phase: slow  # Declared phase, but actually in all phases
+      phase: slow # Declared phase, but actually in all phases
     - tag: url
       type: data
       dataType: string
@@ -512,35 +519,39 @@ When merging, we can't match items because `fastArray` items don't have `id`.
 ```
 
 **Generated Types:**
+
 ```typescript
 // Slow phase: id explicitly included
 SlowViewState = {
-  images: Array<{ id: string, url: string }>
-}
+  images: Array<{ id: string; url: string }>,
+};
 
 // Fast phase: id implicitly added because it's the trackBy field
 FastViewState = {
-  images: Array<{ id: string, loading: boolean }>
-}
+  images: Array<{ id: string; loading: boolean }>,
+};
 
 // Interactive phase: id implicitly added
 InteractiveViewState = {
-  images: Array<{ id: string, loading: boolean }>
-}
+  images: Array<{ id: string; loading: boolean }>,
+};
 ```
 
 **Implementation:**
+
 - In type generator, when processing a repeated sub-contract with `trackBy`
 - Always include the `trackBy` field in all phase ViewStates for that array
 - Validation: The `trackBy` field should have `phase: slow` (or default) to indicate it's the canonical identity
 
 **Pros:**
+
 - Simple to implement
 - No contract syntax changes
 - Clear semantic: identity fields are always present
 - Minimal impact on existing code
 
 **Cons:**
+
 - Implicit behavior (not visible in contract)
 - The declared phase on the `trackBy` field is somewhat misleading
 - Developers might be confused why `id` appears in fast phase when marked as slow
@@ -550,6 +561,7 @@ InteractiveViewState = {
 **Approach:** Add explicit syntax to mark tags as belonging to multiple phases.
 
 **Option 2a: `allPhases` attribute:**
+
 ```yaml
 - tag: images
   type: repeated
@@ -559,7 +571,7 @@ InteractiveViewState = {
     - tag: id
       type: data
       dataType: string
-      allPhases: true  # NEW: Explicitly in all phases
+      allPhases: true # NEW: Explicitly in all phases
     - tag: url
       type: data
       dataType: string
@@ -571,6 +583,7 @@ InteractiveViewState = {
 ```
 
 **Option 2b: Multiple phases syntax:**
+
 ```yaml
 - tag: images
   type: repeated
@@ -580,7 +593,7 @@ InteractiveViewState = {
     - tag: id
       type: data
       dataType: string
-      phase: [slow, fast, fast+interactive]  # NEW: Array of phases
+      phase: [slow, fast, fast+interactive] # NEW: Array of phases
     - tag: url
       type: data
       dataType: string
@@ -592,6 +605,7 @@ InteractiveViewState = {
 ```
 
 **Option 2c: Special `identity` phase:**
+
 ```yaml
 - tag: images
   type: repeated
@@ -601,7 +615,7 @@ InteractiveViewState = {
     - tag: id
       type: data
       dataType: string
-      phase: identity  # NEW: Special phase meaning "all phases"
+      phase: identity # NEW: Special phase meaning "all phases"
     - tag: url
       type: data
       dataType: string
@@ -613,11 +627,13 @@ InteractiveViewState = {
 ```
 
 **Pros:**
+
 - Explicit and clear
 - Self-documenting contract
 - No surprising implicit behavior
 
 **Cons:**
+
 - More verbose
 - Requires contract syntax extension
 - More complex validation rules
@@ -627,6 +643,7 @@ InteractiveViewState = {
 **Approach:** Instead of `trackBy` on the repeated contract, mark the identity tag itself and infer which field is the trackBy.
 
 **Contract Syntax:**
+
 ```yaml
 - tag: images
   type: repeated
@@ -635,7 +652,7 @@ InteractiveViewState = {
     - tag: id
       type: data
       dataType: string
-      identity: true  # NEW: This is the identity field
+      identity: true # NEW: This is the identity field
     - tag: url
       type: data
       dataType: string
@@ -647,17 +664,20 @@ InteractiveViewState = {
 ```
 
 **Implementation:**
+
 - No `trackBy` on repeated contract
 - System looks for `identity: true` within the sub-contract tags
 - Validation: Exactly one tag must have `identity: true` in a repeated sub-contract
 - Identity fields are automatically in all phases
 
 **Pros:**
+
 - Single source of truth (the tag itself declares it's an identity)
 - Semantic meaning is clear
 - No redundancy (`trackBy: id` + tag named `id`)
 
 **Cons:**
+
 - Breaking change from current implementation
 - Validation is more complex (must find the identity tag)
 - Less explicit at the repeated contract level
@@ -677,11 +697,13 @@ InteractiveViewState = {
 **Implementation Details:**
 
 1. **Type Generator Change** (`phase-type-generator.ts`):
+
    - When generating phase-specific ViewStates for a repeated sub-contract
    - Always include the `trackBy` field regardless of its declared phase
    - This ensures both `SlowViewState` and `FastViewState` include the identity field
 
 2. **Validation Rule** (add to existing validation):
+
    - The `trackBy` field should be a `data` tag (already validated)
    - The `trackBy` field should have `phase: slow` or no phase (defaults to slow)
    - Rationale: Identity is conceptually slow-changing data
@@ -707,6 +729,7 @@ If implicit behavior proves confusing, we can later add Option 2c (`phase: ident
 ### Changes Made:
 
 1. **Type Generator (`packages/compiler/compiler-jay-html/lib/contract/phase-type-generator.ts`)**:
+
    - Modified `extractPropertyPathsAndArrays` function to accept a `parentTrackBy` parameter
    - For repeated sub-contracts, pass the `trackBy` field name to nested tag processing
    - When processing leaf data tags, check if the tag name matches `parentTrackBy`
@@ -714,6 +737,7 @@ If implicit behavior proves confusing, we can later add Option 2c (`phase: ident
    - This ensures trackBy fields automatically appear in all phases (slow, fast, interactive)
 
 2. **Validation (`packages/compiler/compiler-jay-html/lib/contract/contract-parser.ts`)**:
+
    - Added validation to warn when a trackBy field has `phase: fast` or `phase: fast+interactive`
    - Warning message: "trackBy field [x] should have phase 'slow' (or no phase) since identity is slow-changing data. Found phase: [y]. Note: trackBy fields are automatically included in all phases for merging."
    - Also fixed validation to accept both `string` and `number` as valid trackBy data types
@@ -730,31 +754,33 @@ If implicit behavior proves confusing, we can later add Option 2c (`phase: ident
 ### Behavior:
 
 **Before (incorrect):**
+
 ```typescript
 // Contract with trackBy: id, phase: slow
 SlowViewState = {
-  items: Array<{ id: string, title: string }>
-}
+  items: Array<{ id: string; title: string }>,
+};
 
 FastViewState = {
-  items: Array<{ completed: boolean }>  // ❌ No id field!
-}
+  items: Array<{ completed: boolean }>, // ❌ No id field!
+};
 ```
 
 **After (correct):**
+
 ```typescript
 // Contract with trackBy: id, phase: slow
 SlowViewState = {
-  items: Array<{ id: string }>
-}
+  items: Array<{ id: string }>,
+};
 
 FastViewState = {
-  items: Array<{ id: string, title: string, completed: boolean }>  // ✅ id is here!
-}
+  items: Array<{ id: string; title: string; completed: boolean }>, // ✅ id is here!
+};
 
 InteractiveViewState = {
-  items: Array<{ id: string, title: string, completed: boolean }>  // ✅ id is here too!
-}
+  items: Array<{ id: string; title: string; completed: boolean }>, // ✅ id is here too!
+};
 ```
 
 ### Benefits:
@@ -775,15 +801,15 @@ InteractiveViewState = {
 
 ### The Issue
 
-After implementing automatic trackBy inclusion in all phases, we discovered a problem: some phases would have arrays containing *only* the identity field, which serves no practical purpose.
+After implementing automatic trackBy inclusion in all phases, we discovered a problem: some phases would have arrays containing _only_ the identity field, which serves no practical purpose.
 
 **Example of the problem:**
 
 ```typescript
 // Contract with only slow-phase properties
 FastViewState = {
-  items: Array<Pick<ViewState['items'][number], 'id'>>  // Only identity!
-}
+  items: Array<Pick<ViewState['items'][number], 'id'>>, // Only identity!
+};
 ```
 
 This creates meaningless type structures where arrays only contain identity fields with no actual data.
@@ -796,15 +822,15 @@ Modified the type generator to **skip repeated arrays when they would only conta
 
 ```typescript
 // For repeated sub-contracts, skip if only the trackBy field is present
-const hasOnlyTrackBy = 
-    isArray && 
-    trackByForChildren && 
-    result.paths.length === 1 && 
-    result.paths[0].propertyName === camelCase(trackByForChildren);
+const hasOnlyTrackBy =
+  isArray &&
+  trackByForChildren &&
+  result.paths.length === 1 &&
+  result.paths[0].propertyName === camelCase(trackByForChildren);
 
 // Only include if it has properties AND it's not an array with only trackBy
 if (result.paths.length > 0 && !hasOnlyTrackBy) {
-    // Include the array
+  // Include the array
 }
 ```
 
@@ -815,29 +841,29 @@ if (result.paths.length > 0 && !hasOnlyTrackBy) {
 ```typescript
 // productId: phase slow, name: phase fast
 SlowViewState = {
-  items: Array<Pick<ViewState['items'][number], 'productId'>>  // Only id!
-}
+  items: Array<Pick<ViewState['items'][number], 'productId'>>, // Only id!
+};
 
 FastViewState = {
-  items: Array<Pick<ViewState['items'][number], 'productId' | 'name'>>
-}
+  items: Array<Pick<ViewState['items'][number], 'productId' | 'name'>>,
+};
 ```
 
 **After optimization:**
 
 ```typescript
-SlowViewState = {}  // ✅ Omitted - would only have id
+SlowViewState = {}; // ✅ Omitted - would only have id
 
 FastViewState = {
-  items: Array<ViewState['items'][number]>  // ✅ Has both productId and name
-}
+  items: Array<ViewState['items'][number]>, // ✅ Has both productId and name
+};
 ```
 
 ### Benefits
 
 1. **Cleaner Types**: No meaningless array structures with only identity fields
 2. **Better Semantics**: A phase ViewState only includes arrays when they have meaningful data
-3. **Correct Behavior**: The trackBy field is still automatically added when the array *does* appear in a phase
+3. **Correct Behavior**: The trackBy field is still automatically added when the array _does_ appear in a phase
 4. **Type Safety**: Empty ViewStates are correctly typed as `{}`
 
 ### When Arrays Are Included
@@ -849,4 +875,3 @@ An array appears in a phase's ViewState when it has **at least one non-trackBy p
 - ❌ Array only has the trackBy property → **omitted**
 
 This ensures that every included array structure has actual purpose beyond just identity tracking.
-
