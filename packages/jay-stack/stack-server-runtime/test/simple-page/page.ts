@@ -11,8 +11,8 @@ import { Props } from '@jay-framework/component';
 import {
     makeJayStackComponent,
     PageProps,
-    partialRender,
-    PartialRender,
+    phaseOutput,
+    PhaseOutput,
     Signals,
 } from '@jay-framework/fullstack-component';
 
@@ -26,20 +26,20 @@ interface FastCarryForward {
 
 async function renderSlowlyChanging(
     props: PageProps,
-): Promise<PartialRender<PageSlowViewState, SlowlyCarryForward>> {
+): Promise<PhaseOutput<PageSlowViewState, SlowlyCarryForward>> {
     const slowlyRendered = 'SLOWLY RENDERED';
     const carryForwardSlowly = 'SLOWLY -> FAST CARRY FORWARD';
-    return partialRender({ slowlyRendered }, { carryForwardSlowly });
+    return phaseOutput({ slowlyRendered }, { carryForwardSlowly });
 }
 
 async function renderFastChanging(
     props: PageProps,
     carryForward: SlowlyCarryForward,
-): Promise<PartialRender<PageFastViewState, FastCarryForward>> {
+): Promise<PhaseOutput<PageFastViewState, FastCarryForward>> {
     const fastRendered = 'FAST RENDERED';
     const fastDynamicRendered = `FAST RENDERED, using '${carryForward.carryForwardSlowly}'`;
     const carryForwardFast = 'FAST -> INTERACTIVE CARRY FORWARD';
-    return partialRender(
+    return phaseOutput(
         {
             fastRendered,
             fastDynamicRendered,

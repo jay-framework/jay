@@ -11,8 +11,8 @@ import {
     makeJayStackComponent,
     notFound,
     PageProps,
-    PartialRender,
-    partialRender,
+    PhaseOutput,
+    phaseOutput,
     Signals,
     SlowlyRenderResult,
     UrlParams,
@@ -55,7 +55,7 @@ async function renderSlowlyChanging(
         ribbon,
         productType,
     } = product;
-    return partialRender(
+    return phaseOutput(
         {
             id,
             brand,
@@ -76,10 +76,10 @@ async function renderSlowlyChanging(
 async function renderFastChanging(
     props: PageProps & ProductPageParams,
     carryForward: ProductsCarryForward,
-): Promise<PartialRender<ProductPageFastViewState, ProductAndInventoryCarryForward>> {
+): Promise<PhaseOutput<ProductPageFastViewState, ProductAndInventoryCarryForward>> {
     const availableProducts = await getAvailableUnits(carryForward.inventoryItemId);
     const inStock = availableProducts > 0;
-    return partialRender(
+    return phaseOutput(
         { inStock },
         {
             productId: carryForward.productId,
