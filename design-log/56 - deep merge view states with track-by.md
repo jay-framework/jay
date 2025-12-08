@@ -418,3 +418,287 @@ For existing repeated contracts, identify identity property:
 4. Add comprehensive tests
 5. Document in jay-contract format guide
 
+---
+
+## Issue: TrackBy Identity Fields Must Be Present in Both Phases
+
+### The Problem
+
+**Critical Issue Discovered During Implementation:**
+
+The `trackBy` field (e.g., `id`) must be present in **both** slow and fast view states for the merge algorithm to work. However, our current phase system only allows a tag to belong to **one** phase:
+
+- `phase: slow` → Only in `SlowViewState`
+- `phase: fast` → Only in `FastViewState`
+- `phase: fast+interactive` → In both `FastViewState` and `InteractiveViewState`
+
+**Why This is a Problem:**
+
+The merge algorithm needs to build maps of items by their identity:
+
+```typescript
+// In mergeArraysByTrackBy:
+const slowByKey = new Map(
+  slowArray.map(item => [item[trackBy], item])  // ❌ Needs item[trackBy]
+);
+
+const fastByKey = new Map(
+  fastArray.map(item => [item[trackBy], item])  // ❌ Needs item[trackBy]
+);
+```
+
+If `id` has `phase: slow`, it won't be in `FastViewState`, so `fastArray` items won't have the `id` field. If `id` has `phase: fast`, it won't be in `SlowViewState`, so `slowArray` items won't have the `id` field.
+
+**Example of the Problem:**
+
+```yaml
+- tag: images
+  type: repeated
+  trackBy: id
+  phase: slow
+  tags:
+    - tag: id
+      type: data
+      dataType: string
+      phase: slow  # ❌ Only in slow phase!
+    - tag: url
+      type: data
+      dataType: string
+      phase: slow
+    - tag: loading
+      type: variant
+      dataType: boolean
+      phase: fast
+```
+
+Generated types:
+```typescript
+SlowViewState = {
+  images: Array<{ id: string, url: string }>  // ✅ Has id
+}
+
+FastViewState = {
+  images: Array<{ loading: boolean }>  // ❌ No id field!
+}
+```
+
+When merging, we can't match items because `fastArray` items don't have `id`.
+
+### Proposed Solutions
+
+#### Option 1: Implicit Requirement (Simple, Immediate Fix)
+
+**Approach:** Mandate that `trackBy` fields are automatically included in **all phases** where the array appears.
+
+**Contract Syntax (Unchanged):**
+```yaml
+- tag: images
+  type: repeated
+  trackBy: id
+  phase: slow
+  tags:
+    - tag: id
+      type: data
+      dataType: string
+      phase: slow  # Declared phase, but actually in all phases
+    - tag: url
+      type: data
+      dataType: string
+      phase: slow
+    - tag: loading
+      type: variant
+      dataType: boolean
+      phase: fast
+```
+
+**Generated Types:**
+```typescript
+// Slow phase: id explicitly included
+SlowViewState = {
+  images: Array<{ id: string, url: string }>
+}
+
+// Fast phase: id implicitly added because it's the trackBy field
+FastViewState = {
+  images: Array<{ id: string, loading: boolean }>
+}
+
+// Interactive phase: id implicitly added
+InteractiveViewState = {
+  images: Array<{ id: string, loading: boolean }>
+}
+```
+
+**Implementation:**
+- In type generator, when processing a repeated sub-contract with `trackBy`
+- Always include the `trackBy` field in all phase ViewStates for that array
+- Validation: The `trackBy` field should have `phase: slow` (or default) to indicate it's the canonical identity
+
+**Pros:**
+- Simple to implement
+- No contract syntax changes
+- Clear semantic: identity fields are always present
+- Minimal impact on existing code
+
+**Cons:**
+- Implicit behavior (not visible in contract)
+- The declared phase on the `trackBy` field is somewhat misleading
+- Developers might be confused why `id` appears in fast phase when marked as slow
+
+#### Option 2: Explicit Multi-Phase Marker
+
+**Approach:** Add explicit syntax to mark tags as belonging to multiple phases.
+
+**Option 2a: `allPhases` attribute:**
+```yaml
+- tag: images
+  type: repeated
+  trackBy: id
+  phase: slow
+  tags:
+    - tag: id
+      type: data
+      dataType: string
+      allPhases: true  # NEW: Explicitly in all phases
+    - tag: url
+      type: data
+      dataType: string
+      phase: slow
+    - tag: loading
+      type: variant
+      dataType: boolean
+      phase: fast
+```
+
+**Option 2b: Multiple phases syntax:**
+```yaml
+- tag: images
+  type: repeated
+  trackBy: id
+  phase: slow
+  tags:
+    - tag: id
+      type: data
+      dataType: string
+      phase: [slow, fast, fast+interactive]  # NEW: Array of phases
+    - tag: url
+      type: data
+      dataType: string
+      phase: slow
+    - tag: loading
+      type: variant
+      dataType: boolean
+      phase: fast
+```
+
+**Option 2c: Special `identity` phase:**
+```yaml
+- tag: images
+  type: repeated
+  trackBy: id
+  phase: slow
+  tags:
+    - tag: id
+      type: data
+      dataType: string
+      phase: identity  # NEW: Special phase meaning "all phases"
+    - tag: url
+      type: data
+      dataType: string
+      phase: slow
+    - tag: loading
+      type: variant
+      dataType: boolean
+      phase: fast
+```
+
+**Pros:**
+- Explicit and clear
+- Self-documenting contract
+- No surprising implicit behavior
+
+**Cons:**
+- More verbose
+- Requires contract syntax extension
+- More complex validation rules
+
+#### Option 3: Identity Tag Attribute (Inferred TrackBy)
+
+**Approach:** Instead of `trackBy` on the repeated contract, mark the identity tag itself and infer which field is the trackBy.
+
+**Contract Syntax:**
+```yaml
+- tag: images
+  type: repeated
+  phase: slow
+  tags:
+    - tag: id
+      type: data
+      dataType: string
+      identity: true  # NEW: This is the identity field
+    - tag: url
+      type: data
+      dataType: string
+      phase: slow
+    - tag: loading
+      type: variant
+      dataType: boolean
+      phase: fast
+```
+
+**Implementation:**
+- No `trackBy` on repeated contract
+- System looks for `identity: true` within the sub-contract tags
+- Validation: Exactly one tag must have `identity: true` in a repeated sub-contract
+- Identity fields are automatically in all phases
+
+**Pros:**
+- Single source of truth (the tag itself declares it's an identity)
+- Semantic meaning is clear
+- No redundancy (`trackBy: id` + tag named `id`)
+
+**Cons:**
+- Breaking change from current implementation
+- Validation is more complex (must find the identity tag)
+- Less explicit at the repeated contract level
+
+### Recommended Approach
+
+**Recommendation: Option 1 (Implicit Requirement)**
+
+**Rationale:**
+
+1. **Minimal Breaking Changes**: Works with current syntax, just changes type generation behavior
+2. **Clear Semantics**: Identity fields being in all phases makes semantic sense - you always need the identity to reference an item
+3. **Simple Implementation**: Small change to type generator, no parser changes needed
+4. **Consistent with forEach**: In jay-html runtime, `trackBy` is always available regardless of phase
+5. **Practical**: Solves the immediate problem without complex new syntax
+
+**Implementation Details:**
+
+1. **Type Generator Change** (`phase-type-generator.ts`):
+   - When generating phase-specific ViewStates for a repeated sub-contract
+   - Always include the `trackBy` field regardless of its declared phase
+   - This ensures both `SlowViewState` and `FastViewState` include the identity field
+
+2. **Validation Rule** (add to existing validation):
+   - The `trackBy` field should be a `data` tag (already validated)
+   - The `trackBy` field should have `phase: slow` or no phase (defaults to slow)
+   - Rationale: Identity is conceptually slow-changing data
+
+3. **Documentation**:
+   - Clearly document that `trackBy` fields are implicitly included in all phases
+   - Explain why: identity is needed for merging across phases
+
+**Alternative Consideration for Future:**
+
+If implicit behavior proves confusing, we can later add Option 2c (`phase: identity`) as syntactic sugar that makes the behavior explicit, while still maintaining backward compatibility with Option 1.
+
+### Action Items
+
+1. ✅ Add note to existing validation rules that trackBy fields are in all phases (implicit)
+2. ⏳ Update type generator to include trackBy fields in all phase ViewStates
+3. ⏳ Add test cases verifying trackBy field appears in all phases
+4. ⏳ Document the implicit behavior in contract format guide
+5. ⏳ Add warning if trackBy field has `phase: fast` (should be slow)
+
