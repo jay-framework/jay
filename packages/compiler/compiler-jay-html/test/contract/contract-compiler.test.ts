@@ -207,16 +207,14 @@ describe('compile contract', () => {
             items: Array<ItemOfTodoViewState>;
         }
         
-        export type TodoSlowViewState = {
-            items: Array<Pick<TodoViewState['items'][number], 'id'>>;
-        };
+        export type TodoSlowViewState = {};
         
         export type TodoFastViewState = {
-            items: Array<Pick<TodoViewState['items'][number], 'title' | 'completed'>>;
+            items: Array<TodoViewState['items'][number]>;
         };
         
         export type TodoInteractiveViewState = {
-            items: Array<Pick<TodoViewState['items'][number], 'title' | 'completed'>>;
+            items: Array<TodoViewState['items'][number]>;
         };
         
         export interface TodoRefs {
@@ -235,6 +233,91 @@ describe('compile contract', () => {
 
         export type TodoContract = JayContract<TodoViewState, TodoRefs, TodoSlowViewState, TodoFastViewState, TodoInteractiveViewState>`),
         );
+    });
+
+    it('should include trackBy field in all phases (slow, fast, interactive)', async () => {
+        const contract = `
+        name: products
+        tags:
+          - tag: items
+            type: sub-contract
+            repeated: true
+            trackBy: productId
+            tags:
+              - tag: productId
+                type: data
+                dataType: number
+                phase: slow
+              - tag: name
+                type: data
+                dataType: string
+                phase: fast
+              - tag: price
+                type: data
+                dataType: number
+                phase: fast+interactive
+        `;
+
+        const parsedContract = parseContract(contract, 'contract.jay-contract');
+        const result = await compileContract(parsedContract, './contract', noHopResolver);
+
+        expect(result.validations).toEqual([]);
+        expect(await prettify(result.val)).toBe(
+            await prettify(`
+        import { JayContract } from '@jay-framework/runtime';
+
+        export interface ItemOfProductsViewState {
+            productId: number;
+            name: string;
+            price: number;
+        }
+        
+        export interface ProductsViewState {
+            items: Array<ItemOfProductsViewState>;
+        }
+        
+        export type ProductsSlowViewState = {};
+        
+        export type ProductsFastViewState = {
+            items: Array<ProductsViewState['items'][number]>;
+        };
+        
+        export type ProductsInteractiveViewState = {
+            items: Array<Pick<ProductsViewState['items'][number], 'productId' | 'price'>>;
+        };
+        
+        export interface ProductsRefs {}
+        
+        export interface ProductsRepeatedRefs {}
+
+        export type ProductsContract = JayContract<ProductsViewState, ProductsRefs, ProductsSlowViewState, ProductsFastViewState, ProductsInteractiveViewState>`),
+        );
+    });
+
+    it('should warn when trackBy field has phase: fast', async () => {
+        const contract = `
+        name: articles
+        tags:
+          - tag: items
+            type: sub-contract
+            repeated: true
+            trackBy: id
+            tags:
+              - tag: id
+                type: data
+                dataType: string
+                phase: fast
+              - tag: title
+                type: data
+                dataType: string
+        `;
+
+        const parsedContract = parseContract(contract, 'contract.jay-contract');
+        const result = await compileContract(parsedContract, './contract', noHopResolver);
+
+        expect(result.validations.length).toBeGreaterThan(0);
+        expect(result.validations[0]).toContain('trackBy field');
+        expect(result.validations[0]).toContain('should have phase \'slow\'');
     });
 
     it('should compile form contract with nested sections', async () => {

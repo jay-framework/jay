@@ -43,6 +43,7 @@ function extractPropertyPathsAndArrays(
     targetPhase: RenderingPhase,
     parentPath: string[] = [],
     parentPhase?: RenderingPhase,
+    parentTrackBy?: string, // trackBy field from parent repeated sub-contract
 ): { paths: PropertyPath[]; arrays: ArrayInfo[]; asyncProps: AsyncInfo[] } {
     const paths: PropertyPath[] = [];
     const arrays: ArrayInfo[] = [];
@@ -62,16 +63,29 @@ function extractPropertyPathsAndArrays(
 
         // Check if this tag has nested tags (sub-contract)
         if (tag.type.includes(ContractTagType.subContract) && tag.tags) {
+            // For repeated sub-contracts, pass trackBy to children
+            const trackByForChildren = isArray ? tag.trackBy : undefined;
+            
             // Recursively process nested tags
             const result = extractPropertyPathsAndArrays(
                 tag.tags,
                 targetPhase,
                 currentPath,
                 effectivePhase,
+                trackByForChildren,
             );
 
+            // For repeated sub-contracts, skip if only the trackBy field is present
+            // (no point having an array with only identity fields)
+            const hasOnlyTrackBy = 
+                isArray && 
+                trackByForChildren && 
+                result.paths.length === 1 && 
+                result.paths[0].propertyName === camelCase(trackByForChildren);
+
             // Only include this object/array if it has properties in this phase
-            if (result.paths.length > 0) {
+            // and it's not an array with only the trackBy field
+            if (result.paths.length > 0 && !hasOnlyTrackBy) {
                 paths.push(...result.paths);
                 arrays.push(...result.arrays);
                 asyncProps.push(...result.asyncProps);
@@ -88,7 +102,10 @@ function extractPropertyPathsAndArrays(
             }
         } else {
             // Leaf property - include if it should be in the target phase
-            if (shouldIncludeInPhase(effectivePhase, targetPhase)) {
+            // OR if it's the trackBy field (always included in all phases)
+            const isTrackByField = parentTrackBy === tag.tag;
+            
+            if (shouldIncludeInPhase(effectivePhase, targetPhase) || isTrackByField) {
                 paths.push({
                     path: parentPath,
                     propertyName,
