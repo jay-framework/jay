@@ -72,7 +72,7 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
                 );
             }
             if (hasJayExtension(source, JAY_CONTRACT_EXTENSION))
-                return await resolveJayContract(this, source, importer, options);
+                return await resolveJayContract(this, source, importer, options, config?.root);
             if (hasJayModeExtension(source))
                 return await resolveJayModeFile(this, source, importer, options);
             if (hasCssImportedByJayHtml(source, importer)) {

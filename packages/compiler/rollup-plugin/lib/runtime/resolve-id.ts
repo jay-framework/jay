@@ -100,6 +100,7 @@ export async function resolveJayContract(
     source: string,
     importer: string | undefined,
     options: ResolveIdOptions,
+    root: string,
 ) {
     // Parse source to handle query parameters - resolve only the base path
     const sourceParsed = parseJayModuleSpecifier(source);
@@ -124,23 +125,30 @@ export async function resolveJayContract(
         ...options,
         skipSelf: true,
     });
+    if (!resolved) return null;
 
     // Parse the resolved id as well (it shouldn't have query params, but be safe)
     const resolvedParsed = parseJayModuleSpecifier(resolved.id);
+    const originId = resolvedParsed.basePath;
 
     // Build the id: basePath + query params (if any) + .ts
     // This maintains backwards compatibility - .ts at the end
     const baseWithQuery = sourceParsed.fullQueryString
-        ? `${resolvedParsed.basePath}${sourceParsed.fullQueryString}`
-        : resolvedParsed.basePath;
-    const id = `${baseWithQuery}${TS_EXTENSION}`;
+        ? `${originId}${sourceParsed.fullQueryString}`
+        : originId;
+    
+    // Handle SSR mode path transformation (same as resolveJayHtml)
+    const id =
+        context['ssr'] && originId.startsWith(root)
+            ? `${baseWithQuery}${TS_EXTENSION}`.slice(root.length)
+            : `${baseWithQuery}${TS_EXTENSION}`;
 
-    console.info(`[resolveId] resolved ${id}`);
+    console.info(`[resolveId] contract  - id: ${id}, originId: ${originId}, ssr: ${context['ssr']}`);
     return {
         id,
         meta: appendJayMetadata(context, id, {
             format: SourceFileFormat.JayContract,
-            originId: resolvedParsed.basePath, // Use basePath without query params for file loading
+            originId, // Use basePath without query params for file loading
         }),
     };
 }
