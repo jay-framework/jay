@@ -75,10 +75,14 @@ export function jayDefinitions() {
                     `${dirname}/${filename}`,
                     JAY_IMPORT_RESOLVER,
                 );
+                
+                // Check validation errors before generating file
+                const validatedTsCode: string = checkValidationErrors(tsCode);
+                
                 const generatedFilename = await writeDefinitionFile(
                     dirname,
                     filename,
-                    tsCode.val,
+                    validatedTsCode,
                     JAY_CONTRACT_DTS_EXTENSION,
                 );
 
