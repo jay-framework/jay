@@ -22,6 +22,7 @@ interface ParsedYamlTag {
     description?: string;
     tags?: Array<ParsedYamlTag>;
     repeated?: boolean;
+    trackBy?: string;
     link?: string;
     async?: boolean;
     phase?: string;
@@ -171,11 +172,50 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
         if (tag.elementType) {
             validations.push(`Tag [${tag.tag}] of type [sub-contract] cannot have an elementType`);
         }
+        // Validate trackBy for repeated sub-contracts
+        if (tag.repeated && !tag.trackBy) {
+            validations.push(
+                `Tag [${tag.tag}] is a repeated sub-contract and requires a trackBy attribute`,
+            );
+        }
+        if (tag.trackBy && !tag.repeated) {
+            validations.push(
+                `Tag [${tag.tag}] has trackBy but is not marked as repeated`,
+            );
+        }
+        // Validate that trackBy references a valid tag
+        if (tag.trackBy && tag.tags) {
+            const trackByTag = tag.tags.find((t) => t.tag === tag.trackBy);
+            if (!trackByTag) {
+                validations.push(
+                    `Tag [${tag.tag}] trackBy references [${tag.trackBy}] which does not exist in the sub-contract`,
+                );
+            } else {
+                // Validate that trackBy references a data tag
+                const trackByTypes = parseType(trackByTag.type || 'data', trackByTag.tag);
+                if (!trackByTypes.val.includes(ContractTagType.data)) {
+                    validations.push(
+                        `Tag [${tag.tag}] trackBy must reference a data tag, but [${tag.trackBy}] is not a data tag`,
+                    );
+                }
+                // Validate that trackBy references string
+                if (trackByTag.dataType) {
+                    const trackByDataType = trackByTag.dataType.toLowerCase();
+                    if (trackByDataType !== 'string') {
+                        validations.push(
+                            `Tag [${tag.tag}] trackBy must reference a string property, but [${tag.trackBy}] is type [${trackByTag.dataType}]`,
+                        );
+                    }
+                }
+            }
+        }
     } else {
         if (tag.tags)
             validations.push(`Tag [${tag.tag}] of type [${typesAsString}] cannot have tags`);
         if (tag.link)
             validations.push(`Tag [${tag.tag}] of type [${typesAsString}] cannot have link`);
+        if (tag.trackBy)
+            validations.push(`Tag [${tag.tag}] of type [${typesAsString}] cannot have trackBy`);
     }
 
     const description = parseDescription(tag.description);
@@ -198,6 +238,7 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
                     ...(required && { required }),
                     ...(description && { description }),
                     ...(tag.repeated && { repeated: tag.repeated }),
+                    ...(tag.trackBy && { trackBy: tag.trackBy }),
                     ...(phase && { phase }),
                     link: tag.link,
                 },
@@ -232,6 +273,7 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
                 ...(description && { description }),
                 tags: parsedSubTags,
                 ...(tag.repeated && { repeated: tag.repeated }),
+                ...(tag.trackBy && { trackBy: tag.trackBy }),
                 ...(tag.async && { async: tag.async }),
                 ...(phase && { phase }),
             },
