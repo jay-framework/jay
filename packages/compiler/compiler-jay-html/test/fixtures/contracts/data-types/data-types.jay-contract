@@ -21,7 +21,11 @@ tags:
   - tag: a1
     type: sub-contract
     repeated: true
+    trackBy: id
     tags:
+      - tag: id
+        type: data
+        dataType: string
       - tag: s3
         type: data
         dataType: string
@@ -45,8 +49,12 @@ tags:
   - tag: pa1
     type: sub-contract
     repeated: true
+    trackBy: id
     async: true
     tags:
+      - tag: id
+        type: data
+        dataType: string
       - tag: ps3
         type: data
         dataType: string

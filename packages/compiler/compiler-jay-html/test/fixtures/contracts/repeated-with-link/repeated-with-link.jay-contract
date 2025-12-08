@@ -8,8 +8,12 @@ tags:
   - tag: items
     type: sub-contract
     repeated: true
+    trackBy: id
     phase: fast
     tags:
+      - tag: id
+        type: data
+        dataType: string
       - tag: product
         type: sub-contract
         link: ./item.jay-contract

@@ -174,7 +174,11 @@ describe('compile contract', () => {
           - tag: items
             type: sub-contract
             repeated: true
+            trackBy: id
             tags:
+              - tag: id
+                type: data
+                dataType: string
               - tag: title
                 type: [data, interactive]
                 dataType: string
@@ -194,6 +198,7 @@ describe('compile contract', () => {
         import { HTMLElementCollectionProxy, JayContract } from '@jay-framework/runtime';
 
         export interface ItemOfTodoViewState {
+            id: string;
             title: string;
             completed: boolean;
         }
@@ -202,14 +207,16 @@ describe('compile contract', () => {
             items: Array<ItemOfTodoViewState>;
         }
         
-        export type TodoSlowViewState = {};
+        export type TodoSlowViewState = {
+            items: Array<Pick<TodoViewState['items'][number], 'id'>>;
+        };
         
         export type TodoFastViewState = {
-            items: Array<TodoViewState['items'][number]>;
+            items: Array<Pick<TodoViewState['items'][number], 'title' | 'completed'>>;
         };
         
         export type TodoInteractiveViewState = {
-            items: Array<TodoViewState['items'][number]>;
+            items: Array<Pick<TodoViewState['items'][number], 'title' | 'completed'>>;
         };
         
         export interface TodoRefs {
@@ -393,7 +400,11 @@ describe('compile contract', () => {
           - tag: items
             type: sub-contract
             repeated: true
+            trackBy: id
             tags:
+              - tag: id
+                type: data
+                dataType: string
               - tag: title
                 type: data
                 dataType: string
@@ -417,6 +428,7 @@ describe('compile contract', () => {
         }
 
         export interface ItemOfTodoViewState {
+            id: string;
             title: string;
             completed: boolean;
         }
@@ -621,6 +633,7 @@ describe('compile contract', () => {
               - tag: items
                 type: sub-contract
                 repeated: true
+                trackBy: id
                 link: ./todo-item${JAY_CONTRACT_EXTENSION}
               - tag: addButton
                 type: interactive
@@ -670,6 +683,7 @@ describe('compile contract', () => {
               - tag: completedItems
                 type: sub-contract
                 repeated: true
+                trackBy: id
                 link: ./todo-item${JAY_CONTRACT_EXTENSION}
               - tag: addButton
                 type: interactive
@@ -727,6 +741,7 @@ tags:
   - tag: children
     type: sub-contract
     repeated: true
+    trackBy: id
     link: $/
 `;
             const parsedContract = parseContract(contract, 'tree-node.jay-contract');
@@ -819,6 +834,7 @@ tags:
       - tag: items
         type: sub-contract
         repeated: true
+        trackBy: id
         link: $/
 `;
             const parsedContract = parseContract(contract, 'menu-item.jay-contract');
@@ -859,12 +875,18 @@ export interface MenuItemRepeatedRefs {}
             const contract = `
 name: complex-tree
 tags:
+  - tag: id
+    type: data
+    dataType: string
   - tag: name
     type: data
     dataType: string
   - tag: metadata
     type: sub-contract
     tags:
+      - tag: id
+        type: data
+        dataType: string
       - tag: category
         type: data
         dataType: string
@@ -874,10 +896,12 @@ tags:
   - tag: children
     type: sub-contract
     repeated: true
+    trackBy: id
     link: $/
   - tag: relatedMetadata
     type: sub-contract
     repeated: true
+    trackBy: id
     link: $/metadata
 `;
             const parsedContract = parseContract(contract, 'complex-tree.jay-contract');
@@ -889,11 +913,13 @@ tags:
 import { JayContract } from '@jay-framework/runtime';
 
 export interface MetadatumOfComplexTreeViewState {
+    id: string;
     category: string;
     tags: string;
 }
 
 export interface ComplexTreeViewState {
+    id: string;
     name: string;
     metadata: MetadatumOfComplexTreeViewState;
     children: Array<ComplexTreeViewState>;
@@ -902,7 +928,7 @@ export interface ComplexTreeViewState {
 
 export type ComplexTreeSlowViewState = Pick<
     ComplexTreeViewState,
-    'name' | 'children' | 'relatedMetadata'
+    'id' | 'name' | 'children' | 'relatedMetadata'
 > & {
     metadata: ComplexTreeViewState['metadata'];
 };
@@ -938,6 +964,7 @@ tags:
       - tag: children
         type: sub-contract
         repeated: true
+        trackBy: id
         link: $/nestedStructure
 `;
             const parsedContract = parseContract(contract, 'document.jay-contract');
@@ -991,6 +1018,7 @@ tags:
   - tag: children
     type: sub-contract
     repeated: true
+    trackBy: id
     link: $/
 `;
             const parsedContract = parseContract(contract, 'folder-tree.jay-contract');
@@ -1035,6 +1063,7 @@ tags:
   - tag: products
     type: sub-contract
     repeated: true
+    trackBy: id
     tags:
       - tag: id
         type: data
@@ -1096,6 +1125,7 @@ tags:
   - tag: products
     type: sub-contract
     repeated: true
+    trackBy: id
     tags:
       - tag: id
         type: data

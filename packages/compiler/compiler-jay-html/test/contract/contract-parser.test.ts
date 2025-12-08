@@ -130,7 +130,11 @@ describe('parse contract', () => {
           - tag: items
             type: sub-contract
             repeated: true
+            trackBy: id
             tags:
+              - tag: id
+                type: data
+                dataType: string
               - tag: title
                 type: data
                 dataType: string
@@ -148,7 +152,9 @@ describe('parse contract', () => {
                     tag: 'items',
                     type: [ContractTagType.subContract],
                     repeated: true,
+                    trackBy: 'id',
                     tags: [
+                        { tag: 'id', type: [ContractTagType.data], dataType: JayString },
                         { tag: 'title', type: [ContractTagType.data], dataType: JayString },
                         { tag: 'completed', type: [ContractTagType.data], dataType: JayNumber },
                     ],
@@ -620,6 +626,7 @@ tags:
     type: sub-contract
     async: true
     repeated: true
+    trackBy: id
     tags:
       - tag: id
         type: data
@@ -638,6 +645,7 @@ tags:
                         tag: 'notifications',
                         type: [ContractTagType.subContract],
                         repeated: true,
+                        trackBy: 'id',
                         async: true,
                         tags: [
                             { tag: 'id', type: [ContractTagType.data], dataType: JayString },
@@ -720,6 +728,7 @@ tags:
   - tag: children
     type: sub-contract
     repeated: true
+    trackBy: id
     link: $/
 `;
             const result = parseContract(contract, 'tree-node.jay-contract');
@@ -733,6 +742,7 @@ tags:
                         tag: 'children',
                         type: [ContractTagType.subContract],
                         repeated: true,
+                        trackBy: 'id',
                         link: '$/',
                     },
                 ],
@@ -793,6 +803,7 @@ tags:
       - tag: items
         type: sub-contract
         repeated: true
+        trackBy: id
         link: $/
 `;
             const result = parseContract(contract, 'menu-item.jay-contract');
@@ -810,6 +821,7 @@ tags:
                                 tag: 'items',
                                 type: [ContractTagType.subContract],
                                 repeated: true,
+                                trackBy: 'id',
                                 link: '$/',
                             },
                         ],
@@ -822,12 +834,18 @@ tags:
             const contract = `
 name: complex-tree
 tags:
+  - tag: id
+    type: data
+    dataType: string
   - tag: name
     type: data
     dataType: string
   - tag: metadata
     type: sub-contract
     tags:
+      - tag: id
+        type: data
+        dataType: string
       - tag: category
         type: data
         dataType: string
@@ -837,20 +855,24 @@ tags:
   - tag: children
     type: sub-contract
     repeated: true
+    trackBy: id
     link: $/
   - tag: relatedMetadata
     type: sub-contract
     repeated: true
+    trackBy: id
     link: $/metadata
 `;
             const result = parseContract(contract, 'complex-tree.jay-contract');
             expect(result.validations).toEqual([]);
             expect(result.val.tags).toEqual([
+                { tag: 'id', type: [ContractTagType.data], dataType: JayString },
                 { tag: 'name', type: [ContractTagType.data], dataType: JayString },
                 {
                     tag: 'metadata',
                     type: [ContractTagType.subContract],
                     tags: [
+                        { tag: 'id', type: [ContractTagType.data], dataType: JayString },
                         { tag: 'category', type: [ContractTagType.data], dataType: JayString },
                         { tag: 'tags', type: [ContractTagType.data], dataType: JayString },
                     ],
@@ -859,12 +881,14 @@ tags:
                     tag: 'children',
                     type: [ContractTagType.subContract],
                     repeated: true,
+                    trackBy: 'id',
                     link: '$/',
                 },
                 {
                     tag: 'relatedMetadata',
                     type: [ContractTagType.subContract],
                     repeated: true,
+                    trackBy: 'id',
                     link: '$/metadata',
                 },
             ]);
@@ -877,18 +901,23 @@ tags:
   - tag: name
     type: data
     dataType: string
+  - tag: id
+    type: data
+    dataType: string
   - tag: permissions
     type: sub-contract
     link: ./file-permissions${JAY_CONTRACT_EXTENSION}
   - tag: children
     type: sub-contract
     repeated: true
+    trackBy: id
     link: $/
 `;
             const result = parseContract(contract, 'file-node.jay-contract');
             expect(result.validations).toEqual([]);
             expect(result.val.tags).toEqual([
                 { tag: 'name', type: [ContractTagType.data], dataType: JayString },
+                { tag: 'id', type: [ContractTagType.data], dataType: JayString },
                 {
                     tag: 'permissions',
                     type: [ContractTagType.subContract],
@@ -898,6 +927,7 @@ tags:
                     tag: 'children',
                     type: [ContractTagType.subContract],
                     repeated: true,
+                    trackBy: 'id',
                     link: '$/',
                 },
             ]);

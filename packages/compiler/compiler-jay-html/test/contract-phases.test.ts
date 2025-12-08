@@ -133,8 +133,13 @@ tags:
   - tag: items
     type: sub-contract
     repeated: true
+    trackBy: id
     phase: slow
     tags:
+      - tag: id
+        type: data
+        dataType: string
+        phase: slow
       - tag: name
         type: data
         dataType: string
@@ -151,8 +156,13 @@ tags:
   - tag: items
     type: sub-contract
     repeated: true
+    trackBy: id
     phase: fast
     tags:
+      - tag: id
+        type: data
+        dataType: string
+        phase: slow
       - tag: name
         type: data
         dataType: string

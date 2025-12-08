@@ -8,14 +8,22 @@ tags:
   - tag: options
     type: sub-contract
     repeated: true
+    trackBy: id
     tags:
+      - tag: id
+        type: data
+        dataType: string
       - tag: name
         type: data
         dataType: string
       - tag: items
         type: sub-contract
         repeated: true
+        trackBy: id
         tags:
+          - tag: id
+            type: data
+            dataType: string
           - tag: label
             type: data
             dataType: string
@@ -27,14 +35,22 @@ tags:
   - tag: modifiers
     type: sub-contract
     repeated: true
+    trackBy: id
     tags:
+      - tag: id
+        type: data
+        dataType: string
       - tag: name
         type: data
         dataType: string
       - tag: items
         type: sub-contract
         repeated: true
+        trackBy: id
         tags:
+          - tag: id
+            type: data
+            dataType: string
           - tag: label
             type: data
             dataType: string

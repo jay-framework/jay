@@ -2,6 +2,7 @@ import { JayContract } from '@jay-framework/runtime';
 import { ItemViewState, ItemRefs, ItemRepeatedRefs } from './item.jay-contract';
 
 export interface ItemOfRepeatedWithLinkViewState {
+    id: string;
     product: ItemViewState;
     quantity: number;
 }
