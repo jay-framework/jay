@@ -1,5 +1,6 @@
 import { deepMergeViewStates } from '../lib/view-state-merger';
 import { Contract, ContractTag, ContractTagType } from '@jay-framework/compiler-jay-html';
+import { vi } from 'vitest';
 
 describe('deepMergeViewStates', () => {
     describe('primitive values', () => {
@@ -448,7 +449,7 @@ describe('deepMergeViewStates', () => {
         });
 
         it('should warn and use fast array when trackBy is missing', () => {
-            const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+            const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
             const slow = { items: [{ id: '1', name: 'Item 1' }] };
             const fast = { items: [{ id: '1', price: 10 }] };

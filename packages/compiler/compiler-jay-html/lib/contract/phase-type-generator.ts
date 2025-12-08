@@ -182,8 +182,17 @@ function countTotalProperties(
  * Build a type path access string, inserting [number] after array properties
  * e.g., for path ['options', 'items'] where 'options' is an array:
  * returns "BaseType['options'][number]['items']"
+` *
+ * For async arrays, does NOT add [number] at the final path segment since we need
+ * to unwrap with Awaited first
  */
-function buildPathAccess(baseTypeName: string, path: string[], arrays: Set<string>): string {
+function buildPathAccess(
+    baseTypeName: string,
+    path: string[],
+    arrays: Set<string>,
+    asyncProps?: Set<string>,
+    skipFinalArrayAccess = false,
+): string {
     if (path.length === 0) {
         return baseTypeName;
     }
@@ -195,7 +204,16 @@ function buildPathAccess(baseTypeName: string, path: string[], arrays: Set<strin
 
         // Check if this path segment is an array (need to add [number] to access item type)
         const pathUpToHere = path.slice(0, i + 1).join('.');
-        if (arrays.has(pathUpToHere)) {
+        const isArray = arrays.has(pathUpToHere);
+        const isAsync = asyncProps?.has(pathUpToHere);
+        const isFinalSegment = i === path.length - 1;
+        
+        // Skip [number] for the final segment if:
+        // 1. skipFinalArrayAccess is true, OR
+        // 2. This is an async array (needs Awaited first)
+        const shouldSkip = isFinalSegment && (skipFinalArrayAccess || (isArray && isAsync));
+        
+        if (isArray && !shouldSkip) {
             result += '[number]';
         }
     }
@@ -238,7 +256,7 @@ function buildPickExpression(
     // Add Pick for direct (leaf) properties
     const directProps = properties.filter((p) => !childPropertyNames.has(p));
     if (directProps.length > 0) {
-        const pathAccess = buildPathAccess(baseTypeName, currentPath, arrays);
+        const pathAccess = buildPathAccess(baseTypeName, currentPath, arrays, asyncProps);
         pickPart.push(`Pick<${pathAccess}, ${directProps.map((p) => `'${p}'`).join(' | ')}>`);
     }
 
@@ -269,7 +287,7 @@ function buildPickExpression(
             let fullExpression: string;
             // Build path access with [number] for parent arrays, but NOT including [number] for this property itself
             // (that will be handled below based on isArray)
-            const originalPathAccess = buildPathAccess(baseTypeName, childPath, arrays);
+            const originalPathAccess = buildPathAccess(baseTypeName, childPath, arrays, asyncProps);
 
             // If we're picking all properties of a leaf object (no further nesting), just use the type reference
             if (
@@ -283,7 +301,9 @@ function buildPickExpression(
                 // Handle async properties (Promises)
                 if (isAsync) {
                     if (isArray) {
-                        fullExpression = `Promise<Array<${directTypeRef}>>`;
+                        // For async arrays: Unwrap Promise, access array element, wrap back
+                        // originalPathAccess is already without [number] for async arrays
+                        fullExpression = `Promise<Array<Awaited<${directTypeRef}>[number]>>`;
                     } else {
                         fullExpression = `Promise<${directTypeRef}>`;
                     }
@@ -299,7 +319,8 @@ function buildPickExpression(
                     // For Promise properties, unwrap with Awaited first, then apply [number] for arrays
                     if (isArray) {
                         // Promise<Array<...>> - unwrap Promise, then access array element
-                        const unwrappedArrayAccess = `Awaited<${originalPathAccess}>`;
+                        // originalPathAccess is already without [number] for async arrays, so we add it after Awaited
+                        const unwrappedArrayAccess = `Awaited<${originalPathAccess}>[number]`;
                         const unwrappedExpression = childExpression.replace(
                             originalPathAccess,
                             unwrappedArrayAccess,
