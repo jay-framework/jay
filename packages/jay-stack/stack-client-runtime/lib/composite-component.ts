@@ -9,9 +9,9 @@ import { JayElement, PreRenderElement } from '@jay-framework/runtime';
 import { CompositePart } from './composite-part';
 import { Signals } from '@jay-framework/fullstack-component';
 
-function makeSignals<T extends object>(carryForward: T): Signals<T> {
-    return Object.keys(carryForward).reduce((signals, key) => {
-        signals[key] = createSignal(carryForward[key]);
+function makeSignals<T extends object>(obj: T): Signals<T> {
+    return Object.keys(obj).reduce((signals, key) => {
+        signals[key] = createSignal(obj[key]);
         return signals;
     }, {}) as Signals<T>;
 }
@@ -28,17 +28,35 @@ export function makeCompositeJayComponent<
     fastCarryForward: object,
     parts: Array<CompositePart>,
 ) {
+    // Determine if we have fast rendering
+    // Both params are always provided when fast rendering exists (even if empty objects)
+    const hasFastRendering = defaultViewState !== null && defaultViewState !== undefined;
+
     const comp = (props: Props<any>, refs, ...contexts): CompCore => {
         const instances: Array<[string, JayComponentCore<any, any>]> = parts.map((part) => {
             const partRefs = part.key ? refs[part.key] : refs;
-            let partCarryForward: object;
-            if (part.key && fastCarryForward?.[part.key])
-                partCarryForward = makeSignals(fastCarryForward[part.key]);
-            else if (fastCarryForward) partCarryForward = makeSignals(fastCarryForward);
-            const partContexts = [
-                partCarryForward,
-                ...contexts.splice(0, part.contextMarkers.length),
-            ];
+            
+            let partContexts: any[];
+            
+            if (hasFastRendering) {
+                // Create signals for fast view state
+                const partViewState = part.key ? defaultViewState?.[part.key] : defaultViewState;
+                const partFastViewState = partViewState ? makeSignals(partViewState) : undefined;
+                
+                // Carry forward as plain object (no signals)
+                const partCarryForward = part.key ? fastCarryForward?.[part.key] : fastCarryForward;
+                
+                // Always pass both parameters when fast rendering exists
+                partContexts = [
+                    partFastViewState,
+                    partCarryForward,
+                    ...contexts.splice(0, part.contextMarkers.length),
+                ];
+            } else {
+                // No fast rendering - just pass regular contexts
+                partContexts = [...contexts.splice(0, part.contextMarkers.length)];
+            }
+            
             return [part.key, part.comp(props, partRefs, ...partContexts)];
         });
 

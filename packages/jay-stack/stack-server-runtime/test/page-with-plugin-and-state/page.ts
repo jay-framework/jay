@@ -46,19 +46,19 @@ async function renderFastChanging(
 function PageConstructor(
     props: Props<PageProps>,
     refs: PageElementRefs,
-    carryForward: Signals<FastCarryForward>,
+    fastViewState: Signals<PageFastViewState>,
+    fastCarryForward: FastCarryForward,
 ) {
-    const [pageFastDynamicRendered, setPageFastDynamicRendered] =
-        carryForward.pageFastDynamicRendered;
-    const [carryForwardFast] = carryForward.carryForwardFast;
+    const [getPageFastDynamicRendered, setPageFastDynamicRendered] =
+        fastViewState.pageFastDynamicRendered;
 
     refs.button.onclick(() => {
-        setPageFastDynamicRendered(`INTERACTIVE RENDERED, using '${carryForwardFast()}'`);
+        setPageFastDynamicRendered(`INTERACTIVE RENDERED, using '${fastCarryForward.carryForwardFast}'`);
     });
 
     return {
         render: () => ({
-            pageFastDynamicRendered,
+            pageFastDynamicRendered: getPageFastDynamicRendered,
         }),
     };
 }
