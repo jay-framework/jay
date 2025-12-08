@@ -58,18 +58,18 @@ async function fastRender(
 function SimplePluginConstructor(
     props: Props<PageProps>,
     refs: SimplePluginRefs,
-    carryForward: Signals<DynamicCarryForward>,
+    fastViewState: Signals<SimplePluginFastViewState>,
+    fastCarryForward: DynamicCarryForward,
 ) {
-    const [dynamicContent, setDynamicContent] = carryForward.pluginInteractiveRendered;
-    const [dynamicData] = carryForward.dynamicData;
+    const [getDynamicContent, setDynamicContent] = fastViewState.pluginInteractiveRendered;
 
     refs.pluginButton.onclick(() => {
-        setDynamicContent(`INTERACTIVE RENDERED, using ${dynamicData()}`);
+        setDynamicContent(`INTERACTIVE RENDERED, using ${fastCarryForward.dynamicData}`);
     });
 
     return {
         render: () => ({
-            pluginInteractiveRendered: dynamicContent,
+            pluginInteractiveRendered: getDynamicContent,
         }),
     };
 }

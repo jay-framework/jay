@@ -148,7 +148,7 @@ export type Builder<
                 FastVS,
                 InteractiveVS,
                 Services,
-                [Signals<NewCarryForward>, ...Contexts],
+                [Signals<FastVS>, NewCarryForward, ...Contexts],
                 PropsT,
                 Params,
                 JayComponentCore<PropsT, InteractiveVS>
@@ -235,7 +235,7 @@ export type Builder<
                   FastVS,
                   InteractiveVS,
                   Services,
-                  [Signals<NewCarryForward>, ...Contexts],
+                  [Signals<FastVS>, NewCarryForward, ...Contexts],
                   PropsT,
                   Params,
                   JayComponentCore<PropsT, InteractiveVS>
@@ -307,7 +307,7 @@ export type Builder<
                     FastVS,
                     InteractiveVS,
                     Services,
-                    [Signals<NewCarryForward>, ...Contexts],
+                    [Signals<FastVS>, NewCarryForward, ...Contexts],
                     PropsT,
                     Params,
                     JayComponentCore<PropsT, InteractiveVS>
@@ -364,7 +364,7 @@ export type Builder<
                       FastVS,
                       InteractiveVS,
                       Services,
-                      [Signals<NewCarryForward>, ...Contexts],
+                      [Signals<FastVS>, NewCarryForward, ...Contexts],
                       PropsT,
                       Params,
                       JayComponentCore<PropsT, InteractiveVS>
@@ -406,7 +406,7 @@ export type Builder<
                         FastVS,
                         InteractiveVS,
                         Services,
-                        [Signals<NewCarryForward>, ...Contexts],
+                        [Signals<FastVS>, NewCarryForward, ...Contexts],
                         PropsT,
                         Params,
                         JayComponentCore<PropsT, InteractiveVS>
@@ -660,7 +660,7 @@ class BuilderImplementation<
         FastVS,
         InteractiveVS,
         Services,
-        [Signals<NewCarryForward>, ...Contexts],
+        [Signals<FastVS>, NewCarryForward, ...Contexts],
         PropsT,
         Params,
         JayComponentCore<PropsT, InteractiveVS>
@@ -678,7 +678,7 @@ class BuilderImplementation<
             FastVS,
             InteractiveVS,
             Services,
-            [Signals<NewCarryForward>, ...Contexts],
+            [Signals<FastVS>, NewCarryForward, ...Contexts],
             PropsT,
             Params,
             CompCore

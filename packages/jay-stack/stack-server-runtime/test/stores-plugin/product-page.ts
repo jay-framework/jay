@@ -91,11 +91,12 @@ async function renderFastChanging(
 function ProductsPageConstructor(
     props: Props<PageProps & ProductPageParams>,
     refs: ProductPageRefs,
-    carryForward: Signals<ProductAndInventoryCarryForward>,
+    fastViewState: Signals<ProductPageFastViewState>,
+    fastCarryForward: ProductAndInventoryCarryForward,
 ) {
-    const [inStock] = carryForward.inStock;
+    const [getInStock] = fastViewState.inStock;
     refs.addToCart.onclick(() => {
-        console.log(`add ${carryForward.productId[0]()} to the cart`);
+        console.log(`add ${fastCarryForward.productId} to the cart`);
     });
 
     return {
