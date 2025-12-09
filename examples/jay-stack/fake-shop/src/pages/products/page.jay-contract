@@ -5,6 +5,7 @@ tags:
     type: sub-contract
     repeated: true
     phase: slow
+    trackBy: id
     description: List of products in the catalog
     tags:
       - tag: name

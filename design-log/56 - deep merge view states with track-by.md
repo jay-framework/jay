@@ -875,3 +875,233 @@ An array appears in a phase's ViewState when it has **at least one non-trackBy p
 - ❌ Array only has the trackBy property → **omitted**
 
 This ensures that every included array structure has actual purpose beyond just identity tracking.
+
+---
+
+## Implementation Lessons Learned: TrackByMap Solution
+
+### The Contract Merging Challenge
+
+During implementation, we discovered that the dev-server needs to merge view states not just from the page's contract, but also from **headless components** imported into the page. Each headless component has its own contract, and these contracts are nested under the page's ViewState using the component's `key` attribute.
+
+**Example Structure:**
+
+```typescript
+// Page with two headless components
+PageViewState = {
+  title: string;        // From page contract
+  counter: {            // From headless component with key="counter"
+    count: number;
+    items: Array<{ id: string; name: string; }>;
+  };
+  productList: {        // From headless component with key="productList"
+    products: Array<{ productId: string; title: string; }>;
+  };
+};
+```
+
+**The Problem:** The `deepMergeViewStates` function needs `trackBy` metadata for arrays at **any depth**, including:
+
+- Arrays directly in the page contract (`pageContract.tags`)
+- Arrays within headless component contracts (nested under their keys)
+
+### Initial Approaches Considered
+
+#### Approach 1: Always Create Contract from Inline Data
+
+**Idea:** If a page doesn't have an explicit contract, generate one from the inline `data:` section.
+
+**Why we rejected it:** This broke backward compatibility. Simple pages without headless components suddenly had contracts created, changing their behavior. The old behavior (no contract = everything in `InteractiveViewState`) was correct for pages without complex phase splits.
+
+#### Approach 2: Merge Headless Contracts into Page Contract
+
+**Idea:** Modify `parseJayFile` to merge headless component contracts into the page's contract structure during parsing.
+
+**Why we rejected it:**
+
+1. **Scope creep**: The parser's job is to parse, not to transform contract structures
+2. **Complexity**: Required traversing and merging nested contract structures
+3. **Side effects**: Modified the contract AST in ways that could affect other tools
+4. **Type generation issues**: Created redundant intersection types for merged contracts (e.g., `PageViewState['counter'] & Pick<PageViewState, 'counter'>`)
+
+### The Solution: TrackByMap
+
+**Key Insight:** The deep merge algorithm doesn't need the full contract structure - it only needs to know:
+
+- Which properties are arrays
+- What the `trackBy` field name is for each array
+- This mapping by property path
+
+**Implementation:**
+
+1. **Added `trackByMap` to `JayHtmlSourceFile`:**
+
+   ```typescript
+   interface JayHtmlSourceFile {
+     // ... existing fields
+     trackByMap?: Record<string, string>; // Map from property path to trackBy field name
+   }
+   ```
+
+2. **Created `extractTrackByMap` function in `jay-html-parser.ts`:**
+
+   ```typescript
+   function extractTrackByMap(
+     pageContract: Contract | undefined,
+     headlessImports: JayHeadlessImports[],
+   ): Record<string, string>;
+   ```
+
+   This function:
+
+   - Recursively traverses the page contract (if it exists)
+   - Recursively traverses each headless component contract
+   - For headless contracts, prepends the component's `key` to all paths
+   - Returns a flat map like:
+     ```typescript
+     {
+       "items": "id",                    // From page contract
+       "counter.items": "itemId",        // From headless component with key="counter"
+       "productList.products": "productId" // From headless component with key="productList"
+     }
+     ```
+
+3. **Updated `LoadedPageParts` interface:**
+
+   ```typescript
+   interface LoadedPageParts {
+     parts: DevServerPagePart[];
+     trackByMap?: Record<string, string>; // NEW: Include trackByMap
+   }
+   ```
+
+4. **Modified `deepMergeViewStates` signature:**
+
+   ```typescript
+   // Before: accepted Contract
+   function deepMergeViewStates(slow: object, fast: object, contract: Contract, path: string);
+
+   // After: accepts trackByMap
+   function deepMergeViewStates(
+     slow: object,
+     fast: object,
+     trackByMap: Record<string, string>,
+     path: string = '',
+   );
+   ```
+
+5. **Updated dev-server to use trackByMap:**
+
+   ```typescript
+   const { parts: pageParts, trackByMap } = pagePartsResult.val;
+
+   if (trackByMap && Object.keys(trackByMap).length > 0) {
+     viewState = deepMergeViewStates(renderedSlowly.rendered, renderedFast.rendered, trackByMap);
+   } else {
+     // Fallback to shallow merge if no trackBy info available
+     viewState = { ...renderedSlowly.rendered, ...renderedFast.rendered };
+   }
+   ```
+
+### Why This Solution Works
+
+1. **Separation of Concerns:**
+
+   - Parser extracts metadata without modifying contracts
+   - Dev-server uses metadata for runtime merging
+   - Clear boundary between parsing and execution
+
+2. **Minimal Surface Area:**
+
+   - Single new field on `JayHtmlSourceFile`
+   - Single new field on `LoadedPageParts`
+   - One extraction function in parser
+   - One parameter change to merge function
+
+3. **Backward Compatible:**
+
+   - Pages without contracts still work (empty trackByMap → shallow merge)
+   - Simple pages without headless components unchanged
+   - No forced contract generation
+
+4. **Scalable:**
+
+   - Works with any number of nested headless components
+   - Handles deep nesting naturally via path prefixing
+   - Easy to extend to other metadata in the future
+
+5. **Type Safe:**
+   - TypeScript validates all the interfaces
+   - Clear types for `trackByMap` structure
+   - Optional field (`trackByMap?`) indicates when it's present
+
+### Test Coverage
+
+Added comprehensive tests to verify:
+
+1. **`parse-jay-file.unit.test.ts`:**
+
+   - Page with explicit contract and headless components → merged trackByMap
+   - Page with only headless components (no page contract) → headless trackByMap only
+   - Page without contracts → undefined trackByMap
+   - Nested trackBy in headless components → correct path prefixing
+
+2. **`view-state-merger.test.ts`:**
+
+   - Arrays with trackByMap merge correctly
+   - Nested objects merge correctly
+   - Headless component arrays merge under their keys
+
+3. **`dev-server.test.ts`:**
+   - Integration test with real page containing headless components
+   - Verifies full pipeline: parse → extract trackByMap → load → merge
+
+### Key Design Principles Applied
+
+1. **Don't Modify the AST:**
+
+   - Contracts remain immutable after parsing
+   - Metadata is extracted, not embedded
+   - Tools can rely on stable contract structure
+
+2. **Keep It Simple:**
+
+   - Flat map is easier to work with than nested structures
+   - Property paths as strings are human-readable and debuggable
+   - Single source of truth for trackBy information
+
+3. **Fail Gracefully:**
+
+   - Missing trackByMap → fall back to shallow merge
+   - Empty trackByMap → fall back to shallow merge
+   - Missing trackBy for specific array → use fast array only
+
+4. **Document Through Tests:**
+   - Each edge case has a test
+   - Test names describe expected behavior
+   - Tests serve as usage examples
+
+### Future Improvements
+
+1. **Editor Integration:**
+
+   - VS Code extension could use `trackByMap` to highlight arrays with identity fields
+   - Quick-fix to add missing `trackBy` attributes
+   - Validation warnings directly in editor
+
+2. **Runtime Validation:**
+
+   - Dev mode could check that trackBy keys are unique within arrays
+   - Warn when items are missing their trackBy field
+   - Report merge conflicts when items can't be matched
+
+3. **Performance Optimization:**
+   - Cache trackByMap extraction results
+   - Memoize deep merge operations for unchanged data
+   - Profile and optimize hot paths in merge algorithm
+
+### Summary
+
+The `trackByMap` solution provides a clean, focused mechanism for the deep merge algorithm to access `trackBy` metadata from both page and headless component contracts. By keeping it as extracted metadata rather than modifying contract structures, we maintained backward compatibility while enabling the sophisticated merging behavior required for multi-phase rendering with nested components.
+
+**Key takeaway:** When facing a choice between modifying core data structures vs. extracting derived metadata, prefer extraction. It keeps concerns separated, maintains backward compatibility, and provides flexibility for future changes.

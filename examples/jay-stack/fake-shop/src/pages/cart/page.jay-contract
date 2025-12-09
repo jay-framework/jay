@@ -4,6 +4,7 @@ tags:
   - tag: cartItems
     type: sub-contract
     repeated: true
+    trackBy: productId
     phase: fast+interactive
     description: Items in the shopping cart
     tags:

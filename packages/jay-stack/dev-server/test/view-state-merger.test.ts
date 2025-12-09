@@ -1,5 +1,4 @@
 import { deepMergeViewStates } from '../lib/view-state-merger';
-import { Contract, ContractTag, ContractTagType } from '@jay-framework/compiler-jay-html';
 import { vi } from 'vitest';
 
 describe('deepMergeViewStates', () => {
@@ -7,17 +6,9 @@ describe('deepMergeViewStates', () => {
         it('should merge simple objects with no nesting', () => {
             const slow = { name: 'Product A', sku: 'SKU-123' };
             const fast = { price: 29.99, inStock: true };
-            const contract: Contract = {
-                name: 'Test',
-                tags: [
-                    { tag: 'name', type: [ContractTagType.data] },
-                    { tag: 'sku', type: [ContractTagType.data] },
-                    { tag: 'price', type: [ContractTagType.data] },
-                    { tag: 'inStock', type: [ContractTagType.data] },
-                ],
-            };
+            const trackByMap = {}; // No arrays to track
 
-            const result = deepMergeViewStates(slow, fast, contract);
+            const result = deepMergeViewStates(slow, fast, trackByMap);
 
             expect(result).toEqual({
                 name: 'Product A',
@@ -30,12 +21,9 @@ describe('deepMergeViewStates', () => {
         it('should prefer fast value when both phases have the same property', () => {
             const slow = { count: 5 };
             const fast = { count: 10 };
-            const contract: Contract = {
-                name: 'Test',
-                tags: [{ tag: 'count', type: [ContractTagType.data] }],
-            };
+            const trackByMap = {};
 
-            const result = deepMergeViewStates(slow, fast, contract);
+            const result = deepMergeViewStates(slow, fast, trackByMap);
 
             expect(result).toEqual({ count: 10 });
         });
@@ -55,23 +43,9 @@ describe('deepMergeViewStates', () => {
                     applied: false,
                 },
             };
-            const contract: Contract = {
-                name: 'Test',
-                tags: [
-                    {
-                        tag: 'discount',
-                        type: [ContractTagType.subContract],
-                        tags: [
-                            { tag: 'type', type: [ContractTagType.data] },
-                            { tag: 'code', type: [ContractTagType.data] },
-                            { tag: 'amount', type: [ContractTagType.data] },
-                            { tag: 'applied', type: [ContractTagType.variant] },
-                        ],
-                    },
-                ],
-            };
+            const trackByMap = {}; // No arrays to track
 
-            const result = deepMergeViewStates(slow, fast, contract);
+            const result = deepMergeViewStates(slow, fast, trackByMap);
 
             expect(result).toEqual({
                 discount: {
@@ -99,28 +73,9 @@ describe('deepMergeViewStates', () => {
                     },
                 },
             };
-            const contract: Contract = {
-                name: 'Test',
-                tags: [
-                    {
-                        tag: 'user',
-                        type: [ContractTagType.subContract],
-                        tags: [
-                            {
-                                tag: 'profile',
-                                type: [ContractTagType.subContract],
-                                tags: [
-                                    { tag: 'name', type: [ContractTagType.data] },
-                                    { tag: 'age', type: [ContractTagType.data] },
-                                    { tag: 'status', type: [ContractTagType.data] },
-                                ],
-                            },
-                        ],
-                    },
-                ],
-            };
+            const trackByMap = {};
 
-            const result = deepMergeViewStates(slow, fast, contract);
+            const result = deepMergeViewStates(slow, fast, trackByMap);
 
             expect(result).toEqual({
                 user: {
@@ -148,25 +103,11 @@ describe('deepMergeViewStates', () => {
                     { id: '2', loading: true },
                 ],
             };
-            const contract: Contract = {
-                name: 'Test',
-                tags: [
-                    {
-                        tag: 'images',
-                        type: [ContractTagType.subContract],
-                        repeated: true,
-                        trackBy: 'id',
-                        tags: [
-                            { tag: 'id', type: [ContractTagType.data] },
-                            { tag: 'url', type: [ContractTagType.data] },
-                            { tag: 'alt', type: [ContractTagType.data] },
-                            { tag: 'loading', type: [ContractTagType.variant] },
-                        ],
-                    },
-                ],
+            const trackByMap = {
+                images: 'id', // images array tracked by 'id' field
             };
 
-            const result = deepMergeViewStates(slow, fast, contract);
+            const result = deepMergeViewStates(slow, fast, trackByMap);
 
             expect(result).toEqual({
                 images: [
@@ -191,24 +132,11 @@ describe('deepMergeViewStates', () => {
                     { id: '3', price: 30 },
                 ],
             };
-            const contract: Contract = {
-                name: 'Test',
-                tags: [
-                    {
-                        tag: 'items',
-                        type: [ContractTagType.subContract],
-                        repeated: true,
-                        trackBy: 'id',
-                        tags: [
-                            { tag: 'id', type: [ContractTagType.data] },
-                            { tag: 'name', type: [ContractTagType.data] },
-                            { tag: 'price', type: [ContractTagType.data] },
-                        ],
-                    },
-                ],
+            const trackByMap = {
+                items: 'id',
             };
 
-            const result = deepMergeViewStates(slow, fast, contract);
+            const result = deepMergeViewStates(slow, fast, trackByMap);
 
             expect(result).toEqual({
                 items: [
@@ -233,24 +161,11 @@ describe('deepMergeViewStates', () => {
                     { id: '3', price: 30 },
                 ],
             };
-            const contract: Contract = {
-                name: 'Test',
-                tags: [
-                    {
-                        tag: 'items',
-                        type: [ContractTagType.subContract],
-                        repeated: true,
-                        trackBy: 'id',
-                        tags: [
-                            { tag: 'id', type: [ContractTagType.data] },
-                            { tag: 'name', type: [ContractTagType.data] },
-                            { tag: 'price', type: [ContractTagType.data] },
-                        ],
-                    },
-                ],
+            const trackByMap = {
+                items: 'id',
             };
 
-            const result = deepMergeViewStates(slow, fast, contract);
+            const result = deepMergeViewStates(slow, fast, trackByMap);
 
             expect(result).toEqual({
                 items: [
@@ -275,24 +190,11 @@ describe('deepMergeViewStates', () => {
                     { id: '3', price: 30 }, // New item in fast
                 ],
             };
-            const contract: Contract = {
-                name: 'Test',
-                tags: [
-                    {
-                        tag: 'items',
-                        type: [ContractTagType.subContract],
-                        repeated: true,
-                        trackBy: 'id',
-                        tags: [
-                            { tag: 'id', type: [ContractTagType.data] },
-                            { tag: 'name', type: [ContractTagType.data] },
-                            { tag: 'price', type: [ContractTagType.data] },
-                        ],
-                    },
-                ],
+            const trackByMap = {
+                items: 'id',
             };
 
-            const result = deepMergeViewStates(slow, fast, contract);
+            const result = deepMergeViewStates(slow, fast, trackByMap);
 
             expect(result).toEqual({
                 items: [
@@ -320,31 +222,11 @@ describe('deepMergeViewStates', () => {
                     },
                 ],
             };
-            const contract: Contract = {
-                name: 'Test',
-                tags: [
-                    {
-                        tag: 'products',
-                        type: [ContractTagType.subContract],
-                        repeated: true,
-                        trackBy: 'id',
-                        tags: [
-                            { tag: 'id', type: [ContractTagType.data] },
-                            {
-                                tag: 'info',
-                                type: [ContractTagType.subContract],
-                                tags: [
-                                    { tag: 'name', type: [ContractTagType.data] },
-                                    { tag: 'sku', type: [ContractTagType.data] },
-                                    { tag: 'price', type: [ContractTagType.data] },
-                                ],
-                            },
-                        ],
-                    },
-                ],
+            const trackByMap = {
+                products: 'id',
             };
 
-            const result = deepMergeViewStates(slow, fast, contract);
+            const result = deepMergeViewStates(slow, fast, trackByMap);
 
             expect(result).toEqual({
                 products: [
@@ -365,12 +247,9 @@ describe('deepMergeViewStates', () => {
         it('should handle empty slow object', () => {
             const slow = {};
             const fast = { count: 10 };
-            const contract: Contract = {
-                name: 'Test',
-                tags: [{ tag: 'count', type: [ContractTagType.data] }],
-            };
+            const trackByMap = {};
 
-            const result = deepMergeViewStates(slow, fast, contract);
+            const result = deepMergeViewStates(slow, fast, trackByMap);
 
             expect(result).toEqual({ count: 10 });
         });
@@ -378,12 +257,9 @@ describe('deepMergeViewStates', () => {
         it('should handle empty fast object', () => {
             const slow = { count: 5 };
             const fast = {};
-            const contract: Contract = {
-                name: 'Test',
-                tags: [{ tag: 'count', type: [ContractTagType.data] }],
-            };
+            const trackByMap = {};
 
-            const result = deepMergeViewStates(slow, fast, contract);
+            const result = deepMergeViewStates(slow, fast, trackByMap);
 
             expect(result).toEqual({ count: 5 });
         });
@@ -391,12 +267,9 @@ describe('deepMergeViewStates', () => {
         it('should handle undefined slow', () => {
             const slow = undefined;
             const fast = { count: 10 };
-            const contract: Contract = {
-                name: 'Test',
-                tags: [{ tag: 'count', type: [ContractTagType.data] }],
-            };
+            const trackByMap = {};
 
-            const result = deepMergeViewStates(slow, fast, contract);
+            const result = deepMergeViewStates(slow, fast, trackByMap);
 
             expect(result).toEqual({ count: 10 });
         });
@@ -404,12 +277,9 @@ describe('deepMergeViewStates', () => {
         it('should handle undefined fast', () => {
             const slow = { count: 5 };
             const fast = undefined;
-            const contract: Contract = {
-                name: 'Test',
-                tags: [{ tag: 'count', type: [ContractTagType.data] }],
-            };
+            const trackByMap = {};
 
-            const result = deepMergeViewStates(slow, fast, contract);
+            const result = deepMergeViewStates(slow, fast, trackByMap);
 
             expect(result).toEqual({ count: 5 });
         });
@@ -417,12 +287,9 @@ describe('deepMergeViewStates', () => {
         it('should handle both undefined', () => {
             const slow = undefined;
             const fast = undefined;
-            const contract: Contract = {
-                name: 'Test',
-                tags: [],
-            };
+            const trackByMap = {};
 
-            const result = deepMergeViewStates(slow, fast, contract);
+            const result = deepMergeViewStates(slow, fast, trackByMap);
 
             expect(result).toEqual({});
         });
@@ -430,56 +297,25 @@ describe('deepMergeViewStates', () => {
         it('should handle empty arrays', () => {
             const slow = { items: [] };
             const fast = { items: [] };
-            const contract: Contract = {
-                name: 'Test',
-                tags: [
-                    {
-                        tag: 'items',
-                        type: [ContractTagType.subContract],
-                        repeated: true,
-                        trackBy: 'id',
-                        tags: [{ tag: 'id', type: [ContractTagType.data] }],
-                    },
-                ],
+            const trackByMap = {
+                items: 'id',
             };
 
-            const result = deepMergeViewStates(slow, fast, contract);
+            const result = deepMergeViewStates(slow, fast, trackByMap);
 
             expect(result).toEqual({ items: [] });
         });
 
-        it('should warn and use fast array when trackBy is missing', () => {
-            const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
+        it('should use fast array when trackBy info is missing from map', () => {
             const slow = { items: [{ id: '1', name: 'Item 1' }] };
             const fast = { items: [{ id: '1', price: 10 }] };
-            const contract: Contract = {
-                name: 'Test',
-                tags: [
-                    {
-                        tag: 'items',
-                        type: [ContractTagType.subContract],
-                        repeated: true,
-                        // trackBy is missing!
-                        tags: [
-                            { tag: 'id', type: [ContractTagType.data] },
-                            { tag: 'name', type: [ContractTagType.data] },
-                            { tag: 'price', type: [ContractTagType.data] },
-                        ],
-                    },
-                ],
-            };
+            const trackByMap = {}; // No trackBy info for items array
 
-            const result = deepMergeViewStates(slow, fast, contract);
+            const result = deepMergeViewStates(slow, fast, trackByMap);
 
             expect(result).toEqual({
                 items: [{ id: '1', price: 10 }], // Fast array wins
             });
-            expect(consoleWarnSpy).toHaveBeenCalledWith(
-                expect.stringContaining('missing trackBy attribute'),
-            );
-
-            consoleWarnSpy.mockRestore();
         });
     });
 
@@ -512,40 +348,11 @@ describe('deepMergeViewStates', () => {
                 },
             };
 
-            const contract: Contract = {
-                name: 'ProductPage',
-                tags: [
-                    { tag: 'name', type: [ContractTagType.data] },
-                    { tag: 'sku', type: [ContractTagType.data] },
-                    { tag: 'description', type: [ContractTagType.data] },
-                    { tag: 'price', type: [ContractTagType.data] },
-                    { tag: 'inStock', type: [ContractTagType.data] },
-                    {
-                        tag: 'images',
-                        type: [ContractTagType.subContract],
-                        repeated: true,
-                        trackBy: 'id',
-                        tags: [
-                            { tag: 'id', type: [ContractTagType.data] },
-                            { tag: 'url', type: [ContractTagType.data] },
-                            { tag: 'alt', type: [ContractTagType.data] },
-                            { tag: 'loading', type: [ContractTagType.variant] },
-                        ],
-                    },
-                    {
-                        tag: 'discount',
-                        type: [ContractTagType.subContract],
-                        tags: [
-                            { tag: 'type', type: [ContractTagType.data] },
-                            { tag: 'code', type: [ContractTagType.data] },
-                            { tag: 'amount', type: [ContractTagType.data] },
-                            { tag: 'applied', type: [ContractTagType.variant] },
-                        ],
-                    },
-                ],
+            const trackByMap = {
+                images: 'id',
             };
 
-            const result = deepMergeViewStates(slow, fast, contract);
+            const result = deepMergeViewStates(slow, fast, trackByMap);
 
             expect(result).toEqual({
                 name: 'Awesome Widget',

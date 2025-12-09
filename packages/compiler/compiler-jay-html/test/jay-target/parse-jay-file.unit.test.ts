@@ -1,4 +1,10 @@
-import { parseJayFile, JayImportResolver, Contract, JAY_IMPORT_RESOLVER } from '../../lib';
+import {
+    parseJayFile,
+    JayImportResolver,
+    Contract,
+    ContractTagType,
+    JAY_IMPORT_RESOLVER,
+} from '../../lib';
 import {
     JayArrayType,
     JayBoolean,
@@ -1038,6 +1044,336 @@ describe('compiler', () => {
                         id: 'favicon32',
                     },
                 });
+            });
+        });
+    });
+
+    describe('contract merging', () => {
+        it('should NOT create contract when no explicit contract and no headless imports', async () => {
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |   title: string
+                        |   count: number
+                        |   isActive: boolean
+                        |`,
+                    '<body></body>',
+                ),
+                'Page',
+                '',
+                {},
+                defaultImportResolver,
+            );
+
+            // Backward compatible: no contract auto-generation for inline data only
+            expect(jayFile.val.contract).toBeUndefined();
+            // But trackByMap should be empty
+            expect(jayFile.val.trackByMap).toBeUndefined();
+        });
+
+        it('should preserve page contract when no headless imports', async () => {
+            const pageContract: Contract = {
+                name: 'testPage',
+                tags: [
+                    {
+                        tag: 'title',
+                        type: [ContractTagType.data],
+                        dataType: JayString,
+                    },
+                ],
+            };
+
+            const resolverWithPageContract: JayImportResolver = {
+                ...defaultImportResolver,
+                loadContract(fullPath: string): WithValidations<Contract> {
+                    return new WithValidations(pageContract, []);
+                },
+                resolveLink(importingModule: string, link: string): string {
+                    return '/path/to/page.jay-contract';
+                },
+            };
+
+            const jayFile = await parseJayFile(
+                stripMargin(
+                    `<html>
+                    |   <head>
+                    |     <script type="application/jay-data" contract="./page.jay-contract"></script>
+                    |   </head>
+                    |   <body></body>
+                    | </html>`,
+                ),
+                'Page',
+                '',
+                {},
+                resolverWithPageContract,
+            );
+
+            expect(jayFile.val.contract).toEqual({
+                name: 'testPage',
+                tags: [{ tag: 'title', type: [ContractTagType.data], dataType: JayString }],
+            });
+        });
+
+        it('should extract trackBy from headless contracts even without page contract', async () => {
+            const counterContract: Contract = {
+                name: 'counter',
+                tags: [
+                    {
+                        tag: 'items',
+                        type: [ContractTagType.subContract],
+                        repeated: true,
+                        trackBy: 'id',
+                        tags: [
+                            {
+                                tag: 'id',
+                                type: [ContractTagType.data],
+                                dataType: JayString,
+                            },
+                            {
+                                tag: 'count',
+                                type: [ContractTagType.data],
+                                dataType: JayNumber,
+                            },
+                        ],
+                    },
+                ],
+            };
+
+            const resolverWithCounter: JayImportResolver = {
+                ...defaultImportResolver,
+                loadContract(fullPath: string): WithValidations<Contract> {
+                    if (fullPath.includes('counter')) {
+                        return new WithValidations(counterContract, []);
+                    }
+                    throw new Error('Unexpected contract path');
+                },
+                resolveLink(importingModule: string, link: string): string {
+                    return '/path/to/counter.jay-contract';
+                },
+            };
+
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |   title: string
+                        |`,
+                    '<body></body>',
+                    `<script type="application/jay-headless" src="./counter.ts" name="counter" contract="./counter.jay-contract" key="myCounter"></script>`,
+                ),
+                'Page',
+                '',
+                {},
+                resolverWithCounter,
+            );
+
+            // No contract auto-generation (backward compatible)
+            expect(jayFile.val.contract).toBeUndefined();
+
+            // But trackByMap should be extracted from headless contract
+            expect(jayFile.val.trackByMap).toEqual({
+                'myCounter.items': 'id',
+            });
+        });
+
+        it('should preserve page contract and extract trackBy from headless contracts', async () => {
+            const pageContract: Contract = {
+                name: 'testPage',
+                tags: [
+                    {
+                        tag: 'items',
+                        type: [ContractTagType.subContract],
+                        repeated: true,
+                        trackBy: 'itemId',
+                        tags: [
+                            {
+                                tag: 'itemId',
+                                type: [ContractTagType.data],
+                                dataType: JayString,
+                            },
+                            {
+                                tag: 'title',
+                                type: [ContractTagType.data],
+                                dataType: JayString,
+                            },
+                        ],
+                    },
+                ],
+            };
+
+            const counterContract: Contract = {
+                name: 'counter',
+                tags: [
+                    {
+                        tag: 'entries',
+                        type: [ContractTagType.subContract],
+                        repeated: true,
+                        trackBy: 'id',
+                        tags: [
+                            {
+                                tag: 'id',
+                                type: [ContractTagType.data],
+                                dataType: JayNumber,
+                            },
+                            {
+                                tag: 'count',
+                                type: [ContractTagType.data],
+                                dataType: JayNumber,
+                            },
+                        ],
+                    },
+                ],
+            };
+
+            const resolverWithBoth: JayImportResolver = {
+                ...defaultImportResolver,
+                loadContract(fullPath: string): WithValidations<Contract> {
+                    if (fullPath.includes('page')) {
+                        return new WithValidations(pageContract, []);
+                    }
+                    if (fullPath.includes('counter')) {
+                        return new WithValidations(counterContract, []);
+                    }
+                    throw new Error('Unexpected contract path');
+                },
+                resolveLink(importingModule: string, link: string): string {
+                    if (link.includes('page')) return '/path/to/page.jay-contract';
+                    if (link.includes('counter')) return '/path/to/counter.jay-contract';
+                    throw new Error('Unexpected link');
+                },
+            };
+
+            const jayFile = await parseJayFile(
+                stripMargin(
+                    `<html>
+                    |   <head>
+                    |     <script type="application/jay-headless" src="./counter.ts" name="counter" contract="./counter.jay-contract" key="myCounter"></script>
+                    |     <script type="application/jay-data" contract="./page.jay-contract"></script>
+                    |   </head>
+                    |   <body></body>
+                    | </html>`,
+                ),
+                'Page',
+                '',
+                {},
+                resolverWithBoth,
+            );
+
+            // Page contract preserved (not merged with headless)
+            expect(jayFile.val.contract).toEqual(pageContract);
+
+            // TrackBy extracted from both page and headless contracts
+            expect(jayFile.val.trackByMap).toEqual({
+                items: 'itemId',
+                'myCounter.entries': 'id',
+            });
+        });
+
+        it('should extract trackBy from multiple headless contracts', async () => {
+            const pageContract: Contract = {
+                name: 'testPage',
+                tags: [
+                    {
+                        tag: 'title',
+                        type: [ContractTagType.data],
+                        dataType: JayString,
+                    },
+                ],
+            };
+
+            const counterContract: Contract = {
+                name: 'counter',
+                tags: [
+                    {
+                        tag: 'counts',
+                        type: [ContractTagType.subContract],
+                        repeated: true,
+                        trackBy: 'countId',
+                        tags: [
+                            {
+                                tag: 'countId',
+                                type: [ContractTagType.data],
+                                dataType: JayString,
+                            },
+                            {
+                                tag: 'value',
+                                type: [ContractTagType.data],
+                                dataType: JayNumber,
+                            },
+                        ],
+                    },
+                ],
+            };
+
+            const timerContract: Contract = {
+                name: 'timer',
+                tags: [
+                    {
+                        tag: 'intervals',
+                        type: [ContractTagType.subContract],
+                        repeated: true,
+                        trackBy: 'intervalId',
+                        tags: [
+                            {
+                                tag: 'intervalId',
+                                type: [ContractTagType.data],
+                                dataType: JayNumber,
+                            },
+                            {
+                                tag: 'seconds',
+                                type: [ContractTagType.data],
+                                dataType: JayNumber,
+                            },
+                        ],
+                    },
+                ],
+            };
+
+            const resolverWithMultiple: JayImportResolver = {
+                ...defaultImportResolver,
+                loadContract(fullPath: string): WithValidations<Contract> {
+                    if (fullPath.includes('page')) {
+                        return new WithValidations(pageContract, []);
+                    }
+                    if (fullPath.includes('counter')) {
+                        return new WithValidations(counterContract, []);
+                    }
+                    if (fullPath.includes('timer')) {
+                        return new WithValidations(timerContract, []);
+                    }
+                    throw new Error('Unexpected contract path');
+                },
+                resolveLink(importingModule: string, link: string): string {
+                    if (link.includes('page')) return '/path/to/page.jay-contract';
+                    if (link.includes('counter')) return '/path/to/counter.jay-contract';
+                    if (link.includes('timer')) return '/path/to/timer.jay-contract';
+                    throw new Error('Unexpected link');
+                },
+            };
+
+            const jayFile = await parseJayFile(
+                stripMargin(
+                    `<html>
+                    |   <head>
+                    |     <script type="application/jay-headless" src="./counter.ts" name="counter" contract="./counter.jay-contract" key="myCounter"></script>
+                    |     <script type="application/jay-headless" src="./timer.ts" name="timer" contract="./timer.jay-contract" key="myTimer"></script>
+                    |     <script type="application/jay-data" contract="./page.jay-contract"></script>
+                    |   </head>
+                    |   <body></body>
+                    | </html>`,
+                ),
+                'Page',
+                '',
+                {},
+                resolverWithMultiple,
+            );
+
+            // Page contract preserved
+            expect(jayFile.val.contract).toEqual(pageContract);
+
+            // TrackBy extracted from both headless contracts
+            expect(jayFile.val.trackByMap).toEqual({
+                'myCounter.counts': 'countId',
+                'myTimer.intervals': 'intervalId',
             });
         });
     });
