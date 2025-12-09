@@ -3,7 +3,7 @@ import { JayRoute } from '@jay-framework/stack-route-scanner';
 import { WithValidations } from '@jay-framework/compiler-shared';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { parseJayFile, Contract } from '@jay-framework/compiler-jay-html';
+import { parseJayFile } from '@jay-framework/compiler-jay-html';
 import { AnyJayStackComponentDefinition } from '@jay-framework/fullstack-component';
 import { JayRollupConfig } from '@jay-framework/rollup-plugin';
 import { createRequire } from 'module';
@@ -19,7 +19,7 @@ export interface DevServerPagePart {
 
 export interface LoadedPageParts {
     parts: DevServerPagePart[];
-    contract?: Contract;
+    trackByMap?: Record<string, string>;
 }
 
 export async function loadPageParts(
@@ -92,7 +92,7 @@ export async function loadPageParts(
         }
         return {
             parts,
-            contract: jayHtml.contract,
+            trackByMap: jayHtml.trackByMap,
         };
     });
 }

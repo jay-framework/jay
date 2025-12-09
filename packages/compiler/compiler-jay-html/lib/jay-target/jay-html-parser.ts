@@ -6,7 +6,7 @@ import {
     WithValidations,
 } from '@jay-framework/compiler-shared';
 import yaml from 'js-yaml';
-import { capitalCase, pascalCase } from 'change-case';
+import { capitalCase, pascalCase, camelCase } from 'change-case';
 import pluralize from 'pluralize';
 import { parseEnumValues, parseImportNames, parseIsEnum } from '../expressions/expression-compiler';
 import { ResolveTsConfigOptions } from '@jay-framework/compiler-analyze-exported-types';
@@ -26,6 +26,7 @@ import {
 import { SourceFileFormat } from '@jay-framework/compiler-shared';
 import { JayImportLink, JayImportName } from '@jay-framework/compiler-shared';
 import { JayYamlStructure } from './jay-yaml-structure';
+import { Contract, ContractTag } from '../contract';
 
 import {
     JayHeadlessImports,
@@ -84,11 +85,7 @@ function parseArrayRecursiveReference(typeString: string): string | null {
  * Validates a recursive reference path against the root data structure
  * Returns an error message if invalid, undefined if valid
  */
-function validateRecursivePath(
-    referencePath: string,
-    rootData: any,
-    currentPath: Array<string>,
-): string | undefined {
+function validateRecursivePath(referencePath: string, rootData: any): string | undefined {
     // Check if the path ends with [] (array item unwrapping syntax)
     const hasArrayUnwrap = referencePath.endsWith('[]');
     const pathToValidate = hasArrayUnwrap
@@ -203,7 +200,7 @@ function resolveType(
         } else if (isRecursiveReference(data[propKey])) {
             // Handle direct recursive reference like "next: $/data"
             const referencePath = data[propKey];
-            const validationError = validateRecursivePath(referencePath, rootData || data, path);
+            const validationError = validateRecursivePath(referencePath, rootData || data);
             if (validationError) {
                 let [, ...pathTail] = path;
                 validations.push(
@@ -215,7 +212,7 @@ function resolveType(
         } else if (parseArrayRecursiveReference(data[propKey])) {
             // Handle array recursive reference like "children: array<$/data>"
             const referencePath = parseArrayRecursiveReference(data[propKey])!;
-            const validationError = validateRecursivePath(referencePath, rootData || data, path);
+            const validationError = validateRecursivePath(referencePath, rootData || data);
             if (validationError) {
                 let [, ...pathTail] = path;
                 validations.push(
@@ -639,7 +636,7 @@ async function parseHeadlessImports(
                         module,
                         names: [{ name, type: new JayComponentType(name, []) }],
                     };
-                    result.push({ key, refs, rootType: type, contractLinks, codeLink });
+                    result.push({ key, refs, rootType: type, contractLinks, codeLink, contract });
                 });
             });
         } catch (e) {
@@ -663,8 +660,7 @@ function parseHeadLinks(root: HTMLElement, excludeCssLinks: boolean = false): Ja
             // Exclude import links
             if (rel === 'import') return false;
             // Exclude CSS links if CSS extraction is enabled
-            if (excludeCssLinks && rel === 'stylesheet') return false;
-            return true;
+            return !(excludeCssLinks && rel === 'stylesheet');
         })
         .map((link) => {
             const attributes = { ...link.attributes };
@@ -736,6 +732,49 @@ async function extractCss(
     return new WithValidations(css, validations);
 }
 
+/**
+ * Extract trackBy information from contracts for use in deep merge algorithm.
+ * Returns a map from property path to trackBy field name.
+ * e.g., { "items": "id", "counter.items": "itemId" }
+ */
+function extractTrackByMap(
+    pageContract: Contract | undefined,
+    headlessImports: JayHeadlessImports[],
+): Record<string, string> {
+    const trackByMap: Record<string, string> = {};
+
+    function extractFromTags(tags: ContractTag[], basePath: string = '') {
+        for (const tag of tags) {
+            const propertyName = camelCase(tag.tag);
+            const currentPath = basePath ? `${basePath}.${propertyName}` : propertyName;
+
+            // If this is a repeated sub-contract with trackBy, record it
+            if (tag.repeated && tag.trackBy) {
+                trackByMap[currentPath] = camelCase(tag.trackBy);
+            }
+
+            // Recurse into nested tags
+            if (tag.tags) {
+                extractFromTags(tag.tags, currentPath);
+            }
+        }
+    }
+
+    // Extract from page contract
+    if (pageContract) {
+        extractFromTags(pageContract.tags);
+    }
+
+    // Extract from headless contracts
+    for (const headless of headlessImports) {
+        if (headless.contract) {
+            extractFromTags(headless.contract.tags, headless.key);
+        }
+    }
+
+    return trackByMap;
+}
+
 export async function parseJayFile(
     html: string,
     filename: string,
@@ -794,6 +833,10 @@ export async function parseJayFile(
         validations.push(`jay file must have exactly a body tag`);
         return new WithValidations(undefined, validations);
     }
+
+    // Extract trackBy information from contracts for deep merge
+    const trackByMap = extractTrackByMap(jayYaml.parsedContract, headlessImports);
+
     return new WithValidations(
         {
             format: SourceFileFormat.JayHtml,
@@ -809,6 +852,7 @@ export async function parseJayFile(
             contract: jayYaml.parsedContract,
             contractRef: jayYaml.contractRef,
             hasInlineData: jayYaml.hasInlineData,
+            trackByMap: Object.keys(trackByMap).length > 0 ? trackByMap : undefined,
         } as JayHtmlSourceFile,
         validations,
     );

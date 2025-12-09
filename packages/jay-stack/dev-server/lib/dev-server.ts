@@ -101,7 +101,7 @@ function mkRoute(
             );
 
             if (pagePartsResult.val) {
-                const { parts: pageParts, contract } = pagePartsResult.val;
+                const { parts: pageParts, trackByMap } = pagePartsResult.val;
 
                 const renderedSlowly = await slowlyPhase.runSlowlyForPage(
                     pageParams,
@@ -117,15 +117,15 @@ function mkRoute(
                         pageParts,
                     );
                     if (renderedFast.kind === 'PhaseOutput') {
-                        // Deep merge view states using contract metadata
-                        if (contract) {
+                        // Deep merge view states using trackBy metadata
+                        if (trackByMap && Object.keys(trackByMap).length > 0) {
                             viewState = deepMergeViewStates(
                                 renderedSlowly.rendered,
                                 renderedFast.rendered,
-                                contract,
+                                trackByMap,
                             );
                         } else {
-                            // Fallback to shallow merge if no contract available
+                            // Fallback to shallow merge if no trackBy info available
                             viewState = { ...renderedSlowly.rendered, ...renderedFast.rendered };
                         }
                         carryForward = renderedFast.carryForward;
