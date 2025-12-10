@@ -107,6 +107,67 @@ const propertyMapping = {
     disabled: { type: BOOLEAN_ATTRIBUTE },
 };
 const attributesRequiresQuotes = /[- ]/;
+
+/**
+ * Convert kebab-case CSS property name to camelCase for JS style object
+ * e.g. "background-color" -> "backgroundColor"
+ */
+function cssPropertyToCamelCase(prop: string): string {
+    return prop.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
+/**
+ * Parse style attribute and return either cssText (for fully static) or style object (with dynamic bindings)
+ */
+function renderStyleAttribute(styleString: string, variables: Variables): RenderFragment {
+    // Parse CSS declarations
+    const declarations = styleString
+        .split(';')
+        .map((decl) => decl.trim())
+        .filter((decl) => decl.length > 0);
+
+    // Parse each declaration and check if any are dynamic
+    const parsedDeclarations = declarations.map((decl) => {
+        const colonIndex = decl.indexOf(':');
+        if (colonIndex === -1) return null;
+
+        const prop = decl.substring(0, colonIndex).trim();
+        const value = decl.substring(colonIndex + 1).trim();
+        const camelProp = cssPropertyToCamelCase(prop);
+        const propKey = camelProp.match(attributesRequiresQuotes)
+            ? `"${camelProp}"`
+            : camelProp;
+
+        // Parse value using property expression parser (handles {binding} syntax)
+        const propExpression = parsePropertyExpression(value, variables);
+        
+        return { propKey, propExpression };
+    }).filter((decl) => decl !== null);
+
+    // Check if all declarations are static (no dp() wrapping)
+    const allStatic = parsedDeclarations.every((decl) => 
+        !decl.propExpression.rendered.includes('dp(')
+    );
+
+    // If fully static, use cssText for optimization
+    if (allStatic) {
+        return new RenderFragment(`style: {cssText: '${styleString.replace(/'/g, "\\'")}'}`);
+    }
+
+    // Generate style object with dynamic and static properties
+    const styleProps = parsedDeclarations.map((decl) => 
+        decl.propExpression.map((_) => `${decl.propKey}: ${_}`)
+    );
+
+    // Combine all style properties into a single style object
+    return styleProps
+        .reduce(
+            (prev, current) => RenderFragment.merge(prev, current, ', '),
+            RenderFragment.empty(),
+        )
+        .map((_: string) => `style: {${_}}`);
+}
+
 function renderAttributes(element: HTMLElement, { variables }: RenderContext): RenderFragment {
     let attributes = element.attributes;
     let renderedAttributes = [];
@@ -125,13 +186,9 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
             attrCanonical === AsyncDirectiveTypes.rejected.directive
         )
             return;
-        if (attrCanonical === 'style')
-            renderedAttributes.push(
-                new RenderFragment(
-                    `style: {cssText: '${attributes[attrName].replace(/'/g, "\\'")}'}`,
-                ),
-            );
-        else if (attrCanonical === 'class') {
+        if (attrCanonical === 'style') {
+            renderedAttributes.push(renderStyleAttribute(attributes[attrName], variables));
+        } else if (attrCanonical === 'class') {
             let classExpression = parseClassExpression(attributes[attrName], variables);
             renderedAttributes.push(classExpression.map((_) => `class: ${_}`));
         } else if (propertyMapping[attrCanonical]?.type === PROPERTY) {

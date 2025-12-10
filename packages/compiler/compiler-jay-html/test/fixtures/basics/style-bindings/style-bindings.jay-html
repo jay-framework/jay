@@ -1,0 +1,27 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    text: string
+    color: string
+    width: string
+    fontSize: number
+    </script>
+</head>
+<body>
+<div>
+    <!-- Fully dynamic styles -->
+    <div style="color: {color}; width: {width}">{text}</div>
+    
+    <!-- Mixed static and dynamic -->
+    <div style="margin: 10px; color: {color}; padding: 20px">{text}</div>
+    
+    <!-- With kebab-case properties -->
+    <div style="background-color: {color}; font-size: {fontSize}px">{text}</div>
+    
+    <!-- Fully static (should optimize to cssText) -->
+    <div style="background: red; padding: 10px">{text}</div>
+</div>
+</body>
+</html>
+
