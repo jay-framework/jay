@@ -105,19 +105,30 @@ e('div', {
 
 ### Implementation Details
 
-The implementation uses the existing expression parser infrastructure (`parsePropertyExpression`) instead of regex parsing. This ensures proper handling of:
+The implementation adds a new PEG.js parser rule `styleDeclarations` that properly parses CSS declarations, handling:
 
 - Simple accessors: `{color}`, `{width}`
 - Template strings: `{fontSize}px` generates `` `${vs.fontSize}px` ``
 - Complex expressions through the template parser
+- Kebab-case to camelCase conversion for CSS properties
 
 ### Code Changes
 
-**Location**: `/packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts`
+**PEG.js Parser** (`/lib/expressions/expression-parser.pegjs`):
+1. Added `styleDeclarations` rule - Top-level entry point for parsing style strings
+2. Added `styleDeclaration` rule - Parses individual `property: value` pairs
+3. Added `stylePropName` rule - Matches CSS property names (including kebab-case)
+4. Added `styleValueContent` rule - Parses values with template string support
+5. Added `styleValueString` rule - Matches static CSS value text
 
-1. Added `cssPropertyToCamelCase()` - Converts kebab-case CSS properties to camelCase for JS style objects
-2. Added `renderStyleAttribute()` - Parses style declarations and generates appropriate runtime code
-3. Updated `renderAttributes()` - Delegates style attribute handling to the new function
+**Expression Compiler** (`/lib/expressions/expression-compiler.ts`):
+1. Added `StyleDeclaration` interface - Represents a parsed CSS declaration
+2. Added `StyleDeclarations` interface - Contains all declarations and dynamic flag
+3. Added `parseStyleDeclarations()` function - Entry point for parsing style strings
+
+**Jay-HTML Compiler** (`/lib/jay-target/jay-html-compiler.ts`):
+1. Added `renderStyleAttribute()` - Uses pegjs parser to process style strings
+2. Updated `renderAttributes()` - Delegates style attribute handling to the new function
 
 ### Optimization
 

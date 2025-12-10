@@ -212,3 +212,18 @@ export function parseIsEnum(expression: string): boolean {
 export function parseEnumValues(expression: string): string[] {
     return doParse(expression, 'enum');
 }
+
+export interface StyleDeclaration {
+    property: string;
+    valueFragment: RenderFragment;
+    isDynamic: boolean;
+}
+
+export interface StyleDeclarations {
+    declarations: StyleDeclaration[];
+    hasDynamic: boolean;
+}
+
+export function parseStyleDeclarations(styleString: string, vars: Variables): StyleDeclarations {
+    return doParse(styleString, 'styleDeclarations', vars);
+}
