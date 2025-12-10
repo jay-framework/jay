@@ -6,12 +6,12 @@ The runtime fully supports dynamic binding into style properties, as evidenced b
 
 ```typescript
 e('div', {
-    textContent: dp((vs) => vs.text),
-    style: {
-        color: dp((vs) => vs.color),
-        width: dp((vs) => vs.width),
-    },
-})
+  textContent: dp((vs) => vs.text),
+  style: {
+    color: dp((vs) => vs.color),
+    width: dp((vs) => vs.width),
+  },
+});
 ```
 
 This runtime structure allows individual CSS properties to be bound dynamically using `dp()` (dynamic property), enabling reactive style updates.
@@ -22,17 +22,15 @@ The jay-html compiler does not support dynamic style bindings. The current imple
 
 ```typescript
 if (attrCanonical === 'style')
-    renderedAttributes.push(
-        new RenderFragment(
-            `style: {cssText: '${attributes[attrName].replace(/'/g, "\\'")}'}`,
-        ),
-    );
+  renderedAttributes.push(
+    new RenderFragment(`style: {cssText: '${attributes[attrName].replace(/'/g, "\\'")}'}`),
+  );
 ```
 
 This means jay-html cannot express reactive styles like:
 
 ```html
-<div style="color: {color}; width: {width}px">
+<div style="color: {color}; width: {width}px"></div>
 ```
 
 ## Why This Matters
@@ -48,13 +46,13 @@ This means jay-html cannot express reactive styles like:
 Support inline binding expressions within style attribute values:
 
 ```html
-<div style="color: {color}; width: {width}; background: {bg}">
+<div style="color: {color}; width: {width}; background: {bg}"></div>
 ```
 
 Mixed static and dynamic:
 
 ```html
-<div style="margin: 10px; color: {textColor}; padding: {spacing}px">
+<div style="margin: 10px; color: {textColor}; padding: {spacing}px"></div>
 ```
 
 ### Compilation Strategy
@@ -69,19 +67,21 @@ Mixed static and dynamic:
 ### Example Transformation
 
 **Input jay-html:**
+
 ```html
-<div style="color: {color}; width: 100px; opacity: {isVisible?1:0}">
+<div style="color: {color}; width: 100px; opacity: {isVisible?1:0}"></div>
 ```
 
 **Generated code:**
+
 ```typescript
 e('div', {
-    style: {
-        color: dp((vs) => vs.color),
-        width: '100px',
-        opacity: dp((vs) => vs.isVisible ? 1 : 0),
-    },
-})
+  style: {
+    color: dp((vs) => vs.color),
+    width: '100px',
+    opacity: dp((vs) => (vs.isVisible ? 1 : 0)),
+  },
+});
 ```
 
 ### Edge Cases to Handle
@@ -115,6 +115,7 @@ The implementation adds a new PEG.js parser rule `styleDeclarations` that proper
 ### Code Changes
 
 **PEG.js Parser** (`/lib/expressions/expression-parser.pegjs`):
+
 1. Added `styleDeclarations` rule - Top-level entry point for parsing style strings
 2. Added `styleDeclaration` rule - Parses individual `property: value` pairs
 3. Added `stylePropName` rule - Matches CSS property names (including kebab-case)
@@ -122,11 +123,13 @@ The implementation adds a new PEG.js parser rule `styleDeclarations` that proper
 5. Added `styleValueString` rule - Matches static CSS value text
 
 **Expression Compiler** (`/lib/expressions/expression-compiler.ts`):
+
 1. Added `StyleDeclaration` interface - Represents a parsed CSS declaration
 2. Added `StyleDeclarations` interface - Contains all declarations and dynamic flag
 3. Added `parseStyleDeclarations()` function - Entry point for parsing style strings
 
 **Jay-HTML Compiler** (`/lib/jay-target/jay-html-compiler.ts`):
+
 1. Added `renderStyleAttribute()` - Uses pegjs parser to process style strings
 2. Updated `renderAttributes()` - Delegates style attribute handling to the new function
 
@@ -139,6 +142,7 @@ The implementation preserves the `cssText` optimization for fully static styles,
 **Test**: `/test/fixtures/basics/style-bindings/style-bindings.jay-html`
 
 Validates:
+
 - Fully dynamic styles
 - Mixed static and dynamic properties
 - Kebab-case property conversion
@@ -149,16 +153,18 @@ Validates:
 
 ```typescript
 // Fully dynamic
-e('div', { style: { color: dp((vs) => vs.color), width: dp((vs) => vs.width) } })
+e('div', { style: { color: dp((vs) => vs.color), width: dp((vs) => vs.width) } });
 
 // Mixed static/dynamic
-e('div', { style: { margin: '10px', color: dp((vs) => vs.color), padding: '20px' } })
+e('div', { style: { margin: '10px', color: dp((vs) => vs.color), padding: '20px' } });
 
 // Kebab-case conversion + template string
-e('div', { style: { backgroundColor: dp((vs) => vs.color), fontSize: dp((vs) => `${vs.fontSize}px`) } })
+e('div', {
+  style: { backgroundColor: dp((vs) => vs.color), fontSize: dp((vs) => `${vs.fontSize}px`) },
+});
 
 // Fully static (optimized)
-e('div', { style: { cssText: 'background: red; padding: 10px' } })
+e('div', { style: { cssText: 'background: red; padding: 10px' } });
 ```
 
 ## Future Considerations
@@ -167,5 +173,3 @@ e('div', { style: { cssText: 'background: red; padding: 10px' } })
 - CSS custom properties: `style="--theme-color: {color}"` for CSS variables
 - Animation/transition support: May need special handling for timing values
 - Ternary operators in style values: Current expression parser doesn't support ternary in property expressions (only in class expressions)
-
-
