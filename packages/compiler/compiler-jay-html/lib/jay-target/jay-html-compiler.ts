@@ -32,6 +32,7 @@ import {
     parseComponentPropExpression,
     parseCondition,
     parsePropertyExpression,
+    parseStyleDeclarations,
     parseTextExpression,
     Variables,
 } from '../expressions/expression-compiler';
@@ -109,55 +110,23 @@ const propertyMapping = {
 const attributesRequiresQuotes = /[- ]/;
 
 /**
- * Convert kebab-case CSS property name to camelCase for JS style object
- * e.g. "background-color" -> "backgroundColor"
- */
-function cssPropertyToCamelCase(prop: string): string {
-    return prop.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
-}
-
-/**
  * Parse style attribute and return either cssText (for fully static) or style object (with dynamic bindings)
  */
 function renderStyleAttribute(styleString: string, variables: Variables): RenderFragment {
-    // Parse CSS declarations
-    const declarations = styleString
-        .split(';')
-        .map((decl) => decl.trim())
-        .filter((decl) => decl.length > 0);
-
-    // Parse each declaration and check if any are dynamic
-    const parsedDeclarations = declarations.map((decl) => {
-        const colonIndex = decl.indexOf(':');
-        if (colonIndex === -1) return null;
-
-        const prop = decl.substring(0, colonIndex).trim();
-        const value = decl.substring(colonIndex + 1).trim();
-        const camelProp = cssPropertyToCamelCase(prop);
-        const propKey = camelProp.match(attributesRequiresQuotes)
-            ? `"${camelProp}"`
-            : camelProp;
-
-        // Parse value using property expression parser (handles {binding} syntax)
-        const propExpression = parsePropertyExpression(value, variables);
-        
-        return { propKey, propExpression };
-    }).filter((decl) => decl !== null);
-
-    // Check if all declarations are static (no dp() wrapping)
-    const allStatic = parsedDeclarations.every((decl) => 
-        !decl.propExpression.rendered.includes('dp(')
-    );
+    const { declarations, hasDynamic } = parseStyleDeclarations(styleString, variables);
 
     // If fully static, use cssText for optimization
-    if (allStatic) {
+    if (!hasDynamic) {
         return new RenderFragment(`style: {cssText: '${styleString.replace(/'/g, "\\'")}'}`);
     }
 
     // Generate style object with dynamic and static properties
-    const styleProps = parsedDeclarations.map((decl) => 
-        decl.propExpression.map((_) => `${decl.propKey}: ${_}`)
-    );
+    const styleProps = declarations.map((decl) => {
+        const propKey = decl.property.match(attributesRequiresQuotes)
+            ? `"${decl.property}"`
+            : decl.property;
+        return decl.valueFragment.map((_) => `${propKey}: ${_}`);
+    });
 
     // Combine all style properties into a single style object
     return styleProps
