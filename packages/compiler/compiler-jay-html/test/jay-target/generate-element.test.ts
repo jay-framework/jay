@@ -71,6 +71,13 @@ describe('generate jay-html element', () => {
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
 
+        it('for style bindings', async () => {
+            const folder = 'basics/style-bindings';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
         it('refs', async () => {
             const folder = 'basics/refs';
             const elementFile = await readFileAndGenerateElementFile(folder);
