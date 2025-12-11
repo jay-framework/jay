@@ -770,6 +770,7 @@ tags:
   - tag: productList
     type: sub-contract
     repeated: true
+    trackBy: name
     tags:
       - tag: name
         type: data
@@ -958,6 +959,7 @@ tags:
   - tag: products
     type: sub-contract
     repeated: true
+    trackBy: id
     tags:
       - tag: id
         type: data
@@ -974,6 +976,7 @@ tags:
   - tag: items
     type: sub-contract
     repeated: true
+    trackBy: productId
     tags:
       - tag: productId
         type: data

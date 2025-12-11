@@ -46,12 +46,14 @@ export interface ProjectComponent {
 ### The Asymmetry
 
 **Pages:**
+
 - ✅ Have a unique identifier: `url` field
 - ✅ URL provides natural path-based identification
 - ✅ Clear "address" that can be used to reference pages
 - Example: `/products/[slug]` uniquely identifies a page
 
 **Components:**
+
 - ❌ Only have a `name` field (just the filename)
 - ❌ No unique path-based identifier
 - ❌ Cannot organize in subdirectories without collisions
@@ -91,32 +93,33 @@ The `scanProjectComponents()` function only scans the top level:
 // packages/jay-stack/stack-cli/lib/editor-handlers.ts:493-522
 
 async function scanProjectComponents(componentsBasePath: string): Promise<ProjectComponent[]> {
-    const components: ProjectComponent[] = [];
+  const components: ProjectComponent[] = [];
 
-    try {
-        const entries = await fs.promises.readdir(componentsBasePath, { withFileTypes: true });
+  try {
+    const entries = await fs.promises.readdir(componentsBasePath, { withFileTypes: true });
 
-        for (const entry of entries) {
-            if (entry.isFile() && entry.name.endsWith(JAY_EXTENSION)) {
-                const componentName = path.basename(entry.name, JAY_EXTENSION);
-                const componentPath = path.join(componentsBasePath, entry.name);
-                
-                components.push({
-                    name: componentName,        // ❌ Not unique if subdirs exist
-                    filePath: componentPath,
-                    contractPath: hasContract ? contractPath : undefined,
-                });
-            }
-        }
-    } catch (error) {
-        console.warn(`Failed to scan components directory ${componentsBasePath}:`, error);
+    for (const entry of entries) {
+      if (entry.isFile() && entry.name.endsWith(JAY_EXTENSION)) {
+        const componentName = path.basename(entry.name, JAY_EXTENSION);
+        const componentPath = path.join(componentsBasePath, entry.name);
+
+        components.push({
+          name: componentName, // ❌ Not unique if subdirs exist
+          filePath: componentPath,
+          contractPath: hasContract ? contractPath : undefined,
+        });
+      }
     }
+  } catch (error) {
+    console.warn(`Failed to scan components directory ${componentsBasePath}:`, error);
+  }
 
-    return components;
+  return components;
 }
 ```
 
 **Issues:**
+
 - No recursive directory scanning
 - Only reads top-level files
 - No relative path tracking
@@ -125,6 +128,7 @@ async function scanProjectComponents(componentsBasePath: string): Promise<Projec
 ### 4. Contrast with Pages
 
 Pages use `scanPageDirectories()` which:
+
 - ✅ Recursively scans nested directories
 - ✅ Builds URL paths for identification
 - ✅ Supports dynamic routes like `[slug]`
@@ -136,10 +140,10 @@ Pages use `scanPageDirectories()` which:
 
 ```typescript
 export interface ProjectComponent {
-    name: string;           // Display name (just filename)
-    relativePath: string;   // ✅ UNIQUE identifier from componentsBase
-    filePath: string;       // Absolute path to file
-    contractPath?: string;  // Path to contract file
+  name: string; // Display name (just filename)
+  relativePath: string; // ✅ UNIQUE identifier from componentsBase
+  filePath: string; // Absolute path to file
+  contractPath?: string; // Path to contract file
 }
 ```
 
@@ -154,13 +158,13 @@ src/components/
 
 Results in:
 [
-  { 
+  {
     name: "submit-button",
     relativePath: "buttons/submit-button",      // ✅ Unique
     filePath: "/abs/path/to/components/buttons/submit-button.jay-html",
     contractPath: "/abs/path/to/components/buttons/submit-button.jay-contract"
   },
-  { 
+  {
     name: "submit-button",
     relativePath: "forms/submit-button",        // ✅ Unique
     filePath: "/abs/path/to/components/forms/submit-button.jay-html"
@@ -179,15 +183,18 @@ Results in:
 ### Implementation Changes Required
 
 1. **Update Protocol Interface** (`packages/jay-stack/editor-protocol/lib/protocol.ts`)
+
    - Add `relativePath` field to `ProjectComponent`
    - Update JSDoc to clarify unique identification
 
 2. **Update Component Scanner** (`packages/jay-stack/stack-cli/lib/editor-handlers.ts`)
+
    - Make `scanProjectComponents()` recursive (similar to `scanPageDirectories()`)
    - Calculate and store `relativePath` for each component
    - Handle nested directory structures
 
 3. **Update Documentation** (`docs/jay-stack-project-info-api.md`)
+
    - Document new `relativePath` field
    - Explain component identification scheme
    - Provide examples of hierarchical component organization
@@ -202,58 +209,46 @@ Results in:
 ```typescript
 // Recursive component scanner
 async function scanProjectComponents(
-    componentsBasePath: string,
-    currentRelativePath: string = ''
+  componentsBasePath: string,
+  currentRelativePath: string = '',
 ): Promise<ProjectComponent[]> {
-    const components: ProjectComponent[] = [];
+  const components: ProjectComponent[] = [];
 
-    try {
-        const entries = await fs.promises.readdir(
-            path.join(componentsBasePath, currentRelativePath), 
-            { withFileTypes: true }
+  try {
+    const entries = await fs.promises.readdir(path.join(componentsBasePath, currentRelativePath), {
+      withFileTypes: true,
+    });
+
+    for (const entry of entries) {
+      const entryRelativePath = path.join(currentRelativePath, entry.name);
+
+      if (entry.isDirectory()) {
+        // Recurse into subdirectories
+        const subComponents = await scanProjectComponents(componentsBasePath, entryRelativePath);
+        components.push(...subComponents);
+      } else if (entry.name.endsWith(JAY_EXTENSION)) {
+        const componentName = path.basename(entry.name, JAY_EXTENSION);
+        const componentRelativePath = path.join(currentRelativePath, componentName);
+        const componentPath = path.join(componentsBasePath, currentRelativePath, entry.name);
+        const contractPath = path.join(
+          componentsBasePath,
+          currentRelativePath,
+          `${componentName}${JAY_CONTRACT_EXTENSION}`,
         );
 
-        for (const entry of entries) {
-            const entryRelativePath = path.join(currentRelativePath, entry.name);
-            
-            if (entry.isDirectory()) {
-                // Recurse into subdirectories
-                const subComponents = await scanProjectComponents(
-                    componentsBasePath, 
-                    entryRelativePath
-                );
-                components.push(...subComponents);
-                
-            } else if (entry.name.endsWith(JAY_EXTENSION)) {
-                const componentName = path.basename(entry.name, JAY_EXTENSION);
-                const componentRelativePath = path.join(
-                    currentRelativePath, 
-                    componentName
-                );
-                const componentPath = path.join(
-                    componentsBasePath, 
-                    currentRelativePath, 
-                    entry.name
-                );
-                const contractPath = path.join(
-                    componentsBasePath,
-                    currentRelativePath,
-                    `${componentName}${JAY_CONTRACT_EXTENSION}`,
-                );
-
-                components.push({
-                    name: componentName,
-                    relativePath: componentRelativePath.replace(/\\/g, '/'), // Normalize to forward slashes
-                    filePath: componentPath,
-                    contractPath: fs.existsSync(contractPath) ? contractPath : undefined,
-                });
-            }
-        }
-    } catch (error) {
-        console.warn(`Failed to scan components directory ${componentsBasePath}:`, error);
+        components.push({
+          name: componentName,
+          relativePath: componentRelativePath.replace(/\\/g, '/'), // Normalize to forward slashes
+          filePath: componentPath,
+          contractPath: fs.existsSync(contractPath) ? contractPath : undefined,
+        });
+      }
     }
+  } catch (error) {
+    console.warn(`Failed to scan components directory ${componentsBasePath}:`, error);
+  }
 
-    return components;
+  return components;
 }
 ```
 
@@ -275,6 +270,7 @@ Currently, **no examples exist with a `components/` folder** in the jay-stack ex
 Instead of `relativePath`, use the full `filePath` as the unique identifier.
 
 **Rejected because:**
+
 - File paths are machine-specific (not portable)
 - Editor applications may run on different machines
 - Relative paths align better with import conventions
@@ -290,6 +286,7 @@ Instead of `relativePath`, use the full `filePath` as the unique identifier.
 ## Next Steps
 
 ### Phase 1: URL Identification (Immediate)
+
 1. Validate the enhanced proposal with team
 2. Add `url` field to `ProjectComponent` interface
 3. Update component scanner to generate URLs (static paths only initially)
@@ -298,6 +295,7 @@ Instead of `relativePath`, use the full `filePath` as the unique identifier.
 6. Update documentation and tests
 
 ### Phase 2: Dynamic Segments (Short-term)
+
 1. Add support for `[param]` directory recognition
 2. Parse dynamic segments in component URLs
 3. Validate dynamic segments match contract props
@@ -305,12 +303,14 @@ Instead of `relativePath`, use the full `filePath` as the unique identifier.
 5. Document component organization patterns
 
 ### Phase 3: Runtime Semantics (Long-term)
+
 1. Define runtime behavior for dynamic components
 2. Consider integration with import system
 3. Explore dynamic component loading capabilities
 4. Document advanced usage patterns
 
 ### Decision Points
+
 - Should TypeScript imports use file paths or URLs?
 - Allow multiple components per dynamic path?
 - Support constrained dynamic segments?
@@ -323,16 +323,17 @@ Rather than just adding `relativePath`, we should add a **`url`** field to compo
 
 ```typescript
 export interface ProjectComponent {
-    name: string;           // Display name (just filename)
-    url: string;            // ✅ URL-like identifier with dynamic segments
-    filePath: string;       // Absolute path to file
-    contractPath?: string;  // Path to contract file
+  name: string; // Display name (just filename)
+  url: string; // ✅ URL-like identifier with dynamic segments
+  filePath: string; // Absolute path to file
+  contractPath?: string; // Path to contract file
 }
 ```
 
 ### Examples
 
 **File structure:**
+
 ```
 src/components/
   ├── button/
@@ -346,24 +347,25 @@ src/components/
 ```
 
 **Resulting component info:**
+
 ```typescript
 [
   {
-    name: "button",
-    url: "/components/button",           // Simple component
-    filePath: "/abs/path/to/components/button/button.jay-html"
+    name: 'button',
+    url: '/components/button', // Simple component
+    filePath: '/abs/path/to/components/button/button.jay-html',
   },
   {
-    name: "clock",
-    url: "/components/clock/[initialTime]",  // Component with dynamic segment
-    filePath: "/abs/path/to/components/clock/[initialTime]/clock.jay-html"
+    name: 'clock',
+    url: '/components/clock/[initialTime]', // Component with dynamic segment
+    filePath: '/abs/path/to/components/clock/[initialTime]/clock.jay-html',
   },
   {
-    name: "list-item",
-    url: "/components/list/[itemType]/list-item",  // Nested with dynamic segment
-    filePath: "/abs/path/to/components/list/[itemType]/list-item.jay-html"
-  }
-]
+    name: 'list-item',
+    url: '/components/list/[itemType]/list-item', // Nested with dynamic segment
+    filePath: '/abs/path/to/components/list/[itemType]/list-item.jay-html',
+  },
+];
 ```
 
 ### Dynamic Segments Map to Component Props
@@ -386,11 +388,13 @@ When a component is used, the dynamic segments are satisfied by providing props:
 #### 1. Perfect Symmetry with Pages
 
 **Pages:**
-- URL: `/products/[slug]` 
+
+- URL: `/products/[slug]`
 - Dynamic segment `slug` becomes a route parameter
 - Accessed at runtime: `/products/laptop`, `/products/phone`
 
 **Components (proposed):**
+
 - URL: `/components/clock/[initialTime]`
 - Dynamic segment `initialTime` becomes a component prop
 - Accessed at usage: `<clock initialTime="12:00:00" />`
@@ -426,8 +430,8 @@ The component contract file would declare these dynamic segments as required pro
 ```typescript
 // clock/[initialTime]/clock.jay-contract
 interface ClockContract {
-  initialTime: string;  // Required - comes from dynamic segment
-  format?: '12h' | '24h';  // Optional - additional prop
+  initialTime: string; // Required - comes from dynamic segment
+  format?: '12h' | '24h'; // Optional - additional prop
 }
 ```
 
@@ -436,11 +440,13 @@ interface ClockContract {
 #### Easy Parts ✅
 
 1. **Path Parsing**: We already parse dynamic segments for pages
+
    - Reuse the same regex patterns
    - Same `[param]` syntax
    - Same normalization logic
 
 2. **URL Generation**: Convert file paths to URLs
+
    - Replace OS path separators with `/`
    - Prepend `/components/` prefix
    - Keep dynamic segment brackets intact
@@ -453,12 +459,14 @@ interface ClockContract {
 #### Moderate Complexity ⚠️
 
 1. **Contract Validation**: Ensure dynamic segments match contract props
+
    ```typescript
    // Validation: path has [initialTime], contract must have initialTime prop
-   validateComponentStructure(componentUrl, contractSchema)
+   validateComponentStructure(componentUrl, contractSchema);
    ```
 
 2. **Editor Integration**: Map component URLs to file locations
+
    - Parse URL to extract file path
    - Handle dynamic segment directories
    - Navigate to correct file when editing
@@ -475,53 +483,58 @@ interface ClockContract {
 #### Complex Parts 🔴
 
 1. **Runtime Component Resolution**: How do components get instantiated?
-   
+
    **Question:** Does the framework need to "resolve" components like it resolves pages?
-   
+
    **Analysis:**
+
    - Pages: Routes are matched at runtime (`/products/laptop` → `products/[slug]/page.jay-html`)
    - Components: Typically statically imported and used directly
-   
+
    **Two possible models:**
 
    **Model A: Static Imports (Current Model)**
+
    ```typescript
    // Traditional import
    import { Clock } from './components/clock/[initialTime]/clock.jay-html';
-   
+
    // Usage
    <Clock initialTime="12:00:00" />
    ```
+
    - Dynamic segments are just directory structure
    - No runtime resolution needed
    - Props are explicit in usage
 
    **Model B: Dynamic Resolution (New Capability)**
+
    ```typescript
    // Runtime component resolution
    const ClockComponent = resolveComponent('/components/clock/[initialTime]', {
-     initialTime: '12:00:00'
+     initialTime: '12:00:00',
    });
    ```
+
    - Framework resolves component path at runtime
    - Similar to how pages are resolved
    - Enables dynamic component loading
 
 2. **Component Reference in jay-html**: How to reference components in templates?
-   
+
    Current model uses static imports. With component URLs, we could enable:
-   
+
    ```jay-html
    <!-- Option 1: Traditional import -->
    <import src="./clock/[initialTime]/clock.jay-html" as="clock" />
    <clock initialTime="12:00:00" />
-   
+
    <!-- Option 2: URL-based reference (new?) -->
    <component url="/components/clock/[initialTime]" initialTime="12:00:00" />
    ```
 
 3. **Multiple Components per Path?**: Unlike pages (one `page.jay-html` per route), components might have multiple files:
-   
+
    ```
    components/
      └── clock/
@@ -530,8 +543,9 @@ interface ClockContract {
              ├── digital-clock.jay-html  ← Variant?
              └── analog-clock.jay-html   ← Another variant?
    ```
-   
+
    **Resolution:** Probably should follow page convention:
+
    - One component per dynamic path
    - Component filename could be flexible (not necessarily matching directory)
    - Or enforce naming: directory name must match component name
@@ -560,20 +574,21 @@ export interface ProjectComponent {
 
 ### Implementation Difficulty Assessment
 
-| Aspect | Difficulty | Reasoning |
-|--------|-----------|-----------|
-| Add `url` field to interface | 🟢 Easy | Simple protocol change |
-| Parse component paths for `[segments]` | 🟢 Easy | Reuse page parsing logic |
-| Generate component URLs | 🟢 Easy | String transformation |
-| Recursive component scanning | 🟡 Moderate | Similar to page scanning |
-| Contract validation | 🟡 Moderate | New validation logic needed |
-| Editor integration updates | 🟡 Moderate | Update file resolution |
-| Runtime semantics | 🔴 Complex | Need to define what dynamic segments *mean* |
-| Import system integration | 🔴 Complex | How do imports reference dynamic paths? |
+| Aspect                                 | Difficulty  | Reasoning                                   |
+| -------------------------------------- | ----------- | ------------------------------------------- |
+| Add `url` field to interface           | 🟢 Easy     | Simple protocol change                      |
+| Parse component paths for `[segments]` | 🟢 Easy     | Reuse page parsing logic                    |
+| Generate component URLs                | 🟢 Easy     | String transformation                       |
+| Recursive component scanning           | 🟡 Moderate | Similar to page scanning                    |
+| Contract validation                    | 🟡 Moderate | New validation logic needed                 |
+| Editor integration updates             | 🟡 Moderate | Update file resolution                      |
+| Runtime semantics                      | 🔴 Complex  | Need to define what dynamic segments _mean_ |
+| Import system integration              | 🔴 Complex  | How do imports reference dynamic paths?     |
 
 **Overall Assessment: Moderate to Complex**
 
 The core idea is sound and the basic implementation is straightforward. The complexity comes from:
+
 1. Defining clear semantics for what dynamic segments mean in component context
 2. Ensuring the import/reference system works smoothly
 3. Deciding if this enables new runtime capabilities or just improves organization
@@ -581,6 +596,7 @@ The core idea is sound and the basic implementation is straightforward. The comp
 ### Recommended Approach: Phased Implementation
 
 #### Phase 1: URL Identification (Easy) 🟢
+
 - Add `url` field to `ProjectComponent`
 - Generate URLs from component file paths
 - Support static paths only (no dynamic segments yet)
@@ -589,6 +605,7 @@ The core idea is sound and the basic implementation is straightforward. The comp
 **Benefit:** Solves the uniqueness problem immediately
 
 #### Phase 2: Dynamic Segment Support (Moderate) 🟡
+
 - Recognize `[param]` directories in component paths
 - Include dynamic segments in URLs
 - Validate dynamic segments match contract props
@@ -597,6 +614,7 @@ The core idea is sound and the basic implementation is straightforward. The comp
 **Benefit:** Enables component organization by variants/types
 
 #### Phase 3: Runtime Semantics (Complex) 🔴
+
 - Define how dynamic components are resolved
 - Integrate with import system
 - Enable dynamic component loading if desired
@@ -607,10 +625,11 @@ The core idea is sound and the basic implementation is straightforward. The comp
 ### Open Questions
 
 1. **Import Paths**: Should TypeScript imports reference the actual file path or the URL?
+
    ```typescript
    // Option A: File path (current)
    import { Clock } from '@/components/clock/[initialTime]/clock.jay-html';
-   
+
    // Option B: URL-like
    import { Clock } from '@components/clock/[initialTime]';
    ```
@@ -618,6 +637,7 @@ The core idea is sound and the basic implementation is straightforward. The comp
 2. **Multiple Components per Dynamic Path**: Allowed or prohibited?
 
 3. **Dynamic Segment Constraints**: Can we specify allowed values?
+
    ```
    /components/button/[variant:primary|secondary|danger]/button.jay-html
                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -628,20 +648,21 @@ The core idea is sound and the basic implementation is straightforward. The comp
 
 ### Comparison with Alternative Proposal
 
-| Aspect | `relativePath` Approach | `url` with Dynamic Segments |
-|--------|------------------------|----------------------------|
-| Uniqueness | ✅ Solved | ✅ Solved |
-| Symmetry with pages | ⚠️ Partial | ✅ Complete |
-| Implementation complexity | 🟢 Simple | 🟡 Moderate to Complex |
-| Enables new patterns | ❌ No | ✅ Yes (component variants) |
-| Breaking changes | 🟢 Minimal | 🟡 May affect imports |
-| Learning curve | 🟢 Low | 🟡 Moderate |
+| Aspect                    | `relativePath` Approach | `url` with Dynamic Segments |
+| ------------------------- | ----------------------- | --------------------------- |
+| Uniqueness                | ✅ Solved               | ✅ Solved                   |
+| Symmetry with pages       | ⚠️ Partial              | ✅ Complete                 |
+| Implementation complexity | 🟢 Simple               | 🟡 Moderate to Complex      |
+| Enables new patterns      | ❌ No                   | ✅ Yes (component variants) |
+| Breaking changes          | 🟢 Minimal              | 🟡 May affect imports       |
+| Learning curve            | 🟢 Low                  | 🟡 Moderate                 |
 
 ### Recommendation
 
 **Yes, this idea makes sense!** It creates beautiful symmetry and unlocks interesting organizational patterns.
 
 **Implementation strategy:**
+
 1. Start with Phase 1 (URL identification without dynamic segments) - this is easy and solves the immediate problem
 2. Validate the approach with a real example
 3. Proceed to Phase 2 (dynamic segments) once Phase 1 proves valuable
@@ -655,4 +676,3 @@ The core idea is sound and the basic implementation is straightforward. The comp
 - `packages/jay-stack/stack-cli/lib/editor-handlers.ts` - Component scanning implementation
 - `packages/jay-stack/stack-cli/lib/config.ts` - Configuration with `componentsBase`
 - `docs/jay-stack-project-info-api.md` - ProjectInfo API documentation
-

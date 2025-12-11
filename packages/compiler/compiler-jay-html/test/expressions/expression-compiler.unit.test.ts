@@ -904,7 +904,9 @@ describe('expression-compiler', () => {
             expect(result.declarations[1].property).toBe('width');
             expect(result.declarations[2].property).toBe('height');
             expect(result.declarations[3].property).toBe('background');
-            expect(result.declarations[3].valueFragment.rendered).toContain("url('/images/I2:2069;2:1758_FILL.png')");
+            expect(result.declarations[3].valueFragment.rendered).toContain(
+                "url('/images/I2:2069;2:1758_FILL.png')",
+            );
         });
     });
 });

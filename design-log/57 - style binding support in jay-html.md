@@ -142,6 +142,7 @@ The implementation preserves the `cssText` optimization for fully static styles,
 **Integration Test**: `/test/fixtures/basics/style-bindings/style-bindings.jay-html`
 
 Validates end-to-end compilation of:
+
 - Fully dynamic styles
 - Mixed static and dynamic properties
 - Kebab-case property conversion
@@ -151,6 +152,7 @@ Validates end-to-end compilation of:
 **Unit Tests**: `/test/expressions/expression-compiler.unit.test.ts`
 
 Added comprehensive `parseStyleDeclarations` test suite covering:
+
 - Fully static styles
 - Fully dynamic styles
 - Mixed static and dynamic styles
@@ -163,6 +165,7 @@ Added comprehensive `parseStyleDeclarations` test suite covering:
 - Empty declarations
 
 These tests ensure the PEG.js parser correctly handles real-world CSS including:
+
 - Complex gradient functions with nested parentheses
 - RGB/RGBA color values with commas
 - CSS comments within declarations
@@ -190,6 +193,7 @@ e('div', { style: { cssText: 'background: red; padding: 10px' } });
 ## Robustness
 
 The PEG.js parser handles complex real-world CSS including:
+
 - ✅ CSS comments (`/* ... */`) - stripped during parsing
 - ✅ Complex functions with nested parentheses (e.g., `linear-gradient(rgba(...), rgba(...))`)
 - ✅ Color values with commas (e.g., `rgb(223, 229, 235)`)
@@ -201,6 +205,7 @@ The PEG.js parser handles complex real-world CSS including:
 - ✅ Mixed kebab-case and camelCase properties
 
 Tested with production Figma-exported styles containing:
+
 - 20+ properties
 - CSS comments
 - Complex gradient functions
