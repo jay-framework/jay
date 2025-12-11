@@ -40,6 +40,10 @@ export interface HasImageMessage extends BaseMessage<HasImageResponse> {
     imageId: string;
 }
 
+export interface GetProjectInfoMessage extends BaseMessage<GetProjectInfoResponse> {
+    type: 'getProjectInfo';
+}
+
 // Response types with discriminators
 export interface PublishResponse extends BaseResponse {
     type: 'publish';
@@ -66,9 +70,106 @@ export interface HasImageResponse extends BaseResponse {
     imageUrl?: string;
 }
 
+export interface ProjectPage {
+    name: string;
+    url: string;
+    filePath: string;
+    contractSchema?: ContractSchema; // Page's own contract if it has a .jay-contract file
+    usedComponents: {
+        appName: string;
+        componentName: string;
+        key: string;
+    }[];
+}
+
+export interface ProjectComponent {
+    name: string;
+    filePath: string;
+    contractPath?: string;
+}
+
+export interface InstalledApp {
+    name: string;
+    module: string;
+    pages: {
+        name: string;
+        headless_components: {
+            name: string;
+            key: string;
+            contract: string;
+            slugs?: string[];
+        }[];
+    }[];
+    components: {
+        name: string;
+        headless_components: {
+            name: string;
+            key: string;
+            contract: string;
+        }[];
+    }[];
+    config_map?: {
+        display_name: string;
+        key: string;
+    }[];
+}
+
+export interface ProjectInfo {
+    name: string;
+    localPath: string;
+    pages: ProjectPage[];
+    components: ProjectComponent[];
+    installedApps: InstalledApp[];
+    installedAppContracts: {
+        [appName: string]: InstalledAppContracts;
+    };
+}
+
+export interface GetProjectInfoResponse extends BaseResponse {
+    type: 'getProjectInfo';
+    info: ProjectInfo;
+}
+
+export interface ContractTag {
+    tag: string; // tag ID
+    type: string | string[]; // tag type(s)
+    dataType?: string;
+    elementType?: string;
+    required?: boolean;
+    repeated?: boolean;
+    tags?: ContractTag[]; // for sub-contracts
+    link?: string; // for linked sub-contracts
+}
+
+export interface ContractSchema {
+    name: string;
+    tags: ContractTag[];
+}
+
+export interface InstalledAppContracts {
+    appName: string;
+    module: string;
+    pages: Array<{
+        pageName: string;
+        contractSchema: ContractSchema;
+    }>;
+    components: Array<{
+        componentName: string;
+        contractSchema: ContractSchema;
+    }>;
+}
+
 // Union types for all messages and responses
-export type EditorProtocolMessageTypes = PublishMessage | SaveImageMessage | HasImageMessage;
-export type EditorProtocolResponseTypes = PublishResponse | SaveImageResponse | HasImageResponse;
+export type EditorProtocolMessageTypes =
+    | PublishMessage
+    | SaveImageMessage
+    | HasImageMessage
+    | GetProjectInfoMessage;
+export type EditorProtocolResponseTypes =
+    | PublishResponse
+    | SaveImageResponse
+    | HasImageResponse
+    | GetProjectInfoResponse;
 
 export interface ProtocolMessage {
     id: string;
@@ -91,6 +192,9 @@ export interface EditorProtocol {
 
     // Check if a previously saved image exists
     hasImage(params: HasImageMessage): Promise<HasImageResponse>;
+
+    // Get comprehensive project information including configuration and contracts
+    getProjectInfo(params: GetProjectInfoMessage): Promise<GetProjectInfoResponse>;
 }
 
 // Dev server side interface for handling editor requests
@@ -103,4 +207,7 @@ export interface DevServerProtocol {
 
     // Handle image existence check requests
     onHasImage(callback: EditorProtocol['hasImage']): void;
+
+    // Handle project info requests
+    onGetProjectInfo(callback: EditorProtocol['getProjectInfo']): void;
 }

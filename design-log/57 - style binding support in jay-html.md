@@ -149,6 +149,29 @@ Validates:
 - Template string values (e.g., `{fontSize}px`)
 - Static style optimization
 
+**Unit Tests**: `/test/expressions/expression-compiler.unit.test.ts`
+
+Added comprehensive `parseStyleDeclarations` test suite covering:
+
+- Fully static styles
+- Fully dynamic styles
+- Mixed static and dynamic styles
+- Template string values
+- Kebab-case to camelCase conversion
+- Trailing semicolons (single and multiple)
+- CSS comments (`/* ... */`)
+- Complex CSS functions (e.g., `linear-gradient`, `rgba`)
+- Whitespace variations
+- Empty declarations
+
+These tests ensure the PEG.js parser correctly handles real-world CSS including:
+
+- Complex gradient functions with nested parentheses
+- RGB/RGBA color values with commas
+- CSS comments within declarations
+- Multiple consecutive semicolons
+- Properties with hyphens (converted to camelCase)
+
 ### Example Output
 
 ```typescript
@@ -166,6 +189,28 @@ e('div', {
 // Fully static (optimized)
 e('div', { style: { cssText: 'background: red; padding: 10px' } });
 ```
+
+## Robustness
+
+The PEG.js parser handles complex real-world CSS including:
+
+- ✅ CSS comments (`/* ... */`) - stripped during parsing
+- ✅ Complex functions with nested parentheses (e.g., `linear-gradient(rgba(...), rgba(...))`)
+- ✅ Color values with commas (e.g., `rgb(223, 229, 235)`)
+- ✅ URLs with quoted strings and special characters (e.g., `url('/images/I2:2069;2:1758_FILL.png')`)
+- ✅ Single and double quoted strings in values
+- ✅ Multiple consecutive semicolons
+- ✅ Empty declarations
+- ✅ Whitespace variations
+- ✅ Mixed kebab-case and camelCase properties
+
+Tested with production Figma-exported styles containing:
+
+- 20+ properties
+- CSS comments
+- Complex gradient functions
+- URLs with colons and special characters
+- Quoted strings with various characters
 
 ## Future Considerations
 

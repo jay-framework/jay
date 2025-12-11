@@ -10,3 +10,5 @@ examples/**/lib/**/*.jay-html.ts
 .yarn/install-state.gz
 /.idea/prettier.xml
 /.idea/workspace.xml
+
+4example

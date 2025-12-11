@@ -9,9 +9,11 @@ import type {
     PublishMessage,
     SaveImageMessage,
     HasImageMessage,
+    GetProjectInfoMessage,
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
+    GetProjectInfoResponse,
 } from '@jay-framework/editor-protocol';
 import { createProtocolResponse } from '@jay-framework/editor-protocol';
 
@@ -19,6 +21,7 @@ export interface EditorServerOptions {
     editorId?: string;
     onEditorId?: (editorId: string) => void;
     portRange?: [number, number];
+    maxBufferSize?: number;
 }
 
 const ALLOWED_ORIGINS = [
@@ -35,15 +38,18 @@ export class EditorServer implements DevServerProtocol {
     private port: number | null = null;
     private editorId: string | null = null;
     private portRange: [number, number];
+    private maxBufferSize: number;
     private onEditorId: (editorId: string) => void;
     private handlers: {
         publish?: (params: PublishMessage) => Promise<PublishResponse>;
         saveImage?: (params: SaveImageMessage) => Promise<SaveImageResponse>;
         hasImage?: (params: HasImageMessage) => Promise<HasImageResponse>;
+        getProjectInfo?: (params: GetProjectInfoMessage) => Promise<GetProjectInfoResponse>;
     } = {};
 
     constructor(options: EditorServerOptions) {
         this.portRange = options.portRange || [3101, 3200];
+        this.maxBufferSize = options.maxBufferSize || 1e8; // 100 MB - allows large publish messages
         this.onEditorId = options.onEditorId;
         this.editorId = options.editorId || null;
     }
@@ -96,6 +102,7 @@ export class EditorServer implements DevServerProtocol {
                 credentials: true,
             },
             allowEIO3: true,
+            maxHttpBufferSize: this.maxBufferSize,
         });
 
         // Setup Socket.io event handlers
@@ -132,6 +139,12 @@ export class EditorServer implements DevServerProtocol {
 
     onHasImage(callback: (params: HasImageMessage) => Promise<HasImageResponse>): void {
         this.handlers.hasImage = callback;
+    }
+
+    onGetProjectInfo(
+        callback: (params: GetProjectInfoMessage) => Promise<GetProjectInfoResponse>,
+    ): void {
+        this.handlers.getProjectInfo = callback;
     }
 
     private handlePortDiscovery(req: any, res: any): void {
@@ -226,6 +239,15 @@ export class EditorServer implements DevServerProtocol {
                 }
                 const hasResult = await this.handlers.hasImage(payload as HasImageMessage);
                 return createProtocolResponse(id, hasResult);
+
+            case 'getProjectInfo':
+                if (!this.handlers.getProjectInfo) {
+                    throw new Error('Get project info handler not registered');
+                }
+                const infoResult = await this.handlers.getProjectInfo(
+                    payload as GetProjectInfoMessage,
+                );
+                return createProtocolResponse(id, infoResult);
 
             default:
                 throw new Error(`Unknown message type: ${(payload as any).type}`);

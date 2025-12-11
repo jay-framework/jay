@@ -7,9 +7,13 @@ import type {
     PublishMessage,
     SaveImageMessage,
     HasImageMessage,
+    GetProjectInfoMessage,
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
+    GetProjectInfoResponse,
+    EditorProtocolMessageTypes,
+    EditorProtocolResponseTypes,
 } from '@jay-framework/editor-protocol';
 import { createProtocolMessage } from '@jay-framework/editor-protocol';
 
@@ -99,7 +103,7 @@ export class ConnectionManager {
         };
     }
 
-    async sendMessage<T extends PublishMessage | SaveImageMessage | HasImageMessage>(
+    async sendMessage<T extends EditorProtocolMessageTypes>(
         message: T,
     ): Promise<
         T extends PublishMessage
@@ -108,7 +112,9 @@ export class ConnectionManager {
               ? SaveImageResponse
               : T extends HasImageMessage
                 ? HasImageResponse
-                : never
+                : T extends GetProjectInfoMessage
+                  ? GetProjectInfoResponse
+                  : never
     > {
         if (this.connectionState !== 'connected') {
             throw new Error('Not connected to editor server');

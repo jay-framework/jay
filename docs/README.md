@@ -34,6 +34,7 @@ Jay enables you to:
 
 - [Jay-HTML Format](./core/jay-html.md) - Extended HTML syntax for Jay components
 - [Contract Files](./core/contract-files.md) - YAML-based component interface definitions
+- [Page Configuration](./jay-stack-page-configuration.md) - Configuring pages and headless dependencies
 - [Component Development](./core/components.md) - Building Jay components with reactive state
 - [Jay Stack Components](./core/jay-stack.md) - Full-stack components with server-side rendering
 
