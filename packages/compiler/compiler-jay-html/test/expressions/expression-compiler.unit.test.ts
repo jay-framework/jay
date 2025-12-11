@@ -12,6 +12,7 @@ import {
     parsePropertyExpression,
     parseReactClassExpression,
     parseReactTextExpression,
+    parseStyleDeclarations,
     parseTextExpression,
     Variables,
 } from '../../lib/expressions/expression-compiler';
@@ -785,5 +786,112 @@ describe('expression-compiler', () => {
                 'failed to parse expression [enum(not an enum]. Expected ")" or "|" but "a" found.',
             );
         });
+    });
+
+    describe('parseStyleDeclarations', () => {
+        let variables: Variables;
+
+        beforeEach(() => {
+            variables = new Variables(
+                new JayObjectType('data', {
+                    color: JayString,
+                    width: JayString,
+                    fontSize: JayNumber,
+                }),
+            );
+        });
+
+        it('parses fully static styles', () => {
+            const result = parseStyleDeclarations('background: red; padding: 10px', variables);
+            expect(result.hasDynamic).toBe(false);
+            expect(result.declarations).toHaveLength(2);
+            expect(result.declarations[0].property).toBe('background');
+            expect(result.declarations[0].isDynamic).toBe(false);
+            expect(result.declarations[0].valueFragment.rendered).toBe("'red'");
+            expect(result.declarations[1].property).toBe('padding');
+            expect(result.declarations[1].valueFragment.rendered).toBe("'10px'");
+        });
+
+        it('parses fully dynamic styles', () => {
+            const result = parseStyleDeclarations('color: {color}; width: {width}', variables);
+            expect(result.hasDynamic).toBe(true);
+            expect(result.declarations).toHaveLength(2);
+            expect(result.declarations[0].property).toBe('color');
+            expect(result.declarations[0].isDynamic).toBe(true);
+            expect(result.declarations[0].valueFragment.rendered).toContain('dp(vs => vs.color)');
+            expect(result.declarations[1].property).toBe('width');
+            expect(result.declarations[1].isDynamic).toBe(true);
+            expect(result.declarations[1].valueFragment.rendered).toContain('dp(vs => vs.width)');
+        });
+
+        it('parses mixed static and dynamic styles', () => {
+            const result = parseStyleDeclarations(
+                'margin: 10px; color: {color}; padding: 20px',
+                variables,
+            );
+            expect(result.hasDynamic).toBe(true);
+            expect(result.declarations).toHaveLength(3);
+            expect(result.declarations[0].isDynamic).toBe(false);
+            expect(result.declarations[1].isDynamic).toBe(true);
+            expect(result.declarations[2].isDynamic).toBe(false);
+        });
+
+        it('parses template string values', () => {
+            const result = parseStyleDeclarations('font-size: {fontSize}px', variables);
+            expect(result.hasDynamic).toBe(true);
+            expect(result.declarations[0].valueFragment.rendered).toContain('`${vs.fontSize}px`');
+        });
+
+        it('converts kebab-case to camelCase', () => {
+            const result = parseStyleDeclarations('background-color: {color}', variables);
+            expect(result.declarations[0].property).toBe('backgroundColor');
+        });
+
+        it('handles trailing semicolon', () => {
+            const result = parseStyleDeclarations('color: red;', variables);
+            expect(result.declarations).toHaveLength(1);
+            expect(result.declarations[0].property).toBe('color');
+        });
+
+        it('handles multiple trailing semicolons', () => {
+            const result = parseStyleDeclarations('color: red;;', variables);
+            expect(result.declarations).toHaveLength(1);
+            expect(result.declarations[0].property).toBe('color');
+        });
+
+        it('handles CSS comments', () => {
+            const result = parseStyleDeclarations(
+                'color: red; /* comment */ background: blue',
+                variables,
+            );
+            expect(result.declarations).toHaveLength(2);
+            expect(result.declarations[0].property).toBe('color');
+            expect(result.declarations[1].property).toBe('background');
+        });
+
+        it('handles complex CSS functions', () => {
+            const result = parseStyleDeclarations(
+                'background: linear-gradient(rgba(255, 255, 255, 1), rgba(0, 0, 0, 0.5))',
+                variables,
+            );
+            expect(result.declarations).toHaveLength(1);
+            expect(result.declarations[0].property).toBe('background');
+            expect(result.declarations[0].valueFragment.rendered).toContain('linear-gradient');
+        });
+
+        it('handles whitespace variations', () => {
+            const result = parseStyleDeclarations('color:red;width:100px', variables);
+            expect(result.declarations).toHaveLength(2);
+            expect(result.declarations[0].property).toBe('color');
+            expect(result.declarations[1].property).toBe('width');
+        });
+
+        it('handles empty declarations', () => {
+            const result = parseStyleDeclarations('color: red; ; ; background: blue', variables);
+            expect(result.declarations).toHaveLength(2);
+            expect(result.declarations[0].property).toBe('color');
+            expect(result.declarations[1].property).toBe('background');
+        });
+
     });
 });

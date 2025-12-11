@@ -9,17 +9,18 @@
 }
 
 styleDeclarations
-  = __ head:styleDeclaration tail:(__ ";" __ styleDeclaration)* __ ";"? __ {
-    const declarations = [head, ...tail.map(t => t[3])].filter(d => d !== null);
+  = __ declarations:(styleDeclaration __)* __ {
+    const validDeclarations = declarations.map(d => d[0]).filter(d => d !== null);
     
     // Check if any declaration has dynamic bindings
-    const hasDynamic = declarations.some(d => d.isDynamic);
+    const hasDynamic = validDeclarations.some(d => d.isDynamic);
     
-    return { declarations, hasDynamic };
+    return { declarations: validDeclarations, hasDynamic };
   }
 
 styleDeclaration
-  = prop:stylePropName __ ":" __ value:styleValueContent {
+  = comment:cssComment __ { return null; }
+  / prop:stylePropName __ ":" __ value:styleValueContent __ ";"* __ {
     const camelProp = prop.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
     const [valueFragment, isDynamic] = value;
     
@@ -31,20 +32,22 @@ styleDeclaration
       isDynamic: isDynamic
     };
   }
-  / __ { return null; }
+  / __ ";"+ __ { return null; }
 
 stylePropName
   = [-a-zA-Z]+ { return text(); }
 
 styleValueContent
-  = a:__ head:((styleValueString __)+)? tail:("{" __ accessorExpression __ '}' __ (styleValueString __)*)* {
+  = a:__ head:((styleValueChunk __)+)? tail:("{" __ accessorExpression __ '}' __ (styleValueChunk __)*)* {
     const renderText = (w, h) => {
       return h?
         h.reduce((acc, str) => acc + str[0] + (str[1].length?' ':''), w.length?' ':''):
         w.length?' ':''
     }
-    if (tail.length === 0)
-      return [new RenderFragment('\'' + renderText(a, head) + '\'', none), false];
+    if (tail.length === 0) {
+      const text = renderText(a, head);
+      return [new RenderFragment('\'' + text + '\'', none), false];
+    }
     else if (tail.length === 1 && !head && a.length === 0 && tail[0][5].length === 0 && tail[0][6].length === 0) {
         let accessor = tail[0][2];
         return [accessor, true];
@@ -59,8 +62,12 @@ styleValueContent
     }
   }
 
-styleValueString
-  = [^;{}]+ { return text().trim(); }
+styleValueChunk
+  = cssComment { return ''; }
+  / [^;{}]+ { return text().trim(); }
+
+cssComment
+  = "/*" [^*]* "*"+ ([^/*] [^*]* "*"+)* "/" { return ''; }
 
 __
   = [ \t\n\r]*
