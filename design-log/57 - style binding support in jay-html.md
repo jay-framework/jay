@@ -139,9 +139,9 @@ The implementation preserves the `cssText` optimization for fully static styles,
 
 ### Test Coverage
 
-**Integration Test**: `/test/fixtures/basics/style-bindings/style-bindings.jay-html`
+**Test**: `/test/fixtures/basics/style-bindings/style-bindings.jay-html`
 
-Validates end-to-end compilation of:
+Validates:
 
 - Fully dynamic styles
 - Mixed static and dynamic properties
