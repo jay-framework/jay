@@ -193,12 +193,19 @@ The PEG.js parser handles complex real-world CSS including:
 - ✅ CSS comments (`/* ... */`) - stripped during parsing
 - ✅ Complex functions with nested parentheses (e.g., `linear-gradient(rgba(...), rgba(...))`)
 - ✅ Color values with commas (e.g., `rgb(223, 229, 235)`)
+- ✅ URLs with quoted strings and special characters (e.g., `url('/images/I2:2069;2:1758_FILL.png')`)
+- ✅ Single and double quoted strings in values
 - ✅ Multiple consecutive semicolons
 - ✅ Empty declarations
 - ✅ Whitespace variations
 - ✅ Mixed kebab-case and camelCase properties
 
-Tested with production Figma-exported styles containing 20+ properties, CSS comments, and complex gradient functions.
+Tested with production Figma-exported styles containing:
+- 20+ properties
+- CSS comments
+- Complex gradient functions
+- URLs with colons and special characters
+- Quoted strings with various characters
 
 ## Future Considerations
 

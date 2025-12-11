@@ -893,5 +893,18 @@ describe('expression-compiler', () => {
             expect(result.declarations[1].property).toBe('background');
         });
 
+        it('handles URLs with special characters in quotes', () => {
+            const result = parseStyleDeclarations(
+                "position: relative;width: 92px;height: 48.89142608642578px;background: url('/images/I2:2069;2:1758_FILL.png') lightgray 50% / cover no-repeat; background-size: ; background-position: ; background-repeat: no-repeat;border-radius: 0px;overflow: hidden;;box-sizing: border-box;",
+                variables,
+            );
+            expect(result.hasDynamic).toBe(false);
+            expect(result.declarations.length).toBeGreaterThan(5);
+            expect(result.declarations[0].property).toBe('position');
+            expect(result.declarations[1].property).toBe('width');
+            expect(result.declarations[2].property).toBe('height');
+            expect(result.declarations[3].property).toBe('background');
+            expect(result.declarations[3].valueFragment.rendered).toContain("url('/images/I2:2069;2:1758_FILL.png')");
+        });
     });
 });

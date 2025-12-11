@@ -64,7 +64,12 @@ styleValueContent
 
 styleValueChunk
   = cssComment { return ''; }
-  / [^;{}]+ { return text().trim(); }
+  / quotedString
+  / [^;{}'"]+  { return text().trim(); }
+
+quotedString
+  = "'" chars:[^']* "'" { return "'" + chars.join('') + "'"; }
+  / '"' chars:[^"]* '"' { return '"' + chars.join('') + '"'; }
 
 cssComment
   = "/*" [^*]* "*"+ ([^/*] [^*]* "*"+)* "/" { return ''; }
