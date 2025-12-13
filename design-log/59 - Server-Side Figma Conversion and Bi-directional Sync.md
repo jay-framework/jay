@@ -201,3 +201,19 @@ graph LR
     *   Test: File -> Convert -> Verify Code.
     *   Test: File -> Import -> Verify Visuals.
 *   **Goal:** Ensure data integrity throughout the cycle.
+
+## Key Strategic Areas
+
+### 1. Robustness via Test-Driven Conversion
+*   **The Challenge:** The variety of design combinations in Figma is nearly infinite. Manual verification of conversion logic is unscalable and prone to regression.
+*   **The Strategy:** Every bug report or new design scenario must be captured as a **Test Case**.
+    *   Since the conversion logic now runs on the server (Node.js), we can build a library of `input.figma.json` files representing different edge cases (e.g., "AutoLayout with absolute children", "Text with mixed styles").
+    *   We can write unit tests that assert: `convert(input.figma.json) === expected_output.jay.html`.
+    *   **AI-Driven Testing:** This architecture opens the door for AI agents to automatically generate thousands of valid `figma.json` permutations to fuzz-test the converter, ensuring it handles every possible layout combination without crashing or producing invalid code.
+
+### 2. Extensibility & Schema Evolution
+*   **The Challenge:** Figma is a living platform. New features (variables, new prototyping triggers) are added regularly. Our schema and converter must evolve without breaking existing projects.
+*   **The Strategy:**
+    *   **Beyond Visuals:** The "Interchange Schema" must be designed to support more than just static design. It should include slots for `prototype` interactions (onclick, onhover), `animations`, and `variables`.
+    *   **Migration Path:** When the schema changes to support a new Figma feature, we can write "codemods" for the JSON files stored on disk, upgrading old saved designs to the new format automatically.
+    *   **Feature Mapping:** We can map abstract Figma concepts to Jay concepts. For example, a Figma "On Click -> Navigate" interaction is currently mapped to a Jay Link. In the future, "On Drag" could map to a custom Jay event handler. The schema acts as the translation layer that decouples the rapid changes in Figma from the stable runtime of Jay.
