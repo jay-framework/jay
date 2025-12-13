@@ -111,4 +111,41 @@ graph LR
 4.  **Asset Handling**
     *   Images and Vectors need to be handled carefully. The JSON payload needs to decide whether to inline binary data (base64) or reference external files that the server manages.
 
+## Design Considerations & Architectural Decisions
 
+### 1. Parity with Figma & The "Interchange Schema"
+*   **The Problem:** It is impossible to achieve 100% parity with Figma's internal document state via the Plugin API (proprietary features, prototyping links, etc. are not fully exposed).
+*   **The Decision:** We will not attempt to mirror the internal Figma state. Instead, we define a **High-Fidelity Interchange Schema**.
+    *   This schema represents the *subset* of Figma attributes that Jay supports and requires for UI reconstruction.
+    *   It will closely mirror the Figma Plugin API interfaces (`SceneNode`, `FrameNode`, etc.) to minimize translation friction.
+    *   This schema acts as the "Contract" between the Plugin (Export/Import) and the Server (Converter).
+
+### 2. Separation of Design & Logic (Co-location Strategy)
+*   **The Problem:** While Design and Logic (Bindings) are conceptually distinct, `pluginData` in Figma is physically attached to the Nodes.
+*   **The Goal:** We want to support "Pure Design" use cases where a user might export/import a design without any Jay bindings, or where the bindings can be stripped easily.
+*   **The Decision:** We will use a **Co-location Strategy** within the JSON structure.
+    *   Standard Figma properties (fills, strokes, layout) will sit at the root of the Node object.
+    *   Jay-specific metadata (Bindings, Tags) will be encapsulated in a specific isolated field (e.g., `jayData` or `pluginData`).
+    *   *Benefit:* This allows the "Rebuilder" to simply ignore the `jayData` field if it wants to restore just the visual design, or for the "Converter" to strip it out if converting to a non-Jay target in the future.
+
+#### Example JSON Structure
+```json
+{
+  "type": "FRAME",
+  "name": "MyComponent",
+  "id": "1:2",
+  "children": [...],
+  // --- Pure Design Props ---
+  "fills": [{ "type": "SOLID", "color": {...} }],
+  "layoutMode": "AUTO",
+  "itemSpacing": 16,
+  
+  // --- Jay Specific Metadata ---
+  "jayData": {
+    "bindings": [
+      { "property": "viewModel.title", "target": "characters" }
+    ],
+    "semanticTag": "article"
+  }
+}
+```
