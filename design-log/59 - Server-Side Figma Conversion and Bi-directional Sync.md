@@ -49,6 +49,7 @@ graph LR
     API -->|Send JSON| PluginLogic
     PluginLogic -->|Hydrate| Rebuilder
     Rebuilder -->|Re-create Nodes| Canvas
+    
 ```
 
 ## Workflow Details
@@ -149,3 +150,54 @@ graph LR
   }
 }
 ```
+
+## High-Level Implementation Plan
+
+### 1. Shared Schema Definition (The Contract)
+*   **Action:** Create a shared TypeScript library/package or file that defines the `FigmaInterchangeSchema`.
+*   **Details:** This schema should include:
+    *   Recursive Node definitions (`Frame`, `Text`, `Rectangle`, etc.).
+    *   Style definitions (`Paint`, `Effect`, `TextStyles`).
+    *   The `JayMetadata` interface for bindings and tags.
+*   **Goal:** Establish a single source of truth for the data structure that both the Plugin and Server will depend on.
+
+### 2. Dev Server API Infrastructure
+*   **Action:** Extend `jay-dev-server` with new endpoints.
+*   **Details:**
+    *   `POST /api/figma/export`: Endpoint to receive the JSON dump and write it to disk as `[page].figma.json`.
+    *   `GET /api/figma/import/:pageId`: Endpoint to read the JSON file from disk and return it to the client.
+*   **Goal:** Create the communication channel and storage mechanism.
+
+### 3. Plugin Export Engine (Serialization)
+*   **Action:** Implement the "Serializer" in the Figma Plugin.
+*   **Details:**
+    *   Traverse the Figma Node tree.
+    *   Map `FigmaNode` -> `InterchangeNode` (Schema).
+    *   Extract `pluginData` and map it to `jayData`.
+    *   Send the result to the Export API.
+*   **Goal:** Enable "Saving" the design to the server.
+
+### 4. Server-Side Conversion Logic
+*   **Action:** Port and Refactor the Converter.
+*   **Details:**
+    *   Move the existing conversion logic from `@jay-desktop-poc/plugin` to a new server-side package/module.
+    *   Update the logic to consume `InterchangeNode` (JSON) instead of `FigmaNode` (API Object).
+    *   Implement the file generation: `InterchangeNode` -> `jay-html`.
+*   **Goal:** Enable code generation from the saved JSON files.
+
+### 5. Plugin Import Engine (Rehydration)
+*   **Action:** Implement the "Rebuilder" in the Figma Plugin.
+*   **Details:**
+    *   Fetch data from the Import API.
+    *   Clear the target frame/page.
+    *   Recursively create Figma nodes based on the schema types (`createFrame`, `createRect`, etc.).
+    *   Restore visual properties and `pluginData`.
+*   **Goal:** Enable "Loading" the design back into Figma.
+
+### 6. Verification & Round-Trip Testing
+*   **Action:** Verify the loop.
+*   **Details:**
+    *   Test: Design -> Export -> Verify File.
+    *   Test: File -> Convert -> Verify Code.
+    *   Test: File -> Import -> Verify Visuals.
+*   **Goal:** Ensure data integrity throughout the cycle.
