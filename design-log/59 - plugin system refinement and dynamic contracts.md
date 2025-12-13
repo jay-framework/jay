@@ -7,10 +7,19 @@
 ## Summary
 
 This document refines the plugin system by:
-1. Renaming `app.conf.yaml` → `plugin.yaml`
+1. Renaming `app.conf.yaml` → `plugin.yaml` (not `plugin.config.yaml`)
 2. Unifying headless component reference syntax across jay-html and page.config.yaml
 3. Adding support for dynamic contract generation (e.g., CMS-driven contracts)
 4. Clarifying what plugin developers and jay-stack users need to do
+
+**Key Decisions:**
+- ✅ File name: `plugin.yaml` (shorter, follows common conventions)
+- ✅ Remove `version` field (use package.json version instead)
+- ✅ Remove `key` field from contract definitions (specify at usage site)
+- ✅ Make `module` field optional (defaults to `name` for local plugins)
+- ✅ Use package.json `exports` for NPM package path resolution
+- ✅ Contract files (.jay-contract) must be published with NPM packages
+- ✅ No fallback to `installedApps/` - clean break from old structure
 
 ## Changes from Current Status
 
@@ -38,7 +47,123 @@ src/plugins/wix-stores/plugin.yaml
 - Deprecation warning for `app.conf.yaml`
 - Auto-migration tool: `jay migrate plugin-config`
 
-### 2. Plugin.yaml Format (Well-Documented)
+### 2. NPM Package Structure for Plugins
+
+An NPM plugin package should include **dual builds** for client-server code splitting (see Design Log #52):
+
+```
+@wix/stores/
+├── package.json            # NPM package definition with exports
+├── plugin.yaml             # Plugin manifest
+├── lib/                    # Source TypeScript
+│   ├── index.ts            # Main entry (re-exports all components)
+│   ├── contracts/          # Contract files (.jay-contract)
+│   │   ├── product-list.jay-contract
+│   │   ├── product-detail.jay-contract
+│   │   └── cart.jay-contract
+│   └── components/
+│       ├── product-list.ts
+│       ├── product-detail.ts
+│       └── cart.ts
+├── dist/                   # Compiled JavaScript (dual builds)
+│   ├── index.js            # Server build (client code stripped)
+│   ├── index.client.js     # Client build (server code stripped)
+│   └── contracts/          # Copied contract files
+│       ├── product-list.jay-contract
+│       ├── product-detail.jay-contract
+│       └── cart.jay-contract
+└── vite.config.ts          # Build configuration with dual outputs
+```
+
+**package.json example:**
+```json
+{
+  "name": "@wix/stores",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./client": "./dist/index.client.js",
+    "./plugin.yaml": "./plugin.yaml",
+    "./contracts/*.jay-contract": "./dist/contracts/*.jay-contract"
+  },
+  "files": [
+    "dist",
+    "plugin.yaml"
+  ],
+  "scripts": {
+    "build": "npm run definitions && npm run build:client && npm run build:server && npm run build:copy-contracts",
+    "definitions": "jay-cli definitions lib",
+    "build:client": "vite build",
+    "build:server": "vite build --ssr",
+    "build:copy-contracts": "cp -r lib/contracts/*.jay-contract* dist/contracts/"
+  }
+}
+```
+
+**vite.config.ts example:**
+```typescript
+import { resolve } from 'path';
+import { defineConfig } from 'vite';
+import { JayRollupConfig, jayStackCompiler } from '@jay-framework/compiler-jay-stack';
+
+const jayOptions: JayRollupConfig = {
+  tsConfigFilePath: resolve(__dirname, 'tsconfig.json'),
+  outputDir: 'build/jay-runtime',
+};
+
+export default defineConfig(({ isSsrBuild }) => ({
+  plugins: [...jayStackCompiler(jayOptions)],
+  build: {
+    minify: false,
+    target: 'es2020',
+    ssr: isSsrBuild,              // Determines server vs client build
+    emptyOutDir: false,            // Keep both builds in dist/
+    lib: {
+      entry: isSsrBuild
+        ? { index: resolve(__dirname, 'lib/index.ts') }           // Server build
+        : { 'index.client': resolve(__dirname, 'lib/index.ts') }, // Client build
+      formats: ['es'],
+    },
+    rollupOptions: {
+      external: [
+        '@jay-framework/component',
+        '@jay-framework/fullstack-component',
+        '@jay-framework/reactive',
+        '@jay-framework/runtime',
+        '@jay-framework/secure',
+      ],
+    },
+  },
+}));
+```
+
+**Key points:**
+- **Dual builds**: Server build (`index.js`) has client code stripped, client build (`index.client.js`) has server code stripped
+- **Build commands**: Run both `vite build` (client) and `vite build --ssr` (server)
+- **Contract files**: Must be published in `dist/` directory (not just source)
+- **Code splitting**: Uses `jayStackCompiler` plugin which detects `isSsrBuild` flag
+- **Server build** (default export `.`): Safe to import on Node.js (no browser APIs)
+- **Client build** (`./client` export): Optimized for browser (no server code)
+- **Security**: Server secrets never leak to client bundle
+- **Performance**: Both bundles are smaller and optimized for their environment
+
+**How consumers use the plugin:**
+
+Server-side imports (in page.ts):
+```typescript
+import { productList } from '@wix/stores';
+// → Resolves to dist/index.js (server build - no browser APIs) ✅
+```
+
+Client-side imports (generated by jay-stack):
+```typescript
+import { productList } from '@wix/stores/client';
+// → Resolves to dist/index.client.js (client build - no server code) ✅
+```
+
+### 3. Plugin.yaml Format (Well-Documented)
 
 ```yaml
 # plugin.yaml - Defines a Jay Stack plugin
@@ -49,26 +174,22 @@ src/plugins/wix-stores/plugin.yaml
 # Plugin metadata
 name: wix-stores                    # Human-readable name
 module: "@wix/stores"                # NPM package name (for resolution)
-version: "1.0.0"                     # Plugin version
 
 # Static contracts: List of contracts exposed by this plugin
 contracts:
   # Each contract entry defines a headless component
   - name: product-list               # Component name (used in references)
-    key: products                    # Data key in parent contract
-    contract: ./contracts/product-list.jay-contract  # Relative path to contract
-    implementation: ./components/product-list.ts     # Relative path to implementation
+    contract: ./contracts/product-list.jay-contract  # Path to contract (relative or export path)
+    component: ./components/product-list        # Export path to implementation
     description: "Displays a list of products"       # Optional description
     
   - name: product-detail
-    key: product
     contract: ./contracts/product-detail.jay-contract
-    implementation: ./components/product-detail.ts
+    component: ./components/product-detail
     
   - name: shopping-cart
-    key: cart
     contract: ./contracts/cart.jay-contract
-    implementation: ./components/cart.ts
+    component: ./components/cart
 
 # Dynamic contracts: Contracts generated at build time (optional)
 dynamic_contracts:
@@ -82,9 +203,18 @@ dynamic_contracts:
 - **`module`**: NPM package name for Node.js resolution
 - **`contracts`**: Static list of exposed contracts (most common)
 - **`dynamic_contracts`**: Optional generator for dynamic contracts
-- **`contract`**: Relative path to `.jay-contract` file (resolved via Node.js module resolution)
-- **`implementation`**: Relative path to TypeScript implementation
-- **`key`**: The property name used when embedding this contract in a parent contract
+- **`contract`**: Path to `.jay-contract` file (see Path Resolution below)
+- **`component`**: Path to TypeScript/JavaScript implementation (see Path Resolution below)
+
+**Path Resolution:**
+
+For **NPM packages**, paths use Node.js module resolution with package.json exports:
+- `./contracts/product-list.jay-contract` → resolved via package.json `exports` field
+- `./components/product-list` → resolved as ES module export
+
+For **local plugins** (src/plugins/), paths are relative to plugin.yaml location:
+- `./contracts/product-list.jay-contract` → relative path from plugin.yaml
+- `./components/product-list.ts` → relative path from plugin.yaml
 
 ### 3. Unified Headless Component Reference Syntax
 
@@ -104,6 +234,7 @@ dynamic_contracts:
 **Changes from current:**
 - `src` → `plugin` (clearer semantics)
 - `name` → `contract` (directly references contract name from plugin.yaml)
+- `key` is specified here (at usage site), not in plugin.yaml
 - Removes indirection (no need to know if it's a page or component in the plugin)
 
 #### In `page.config.yaml`
@@ -142,9 +273,8 @@ used_components:
 
 #### Resolution Priority:
 
-1. Check `src/plugins/<name>/plugin.yaml` (local overrides)
-2. Check `node_modules/<name>/plugin.yaml` (npm package)
-3. Check `src/config/installedApps/<name>/app.conf.yaml` (legacy)
+1. Check `src/plugins/<name>/plugin.yaml` (local plugins)
+2. Check `node_modules/<name>/plugin.yaml` (npm packages)
 
 ### 5. Dynamic Contract Generation
 
@@ -165,8 +295,7 @@ export interface DynamicContractGenerator {
 }
 
 export interface GeneratedContract {
-  name: string;                    // Contract name (e.g., "blog-post")
-  key: string;                     // Data key (e.g., "blogPost")
+  name: string;                    // Contract name (e.g., "blog-post-list")
   contract: Contract;               // Parsed contract object
   implementation: string;           // Path to implementation file
   description?: string;             // Optional description
@@ -181,9 +310,8 @@ export const generator: DynamicContractGenerator = {
     
     return collections.map(collection => ({
       name: `${collection.name}-list`,
-      key: collection.name,
       contract: generateContractFromSchema(collection.schema),
-      implementation: `./generated/${collection.name}.ts`,
+      implementation: `./generated/${collection.name}-list.ts`,
       description: `List view for ${collection.name}`
     }));
   }
@@ -434,9 +562,9 @@ async function loadPluginContracts(
     for (const gen of generated) {
       contracts.push({
         name: gen.name,
-        key: gen.key,
         contract: gen.contract,
-        implementation: gen.implementation
+        implementation: gen.implementation,
+        description: gen.description
       });
     }
   }
@@ -452,17 +580,15 @@ async function loadPluginContracts(
 
 export interface PluginManifest {
   name: string;
-  module: string;
-  version?: string;
+  module?: string;            // Optional for local plugins, defaults to name
   contracts?: StaticContractDef[];
   dynamic_contracts?: DynamicContractDef;
 }
 
 export interface StaticContractDef {
   name: string;
-  key: string;
-  contract: string;           // Path to .jay-contract
-  implementation: string;     // Path to .ts implementation
+  contract: string;           // Path to .jay-contract (resolved via package exports or relative path)
+  implementation: string;     // Path to implementation (resolved via package exports or relative path)
   description?: string;
 }
 
@@ -494,29 +620,39 @@ pages:
   - name: ProductPage
     headless_components:
       - name: product-list
-        key: products
+        key: products  # ❌ key was here
         contract: ./contracts/product-list.jay-contract
 
-# NEW (plugin.yaml) - flattened structure
+# NEW (plugin.yaml) - flattened structure, no key
 name: wix-stores
-module: "@wix/stores"
+module: "@wix/stores"  # Optional - can be omitted if same as name
 contracts:
   - name: product-list
-    key: products
     contract: ./contracts/product-list.jay-contract
-    implementation: ./components/product-list.ts
+    implementation: ./components/product-list
 ```
 
-**Step 3:** Update package.json exports
+**Key changes:**
+- Removed `pages`/`components` nesting
+- Removed `version` (use package.json version)
+- Removed `key` from contract definition (specified at usage site)
+- `implementation` path added (for ES module import)
+
+**Step 3:** Update package.json exports (for NPM packages)
 ```json
 {
+  "name": "@wix/stores",
+  "version": "1.0.0",
+  "type": "module",
   "exports": {
     "./plugin.yaml": "./plugin.yaml",
-    "./contracts/*": "./contracts/*",
-    "./components/*": "./dist/components/*"
+    "./contracts/*.jay-contract": "./contracts/*.jay-contract",
+    "./components/*": "./dist/components/*.js"
   }
 }
 ```
+
+**Note:** Contract files (.jay-contract) should be included in your published package, not just the compiled TypeScript. Jay-stack needs the YAML contract files at build time.
 
 ### For Jay-Stack Users
 
@@ -642,7 +778,6 @@ export const generator: DynamicContractGenerator = {
       
       return {
         name: `${collection.name}-list`,
-        key: `${collection.name}List`,
         contract,
         implementation: `./generated/${collection.name}-list.ts`,
         description: `List view for ${collection.displayName || collection.name}`
@@ -701,31 +836,244 @@ All with full type safety and IDE autocomplete!
 
 ## Open Questions
 
-1. **Should we support contract versioning in plugin.yaml?**
-   ```yaml
-   contracts:
-     - name: product-list
-       version: "2.0"
-       contract: ./contracts/product-list-v2.jay-contract
-   ```
+### 1. Do we need the `module` field for local plugins?
 
-2. **Should dynamic contracts support incremental regeneration?**
-   - Only regenerate changed contracts
-   - Requires stable contract IDs/hashing
+**Current proposal:**
+```yaml
+# Local plugin in src/plugins/my-plugin/plugin.yaml
+name: my-plugin
+module: my-plugin  # ❓ Is this needed?
+```
 
-3. **Should we support contract aliases?**
-   ```yaml
-   contracts:
-     - name: product-list
-       aliases: [products, product-listing]
-   ```
+**Options:**
+- **A)** Make `module` optional for local plugins, use `name` as module identifier
+- **B)** Require `module` always (for consistency)
+- **C)** Remove `module` entirely, just use `name` everywhere
 
-4. **Should contracts declare their dependencies?**
-   ```yaml
-   contracts:
-     - name: shopping-cart
-       requires: [product-list]  # Must be available
-   ```
+**Recommendation:** Option A - `module` is optional, defaults to `name` if not specified
+
+### 2. NPM Package Structure - What should package.json look like?
+
+**Contracts as files via exports:**
+```json
+{
+  "name": "@wix/stores",
+  "version": "1.0.0",
+  "exports": {
+    "./plugin.yaml": "./plugin.yaml",
+    "./contracts/*": "./dist/contracts/*",
+    "./components/*": "./dist/components/*.js"
+  }
+}
+```
+
+**OR contracts as TypeScript types only?**
+```json
+{
+  "name": "@wix/stores",
+  "exports": {
+    "./plugin.yaml": "./plugin.yaml",
+    ".": "./dist/index.js"
+  }
+}
+```
+
+Then plugin.yaml references named exports:
+```yaml
+contracts:
+  - name: product-list
+    contract: "productListContract"  # Named export from main module
+    implementation: "productList"
+```
+
+**Which approach?**
+
+### 3. How do users specify which version of a plugin to use?
+
+Since we removed `version` from plugin.yaml:
+
+```bash
+# Standard NPM versioning
+npm install @wix/stores@1.2.3
+```
+
+But what if they want to use a specific contract version?
+
+**Options:**
+- **A)** Version is purely package-level (use package.json version)
+- **B)** Support contract-level versioning in plugin.yaml
+- **C)** Use multiple plugins with different names for breaking changes
+
+**Question:** Should major contract changes be separate plugins (e.g., `@wix/stores-v2`) or same plugin with versioned contracts?
+
+### 4. Path Resolution - Support both formats?
+
+**Format 1: Relative file paths (for local development)**
+```yaml
+contracts:
+  - name: product-list
+    contract: ./contracts/product-list.jay-contract
+    implementation: ./components/product-list.ts
+```
+
+**Format 2: Package exports (for NPM)**
+```yaml
+contracts:
+  - name: product-list
+    contract: "./contracts/product-list.jay-contract"  # Resolved via exports
+    implementation: "./components/product-list"         # Resolved via exports
+```
+
+**Question:** Are these the same format, or do we need different syntax? Can we auto-detect based on whether it's an NPM package or local plugin?
+
+### 5. Can contracts reference other plugin's contracts?
+
+**Example:**
+```yaml
+# plugin: wix-stores
+contracts:
+  - name: shopping-cart
+    contract: ./contracts/cart.jay-contract
+```
+
+```yaml
+# cart.jay-contract
+name: ShoppingCart
+tags:
+  - tag: items
+    type: subcontract
+    link: plugin:wix-stores/product-list  # ❓ Reference another contract in same plugin
+    repeated: true
+    
+  - tag: payment
+    type: subcontract
+    link: plugin:wix-payments/payment-form  # ❓ Reference contract from different plugin
+```
+
+**Should we support:**
+- ✅ Contracts referencing other contracts in same plugin?
+- ❓ Contracts referencing contracts from other plugins (plugin dependencies)?
+
+### 6. Plugin initialization and configuration?
+
+Some plugins might need configuration:
+
+```yaml
+# In project's config or .env
+WIX_STORES_API_KEY=abc123
+WIX_STORES_SHOP_ID=my-shop
+```
+
+**Should plugin.yaml declare required config?**
+```yaml
+name: wix-stores
+module: "@wix/stores"
+config:
+  - name: API_KEY
+    env: WIX_STORES_API_KEY
+    required: true
+  - name: SHOP_ID
+    env: WIX_STORES_SHOP_ID
+    required: true
+```
+
+**Or leave config to runtime only?**
+
+### 7. When do dynamic contracts get generated?
+
+**Options:**
+- **A)** During `jay build` (compile time)
+- **B)** During `jay dev` startup (dev server init)
+- **C)** On-demand when first referenced
+- **D)** Explicitly via `jay generate-contracts`
+
+**Follow-up:** Where are generated contracts stored?
+- In memory only?
+- Cached in `node_modules/.cache/jay/`?
+- Committed to repo in `src/generated/`?
+
+### 8. Error handling for missing contracts?
+
+```html
+<script 
+  type="application/jay-headless"
+  plugin="wix-stores"
+  contract="nonexistent-contract"
+  key="data"
+></script>
+```
+
+**What should happen?**
+- Compile-time error (prevent build)
+- Warning with type `unknown`
+- Auto-generate empty contract
+
+### 9. Should plugin.yaml support contract overrides?
+
+Allow projects to override plugin contracts:
+
+```yaml
+# In project's src/plugins/wix-stores-overrides/plugin.yaml
+name: wix-stores
+module: "@wix/stores"
+override: true  # Extends/overrides original plugin
+
+contracts:
+  - name: product-list
+    contract: ./my-custom-product-list.jay-contract  # Override
+```
+
+**Use cases:**
+- Customize third-party plugin contracts
+- Add extra fields
+- Change phase annotations
+
+**Risk:** Could break plugin implementations
+
+### 10. Should we support TypeScript for plugin.yaml?
+
+Instead of YAML, use TypeScript with type checking:
+
+```typescript
+// plugin.config.ts
+import { definePlugin } from '@jay-framework/plugin-api';
+
+export default definePlugin({
+  name: 'wix-stores',
+  module: '@wix/stores',
+  contracts: [
+    {
+      name: 'product-list',
+      contract: './contracts/product-list.jay-contract',
+      implementation: './components/product-list'
+    }
+  ]
+});
+```
+
+**Benefits:**
+- Type checking
+- IDE autocomplete
+- Can compute contract list dynamically
+
+**Drawbacks:**
+- Requires compilation
+- More complex tooling
+
+### 11. How to handle contract file extensions in imports?
+
+```typescript
+// Option A: With extension
+import { productListContract } from '@wix/stores/contracts/product-list.jay-contract';
+
+// Option B: Without extension  
+import { productListContract } from '@wix/stores/contracts/product-list';
+
+// Option C: From main export
+import { productListContract } from '@wix/stores';
+```
+
+**Which pattern should we document/recommend?**
 
 ## Next Steps
 
