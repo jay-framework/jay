@@ -1,0 +1,3 @@
+<div class="user-card" j-if="user.isLoggedIn">
+  <span class="username" j-bind:text="user.name" j-text="user.name"></span>
+</div>
