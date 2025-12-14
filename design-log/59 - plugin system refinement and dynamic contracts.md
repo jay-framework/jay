@@ -193,8 +193,9 @@ contracts:
 
 # Dynamic contracts: Contracts generated at build time (optional)
 dynamic_contracts:
-  generator: ./generators/cms-contracts.ts  # Path to generator function
-  cache_key: "schema-version-123"           # Optional cache key
+  component: ./components/cms-collection        # Shared component for all dynamic contracts
+  generator: ./generators/cms-contracts.ts      # Path to generator function
+  prefix: "cms"                                 # Namespace prefix
 ```
 
 **Key Fields:**
@@ -205,6 +206,7 @@ dynamic_contracts:
 - **`dynamic_contracts`**: Optional generator for dynamic contracts
 - **`contract`**: Path to `.jay-contract` file (see Path Resolution below)
 - **`component`**: Path to TypeScript/JavaScript implementation (see Path Resolution below)
+- **For dynamic contracts**: All generated contracts share the same `component` implementation. The component receives contract metadata as props to determine which contract instance it's handling.
 
 **Path Resolution:**
 
@@ -280,64 +282,249 @@ used_components:
 
 **Use Case:** CMS plugin that reads schema from external system and generates contracts
 
-#### Generator Function Signature
+**Key Concepts:**
+1. **Shared Component**: All dynamic contracts use the **same component implementation**
+2. **Contract as Service**: The component receives the full contract instance via a service (server-only)
+3. **Automatic Naming Prefix**: Dynamic contracts use a prefix (e.g., `cms/collection-name`) to distinguish them from static contracts
+4. **Use Cases**: CMS collections, multi-lingual variants, A/B test variants, tenant-specific schemas
+
+#### Generator Function Signature with Builder API
+
+Generators can access services (like database connections, API clients) using a builder pattern similar to `init.ts`:
 
 ```typescript
-// cms-contracts.ts
+// generators/cms-contracts.ts
 import { Contract } from '@jay-framework/compiler-shared';
+import { makeContractGenerator } from '@jay-framework/fullstack-component';
+import { CMS_SERVICE } from '../services/cms-service';
 
-export interface DynamicContractGenerator {
-  /**
-   * Generate contracts dynamically at build time
-   * @returns Array of generated contract definitions
-   */
-  generate(): Promise<GeneratedContract[]> | GeneratedContract[];
-}
-
-export interface GeneratedContract {
-  name: string;                    // Contract name (e.g., "blog-post-list")
-  contract: Contract;               // Parsed contract object
-  component: string;                // Path to component file
-  description?: string;             // Optional description
-}
-
-// Example: CMS plugin that generates contracts for each collection
-export const generator: DynamicContractGenerator = {
-  async generate() {
+export const generator = makeContractGenerator()
+  .withServices(CMS_SERVICE)
+  .generate(async (services) => {
+    const cms = services[CMS_SERVICE];
+    
     // Connect to CMS and read schema
-    const cms = await connectToCMS();
     const collections = await cms.getCollections();
     
-    return collections.map(collection => ({
-      name: `${collection.name}-list`,
-      contract: generateContractFromSchema(collection.schema),
-      component: `./generated/${collection.name}-list.ts`,
-      description: `List view for ${collection.name}`
+    // Return array of contracts
+    return collections.map(collection => 
+      generateContractFromSchema(collection)
+    );
+  });
+```
+
+**Why a builder API?**
+
+- **Service injection**: Generator needs access to services (DB, API clients, credentials)
+- **Consistent pattern**: Same pattern as `init.ts` and page components
+- **Type safety**: Services are properly typed
+- **Testability**: Can mock services in tests
+
+**Builder API:**
+
+```typescript
+// @jay-framework/fullstack-component
+
+export interface ContractGeneratorBuilder<Services extends ServiceMarkers> {
+  withServices<NewServices extends ServiceMarkers>(
+    ...services: NewServices
+  ): ContractGeneratorBuilder<Services & NewServices>;
+  
+  generate(
+    fn: (services: ServiceInstances<Services>) => Promise<Contract[]> | Contract[]
+  ): DynamicContractGenerator;
+}
+
+export function makeContractGenerator(): ContractGeneratorBuilder<{}> {
+  // Implementation
+}
+```
+
+**Simple generators without services:**
+
+```typescript
+// generators/simple-generator.ts
+import { makeContractGenerator } from '@jay-framework/fullstack-component';
+
+export const generator = makeContractGenerator()
+  .generate(async () => {
+    // No services needed
+    return [
+      { name: 'StaticContract1', tags: [...] },
+      { name: 'StaticContract2', tags: [...] },
+    ];
+  });
+```
+
+#### Component Implementation for Dynamic Contracts
+
+The shared component receives the **full contract instance** via a special service marker:
+
+```typescript
+// components/cms-collection.ts
+import { makeJayStackComponent } from '@jay-framework/fullstack-component';
+import { DYNAMIC_CONTRACT_SERVICE } from '@jay-framework/fullstack-component';
+import { Contract } from '@jay-framework/compiler-shared';
+import { connectToCMS } from '../lib/cms-client';
+
+// No special props needed - contract comes via service
+export const cmsCollection = makeJayStackComponent<DynamicContract>()
+  .withServices(DYNAMIC_CONTRACT_SERVICE)  // Get contract instance as service
+  .withFastRender(async (props, contract: Contract) => {
+    const cms = await connectToCMS();
+    
+    // Use contract.name to determine which collection to query
+    // contract.name is the full dynamic contract name (e.g., "BlogPostsList")
+    const collectionName = deriveCollectionName(contract.name);
+    const items = await cms.query(collectionName);
+    
+    return partialRender({ items }, {});
+  });
+
+function deriveCollectionName(contractName: string): string {
+  // "BlogPostsList" → "blog-posts"
+  return contractName.replace(/List$/, '').replace(/([A-Z])/g, '-$1').toLowerCase().slice(1);
+}
+```
+
+**Why use a service instead of props?**
+
+- **Services are server-only** - Contract instance doesn't need to go to client
+- **Compile-time resolution** - Contract is resolved at build time, not runtime
+- **Type safety** - Service marker ensures proper typing
+- **Clean separation** - Props for runtime data, services for build/server context
+
+**Service Marker:**
+
+```typescript
+// @jay-framework/fullstack-component
+export const DYNAMIC_CONTRACT_SERVICE = createJayService('DynamicContract');
+```
+
+#### Automatic Naming Prefix for Dynamic Contracts
+
+**Problem:** When parsing jay-html, how do we know if `contract="products-list"` is static or dynamic?
+
+**Solution:** Dynamic contracts automatically get a prefix based on the plugin's dynamic contract configuration.
+
+**In plugin.yaml:**
+
+```yaml
+name: my-cms
+module: "@mycompany/cms-plugin"
+
+dynamic_contracts:
+  prefix: "cms"                                 # Automatic prefix for all dynamic contracts
+  component: ./components/cms-collection
+  generator: ./generators/collections-generator.ts
+```
+
+**Generated contracts automatically prefixed:**
+
+```typescript
+// Generator returns contracts with names like: "BlogPosts", "Products", "Authors"
+export const generator = {
+  async generate() {
+    const collections = await getCollections();
+    return collections.map(col => ({
+      name: `${toPascalCase(col.name)}List`,  // e.g., "BlogPostsList"
+      tags: [...]
     }));
   }
 };
 ```
 
+**Framework adds prefix automatically:**
+
+When loading dynamic contracts, the framework prepends the prefix:
+- Generator produces: `BlogPostsList`
+- Framework registers as: `cms/BlogPostsList`
+
+**Usage in jay-html:**
+
+```html
+<script 
+  type="application/jay-headless"
+  plugin="my-cms"
+  contract="cms/blog-posts-list"
+  key="blogPosts"
+></script>
+
+<script 
+  type="application/jay-headless"
+  plugin="my-cms"
+  contract="cms/products-list"
+  key="products"
+></script>
+```
+
+**Benefits:**
+
+1. **Clear distinction** - `cms/` prefix makes it obvious it's a dynamic contract
+2. **Namespace isolation** - Avoids collisions between static and dynamic contracts
+3. **Plugin organization** - Multiple dynamic contract generators can have different prefixes
+4. **Type safety** - Compiler can validate the prefix matches the plugin's dynamic_contracts configuration
+
+**Static contracts don't need prefix:**
+
+```html
+<script 
+  type="application/jay-headless"
+  plugin="wix-stores"
+  contract="product-list"
+  key="products"
+></script>
+```
+
+**Resolution Logic:**
+
+```typescript
+function resolveContract(pluginManifest: PluginManifest, contractName: string) {
+  // Check if contract name has a prefix
+  const prefix = pluginManifest.dynamic_contracts?.prefix;
+  
+  if (prefix && contractName.startsWith(`${prefix}/`)) {
+    // Dynamic contract
+    const actualName = contractName.slice(prefix.length + 1);
+    return findDynamicContract(pluginManifest, actualName);
+  } else {
+    // Static contract
+    return findStaticContract(pluginManifest, contractName);
+  }
+}
+```
+
 #### Using Dynamic Contracts
 
-Once generated, they're used exactly like static contracts:
+Once generated, they're used with the automatic prefix:
 
 ```html
 <!-- In page.jay-html -->
 <script 
   type="application/jay-headless"
   plugin="my-cms"
-  contract="blog-post-list"
+  contract="cms/blog-posts-list"
   key="blogPosts"
+></script>
+
+<script 
+  type="application/jay-headless"
+  plugin="my-cms"
+  contract="cms/products-list"
+  key="products"
 ></script>
 ```
 
+**Both contracts use the same component** (`cms-collection`), but receive different contract instances via the `DYNAMIC_CONTRACT_SERVICE`.
+
 **Build-time behavior:**
-1. During `jay build`, framework calls `generator.generate()`
-2. Generated contracts are validated
-3. Component files are generated or validated
-4. Contracts become available for type-checking and compilation
-5. Results cached using `cache_key` (regenerate only when cache invalidated)
+1. During `jay-stack build`, framework loads `init.ts` to initialize services
+2. Framework calls generator with injected services: `generator.generate(services)`
+3. Generated contracts (Contract[]) are validated
+4. Framework adds automatic prefix to each contract name (e.g., `cms/BlogPostsList`)
+5. All contracts are linked to the shared component specified in `dynamic_contracts.component`
+6. Contracts become available for type-checking and compilation
+7. At runtime, component receives full contract instance via `DYNAMIC_CONTRACT_SERVICE`
 
 ## What Plugin Developers Need to Do
 
@@ -385,23 +572,53 @@ Once generated, they're used exactly like static contracts:
    name: cms-plugin
    module: "@mycompany/cms-plugin"
    dynamic_contracts:
+     prefix: "cms"                               # Namespace prefix
+     component: ./components/cms-collection      # Shared component
      generator: ./generators/cms-generator.ts
-     cache_key: "${CMS_SCHEMA_VERSION}"
    ```
 
-2. **Implement generator**
+2. **Implement shared component with service**
+   ```typescript
+   // components/cms-collection.ts
+   import { DYNAMIC_CONTRACT_SERVICE, createJayService } from '@jay-framework/fullstack-component';
+   
+   export const cmsCollection = makeJayStackComponent<DynamicContract>()
+     .withServices(DYNAMIC_CONTRACT_SERVICE)
+     .withFastRender(async (props, contract: Contract) => {
+       // contract.name contains full contract info
+       const items = await fetchCollection(contract);
+       return partialRender({ items }, {});
+     });
+   ```
+
+3. **Implement generator with builder API**
    ```typescript
    // generators/cms-generator.ts
-   export const generator = {
-     async generate() {
-       // Fetch CMS schema
-       // Generate contracts
-       // Return GeneratedContract[]
-     }
-   };
+   import { makeContractGenerator } from '@jay-framework/fullstack-component';
+   import { CMS_SERVICE } from '../services/cms-service';
+   
+   export const generator = makeContractGenerator()
+     .withServices(CMS_SERVICE)
+     .generate(async (services) => {
+       const cms = services[CMS_SERVICE];
+       const collections = await cms.getCollections();
+       return collections.map(col => ({
+         name: `${toPascalCase(col.name)}List`,
+         tags: [/* ... */]
+       }));
+     });
    ```
 
-3. **Generator runs at build time**, creates contracts and types
+4. **Configure services in project's `init.ts`**
+   ```typescript
+   // src/init.ts
+   import { CMS_SERVICE } from '@mycompany/cms-plugin/services';
+   
+   export const init = initServer()
+     .withService(CMS_SERVICE, () => new CMSClient({ /* ... */ }));
+   ```
+
+5. **Generator runs at build time**, framework loads `init.ts`, injects services, and adds prefix automatically (`cms/blog-posts-list`)
 
 ## What Jay-Stack Users Need to Do
 
@@ -530,6 +747,120 @@ interface HeadlessReference {
 }
 ```
 
+#### Implementation Note: Plugin Resolution During jay-html Compilation
+
+When the jay-html parser encounters a headless component reference, it must perform a **two-step resolution process**:
+
+**Step 1: Load plugin.yaml** - Find and parse the plugin manifest
+
+```typescript
+// Resolution order:
+// 1. src/plugins/<plugin-name>/plugin.yaml (local plugins)
+// 2. node_modules/<plugin-name>/plugin.yaml (npm packages)
+
+const pluginPath = resolvePlugin(pluginName, projectRoot);
+const pluginManifest = await loadPluginManifest(pluginPath);
+```
+
+**Step 2: Resolve contract and component locations** - Look up paths in plugin manifest
+
+```typescript
+// Find contract definition in plugin.contracts or dynamic_contracts
+const contractDef = findContractInPlugin(pluginManifest, contractName);
+
+// Resolve contract file path (for type generation)
+const contractPath = resolveFromPlugin(pluginManifest, contractDef.contract);
+
+// Resolve component file path (for runtime import)
+// For static contracts: use contractDef.component
+// For dynamic contracts: use pluginManifest.dynamic_contracts.component
+const componentPath = resolveFromPlugin(pluginManifest, contractDef.component);
+```
+
+**Step 3: Generate imports** - Create proper import statements for the page component
+
+```typescript
+// Contract import for type generation
+import { ProductListContract } from '@wix/stores/contracts/product-list.jay-contract';
+
+// Component import (server-side)
+import { productList } from '@wix/stores';  // → dist/index.js
+
+// Component import (client-side, generated by jay-stack)
+import { productList } from '@wix/stores/client';  // → dist/index.client.js
+```
+
+**Key Changes from Current Implementation:**
+
+- **Old:** Direct file path resolution based on `src` attribute
+- **New:** Two-step resolution: plugin.yaml lookup → contract/component path resolution
+- **Impact:** Parser now depends on plugin discovery and manifest loading
+- **Benefit:** Decouples pages from plugin internals, enables plugin refactoring without breaking consumers
+
+**Error Handling:**
+
+```typescript
+// Plugin not found
+if (!pluginExists) {
+  throw new CompilationError(
+    `Plugin '${pluginName}' not found. Install with: npm install ${pluginName}`
+  );
+}
+
+// Contract not found in plugin
+if (!contractDef) {
+  const availableContracts = listAvailableContracts(pluginManifest);
+  throw new CompilationError(
+    `Contract '${contractName}' not found in plugin '${pluginName}'. ` +
+    `Available contracts: ${availableContracts.join(', ')}`
+  );
+}
+
+// Component file not found
+if (!fs.existsSync(componentPath)) {
+  throw new CompilationError(
+    `Component file not found: ${contractDef.component} ` +
+    `(referenced in ${pluginName}/plugin.yaml)`
+  );
+}
+
+// Contract file not found
+if (!fs.existsSync(contractPath)) {
+  throw new CompilationError(
+    `Contract file not found: ${contractDef.contract} ` +
+    `(referenced in ${pluginName}/plugin.yaml)`
+  );
+}
+```
+
+**Compilation Performance:**
+
+To avoid repeated plugin.yaml loading during compilation:
+
+```typescript
+// Cache plugin manifests during compilation session
+const pluginCache = new Map<string, PluginManifest>();
+
+async function getPlugin(name: string, projectRoot: string): Promise<PluginManifest> {
+  if (!pluginCache.has(name)) {
+    const manifest = await loadPluginManifest(name, projectRoot);
+    pluginCache.set(name, manifest);
+  }
+  return pluginCache.get(name)!;
+}
+
+// Clear cache when file system changes (dev mode)
+function clearPluginCache(): void {
+  pluginCache.clear();
+}
+```
+
+**Implementation Location:**
+
+- Parser updates: `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-parser.ts`
+- Plugin loading: `packages/jay-stack/stack-cli/lib/plugin-loader.ts` (new file)
+- Resolution helpers: Shared utility functions for consistent resolution across compiler and runtime
+
 ### 3. Add Dynamic Contract Generator Support
 
 ```typescript
@@ -545,7 +876,11 @@ async function loadPluginContracts(
       const contract = await loadContract(
         resolveFromPlugin(plugin, contractDef.contract)
       );
-      contracts.push({ ...contractDef, contract });
+      contracts.push({ 
+        ...contractDef, 
+        contract,
+        component: contractDef.component 
+      });
     }
   }
   
@@ -556,19 +891,26 @@ async function loadPluginContracts(
       plugin.dynamic_contracts.generator
     );
     const generator = await import(generatorPath);
-    const generated = await generator.generator.generate();
+    const generatedContracts: Contract[] = await generator.generator.generate();
     
-    for (const gen of generated) {
+    // All dynamic contracts share the same component
+    const sharedComponent = plugin.dynamic_contracts.component;
+    const prefix = plugin.dynamic_contracts.prefix;
+    
+    for (const contract of generatedContracts) {
       contracts.push({
-        name: gen.name,
-        contract: gen.contract,
-        component: gen.component,
-        description: gen.description
+        name: `${prefix}/${toKebabCase(contract.name)}`,  // Add prefix
+        contract,
+        component: sharedComponent,  // Use shared component
       });
     }
   }
   
   return contracts;
+}
+
+function toKebabCase(str: string): string {
+  return str.replace(/([A-Z])/g, '-$1').toLowerCase().slice(1);
 }
 ```
 
@@ -592,8 +934,9 @@ export interface StaticContractDef {
 }
 
 export interface DynamicContractDef {
-  generator: string;          // Path to generator
-  cache_key?: string;         // Cache invalidation key
+  prefix: string;                 // Namespace prefix for dynamic contracts (e.g., "cms")
+  component: string;              // Path to shared component for all dynamic contracts
+  generator: string;              // Path to generator
 }
 
 export interface ResolvedContract extends StaticContractDef {
@@ -720,36 +1063,32 @@ my-cms-plugin/
 ```yaml
 name: my-cms
 module: "@mycompany/cms-plugin"
-version: "1.0.0"
 
 dynamic_contracts:
+  prefix: "cms"                                 # Namespace for dynamic contracts
+  component: ./components/cms-collection        # Shared component for all collections
   generator: ./generators/collections-generator.ts
-  cache_key: "${CMS_API_URL}:${CMS_SCHEMA_VERSION}"
 ```
 
 ### collections-generator.ts
 
 ```typescript
-import { DynamicContractGenerator, GeneratedContract } from '@jay-framework/plugin-api';
-import { connectToCMS } from './cms-client';
-import { generateTemplate } from '../templates/collection-list.template';
+import { makeContractGenerator } from '@jay-framework/fullstack-component';
+import { Contract } from '@jay-framework/compiler-shared';
+import { CMS_SERVICE } from '../services/cms-service';
 
-export const generator: DynamicContractGenerator = {
-  async generate(): Promise<GeneratedContract[]> {
-    // Connect to CMS
-    const cms = await connectToCMS({
-      apiUrl: process.env.CMS_API_URL,
-      apiKey: process.env.CMS_API_KEY
-    });
+export const generator = makeContractGenerator()
+  .withServices(CMS_SERVICE)
+  .generate(async (services) => {
+    const cms = services[CMS_SERVICE];
     
-    // Get all collections
+    // Get all collections from CMS
     const collections = await cms.getCollections();
     
     // Generate contract for each collection
     return collections.map(collection => {
-      // Generate contract from schema
       const contract: Contract = {
-        name: `${collection.name}List`,
+        name: `${toPascalCase(collection.name)}List`,  // e.g., "BlogPostsList"
         tags: [
           {
             tag: 'items',
@@ -773,18 +1112,9 @@ export const generator: DynamicContractGenerator = {
         ]
       };
       
-      // Generate component
-      const component = generateTemplate(collection);
-      
-      return {
-        name: `${collection.name}-list`,
-        contract,
-        component: `./generated/${collection.name}-list.ts`,
-        description: `List view for ${collection.displayName || collection.name}`
-      };
+      return contract;
     });
-  }
-};
+  });
 
 function mapFieldType(cmsType: string): string {
   const typeMap = {
@@ -796,21 +1126,43 @@ function mapFieldType(cmsType: string): string {
   };
   return typeMap[cmsType] || 'string';
 }
+
+function toPascalCase(str: string): string {
+  return str.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
+}
 ```
 
 ### Usage in Project
 
+**1. Install plugin:**
 ```bash
-# Install plugin
 npm install @mycompany/cms-plugin
+```
 
-# Set environment variables
+**2. Configure services in `init.ts`:**
+```typescript
+// src/init.ts
+import { CMS_SERVICE } from '@mycompany/cms-plugin/services';
+import { CMSClient } from '@mycompany/cms-plugin/client';
+
+export const init = initServer()
+  .withService(CMS_SERVICE, () => {
+    return new CMSClient({
+      apiUrl: process.env.CMS_API_URL,
+      apiKey: process.env.CMS_API_KEY
+    });
+  });
+```
+
+**3. Set environment variables:**
+```bash
 export CMS_API_URL="https://my-cms.com/api"
 export CMS_API_KEY="secret-key"
-export CMS_SCHEMA_VERSION="v2.1"
+```
 
-# Build - contracts are generated automatically
-jay build
+**4. Build - contracts are generated automatically:**
+```bash
+jay-stack build
 ```
 
 **Generated contracts are available:**
@@ -820,19 +1172,19 @@ jay build
 <script 
   type="application/jay-headless"
   plugin="my-cms"
-  contract="blog-posts-list"
+  contract="cms/blog-posts-list"
   key="blogPosts"
 ></script>
 
 <script 
   type="application/jay-headless"
   plugin="my-cms"
-  contract="products-list"
+  contract="cms/products-list"
   key="products"
 ></script>
 ```
 
-All with full type safety and IDE autocomplete!
+All with full type safety and IDE autocomplete! Both use the same `cms-collection` component but with different contract instances passed via service.
 
 ## Open Questions
 
@@ -851,6 +1203,7 @@ module: my-plugin  # ❓ Is this needed?
 - **C)** Remove `module` entirely, just use `name` everywhere
 
 **Recommendation:** Option A - `module` is optional, defaults to `name` if not specified
+**Answer:** agree with recommendation
 
 ### 2. NPM Package Structure - What should package.json look like?
 
@@ -887,6 +1240,7 @@ contracts:
 ```
 
 **Which approach?**
+**Answer:** I think the second does not work, as NPM does not let us require files that are not exported.
 
 ### 3. How do users specify which version of a plugin to use?
 
@@ -905,6 +1259,7 @@ But what if they want to use a specific contract version?
 - **C)** Use multiple plugins with different names for breaking changes
 
 **Question:** Should major contract changes be separate plugins (e.g., `@wix/stores-v2`) or same plugin with versioned contracts?
+**Answer:** we should use the NPM version mechanism, at least until we find really good requirements for something else.
 
 ### 4. Path Resolution - Support both formats?
 
@@ -925,6 +1280,9 @@ contracts:
 ```
 
 **Question:** Are these the same format, or do we need different syntax? Can we auto-detect based on whether it's an NPM package or local plugin?
+**Answer:** we can auto detect. There is something nice in the fact that the path are relative to the plugin.yaml.
+however, for NPM, we also need to validate the contract files are exported from the package,  
+and that the component files are exported from the package main module
 
 ### 5. Can contracts reference other plugin's contracts?
 
@@ -954,6 +1312,8 @@ tags:
 - ✅ Contracts referencing other contracts in same plugin?
 - ❓ Contracts referencing contracts from other plugins (plugin dependencies)?
 
+**Answer:** I think we should, and mandate that there is an NPM dependency between the two plugin packages
+
 ### 6. Plugin initialization and configuration?
 
 Some plugins might need configuration:
@@ -978,6 +1338,8 @@ config:
 ```
 
 **Or leave config to runtime only?**
+**Answer:** we use the init.js and services pattern for plugin initialization.
+the plugin needs to document what configuration it needs and how to activate it from the init.js file
 
 ### 7. When do dynamic contracts get generated?
 
@@ -991,6 +1353,15 @@ config:
 - In memory only?
 - Cached in `node_modules/.cache/jay/`?
 - Committed to repo in `src/generated/`?
+
+**Answer:**
+during development - at the time of jay dev startup.
+during production - dynamic contract change is a classic slow changing data, and we will need to build 
+a mechanism that can accept a signal from the source system (CMS) about a change and trigger a refresh of the 
+contracts. we will need to design this system at a later time.
+
+regarding storage, for development we do not need to store generated contracts. 
+for production, all slowly rendered data needs to be stored, and this storage system is yet to be defined.
 
 ### 8. Error handling for missing contracts?
 
@@ -1007,6 +1378,8 @@ config:
 - Compile-time error (prevent build)
 - Warning with type `unknown`
 - Auto-generate empty contract
+
+**Answer:** compile time error
 
 ### 9. Should plugin.yaml support contract overrides?
 
@@ -1029,6 +1402,10 @@ contracts:
 - Change phase annotations
 
 **Risk:** Could break plugin components
+
+**Answer:** I do not think so. 
+Jay support extension using a close / open principle - a page can have a page contract in addition to 
+importing a contract, and the visual page can use the page contract tags instead of the imported contract tags. 
 
 ### 10. Should we support TypeScript for plugin.yaml?
 
@@ -1059,6 +1436,8 @@ export default definePlugin({
 **Drawbacks:**
 - Requires compilation
 - More complex tooling
+  
+**Answer:** I think for now it is an overkill
 
 ### 11. How to handle contract file extensions in imports?
 
@@ -1074,6 +1453,9 @@ import { productListContract } from '@wix/stores';
 ```
 
 **Which pattern should we document/recommend?**
+
+**Answer:** right now we are using the first pattern, with the `.jay-contract` suffix, which is used by the compiler 
+to turn the contract file to a TS file.
 
 ## Next Steps
 
