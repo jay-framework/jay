@@ -1,219 +1,123 @@
-# 59 - Server-Side Figma Conversion and Bi-directional Sync
+# 59 - Server-Side Editor Integration (Vendor Architecture) and Bi-directional Sync
 
 ## Context
-Currently, the conversion logic from Figma design to Jay framework code (`jay-html`) resides within the Figma plugin (`@jay-desktop-poc/plugin`). The workflow involves the plugin traversing the Figma node tree, generating the final `jay-html` string, and sending it to the dev server merely for file saving.
+We are architecting a solution for bi-directional synchronization between visual editors (like Figma, Wix, etc.) and the Jay framework. While the immediate implementation focus is on **Figma**, the architecture is designed to be **Vendor-Agnostic**, allowing any external editor to serve as a design source for Jay projects.
 
-## New Approach
-We are shifting the conversion responsibility from the Figma Plugin to the **Jay Dev Server**.
+Previously, the conversion logic resided entirely within the Figma plugin. We are shifting this responsibility to the **Jay Dev Server**, turning it into a central hub for design processing.
 
-In this new architecture:
-1.  **The Plugin** acts as a "dumb" client. Its primary role is to extract the raw Figma document structure (nodes, components, variants, styles) and the user-defined binding metadata.
-2.  **The Dev Server** receives this raw data, saves it as a "Source of Truth" (`.figma.json`), and then executes the conversion logic to generate the `jay-html` files.
-3.  **Bi-directionality**: The Dev Server serves as a repository for design state. The Plugin can request the raw design data back from the server to reconstruct/rehydrate a design on the Figma canvas.
+## New Approach: Vendor Adapter Architecture
+The Jay Dev Server will expose a generic "Design API" and implement a **Vendor Adapter Pattern**.
+
+1.  **Vendor Client (e.g., Figma Plugin):** Acts as a "dumb" client. Its role is to serialize the editor's specific document structure into a JSON payload (The Interchange Doc) and send it to the server.
+2.  **Dev Server (The Hub):** 
+    *   Exposes generic endpoints: `/api/design/:vendorId/export` and `/api/design/:vendorId/import`.
+    *   Loads the appropriate **Vendor Adapter** (e.g., `figma-adapter`) based on the request.
+    *   Saves the raw JSON as the "Source of Truth" (e.g., `page.figma.json`).
+    *   Invokes the Adapter's **Conversion Engine** to generate `jay-html`.
+3.  **Bi-directionality:** The Server stores the source-of-truth. Clients can request this data back to re-hydrate the design in the editor.
 
 ## Architecture Diagram
 
-The following diagram illustrates the flow of data between Figma, the Dev Server, and the File System.
-
 ```mermaid
 graph LR
-    subgraph FigmaEnv [Figma Environment]
-        Canvas[Design Canvas]
-        PluginLogic[Plugin Logic]
-        Rebuilder[Design Rebuilder]
+    subgraph EditorEnv [External Editor Environment]
+        EditorCanvas[Editor Canvas]
+        ClientAdapter[Client Adapter / Plugin]
     end
 
     subgraph DevServer [Jay Dev Server]
-        API[API Endpoints]
-        Converter[Conversion Engine]
+        API[Generic Design API]
+        Router[Vendor Router]
+        subgraph Adapters [Vendor Adapters]
+            FigmaAdapter[Figma Adapter]
+            WixAdapter[Wix Adapter]
+        end
         Compiler[Jay Compiler]
     end
 
     subgraph FileSystem [Project Files]
-        RawData["page.figma.json\n(Raw Source + Bindings)"]
-        JaySource["page.jay.html\n(Generated Code)"]
-        CompiledOutput["page.js / page.ts\n(Runtime Bundle)"]
+        RawData["page.[vendor].json\n(Source of Truth)"]
+        JaySource["page.jay-html\n(Generated Code)"]
     end
 
     %% Export Flow
-    Canvas -->|Read Nodes| PluginLogic
-    PluginLogic -->|Export Raw JSON| API
-    API -->|Save| RawData
-    RawData -->|Input| Converter
-    Converter -->|Generate| JaySource
+    EditorCanvas -->|Read Model| ClientAdapter
+    ClientAdapter -->|Export JSON| API
+    API -->|Route by VendorID| Router
+    Router -->|Select| FigmaAdapter
+    FigmaAdapter -->|Save| RawData
+    RawData -->|Convert| FigmaAdapter
+    FigmaAdapter -->|Generate| JaySource
     JaySource -->|Compile| Compiler
-    Compiler --> CompiledOutput
 
-    %% Import/Restore Flow
+    %% Import Flow
     RawData -->|Load| API
-    API -->|Send JSON| PluginLogic
-    PluginLogic -->|Hydrate| Rebuilder
-    Rebuilder -->|Re-create Nodes| Canvas
-    
+    API -->|Return JSON| ClientAdapter
+    ClientAdapter -->|Rebuild| EditorCanvas
 ```
 
 ## Workflow Details
 
-### 1. Export (Publish)
-*   **User Action:** Click "Publish" in the Figma Plugin.
-*   **Plugin:** Serializes the selected Figma Frame(s) or Page into a JSON representation. This includes:
-    *   Visual properties (layout, stroke, fill, effects).
-    *   Hierarchy structure.
-    *   Jay Binding metadata (which layer maps to which contract property).
-*   **Server:** Receives the payload.
-    *   Saves `[name].figma.json` (The raw dump).
-    *   Triggers the `Conversion Engine`.
-    *   Generates `[name].jay.html` based on the raw dump.
+### 1. Export (Publish) from Editor
+*   **User Action:** Click "Publish" in the Editor (e.g., Figma Plugin).
+*   **Client:** Serializes the design into a vendor-specific JSON (e.g., `FigmaInterchangeDoc`).
+*   **Request:** `POST /api/design/figma/export`
+*   **Server:**
+    *   Receives payload.
+    *   Resolves file path from `pageUrl`.
+    *   Saves `page.figma.json`.
+    *   Calls `FigmaAdapter.convert(json)`.
+    *   Writes `page.jay-html`.
 
-### 2. Import (Restore)
-*   **User Action:** Click "Load from Code" or "Restore Version" in the Figma Plugin.
-*   **Server:** Reads the requested `[name].figma.json`.
-*   **Plugin:** Receives the JSON.
-    *   Clears the specific frame or creates a new page.
-    *   Iteratively recreates the Figma nodes (Rectangles, Text, AutoLayouts) based on the JSON data.
-    *   Re-applies the Jay Bindings to the `pluginData` of the new nodes.
+### 2. Import (Restore) to Editor
+*   **User Action:** Click "Load" in the Editor.
+*   **Request:** `GET /api/design/figma/import?url=home`
+*   **Server:** Reads `home/page.figma.json` and returns it.
+*   **Client:** Deserializes the JSON and reconstructs the native editor nodes.
 
 ## Pros and Cons
 
 ### Pros
-
-1.  **Testability & Robustness (Major)**
-    *   **Headless Testing:** We can write unit tests for the `Conversion Engine` in the Dev Server (Node.js) environment. We can capture edge-case Figma JSONs and add them to a test suite to ensure the generator never breaks, without needing to spin up Figma manually.
-    *   **faster Iteration:** Fixing a bug in the generator doesn't require reloading the Figma plugin. We can just run the server test suite.
-
-2.  **Version Control & History**
-    *   Since the raw `page.figma.json` is saved to the file system, it can be committed to Git.
-    *   This provides a history of the *design itself*, not just the generated code.
-    *   Developers can diff changes in the design data (structure changes, binding updates).
-
-3.  **Design Restoration (Time Travel)**
-    *   Because we save the raw source, we can revert to an older commit in Git, reload the Dev Server, and "Import" that version back into Figma. This effectively gives us "Time Travel" for Figma designs relative to the project codebase.
-
-4.  **Separation of Concerns**
-    *   **Plugin:** Focuses on UI interaction and Figma API quirks.
-    *   **Server:** Focuses on Logic, Code Generation, and File I/O.
-    *   This allows the conversion logic to become more complex (e.g., deeper optimization, better code structure) without bloating the plugin bundle or slowing down the Figma UI thread.
-
-5.  **Single Source of Truth**
-    *   The file system becomes the master record. The Figma file is just a "View" into that record. This prevents "Drift" where the Figma file and the code involve into two completely different states.
+1.  **Extensibility:** We can support Wix, Penpot, or a custom internal tool by simply writing a new Server Adapter and a simple Client Plugin. The API surface remains constant.
+2.  **Testability:** Conversion logic runs on Node.js. We can unit test the "Figma to Jay" conversion with static JSON fixtures, independent of the Figma environment.
+3.  **Source Control:** Raw vendor files (`.figma.json`, `.wix.json`) are committed to Git, enabling version history for the *design* source.
+4.  **Separation of Concerns:** Editors handle UI/Interaction. The Server handles Logic/Code Generation.
 
 ### Cons
+1.  **Payload Size:** serialized design documents can be large.
+2.  **Adapter Complexity:** Writing the "Rebuilder" (Import logic) for each vendor is non-trivial and requires deep knowledge of that vendor's API.
 
-1.  **Payload Size & Performance**
-    *   Figma documents can be very large. Serializing a complex page into JSON might result in large payloads sent over the local network.
-    *   *Mitigation:* Only send diffs or use efficient binary serialization formats if JSON becomes a bottleneck.
+## Design Considerations
 
-2.  **Import Complexity**
-    *   Writing the "Rebuilder" (JSON -> Figma Node) is complex. Figma's API handles node creation differently than reading. Ensuring that a restored design is 1:1 pixel-perfect with the original requires significant effort.
+### 1. Vendor Specific Schemas
+*   We will NOT attempt to create a single "Universal UI Schema" (like a standardized AST) that all editors must map to before sending to the server.
+*   **Reasoning:** Editors are too different. Figma has AutoLayout; others might use Constraint Layout or Flexbox directly. Converting to a generic intermediate format on the client adds massive complexity and potential data loss.
+*   **Decision:** The "Shared Schema" is shared *between the specific Vendor Client and its corresponding Server Adapter*. 
+    *   Figma Client <-> Figma Adapter share `FigmaInterchangeDoc`.
+    *   Wix Client <-> Wix Adapter share `WixInterchangeDoc`.
 
-3.  **Dependency on Dev Server**
-    *   The plugin becomes strictly dependent on the Dev Server being running to perform any meaningful export/import action. (Though this is consistent with the general Jay workflow).
-
-4.  **Asset Handling**
-    *   Images and Vectors need to be handled carefully. The JSON payload needs to decide whether to inline binary data (base64) or reference external files that the server manages.
-
-## Design Considerations & Architectural Decisions
-
-### 1. Parity with Figma & The "Interchange Schema"
-*   **The Problem:** It is impossible to achieve 100% parity with Figma's internal document state via the Plugin API (proprietary features, prototyping links, etc. are not fully exposed).
-*   **The Decision:** We will not attempt to mirror the internal Figma state. Instead, we define a **High-Fidelity Interchange Schema**.
-    *   This schema represents the *subset* of Figma attributes that Jay supports and requires for UI reconstruction.
-    *   It will closely mirror the Figma Plugin API interfaces (`SceneNode`, `FrameNode`, etc.) to minimize translation friction.
-    *   This schema acts as the "Contract" between the Plugin (Export/Import) and the Server (Converter).
-
-### 2. Separation of Design & Logic (Co-location Strategy)
-*   **The Problem:** While Design and Logic (Bindings) are conceptually distinct, `pluginData` in Figma is physically attached to the Nodes.
-*   **The Goal:** We want to support "Pure Design" use cases where a user might export/import a design without any Jay bindings, or where the bindings can be stripped easily.
-*   **The Decision:** We will use a **Co-location Strategy** within the JSON structure.
-    *   Standard Figma properties (fills, strokes, layout) will sit at the root of the Node object.
-    *   Jay-specific metadata (Bindings, Tags) will be encapsulated in a specific isolated field (e.g., `jayData` or `pluginData`).
-    *   *Benefit:* This allows the "Rebuilder" to simply ignore the `jayData` field if it wants to restore just the visual design, or for the "Converter" to strip it out if converting to a non-Jay target in the future.
-
-#### Example JSON Structure
-```json
-{
-  "type": "FRAME",
-  "name": "MyComponent",
-  "id": "1:2",
-  "children": [...],
-  // --- Pure Design Props ---
-  "fills": [{ "type": "SOLID", "color": {...} }],
-  "layoutMode": "AUTO",
-  "itemSpacing": 16,
-  
-  // --- Jay Specific Metadata ---
-  "jayData": {
-    "bindings": [
-      { "property": "viewModel.title", "target": "characters" }
-    ],
-    "semanticTag": "article"
-  }
-}
-```
+### 2. Co-location of Logic
+*   Jay Binding metadata (e.g., `j-text="user.name"`) should be stored within the Vendor's native storage (e.g., Figma `pluginData`) and serialized as a distinct field in the JSON (e.g., `jayData` object). This keeps the design "pure" and the logic separable.
 
 ## High-Level Implementation Plan
 
-### 1. Shared Schema Definition (The Contract)
-*   **Action:** Create a shared TypeScript library/package or file that defines the `FigmaInterchangeSchema`.
-*   **Details:** This schema should include:
-    *   Recursive Node definitions (`Frame`, `Text`, `Rectangle`, etc.).
-    *   Style definitions (`Paint`, `Effect`, `TextStyles`).
-    *   The `JayMetadata` interface for bindings and tags.
-*   **Goal:** Establish a single source of truth for the data structure that both the Plugin and Server will depend on.
+### 1. Vendor Schema Definitions
+*   Define the data contract for the specific vendor (e.g., `@jay-framework/figma-interchange`).
 
-### 2. Dev Server API Infrastructure
-*   **Action:** Extend `jay-dev-server` with new endpoints.
-*   **Details:**
-    *   `POST /api/figma/export`: Endpoint to receive the JSON dump and write it to disk as `[page].figma.json`.
-    *   `GET /api/figma/import/:pageId`: Endpoint to read the JSON file from disk and return it to the client.
-*   **Goal:** Create the communication channel and storage mechanism.
+### 2. Generic Dev Server API
+*   Implement the routing layer: `/api/design/:vendorId/*`.
+*   Define a `VendorAdapter` interface that all adapters must implement (e.g., `convert(data: any): string`).
 
-### 3. Plugin Export Engine (Serialization)
-*   **Action:** Implement the "Serializer" in the Figma Plugin.
-*   **Details:**
-    *   Traverse the Figma Node tree.
-    *   Map `FigmaNode` -> `InterchangeNode` (Schema).
-    *   Extract `pluginData` and map it to `jayData`.
-    *   Send the result to the Export API.
-*   **Goal:** Enable "Saving" the design to the server.
+### 3. Client Export Engine (Vendor Implementation)
+*   Implement the serializer in the specific editor (e.g., Figma Plugin) to match its schema.
 
-### 4. Server-Side Conversion Logic
-*   **Action:** Port and Refactor the Converter.
-*   **Details:**
-    *   Move the existing conversion logic from `@jay-desktop-poc/plugin` to a new server-side package/module.
-    *   Update the logic to consume `InterchangeNode` (JSON) instead of `FigmaNode` (API Object).
-    *   Implement the file generation: `InterchangeNode` -> `jay-html`.
-*   **Goal:** Enable code generation from the saved JSON files.
+### 4. Server-Side Adapter Logic
+*   Implement the `VendorAdapter` for the specific tool (e.g., `FigmaAdapter`).
+*   This contains the core conversion logic (JSON -> jay-html).
 
-### 5. Plugin Import Engine (Rehydration)
-*   **Action:** Implement the "Rebuilder" in the Figma Plugin.
-*   **Details:**
-    *   Fetch data from the Import API.
-    *   Clear the target frame/page.
-    *   Recursively create Figma nodes based on the schema types (`createFrame`, `createRect`, etc.).
-    *   Restore visual properties and `pluginData`.
-*   **Goal:** Enable "Loading" the design back into Figma.
+### 5. Client Import Engine (Vendor Implementation)
+*   Implement the reconstruction logic in the editor to support bi-directionality.
 
-### 6. Verification & Round-Trip Testing
-*   **Action:** Verify the loop.
-*   **Details:**
-    *   Test: Design -> Export -> Verify File.
-    *   Test: File -> Convert -> Verify Code.
-    *   Test: File -> Import -> Verify Visuals.
-*   **Goal:** Ensure data integrity throughout the cycle.
-
-## Key Strategic Areas
-
-### 1. Robustness via Test-Driven Conversion
-*   **The Challenge:** The variety of design combinations in Figma is nearly infinite. Manual verification of conversion logic is unscalable and prone to regression.
-*   **The Strategy:** Every bug report or new design scenario must be captured as a **Test Case**.
-    *   Since the conversion logic now runs on the server (Node.js), we can build a library of `input.figma.json` files representing different edge cases (e.g., "AutoLayout with absolute children", "Text with mixed styles").
-    *   We can write unit tests that assert: `convert(input.figma.json) === expected_output.jay.html`.
-    *   **AI-Driven Testing:** This architecture opens the door for AI agents to automatically generate thousands of valid `figma.json` permutations to fuzz-test the converter, ensuring it handles every possible layout combination without crashing or producing invalid code.
-
-### 2. Extensibility & Schema Evolution
-*   **The Challenge:** Figma is a living platform. New features (variables, new prototyping triggers) are added regularly. Our schema and converter must evolve without breaking existing projects.
-*   **The Strategy:**
-    *   **Beyond Visuals:** The "Interchange Schema" must be designed to support more than just static design. It should include slots for `prototype` interactions (onclick, onhover), `animations`, and `variables`.
-    *   **Migration Path:** When the schema changes to support a new Figma feature, we can write "codemods" for the JSON files stored on disk, upgrading old saved designs to the new format automatically.
-    *   **Feature Mapping:** We can map abstract Figma concepts to Jay concepts. For example, a Figma "On Click -> Navigate" interaction is currently mapped to a Jay Link. In the future, "On Drag" could map to a custom Jay event handler. The schema acts as the translation layer that decouples the rapid changes in Figma from the stable runtime of Jay.
+### 6. Verification
+*   Test suites for the generic API.
+*   Specific test suites for the Figma Adapter (using JSON fixtures).
