@@ -1472,25 +1472,84 @@ to turn the contract file to a TS file.
 
 ### Overview
 
-A CLI tool to validate plugin packages before publishing or during development. Ensures plugin.yaml is correct, all referenced files exist, and the package structure is valid.
+A validation tool integrated into `jay-stack-cli` to help plugin developers ensure their plugins are correctly structured before publishing or during development.
+
+**Target Users:** Plugin developers (not app developers)
+
+**Two Validation Modes:**
+1. **Package mode**: Validate an NPM plugin package (published or ready to publish)
+2. **Local mode**: Validate plugins in `src/plugins/` during development
+
+### CLI Integration
+
+**Update to jay-stack-cli structure:**
+
+Current command `jay-stack` becomes `jay-stack dev`, and we add new validation commands:
+
+```bash
+# Development server (existing functionality)
+jay-stack dev
+jay-stack dev --port 3000
+
+# Plugin validation (new functionality)
+jay-stack validate-plugin              # Validate current directory as plugin package
+jay-stack validate-plugin ./my-plugin  # Validate specific plugin package
+jay-stack validate-plugin --local      # Validate src/plugins/ in current project
+
+# Combined validation and generation
+jay-stack validate-plugin --generate-types  # Also generate .d.ts files
+```
+
+**Implementation uses Commander package** (already used by jay-stack-cli)
+
+### Validation Package Structure
+
+Create new package: `@jay-framework/plugin-validator`
+
+```
+packages/jay-stack/plugin-validator/
+├── lib/
+│   ├── index.ts                    # Main validator export
+│   ├── validate-plugin.ts          # Core validation logic
+│   ├── validate-package.ts         # NPM package validation
+│   ├── validate-local.ts           # Local src/plugins/ validation
+│   ├── validators/
+│   │   ├── schema-validator.ts     # plugin.yaml schema
+│   │   ├── contract-validator.ts   # Contract file validation
+│   │   ├── component-validator.ts  # Component file validation
+│   │   └── package-validator.ts    # package.json validation
+│   └── utils/
+│       ├── contract-generator.ts   # Uses jay-cli definitions
+│       └── error-formatter.ts      # Pretty error messages
+├── package.json
+└── tsconfig.json
+```
+
+**Reuses existing tools:**
+- `@jay-framework/compiler-jay-html` - For contract parsing
+- `jay-cli definitions` - For generating and validating .d.ts files
+- `@jay-framework/compiler-shared` - For types and utilities
 
 ### Command
 
 ```bash
-# Validate current directory as a plugin
-jay validate-plugin
+# Validate NPM plugin package (current directory)
+jay-stack validate-plugin
 
-# Validate specific plugin directory
-jay validate-plugin ./my-plugin
+# Validate specific plugin package directory
+jay-stack validate-plugin ./my-plugin
 
-# Validate NPM package
-jay validate-plugin @wix/stores
+# Validate local plugins in src/plugins/
+jay-stack validate-plugin --local
 
 # Validate with verbose output
-jay validate-plugin --verbose
+jay-stack validate-plugin --verbose
+
+# Generate .d.ts files during validation
+jay-stack validate-plugin --generate-types
 
 # CI mode (exit code 1 on any error)
-jay validate-plugin --strict
+jay-stack validate-plugin --strict
 ```
 
 ### Validation Checks
@@ -1533,10 +1592,12 @@ interface ValidationError {
 
 **Checks:**
 - ✅ All referenced contract files exist
-- ✅ Contract files are valid `.jay-contract` files
-- ✅ Contract files can be parsed without errors
-- ✅ Contract names in files match declared names
+- ✅ Contract files are valid `.jay-contract` files (YAML syntax)
+- ✅ Contract files can be parsed without errors (uses `@jay-framework/compiler-jay-html`)
+- ✅ Contract names in files match declared names (PascalCase matching)
+- ✅ **Generate `.d.ts` files** using `jay-cli definitions` command
 - ✅ For NPM packages: contract paths resolve via package.json exports
+- ✅ For NPM packages: contract files are exported in package.json
 
 **Example errors:**
 ```
@@ -1551,18 +1612,32 @@ interface ValidationError {
    Contract file name: "ProductList"
    File: ./contracts/product-list.jay-contract
    
-⚠️  Warning: Contract file not exported in package.json
+❌ Error: Contract file not exported in package.json
    File: ./contracts/product-list.jay-contract
    Add to exports: "./contracts/*.jay-contract": "./dist/contracts/*.jay-contract"
+   
+✅ Success: Generated type definitions for 3 contracts
+   - dist/contracts/product-list.jay-contract.d.ts
+   - dist/contracts/product-detail.jay-contract.d.ts
+   - dist/contracts/cart.jay-contract.d.ts
 ```
+
+**Type Generation Integration:**
+
+When `--generate-types` flag is used, the validator:
+1. Finds all contract files
+2. Calls `jay-cli definitions` for each contract
+3. Validates generated types compile without errors
+4. Reports any type generation failures
 
 #### 3. **Component File Validation**
 
 **Checks:**
 - ✅ All referenced component files exist
-- ✅ Component files are valid TypeScript/JavaScript
-- ✅ Component exports expected identifiers
+- ✅ Component files are valid TypeScript/JavaScript (syntax check)
+- ✅ Component exports expected identifiers (static analysis)
 - ✅ For NPM packages: component paths resolve via package.json exports
+- ✅ For NPM packages: components are exported from main module (`dist/index.js`)
 - ✅ For dual builds: both `index.js` and `index.client.js` exist in dist/
 
 **Example errors:**
@@ -1570,9 +1645,10 @@ interface ValidationError {
 ❌ Error: Component file not found: ./components/product-list.ts
    Referenced in: contracts[0].component
    
-❌ Error: Component file not exported in package.json
-   File: ./components/product-list
-   Add to exports: ".": "./dist/index.js"
+❌ Error: Component not exported from main module
+   Component: ./components/product-list
+   Expected in: dist/index.js
+   Suggestion: Add export in lib/index.ts
    
 ⚠️  Warning: Missing client build
    Found: dist/index.js
@@ -1656,23 +1732,57 @@ interface ValidationError {
 
 ### Implementation
 
-Add to existing jay-stack CLI:
+**New Package: `@jay-framework/plugin-validator`**
 
-```typescript
-// packages/jay-stack/stack-cli/lib/commands/validate-plugin.ts
+Location: `packages/jay-stack/plugin-validator/`
 
-import path from 'path';
-import fs from 'fs';
-import YAML from 'yaml';
-import chalk from 'chalk';
+**Package structure:**
+```
+packages/jay-stack/plugin-validator/
+├── lib/
+│   ├── index.ts                    # Main validator export
+│   ├── validate-plugin.ts          # Core validation orchestrator
+│   ├── validate-package.ts         # NPM package validation
+│   ├── validate-local.ts           # Local src/plugins/ validation
+│   ├── output-formatter.ts         # Pretty error/success output
+│   └── validators/
+│       ├── schema-validator.ts     # plugin.yaml schema validation
+│       ├── contract-validator.ts   # Contract file validation + type gen
+│       ├── component-validator.ts  # Component file validation
+│       └── package-validator.ts    # package.json validation
+├── package.json
+└── tsconfig.json
+```
 
-interface ValidatePluginOptions {
-  pluginPath?: string;
-  verbose?: boolean;
-  strict?: boolean;
+**Reuses existing tools:**
+- `@jay-framework/compiler-jay-html` - For contract parsing
+- `jay-cli definitions` - For generating and validating .d.ts files
+- `@jay-framework/compiler-shared` - For types and utilities
+- `commander` - CLI framework (via jay-stack-cli)
+
+**Package dependencies:**
+```json
+{
+  "name": "@jay-framework/plugin-validator",
+  "dependencies": {
+    "@jay-framework/compiler-jay-html": "workspace:^",
+    "@jay-framework/compiler-shared": "workspace:^",
+    "yaml": "^2.3.4",
+    "chalk": "^5.3.0"
+  }
 }
+```
 
-export async function validatePlugin(options: ValidatePluginOptions = {}): Promise<ValidationResult> {
+**Used by jay-stack-cli:**
+```json
+// packages/jay-stack/stack-cli/package.json
+{
+  "dependencies": {
+    "@jay-framework/plugin-validator": "workspace:^",
+    "commander": "^11.1.0"
+  }
+}
+```
   const pluginPath = options.pluginPath || process.cwd();
   const verbose = options.verbose || false;
   const strict = options.strict || false;
@@ -1928,17 +2038,53 @@ function toPascalCase(str: string): string {
 }
 ```
 
+### Validation Logic Overview
+
+**Two modes:**
+
+1. **Package mode** - Validates a plugin package (NPM or local development)
+   - Load and parse `plugin.yaml`
+   - Validate schema
+   - Check all contract files exist and are valid
+   - Generate `.d.ts` files (if `--generate-types` flag)
+   - Check all component files exist
+   - Validate `package.json` exports (if present)
+   - Validate dynamic contract generator (if present)
+
+2. **Local mode** (`--local`) - Validates all plugins in `src/plugins/`
+   - Find all directories in `src/plugins/`
+   - Run package validation on each
+   - Aggregate results
+
+**Contract validation with type generation:**
+- Parse contract file using `@jay-framework/compiler-jay-html`
+- Check for syntax errors
+- If `--generate-types` flag: call `jay-cli definitions` command
+- Track success/failure of type generation
+- Report results
+
+**Component validation:**
+- Check file exists
+- For NPM packages: verify component is exported from main module
+- For NPM packages: verify dual builds exist (`index.js` and `index.client.js`)
+
+**Package.json validation:**
+- Verify contract files are exported
+- Verify main module exports components
+- Check for dual build configuration
+
 ### Output Format
 
 **Success:**
 ```bash
-$ jay validate-plugin
+$ jay-stack validate-plugin
 
 ✅ Plugin validation successful!
 
 Plugin: wix-stores (@wix/stores)
   ✅ plugin.yaml valid
   ✅ 3 contracts validated
+  ✅ 3 type definitions generated
   ✅ 3 components validated
   ✅ package.json valid
   ✅ Dual builds present
@@ -1948,7 +2094,7 @@ No errors found.
 
 **With Warnings:**
 ```bash
-$ jay validate-plugin
+$ jay-stack validate-plugin
 
 ⚠️  Plugin validation passed with warnings
 
@@ -1966,7 +2112,7 @@ Use --strict to treat warnings as errors.
 
 **With Errors:**
 ```bash
-$ jay validate-plugin
+$ jay-stack validate-plugin
 
 ❌ Plugin validation failed
 
@@ -1977,112 +2123,68 @@ Plugin: my-plugin
   
 Errors:
   ❌ contracts[0]: Contract file not found: ./contracts/missing.jay-contract
+      Location: contracts[0]
       → Create the contract file or update the path in plugin.yaml
       
   ❌ contracts[0].component: Component file not found: ./components/missing.ts
+      Location: contracts[0].component
       → Create the component file or update the path in plugin.yaml
 
 2 errors found.
 ```
 
+**Local plugins validation:**
+```bash
+$ jay-stack validate-plugin --local
+
+✅ Validated 2 local plugins in src/plugins/
+
+Plugin: my-custom-plugin
+  ✅ plugin.yaml valid
+  ✅ 1 contract validated
+  ✅ 1 component validated
+  
+Plugin: experimental-plugin
+  ⚠️  1 warning
+  
+Warnings:
+  ⚠️  Missing component implementation
+      Contract: test-feature
+      → Implement ./components/test-feature.ts
+```
+
 ### Integration with jay-stack CLI
 
-**Add command to CLI entry point:**
+**Update CLI structure:**
 
-```typescript
-// packages/jay-stack/stack-cli/lib/cli.ts
+1. Move existing dev server to `dev` subcommand
+2. Add new `validate-plugin` command
+3. Use Commander package for command handling
 
-import { Command } from 'commander';
-import { validatePlugin } from './commands/validate-plugin';
-
-const program = new Command();
-
-// ... existing commands (start, build, etc.)
-
-program
-  .command('validate-plugin [path]')
-  .description('Validate a Jay Stack plugin package')
-  .option('-v, --verbose', 'Show detailed validation output')
-  .option('--strict', 'Treat warnings as errors (for CI)')
-  .action(async (pluginPath, options) => {
-    try {
-      const result = await validatePlugin({
-        pluginPath,
-        verbose: options.verbose,
-        strict: options.strict,
-      });
-      
-      // Print results
-      printValidationResult(result, options.verbose);
-      
-      // Exit with error code if validation failed
-      if (!result.valid || (options.strict && result.warnings.length > 0)) {
-        process.exit(1);
-      }
-    } catch (error) {
-      console.error(chalk.red('Validation error:'), error.message);
-      process.exit(1);
-    }
-  });
-
-function printValidationResult(result: ValidationResult, verbose: boolean): void {
-  if (result.valid && result.warnings.length === 0) {
-    console.log(chalk.green('✅ Plugin validation successful!\n'));
-    if (verbose) {
-      console.log('Plugin:', result.pluginName);
-      console.log('  ✅ plugin.yaml valid');
-      console.log(`  ✅ ${result.contractsChecked} contracts validated`);
-      console.log(`  ✅ ${result.componentsChecked} components validated`);
-      if (result.packageJsonChecked) {
-        console.log('  ✅ package.json valid');
-      }
-      console.log('\nNo errors found.');
-    }
-  } else if (result.valid && result.warnings.length > 0) {
-    console.log(chalk.yellow('⚠️  Plugin validation passed with warnings\n'));
-    console.log('Warnings:');
-    result.warnings.forEach(warning => {
-      console.log(chalk.yellow(`  ⚠️  ${warning.message}`));
-      if (warning.location) {
-        console.log(chalk.gray(`      Location: ${warning.location}`));
-      }
-      if (warning.suggestion) {
-        console.log(chalk.gray(`      → ${warning.suggestion}`));
-      }
-      console.log();
-    });
-    console.log(chalk.gray('Use --strict to treat warnings as errors.'));
-  } else {
-    console.log(chalk.red('❌ Plugin validation failed\n'));
-    console.log('Errors:');
-    result.errors.forEach(error => {
-      console.log(chalk.red(`  ❌ ${error.message}`));
-      if (error.location) {
-        console.log(chalk.gray(`      Location: ${error.location}`));
-      }
-      if (error.suggestion) {
-        console.log(chalk.gray(`      → ${error.suggestion}`));
-      }
-      console.log();
-    });
-    console.log(chalk.red(`${result.errors.length} errors found.`));
-  }
-}
-```
-
-**Usage:**
+**CLI commands:**
 
 ```bash
-# Using jay-stack CLI directly
-npm run jay-stack validate-plugin
+# Development server (existing functionality)
+jay-stack dev [path]
+jay-stack dev --port 3000
 
-# Or if installed globally/in PATH
-jay-stack validate-plugin
-
-# With options
-jay-stack validate-plugin ./my-plugin --verbose
+# Plugin validation (new)
+jay-stack validate-plugin [path]
+jay-stack validate-plugin --local
+jay-stack validate-plugin --generate-types
+jay-stack validate-plugin --verbose
 jay-stack validate-plugin --strict
+
+# Build (existing)
+jay-stack build
 ```
+
+**Implementation approach:**
+
+- Import validation functions from `@jay-framework/plugin-validator`
+- Add new command using Commander's `.command()` API
+- Format and display validation results
+- Exit with appropriate error codes (0 for success, 1 for failure)
 ```json
 {
   "scripts": {
