@@ -297,7 +297,7 @@ export interface DynamicContractGenerator {
 export interface GeneratedContract {
   name: string;                    // Contract name (e.g., "blog-post-list")
   contract: Contract;               // Parsed contract object
-  implementation: string;           // Path to implementation file
+  component: string;                // Path to component file
   description?: string;             // Optional description
 }
 
@@ -311,7 +311,7 @@ export const generator: DynamicContractGenerator = {
     return collections.map(collection => ({
       name: `${collection.name}-list`,
       contract: generateContractFromSchema(collection.schema),
-      implementation: `./generated/${collection.name}-list.ts`,
+      component: `./generated/${collection.name}-list.ts`,
       description: `List view for ${collection.name}`
     }));
   }
@@ -335,7 +335,7 @@ Once generated, they're used exactly like static contracts:
 **Build-time behavior:**
 1. During `jay build`, framework calls `generator.generate()`
 2. Generated contracts are validated
-3. Implementation files are generated or validated
+3. Component files are generated or validated
 4. Contracts become available for type-checking and compilation
 5. Results cached using `cache_key` (regenerate only when cache invalidated)
 
@@ -349,9 +349,8 @@ Once generated, they're used exactly like static contracts:
    module: "@mycompany/my-plugin"
    contracts:
      - name: my-component
-       key: myComponent
        contract: ./contracts/my-component.jay-contract
-       implementation: ./components/my-component.ts
+       component: ./components/my-component.ts
    ```
 
 2. **Create contract files**
@@ -418,7 +417,7 @@ Framework auto-discovers plugin via `node_modules/@wix/stores/plugin.yaml`
 **Local Plugin:**
 ```bash
 mkdir -p src/plugins/my-plugin
-# Create plugin.yaml, contracts, implementations in that folder
+# Create plugin.yaml, contracts, components in that folder
 ```
 
 ### Using a Plugin in a Page
@@ -563,7 +562,7 @@ async function loadPluginContracts(
       contracts.push({
         name: gen.name,
         contract: gen.contract,
-        implementation: gen.implementation,
+        component: gen.component,
         description: gen.description
       });
     }
@@ -588,7 +587,7 @@ export interface PluginManifest {
 export interface StaticContractDef {
   name: string;
   contract: string;           // Path to .jay-contract (resolved via package exports or relative path)
-  implementation: string;     // Path to implementation (resolved via package exports or relative path)
+  component: string;          // Path to component (resolved via package exports or relative path)
   description?: string;
 }
 
@@ -629,14 +628,15 @@ module: "@wix/stores"  # Optional - can be omitted if same as name
 contracts:
   - name: product-list
     contract: ./contracts/product-list.jay-contract
-    implementation: ./components/product-list
+    component: ./components/product-list
 ```
 
 **Key changes:**
 - Removed `pages`/`components` nesting
 - Removed `version` (use package.json version)
 - Removed `key` from contract definition (specified at usage site)
-- `implementation` path added (for ES module import)
+- Changed `implementation` → `component` (clearer semantics)
+- `component` path added (for ES module import)
 
 **Step 3:** Update package.json exports (for NPM packages)
 ```json
@@ -773,13 +773,13 @@ export const generator: DynamicContractGenerator = {
         ]
       };
       
-      // Generate implementation
-      const implementation = generateTemplate(collection);
+      // Generate component
+      const component = generateTemplate(collection);
       
       return {
         name: `${collection.name}-list`,
         contract,
-        implementation: `./generated/${collection.name}-list.ts`,
+        component: `./generated/${collection.name}-list.ts`,
         description: `List view for ${collection.displayName || collection.name}`
       };
     });
@@ -883,7 +883,7 @@ Then plugin.yaml references named exports:
 contracts:
   - name: product-list
     contract: "productListContract"  # Named export from main module
-    implementation: "productList"
+    component: "productList"
 ```
 
 **Which approach?**
@@ -913,7 +913,7 @@ But what if they want to use a specific contract version?
 contracts:
   - name: product-list
     contract: ./contracts/product-list.jay-contract
-    implementation: ./components/product-list.ts
+    component: ./components/product-list.ts
 ```
 
 **Format 2: Package exports (for NPM)**
@@ -921,7 +921,7 @@ contracts:
 contracts:
   - name: product-list
     contract: "./contracts/product-list.jay-contract"  # Resolved via exports
-    implementation: "./components/product-list"         # Resolved via exports
+    component: "./components/product-list"              # Resolved via exports
 ```
 
 **Question:** Are these the same format, or do we need different syntax? Can we auto-detect based on whether it's an NPM package or local plugin?
@@ -1028,7 +1028,7 @@ contracts:
 - Add extra fields
 - Change phase annotations
 
-**Risk:** Could break plugin implementations
+**Risk:** Could break plugin components
 
 ### 10. Should we support TypeScript for plugin.yaml?
 
@@ -1045,7 +1045,7 @@ export default definePlugin({
     {
       name: 'product-list',
       contract: './contracts/product-list.jay-contract',
-      implementation: './components/product-list'
+      component: './components/product-list'
     }
   ]
 });
@@ -1084,6 +1084,658 @@ import { productListContract } from '@wix/stores';
 5. **Update documentation** - Plugin development guide
 6. **Create example plugins** - Static and dynamic examples
 7. **Add validation** - Ensure contracts referenced exist
+8. **Create plugin validation tool** - `jay validate-plugin`
+
+## Plugin Validation Tool
+
+### Overview
+
+A CLI tool to validate plugin packages before publishing or during development. Ensures plugin.yaml is correct, all referenced files exist, and the package structure is valid.
+
+### Command
+
+```bash
+# Validate current directory as a plugin
+jay validate-plugin
+
+# Validate specific plugin directory
+jay validate-plugin ./my-plugin
+
+# Validate NPM package
+jay validate-plugin @wix/stores
+
+# Validate with verbose output
+jay validate-plugin --verbose
+
+# CI mode (exit code 1 on any error)
+jay validate-plugin --strict
+```
+
+### Validation Checks
+
+#### 1. **plugin.yaml Schema Validation**
+
+```typescript
+interface ValidationResult {
+  valid: boolean;
+  errors: ValidationError[];
+  warnings: ValidationWarning[];
+}
+
+interface ValidationError {
+  type: 'schema' | 'file-missing' | 'export-mismatch' | 'contract-invalid';
+  message: string;
+  location?: string;  // File path or YAML path
+  suggestion?: string;
+}
+```
+
+**Checks:**
+- ✅ plugin.yaml exists
+- ✅ Valid YAML syntax
+- ✅ Required fields present (`name`, `contracts` or `dynamic_contracts`)
+- ✅ Field types correct (strings, arrays, objects)
+- ✅ No unknown fields (warn only)
+- ✅ `module` field matches package.json `name` (for NPM packages)
+
+**Example errors:**
+```
+❌ Error: plugin.yaml not found
+❌ Error: Invalid YAML syntax at line 5
+❌ Error: Missing required field 'name'
+❌ Error: Field 'contracts' must be an array
+⚠️  Warning: Unknown field 'version' - use package.json version instead
+```
+
+#### 2. **Contract File Validation**
+
+**Checks:**
+- ✅ All referenced contract files exist
+- ✅ Contract files are valid `.jay-contract` files
+- ✅ Contract files can be parsed without errors
+- ✅ Contract names in files match declared names
+- ✅ For NPM packages: contract paths resolve via package.json exports
+
+**Example errors:**
+```
+❌ Error: Contract file not found: ./contracts/product-list.jay-contract
+   Referenced in: contracts[0]
+   
+❌ Error: Contract file invalid: ./contracts/cart.jay-contract
+   Parse error: Invalid YAML syntax at line 12
+   
+❌ Error: Contract name mismatch
+   Declared: "product-list"
+   Contract file name: "ProductList"
+   File: ./contracts/product-list.jay-contract
+   
+⚠️  Warning: Contract file not exported in package.json
+   File: ./contracts/product-list.jay-contract
+   Add to exports: "./contracts/*.jay-contract": "./dist/contracts/*.jay-contract"
+```
+
+#### 3. **Component File Validation**
+
+**Checks:**
+- ✅ All referenced component files exist
+- ✅ Component files are valid TypeScript/JavaScript
+- ✅ Component exports expected identifiers
+- ✅ For NPM packages: component paths resolve via package.json exports
+- ✅ For dual builds: both `index.js` and `index.client.js` exist in dist/
+
+**Example errors:**
+```
+❌ Error: Component file not found: ./components/product-list.ts
+   Referenced in: contracts[0].component
+   
+❌ Error: Component file not exported in package.json
+   File: ./components/product-list
+   Add to exports: ".": "./dist/index.js"
+   
+⚠️  Warning: Missing client build
+   Found: dist/index.js
+   Missing: dist/index.client.js
+   Run: npm run build:client
+   
+⚠️  Warning: Component file has no default or named export matching contract name
+   File: ./components/product-list.ts
+   Expected export: productList
+```
+
+#### 4. **Package.json Validation** (NPM packages only)
+
+**Checks:**
+- ✅ package.json exists
+- ✅ `name` field matches plugin.yaml `module`
+- ✅ `type: "module"` is set
+- ✅ `exports` field includes plugin.yaml
+- ✅ `exports` field includes contract paths
+- ✅ `exports` field includes component paths (both server and client)
+- ✅ `files` field includes dist/ and plugin.yaml
+- ✅ Build scripts exist for dual builds
+
+**Example errors:**
+```
+❌ Error: package.json not found
+   
+❌ Error: Package name mismatch
+   package.json: "@wix/stores"
+   plugin.yaml module: "@wix/store"
+   
+❌ Error: Missing package.json exports
+   Required: "./plugin.yaml": "./plugin.yaml"
+   
+⚠️  Warning: Missing "type": "module" in package.json
+   
+⚠️  Warning: Missing dual build scripts
+   Add: "build:client": "vite build"
+   Add: "build:server": "vite build --ssr"
+```
+
+#### 5. **Dynamic Contract Validation**
+
+**Checks:**
+- ✅ Generator file exists
+- ✅ Generator exports valid interface
+- ✅ Generator can be imported (syntax check)
+- ⚠️  Generator execution (optional, may require env vars)
+
+**Example errors:**
+```
+❌ Error: Generator file not found: ./generators/cms-generator.ts
+   Referenced in: dynamic_contracts.generator
+   
+❌ Error: Generator file has syntax errors
+   File: ./generators/cms-generator.ts
+   Error: Unexpected token at line 15
+   
+⚠️  Warning: Generator export validation skipped
+   Set environment variables to test generator execution
+```
+
+#### 6. **File Structure Validation**
+
+**Checks:**
+- ✅ Recommended directory structure
+- ✅ No conflicting files
+- ✅ Contract files in consistent location
+- ✅ Component files in consistent location
+
+**Example warnings:**
+```
+⚠️  Warning: Contracts not in recommended location
+   Found: ./product-list.jay-contract
+   Recommended: ./contracts/product-list.jay-contract
+   
+⚠️  Warning: Mixed contract locations
+   Some in ./contracts/, some in root
+   Consider organizing all contracts in ./contracts/
+```
+
+### Implementation
+
+Add to existing jay-stack CLI:
+
+```typescript
+// packages/jay-stack/stack-cli/lib/commands/validate-plugin.ts
+
+import path from 'path';
+import fs from 'fs';
+import YAML from 'yaml';
+import chalk from 'chalk';
+
+interface ValidatePluginOptions {
+  pluginPath?: string;
+  verbose?: boolean;
+  strict?: boolean;
+}
+
+export async function validatePlugin(options: ValidatePluginOptions = {}): Promise<ValidationResult> {
+  const pluginPath = options.pluginPath || process.cwd();
+  const verbose = options.verbose || false;
+  const strict = options.strict || false;
+  
+  const result: ValidationResult = {
+    valid: true,
+    errors: [],
+    warnings: [],
+  };
+  
+  // 1. Load and validate plugin.yaml
+  const pluginYamlPath = path.join(pluginPath, 'plugin.yaml');
+  if (!fs.existsSync(pluginYamlPath)) {
+    result.errors.push({
+      type: 'file-missing',
+      message: 'plugin.yaml not found',
+      location: pluginPath,
+      suggestion: 'Create a plugin.yaml file in the plugin root directory',
+    });
+    result.valid = false;
+    return result;
+  }
+  
+  // Parse plugin.yaml
+  let pluginManifest: PluginManifest;
+  try {
+    const yamlContent = fs.readFileSync(pluginYamlPath, 'utf-8');
+    pluginManifest = YAML.parse(yamlContent);
+  } catch (error) {
+    result.errors.push({
+      type: 'schema',
+      message: `Invalid YAML syntax: ${error.message}`,
+      location: pluginYamlPath,
+    });
+    result.valid = false;
+    return result;
+  }
+  
+  // 2. Schema validation
+  validateSchema(pluginManifest, pluginYamlPath, result);
+  
+  // 3. Contract file validation
+  if (pluginManifest.contracts) {
+    for (let i = 0; i < pluginManifest.contracts.length; i++) {
+      validateContract(pluginManifest.contracts[i], i, pluginPath, result);
+    }
+  }
+  
+  // 4. Component file validation
+  if (pluginManifest.contracts) {
+    for (let i = 0; i < pluginManifest.contracts.length; i++) {
+      validateComponent(pluginManifest.contracts[i], i, pluginPath, result);
+    }
+  }
+  
+  // 5. Package.json validation (if NPM package)
+  const packageJsonPath = path.join(pluginPath, 'package.json');
+  if (fs.existsSync(packageJsonPath)) {
+    validatePackageJson(pluginManifest, pluginPath, result);
+  }
+  
+  // 6. Dynamic contracts validation
+  if (pluginManifest.dynamic_contracts) {
+    validateDynamicContracts(pluginManifest.dynamic_contracts, pluginPath, result);
+  }
+  
+  // 7. File structure validation
+  validateFileStructure(pluginPath, result);
+  
+  // Final result
+  result.valid = result.errors.length === 0;
+  
+  return result;
+}
+
+function validateSchema(
+  manifest: PluginManifest,
+  location: string,
+  result: ValidationResult
+): void {
+  // Check required fields
+  if (!manifest.name) {
+    result.errors.push({
+      type: 'schema',
+      message: "Missing required field 'name'",
+      location,
+    });
+  }
+  
+  if (!manifest.contracts && !manifest.dynamic_contracts) {
+    result.errors.push({
+      type: 'schema',
+      message: "Plugin must have either 'contracts' or 'dynamic_contracts'",
+      location,
+    });
+  }
+  
+  // Check for deprecated fields
+  if ((manifest as any).version) {
+    result.warnings.push({
+      type: 'schema',
+      message: "Field 'version' is deprecated - use package.json version instead",
+      location,
+      suggestion: 'Remove version from plugin.yaml',
+    });
+  }
+  
+  // Validate contracts array
+  if (manifest.contracts && !Array.isArray(manifest.contracts)) {
+    result.errors.push({
+      type: 'schema',
+      message: "Field 'contracts' must be an array",
+      location,
+    });
+  }
+}
+
+function validateContract(
+  contract: StaticContractDef,
+  index: number,
+  pluginPath: string,
+  result: ValidationResult
+): void {
+  const contractPath = path.join(pluginPath, contract.contract);
+  
+  // Check file exists
+  if (!fs.existsSync(contractPath)) {
+    result.errors.push({
+      type: 'file-missing',
+      message: `Contract file not found: ${contract.contract}`,
+      location: `contracts[${index}]`,
+      suggestion: `Create the contract file or update the path in plugin.yaml`,
+    });
+    return;
+  }
+  
+  // Parse and validate contract
+  try {
+    const contractContent = fs.readFileSync(contractPath, 'utf-8');
+    const contractData = YAML.parse(contractContent);
+    
+    // Validate contract name matches
+    if (contractData.name && contractData.name !== toPascalCase(contract.name)) {
+      result.warnings.push({
+        type: 'schema',
+        message: `Contract name mismatch`,
+        location: contractPath,
+        suggestion: `Contract file name should be '${toPascalCase(contract.name)}' or declare name: '${contract.name}' in plugin.yaml`,
+      });
+    }
+  } catch (error) {
+    result.errors.push({
+      type: 'contract-invalid',
+      message: `Invalid contract file: ${error.message}`,
+      location: contractPath,
+    });
+  }
+}
+
+function validateComponent(
+  contract: StaticContractDef,
+  index: number,
+  pluginPath: string,
+  result: ValidationResult
+): void {
+  const componentPath = path.join(pluginPath, contract.component);
+  
+  // Try with .ts and .js extensions
+  const possiblePaths = [
+    componentPath,
+    `${componentPath}.ts`,
+    `${componentPath}.js`,
+  ];
+  
+  const exists = possiblePaths.some(p => fs.existsSync(p));
+  
+  if (!exists) {
+    result.errors.push({
+      type: 'file-missing',
+      message: `Component file not found: ${contract.component}`,
+      location: `contracts[${index}].component`,
+      suggestion: `Create the component file or update the path in plugin.yaml`,
+    });
+  }
+}
+
+function validatePackageJson(
+  manifest: PluginManifest,
+  pluginPath: string,
+  result: ValidationResult
+): void {
+  const packageJsonPath = path.join(pluginPath, 'package.json');
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+  
+  // Check module name matches
+  if (manifest.module && packageJson.name !== manifest.module) {
+    result.errors.push({
+      type: 'schema',
+      message: `Package name mismatch: package.json="${packageJson.name}", plugin.yaml module="${manifest.module}"`,
+      location: packageJsonPath,
+      suggestion: `Update module in plugin.yaml to match package.json name`,
+    });
+  }
+  
+  // Check type: module
+  if (packageJson.type !== 'module') {
+    result.warnings.push({
+      type: 'schema',
+      message: 'Missing "type": "module" in package.json',
+      location: packageJsonPath,
+      suggestion: 'Add "type": "module" to package.json',
+    });
+  }
+  
+  // Check exports include plugin.yaml
+  if (!packageJson.exports || !packageJson.exports['./plugin.yaml']) {
+    result.errors.push({
+      type: 'export-mismatch',
+      message: 'plugin.yaml not exported in package.json',
+      location: packageJsonPath,
+      suggestion: 'Add "./plugin.yaml": "./plugin.yaml" to exports',
+    });
+  }
+  
+  // Check dual builds exist
+  const distPath = path.join(pluginPath, 'dist');
+  if (fs.existsSync(distPath)) {
+    const hasServerBuild = fs.existsSync(path.join(distPath, 'index.js'));
+    const hasClientBuild = fs.existsSync(path.join(distPath, 'index.client.js'));
+    
+    if (!hasServerBuild) {
+      result.warnings.push({
+        type: 'file-missing',
+        message: 'Server build not found: dist/index.js',
+        location: distPath,
+        suggestion: 'Run: npm run build:server',
+      });
+    }
+    
+    if (!hasClientBuild) {
+      result.warnings.push({
+        type: 'file-missing',
+        message: 'Client build not found: dist/index.client.js',
+        location: distPath,
+        suggestion: 'Run: npm run build:client',
+      });
+    }
+  }
+}
+
+function toPascalCase(str: string): string {
+  return str.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
+}
+```
+
+### Output Format
+
+**Success:**
+```bash
+$ jay validate-plugin
+
+✅ Plugin validation successful!
+
+Plugin: wix-stores (@wix/stores)
+  ✅ plugin.yaml valid
+  ✅ 3 contracts validated
+  ✅ 3 components validated
+  ✅ package.json valid
+  ✅ Dual builds present
+  
+No errors found.
+```
+
+**With Warnings:**
+```bash
+$ jay validate-plugin
+
+⚠️  Plugin validation passed with warnings
+
+Plugin: my-plugin
+  ✅ plugin.yaml valid
+  ✅ 2 contracts validated
+  ⚠️  1 warning
+
+Warnings:
+  ⚠️  contracts/product.jay-contract: Contract name mismatch
+      Expected: 'Product', Found: 'ProductList'
+      
+Use --strict to treat warnings as errors.
+```
+
+**With Errors:**
+```bash
+$ jay validate-plugin
+
+❌ Plugin validation failed
+
+Plugin: my-plugin
+  ❌ plugin.yaml invalid
+  ❌ 1 contract missing
+  ✅ 1 component validated
+  
+Errors:
+  ❌ contracts[0]: Contract file not found: ./contracts/missing.jay-contract
+      → Create the contract file or update the path in plugin.yaml
+      
+  ❌ contracts[0].component: Component file not found: ./components/missing.ts
+      → Create the component file or update the path in plugin.yaml
+
+2 errors found.
+```
+
+### Integration with jay-stack CLI
+
+**Add command to CLI entry point:**
+
+```typescript
+// packages/jay-stack/stack-cli/lib/cli.ts
+
+import { Command } from 'commander';
+import { validatePlugin } from './commands/validate-plugin';
+
+const program = new Command();
+
+// ... existing commands (start, build, etc.)
+
+program
+  .command('validate-plugin [path]')
+  .description('Validate a Jay Stack plugin package')
+  .option('-v, --verbose', 'Show detailed validation output')
+  .option('--strict', 'Treat warnings as errors (for CI)')
+  .action(async (pluginPath, options) => {
+    try {
+      const result = await validatePlugin({
+        pluginPath,
+        verbose: options.verbose,
+        strict: options.strict,
+      });
+      
+      // Print results
+      printValidationResult(result, options.verbose);
+      
+      // Exit with error code if validation failed
+      if (!result.valid || (options.strict && result.warnings.length > 0)) {
+        process.exit(1);
+      }
+    } catch (error) {
+      console.error(chalk.red('Validation error:'), error.message);
+      process.exit(1);
+    }
+  });
+
+function printValidationResult(result: ValidationResult, verbose: boolean): void {
+  if (result.valid && result.warnings.length === 0) {
+    console.log(chalk.green('✅ Plugin validation successful!\n'));
+    if (verbose) {
+      console.log('Plugin:', result.pluginName);
+      console.log('  ✅ plugin.yaml valid');
+      console.log(`  ✅ ${result.contractsChecked} contracts validated`);
+      console.log(`  ✅ ${result.componentsChecked} components validated`);
+      if (result.packageJsonChecked) {
+        console.log('  ✅ package.json valid');
+      }
+      console.log('\nNo errors found.');
+    }
+  } else if (result.valid && result.warnings.length > 0) {
+    console.log(chalk.yellow('⚠️  Plugin validation passed with warnings\n'));
+    console.log('Warnings:');
+    result.warnings.forEach(warning => {
+      console.log(chalk.yellow(`  ⚠️  ${warning.message}`));
+      if (warning.location) {
+        console.log(chalk.gray(`      Location: ${warning.location}`));
+      }
+      if (warning.suggestion) {
+        console.log(chalk.gray(`      → ${warning.suggestion}`));
+      }
+      console.log();
+    });
+    console.log(chalk.gray('Use --strict to treat warnings as errors.'));
+  } else {
+    console.log(chalk.red('❌ Plugin validation failed\n'));
+    console.log('Errors:');
+    result.errors.forEach(error => {
+      console.log(chalk.red(`  ❌ ${error.message}`));
+      if (error.location) {
+        console.log(chalk.gray(`      Location: ${error.location}`));
+      }
+      if (error.suggestion) {
+        console.log(chalk.gray(`      → ${error.suggestion}`));
+      }
+      console.log();
+    });
+    console.log(chalk.red(`${result.errors.length} errors found.`));
+  }
+}
+```
+
+**Usage:**
+
+```bash
+# Using jay-stack CLI directly
+npm run jay-stack validate-plugin
+
+# Or if installed globally/in PATH
+jay-stack validate-plugin
+
+# With options
+jay-stack validate-plugin ./my-plugin --verbose
+jay-stack validate-plugin --strict
+```
+```json
+{
+  "scripts": {
+    "validate": "jay-stack validate-plugin",
+    "prepack": "npm run validate",
+    "prepublishOnly": "npm run validate --strict"
+  }
+}
+```
+
+**In CI/CD:**
+```yaml
+# .github/workflows/validate.yml
+name: Validate Plugin
+on: [push, pull_request]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+      - run: npm install
+      - run: npm run build
+      - run: npx jay-stack validate-plugin --strict --verbose
+```
+
+### Benefits
+
+1. **Catch errors early** - Before publishing or deployment
+2. **Clear error messages** - With suggestions for fixes
+3. **CI/CD integration** - Prevent invalid plugins from being published
+4. **Development feedback** - Quick validation during development
+5. **Documentation** - Validation rules serve as documentation
+6. **Consistency** - Enforce plugin structure standards
 
 ## Success Criteria
 
