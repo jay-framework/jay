@@ -1,0 +1,7 @@
+{
+  "extends": "../../../../../dev-environment/library/tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist"
+  }
+}
+

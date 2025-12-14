@@ -25,6 +25,7 @@
   "dependencies": {
     "@jay-framework/dev-server": "workspace:^",
     "@jay-framework/editor-server": "workspace:^",
+    "@jay-framework/figma-adapter": "workspace:^",
     "express": "^5.0.1",
     "vite": "^5.0.11"
   },

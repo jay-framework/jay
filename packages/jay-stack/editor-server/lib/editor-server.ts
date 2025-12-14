@@ -10,10 +10,14 @@ import type {
     SaveImageMessage,
     HasImageMessage,
     GetProjectInfoMessage,
+    ExportDesignMessage,
+    ImportDesignMessage,
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
     GetProjectInfoResponse,
+    ExportDesignResponse,
+    ImportDesignResponse,
 } from '@jay-framework/editor-protocol';
 import { createProtocolResponse } from '@jay-framework/editor-protocol';
 
@@ -45,6 +49,8 @@ export class EditorServer implements DevServerProtocol {
         saveImage?: (params: SaveImageMessage) => Promise<SaveImageResponse>;
         hasImage?: (params: HasImageMessage) => Promise<HasImageResponse>;
         getProjectInfo?: (params: GetProjectInfoMessage) => Promise<GetProjectInfoResponse>;
+        exportDesign?: (params: ExportDesignMessage) => Promise<ExportDesignResponse>;
+        importDesign?: (params: ImportDesignMessage) => Promise<ImportDesignResponse>;
     } = {};
 
     constructor(options: EditorServerOptions) {
@@ -145,6 +151,14 @@ export class EditorServer implements DevServerProtocol {
         callback: (params: GetProjectInfoMessage) => Promise<GetProjectInfoResponse>,
     ): void {
         this.handlers.getProjectInfo = callback;
+    }
+
+    onExportDesign(callback: (params: ExportDesignMessage) => Promise<ExportDesignResponse>): void {
+        this.handlers.exportDesign = callback;
+    }
+
+    onImportDesign(callback: (params: ImportDesignMessage) => Promise<ImportDesignResponse>): void {
+        this.handlers.importDesign = callback;
     }
 
     private handlePortDiscovery(req: any, res: any): void {
@@ -248,6 +262,24 @@ export class EditorServer implements DevServerProtocol {
                     payload as GetProjectInfoMessage,
                 );
                 return createProtocolResponse(id, infoResult);
+
+            case 'exportDesign':
+                if (!this.handlers.exportDesign) {
+                    throw new Error('Export design handler not registered');
+                }
+                const exportResult = await this.handlers.exportDesign(
+                    payload as ExportDesignMessage
+                );
+                return createProtocolResponse(id, exportResult);
+
+            case 'importDesign':
+                if (!this.handlers.importDesign) {
+                    throw new Error('Import design handler not registered');
+                }
+                const importResult = await this.handlers.importDesign(
+                    payload as ImportDesignMessage
+                );
+                return createProtocolResponse(id, importResult);
 
             default:
                 throw new Error(`Unknown message type: ${(payload as any).type}`);

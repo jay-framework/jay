@@ -1,5 +1,6 @@
 import express, { Express } from 'express';
-import { mkDevServer } from '@jay-framework/dev-server';
+import { mkDevServer, designAdapterRegistry } from '@jay-framework/dev-server';
+import { FigmaAdapter } from '@jay-framework/figma-adapter';
 import { createEditorServer } from '@jay-framework/editor-server';
 import getPort from 'get-port';
 import path from 'path';
@@ -47,8 +48,17 @@ async function initApp() {
     editorServer.onSaveImage(handlers.onSaveImage);
     editorServer.onHasImage(handlers.onHasImage);
     editorServer.onGetProjectInfo(handlers.onGetProjectInfo);
+    editorServer.onExportDesign(handlers.onExportDesign);
+    editorServer.onImportDesign(handlers.onImportDesign);
 
     // Start dev server
+    // Register Adapters
+    try {
+        designAdapterRegistry.register(new FigmaAdapter());
+    } catch (e) {
+        // Ignore if already registered (e.g. during hot reload if that happens)
+    }
+
     const { server, viteServer, routes } = await mkDevServer({
         pagesRootFolder: path.resolve(resolvedConfig.devServer.pagesBase),
         projectRootFolder: process.cwd(),
@@ -58,7 +68,7 @@ async function initApp() {
     });
 
     app.use(server);
-
+    
     // Serve static files from public folder
     const publicPath = path.resolve(resolvedConfig.devServer.publicFolder);
     if (fs.existsSync(publicPath)) {

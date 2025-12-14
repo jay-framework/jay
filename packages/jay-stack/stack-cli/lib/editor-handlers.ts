@@ -22,7 +22,12 @@ import type {
     ContractTag as ProtocolContractTag,
     ContractSchema,
     InstalledAppContracts,
+    ExportDesignMessage,
+    ImportDesignMessage,
+    ExportDesignResponse,
+    ImportDesignResponse,
 } from '@jay-framework/editor-protocol';
+import { designAdapterRegistry } from '@jay-framework/dev-server';
 import type { JayConfig } from './config';
 import {
     generateElementDefinitionFile,
@@ -1011,10 +1016,110 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
         }
     };
 
+    const onImportDesign = async (params: ImportDesignMessage): Promise<ImportDesignResponse> => {
+        try {
+            const { vendorId, pageUrl } = params;
+            const pagesBasePath = path.resolve(config.devServer.pagesBase);
+            const targetDir = path.join(pagesBasePath, pageUrl);
+            const vendorFile = path.join(targetDir, `page.${vendorId}.json`);
+
+            // Check if file exists
+            try {
+                 await fs.promises.access(vendorFile);
+            } catch {
+                return {
+                    type: 'importDesign',
+                    success: false,
+                    error: 'Design file not found'
+                };
+            }
+
+            const content = await fs.promises.readFile(vendorFile, 'utf-8');
+            const data = JSON.parse(content);
+
+            console.log(`📥 Imported design for ${pageUrl} from ${vendorId}`);
+
+            return {
+                type: 'importDesign',
+                success: true,
+                data
+            };
+
+        } catch (error) {
+            console.error('Failed to import design:', error);
+            return {
+                type: 'importDesign',
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            };
+        }
+    };
+
+    const onExportDesign = async (params: ExportDesignMessage): Promise<ExportDesignResponse> => {
+        try {
+            const { vendorId, pageUrl, data } = params;
+            const pagesBasePath = path.resolve(config.devServer.pagesBase);
+            const targetDir = path.join(pagesBasePath, pageUrl);
+            
+            // Ensure directory exists
+            await fs.promises.mkdir(targetDir, { recursive: true });
+
+            // 1. Get Adapter
+            let adapter;
+            try {
+                adapter = designAdapterRegistry.get(vendorId);
+            } catch (e) {
+                return {
+                    type: 'exportDesign',
+                    success: false,
+                    error: (e as Error).message
+                };
+            }
+
+            // 2. Validate (Optional)
+            if (adapter.validate && !adapter.validate(data)) {
+                 return {
+                    type: 'exportDesign',
+                    success: false,
+                    error: 'Invalid data format'
+                };
+            }
+
+            // 3. Save Source of Truth
+            const vendorFile = path.join(targetDir, `page.${vendorId}.json`);
+            await fs.promises.writeFile(vendorFile, JSON.stringify(data, null, 2));
+
+            // 4. Convert
+            const jayHtml = await adapter.convert(data);
+
+            // 5. Save Generated Code
+            const jayHtmlFile = path.join(targetDir, 'page.jay-html');
+            await fs.promises.writeFile(jayHtmlFile, jayHtml);
+
+            console.log(`📤 Exported design for ${pageUrl} from ${vendorId}`);
+
+            return {
+                type: 'exportDesign',
+                success: true,
+                path: vendorFile
+            };
+
+        } catch (error) {
+            console.error('Failed to export design:', error);
+             return {
+                type: 'exportDesign',
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error'
+            };
+        }
+    };
+
     return {
         onPublish,
         onSaveImage,
         onHasImage,
         onGetProjectInfo,
+        onExportDesign,
+        onImportDesign,
     };
 }

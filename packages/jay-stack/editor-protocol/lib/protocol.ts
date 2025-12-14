@@ -44,6 +44,21 @@ export interface GetProjectInfoMessage extends BaseMessage<GetProjectInfoRespons
     type: 'getProjectInfo';
 }
 
+// --- New Design Sync Messages ---
+
+export interface ExportDesignMessage extends BaseMessage<ExportDesignResponse> {
+    type: 'exportDesign';
+    vendorId: string;
+    pageUrl: string;
+    data: any; // Vendor-specific JSON (e.g., FigmaInterchangeDoc)
+}
+
+export interface ImportDesignMessage extends BaseMessage<ImportDesignResponse> {
+    type: 'importDesign';
+    vendorId: string;
+    pageUrl: string;
+}
+
 // Response types with discriminators
 export interface PublishResponse extends BaseResponse {
     type: 'publish';
@@ -68,6 +83,16 @@ export interface HasImageResponse extends BaseResponse {
     type: 'hasImage';
     exists: boolean;
     imageUrl?: string;
+}
+
+export interface ExportDesignResponse extends BaseResponse {
+    type: 'exportDesign';
+    path?: string;
+}
+
+export interface ImportDesignResponse extends BaseResponse {
+    type: 'importDesign';
+    data?: any;
 }
 
 export interface ProjectPage {
@@ -164,12 +189,17 @@ export type EditorProtocolMessageTypes =
     | PublishMessage
     | SaveImageMessage
     | HasImageMessage
-    | GetProjectInfoMessage;
+    | GetProjectInfoMessage
+    | ExportDesignMessage
+    | ImportDesignMessage;
+
 export type EditorProtocolResponseTypes =
     | PublishResponse
     | SaveImageResponse
     | HasImageResponse
-    | GetProjectInfoResponse;
+    | GetProjectInfoResponse
+    | ExportDesignResponse
+    | ImportDesignResponse;
 
 export interface ProtocolMessage {
     id: string;
@@ -195,6 +225,12 @@ export interface EditorProtocol {
 
     // Get comprehensive project information including configuration and contracts
     getProjectInfo(params: GetProjectInfoMessage): Promise<GetProjectInfoResponse>;
+
+    // Export a design to the dev server (Source of Truth)
+    exportDesign(params: ExportDesignMessage): Promise<ExportDesignResponse>;
+
+    // Import a design from the dev server (Source of Truth)
+    importDesign(params: ImportDesignMessage): Promise<ImportDesignResponse>;
 }
 
 // Dev server side interface for handling editor requests
@@ -210,4 +246,10 @@ export interface DevServerProtocol {
 
     // Handle project info requests
     onGetProjectInfo(callback: EditorProtocol['getProjectInfo']): void;
+
+    // Handle design export requests
+    onExportDesign(callback: EditorProtocol['exportDesign']): void;
+
+    // Handle design import requests
+    onImportDesign(callback: EditorProtocol['importDesign']): void;
 }
