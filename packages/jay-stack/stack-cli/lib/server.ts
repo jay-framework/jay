@@ -8,19 +8,29 @@ import { loadConfig, updateConfig, getConfigWithDefaults } from './config';
 import { createEditorHandlers } from './editor-handlers';
 import { generatePageDefinitionFiles } from './generate-page-definition-files';
 
-// Load configuration
-const config = loadConfig();
-const resolvedConfig = getConfigWithDefaults(config);
+export interface StartDevServerOptions {
+    projectPath?: string;
+}
 
-const jayOptions = {
-    tsConfigFilePath: './tsconfig.json',
-    outputDir: 'build/jay-runtime',
-};
+export async function startDevServer(options: StartDevServerOptions = {}) {
+    const projectPath = options.projectPath || process.cwd();
+    
+    // Change to project directory if specified
+    if (projectPath !== process.cwd()) {
+        process.chdir(projectPath);
+    }
+    
+    // Load configuration
+    const config = loadConfig();
+    const resolvedConfig = getConfigWithDefaults(config);
 
-// Create http server
-const app: Express = express();
+    const jayOptions = {
+        tsConfigFilePath: './tsconfig.json',
+        outputDir: 'build/jay-runtime',
+    };
 
-async function initApp() {
+    // Create http server
+    const app: Express = express();
     // Find available port for dev server
     const devServerPort = await getPort({ port: resolvedConfig.devServer.portRange });
 
@@ -93,12 +103,8 @@ async function initApp() {
         await new Promise((resolve) => expressServer.close(resolve));
         process.exit(0);
     };
+    
     // Handle graceful shutdown
     process.on('SIGTERM', shutdown);
     process.on('SIGINT', shutdown);
 }
-
-initApp().catch((error) => {
-    console.error('Failed to start servers:', error);
-    process.exit(1);
-});

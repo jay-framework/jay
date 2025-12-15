@@ -1,10 +1,14 @@
 {
-  "name": "@jay-framework/jay-stack-cli",
+  "name": "@jay-framework/plugin-validator",
   "version": "0.9.0",
-  "license": "Apache-2.0",
   "type": "module",
+  "license": "Apache-2.0",
+  "description": "Validation tool for Jay Stack plugins",
   "main": "dist/index.js",
-  "bin": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js"
+  },
   "files": [
     "dist",
     "readme.md"
@@ -15,31 +19,24 @@
     "build:js": "vite build",
     "build:types": "tsup lib/index.ts --dts-only --format esm",
     "build:check-types": "tsc",
-    "test-definitions": "jay-cli definitions test",
-    "test-runtime": "jay-cli runtime test",
     "clean": "rimraf dist",
     "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
     "test": "vitest run",
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@jay-framework/dev-server": "workspace:^",
-    "@jay-framework/editor-server": "workspace:^",
-    "@jay-framework/plugin-validator": "workspace:^",
+    "@jay-framework/compiler-jay-html": "workspace:^",
+    "@jay-framework/editor-protocol": "workspace:^",
     "chalk": "^5.3.0",
-    "commander": "^11.1.0",
-    "express": "^5.0.1",
-    "vite": "^5.0.11"
+    "yaml": "^2.3.4"
   },
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",
-    "@types/express": "^5.0.2",
     "@types/node": "^22.15.21",
-    "nodemon": "^3.0.3",
-    "replace-in-file": "^7.1.0",
     "rimraf": "^5.0.5",
     "tsup": "^8.0.1",
     "typescript": "^5.3.3",
+    "vite": "^5.0.11",
     "vitest": "^1.2.1"
   }
 }

@@ -110,17 +110,12 @@ export interface PluginManifest {
 }
 
 export interface Plugin {
-    name: string;
-    module?: string;
-    location: 'npm' | 'local';  // Where the plugin is installed
-    manifestPath: string;       // Path to plugin.yaml
-    contracts: Array<{
-        name: string;           // Contract name (with prefix for dynamic)
-        contractPath: string;   // Path to contract file
-        componentPath: string;  // Path to component
-        isDynamic: boolean;     // Whether from dynamic_contracts
-        description?: string;
-    }>;
+    manifest: PluginManifest;
+    location: {
+        type: 'local' | 'npm';
+        path?: string;      // For local plugins (src/plugins/my-plugin)
+        module?: string;    // For npm plugins (@wix/stores)
+    };
 }
 
 // Legacy type for backward compatibility
