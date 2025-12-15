@@ -92,7 +92,7 @@ export interface ProjectComponent {
 export interface StaticContractDef {
     name: string; // Contract name (kebab-case)
     contract: string; // Path to contract file
-    component: string; // Path to component implementation
+    component: string; // Exported member name from the module (e.g., "moodTracker")
     description?: string; // Optional description
 }
 

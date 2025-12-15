@@ -203,7 +203,7 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
                         type: 'schema',
                         message: `Contract "${contract.name || index}" is missing "component" field`,
                         location: 'plugin.yaml',
-                        suggestion: 'Specify path to component implementation',
+                        suggestion: 'Specify the exported member name from the module (e.g., "moodTracker")',
                     });
                 }
             });
@@ -261,17 +261,50 @@ async function validateContract(
 ): Promise<void> {
     result.contractsChecked = (result.contractsChecked || 0) + 1;
 
-    const contractPath = path.join(context.pluginPath, contract.contract);
+    let contractPath: string;
 
-    // Check if contract file exists
-    if (!fs.existsSync(contractPath)) {
-        result.errors.push({
-            type: 'file-missing',
-            message: `Contract file not found: ${contract.contract}`,
-            location: `plugin.yaml contracts[${index}]`,
-            suggestion: `Create the contract file at ${contractPath}`,
-        });
-        return;
+    if (context.isNpmPackage) {
+        // For NPM packages, contract should be an export subpath (e.g., "mood-tracker.jay-contract")
+        // Check if the file exists in common locations
+        const contractSpec = contract.contract;
+        const possiblePaths = [
+            path.join(context.pluginPath, 'dist', contractSpec),
+            path.join(context.pluginPath, 'lib', contractSpec),
+            path.join(context.pluginPath, contractSpec),
+        ];
+        
+        let found = false;
+        for (const possiblePath of possiblePaths) {
+            if (fs.existsSync(possiblePath)) {
+                contractPath = possiblePath;
+                found = true;
+                break;
+            }
+        }
+        
+        if (!found) {
+            result.errors.push({
+                type: 'file-missing',
+                message: `Contract file not found: ${contractSpec}`,
+                location: `plugin.yaml contracts[${index}]`,
+                suggestion: `Ensure the contract file exists (looked in dist/, lib/, and root)`,
+            });
+            return;
+        }
+    } else {
+        // For local plugins, contract is a relative path
+        contractPath = path.join(context.pluginPath, contract.contract);
+        
+        // Check if contract file exists
+        if (!fs.existsSync(contractPath)) {
+            result.errors.push({
+                type: 'file-missing',
+                message: `Contract file not found: ${contract.contract}`,
+                location: `plugin.yaml contracts[${index}]`,
+                suggestion: `Create the contract file at ${contractPath}`,
+            });
+            return;
+        }
     }
 
     // Validate contract file is valid YAML
@@ -326,7 +359,7 @@ async function validateContract(
 }
 
 /**
- * Validates that component file exists
+ * Validates that component export name is valid
  */
 async function validateComponent(
     contract: any,
@@ -336,29 +369,28 @@ async function validateComponent(
 ): Promise<void> {
     result.componentsChecked = (result.componentsChecked || 0) + 1;
 
-    // For NPM packages, we can't easily validate exports without loading the package
-    // So we'll just validate for local plugins
-    if (!context.isNpmPackage) {
-        const componentPath = contract.component;
-        const possibleExtensions = ['.ts', '.js', '.tsx', '.jsx', '/index.ts', '/index.js'];
-
-        let found = false;
-        for (const ext of possibleExtensions) {
-            const fullPath = path.join(context.pluginPath, componentPath + ext);
-            if (fs.existsSync(fullPath)) {
-                found = true;
-                break;
-            }
-        }
-
-        if (!found) {
-            result.errors.push({
-                type: 'file-missing',
-                message: `Component file not found: ${componentPath}`,
-                location: `plugin.yaml contracts[${index}]`,
-                suggestion: `Create a component file at ${componentPath}.ts or ${componentPath}/index.ts`,
-            });
-        }
+    // For NPM packages, component is just the export name (e.g., "moodTracker")
+    // For local plugins, it's also just the export name
+    // We can't really validate the export exists without loading the module,
+    // but we can check the format
+    
+    if (typeof contract.component !== 'string' || contract.component.length === 0) {
+        result.errors.push({
+            type: 'schema',
+            message: `Invalid component name: ${contract.component}`,
+            location: `plugin.yaml contracts[${index}]`,
+            suggestion: 'Component should be the exported member name (e.g., "moodTracker")',
+        });
+    }
+    
+    // Warn if component name looks like a path instead of an export name
+    if (contract.component.includes('/') || contract.component.includes('.')) {
+        result.warnings.push({
+            type: 'schema',
+            message: `Component "${contract.component}" looks like a path. Should it be an export name?`,
+            location: `plugin.yaml contracts[${index}]`,
+            suggestion: 'Component should be the exported member name (e.g., "moodTracker"), not a file path',
+        });
     }
 }
 
@@ -406,16 +438,40 @@ async function validatePackageJson(
             // Check for contract exports if contracts are defined
             if (context.manifest.contracts) {
                 for (const contract of context.manifest.contracts) {
-                    const contractExport = `./contracts/${contract.name}.jay-contract`;
+                    // Contract should be an export subpath (e.g., "mood-tracker.jay-contract")
+                    // Prepend "./" to create the export key
+                    const contractExport = './' + contract.contract;
+                    
                     if (!packageJson.exports[contractExport]) {
-                        result.warnings.push({
+                        result.errors.push({
                             type: 'export-mismatch',
-                            message: `Contract ${contract.name} not exported in package.json`,
+                            message: `Contract "${contract.name}" not exported in package.json`,
                             location: packageJsonPath,
-                            suggestion: `Add "${contractExport}" to exports field`,
+                            suggestion: `Add "${contractExport}": "./dist/${contract.contract}" to exports field`,
                         });
                     }
                 }
+            }
+            
+            // Check for main export (required for NPM packages, even when module is not specified)
+            if (!packageJson.exports['.']) {
+                result.errors.push({
+                    type: 'export-mismatch',
+                    message: 'NPM package missing "." export in package.json',
+                    location: packageJsonPath,
+                    suggestion: 'Add ".": "./dist/index.js" (or your main file) to exports field',
+                });
+            }
+            
+            // If module is explicitly specified, validate it
+            if (context.manifest.module) {
+                const moduleName = context.manifest.module;
+                result.warnings.push({
+                    type: 'schema',
+                    message: 'NPM packages should omit the "module" field - the package main export will be used',
+                    location: 'plugin.yaml',
+                    suggestion: 'Remove the "module" field from plugin.yaml',
+                });
             }
         }
 

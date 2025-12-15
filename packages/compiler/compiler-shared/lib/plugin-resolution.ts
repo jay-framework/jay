@@ -11,11 +11,11 @@ const require = createRequire(import.meta.url);
  */
 export interface PluginManifest {
     name: string;
-    module?: string;
+    module?: string; // Optional: For local plugins, relative path to module (e.g., "dist/index.js"). For NPM packages, omit to use main export.
     contracts?: Array<{
         name: string;
-        contract: string;
-        component: string;
+        contract: string; // For NPM: export subpath (e.g., "contract.jay-contract"). For local: relative path.
+        component: string; // Exported member name from module (e.g., "moodTracker")
         description?: string;
     }>;
     dynamic_contracts?: {
@@ -31,10 +31,14 @@ export interface PluginManifest {
 export interface PluginComponentResolution {
     /** Absolute path to the contract file */
     contractPath: string;
-    /** Absolute path to the component file (without extension) */
+    /** Absolute path to the component file (without extension) - used for local plugins */
     componentPath: string;
     /** Component name to import */
     componentName: string;
+    /** Whether this is an NPM package (vs local plugin) */
+    isNpmPackage: boolean;
+    /** For NPM packages: the package name to import from */
+    packageName?: string;
 }
 
 /**
@@ -106,11 +110,16 @@ export function resolveLocalPlugin(
         ]);
     }
 
+    // Component path comes from manifest.module (or defaults to index.js)
+    const componentModule = manifest.module || 'index.js';
+    const componentPath = path.join(localPluginPath, componentModule);
+    
     return new WithValidations(
         {
             contractPath: path.join(localPluginPath, contract.contract),
-            componentPath: path.join(localPluginPath, contract.component),
-            componentName: contractName,
+            componentPath: componentPath,
+            componentName: contract.component, // This is the exported member name
+            isNpmPackage: false,
         },
         [],
     );
@@ -172,74 +181,66 @@ export function resolveNpmPlugin(
         ]);
     }
 
-    // For NPM packages, resolve paths through package.json exports
+    // For NPM packages, resolve through package.json exports
     const packageJsonPath = path.join(npmPluginPath, 'package.json');
-    let resolvedContractPath: string;
-    let resolvedComponentPath: string;
-    const warnings: string[] = [];
-
+    let componentPath: string;
+    let contractPath: string;
+    
     if (fs.existsSync(packageJsonPath)) {
         try {
             const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-
-            // Try to resolve contract through exports
-            const contractExportKey = `./contracts/${contract.contract}`;
-            if (packageJson.exports && packageJson.exports[contractExportKey]) {
-                resolvedContractPath = path.join(
-                    npmPluginPath,
-                    packageJson.exports[contractExportKey],
-                );
-            } else {
-                resolvedContractPath = path.join(npmPluginPath, contract.contract);
-            }
-
-            // Try to resolve component through exports or module field
-            if (packageJson.exports && packageJson.exports['.']) {
-                // If exports["."]. default exists, use directory from that
+            const packageName = packageJson.name;
+            
+            // Resolve component module path
+            // For NPM packages, module field is optional - defaults to using package's main export
+            const moduleName = manifest.module || packageName;
+            if ((moduleName === packageName || !manifest.module) && packageJson.exports && packageJson.exports['.']) {
+                // Use the main export from package.json
                 const mainExport = packageJson.exports['.'];
-                const mainPath =
-                    typeof mainExport === 'string'
-                        ? mainExport
-                        : mainExport.default || mainExport.import;
-                if (mainPath) {
-                    const mainDir = path.dirname(path.join(npmPluginPath, mainPath));
-                    resolvedComponentPath = path.join(mainDir, path.basename(contract.component));
-                } else {
-                    resolvedComponentPath = path.join(npmPluginPath, contract.component);
-                }
-            } else if (manifest.module) {
-                // Use module field from plugin.yaml
-                const moduleDir = path.dirname(path.join(npmPluginPath, manifest.module));
-                resolvedComponentPath = path.join(moduleDir, path.basename(contract.component));
+                const mainPath = typeof mainExport === 'string' ? mainExport : mainExport.default || mainExport.import;
+                componentPath = path.join(npmPluginPath, mainPath);
             } else {
-                resolvedComponentPath = path.join(npmPluginPath, contract.component);
-                warnings.push(
-                    `NPM package "${pluginName}" has no exports field in package.json. Using direct path resolution.`,
-                );
+                // Fallback: assume dist/index.js
+                componentPath = path.join(npmPluginPath, 'dist/index.js');
+            }
+            
+            // Resolve contract path from package.json exports
+            // contract format should be the export subpath (e.g., "mood-tracker.jay-contract")
+            const contractSpec = contract.contract;
+            const contractExportKey = './' + contractSpec;
+            
+            if (packageJson.exports && packageJson.exports[contractExportKey]) {
+                const exportPath = packageJson.exports[contractExportKey];
+                contractPath = path.join(npmPluginPath, exportPath);
+            } else {
+                // Fallback: try common locations
+                const possiblePaths = [
+                    path.join(npmPluginPath, 'dist', contractSpec),
+                    path.join(npmPluginPath, 'lib', contractSpec),
+                    path.join(npmPluginPath, contractSpec),
+                ];
+                contractPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
             }
         } catch (error) {
-            // Fallback to direct paths
-            resolvedContractPath = path.join(npmPluginPath, contract.contract);
-            resolvedComponentPath = path.join(npmPluginPath, contract.component);
-            warnings.push(
-                `Failed to parse package.json for "${pluginName}": ${error}. Using direct path resolution.`,
-            );
+            // Fallback if package.json parsing fails
+            componentPath = path.join(npmPluginPath, 'dist/index.js');
+            contractPath = path.join(npmPluginPath, 'dist', contract.contract);
         }
     } else {
-        resolvedContractPath = path.join(npmPluginPath, contract.contract);
-        resolvedComponentPath = path.join(npmPluginPath, contract.component);
-        warnings.push(
-            `NPM package "${pluginName}" has no package.json. Using direct path resolution.`,
-        );
+        // No package.json: use fallback paths
+        componentPath = path.join(npmPluginPath, 'dist/index.js');
+        contractPath = path.join(npmPluginPath, 'dist', contract.contract);
     }
 
     return new WithValidations(
         {
-            contractPath: resolvedContractPath,
-            componentPath: resolvedComponentPath,
-            componentName: contractName,
+            contractPath: contractPath,
+            componentPath: componentPath,
+            componentName: contract.component, // This is the exported member name
+            isNpmPackage: true,
+            packageName: pluginName,
         },
-        warnings,
+        [],
     );
 }
 

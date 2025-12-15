@@ -576,12 +576,20 @@ async function parseHeadlessImports(
         const absoluteComponentPath = resolveResult.val.componentPath;
         const name = resolveResult.val.componentName;
         const contractPath = resolveResult.val.contractPath;
+        const isNpmPackage = resolveResult.val.isNpmPackage;
+        const packageName = resolveResult.val.packageName;
 
-        // Make component path relative to the jay-html file for imports
-        let module = path.relative(filePath, absoluteComponentPath);
-        // Ensure the path starts with ./ or ../ for proper module resolution
-        if (!module.startsWith('.')) {
-            module = './' + module;
+        // For NPM packages, use the package name; for local plugins, use relative path
+        let module: string;
+        if (isNpmPackage && packageName) {
+            module = packageName; // Import from npm package (e.g., "example-jay-mood-tracker-plugin")
+        } else {
+            // Make component path relative to the jay-html file for imports
+            module = path.relative(filePath, absoluteComponentPath);
+            // Ensure the path starts with ./ or ../ for proper module resolution
+            if (!module.startsWith('.')) {
+                module = './' + module;
+            }
         }
 
         // Contract path from plugin resolution is already absolute, don't resolve it again
