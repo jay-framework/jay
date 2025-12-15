@@ -113,7 +113,7 @@ export function resolveLocalPlugin(
     // Component path comes from manifest.module (or defaults to index.js)
     const componentModule = manifest.module || 'index.js';
     const componentPath = path.join(localPluginPath, componentModule);
-    
+
     return new WithValidations(
         {
             contractPath: path.join(localPluginPath, contract.contract),
@@ -185,30 +185,37 @@ export function resolveNpmPlugin(
     const packageJsonPath = path.join(npmPluginPath, 'package.json');
     let componentPath: string;
     let contractPath: string;
-    
+
     if (fs.existsSync(packageJsonPath)) {
         try {
             const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
             const packageName = packageJson.name;
-            
+
             // Resolve component module path
             // For NPM packages, module field is optional - defaults to using package's main export
             const moduleName = manifest.module || packageName;
-            if ((moduleName === packageName || !manifest.module) && packageJson.exports && packageJson.exports['.']) {
+            if (
+                (moduleName === packageName || !manifest.module) &&
+                packageJson.exports &&
+                packageJson.exports['.']
+            ) {
                 // Use the main export from package.json
                 const mainExport = packageJson.exports['.'];
-                const mainPath = typeof mainExport === 'string' ? mainExport : mainExport.default || mainExport.import;
+                const mainPath =
+                    typeof mainExport === 'string'
+                        ? mainExport
+                        : mainExport.default || mainExport.import;
                 componentPath = path.join(npmPluginPath, mainPath);
             } else {
                 // Fallback: assume dist/index.js
                 componentPath = path.join(npmPluginPath, 'dist/index.js');
             }
-            
+
             // Resolve contract path from package.json exports
             // contract format should be the export subpath (e.g., "mood-tracker.jay-contract")
             const contractSpec = contract.contract;
             const contractExportKey = './' + contractSpec;
-            
+
             if (packageJson.exports && packageJson.exports[contractExportKey]) {
                 const exportPath = packageJson.exports[contractExportKey];
                 contractPath = path.join(npmPluginPath, exportPath);
@@ -219,7 +226,7 @@ export function resolveNpmPlugin(
                     path.join(npmPluginPath, 'lib', contractSpec),
                     path.join(npmPluginPath, contractSpec),
                 ];
-                contractPath = possiblePaths.find(p => fs.existsSync(p)) || possiblePaths[0];
+                contractPath = possiblePaths.find((p) => fs.existsSync(p)) || possiblePaths[0];
             }
         } catch (error) {
             // Fallback if package.json parsing fails

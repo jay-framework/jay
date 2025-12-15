@@ -203,7 +203,8 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
                         type: 'schema',
                         message: `Contract "${contract.name || index}" is missing "component" field`,
                         location: 'plugin.yaml',
-                        suggestion: 'Specify the exported member name from the module (e.g., "moodTracker")',
+                        suggestion:
+                            'Specify the exported member name from the module (e.g., "moodTracker")',
                     });
                 }
             });
@@ -272,7 +273,7 @@ async function validateContract(
             path.join(context.pluginPath, 'lib', contractSpec),
             path.join(context.pluginPath, contractSpec),
         ];
-        
+
         let found = false;
         for (const possiblePath of possiblePaths) {
             if (fs.existsSync(possiblePath)) {
@@ -281,7 +282,7 @@ async function validateContract(
                 break;
             }
         }
-        
+
         if (!found) {
             result.errors.push({
                 type: 'file-missing',
@@ -294,7 +295,7 @@ async function validateContract(
     } else {
         // For local plugins, contract is a relative path
         contractPath = path.join(context.pluginPath, contract.contract);
-        
+
         // Check if contract file exists
         if (!fs.existsSync(contractPath)) {
             result.errors.push({
@@ -373,7 +374,7 @@ async function validateComponent(
     // For local plugins, it's also just the export name
     // We can't really validate the export exists without loading the module,
     // but we can check the format
-    
+
     if (typeof contract.component !== 'string' || contract.component.length === 0) {
         result.errors.push({
             type: 'schema',
@@ -382,14 +383,15 @@ async function validateComponent(
             suggestion: 'Component should be the exported member name (e.g., "moodTracker")',
         });
     }
-    
+
     // Warn if component name looks like a path instead of an export name
     if (contract.component.includes('/') || contract.component.includes('.')) {
         result.warnings.push({
             type: 'schema',
             message: `Component "${contract.component}" looks like a path. Should it be an export name?`,
             location: `plugin.yaml contracts[${index}]`,
-            suggestion: 'Component should be the exported member name (e.g., "moodTracker"), not a file path',
+            suggestion:
+                'Component should be the exported member name (e.g., "moodTracker"), not a file path',
         });
     }
 }
@@ -441,7 +443,7 @@ async function validatePackageJson(
                     // Contract should be an export subpath (e.g., "mood-tracker.jay-contract")
                     // Prepend "./" to create the export key
                     const contractExport = './' + contract.contract;
-                    
+
                     if (!packageJson.exports[contractExport]) {
                         result.errors.push({
                             type: 'export-mismatch',
@@ -452,7 +454,7 @@ async function validatePackageJson(
                     }
                 }
             }
-            
+
             // Check for main export (required for NPM packages, even when module is not specified)
             if (!packageJson.exports['.']) {
                 result.errors.push({
@@ -462,13 +464,14 @@ async function validatePackageJson(
                     suggestion: 'Add ".": "./dist/index.js" (or your main file) to exports field',
                 });
             }
-            
+
             // If module is explicitly specified, validate it
             if (context.manifest.module) {
                 const moduleName = context.manifest.module;
                 result.warnings.push({
                     type: 'schema',
-                    message: 'NPM packages should omit the "module" field - the package main export will be used',
+                    message:
+                        'NPM packages should omit the "module" field - the package main export will be used',
                     location: 'plugin.yaml',
                     suggestion: 'Remove the "module" field from plugin.yaml',
                 });
