@@ -2,6 +2,9 @@ import fs from 'fs';
 import path from 'path';
 import YAML from 'yaml';
 import { WithValidations } from './with-validations';
+import { createRequire } from 'module';
+
+const require = createRequire(import.meta.url);
 
 /**
  * Plugin manifest structure (contracts section only - subset of full PluginManifest)
@@ -126,13 +129,20 @@ export function resolveNpmPlugin(
     pluginName: string,
     contractName: string,
 ): WithValidations<PluginComponentResolution> | null {
-    const npmPluginPath = path.join(projectRoot, 'node_modules', pluginName);
-
-    if (!fs.existsSync(npmPluginPath)) {
-        return null; // Not found in NPM either
+    // Use Node's require.resolve to find plugin.yaml directly
+    let pluginYamlPath: string;
+    try {
+        // Resolve plugin.yaml directly - package must export it
+        pluginYamlPath = require.resolve(`${pluginName}/plugin.yaml`, {
+            paths: [projectRoot],
+        });
+    } catch (error) {
+        return new WithValidations(null as any, [
+            `NPM package "${pluginName}" not found or plugin.yaml is not exported. Is this a Jay Stack plugin?`,
+        ]);
     }
-
-    const pluginYamlPath = path.join(npmPluginPath, 'plugin.yaml');
+    
+    const npmPluginPath = path.dirname(pluginYamlPath);
 
     if (!fs.existsSync(pluginYamlPath)) {
         return new WithValidations(null as any, [

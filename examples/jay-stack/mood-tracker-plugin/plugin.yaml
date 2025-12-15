@@ -1,0 +1,7 @@
+name: mood-tracker-plugin
+module: dist/index.js
+contracts:
+  - name: mood-tracker
+    contract: dist/mood-tracker.jay-contract
+    component: dist/index
+    description: A mood tracker component with happy, neutral, and sad states

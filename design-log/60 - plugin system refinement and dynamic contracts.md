@@ -8,6 +8,7 @@
 ## Implementation Status
 
 ✅ **Completed Features:**
+
 - Protocol types (`PluginManifest`, `Plugin`, `DynamicContractDef`)
 - String-based dynamic contract generation (returns YAML, not Contract objects)
 - `DYNAMIC_CONTRACT_SERVICE` for passing contract metadata to components
@@ -17,24 +18,32 @@
 - Plugin scanning in `editor-handlers.ts` (local + npm packages)
 - Jay-html parser support for `plugin`/`contract` attributes
 - Page.config.yaml support for `plugin`/`contract` syntax
-- **NEW:** Shared plugin resolution in `@jay-framework/compiler-shared`
-- **NEW:** NPM package resolution with `package.json` exports support
-- **NEW:** `projectRoot` as explicit parameter to `parseJayFile`
-- **NEW:** `WithValidations` result monad for meaningful error messages
+- Shared plugin resolution in `@jay-framework/compiler-shared`
+- NPM package resolution with `package.json` exports support
+- `projectRoot` as explicit parameter to `parseJayFile`
+- `WithValidations` result monad for meaningful error messages
+- Yarn workspace plugin resolution using Node's `require.resolve()`
+- Direct `plugin.yaml` resolution (simpler than resolving `package.json`)
+- Plugin validator enforces `plugin.yaml` export requirement (error, not warning)
+- Examples updated with `plugin.yaml` and new syntax
+- All tests passing (597 tests across all packages)
 
 ⏳ **Deferred:**
+
 - Dynamic contract runtime execution (generators run at build time)
 - Tests for plugin validation
 
 ## Summary
 
 This document refines the plugin system by:
+
 1. Renaming `app.conf.yaml` → `plugin.yaml` (not `plugin.config.yaml`)
 2. Unifying headless component reference syntax across jay-html and page.config.yaml
 3. Adding support for dynamic contract generation (e.g., CMS-driven contracts)
 4. Clarifying what plugin developers and jay-stack users need to do
 
 **Key Decisions:**
+
 - ✅ File name: `plugin.yaml` (shorter, follows common conventions)
 - ✅ Remove `version` field (use package.json version instead)
 - ✅ Remove `key` field from contract definitions (specify at usage site)
@@ -48,23 +57,27 @@ This document refines the plugin system by:
 ### 1. File Rename: `app.conf.yaml` → `plugin.yaml`
 
 **Current:**
+
 ```
 node_modules/@wix/stores/app.conf.yaml
 src/config/installedApps/wix-stores/app.conf.yaml
 ```
 
 **New:**
+
 ```
 node_modules/@wix/stores/plugin.yaml
 src/plugins/wix-stores/plugin.yaml
 ```
 
 **Why `plugin.yaml` not `plugin.config.yaml`?**
+
 - Shorter, cleaner
 - Common convention (see `tsconfig.json`, `package.json`)
 - "config" is redundant (YAML files are inherently configuration)
 
 **Migration path:**
+
 - Support both names during transition
 - Deprecation warning for `app.conf.yaml`
 - Auto-migration tool: `jay migrate plugin-config`
@@ -98,6 +111,7 @@ An NPM plugin package should include **dual builds** for client-server code spli
 ```
 
 **package.json example:**
+
 ```json
 {
   "name": "@wix/stores",
@@ -107,13 +121,10 @@ An NPM plugin package should include **dual builds** for client-server code spli
   "exports": {
     ".": "./dist/index.js",
     "./client": "./dist/index.client.js",
-    "./plugin.yaml": "./plugin.yaml",
+    "./plugin.yaml": "./plugin.yaml",  // Required for plugin resolution
     "./contracts/*.jay-contract": "./dist/contracts/*.jay-contract"
   },
-  "files": [
-    "dist",
-    "plugin.yaml"
-  ],
+  "files": ["dist", "plugin.yaml"],
   "scripts": {
     "build": "npm run definitions && npm run build:client && npm run build:server && npm run build:copy-contracts",
     "definitions": "jay-cli definitions lib",
@@ -125,6 +136,7 @@ An NPM plugin package should include **dual builds** for client-server code spli
 ```
 
 **vite.config.ts example:**
+
 ```typescript
 import { resolve } from 'path';
 import { defineConfig } from 'vite';
@@ -140,11 +152,11 @@ export default defineConfig(({ isSsrBuild }) => ({
   build: {
     minify: false,
     target: 'es2020',
-    ssr: isSsrBuild,              // Determines server vs client build
-    emptyOutDir: false,            // Keep both builds in dist/
+    ssr: isSsrBuild, // Determines server vs client build
+    emptyOutDir: false, // Keep both builds in dist/
     lib: {
       entry: isSsrBuild
-        ? { index: resolve(__dirname, 'lib/index.ts') }           // Server build
+        ? { index: resolve(__dirname, 'lib/index.ts') } // Server build
         : { 'index.client': resolve(__dirname, 'lib/index.ts') }, // Client build
       formats: ['es'],
     },
@@ -162,6 +174,7 @@ export default defineConfig(({ isSsrBuild }) => ({
 ```
 
 **Key points:**
+
 - **Dual builds**: Server build (`index.js`) has client code stripped, client build (`index.client.js`) has server code stripped
 - **Build commands**: Run both `vite build` (client) and `vite build --ssr` (server)
 - **Contract files**: Must be published in `dist/` directory (not just source)
@@ -174,12 +187,14 @@ export default defineConfig(({ isSsrBuild }) => ({
 **How consumers use the plugin:**
 
 Server-side imports (in page.ts):
+
 ```typescript
 import { productList } from '@wix/stores';
 // → Resolves to dist/index.js (server build - no browser APIs) ✅
 ```
 
 Client-side imports (generated by jay-stack):
+
 ```typescript
 import { productList } from '@wix/stores/client';
 // → Resolves to dist/index.client.js (client build - no server code) ✅
@@ -194,30 +209,30 @@ import { productList } from '@wix/stores/client';
 # This file can be in an npm package or in src/plugins/<plugin-name>/ folder.
 
 # Plugin metadata
-name: wix-stores                    # Human-readable name
-module: "@wix/stores"                # NPM package name (for resolution)
+name: wix-stores # Human-readable name
+module: '@wix/stores' # NPM package name (for resolution)
 
 # Static contracts: List of contracts exposed by this plugin
 contracts:
   # Each contract entry defines a headless component
-  - name: product-list               # Component name (used in references)
-    contract: ./contracts/product-list.jay-contract  # Path to contract (relative or export path)
-    component: ./components/product-list        # Export path to implementation
-    description: "Displays a list of products"       # Optional description
-    
+  - name: product-list # Component name (used in references)
+    contract: ./contracts/product-list.jay-contract # Path to contract (relative or export path)
+    component: ./components/product-list # Export path to implementation
+    description: 'Displays a list of products' # Optional description
+
   - name: product-detail
     contract: ./contracts/product-detail.jay-contract
     component: ./components/product-detail
-    
+
   - name: shopping-cart
     contract: ./contracts/cart.jay-contract
     component: ./components/cart
 
 # Dynamic contracts: Contracts generated at build time (optional)
 dynamic_contracts:
-  component: ./components/cms-collection        # Shared component for all dynamic contracts
-  generator: ./generators/cms-contracts.ts      # Path to generator function
-  prefix: "cms"                                 # Namespace prefix
+  component: ./components/cms-collection # Shared component for all dynamic contracts
+  generator: ./generators/cms-contracts.ts # Path to generator function
+  prefix: 'cms' # Namespace prefix
 ```
 
 **Key Fields:**
@@ -233,10 +248,12 @@ dynamic_contracts:
 **Path Resolution:**
 
 For **NPM packages**, paths use Node.js module resolution with package.json exports:
+
 - `./contracts/product-list.jay-contract` → resolved via package.json `exports` field
 - `./components/product-list` → resolved as ES module export
 
 For **local plugins** (src/plugins/), paths are relative to plugin.yaml location:
+
 - `./contracts/product-list.jay-contract` → relative path from plugin.yaml
 - `./components/product-list.ts` → relative path from plugin.yaml
 
@@ -247,7 +264,7 @@ For **local plugins** (src/plugins/), paths are relative to plugin.yaml location
 #### In `page.jay-html`
 
 ```html
-<script 
+<script
   type="application/jay-headless"
   plugin="wix-stores"
   contract="product-list"
@@ -256,6 +273,7 @@ For **local plugins** (src/plugins/), paths are relative to plugin.yaml location
 ```
 
 **Changes from current:**
+
 - `src` → `plugin` (clearer semantics)
 - `name` → `contract` (directly references contract name from plugin.yaml)
 - `key` is specified here (at usage site), not in plugin.yaml
@@ -269,7 +287,7 @@ used_components:
   - plugin: wix-stores
     contract: product-list
     key: products
-    
+
   - plugin: wix-stores
     contract: shopping-cart
     key: cart
@@ -282,9 +300,11 @@ used_components:
 #### Two locations for plugins:
 
 1. **NPM packages** (published plugins)
+
    ```
    node_modules/@wix/stores/plugin.yaml
    ```
+
    - Discovered via Node.js module resolution
    - Reference: `plugin: "@wix/stores"`
 
@@ -305,6 +325,7 @@ used_components:
 **Use Case:** CMS plugin that reads schema from external system and generates contracts
 
 **Key Concepts:**
+
 1. **Shared Component**: All dynamic contracts use the **same component implementation**
 2. **Contract as Service**: The component receives the full contract instance via a service (server-only)
 3. **Automatic Naming Prefix**: Dynamic contracts use a prefix (e.g., `cms/collection-name`) to distinguish them from static contracts
@@ -324,14 +345,12 @@ export const generator = makeContractGenerator()
   .withServices(CMS_SERVICE)
   .generateWith(async (services) => {
     const cms = services[CMS_SERVICE];
-    
+
     // Connect to CMS and read schema
     const collections = await cms.getCollections();
-    
+
     // Return array of contracts
-    return collections.map(collection => 
-      generateContractFromSchema(collection)
-    );
+    return collections.map((collection) => generateContractFromSchema(collection));
   });
 ```
 
@@ -351,9 +370,9 @@ export interface ContractGeneratorBuilder<Services extends ServiceMarkers> {
   withServices<NewServices extends ServiceMarkers>(
     ...services: NewServices
   ): ContractGeneratorBuilder<Services & NewServices>;
-  
+
   generate(
-    fn: (services: ServiceInstances<Services>) => Promise<Contract[]> | Contract[]
+    fn: (services: ServiceInstances<Services>) => Promise<Contract[]> | Contract[],
   ): DynamicContractGenerator;
 }
 
@@ -391,21 +410,25 @@ import { connectToCMS } from '../lib/cms-client';
 
 // No special props needed - contract comes via service
 export const cmsCollection = makeJayStackComponent<DynamicContract>()
-  .withServices(DYNAMIC_CONTRACT_SERVICE)  // Get contract instance as service
+  .withServices(DYNAMIC_CONTRACT_SERVICE) // Get contract instance as service
   .withFastRender(async (props, contract: Contract) => {
     const cms = await connectToCMS();
-    
+
     // Use contract.name to determine which collection to query
     // contract.name is the full dynamic contract name (e.g., "BlogPostsList")
     const collectionName = deriveCollectionName(contract.name);
     const items = await cms.query(collectionName);
-    
+
     return partialRender({ items }, {});
   });
 
 function deriveCollectionName(contractName: string): string {
   // "BlogPostsList" → "blog-posts"
-  return contractName.replace(/List$/, '').replace(/([A-Z])/g, '-$1').toLowerCase().slice(1);
+  return contractName
+    .replace(/List$/, '')
+    .replace(/([A-Z])/g, '-$1')
+    .toLowerCase()
+    .slice(1);
 }
 ```
 
@@ -433,10 +456,10 @@ export const DYNAMIC_CONTRACT_SERVICE = createJayService('DynamicContract');
 
 ```yaml
 name: my-cms
-module: "@mycompany/cms-plugin"
+module: '@mycompany/cms-plugin'
 
 dynamic_contracts:
-  prefix: "cms"                                 # Automatic prefix for all dynamic contracts
+  prefix: 'cms' # Automatic prefix for all dynamic contracts
   component: ./components/cms-collection
   generator: ./generators/collections-generator.ts
 ```
@@ -459,20 +482,21 @@ export const generator = {
 **Framework adds prefix automatically:**
 
 When loading dynamic contracts, the framework prepends the prefix:
+
 - Generator produces: `BlogPostsList`
 - Framework registers as: `cms/BlogPostsList`
 
 **Usage in jay-html:**
 
 ```html
-<script 
+<script
   type="application/jay-headless"
   plugin="my-cms"
   contract="cms/blog-posts-list"
   key="blogPosts"
 ></script>
 
-<script 
+<script
   type="application/jay-headless"
   plugin="my-cms"
   contract="cms/products-list"
@@ -490,7 +514,7 @@ When loading dynamic contracts, the framework prepends the prefix:
 **Static contracts don't need prefix:**
 
 ```html
-<script 
+<script
   type="application/jay-headless"
   plugin="wix-stores"
   contract="product-list"
@@ -504,7 +528,7 @@ When loading dynamic contracts, the framework prepends the prefix:
 function resolveContract(pluginManifest: PluginManifest, contractName: string) {
   // Check if contract name has a prefix
   const prefix = pluginManifest.dynamic_contracts?.prefix;
-  
+
   if (prefix && contractName.startsWith(`${prefix}/`)) {
     // Dynamic contract
     const actualName = contractName.slice(prefix.length + 1);
@@ -522,14 +546,14 @@ Once generated, they're used with the automatic prefix:
 
 ```html
 <!-- In page.jay-html -->
-<script 
+<script
   type="application/jay-headless"
   plugin="my-cms"
   contract="cms/blog-posts-list"
   key="blogPosts"
 ></script>
 
-<script 
+<script
   type="application/jay-headless"
   plugin="my-cms"
   contract="cms/products-list"
@@ -540,6 +564,7 @@ Once generated, they're used with the automatic prefix:
 **Both contracts use the same component** (`cms-collection`), but receive different contract instances via the `DYNAMIC_CONTRACT_SERVICE`.
 
 **Build-time behavior:**
+
 1. During `jay-stack build`, framework loads `init.ts` to initialize services
 2. Framework calls generator with injected services: `generator.generate(services)`
 3. Generated contracts (Contract[]) are validated
@@ -553,9 +578,10 @@ Once generated, they're used with the automatic prefix:
 ### Creating a Static Plugin
 
 1. **Create plugin.yaml**
+
    ```yaml
    name: my-plugin
-   module: "@mycompany/my-plugin"
+   module: '@mycompany/my-plugin'
    contracts:
      - name: my-component
        contract: ./contracts/my-component.jay-contract
@@ -563,6 +589,7 @@ Once generated, they're used with the automatic prefix:
    ```
 
 2. **Create contract files**
+
    ```yaml
    # contracts/my-component.jay-contract
    name: MyComponent
@@ -574,36 +601,56 @@ Once generated, they're used with the automatic prefix:
    ```
 
 3. **Implement component**
+
    ```typescript
    // components/my-component.ts
    import { makeJayStackComponent } from '@jay-framework/fullstack-component';
    import { MyComponentContract } from '../contracts/my-component.jay-contract';
-   
-   export const myComponent = makeJayStackComponent<MyComponentContract>()
-     .withSlowlyRender(async (props) => {
+
+   export const myComponent = makeJayStackComponent<MyComponentContract>().withSlowlyRender(
+     async (props) => {
        return partialRender({ title: 'Hello' }, {});
-     });
+     },
+   );
    ```
 
-4. **Publish to NPM** (or keep local in `src/plugins/`)
+4. **Configure package.json exports**
+
+   ```json
+   {
+     "exports": {
+       ".": "./dist/index.js",
+       "./client": "./dist/index.client.js",
+       "./plugin.yaml": "./plugin.yaml",  // Required for plugin resolution
+       "./my-component.jay-contract": "./dist/contracts/my-component.jay-contract"
+     },
+     "files": ["dist", "plugin.yaml"]
+   }
+   ```
+
+   **Important:** The `"./plugin.yaml": "./plugin.yaml"` export is **required** for Jay Stack to locate your plugin. The plugin validator will enforce this requirement.
+
+5. **Publish to NPM** (or keep local in `src/plugins/`)
 
 ### Creating a Dynamic Plugin
 
 1. **Create plugin.yaml with dynamic_contracts**
+
    ```yaml
    name: cms-plugin
-   module: "@mycompany/cms-plugin"
+   module: '@mycompany/cms-plugin'
    dynamic_contracts:
-     prefix: "cms"                               # Namespace prefix
-     component: ./components/cms-collection      # Shared component
+     prefix: 'cms' # Namespace prefix
+     component: ./components/cms-collection # Shared component
      generator: ./generators/cms-generator.ts
    ```
 
 2. **Implement shared component with service**
+
    ```typescript
    // components/cms-collection.ts
    import { DYNAMIC_CONTRACT_SERVICE, createJayService } from '@jay-framework/fullstack-component';
-   
+
    export const cmsCollection = makeJayStackComponent<DynamicContract>()
      .withServices(DYNAMIC_CONTRACT_SERVICE)
      .withFastRender(async (props, contract: Contract) => {
@@ -614,30 +661,39 @@ Once generated, they're used with the automatic prefix:
    ```
 
 3. **Implement generator with builder API**
+
    ```typescript
    // generators/cms-generator.ts
    import { makeContractGenerator } from '@jay-framework/fullstack-component';
    import { CMS_SERVICE } from '../services/cms-service';
-   
+
    export const generator = makeContractGenerator()
      .withServices(CMS_SERVICE)
      .generate(async (services) => {
        const cms = services[CMS_SERVICE];
        const collections = await cms.getCollections();
-       return collections.map(col => ({
+       return collections.map((col) => ({
          name: `${toPascalCase(col.name)}List`,
-         tags: [/* ... */]
+         tags: [
+           /* ... */
+         ],
        }));
      });
    ```
 
 4. **Configure services in project's `init.ts`**
+
    ```typescript
    // src/init.ts
    import { CMS_SERVICE } from '@mycompany/cms-plugin/services';
-   
-   export const init = initServer()
-     .withService(CMS_SERVICE, () => new CMSClient({ /* ... */ }));
+
+   export const init = initServer().withService(
+     CMS_SERVICE,
+     () =>
+       new CMSClient({
+         /* ... */
+       }),
+   );
    ```
 
 5. **Generator runs at build time**, framework loads `init.ts`, injects services, and adds prefix automatically (`cms/blog-posts-list`)
@@ -647,6 +703,7 @@ Once generated, they're used with the automatic prefix:
 ### Installing a Plugin
 
 **From NPM:**
+
 ```bash
 npm install @wix/stores
 ```
@@ -654,6 +711,7 @@ npm install @wix/stores
 Framework auto-discovers plugin via `node_modules/@wix/stores/plugin.yaml`
 
 **Local Plugin:**
+
 ```bash
 mkdir -p src/plugins/my-plugin
 # Create plugin.yaml, contracts, components in that folder
@@ -662,14 +720,15 @@ mkdir -p src/plugins/my-plugin
 ### Using a Plugin in a Page
 
 **Option 1: In jay-html**
+
 ```html
 <!-- page.jay-html -->
 <html>
   <head>
     <script type="application/jay-data" contract="./page.jay-contract"></script>
-    
+
     <!-- Reference plugin contracts -->
-    <script 
+    <script
       type="application/jay-headless"
       plugin="wix-stores"
       contract="product-list"
@@ -686,6 +745,7 @@ mkdir -p src/plugins/my-plugin
 ```
 
 **Option 2: In page.config.yaml (headless pages)**
+
 ```yaml
 # page.config.yaml
 used_components:
@@ -708,11 +768,11 @@ tags:
     type: data
     dataType: string
     phase: slow
-    
+
   # Headless component contract is nested here
   - tag: products
     type: subcontract
-    link: plugin:wix-stores/product-list  # Resolved from plugin
+    link: plugin:wix-stores/product-list # Resolved from plugin
     phase: fast
 ```
 
@@ -724,26 +784,25 @@ tags:
 
 **Current:** Scans `installedApps/*/app.conf.yaml`  
 **New:** Scan both:
+
 - `src/plugins/*/plugin.yaml` (local)
 - `node_modules/*/plugin.yaml` (npm)
 
 ```typescript
-async function scanPlugins(
-  projectRoot: string
-): Promise<{ [pluginName: string]: PluginManifest }> {
+async function scanPlugins(projectRoot: string): Promise<{ [pluginName: string]: PluginManifest }> {
   const plugins: { [pluginName: string]: PluginManifest } = {};
-  
+
   // Scan local plugins
   const localPluginsPath = path.join(projectRoot, 'src/plugins');
   if (fs.existsSync(localPluginsPath)) {
     const localPlugins = await scanDirectory(localPluginsPath, 'plugin.yaml');
     Object.assign(plugins, localPlugins);
   }
-  
+
   // Scan npm packages (via package.json dependencies)
   const packageJson = require(path.join(projectRoot, 'package.json'));
   const deps = { ...packageJson.dependencies, ...packageJson.devDependencies };
-  
+
   for (const [pkgName, _] of Object.entries(deps)) {
     const pluginPath = resolvePackagePath(projectRoot, pkgName, 'plugin.yaml');
     if (pluginPath && fs.existsSync(pluginPath)) {
@@ -751,7 +810,7 @@ async function scanPlugins(
       plugins[pkgName] = plugin;
     }
   }
-  
+
   return plugins;
 }
 ```
@@ -763,9 +822,9 @@ async function scanPlugins(
 
 ```typescript
 interface HeadlessReference {
-  plugin: string;      // Plugin name (e.g., "wix-stores")
-  contract: string;    // Contract name (e.g., "product-list")
-  key: string;         // Data key in parent
+  plugin: string; // Plugin name (e.g., "wix-stores")
+  contract: string; // Contract name (e.g., "product-list")
+  key: string; // Data key in parent
 }
 ```
 
@@ -806,10 +865,10 @@ const componentPath = resolveFromPlugin(pluginManifest, contractDef.component);
 import { ProductListContract } from '@wix/stores/contracts/product-list.jay-contract';
 
 // Component import (server-side)
-import { productList } from '@wix/stores';  // → dist/index.js
+import { productList } from '@wix/stores'; // → dist/index.js
 
 // Component import (client-side, generated by jay-stack)
-import { productList } from '@wix/stores/client';  // → dist/index.client.js
+import { productList } from '@wix/stores/client'; // → dist/index.client.js
 ```
 
 **Key Changes from Current Implementation:**
@@ -825,7 +884,7 @@ import { productList } from '@wix/stores/client';  // → dist/index.client.js
 // Plugin not found
 if (!pluginExists) {
   throw new CompilationError(
-    `Plugin '${pluginName}' not found. Install with: npm install ${pluginName}`
+    `Plugin '${pluginName}' not found. Install with: npm install ${pluginName}`,
   );
 }
 
@@ -834,7 +893,7 @@ if (!contractDef) {
   const availableContracts = listAvailableContracts(pluginManifest);
   throw new CompilationError(
     `Contract '${contractName}' not found in plugin '${pluginName}'. ` +
-    `Available contracts: ${availableContracts.join(', ')}`
+      `Available contracts: ${availableContracts.join(', ')}`,
   );
 }
 
@@ -842,7 +901,7 @@ if (!contractDef) {
 if (!fs.existsSync(componentPath)) {
   throw new CompilationError(
     `Component file not found: ${contractDef.component} ` +
-    `(referenced in ${pluginName}/plugin.yaml)`
+      `(referenced in ${pluginName}/plugin.yaml)`,
   );
 }
 
@@ -850,7 +909,7 @@ if (!fs.existsSync(componentPath)) {
 if (!fs.existsSync(contractPath)) {
   throw new CompilationError(
     `Contract file not found: ${contractDef.contract} ` +
-    `(referenced in ${pluginName}/plugin.yaml)`
+      `(referenced in ${pluginName}/plugin.yaml)`,
   );
 }
 ```
@@ -888,51 +947,49 @@ function clearPluginCache(): void {
 ```typescript
 async function loadPluginContracts(
   plugin: PluginManifest,
-  projectRoot: string
+  projectRoot: string,
 ): Promise<ResolvedContract[]> {
   const contracts: ResolvedContract[] = [];
-  
+
   // Load static contracts
   if (plugin.contracts) {
     for (const contractDef of plugin.contracts) {
-      const contract = await loadContract(
-        resolveFromPlugin(plugin, contractDef.contract)
-      );
-      contracts.push({ 
-        ...contractDef, 
+      const contract = await loadContract(resolveFromPlugin(plugin, contractDef.contract));
+      contracts.push({
+        ...contractDef,
         contract,
-        component: contractDef.component 
+        component: contractDef.component,
       });
     }
   }
-  
+
   // Load dynamic contracts
   if (plugin.dynamic_contracts) {
-    const generatorPath = resolveFromPlugin(
-      plugin, 
-      plugin.dynamic_contracts.generator
-    );
+    const generatorPath = resolveFromPlugin(plugin, plugin.dynamic_contracts.generator);
     const generator = await import(generatorPath);
     const generatedContracts: Contract[] = await generator.generator.generate();
-    
+
     // All dynamic contracts share the same component
     const sharedComponent = plugin.dynamic_contracts.component;
     const prefix = plugin.dynamic_contracts.prefix;
-    
+
     for (const contract of generatedContracts) {
       contracts.push({
-        name: `${prefix}/${toKebabCase(contract.name)}`,  // Add prefix
+        name: `${prefix}/${toKebabCase(contract.name)}`, // Add prefix
         contract,
-        component: sharedComponent,  // Use shared component
+        component: sharedComponent, // Use shared component
       });
     }
   }
-  
+
   return contracts;
 }
 
 function toKebabCase(str: string): string {
-  return str.replace(/([A-Z])/g, '-$1').toLowerCase().slice(1);
+  return str
+    .replace(/([A-Z])/g, '-$1')
+    .toLowerCase()
+    .slice(1);
 }
 ```
 
@@ -943,26 +1000,26 @@ function toKebabCase(str: string): string {
 
 export interface PluginManifest {
   name: string;
-  module?: string;            // Optional for local plugins, defaults to name
+  module?: string; // Optional for local plugins, defaults to name
   contracts?: StaticContractDef[];
   dynamic_contracts?: DynamicContractDef;
 }
 
 export interface StaticContractDef {
   name: string;
-  contract: string;           // Path to .jay-contract (resolved via package exports or relative path)
-  component: string;          // Path to component (resolved via package exports or relative path)
+  contract: string; // Path to .jay-contract (resolved via package exports or relative path)
+  component: string; // Path to component (resolved via package exports or relative path)
   description?: string;
 }
 
 export interface DynamicContractDef {
-  prefix: string;                 // Namespace prefix for dynamic contracts (e.g., "cms")
-  component: string;              // Path to shared component for all dynamic contracts
-  generator: string;              // Path to generator
+  prefix: string; // Namespace prefix for dynamic contracts (e.g., "cms")
+  component: string; // Path to shared component for all dynamic contracts
+  generator: string; // Path to generator
 }
 
 export interface ResolvedContract extends StaticContractDef {
-  contract: Contract;         // Parsed contract object
+  contract: Contract; // Parsed contract object
 }
 ```
 
@@ -971,11 +1028,13 @@ export interface ResolvedContract extends StaticContractDef {
 ### For Plugin Developers
 
 **Step 1:** Rename file
+
 ```bash
 mv app.conf.yaml plugin.yaml
 ```
 
 **Step 2:** Update format (if needed)
+
 ```yaml
 # OLD (app.conf.yaml)
 name: wix-stores
@@ -997,6 +1056,7 @@ contracts:
 ```
 
 **Key changes:**
+
 - Removed `pages`/`components` nesting
 - Removed `version` (use package.json version)
 - Removed `key` from contract definition (specified at usage site)
@@ -1004,6 +1064,7 @@ contracts:
 - `component` path added (for ES module import)
 
 **Step 3:** Update package.json exports (for NPM packages)
+
 ```json
 {
   "name": "@wix/stores",
@@ -1025,7 +1086,7 @@ contracts:
 
 ```html
 <!-- Before -->
-<script 
+<script
   type="application/jay-headless"
   src="wix-stores"
   name="product-list"
@@ -1033,7 +1094,7 @@ contracts:
 ></script>
 
 <!-- After -->
-<script 
+<script
   type="application/jay-headless"
   plugin="wix-stores"
   contract="product-list"
@@ -1044,19 +1105,23 @@ contracts:
 ## Benefits
 
 1. **Clearer Semantics**
+
    - `plugin` vs `src` - explicit that it's a plugin reference
    - `contract` vs `name` - directly references contract definition
    - Removes confusion about pages vs components in plugin structure
 
 2. **Perfect Symmetry**
+
    - jay-html and page.config.yaml use identical syntax
    - Easier to learn and remember
 
 3. **Better Organization**
+
    - Flat `contracts` list is simpler than nested `pages/components` structure
    - Local plugins in `src/plugins/` (not buried in `config/installedApps/`)
 
 4. **Dynamic Contracts**
+
    - Powerful new capability for CMS, database-driven apps
    - Contracts generated at build time maintain type safety
    - Clean generator interface
@@ -1084,11 +1149,11 @@ my-cms-plugin/
 
 ```yaml
 name: my-cms
-module: "@mycompany/cms-plugin"
+module: '@mycompany/cms-plugin'
 
 dynamic_contracts:
-  prefix: "cms"                                 # Namespace for dynamic contracts
-  component: ./components/cms-collection        # Shared component for all collections
+  prefix: 'cms' # Namespace for dynamic contracts
+  component: ./components/cms-collection # Shared component for all collections
   generator: ./generators/collections-generator.ts
 ```
 
@@ -1103,14 +1168,14 @@ export const generator = makeContractGenerator()
   .withServices(CMS_SERVICE)
   .generateWith(async (services) => {
     const cms = services[CMS_SERVICE];
-    
+
     // Get all collections from CMS
     const collections = await cms.getCollections();
-    
+
     // Generate contract for each collection
-    return collections.map(collection => {
+    return collections.map((collection) => {
       const contract: Contract = {
-        name: `${toPascalCase(collection.name)}List`,  // e.g., "BlogPostsList"
+        name: `${toPascalCase(collection.name)}List`, // e.g., "BlogPostsList"
         tags: [
           {
             tag: 'items',
@@ -1118,71 +1183,77 @@ export const generator = makeContractGenerator()
             dataType: 'array',
             repeated: true,
             phase: 'fast',
-            tags: collection.fields.map(field => ({
+            tags: collection.fields.map((field) => ({
               tag: field.name,
               type: 'data',
               dataType: mapFieldType(field.type),
-              phase: field.cached ? 'slow' : 'fast'
-            }))
+              phase: field.cached ? 'slow' : 'fast',
+            })),
           },
           {
             tag: 'totalCount',
             type: 'data',
             dataType: 'number',
-            phase: 'fast'
-          }
-        ]
+            phase: 'fast',
+          },
+        ],
       };
-      
+
       return contract;
     });
   });
 
 function mapFieldType(cmsType: string): string {
   const typeMap = {
-    'text': 'string',
-    'number': 'number',
-    'boolean': 'boolean',
-    'date': 'string',
-    'reference': 'string'
+    text: 'string',
+    number: 'number',
+    boolean: 'boolean',
+    date: 'string',
+    reference: 'string',
   };
   return typeMap[cmsType] || 'string';
 }
 
 function toPascalCase(str: string): string {
-  return str.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
+  return str
+    .split('-')
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join('');
 }
 ```
 
 ### Usage in Project
 
 **1. Install plugin:**
+
 ```bash
 npm install @mycompany/cms-plugin
 ```
 
 **2. Configure services in `init.ts`:**
+
 ```typescript
 // src/init.ts
 import { CMS_SERVICE } from '@mycompany/cms-plugin/services';
 import { CMSClient } from '@mycompany/cms-plugin/client';
 
-export const init = initServer()
-  .withService(CMS_SERVICE, () => {
-    return new CMSClient({
-      apiUrl: process.env.CMS_API_URL,
-      apiKey: process.env.CMS_API_KEY
-    });
+export const init = initServer().withService(CMS_SERVICE, () => {
+  return new CMSClient({
+    apiUrl: process.env.CMS_API_URL,
+    apiKey: process.env.CMS_API_KEY,
   });
+});
 ```
 
 **3. Set environment variables:**
+
 ```bash
 export CMS_API_URL="https://my-cms.com/api"
 export CMS_API_KEY="secret-key"
 ```
 
 **4. Build - contracts are generated automatically:**
+
 ```bash
 jay-stack build
 ```
@@ -1191,14 +1262,14 @@ jay-stack build
 
 ```html
 <!-- page.jay-html -->
-<script 
+<script
   type="application/jay-headless"
   plugin="my-cms"
   contract="cms/blog-posts-list"
   key="blogPosts"
 ></script>
 
-<script 
+<script
   type="application/jay-headless"
   plugin="my-cms"
   contract="cms/products-list"
@@ -1213,13 +1284,15 @@ All with full type safety and IDE autocomplete! Both use the same `cms-collectio
 ### 1. Do we need the `module` field for local plugins?
 
 **Current proposal:**
+
 ```yaml
 # Local plugin in src/plugins/my-plugin/plugin.yaml
 name: my-plugin
-module: my-plugin  # ❓ Is this needed?
+module: my-plugin # ❓ Is this needed?
 ```
 
 **Options:**
+
 - **A)** Make `module` optional for local plugins, use `name` as module identifier
 - **B)** Require `module` always (for consistency)
 - **C)** Remove `module` entirely, just use `name` everywhere
@@ -1230,6 +1303,7 @@ module: my-plugin  # ❓ Is this needed?
 ### 2. NPM Package Structure - What should package.json look like?
 
 **Contracts as files via exports:**
+
 ```json
 {
   "name": "@wix/stores",
@@ -1243,6 +1317,7 @@ module: my-plugin  # ❓ Is this needed?
 ```
 
 **OR contracts as TypeScript types only?**
+
 ```json
 {
   "name": "@wix/stores",
@@ -1254,11 +1329,12 @@ module: my-plugin  # ❓ Is this needed?
 ```
 
 Then plugin.yaml references named exports:
+
 ```yaml
 contracts:
   - name: product-list
-    contract: "productListContract"  # Named export from main module
-    component: "productList"
+    contract: 'productListContract' # Named export from main module
+    component: 'productList'
 ```
 
 **Which approach?**
@@ -1276,6 +1352,7 @@ npm install @wix/stores@1.2.3
 But what if they want to use a specific contract version?
 
 **Options:**
+
 - **A)** Version is purely package-level (use package.json version)
 - **B)** Support contract-level versioning in plugin.yaml
 - **C)** Use multiple plugins with different names for breaking changes
@@ -1286,6 +1363,7 @@ But what if they want to use a specific contract version?
 ### 4. Path Resolution - Support both formats?
 
 **Format 1: Relative file paths (for local development)**
+
 ```yaml
 contracts:
   - name: product-list
@@ -1294,11 +1372,12 @@ contracts:
 ```
 
 **Format 2: Package exports (for NPM)**
+
 ```yaml
 contracts:
   - name: product-list
-    contract: "./contracts/product-list.jay-contract"  # Resolved via exports
-    component: "./components/product-list"              # Resolved via exports
+    contract: './contracts/product-list.jay-contract' # Resolved via exports
+    component: './components/product-list' # Resolved via exports
 ```
 
 **Question:** Are these the same format, or do we need different syntax? Can we auto-detect based on whether it's an NPM package or local plugin?
@@ -1309,6 +1388,7 @@ and that the component files are exported from the package main module
 ### 5. Can contracts reference other plugin's contracts?
 
 **Example:**
+
 ```yaml
 # plugin: wix-stores
 contracts:
@@ -1322,15 +1402,16 @@ name: ShoppingCart
 tags:
   - tag: items
     type: subcontract
-    link: plugin:wix-stores/product-list  # ❓ Reference another contract in same plugin
+    link: plugin:wix-stores/product-list # ❓ Reference another contract in same plugin
     repeated: true
-    
+
   - tag: payment
     type: subcontract
-    link: plugin:wix-payments/payment-form  # ❓ Reference contract from different plugin
+    link: plugin:wix-payments/payment-form # ❓ Reference contract from different plugin
 ```
 
 **Should we support:**
+
 - ✅ Contracts referencing other contracts in same plugin?
 - ❓ Contracts referencing contracts from other plugins (plugin dependencies)?
 
@@ -1347,9 +1428,10 @@ WIX_STORES_SHOP_ID=my-shop
 ```
 
 **Should plugin.yaml declare required config?**
+
 ```yaml
 name: wix-stores
-module: "@wix/stores"
+module: '@wix/stores'
 config:
   - name: API_KEY
     env: WIX_STORES_API_KEY
@@ -1366,29 +1448,31 @@ the plugin needs to document what configuration it needs and how to activate it 
 ### 7. When do dynamic contracts get generated?
 
 **Options:**
+
 - **A)** During `jay build` (compile time)
 - **B)** During `jay dev` startup (dev server init)
 - **C)** On-demand when first referenced
 - **D)** Explicitly via `jay generate-contracts`
 
 **Follow-up:** Where are generated contracts stored?
+
 - In memory only?
 - Cached in `node_modules/.cache/jay/`?
 - Committed to repo in `src/generated/`?
 
 **Answer:**
 during development - at the time of jay dev startup.
-during production - dynamic contract change is a classic slow changing data, and we will need to build 
-a mechanism that can accept a signal from the source system (CMS) about a change and trigger a refresh of the 
+during production - dynamic contract change is a classic slow changing data, and we will need to build
+a mechanism that can accept a signal from the source system (CMS) about a change and trigger a refresh of the
 contracts. we will need to design this system at a later time.
 
-regarding storage, for development we do not need to store generated contracts. 
+regarding storage, for development we do not need to store generated contracts.
 for production, all slowly rendered data needs to be stored, and this storage system is yet to be defined.
 
 ### 8. Error handling for missing contracts?
 
 ```html
-<script 
+<script
   type="application/jay-headless"
   plugin="wix-stores"
   contract="nonexistent-contract"
@@ -1397,6 +1481,7 @@ for production, all slowly rendered data needs to be stored, and this storage sy
 ```
 
 **What should happen?**
+
 - Compile-time error (prevent build)
 - Warning with type `unknown`
 - Auto-generate empty contract
@@ -1410,24 +1495,25 @@ Allow projects to override plugin contracts:
 ```yaml
 # In project's src/plugins/wix-stores-overrides/plugin.yaml
 name: wix-stores
-module: "@wix/stores"
-override: true  # Extends/overrides original plugin
+module: '@wix/stores'
+override: true # Extends/overrides original plugin
 
 contracts:
   - name: product-list
-    contract: ./my-custom-product-list.jay-contract  # Override
+    contract: ./my-custom-product-list.jay-contract # Override
 ```
 
 **Use cases:**
+
 - Customize third-party plugin contracts
 - Add extra fields
 - Change phase annotations
 
 **Risk:** Could break plugin components
 
-**Answer:** I do not think so. 
-Jay support extension using a close / open principle - a page can have a page contract in addition to 
-importing a contract, and the visual page can use the page contract tags instead of the imported contract tags. 
+**Answer:** I do not think so.
+Jay support extension using a close / open principle - a page can have a page contract in addition to
+importing a contract, and the visual page can use the page contract tags instead of the imported contract tags.
 
 ### 10. Should we support TypeScript for plugin.yaml?
 
@@ -1444,21 +1530,23 @@ export default definePlugin({
     {
       name: 'product-list',
       contract: './contracts/product-list.jay-contract',
-      component: './components/product-list'
-    }
-  ]
+      component: './components/product-list',
+    },
+  ],
 });
 ```
 
 **Benefits:**
+
 - Type checking
 - IDE autocomplete
 - Can compute contract list dynamically
 
 **Drawbacks:**
+
 - Requires compilation
 - More complex tooling
-  
+
 **Answer:** I think for now it is an overkill
 
 ### 11. How to handle contract file extensions in imports?
@@ -1467,7 +1555,7 @@ export default definePlugin({
 // Option A: With extension
 import { productListContract } from '@wix/stores/contracts/product-list.jay-contract';
 
-// Option B: Without extension  
+// Option B: Without extension
 import { productListContract } from '@wix/stores/contracts/product-list';
 
 // Option C: From main export
@@ -1476,7 +1564,7 @@ import { productListContract } from '@wix/stores';
 
 **Which pattern should we document/recommend?**
 
-**Answer:** right now we are using the first pattern, with the `.jay-contract` suffix, which is used by the compiler 
+**Answer:** right now we are using the first pattern, with the `.jay-contract` suffix, which is used by the compiler
 to turn the contract file to a TS file.
 
 ## Next Steps
@@ -1499,6 +1587,7 @@ A validation tool integrated into `jay-stack-cli` to help plugin developers ensu
 **Target Users:** Plugin developers (not app developers)
 
 **Two Validation Modes:**
+
 1. **Package mode**: Validate an NPM plugin package (published or ready to publish)
 2. **Local mode**: Validate plugins in `src/plugins/` during development
 
@@ -1548,6 +1637,7 @@ packages/jay-stack/plugin-validator/
 ```
 
 **Reuses existing tools:**
+
 - `@jay-framework/compiler-jay-html` - For contract parsing
 - `jay-cli definitions` - For generating and validating .d.ts files
 - `@jay-framework/compiler-shared` - For types and utilities
@@ -1588,12 +1678,13 @@ interface ValidationResult {
 interface ValidationError {
   type: 'schema' | 'file-missing' | 'export-mismatch' | 'contract-invalid';
   message: string;
-  location?: string;  // File path or YAML path
+  location?: string; // File path or YAML path
   suggestion?: string;
 }
 ```
 
 **Checks:**
+
 - ✅ plugin.yaml exists
 - ✅ Valid YAML syntax
 - ✅ Required fields present (`name`, `contracts` or `dynamic_contracts`)
@@ -1602,6 +1693,7 @@ interface ValidationError {
 - ✅ `module` field matches package.json `name` (for NPM packages)
 
 **Example errors:**
+
 ```
 ❌ Error: plugin.yaml not found
 ❌ Error: Invalid YAML syntax at line 5
@@ -1613,6 +1705,7 @@ interface ValidationError {
 #### 2. **Contract File Validation**
 
 **Checks:**
+
 - ✅ All referenced contract files exist
 - ✅ Contract files are valid `.jay-contract` files (YAML syntax)
 - ✅ Contract files can be parsed without errors (uses `@jay-framework/compiler-jay-html`)
@@ -1622,22 +1715,23 @@ interface ValidationError {
 - ✅ For NPM packages: contract files are exported in package.json
 
 **Example errors:**
+
 ```
 ❌ Error: Contract file not found: ./contracts/product-list.jay-contract
    Referenced in: contracts[0]
-   
+
 ❌ Error: Contract file invalid: ./contracts/cart.jay-contract
    Parse error: Invalid YAML syntax at line 12
-   
+
 ❌ Error: Contract name mismatch
    Declared: "product-list"
    Contract file name: "ProductList"
    File: ./contracts/product-list.jay-contract
-   
+
 ❌ Error: Contract file not exported in package.json
    File: ./contracts/product-list.jay-contract
    Add to exports: "./contracts/*.jay-contract": "./dist/contracts/*.jay-contract"
-   
+
 ✅ Success: Generated type definitions for 3 contracts
    - dist/contracts/product-list.jay-contract.d.ts
    - dist/contracts/product-detail.jay-contract.d.ts
@@ -1647,6 +1741,7 @@ interface ValidationError {
 **Type Generation Integration:**
 
 When `--generate-types` flag is used, the validator:
+
 1. Finds all contract files
 2. Calls `jay-cli definitions` for each contract
 3. Validates generated types compile without errors
@@ -1655,6 +1750,7 @@ When `--generate-types` flag is used, the validator:
 #### 3. **Component File Validation**
 
 **Checks:**
+
 - ✅ All referenced component files exist
 - ✅ Component files are valid TypeScript/JavaScript (syntax check)
 - ✅ Component exports expected identifiers (static analysis)
@@ -1663,20 +1759,21 @@ When `--generate-types` flag is used, the validator:
 - ✅ For dual builds: both `index.js` and `index.client.js` exist in dist/
 
 **Example errors:**
+
 ```
 ❌ Error: Component file not found: ./components/product-list.ts
    Referenced in: contracts[0].component
-   
+
 ❌ Error: Component not exported from main module
    Component: ./components/product-list
    Expected in: dist/index.js
    Suggestion: Add export in lib/index.ts
-   
+
 ⚠️  Warning: Missing client build
    Found: dist/index.js
    Missing: dist/index.client.js
    Run: npm run build:client
-   
+
 ⚠️  Warning: Component file has no default or named export matching contract name
    File: ./components/product-list.ts
    Expected export: productList
@@ -1685,6 +1782,7 @@ When `--generate-types` flag is used, the validator:
 #### 4. **Package.json Validation** (NPM packages only)
 
 **Checks:**
+
 - ✅ package.json exists
 - ✅ `name` field matches plugin.yaml `module`
 - ✅ `type: "module"` is set
@@ -1695,18 +1793,19 @@ When `--generate-types` flag is used, the validator:
 - ✅ Build scripts exist for dual builds
 
 **Example errors:**
+
 ```
 ❌ Error: package.json not found
-   
+
 ❌ Error: Package name mismatch
    package.json: "@wix/stores"
    plugin.yaml module: "@wix/store"
-   
+
 ❌ Error: Missing package.json exports
    Required: "./plugin.yaml": "./plugin.yaml"
-   
+
 ⚠️  Warning: Missing "type": "module" in package.json
-   
+
 ⚠️  Warning: Missing dual build scripts
    Add: "build:client": "vite build"
    Add: "build:server": "vite build --ssr"
@@ -1715,20 +1814,22 @@ When `--generate-types` flag is used, the validator:
 #### 5. **Dynamic Contract Validation**
 
 **Checks:**
+
 - ✅ Generator file exists
 - ✅ Generator exports valid interface
 - ✅ Generator can be imported (syntax check)
-- ⚠️  Generator execution (optional, may require env vars)
+- ⚠️ Generator execution (optional, may require env vars)
 
 **Example errors:**
+
 ```
 ❌ Error: Generator file not found: ./generators/cms-generator.ts
    Referenced in: dynamic_contracts.generator
-   
+
 ❌ Error: Generator file has syntax errors
    File: ./generators/cms-generator.ts
    Error: Unexpected token at line 15
-   
+
 ⚠️  Warning: Generator export validation skipped
    Set environment variables to test generator execution
 ```
@@ -1736,17 +1837,19 @@ When `--generate-types` flag is used, the validator:
 #### 6. **File Structure Validation**
 
 **Checks:**
+
 - ✅ Recommended directory structure
 - ✅ No conflicting files
 - ✅ Contract files in consistent location
 - ✅ Component files in consistent location
 
 **Example warnings:**
+
 ```
 ⚠️  Warning: Contracts not in recommended location
    Found: ./product-list.jay-contract
    Recommended: ./contracts/product-list.jay-contract
-   
+
 ⚠️  Warning: Mixed contract locations
    Some in ./contracts/, some in root
    Consider organizing all contracts in ./contracts/
@@ -1759,6 +1862,7 @@ When `--generate-types` flag is used, the validator:
 Location: `packages/jay-stack/plugin-validator/`
 
 **Package structure:**
+
 ```
 packages/jay-stack/plugin-validator/
 ├── lib/
@@ -1777,12 +1881,14 @@ packages/jay-stack/plugin-validator/
 ```
 
 **Reuses existing tools:**
+
 - `@jay-framework/compiler-jay-html` - For contract parsing
 - `jay-cli definitions` - For generating and validating .d.ts files
 - `@jay-framework/compiler-shared` - For types and utilities
 - `commander` - CLI framework (via jay-stack-cli)
 
 **Package dependencies:**
+
 ```json
 {
   "name": "@jay-framework/plugin-validator",
@@ -1796,6 +1902,7 @@ packages/jay-stack/plugin-validator/
 ```
 
 **Used by jay-stack-cli:**
+
 ```json
 // packages/jay-stack/stack-cli/package.json
 {
@@ -1805,147 +1912,148 @@ packages/jay-stack/plugin-validator/
   }
 }
 ```
-  const pluginPath = options.pluginPath || process.cwd();
-  const verbose = options.verbose || false;
-  const strict = options.strict || false;
-  
-  const result: ValidationResult = {
-    valid: true,
-    errors: [],
-    warnings: [],
-  };
-  
-  // 1. Load and validate plugin.yaml
-  const pluginYamlPath = path.join(pluginPath, 'plugin.yaml');
-  if (!fs.existsSync(pluginYamlPath)) {
-    result.errors.push({
-      type: 'file-missing',
-      message: 'plugin.yaml not found',
-      location: pluginPath,
-      suggestion: 'Create a plugin.yaml file in the plugin root directory',
-    });
-    result.valid = false;
-    return result;
-  }
-  
-  // Parse plugin.yaml
-  let pluginManifest: PluginManifest;
-  try {
-    const yamlContent = fs.readFileSync(pluginYamlPath, 'utf-8');
-    pluginManifest = YAML.parse(yamlContent);
-  } catch (error) {
-    result.errors.push({
-      type: 'schema',
-      message: `Invalid YAML syntax: ${error.message}`,
-      location: pluginYamlPath,
-    });
-    result.valid = false;
-    return result;
-  }
-  
-  // 2. Schema validation
-  validateSchema(pluginManifest, pluginYamlPath, result);
-  
-  // 3. Contract file validation
-  if (pluginManifest.contracts) {
-    for (let i = 0; i < pluginManifest.contracts.length; i++) {
-      validateContract(pluginManifest.contracts[i], i, pluginPath, result);
-    }
-  }
-  
-  // 4. Component file validation
-  if (pluginManifest.contracts) {
-    for (let i = 0; i < pluginManifest.contracts.length; i++) {
-      validateComponent(pluginManifest.contracts[i], i, pluginPath, result);
-    }
-  }
-  
-  // 5. Package.json validation (if NPM package)
-  const packageJsonPath = path.join(pluginPath, 'package.json');
-  if (fs.existsSync(packageJsonPath)) {
-    validatePackageJson(pluginManifest, pluginPath, result);
-  }
-  
-  // 6. Dynamic contracts validation
-  if (pluginManifest.dynamic_contracts) {
-    validateDynamicContracts(pluginManifest.dynamic_contracts, pluginPath, result);
-  }
-  
-  // 7. File structure validation
-  validateFileStructure(pluginPath, result);
-  
-  // Final result
-  result.valid = result.errors.length === 0;
-  
-  return result;
+
+const pluginPath = options.pluginPath || process.cwd();
+const verbose = options.verbose || false;
+const strict = options.strict || false;
+
+const result: ValidationResult = {
+valid: true,
+errors: [],
+warnings: [],
+};
+
+// 1. Load and validate plugin.yaml
+const pluginYamlPath = path.join(pluginPath, 'plugin.yaml');
+if (!fs.existsSync(pluginYamlPath)) {
+result.errors.push({
+type: 'file-missing',
+message: 'plugin.yaml not found',
+location: pluginPath,
+suggestion: 'Create a plugin.yaml file in the plugin root directory',
+});
+result.valid = false;
+return result;
+}
+
+// Parse plugin.yaml
+let pluginManifest: PluginManifest;
+try {
+const yamlContent = fs.readFileSync(pluginYamlPath, 'utf-8');
+pluginManifest = YAML.parse(yamlContent);
+} catch (error) {
+result.errors.push({
+type: 'schema',
+message: `Invalid YAML syntax: ${error.message}`,
+location: pluginYamlPath,
+});
+result.valid = false;
+return result;
+}
+
+// 2. Schema validation
+validateSchema(pluginManifest, pluginYamlPath, result);
+
+// 3. Contract file validation
+if (pluginManifest.contracts) {
+for (let i = 0; i < pluginManifest.contracts.length; i++) {
+validateContract(pluginManifest.contracts[i], i, pluginPath, result);
+}
+}
+
+// 4. Component file validation
+if (pluginManifest.contracts) {
+for (let i = 0; i < pluginManifest.contracts.length; i++) {
+validateComponent(pluginManifest.contracts[i], i, pluginPath, result);
+}
+}
+
+// 5. Package.json validation (if NPM package)
+const packageJsonPath = path.join(pluginPath, 'package.json');
+if (fs.existsSync(packageJsonPath)) {
+validatePackageJson(pluginManifest, pluginPath, result);
+}
+
+// 6. Dynamic contracts validation
+if (pluginManifest.dynamic_contracts) {
+validateDynamicContracts(pluginManifest.dynamic_contracts, pluginPath, result);
+}
+
+// 7. File structure validation
+validateFileStructure(pluginPath, result);
+
+// Final result
+result.valid = result.errors.length === 0;
+
+return result;
 }
 
 function validateSchema(
-  manifest: PluginManifest,
-  location: string,
-  result: ValidationResult
+manifest: PluginManifest,
+location: string,
+result: ValidationResult
 ): void {
-  // Check required fields
-  if (!manifest.name) {
-    result.errors.push({
-      type: 'schema',
-      message: "Missing required field 'name'",
-      location,
-    });
-  }
-  
-  if (!manifest.contracts && !manifest.dynamic_contracts) {
-    result.errors.push({
-      type: 'schema',
-      message: "Plugin must have either 'contracts' or 'dynamic_contracts'",
-      location,
-    });
-  }
-  
-  // Check for deprecated fields
-  if ((manifest as any).version) {
-    result.warnings.push({
-      type: 'schema',
-      message: "Field 'version' is deprecated - use package.json version instead",
-      location,
-      suggestion: 'Remove version from plugin.yaml',
-    });
-  }
-  
-  // Validate contracts array
-  if (manifest.contracts && !Array.isArray(manifest.contracts)) {
-    result.errors.push({
-      type: 'schema',
-      message: "Field 'contracts' must be an array",
-      location,
-    });
-  }
+// Check required fields
+if (!manifest.name) {
+result.errors.push({
+type: 'schema',
+message: "Missing required field 'name'",
+location,
+});
+}
+
+if (!manifest.contracts && !manifest.dynamic_contracts) {
+result.errors.push({
+type: 'schema',
+message: "Plugin must have either 'contracts' or 'dynamic_contracts'",
+location,
+});
+}
+
+// Check for deprecated fields
+if ((manifest as any).version) {
+result.warnings.push({
+type: 'schema',
+message: "Field 'version' is deprecated - use package.json version instead",
+location,
+suggestion: 'Remove version from plugin.yaml',
+});
+}
+
+// Validate contracts array
+if (manifest.contracts && !Array.isArray(manifest.contracts)) {
+result.errors.push({
+type: 'schema',
+message: "Field 'contracts' must be an array",
+location,
+});
+}
 }
 
 function validateContract(
-  contract: StaticContractDef,
-  index: number,
-  pluginPath: string,
-  result: ValidationResult
+contract: StaticContractDef,
+index: number,
+pluginPath: string,
+result: ValidationResult
 ): void {
-  const contractPath = path.join(pluginPath, contract.contract);
-  
-  // Check file exists
-  if (!fs.existsSync(contractPath)) {
-    result.errors.push({
-      type: 'file-missing',
-      message: `Contract file not found: ${contract.contract}`,
-      location: `contracts[${index}]`,
-      suggestion: `Create the contract file or update the path in plugin.yaml`,
-    });
-    return;
-  }
-  
-  // Parse and validate contract
-  try {
-    const contractContent = fs.readFileSync(contractPath, 'utf-8');
-    const contractData = YAML.parse(contractContent);
-    
+const contractPath = path.join(pluginPath, contract.contract);
+
+// Check file exists
+if (!fs.existsSync(contractPath)) {
+result.errors.push({
+type: 'file-missing',
+message: `Contract file not found: ${contract.contract}`,
+location: `contracts[${index}]`,
+suggestion: `Create the contract file or update the path in plugin.yaml`,
+});
+return;
+}
+
+// Parse and validate contract
+try {
+const contractContent = fs.readFileSync(contractPath, 'utf-8');
+const contractData = YAML.parse(contractContent);
+
     // Validate contract name matches
     if (contractData.name && contractData.name !== toPascalCase(contract.name)) {
       result.warnings.push({
@@ -1955,86 +2063,87 @@ function validateContract(
         suggestion: `Contract file name should be '${toPascalCase(contract.name)}' or declare name: '${contract.name}' in plugin.yaml`,
       });
     }
-  } catch (error) {
-    result.errors.push({
-      type: 'contract-invalid',
-      message: `Invalid contract file: ${error.message}`,
-      location: contractPath,
-    });
-  }
+
+} catch (error) {
+result.errors.push({
+type: 'contract-invalid',
+message: `Invalid contract file: ${error.message}`,
+location: contractPath,
+});
+}
 }
 
 function validateComponent(
-  contract: StaticContractDef,
-  index: number,
-  pluginPath: string,
-  result: ValidationResult
+contract: StaticContractDef,
+index: number,
+pluginPath: string,
+result: ValidationResult
 ): void {
-  const componentPath = path.join(pluginPath, contract.component);
-  
-  // Try with .ts and .js extensions
-  const possiblePaths = [
-    componentPath,
-    `${componentPath}.ts`,
-    `${componentPath}.js`,
-  ];
-  
-  const exists = possiblePaths.some(p => fs.existsSync(p));
-  
-  if (!exists) {
-    result.errors.push({
-      type: 'file-missing',
-      message: `Component file not found: ${contract.component}`,
-      location: `contracts[${index}].component`,
-      suggestion: `Create the component file or update the path in plugin.yaml`,
-    });
-  }
+const componentPath = path.join(pluginPath, contract.component);
+
+// Try with .ts and .js extensions
+const possiblePaths = [
+componentPath,
+`${componentPath}.ts`,
+`${componentPath}.js`,
+];
+
+const exists = possiblePaths.some(p => fs.existsSync(p));
+
+if (!exists) {
+result.errors.push({
+type: 'file-missing',
+message: `Component file not found: ${contract.component}`,
+location: `contracts[${index}].component`,
+suggestion: `Create the component file or update the path in plugin.yaml`,
+});
+}
 }
 
 function validatePackageJson(
-  manifest: PluginManifest,
-  pluginPath: string,
-  result: ValidationResult
+manifest: PluginManifest,
+pluginPath: string,
+result: ValidationResult
 ): void {
-  const packageJsonPath = path.join(pluginPath, 'package.json');
-  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-  
-  // Check module name matches
-  if (manifest.module && packageJson.name !== manifest.module) {
-    result.errors.push({
-      type: 'schema',
-      message: `Package name mismatch: package.json="${packageJson.name}", plugin.yaml module="${manifest.module}"`,
-      location: packageJsonPath,
-      suggestion: `Update module in plugin.yaml to match package.json name`,
-    });
-  }
-  
-  // Check type: module
-  if (packageJson.type !== 'module') {
-    result.warnings.push({
-      type: 'schema',
-      message: 'Missing "type": "module" in package.json',
-      location: packageJsonPath,
-      suggestion: 'Add "type": "module" to package.json',
-    });
-  }
-  
-  // Check exports include plugin.yaml
-  if (!packageJson.exports || !packageJson.exports['./plugin.yaml']) {
-    result.errors.push({
-      type: 'export-mismatch',
-      message: 'plugin.yaml not exported in package.json',
-      location: packageJsonPath,
-      suggestion: 'Add "./plugin.yaml": "./plugin.yaml" to exports',
-    });
-  }
-  
-  // Check dual builds exist
-  const distPath = path.join(pluginPath, 'dist');
-  if (fs.existsSync(distPath)) {
-    const hasServerBuild = fs.existsSync(path.join(distPath, 'index.js'));
-    const hasClientBuild = fs.existsSync(path.join(distPath, 'index.client.js'));
-    
+const packageJsonPath = path.join(pluginPath, 'package.json');
+const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+
+// Check module name matches
+if (manifest.module && packageJson.name !== manifest.module) {
+result.errors.push({
+type: 'schema',
+message: `Package name mismatch: package.json="${packageJson.name}", plugin.yaml module="${manifest.module}"`,
+location: packageJsonPath,
+suggestion: `Update module in plugin.yaml to match package.json name`,
+});
+}
+
+// Check type: module
+if (packageJson.type !== 'module') {
+result.warnings.push({
+type: 'schema',
+message: 'Missing "type": "module" in package.json',
+location: packageJsonPath,
+suggestion: 'Add "type": "module" to package.json',
+});
+}
+
+// Check exports include plugin.yaml
+if (!packageJson.exports || !packageJson.exports['./plugin.yaml']) {
+result.errors.push({
+type: 'export-mismatch',
+message: 'plugin.yaml not exported in package.json',
+location: packageJsonPath,
+suggestion: 'Add "./plugin.yaml": "./plugin.yaml" to exports',
+});
+}
+
+// Check dual builds exist
+const distPath = path.join(pluginPath, 'dist');
+if (fs.existsSync(distPath)) {
+const hasServerBuild = fs.existsSync(path.join(distPath, 'index.js'));
+const hasClientBuild = fs.existsSync(path.join(distPath, 'index.client.js'));
+
     if (!hasServerBuild) {
       result.warnings.push({
         type: 'file-missing',
@@ -2043,7 +2152,7 @@ function validatePackageJson(
         suggestion: 'Run: npm run build:server',
       });
     }
-    
+
     if (!hasClientBuild) {
       result.warnings.push({
         type: 'file-missing',
@@ -2052,13 +2161,15 @@ function validatePackageJson(
         suggestion: 'Run: npm run build:client',
       });
     }
-  }
+
+}
 }
 
 function toPascalCase(str: string): string {
-  return str.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
+return str.split('-').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join('');
 }
-```
+
+````
 
 ### Validation Logic Overview
 
@@ -2110,11 +2221,12 @@ Plugin: wix-stores (@wix/stores)
   ✅ 3 components validated
   ✅ package.json valid
   ✅ Dual builds present
-  
+
 No errors found.
-```
+````
 
 **With Warnings:**
+
 ```bash
 $ jay-stack validate-plugin
 
@@ -2128,11 +2240,12 @@ Plugin: my-plugin
 Warnings:
   ⚠️  contracts/product.jay-contract: Contract name mismatch
       Expected: 'Product', Found: 'ProductList'
-      
+
 Use --strict to treat warnings as errors.
 ```
 
 **With Errors:**
+
 ```bash
 $ jay-stack validate-plugin
 
@@ -2142,12 +2255,12 @@ Plugin: my-plugin
   ❌ plugin.yaml invalid
   ❌ 1 contract missing
   ✅ 1 component validated
-  
+
 Errors:
   ❌ contracts[0]: Contract file not found: ./contracts/missing.jay-contract
       Location: contracts[0]
       → Create the contract file or update the path in plugin.yaml
-      
+
   ❌ contracts[0].component: Component file not found: ./components/missing.ts
       Location: contracts[0].component
       → Create the component file or update the path in plugin.yaml
@@ -2156,6 +2269,7 @@ Errors:
 ```
 
 **Local plugins validation:**
+
 ```bash
 $ jay-stack validate-plugin --local
 
@@ -2165,10 +2279,10 @@ Plugin: my-custom-plugin
   ✅ plugin.yaml valid
   ✅ 1 contract validated
   ✅ 1 component validated
-  
+
 Plugin: experimental-plugin
   ⚠️  1 warning
-  
+
 Warnings:
   ⚠️  Missing component implementation
       Contract: test-feature
@@ -2207,6 +2321,7 @@ jay-stack build
 - Add new command using Commander's `.command()` API
 - Format and display validation results
 - Exit with appropriate error codes (0 for success, 1 for failure)
+
 ```json
 {
   "scripts": {
@@ -2218,6 +2333,7 @@ jay-stack build
 ```
 
 **In CI/CD:**
+
 ```yaml
 # .github/workflows/validate.yml
 name: Validate Plugin
@@ -2248,27 +2364,31 @@ jobs:
 ### Dynamic Contract Generator Returns YAML Strings
 
 **Problem:** Dynamic contract generators need to create `Contract` objects, which contain `JayType` (from `compiler-shared`). This would create a circular dependency:
+
 - fullstack-component needs `Contract` type
 - `Contract` contains `JayType`
 - `JayType` is in `compiler-shared`
 - But fullstack-component is a runtime package and cannot depend on compiler
 
 **Solution:** Generators return **contract definitions as YAML strings**:
+
 ```typescript
 export interface GeneratedContractYaml {
-    name: string;           // Contract name (PascalCase)
-    yaml: string;           // Contract definition in YAML format
-    description?: string;   // Optional description
+  name: string; // Contract name (PascalCase)
+  yaml: string; // Contract definition in YAML format
+  description?: string; // Optional description
 }
 ```
 
 **Benefits:**
+
 1. **No compiler dependencies** - fullstack-component stays pure runtime
 2. **Clean separation** - runtime generates strings, compiler parses them
 3. **Flexible** - Can use any YAML generation approach (templates, builders, etc.)
 4. **Future extensible** - Can add helper builders later without changing the core API
 
 **Future Addition:** Could add a contract builder API in runtime for convenience:
+
 ```typescript
 // Future: Optional builder for convenience
 const yaml = contractBuilder()
@@ -2283,15 +2403,18 @@ const yaml = contractBuilder()
 **Change:** `generate()` → `generateWith()`
 
 **Rationale:**
+
 - Method name `generate()` implies immediate execution
 - Actually defines deferred generation function, executed later at build time
 - `generateWith()` clarifies it's providing the generation logic, not executing it
 
 **Usage:**
+
 ```typescript
 export const generator = makeContractGenerator()
   .withServices(CMS_SERVICE)
-  .generateWith(async (cms) => { // More accurate than "generate"
+  .generateWith(async (cms) => {
+    // More accurate than "generate"
     return await cms.getContracts();
   });
 ```
@@ -2301,6 +2424,7 @@ export const generator = makeContractGenerator()
 ### Shared Plugin Resolution
 
 **Problem:**
+
 - Plugin resolution logic was duplicated between `compiler-jay-html` and `plugin-validator`
 - NPM package resolution was incomplete (TODO comment)
 - Error messages when resolution failed were generic ("not found")
@@ -2310,13 +2434,26 @@ Created shared plugin resolution utilities in `@jay-framework/compiler-shared`:
 
 ```typescript
 // New functions in lib/plugin-resolution.ts
-export function loadPluginManifest(pluginDir: string): PluginManifest | null
-export function resolveLocalPlugin(projectRoot, pluginName, contractName): WithValidations<PluginComponentResolution> | null
-export function resolveNpmPlugin(projectRoot, pluginName, contractName): WithValidations<PluginComponentResolution> | null
-export function resolvePluginComponent(projectRoot, pluginName, contractName): WithValidations<PluginComponentResolution>
+export function loadPluginManifest(pluginDir: string): PluginManifest | null;
+export function resolveLocalPlugin(
+  projectRoot,
+  pluginName,
+  contractName,
+): WithValidations<PluginComponentResolution> | null;
+export function resolveNpmPlugin(
+  projectRoot,
+  pluginName,
+  contractName,
+): WithValidations<PluginComponentResolution> | null;
+export function resolvePluginComponent(
+  projectRoot,
+  pluginName,
+  contractName,
+): WithValidations<PluginComponentResolution>;
 ```
 
 **Benefits:**
+
 - ✅ Single source of truth for plugin resolution
 - ✅ NPM packages now fully supported (resolves through `package.json` exports)
 - ✅ Consistent behavior between compiler and validator
@@ -2325,6 +2462,7 @@ export function resolvePluginComponent(projectRoot, pluginName, contractName): W
 ### WithValidations for Error Messages
 
 **Before:**
+
 ```typescript
 // Old signature - returns null on failure
 resolvePluginComponent(...): PluginComponentResolution | null
@@ -2339,6 +2477,7 @@ if (!resolved) {
 ```
 
 **After:**
+
 ```typescript
 // New signature - returns WithValidations
 resolvePluginComponent(...): WithValidations<PluginComponentResolution>
@@ -2349,6 +2488,7 @@ validations.push(...result.validations);
 ```
 
 **Example Error Messages:**
+
 - `Plugin "my-plugin" not found. Searched in src/plugins/my-plugin/ and node_modules/my-plugin/. Ensure the plugin is installed or exists in your project.`
 - `Contract "wrong-name" not found in local plugin "my-plugin". Available contracts: products, categories, blog-posts`
 - `NPM package "my-plugin" found but plugin.yaml is missing. Is this a Jay Stack plugin?`
@@ -2357,27 +2497,101 @@ validations.push(...result.validations);
 ### Explicit ProjectRoot Parameter
 
 **Problem:**
+
 - `parseHeadlessImports` computed `projectRoot` as `path.dirname(path.dirname(filePath))`
 - Assumed specific directory structure (`src/pages/`)
 - Not flexible for different project layouts or testing
 
 **Solution:**
+
 ```typescript
 // New signature
 export async function parseJayFile(
-    html: string,
-    filename: string,
-    filePath: string,
-    options: ResolveTsConfigOptions,
-    linkedContractResolver: JayImportResolver,
-    projectRoot: string, // ← NEW: explicit parameter
-): Promise<WithValidations<JayHtmlSourceFile>>
+  html: string,
+  filename: string,
+  filePath: string,
+  options: ResolveTsConfigOptions,
+  linkedContractResolver: JayImportResolver,
+  projectRoot: string, // ← NEW: explicit parameter
+): Promise<WithValidations<JayHtmlSourceFile>>;
 ```
 
 **Benefits:**
+
 - ✅ More flexible - callers control the project root
 - ✅ Explicit and testable
 - ✅ No assumptions about directory structure
+
+### Yarn Workspace Plugin Resolution
+
+**Problem:**
+
+When running `jay-cli definitions` from within a yarn workspace (e.g., `examples/jay-stack/fake-shop`), NPM plugin resolution failed because:
+
+1. The code was looking only in `projectRoot/node_modules/plugin-name`
+2. Yarn workspaces hoist dependencies to the workspace root's `node_modules`
+3. Local workspace packages are symlinked, not copied
+
+**Solution:**
+
+1. **Plugin packages must export `plugin.yaml`** in their `package.json` exports field:
+   ```json
+   {
+     "exports": {
+       ".": "./dist/index.js",
+       "./client": "./dist/index.client.js",
+       "./plugin.yaml": "./plugin.yaml"
+     }
+   }
+   ```
+
+2. **Resolution uses `require.resolve()` to directly find `plugin.yaml`**:
+   ```typescript
+   // Directly resolve plugin.yaml - the file we actually need
+   const pluginYamlPath = require.resolve(`${pluginName}/plugin.yaml`, {
+     paths: [projectRoot],
+   });
+   const npmPluginPath = path.dirname(pluginYamlPath);
+   ```
+
+**Benefits:**
+
+- ✅ Correctly handles yarn workspace hoisting
+- ✅ Works with symlinked workspace packages
+- ✅ Uses standard Node.js resolution algorithm
+- ✅ Simple and clean - no directory tree walking needed
+- ✅ Resolves what we actually need (`plugin.yaml`) directly
+- ✅ Plugin validator enforces the export requirement
+- ✅ Follows modern package.json `exports` conventions
+
+### Example Updates
+
+Updated `examples/jay-stack/mood-tracker-plugin` and `examples/jay-stack/fake-shop`:
+
+**mood-tracker-plugin:**
+
+- ✅ Added `plugin.yaml` with contract definitions
+- ✅ Updated `package.json` `files` to include `plugin.yaml`
+- ✅ Built and verified exports are correct
+
+**fake-shop:**
+
+- ✅ Updated `page.jay-html` to use new `plugin`/`contract` syntax:
+  ```html
+  <script type="application/jay-headless"
+          plugin="example-jay-mood-tracker-plugin"
+          contract="mood-tracker"
+          key="mt">
+  </script>
+  ```
+- ✅ Verified type generation works correctly
+- ✅ Verified dev server can resolve and load the plugin
+
+**Test Results:**
+
+- ✅ All test suites passing (597 tests across all packages)
+- ✅ `jay-cli definitions` successfully generates types for fake-shop
+- ✅ Generated `.d.ts` files correctly import from plugin contracts
 
 ## Success Criteria
 
@@ -2388,4 +2602,3 @@ export async function parseJayFile(
 - ✅ Migration from old format is straightforward
 - ✅ Dynamic contracts maintain full type safety
 - ✅ Documentation is comprehensive and includes examples
-

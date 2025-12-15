@@ -419,13 +419,13 @@ async function validatePackageJson(
             }
         }
 
-        // Check for plugin.yaml export
+        // Check for plugin.yaml export (required for plugin resolution)
         if (!packageJson.exports || !packageJson.exports['./plugin.yaml']) {
-            result.warnings.push({
+            result.errors.push({
                 type: 'export-mismatch',
-                message: 'plugin.yaml not exported in package.json',
+                message: 'plugin.yaml not exported in package.json (required for plugin resolution)',
                 location: packageJsonPath,
-                suggestion: 'Add "./plugin.yaml" to exports field',
+                suggestion: 'Add "./plugin.yaml": "./plugin.yaml" to exports field',
             });
         }
     } catch (error: any) {
