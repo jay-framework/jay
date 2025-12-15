@@ -999,7 +999,7 @@ async function handleComponentPublish(
     }
 }
 
-export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: string) {
+export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: string, projectRoot: string) {
     const onPublish = async (params: PublishMessage): Promise<PublishResponse> => {
         const status: PublishStatus[] = [];
         const createdJayHtmls: CreatedJayHtml[] = [];
@@ -1032,6 +1032,7 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
                 dirname,
                 { relativePath: tsConfigPath },
                 JAY_IMPORT_RESOLVER,
+                projectRoot,
             );
             const definitionFile = generateElementDefinitionFile(parsedJayHtml);
             if (definitionFile.validations.length > 0)

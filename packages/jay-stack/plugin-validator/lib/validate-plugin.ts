@@ -2,7 +2,6 @@ import fs from 'fs';
 import path from 'path';
 import YAML from 'yaml';
 import { loadPluginManifest } from '@jay-framework/compiler-shared';
-import type { PluginManifest } from '@jay-framework/editor-protocol';
 import type { ValidatePluginOptions, ValidationResult, PluginContext } from './types';
 
 /**

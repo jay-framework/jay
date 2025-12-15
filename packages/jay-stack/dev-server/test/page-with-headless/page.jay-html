@@ -3,9 +3,8 @@
 <head>
     <title>Page with Headless</title>
     <script type="application/jay-headless"
-            src="./headless-component.ts"
-            name="headless"
-            contract="./headless-component.jay-contract"
+            plugin="test-headless"
+            contract="headless"
             key="headless" ></script>
     <script type="application/jay-data" contract="./page.jay-contract">
     </script>

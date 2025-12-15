@@ -613,6 +613,7 @@ describe('compiler', () => {
                 './test',
                 {},
                 JAY_IMPORT_RESOLVER,
+                ''
             );
 
             expect(jayFile.validations).toEqual([]);
@@ -840,6 +841,7 @@ describe('compiler', () => {
                 '',
                 {},
                 JAY_IMPORT_RESOLVER,
+                ''
             );
 
             expect(jayFile.validations.length).toEqual(1);
@@ -861,6 +863,7 @@ describe('compiler', () => {
                 '',
                 {},
                 JAY_IMPORT_RESOLVER,
+                ''
             );
 
             expect(jayFile.validations.length).toEqual(1);
@@ -882,6 +885,7 @@ describe('compiler', () => {
                 '',
                 {},
                 JAY_IMPORT_RESOLVER,
+                ''
             );
 
             expect(jayFile.validations[0]).toContain(
@@ -909,6 +913,7 @@ describe('compiler', () => {
                     '',
                     {},
                     JAY_IMPORT_RESOLVER,
+                    ''
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -956,6 +961,7 @@ describe('compiler', () => {
                     '',
                     {},
                     JAY_IMPORT_RESOLVER,
+                    ''
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -978,6 +984,7 @@ describe('compiler', () => {
                     '',
                     {},
                     JAY_IMPORT_RESOLVER,
+                    ''
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -998,6 +1005,7 @@ describe('compiler', () => {
                     '',
                     {},
                     JAY_IMPORT_RESOLVER,
+                    ''
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -1030,6 +1038,7 @@ describe('compiler', () => {
                     '',
                     {},
                     JAY_IMPORT_RESOLVER,
+                    ''
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -1070,6 +1079,7 @@ describe('compiler', () => {
                     '',
                     {},
                     JAY_IMPORT_RESOLVER,
+                    ''
                 );
 
                 expect(jayFile.validations).toEqual([]);

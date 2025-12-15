@@ -52,7 +52,7 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
     const { port: editorPort, editorId } = await editorServer.start();
 
     // Set up editor server callbacks
-    const handlers = createEditorHandlers(resolvedConfig, jayOptions.tsConfigFilePath);
+    const handlers = createEditorHandlers(resolvedConfig, jayOptions.tsConfigFilePath, process.cwd());
     editorServer.onPublish(handlers.onPublish);
     editorServer.onSaveImage(handlers.onSaveImage);
     editorServer.onHasImage(handlers.onHasImage);
@@ -83,7 +83,7 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
     });
 
     // generate page d.ts files
-    generatePageDefinitionFiles(routes, jayOptions.tsConfigFilePath);
+    generatePageDefinitionFiles(routes, jayOptions.tsConfigFilePath, process.cwd());
 
     // Start http server
     const expressServer = app.listen(devServerPort, () => {

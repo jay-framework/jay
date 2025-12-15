@@ -97,6 +97,7 @@ function mkRoute(
                 vite,
                 route,
                 options.pagesRootFolder,
+                options.projectRootFolder,
                 options.jayRollupConfig,
             );
 

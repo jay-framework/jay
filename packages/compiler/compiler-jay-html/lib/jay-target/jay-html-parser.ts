@@ -573,9 +573,16 @@ async function parseHeadlessImports(
             continue;
         }
         
-        const module = resolveResult.val.componentPath;
+        const absoluteComponentPath = resolveResult.val.componentPath;
         const name = resolveResult.val.componentName;
         const contractPath = resolveResult.val.contractPath;
+
+        // Make component path relative to the jay-html file for imports
+        let module = path.relative(filePath, absoluteComponentPath);
+        // Ensure the path starts with ./ or ../ for proper module resolution
+        if (!module.startsWith('.')) {
+            module = './' + module;
+        }
 
         // Contract path from plugin resolution is already absolute, don't resolve it again
         const contractFile = contractPath;

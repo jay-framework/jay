@@ -19,7 +19,7 @@ import {
 } from '@jay-framework/compiler-jay-html';
 import { checkCodeErrors } from '../common/errors';
 
-export function jayDefinitions() {
+export function jayDefinitions(projectRoot: string) {
     return {
         name: 'jay:definitions', // this name will show up in warnings and errors
         async load(id: string): Promise<LoadResult> {
@@ -52,6 +52,7 @@ export function jayDefinitions() {
                     dirname,
                     {},
                     JAY_IMPORT_RESOLVER,
+                    projectRoot,
                 );
                 const tsCode: string = checkValidationErrors(
                     generateElementDefinitionFile(parsedFile),

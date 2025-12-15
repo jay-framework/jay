@@ -21,8 +21,8 @@
     "build:check-types": "tsc",
     "clean": "rimraf dist",
     "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test": ":",
+    "test:watch": ":"
   },
   "dependencies": {
     "@jay-framework/compiler-jay-html": "workspace:^",

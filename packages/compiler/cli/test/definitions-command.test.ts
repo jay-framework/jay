@@ -43,7 +43,7 @@ describe('definitions command', () => {
 
         const build = await rollup({
             input: getJayHtmlOrContractFileInputs(sourceDir),
-            plugins: [jayDefinitions()],
+            plugins: [jayDefinitions('')],
         });
 
         // Close the bundle to complete the build
@@ -65,7 +65,7 @@ describe('definitions command', () => {
 
         const build = await rollup({
             input: getJayHtmlOrContractFileInputs(sourceDir),
-            plugins: [jayDefinitions()],
+            plugins: [jayDefinitions('')],
         });
 
         // Close the bundle to complete the build
@@ -90,7 +90,7 @@ describe('definitions command', () => {
 
         const build = await rollup({
             input: getJayHtmlOrContractFileInputs(sourceDir),
-            plugins: [jayDefinitions()],
+            plugins: [jayDefinitions('')],
         });
 
         // Close the bundle to complete the build
