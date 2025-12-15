@@ -4099,6 +4099,7 @@ __metadata:
     "@jay-framework/compiler-analyze-exported-types": "workspace:^"
     "@jay-framework/compiler-shared": "workspace:^"
     "@jay-framework/component": "workspace:^"
+    "@jay-framework/contract-types": "workspace:^"
     "@jay-framework/dev-environment": "workspace:^"
     "@jay-framework/runtime": "workspace:^"
     "@jay-framework/secure": "workspace:^"
@@ -4223,6 +4224,19 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@jay-framework/contract-types@workspace:^, @jay-framework/contract-types@workspace:packages/runtime/contract-types":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/contract-types@workspace:packages/runtime/contract-types"
+  dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@types/node": ^22.15.21
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+  languageName: unknown
+  linkType: soft
+
 "@jay-framework/dev-environment@workspace:^, @jay-framework/dev-environment@workspace:dev-environment":
   version: 0.0.0-use.local
   resolution: "@jay-framework/dev-environment@workspace:dev-environment"
@@ -4322,6 +4336,7 @@ __metadata:
   resolution: "@jay-framework/fullstack-component@workspace:packages/jay-stack/full-stack-component"
   dependencies:
     "@jay-framework/component": "workspace:^"
+    "@jay-framework/contract-types": "workspace:^"
     "@jay-framework/dev-environment": "workspace:^"
     "@jay-framework/jay-cli": "workspace:^"
     "@jay-framework/runtime": "workspace:^"
@@ -4452,6 +4467,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@jay-framework/runtime@workspace:packages/runtime/runtime"
   dependencies:
+    "@jay-framework/contract-types": "workspace:^"
     "@jay-framework/dev-environment": "workspace:^"
     "@jay-framework/list-compare": "workspace:^"
     "@jay-framework/reactive": "workspace:^"

@@ -88,6 +88,42 @@ export interface ProjectComponent {
     contractPath?: string;
 }
 
+// Plugin types (replaces InstalledApp)
+export interface StaticContractDef {
+    name: string;              // Contract name (kebab-case)
+    contract: string;          // Path to contract file
+    component: string;         // Path to component implementation
+    description?: string;      // Optional description
+}
+
+export interface DynamicContractDef {
+    prefix: string;            // Namespace prefix (e.g., "cms")
+    component: string;         // Shared component for all dynamic contracts
+    generator: string;         // Path to generator file
+}
+
+export interface PluginManifest {
+    name: string;              // Plugin name (kebab-case)
+    module?: string;           // NPM module name (optional for local plugins)
+    contracts?: StaticContractDef[];
+    dynamic_contracts?: DynamicContractDef;
+}
+
+export interface Plugin {
+    name: string;
+    module?: string;
+    location: 'npm' | 'local';  // Where the plugin is installed
+    manifestPath: string;       // Path to plugin.yaml
+    contracts: Array<{
+        name: string;           // Contract name (with prefix for dynamic)
+        contractPath: string;   // Path to contract file
+        componentPath: string;  // Path to component
+        isDynamic: boolean;     // Whether from dynamic_contracts
+        description?: string;
+    }>;
+}
+
+// Legacy type for backward compatibility
 export interface InstalledApp {
     name: string;
     module: string;
@@ -119,7 +155,8 @@ export interface ProjectInfo {
     localPath: string;
     pages: ProjectPage[];
     components: ProjectComponent[];
-    installedApps: InstalledApp[];
+    plugins: Plugin[];          // New plugin system
+    installedApps: InstalledApp[];  // Legacy - for backward compatibility
     installedAppContracts: {
         [appName: string]: InstalledAppContracts;
     };

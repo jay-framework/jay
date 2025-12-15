@@ -300,7 +300,7 @@ import { CMS_SERVICE } from '../services/cms-service';
 
 export const generator = makeContractGenerator()
   .withServices(CMS_SERVICE)
-  .generate(async (services) => {
+  .generateWith(async (services) => {
     const cms = services[CMS_SERVICE];
     
     // Connect to CMS and read schema
@@ -1079,7 +1079,7 @@ import { CMS_SERVICE } from '../services/cms-service';
 
 export const generator = makeContractGenerator()
   .withServices(CMS_SERVICE)
-  .generate(async (services) => {
+  .generateWith(async (services) => {
     const cms = services[CMS_SERVICE];
     
     // Get all collections from CMS
@@ -2220,6 +2220,59 @@ jobs:
 4. **Development feedback** - Quick validation during development
 5. **Documentation** - Validation rules serve as documentation
 6. **Consistency** - Enforce plugin structure standards
+
+## Implementation Note: Package Dependencies
+
+### Dynamic Contract Generator Returns YAML Strings
+
+**Problem:** Dynamic contract generators need to create `Contract` objects, which contain `JayType` (from `compiler-shared`). This would create a circular dependency:
+- fullstack-component needs `Contract` type
+- `Contract` contains `JayType`
+- `JayType` is in `compiler-shared`
+- But fullstack-component is a runtime package and cannot depend on compiler
+
+**Solution:** Generators return **contract definitions as YAML strings**:
+```typescript
+export interface GeneratedContractYaml {
+    name: string;           // Contract name (PascalCase)
+    yaml: string;           // Contract definition in YAML format
+    description?: string;   // Optional description
+}
+```
+
+**Benefits:**
+1. **No compiler dependencies** - fullstack-component stays pure runtime
+2. **Clean separation** - runtime generates strings, compiler parses them
+3. **Flexible** - Can use any YAML generation approach (templates, builders, etc.)
+4. **Future extensible** - Can add helper builders later without changing the core API
+
+**Future Addition:** Could add a contract builder API in runtime for convenience:
+```typescript
+// Future: Optional builder for convenience
+const yaml = contractBuilder()
+  .name('BlogPostsList')
+  .dataTag('title', 'string', { phase: 'slow' })
+  .dataTag('content', 'string', { phase: 'fast' })
+  .toYaml();
+```
+
+### Builder API Naming
+
+**Change:** `generate()` → `generateWith()`
+
+**Rationale:**
+- Method name `generate()` implies immediate execution
+- Actually defines deferred generation function, executed later at build time
+- `generateWith()` clarifies it's providing the generation logic, not executing it
+
+**Usage:**
+```typescript
+export const generator = makeContractGenerator()
+  .withServices(CMS_SERVICE)
+  .generateWith(async (cms) => { // More accurate than "generate"
+    return await cms.getContracts();
+  });
+```
 
 ## Success Criteria
 
