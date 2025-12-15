@@ -33,6 +33,7 @@ describe('CSS extraction', () => {
             '',
             {},
             JAY_IMPORT_RESOLVER,
+            '',
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -53,6 +54,7 @@ describe('CSS extraction', () => {
             './test',
             {},
             JAY_IMPORT_RESOLVER,
+            '',
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -72,6 +74,7 @@ describe('CSS extraction', () => {
             './test',
             {},
             JAY_IMPORT_RESOLVER,
+            '',
         );
 
         expect(jayFile.validations).toContain(
@@ -95,6 +98,7 @@ describe('CSS extraction', () => {
             './test',
             {},
             JAY_IMPORT_RESOLVER,
+            '',
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -111,6 +115,7 @@ describe('CSS extraction', () => {
             '',
             {},
             JAY_IMPORT_RESOLVER,
+            '',
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -131,6 +136,7 @@ describe('CSS extraction', () => {
             '',
             {},
             JAY_IMPORT_RESOLVER,
+            '',
         );
 
         expect(jayFile.validations).toEqual([]);

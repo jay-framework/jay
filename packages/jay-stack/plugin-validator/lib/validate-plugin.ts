@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import YAML from 'yaml';
+import { loadPluginManifest } from '@jay-framework/compiler-shared';
 import type { PluginManifest } from '@jay-framework/editor-protocol';
 import type { ValidatePluginOptions, ValidationResult, PluginContext } from './types';
 
@@ -34,31 +35,28 @@ async function validatePluginPackage(
     
     // 1. Load and validate plugin.yaml
     const pluginYamlPath = path.join(pluginPath, 'plugin.yaml');
-    if (!fs.existsSync(pluginYamlPath)) {
-        result.errors.push({
-            type: 'file-missing',
-            message: 'plugin.yaml not found',
-            location: pluginPath,
-            suggestion: 'Create a plugin.yaml file in the plugin root directory',
-        });
+    const pluginManifest = loadPluginManifest(pluginPath);
+    
+    if (!pluginManifest) {
+        if (!fs.existsSync(pluginYamlPath)) {
+            result.errors.push({
+                type: 'file-missing',
+                message: 'plugin.yaml not found',
+                location: pluginPath,
+                suggestion: 'Create a plugin.yaml file in the plugin root directory',
+            });
+        } else {
+            result.errors.push({
+                type: 'schema',
+                message: 'Invalid YAML syntax or format',
+                location: pluginYamlPath,
+            });
+        }
         result.valid = false;
         return result;
     }
     
-    let pluginManifest: PluginManifest;
-    try {
-        const yamlContent = fs.readFileSync(pluginYamlPath, 'utf-8');
-        pluginManifest = YAML.parse(yamlContent);
-        result.pluginName = pluginManifest.name;
-    } catch (error: any) {
-        result.errors.push({
-            type: 'schema',
-            message: `Invalid YAML syntax: ${error.message}`,
-            location: pluginYamlPath,
-        });
-        result.valid = false;
-        return result;
-    }
+    result.pluginName = pluginManifest.name;
     
     const context: PluginContext = {
         manifest: pluginManifest,

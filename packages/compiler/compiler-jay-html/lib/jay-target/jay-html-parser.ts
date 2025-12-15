@@ -531,9 +531,9 @@ async function parseHeadlessImports(
     validations: Array<string>,
     filePath: string,
     importResolver: JayImportResolver,
+    projectRoot: string,
 ): Promise<JayHeadlessImports[]> {
     const result: JayHeadlessImports[] = [];
-    const projectRoot = path.dirname(path.dirname(filePath)); // Assuming filePath is in src/pages/
     
     for await (const element of elements) {
         const pluginAttr = element.getAttribute('plugin');
@@ -798,6 +798,7 @@ export async function parseJayFile(
     filePath: string,
     options: ResolveTsConfigOptions,
     linkedContractResolver: JayImportResolver,
+    projectRoot: string,
 ): Promise<WithValidations<JayHtmlSourceFile>> {
     const normalizedFileName = normalizeFilename(filename);
     const baseElementName = capitalCase(normalizedFileName, { delimiter: '' });
@@ -819,6 +820,7 @@ export async function parseJayFile(
         validations,
         filePath,
         linkedContractResolver,
+        projectRoot,
     );
     const importNames = headfullImports.flatMap((_) => _.names);
     const types = await parseTypes(

@@ -53,6 +53,7 @@ describe('head links integration', () => {
             '',
             {},
             JAY_IMPORT_RESOLVER,
+            '',
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -81,6 +82,7 @@ describe('head links integration', () => {
             '',
             {},
             JAY_IMPORT_RESOLVER,
+            '',
         );
 
         const generated = generateElementFile(jayFile.val, RuntimeMode.MainTrusted);
@@ -142,6 +144,7 @@ describe('head links integration', () => {
             './test',
             {},
             JAY_IMPORT_RESOLVER,
+            '',
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -172,6 +175,7 @@ describe('head links integration', () => {
             '',
             {},
             JAY_IMPORT_RESOLVER,
+            '',
         );
 
         expect(jayFile.validations).toEqual([]);

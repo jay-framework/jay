@@ -29,6 +29,7 @@ describe('head links compilation', () => {
             './test',
             {},
             JAY_IMPORT_RESOLVER,
+            '',
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -61,6 +62,7 @@ describe('head links compilation', () => {
             '',
             {},
             JAY_IMPORT_RESOLVER,
+            '',
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -91,6 +93,7 @@ describe('head links compilation', () => {
             './test',
             {},
             JAY_IMPORT_RESOLVER,
+            '',
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -130,6 +133,7 @@ describe('head links compilation', () => {
             './test',
             {},
             JAY_IMPORT_RESOLVER,
+            '',
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -159,6 +163,7 @@ describe('head links compilation', () => {
             '',
             {},
             JAY_IMPORT_RESOLVER,
+            '',
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -182,6 +187,7 @@ describe('head links compilation', () => {
             '',
             {},
             JAY_IMPORT_RESOLVER,
+            '',
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -225,6 +231,7 @@ describe('head links compilation', () => {
             '',
             {},
             JAY_IMPORT_RESOLVER,
+            '',
         );
 
         expect(jayFile.validations).toEqual([]);
@@ -259,6 +266,7 @@ describe('head links compilation', () => {
             '',
             {},
             JAY_IMPORT_RESOLVER,
+            '',
         );
 
         expect(jayFile.validations).toEqual([]);

@@ -13,6 +13,7 @@ export default defineConfig({
         rollupOptions: {
             external: [
                 '@jay-framework/compiler-jay-html',
+                '@jay-framework/compiler-shared',
                 '@jay-framework/editor-protocol',
                 'chalk',
                 'yaml',

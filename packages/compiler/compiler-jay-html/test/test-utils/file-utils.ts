@@ -28,6 +28,10 @@ export function fixtureDir(folder): string {
     return path.resolve(__dirname, `../fixtures/${folder}`);
 }
 
+export function fixturesRoot(): string {
+    return path.resolve(__dirname, '../fixtures');
+}
+
 export async function readFixtureElementFile(folder) {
     return prettify(await readFixtureFileRaw(folder, 'generated-element.ts'));
 }
@@ -78,7 +82,7 @@ export async function readFileAndGenerateElementBridgeFile(folder: string, given
     const file = givenFile || getFileFromFolder(folder);
     const jayFile = await readFixtureSourceJayFile(folder, file);
     const parsedFile = checkValidationErrors(
-        await parseJayFile(jayFile, `${file}.jay-html`, dirname, {}, resolver || TEST_IMPORT_RESOLVER),
+        await parseJayFile(jayFile, `${file}.jay-html`, dirname, {}, resolver || TEST_IMPORT_RESOLVER, fixturesRoot()),
     );
     return generateElementBridgeFile(parsedFile);
 }
@@ -92,7 +96,7 @@ export async function readAndParseJayFile(
     const dirname = fixtureDir(folder);
     const filename = `${file}.jay-html`;
     const code = await readFixtureSourceJayFile(folder, file);
-    return await parseJayFile(code, filename, dirname, {}, resolver || TEST_IMPORT_RESOLVER);
+    return await parseJayFile(code, filename, dirname, {}, resolver || TEST_IMPORT_RESOLVER, fixturesRoot());
 }
 
 export interface ReadFileAndGenerateElementFileOptions {
@@ -113,7 +117,7 @@ export async function readFileAndGenerateElementFile(
     const file = givenFile || getFileFromFolder(folder);
     const jayFile = await readFixtureSourceJayFile(folder, file);
     const parsedFile = checkValidationErrors(
-        await parseJayFile(jayFile, `${file}.jay-html`, dirname, {}, options?.resolver || TEST_IMPORT_RESOLVER),
+        await parseJayFile(jayFile, `${file}.jay-html`, dirname, {}, options?.resolver || TEST_IMPORT_RESOLVER, fixturesRoot()),
     );
     if (options?.generateTarget === GenerateTarget.react)
         return generateElementFileReactTarget(parsedFile, importerMode);
