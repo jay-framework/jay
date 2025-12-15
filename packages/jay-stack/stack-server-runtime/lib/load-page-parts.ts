@@ -1,12 +1,12 @@
-import {ViteDevServer} from 'vite';
-import {JayRoute} from '@jay-framework/stack-route-scanner';
-import {WithValidations} from '@jay-framework/compiler-shared';
+import { ViteDevServer } from 'vite';
+import { JayRoute } from '@jay-framework/stack-route-scanner';
+import { WithValidations } from '@jay-framework/compiler-shared';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {parseJayFile, JAY_IMPORT_RESOLVER} from '@jay-framework/compiler-jay-html';
-import {AnyJayStackComponentDefinition} from '@jay-framework/fullstack-component';
-import {JayRollupConfig} from '@jay-framework/rollup-plugin';
-import {createRequire} from 'module';
+import { parseJayFile, JAY_IMPORT_RESOLVER } from '@jay-framework/compiler-jay-html';
+import { AnyJayStackComponentDefinition } from '@jay-framework/fullstack-component';
+import { JayRollupConfig } from '@jay-framework/rollup-plugin';
+import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 
@@ -58,7 +58,7 @@ export async function loadPageParts(
             relativePath: jayRollupConfig.tsConfigFilePath,
         },
         JAY_IMPORT_RESOLVER,
-        projectBase
+        projectBase,
     );
 
     return jayHtmlWithValidations.mapAsync(async (jayHtml) => {

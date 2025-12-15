@@ -6,13 +6,15 @@ import type { ValidatePluginOptions, ValidationResult, PluginContext } from './t
 
 /**
  * Validates a Jay Stack plugin package or local plugin directory.
- * 
+ *
  * @param options - Validation options
  * @returns Validation result with errors and warnings
  */
-export async function validatePlugin(options: ValidatePluginOptions = {}): Promise<ValidationResult> {
+export async function validatePlugin(
+    options: ValidatePluginOptions = {},
+): Promise<ValidationResult> {
     const pluginPath = options.pluginPath || process.cwd();
-    
+
     if (options.local) {
         return validateLocalPlugins(pluginPath, options);
     } else {
@@ -22,7 +24,7 @@ export async function validatePlugin(options: ValidatePluginOptions = {}): Promi
 
 async function validatePluginPackage(
     pluginPath: string,
-    options: ValidatePluginOptions
+    options: ValidatePluginOptions,
 ): Promise<ValidationResult> {
     const result: ValidationResult = {
         valid: true,
@@ -31,11 +33,11 @@ async function validatePluginPackage(
         contractsChecked: 0,
         componentsChecked: 0,
     };
-    
+
     // 1. Load and validate plugin.yaml
     const pluginYamlPath = path.join(pluginPath, 'plugin.yaml');
     const pluginManifest = loadPluginManifest(pluginPath);
-    
+
     if (!pluginManifest) {
         if (!fs.existsSync(pluginYamlPath)) {
             result.errors.push({
@@ -54,18 +56,18 @@ async function validatePluginPackage(
         result.valid = false;
         return result;
     }
-    
+
     result.pluginName = pluginManifest.name;
-    
+
     const context: PluginContext = {
         manifest: pluginManifest,
         pluginPath,
         isNpmPackage: fs.existsSync(path.join(pluginPath, 'package.json')),
     };
-    
+
     // 2. Schema validation
     await validateSchema(context, result);
-    
+
     // 3. Contract file validation
     if (pluginManifest.contracts) {
         for (let i = 0; i < pluginManifest.contracts.length; i++) {
@@ -74,71 +76,74 @@ async function validatePluginPackage(
                 i,
                 context,
                 options.generateTypes || false,
-                result
+                result,
             );
         }
     }
-    
+
     // 4. Component file validation
     if (pluginManifest.contracts) {
         for (let i = 0; i < pluginManifest.contracts.length; i++) {
             await validateComponent(pluginManifest.contracts[i], i, context, result);
         }
     }
-    
+
     // 5. Package.json validation (if NPM package)
     if (context.isNpmPackage) {
         await validatePackageJson(context, result);
         result.packageJsonChecked = true;
     }
-    
+
     // 6. Dynamic contracts validation
     if (pluginManifest.dynamic_contracts) {
         await validateDynamicContracts(context, result);
     }
-    
+
     // Final result
     result.valid = result.errors.length === 0;
-    
+
     return result;
 }
 
 async function validateLocalPlugins(
     projectPath: string,
-    options: ValidatePluginOptions
+    options: ValidatePluginOptions,
 ): Promise<ValidationResult> {
     const pluginsPath = path.join(projectPath, 'src/plugins');
-    
+
     if (!fs.existsSync(pluginsPath)) {
         return {
             valid: false,
-            errors: [{
-                type: 'file-missing',
-                message: 'src/plugins/ directory not found',
-                location: projectPath,
-                suggestion: 'Create src/plugins/ directory for local plugins',
-            }],
+            errors: [
+                {
+                    type: 'file-missing',
+                    message: 'src/plugins/ directory not found',
+                    location: projectPath,
+                    suggestion: 'Create src/plugins/ directory for local plugins',
+                },
+            ],
             warnings: [],
         };
     }
-    
+
     // Validate each plugin in src/plugins/
-    const pluginDirs = fs.readdirSync(pluginsPath, { withFileTypes: true })
-        .filter(d => d.isDirectory());
-    
+    const pluginDirs = fs
+        .readdirSync(pluginsPath, { withFileTypes: true })
+        .filter((d) => d.isDirectory());
+
     const allResults: ValidationResult[] = [];
-    
+
     for (const pluginDir of pluginDirs) {
         const pluginPath = path.join(pluginsPath, pluginDir.name);
         const result = await validatePluginPackage(pluginPath, options);
         allResults.push(result);
     }
-    
+
     // Combine results
     return {
-        valid: allResults.every(r => r.valid),
-        errors: allResults.flatMap(r => r.errors),
-        warnings: allResults.flatMap(r => r.warnings),
+        valid: allResults.every((r) => r.valid),
+        errors: allResults.flatMap((r) => r.errors),
+        warnings: allResults.flatMap((r) => r.warnings),
         contractsChecked: allResults.reduce((sum, r) => sum + (r.contractsChecked || 0), 0),
         componentsChecked: allResults.reduce((sum, r) => sum + (r.componentsChecked || 0), 0),
         typesGenerated: allResults.reduce((sum, r) => sum + (r.typesGenerated || 0), 0),
@@ -150,7 +155,7 @@ async function validateLocalPlugins(
  */
 async function validateSchema(context: PluginContext, result: ValidationResult): Promise<void> {
     const { manifest } = context;
-    
+
     // Check required field: name
     if (!manifest.name) {
         result.errors.push({
@@ -167,7 +172,7 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
             suggestion: 'Use lowercase letters, numbers, and hyphens only (e.g., "my-plugin")',
         });
     }
-    
+
     // Check contracts if present
     if (manifest.contracts) {
         if (!Array.isArray(manifest.contracts)) {
@@ -204,7 +209,7 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
             });
         }
     }
-    
+
     // Check dynamic_contracts if present
     if (manifest.dynamic_contracts) {
         if (!manifest.dynamic_contracts.component) {
@@ -232,7 +237,7 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
             });
         }
     }
-    
+
     // Warn if neither contracts nor dynamic_contracts are specified
     if (!manifest.contracts && !manifest.dynamic_contracts) {
         result.warnings.push({
@@ -252,12 +257,12 @@ async function validateContract(
     index: number,
     context: PluginContext,
     generateTypes: boolean,
-    result: ValidationResult
+    result: ValidationResult,
 ): Promise<void> {
     result.contractsChecked = (result.contractsChecked || 0) + 1;
-    
+
     const contractPath = path.join(context.pluginPath, contract.contract);
-    
+
     // Check if contract file exists
     if (!fs.existsSync(contractPath)) {
         result.errors.push({
@@ -268,12 +273,12 @@ async function validateContract(
         });
         return;
     }
-    
+
     // Validate contract file is valid YAML
     try {
         const contractContent = await fs.promises.readFile(contractPath, 'utf-8');
         const parsedContract = YAML.parse(contractContent);
-        
+
         // Basic contract structure validation
         if (!parsedContract.name) {
             result.errors.push({
@@ -282,7 +287,7 @@ async function validateContract(
                 location: contractPath,
             });
         }
-        
+
         if (!parsedContract.tags || !Array.isArray(parsedContract.tags)) {
             result.errors.push({
                 type: 'contract-invalid',
@@ -299,16 +304,16 @@ async function validateContract(
         });
         return;
     }
-    
+
     // Generate .d.ts file if requested
     if (generateTypes) {
         try {
             // Import compiler dynamically to generate types
             const { compileContractFile } = await import('@jay-framework/compiler-jay-html');
             const dtsPath = contractPath + '.d.ts';
-            
+
             await compileContractFile(contractPath, dtsPath);
-            
+
             result.typesGenerated = (result.typesGenerated || 0) + 1;
         } catch (error: any) {
             result.errors.push({
@@ -327,16 +332,16 @@ async function validateComponent(
     contract: any,
     index: number,
     context: PluginContext,
-    result: ValidationResult
+    result: ValidationResult,
 ): Promise<void> {
     result.componentsChecked = (result.componentsChecked || 0) + 1;
-    
+
     // For NPM packages, we can't easily validate exports without loading the package
     // So we'll just validate for local plugins
     if (!context.isNpmPackage) {
         const componentPath = contract.component;
         const possibleExtensions = ['.ts', '.js', '.tsx', '.jsx', '/index.ts', '/index.js'];
-        
+
         let found = false;
         for (const ext of possibleExtensions) {
             const fullPath = path.join(context.pluginPath, componentPath + ext);
@@ -345,7 +350,7 @@ async function validateComponent(
                 break;
             }
         }
-        
+
         if (!found) {
             result.errors.push({
                 type: 'file-missing',
@@ -360,9 +365,12 @@ async function validateComponent(
 /**
  * Validates package.json has correct exports for NPM packages
  */
-async function validatePackageJson(context: PluginContext, result: ValidationResult): Promise<void> {
+async function validatePackageJson(
+    context: PluginContext,
+    result: ValidationResult,
+): Promise<void> {
     const packageJsonPath = path.join(context.pluginPath, 'package.json');
-    
+
     if (!fs.existsSync(packageJsonPath)) {
         result.warnings.push({
             type: 'file-missing',
@@ -372,10 +380,10 @@ async function validatePackageJson(context: PluginContext, result: ValidationRes
         });
         return;
     }
-    
+
     try {
         const packageJson = JSON.parse(await fs.promises.readFile(packageJsonPath, 'utf-8'));
-        
+
         // Check for exports field
         if (!packageJson.exports) {
             result.warnings.push({
@@ -394,7 +402,7 @@ async function validatePackageJson(context: PluginContext, result: ValidationRes
                     suggestion: 'Add "." export for the main module entry',
                 });
             }
-            
+
             // Check for contract exports if contracts are defined
             if (context.manifest.contracts) {
                 for (const contract of context.manifest.contracts) {
@@ -410,7 +418,7 @@ async function validatePackageJson(context: PluginContext, result: ValidationRes
                 }
             }
         }
-        
+
         // Check for plugin.yaml export
         if (!packageJson.exports || !packageJson.exports['./plugin.yaml']) {
             result.warnings.push({
@@ -420,7 +428,6 @@ async function validatePackageJson(context: PluginContext, result: ValidationRes
                 suggestion: 'Add "./plugin.yaml" to exports field',
             });
         }
-        
     } catch (error: any) {
         result.errors.push({
             type: 'schema',
@@ -433,15 +440,18 @@ async function validatePackageJson(context: PluginContext, result: ValidationRes
 /**
  * Validates dynamic contracts configuration
  */
-async function validateDynamicContracts(context: PluginContext, result: ValidationResult): Promise<void> {
+async function validateDynamicContracts(
+    context: PluginContext,
+    result: ValidationResult,
+): Promise<void> {
     const { dynamic_contracts } = context.manifest;
     if (!dynamic_contracts) return;
-    
+
     // Check generator file exists
     if (dynamic_contracts.generator) {
         const generatorPath = path.join(context.pluginPath, dynamic_contracts.generator);
         const possibleExtensions = ['.ts', '.js', '/index.ts', '/index.js'];
-        
+
         let found = false;
         for (const ext of possibleExtensions) {
             if (fs.existsSync(generatorPath + ext)) {
@@ -449,7 +459,7 @@ async function validateDynamicContracts(context: PluginContext, result: Validati
                 break;
             }
         }
-        
+
         if (!found && !context.isNpmPackage) {
             result.errors.push({
                 type: 'file-missing',
@@ -459,12 +469,12 @@ async function validateDynamicContracts(context: PluginContext, result: Validati
             });
         }
     }
-    
+
     // Check component file exists
     if (dynamic_contracts.component) {
         const componentPath = path.join(context.pluginPath, dynamic_contracts.component);
         const possibleExtensions = ['.ts', '.js', '/index.ts', '/index.js'];
-        
+
         let found = false;
         for (const ext of possibleExtensions) {
             if (fs.existsSync(componentPath + ext)) {
@@ -472,7 +482,7 @@ async function validateDynamicContracts(context: PluginContext, result: Validati
                 break;
             }
         }
-        
+
         if (!found && !context.isNpmPackage) {
             result.errors.push({
                 type: 'file-missing',
@@ -483,4 +493,3 @@ async function validateDynamicContracts(context: PluginContext, result: Validati
         }
     }
 }
-

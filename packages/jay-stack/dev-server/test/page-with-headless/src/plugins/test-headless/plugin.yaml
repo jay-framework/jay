@@ -4,4 +4,3 @@ contracts:
     contract: ../../../headless-component.jay-contract
     component: ../../../headless-component
     description: Test headless component
-

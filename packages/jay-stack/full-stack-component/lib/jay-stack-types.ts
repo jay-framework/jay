@@ -40,8 +40,8 @@ export type ServiceMarkers<T extends any[]> = {
  * Contains the contract name and original YAML definition.
  */
 export interface DynamicContractMetadata {
-    contractName: string;      // e.g., "BlogPostsList" or "cms/blog-posts-list"
-    contractYaml: string;      // Original YAML contract definition
+    contractName: string; // e.g., "BlogPostsList" or "cms/blog-posts-list"
+    contractYaml: string; // Original YAML contract definition
 }
 
 /**
@@ -60,7 +60,8 @@ export interface DynamicContractMetadata {
  *   });
  * ```
  */
-export const DYNAMIC_CONTRACT_SERVICE = createJayService<DynamicContractMetadata>('DynamicContract');
+export const DYNAMIC_CONTRACT_SERVICE =
+    createJayService<DynamicContractMetadata>('DynamicContract');
 
 // ============================================================================
 // Page Props and URL Params
@@ -201,14 +202,14 @@ export type AnyJayStackComponentDefinition = JayStackComponentDefinition<
 
 /**
  * A generated contract definition in YAML string format.
- * 
+ *
  * This avoids dependency on compiler types - generators output contract YAML,
  * which the compiler parses using its own type system.
  */
 export interface GeneratedContractYaml {
-    name: string;           // Contract name (PascalCase, e.g., "BlogPostsList")
-    yaml: string;           // Contract definition in YAML format
-    description?: string;   // Optional description
+    name: string; // Contract name (PascalCase, e.g., "BlogPostsList")
+    yaml: string; // Contract definition in YAML format
+    description?: string; // Optional description
 }
 
 /**

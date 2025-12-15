@@ -28,7 +28,9 @@ describe('compile contract', () => {
             throw new Error(`Unknown link: ${link}`);
         },
         resolvePluginComponent(pluginName: string, contractName: string, projectRoot: string) {
-            return new WithValidations(null as any, [`Plugin resolution not supported in this test`]);
+            return new WithValidations(null as any, [
+                `Plugin resolution not supported in this test`,
+            ]);
         },
     };
     it('should compile counter contract', async () => {

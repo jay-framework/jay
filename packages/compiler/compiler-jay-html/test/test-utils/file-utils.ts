@@ -77,12 +77,23 @@ export function getFileFromFolder(folder: string): string {
     return folder.split('/').slice(-1)[0];
 }
 
-export async function readFileAndGenerateElementBridgeFile(folder: string, givenFile?: string, resolver?: JayImportResolver) {
+export async function readFileAndGenerateElementBridgeFile(
+    folder: string,
+    givenFile?: string,
+    resolver?: JayImportResolver,
+) {
     const dirname = fixtureDir(folder);
     const file = givenFile || getFileFromFolder(folder);
     const jayFile = await readFixtureSourceJayFile(folder, file);
     const parsedFile = checkValidationErrors(
-        await parseJayFile(jayFile, `${file}.jay-html`, dirname, {}, resolver || TEST_IMPORT_RESOLVER, fixturesRoot()),
+        await parseJayFile(
+            jayFile,
+            `${file}.jay-html`,
+            dirname,
+            {},
+            resolver || TEST_IMPORT_RESOLVER,
+            fixturesRoot(),
+        ),
     );
     return generateElementBridgeFile(parsedFile);
 }
@@ -96,7 +107,14 @@ export async function readAndParseJayFile(
     const dirname = fixtureDir(folder);
     const filename = `${file}.jay-html`;
     const code = await readFixtureSourceJayFile(folder, file);
-    return await parseJayFile(code, filename, dirname, {}, resolver || TEST_IMPORT_RESOLVER, fixturesRoot());
+    return await parseJayFile(
+        code,
+        filename,
+        dirname,
+        {},
+        resolver || TEST_IMPORT_RESOLVER,
+        fixturesRoot(),
+    );
 }
 
 export interface ReadFileAndGenerateElementFileOptions {
@@ -117,7 +135,14 @@ export async function readFileAndGenerateElementFile(
     const file = givenFile || getFileFromFolder(folder);
     const jayFile = await readFixtureSourceJayFile(folder, file);
     const parsedFile = checkValidationErrors(
-        await parseJayFile(jayFile, `${file}.jay-html`, dirname, {}, options?.resolver || TEST_IMPORT_RESOLVER, fixturesRoot()),
+        await parseJayFile(
+            jayFile,
+            `${file}.jay-html`,
+            dirname,
+            {},
+            options?.resolver || TEST_IMPORT_RESOLVER,
+            fixturesRoot(),
+        ),
     );
     if (options?.generateTarget === GenerateTarget.react)
         return generateElementFileReactTarget(parsedFile, importerMode);

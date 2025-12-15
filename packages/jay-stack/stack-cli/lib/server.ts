@@ -14,12 +14,12 @@ export interface StartDevServerOptions {
 
 export async function startDevServer(options: StartDevServerOptions = {}) {
     const projectPath = options.projectPath || process.cwd();
-    
+
     // Change to project directory if specified
     if (projectPath !== process.cwd()) {
         process.chdir(projectPath);
     }
-    
+
     // Load configuration
     const config = loadConfig();
     const resolvedConfig = getConfigWithDefaults(config);
@@ -52,7 +52,11 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
     const { port: editorPort, editorId } = await editorServer.start();
 
     // Set up editor server callbacks
-    const handlers = createEditorHandlers(resolvedConfig, jayOptions.tsConfigFilePath, process.cwd());
+    const handlers = createEditorHandlers(
+        resolvedConfig,
+        jayOptions.tsConfigFilePath,
+        process.cwd(),
+    );
     editorServer.onPublish(handlers.onPublish);
     editorServer.onSaveImage(handlers.onSaveImage);
     editorServer.onHasImage(handlers.onHasImage);
@@ -103,7 +107,7 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
         await new Promise((resolve) => expressServer.close(resolve));
         process.exit(0);
     };
-    
+
     // Handle graceful shutdown
     process.on('SIGTERM', shutdown);
     process.on('SIGINT', shutdown);

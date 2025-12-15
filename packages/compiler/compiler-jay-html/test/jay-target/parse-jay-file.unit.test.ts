@@ -36,25 +36,34 @@ describe('compiler', () => {
             // Handle test plugins
             // These tests don't use real fixture files, so just return simple paths
             if (pluginName === 'test-counter' && contractName === 'counter') {
-                return new WithValidations({
-                    contractPath: '/path/to/counter.jay-contract',
-                    componentPath: '/path/to/counter',
-                    componentName: 'counter',
-                }, []);
+                return new WithValidations(
+                    {
+                        contractPath: '/path/to/counter.jay-contract',
+                        componentPath: '/path/to/counter',
+                        componentName: 'counter',
+                    },
+                    [],
+                );
             }
             if (pluginName === 'test-named-counter' && contractName === 'named-counter') {
-                return new WithValidations({
-                    contractPath: '/path/to/named-counter.jay-contract',
-                    componentPath: '/path/to/named-counter',
-                    componentName: 'namedCounter',
-                }, []);
+                return new WithValidations(
+                    {
+                        contractPath: '/path/to/named-counter.jay-contract',
+                        componentPath: '/path/to/named-counter',
+                        componentName: 'namedCounter',
+                    },
+                    [],
+                );
             }
             if (pluginName === 'test-timer' && contractName === 'timer') {
-                return new WithValidations({
-                    contractPath: '/path/to/timer.jay-contract',
-                    componentPath: '/path/to/timer',
-                    componentName: 'timer',
-                }, []);
+                return new WithValidations(
+                    {
+                        contractPath: '/path/to/timer.jay-contract',
+                        componentPath: '/path/to/timer',
+                        componentName: 'timer',
+                    },
+                    [],
+                );
             }
             return new WithValidations(null as any, [`Plugin "${pluginName}" not found in test`]);
         },
@@ -613,7 +622,7 @@ describe('compiler', () => {
                 './test',
                 {},
                 JAY_IMPORT_RESOLVER,
-                ''
+                '',
             );
 
             expect(jayFile.validations).toEqual([]);
@@ -841,7 +850,7 @@ describe('compiler', () => {
                 '',
                 {},
                 JAY_IMPORT_RESOLVER,
-                ''
+                '',
             );
 
             expect(jayFile.validations.length).toEqual(1);
@@ -863,7 +872,7 @@ describe('compiler', () => {
                 '',
                 {},
                 JAY_IMPORT_RESOLVER,
-                ''
+                '',
             );
 
             expect(jayFile.validations.length).toEqual(1);
@@ -885,7 +894,7 @@ describe('compiler', () => {
                 '',
                 {},
                 JAY_IMPORT_RESOLVER,
-                ''
+                '',
             );
 
             expect(jayFile.validations[0]).toContain(
@@ -913,7 +922,7 @@ describe('compiler', () => {
                     '',
                     {},
                     JAY_IMPORT_RESOLVER,
-                    ''
+                    '',
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -961,7 +970,7 @@ describe('compiler', () => {
                     '',
                     {},
                     JAY_IMPORT_RESOLVER,
-                    ''
+                    '',
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -984,7 +993,7 @@ describe('compiler', () => {
                     '',
                     {},
                     JAY_IMPORT_RESOLVER,
-                    ''
+                    '',
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -1005,7 +1014,7 @@ describe('compiler', () => {
                     '',
                     {},
                     JAY_IMPORT_RESOLVER,
-                    ''
+                    '',
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -1038,7 +1047,7 @@ describe('compiler', () => {
                     '',
                     {},
                     JAY_IMPORT_RESOLVER,
-                    ''
+                    '',
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -1079,7 +1088,7 @@ describe('compiler', () => {
                     '',
                     {},
                     JAY_IMPORT_RESOLVER,
-                    ''
+                    '',
                 );
 
                 expect(jayFile.validations).toEqual([]);

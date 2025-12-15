@@ -7,7 +7,11 @@ import {
     parseJayFile,
 } from '@jay-framework/compiler-jay-html';
 
-export async function generatePageDefinitionFiles(routes: DevServerRoute[], tsConfigPath: string, projectRoot: string) {
+export async function generatePageDefinitionFiles(
+    routes: DevServerRoute[],
+    tsConfigPath: string,
+    projectRoot: string,
+) {
     for (const route of routes) {
         const jayHtmlPath = route.fsRoute.jayHtmlPath;
 

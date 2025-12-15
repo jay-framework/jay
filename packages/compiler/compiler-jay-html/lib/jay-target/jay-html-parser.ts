@@ -534,45 +534,45 @@ async function parseHeadlessImports(
     projectRoot: string,
 ): Promise<JayHeadlessImports[]> {
     const result: JayHeadlessImports[] = [];
-    
+
     for await (const element of elements) {
         const pluginAttr = element.getAttribute('plugin');
         const contractAttr = element.getAttribute('contract');
         const key = element.getAttribute('key');
-        
+
         // Validate required attributes
         if (!pluginAttr) {
-            validations.push(
-                'headless import must specify plugin attribute',
-            );
+            validations.push('headless import must specify plugin attribute');
             continue;
         }
-        
+
         if (!contractAttr) {
-            validations.push(
-                'headless import must specify contract attribute',
-            );
+            validations.push('headless import must specify contract attribute');
             continue;
         }
-        
+
         if (!key) {
             validations.push(
                 'headless import must specify key attribute, used for this component ViewState and Refs member for the contract',
             );
             continue;
         }
-        
+
         // Resolve plugin to actual paths using the resolver
-        const resolveResult = importResolver.resolvePluginComponent(pluginAttr, contractAttr, projectRoot);
-        
+        const resolveResult = importResolver.resolvePluginComponent(
+            pluginAttr,
+            contractAttr,
+            projectRoot,
+        );
+
         // Add any validation messages from resolution
         validations.push(...resolveResult.validations);
-        
+
         if (!resolveResult.val) {
             // Resolution failed - validation messages already added above
             continue;
         }
-        
+
         const absoluteComponentPath = resolveResult.val.componentPath;
         const name = resolveResult.val.componentName;
         const contractPath = resolveResult.val.contractPath;
@@ -617,7 +617,7 @@ async function parseHeadlessImports(
 
                     // Make contract path relative to the jay-html file for imports
                     const relativeContractPath = path.relative(filePath, contractPath);
-                    
+
                     const enumsFromContract = enumsToImportRelativeToJayHtml
                         .filter((_) => _.declaringModule === relativeContractPath)
                         .map((_) => _.type);

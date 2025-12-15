@@ -45,7 +45,9 @@ interface ContractGeneratorBuilderInitial {
     /**
      * Defines the contract generation function without services.
      */
-    generateWith(fn: () => Promise<GeneratedContractYaml[]> | GeneratedContractYaml[]): DynamicContractGenerator<[]>;
+    generateWith(
+        fn: () => Promise<GeneratedContractYaml[]> | GeneratedContractYaml[],
+    ): DynamicContractGenerator<[]>;
 }
 
 /**
@@ -101,9 +103,9 @@ class ContractGeneratorBuilderImpl<Services extends Array<any> = []> {
  *   .withServices(CMS_SERVICE, API_SERVICE)
  *   .generateWith(async (cms, api) => {
  *     const data = await cms.fetch();
- *     return data.map(item => ({ 
- *       name: item.name, 
- *       yaml: generateYaml(item) 
+ *     return data.map(item => ({
+ *       name: item.name,
+ *       yaml: generateYaml(item)
  *     }));
  *   });
  * ```
@@ -111,4 +113,3 @@ class ContractGeneratorBuilderImpl<Services extends Array<any> = []> {
 export function makeContractGenerator(): ContractGeneratorBuilderInitial {
     return new ContractGeneratorBuilderImpl();
 }
-

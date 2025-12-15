@@ -2,10 +2,10 @@ import type { PluginManifest } from '@jay-framework/editor-protocol';
 
 export interface ValidatePluginOptions {
     pluginPath?: string;
-    local?: boolean;           // Validate src/plugins/ instead of package
+    local?: boolean; // Validate src/plugins/ instead of package
     verbose?: boolean;
     strict?: boolean;
-    generateTypes?: boolean;   // Generate .d.ts files
+    generateTypes?: boolean; // Generate .d.ts files
 }
 
 export interface ValidationResult {
@@ -20,7 +20,12 @@ export interface ValidationResult {
 }
 
 export interface ValidationError {
-    type: 'schema' | 'file-missing' | 'export-mismatch' | 'contract-invalid' | 'type-generation-failed';
+    type:
+        | 'schema'
+        | 'file-missing'
+        | 'export-mismatch'
+        | 'contract-invalid'
+        | 'type-generation-failed';
     message: string;
     location?: string;
     suggestion?: string;
@@ -38,4 +43,3 @@ export interface PluginContext {
     pluginPath: string;
     isNpmPackage: boolean;
 }
-

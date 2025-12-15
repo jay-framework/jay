@@ -111,4 +111,3 @@ function printValidationResult(result: ValidationResult, verbose: boolean): void
         console.log(chalk.red(`${result.errors.length} errors found.`));
     }
 }
-
