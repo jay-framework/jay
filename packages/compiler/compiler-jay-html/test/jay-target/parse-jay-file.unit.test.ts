@@ -36,27 +36,27 @@ describe('compiler', () => {
             // Handle test plugins
             // These tests don't use real fixture files, so just return simple paths
             if (pluginName === 'test-counter' && contractName === 'counter') {
-                return {
+                return new WithValidations({
                     contractPath: '/path/to/counter.jay-contract',
                     componentPath: '/path/to/counter',
                     componentName: 'counter',
-                };
+                }, []);
             }
             if (pluginName === 'test-named-counter' && contractName === 'named-counter') {
-                return {
+                return new WithValidations({
                     contractPath: '/path/to/named-counter.jay-contract',
                     componentPath: '/path/to/named-counter',
                     componentName: 'namedCounter',
-                };
+                }, []);
             }
             if (pluginName === 'test-timer' && contractName === 'timer') {
-                return {
+                return new WithValidations({
                     contractPath: '/path/to/timer.jay-contract',
                     componentPath: '/path/to/timer',
                     componentName: 'timer',
-                };
+                }, []);
             }
-            return null;
+            return new WithValidations(null as any, [`Plugin "${pluginName}" not found in test`]);
         },
     };
 

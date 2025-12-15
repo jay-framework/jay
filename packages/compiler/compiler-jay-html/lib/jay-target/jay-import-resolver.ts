@@ -21,7 +21,7 @@ export interface JayImportResolver {
     resolveLink(importingModuleDir: string, link: string): string;
     loadContract(fullPath: string): WithValidations<Contract>;
     analyzeExportedTypes(fullPath: string, options: ResolveTsConfigOptions): JayType[];
-    resolvePluginComponent(pluginName: string, contractName: string, projectRoot: string): PluginComponentResolution | null;
+    resolvePluginComponent(pluginName: string, contractName: string, projectRoot: string): WithValidations<PluginComponentResolution>;
 }
 
 export const JAY_IMPORT_RESOLVER: JayImportResolver = {
@@ -36,7 +36,7 @@ export const JAY_IMPORT_RESOLVER: JayImportResolver = {
         if (link?.[0] === '.') return path.resolve(importingModuleDir, link);
         else return require.resolve(link, { paths: require.resolve.paths(importingModuleDir) });
     },
-    resolvePluginComponent(pluginName: string, contractName: string, projectRoot: string): PluginComponentResolution | null {
+    resolvePluginComponent(pluginName: string, contractName: string, projectRoot: string): WithValidations<PluginComponentResolution> {
         // Use shared plugin resolution logic from compiler-shared
         // This handles both local plugins (src/plugins/) and NPM packages (node_modules/)
         return resolvePlugin(projectRoot, pluginName, contractName);

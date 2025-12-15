@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import YAML from 'yaml';
+import { WithValidations } from './with-validations';
 
 /**
  * Plugin manifest structure (contracts section only - subset of full PluginManifest)
@@ -60,30 +61,57 @@ export function loadPluginManifest(pluginDir: string): PluginManifest | null {
  * @param projectRoot - Project root directory
  * @param pluginName - Name of the plugin
  * @param contractName - Name of the contract to resolve
- * @returns Resolution result or null if not found
+ * @returns Resolution result with validation messages
  */
 export function resolveLocalPlugin(
     projectRoot: string,
     pluginName: string,
     contractName: string,
-): PluginComponentResolution | null {
+): WithValidations<PluginComponentResolution> | null {
     const localPluginPath = path.join(projectRoot, 'src/plugins', pluginName);
+    const pluginYamlPath = path.join(localPluginPath, 'plugin.yaml');
+    
+    if (!fs.existsSync(localPluginPath)) {
+        return null; // Not found locally, will try NPM
+    }
+    
+    if (!fs.existsSync(pluginYamlPath)) {
+        return new WithValidations(
+            null as any,
+            [`Local plugin "${pluginName}" found at ${localPluginPath} but plugin.yaml is missing`]
+        );
+    }
+    
     const manifest = loadPluginManifest(localPluginPath);
     
-    if (!manifest || !manifest.contracts) {
-        return null;
+    if (!manifest) {
+        return new WithValidations(
+            null as any,
+            [`Failed to parse plugin.yaml for local plugin "${pluginName}" at ${pluginYamlPath}`]
+        );
+    }
+    
+    if (!manifest.contracts || manifest.contracts.length === 0) {
+        return new WithValidations(
+            null as any,
+            [`Local plugin "${pluginName}" has no contracts defined in plugin.yaml`]
+        );
     }
     
     const contract = manifest.contracts.find((c) => c.name === contractName);
     if (!contract) {
-        return null;
+        const availableContracts = manifest.contracts.map(c => c.name).join(', ');
+        return new WithValidations(
+            null as any,
+            [`Contract "${contractName}" not found in local plugin "${pluginName}". Available contracts: ${availableContracts}`]
+        );
     }
     
-    return {
+    return new WithValidations({
         contractPath: path.join(localPluginPath, contract.contract),
         componentPath: path.join(localPluginPath, contract.component),
         componentName: contractName,
-    };
+    }, []);
 }
 
 /**
@@ -92,34 +120,58 @@ export function resolveLocalPlugin(
  * @param projectRoot - Project root directory
  * @param pluginName - Name of the NPM package
  * @param contractName - Name of the contract to resolve
- * @returns Resolution result or null if not found
+ * @returns Resolution result with validation messages
  */
 export function resolveNpmPlugin(
     projectRoot: string,
     pluginName: string,
     contractName: string,
-): PluginComponentResolution | null {
+): WithValidations<PluginComponentResolution> | null {
     const npmPluginPath = path.join(projectRoot, 'node_modules', pluginName);
     
     if (!fs.existsSync(npmPluginPath)) {
-        return null;
+        return null; // Not found in NPM either
+    }
+    
+    const pluginYamlPath = path.join(npmPluginPath, 'plugin.yaml');
+    
+    if (!fs.existsSync(pluginYamlPath)) {
+        return new WithValidations(
+            null as any,
+            [`NPM package "${pluginName}" found but plugin.yaml is missing. Is this a Jay Stack plugin?`]
+        );
     }
     
     const manifest = loadPluginManifest(npmPluginPath);
     
-    if (!manifest || !manifest.contracts) {
-        return null;
+    if (!manifest) {
+        return new WithValidations(
+            null as any,
+            [`Failed to parse plugin.yaml for NPM package "${pluginName}" at ${pluginYamlPath}`]
+        );
+    }
+    
+    if (!manifest.contracts || manifest.contracts.length === 0) {
+        return new WithValidations(
+            null as any,
+            [`NPM package "${pluginName}" has no contracts defined in plugin.yaml`]
+        );
     }
     
     const contract = manifest.contracts.find((c) => c.name === contractName);
     if (!contract) {
-        return null;
+        const availableContracts = manifest.contracts.map(c => c.name).join(', ');
+        return new WithValidations(
+            null as any,
+            [`Contract "${contractName}" not found in NPM package "${pluginName}". Available contracts: ${availableContracts}`]
+        );
     }
     
     // For NPM packages, resolve paths through package.json exports
     const packageJsonPath = path.join(npmPluginPath, 'package.json');
     let resolvedContractPath: string;
     let resolvedComponentPath: string;
+    const warnings: string[] = [];
     
     if (fs.existsSync(packageJsonPath)) {
         try {
@@ -150,22 +202,25 @@ export function resolveNpmPlugin(
                 resolvedComponentPath = path.join(moduleDir, path.basename(contract.component));
             } else {
                 resolvedComponentPath = path.join(npmPluginPath, contract.component);
+                warnings.push(`NPM package "${pluginName}" has no exports field in package.json. Using direct path resolution.`);
             }
         } catch (error) {
             // Fallback to direct paths
             resolvedContractPath = path.join(npmPluginPath, contract.contract);
             resolvedComponentPath = path.join(npmPluginPath, contract.component);
+            warnings.push(`Failed to parse package.json for "${pluginName}": ${error}. Using direct path resolution.`);
         }
     } else {
         resolvedContractPath = path.join(npmPluginPath, contract.contract);
         resolvedComponentPath = path.join(npmPluginPath, contract.component);
+        warnings.push(`NPM package "${pluginName}" has no package.json. Using direct path resolution.`);
     }
     
-    return {
+    return new WithValidations({
         contractPath: resolvedContractPath,
         componentPath: resolvedComponentPath,
         componentName: contractName,
-    };
+    }, warnings);
 }
 
 /**
@@ -174,20 +229,33 @@ export function resolveNpmPlugin(
  * @param projectRoot - Project root directory
  * @param pluginName - Name of the plugin
  * @param contractName - Name of the contract to resolve
- * @returns Resolution result or null if not found
+ * @returns Resolution result with validation messages
  */
 export function resolvePluginComponent(
     projectRoot: string,
     pluginName: string,
     contractName: string,
-): PluginComponentResolution | null {
+): WithValidations<PluginComponentResolution> {
     // Try local plugins first
     const localResult = resolveLocalPlugin(projectRoot, pluginName, contractName);
-    if (localResult) {
-        return localResult;
+    if (localResult !== null) {
+        return localResult; // Found locally (success or error)
     }
     
     // Try NPM packages
-    return resolveNpmPlugin(projectRoot, pluginName, contractName);
+    const npmResult = resolveNpmPlugin(projectRoot, pluginName, contractName);
+    if (npmResult !== null) {
+        return npmResult; // Found in NPM (success or error)
+    }
+    
+    // Not found anywhere
+    return new WithValidations(
+        null as any,
+        [
+            `Plugin "${pluginName}" not found. ` +
+            `Searched in src/plugins/${pluginName}/ and node_modules/${pluginName}/. ` +
+            `Ensure the plugin is installed or exists in your project.`
+        ]
+    );
 }
 

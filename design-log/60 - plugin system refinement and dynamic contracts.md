@@ -17,10 +17,13 @@
 - Plugin scanning in `editor-handlers.ts` (local + npm packages)
 - Jay-html parser support for `plugin`/`contract` attributes
 - Page.config.yaml support for `plugin`/`contract` syntax
+- **NEW:** Shared plugin resolution in `@jay-framework/compiler-shared`
+- **NEW:** NPM package resolution with `package.json` exports support
+- **NEW:** `projectRoot` as explicit parameter to `parseJayFile`
+- **NEW:** `WithValidations` result monad for meaningful error messages
 
 ⏳ **Deferred:**
 - Dynamic contract runtime execution (generators run at build time)
-- NPM package resolution for plugins (currently supports local plugins only)
 - Tests for plugin validation
 
 ## Summary
@@ -2292,6 +2295,89 @@ export const generator = makeContractGenerator()
     return await cms.getContracts();
   });
 ```
+
+## December 15 Refinements
+
+### Shared Plugin Resolution
+
+**Problem:**
+- Plugin resolution logic was duplicated between `compiler-jay-html` and `plugin-validator`
+- NPM package resolution was incomplete (TODO comment)
+- Error messages when resolution failed were generic ("not found")
+
+**Solution:**
+Created shared plugin resolution utilities in `@jay-framework/compiler-shared`:
+
+```typescript
+// New functions in lib/plugin-resolution.ts
+export function loadPluginManifest(pluginDir: string): PluginManifest | null
+export function resolveLocalPlugin(projectRoot, pluginName, contractName): WithValidations<PluginComponentResolution> | null
+export function resolveNpmPlugin(projectRoot, pluginName, contractName): WithValidations<PluginComponentResolution> | null
+export function resolvePluginComponent(projectRoot, pluginName, contractName): WithValidations<PluginComponentResolution>
+```
+
+**Benefits:**
+- ✅ Single source of truth for plugin resolution
+- ✅ NPM packages now fully supported (resolves through `package.json` exports)
+- ✅ Consistent behavior between compiler and validator
+- ✅ Meaningful error messages using `WithValidations` result monad
+
+### WithValidations for Error Messages
+
+**Before:**
+```typescript
+// Old signature - returns null on failure
+resolvePluginComponent(...): PluginComponentResolution | null
+
+// Generic error message
+if (!resolved) {
+  validations.push(
+    `Could not resolve plugin "${pluginAttr}" with contract "${contractAttr}". ` +
+    `Ensure plugin.yaml exists...`
+  );
+}
+```
+
+**After:**
+```typescript
+// New signature - returns WithValidations
+resolvePluginComponent(...): WithValidations<PluginComponentResolution>
+
+// Specific error messages
+const result = resolvePluginComponent(...);
+validations.push(...result.validations);
+```
+
+**Example Error Messages:**
+- `Plugin "my-plugin" not found. Searched in src/plugins/my-plugin/ and node_modules/my-plugin/. Ensure the plugin is installed or exists in your project.`
+- `Contract "wrong-name" not found in local plugin "my-plugin". Available contracts: products, categories, blog-posts`
+- `NPM package "my-plugin" found but plugin.yaml is missing. Is this a Jay Stack plugin?`
+- `Failed to parse plugin.yaml for local plugin "my-plugin" at /path/to/plugin.yaml`
+
+### Explicit ProjectRoot Parameter
+
+**Problem:**
+- `parseHeadlessImports` computed `projectRoot` as `path.dirname(path.dirname(filePath))`
+- Assumed specific directory structure (`src/pages/`)
+- Not flexible for different project layouts or testing
+
+**Solution:**
+```typescript
+// New signature
+export async function parseJayFile(
+    html: string,
+    filename: string,
+    filePath: string,
+    options: ResolveTsConfigOptions,
+    linkedContractResolver: JayImportResolver,
+    projectRoot: string, // ← NEW: explicit parameter
+): Promise<WithValidations<JayHtmlSourceFile>>
+```
+
+**Benefits:**
+- ✅ More flexible - callers control the project root
+- ✅ Explicit and testable
+- ✅ No assumptions about directory structure
 
 ## Success Criteria
 

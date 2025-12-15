@@ -563,19 +563,19 @@ async function parseHeadlessImports(
         }
         
         // Resolve plugin to actual paths using the resolver
-        const resolved = importResolver.resolvePluginComponent(pluginAttr, contractAttr, projectRoot);
+        const resolveResult = importResolver.resolvePluginComponent(pluginAttr, contractAttr, projectRoot);
         
-        if (!resolved) {
-            validations.push(
-                `Could not resolve plugin "${pluginAttr}" with contract "${contractAttr}". ` +
-                `Ensure plugin.yaml exists in src/plugins/${pluginAttr}/ or node_modules/${pluginAttr}/`,
-            );
+        // Add any validation messages from resolution
+        validations.push(...resolveResult.validations);
+        
+        if (!resolveResult.val) {
+            // Resolution failed - validation messages already added above
             continue;
         }
         
-        const module = resolved.componentPath;
-        const name = resolved.componentName;
-        const contractPath = resolved.contractPath;
+        const module = resolveResult.val.componentPath;
+        const name = resolveResult.val.componentName;
+        const contractPath = resolveResult.val.contractPath;
 
         // Contract path from plugin resolution is already absolute, don't resolve it again
         const contractFile = contractPath;
