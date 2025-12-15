@@ -7,9 +7,7 @@ describe('Plugin Resolution with Meaningful Error Messages', () => {
         const result = resolvePluginComponent('/fake/root', 'non-existent-plugin', 'some-contract');
 
         expect(result.validations).toHaveLength(1);
-        expect(result.validations[0]).toContain('Plugin "non-existent-plugin" not found');
-        expect(result.validations[0]).toContain('src/plugins/non-existent-plugin/');
-        expect(result.validations[0]).toContain('node_modules/non-existent-plugin/');
+        expect(result.validations[0]).toContain('NPM package "non-existent-plugin" not found or plugin.yaml is not exported. Is this a Jay Stack plugin?');
         expect(result.val).toBeNull();
     });
 
