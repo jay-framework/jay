@@ -121,7 +121,7 @@ An NPM plugin package should include **dual builds** for client-server code spli
   "exports": {
     ".": "./dist/index.js",
     "./client": "./dist/index.client.js",
-    "./plugin.yaml": "./plugin.yaml",  // Required for plugin resolution
+    "./plugin.yaml": "./plugin.yaml", // Required for plugin resolution
     "./contracts/*.jay-contract": "./dist/contracts/*.jay-contract"
   },
   "files": ["dist", "plugin.yaml"],
@@ -621,7 +621,7 @@ Once generated, they're used with the automatic prefix:
      "exports": {
        ".": "./dist/index.js",
        "./client": "./dist/index.client.js",
-       "./plugin.yaml": "./plugin.yaml",  // Required for plugin resolution
+       "./plugin.yaml": "./plugin.yaml", // Required for plugin resolution
        "./my-component.jay-contract": "./dist/contracts/my-component.jay-contract"
      },
      "files": ["dist", "plugin.yaml"]
@@ -2535,6 +2535,7 @@ When running `jay-cli definitions` from within a yarn workspace (e.g., `examples
 **Solution:**
 
 1. **Plugin packages must export `plugin.yaml`** in their `package.json` exports field:
+
    ```json
    {
      "exports": {
@@ -2578,11 +2579,12 @@ Updated `examples/jay-stack/mood-tracker-plugin` and `examples/jay-stack/fake-sh
 
 - ✅ Updated `page.jay-html` to use new `plugin`/`contract` syntax:
   ```html
-  <script type="application/jay-headless"
-          plugin="example-jay-mood-tracker-plugin"
-          contract="mood-tracker"
-          key="mt">
-  </script>
+  <script
+    type="application/jay-headless"
+    plugin="example-jay-mood-tracker-plugin"
+    contract="mood-tracker"
+    key="mt"
+  ></script>
   ```
 - ✅ Verified type generation works correctly
 - ✅ Verified dev server can resolve and load the plugin

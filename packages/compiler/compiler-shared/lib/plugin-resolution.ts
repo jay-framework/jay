@@ -141,7 +141,7 @@ export function resolveNpmPlugin(
             `NPM package "${pluginName}" not found or plugin.yaml is not exported. Is this a Jay Stack plugin?`,
         ]);
     }
-    
+
     const npmPluginPath = path.dirname(pluginYamlPath);
 
     if (!fs.existsSync(pluginYamlPath)) {

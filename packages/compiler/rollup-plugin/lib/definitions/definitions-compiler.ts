@@ -35,8 +35,8 @@ export function jayDefinitions(projectRoot: string) {
                 const context = this as PluginContext;
                 const { filename, dirname } = getFileContext(id);
                 // make sure imported files are resolved first
-                const imports: string[] = getJayHtmlImports(code).filter((module: string) =>
-                    module && module.endsWith('jay-html.d'),
+                const imports: string[] = getJayHtmlImports(code).filter(
+                    (module: string) => module && module.endsWith('jay-html.d'),
                 );
                 await Promise.all(
                     imports.map((imported) =>

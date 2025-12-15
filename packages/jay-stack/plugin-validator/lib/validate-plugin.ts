@@ -423,7 +423,8 @@ async function validatePackageJson(
         if (!packageJson.exports || !packageJson.exports['./plugin.yaml']) {
             result.errors.push({
                 type: 'export-mismatch',
-                message: 'plugin.yaml not exported in package.json (required for plugin resolution)',
+                message:
+                    'plugin.yaml not exported in package.json (required for plugin resolution)',
                 location: packageJsonPath,
                 suggestion: 'Add "./plugin.yaml": "./plugin.yaml" to exports field',
             });
