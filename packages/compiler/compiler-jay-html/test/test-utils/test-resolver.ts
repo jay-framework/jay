@@ -1,0 +1,39 @@
+import path from 'path';
+import { JAY_IMPORT_RESOLVER, JayImportResolver, PluginComponentResolution } from '../../lib/jay-target/jay-import-resolver';
+
+/**
+ * Test resolver that extends the default resolver with test plugin support.
+ * This should ONLY be used in tests.
+ */
+export const TEST_IMPORT_RESOLVER: JayImportResolver = {
+    ...JAY_IMPORT_RESOLVER,
+    resolvePluginComponent(pluginName: string, contractName: string, projectRoot: string): PluginComponentResolution | null {
+        // Handle test plugins for test fixtures
+        // projectRoot for fixtures is test/fixtures (two levels up from filePath)
+        if (pluginName === 'test-counter' && contractName === 'counter') {
+            return {
+                contractPath: path.resolve(projectRoot, 'contracts/counter/counter.jay-contract'),
+                componentPath: path.resolve(projectRoot, 'contracts/counter/counter'),
+                componentName: 'counter',
+            };
+        }
+        if (pluginName === 'test-named-counter' && contractName === 'named-counter') {
+            return {
+                contractPath: path.resolve(projectRoot, 'contracts/named-counter/named-counter.jay-contract'),
+                componentPath: path.resolve(projectRoot, 'contracts/named-counter/named-counter'),
+                componentName: 'namedCounter',
+            };
+        }
+        if (pluginName === 'test-timer' && contractName === 'timer') {
+            return {
+                contractPath: path.resolve(projectRoot, 'contracts/timer/timer.jay-contract'),
+                componentPath: path.resolve(projectRoot, 'contracts/timer/timer'),
+                componentName: 'timer',
+            };
+        }
+        
+        // Fall back to production resolver
+        return JAY_IMPORT_RESOLVER.resolvePluginComponent(pluginName, contractName, projectRoot);
+    },
+};
+

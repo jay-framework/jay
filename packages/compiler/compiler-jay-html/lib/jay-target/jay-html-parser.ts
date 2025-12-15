@@ -533,38 +533,52 @@ async function parseHeadlessImports(
     importResolver: JayImportResolver,
 ): Promise<JayHeadlessImports[]> {
     const result: JayHeadlessImports[] = [];
+    const projectRoot = path.dirname(path.dirname(filePath)); // Assuming filePath is in src/pages/
+    
     for await (const element of elements) {
-        const module = element.getAttribute('src');
-        const name = element.getAttribute('name');
-        const contractPath = element.getAttribute('contract');
+        const pluginAttr = element.getAttribute('plugin');
+        const contractAttr = element.getAttribute('contract');
         const key = element.getAttribute('key');
-
-        if (!module) {
+        
+        // Validate required attributes
+        if (!pluginAttr) {
             validations.push(
-                'headless import must specify src attribute, module path to headless component implementation',
+                'headless import must specify plugin attribute',
             );
             continue;
         }
-        if (!name) {
+        
+        if (!contractAttr) {
             validations.push(
-                `headless import must specify name of the constant to import from ${module}`,
+                'headless import must specify contract attribute',
             );
             continue;
         }
-        if (!contractPath) {
-            validations.push(
-                'headless import must specify contract attribute, module path to headless component contract',
-            );
-            continue;
-        }
+        
         if (!key) {
             validations.push(
                 'headless import must specify key attribute, used for this component ViewState and Refs member for the contract',
             );
             continue;
         }
+        
+        // Resolve plugin to actual paths using the resolver
+        const resolved = importResolver.resolvePluginComponent(pluginAttr, contractAttr, projectRoot);
+        
+        if (!resolved) {
+            validations.push(
+                `Could not resolve plugin "${pluginAttr}" with contract "${contractAttr}". ` +
+                `Ensure plugin.yaml exists in src/plugins/${pluginAttr}/ or node_modules/${pluginAttr}/`,
+            );
+            continue;
+        }
+        
+        const module = resolved.componentPath;
+        const name = resolved.componentName;
+        const contractPath = resolved.contractPath;
 
-        const contractFile = importResolver.resolveLink(filePath, contractPath);
+        // Contract path from plugin resolution is already absolute, don't resolve it again
+        const contractFile = contractPath;
 
         try {
             const subContract = importResolver.loadContract(contractFile);
@@ -594,12 +608,15 @@ async function parseHeadlessImports(
                         }),
                     );
 
+                    // Make contract path relative to the jay-html file for imports
+                    const relativeContractPath = path.relative(filePath, contractPath);
+                    
                     const enumsFromContract = enumsToImportRelativeToJayHtml
-                        .filter((_) => _.declaringModule === contractPath)
+                        .filter((_) => _.declaringModule === relativeContractPath)
                         .map((_) => _.type);
 
                     const contractLink: JayImportLink = {
-                        module: contractPath,
+                        module: relativeContractPath,
                         names: [
                             { name: type.name, type },
                             { name: refsTypeName, type: JayUnknown },
@@ -608,7 +625,7 @@ async function parseHeadlessImports(
                     };
 
                     const enumsFromOtherContracts = enumsToImportRelativeToJayHtml.filter(
-                        (_) => _.declaringModule !== contractPath,
+                        (_) => _.declaringModule !== relativeContractPath,
                     );
 
                     const enumImportLinks: JayImportLink[] = Object.entries(

@@ -32,6 +32,32 @@ describe('compiler', () => {
         analyzeExportedTypes(fullPath: string, options: ResolveTsConfigOptions): JayType[] {
             throw new Error('Not implemented');
         },
+        resolvePluginComponent(pluginName: string, contractName: string, projectRoot: string) {
+            // Handle test plugins
+            // These tests don't use real fixture files, so just return simple paths
+            if (pluginName === 'test-counter' && contractName === 'counter') {
+                return {
+                    contractPath: '/path/to/counter.jay-contract',
+                    componentPath: '/path/to/counter',
+                    componentName: 'counter',
+                };
+            }
+            if (pluginName === 'test-named-counter' && contractName === 'named-counter') {
+                return {
+                    contractPath: '/path/to/named-counter.jay-contract',
+                    componentPath: '/path/to/named-counter',
+                    componentName: 'namedCounter',
+                };
+            }
+            if (pluginName === 'test-timer' && contractName === 'timer') {
+                return {
+                    contractPath: '/path/to/timer.jay-contract',
+                    componentPath: '/path/to/timer',
+                    componentName: 'timer',
+                };
+            }
+            return null;
+        },
     };
 
     function jayFileWith(jayYaml, body, scripts?) {
@@ -1158,7 +1184,7 @@ describe('compiler', () => {
                         |   title: string
                         |`,
                     '<body></body>',
-                    `<script type="application/jay-headless" src="./counter.ts" name="counter" contract="./counter.jay-contract" key="myCounter"></script>`,
+                    `<script type="application/jay-headless" plugin="test-counter" contract="counter" key="myCounter"></script>`,
                 ),
                 'Page',
                 '',
@@ -1246,7 +1272,7 @@ describe('compiler', () => {
                 stripMargin(
                     `<html>
                     |   <head>
-                    |     <script type="application/jay-headless" src="./counter.ts" name="counter" contract="./counter.jay-contract" key="myCounter"></script>
+                    |     <script type="application/jay-headless" plugin="test-counter" contract="counter" key="myCounter"></script>
                     |     <script type="application/jay-data" contract="./page.jay-contract"></script>
                     |   </head>
                     |   <body></body>
@@ -1354,8 +1380,8 @@ describe('compiler', () => {
                 stripMargin(
                     `<html>
                     |   <head>
-                    |     <script type="application/jay-headless" src="./counter.ts" name="counter" contract="./counter.jay-contract" key="myCounter"></script>
-                    |     <script type="application/jay-headless" src="./timer.ts" name="timer" contract="./timer.jay-contract" key="myTimer"></script>
+                    |     <script type="application/jay-headless" plugin="test-counter" contract="counter" key="myCounter"></script>
+                    |     <script type="application/jay-headless" plugin="test-timer" contract="timer" key="myTimer"></script>
                     |     <script type="application/jay-data" contract="./page.jay-contract"></script>
                     |   </head>
                     |   <body></body>

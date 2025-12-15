@@ -1,8 +1,27 @@
 # Plugin System Refinement and Dynamic Contracts
 
 **Date:** December 11, 2025  
-**Status:** Design Proposal  
+**Status:** ✅ Implemented  
+**Implementation Date:** December 15, 2025  
 **Related:** Design Logs #58, #51, #40, #39
+
+## Implementation Status
+
+✅ **Completed Features:**
+- Protocol types (`PluginManifest`, `Plugin`, `DynamicContractDef`)
+- String-based dynamic contract generation (returns YAML, not Contract objects)
+- `DYNAMIC_CONTRACT_SERVICE` for passing contract metadata to components
+- `makeContractGenerator()` builder API with service injection
+- `@jay-framework/plugin-validator` package with full validation logic
+- `jay-stack-cli` refactored with `dev` and `validate-plugin` commands
+- Plugin scanning in `editor-handlers.ts` (local + npm packages)
+- Jay-html parser support for `plugin`/`contract` attributes
+- Page.config.yaml support for `plugin`/`contract` syntax
+
+⏳ **Deferred:**
+- Dynamic contract runtime execution (generators run at build time)
+- NPM package resolution for plugins (currently supports local plugins only)
+- Tests for plugin validation
 
 ## Summary
 

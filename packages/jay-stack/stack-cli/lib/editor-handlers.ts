@@ -755,11 +755,40 @@ async function scanProjectInfo(
                 const configContent = await fs.promises.readFile(pageConfigPath, 'utf-8');
                 const pageConfig = YAML.parse(configContent);
                 if (pageConfig.used_components && Array.isArray(pageConfig.used_components)) {
-                    // Resolve src and name to appName and componentName
+                    // Resolve components - supports both new (plugin/contract) and old (src/name) syntax
                     for (const comp of pageConfig.used_components) {
-                        const src = comp.src || '';
-                        const name = comp.name || '';
                         const key = comp.key || '';
+                        let src = '';
+                        let name = '';
+                        
+                        // NEW SYNTAX: plugin + contract
+                        if (comp.plugin && comp.contract) {
+                            // For plugin-based references, we look up the plugin in the plugins array
+                            const plugin = plugins.find(p => p.manifest.name === comp.plugin);
+                            if (plugin && plugin.manifest.contracts) {
+                                const contract = plugin.manifest.contracts.find(c => c.name === comp.contract);
+                                if (contract) {
+                                    // Use plugin name as appName and contract name as componentName
+                                    usedComponents.push({
+                                        appName: comp.plugin,
+                                        componentName: comp.contract,
+                                        key,
+                                    });
+                                    continue;
+                                }
+                            }
+                            // If not resolved, still add it (may be resolved later)
+                            usedComponents.push({
+                                appName: comp.plugin,
+                                componentName: comp.contract,
+                                key,
+                            });
+                            continue;
+                        }
+                        
+                        // OLD SYNTAX: src + name
+                        src = comp.src || '';
+                        name = comp.name || '';
 
                         let resolved = false;
                         for (const app of installedApps) {
