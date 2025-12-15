@@ -28,6 +28,7 @@ export const TEST_IMPORT_RESOLVER: JayImportResolver = {
                     ),
                     componentPath: path.resolve(projectRoot, 'contracts/counter/counter'),
                     componentName: 'counter',
+                    isNpmPackage: false,
                 },
                 [],
             );
@@ -44,6 +45,7 @@ export const TEST_IMPORT_RESOLVER: JayImportResolver = {
                         'contracts/named-counter/named-counter',
                     ),
                     componentName: 'namedCounter',
+                    isNpmPackage: false,
                 },
                 [],
             );
@@ -54,6 +56,7 @@ export const TEST_IMPORT_RESOLVER: JayImportResolver = {
                     contractPath: path.resolve(projectRoot, 'contracts/timer/timer.jay-contract'),
                     componentPath: path.resolve(projectRoot, 'contracts/timer/timer'),
                     componentName: 'timer',
+                    isNpmPackage: false,
                 },
                 [],
             );
