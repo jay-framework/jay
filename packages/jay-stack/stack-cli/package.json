@@ -26,8 +26,8 @@
     "@jay-framework/dev-server": "workspace:^",
     "@jay-framework/editor-server": "workspace:^",
     "@jay-framework/plugin-validator": "workspace:^",
-    "chalk": "^5.3.0",
-    "commander": "^11.1.0",
+    "chalk": "^4.1.2",
+    "commander": "^14.0.0",
     "express": "^5.0.1",
     "vite": "^5.0.11"
   },
