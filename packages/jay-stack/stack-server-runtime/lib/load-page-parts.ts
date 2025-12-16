@@ -75,8 +75,8 @@ export async function loadPageParts(
             const compDefinition = (await vite.ssrLoadModule(modulePath))[name];
 
             // Generate client import path
-            const moduleImport = module.startsWith('./') ? path.resolve(pagesBase, module) : module;
-            const isNpmPackage = !module.startsWith('./') && !module.startsWith('../');
+            const moduleImport = isLocalModule ? path.resolve(dirName, module) : module;
+            const isNpmPackage = !isLocalModule;
             const clientModuleImport = isNpmPackage
                 ? `${moduleImport}/client` // npm packages: use /client export
                 : `${moduleImport}`; // local files: use ?jay-client query

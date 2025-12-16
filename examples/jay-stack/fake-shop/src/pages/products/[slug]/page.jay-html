@@ -1,6 +1,10 @@
 <html>
 <head>
   <script type="application/jay-data" contract="./page.jay-contract"></script>
+  <script type="application/jay-headless"
+          plugin="product-rating"
+          contract="product-rating"
+          key="rating"></script>
 </head>
 <body>
 <div>
@@ -10,6 +14,26 @@
   <h1>{name}</h1>
   <h2>{price}</h2>
   <h2>{sku}</h2>
+  
+  <!-- Product Rating Widget (Local Plugin) -->
+  <div class="rating-display">
+    <span class="rating-value">★ {rating.rating}</span>
+    <span class="review-count">({rating.totalReviews} reviews)</span>
+  </div>
+  
+  <div class="rate-product">
+    <p>Rate this product:</p>
+    <div class="stars">
+      <button ref="rating.star1" class="star">★</button>
+      <button ref="rating.star2" class="star">★</button>
+      <button ref="rating.star3" class="star">★</button>
+      <button ref="rating.star4" class="star">★</button>
+      <button ref="rating.star5" class="star">★</button>
+    </div>
+    <p>Your rating: {rating.userRating} stars</p>
+    <button ref="rating.submitButton">Submit Rating</button>
+  </div>
+  
   <div if="inStock">
     <button ref="add-to-cart">add to cart</button>
   </div>
