@@ -279,7 +279,114 @@ makeJayStackComponent<ProductContract>()
 - Carry forward is injected as a **separate parameter** (not part of props)
 - `viewStateSignals` provides reactive access to data from the fast render phase as `[getter, setter]` tuples
 
+## RenderPipeline (Recommended)
+
+For complex render logic with error handling and async operations, use the **RenderPipeline** API. It provides a functional, type-safe way to compose render operations with automatic error propagation.
+
+### Quick Example
+
+```typescript
+import { RenderPipeline } from '@jay-framework/fullstack-component';
+
+async function slowlyRender(props, wixStores) {
+  const Pipeline = RenderPipeline.for<SlowViewState, CarryForward>();
+
+  return Pipeline
+    .try(() => wixStores.getProduct(props.slug))
+    .map(product => product || Pipeline.notFound('Product not found'))
+    .toPhaseOutput(product => ({
+      viewState: { name: product.name, price: product.price },
+      carryForward: { productId: product.id }
+    }));
+}
+```
+
+### Key Features
+
+- **Type Safety**: Full TypeScript inference from start to finish
+- **Error Propagation**: Errors automatically skip subsequent `.map()` calls
+- **Error Recovery**: Use `.recover()` to handle errors and return to success path
+- **Async Composition**: Chain async operations naturally without nested promises
+- **Conditional Branching**: Return `Pipeline.notFound()` or other errors from `.map()` to branch
+
+### Basic API
+
+```typescript
+const Pipeline = RenderPipeline.for<ViewState, CarryForward>();
+
+// Start with a value
+Pipeline.ok(data)
+
+// Start with a function (catches errors)
+Pipeline.try(() => fetchData())
+
+// Start with an error
+Pipeline.notFound('Not found')
+Pipeline.badRequest('Invalid input')
+
+// Transform values
+.map(x => x * 2)                           // Sync transform
+.map(async x => await enrichData(x))      // Async transform
+.map(x => x ? x : Pipeline.notFound())    // Conditional error
+
+// Recover from errors
+.recover(error => Pipeline.ok(fallbackData))
+
+// Terminal operation (async)
+.toPhaseOutput(data => ({
+  viewState: { /* ... */ },
+  carryForward: { /* ... */ }
+}))
+```
+
+### Complete Example
+
+```typescript
+async function renderSlowlyChanging(props, wixStores) {
+  const Pipeline = RenderPipeline.for<ProductSlowViewState, ProductCarryForward>();
+
+  return Pipeline
+    // Fetch product, catching any errors
+    .try(() => wixStores.products.getProductBySlug(props.slug))
+    
+    // Handle not found case
+    .map(response => response.product || Pipeline.notFound('Product not found'))
+    
+    // Validate product data
+    .map(product => {
+      if (!product.name) {
+        return Pipeline.badRequest('Invalid product data');
+      }
+      return product;
+    })
+    
+    // Enrich with additional data
+    .map(async product => {
+      const reviews = await reviewsApi.getReviews(product.id);
+      return { ...product, reviews };
+    })
+    
+    // Transform to final output
+    .toPhaseOutput(data => ({
+      viewState: {
+        name: data.name,
+        description: data.description,
+        reviewCount: data.reviews.length
+      },
+      carryForward: {
+        productId: data.id
+      }
+    }));
+}
+```
+
+**📖 For complete documentation and advanced patterns, see [RenderPipeline Guide](./render-pipeline.md)**
+
+---
+
 ## Render Response Builders
+
+For simple cases without complex error handling, you can use the direct response builders:
 
 ### `phaseOutput<ViewState, CarryForward>`
 
