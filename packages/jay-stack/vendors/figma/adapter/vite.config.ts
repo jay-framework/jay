@@ -12,10 +12,7 @@ export default defineConfig({
             formats: ['es'],
         },
         rollupOptions: {
-            external: [
-                '@jay-framework/dev-server',
-                '@jay-framework/figma-interchange'
-            ],
+            external: ['@jay-framework/dev-server', '@jay-framework/figma-interchange'],
         },
     },
     test: {
@@ -23,4 +20,3 @@ export default defineConfig({
         environment: 'node',
     },
 });
-

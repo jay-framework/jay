@@ -20,4 +20,3 @@ export class AdapterRegistry {
 }
 
 export const designAdapterRegistry = new AdapterRegistry();
-
