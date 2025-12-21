@@ -56,7 +56,7 @@ export interface ExportDesignMessage extends BaseMessage<ExportDesignResponse> {
 export interface ImportDesignMessage extends BaseMessage<ImportDesignResponse> {
     type: 'importDesign';
     vendorId: string;
-    pageUrl: string;
+    pageUrl?: string; // Optional: undefined = list all pages
 }
 
 // Response types with discriminators
@@ -92,7 +92,7 @@ export interface ExportDesignResponse extends BaseResponse {
 
 export interface ImportDesignResponse extends BaseResponse {
     type: 'importDesign';
-    data?: any;
+    data?: { pageUrls: string[] }; // List of available page URLs (single page will have 1 URL)
 }
 
 export interface ProjectPage {

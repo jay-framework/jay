@@ -1020,12 +1020,49 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
         try {
             const { vendorId, pageUrl } = params;
             const pagesBasePath = path.resolve(config.devServer.pagesBase);
+
+            // If pageUrl is undefined, return list of all pages with vendor design files
+            if (!pageUrl) {
+                try {
+                    const entries = await fs.promises.readdir(pagesBasePath, { withFileTypes: true });
+                    const pageUrls: string[] = [];
+
+                    for (const entry of entries) {
+                        if (entry.isDirectory()) {
+                            const vendorFile = path.join(pagesBasePath, entry.name, `page.${vendorId}.json`);
+                            try {
+                                await fs.promises.access(vendorFile);
+                                pageUrls.push(entry.name);
+                            } catch {
+                                // Skip directories without vendor design files
+                            }
+                        }
+                    }
+
+                    console.log(`📋 Listed ${pageUrls.length} pages with ${vendorId} designs`);
+
+                    return {
+                        type: 'importDesign',
+                        success: true,
+                        data: { pageUrls }
+                    };
+                } catch (error) {
+                    console.error('Failed to list pages:', error);
+                    return {
+                        type: 'importDesign',
+                        success: false,
+                        error: error instanceof Error ? error.message : 'Failed to list pages'
+                    };
+                }
+            }
+
+            // For specific page, verify it exists and return its URL
             const targetDir = path.join(pagesBasePath, pageUrl);
             const vendorFile = path.join(targetDir, `page.${vendorId}.json`);
 
             // Check if file exists
             try {
-                 await fs.promises.access(vendorFile);
+                await fs.promises.access(vendorFile);
             } catch {
                 return {
                     type: 'importDesign',
@@ -1034,15 +1071,12 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
                 };
             }
 
-            const content = await fs.promises.readFile(vendorFile, 'utf-8');
-            const data = JSON.parse(content);
-
-            console.log(`📥 Imported design for ${pageUrl} from ${vendorId}`);
+            console.log(`📥 Verified design exists for ${pageUrl} from ${vendorId}`);
 
             return {
                 type: 'importDesign',
                 success: true,
-                data
+                data: { pageUrls: [pageUrl] }
             };
 
         } catch (error) {
@@ -1058,9 +1092,11 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
     const onExportDesign = async (params: ExportDesignMessage): Promise<ExportDesignResponse> => {
         try {
             const { vendorId, pageUrl, data } = params;
+
             const pagesBasePath = path.resolve(config.devServer.pagesBase);
-            const targetDir = path.join(pagesBasePath, pageUrl);
-            
+            const cleanUrl = pageUrl.replace(/^\//, '').replace(/\/$/, '');
+            const targetDir = path.join(pagesBasePath, cleanUrl);
+
             // Ensure directory exists
             await fs.promises.mkdir(targetDir, { recursive: true });
 
@@ -1072,24 +1108,24 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
                 return {
                     type: 'exportDesign',
                     success: false,
-                    error: (e as Error).message
+                    error: (e as Error).message,
                 };
             }
 
             // 2. Validate (Optional)
             if (adapter.validate && !adapter.validate(data)) {
-                 return {
+                return {
                     type: 'exportDesign',
                     success: false,
-                    error: 'Invalid data format'
+                    error: 'Invalid data format',
                 };
             }
 
-            // 3. Save Source of Truth
+            // 3. Save Source of Truth (vendor JSON)
             const vendorFile = path.join(targetDir, `page.${vendorId}.json`);
             await fs.promises.writeFile(vendorFile, JSON.stringify(data, null, 2));
 
-            // 4. Convert
+            // 4. Convert to jay-html
             const jayHtml = await adapter.convert(data);
 
             // 5. Save Generated Code
@@ -1101,15 +1137,14 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
             return {
                 type: 'exportDesign',
                 success: true,
-                path: vendorFile
+                path: vendorFile,
             };
-
         } catch (error) {
             console.error('Failed to export design:', error);
-             return {
+            return {
                 type: 'exportDesign',
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown error'
+                error: error instanceof Error ? error.message : 'Unknown error',
             };
         }
     };

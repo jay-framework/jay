@@ -68,7 +68,7 @@ async function initApp() {
     });
 
     app.use(server);
-    
+
     // Serve static files from public folder
     const publicPath = path.resolve(resolvedConfig.devServer.publicFolder);
     if (fs.existsSync(publicPath)) {

@@ -4,10 +4,14 @@ import {
     SaveImageMessage,
     HasImageMessage,
     GetProjectInfoMessage,
+    ExportDesignMessage,
+    ImportDesignMessage,
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
     GetProjectInfoResponse,
+    ExportDesignResponse,
+    ImportDesignResponse,
     EditorProtocolMessageTypes,
     EditorProtocolResponseTypes,
 } from '@jay-framework/editor-protocol';
@@ -60,6 +64,14 @@ export class EditorClient implements EditorProtocol {
 
     async getProjectInfo(params: GetProjectInfoMessage): Promise<GetProjectInfoResponse> {
         return this.connectionManager.sendMessage<GetProjectInfoMessage>(params);
+    }
+
+    async exportDesign(params: ExportDesignMessage): Promise<ExportDesignResponse> {
+        return this.connectionManager.sendMessage<ExportDesignMessage>(params);
+    }
+
+    async importDesign(params: ImportDesignMessage): Promise<ImportDesignResponse> {
+        return this.connectionManager.sendMessage<ImportDesignMessage>(params);
     }
 
     async send(params: EditorProtocolMessageTypes): Promise<EditorProtocolResponseTypes> {
