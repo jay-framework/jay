@@ -646,3 +646,4 @@ async function renderSlowlyChanging(props, wixStores) {
 
 For more examples, see the [wix-stores product-page implementation](https://github.com/jay-framework/wix-stores/blob/main/lib/components/product-page.ts) which uses RenderPipeline extensively.
 
+

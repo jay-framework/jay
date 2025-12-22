@@ -36,3 +36,4 @@ describe('Plugin Resolution with Meaningful Error Messages', () => {
         expect(true).toBe(true);
     });
 });
+

@@ -89,3 +89,4 @@ export const productRating = makeJayStackComponent<ProductRatingContract>()
         };
     });
 
+
