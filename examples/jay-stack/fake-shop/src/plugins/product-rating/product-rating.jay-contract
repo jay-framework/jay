@@ -1,0 +1,49 @@
+name: ProductRating
+tags:
+  - tag: rating
+    type: data
+    dataType: number
+    phase: fast+interactive
+    description: Current average rating (0-5)
+  
+  - tag: totalReviews
+    type: data
+    dataType: number
+    phase: fast+interactive
+    description: Total number of reviews
+
+  - tag: userRating
+    type: data
+    dataType: string
+    phase: fast+interactive
+    description: User's selected rating (0-5)
+
+  - tag: submitButton
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Button to submit rating
+
+  - tag: star1
+    type: [variant, interactive]
+    dataType: boolean
+    elementType: HTMLButtonElement
+
+  - tag: star2
+    type: [variant, interactive]
+    dataType: boolean
+    elementType: HTMLButtonElement
+
+  - tag: star3
+    type: [variant, interactive]
+    dataType: boolean
+    elementType: HTMLButtonElement
+
+  - tag: star4
+    type: [variant, interactive]
+    dataType: boolean
+    elementType: HTMLButtonElement
+
+  - tag: star5
+    type: [variant, interactive]
+    dataType: boolean
+    elementType: HTMLButtonElement

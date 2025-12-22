@@ -15,7 +15,7 @@ program
     .action(async (source) => {
         await rollup({
             input: getJayHtmlOrContractFileInputs(source),
-            plugins: [jayDefinitions()],
+            plugins: [jayDefinitions(process.cwd())],
         });
     });
 

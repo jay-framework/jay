@@ -1,0 +1,7 @@
+name: mood-tracker-plugin
+# module field omitted for NPM packages - will use package's main export (".")
+contracts:
+  - name: mood-tracker
+    contract: mood-tracker.jay-contract # Export subpath (matches package.json exports key)
+    component: moodTracker # Exported full stack component in index.ts
+    description: A mood tracker component with happy, neutral, and sad states

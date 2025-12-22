@@ -5,7 +5,7 @@
   "private": true,
   "license": "Apache-2.0",
   "scripts": {
-    "dev": "jay-stack-cli",
+    "dev": "jay-stack-cli dev",
     "clean": "rimraf dist && rimraf build && rimraf -g 'src/**/*.d.ts'",
     "definitions": "jay-cli definitions src",
     "build": "npm run definitions & echo 'build not implemented yet'",

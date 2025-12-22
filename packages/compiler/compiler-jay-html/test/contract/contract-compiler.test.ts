@@ -27,6 +27,11 @@ describe('compile contract', () => {
         resolveLink: (link: string, importingModule: string) => {
             throw new Error(`Unknown link: ${link}`);
         },
+        resolvePluginComponent(pluginName: string, contractName: string, projectRoot: string) {
+            return new WithValidations(null as any, [
+                `Plugin resolution not supported in this test`,
+            ]);
+        },
     };
     it('should compile counter contract', async () => {
         const contract = `
@@ -661,6 +666,9 @@ describe('compile contract', () => {
             },
             resolveLink: (importingModule: string, link: string) => {
                 return path.relative(importingModule, link);
+            },
+            resolvePluginComponent() {
+                return null;
             },
         };
 

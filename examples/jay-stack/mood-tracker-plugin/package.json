@@ -7,12 +7,14 @@
   "license": "Apache-2.0",
   "main": "dist/index.js",
   "files": [
-    "dist"
+    "dist",
+    "plugin.yaml"
   ],
   "exports": {
     ".": "./dist/index.js",
     "./client": "./dist/index.client.js",
-    "./mood-tracker.jay-contract": "./dist/mood-tracker.jay-contract"
+    "./mood-tracker.jay-contract": "./dist/mood-tracker.jay-contract",
+    "./plugin.yaml": "./plugin.yaml"
   },
   "scripts": {
     "build": "npm run definitions && npm run build:client && npm run build:server && npm run build:copy-contract",

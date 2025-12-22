@@ -29,7 +29,7 @@ Jay Stack implements three distinct rendering phases for optimal performance:
   // Load static data that doesn't change often
   const product = await productsDb.getProductBySlug(props.slug);
 
-  return partialRender(
+  return phaseOutput(
     {
       name: product.name,
       sku: product.sku,
@@ -51,7 +51,7 @@ Jay Stack implements three distinct rendering phases for optimal performance:
   // Load dynamic data that can change
   const status = await inventory.getStatus(carryForward.productId);
 
-  return partialRender(
+  return phaseOutput(
     { inStock: status.available > 0 },
     { productId: carryForward.productId, inStock: status.available > 0 }
   );
@@ -65,15 +65,25 @@ Jay Stack implements three distinct rendering phases for optimal performance:
 **Output**: Reactive UI updates
 
 ```typescript
-.withInteractive((props, refs) => {
+.withInteractive((props, refs, viewStateSignals, fastCarryForward) => {
+  // viewStateSignals provides reactive access to FastViewState properties
+  const [getInStock, setInStock] = viewStateSignals.inStock;
+  
+  // fastCarryForward is injected as the first context (after viewStateSignals)
+  const productId = fastCarryForward.productId;
+  
   const [quantity, setQuantity] = createSignal(1);
 
   refs.addToCart.onclick(() => {
-    addToCart({ productId: props.productId, quantity: quantity() });
+    addToCart({ productId, quantity: quantity() });
   });
 
   return {
-    render: () => ({ quantity: quantity() }),
+    render: () => ({ 
+      quantity,
+      // You can also use signals from fast phase
+      stockAvailable: getInStock()
+    }),
   };
 })
 ```
@@ -85,7 +95,7 @@ Jay Stack uses a fluent builder API for creating full-stack components:
 ```typescript
 import {
   makeJayStackComponent,
-  partialRender,
+  phaseOutput,
   createJayService,
 } from '@jay-framework/fullstack-component';
 import { PRODUCTS_DATABASE_SERVICE, INVENTORY_SERVICE } from './services';
@@ -174,7 +184,7 @@ Defines the slow rendering function for semi-static data:
 async function slowlyRender(props: ProductPageProps & ProductParams, productsDb: ProductsDatabase) {
   const product = await productsDb.getProductBySlug(props.slug);
 
-  return partialRender(
+  return phaseOutput(
     {
       name: product.name,
       sku: product.sku,
@@ -198,21 +208,24 @@ Defines the fast rendering function for dynamic data:
 ```typescript
 async function fastRender(
   props: ProductPageProps & ProductParams,
-  carryForward: { productId: string },
-  inventory: InventoryService,
+  slowCarryForward: { productId: string },  // Injected as FIRST SERVICE
+  inventory: InventoryService,               // Then requested services
 ) {
-  const status = await inventory.getStatus(carryForward.productId);
+  const status = await inventory.getStatus(slowCarryForward.productId);
 
-  return partialRender(
+  return phaseOutput(
     { inStock: status.available > 0 },
-    { productId: carryForward.productId, inStock: status.available > 0 },
+    { productId: slowCarryForward.productId, inStock: status.available > 0 },
   );
 }
 
 makeJayStackComponent<ProductContract>().withServices(INVENTORY_SERVICE).withFastRender(fastRender);
 ```
 
-The fast render function receives props, the carry-forward data from slow render, and the requested services as parameters.
+**Parameter order:**
+1. **props** - Component props
+2. **slowCarryForward** - Carry forward data from slow render (injected as **first service**)
+3. **...requestedServices** - Services specified via `withServices()`
 
 #### `.withInteractive(componentConstructor)`
 
@@ -220,21 +233,30 @@ Defines the client-side interactive component:
 
 ```typescript
 function interactiveConstructor(
-  props: ProductPageProps & ProductParams & { productId: string; inStock: boolean },
+  props: ProductPageProps & ProductParams,  // Props only (NO carry forward)
   refs,
-  themeContext: Theme,
+  viewStateSignals,                         // Signals<FastViewState>
+  fastCarryForward,                         // Carry forward from fast (FIRST CONTEXT)
+  themeContext: Theme,                      // Then requested contexts
   userContext: User,
 ) {
+  // Access fast-phase ViewState as reactive signals
+  const [getInStock, setInStock] = viewStateSignals.inStock;
+  
+  // Access carry forward data
+  const productId = fastCarryForward.productId;
+  
   const [quantity, setQuantity] = createSignal(1);
 
   refs.addToCart.onclick(() => {
-    addToCart({ productId: props.productId, quantity: quantity() });
+    addToCart({ productId, quantity: quantity() });
   });
 
   return {
     render: () => ({
-      quantity: quantity(),
+      quantity,
       theme: themeContext.currentTheme,
+      stockStatus: getInStock(), // Use signal from fast phase
     }),
   };
 }
@@ -244,20 +266,140 @@ makeJayStackComponent<ProductContract>()
   .withInteractive(interactiveConstructor);
 ```
 
-The interactive component receives props, refs, and the requested client-side contexts as parameters. Note that services are not available in the interactive phase - only contexts.
+**Parameter order:**
+
+1. **props** - From `withProps()` + URL params (does NOT include carry forward)
+2. **refs** - Interactive element references from the contract
+3. **viewStateSignals** - Reactive signals for FastViewState properties (`Signals<FastViewState>`)
+4. **fastCarryForward** - Carry forward data from fast render (injected as **first context**)
+5. **...requestedContexts** - Contexts specified via `withContexts()`
+
+**Important:** 
+- Services are not available in the interactive phase - only contexts
+- Carry forward is injected as a **separate parameter** (not part of props)
+- `viewStateSignals` provides reactive access to data from the fast render phase as `[getter, setter]` tuples
+
+## RenderPipeline (Recommended)
+
+For complex render logic with error handling and async operations, use the **RenderPipeline** API. It provides a functional, type-safe way to compose render operations with automatic error propagation.
+
+### Quick Example
+
+```typescript
+import { RenderPipeline } from '@jay-framework/fullstack-component';
+
+async function slowlyRender(props, wixStores) {
+  const Pipeline = RenderPipeline.for<SlowViewState, CarryForward>();
+
+  return Pipeline
+    .try(() => wixStores.getProduct(props.slug))
+    .map(product => product || Pipeline.notFound('Product not found'))
+    .toPhaseOutput(product => ({
+      viewState: { name: product.name, price: product.price },
+      carryForward: { productId: product.id }
+    }));
+}
+```
+
+### Key Features
+
+- **Type Safety**: Full TypeScript inference from start to finish
+- **Error Propagation**: Errors automatically skip subsequent `.map()` calls
+- **Error Recovery**: Use `.recover()` to handle errors and return to success path
+- **Async Composition**: Chain async operations naturally without nested promises
+- **Conditional Branching**: Return `Pipeline.notFound()` or other errors from `.map()` to branch
+
+### Basic API
+
+```typescript
+const Pipeline = RenderPipeline.for<ViewState, CarryForward>();
+
+// Start with a value
+Pipeline.ok(data)
+
+// Start with a function (catches errors)
+Pipeline.try(() => fetchData())
+
+// Start with an error
+Pipeline.notFound('Not found')
+Pipeline.badRequest('Invalid input')
+
+// Transform values
+.map(x => x * 2)                           // Sync transform
+.map(async x => await enrichData(x))      // Async transform
+.map(x => x ? x : Pipeline.notFound())    // Conditional error
+
+// Recover from errors
+.recover(error => Pipeline.ok(fallbackData))
+
+// Terminal operation (async)
+.toPhaseOutput(data => ({
+  viewState: { /* ... */ },
+  carryForward: { /* ... */ }
+}))
+```
+
+### Complete Example
+
+```typescript
+async function renderSlowlyChanging(props, wixStores) {
+  const Pipeline = RenderPipeline.for<ProductSlowViewState, ProductCarryForward>();
+
+  return Pipeline
+    // Fetch product, catching any errors
+    .try(() => wixStores.products.getProductBySlug(props.slug))
+    
+    // Handle not found case
+    .map(response => response.product || Pipeline.notFound('Product not found'))
+    
+    // Validate product data
+    .map(product => {
+      if (!product.name) {
+        return Pipeline.badRequest('Invalid product data');
+      }
+      return product;
+    })
+    
+    // Enrich with additional data
+    .map(async product => {
+      const reviews = await reviewsApi.getReviews(product.id);
+      return { ...product, reviews };
+    })
+    
+    // Transform to final output
+    .toPhaseOutput(data => ({
+      viewState: {
+        name: data.name,
+        description: data.description,
+        reviewCount: data.reviews.length
+      },
+      carryForward: {
+        productId: data.id
+      }
+    }));
+}
+```
+
+**📖 For complete documentation and advanced patterns, see [RenderPipeline Guide](./render-pipeline.md)**
+
+---
 
 ## Render Response Builders
 
-### `partialRender<ViewState, CarryForward>`
+For simple cases without complex error handling, you can use the direct response builders:
 
-Creates a successful partial render result with data to carry forward:
+### `phaseOutput<ViewState, CarryForward>`
+
+Creates a successful phase render result with data to carry forward to the next phase:
 
 ```typescript
-return partialRender(
-  { name: 'Product Name', price: 99.99 }, // View state
-  { productId: '123' }, // Carry forward data
+return phaseOutput(
+  { name: 'Product Name', price: 99.99 }, // Rendered ViewState for this phase
+  { productId: '123' }, // Carry forward data to next phase
 );
 ```
+
+**Note:** `partialRender` is still available as an alias for backward compatibility, but `phaseOutput` is the preferred name as it better reflects the three-phase rendering model.
 
 ### `serverError5xx(status)`
 
@@ -287,20 +429,102 @@ return redirect3xx(301, 'https://new-domain.com/product');
 
 ## Data Flow
 
-### Props Composition
+### Carry Forward Mechanism
 
-Props are composed across rendering phases:
+Data flows between phases using the **carry forward** mechanism. Each phase can return data that's injected into subsequent phases:
+
+```typescript
+// Slow render: Return ViewState + CarryForward
+.withSlowlyRender(async (props, service1, service2) => {
+  const product = await getProduct(props.slug);
+  
+  return phaseOutput(
+    { name: product.name, sku: product.sku },  // → SlowViewState
+    { productId: product.id }                   // → Injected as first service in fast render
+  );
+})
+
+// Fast render: Receive slow carry forward as FIRST SERVICE
+.withFastRender(async (props, slowCarryForward, service1, service2) => {
+  // slowCarryForward is injected as the first service parameter
+  const inventory = await getInventory(slowCarryForward.productId);
+  
+  return phaseOutput(
+    { inStock: inventory.available > 0 },       // → FastViewState (becomes signals)
+    { productId: slowCarryForward.productId, stockLevel: inventory.available }  // → Injected as first context in interactive
+  );
+})
+
+// Interactive: Receive fast carry forward as FIRST CONTEXT (after viewStateSignals)
+.withInteractive((props, refs, viewStateSignals, fastCarryForward, context1, context2) => {
+  // Parameter order:
+  // 1. props (from withProps + URL params)
+  // 2. refs (from contract)
+  // 3. viewStateSignals (Signals<FastViewState>)
+  // 4. fastCarryForward (first context - carry forward from fast render)
+  // 5. context1, context2, ... (requested contexts via withContexts)
+  
+  const [getInStock, setInStock] = viewStateSignals.inStock;
+  
+  return {
+    render: () => ({ 
+      stockLevel: fastCarryForward.stockLevel,
+      inStock: getInStock()
+    }),
+  };
+})
+```
+
+**Key points:**
+
+- **Slow → Fast**: Carry forward is injected as the **first service parameter** (before requested services)
+- **Fast → Interactive**: Carry forward is injected as the **first context parameter** (after viewStateSignals, before requested contexts)
+- **Carry forward ≠ Props**: Carry forward data does NOT become part of props - it's a separate injection parameter
+- **ViewState → Signals**: Fast ViewState is converted to reactive signals and passed as `viewStateSignals` in interactive
+- **Optimization**: Only carry forward what's needed (IDs, metadata), not entire objects
+
+### Props Composition and Parameter Injection
+
+Props remain constant across phases, while carry forward data is injected via different mechanisms:
 
 ```typescript
 // Phase 1: Slow Render
-props: PageProps & ProductParams;
+function slowRender(
+  props: PageProps & ProductParams,
+  ...services
+) {
+  return phaseOutput(viewState, carryForward);
+}
 
 // Phase 2: Fast Render
-props: PageProps & ProductParams & SlowRenderCarryForward;
+function fastRender(
+  props: PageProps & ProductParams,          // Same props as slow
+  slowCarryForward: { productId: string },   // Injected as FIRST SERVICE
+  ...requestedServices                        // Other services follow
+) {
+  return phaseOutput(viewState, carryForward);
+}
 
 // Phase 3: Interactive
-props: PageProps & ProductParams & FastRenderCarryForward;
+function interactive(
+  props: PageProps & ProductParams,                    // Same props as slow/fast
+  refs: ComponentRefs,                                 // From contract
+  viewStateSignals: Signals<FastViewState>,           // Fast ViewState as signals
+  fastCarryForward: { productId: string; inStock: boolean },  // Injected as FIRST CONTEXT
+  ...requestedContexts                                 // Other contexts follow
+) {
+  return { render: () => ({ ... }) };
+}
 ```
+
+**Key principles:**
+
+1. **Props are stable**: The same props object flows through all phases (from `withProps()` + URL params)
+2. **Carry forward is injected separately**:
+   - In fast render: As the **first service** parameter
+   - In interactive: As the **first context** parameter (after viewStateSignals)
+3. **Services stay server-side**: Only available in slow and fast render
+4. **Contexts are client-side**: Only available in interactive phase
 
 ### Service and Context Injection
 
@@ -323,35 +547,68 @@ async function slowlyRender(
 ) {
   const user = await auth.getUser(props.userId);
   const data = await productsDb.getUserData(user.id);
-  return partialRender({ data }, { userId: user.id });
+  return phaseOutput({ data }, { userId: user.id });
 }
 
-// Services in fast render
+// Services in fast render (carry forward is the FIRST service parameter)
 async function fastRender(
   props: ProductPageProps,
-  carryForward: { userId: string },
-  inventory: InventoryService,
+  slowCarryForward: { userId: string },  // First parameter after props
+  inventory: InventoryService,            // Then requested services
 ) {
-  const status = await inventory.getStatus(carryForward.userId);
-  return partialRender({ status });
+  const status = await inventory.getStatus(slowCarryForward.userId);
+  return phaseOutput({ status }, {});
 }
 ```
 
 #### Contexts (Client-Side)
 
-Contexts are only available in the interactive phase:
+Contexts are only available in the interactive phase. The parameter order for interactive components is:
+
+1. **props** - From `withProps()` + URL params
+2. **refs** - Interactive elements from contract
+3. **viewStateSignals** - `Signals<FastViewState>` (reactive access to fast-phase data)
+4. **fastCarryForward** - Carry forward data from fast render (injected as first context)
+5. **...requestedContexts** - Contexts specified via `withContexts()`
 
 ```typescript
 // Contexts in interactive component
-function interactiveConstructor(props, refs, theme: Theme, user: User) {
+function interactiveConstructor(
+  props, 
+  refs, 
+  viewStateSignals,        // Signals<FastViewState>
+  fastCarryForward,        // Carry forward from fast render (FIRST CONTEXT)
+  theme: Theme,            // Requested contexts follow
+  user: User
+) {
+  // viewStateSignals is Signals<FastViewState>
+  // Each property is a [getter, setter] tuple
+  const [getStatus, setStatus] = viewStateSignals.status;
+  
+  // Access carry forward data
+  const productId = fastCarryForward.productId;
+  
   const isDarkMode = theme.isDarkMode();
   const userPreferences = user.getPreferences();
 
   return {
-    render: () => ({ isDarkMode, userPreferences }),
+    render: () => ({ 
+      isDarkMode, 
+      userPreferences,
+      status: getStatus() // Access fast-phase data reactively
+    }),
   };
 }
 ```
+
+**Important:** 
+
+- **viewStateSignals**: Contains reactive signals (`[Getter, Setter]` tuples) for all properties rendered in the fast phase
+  - Read fast-phase data reactively using the getter
+  - Update fast-phase data using the setter (e.g., for optimistic updates)
+  - Subscribe to changes in fast-phase data
+
+- **fastCarryForward**: Injected as the **first context parameter** (after viewStateSignals), providing access to data carried forward from the fast render phase
 
 ## URL Parameter Loading
 
@@ -485,7 +742,7 @@ export const page = makeJayStackComponent<PageContract>()
   .withServices(PRODUCTS_DATABASE_SERVICE)
   .withSlowlyRender(async (props, productsDb) => {
     const products = await productsDb.getAllProducts();
-    return partialRender({ products });
+    return phaseOutput({ products }, {});
   });
 ```
 
@@ -501,11 +758,11 @@ const ThemeContext = createJayContext<Theme>();
 const CartContext = createJayContext<Cart>();
 
 // Use in interactive component
-function interactiveConstructor(props, refs, theme, cart) {
+function interactiveConstructor(props, refs, viewStateSignals, fastCarryForward, theme, cart) {
   const [quantity, setQuantity] = createSignal(1);
 
   refs.addToCart.onclick(() => {
-    cart.addItem({ productId: props.productId, quantity: quantity() });
+    cart.addItem({ productId: fastCarryForward.productId, quantity: quantity() });
   });
 
   return {
@@ -533,7 +790,7 @@ async function slowlyRender(props) {
       return notFound();
     }
 
-    return partialRender({ product }, { productId: product.id });
+    return phaseOutput({ product }, { productId: product.id });
   } catch (error) {
     console.error('Failed to load product:', error);
     return serverError5xx(503);
@@ -546,10 +803,10 @@ async function slowlyRender(props) {
 Handle client-side errors:
 
 ```typescript
-async function fastRender(props) {
+async function fastRender(props, slowCarryForward) {
   try {
-    const inventory = await getInventoryStatus(props.productId);
-    return partialRender({ inStock: inventory.available > 0 });
+    const inventory = await getInventoryStatus(slowCarryForward.productId);
+    return phaseOutput({ inStock: inventory.available > 0 }, {});
   } catch (error) {
     if (error.code === 'NOT_FOUND') {
       return clientError4xx(404);
@@ -586,12 +843,12 @@ Only update the parts of the view state that change:
 
 ```typescript
 // Slow render - static data
-return partialRender({ name: product.name, sku: product.sku }, { productId: product.id });
+return phaseOutput({ name: product.name, sku: product.sku }, { productId: product.id });
 
-// Fast render - only dynamic data
-return partialRender(
+// Fast render - only dynamic data (receives slowCarryForward as first service)
+return phaseOutput(
   { inStock: inventory.available > 0 },
-  { productId: props.productId, inStock: inventory.available > 0 },
+  { productId: slowCarryForward.productId, inStock: inventory.available > 0 },
 );
 
 // Interactive - only interactive data
@@ -607,16 +864,16 @@ Pass data between phases to avoid recomputation:
 ```typescript
 // Slow render
 const product = await getProductBySlug(props.slug);
-return partialRender(
+return phaseOutput(
   { name: product.name, price: product.price },
   { productId: product.id, category: product.category },
 );
 
-// Fast render - use carried forward data
-const inventory = await getInventoryStatus(props.productId);
-return partialRender(
+// Fast render - use carried forward data (slowCarryForward is first service parameter)
+const inventory = await getInventoryStatus(slowCarryForward.productId);
+return phaseOutput(
   { inStock: inventory.available > 0 },
-  { productId: props.productId, category: props.category },
+  { productId: slowCarryForward.productId, category: slowCarryForward.category },
 );
 ```
 
@@ -632,17 +889,17 @@ async function slowlyRender(props) {
 
   if (productCache.has(cacheKey)) {
     const cached = productCache.get(cacheKey);
-    return partialRender(cached.data, cached.carryForward);
+    return phaseOutput(cached.data, cached.carryForward);
   }
 
   const product = await getProductBySlug(props.slug);
-  const result = partialRender(
+  const result = phaseOutput(
     { name: product.name, price: product.price },
     { productId: product.id },
   );
 
   productCache.set(cacheKey, {
-    data: result.viewState,
+    data: result.rendered,
     carryForward: result.carryForward,
   });
 
@@ -663,12 +920,12 @@ async function slowlyRender(props) {
     const user = await getUser(props.userId);
     const personalizedData = await getPersonalizedData(user.id);
 
-    return partialRender({ user, personalizedData }, { userId: user.id, isAuthenticated: true });
+    return phaseOutput({ user, personalizedData }, { userId: user.id, isAuthenticated: true });
   } else {
     // Anonymous user
     const publicData = await getPublicData();
 
-    return partialRender({ publicData }, { isAuthenticated: false });
+    return phaseOutput({ publicData }, { isAuthenticated: false });
   }
 }
 ```
@@ -678,17 +935,17 @@ async function slowlyRender(props) {
 Load components dynamically based on data:
 
 ```typescript
-async function fastRender(props) {
-  const componentType = await getComponentType(props.productId);
+async function fastRender(props, slowCarryForward) {
+  const componentType = await getComponentType(slowCarryForward.productId);
 
   if (componentType === 'video') {
-    return partialRender(
-      { componentType, videoUrl: await getVideoUrl(props.productId) },
+    return phaseOutput(
+      { componentType, videoUrl: await getVideoUrl(slowCarryForward.productId) },
       { componentType },
     );
   } else {
-    return partialRender(
-      { componentType, imageUrl: await getImageUrl(props.productId) },
+    return phaseOutput(
+      { componentType, imageUrl: await getImageUrl(slowCarryForward.productId) },
       { componentType },
     );
   }
@@ -787,12 +1044,12 @@ Keep rendering functions focused:
 // Good - focused functions
 async function slowlyRender(props) {
   const product = await getProduct(props.slug);
-  return partialRender({ product }, { productId: product.id });
+  return phaseOutput({ product }, { productId: product.id });
 }
 
-async function fastRender(props) {
-  const inventory = await getInventory(props.productId);
-  return partialRender({ inventory }, { productId: props.productId });
+async function fastRender(props, slowCarryForward) {
+  const inventory = await getInventory(slowCarryForward.productId);
+  return phaseOutput({ inventory }, { productId: slowCarryForward.productId });
 }
 
 // Avoid - doing too much in one function
@@ -802,7 +1059,7 @@ async function renderEverything(props) {
   const reviews = await getReviews(product.id);
   const recommendations = await getRecommendations(product.id);
 
-  return partialRender({ product, inventory, reviews, recommendations });
+  return phaseOutput({ product, inventory, reviews, recommendations }, {});
 }
 ```
 
@@ -811,25 +1068,25 @@ async function renderEverything(props) {
 Provide loading states for better UX:
 
 ```typescript
-async function fastRender(props) {
-  const inventory = await getInventory(props.productId);
+async function fastRender(props, slowCarryForward) {
+  const inventory = await getInventory(slowCarryForward.productId);
 
-  return partialRender(
+  return phaseOutput(
     {
       inStock: inventory.available > 0,
       isLoading: false,
     },
-    { productId: props.productId },
+    { productId: slowCarryForward.productId },
   );
 }
 
-function interactiveConstructor(props, refs) {
+function interactiveConstructor(props, refs, viewStateSignals, fastCarryForward) {
   const [isAddingToCart, setIsAddingToCart] = createSignal(false);
 
   refs.addToCart.onclick(async () => {
     setIsAddingToCart(true);
     try {
-      await addToCart({ productId: props.productId, quantity: 1 });
+      await addToCart({ productId: fastCarryForward.productId, quantity: 1 });
     } finally {
       setIsAddingToCart(false);
     }
@@ -849,17 +1106,17 @@ Load only necessary data in each phase:
 // Slow render - only static data
 async function slowlyRender(props) {
   const product = await getProductBasicInfo(props.slug);
-  return partialRender({ product }, { productId: product.id });
+  return phaseOutput({ product }, { productId: product.id });
 }
 
 // Fast render - dynamic data
-async function fastRender(props) {
+async function fastRender(props, slowCarryForward) {
   const [inventory, price] = await Promise.all([
-    getInventory(props.productId),
-    getCurrentPrice(props.productId),
+    getInventory(slowCarryForward.productId),
+    getCurrentPrice(slowCarryForward.productId),
   ]);
 
-  return partialRender({ inventory, price }, { productId: props.productId });
+  return phaseOutput({ inventory, price }, { productId: slowCarryForward.productId });
 }
 ```
 

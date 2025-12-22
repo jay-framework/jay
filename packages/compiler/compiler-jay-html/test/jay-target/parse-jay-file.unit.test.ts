@@ -32,6 +32,41 @@ describe('compiler', () => {
         analyzeExportedTypes(fullPath: string, options: ResolveTsConfigOptions): JayType[] {
             throw new Error('Not implemented');
         },
+        resolvePluginComponent(pluginName: string, contractName: string, projectRoot: string) {
+            // Handle test plugins
+            // These tests don't use real fixture files, so just return simple paths
+            if (pluginName === 'test-counter' && contractName === 'counter') {
+                return new WithValidations(
+                    {
+                        contractPath: '/path/to/counter.jay-contract',
+                        componentPath: '/path/to/counter',
+                        componentName: 'counter',
+                    },
+                    [],
+                );
+            }
+            if (pluginName === 'test-named-counter' && contractName === 'named-counter') {
+                return new WithValidations(
+                    {
+                        contractPath: '/path/to/named-counter.jay-contract',
+                        componentPath: '/path/to/named-counter',
+                        componentName: 'namedCounter',
+                    },
+                    [],
+                );
+            }
+            if (pluginName === 'test-timer' && contractName === 'timer') {
+                return new WithValidations(
+                    {
+                        contractPath: '/path/to/timer.jay-contract',
+                        componentPath: '/path/to/timer',
+                        componentName: 'timer',
+                    },
+                    [],
+                );
+            }
+            return new WithValidations(null as any, [`Plugin "${pluginName}" not found in test`]);
+        },
     };
 
     function jayFileWith(jayYaml, body, scripts?) {
@@ -60,6 +95,7 @@ describe('compiler', () => {
                 '',
                 {},
                 defaultImportResolver,
+                '',
             );
 
             expect(jayFile.val.types).toEqual(
@@ -79,6 +115,7 @@ describe('compiler', () => {
                 '',
                 {},
                 defaultImportResolver,
+                '',
             );
 
             expect(jayFile.val.types).toEqual(
@@ -97,6 +134,7 @@ describe('compiler', () => {
                 '',
                 {},
                 defaultImportResolver,
+                '',
             );
 
             expect(jayFile.validations).toEqual(['invalid type [bla] found at [data.text]']);
@@ -121,6 +159,7 @@ describe('compiler', () => {
                 '',
                 {},
                 defaultImportResolver,
+                '',
             );
 
             expect(jayFile.val.types).toEqual(
@@ -153,6 +192,7 @@ describe('compiler', () => {
                 '',
                 {},
                 defaultImportResolver,
+                '',
             );
 
             expect(jayFile.val.types).toEqual(
@@ -174,6 +214,7 @@ describe('compiler', () => {
                 '',
                 {},
                 defaultImportResolver,
+                '',
             );
 
             expect(jayFile.val.types).toEqual(
@@ -197,6 +238,7 @@ describe('compiler', () => {
                 '',
                 {},
                 defaultImportResolver,
+                '',
             );
 
             expect(jayFile.val.types).toEqual(
@@ -224,6 +266,7 @@ describe('compiler', () => {
                 '',
                 {},
                 defaultImportResolver,
+                '',
             );
 
             expect(jayFile.val.types).toEqual(
@@ -254,6 +297,7 @@ describe('compiler', () => {
                     '',
                     {},
                     defaultImportResolver,
+                    '',
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -282,6 +326,7 @@ describe('compiler', () => {
                     '',
                     {},
                     defaultImportResolver,
+                    '',
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -311,6 +356,7 @@ describe('compiler', () => {
                     '',
                     {},
                     defaultImportResolver,
+                    '',
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -340,6 +386,7 @@ describe('compiler', () => {
                     '',
                     {},
                     defaultImportResolver,
+                    '',
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -371,6 +418,7 @@ describe('compiler', () => {
                     '',
                     {},
                     defaultImportResolver,
+                    '',
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -409,6 +457,7 @@ describe('compiler', () => {
                     '',
                     {},
                     defaultImportResolver,
+                    '',
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -447,6 +496,7 @@ describe('compiler', () => {
                     '',
                     {},
                     defaultImportResolver,
+                    '',
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -481,6 +531,7 @@ describe('compiler', () => {
                     '',
                     {},
                     defaultImportResolver,
+                    '',
                 );
 
                 expect(jayFile.validations.length).toBeGreaterThan(0);
@@ -501,6 +552,7 @@ describe('compiler', () => {
                     '',
                     {},
                     defaultImportResolver,
+                    '',
                 );
 
                 expect(jayFile.validations).toContain(
@@ -522,6 +574,7 @@ describe('compiler', () => {
                     '',
                     {},
                     defaultImportResolver,
+                    '',
                 );
 
                 expect(jayFile.validations.length).toBeGreaterThan(0);
@@ -543,6 +596,7 @@ describe('compiler', () => {
                     '',
                     {},
                     defaultImportResolver,
+                    '',
                 );
 
                 expect(jayFile.validations).toContain(
@@ -568,6 +622,7 @@ describe('compiler', () => {
                 './test',
                 {},
                 JAY_IMPORT_RESOLVER,
+                '',
             );
 
             expect(jayFile.validations).toEqual([]);
@@ -691,6 +746,7 @@ describe('compiler', () => {
                 '',
                 {},
                 defaultImportResolver,
+                '',
             );
 
             expect(jayFile.val.namespaces).toEqual([
@@ -719,6 +775,7 @@ describe('compiler', () => {
                 '',
                 {},
                 defaultImportResolver,
+                '',
             );
             expect(jayFile.validations).toEqual([
                 'jay file should have exactly one jay-data script, found 2',
@@ -738,6 +795,7 @@ describe('compiler', () => {
                 '',
                 {},
                 defaultImportResolver,
+                '',
             );
             expect(jayFile.validations).toEqual([
                 'jay file should have exactly one jay-data script, found none',
@@ -751,6 +809,7 @@ describe('compiler', () => {
                 '',
                 {},
                 defaultImportResolver,
+                '',
             );
             expect(jayFile.validations).toEqual([
                 'jay file should have exactly one jay-data script, found none',
@@ -773,6 +832,7 @@ describe('compiler', () => {
                 '',
                 {},
                 defaultImportResolver,
+                '',
             );
             expect(jayFile.validations).toEqual(['jay file must have exactly a body tag']);
         });
@@ -790,6 +850,7 @@ describe('compiler', () => {
                 '',
                 {},
                 JAY_IMPORT_RESOLVER,
+                '',
             );
 
             expect(jayFile.validations.length).toEqual(1);
@@ -811,6 +872,7 @@ describe('compiler', () => {
                 '',
                 {},
                 JAY_IMPORT_RESOLVER,
+                '',
             );
 
             expect(jayFile.validations.length).toEqual(1);
@@ -832,6 +894,7 @@ describe('compiler', () => {
                 '',
                 {},
                 JAY_IMPORT_RESOLVER,
+                '',
             );
 
             expect(jayFile.validations[0]).toContain(
@@ -859,6 +922,7 @@ describe('compiler', () => {
                     '',
                     {},
                     JAY_IMPORT_RESOLVER,
+                    '',
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -906,6 +970,7 @@ describe('compiler', () => {
                     '',
                     {},
                     JAY_IMPORT_RESOLVER,
+                    '',
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -928,6 +993,7 @@ describe('compiler', () => {
                     '',
                     {},
                     JAY_IMPORT_RESOLVER,
+                    '',
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -948,6 +1014,7 @@ describe('compiler', () => {
                     '',
                     {},
                     JAY_IMPORT_RESOLVER,
+                    '',
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -980,6 +1047,7 @@ describe('compiler', () => {
                     '',
                     {},
                     JAY_IMPORT_RESOLVER,
+                    '',
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -1020,6 +1088,7 @@ describe('compiler', () => {
                     '',
                     {},
                     JAY_IMPORT_RESOLVER,
+                    '',
                 );
 
                 expect(jayFile.validations).toEqual([]);
@@ -1063,6 +1132,7 @@ describe('compiler', () => {
                 '',
                 {},
                 defaultImportResolver,
+                '',
             );
 
             // Backward compatible: no contract auto-generation for inline data only
@@ -1106,6 +1176,7 @@ describe('compiler', () => {
                 '',
                 {},
                 resolverWithPageContract,
+                '',
             );
 
             expect(jayFile.val.contract).toEqual({
@@ -1158,12 +1229,13 @@ describe('compiler', () => {
                         |   title: string
                         |`,
                     '<body></body>',
-                    `<script type="application/jay-headless" src="./counter.ts" name="counter" contract="./counter.jay-contract" key="myCounter"></script>`,
+                    `<script type="application/jay-headless" plugin="test-counter" contract="counter" key="myCounter"></script>`,
                 ),
                 'Page',
                 '',
                 {},
                 resolverWithCounter,
+                '',
             );
 
             // No contract auto-generation (backward compatible)
@@ -1246,7 +1318,7 @@ describe('compiler', () => {
                 stripMargin(
                     `<html>
                     |   <head>
-                    |     <script type="application/jay-headless" src="./counter.ts" name="counter" contract="./counter.jay-contract" key="myCounter"></script>
+                    |     <script type="application/jay-headless" plugin="test-counter" contract="counter" key="myCounter"></script>
                     |     <script type="application/jay-data" contract="./page.jay-contract"></script>
                     |   </head>
                     |   <body></body>
@@ -1256,6 +1328,7 @@ describe('compiler', () => {
                 '',
                 {},
                 resolverWithBoth,
+                '',
             );
 
             // Page contract preserved (not merged with headless)
@@ -1354,8 +1427,8 @@ describe('compiler', () => {
                 stripMargin(
                     `<html>
                     |   <head>
-                    |     <script type="application/jay-headless" src="./counter.ts" name="counter" contract="./counter.jay-contract" key="myCounter"></script>
-                    |     <script type="application/jay-headless" src="./timer.ts" name="timer" contract="./timer.jay-contract" key="myTimer"></script>
+                    |     <script type="application/jay-headless" plugin="test-counter" contract="counter" key="myCounter"></script>
+                    |     <script type="application/jay-headless" plugin="test-timer" contract="timer" key="myTimer"></script>
                     |     <script type="application/jay-data" contract="./page.jay-contract"></script>
                     |   </head>
                     |   <body></body>
@@ -1365,6 +1438,7 @@ describe('compiler', () => {
                 '',
                 {},
                 resolverWithMultiple,
+                '',
             );
 
             // Page contract preserved

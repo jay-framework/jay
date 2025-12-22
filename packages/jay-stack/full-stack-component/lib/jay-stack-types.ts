@@ -35,6 +35,34 @@ export type ServiceMarkers<T extends any[]> = {
     [K in keyof T]: ServiceMarker<T[K]>;
 };
 
+/**
+ * Contract metadata passed to dynamic contract components.
+ * Contains the contract name and original YAML definition.
+ */
+export interface DynamicContractMetadata {
+    contractName: string; // e.g., "BlogPostsList" or "cms/blog-posts-list"
+    contractYaml: string; // Original YAML contract definition
+}
+
+/**
+ * Built-in service for dynamic contract metadata.
+ * Used by plugin system to pass contract metadata to shared components.
+ *
+ * @example
+ * ```typescript
+ * export const cmsCollection = makeJayStackComponent<DynamicContract>()
+ *   .withServices(DYNAMIC_CONTRACT_SERVICE)
+ *   .withFastRender(async (props, metadata: DynamicContractMetadata) => {
+ *     // metadata.contractName contains the full contract name (e.g., "BlogPostsList")
+ *     const collectionName = deriveCollectionName(metadata.contractName);
+ *     const items = await fetchCollection(collectionName);
+ *     return partialRender({ items }, {});
+ *   });
+ * ```
+ */
+export const DYNAMIC_CONTRACT_SERVICE =
+    createJayService<DynamicContractMetadata>('DynamicContract');
+
 // ============================================================================
 // Page Props and URL Params
 // ============================================================================
@@ -167,3 +195,43 @@ export type AnyJayStackComponentDefinition = JayStackComponentDefinition<
     UrlParams,
     any
 >;
+
+// ============================================================================
+// Dynamic Contract Generator API
+// ============================================================================
+
+/**
+ * A generated contract definition in YAML string format.
+ *
+ * This avoids dependency on compiler types - generators output contract YAML,
+ * which the compiler parses using its own type system.
+ */
+export interface GeneratedContractYaml {
+    name: string; // Contract name (PascalCase, e.g., "BlogPostsList")
+    yaml: string; // Contract definition in YAML format
+    description?: string; // Optional description
+}
+
+/**
+ * Function that generates contracts dynamically at build time.
+ * Returns contract definitions as YAML strings to avoid compiler type dependencies.
+ * Services are injected based on the markers provided to withServices().
+ */
+export type ContractGeneratorFunction<Services extends any[]> = (
+    ...services: Services
+) => Promise<GeneratedContractYaml[]> | GeneratedContractYaml[];
+
+/**
+ * Interface for a dynamic contract generator with service dependencies.
+ * Returned by makeContractGenerator() builder.
+ */
+export interface DynamicContractGenerator<Services extends any[] = any[]> {
+    services: ServiceMarkers<Services>;
+    generate: ContractGeneratorFunction<Services>;
+}
+
+/**
+ * Type helper to extract service instances from service markers.
+ */
+export type ServiceInstances<Markers extends ServiceMarkers<any[]>> =
+    Markers extends ServiceMarkers<infer Services> ? Services : never;

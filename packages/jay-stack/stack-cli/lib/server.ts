@@ -8,19 +8,29 @@ import { loadConfig, updateConfig, getConfigWithDefaults } from './config';
 import { createEditorHandlers } from './editor-handlers';
 import { generatePageDefinitionFiles } from './generate-page-definition-files';
 
-// Load configuration
-const config = loadConfig();
-const resolvedConfig = getConfigWithDefaults(config);
+export interface StartDevServerOptions {
+    projectPath?: string;
+}
 
-const jayOptions = {
-    tsConfigFilePath: './tsconfig.json',
-    outputDir: 'build/jay-runtime',
-};
+export async function startDevServer(options: StartDevServerOptions = {}) {
+    const projectPath = options.projectPath || process.cwd();
 
-// Create http server
-const app: Express = express();
+    // Change to project directory if specified
+    if (projectPath !== process.cwd()) {
+        process.chdir(projectPath);
+    }
 
-async function initApp() {
+    // Load configuration
+    const config = loadConfig();
+    const resolvedConfig = getConfigWithDefaults(config);
+
+    const jayOptions = {
+        tsConfigFilePath: './tsconfig.json',
+        outputDir: 'build/jay-runtime',
+    };
+
+    // Create http server
+    const app: Express = express();
     // Find available port for dev server
     const devServerPort = await getPort({ port: resolvedConfig.devServer.portRange });
 
@@ -42,7 +52,11 @@ async function initApp() {
     const { port: editorPort, editorId } = await editorServer.start();
 
     // Set up editor server callbacks
-    const handlers = createEditorHandlers(resolvedConfig, jayOptions.tsConfigFilePath);
+    const handlers = createEditorHandlers(
+        resolvedConfig,
+        jayOptions.tsConfigFilePath,
+        process.cwd(),
+    );
     editorServer.onPublish(handlers.onPublish);
     editorServer.onSaveImage(handlers.onSaveImage);
     editorServer.onHasImage(handlers.onHasImage);
@@ -73,7 +87,7 @@ async function initApp() {
     });
 
     // generate page d.ts files
-    generatePageDefinitionFiles(routes, jayOptions.tsConfigFilePath);
+    generatePageDefinitionFiles(routes, jayOptions.tsConfigFilePath, process.cwd());
 
     // Start http server
     const expressServer = app.listen(devServerPort, () => {
@@ -93,12 +107,8 @@ async function initApp() {
         await new Promise((resolve) => expressServer.close(resolve));
         process.exit(0);
     };
+
     // Handle graceful shutdown
     process.on('SIGTERM', shutdown);
     process.on('SIGINT', shutdown);
 }
-
-initApp().catch((error) => {
-    console.error('Failed to start servers:', error);
-    process.exit(1);
-});

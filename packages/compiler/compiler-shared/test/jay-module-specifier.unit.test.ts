@@ -206,3 +206,4 @@ describe('isLocalModule', () => {
         expect(isLocalModule('some-package?jay-client')).toBe(false);
     });
 });
+
