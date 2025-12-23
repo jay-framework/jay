@@ -26,4 +26,3 @@ export function camelCase(str: string): string {
     const camelCased = baseCamelCase(withoutLeadingUnderscores);
     return '_'.repeat(leadingUnderscores) + camelCased;
 }
-
