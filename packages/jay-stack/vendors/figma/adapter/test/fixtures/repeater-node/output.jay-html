@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script type="application/jay-data">
+data:
+  items:
+  - id: string
+    title: string
+    active: boolean
+</script>
+    <style>
+        /* Global Reset & Base Styles */
+        * { box-sizing: border-box; }
+        body { margin: 0; padding: 0; overflow-x: hidden; }
+        
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #C1C1C1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #A8A8A8; }
+    </style>
+</head>
+<body>
+    <div id="container-1-11" style="position: absolute; top: 0px; left: 0px; width: 400px; height: 300px">
+  <div id="itemslist-2-11" style="position: absolute; top: 50px; left: 50px; width: 300px; height: 200px; display: flex; flex-direction: column; gap: 12px; padding-left: 10px; padding-right: 10px; padding-top: 10px; padding-bottom: 10px" forEach="items" trackBy="id">
+    <div id="itemcard-3-11" style="position: absolute; top: 10px; left: 10px; width: 280px; height: 60px; background-color: #f2f2f2; border-radius: 8px; display: flex; flex-direction: row; gap: 8px; padding-left: 16px; padding-right: 16px; padding-top: 8px; padding-bottom: 8px">
+      <span id="itemname-4-11" style="position: absolute; top: 18px; left: 16px; width: 200px; height: 24px">{title}</span>
+    </div>
+  </div>
+</div>
+    
+    
+</body>
+</html>

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { FigmaAdapter } from '../lib/adapter';
+import { ContractContext } from '@jay-framework/dev-server';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
@@ -9,10 +10,30 @@ const __dirname = path.dirname(__filename);
 
 const fixturesDir = path.join(__dirname, 'fixtures');
 // Read all subdirectories from the fixtures directory
-const fixtures = fs.readdirSync(fixturesDir)
-    .filter(file => {
-        return fs.statSync(path.join(fixturesDir, file)).isDirectory();
-    });
+const fixtures = fs.readdirSync(fixturesDir).filter((file) => {
+    return fs.statSync(path.join(fixturesDir, file)).isDirectory();
+});
+
+// Load contract context from fixture files
+function getContractContext(fixtureName: string, input: any): ContractContext {
+    const pageUrl = input.pageUrl || `/${fixtureName}`;
+    const fixturePath = path.join(fixturesDir, fixtureName);
+    const contractContextPath = path.join(fixturePath, 'contract.context');
+
+    // Read contract context file if it exists, otherwise use empty contract
+    let contractScript = `<script type="application/jay-data">
+data:
+</script>`;
+
+    if (fs.existsSync(contractContextPath)) {
+        contractScript = fs.readFileSync(contractContextPath, 'utf-8').trim();
+    }
+
+    return {
+        pageUrl,
+        contractScript,
+    };
+}
 
 describe('FigmaAdapter Snapshot Tests', () => {
     const adapter = new FigmaAdapter();
@@ -20,7 +41,7 @@ describe('FigmaAdapter Snapshot Tests', () => {
     it.each(fixtures)('should convert %s matching snapshot', async (fixtureName) => {
         const fixturePath = path.join(fixturesDir, fixtureName);
         const inputPath = path.join(fixturePath, 'input.json');
-        
+
         // Ensure input file exists
         if (!fs.existsSync(inputPath)) {
             throw new Error(`Fixture ${fixtureName} is missing input.json`);
@@ -29,8 +50,11 @@ describe('FigmaAdapter Snapshot Tests', () => {
         const fileContent = fs.readFileSync(inputPath, 'utf-8');
         const input = JSON.parse(fileContent);
 
-        const result = await adapter.convert(input);
-        
+        // Get appropriate contract context for this fixture
+        const contractContext = getContractContext(fixtureName, input);
+
+        const result = await adapter.convert(input, contractContext);
+
         // Use File Snapshot pointing to output.jay-html in the same fixture directory
         const snapshotPath = path.join(fixturePath, 'output.jay-html');
         await expect(result).toMatchFileSnapshot(snapshotPath);

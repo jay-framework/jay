@@ -1,0 +1,69 @@
+{
+  "version": "1.0.0",
+  "vendor": "figma",
+  "exportedAt": "2023-10-27T10:00:00Z",
+  "documentName": "Input Node Test",
+  "pageUrl": "/input-node",
+  "views": {
+    "desktop": {
+      "id": "1:8",
+      "name": "Container",
+      "type": "FRAME",
+      "visible": true,
+      "width": 400,
+      "height": 300,
+      "x": 0,
+      "y": 0,
+      "fills": [],
+      "strokes": [],
+      "effects": [],
+      "layoutMode": "NONE",
+      "primaryAxisSizingMode": "FIXED",
+      "counterAxisSizingMode": "FIXED",
+      "paddingLeft": 0,
+      "paddingRight": 0,
+      "paddingTop": 0,
+      "paddingBottom": 0,
+      "itemSpacing": 0,
+      "children": [
+        {
+          "id": "2:8",
+          "name": "EmailInput",
+          "type": "INPUT",
+          "visible": true,
+          "width": 300,
+          "height": 40,
+          "x": 50,
+          "y": 130,
+          "opacity": 1,
+          "rotation": 0,
+          "fills": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 1,
+              "color": { "r": 1, "g": 1, "b": 1 }
+            }
+          ],
+          "strokes": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 1,
+              "color": { "r": 0.8, "g": 0.8, "b": 0.8 }
+            }
+          ],
+          "effects": [],
+          "inputType": "email",
+          "placeholder": "Enter your email",
+          "fontFamily": "Inter",
+          "fontSize": 16,
+          "fontWeight": 400,
+          "textColor": "#333333",
+          "cornerRadius": 4
+        }
+      ]
+    }
+  },
+  "breakpointConstraints": {}
+}

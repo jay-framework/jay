@@ -1,0 +1,6 @@
+<script type="application/jay-data">
+data:
+  user:
+    name: string
+    isLoggedIn: boolean
+</script>

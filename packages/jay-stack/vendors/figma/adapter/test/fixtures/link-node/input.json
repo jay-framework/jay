@@ -1,0 +1,94 @@
+{
+  "version": "1.0.0",
+  "vendor": "figma",
+  "exportedAt": "2023-10-27T10:00:00Z",
+  "documentName": "Link Node Test",
+  "pageUrl": "/link-node",
+  "views": {
+    "desktop": {
+      "id": "1:10",
+      "name": "Container",
+      "type": "FRAME",
+      "visible": true,
+      "width": 400,
+      "height": 300,
+      "x": 0,
+      "y": 0,
+      "fills": [],
+      "strokes": [],
+      "effects": [],
+      "layoutMode": "NONE",
+      "primaryAxisSizingMode": "FIXED",
+      "counterAxisSizingMode": "FIXED",
+      "paddingLeft": 0,
+      "paddingRight": 0,
+      "paddingTop": 0,
+      "paddingBottom": 0,
+      "itemSpacing": 0,
+      "children": [
+        {
+          "id": "2:10",
+          "name": "LinkButton",
+          "type": "FRAME",
+          "visible": true,
+          "width": 150,
+          "height": 50,
+          "x": 125,
+          "y": 125,
+          "opacity": 1,
+          "rotation": 0,
+          "fills": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 1,
+              "color": { "r": 0.2, "g": 0.6, "b": 1 }
+            }
+          ],
+          "strokes": [],
+          "effects": [],
+          "layoutMode": "HORIZONTAL",
+          "primaryAxisSizingMode": "FIXED",
+          "counterAxisSizingMode": "FIXED",
+          "paddingLeft": 16,
+          "paddingRight": 16,
+          "paddingTop": 12,
+          "paddingBottom": 12,
+          "itemSpacing": 8,
+          "children": [
+            {
+              "id": "3:10",
+              "name": "LinkText",
+              "type": "TEXT",
+              "visible": true,
+              "width": 100,
+              "height": 24,
+              "x": 16,
+              "y": 13,
+              "opacity": 1,
+              "rotation": 0,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "visible": true,
+                  "opacity": 1,
+                  "color": { "r": 1, "g": 1, "b": 1 }
+                }
+              ],
+              "strokes": [],
+              "effects": [],
+              "characters": "Learn More"
+            }
+          ],
+          "jayData": {
+            "link": {
+              "href": "https://example.com/learn",
+              "target": "_blank"
+            }
+          }
+        }
+      ]
+    }
+  },
+  "breakpointConstraints": {}
+}

@@ -1,0 +1,50 @@
+{
+  "version": "1.0.0",
+  "vendor": "figma",
+  "exportedAt": "2023-10-27T10:00:00Z",
+  "documentName": "Image Node Test",
+  "pageUrl": "/image-node",
+  "views": {
+    "desktop": {
+      "id": "1:6",
+      "name": "Container",
+      "type": "FRAME",
+      "visible": true,
+      "width": 400,
+      "height": 300,
+      "x": 0,
+      "y": 0,
+      "fills": [],
+      "strokes": [],
+      "effects": [],
+      "layoutMode": "NONE",
+      "primaryAxisSizingMode": "FIXED",
+      "counterAxisSizingMode": "FIXED",
+      "paddingLeft": 0,
+      "paddingRight": 0,
+      "paddingTop": 0,
+      "paddingBottom": 0,
+      "itemSpacing": 0,
+      "children": [
+        {
+          "id": "2:6",
+          "name": "ProductImage",
+          "type": "IMAGE",
+          "visible": true,
+          "width": 200,
+          "height": 150,
+          "x": 100,
+          "y": 75,
+          "opacity": 1,
+          "rotation": 0,
+          "fills": [],
+          "strokes": [],
+          "effects": [],
+          "imageUrl": "/assets/product-123.jpg",
+          "cornerRadius": 8
+        }
+      ]
+    }
+  },
+  "breakpointConstraints": {}
+}

@@ -1,0 +1,7 @@
+<script type="application/jay-data">
+data:
+  items:
+  - id: string
+    title: string
+    active: boolean
+</script>

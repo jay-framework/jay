@@ -5,9 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script type="application/jay-data">
 data:
-  user:
-    name: string
-    isLoggedIn: boolean
 </script>
     <style>
         /* Global Reset & Base Styles */
@@ -22,8 +19,8 @@ data:
     </style>
 </head>
 <body>
-    <div id="user-card-1-3" style="position: absolute; top: 0px; left: 0px; width: 250px; height: 100px" if="user.isLoggedIn">
-  <span id="username-1-4" style="position: absolute; top: 35px; left: 20px; width: 100px; height: 30px">{user.name}</span>
+    <div id="container-1-8" style="position: absolute; top: 0px; left: 0px; width: 400px; height: 300px">
+  <input id="emailinput-2-8" style="position: absolute; top: 130px; left: 50px; width: 300px; height: 40px; background-color: #ffffff; border: 1px solid rgb(204, 204, 204); border-radius: 4px; font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 400; color: #333333" type="email" placeholder="Enter your email" />
 </div>
     
     

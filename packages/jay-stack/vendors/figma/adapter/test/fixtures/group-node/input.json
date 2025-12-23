@@ -1,0 +1,88 @@
+{
+  "version": "1.0.0",
+  "vendor": "figma",
+  "exportedAt": "2023-10-27T10:00:00Z",
+  "documentName": "Group Node Test",
+  "pageUrl": "/group-node",
+  "views": {
+    "desktop": {
+      "id": "1:1",
+      "name": "Container",
+      "type": "FRAME",
+      "visible": true,
+      "fills": [],
+      "strokes": [],
+      "effects": [],
+      "layoutMode": "NONE",
+      "primaryAxisSizingMode": "FIXED",
+      "counterAxisSizingMode": "FIXED",
+      "paddingLeft": 0,
+      "paddingRight": 0,
+      "paddingTop": 0,
+      "paddingBottom": 0,
+      "itemSpacing": 0,
+      "width": 400,
+      "height": 300,
+      "x": 0,
+      "y": 0,
+      "children": [
+        {
+          "id": "2:1",
+          "name": "MyGroup",
+          "type": "GROUP",
+          "visible": true,
+          "fills": [],
+          "strokes": [],
+          "effects": [],
+          "width": 200,
+          "height": 100,
+          "x": 50,
+          "y": 50,
+          "opacity": 1,
+          "rotation": 0,
+          "children": [
+            {
+              "id": "3:1",
+              "name": "Child1",
+              "type": "RECTANGLE",
+              "visible": true,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "visible": true,
+                  "opacity": 1,
+                  "color": { "r": 1, "g": 0, "b": 0 }
+                }
+              ],
+              "strokes": [],
+              "effects": [],
+              "width": 80,
+              "height": 40,
+              "x": 10,
+              "y": 10,
+              "opacity": 1,
+              "rotation": 0
+            },
+            {
+              "id": "3:2",
+              "name": "Child2",
+              "type": "TEXT",
+              "visible": true,
+              "fills": [],
+              "strokes": [],
+              "effects": [],
+              "characters": "Hello Group",
+              "width": 100,
+              "height": 30,
+              "x": 10,
+              "y": 60,
+              "opacity": 1,
+              "rotation": 0
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "breakpointConstraints": {}
+}

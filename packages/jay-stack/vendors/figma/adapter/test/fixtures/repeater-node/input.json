@@ -1,0 +1,124 @@
+{
+  "version": "1.0.0",
+  "vendor": "figma",
+  "exportedAt": "2023-10-27T10:00:00Z",
+  "documentName": "Repeater Node Test",
+  "pageUrl": "/repeater-node",
+  "views": {
+    "desktop": {
+      "id": "1:11",
+      "name": "Container",
+      "type": "FRAME",
+      "visible": true,
+      "width": 400,
+      "height": 300,
+      "x": 0,
+      "y": 0,
+      "fills": [],
+      "strokes": [],
+      "effects": [],
+      "layoutMode": "NONE",
+      "primaryAxisSizingMode": "FIXED",
+      "counterAxisSizingMode": "FIXED",
+      "paddingLeft": 0,
+      "paddingRight": 0,
+      "paddingTop": 0,
+      "paddingBottom": 0,
+      "itemSpacing": 0,
+      "children": [
+        {
+          "id": "2:11",
+          "name": "ItemsList",
+          "type": "FRAME",
+          "visible": true,
+          "width": 300,
+          "height": 200,
+          "x": 50,
+          "y": 50,
+          "opacity": 1,
+          "rotation": 0,
+          "fills": [],
+          "strokes": [],
+          "effects": [],
+          "layoutMode": "VERTICAL",
+          "primaryAxisSizingMode": "FIXED",
+          "counterAxisSizingMode": "FIXED",
+          "paddingLeft": 10,
+          "paddingRight": 10,
+          "paddingTop": 10,
+          "paddingBottom": 10,
+          "itemSpacing": 12,
+          "jayData": {
+            "directives": [
+              {
+                "type": "for",
+                "expression": "items",
+                "variable": "item"
+              }
+            ]
+          },
+          "children": [
+            {
+              "id": "3:11",
+              "name": "ItemCard",
+              "type": "FRAME",
+              "visible": true,
+              "width": 280,
+              "height": 60,
+              "x": 10,
+              "y": 10,
+              "opacity": 1,
+              "rotation": 0,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "visible": true,
+                  "opacity": 1,
+                  "color": { "r": 0.95, "g": 0.95, "b": 0.95 }
+                }
+              ],
+              "strokes": [],
+              "effects": [],
+              "layoutMode": "HORIZONTAL",
+              "primaryAxisSizingMode": "FIXED",
+              "counterAxisSizingMode": "FIXED",
+              "paddingLeft": 16,
+              "paddingRight": 16,
+              "paddingTop": 8,
+              "paddingBottom": 8,
+              "itemSpacing": 8,
+              "cornerRadius": 8,
+              "children": [
+                {
+                  "id": "4:11",
+                  "name": "ItemName",
+                  "type": "TEXT",
+                  "visible": true,
+                  "width": 200,
+                  "height": 24,
+                  "x": 16,
+                  "y": 18,
+                  "opacity": 1,
+                  "rotation": 0,
+                  "fills": [],
+                  "strokes": [],
+                  "effects": [],
+                  "characters": "Item Name",
+                  "jayData": {
+                    "bindings": [
+                      {
+                        "contractProperty": "title",
+                        "targetProperty": "text"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "breakpointConstraints": {}
+}

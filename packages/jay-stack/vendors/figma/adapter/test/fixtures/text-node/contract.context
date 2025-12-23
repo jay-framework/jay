@@ -1,0 +1,5 @@
+<script type="application/jay-data">
+data:
+  title: string
+  description: string
+</script>

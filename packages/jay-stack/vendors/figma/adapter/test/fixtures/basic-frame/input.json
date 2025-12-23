@@ -3,23 +3,30 @@
   "vendor": "figma",
   "exportedAt": "2023-10-27T10:00:00Z",
   "documentName": "Basic Frame",
-  "root": {
-    "id": "1:1",
-    "name": "My Frame",
-    "type": "FRAME",
-    "visible": true,
-    "fills": [],
-    "strokes": [],
-    "effects": [],
-    "layoutMode": "VERTICAL",
-    "primaryAxisSizingMode": "FIXED",
-    "counterAxisSizingMode": "AUTO",
-    "paddingLeft": 10,
-    "paddingRight": 10,
-    "paddingTop": 20,
-    "paddingBottom": 20,
-    "itemSpacing": 8,
-    "children": []
-  }
+  "pageUrl": "/basic-frame",
+  "views": {
+    "desktop": {
+      "id": "1:1",
+      "name": "My Frame",
+      "type": "FRAME",
+      "visible": true,
+      "width": 300,
+      "height": 200,
+      "x": 0,
+      "y": 0,
+      "fills": [],
+      "strokes": [],
+      "effects": [],
+      "layoutMode": "VERTICAL",
+      "primaryAxisSizingMode": "FIXED",
+      "counterAxisSizingMode": "AUTO",
+      "paddingLeft": 10,
+      "paddingRight": 10,
+      "paddingTop": 20,
+      "paddingBottom": 20,
+      "itemSpacing": 8,
+      "children": []
+    }
+  },
+  "breakpointConstraints": {}
 }
-

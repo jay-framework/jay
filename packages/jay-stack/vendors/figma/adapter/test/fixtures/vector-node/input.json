@@ -1,0 +1,56 @@
+{
+  "version": "1.0.0",
+  "vendor": "figma",
+  "exportedAt": "2023-10-27T10:00:00Z",
+  "documentName": "Vector Node Test",
+  "pageUrl": "/vector-node",
+  "views": {
+    "desktop": {
+      "id": "1:5",
+      "name": "Container",
+      "type": "FRAME",
+      "visible": true,
+      "width": 400,
+      "height": 300,
+      "x": 0,
+      "y": 0,
+      "fills": [],
+      "strokes": [],
+      "effects": [],
+      "layoutMode": "NONE",
+      "primaryAxisSizingMode": "FIXED",
+      "counterAxisSizingMode": "FIXED",
+      "paddingLeft": 0,
+      "paddingRight": 0,
+      "paddingTop": 0,
+      "paddingBottom": 0,
+      "itemSpacing": 0,
+      "children": [
+        {
+          "id": "2:5",
+          "name": "StarIcon",
+          "type": "VECTOR",
+          "visible": true,
+          "width": 24,
+          "height": 24,
+          "x": 50,
+          "y": 50,
+          "opacity": 1,
+          "rotation": 0,
+          "fills": [
+            {
+              "type": "SOLID",
+              "visible": true,
+              "opacity": 1,
+              "color": { "r": 1, "g": 0.8, "b": 0 }
+            }
+          ],
+          "strokes": [],
+          "effects": [],
+          "svgContent": "<svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\"><path d=\"M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z\" fill=\"#FFCC00\"/></svg>"
+        }
+      ]
+    }
+  },
+  "breakpointConstraints": {}
+}

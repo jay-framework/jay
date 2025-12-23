@@ -3,18 +3,69 @@
   "vendor": "figma",
   "exportedAt": "2023-10-27T10:00:00Z",
   "documentName": "Text Node",
-  "root": {
-    "id": "1:2",
-    "name": "Title",
-    "type": "TEXT",
-    "visible": true,
-    "fills": [],
-    "strokes": [],
-    "effects": [],
-    "characters": "Hello World",
-    "jayData": {
-        "semanticTag": "h1"
+  "pageUrl": "/text-node",
+  "views": {
+    "desktop": {
+      "id": "1:2",
+      "name": "Container",
+      "type": "FRAME",
+      "visible": true,
+      "width": 400,
+      "height": 100,
+      "x": 0,
+      "y": 0,
+      "fills": [],
+      "strokes": [],
+      "effects": [],
+      "children": [
+        {
+          "id": "1:2",
+          "name": "Title",
+          "type": "TEXT",
+          "visible": true,
+          "width": 150,
+          "height": 40,
+          "x": 10,
+          "y": 10,
+          "fills": [],
+          "strokes": [],
+          "effects": [],
+          "characters": "Hello World",
+          "jayData": {
+            "semanticTag": "h1",
+            "bindings": [
+              {
+                "contractProperty": "title",
+                "targetProperty": "text"
+              }
+            ]
+          }
+        },
+        {
+          "id": "1:3",
+          "name": "Description",
+          "type": "TEXT",
+          "visible": true,
+          "width": 300,
+          "height": 20,
+          "x": 10,
+          "y": 60,
+          "fills": [],
+          "strokes": [],
+          "effects": [],
+          "characters": "Some description",
+          "jayData": {
+            "semanticTag": "p",
+            "bindings": [
+              {
+                "contractProperty": "description",
+                "targetProperty": "text"
+              }
+            ]
+          }
+        }
+      ]
     }
-  }
+  },
+  "breakpointConstraints": {}
 }
-
