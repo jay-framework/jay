@@ -62,23 +62,21 @@ Headfull components include both the contract and UI design:
 
 ### Importing Headless Components
 
-Headless components provide only the contract and logic:
+Headless components provide only the contract and logic, and are referenced through the plugin system:
 
 ```html
 <script
   type="application/jay-headless"
-  contract="{contract-path}"
-  src="{component-path}"
-  name="{component-name}"
+  plugin="{plugin-name}"
+  contract="{contract-name}"
   key="{nested-key}"
 ></script>
 ```
 
 **Parameters:**
 
-- `contract` - Path to the contract file (`.jay-contract`)
-- `src` - Path to the component implementation
-- `name` - Name of the exported component definition
+- `plugin` - Plugin name (from plugin.yaml in src/plugins/ or node_modules/)
+- `contract` - Contract name within the plugin
 - `key` - Attribute name for nesting the component's ViewState and Refs
 
 ### Import Examples
@@ -95,13 +93,12 @@ Headless components provide only the contract and logic:
   sandbox="true"
 ></script>
 
-<!-- Import a headless component -->
+<!-- Import a headless component from a plugin -->
 <script
   type="application/jay-headless"
-  contract="../data-store/store.jay-contract"
-  src="../data-store/store"
-  name="dataStore"
-  key="store"
+  plugin="wix-stores"
+  contract="product-list"
+  key="products"
 ></script>
 ```
 

@@ -113,6 +113,37 @@ export interface ProjectComponent {
     contractPath?: string;
 }
 
+// Plugin types (replaces InstalledApp)
+export interface StaticContractDef {
+    name: string; // Contract name (kebab-case)
+    contract: string; // Path to contract file
+    component: string; // Exported member name from the module (e.g., "moodTracker")
+    description?: string; // Optional description
+}
+
+export interface DynamicContractDef {
+    prefix: string; // Namespace prefix (e.g., "cms")
+    component: string; // Shared component for all dynamic contracts
+    generator: string; // Path to generator file
+}
+
+export interface PluginManifest {
+    name: string; // Plugin name (kebab-case)
+    module?: string; // NPM module name (optional for local plugins)
+    contracts?: StaticContractDef[];
+    dynamic_contracts?: DynamicContractDef;
+}
+
+export interface Plugin {
+    manifest: PluginManifest;
+    location: {
+        type: 'local' | 'npm';
+        path?: string; // For local plugins (src/plugins/my-plugin)
+        module?: string; // For npm plugins (@wix/stores)
+    };
+}
+
+// Legacy type for backward compatibility
 export interface InstalledApp {
     name: string;
     module: string;
@@ -144,7 +175,8 @@ export interface ProjectInfo {
     localPath: string;
     pages: ProjectPage[];
     components: ProjectComponent[];
-    installedApps: InstalledApp[];
+    plugins: Plugin[]; // New plugin system
+    installedApps: InstalledApp[]; // Legacy - for backward compatibility
     installedAppContracts: {
         [appName: string]: InstalledAppContracts;
     };

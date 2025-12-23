@@ -79,6 +79,7 @@ export async function loadCssFile(
                 relativePath: jayContext.jayOptions.tsConfigFilePath,
             },
             JAY_IMPORT_RESOLVER,
+            jayContext.projectRoot,
         );
         console.info(`[load] end ${id}`);
         return { code: jayHtml.val.css };

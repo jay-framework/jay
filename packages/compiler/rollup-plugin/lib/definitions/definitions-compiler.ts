@@ -19,7 +19,7 @@ import {
 } from '@jay-framework/compiler-jay-html';
 import { checkCodeErrors } from '../common/errors';
 
-export function jayDefinitions() {
+export function jayDefinitions(projectRoot: string) {
     return {
         name: 'jay:definitions', // this name will show up in warnings and errors
         async load(id: string): Promise<LoadResult> {
@@ -35,8 +35,8 @@ export function jayDefinitions() {
                 const context = this as PluginContext;
                 const { filename, dirname } = getFileContext(id);
                 // make sure imported files are resolved first
-                const imports: string[] = getJayHtmlImports(code).filter((module: string) =>
-                    module.endsWith('jay-html.d'),
+                const imports: string[] = getJayHtmlImports(code).filter(
+                    (module: string) => module && module.endsWith('jay-html.d'),
                 );
                 await Promise.all(
                     imports.map((imported) =>
@@ -52,6 +52,7 @@ export function jayDefinitions() {
                     dirname,
                     {},
                     JAY_IMPORT_RESOLVER,
+                    projectRoot,
                 );
                 const tsCode: string = checkValidationErrors(
                     generateElementDefinitionFile(parsedFile),

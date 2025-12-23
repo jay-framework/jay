@@ -11,6 +11,7 @@ describe('dev server', () => {
     const baseOptions = {
         serverBase: '/',
         pagesBase: path.resolve(__dirname, './'),
+        projectRootFolder: path.resolve(__dirname, './'),
         jayRollupConfig: {
             tsConfigFilePath: path.resolve(__dirname, '../../../tsconfig.json'),
         } as JayRollupConfig,
@@ -21,6 +22,7 @@ describe('dev server', () => {
         return {
             ...baseOptions,
             pagesRootFolder: path.resolve(__dirname, directory),
+            projectRootFolder: path.resolve(__dirname, directory),
         };
     }
 

@@ -4394,8 +4394,11 @@ __metadata:
     "@jay-framework/dev-server": "workspace:^"
     "@jay-framework/editor-server": "workspace:^"
     "@jay-framework/figma-adapter": "workspace:^"
+    "@jay-framework/plugin-validator": "workspace:^"
     "@types/express": ^5.0.2
     "@types/node": ^22.15.21
+    chalk: ^4.1.2
+    commander: ^14.0.0
     express: ^5.0.1
     nodemon: ^3.0.3
     replace-in-file: ^7.1.0
@@ -4435,6 +4438,24 @@ __metadata:
     typescript: ^5.3.3
     vite: ^5.0.11
     vitest: ^1.2.1
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/plugin-validator@workspace:^, @jay-framework/plugin-validator@workspace:packages/jay-stack/plugin-validator":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/plugin-validator@workspace:packages/jay-stack/plugin-validator"
+  dependencies:
+    "@jay-framework/compiler-jay-html": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/editor-protocol": "workspace:^"
+    "@types/node": ^22.15.21
+    chalk: ^4.1.2
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
+    yaml: ^2.3.4
   languageName: unknown
   linkType: soft
 

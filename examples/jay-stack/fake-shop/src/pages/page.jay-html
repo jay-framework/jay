@@ -1,9 +1,8 @@
 <html>
   <head>
     <script type="application/jay-headless"
-            contract="example-jay-mood-tracker-plugin/mood-tracker.jay-contract"
-            src="example-jay-mood-tracker-plugin"
-            name="moodTracker"
+            plugin="example-jay-mood-tracker-plugin"
+            contract="mood-tracker"
             key="mt"
     ></script>
     <style>

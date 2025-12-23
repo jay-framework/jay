@@ -35,7 +35,9 @@ export async function generateFiles(
     outputExtension: string,
     destinationDir?: string,
     compilationTarget?: string,
+    projectRoot?: string,
 ) {
+    const resolvedProjectRoot = projectRoot || process.cwd();
     console.log(chalk.whiteBright('Jay generating files for ', dir));
     let jayFiles = await findAllJayFiles(dir);
     console.log(dir, jayFiles);
@@ -49,6 +51,7 @@ export async function generateFiles(
                 path.dirname(jayFile),
                 {},
                 JAY_IMPORT_RESOLVER,
+                resolvedProjectRoot,
             ),
         );
         const generateTarget: GenerateTarget =

@@ -3,7 +3,7 @@ import { JayRoute } from '@jay-framework/stack-route-scanner';
 import { WithValidations } from '@jay-framework/compiler-shared';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { parseJayFile } from '@jay-framework/compiler-jay-html';
+import { parseJayFile, JAY_IMPORT_RESOLVER } from '@jay-framework/compiler-jay-html';
 import { AnyJayStackComponentDefinition } from '@jay-framework/fullstack-component';
 import { JayRollupConfig } from '@jay-framework/rollup-plugin';
 import { createRequire } from 'module';
@@ -26,6 +26,7 @@ export async function loadPageParts(
     vite: ViteDevServer,
     route: JayRoute,
     pagesBase: string,
+    projectBase: string,
     jayRollupConfig: JayRollupConfig,
 ): Promise<WithValidations<LoadedPageParts>> {
     const exists = await fs
@@ -49,8 +50,6 @@ export async function loadPageParts(
     const jayHtmlSource = (await fs.readFile(route.jayHtmlPath)).toString();
     const fileName = path.basename(route.jayHtmlPath);
     const dirName = path.dirname(route.jayHtmlPath);
-    const module = await import('@jay-framework/compiler-jay-html');
-    const JAY_IMPORT_RESOLVER = module.JAY_IMPORT_RESOLVER;
     const jayHtmlWithValidations = await parseJayFile(
         jayHtmlSource,
         fileName,
@@ -59,6 +58,7 @@ export async function loadPageParts(
             relativePath: jayRollupConfig.tsConfigFilePath,
         },
         JAY_IMPORT_RESOLVER,
+        projectBase,
     );
 
     return jayHtmlWithValidations.mapAsync(async (jayHtml) => {
@@ -75,8 +75,8 @@ export async function loadPageParts(
             const compDefinition = (await vite.ssrLoadModule(modulePath))[name];
 
             // Generate client import path
-            const moduleImport = module.startsWith('./') ? path.resolve(pagesBase, module) : module;
-            const isNpmPackage = !module.startsWith('./') && !module.startsWith('../');
+            const moduleImport = isLocalModule ? path.resolve(dirName, module) : module;
+            const isNpmPackage = !isLocalModule;
             const clientModuleImport = isNpmPackage
                 ? `${moduleImport}/client` // npm packages: use /client export
                 : `${moduleImport}`; // local files: use ?jay-client query

@@ -69,7 +69,7 @@ describe('Editor Handlers', () => {
 
     describe('Pages Publishing', () => {
         it('should publish pages correctly', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             const result = await handlers.onPublish({
                 type: 'publish',
@@ -118,7 +118,7 @@ describe('Editor Handlers', () => {
 
     describe('Components Publishing', () => {
         it('should publish components only', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             const result = await handlers.onPublish({
                 type: 'publish',
@@ -171,7 +171,7 @@ describe('Editor Handlers', () => {
         });
 
         it('should publish pages and components together', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             const result = await handlers.onPublish({
                 type: 'publish',
@@ -230,7 +230,7 @@ describe('Editor Handlers', () => {
         });
 
         it('should handle empty components array', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             const result = await handlers.onPublish({
                 type: 'publish',
@@ -242,7 +242,7 @@ describe('Editor Handlers', () => {
         });
 
         it('should handle missing components and pages arrays', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             const result = await handlers.onPublish({
                 type: 'publish',
@@ -253,7 +253,7 @@ describe('Editor Handlers', () => {
         });
 
         it('should create components directory if it does not exist', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             // Ensure components directory doesn't exist
             expect(fs.existsSync(testComponentsDir)).toBe(false);
@@ -286,7 +286,7 @@ describe('Editor Handlers', () => {
         });
 
         it('should handle component names with special characters', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             const result = await handlers.onPublish({
                 type: 'publish',
@@ -318,7 +318,7 @@ describe('Editor Handlers', () => {
         });
 
         it('should handle large component content', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             const largeContent = '<div>' + 'x'.repeat(10000) + '</div>';
 
@@ -347,7 +347,7 @@ describe('Editor Handlers', () => {
         });
 
         it('should provide correct file paths in response', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             const result = await handlers.onPublish({
                 type: 'publish',
@@ -369,7 +369,7 @@ describe('Editor Handlers', () => {
         });
 
         it('should generate .d.ts files with proper TypeScript definitions', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             const result = await handlers.onPublish({
                 type: 'publish',
@@ -407,7 +407,7 @@ describe('Editor Handlers', () => {
 
     describe('Image Operations', () => {
         it('should save images correctly', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             const imageData = Buffer.from('fake-image-data').toString('base64');
             const result = await handlers.onSaveImage({
@@ -425,7 +425,7 @@ describe('Editor Handlers', () => {
         });
 
         it('should check image existence correctly', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             // Create test image
             const imagesDir = path.join(testPublicDir, 'images');
@@ -455,7 +455,7 @@ describe('Editor Handlers', () => {
 
     describe('Contract Publishing', () => {
         it('should publish pages with contracts correctly', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             const contractContent = `name: TestPage
 tags:
@@ -504,7 +504,7 @@ tags:
         });
 
         it('should publish components with contracts correctly', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             const contractContent = `name: Counter
 tags:
@@ -562,7 +562,7 @@ tags:
         });
 
         it('should publish without contracts when not provided', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             const result = await handlers.onPublish({
                 type: 'publish',
@@ -616,7 +616,7 @@ tags:
         });
 
         it('should handle mixed publishing (some with contracts, some without)', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             const contractContent = `name: WithContract
 tags:
@@ -690,7 +690,7 @@ tags:
         });
 
         it('should return empty arrays when no pages or installed apps exist', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             const result = await handlers.onGetProjectInfo({
                 type: 'getProjectInfo',
@@ -702,7 +702,7 @@ tags:
         });
 
         it('should return pages without contracts', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             // Create pages without contracts
             fs.mkdirSync(testPagesDir, { recursive: true });
@@ -738,7 +738,7 @@ tags:
         });
 
         it('should return pages with their own contracts', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             // Create pages with contracts
             fs.mkdirSync(testPagesDir, { recursive: true });
@@ -819,7 +819,7 @@ tags:
         });
 
         it('should return pages with used component contracts (references only)', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             // Create page that uses an installed app component
             fs.mkdirSync(testPagesDir, { recursive: true });
@@ -904,7 +904,7 @@ tags:
         });
 
         it('should return complete installed app contracts', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             // Create installed app configuration
             const testAppDir = path.join(installedAppsDir, 'shop-app');
@@ -1031,7 +1031,7 @@ tags:
         });
 
         it('should handle parameterized routes correctly', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             // Create parameterized route
             fs.mkdirSync(path.join(testPagesDir, 'products', '[productId]'), { recursive: true });
@@ -1061,7 +1061,7 @@ tags:
         });
 
         it('should handle nested parameterized routes', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             // Create nested parameterized routes
             fs.mkdirSync(
@@ -1093,7 +1093,7 @@ tags:
         });
 
         it('should handle pages with linked sub-contracts', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             // Create product sub-contract
             fs.mkdirSync(testPagesDir, { recursive: true });
@@ -1146,7 +1146,7 @@ tags:
         });
 
         it('should handle multiple pages using the same app component', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             // Create two pages that use the same app component
             fs.mkdirSync(testPagesDir, { recursive: true });
@@ -1244,7 +1244,7 @@ tags:
         });
 
         it('should handle complex scenario with page contracts and multiple app components', async () => {
-            const handlers = createEditorHandlers(testConfig, TS_CONFIG);
+            const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
             // Create page with its own contract and using multiple app components
             fs.mkdirSync(testPagesDir, { recursive: true });

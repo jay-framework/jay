@@ -56,6 +56,7 @@ async function getJayStructureFromJayHtmlSource(
             relativePath: jayContext.jayOptions.tsConfigFilePath,
         },
         JAY_IMPORT_RESOLVER,
+        jayContext.projectRoot,
     );
 }
 

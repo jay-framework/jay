@@ -1,9 +1,8 @@
 <html>
 <head>
     <script type="application/jay-headless" 
-            src="../counter/counter"
-            name="counter"
-            contract="../counter/counter.jay-contract"
+            plugin="test-counter"
+            contract="counter"
             key="counter"></script>
     <script type="application/jay-data">
 data:

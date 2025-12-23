@@ -347,7 +347,7 @@ export type ProductPageContract = JayContract<
 Rendering phases enable type-safe full-stack components with Jay Stack:
 
 ```typescript
-import { makeJayStackComponent, partialRender } from '@jay-framework/fullstack-component';
+import { makeJayStackComponent, phaseOutput } from '@jay-framework/fullstack-component';
 import { ProductPageContract } from './product-page.jay-contract';
 
 export const page = makeJayStackComponent<ProductPageContract>()
@@ -355,20 +355,35 @@ export const page = makeJayStackComponent<ProductPageContract>()
 
   // Slow render: Only 'name' is valid (SlowViewState)
   .withSlowlyRender(async (props) => {
-    return partialRender({ name: 'Product' }, { productId: '123' });
+    return phaseOutput({ name: 'Product' }, { productId: '123' });
   })
 
   // Fast render: 'price' and 'quantity' are valid (FastViewState)
   .withFastRender(async (props) => {
-    return partialRender({ price: 99.99, quantity: 1 }, {});
+    return phaseOutput({ price: 99.99, quantity: 1 }, {});
   })
 
   // Interactive: Only 'quantity' is modifiable (InteractiveViewState)
-  .withInteractive((props, refs) => {
-    const [qty, setQty] = createSignal(props.quantity);
+  // viewStateSignals provides reactive access to FastViewState properties
+  .withInteractive((props, refs, viewStateSignals, fastCarryForward) => {
+    // Parameter order:
+    // 1. props - from withProps() only (no carry forward)
+    // 2. refs - interactive elements
+    // 3. viewStateSignals - Signals<FastViewState>
+    // 4. fastCarryForward - carry forward from fast render (first context)
+    // 5. ...contexts - requested contexts
+    
+    // Access fast-phase data as reactive signals
+    const [getQuantity, setQuantity] = viewStateSignals.quantity;
+    
+    // Access carry forward if needed
+    const productId = fastCarryForward.productId;
+    
+    // Create additional client-side state
+    const [localQty, setLocalQty] = createSignal(getQuantity());
 
     return {
-      render: () => ({ quantity: qty() }),
+      render: () => ({ quantity: localQty() }),
     };
   });
 ```

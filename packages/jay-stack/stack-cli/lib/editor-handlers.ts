@@ -22,6 +22,8 @@ import type {
     ContractTag as ProtocolContractTag,
     ContractSchema,
     InstalledAppContracts,
+    Plugin,
+    PluginManifest,
     ExportDesignMessage,
     ImportDesignMessage,
     ExportDesignResponse,
@@ -584,6 +586,124 @@ async function getProjectName(configBasePath: string): Promise<string> {
     return 'Unnamed Project';
 }
 
+/**
+ * Scans for Jay Stack plugins in both src/plugins/ (local) and node_modules/ (npm packages)
+ */
+async function scanPlugins(projectRootPath: string): Promise<Plugin[]> {
+    const plugins: Plugin[] = [];
+
+    // 1. Scan local plugins in src/plugins/
+    const localPluginsPath = path.join(projectRootPath, 'src/plugins');
+    if (fs.existsSync(localPluginsPath)) {
+        try {
+            const pluginDirs = await fs.promises.readdir(localPluginsPath, { withFileTypes: true });
+
+            for (const dir of pluginDirs) {
+                if (!dir.isDirectory()) continue;
+
+                const pluginPath = path.join(localPluginsPath, dir.name);
+                const pluginYamlPath = path.join(pluginPath, 'plugin.yaml');
+
+                if (fs.existsSync(pluginYamlPath)) {
+                    try {
+                        const yamlContent = await fs.promises.readFile(pluginYamlPath, 'utf-8');
+                        const manifest: PluginManifest = YAML.parse(yamlContent);
+
+                        plugins.push({
+                            manifest,
+                            location: {
+                                type: 'local',
+                                path: pluginPath,
+                            },
+                        });
+                    } catch (error) {
+                        console.warn(`Failed to parse plugin.yaml for ${dir.name}:`, error);
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn(`Failed to scan local plugins directory ${localPluginsPath}:`, error);
+        }
+    }
+
+    // 2. Scan npm package plugins in node_modules/
+    const nodeModulesPath = path.join(projectRootPath, 'node_modules');
+    if (fs.existsSync(nodeModulesPath)) {
+        try {
+            // Check all @scoped and unscoped packages
+            const topLevelDirs = await fs.promises.readdir(nodeModulesPath, {
+                withFileTypes: true,
+            });
+
+            for (const entry of topLevelDirs) {
+                if (!entry.isDirectory()) continue;
+
+                const packageDirs: string[] = [];
+
+                if (entry.name.startsWith('@')) {
+                    // Scoped package - check subdirectories
+                    const scopePath = path.join(nodeModulesPath, entry.name);
+                    const scopedPackages = await fs.promises.readdir(scopePath, {
+                        withFileTypes: true,
+                    });
+
+                    for (const scopedPkg of scopedPackages) {
+                        if (scopedPkg.isDirectory()) {
+                            packageDirs.push(path.join(scopePath, scopedPkg.name));
+                        }
+                    }
+                } else {
+                    // Unscoped package
+                    packageDirs.push(path.join(nodeModulesPath, entry.name));
+                }
+
+                // Check each package for plugin.yaml
+                for (const pkgPath of packageDirs) {
+                    const pluginYamlPath = path.join(pkgPath, 'plugin.yaml');
+
+                    if (fs.existsSync(pluginYamlPath)) {
+                        try {
+                            const yamlContent = await fs.promises.readFile(pluginYamlPath, 'utf-8');
+                            const manifest: PluginManifest = YAML.parse(yamlContent);
+
+                            // Read package.json to get module name
+                            const packageJsonPath = path.join(pkgPath, 'package.json');
+                            let moduleName = manifest.module;
+
+                            if (fs.existsSync(packageJsonPath)) {
+                                const packageJson = JSON.parse(
+                                    await fs.promises.readFile(packageJsonPath, 'utf-8'),
+                                );
+                                moduleName = packageJson.name;
+                            }
+
+                            plugins.push({
+                                manifest: {
+                                    ...manifest,
+                                    module: moduleName,
+                                },
+                                location: {
+                                    type: 'npm',
+                                    module: moduleName || manifest.name,
+                                },
+                            });
+                        } catch (error) {
+                            console.warn(
+                                `Failed to parse plugin.yaml for package ${pkgPath}:`,
+                                error,
+                            );
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn(`Failed to scan node_modules for plugins:`, error);
+        }
+    }
+
+    return plugins;
+}
+
 // Comprehensive function to scan all project information in one pass
 async function scanProjectInfo(
     pagesBasePath: string,
@@ -592,10 +712,11 @@ async function scanProjectInfo(
     projectRootPath: string,
 ): Promise<ProjectInfo> {
     // Scan basic project info
-    const [projectName, components, installedApps] = await Promise.all([
+    const [projectName, components, installedApps, plugins] = await Promise.all([
         getProjectName(configBasePath),
         scanProjectComponents(componentsBasePath),
         scanInstalledApps(configBasePath),
+        scanPlugins(projectRootPath),
     ]);
 
     // Scan installed app contracts
@@ -648,11 +769,42 @@ async function scanProjectInfo(
                 const configContent = await fs.promises.readFile(pageConfigPath, 'utf-8');
                 const pageConfig = YAML.parse(configContent);
                 if (pageConfig.used_components && Array.isArray(pageConfig.used_components)) {
-                    // Resolve src and name to appName and componentName
+                    // Resolve components - supports both new (plugin/contract) and old (src/name) syntax
                     for (const comp of pageConfig.used_components) {
-                        const src = comp.src || '';
-                        const name = comp.name || '';
                         const key = comp.key || '';
+                        let src = '';
+                        let name = '';
+
+                        // NEW SYNTAX: plugin + contract
+                        if (comp.plugin && comp.contract) {
+                            // For plugin-based references, we look up the plugin in the plugins array
+                            const plugin = plugins.find((p) => p.manifest.name === comp.plugin);
+                            if (plugin && plugin.manifest.contracts) {
+                                const contract = plugin.manifest.contracts.find(
+                                    (c) => c.name === comp.contract,
+                                );
+                                if (contract) {
+                                    // Use plugin name as appName and contract name as componentName
+                                    usedComponents.push({
+                                        appName: comp.plugin,
+                                        componentName: comp.contract,
+                                        key,
+                                    });
+                                    continue;
+                                }
+                            }
+                            // If not resolved, still add it (may be resolved later)
+                            usedComponents.push({
+                                appName: comp.plugin,
+                                componentName: comp.contract,
+                                key,
+                            });
+                            continue;
+                        }
+
+                        // OLD SYNTAX: src + name
+                        src = comp.src || '';
+                        name = comp.name || '';
 
                         let resolved = false;
                         for (const app of installedApps) {
@@ -744,6 +896,7 @@ async function scanProjectInfo(
         components,
         installedApps,
         installedAppContracts,
+        plugins,
     };
 }
 
@@ -862,7 +1015,11 @@ async function handleComponentPublish(
     }
 }
 
-export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: string) {
+export function createEditorHandlers(
+    config: Required<JayConfig>,
+    tsConfigPath: string,
+    projectRoot: string,
+) {
     const onPublish = async (params: PublishMessage): Promise<PublishResponse> => {
         const status: PublishStatus[] = [];
         const createdJayHtmls: CreatedJayHtml[] = [];
@@ -895,6 +1052,7 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
                 dirname,
                 { relativePath: tsConfigPath },
                 JAY_IMPORT_RESOLVER,
+                projectRoot,
             );
             const definitionFile = generateElementDefinitionFile(parsedJayHtml);
             if (definitionFile.validations.length > 0)
@@ -1011,6 +1169,7 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
                     components: [],
                     installedApps: [],
                     installedAppContracts: {},
+                    plugins: [],
                 },
             };
         }
