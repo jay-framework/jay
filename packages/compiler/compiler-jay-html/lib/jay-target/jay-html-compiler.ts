@@ -190,6 +190,9 @@ function renderElementRef(
     if (element.attributes.ref) {
         if (importedRefNameToRef.has(element.attributes.ref)) {
             const ref = importedRefNameToRef.get(element.attributes.ref);
+            // Register the imported ref's constName so later refs with the same name
+            // get a different suffix
+            refNameGenerator.registerUsedConstName(ref.constName, variables);
             return new RenderFragment(`${ref.constName}()`);
         }
         let originalName = element.attributes.ref;
@@ -253,6 +256,9 @@ function renderChildCompRef(
 ): RenderFragment {
     if (importedRefNameToRef.has(element.attributes.ref)) {
         const ref = importedRefNameToRef.get(element.attributes.ref);
+        // Register the imported ref's constName so later refs with the same name
+        // get a different suffix
+        refNameGenerator.registerUsedConstName(ref.constName, variables);
         return new RenderFragment(`${ref.constName}()`, Imports.none(), [], mkRefsTree([ref], {}));
     }
     let originalName = element.attributes.ref || refNameGenerator.newAutoRefNameGenerator();

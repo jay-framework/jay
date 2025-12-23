@@ -135,6 +135,17 @@ export class RefNameGenerator {
         return 'aR' + this.nextId++;
     }
 
+    /**
+     * Register a constName as used with the given Variables context.
+     * This is used when an imported ref is used to ensure later refs
+     * with the same name get a different suffix.
+     */
+    registerUsedConstName(constName: string, variables: Variables): void {
+        if (!this.constNamesToVariables.has(constName)) {
+            this.constNamesToVariables.set(constName, variables);
+        }
+    }
+
     newConstantName(refName: string, variables: Variables): string {
         let suffix = 2;
         let constName = camelCase(`ref ${refName}`);

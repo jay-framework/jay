@@ -1,0 +1,49 @@
+<html>
+<head>
+    <script type="application/jay-data">
+        data:
+          options:
+          -     id: string
+                name: string
+                choices:
+                -     choiceId: string
+                      choiceName: string
+          modifiers:
+          -     id: string
+                name: string
+                choices:
+                -     choiceId: string
+                      choiceName: string
+    </script>
+</head>
+<body>
+<div>
+    <!-- Options section - using FULL path ref -->
+    <div forEach="options" trackBy="id">
+        <div>{name}</div>
+        <div class="option-choices">
+            <button class="choice-button"
+                    forEach="choices" 
+                    trackBy="choiceId"
+                    ref="options.choices.choiceButton">
+                {choiceName}
+            </button>
+        </div>
+    </div>
+    
+    <!-- Modifiers section - using SHORT path ref -->
+    <div forEach="modifiers" trackBy="id">
+        <div>{name}</div>
+        <div class="modifier-choices">
+            <button class="choice-button"
+                    forEach="choices" 
+                    trackBy="choiceId"
+                    ref="choiceButton">
+                {choiceName}
+            </button>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+
