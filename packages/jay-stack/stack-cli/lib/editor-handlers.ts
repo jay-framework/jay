@@ -1024,12 +1024,18 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
             // If pageUrl is undefined, return list of all pages with vendor design files
             if (!pageUrl) {
                 try {
-                    const entries = await fs.promises.readdir(pagesBasePath, { withFileTypes: true });
+                    const entries = await fs.promises.readdir(pagesBasePath, {
+                        withFileTypes: true,
+                    });
                     const pageUrls: string[] = [];
 
                     for (const entry of entries) {
                         if (entry.isDirectory()) {
-                            const vendorFile = path.join(pagesBasePath, entry.name, `page.${vendorId}.json`);
+                            const vendorFile = path.join(
+                                pagesBasePath,
+                                entry.name,
+                                `page.${vendorId}.json`,
+                            );
                             try {
                                 await fs.promises.access(vendorFile);
                                 pageUrls.push(entry.name);
@@ -1044,14 +1050,14 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
                     return {
                         type: 'importDesign',
                         success: true,
-                        data: { pageUrls }
+                        data: { pageUrls },
                     };
                 } catch (error) {
                     console.error('Failed to list pages:', error);
                     return {
                         type: 'importDesign',
                         success: false,
-                        error: error instanceof Error ? error.message : 'Failed to list pages'
+                        error: error instanceof Error ? error.message : 'Failed to list pages',
                     };
                 }
             }
@@ -1067,7 +1073,7 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
                 return {
                     type: 'importDesign',
                     success: false,
-                    error: 'Design file not found'
+                    error: 'Design file not found',
                 };
             }
 
@@ -1076,15 +1082,14 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
             return {
                 type: 'importDesign',
                 success: true,
-                data: { pageUrls: [pageUrl] }
+                data: { pageUrls: [pageUrl] },
             };
-
         } catch (error) {
             console.error('Failed to import design:', error);
             return {
                 type: 'importDesign',
                 success: false,
-                error: error instanceof Error ? error.message : 'Unknown error'
+                error: error instanceof Error ? error.message : 'Unknown error',
             };
         }
     };
@@ -1094,6 +1099,9 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
             const { vendorId, pageUrl, data } = params;
 
             const pagesBasePath = path.resolve(config.devServer.pagesBase);
+            const componentsBasePath = path.resolve(config.devServer.componentsBase);
+            const configBasePath = path.resolve(config.devServer.configBase);
+            const projectRootPath = process.cwd();
             const cleanUrl = pageUrl.replace(/^\//, '').replace(/\/$/, '');
             const targetDir = path.join(pagesBasePath, cleanUrl);
 
@@ -1121,14 +1129,35 @@ export function createEditorHandlers(config: Required<JayConfig>, tsConfigPath: 
                 };
             }
 
-            // 3. Save Source of Truth (vendor JSON)
+            // 3. Get contract information for this page and convert to YAML
+            const projectInfo = await scanProjectInfo(
+                pagesBasePath,
+                componentsBasePath,
+                configBasePath,
+                projectRootPath,
+            );
+
+            const pageContract = projectInfo.pages.find((p) => p.url === pageUrl);
+
+            // Import here to avoid circular dependency
+            const { convertContractToScript } = await import('@jay-framework/dev-server');
+
+            // Always provide contractScript (Jay framework requires jay-data script)
+            const contractScript = convertContractToScript(pageContract?.contractSchema);
+
+            const contractContext = {
+                pageUrl,
+                contractScript,
+            };
+
+            // 4. Save Source of Truth (vendor JSON)
             const vendorFile = path.join(targetDir, `page.${vendorId}.json`);
             await fs.promises.writeFile(vendorFile, JSON.stringify(data, null, 2));
 
-            // 4. Convert to jay-html
-            const jayHtml = await adapter.convert(data);
+            // 5. Convert to jay-html with contract context
+            const jayHtml = await adapter.convert(data, contractContext);
 
-            // 5. Save Generated Code
+            // 6. Save Generated Code
             const jayHtmlFile = path.join(targetDir, 'page.jay-html');
             await fs.promises.writeFile(jayHtmlFile, jayHtml);
 

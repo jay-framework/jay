@@ -268,7 +268,7 @@ export class EditorServer implements DevServerProtocol {
                     throw new Error('Export design handler not registered');
                 }
                 const exportResult = await this.handlers.exportDesign(
-                    payload as ExportDesignMessage
+                    payload as ExportDesignMessage,
                 );
                 return createProtocolResponse(id, exportResult);
 
@@ -277,7 +277,7 @@ export class EditorServer implements DevServerProtocol {
                     throw new Error('Import design handler not registered');
                 }
                 const importResult = await this.handlers.importDesign(
-                    payload as ImportDesignMessage
+                    payload as ImportDesignMessage,
                 );
                 return createProtocolResponse(id, importResult);
 
