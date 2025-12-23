@@ -372,13 +372,13 @@ export const page = makeJayStackComponent<ProductPageContract>()
     // 3. viewStateSignals - Signals<FastViewState>
     // 4. fastCarryForward - carry forward from fast render (first context)
     // 5. ...contexts - requested contexts
-    
+
     // Access fast-phase data as reactive signals
     const [getQuantity, setQuantity] = viewStateSignals.quantity;
-    
+
     // Access carry forward if needed
     const productId = fastCarryForward.productId;
-    
+
     // Create additional client-side state
     const [localQty, setLocalQty] = createSignal(getQuantity());
 

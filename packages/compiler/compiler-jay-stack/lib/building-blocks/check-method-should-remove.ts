@@ -18,4 +18,3 @@ export function shouldRemoveMethod(methodName: string, environment: BuildEnviron
         (environment === 'server' && CLIENT_METHODS.has(methodName))
     );
 }
-

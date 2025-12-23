@@ -68,10 +68,10 @@ Jay Stack implements three distinct rendering phases for optimal performance:
 .withInteractive((props, refs, viewStateSignals, fastCarryForward) => {
   // viewStateSignals provides reactive access to FastViewState properties
   const [getInStock, setInStock] = viewStateSignals.inStock;
-  
+
   // fastCarryForward is injected as the first context (after viewStateSignals)
   const productId = fastCarryForward.productId;
-  
+
   const [quantity, setQuantity] = createSignal(1);
 
   refs.addToCart.onclick(() => {
@@ -79,7 +79,7 @@ Jay Stack implements three distinct rendering phases for optimal performance:
   });
 
   return {
-    render: () => ({ 
+    render: () => ({
       quantity,
       // You can also use signals from fast phase
       stockAvailable: getInStock()
@@ -208,8 +208,8 @@ Defines the fast rendering function for dynamic data:
 ```typescript
 async function fastRender(
   props: ProductPageProps & ProductParams,
-  slowCarryForward: { productId: string },  // Injected as FIRST SERVICE
-  inventory: InventoryService,               // Then requested services
+  slowCarryForward: { productId: string }, // Injected as FIRST SERVICE
+  inventory: InventoryService, // Then requested services
 ) {
   const status = await inventory.getStatus(slowCarryForward.productId);
 
@@ -223,6 +223,7 @@ makeJayStackComponent<ProductContract>().withServices(INVENTORY_SERVICE).withFas
 ```
 
 **Parameter order:**
+
 1. **props** - Component props
 2. **slowCarryForward** - Carry forward data from slow render (injected as **first service**)
 3. **...requestedServices** - Services specified via `withServices()`
@@ -233,19 +234,19 @@ Defines the client-side interactive component:
 
 ```typescript
 function interactiveConstructor(
-  props: ProductPageProps & ProductParams,  // Props only (NO carry forward)
+  props: ProductPageProps & ProductParams, // Props only (NO carry forward)
   refs,
-  viewStateSignals,                         // Signals<FastViewState>
-  fastCarryForward,                         // Carry forward from fast (FIRST CONTEXT)
-  themeContext: Theme,                      // Then requested contexts
+  viewStateSignals, // Signals<FastViewState>
+  fastCarryForward, // Carry forward from fast (FIRST CONTEXT)
+  themeContext: Theme, // Then requested contexts
   userContext: User,
 ) {
   // Access fast-phase ViewState as reactive signals
   const [getInStock, setInStock] = viewStateSignals.inStock;
-  
+
   // Access carry forward data
   const productId = fastCarryForward.productId;
-  
+
   const [quantity, setQuantity] = createSignal(1);
 
   refs.addToCart.onclick(() => {
@@ -274,7 +275,8 @@ makeJayStackComponent<ProductContract>()
 4. **fastCarryForward** - Carry forward data from fast render (injected as **first context**)
 5. **...requestedContexts** - Contexts specified via `withContexts()`
 
-**Important:** 
+**Important:**
+
 - Services are not available in the interactive phase - only contexts
 - Carry forward is injected as a **separate parameter** (not part of props)
 - `viewStateSignals` provides reactive access to data from the fast render phase as `[getter, setter]` tuples
@@ -291,12 +293,11 @@ import { RenderPipeline } from '@jay-framework/fullstack-component';
 async function slowlyRender(props, wixStores) {
   const Pipeline = RenderPipeline.for<SlowViewState, CarryForward>();
 
-  return Pipeline
-    .try(() => wixStores.getProduct(props.slug))
-    .map(product => product || Pipeline.notFound('Product not found'))
-    .toPhaseOutput(product => ({
+  return Pipeline.try(() => wixStores.getProduct(props.slug))
+    .map((product) => product || Pipeline.notFound('Product not found'))
+    .toPhaseOutput((product) => ({
       viewState: { name: product.name, price: product.price },
-      carryForward: { productId: product.id }
+      carryForward: { productId: product.id },
     }));
 }
 ```
@@ -315,28 +316,32 @@ async function slowlyRender(props, wixStores) {
 const Pipeline = RenderPipeline.for<ViewState, CarryForward>();
 
 // Start with a value
-Pipeline.ok(data)
+Pipeline.ok(data);
 
 // Start with a function (catches errors)
-Pipeline.try(() => fetchData())
+Pipeline.try(() => fetchData());
 
 // Start with an error
-Pipeline.notFound('Not found')
+Pipeline.notFound('Not found');
 Pipeline.badRequest('Invalid input')
 
-// Transform values
-.map(x => x * 2)                           // Sync transform
-.map(async x => await enrichData(x))      // Async transform
-.map(x => x ? x : Pipeline.notFound())    // Conditional error
+  // Transform values
+  .map((x) => x * 2) // Sync transform
+  .map(async (x) => await enrichData(x)) // Async transform
+  .map((x) => (x ? x : Pipeline.notFound())) // Conditional error
 
-// Recover from errors
-.recover(error => Pipeline.ok(fallbackData))
+  // Recover from errors
+  .recover((error) => Pipeline.ok(fallbackData))
 
-// Terminal operation (async)
-.toPhaseOutput(data => ({
-  viewState: { /* ... */ },
-  carryForward: { /* ... */ }
-}))
+  // Terminal operation (async)
+  .toPhaseOutput((data) => ({
+    viewState: {
+      /* ... */
+    },
+    carryForward: {
+      /* ... */
+    },
+  }));
 ```
 
 ### Complete Example
@@ -345,38 +350,40 @@ Pipeline.badRequest('Invalid input')
 async function renderSlowlyChanging(props, wixStores) {
   const Pipeline = RenderPipeline.for<ProductSlowViewState, ProductCarryForward>();
 
-  return Pipeline
-    // Fetch product, catching any errors
-    .try(() => wixStores.products.getProductBySlug(props.slug))
-    
-    // Handle not found case
-    .map(response => response.product || Pipeline.notFound('Product not found'))
-    
-    // Validate product data
-    .map(product => {
-      if (!product.name) {
-        return Pipeline.badRequest('Invalid product data');
-      }
-      return product;
-    })
-    
-    // Enrich with additional data
-    .map(async product => {
-      const reviews = await reviewsApi.getReviews(product.id);
-      return { ...product, reviews };
-    })
-    
-    // Transform to final output
-    .toPhaseOutput(data => ({
-      viewState: {
-        name: data.name,
-        description: data.description,
-        reviewCount: data.reviews.length
-      },
-      carryForward: {
-        productId: data.id
-      }
-    }));
+  return (
+    Pipeline
+      // Fetch product, catching any errors
+      .try(() => wixStores.products.getProductBySlug(props.slug))
+
+      // Handle not found case
+      .map((response) => response.product || Pipeline.notFound('Product not found'))
+
+      // Validate product data
+      .map((product) => {
+        if (!product.name) {
+          return Pipeline.badRequest('Invalid product data');
+        }
+        return product;
+      })
+
+      // Enrich with additional data
+      .map(async (product) => {
+        const reviews = await reviewsApi.getReviews(product.id);
+        return { ...product, reviews };
+      })
+
+      // Transform to final output
+      .toPhaseOutput((data) => ({
+        viewState: {
+          name: data.name,
+          description: data.description,
+          reviewCount: data.reviews.length,
+        },
+        carryForward: {
+          productId: data.id,
+        },
+      }))
+  );
 }
 ```
 
@@ -437,7 +444,7 @@ Data flows between phases using the **carry forward** mechanism. Each phase can 
 // Slow render: Return ViewState + CarryForward
 .withSlowlyRender(async (props, service1, service2) => {
   const product = await getProduct(props.slug);
-  
+
   return phaseOutput(
     { name: product.name, sku: product.sku },  // → SlowViewState
     { productId: product.id }                   // → Injected as first service in fast render
@@ -448,7 +455,7 @@ Data flows between phases using the **carry forward** mechanism. Each phase can 
 .withFastRender(async (props, slowCarryForward, service1, service2) => {
   // slowCarryForward is injected as the first service parameter
   const inventory = await getInventory(slowCarryForward.productId);
-  
+
   return phaseOutput(
     { inStock: inventory.available > 0 },       // → FastViewState (becomes signals)
     { productId: slowCarryForward.productId, stockLevel: inventory.available }  // → Injected as first context in interactive
@@ -463,11 +470,11 @@ Data flows between phases using the **carry forward** mechanism. Each phase can 
   // 3. viewStateSignals (Signals<FastViewState>)
   // 4. fastCarryForward (first context - carry forward from fast render)
   // 5. context1, context2, ... (requested contexts via withContexts)
-  
+
   const [getInStock, setInStock] = viewStateSignals.inStock;
-  
+
   return {
-    render: () => ({ 
+    render: () => ({
       stockLevel: fastCarryForward.stockLevel,
       inStock: getInStock()
     }),
@@ -553,8 +560,8 @@ async function slowlyRender(
 // Services in fast render (carry forward is the FIRST service parameter)
 async function fastRender(
   props: ProductPageProps,
-  slowCarryForward: { userId: string },  // First parameter after props
-  inventory: InventoryService,            // Then requested services
+  slowCarryForward: { userId: string }, // First parameter after props
+  inventory: InventoryService, // Then requested services
 ) {
   const status = await inventory.getStatus(slowCarryForward.userId);
   return phaseOutput({ status }, {});
@@ -574,36 +581,37 @@ Contexts are only available in the interactive phase. The parameter order for in
 ```typescript
 // Contexts in interactive component
 function interactiveConstructor(
-  props, 
-  refs, 
-  viewStateSignals,        // Signals<FastViewState>
-  fastCarryForward,        // Carry forward from fast render (FIRST CONTEXT)
-  theme: Theme,            // Requested contexts follow
-  user: User
+  props,
+  refs,
+  viewStateSignals, // Signals<FastViewState>
+  fastCarryForward, // Carry forward from fast render (FIRST CONTEXT)
+  theme: Theme, // Requested contexts follow
+  user: User,
 ) {
   // viewStateSignals is Signals<FastViewState>
   // Each property is a [getter, setter] tuple
   const [getStatus, setStatus] = viewStateSignals.status;
-  
+
   // Access carry forward data
   const productId = fastCarryForward.productId;
-  
+
   const isDarkMode = theme.isDarkMode();
   const userPreferences = user.getPreferences();
 
   return {
-    render: () => ({ 
-      isDarkMode, 
+    render: () => ({
+      isDarkMode,
       userPreferences,
-      status: getStatus() // Access fast-phase data reactively
+      status: getStatus(), // Access fast-phase data reactively
     }),
   };
 }
 ```
 
-**Important:** 
+**Important:**
 
 - **viewStateSignals**: Contains reactive signals (`[Getter, Setter]` tuples) for all properties rendered in the fast phase
+
   - Read fast-phase data reactively using the getter
   - Update fast-phase data using the setter (e.g., for optimistic updates)
   - Subscribe to changes in fast-phase data

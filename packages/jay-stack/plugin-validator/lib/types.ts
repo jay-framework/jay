@@ -43,4 +43,3 @@ export interface PluginContext {
     pluginPath: string;
     isNpmPackage: boolean;
 }
-

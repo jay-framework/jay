@@ -411,4 +411,3 @@ describe('RenderPipeline', () => {
         });
     });
 });
-

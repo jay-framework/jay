@@ -20,12 +20,11 @@ import { RenderPipeline } from '@jay-framework/fullstack-component';
 async function slowlyRender(props, wixStores) {
   const Pipeline = RenderPipeline.for<SlowViewState, CarryForward>();
 
-  return Pipeline
-    .try(() => wixStores.getProduct(props.slug))
-    .map(product => product ? product : Pipeline.notFound())
-    .toPhaseOutput(product => ({
+  return Pipeline.try(() => wixStores.getProduct(props.slug))
+    .map((product) => (product ? product : Pipeline.notFound()))
+    .toPhaseOutput((product) => ({
       viewState: { name: product.name, price: product.price },
-      carryForward: { productId: product.id }
+      carryForward: { productId: product.id },
     }));
 }
 ```
@@ -50,10 +49,10 @@ Start with a successful value (sync or async):
 
 ```typescript
 // Sync value
-Pipeline.ok({ data: 'value' })
+Pipeline.ok({ data: 'value' });
 
 // Async value
-Pipeline.ok(fetchData())
+Pipeline.ok(fetchData());
 ```
 
 #### `Pipeline.try(fn)`
@@ -62,10 +61,10 @@ Start with a function that might throw. Errors are caught and can be recovered:
 
 ```typescript
 // Sync function
-Pipeline.try(() => JSON.parse(jsonString))
+Pipeline.try(() => JSON.parse(jsonString));
 
 // Async function
-Pipeline.try(async () => await api.fetchData())
+Pipeline.try(async () => await api.fetchData());
 ```
 
 **Key difference from `.ok()`**: `.try()` catches exceptions and makes them recoverable via `.recover()`.
@@ -75,13 +74,13 @@ Pipeline.try(async () => await api.fetchData())
 Start directly with an error:
 
 ```typescript
-Pipeline.notFound('Resource not found')
-Pipeline.badRequest('Invalid input')
-Pipeline.unauthorized('Authentication required')
-Pipeline.forbidden('Access denied')
-Pipeline.serverError(503, 'Service unavailable')
-Pipeline.clientError(400, 'Bad request')
-Pipeline.redirect(301, '/new-location')
+Pipeline.notFound('Resource not found');
+Pipeline.badRequest('Invalid input');
+Pipeline.unauthorized('Authentication required');
+Pipeline.forbidden('Access denied');
+Pipeline.serverError(503, 'Service unavailable');
+Pipeline.clientError(400, 'Bad request');
+Pipeline.redirect(301, '/new-location');
 ```
 
 ## Transforming Values
@@ -89,6 +88,7 @@ Pipeline.redirect(301, '/new-location')
 ### `.map(fn)`
 
 Transform the current value. The function can return:
+
 - A plain value: `x => x * 2`
 - A Promise: `async x => await enrichData(x)`
 - A RenderPipeline: `x => x ? Pipeline.ok(x) : Pipeline.notFound()`
@@ -105,11 +105,10 @@ Pipeline
 **Error passthrough**: If the pipeline is in an error state, `.map()` functions are skipped:
 
 ```typescript
-Pipeline
-  .notFound('Missing')
-  .map(x => x * 2)        // Skipped
-  .map(x => x + 1)        // Skipped
-  // Still returns 404 error
+Pipeline.notFound('Missing')
+  .map((x) => x * 2) // Skipped
+  .map((x) => x + 1); // Skipped
+// Still returns 404 error
 ```
 
 ### Conditional Branching
@@ -170,17 +169,20 @@ Pipeline
 **This is the only async method**. It resolves all promises and produces the final result:
 
 ```typescript
-await Pipeline
-  .ok(data)
-  .toPhaseOutput(data => ({
-    viewState: { /* SlowViewState */ },
-    carryForward: { /* CarryForward */ }
-  }));
+await Pipeline.ok(data).toPhaseOutput((data) => ({
+  viewState: {
+    /* SlowViewState */
+  },
+  carryForward: {
+    /* CarryForward */
+  },
+}));
 ```
 
 **Type safety**: TypeScript validates that `viewState` and `carryForward` match the types declared in `.for<>()`.
 
-**Return types**: 
+**Return types**:
+
 - Success: `PhaseOutput<ViewState, CarryForward>`
 - Error: `ClientError4xx`, `ServerError5xx`, or `Redirect3xx`
 
@@ -203,30 +205,32 @@ interface ProductCarryForward {
 async function renderSlowlyChanging(props, wixStores) {
   const Pipeline = RenderPipeline.for<ProductSlowViewState, ProductCarryForward>();
 
-  return Pipeline
-    // Fetch product, catching any errors
-    .try(() => wixStores.products.getProductBySlug(props.slug))
-    
-    // Handle not found case
-    .map(response => {
-      if (!response.product) {
-        return Pipeline.notFound('Product not found');
-      }
-      return response.product;
-    })
-    
-    // Transform to final output
-    .toPhaseOutput(product => ({
-      viewState: {
-        name: product.name,
-        description: product.description,
-        brand: product.brand || 'Unknown'
-      },
-      carryForward: {
-        productId: product.id,
-        inventoryId: product.inventoryItemId
-      }
-    }));
+  return (
+    Pipeline
+      // Fetch product, catching any errors
+      .try(() => wixStores.products.getProductBySlug(props.slug))
+
+      // Handle not found case
+      .map((response) => {
+        if (!response.product) {
+          return Pipeline.notFound('Product not found');
+        }
+        return response.product;
+      })
+
+      // Transform to final output
+      .toPhaseOutput((product) => ({
+        viewState: {
+          name: product.name,
+          description: product.description,
+          brand: product.brand || 'Unknown',
+        },
+        carryForward: {
+          productId: product.id,
+          inventoryId: product.inventoryItemId,
+        },
+      }))
+  );
 }
 ```
 
@@ -236,28 +240,30 @@ async function renderSlowlyChanging(props, wixStores) {
 async function renderSlowlyChanging(props, dataService) {
   const Pipeline = RenderPipeline.for<ViewState, CarryForward>();
 
-  return Pipeline
-    // Try primary data source
-    .try(() => dataService.getPrimaryData(props.id))
-    
-    // Recover from errors by using fallback
-    .recover(error => {
-      console.log('Primary source failed, using cache');
-      return Pipeline.ok(dataService.getCachedData(props.id));
-    })
-    
-    // Validate the data we got
-    .map(data => {
-      if (!data || !data.isValid) {
-        return Pipeline.badRequest('Invalid data');
-      }
-      return data;
-    })
-    
-    .toPhaseOutput(data => ({
-      viewState: { content: data.content },
-      carryForward: { dataId: data.id }
-    }));
+  return (
+    Pipeline
+      // Try primary data source
+      .try(() => dataService.getPrimaryData(props.id))
+
+      // Recover from errors by using fallback
+      .recover((error) => {
+        console.log('Primary source failed, using cache');
+        return Pipeline.ok(dataService.getCachedData(props.id));
+      })
+
+      // Validate the data we got
+      .map((data) => {
+        if (!data || !data.isValid) {
+          return Pipeline.badRequest('Invalid data');
+        }
+        return data;
+      })
+
+      .toPhaseOutput((data) => ({
+        viewState: { content: data.content },
+        carryForward: { dataId: data.id },
+      }))
+  );
 }
 ```
 
@@ -267,34 +273,36 @@ async function renderSlowlyChanging(props, dataService) {
 async function renderSlowlyChanging(props, api) {
   const Pipeline = RenderPipeline.for<ViewState, CarryForward>();
 
-  return Pipeline
-    // Fetch user
-    .try(() => api.getUser(props.userId))
-    
-    // Fetch user's orders (async)
-    .map(async user => {
-      const orders = await api.getOrders(user.id);
-      return { user, orders };
-    })
-    
-    // Fetch order details for each order (parallel)
-    .map(async ({ user, orders }) => {
-      const orderDetails = await Promise.all(
-        orders.map(order => api.getOrderDetails(order.id))
-      );
-      return { user, orders, orderDetails };
-    })
-    
-    .toPhaseOutput(({ user, orders, orderDetails }) => ({
-      viewState: {
-        userName: user.name,
-        orderCount: orders.length,
-        totalSpent: orderDetails.reduce((sum, d) => sum + d.total, 0)
-      },
-      carryForward: {
-        userId: user.id
-      }
-    }));
+  return (
+    Pipeline
+      // Fetch user
+      .try(() => api.getUser(props.userId))
+
+      // Fetch user's orders (async)
+      .map(async (user) => {
+        const orders = await api.getOrders(user.id);
+        return { user, orders };
+      })
+
+      // Fetch order details for each order (parallel)
+      .map(async ({ user, orders }) => {
+        const orderDetails = await Promise.all(
+          orders.map((order) => api.getOrderDetails(order.id)),
+        );
+        return { user, orders, orderDetails };
+      })
+
+      .toPhaseOutput(({ user, orders, orderDetails }) => ({
+        viewState: {
+          userName: user.name,
+          orderCount: orders.length,
+          totalSpent: orderDetails.reduce((sum, d) => sum + d.total, 0),
+        },
+        carryForward: {
+          userId: user.id,
+        },
+      }))
+  );
 }
 ```
 
@@ -304,30 +312,31 @@ async function renderSlowlyChanging(props, api) {
 async function renderFastChanging(props, slowCarryForward, inventoryService) {
   const Pipeline = RenderPipeline.for<FastViewState, FastCarryForward>();
 
-  return Pipeline
-    .try(() => inventoryService.getStatus(slowCarryForward.productId))
-    
-    // Validate inventory response
-    .map(inventory => {
-      if (!inventory) {
-        return Pipeline.serverError(503, 'Inventory service unavailable');
-      }
-      if (inventory.status === 'discontinued') {
-        return Pipeline.clientError(410, 'Product discontinued');
-      }
-      return inventory;
-    })
-    
-    .toPhaseOutput(inventory => ({
-      viewState: {
-        inStock: inventory.available > 0,
-        quantity: inventory.available
-      },
-      carryForward: {
-        productId: slowCarryForward.productId,
-        inventoryId: inventory.id
-      }
-    }));
+  return (
+    Pipeline.try(() => inventoryService.getStatus(slowCarryForward.productId))
+
+      // Validate inventory response
+      .map((inventory) => {
+        if (!inventory) {
+          return Pipeline.serverError(503, 'Inventory service unavailable');
+        }
+        if (inventory.status === 'discontinued') {
+          return Pipeline.clientError(410, 'Product discontinued');
+        }
+        return inventory;
+      })
+
+      .toPhaseOutput((inventory) => ({
+        viewState: {
+          inStock: inventory.available > 0,
+          quantity: inventory.available,
+        },
+        carryForward: {
+          productId: slowCarryForward.productId,
+          inventoryId: inventory.id,
+        },
+      }))
+  );
 }
 ```
 
@@ -339,26 +348,26 @@ async function renderFastChanging(props, slowCarryForward, inventoryService) {
 async function renderSlowlyChanging(props, wixStores) {
   try {
     const response = await wixStores.products.getProductBySlug(props.slug);
-    
+
     if (!response.product) {
       return clientError4xx(404, 'Product not found');
     }
-    
+
     const product = response.product;
-    
+
     if (!product.name) {
       return badRequest('Invalid product data');
     }
-    
+
     return phaseOutput(
       {
         name: product.name,
         description: product.description,
-        brand: product.brand || 'Unknown'
+        brand: product.brand || 'Unknown',
       },
       {
-        productId: product.id
-      }
+        productId: product.id,
+      },
     );
   } catch (error) {
     console.error('Failed to load product:', error);
@@ -373,24 +382,24 @@ async function renderSlowlyChanging(props, wixStores) {
 async function renderSlowlyChanging(props, wixStores) {
   const Pipeline = RenderPipeline.for<ViewState, CarryForward>();
 
-  return Pipeline
-    .try(() => wixStores.products.getProductBySlug(props.slug))
-    .map(response => response.product || Pipeline.notFound('Product not found'))
-    .map(product => product.name ? product : Pipeline.badRequest('Invalid product data'))
-    .toPhaseOutput(product => ({
+  return Pipeline.try(() => wixStores.products.getProductBySlug(props.slug))
+    .map((response) => response.product || Pipeline.notFound('Product not found'))
+    .map((product) => (product.name ? product : Pipeline.badRequest('Invalid product data')))
+    .toPhaseOutput((product) => ({
       viewState: {
         name: product.name,
         description: product.description,
-        brand: product.brand || 'Unknown'
+        brand: product.brand || 'Unknown',
       },
       carryForward: {
-        productId: product.id
-      }
+        productId: product.id,
+      },
     }));
 }
 ```
 
 **Benefits:**
+
 - No manual try/catch blocks
 - Errors propagate automatically
 - More functional, composable style
@@ -441,31 +450,30 @@ Pipeline
 ### Data Enrichment Chain
 
 ```typescript
-Pipeline
-  .try(() => db.getProduct(props.id))
-  .map(async product => ({
+Pipeline.try(() => db.getProduct(props.id))
+  .map(async (product) => ({
     ...product,
-    reviews: await reviewsApi.getReviews(product.id)
+    reviews: await reviewsApi.getReviews(product.id),
   }))
-  .map(async data => ({
+  .map(async (data) => ({
     ...data,
-    recommendations: await recommendationsApi.get(data.product.id)
+    recommendations: await recommendationsApi.get(data.product.id),
   }))
-  .map(async data => ({
+  .map(async (data) => ({
     ...data,
-    inventory: await inventoryApi.getStatus(data.product.inventoryId)
+    inventory: await inventoryApi.getStatus(data.product.inventoryId),
   }))
-  .toPhaseOutput(data => ({
+  .toPhaseOutput((data) => ({
     viewState: {
       product: data.product,
       reviews: data.reviews,
       recommendations: data.recommendations,
-      inStock: data.inventory.available > 0
+      inStock: data.inventory.available > 0,
     },
     carryForward: {
-      productId: data.product.id
-    }
-  }))
+      productId: data.product.id,
+    },
+  }));
 ```
 
 ## Utility Methods
@@ -476,11 +484,11 @@ Check pipeline state (useful for debugging):
 
 ```typescript
 const pipeline = Pipeline.ok('value');
-console.log(pipeline.isOk());    // true
+console.log(pipeline.isOk()); // true
 console.log(pipeline.isError()); // false
 
 const errorPipeline = Pipeline.notFound();
-console.log(errorPipeline.isOk());    // false
+console.log(errorPipeline.isOk()); // false
 console.log(errorPipeline.isError()); // true
 ```
 
@@ -501,20 +509,19 @@ interface UserCarryForward {
 const Pipeline = RenderPipeline.for<UserViewState, UserCarryForward>();
 
 // TypeScript validates the entire chain
-Pipeline
-  .ok(5)                     // Type: RenderPipeline<number>
-  .map(x => x * 2)          // Type: RenderPipeline<number>
-  .map(x => ({ value: x })) // Type: RenderPipeline<{ value: number }>
-  .toPhaseOutput(data => ({
+Pipeline.ok(5) // Type: RenderPipeline<number>
+  .map((x) => x * 2) // Type: RenderPipeline<number>
+  .map((x) => ({ value: x })) // Type: RenderPipeline<{ value: number }>
+  .toPhaseOutput((data) => ({
     // ✅ TypeScript ensures these match UserViewState
     viewState: {
       name: 'User',
-      email: 'user@example.com'
+      email: 'user@example.com',
     },
     // ✅ And these match UserCarryForward
     carryForward: {
-      userId: 'user-123'
-    }
+      userId: 'user-123',
+    },
   }));
 ```
 
@@ -536,10 +543,10 @@ const Pipeline = RenderPipeline.for<any, any>();
 
 ```typescript
 // ✅ Good - errors are caught and recoverable
-Pipeline.try(() => api.fetchData())
+Pipeline.try(() => api.fetchData());
 
 // ❌ Risky - exceptions will bubble up
-Pipeline.ok(api.fetchData()) // If api.fetchData() throws synchronously
+Pipeline.ok(api.fetchData()); // If api.fetchData() throws synchronously
 ```
 
 ### 3. Keep `.map()` Functions Focused
@@ -568,34 +575,30 @@ Pipeline
 
 ```typescript
 // ✅ Good - specific error handling
-Pipeline
-  .try(() => fetchData())
-  .recover(error => {
-    if (error.message.includes('not found')) {
-      return Pipeline.notFound('Resource not found');
-    }
-    if (error.message.includes('permission')) {
-      return Pipeline.forbidden('Access denied');
-    }
-    return Pipeline.serverError(500, 'Unexpected error');
-  })
+Pipeline.try(() => fetchData()).recover((error) => {
+  if (error.message.includes('not found')) {
+    return Pipeline.notFound('Resource not found');
+  }
+  if (error.message.includes('permission')) {
+    return Pipeline.forbidden('Access denied');
+  }
+  return Pipeline.serverError(500, 'Unexpected error');
+});
 
 // ❌ Generic - less helpful
-Pipeline
-  .try(() => fetchData())
-  .recover(() => Pipeline.serverError(500, 'Error'))
+Pipeline.try(() => fetchData()).recover(() => Pipeline.serverError(500, 'Error'));
 ```
 
 ### 5. Use Descriptive Error Messages
 
 ```typescript
 // ✅ Good
-Pipeline.notFound(`Product with slug "${props.slug}" not found`)
-Pipeline.badRequest('Invalid email format: must include @ symbol')
+Pipeline.notFound(`Product with slug "${props.slug}" not found`);
+Pipeline.badRequest('Invalid email format: must include @ symbol');
 
 // ❌ Vague
-Pipeline.notFound('Not found')
-Pipeline.badRequest('Invalid')
+Pipeline.notFound('Not found');
+Pipeline.badRequest('Invalid');
 ```
 
 ## Performance Considerations
@@ -613,18 +616,21 @@ export const productPage = makeJayStackComponent<ProductPageContract>()
   .withProps<PageProps>()
   .withServices(WIX_STORES_SERVICE)
   .withLoadParams(loadProductParams)
-  .withSlowlyRender(renderSlowlyChanging)  // Uses RenderPipeline
-  .withFastRender(renderFastChanging)      // Uses RenderPipeline
+  .withSlowlyRender(renderSlowlyChanging) // Uses RenderPipeline
+  .withFastRender(renderFastChanging) // Uses RenderPipeline
   .withInteractive(ProductPageInteractive);
 
 async function renderSlowlyChanging(props, wixStores) {
   const Pipeline = RenderPipeline.for<SlowViewState, CarryForward>();
-  return Pipeline
-    .try(() => wixStores.products.getProductBySlug(props.slug))
-    .map(response => response.product || Pipeline.notFound())
-    .toPhaseOutput(product => ({
-      viewState: { /* ... */ },
-      carryForward: { /* ... */ }
+  return Pipeline.try(() => wixStores.products.getProductBySlug(props.slug))
+    .map((response) => response.product || Pipeline.notFound())
+    .toPhaseOutput((product) => ({
+      viewState: {
+        /* ... */
+      },
+      carryForward: {
+        /* ... */
+      },
     }));
 }
 ```
@@ -632,6 +638,7 @@ async function renderSlowlyChanging(props, wixStores) {
 ## Summary
 
 **Use RenderPipeline when you want:**
+
 - ✅ Clean, functional composition
 - ✅ Automatic error propagation
 - ✅ Type-safe transformations
@@ -639,11 +646,10 @@ async function renderSlowlyChanging(props, wixStores) {
 - ✅ Readable async chains
 
 **Use direct `phaseOutput()` when:**
+
 - Simple, single-step renders with no error handling
 - Maximum performance is critical (though the difference is negligible)
 
 ---
 
 For more examples, see the [wix-stores product-page implementation](https://github.com/jay-framework/wix-stores/blob/main/lib/components/product-page.ts) which uses RenderPipeline extensively.
-
-

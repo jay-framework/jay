@@ -133,10 +133,7 @@ Create the full-stack component implementation:
 **`lib/mood-tracker.ts`:**
 
 ```typescript
-import {
-  makeJayStackComponent,
-  phaseOutput,
-} from '@jay-framework/fullstack-component';
+import { makeJayStackComponent, phaseOutput } from '@jay-framework/fullstack-component';
 import type { MoodTrackerContract } from './mood-tracker.jay-contract';
 
 export const moodTracker = makeJayStackComponent<MoodTrackerContract>()
@@ -155,7 +152,7 @@ export const moodTracker = makeJayStackComponent<MoodTrackerContract>()
     // 3. viewStateSignals - Signals<FastViewState> (reactive access to fast-phase data)
     // 4. fastCarryForward - carry forward from fast render (first context)
     // 5. ...contexts - any requested contexts via withContexts()
-    
+
     // viewStateSignals provides reactive access to fast-rendered data
     const [getMood, setMood] = viewStateSignals.mood;
 
@@ -490,10 +487,7 @@ See [Jay Stack Components - Service Management](./jay-stack.md#service-managemen
 Plugins can generate contracts at build time (e.g., from a CMS schema):
 
 ```typescript
-import {
-  makeContractGenerator,
-  createJayService,
-} from '@jay-framework/fullstack-component';
+import { makeContractGenerator, createJayService } from '@jay-framework/fullstack-component';
 
 // Define a service for the generator
 interface CMSClient {
@@ -566,7 +560,6 @@ Breaking changes to contracts affect all consumers:
   type: data
   dataType: string
   required: false
-
 # ❌ Breaking - removing or renaming required fields
 # - tag: oldField  # Don't delete required fields!
 ```
@@ -769,4 +762,3 @@ Now that you understand how to build Jay packages:
 ---
 
 Ready to build your first plugin? Start with the [Quick Start](#step-by-step-guide) guide above!
-
