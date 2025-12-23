@@ -28,7 +28,7 @@ import {
     Variables,
 } from '../expressions/expression-compiler';
 import Node from 'node-html-parser/dist/nodes/node';
-import { camelCase } from 'camel-case';
+import { camelCase } from '../case-utils';
 import parse from 'style-to-object';
 import { ensureSingleChildElement, isConditional, isForEach } from '../jay-target/jay-html-helpers';
 import { generateTypes } from '../jay-target/jay-html-compile-types';

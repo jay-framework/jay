@@ -6,7 +6,8 @@ import {
     WithValidations,
 } from '@jay-framework/compiler-shared';
 import yaml from 'js-yaml';
-import { capitalCase, pascalCase, camelCase } from 'change-case';
+import { capitalCase, pascalCase } from 'change-case';
+import { camelCase } from '../case-utils';
 import pluralize from 'pluralize';
 import { parseEnumValues, parseImportNames, parseIsEnum } from '../expressions/expression-compiler';
 import { ResolveTsConfigOptions } from '@jay-framework/compiler-analyze-exported-types';

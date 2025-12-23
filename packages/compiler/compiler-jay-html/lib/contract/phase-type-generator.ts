@@ -1,6 +1,7 @@
 import { Contract, ContractTag, ContractTagType, RenderingPhase } from './contract';
 import { filterTagsByPhase, getEffectivePhase } from './contract-phase-validator';
-import { pascalCase, camelCase } from 'change-case';
+import { pascalCase } from 'change-case';
+import { camelCase } from '../case-utils';
 
 /**
  * Check if a property should be included in a target phase's ViewState

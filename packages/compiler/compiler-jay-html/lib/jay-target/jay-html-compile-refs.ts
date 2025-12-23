@@ -17,7 +17,7 @@ import {
 } from '@jay-framework/compiler-shared';
 import { HTMLElement } from 'node-html-parser';
 import { htmlElementTagNameMap } from './html-element-tag-name-map';
-import { camelCase } from 'camel-case';
+import { camelCase } from '../case-utils';
 import { Indent } from './indent';
 import { JayHeadlessImports } from './jay-html-source-file';
 import { Variables } from '../expressions/expression-compiler';

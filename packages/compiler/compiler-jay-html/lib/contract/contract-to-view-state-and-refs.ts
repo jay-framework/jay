@@ -23,7 +23,8 @@ import {
     isObjectType,
     isPromiseType,
 } from '@jay-framework/compiler-shared';
-import { camelCase, pascalCase } from 'change-case';
+import { pascalCase } from 'change-case';
+import { camelCase } from '../case-utils';
 import path from 'path';
 import { toInterfaceName } from '../jay-target/jay-html-parser';
 import { createPhaseContract } from './contract-phase-validator';

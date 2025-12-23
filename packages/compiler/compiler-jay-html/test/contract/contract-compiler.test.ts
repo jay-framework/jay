@@ -122,6 +122,51 @@ describe('compile contract', () => {
         );
     });
 
+    it('should preserve underscore prefix in tag names like _id', async () => {
+        const contract = `
+        name: item
+        tags: 
+          - tag: _id
+            type: data
+            dataType: string
+          - tag: _name
+            type: data
+            dataType: string
+          - tag: regular-name
+            type: data
+            dataType: string
+        `;
+
+        const parsedContract = parseContract(contract, 'contract.jay-contract');
+        const result = await compileContract(parsedContract, './contract', noHopResolver);
+
+        expect(result.validations).toEqual([]);
+        expect(await prettify(result.val)).toBe(
+            await prettify(`
+        import { JayContract } from '@jay-framework/runtime';
+
+        export interface ItemViewState {
+            _id: string;
+            _name: string;
+            regularName: string;
+        }
+        
+        export type ItemSlowViewState = Pick<ItemViewState, '_id' | '_name' | 'regularName'>;
+        
+        export type ItemFastViewState = {};
+        
+        export type ItemInteractiveViewState = {};
+
+        export interface ItemRefs {
+        }
+
+        export interface ItemRepeatedRefs {
+        }
+        
+        export type ItemContract = JayContract<ItemViewState, ItemRefs, ItemSlowViewState, ItemFastViewState, ItemInteractiveViewState>`),
+        );
+    });
+
     it('should compile contract with sub-contract', async () => {
         const contract = `
         name: todo

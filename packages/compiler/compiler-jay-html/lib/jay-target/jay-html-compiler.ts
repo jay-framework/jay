@@ -36,7 +36,7 @@ import {
     parseTextExpression,
     Variables,
 } from '../expressions/expression-compiler';
-import { camelCase } from 'camel-case';
+import { camelCase } from '../case-utils';
 
 import {
     JayHeadlessImports,

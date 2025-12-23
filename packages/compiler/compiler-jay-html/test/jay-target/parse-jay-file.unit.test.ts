@@ -103,6 +103,31 @@ describe('compiler', () => {
             );
         });
 
+        it('should preserve underscore prefix in data property names like _id', async () => {
+            let jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |   _id: string
+                        |   _name: string
+                        |`,
+                    '<body></body>',
+                ),
+                'Base',
+                '',
+                {},
+                defaultImportResolver,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([]);
+            expect(jayFile.val.types).toEqual(
+                new JayObjectType('BaseViewState', {
+                    _id: JayString,
+                    _name: JayString,
+                }),
+            );
+        });
+
         it('should append the base name to the view state type', async () => {
             let jayFile = await parseJayFile(
                 jayFileWith(
