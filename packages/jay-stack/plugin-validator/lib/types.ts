@@ -1,5 +1,27 @@
 import type { PluginManifest } from '@jay-framework/editor-protocol';
 
+// Extended types for the new plugin manifest structure
+// (These should match what's in editor-protocol but are included here to avoid build dependency issues)
+export interface ExtendedPluginManifest extends PluginManifest {
+    pages?: PluginPageDef[];
+    components?: PluginComponentDef[];
+}
+
+export interface PluginPageDef {
+    name: string;
+    contract: string;
+    component: string;
+    slugs?: string[];
+    description?: string;
+}
+
+export interface PluginComponentDef {
+    name: string;
+    contract: string;
+    component: string;
+    description?: string;
+}
+
 export interface ValidatePluginOptions {
     pluginPath?: string;
     local?: boolean; // Validate src/plugins/ instead of package
@@ -39,7 +61,7 @@ export interface ValidationWarning {
 }
 
 export interface PluginContext {
-    manifest: PluginManifest;
+    manifest: ExtendedPluginManifest;
     pluginPath: string;
     isNpmPackage: boolean;
 }

@@ -18,17 +18,19 @@ import type {
     ProjectInfo,
     ProjectPage,
     ProjectComponent,
-    InstalledApp,
     ContractTag as ProtocolContractTag,
     ContractSchema,
-    InstalledAppContracts,
     Plugin,
     PluginManifest,
+    PluginContractsByType,
+    PluginPageContract,
+    PluginComponentContract,
     ExportDesignMessage,
     ImportDesignMessage,
     ExportDesignResponse,
     ImportDesignResponse,
 } from '@jay-framework/editor-protocol';
+import { resolvePluginComponent } from '@jay-framework/compiler-shared';
 import { designAdapterRegistry } from '@jay-framework/dev-server';
 import type { JayConfig } from './config';
 import {
@@ -264,237 +266,210 @@ async function resolveLinkedTags(
     return resolvedTags;
 }
 
-// Helper function to resolve contract files from installed apps using Node.js module resolution
-function resolveAppContractPath(
-    appModule: string,
-    contractFileName: string,
+// resolveAppContractPath function removed - uses plugin resolution system
+
+/**
+ * Scans and loads all plugin contracts from the plugin system
+ * Returns contracts grouped by plugin name and organized by type (pages vs components)
+ */
+async function scanPluginContracts(
+    plugins: Plugin[],
     projectRootPath: string,
-): string | null {
-    try {
-        // Create a require function relative to the project root
-        const require = createRequire(path.join(projectRootPath, 'package.json'));
+): Promise<{ [pluginName: string]: PluginContractsByType }> {
+    const pluginContracts: { [pluginName: string]: PluginContractsByType } = {};
 
-        // Use Node.js module resolution with the module name
-        const modulePath = `${appModule}/${contractFileName}`;
-        const resolvedPath = require.resolve(modulePath);
+    for (const plugin of plugins) {
+        const pluginName = plugin.manifest.name;
+        
+        const contracts: PluginContractsByType = {
+            pages: [],
+            components: [],
+        };
 
-        return resolvedPath;
-    } catch (error) {
-        console.warn(
-            `Failed to resolve contract: ${appModule}/${contractFileName}`,
-            error instanceof Error ? error.message : error,
-        );
-        return null;
-    }
-}
-
-// Helper function to scan installed app contracts
-async function scanInstalledAppContracts(
-    configBasePath: string,
-    projectRootPath: string,
-): Promise<{ [appName: string]: InstalledAppContracts }> {
-    const installedAppContracts: { [appName: string]: InstalledAppContracts } = {};
-    const installedAppsPath = path.join(configBasePath, 'installedApps');
-
-    try {
-        if (!fs.existsSync(installedAppsPath)) {
-            return installedAppContracts;
-        }
-
-        const appDirs = await fs.promises.readdir(installedAppsPath, { withFileTypes: true });
-
-        for (const appDir of appDirs) {
-            if (appDir.isDirectory()) {
-                const appConfigPath = path.join(installedAppsPath, appDir.name, 'app.conf.yaml');
-
+        // Process pages from new structure
+        if (plugin.manifest.pages) {
+            for (const pageDef of plugin.manifest.pages) {
                 try {
-                    if (fs.existsSync(appConfigPath)) {
-                        const configContent = await fs.promises.readFile(appConfigPath, 'utf-8');
-                        const appConfig = YAML.parse(configContent);
-                        const appName = appConfig.name || appDir.name;
-                        const appModule = appConfig.module || appDir.name;
+                    const resolution = resolvePluginComponent(
+                        projectRootPath,
+                        pluginName,
+                        pageDef.name,
+                    );
 
-                        const appContracts: InstalledAppContracts = {
-                            appName,
-                            module: appModule,
-                            pages: [],
-                            components: [],
-                        };
+                    if (!resolution.val) {
+                        console.warn(
+                            `Failed to resolve plugin page ${pluginName}/${pageDef.name}:`,
+                            resolution.validations,
+                        );
+                        continue;
+                    }
 
-                        // Scan app pages and their contracts
-                        if (appConfig.pages && Array.isArray(appConfig.pages)) {
-                            for (const page of appConfig.pages) {
-                                if (
-                                    page.headless_components &&
-                                    Array.isArray(page.headless_components)
-                                ) {
-                                    for (const component of page.headless_components) {
-                                        if (component.contract) {
-                                            // Resolve contract path using Node.js module resolution
-                                            const contractPath = resolveAppContractPath(
-                                                appModule,
-                                                component.contract,
-                                                projectRootPath,
-                                            );
-
-                                            if (contractPath) {
-                                                const contractSchema =
-                                                    await parseContractFile(contractPath);
-                                                if (contractSchema) {
-                                                    appContracts.pages.push({
-                                                        pageName: page.name,
-                                                        contractSchema,
-                                                    });
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
+                    const contractPath = resolution.val.contractPath;
+                    
+                    if (fs.existsSync(contractPath)) {
+                        const contractSchema = await parseContractFile(contractPath);
+                        if (contractSchema) {
+                            contracts.pages.push({
+                                contractName: pageDef.name,
+                                contractSchema,
+                                pluginName,
+                                componentName: pageDef.component,
+                                pageName: pageDef.name,
+                                slugs: pageDef.slugs,
+                            });
                         }
-
-                        // Scan app components and their contracts
-                        if (appConfig.components && Array.isArray(appConfig.components)) {
-                            for (const component of appConfig.components) {
-                                if (
-                                    component.headless_components &&
-                                    Array.isArray(component.headless_components)
-                                ) {
-                                    for (const headlessComp of component.headless_components) {
-                                        if (headlessComp.contract) {
-                                            // Resolve contract path using Node.js module resolution
-                                            const contractPath = resolveAppContractPath(
-                                                appModule,
-                                                headlessComp.contract,
-                                                projectRootPath,
-                                            );
-
-                                            if (contractPath) {
-                                                const contractSchema =
-                                                    await parseContractFile(contractPath);
-                                                if (contractSchema) {
-                                                    appContracts.components.push({
-                                                        componentName: component.name,
-                                                        contractSchema,
-                                                    });
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        installedAppContracts[appName] = appContracts;
                     }
                 } catch (error) {
-                    console.warn(`Failed to parse app config ${appConfigPath}:`, error);
+                    console.warn(
+                        `Failed to process page ${pageDef.name} for plugin ${pluginName}:`,
+                        error,
+                    );
                 }
             }
         }
-    } catch (error) {
-        console.warn(`Failed to scan installed apps directory ${installedAppsPath}:`, error);
+
+        // Process components from new structure
+        if (plugin.manifest.components) {
+            for (const componentDef of plugin.manifest.components) {
+                try {
+                    const resolution = resolvePluginComponent(
+                        projectRootPath,
+                        pluginName,
+                        componentDef.name,
+                    );
+
+                    if (!resolution.val) {
+                        console.warn(
+                            `Failed to resolve plugin component ${pluginName}/${componentDef.name}:`,
+                            resolution.validations,
+                        );
+                        continue;
+                    }
+
+                    const contractPath = resolution.val.contractPath;
+                    
+                    if (fs.existsSync(contractPath)) {
+                        const contractSchema = await parseContractFile(contractPath);
+                        if (contractSchema) {
+                            contracts.components.push({
+                                contractName: componentDef.name,
+                                contractSchema,
+                                pluginName,
+                                componentName: componentDef.component,
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.warn(
+                        `Failed to process component ${componentDef.name} for plugin ${pluginName}:`,
+                        error,
+                    );
+                }
+            }
+        }
+
+        // Process legacy contracts (for backward compatibility during transition)
+        if (plugin.manifest.contracts) {
+            for (const contractDef of plugin.manifest.contracts) {
+                try {
+                    const resolution = resolvePluginComponent(
+                        projectRootPath,
+                        pluginName,
+                        contractDef.name,
+                    );
+
+                    if (!resolution.val) {
+                        console.warn(
+                            `Failed to resolve plugin contract ${pluginName}/${contractDef.name}:`,
+                            resolution.validations,
+                        );
+                        continue;
+                    }
+
+                    const contractPath = resolution.val.contractPath;
+                    
+                    if (fs.existsSync(contractPath)) {
+                        const contractSchema = await parseContractFile(contractPath);
+                        if (contractSchema) {
+                            // Legacy contracts go to components by default
+                            contracts.components.push({
+                                contractName: contractDef.name,
+                                contractSchema,
+                                pluginName,
+                                componentName: contractDef.component,
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.warn(
+                        `Failed to process legacy contract ${contractDef.name} for plugin ${pluginName}:`,
+                        error,
+                    );
+                }
+            }
+        }
+
+        // TODO: Handle dynamic contracts when implemented
+        // if (plugin.manifest.dynamic_contracts) { ... }
+
+        pluginContracts[pluginName] = contracts;
     }
 
-    return installedAppContracts;
+    return pluginContracts;
 }
 
-// Helper function to build full page contracts (combines page contracts with installed app components)
-// Helper function to extract headless components from jay-html content and resolve to app/component names
-function extractHeadlessComponents(
+/**
+ * Extract headless components from jay-html using the new plugin/contract system
+ * This replaces the old extractHeadlessComponents function
+ */
+async function extractHeadlessComponentsFromJayHtml(
     jayHtmlContent: string,
-    installedApps: InstalledApp[],
-    installedAppContracts: { [appName: string]: InstalledAppContracts },
-): {
+    fileName: string,
+    dirName: string,
+    projectRootPath: string,
+): Promise<{
     appName: string;
     componentName: string;
     key: string;
-}[] {
-    const root = parse(jayHtmlContent);
-    const headlessScripts = root.querySelectorAll('script[type="application/jay-headless"]');
-
+}[]> {
     const resolvedComponents: {
         appName: string;
         componentName: string;
         key: string;
     }[] = [];
 
-    for (const script of headlessScripts) {
-        const src = script.getAttribute('src') || '';
-        const name = script.getAttribute('name') || '';
-        const key = script.getAttribute('key') || '';
+    try {
+        // Parse HTML to find headless script tags with plugin/contract attributes
+        const root = parse(jayHtmlContent);
+        const headlessScripts = root.querySelectorAll('script[type="application/jay-headless"]');
 
-        // Resolve src and name to appName and componentName
-        let resolved = false;
-        for (const app of installedApps) {
-            // Check if app module matches src
-            if (app.module !== src && app.name !== src) {
-                continue;
-            }
+        for (const script of headlessScripts) {
+            const plugin = script.getAttribute('plugin') || '';
+            const contract = script.getAttribute('contract') || '';
+            const key = script.getAttribute('key') || '';
 
-            // Check in app pages
-            for (const appPage of app.pages) {
-                for (const headlessComp of appPage.headless_components) {
-                    if (headlessComp.name === name && headlessComp.key === key) {
-                        const appContracts = installedAppContracts[app.name];
-                        if (appContracts) {
-                            const matchingPageContract = appContracts.pages.find(
-                                (pc) => pc.pageName === appPage.name,
-                            );
-                            if (matchingPageContract) {
-                                resolvedComponents.push({
-                                    appName: app.name,
-                                    componentName: appPage.name,
-                                    key,
-                                });
-                                resolved = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-                if (resolved) break;
+            if (plugin && contract && key) {
+                resolvedComponents.push({
+                    appName: plugin,
+                    componentName: contract,
+                    key,
+                });
+            } else {
+                console.warn(
+                    `Incomplete headless script tag in ${fileName}: ` +
+                    `plugin="${plugin}" contract="${contract}" key="${key}"`
+                );
             }
-            if (resolved) break;
-
-            // Check in app components
-            for (const appComponent of app.components) {
-                for (const headlessComp of appComponent.headless_components) {
-                    if (headlessComp.name === name && headlessComp.key === key) {
-                        const appContracts = installedAppContracts[app.name];
-                        if (appContracts) {
-                            const matchingComponentContract = appContracts.components.find(
-                                (cc) => cc.componentName === appComponent.name,
-                            );
-                            if (matchingComponentContract) {
-                                resolvedComponents.push({
-                                    appName: app.name,
-                                    componentName: appComponent.name,
-                                    key,
-                                });
-                                resolved = true;
-                                break;
-                            }
-                        }
-                    }
-                }
-                if (resolved) break;
-            }
-            if (resolved) break;
         }
 
-        // If not resolved, keep original values (this shouldn't happen in normal cases)
-        if (!resolved) {
-            resolvedComponents.push({
-                appName: src,
-                componentName: name,
-                key,
-            });
-        }
+        return resolvedComponents;
+    } catch (error) {
+        console.warn(`Failed to parse jay-html file ${fileName}:`, error);
+        return [];
     }
-
-    return resolvedComponents;
 }
+
+// extractHeadlessComponents function removed - uses extractHeadlessComponentsFromJayHtml with plugin system
 
 // Helper function to scan components in the project
 async function scanProjectComponents(componentsBasePath: string): Promise<ProjectComponent[]> {
@@ -528,46 +503,7 @@ async function scanProjectComponents(componentsBasePath: string): Promise<Projec
     return components;
 }
 
-// Helper function to scan installed apps
-async function scanInstalledApps(configBasePath: string): Promise<InstalledApp[]> {
-    const installedApps: InstalledApp[] = [];
-    const installedAppsPath = path.join(configBasePath, 'installedApps');
-
-    try {
-        if (!fs.existsSync(installedAppsPath)) {
-            return installedApps;
-        }
-
-        const appDirs = await fs.promises.readdir(installedAppsPath, { withFileTypes: true });
-
-        for (const appDir of appDirs) {
-            if (appDir.isDirectory()) {
-                const appConfigPath = path.join(installedAppsPath, appDir.name, 'app.conf.yaml');
-
-                try {
-                    if (fs.existsSync(appConfigPath)) {
-                        const configContent = await fs.promises.readFile(appConfigPath, 'utf-8');
-                        const appConfig = YAML.parse(configContent);
-
-                        installedApps.push({
-                            name: appConfig.name || appDir.name,
-                            module: appConfig.module || appDir.name,
-                            pages: appConfig.pages || [],
-                            components: appConfig.components || [],
-                            config_map: appConfig.config_map || [],
-                        });
-                    }
-                } catch (error) {
-                    console.warn(`Failed to parse app config ${appConfigPath}:`, error);
-                }
-            }
-        }
-    } catch (error) {
-        console.warn(`Failed to scan installed apps directory ${installedAppsPath}:`, error);
-    }
-
-    return installedApps;
-}
+// scanInstalledApps and convertPluginsToInstalledApps functions removed - uses scanPlugins() instead
 
 // Helper function to get project name from project.conf.yaml
 async function getProjectName(configBasePath: string): Promise<string> {
@@ -712,15 +648,14 @@ async function scanProjectInfo(
     projectRootPath: string,
 ): Promise<ProjectInfo> {
     // Scan basic project info
-    const [projectName, components, installedApps, plugins] = await Promise.all([
+    const [projectName, components, plugins] = await Promise.all([
         getProjectName(configBasePath),
         scanProjectComponents(componentsBasePath),
-        scanInstalledApps(configBasePath),
         scanPlugins(projectRootPath),
     ]);
 
-    // Scan installed app contracts
-    const installedAppContracts = await scanInstalledAppContracts(configBasePath, projectRootPath);
+    // Scan plugin contracts using new plugin system
+    const pluginContracts = await scanPluginContracts(plugins, projectRootPath);
 
     // Scan pages with full information (basic info + contracts + used components)
     const pages: ProjectPage[] = [];
@@ -754,10 +689,12 @@ async function scanProjectInfo(
         if (hasPageHtml) {
             try {
                 const jayHtmlContent = await fs.promises.readFile(pageFilePath, 'utf-8');
-                usedComponents = extractHeadlessComponents(
+                // Use the new plugin-based extraction
+                usedComponents = await extractHeadlessComponentsFromJayHtml(
                     jayHtmlContent,
-                    installedApps,
-                    installedAppContracts,
+                    path.basename(pageFilePath),
+                    path.dirname(pageFilePath),
+                    projectRootPath,
                 );
             } catch (error) {
                 console.warn(`Failed to read page file ${pageFilePath}:`, error);
@@ -769,110 +706,67 @@ async function scanProjectInfo(
                 const configContent = await fs.promises.readFile(pageConfigPath, 'utf-8');
                 const pageConfig = YAML.parse(configContent);
                 if (pageConfig.used_components && Array.isArray(pageConfig.used_components)) {
-                    // Resolve components - supports both new (plugin/contract) and old (src/name) syntax
+                    // Process used components using the documented page.conf.yaml syntax
                     for (const comp of pageConfig.used_components) {
-                        const key = comp.key || '';
-                        let src = '';
-                        let name = '';
-
-                        // NEW SYNTAX: plugin + contract
-                        if (comp.plugin && comp.contract) {
-                            // For plugin-based references, we look up the plugin in the plugins array
-                            const plugin = plugins.find((p) => p.manifest.name === comp.plugin);
-                            if (plugin && plugin.manifest.contracts) {
-                                const contract = plugin.manifest.contracts.find(
-                                    (c) => c.name === comp.contract,
-                                );
-                                if (contract) {
-                                    // Use plugin name as appName and contract name as componentName
-                                    usedComponents.push({
-                                        appName: comp.plugin,
-                                        componentName: comp.contract,
-                                        key,
-                                    });
-                                    continue;
-                                }
-                            }
-                            // If not resolved, still add it (may be resolved later)
-                            usedComponents.push({
-                                appName: comp.plugin,
-                                componentName: comp.contract,
-                                key,
-                            });
+                        // Validate required fields as per page.conf.yaml documentation
+                        if (!comp.name || !comp.src || !comp.key) {
+                            console.warn(
+                                `Invalid component in page.conf.yaml: ${JSON.stringify(comp)}. ` +
+                                `Required fields: name (contract), src (plugin), key (unique identifier)`
+                            );
                             continue;
                         }
 
-                        // OLD SYNTAX: src + name
-                        src = comp.src || '';
-                        name = comp.name || '';
+                        const pluginName = comp.src;
+                        const contractName = comp.name;
+                        const key = comp.key;
 
-                        let resolved = false;
-                        for (const app of installedApps) {
-                            // Check if app module matches src
-                            if (app.module !== src && app.name !== src) {
-                                continue;
+                        // Validate that the plugin and contract exist
+                        const plugin = plugins.find((p) => p.manifest.name === pluginName);
+                        if (plugin) {
+                            let contractFound = false;
+                            const availableContracts: string[] = [];
+
+                            // Check pages
+                            if (plugin.manifest.pages) {
+                                availableContracts.push(...plugin.manifest.pages.map(p => p.name));
+                                contractFound = plugin.manifest.pages.some(p => p.name === contractName);
                             }
 
-                            // Check in app pages
-                            for (const appPage of app.pages) {
-                                for (const headlessComp of appPage.headless_components) {
-                                    if (headlessComp.name === name && headlessComp.key === key) {
-                                        const appContracts = installedAppContracts[app.name];
-                                        if (appContracts) {
-                                            const matchingPageContract = appContracts.pages.find(
-                                                (pc) => pc.pageName === appPage.name,
-                                            );
-                                            if (matchingPageContract) {
-                                                usedComponents.push({
-                                                    appName: app.name,
-                                                    componentName: appPage.name,
-                                                    key,
-                                                });
-                                                resolved = true;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                }
-                                if (resolved) break;
+                            // Check components
+                            if (plugin.manifest.components) {
+                                availableContracts.push(...plugin.manifest.components.map(c => c.name));
+                                contractFound = contractFound || plugin.manifest.components.some(c => c.name === contractName);
                             }
-                            if (resolved) break;
 
-                            // Check in app components
-                            for (const appComponent of app.components) {
-                                for (const headlessComp of appComponent.headless_components) {
-                                    if (headlessComp.name === name && headlessComp.key === key) {
-                                        const appContracts = installedAppContracts[app.name];
-                                        if (appContracts) {
-                                            const matchingComponentContract =
-                                                appContracts.components.find(
-                                                    (cc) => cc.componentName === appComponent.name,
-                                                );
-                                            if (matchingComponentContract) {
-                                                usedComponents.push({
-                                                    appName: app.name,
-                                                    componentName: appComponent.name,
-                                                    key,
-                                                });
-                                                resolved = true;
-                                                break;
-                                            }
-                                        }
-                                    }
-                                }
-                                if (resolved) break;
+                            // Check legacy contracts
+                            if (plugin.manifest.contracts) {
+                                availableContracts.push(...plugin.manifest.contracts.map(c => c.name));
+                                contractFound = contractFound || plugin.manifest.contracts.some(c => c.name === contractName);
                             }
-                            if (resolved) break;
+
+                            if (!contractFound && availableContracts.length > 0) {
+                                console.warn(
+                                    `Contract "${contractName}" not found in plugin "${pluginName}". ` +
+                                    `Available contracts: ${availableContracts.join(', ')}`
+                                );
+                            } else if (availableContracts.length === 0) {
+                                console.warn(
+                                    `Plugin "${pluginName}" has no contracts defined.`
+                                );
+                            }
+                        } else {
+                            console.warn(
+                                `Plugin "${pluginName}" not found.`
+                            );
                         }
 
-                        // If not resolved, keep original values
-                        if (!resolved) {
-                            usedComponents.push({
-                                appName: src,
-                                componentName: name,
-                                key,
-                            });
-                        }
+                        // Add the component (validation warnings above are just warnings)
+                        usedComponents.push({
+                            appName: pluginName,
+                            componentName: contractName,
+                            key,
+                        });
                     }
                 }
             } catch (error) {
@@ -894,9 +788,8 @@ async function scanProjectInfo(
         localPath: projectRootPath,
         pages,
         components,
-        installedApps,
-        installedAppContracts,
         plugins,
+        pluginContracts,
     };
 }
 

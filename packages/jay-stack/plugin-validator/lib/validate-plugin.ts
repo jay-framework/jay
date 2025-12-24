@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import YAML from 'yaml';
 import { loadPluginManifest } from '@jay-framework/compiler-shared';
-import type { ValidatePluginOptions, ValidationResult, PluginContext } from './types';
+import type { ValidatePluginOptions, ValidationResult, PluginContext, ExtendedPluginManifest } from './types';
 
 /**
  * Validates a Jay Stack plugin package or local plugin directory.
@@ -60,7 +60,7 @@ async function validatePluginPackage(
     result.pluginName = pluginManifest.name;
 
     const context: PluginContext = {
-        manifest: pluginManifest,
+        manifest: pluginManifest as ExtendedPluginManifest,
         pluginPath,
         isNpmPackage: fs.existsSync(path.join(pluginPath, 'package.json')),
     };
@@ -68,7 +68,35 @@ async function validatePluginPackage(
     // 2. Schema validation
     await validateSchema(context, result);
 
-    // 3. Contract file validation
+    // 3. Contract file validation - NEW pages structure
+    if ((pluginManifest as ExtendedPluginManifest).pages) {
+        const pages = (pluginManifest as ExtendedPluginManifest).pages!;
+        for (let i = 0; i < pages.length; i++) {
+            await validatePage(
+                pages[i],
+                i,
+                context,
+                options.generateTypes || false,
+                result,
+            );
+        }
+    }
+
+    // 4. Contract file validation - NEW components structure
+    if ((pluginManifest as ExtendedPluginManifest).components) {
+        const components = (pluginManifest as ExtendedPluginManifest).components!;
+        for (let i = 0; i < components.length; i++) {
+            await validateComponentContract(
+                components[i],
+                i,
+                context,
+                options.generateTypes || false,
+                result,
+            );
+        }
+    }
+
+    // 5. Contract file validation - LEGACY contracts structure
     if (pluginManifest.contracts) {
         for (let i = 0; i < pluginManifest.contracts.length; i++) {
             await validateContract(
@@ -81,20 +109,36 @@ async function validatePluginPackage(
         }
     }
 
-    // 4. Component file validation
-    if (pluginManifest.contracts) {
-        for (let i = 0; i < pluginManifest.contracts.length; i++) {
-            await validateComponent(pluginManifest.contracts[i], i, context, result);
+    // 6. Component file validation - NEW pages structure
+    if ((pluginManifest as ExtendedPluginManifest).pages) {
+        const pages = (pluginManifest as ExtendedPluginManifest).pages!;
+        for (let i = 0; i < pages.length; i++) {
+            await validateComponent(pages[i], i, context, result, 'pages');
         }
     }
 
-    // 5. Package.json validation (if NPM package)
+    // 7. Component file validation - NEW components structure
+    if ((pluginManifest as ExtendedPluginManifest).components) {
+        const components = (pluginManifest as ExtendedPluginManifest).components!;
+        for (let i = 0; i < components.length; i++) {
+            await validateComponent(components[i], i, context, result, 'components');
+        }
+    }
+
+    // 8. Component file validation - LEGACY contracts structure
+    if (pluginManifest.contracts) {
+        for (let i = 0; i < pluginManifest.contracts.length; i++) {
+            await validateComponent(pluginManifest.contracts[i], i, context, result, 'contracts');
+        }
+    }
+
+    // 9. Package.json validation (if NPM package)
     if (context.isNpmPackage) {
         await validatePackageJson(context, result);
         result.packageJsonChecked = true;
     }
 
-    // 6. Dynamic contracts validation
+    // 10. Dynamic contracts validation
     if (pluginManifest.dynamic_contracts) {
         await validateDynamicContracts(context, result);
     }
@@ -154,7 +198,7 @@ async function validateLocalPlugins(
  * Validates plugin.yaml schema - ensures required fields are present
  */
 async function validateSchema(context: PluginContext, result: ValidationResult): Promise<void> {
-    const { manifest } = context;
+    const manifest = context.manifest as ExtendedPluginManifest;
 
     // Check required field: name
     if (!manifest.name) {
@@ -173,7 +217,133 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
         });
     }
 
-    // Check contracts if present
+    // Check pages if present
+    if (manifest.pages) {
+        if (!Array.isArray(manifest.pages)) {
+            result.errors.push({
+                type: 'schema',
+                message: 'Field "pages" must be an array',
+                location: 'plugin.yaml',
+            });
+        } else {
+            manifest.pages.forEach((page, index) => {
+                if (!page.name) {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Page at index ${index} is missing "name" field`,
+                        location: 'plugin.yaml',
+                    });
+                }
+                if (!page.contract) {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Page "${page.name || index}" is missing "contract" field`,
+                        location: 'plugin.yaml',
+                        suggestion: 'Specify path to .jay-contract file',
+                    });
+                }
+                if (!page.component) {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Page "${page.name || index}" is missing "component" field`,
+                        location: 'plugin.yaml',
+                        suggestion: 'Specify the exported member name from the module (e.g., "productPage")',
+                    });
+                }
+
+                // Validate slugs if present
+                if (page.slugs !== undefined) {
+                    if (!Array.isArray(page.slugs)) {
+                        result.errors.push({
+                            type: 'schema',
+                            message: `Page "${page.name || index}" has invalid "slugs" field - must be an array`,
+                            location: 'plugin.yaml',
+                            suggestion: 'Use array format: ["productId", "categoryId"]',
+                        });
+                    } else {
+                        page.slugs.forEach((slug, slugIndex) => {
+                            if (typeof slug !== 'string') {
+                                result.errors.push({
+                                    type: 'schema',
+                                    message: `Page "${page.name || index}" slug at index ${slugIndex} must be a string`,
+                                    location: 'plugin.yaml',
+                                });
+                            } else if (!/^[a-zA-Z][a-zA-Z0-9]*$/.test(slug)) {
+                                result.errors.push({
+                                    type: 'schema',
+                                    message: `Page "${page.name || index}" has invalid slug "${slug}" - must be valid identifier`,
+                                    location: 'plugin.yaml',
+                                    suggestion: 'Use camelCase identifiers (e.g., "productId", "categoryId")',
+                                });
+                            }
+                        });
+
+                        // Check for duplicate slugs
+                        const duplicateSlugs = page.slugs.filter((slug, index, arr) => 
+                            arr.indexOf(slug) !== index
+                        );
+                        if (duplicateSlugs.length > 0) {
+                            result.errors.push({
+                                type: 'schema',
+                                message: `Page "${page.name || index}" has duplicate slugs: ${duplicateSlugs.join(', ')}`,
+                                location: 'plugin.yaml',
+                                suggestion: 'Remove duplicate slug names',
+                            });
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    // Check components if present
+    if (manifest.components) {
+        if (!Array.isArray(manifest.components)) {
+            result.errors.push({
+                type: 'schema',
+                message: 'Field "components" must be an array',
+                location: 'plugin.yaml',
+            });
+        } else {
+            manifest.components.forEach((component, index) => {
+                if (!component.name) {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Component at index ${index} is missing "name" field`,
+                        location: 'plugin.yaml',
+                    });
+                }
+                if (!component.contract) {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Component "${component.name || index}" is missing "contract" field`,
+                        location: 'plugin.yaml',
+                        suggestion: 'Specify path to .jay-contract file',
+                    });
+                }
+                if (!component.component) {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Component "${component.name || index}" is missing "component" field`,
+                        location: 'plugin.yaml',
+                        suggestion: 'Specify the exported member name from the module (e.g., "productCard")',
+                    });
+                }
+
+                // Warn if component has slugs (components shouldn't have slugs)
+                if ((component as any).slugs) {
+                    result.warnings.push({
+                        type: 'schema',
+                        message: `Component "${component.name || index}" has "slugs" field - only pages should have slugs`,
+                        location: 'plugin.yaml',
+                        suggestion: 'Remove "slugs" field from components or move to "pages" section',
+                    });
+                }
+            });
+        }
+    }
+
+    // Check legacy contracts if present
     if (manifest.contracts) {
         if (!Array.isArray(manifest.contracts)) {
             result.errors.push({
@@ -239,19 +409,29 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
         }
     }
 
-    // Warn if neither contracts nor dynamic_contracts are specified
-    if (!manifest.contracts && !manifest.dynamic_contracts) {
+    // Warn if no contracts are specified (neither new nor legacy format)
+    if (!manifest.pages && !manifest.components && !manifest.contracts && !manifest.dynamic_contracts) {
         result.warnings.push({
             type: 'schema',
-            message: 'Plugin has no contracts or dynamic_contracts defined',
+            message: 'Plugin has no pages, components, contracts, or dynamic_contracts defined',
             location: 'plugin.yaml',
-            suggestion: 'Add either "contracts" or "dynamic_contracts" to expose functionality',
+            suggestion: 'Add "pages", "components", "contracts", or "dynamic_contracts" to expose functionality',
+        });
+    }
+
+    // Warn about mixing legacy and new formats
+    if (manifest.contracts && (manifest.pages || manifest.components)) {
+        result.warnings.push({
+            type: 'schema',
+            message: 'Plugin uses both legacy "contracts" and new "pages"/"components" format',
+            location: 'plugin.yaml',
+            suggestion: 'Consider migrating legacy "contracts" to "pages" or "components" for better organization',
         });
     }
 }
 
 /**
- * Validates a single contract definition
+ * Validates a single contract definition (legacy format)
  */
 async function validateContract(
     contract: any,
@@ -259,6 +439,70 @@ async function validateContract(
     context: PluginContext,
     generateTypes: boolean,
     result: ValidationResult,
+): Promise<void> {
+    // Reuse the common contract validation logic
+    await validateContractFile(
+        contract,
+        index,
+        context,
+        generateTypes,
+        result,
+        'contracts'
+    );
+}
+
+/**
+ * Validates a page definition (new format)
+ */
+async function validatePage(
+    page: any,
+    index: number,
+    context: PluginContext,
+    generateTypes: boolean,
+    result: ValidationResult,
+): Promise<void> {
+    // Reuse contract validation logic but with page-specific context
+    await validateContractFile(
+        page,
+        index,
+        context,
+        generateTypes,
+        result,
+        'pages'
+    );
+}
+
+/**
+ * Validates a component definition (new format)
+ */
+async function validateComponentContract(
+    component: any,
+    index: number,
+    context: PluginContext,
+    generateTypes: boolean,
+    result: ValidationResult,
+): Promise<void> {
+    // Reuse contract validation logic but with component-specific context
+    await validateContractFile(
+        component,
+        index,
+        context,
+        generateTypes,
+        result,
+        'components'
+    );
+}
+
+/**
+ * Generic contract file validation (used by pages, components, and legacy contracts)
+ */
+async function validateContractFile(
+    contract: any,
+    index: number,
+    context: PluginContext,
+    generateTypes: boolean,
+    result: ValidationResult,
+    section: 'pages' | 'components' | 'contracts',
 ): Promise<void> {
     result.contractsChecked = (result.contractsChecked || 0) + 1;
 
@@ -287,7 +531,7 @@ async function validateContract(
             result.errors.push({
                 type: 'file-missing',
                 message: `Contract file not found: ${contractSpec}`,
-                location: `plugin.yaml contracts[${index}]`,
+                location: `plugin.yaml ${section}[${index}]`,
                 suggestion: `Ensure the contract file exists (looked in dist/, lib/, and root)`,
             });
             return;
@@ -301,7 +545,7 @@ async function validateContract(
             result.errors.push({
                 type: 'file-missing',
                 message: `Contract file not found: ${contract.contract}`,
-                location: `plugin.yaml contracts[${index}]`,
+                location: `plugin.yaml ${section}[${index}]`,
                 suggestion: `Create the contract file at ${contractPath}`,
             });
             return;
@@ -367,6 +611,7 @@ async function validateComponent(
     index: number,
     context: PluginContext,
     result: ValidationResult,
+    section: 'pages' | 'components' | 'contracts' = 'contracts',
 ): Promise<void> {
     result.componentsChecked = (result.componentsChecked || 0) + 1;
 
@@ -379,7 +624,7 @@ async function validateComponent(
         result.errors.push({
             type: 'schema',
             message: `Invalid component name: ${contract.component}`,
-            location: `plugin.yaml contracts[${index}]`,
+            location: `plugin.yaml ${section}[${index}]`,
             suggestion: 'Component should be the exported member name (e.g., "moodTracker")',
         });
     }
@@ -389,9 +634,44 @@ async function validateComponent(
         result.warnings.push({
             type: 'schema',
             message: `Component "${contract.component}" looks like a path. Should it be an export name?`,
-            location: `plugin.yaml contracts[${index}]`,
+            location: `plugin.yaml ${section}[${index}]`,
             suggestion:
                 'Component should be the exported member name (e.g., "moodTracker"), not a file path',
+        });
+    }
+
+    // Additional validation for pages with slugs
+    if (section === 'pages' && contract.slugs && Array.isArray(contract.slugs) && contract.slugs.length > 0) {
+        // Pages with slugs should follow naming conventions
+        if (!contract.name.includes('page') && !contract.name.includes('Page')) {
+            result.warnings.push({
+                type: 'schema',
+                message: `Page "${contract.name}" has slugs but name doesn't indicate it's a page`,
+                location: `plugin.yaml ${section}[${index}]`,
+                suggestion: 'Consider naming pages with "page" suffix (e.g., "product-page")',
+            });
+        }
+
+        // Validate slug names are reasonable
+        contract.slugs.forEach((slug: string, slugIndex: number) => {
+            if (slug.length < 2) {
+                result.warnings.push({
+                    type: 'schema',
+                    message: `Page "${contract.name}" slug "${slug}" is very short`,
+                    location: `plugin.yaml ${section}[${index}]`,
+                    suggestion: 'Use descriptive slug names (e.g., "productId" instead of "id")',
+                });
+            }
+            
+            // Check for common bad patterns
+            if (['id', 'key', 'value'].includes(slug.toLowerCase())) {
+                result.warnings.push({
+                    type: 'schema',
+                    message: `Page "${contract.name}" slug "${slug}" is too generic`,
+                    location: `plugin.yaml ${section}[${index}]`,
+                    suggestion: 'Use specific slug names (e.g., "productId" instead of "id")',
+                });
+            }
         });
     }
 }
@@ -437,7 +717,37 @@ async function validatePackageJson(
                 });
             }
 
-            // Check for contract exports if contracts are defined
+            // Check for contract exports - NEW pages format
+            if (context.manifest.pages) {
+                for (const page of context.manifest.pages) {
+                    const contractExport = './' + page.contract;
+                    if (!packageJson.exports[contractExport]) {
+                        result.errors.push({
+                            type: 'export-mismatch',
+                            message: `Page contract "${page.name}" not exported in package.json`,
+                            location: packageJsonPath,
+                            suggestion: `Add "${contractExport}": "./dist/${page.contract}" to exports field`,
+                        });
+                    }
+                }
+            }
+
+            // Check for contract exports - NEW components format
+            if (context.manifest.components) {
+                for (const component of context.manifest.components) {
+                    const contractExport = './' + component.contract;
+                    if (!packageJson.exports[contractExport]) {
+                        result.errors.push({
+                            type: 'export-mismatch',
+                            message: `Component contract "${component.name}" not exported in package.json`,
+                            location: packageJsonPath,
+                            suggestion: `Add "${contractExport}": "./dist/${component.contract}" to exports field`,
+                        });
+                    }
+                }
+            }
+
+            // Check for contract exports - LEGACY contracts format
             if (context.manifest.contracts) {
                 for (const contract of context.manifest.contracts) {
                     // Contract should be an export subpath (e.g., "mood-tracker.jay-contract")
@@ -447,7 +757,7 @@ async function validatePackageJson(
                     if (!packageJson.exports[contractExport]) {
                         result.errors.push({
                             type: 'export-mismatch',
-                            message: `Contract "${contract.name}" not exported in package.json`,
+                            message: `Legacy contract "${contract.name}" not exported in package.json`,
                             location: packageJsonPath,
                             suggestion: `Add "${contractExport}": "./dist/${contract.contract}" to exports field`,
                         });

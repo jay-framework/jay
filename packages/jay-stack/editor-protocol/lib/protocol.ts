@@ -127,10 +127,34 @@ export interface DynamicContractDef {
     generator: string; // Path to generator file
 }
 
+// Page definition in plugin manifest
+export interface PluginPageDef {
+    name: string; // Page name (e.g., "product-page")
+    contract: string; // Path to contract file
+    component: string; // Exported member name from the module
+    slugs?: string[]; // Dynamic route parameters (e.g., ["productId", "categoryId"])
+    description?: string; // Optional description
+}
+
+// Component definition in plugin manifest  
+export interface PluginComponentDef {
+    name: string; // Component name (e.g., "product-card")
+    contract: string; // Path to contract file
+    component: string; // Exported member name from the module
+    description?: string; // Optional description
+}
+
 export interface PluginManifest {
     name: string; // Plugin name (kebab-case)
     module?: string; // NPM module name (optional for local plugins)
+    
+    // Legacy contracts (still supported)
     contracts?: StaticContractDef[];
+    
+    // New structured approach
+    pages?: PluginPageDef[];
+    components?: PluginComponentDef[];
+    
     dynamic_contracts?: DynamicContractDef;
 }
 
@@ -143,43 +167,41 @@ export interface Plugin {
     };
 }
 
-// Legacy type for backward compatibility
-export interface InstalledApp {
-    name: string;
-    module: string;
-    pages: {
-        name: string;
-        headless_components: {
-            name: string;
-            key: string;
-            contract: string;
-            slugs?: string[];
-        }[];
-    }[];
-    components: {
-        name: string;
-        headless_components: {
-            name: string;
-            key: string;
-            contract: string;
-        }[];
-    }[];
-    config_map?: {
-        display_name: string;
-        key: string;
-    }[];
-}
+// InstalledApp interface removed - no longer needed without backward compatibility
 
 export interface ProjectInfo {
     name: string;
     localPath: string;
     pages: ProjectPage[];
     components: ProjectComponent[];
-    plugins: Plugin[]; // New plugin system
-    installedApps: InstalledApp[]; // Legacy - for backward compatibility
-    installedAppContracts: {
-        [appName: string]: InstalledAppContracts;
+    plugins: Plugin[];
+    pluginContracts: {
+        [pluginName: string]: PluginContractsByType;
     };
+}
+
+// Plugin contracts organized by type (pages vs components)
+export interface PluginContractsByType {
+    pages: PluginPageContract[];
+    components: PluginComponentContract[];
+}
+
+// Page contract information from a plugin
+export interface PluginPageContract {
+    contractName: string;
+    contractSchema: ContractSchema;
+    pluginName: string;
+    componentName: string; // The exported component name from the plugin
+    pageName: string; // Display name of the page
+    slugs?: string[]; // Dynamic route parameters
+}
+
+// Component contract information from a plugin
+export interface PluginComponentContract {
+    contractName: string;
+    contractSchema: ContractSchema;
+    pluginName: string;
+    componentName: string; // The exported component name from the plugin
 }
 
 export interface GetProjectInfoResponse extends BaseResponse {
@@ -203,18 +225,6 @@ export interface ContractSchema {
     tags: ContractTag[];
 }
 
-export interface InstalledAppContracts {
-    appName: string;
-    module: string;
-    pages: Array<{
-        pageName: string;
-        contractSchema: ContractSchema;
-    }>;
-    components: Array<{
-        componentName: string;
-        contractSchema: ContractSchema;
-    }>;
-}
 
 // Union types for all messages and responses
 export type EditorProtocolMessageTypes =

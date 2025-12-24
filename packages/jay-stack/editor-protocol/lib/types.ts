@@ -18,16 +18,19 @@ export type {
     BaseResponse,
     ContractTag,
     ContractSchema,
-    InstalledAppContracts,
     ProjectInfo,
     ProjectPage,
     ProjectComponent,
-    InstalledApp,
     // New plugin system types
     PluginManifest,
+    PluginPageDef,
+    PluginComponentDef,
     StaticContractDef,
     DynamicContractDef,
     Plugin,
+    PluginContractsByType,
+    PluginPageContract,
+    PluginComponentContract,
 } from './protocol';
 
 // Connection configuration
