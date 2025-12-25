@@ -45,6 +45,7 @@ For production applications, it's recommended to use design tool integration rat
 A Jay-HTML file follows standard HTML structure with special script tags:
 
 **With Inline Data:**
+
 ```html
 <html>
   <head>
@@ -71,6 +72,7 @@ A Jay-HTML file follows standard HTML structure with special script tags:
 ```
 
 **With Contract Reference:**
+
 ```html
 <html>
   <head>
@@ -108,6 +110,7 @@ You can reference an external contract file using the `contract` attribute:
 ```
 
 **Important Rules:**
+
 - **Exactly one jay-data script** is required per Jay-HTML file
 - When using the `contract` attribute, the script body must be empty
 - You cannot combine inline data with contract references in the same script
@@ -198,6 +201,7 @@ Jay-HTML files can import other components using special script tags.
 - `sandbox` - Optional boolean attribute to enable sandboxing for the component (defaults to false)
 
 **Sandboxing:**
+
 ```html
 <script type="application/jay-headfull" src="./item" names="Item" sandbox></script>
 <!-- or -->
@@ -225,6 +229,7 @@ When `sandbox` is enabled, the component runs in an isolated environment for enh
 - `key` - Attribute name under which the imported component's data and Refs are nested
 
 **Plugin Resolution**:
+
 - For NPM packages: Use the package name directly (e.g., `"example-jay-mood-tracker-plugin"`)
 - For local plugins: Use the plugin identifier as configured in your project
 - The system automatically resolves plugin paths and component names based on the plugin configuration
@@ -1003,6 +1008,7 @@ Jay-HTML files undergo strict validation during compilation. Understanding these
 ### Data Script Validation
 
 **Required Structure:**
+
 - Exactly one `<script type="application/jay-data">` element must exist per file
 - Cannot have both `contract` attribute and inline data content in the same script
 - Cannot have multiple jay-data scripts (no mixing contract references with inline data)
@@ -1010,11 +1016,13 @@ Jay-HTML files undergo strict validation during compilation. Understanding these
 
 **Why One Script Only?**
 Jay components have a single ViewState contract. Multiple data scripts would create ambiguity about type generation and data merging. For complex scenarios, use:
+
 - Parent contracts that reference sub-contracts
 - Headless component imports for sub-components
 - Structured inline data with nested objects
 
 **Common Errors:**
+
 ```html
 <!-- ERROR: Missing jay-data script -->
 <html>
@@ -1026,8 +1034,13 @@ Jay components have a single ViewState contract. Multiple data scripts would cre
 <!-- ERROR: Multiple jay-data scripts -->
 <html>
   <head>
-    <script type="application/jay-data">...</script>
-    <script type="application/jay-data">...</script> <!-- Second script not allowed -->
+    <script type="application/jay-data">
+      ...
+    </script>
+    <script type="application/jay-data">
+      ...
+    </script>
+    <!-- Second script not allowed -->
   </head>
 </html>
 
@@ -1035,9 +1048,10 @@ Jay components have a single ViewState contract. Multiple data scripts would cre
 <html>
   <head>
     <script type="application/jay-data" contract="../user.jay-contract"></script>
-    <script type="application/jay-data">  <!-- Cannot have both -->
-      data:
-        count: number
+    <script type="application/jay-data">
+      <!-- Cannot have both -->
+          data:
+            count: number
     </script>
   </head>
 </html>
@@ -1052,11 +1066,13 @@ Jay components have a single ViewState contract. Multiple data scripts would cre
 ### Import Validation
 
 **Headfull Imports:**
+
 - Must specify `names` attribute with valid import names
 - Referenced modules must exist and export the specified names
 - Type analysis must succeed for imported components
 
 **Headless Imports:**
+
 - Must specify all required attributes: `plugin`, `contract`, `key`
 - Plugin must be resolvable (either as NPM package or local plugin)
 - Contract file must exist and be valid
@@ -1065,11 +1081,13 @@ Jay components have a single ViewState contract. Multiple data scripts would cre
 ### Type System Validation
 
 **Recursive References:**
+
 - Must use `$/data` or `$/data/path` format
 - Referenced paths must exist in the data structure
 - Array unwrapping with `[]` syntax requires target to be array type
 
 **Async Properties:**
+
 - Use `async propertyName:` syntax
 - Can be applied to any data type (primitives, objects, arrays, enums)
 - Generate `Promise<T>` types in TypeScript output
@@ -1077,6 +1095,7 @@ Jay components have a single ViewState contract. Multiple data scripts would cre
 ### File Structure Requirements
 
 **Required Elements:**
+
 - Must have exactly one `<body>` element
 - `<head>` section for imports and data scripts
 - Valid HTML structure throughout

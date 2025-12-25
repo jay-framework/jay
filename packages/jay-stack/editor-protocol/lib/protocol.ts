@@ -94,6 +94,7 @@ export interface StaticContractDef {
     contract: string; // Path to contract file
     component: string; // Exported member name from the module (e.g., "moodTracker")
     description?: string; // Optional description
+    slugs?: string[]; // Dynamic URL slugs expected by this contract (e.g., ["productId", "userId"])
 }
 
 export interface DynamicContractDef {

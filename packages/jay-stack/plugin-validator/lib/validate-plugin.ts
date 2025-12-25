@@ -207,6 +207,38 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
                             'Specify the exported member name from the module (e.g., "moodTracker")',
                     });
                 }
+                // Validate slugs field if present
+                if (contract.slugs !== undefined) {
+                    if (!Array.isArray(contract.slugs)) {
+                        result.errors.push({
+                            type: 'schema',
+                            message: `Contract "${contract.name || index}" has invalid "slugs" field - must be an array`,
+                            location: 'plugin.yaml',
+                            suggestion:
+                                'Provide slugs as an array of strings, e.g., ["productId", "userId"]',
+                        });
+                    } else {
+                        contract.slugs.forEach((slug: any, slugIndex: number) => {
+                            if (typeof slug !== 'string') {
+                                result.errors.push({
+                                    type: 'schema',
+                                    message: `Contract "${contract.name || index}" has invalid slug at index ${slugIndex} - must be a string`,
+                                    location: 'plugin.yaml',
+                                    suggestion:
+                                        'All slugs must be strings representing dynamic URL parameters',
+                                });
+                            } else if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(slug)) {
+                                result.errors.push({
+                                    type: 'schema',
+                                    message: `Contract "${contract.name || index}" has invalid slug "${slug}" - must be a valid identifier`,
+                                    location: 'plugin.yaml',
+                                    suggestion:
+                                        'Slugs must start with a letter and contain only letters, numbers, and underscores (e.g., "productId", "user_id")',
+                                });
+                            }
+                        });
+                    }
+                }
             });
         }
     }

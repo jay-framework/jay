@@ -17,6 +17,7 @@ export interface PluginManifest {
         contract: string; // For NPM: export subpath (e.g., "contract.jay-contract"). For local: relative path.
         component: string; // Exported member name from module (e.g., "moodTracker")
         description?: string;
+        slugs?: string[]; // Dynamic URL slugs expected by this contract (e.g., ["productId", "userId"])
     }>;
     dynamic_contracts?: {
         generator: string;

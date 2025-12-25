@@ -201,12 +201,21 @@ contracts:
     contract: mood-tracker.jay-contract # Export subpath from package.json
     component: moodTracker # Exported member name from index.ts
     description: A mood tracker component with happy, neutral, and sad states
+    slugs: ['userId', 'moodId'] # Optional: Dynamic URL slugs expected by this contract
 ```
 
 **Field descriptions:**
 
 - `name` - Plugin identifier (usually matches package name)
 - `module` - (Optional) Path to component module. Defaults to package main export (`.`)
+
+**Contract field descriptions:**
+
+- `name` - Contract identifier
+- `contract` - Path to `.jay-contract` file (export subpath for NPM packages)
+- `component` - Exported member name from the module (e.g., "moodTracker")
+- `description` - (Optional) Human-readable description of the component
+- `slugs` - (Optional) Array of dynamic URL slugs expected by this contract (e.g., ["userId", "productId"]). This declares what URL parameters the contract expects when used in dynamic routes like `/products/[slug]/` or `/users/[userId]/posts/[postId]/`
 - `contracts[]` - Array of contracts exposed by this plugin
   - `name` - Contract identifier (used in `<script plugin="..." contract="name">`)
   - `contract` - Export subpath to the `.jay-contract` file (matches `package.json` exports)
@@ -527,6 +536,48 @@ dynamic_contracts:
 ```
 
 See Design Log #60 for full dynamic contract implementation.
+
+## URL Parameter Declarations
+
+When your component expects dynamic URL parameters (slugs), declare them in the `slugs` field:
+
+```yaml
+contracts:
+  - name: product-detail
+    contract: product-detail.jay-contract
+    component: productDetail
+    description: Product detail page component
+    slugs: ['category', 'productId'] # Expects for example /products/[category]/[productId]/
+```
+
+**How slugs work:**
+
+1. **Declaration** - The `slugs` array declares what URL parameters your contract expects
+2. **Route matching** - Jay Stack matches these to dynamic route segments like `[category]` and `[productId]`
+3. **Type safety** - Slugs are included in the generated TypeScript types for your component props
+4. **URL loading** - Your component's `urlLoader` can access these parameters to generate static paths
+
+**Example component using slugs:**
+
+```typescript
+// The component receives slugs as part of props
+interface ProductDetailProps {
+  category: string; // From [category] slug
+  productId: string; // From [productId] slug
+}
+
+async function* urlLoader(productsDb: ProductsService): AsyncIterable<ProductDetailProps[]> {
+  const categories = await productsDb.getCategories();
+
+  for (const category of categories) {
+    const products = await productsDb.getProductsByCategory(category.slug);
+    yield products.map((product) => ({
+      category: category.slug,
+      productId: product.id,
+    }));
+  }
+}
+```
 
 ### TypeScript Configuration
 
