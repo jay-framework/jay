@@ -31,6 +31,13 @@ describe('apply JSON patch', () => {
             obj = patch(obj, [{ op: REMOVE, path: ['c'] }]);
             expect(obj).toEqual({ a: 1, b: 2 });
         });
+
+        it('add for existing path acts as replace', () => {
+            let obj = { x: { a: 1, b: 2, c: 3 } };
+            // Intentionally testing invalid path - bypassing type check
+            obj = patch(obj, [{ op: ADD, path: ['x', 'a'], value: 12 } as any]);
+            expect(obj).toEqual({ x: { a: 1, b: 2, c: 3 } });
+        });
     });
 
     describe('nested object', () => {
