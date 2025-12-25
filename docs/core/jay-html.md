@@ -44,6 +44,7 @@ For production applications, it's recommended to use design tool integration rat
 
 A Jay-HTML file follows standard HTML structure with special script tags:
 
+**With Inline Data:**
 ```html
 <html>
   <head>
@@ -69,9 +70,53 @@ A Jay-HTML file follows standard HTML structure with special script tags:
 </html>
 ```
 
+**With Contract Reference:**
+```html
+<html>
+  <head>
+    <!-- Component imports -->
+    <script type="application/jay-headfull" src="./item" names="Item"></script>
+
+    <!-- Reference external contract file -->
+    <script type="application/jay-data" contract="../contracts/counter.jay-contract">
+      <!-- Script body must be empty when using contract attribute -->
+    </script>
+  </head>
+  <body>
+    <!-- UI structure with template syntax -->
+    <div>
+      <h1>{title}</h1>
+      <span>{count}</span>
+      <button ref="increment">+</button>
+    </div>
+  </body>
+</html>
+```
+
 ## Data Scripts
 
-The `application/jay-data` script defines the component's view state contract.
+The `application/jay-data` script defines the component's view state contract. You can either define the contract inline with YAML data or reference an external contract file.
+
+### Contract References
+
+You can reference an external contract file using the `contract` attribute:
+
+```html
+<script type="application/jay-data" contract="../contracts/user-profile.jay-contract">
+  <!-- Script body must be empty when using contract attribute -->
+</script>
+```
+
+**Important Rules:**
+- **Exactly one jay-data script** is required per Jay-HTML file
+- When using the `contract` attribute, the script body must be empty
+- You cannot combine inline data with contract references in the same script
+- You cannot have multiple jay-data scripts (even mixing contract references and inline data)
+- The contract file path is resolved relative to the Jay-HTML file
+
+### Inline Data Definition
+
+Alternatively, you can define the data structure directly in the script using YAML:
 
 ### Basic Data Types
 
@@ -150,26 +195,39 @@ Jay-HTML files can import other components using special script tags.
 - `src="./item"` - Path to the component (without extension)
 - `names="Item"` - Name of the component `const` to import, created using `makeJayComponent`
 - `names="Item as AnotherName"` - Allows to rename the imported name to `AnotherName`
+- `sandbox` - Optional boolean attribute to enable sandboxing for the component (defaults to false)
+
+**Sandboxing:**
+```html
+<script type="application/jay-headfull" src="./item" names="Item" sandbox></script>
+<!-- or -->
+<script type="application/jay-headfull" src="./item" names="Item" sandbox="true"></script>
+```
+
+When `sandbox` is enabled, the component runs in an isolated environment for enhanced security.
 
 ### Importing Headless Components
 
 ```html
 <script
   type="application/jay-headless"
-  contract="../named-counter/named-counter.jay-contract"
-  src="../named-counter/named-counter"
-  name="namedCounter"
-  key="namedCounter"
+  plugin="example-mood-tracker-plugin"
+  contract="../mood-tracker/mood-tracker.jay-contract"
+  key="moodTracker"
 ></script>
 ```
 
 **Attributes**:
 
 - `type="application/jay-headless"` - Identifies this as a headless component import
+- `plugin` - Name of the plugin component to import (can be npm package name or local plugin identifier)
 - `contract` - Path to the contract file
-- `src` - Path to the component implementation
-- `name` - Name of the component `const` to import, created using `makeJayStackComponent`
 - `key` - Attribute name under which the imported component's data and Refs are nested
+
+**Plugin Resolution**:
+- For NPM packages: Use the package name directly (e.g., `"example-jay-mood-tracker-plugin"`)
+- For local plugins: Use the plugin identifier as configured in your project
+- The system automatically resolves plugin paths and component names based on the plugin configuration
 
 ## Head Links
 
@@ -937,6 +995,91 @@ For a headless component imported with a certain key, references are prefixed wi
   </div>
 </div>
 ```
+
+## Validation Rules and Error Handling
+
+Jay-HTML files undergo strict validation during compilation. Understanding these rules helps prevent common errors.
+
+### Data Script Validation
+
+**Required Structure:**
+- Exactly one `<script type="application/jay-data">` element must exist per file
+- Cannot have both `contract` attribute and inline data content in the same script
+- Cannot have multiple jay-data scripts (no mixing contract references with inline data)
+- When using `contract` attribute, script body must be completely empty
+
+**Why One Script Only?**
+Jay components have a single ViewState contract. Multiple data scripts would create ambiguity about type generation and data merging. For complex scenarios, use:
+- Parent contracts that reference sub-contracts
+- Headless component imports for sub-components
+- Structured inline data with nested objects
+
+**Common Errors:**
+```html
+<!-- ERROR: Missing jay-data script -->
+<html>
+  <head>
+    <!-- No jay-data script found -->
+  </head>
+</html>
+
+<!-- ERROR: Multiple jay-data scripts -->
+<html>
+  <head>
+    <script type="application/jay-data">...</script>
+    <script type="application/jay-data">...</script> <!-- Second script not allowed -->
+  </head>
+</html>
+
+<!-- ERROR: Mixing contract references and inline data -->
+<html>
+  <head>
+    <script type="application/jay-data" contract="../user.jay-contract"></script>
+    <script type="application/jay-data">  <!-- Cannot have both -->
+      data:
+        count: number
+    </script>
+  </head>
+</html>
+
+<!-- ERROR: Contract reference with inline data -->
+<script type="application/jay-data" contract="../user.jay-contract">
+  data:
+    name: string  <!-- Content not allowed with contract attribute -->
+</script>
+```
+
+### Import Validation
+
+**Headfull Imports:**
+- Must specify `names` attribute with valid import names
+- Referenced modules must exist and export the specified names
+- Type analysis must succeed for imported components
+
+**Headless Imports:**
+- Must specify all required attributes: `plugin`, `contract`, `key`
+- Plugin must be resolvable (either as NPM package or local plugin)
+- Contract file must exist and be valid
+- Key names must be unique within the component
+
+### Type System Validation
+
+**Recursive References:**
+- Must use `$/data` or `$/data/path` format
+- Referenced paths must exist in the data structure
+- Array unwrapping with `[]` syntax requires target to be array type
+
+**Async Properties:**
+- Use `async propertyName:` syntax
+- Can be applied to any data type (primitives, objects, arrays, enums)
+- Generate `Promise<T>` types in TypeScript output
+
+### File Structure Requirements
+
+**Required Elements:**
+- Must have exactly one `<body>` element
+- `<head>` section for imports and data scripts
+- Valid HTML structure throughout
 
 ## Best Practices
 
