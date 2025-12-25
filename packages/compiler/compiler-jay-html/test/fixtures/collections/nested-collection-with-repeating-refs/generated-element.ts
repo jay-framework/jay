@@ -170,4 +170,3 @@ export function render(
         ) as NestedCollectionWithRepeatingRefsElement;
     return [refManager.getPublicAPI() as NestedCollectionWithRepeatingRefsElementRefs, render];
 }
-
