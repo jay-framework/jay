@@ -897,7 +897,7 @@ export function getJayHtmlImports(html: string): string[] {
     const root = parse(html);
     return root
         .querySelectorAll(
-            'script[type="application/jay-headfull"], script[type="application/jay-headless"]',
+            'script[type="application/jay-headfull"]',
         )
         .map((script) => script.getAttribute('src'))
         .filter((src): src is string => src !== null);
