@@ -20,7 +20,11 @@ export function patch<T>(target: T, jsonPatch: JSONPatch<T>, level = 0): T {
         if (path.length - 1 === level) {
             if (op === REPLACE || op === ADD) {
                 if (Array.isArray(copy) && op === ADD) {
-                    copy.splice(pathItem as number, 0, (patchOperation as { value: unknown }).value);
+                    copy.splice(
+                        pathItem as number,
+                        0,
+                        (patchOperation as { value: unknown }).value,
+                    );
                 } else if (copy[pathItem] === (patchOperation as { value: unknown }).value) {
                     equalCount += 1;
                 } else {
@@ -29,7 +33,11 @@ export function patch<T>(target: T, jsonPatch: JSONPatch<T>, level = 0): T {
             } else if (op === REMOVE) {
                 if (Array.isArray(copy)) copy.splice(pathItem as number, 1);
                 else delete copy[pathItem];
-            } else if (op === MOVE && Array.isArray(copy) && validateMove(patchOperation as JSONPatchMove)) {
+            } else if (
+                op === MOVE &&
+                Array.isArray(copy) &&
+                validateMove(patchOperation as JSONPatchMove)
+            ) {
                 const fromPath = (patchOperation as JSONPatchMove).from;
                 const [item] = copy.splice(fromPath[level] as number, 1);
                 copy.splice(pathItem as number, 0, item);

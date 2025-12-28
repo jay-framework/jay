@@ -55,7 +55,7 @@ export function createPatchableSignal<T>(
     value: ValueOrGetter<T>,
 ): [get: Getter<T>, set: Setter<T>, patchFunc: Patcher<T>] {
     const [get, set] = createSignal(value);
-    const patchFunc = (...jsonPatch: JSONPatch) => set(patch(get(), jsonPatch));
+    const patchFunc = (...jsonPatch: JSONPatch<T>) => set(patch(get(), jsonPatch));
     return [get, set, patchFunc];
 }
 

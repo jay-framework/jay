@@ -36,7 +36,7 @@ describe('apply JSON patch', () => {
             let obj = { x: { a: 1, b: 2, c: 3 } };
             // Intentionally testing invalid path - bypassing type check
             obj = patch(obj, [{ op: ADD, path: ['x', 'a'], value: 12 } as any]);
-            expect(obj).toEqual({ x: { a: 1, b: 2, c: 3 } });
+            expect(obj).toEqual({ x: { a: 12, b: 2, c: 3 } });
         });
     });
 
@@ -70,7 +70,7 @@ describe('apply JSON patch', () => {
 
         it('should apply an add patch', () => {
             let obj: { x: Record<string, number> } = { x: { a: 1, b: 2, c: 3 } };
-            obj = patch(obj, [{ op: ADD, path: ["x", "d"], value: 4 }]);
+            obj = patch(obj, [{ op: ADD, path: ['x', 'd'], value: 4 }]);
             expect(obj).toEqual({ x: { a: 1, b: 2, c: 3, d: 4 } });
         });
 

@@ -17,7 +17,7 @@ export interface JayPortMessage {
 }
 export interface JPMRender extends JayPortMessage {
     readonly type: JayPortMessageType.render;
-    patch: JSONPatch;
+    patch: JSONPatch<any>;
 }
 export interface JPMAddEventListener extends JayPortMessage {
     readonly type: JayPortMessageType.addEventListener;
@@ -52,7 +52,7 @@ export interface JPMDomEvent extends JayPortMessage {
 }
 export interface JPMRootComponentViewState extends JayPortMessage {
     readonly type: JayPortMessageType.root;
-    patch: JSONPatch;
+    patch: JSONPatch<any>;
 }
 
 export interface JPMRootAPIInvoke extends JayPortMessage {
@@ -73,7 +73,7 @@ export function rootApiReturns(callId: number, returns: any, error?: any): JPMRo
     return { callId, returns, error, type: JayPortMessageType.rootApiReturns };
 }
 
-export function renderMessage(patch: JSONPatch): JPMRender {
+export function renderMessage(patch: JSONPatch<any>): JPMRender {
     return { patch, type: JayPortMessageType.render };
 }
 
@@ -100,7 +100,7 @@ export function eventInvocationMessage(
     return { coordinate, eventType, eventData, type: JayPortMessageType.eventInvocation };
 }
 
-export function rootComponentViewState(patch: JSONPatch): JPMRootComponentViewState {
+export function rootComponentViewState(patch: JSONPatch<any>): JPMRootComponentViewState {
     return { patch, type: JayPortMessageType.root };
 }
 

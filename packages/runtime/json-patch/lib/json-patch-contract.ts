@@ -5,21 +5,21 @@ type Prev = [never, 0, 1, 2, 3, 4, 5, 6, 7, ...0[]];
 type Paths<T, Depth extends number = 7> = Depth extends 0
     ? never
     : T extends object
-        ? {
+      ? {
             [K in keyof T]: K extends string | number
                 ? T[K] extends any[]
                     ?
-                    | [K]
-                    | [K, number]
-                    | (T[K][number] extends object
-                    ? [K, number, ...Paths<T[K][number], Prev[Depth]>]
-                    : never)
+                          | [K]
+                          | [K, number]
+                          | (T[K][number] extends object
+                                ? [K, number, ...Paths<T[K][number], Prev[Depth]>]
+                                : never)
                     : T[K] extends object
-                        ? [K] | [K, ...Paths<T[K], Prev[Depth]>]
-                        : [K]
+                      ? [K] | [K, ...Paths<T[K], Prev[Depth]>]
+                      : [K]
                 : never;
         }[keyof T]
-        : never;
+      : never;
 
 export const ADD = 'add' as const;
 export const REPLACE = 'replace' as const;
@@ -30,15 +30,16 @@ export const MOVE = 'move' as const;
 type IsAny<T> = 0 extends 1 & T ? true : false;
 type IsUnknown<T> = unknown extends T ? (T extends unknown ? true : false) : false;
 
-export type JSONPointer<T = unknown> = IsAny<T> extends true
-    ? (string | number)[]
-    : IsUnknown<T> extends true
+export type JSONPointer<T = unknown> =
+    IsAny<T> extends true
         ? (string | number)[]
-        : [T] extends [never]
+        : IsUnknown<T> extends true
+          ? (string | number)[]
+          : [T] extends [never]
             ? (string | number)[]
             : Paths<T> extends never
-                ? (string | number)[]
-                : Paths<T>;
+              ? (string | number)[]
+              : Paths<T>;
 
 export interface JSONPatchAdd<T = unknown> {
     op: typeof ADD;
@@ -63,5 +64,9 @@ export interface JSONPatchMove<T = unknown> {
     path: JSONPointer<T>;
 }
 
-export type JSONPatchOperation<T = unknown> = JSONPatchAdd<T> | JSONPatchReplace<T> | JSONPatchRemove<T> | JSONPatchMove<T>;
+export type JSONPatchOperation<T = unknown> =
+    | JSONPatchAdd<T>
+    | JSONPatchReplace<T>
+    | JSONPatchRemove<T>
+    | JSONPatchMove<T>;
 export type JSONPatch<T = unknown> = JSONPatchOperation<T>[];
