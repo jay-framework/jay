@@ -34,14 +34,17 @@ Move `deepMergeViewStates` to a shared location so both dev-server and stack-cli
 ### 1. Where should the merge algorithm live?
 
 **Option A: json-patch library**
+
 - Pros: Already handles JSON transformations
 - Cons: json-patch is about RFC 6902 operations (diff/apply). This merge is semantically different - it's about combining two partial objects with identity-based array merging.
 
 **Option B: New shared library (e.g., `packages/runtime/view-state-merge`)**
+
 - Pros: Clear single responsibility, clean dependency
 - Cons: Another package to maintain
 
 **Option C: Move to `@jay-framework/component` or existing runtime package**
+
 - Pros: No new package
 - Cons: May not be the right conceptual fit
 
@@ -78,14 +81,17 @@ Instead of passing `trackByMap` separately, could the contract compiler embed tr
 ## Implementation Plan
 
 1. **Create new library:** `packages/runtime/view-state-merge`
+
    - Move `deepMergeViewStates` and `mergeArraysByTrackBy` from `dev-server/lib/view-state-merger.ts`
    - Export as `@jay-framework/view-state-merge`
 
 2. **Update dev-server:**
+
    - Import `deepMergeViewStates` from new library
    - Remove local implementation
 
 3. **Update generate-client-script:**
+
    - Add `trackByMap` parameter
    - Embed in generated HTML: `const trackByMap = ${JSON.stringify(trackByMap)};`
    - Pass to `makeCompositeJayComponent`
@@ -94,4 +100,3 @@ Instead of passing `trackByMap` separately, could the contract compiler embed tr
    - Import `deepMergeViewStates` from new library
    - Modify `makeCompositeJayComponent` to accept `trackByMap` parameter
    - Replace shallow merge in render function with `deepMergeViewStates`
-

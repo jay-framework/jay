@@ -7,7 +7,7 @@ The `json-patch` package lacked type safety for JSONPointer paths. When writing 
 ```typescript
 // Before: No type safety - any path accepted
 const patch: JSONPatch = [
-    { op: 'replace', path: ['nonexistent', 'path'], value: 5 }  // No error!
+  { op: 'replace', path: ['nonexistent', 'path'], value: 5 }, // No error!
 ];
 ```
 
@@ -23,56 +23,57 @@ type Prev = [never, 0, 1, 2, 3, 4, 5, 6, 7, ...0[]];
 
 // Generate all valid paths as tuple types
 type Paths<T, Depth extends number = 7> = Depth extends 0
-    ? never
-    : T extends object
-        ? {
-            [K in keyof T]: K extends string | number
-                ? T[K] extends any[]
-                    ?
-                    | [K]
-                    | [K, number]
-                    | (T[K][number] extends object
+  ? never
+  : T extends object
+    ? {
+        [K in keyof T]: K extends string | number
+          ? T[K] extends any[]
+            ?
+                | [K]
+                | [K, number]
+                | (T[K][number] extends object
                     ? [K, number, ...Paths<T[K][number], Prev[Depth]>]
                     : never)
-                    : T[K] extends object
-                        ? [K] | [K, ...Paths<T[K], Prev[Depth]>]
-                        : [K]
-                : never;
-        }[keyof T]
-        : never;
+            : T[K] extends object
+              ? [K] | [K, ...Paths<T[K], Prev[Depth]>]
+              : [K]
+          : never;
+      }[keyof T]
+    : never;
 
 // Handle any/unknown fallback gracefully
 type IsAny<T> = 0 extends 1 & T ? true : false;
 type IsUnknown<T> = unknown extends T ? (T extends unknown ? true : false) : false;
 
-export type JSONPointer<T = unknown> = IsAny<T> extends true
+export type JSONPointer<T = unknown> =
+  IsAny<T> extends true
     ? (string | number)[]
     : IsUnknown<T> extends true
+      ? (string | number)[]
+      : [T] extends [never]
         ? (string | number)[]
-        : [T] extends [never]
-            ? (string | number)[]
-            : Paths<T> extends never
-                ? (string | number)[]
-                : Paths<T>;
+        : Paths<T> extends never
+          ? (string | number)[]
+          : Paths<T>;
 ```
 
 ### Usage
 
 ```typescript
 interface Product {
-    id: string;
-    details: {
-        name: string;
-        price: number;
-    };
-    tags: string[];
+  id: string;
+  details: {
+    name: string;
+    price: number;
+  };
+  tags: string[];
 }
 
 // Now with type completion!
 const patch: JSONPatch<Product> = [
-    { op: 'replace', path: ['details', 'name'], value: 'New Name' },  // ✅ Valid
-    { op: 'replace', path: ['tags', 0], value: 'sale' },              // ✅ Valid
-    { op: 'replace', path: ['details', 'invalid'], value: 5 }         // ❌ Type error!
+  { op: 'replace', path: ['details', 'name'], value: 'New Name' }, // ✅ Valid
+  { op: 'replace', path: ['tags', 0], value: 'sale' }, // ✅ Valid
+  { op: 'replace', path: ['details', 'invalid'], value: 5 }, // ❌ Type error!
 ];
 ```
 
