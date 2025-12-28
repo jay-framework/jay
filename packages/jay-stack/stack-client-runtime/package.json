@@ -29,7 +29,8 @@
   "dependencies": {
     "@jay-framework/component": "workspace:^",
     "@jay-framework/fullstack-component": "workspace:^",
-    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/runtime": "workspace:^",
+    "@jay-framework/view-state-merge": "workspace:^"
   },
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",

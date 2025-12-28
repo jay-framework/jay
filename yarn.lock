@@ -4247,6 +4247,7 @@ __metadata:
     "@jay-framework/stack-client-runtime": "workspace:^"
     "@jay-framework/stack-route-scanner": "workspace:^"
     "@jay-framework/stack-server-runtime": "workspace:^"
+    "@jay-framework/view-state-merge": "workspace:^"
     "@types/express": ^5.0.2
     "@types/node": ^22.15.21
     nodemon: ^3.0.3
@@ -4598,6 +4599,20 @@ __metadata:
     tsup: ^8.0.1
     typescript: ^5.3.3
     vite: ^5.0.11
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/view-state-merge@workspace:^, @jay-framework/view-state-merge@workspace:packages/runtime/view-state-merge":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/view-state-merge@workspace:packages/runtime/view-state-merge"
+  dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@types/node": ^20.11.5
+    rimraf: ^5.0.5
+    tsup: ^8.0.1
+    typescript: ^5.3.3
+    vite: ^5.0.11
+    vitest: ^1.2.1
   languageName: unknown
   linkType: soft
 

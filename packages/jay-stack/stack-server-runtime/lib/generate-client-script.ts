@@ -1,10 +1,12 @@
 import { DevServerPagePart } from './load-page-parts';
+import type { TrackByMap } from '@jay-framework/view-state-merge';
 
 export function generateClientScript(
     defaultViewState: object,
     fastCarryForward: object,
     parts: DevServerPagePart[],
     jayHtmlPath: string,
+    trackByMap: TrackByMap = {},
 ) {
     const imports =
         parts.length > 0 ? parts.map((part) => part.clientImport).join('\n') + '\n' : '';
@@ -30,9 +32,10 @@ ${parts.map((part) => '        ' + part.clientPart).join(',\n')}
       ${imports}
       const viewState = ${JSON.stringify(defaultViewState)};
       const fastCarryForward = ${JSON.stringify(fastCarryForward)};
+      const trackByMap = ${JSON.stringify(trackByMap)};
 
       const target = document.getElementById('target');
-      const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, ${compositeParts})
+      const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, ${compositeParts}, trackByMap)
 
       const instance = pageComp({...viewState, ...fastCarryForward})
       target.appendChild(instance.element.dom);

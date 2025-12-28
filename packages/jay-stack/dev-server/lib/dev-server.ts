@@ -21,7 +21,7 @@ import { generateClientScript } from '@jay-framework/stack-server-runtime';
 import { Request, Response } from 'express';
 import { DevServerOptions } from './dev-server-options';
 import { ServiceLifecycleManager } from './service-lifecycle';
-import { deepMergeViewStates } from './view-state-merger';
+import { deepMergeViewStates } from '@jay-framework/view-state-merge';
 
 async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
     return await scanRoutes(pagesBaseFolder, {
@@ -136,6 +136,7 @@ function mkRoute(
                             carryForward,
                             pageParts,
                             route.jayHtmlPath,
+                            trackByMap,
                         );
 
                         const compiledPageHtml = await vite.transformIndexHtml(
