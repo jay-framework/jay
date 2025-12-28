@@ -1,14 +1,13 @@
-import { deepMergeViewStates } from '../lib/view-state-merger';
-import { vi } from 'vitest';
+import { deepMergeViewStates } from '../lib/index';
 
 describe('deepMergeViewStates', () => {
     describe('primitive values', () => {
         it('should merge simple objects with no nesting', () => {
-            const slow = { name: 'Product A', sku: 'SKU-123' };
-            const fast = { price: 29.99, inStock: true };
+            const base = { name: 'Product A', sku: 'SKU-123' };
+            const overlay = { price: 29.99, inStock: true };
             const trackByMap = {}; // No arrays to track
 
-            const result = deepMergeViewStates(slow, fast, trackByMap);
+            const result = deepMergeViewStates(base, overlay, trackByMap);
 
             expect(result).toEqual({
                 name: 'Product A',
@@ -18,12 +17,12 @@ describe('deepMergeViewStates', () => {
             });
         });
 
-        it('should prefer fast value when both phases have the same property', () => {
-            const slow = { count: 5 };
-            const fast = { count: 10 };
+        it('should prefer overlay value when both have the same property', () => {
+            const base = { count: 5 };
+            const overlay = { count: 10 };
             const trackByMap = {};
 
-            const result = deepMergeViewStates(slow, fast, trackByMap);
+            const result = deepMergeViewStates(base, overlay, trackByMap);
 
             expect(result).toEqual({ count: 10 });
         });
@@ -31,13 +30,13 @@ describe('deepMergeViewStates', () => {
 
     describe('nested objects', () => {
         it('should deep merge nested objects', () => {
-            const slow = {
+            const base = {
                 discount: {
                     type: 'percentage',
                     code: 'SAVE10',
                 },
             };
-            const fast = {
+            const overlay = {
                 discount: {
                     amount: 5,
                     applied: false,
@@ -45,7 +44,7 @@ describe('deepMergeViewStates', () => {
             };
             const trackByMap = {}; // No arrays to track
 
-            const result = deepMergeViewStates(slow, fast, trackByMap);
+            const result = deepMergeViewStates(base, overlay, trackByMap);
 
             expect(result).toEqual({
                 discount: {
@@ -58,7 +57,7 @@ describe('deepMergeViewStates', () => {
         });
 
         it('should handle deeply nested objects (3 levels)', () => {
-            const slow = {
+            const base = {
                 user: {
                     profile: {
                         name: 'John',
@@ -66,7 +65,7 @@ describe('deepMergeViewStates', () => {
                     },
                 },
             };
-            const fast = {
+            const overlay = {
                 user: {
                     profile: {
                         status: 'online',
@@ -75,7 +74,7 @@ describe('deepMergeViewStates', () => {
             };
             const trackByMap = {};
 
-            const result = deepMergeViewStates(slow, fast, trackByMap);
+            const result = deepMergeViewStates(base, overlay, trackByMap);
 
             expect(result).toEqual({
                 user: {
@@ -91,13 +90,13 @@ describe('deepMergeViewStates', () => {
 
     describe('arrays with trackBy', () => {
         it('should merge arrays by trackBy identity', () => {
-            const slow = {
+            const base = {
                 images: [
                     { id: '1', url: '/img1.jpg', alt: 'Image 1' },
                     { id: '2', url: '/img2.jpg', alt: 'Image 2' },
                 ],
             };
-            const fast = {
+            const overlay = {
                 images: [
                     { id: '1', loading: false },
                     { id: '2', loading: true },
@@ -107,7 +106,7 @@ describe('deepMergeViewStates', () => {
                 images: 'id', // images array tracked by 'id' field
             };
 
-            const result = deepMergeViewStates(slow, fast, trackByMap);
+            const result = deepMergeViewStates(base, overlay, trackByMap);
 
             expect(result).toEqual({
                 images: [
@@ -117,15 +116,15 @@ describe('deepMergeViewStates', () => {
             });
         });
 
-        it('should preserve slow array order when merging', () => {
-            const slow = {
+        it('should preserve base array order when merging', () => {
+            const base = {
                 items: [
                     { id: '2', name: 'Item 2' },
                     { id: '1', name: 'Item 1' },
                     { id: '3', name: 'Item 3' },
                 ],
             };
-            const fast = {
+            const overlay = {
                 items: [
                     { id: '1', price: 10 },
                     { id: '2', price: 20 },
@@ -136,7 +135,7 @@ describe('deepMergeViewStates', () => {
                 items: 'id',
             };
 
-            const result = deepMergeViewStates(slow, fast, trackByMap);
+            const result = deepMergeViewStates(base, overlay, trackByMap);
 
             expect(result).toEqual({
                 items: [
@@ -147,15 +146,15 @@ describe('deepMergeViewStates', () => {
             });
         });
 
-        it('should handle items only in slow array', () => {
-            const slow = {
+        it('should handle items only in base array', () => {
+            const base = {
                 items: [
                     { id: '1', name: 'Item 1' },
                     { id: '2', name: 'Item 2' },
                     { id: '3', name: 'Item 3' },
                 ],
             };
-            const fast = {
+            const overlay = {
                 items: [
                     { id: '1', price: 10 },
                     { id: '3', price: 30 },
@@ -165,48 +164,48 @@ describe('deepMergeViewStates', () => {
                 items: 'id',
             };
 
-            const result = deepMergeViewStates(slow, fast, trackByMap);
+            const result = deepMergeViewStates(base, overlay, trackByMap);
 
             expect(result).toEqual({
                 items: [
                     { id: '1', name: 'Item 1', price: 10 },
-                    { id: '2', name: 'Item 2' }, // No price (only in slow)
+                    { id: '2', name: 'Item 2' }, // No price (only in base)
                     { id: '3', name: 'Item 3', price: 30 },
                 ],
             });
         });
 
-        it('should handle items only in fast array', () => {
-            const slow = {
+        it('should handle items only in overlay array', () => {
+            const base = {
                 items: [
                     { id: '1', name: 'Item 1' },
                     { id: '2', name: 'Item 2' },
                 ],
             };
-            const fast = {
+            const overlay = {
                 items: [
                     { id: '1', price: 10 },
                     { id: '2', price: 20 },
-                    { id: '3', price: 30 }, // New item in fast
+                    { id: '3', price: 30 }, // New item in overlay
                 ],
             };
             const trackByMap = {
                 items: 'id',
             };
 
-            const result = deepMergeViewStates(slow, fast, trackByMap);
+            const result = deepMergeViewStates(base, overlay, trackByMap);
 
             expect(result).toEqual({
                 items: [
                     { id: '1', name: 'Item 1', price: 10 },
                     { id: '2', name: 'Item 2', price: 20 },
-                    { id: '3', price: 30 }, // No name (only in fast)
+                    { id: '3', price: 30 }, // No name (only in overlay)
                 ],
             });
         });
 
         it('should handle nested objects within array items', () => {
-            const slow = {
+            const base = {
                 products: [
                     {
                         id: '1',
@@ -214,7 +213,7 @@ describe('deepMergeViewStates', () => {
                     },
                 ],
             };
-            const fast = {
+            const overlay = {
                 products: [
                     {
                         id: '1',
@@ -226,7 +225,7 @@ describe('deepMergeViewStates', () => {
                 products: 'id',
             };
 
-            const result = deepMergeViewStates(slow, fast, trackByMap);
+            const result = deepMergeViewStates(base, overlay, trackByMap);
 
             expect(result).toEqual({
                 products: [
@@ -244,84 +243,84 @@ describe('deepMergeViewStates', () => {
     });
 
     describe('edge cases', () => {
-        it('should handle empty slow object', () => {
-            const slow = {};
-            const fast = { count: 10 };
+        it('should handle empty base object', () => {
+            const base = {};
+            const overlay = { count: 10 };
             const trackByMap = {};
 
-            const result = deepMergeViewStates(slow, fast, trackByMap);
+            const result = deepMergeViewStates(base, overlay, trackByMap);
 
             expect(result).toEqual({ count: 10 });
         });
 
-        it('should handle empty fast object', () => {
-            const slow = { count: 5 };
-            const fast = {};
+        it('should handle empty overlay object', () => {
+            const base = { count: 5 };
+            const overlay = {};
             const trackByMap = {};
 
-            const result = deepMergeViewStates(slow, fast, trackByMap);
+            const result = deepMergeViewStates(base, overlay, trackByMap);
 
             expect(result).toEqual({ count: 5 });
         });
 
-        it('should handle undefined slow', () => {
-            const slow = undefined;
-            const fast = { count: 10 };
+        it('should handle undefined base', () => {
+            const base = undefined;
+            const overlay = { count: 10 };
             const trackByMap = {};
 
-            const result = deepMergeViewStates(slow, fast, trackByMap);
+            const result = deepMergeViewStates(base, overlay, trackByMap);
 
             expect(result).toEqual({ count: 10 });
         });
 
-        it('should handle undefined fast', () => {
-            const slow = { count: 5 };
-            const fast = undefined;
+        it('should handle undefined overlay', () => {
+            const base = { count: 5 };
+            const overlay = undefined;
             const trackByMap = {};
 
-            const result = deepMergeViewStates(slow, fast, trackByMap);
+            const result = deepMergeViewStates(base, overlay, trackByMap);
 
             expect(result).toEqual({ count: 5 });
         });
 
         it('should handle both undefined', () => {
-            const slow = undefined;
-            const fast = undefined;
+            const base = undefined;
+            const overlay = undefined;
             const trackByMap = {};
 
-            const result = deepMergeViewStates(slow, fast, trackByMap);
+            const result = deepMergeViewStates(base, overlay, trackByMap);
 
             expect(result).toEqual({});
         });
 
         it('should handle empty arrays', () => {
-            const slow = { items: [] };
-            const fast = { items: [] };
+            const base = { items: [] };
+            const overlay = { items: [] };
             const trackByMap = {
                 items: 'id',
             };
 
-            const result = deepMergeViewStates(slow, fast, trackByMap);
+            const result = deepMergeViewStates(base, overlay, trackByMap);
 
             expect(result).toEqual({ items: [] });
         });
 
-        it('should use fast array when trackBy info is missing from map', () => {
-            const slow = { items: [{ id: '1', name: 'Item 1' }] };
-            const fast = { items: [{ id: '1', price: 10 }] };
+        it('should use overlay array when trackBy info is missing from map', () => {
+            const base = { items: [{ id: '1', name: 'Item 1' }] };
+            const overlay = { items: [{ id: '1', price: 10 }] };
             const trackByMap = {}; // No trackBy info for items array
 
-            const result = deepMergeViewStates(slow, fast, trackByMap);
+            const result = deepMergeViewStates(base, overlay, trackByMap);
 
             expect(result).toEqual({
-                items: [{ id: '1', price: 10 }], // Fast array wins
+                items: [{ id: '1', price: 10 }], // Overlay array wins
             });
         });
     });
 
     describe('complex real-world example', () => {
         it('should merge a product page view state', () => {
-            const slow = {
+            const base = {
                 name: 'Awesome Widget',
                 sku: 'AWW-001',
                 description: 'A very cool widget',
@@ -335,7 +334,7 @@ describe('deepMergeViewStates', () => {
                 },
             };
 
-            const fast = {
+            const overlay = {
                 price: 49.99,
                 inStock: true,
                 images: [
@@ -352,7 +351,7 @@ describe('deepMergeViewStates', () => {
                 images: 'id',
             };
 
-            const result = deepMergeViewStates(slow, fast, trackByMap);
+            const result = deepMergeViewStates(base, overlay, trackByMap);
 
             expect(result).toEqual({
                 name: 'Awesome Widget',
@@ -374,3 +373,4 @@ describe('deepMergeViewStates', () => {
         });
     });
 });
+
