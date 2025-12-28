@@ -61,9 +61,10 @@ import { render } from "/page.jay-html.ts";
 
 const viewState = {};
 const fastCarryForward = {};
+const trackByMap = {};
 
 const target = document.getElementById('target');
-const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [])
+const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [], trackByMap)
 
 const instance = pageComp({...viewState, ...fastCarryForward})
 target.appendChild(instance.element.dom);
@@ -107,11 +108,12 @@ import {page} from "/page.ts"
 
 const viewState = {"title":"Page with Code","content":"This page has both a jay-html file and a code file"};
 const fastCarryForward = {};
+const trackByMap = {};
 
 const target = document.getElementById('target');
 const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [
 {comp: page.comp, contextMarkers: []}
-])
+], trackByMap)
 
 const instance = pageComp({...viewState, ...fastCarryForward})
 target.appendChild(instance.element.dom);
@@ -156,12 +158,13 @@ import {headless} from "/headless-component.ts"
 
 const viewState = {"title":"Page with Headless","content":"This page has a headless component","headless":{"content":"This is from the headless component"}};
 const fastCarryForward = {};
+const trackByMap = {};
 
 const target = document.getElementById('target');
 const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [
 {comp: page.comp, contextMarkers: []},
 {comp: headless.comp, contextMarkers: [], key: 'headless'}
-])
+], trackByMap)
 
 const instance = pageComp({...viewState, ...fastCarryForward})
 target.appendChild(instance.element.dom);

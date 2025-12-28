@@ -175,7 +175,7 @@ describe('deepMergeViewStates', () => {
             });
         });
 
-        it('should handle items only in overlay array', () => {
+        it('should NOT add items that only exist in overlay array', () => {
             const base = {
                 items: [
                     { id: '1', name: 'Item 1' },
@@ -186,7 +186,7 @@ describe('deepMergeViewStates', () => {
                 items: [
                     { id: '1', price: 10 },
                     { id: '2', price: 20 },
-                    { id: '3', price: 30 }, // New item in overlay
+                    { id: '3', price: 30 }, // New item in overlay - should be ignored
                 ],
             };
             const trackByMap = {
@@ -195,11 +195,11 @@ describe('deepMergeViewStates', () => {
 
             const result = deepMergeViewStates(base, overlay, trackByMap);
 
+            // id: '3' is NOT added - base defines the structure
             expect(result).toEqual({
                 items: [
                     { id: '1', name: 'Item 1', price: 10 },
                     { id: '2', name: 'Item 2', price: 20 },
-                    { id: '3', price: 30 }, // No name (only in overlay)
                 ],
             });
         });
@@ -373,4 +373,3 @@ describe('deepMergeViewStates', () => {
         });
     });
 });
-

@@ -17,4 +17,3 @@ export default defineConfig({
         setupFiles: '@jay-framework/dev-environment/library/vitest.setup.ts',
     },
 });
-

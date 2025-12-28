@@ -8,6 +8,7 @@ This library provides a deep merge algorithm that correctly combines ViewStates 
 
 1. **Deep merges nested objects** - Preserves properties from both sources at any nesting depth
 2. **Merges arrays by identity** - Uses `trackBy` metadata to match array items by their identity field (e.g., `id`) and merge their properties
+3. **Base defines structure** - Items only in overlay are NOT added; the base array defines which items exist
 
 ## Usage
 
@@ -15,23 +16,23 @@ This library provides a deep merge algorithm that correctly combines ViewStates 
 import { deepMergeViewStates, TrackByMap } from '@jay-framework/view-state-merge';
 
 const base = {
-    name: 'Product',
-    items: [
-        { id: '1', title: 'Item 1' },
-        { id: '2', title: 'Item 2' },
-    ],
+  name: 'Product',
+  items: [
+    { id: '1', title: 'Item 1' },
+    { id: '2', title: 'Item 2' },
+  ],
 };
 
 const overlay = {
-    price: 29.99,
-    items: [
-        { id: '1', selected: true },
-        { id: '2', selected: false },
-    ],
+  price: 29.99,
+  items: [
+    { id: '1', selected: true },
+    { id: '2', selected: false },
+  ],
 };
 
 const trackByMap: TrackByMap = {
-    items: 'id', // 'items' array uses 'id' field for identity
+  items: 'id', // 'items' array uses 'id' field for identity
 };
 
 const merged = deepMergeViewStates(base, overlay, trackByMap);
@@ -71,4 +72,3 @@ Keys are dot-separated property paths (e.g., `"items"`, `"user.orders"`), values
 
 - Design Log #56: Deep Merge View States with Track-By
 - Design Log #62: Relocate Deep Merge for Stack-Client-Runtime
-

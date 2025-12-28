@@ -98,60 +98,31 @@ function mergeArraysByTrackBy(
         }
     }
 
-    // Build index of overlay items by trackBy key
+    // Build index of overlay items by trackBy key for quick lookup
     const overlayByKey = new Map<string | number, any>();
     for (const item of overlayArray) {
         const key = item[trackByField];
         if (key !== undefined && key !== null) {
-            if (overlayByKey.has(key)) {
-                console.warn(
-                    `Duplicate trackBy key [${key}] in overlay array at path [${arrayPath}]. ` +
-                        `This may cause incorrect merging.`,
-                );
-            }
             overlayByKey.set(key, item);
         }
     }
 
-    // Merge: Start with base array order, merge matching overlay items
-    const result: any[] = [];
-    const processedKeys = new Set<string | number>();
-
-    for (const baseItem of baseArray) {
+    // Merge: Iterate base array, merge matching overlay items
+    // Items only in overlay are NOT added (base defines the structure)
+    return baseArray.map((baseItem) => {
         const key = baseItem[trackByField];
         if (key === undefined || key === null) {
-            // Item missing trackBy key - include base item as-is
-            result.push(baseItem);
-            continue;
+            // Item missing trackBy key - return base item as-is
+            return baseItem;
         }
 
-        processedKeys.add(key);
         const overlayItem = overlayByKey.get(key);
-
         if (overlayItem) {
             // Item exists in both: deep merge the item objects
-            const mergedItem = deepMergeViewStates(baseItem, overlayItem, trackByMap, arrayPath);
-            result.push(mergedItem);
+            return deepMergeViewStates(baseItem, overlayItem, trackByMap, arrayPath);
         } else {
-            // Item only in base
-            result.push(baseItem);
+            // Item only in base - return as-is
+            return baseItem;
         }
-    }
-
-    // Add items that only exist in overlay
-    for (const overlayItem of overlayArray) {
-        const key = overlayItem[trackByField];
-        if (key === undefined || key === null) {
-            // Item missing trackBy key - include overlay item as-is
-            result.push(overlayItem);
-            continue;
-        }
-
-        if (!processedKeys.has(key)) {
-            result.push(overlayItem);
-        }
-    }
-
-    return result;
+    });
 }
-

@@ -34,9 +34,6 @@ export function makeCompositeJayComponent<
     // Both params are always provided when fast rendering exists (even if empty objects)
     const hasFastRendering = defaultViewState !== null && defaultViewState !== undefined;
 
-    // Check if we have trackBy info for deep merging
-    const hasTrackByInfo = Object.keys(trackByMap).length > 0;
-
     const comp = (props: Props<any>, refs, ...contexts): CompCore => {
         const instances: Array<[string, JayComponentCore<any, any>]> = parts.map((part) => {
             const partRefs = part.key ? refs[part.key] : refs;
@@ -71,33 +68,20 @@ export function makeCompositeJayComponent<
                 instances.forEach(([key, instance]) => {
                     const rendered = materializeViewState(instance.render());
                     if (key) {
-                        if (hasTrackByInfo) {
-                            // Deep merge using trackBy for arrays
-                            viewState[key] = deepMergeViewStates(
-                                defaultViewState[key],
-                                rendered,
-                                trackByMap,
-                                key,
-                            );
-                        } else {
-                            // Fallback to shallow merge
-                            viewState[key] = {
-                                ...defaultViewState[key],
-                                ...rendered,
-                            };
-                        }
+                        // Deep merge using trackBy for arrays (handles empty trackByMap gracefully)
+                        viewState[key] = deepMergeViewStates(
+                            defaultViewState[key],
+                            rendered,
+                            trackByMap,
+                            key,
+                        );
                     } else {
-                        if (hasTrackByInfo) {
-                            // Deep merge using trackBy for arrays
-                            viewState = deepMergeViewStates(
-                                viewState,
-                                rendered,
-                                trackByMap,
-                            ) as ViewState;
-                        } else {
-                            // Fallback to shallow merge
-                            viewState = { ...viewState, ...rendered };
-                        }
+                        // Deep merge using trackBy for arrays
+                        viewState = deepMergeViewStates(
+                            viewState,
+                            rendered,
+                            trackByMap,
+                        ) as ViewState;
                     }
                 });
                 return viewState;
