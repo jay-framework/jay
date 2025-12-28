@@ -242,6 +242,49 @@ describe('deepMergeViewStates', () => {
         });
     });
 
+    describe('arrays without trackBy (overlay replacement)', () => {
+        it('should replace array with overlay when trackBy info is missing', () => {
+            const base = { items: [{ id: '1', name: 'Item 1' }] };
+            const overlay = { items: [{ id: '1', price: 10 }] };
+            const trackByMap = {}; // No trackBy info for items array
+
+            const result = deepMergeViewStates(base, overlay, trackByMap);
+
+            // Without trackBy, overlay array completely replaces base array
+            expect(result).toEqual({
+                items: [{ id: '1', price: 10 }],
+            });
+        });
+
+        it('should allow full array replacement for dynamic lists', () => {
+            const base = {
+                searchResults: [
+                    { id: '1', title: 'Old Result 1' },
+                    { id: '2', title: 'Old Result 2' },
+                ],
+            };
+            const overlay = {
+                searchResults: [
+                    { id: '3', title: 'New Result 1' },
+                    { id: '4', title: 'New Result 2' },
+                    { id: '5', title: 'New Result 3' },
+                ],
+            };
+            const trackByMap = {}; // Intentionally no trackBy - we want full replacement
+
+            const result = deepMergeViewStates(base, overlay, trackByMap);
+
+            // Overlay completely replaces base - useful for search results, filters, etc.
+            expect(result).toEqual({
+                searchResults: [
+                    { id: '3', title: 'New Result 1' },
+                    { id: '4', title: 'New Result 2' },
+                    { id: '5', title: 'New Result 3' },
+                ],
+            });
+        });
+    });
+
     describe('edge cases', () => {
         it('should handle empty base object', () => {
             const base = {};
@@ -303,18 +346,6 @@ describe('deepMergeViewStates', () => {
             const result = deepMergeViewStates(base, overlay, trackByMap);
 
             expect(result).toEqual({ items: [] });
-        });
-
-        it('should use overlay array when trackBy info is missing from map', () => {
-            const base = { items: [{ id: '1', name: 'Item 1' }] };
-            const overlay = { items: [{ id: '1', price: 10 }] };
-            const trackByMap = {}; // No trackBy info for items array
-
-            const result = deepMergeViewStates(base, overlay, trackByMap);
-
-            expect(result).toEqual({
-                items: [{ id: '1', price: 10 }], // Overlay array wins
-            });
         });
     });
 
