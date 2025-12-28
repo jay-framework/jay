@@ -1162,8 +1162,9 @@ describe('compiler', () => {
 
             // Backward compatible: no contract auto-generation for inline data only
             expect(jayFile.val.contract).toBeUndefined();
-            // But trackByMap should be empty
-            expect(jayFile.val.trackByMap).toBeUndefined();
+            // But trackByMaps should be empty
+            expect(jayFile.val.serverTrackByMap).toBeUndefined();
+            expect(jayFile.val.clientTrackByMap).toBeUndefined();
         });
 
         it('should preserve page contract when no headless imports', async () => {
@@ -1266,8 +1267,12 @@ describe('compiler', () => {
             // No contract auto-generation (backward compatible)
             expect(jayFile.val.contract).toBeUndefined();
 
-            // But trackByMap should be extracted from headless contract
-            expect(jayFile.val.trackByMap).toEqual({
+            // But trackByMaps should be extracted from headless contract
+            // Both maps are equal since there are no fast+interactive arrays
+            expect(jayFile.val.serverTrackByMap).toEqual({
+                'myCounter.items': 'id',
+            });
+            expect(jayFile.val.clientTrackByMap).toEqual({
                 'myCounter.items': 'id',
             });
         });
@@ -1360,7 +1365,12 @@ describe('compiler', () => {
             expect(jayFile.val.contract).toEqual(pageContract);
 
             // TrackBy extracted from both page and headless contracts
-            expect(jayFile.val.trackByMap).toEqual({
+            // Both maps are equal since there are no fast+interactive arrays
+            expect(jayFile.val.serverTrackByMap).toEqual({
+                items: 'itemId',
+                'myCounter.entries': 'id',
+            });
+            expect(jayFile.val.clientTrackByMap).toEqual({
                 items: 'itemId',
                 'myCounter.entries': 'id',
             });
@@ -1470,9 +1480,82 @@ describe('compiler', () => {
             expect(jayFile.val.contract).toEqual(pageContract);
 
             // TrackBy extracted from both headless contracts
-            expect(jayFile.val.trackByMap).toEqual({
+            // Both maps are equal since there are no fast+interactive arrays
+            expect(jayFile.val.serverTrackByMap).toEqual({
                 'myCounter.counts': 'countId',
                 'myTimer.intervals': 'intervalId',
+            });
+            expect(jayFile.val.clientTrackByMap).toEqual({
+                'myCounter.counts': 'countId',
+                'myTimer.intervals': 'intervalId',
+            });
+        });
+
+        it('should exclude fast+interactive arrays from clientTrackByMap', async () => {
+            const pageContract: Contract = {
+                name: 'searchPage',
+                tags: [
+                    {
+                        tag: 'staticItems',
+                        type: [ContractTagType.subContract],
+                        repeated: true,
+                        trackBy: 'id',
+                        phase: 'slow', // Static array - structure defined at slow phase
+                        tags: [
+                            { tag: 'id', type: [ContractTagType.data], dataType: JayString },
+                            { tag: 'name', type: [ContractTagType.data], dataType: JayString },
+                        ],
+                    },
+                    {
+                        tag: 'searchResults',
+                        type: [ContractTagType.subContract],
+                        repeated: true,
+                        trackBy: 'id',
+                        phase: 'fast+interactive', // Dynamic array - can be replaced by interactive
+                        tags: [
+                            { tag: 'id', type: [ContractTagType.data], dataType: JayString },
+                            { tag: 'title', type: [ContractTagType.data], dataType: JayString },
+                        ],
+                    },
+                ],
+            };
+
+            const resolverWithDynamicArray: JayImportResolver = {
+                ...defaultImportResolver,
+                loadContract(fullPath: string): WithValidations<Contract> {
+                    return new WithValidations(pageContract, []);
+                },
+                resolveLink(importingModule: string, link: string): string {
+                    return '/path/to/page.jay-contract';
+                },
+            };
+
+            const jayFile = await parseJayFile(
+                stripMargin(
+                    `<html>
+                    |   <head>
+                    |     <script type="application/jay-data" contract="./page.jay-contract"></script>
+                    |   </head>
+                    |   <body></body>
+                    | </html>`,
+                ),
+                'Page',
+                '',
+                {},
+                resolverWithDynamicArray,
+                '',
+            );
+
+            // Server needs trackBy for both arrays (slow → fast merge)
+            expect(jayFile.val.serverTrackByMap).toEqual({
+                staticItems: 'id',
+                searchResults: 'id',
+            });
+
+            // Client excludes fast+interactive array (interactive can replace it entirely)
+            expect(jayFile.val.clientTrackByMap).toEqual({
+                staticItems: 'id',
+                // searchResults is NOT here - it's dynamic
             });
         });
     });

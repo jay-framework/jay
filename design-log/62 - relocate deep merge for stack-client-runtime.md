@@ -100,3 +100,29 @@ Instead of passing `trackByMap` separately, could the contract compiler embed tr
    - Import `deepMergeViewStates` from new library
    - Modify `makeCompositeJayComponent` to accept `trackByMap` parameter
    - Replace shallow merge in render function with `deepMergeViewStates`
+
+## Lessons Learned During Implementation
+
+### 1. Base Defines Structure
+
+Overlay-only array items should NOT be added. The base (defaultViewState) defines which items exist; overlay only updates properties on existing items.
+
+### 2. Arrays Without trackBy = Full Replacement
+
+When an array path is not in trackByMap, the overlay array completely replaces the base. This is a feature, not a limitation—useful for dynamic lists like search results.
+
+### 3. Server vs Client TrackByMaps
+
+Contracts require `trackBy` on all repeated arrays, but not all need identity-based merging on the client:
+
+| Array Phase        | Server | Client | Reason                                           |
+| ------------------ | ------ | ------ | ------------------------------------------------ |
+| `slow`             | ✅     | ✅     | Structure from slow, updated in fast/interactive |
+| `fast`             | ✅     | ✅     | Structure from fast, updated in interactive      |
+| `fast+interactive` | ✅     | ❌     | Interactive can fully replace (dynamic)          |
+
+Solution: Generate two maps—`serverTrackByMap` (all arrays) and `clientTrackByMap` (excludes `fast+interactive` arrays).
+
+### 4. No Conditional Check Needed
+
+`deepMergeViewStates` handles empty trackByMap gracefully—arrays without trackBy info use overlay replacement. No need for `if (hasTrackByInfo)` branching.

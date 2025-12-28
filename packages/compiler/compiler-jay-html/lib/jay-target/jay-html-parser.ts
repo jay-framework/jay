@@ -27,7 +27,7 @@ import {
 import { SourceFileFormat } from '@jay-framework/compiler-shared';
 import { JayImportLink, JayImportName } from '@jay-framework/compiler-shared';
 import { JayYamlStructure } from './jay-yaml-structure';
-import { Contract, ContractTag } from '../contract';
+import { Contract, ContractTag, RenderingPhase } from '../contract';
 
 import {
     JayHeadlessImports,
@@ -767,28 +767,47 @@ async function extractCss(
 
 /**
  * Extract trackBy information from contracts for use in deep merge algorithm.
- * Returns a map from property path to trackBy field name.
- * e.g., { "items": "id", "counter.items": "itemId" }
+ * Returns two maps:
+ * - serverTrackByMap: for slow→fast merge (all tracked arrays)
+ * - clientTrackByMap: for fast→interactive merge (excludes fast+interactive arrays)
+ *
+ * Arrays with phase 'fast+interactive' are dynamic and can be completely replaced
+ * by interactive updates, so they don't need identity-based merging on the client.
  */
-function extractTrackByMap(
+function extractTrackByMaps(
     pageContract: Contract | undefined,
     headlessImports: JayHeadlessImports[],
-): Record<string, string> {
-    const trackByMap: Record<string, string> = {};
+): { serverTrackByMap: Record<string, string>; clientTrackByMap: Record<string, string> } {
+    const serverTrackByMap: Record<string, string> = {};
+    const clientTrackByMap: Record<string, string> = {};
 
-    function extractFromTags(tags: ContractTag[], basePath: string = '') {
+    function extractFromTags(
+        tags: ContractTag[],
+        basePath: string = '',
+        parentPhase?: RenderingPhase,
+    ) {
         for (const tag of tags) {
             const propertyName = camelCase(tag.tag);
             const currentPath = basePath ? `${basePath}.${propertyName}` : propertyName;
+            const effectivePhase = tag.phase || parentPhase || 'slow';
 
             // If this is a repeated sub-contract with trackBy, record it
             if (tag.repeated && tag.trackBy) {
-                trackByMap[currentPath] = camelCase(tag.trackBy);
+                const trackByField = camelCase(tag.trackBy);
+
+                // Server always needs trackBy for slow→fast merge
+                serverTrackByMap[currentPath] = trackByField;
+
+                // Client only needs trackBy for non-interactive arrays
+                // Arrays with 'fast+interactive' phase can be fully replaced by interactive
+                if (effectivePhase !== 'fast+interactive') {
+                    clientTrackByMap[currentPath] = trackByField;
+                }
             }
 
             // Recurse into nested tags
             if (tag.tags) {
-                extractFromTags(tag.tags, currentPath);
+                extractFromTags(tag.tags, currentPath, effectivePhase);
             }
         }
     }
@@ -805,7 +824,7 @@ function extractTrackByMap(
         }
     }
 
-    return trackByMap;
+    return { serverTrackByMap, clientTrackByMap };
 }
 
 export async function parseJayFile(
@@ -870,7 +889,10 @@ export async function parseJayFile(
     }
 
     // Extract trackBy information from contracts for deep merge
-    const trackByMap = extractTrackByMap(jayYaml.parsedContract, headlessImports);
+    const { serverTrackByMap, clientTrackByMap } = extractTrackByMaps(
+        jayYaml.parsedContract,
+        headlessImports,
+    );
 
     return new WithValidations(
         {
@@ -887,7 +909,10 @@ export async function parseJayFile(
             contract: jayYaml.parsedContract,
             contractRef: jayYaml.contractRef,
             hasInlineData: jayYaml.hasInlineData,
-            trackByMap: Object.keys(trackByMap).length > 0 ? trackByMap : undefined,
+            serverTrackByMap:
+                Object.keys(serverTrackByMap).length > 0 ? serverTrackByMap : undefined,
+            clientTrackByMap:
+                Object.keys(clientTrackByMap).length > 0 ? clientTrackByMap : undefined,
         } as JayHtmlSourceFile,
         validations,
     );

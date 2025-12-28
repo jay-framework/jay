@@ -102,7 +102,11 @@ function mkRoute(
             );
 
             if (pagePartsResult.val) {
-                const { parts: pageParts, trackByMap } = pagePartsResult.val;
+                const {
+                    parts: pageParts,
+                    serverTrackByMap,
+                    clientTrackByMap,
+                } = pagePartsResult.val;
 
                 const renderedSlowly = await slowlyPhase.runSlowlyForPage(
                     pageParams,
@@ -118,12 +122,12 @@ function mkRoute(
                         pageParts,
                     );
                     if (renderedFast.kind === 'PhaseOutput') {
-                        // Deep merge view states using trackBy metadata
-                        if (trackByMap && Object.keys(trackByMap).length > 0) {
+                        // Deep merge view states using trackBy metadata (server-side: slow + fast)
+                        if (serverTrackByMap && Object.keys(serverTrackByMap).length > 0) {
                             viewState = deepMergeViewStates(
                                 renderedSlowly.rendered,
                                 renderedFast.rendered,
-                                trackByMap,
+                                serverTrackByMap,
                             );
                         } else {
                             // Fallback to shallow merge if no trackBy info available
@@ -131,12 +135,13 @@ function mkRoute(
                         }
                         carryForward = renderedFast.carryForward;
 
+                        // Pass clientTrackByMap to client (excludes fast+interactive arrays)
                         const pageHtml = generateClientScript(
                             viewState,
                             carryForward,
                             pageParts,
                             route.jayHtmlPath,
-                            trackByMap,
+                            clientTrackByMap,
                         );
 
                         const compiledPageHtml = await vite.transformIndexHtml(

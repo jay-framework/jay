@@ -19,7 +19,10 @@ export interface DevServerPagePart {
 
 export interface LoadedPageParts {
     parts: DevServerPagePart[];
-    trackByMap?: Record<string, string>;
+    /** TrackBy map for server-side merge (slow → fast) */
+    serverTrackByMap?: Record<string, string>;
+    /** TrackBy map for client-side merge (fast → interactive) */
+    clientTrackByMap?: Record<string, string>;
 }
 
 export async function loadPageParts(
@@ -92,7 +95,8 @@ export async function loadPageParts(
         }
         return {
             parts,
-            trackByMap: jayHtml.trackByMap,
+            serverTrackByMap: jayHtml.serverTrackByMap,
+            clientTrackByMap: jayHtml.clientTrackByMap,
         };
     });
 }

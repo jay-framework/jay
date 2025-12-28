@@ -101,6 +101,7 @@ const trackByMap = {}; // No trackBy for searchResults
 ```
 
 This is useful for:
+
 - Search results that change entirely
 - Filtered lists
 - Paginated data
