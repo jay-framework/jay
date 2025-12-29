@@ -2,7 +2,7 @@
  * Service lifecycle management for the Jay Stack dev-server.
  *
  * Handles loading jay.init.ts, running init/shutdown callbacks,
- * hot reloading services, and graceful shutdown.
+ * hot reloading services, graceful shutdown, and action auto-discovery.
  */
 
 import {
@@ -10,6 +10,8 @@ import {
     runShutdownCallbacks,
     clearLifecycleCallbacks,
     clearServiceRegistry,
+    discoverAndRegisterActions,
+    actionRegistry,
 } from '@jay-framework/stack-server-runtime';
 import * as path from 'node:path';
 import * as fs from 'node:fs';
@@ -52,7 +54,8 @@ export class ServiceLifecycleManager {
     }
 
     /**
-     * Initializes services by loading and executing jay.init.ts
+     * Initializes services by loading and executing jay.init.ts,
+     * then auto-discovers and registers actions.
      */
     async initialize(): Promise<void> {
         if (this.isInitialized) {
@@ -62,34 +65,58 @@ export class ServiceLifecycleManager {
 
         this.initFilePath = this.findInitFile();
 
-        if (!this.initFilePath) {
+        if (this.initFilePath) {
+            console.log(`[Services] Loading initialization file: ${this.initFilePath}`);
+
+            try {
+                // Load jay.init.ts through Vite's SSR loader (handles TypeScript)
+                // Vite is configured to treat @jay-framework/stack-server-runtime as external,
+                // so both this file and jay.init.ts will share the same module instance
+                if (this.viteServer) {
+                    await this.viteServer.ssrLoadModule(this.initFilePath);
+                } else {
+                    // Fallback for production: use native import (requires .js files)
+                    const fileUrl = pathToFileURL(this.initFilePath).href;
+                    await import(fileUrl);
+                }
+
+                // Execute registered init callbacks
+                // This works because Vite uses Node's require for stack-server-runtime (external)
+                await runInitCallbacks();
+
+                console.log('[Services] Initialization complete');
+            } catch (error) {
+                console.error('[Services] Failed to initialize:', error);
+                throw error;
+            }
+        } else {
             console.log('[Services] No jay.init.ts found in src/, skipping service initialization');
-            return;
         }
 
-        console.log(`[Services] Loading initialization file: ${this.initFilePath}`);
+        // Auto-discover and register actions from src/actions/
+        await this.discoverActions();
 
+        this.isInitialized = true;
+    }
+
+    /**
+     * Auto-discovers and registers actions from the project's actions directory.
+     */
+    private async discoverActions(): Promise<void> {
         try {
-            // Load jay.init.ts through Vite's SSR loader (handles TypeScript)
-            // Vite is configured to treat @jay-framework/stack-server-runtime as external,
-            // so both this file and jay.init.ts will share the same module instance
-            if (this.viteServer) {
-                await this.viteServer.ssrLoadModule(this.initFilePath);
-            } else {
-                // Fallback for production: use native import (requires .js files)
-                const fileUrl = pathToFileURL(this.initFilePath).href;
-                await import(fileUrl);
+            const result = await discoverAndRegisterActions({
+                projectRoot: this.projectRoot,
+                actionsDir: path.join(this.sourceBase, 'actions'),
+                registry: actionRegistry,
+                verbose: true,
+            });
+
+            if (result.actionCount > 0) {
+                console.log(`[Actions] Auto-registered ${result.actionCount} action(s)`);
             }
-
-            // Execute registered init callbacks
-            // This works because Vite uses Node's require for stack-server-runtime (external)
-            await runInitCallbacks();
-
-            this.isInitialized = true;
-            console.log('[Services] Initialization complete');
         } catch (error) {
-            console.error('[Services] Failed to initialize:', error);
-            throw error;
+            console.error('[Actions] Failed to auto-discover actions:', error);
+            // Don't throw - actions are optional
         }
     }
 
@@ -128,11 +155,6 @@ export class ServiceLifecycleManager {
      * Hot reload: shutdown, clear caches, re-import, and re-initialize
      */
     async reload(): Promise<void> {
-        if (!this.initFilePath) {
-            console.log('[Services] No init file to reload');
-            return;
-        }
-
         console.log('[Services] Reloading services...');
 
         // Step 1: Graceful shutdown
@@ -142,15 +164,16 @@ export class ServiceLifecycleManager {
         // Uses the same stack-server-runtime instance due to Vite's external config
         clearLifecycleCallbacks();
         clearServiceRegistry();
+        actionRegistry.clear();
 
         // Step 3: Invalidate module caches
-        if (this.viteServer) {
+        if (this.initFilePath && this.viteServer) {
             // Invalidate Vite's module cache for jay.init.ts
             const moduleNode = this.viteServer.moduleGraph.getModuleById(this.initFilePath);
             if (moduleNode) {
                 await this.viteServer.moduleGraph.invalidateModule(moduleNode);
             }
-        } else {
+        } else if (this.initFilePath) {
             // Clear Node.js module cache (production fallback)
             delete require.cache[require.resolve(this.initFilePath)];
         }

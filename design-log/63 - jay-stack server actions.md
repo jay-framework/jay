@@ -1153,10 +1153,21 @@ export async function onInit() {
 - Server builds: No transform (actions execute directly)
 - Client builds: Replace `import { addToCart } from './actions/cart.actions'` with `const addToCart = createActionCaller('cart.addToCart', 'POST')`
 
-### Total Test Count: 77 tests
+### Phase 4: Auto-Registration ✅
+
+**Action Discovery** (`@jay-framework/stack-server-runtime`)
+- `discoverAndRegisterActions()` - scans `src/actions/*.actions.ts` and registers actions
+- `discoverPluginActions()` - reads `plugin.yaml` for plugin action declarations
+- Recursive directory scanning for nested action files
+- Integrated into `ServiceLifecycleManager.initialize()`
+- 6 tests passing
+
+**Dev-Server Integration**
+- Actions auto-discovered after `jay.init.ts` runs
+- Actions cleared and re-discovered on hot reload
+- No manual `registerAction()` calls needed in user code
 
 ### Remaining Work
 
-1. **Auto-registration** - Generate server entry code to auto-register actions
-2. **Plugin actions** - Support `plugin.yaml` action declarations
-3. **Package import resolution** - Handle `@jay-plugin-*` action imports in transform
+1. **Plugin actions** - Full `plugin.yaml` integration for plugin actions
+2. **Package import resolution** - Handle `@jay-plugin-*` action imports in client transform

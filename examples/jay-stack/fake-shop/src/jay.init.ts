@@ -1,32 +1,20 @@
 /**
- * Service and action initialization for the fake-shop example.
+ * Service initialization for the fake-shop example.
  *
  * This file is loaded by the dev-server on startup and registers
- * all services and actions that the application uses.
+ * all services that the application uses.
+ *
+ * Note: Actions are auto-discovered and registered from src/actions/
+ * by the dev-server, so no manual registerAction() calls are needed.
  */
 
 import {
     onInit,
     onShutdown,
     registerService,
-    registerAction,
 } from '@jay-framework/stack-server-runtime';
 import { PRODUCTS_DATABASE_SERVICE, createProductsDatabaseService } from './products-database';
 import { INVENTORY_SERVICE, createInventoryService } from './inventory-service';
-
-// Import actions for registration
-import {
-    addToCart,
-    getCart,
-    removeFromCart,
-    updateCartQuantity,
-    clearCart,
-} from './actions/cart.actions';
-import {
-    searchProducts,
-    getProductBySlug,
-    getAllProducts,
-} from './actions/search.actions';
 
 onInit(async () => {
     console.log('[Fake Shop] Initializing services...');
@@ -41,22 +29,8 @@ onInit(async () => {
 
     console.log('[Fake Shop] Services initialized!');
 
-    // Register actions
-    console.log('[Fake Shop] Registering actions...');
-
-    // Cart actions
-    registerAction(addToCart);
-    registerAction(getCart);
-    registerAction(removeFromCart);
-    registerAction(updateCartQuantity);
-    registerAction(clearCart);
-
-    // Search/product actions
-    registerAction(searchProducts);
-    registerAction(getProductBySlug);
-    registerAction(getAllProducts);
-
-    console.log('[Fake Shop] Actions registered!');
+    // Actions are auto-discovered from src/actions/*.actions.ts
+    // No manual registration needed!
 });
 
 onShutdown(async () => {
