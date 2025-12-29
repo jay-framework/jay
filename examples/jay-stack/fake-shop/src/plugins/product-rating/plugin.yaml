@@ -5,3 +5,6 @@ contracts:
     contract: ./product-rating.jay-contract
     component: productRating
     description: Product rating widget with stars and review count
+actions:
+  - submitRating
+  - getRatings

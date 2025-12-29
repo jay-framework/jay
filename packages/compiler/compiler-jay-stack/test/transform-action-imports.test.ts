@@ -279,6 +279,64 @@ describe('transform-action-imports', () => {
 
             expect(await prettify(result!.code)).toEqual(await prettify(expected));
         });
+
+        it('should transform plugin component that imports actions from same plugin', async () => {
+            const pluginActionSource = `
+                import { makeJayAction, makeJayQuery } from '@jay-framework/fullstack-component';
+
+                export const submitRating = makeJayAction('rating.submit')
+                    .withHandler(async (input) => ({ success: true }));
+
+                export const getRatings = makeJayQuery('rating.get')
+                    .withCaching({ maxAge: 60 })
+                    .withHandler(async (input) => ({ ratings: [] }));
+            `;
+
+            const mockPluginResolve = async (importSource: string, _importer: string) => {
+                if (importSource.includes('rating.actions')) {
+                    return { path: '/plugin/rating.actions.ts', code: pluginActionSource };
+                }
+                return null;
+            };
+
+            // Plugin component importing actions from same plugin
+            const source = `
+                import { makeJayStackComponent } from '@jay-framework/fullstack-component';
+                import { submitRating, getRatings } from './rating.actions';
+
+                export const ratingWidget = makeJayStackComponent()
+                    .withInteractive((props, refs) => {
+                        refs.submitBtn.onclick(async () => {
+                            await submitRating({ rating: 5 });
+                        });
+                    });
+            `;
+
+            const result = await transformActionImports(
+                source,
+                '/plugin/rating-widget.ts',
+                mockPluginResolve,
+            );
+
+            expect(result).not.toBeNull();
+
+            const expected = `
+                import { createActionCaller } from '@jay-framework/stack-client-runtime';
+
+                import { makeJayStackComponent } from '@jay-framework/fullstack-component';
+                const submitRating = createActionCaller('rating.submit', 'POST');
+                const getRatings = createActionCaller('rating.get', 'GET');
+
+                export const ratingWidget = makeJayStackComponent()
+                    .withInteractive((props, refs) => {
+                        refs.submitBtn.onclick(async () => {
+                            await submitRating({ rating: 5 });
+                        });
+                    });
+            `;
+
+            expect(await prettify(result!.code)).toEqual(await prettify(expected));
+        });
     });
 });
 

@@ -11,6 +11,7 @@ import {
     clearLifecycleCallbacks,
     clearServiceRegistry,
     discoverAndRegisterActions,
+    discoverAllPluginActions,
     actionRegistry,
 } from '@jay-framework/stack-server-runtime';
 import * as path from 'node:path';
@@ -100,9 +101,12 @@ export class ServiceLifecycleManager {
     }
 
     /**
-     * Auto-discovers and registers actions from the project's actions directory.
+     * Auto-discovers and registers actions from project and plugins.
      */
     private async discoverActions(): Promise<void> {
+        let totalActions = 0;
+
+        // Discover project actions from src/actions/
         try {
             const result = await discoverAndRegisterActions({
                 projectRoot: this.projectRoot,
@@ -111,12 +115,26 @@ export class ServiceLifecycleManager {
                 verbose: true,
             });
 
-            if (result.actionCount > 0) {
-                console.log(`[Actions] Auto-registered ${result.actionCount} action(s)`);
-            }
+            totalActions += result.actionCount;
         } catch (error) {
-            console.error('[Actions] Failed to auto-discover actions:', error);
-            // Don't throw - actions are optional
+            console.error('[Actions] Failed to auto-discover project actions:', error);
+        }
+
+        // Discover plugin actions from src/plugins/
+        try {
+            const pluginActions = await discoverAllPluginActions({
+                projectRoot: this.projectRoot,
+                registry: actionRegistry,
+                verbose: true,
+            });
+
+            totalActions += pluginActions.length;
+        } catch (error) {
+            console.error('[Actions] Failed to auto-discover plugin actions:', error);
+        }
+
+        if (totalActions > 0) {
+            console.log(`[Actions] Auto-registered ${totalActions} action(s) total`);
         }
     }
 

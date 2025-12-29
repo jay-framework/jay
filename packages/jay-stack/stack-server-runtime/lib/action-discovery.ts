@@ -9,6 +9,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { ActionRegistry, actionRegistry } from './action-registry';
 import { isJayAction } from '@jay-framework/fullstack-component';
+import { loadPluginManifest } from '@jay-framework/compiler-shared';
 
 /**
  * Options for action discovery.
@@ -139,104 +140,121 @@ async function findActionFiles(dir: string): Promise<string[]> {
 }
 
 /**
- * Discovers actions from plugin.yaml files.
+ * Options for discovering plugin actions.
+ */
+export interface PluginActionDiscoveryOptions {
+    /** Project root directory */
+    projectRoot: string;
+    /** Registry to register actions in (default: global actionRegistry) */
+    registry?: ActionRegistry;
+    /** Whether to log discovery progress */
+    verbose?: boolean;
+}
+
+/**
+ * Discovers and registers actions from all plugins in a project.
+ *
+ * Scans both local plugins (src/plugins/) and installed NPM plugins.
+ *
+ * @param options - Discovery options
+ * @returns Array of registered action names
+ */
+export async function discoverAllPluginActions(
+    options: PluginActionDiscoveryOptions,
+): Promise<string[]> {
+    const { projectRoot, registry = actionRegistry, verbose = false } = options;
+    const allActions: string[] = [];
+
+    // Discover local plugins in src/plugins/
+    const localPluginsPath = path.join(projectRoot, 'src/plugins');
+    if (fs.existsSync(localPluginsPath)) {
+        const pluginDirs = await fs.promises.readdir(localPluginsPath, { withFileTypes: true });
+
+        for (const entry of pluginDirs) {
+            if (entry.isDirectory()) {
+                const pluginPath = path.join(localPluginsPath, entry.name);
+                const actions = await discoverPluginActions(pluginPath, projectRoot, registry, verbose);
+                allActions.push(...actions);
+            }
+        }
+    }
+
+    return allActions;
+}
+
+/**
+ * Discovers actions from a single plugin's plugin.yaml file.
  *
  * Reads plugin.yaml, finds the `actions` array, and imports those
- * named exports from the plugin's backend bundle.
+ * named exports from the plugin's module.
  *
  * @param pluginPath - Path to the plugin directory (containing plugin.yaml)
+ * @param projectRoot - Project root for resolving imports
  * @param registry - Registry to register actions in
+ * @param verbose - Whether to log progress
  * @returns Array of registered action names
  */
 export async function discoverPluginActions(
     pluginPath: string,
+    projectRoot: string,
     registry: ActionRegistry = actionRegistry,
+    verbose: boolean = false,
 ): Promise<string[]> {
-    const pluginYamlPath = path.join(pluginPath, 'plugin.yaml');
+    // Use shared plugin manifest loader
+    const pluginConfig = loadPluginManifest(pluginPath);
 
-    if (!fs.existsSync(pluginYamlPath)) {
+    if (!pluginConfig) {
+        return [];
+    }
+
+    if (!pluginConfig.actions || !Array.isArray(pluginConfig.actions)) {
+        return [];
+    }
+
+    const registeredActions: string[] = [];
+    const pluginName = pluginConfig.name || path.basename(pluginPath);
+
+    if (verbose) {
+        console.log(`[Actions] Plugin "${pluginName}" declares actions:`, pluginConfig.actions);
+    }
+
+    // Determine the module path to import
+    // For local plugins: use the module field or default to index.ts
+    const modulePath = pluginConfig.module
+        ? path.join(pluginPath, pluginConfig.module)
+        : path.join(pluginPath, 'index.ts');
+
+    if (!fs.existsSync(modulePath) && !fs.existsSync(modulePath.replace('.ts', '.js'))) {
+        console.warn(`[Actions] Plugin "${pluginName}" module not found at ${modulePath}`);
         return [];
     }
 
     try {
-        const yamlContent = await fs.promises.readFile(pluginYamlPath, 'utf-8');
-        const pluginConfig = parseSimpleYaml(yamlContent);
+        // Import the plugin module
+        const pluginModule = await import(modulePath);
 
-        if (!pluginConfig.actions || !Array.isArray(pluginConfig.actions)) {
-            return [];
-        }
+        // Register each declared action
+        for (const actionName of pluginConfig.actions) {
+            const actionExport = pluginModule[actionName];
 
-        const registeredActions: string[] = [];
+            if (actionExport && isJayAction(actionExport)) {
+                registry.register(actionExport as any);
+                registeredActions.push((actionExport as any).actionName);
 
-        // Try to import the plugin's main entry or backend bundle
-        // This would need to resolve the actual plugin package
-        // For now, we'll return the action names from the config
-        // The actual import would be done by the build system
-
-        console.log(`[Actions] Plugin ${pluginConfig.name} declares actions:`, pluginConfig.actions);
-
-        return registeredActions;
-    } catch (error) {
-        console.error(`[Actions] Failed to read plugin.yaml at ${pluginPath}:`, error);
-        return [];
-    }
-}
-
-/**
- * Simple YAML parser for plugin.yaml files.
- * Handles basic key: value and key: [array] formats.
- */
-function parseSimpleYaml(content: string): Record<string, any> {
-    const result: Record<string, any> = {};
-    const lines = content.split('\n');
-
-    let currentKey: string | null = null;
-    let currentArray: string[] | null = null;
-
-    for (const line of lines) {
-        const trimmed = line.trim();
-
-        // Skip empty lines and comments
-        if (!trimmed || trimmed.startsWith('#')) {
-            continue;
-        }
-
-        // Check for array item (starts with -)
-        if (trimmed.startsWith('- ') && currentKey && currentArray) {
-            const value = trimmed.slice(2).trim();
-            currentArray.push(value);
-            continue;
-        }
-
-        // Check for key: value
-        const colonIndex = trimmed.indexOf(':');
-        if (colonIndex > 0) {
-            // Save previous array if any
-            if (currentKey && currentArray) {
-                result[currentKey] = currentArray;
-            }
-
-            const key = trimmed.slice(0, colonIndex).trim();
-            const value = trimmed.slice(colonIndex + 1).trim();
-
-            if (value) {
-                // Inline value
-                result[key] = value.replace(/^["']|["']$/g, ''); // Remove quotes
-                currentKey = null;
-                currentArray = null;
+                if (verbose) {
+                    console.log(`[Actions] Registered plugin action: ${(actionExport as any).actionName}`);
+                }
             } else {
-                // Array or nested object follows
-                currentKey = key;
-                currentArray = [];
+                console.warn(
+                    `[Actions] Plugin "${pluginName}" declares action "${actionName}" but it's not exported or not a JayAction`,
+                );
             }
         }
+    } catch (importError) {
+        console.error(`[Actions] Failed to import plugin module at ${modulePath}:`, importError);
     }
 
-    // Save final array if any
-    if (currentKey && currentArray) {
-        result[currentKey] = currentArray;
-    }
-
-    return result;
+    return registeredActions;
 }
+
 

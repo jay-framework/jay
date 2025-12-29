@@ -7,10 +7,11 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
 /**
- * Plugin manifest structure (contracts section only - subset of full PluginManifest)
+ * Plugin manifest structure from plugin.yaml
  */
 export interface PluginManifest {
     name: string;
+    version?: string;
     module?: string; // Optional: For local plugins, relative path to module (e.g., "dist/index.js"). For NPM packages, omit to use main export.
     contracts?: Array<{
         name: string;
@@ -23,6 +24,8 @@ export interface PluginManifest {
         component: string;
         prefix: string;
     };
+    /** Named exports from plugin backend bundle that are JayAction instances */
+    actions?: string[];
 }
 
 /**

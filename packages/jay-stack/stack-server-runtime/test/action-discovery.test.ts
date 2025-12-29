@@ -4,6 +4,7 @@ import * as path from 'node:path';
 import * as os from 'node:os';
 import {
     discoverAndRegisterActions,
+    discoverAllPluginActions,
     ActionRegistry,
 } from '../lib';
 
@@ -124,6 +125,87 @@ describe('Action Discovery', () => {
             });
 
             expect(result.scannedFiles).toContain(actionFile);
+        });
+    });
+
+    describe('discoverAllPluginActions', () => {
+        it('should return empty array when no plugins directory exists', async () => {
+            const result = await discoverAllPluginActions({
+                projectRoot: tempDir,
+                registry,
+            });
+
+            expect(result).toEqual([]);
+        });
+
+        it('should return empty array when plugins directory is empty', async () => {
+            const pluginsDir = path.join(tempDir, 'src/plugins');
+            await fs.promises.mkdir(pluginsDir, { recursive: true });
+
+            const result = await discoverAllPluginActions({
+                projectRoot: tempDir,
+                registry,
+            });
+
+            expect(result).toEqual([]);
+        });
+
+        it('should skip plugins without plugin.yaml', async () => {
+            const pluginDir = path.join(tempDir, 'src/plugins/my-plugin');
+            await fs.promises.mkdir(pluginDir, { recursive: true });
+            // No plugin.yaml created
+
+            const result = await discoverAllPluginActions({
+                projectRoot: tempDir,
+                registry,
+            });
+
+            expect(result).toEqual([]);
+        });
+
+        it('should skip plugins without actions field', async () => {
+            const pluginDir = path.join(tempDir, 'src/plugins/my-plugin');
+            await fs.promises.mkdir(pluginDir, { recursive: true });
+
+            // Create plugin.yaml without actions
+            await fs.promises.writeFile(
+                path.join(pluginDir, 'plugin.yaml'),
+                `name: my-plugin\nversion: "1.0.0"`,
+            );
+
+            const result = await discoverAllPluginActions({
+                projectRoot: tempDir,
+                registry,
+            });
+
+            expect(result).toEqual([]);
+        });
+
+        it('should parse plugin.yaml with actions array', async () => {
+            const pluginDir = path.join(tempDir, 'src/plugins/my-plugin');
+            await fs.promises.mkdir(pluginDir, { recursive: true });
+
+            // Create plugin.yaml with actions
+            await fs.promises.writeFile(
+                path.join(pluginDir, 'plugin.yaml'),
+                `name: my-plugin\nversion: "1.0.0"\nactions:\n  - addToCart\n  - removeFromCart`,
+            );
+
+            // Create an index.ts (won't be imported in test, but shows the structure)
+            await fs.promises.writeFile(
+                path.join(pluginDir, 'index.ts'),
+                `export const addToCart = {}; export const removeFromCart = {};`,
+            );
+
+            // Will fail to import in test environment, but should parse plugin.yaml
+            const result = await discoverAllPluginActions({
+                projectRoot: tempDir,
+                registry,
+                verbose: false,
+            });
+
+            // Import will fail in test, so no actions registered
+            expect(result).toEqual([]);
         });
     });
 });

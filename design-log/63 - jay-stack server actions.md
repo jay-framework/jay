@@ -388,11 +388,12 @@ function ProductsPageConstructor(
 
 ### Using Actions in Client Context
 
-Actions can be wrapped in a context for shared state management:
+Actions can be wrapped in a reactive context for shared state management:
 
 ```typescript
 // src/contexts/cart.context.ts
-import { createJayContext, createSignal } from '@jay-framework/runtime';
+import { createSignal, provideReactiveContext } from '@jay-framework/component';
+import { createJayContext } from '@jay-framework/runtime';
 import { addToCart, getCart, removeFromCart } from '../actions/cart.actions';
 
 export interface CartContextValue {
@@ -404,54 +405,56 @@ export interface CartContextValue {
     refresh: () => Promise<void>;
 }
 
-export const CartContext = createJayContext<CartContextValue>();
+export const CART_CONTEXT = createJayContext<CartContextValue>();
 
-export function createCartContext(): CartContextValue {
-    const [items, setItems] = createSignal<CartItem[]>([]);
-    const [isLoading, setIsLoading] = createSignal(false);
+// Call this in a parent component to provide the cart context
+export const provideCartContext = () =>
+    provideReactiveContext(CART_CONTEXT, () => {
+        const [items, setItems] = createSignal<CartItem[]>([]);
+        const [isLoading, setIsLoading] = createSignal(false);
 
-    const refresh = async () => {
-        setIsLoading(true);
-        try {
-            const cart = await getCart();
-            setItems(cart.items);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const add = async (productId: string, quantity: number) => {
-        setIsLoading(true);
-        try {
-            const result = await addToCart({ productId, quantity });
-            if (result.success) {
-                await refresh();
+        const refresh = async () => {
+            setIsLoading(true);
+            try {
+                const cart = await getCart();
+                setItems(cart.items);
+            } finally {
+                setIsLoading(false);
             }
-            return result.success;
-        } finally {
-            setIsLoading(false);
-        }
-    };
+        };
 
-    const remove = async (itemId: string) => {
-        setIsLoading(true);
-        try {
-            await removeFromCart({ itemId });
-            await refresh();
-        } finally {
-            setIsLoading(false);
-        }
-    };
+        const add = async (productId: string, quantity: number) => {
+            setIsLoading(true);
+            try {
+                const result = await addToCart({ productId, quantity });
+                await refresh();
+                return true;
+            } catch (e) {
+                return false;
+            } finally {
+                setIsLoading(false);
+            }
+        };
 
-    return {
-        items,
-        itemCount: () => items().length,
-        isLoading,
-        add,
-        remove,
-        refresh,
-    };
-}
+        const remove = async (itemId: string) => {
+            setIsLoading(true);
+            try {
+                await removeFromCart({ itemId });
+                await refresh();
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        return {
+            items,
+            itemCount: () => items().length,
+            isLoading,
+            add,
+            remove,
+            refresh,
+        };
+    });
 ```
 
 ## Project Structure
@@ -1167,7 +1170,97 @@ export async function onInit() {
 - Actions cleared and re-discovered on hot reload
 - No manual `registerAction()` calls needed in user code
 
-### Remaining Work
+### Phase 5: Plugin Actions ✅
 
-1. **Plugin actions** - Full `plugin.yaml` integration for plugin actions
-2. **Package import resolution** - Handle `@jay-plugin-*` action imports in client transform
+**Plugin Action Discovery** (`@jay-framework/stack-server-runtime`)
+- `discoverAllPluginActions()` - scans `src/plugins/` for plugins with actions
+- `discoverPluginActions()` - reads `plugin.yaml`, imports and registers declared actions
+- Integrated into `ServiceLifecycleManager.initialize()`
+- 5 new tests for plugin discovery
+
+**Plugin Manifest Extension** (`@jay-framework/compiler-shared`)
+- Added `actions?: string[]` field to `PluginManifest` interface
+- Actions are named exports from the plugin module
+
+**Example: product-rating plugin**
+- Added `submitRating` and `getRatings` actions
+- Demonstrates plugin actions pattern
+
+### Phase 6: Plugin Client Build ✅
+
+**Plugin Build Configuration**
+- Plugins use `jayStackCompiler` in their vite.config.ts (already handles action transform)
+- Client build (`isSsrBuild = false`) transforms action imports to `createActionCaller()`
+- Plugin must add `@jay-framework/stack-client-runtime` to externals
+
+**Example vite.config.ts for plugin with actions:**
+
+```typescript
+export default defineConfig(({ isSsrBuild }) => ({
+    plugins: [...jayStackCompiler(jayOptions)],
+    build: {
+        ssr: isSsrBuild,
+        rollupOptions: {
+            external: [
+                '@jay-framework/fullstack-component',
+                '@jay-framework/stack-client-runtime', // Required for action callers
+                // ... other externals
+            ],
+        },
+    },
+}));
+```
+
+**Test Coverage**
+- Added test for plugin component importing actions from same plugin
+- 19 tests passing in compiler-jay-stack
+
+---
+
+## Learnings and Deviations
+
+### Design Decisions Made During Implementation
+
+1. **ActionRegistry as Class (not singleton)**
+   - Original design implied global registry
+   - Changed to class with default instance for better testability
+   - Each test can create isolated registry instances
+
+2. **Plugin YAML Parsing Reuse**
+   - Initially created custom `parseSimpleYaml()` in action-discovery
+   - Refactored to use `loadPluginManifest()` from `@jay-framework/compiler-shared`
+   - Eliminates duplication, uses proper YAML library
+
+3. **Handler Simplification**
+   - Original design had `withHandler` return a placeholder function
+   - Simplified to directly call the handler when action is invoked server-side
+   - Client builds transform to HTTP calls anyway
+
+4. **Test Pattern for Discriminated Unions**
+   - TypeScript struggled with type narrowing for `ActionExecutionResult`
+   - Used `expect(result).toMatchObject()` pattern instead of property access
+   - Provides better error messages and type inference
+
+### Files Structure
+
+Key implementation files:
+- `full-stack-component/lib/jay-action-builder.ts` - Builder API
+- `stack-server-runtime/lib/action-registry.ts` - Server registry
+- `stack-server-runtime/lib/action-discovery.ts` - Auto-registration
+- `dev-server/lib/action-router.ts` - HTTP endpoint
+- `stack-client-runtime/lib/action-caller.ts` - Client caller
+- `compiler-jay-stack/lib/transform-action-imports.ts` - Build transform
+
+---
+
+## Implementation Complete
+
+All phases of server actions are now implemented:
+1. ✅ Action Builder API
+2. ✅ Action Registry
+3. ✅ Action Router
+4. ✅ Client Action Caller
+5. ✅ Compiler Transform
+6. ✅ Auto-Registration (project actions)
+7. ✅ Plugin Actions
+8. ✅ Plugin Client Build
