@@ -29,6 +29,7 @@ export default defineConfig(({ isSsrBuild }) => ({
                 '@jay-framework/reactive',
                 '@jay-framework/runtime',
                 '@jay-framework/secure',
+                '@jay-framework/stack-client-runtime', // Required for action callers in client build
             ],
         },
     },

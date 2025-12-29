@@ -12,6 +12,14 @@ import { isJayAction } from '@jay-framework/fullstack-component';
 import { loadPluginManifest } from '@jay-framework/compiler-shared';
 
 /**
+ * Vite server interface for SSR module loading.
+ * Using a minimal interface to avoid direct Vite dependency.
+ */
+export interface ViteSSRLoader {
+    ssrLoadModule: (url: string) => Promise<Record<string, any>>;
+}
+
+/**
  * Options for action discovery.
  */
 export interface ActionDiscoveryOptions {
@@ -23,6 +31,8 @@ export interface ActionDiscoveryOptions {
     registry?: ActionRegistry;
     /** Whether to log discovery progress */
     verbose?: boolean;
+    /** Vite server for SSR module loading (required in dev for TypeScript files) */
+    viteServer?: ViteSSRLoader;
 }
 
 /**
@@ -63,6 +73,7 @@ export async function discoverAndRegisterActions(
         actionsDir = 'src/actions',
         registry = actionRegistry,
         verbose = false,
+        viteServer,
     } = options;
 
     const result: ActionDiscoveryResult = {
@@ -94,7 +105,14 @@ export async function discoverAndRegisterActions(
 
         try {
             // Dynamic import of the action module
-            const module = await import(filePath);
+            // Use Vite's SSR loader for TypeScript files in dev mode
+            let module: Record<string, any>;
+            if (viteServer) {
+                module = await viteServer.ssrLoadModule(filePath);
+            } else {
+                // Production fallback: requires pre-compiled .js files
+                module = await import(filePath);
+            }
 
             // Find and register all JayAction exports
             for (const [exportName, exportValue] of Object.entries(module)) {
@@ -149,6 +167,8 @@ export interface PluginActionDiscoveryOptions {
     registry?: ActionRegistry;
     /** Whether to log discovery progress */
     verbose?: boolean;
+    /** Vite server for SSR module loading (required in dev for TypeScript files) */
+    viteServer?: ViteSSRLoader;
 }
 
 /**
@@ -162,7 +182,7 @@ export interface PluginActionDiscoveryOptions {
 export async function discoverAllPluginActions(
     options: PluginActionDiscoveryOptions,
 ): Promise<string[]> {
-    const { projectRoot, registry = actionRegistry, verbose = false } = options;
+    const { projectRoot, registry = actionRegistry, verbose = false, viteServer } = options;
     const allActions: string[] = [];
 
     // Discover local plugins in src/plugins/
@@ -173,7 +193,7 @@ export async function discoverAllPluginActions(
         for (const entry of pluginDirs) {
             if (entry.isDirectory()) {
                 const pluginPath = path.join(localPluginsPath, entry.name);
-                const actions = await discoverPluginActions(pluginPath, projectRoot, registry, verbose);
+                const actions = await discoverPluginActions(pluginPath, projectRoot, registry, verbose, viteServer);
                 allActions.push(...actions);
             }
         }
@@ -199,6 +219,7 @@ export async function discoverPluginActions(
     projectRoot: string,
     registry: ActionRegistry = actionRegistry,
     verbose: boolean = false,
+    viteServer?: ViteSSRLoader,
 ): Promise<string[]> {
     // Use shared plugin manifest loader
     const pluginConfig = loadPluginManifest(pluginPath);
@@ -220,18 +241,34 @@ export async function discoverPluginActions(
 
     // Determine the module path to import
     // For local plugins: use the module field or default to index.ts
-    const modulePath = pluginConfig.module
+    let modulePath = pluginConfig.module
         ? path.join(pluginPath, pluginConfig.module)
         : path.join(pluginPath, 'index.ts');
 
-    if (!fs.existsSync(modulePath) && !fs.existsSync(modulePath.replace('.ts', '.js'))) {
-        console.warn(`[Actions] Plugin "${pluginName}" module not found at ${modulePath}`);
-        return [];
+    // Handle module paths without extension - try .ts and .js
+    if (!fs.existsSync(modulePath)) {
+        const tsPath = modulePath + '.ts';
+        const jsPath = modulePath + '.js';
+        if (fs.existsSync(tsPath)) {
+            modulePath = tsPath;
+        } else if (fs.existsSync(jsPath)) {
+            modulePath = jsPath;
+        } else {
+            console.warn(`[Actions] Plugin "${pluginName}" module not found at ${modulePath}`);
+            return [];
+        }
     }
 
     try {
         // Import the plugin module
-        const pluginModule = await import(modulePath);
+        // Use Vite's SSR loader for TypeScript files in dev mode
+        let pluginModule: Record<string, any>;
+        if (viteServer) {
+            pluginModule = await viteServer.ssrLoadModule(modulePath);
+        } else {
+            // Production fallback: requires pre-compiled .js files
+            pluginModule = await import(modulePath);
+        }
 
         // Register each declared action
         for (const actionName of pluginConfig.actions) {

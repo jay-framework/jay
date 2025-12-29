@@ -113,6 +113,7 @@ export class ServiceLifecycleManager {
                 actionsDir: path.join(this.sourceBase, 'actions'),
                 registry: actionRegistry,
                 verbose: true,
+                viteServer: this.viteServer ?? undefined,
             });
 
             totalActions += result.actionCount;
@@ -126,6 +127,7 @@ export class ServiceLifecycleManager {
                 projectRoot: this.projectRoot,
                 registry: actionRegistry,
                 verbose: true,
+                viteServer: this.viteServer ?? undefined,
             });
 
             totalActions += pluginActions.length;

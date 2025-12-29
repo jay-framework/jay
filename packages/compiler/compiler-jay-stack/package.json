@@ -28,15 +28,16 @@
   },
   "dependencies": {
     "@jay-framework/compiler": "workspace:^",
+    "@jay-framework/compiler-shared": "workspace:^",
     "@jay-framework/typescript-bridge": "workspace:^",
     "@jay-framework/vite-plugin": "workspace:^",
+    "typescript": "^5.3.3",
     "vite": "^5.0.11"
   },
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",
     "rimraf": "^5.0.5",
     "tsup": "^8.0.1",
-    "typescript": "^5.3.3",
     "vitest": "^1.2.1"
   }
 }

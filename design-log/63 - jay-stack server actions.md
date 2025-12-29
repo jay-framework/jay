@@ -1250,6 +1250,37 @@ Key implementation files:
 - `dev-server/lib/action-router.ts` - HTTP endpoint
 - `stack-client-runtime/lib/action-caller.ts` - Client caller
 - `compiler-jay-stack/lib/transform-action-imports.ts` - Build transform
+- `compiler-jay-stack/lib/index.ts` - Vite plugin with resolveId + load hooks
+
+### Plugin Build Transform Fix
+
+**Problem:** When building a plugin package, the `transform` hook runs AFTER Rollup has resolved and inlined internal imports. This means action imports like `import { submitMood } from './mood-actions'` get bundled before the transform can replace them with `createActionCaller`.
+
+**Solution:** Use `resolveId` + `load` hooks instead of `transform`:
+
+1. **`resolveId`** - Intercepts action module imports BEFORE bundling
+   - Checks `isActionImport(source)` to identify action modules
+   - Returns a virtual module ID: `\0jay-action:${actualPath}`
+   
+2. **`load`** - Generates virtual module content for the virtual ID
+   - Reads actual action file and extracts metadata via `extractActionsFromSource()`
+   - Returns code with `createActionCaller` exports instead of handlers
+
+**Additional fixes required:**
+
+1. **TypeScript bridge** - Direct `import * as ts from 'typescript'` fails in ESM bundles. Changed to use `@jay-framework/typescript-bridge` which loads TypeScript via `createRequire`.
+
+2. **Hyphen pattern support** - Updated `isActionImport()` to match both:
+   - `cart.actions.ts` (dot pattern)
+   - `mood-actions.ts` (hyphen pattern)
+
+3. **SSR detection** - Used IIFE with closure variable to track `isSSRBuild` across plugin lifecycle hooks, since `configResolved` and `resolveId` don't share `this` context.
+
+**Result:**
+| Bundle | File Size | Actions |
+|--------|-----------|---------|
+| Client | 2.23 kB | `createActionCaller()` HTTP calls |
+| Server | 2.65 kB | `makeJayAction().withHandler()` |
 
 ---
 
@@ -1263,4 +1294,4 @@ All phases of server actions are now implemented:
 5. ✅ Compiler Transform
 6. ✅ Auto-Registration (project actions)
 7. ✅ Plugin Actions
-8. ✅ Plugin Client Build
+8. ✅ Plugin Client Build (with resolveId + load pattern)

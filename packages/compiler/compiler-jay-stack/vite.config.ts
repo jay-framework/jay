@@ -5,6 +5,7 @@ export default defineConfig({
     build: {
         minify: false,
         target: 'es2020',
+        ssr: true, // Build for Node.js environment
         lib: {
             entry: resolve(__dirname, 'lib/index.ts'),
             name: 'jayStackCompiler',
@@ -18,6 +19,7 @@ export default defineConfig({
                 '@jay-framework/typescript-bridge',
                 '@jay-framework/vite-plugin',
                 'vite',
+                'typescript', // Required for action import transform
             ],
         },
     },

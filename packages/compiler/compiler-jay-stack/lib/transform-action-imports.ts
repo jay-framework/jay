@@ -16,7 +16,8 @@
  * ```
  */
 
-import * as ts from 'typescript';
+import type * as ts from 'typescript';
+import tsBridge from '@jay-framework/typescript-bridge';
 
 /**
  * Metadata for a discovered action.
@@ -56,7 +57,12 @@ export function clearActionMetadataCache(): void {
  * Checks if a file path is an action module.
  */
 export function isActionModule(filePath: string): boolean {
-    return filePath.endsWith('.actions.ts') || filePath.endsWith('.actions.js');
+    return (
+        filePath.endsWith('.actions.ts') ||
+        filePath.endsWith('.actions.js') ||
+        filePath.endsWith('-actions.ts') ||
+        filePath.endsWith('-actions.js')
+    );
 }
 
 /**
@@ -68,8 +74,10 @@ export function isActionImport(importSource: string): boolean {
     // - '../actions/cart.actions'
     // - '@jay-plugin-store/actions'
     // - 'src/actions/cart.actions'
+    // - './mood-actions' (hyphen variant)
     return (
         importSource.includes('.actions') ||
+        importSource.includes('-actions') ||
         importSource.includes('/actions/') ||
         importSource.endsWith('/actions')
     );
@@ -92,20 +100,20 @@ export function extractActionsFromSource(sourceCode: string, filePath: string): 
     const actions: ActionMetadata[] = [];
 
     // Parse the source file
-    const sourceFile = ts.createSourceFile(filePath, sourceCode, ts.ScriptTarget.Latest, true);
+    const sourceFile = tsBridge.createSourceFile(filePath, sourceCode, tsBridge.ScriptTarget.Latest, true);
 
     // Find all exported variable declarations with makeJayAction/makeJayQuery
     function visit(node: ts.Node): void {
         // Look for: export const foo = makeJayAction('name')...
-        if (ts.isVariableStatement(node)) {
-            const hasExport = node.modifiers?.some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
+        if (tsBridge.isVariableStatement(node)) {
+            const hasExport = node.modifiers?.some((m) => m.kind === tsBridge.SyntaxKind.ExportKeyword);
             if (!hasExport) {
-                ts.forEachChild(node, visit);
+                tsBridge.forEachChild(node, visit);
                 return;
             }
 
             for (const decl of node.declarationList.declarations) {
-                if (!ts.isIdentifier(decl.name) || !decl.initializer) {
+                if (!tsBridge.isIdentifier(decl.name) || !decl.initializer) {
                     continue;
                 }
 
@@ -121,7 +129,7 @@ export function extractActionsFromSource(sourceCode: string, filePath: string): 
             }
         }
 
-        ts.forEachChild(node, visit);
+        tsBridge.forEachChild(node, visit);
     }
 
     visit(sourceFile);
@@ -147,13 +155,13 @@ function extractActionFromExpression(
     let method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' = 'POST';
     let explicitMethod: string | null = null;
 
-    while (ts.isCallExpression(current)) {
+    while (tsBridge.isCallExpression(current)) {
         const expr = current.expression;
 
         // Check for .withMethod('GET') etc.
-        if (ts.isPropertyAccessExpression(expr) && expr.name.text === 'withMethod') {
+        if (tsBridge.isPropertyAccessExpression(expr) && expr.name.text === 'withMethod') {
             const arg = current.arguments[0];
-            if (arg && ts.isStringLiteral(arg)) {
+            if (arg && tsBridge.isStringLiteral(arg)) {
                 explicitMethod = arg.text;
             }
             current = expr.expression;
@@ -162,7 +170,7 @@ function extractActionFromExpression(
 
         // Check for other builder methods
         if (
-            ts.isPropertyAccessExpression(expr) &&
+            tsBridge.isPropertyAccessExpression(expr) &&
             ['withServices', 'withCaching', 'withHandler', 'withTimeout'].includes(expr.name.text)
         ) {
             current = expr.expression;
@@ -170,12 +178,12 @@ function extractActionFromExpression(
         }
 
         // Check for makeJayAction/makeJayQuery root call
-        if (ts.isIdentifier(expr)) {
+        if (tsBridge.isIdentifier(expr)) {
             const funcName = expr.text;
             if (funcName === 'makeJayAction' || funcName === 'makeJayQuery') {
                 // Get the action name from first argument
                 const nameArg = current.arguments[0];
-                if (nameArg && ts.isStringLiteral(nameArg)) {
+                if (nameArg && tsBridge.isStringLiteral(nameArg)) {
                     // Default method based on builder type
                     method = funcName === 'makeJayQuery' ? 'GET' : 'POST';
 
@@ -227,7 +235,7 @@ export async function transformActionImports(
     }
 
     // Parse the source file
-    const sourceFile = ts.createSourceFile(id, code, ts.ScriptTarget.Latest, true);
+    const sourceFile = tsBridge.createSourceFile(id, code, tsBridge.ScriptTarget.Latest, true);
 
     // Find action imports
     const actionImports: Array<{
@@ -239,12 +247,12 @@ export async function transformActionImports(
     }> = [];
 
     for (const statement of sourceFile.statements) {
-        if (!ts.isImportDeclaration(statement)) {
+        if (!tsBridge.isImportDeclaration(statement)) {
             continue;
         }
 
         const moduleSpecifier = statement.moduleSpecifier;
-        if (!ts.isStringLiteral(moduleSpecifier)) {
+        if (!tsBridge.isStringLiteral(moduleSpecifier)) {
             continue;
         }
 
@@ -257,7 +265,7 @@ export async function transformActionImports(
 
         // Get named imports
         const importClause = statement.importClause;
-        if (!importClause?.namedBindings || !ts.isNamedImports(importClause.namedBindings)) {
+        if (!importClause?.namedBindings || !tsBridge.isNamedImports(importClause.namedBindings)) {
             continue; // Skip default imports or namespace imports
         }
 

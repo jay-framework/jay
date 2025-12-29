@@ -89,85 +89,115 @@ export function jayStackCompiler(jayOptions: JayRollupConfig = {}): Plugin[] {
         },
 
         // Second: Action import transformation (client builds only)
-        {
-            name: 'jay-stack:action-transform',
-            enforce: 'pre',
+        // Uses resolveId + load to replace action modules with virtual modules
+        // containing createActionCaller calls BEFORE bundling happens.
+        (() => {
+            // Closure variable to track SSR mode
+            let isSSRBuild = false;
 
-            buildStart() {
-                // Clear caches on build start for fresh transforms
-                clearActionMetadataCache();
-                moduleCache.clear();
-            },
+            return {
+                name: 'jay-stack:action-transform',
+                enforce: 'pre' as const,
 
-            async transform(code: string, id: string, options) {
-                // Only transform for client builds (not SSR)
-                if (options?.ssr) {
-                    return null;
-                }
+                // Track SSR mode from config
+                configResolved(config: { build?: { ssr?: boolean } }) {
+                    isSSRBuild = config.build?.ssr ?? false;
+                },
 
-                // Only transform TypeScript/JavaScript files
-                if (!id.endsWith('.ts') && !id.endsWith('.js') && !id.includes('.ts?')) {
-                    return null;
-                }
+                buildStart() {
+                    // Clear caches on build start for fresh transforms
+                    clearActionMetadataCache();
+                    moduleCache.clear();
+                },
 
-                // Skip action module files themselves (don't transform the definitions)
-                if (id.endsWith('.actions.ts') || id.endsWith('.actions.js')) {
-                    return null;
-                }
+                async resolveId(source: string, importer: string | undefined, options: { ssr?: boolean } | undefined) {
+                    // Skip SSR builds - actions should run directly on server
+                    if (options?.ssr || isSSRBuild) {
+                        return null;
+                    }
 
-                // Quick check: skip files without action-like imports
-                if (!isActionImport(code) && !code.includes('.actions')) {
-                    return null;
-                }
+                    // Only intercept action module imports
+                    if (!isActionImport(source)) {
+                        return null;
+                    }
 
-                try {
-                    const result = await transformActionImports(
-                        code,
-                        id,
-                        async (importSource: string, importer: string) => {
-                            // Check cache first
-                            const cacheKey = `${importer}:${importSource}`;
-                            if (moduleCache.has(cacheKey)) {
-                                return moduleCache.get(cacheKey)!;
-                            }
+                    // Only handle relative imports (package imports work differently)
+                    if (!source.startsWith('.') || !importer) {
+                        return null;
+                    }
 
-                            // Resolve the import path
-                            const importerDir = path.dirname(importer);
-                            let resolvedPath: string;
+                    // Resolve the actual path
+                    const importerDir = path.dirname(importer);
+                    let resolvedPath = path.resolve(importerDir, source);
 
-                            if (importSource.startsWith('.')) {
-                                // Relative import
-                                resolvedPath = path.resolve(importerDir, importSource);
-                                // Add .ts extension if not present
-                                if (!resolvedPath.endsWith('.ts') && !resolvedPath.endsWith('.js')) {
-                                    resolvedPath += '.ts';
-                                }
-                            } else {
-                                // Package import - would need node_modules resolution
-                                // For now, skip package imports
-                                return null;
-                            }
+                    // Add .ts extension if not present
+                    if (!resolvedPath.endsWith('.ts') && !resolvedPath.endsWith('.js')) {
+                        // Try .ts first
+                        if (fs.existsSync(resolvedPath + '.ts')) {
+                            resolvedPath += '.ts';
+                        } else if (fs.existsSync(resolvedPath + '.js')) {
+                            resolvedPath += '.js';
+                        } else {
+                            return null;
+                        }
+                    }
 
-                            // Read the file
-                            try {
-                                const code = await fs.promises.readFile(resolvedPath, 'utf-8');
-                                const result = { path: resolvedPath, code };
-                                moduleCache.set(cacheKey, result);
-                                return result;
-                            } catch (err) {
-                                console.warn(`[action-transform] Could not read ${resolvedPath}:`, err);
-                                return null;
-                            }
-                        },
-                    );
+                    // Return a virtual module ID that we'll handle in load
+                    // The \0 prefix tells Rollup this is a virtual module
+                    return `\0jay-action:${resolvedPath}`;
+                },
 
+                async load(id: string) {
+                    // Only handle our virtual action modules
+                    if (!id.startsWith('\0jay-action:')) {
+                        return null;
+                    }
+
+                    // Extract the actual file path
+                    const actualPath = id.slice('\0jay-action:'.length);
+
+                    // Read and parse the action module
+                    let code: string;
+                    try {
+                        code = await fs.promises.readFile(actualPath, 'utf-8');
+                    } catch (err) {
+                        console.error(`[action-transform] Could not read ${actualPath}:`, err);
+                        return null;
+                    }
+
+                    // Extract action metadata
+                    const actions = extractActionsFromSource(code, actualPath);
+
+                    if (actions.length === 0) {
+                        // No actions found - return empty module or original?
+                        // Return null to let other plugins handle it
+                        console.warn(`[action-transform] No actions found in ${actualPath}`);
+                        return null;
+                    }
+
+                    // Generate virtual module with createActionCaller exports
+                    const lines: string[] = [
+                        `import { createActionCaller } from '@jay-framework/stack-client-runtime';`,
+                        '',
+                    ];
+
+                    for (const action of actions) {
+                        lines.push(
+                            `export const ${action.exportName} = createActionCaller('${action.actionName}', '${action.method}');`,
+                        );
+                    }
+
+                    // Also export any non-action exports (like types, interfaces)
+                    // For now, we export ActionError from client-runtime
+                    if (code.includes('ActionError')) {
+                        lines.push(`export { ActionError } from '@jay-framework/stack-client-runtime';`);
+                    }
+
+                    const result = lines.join('\n');
                     return result;
-                } catch (error) {
-                    console.error(`[jay-stack:action-transform] Error transforming ${id}:`, error);
-                    return null;
-                }
-            },
-        },
+                },
+            } as Plugin;
+        })(),
 
         // Third: Jay runtime compilation (existing plugin)
         jayRuntime(jayOptions),
