@@ -896,7 +896,7 @@ export const searchProducts = createActionCaller('products.search', 'GET');
 
 1. **At build start**: Scan action files, extract metadata (name, method) from each action
 2. **During transform**: Replace client imports using cached metadata
-3. **For plugins**: Scan plugin package.json for `jay-actions` field or `exports` conventions
+3. **For plugins**: Scan plugin `plugin.yaml` for `actions` array
 
 ### Action Discovery
 
@@ -929,45 +929,62 @@ async function discoverProjectActions(projectRoot: string) {
 
 #### Plugin Actions
 
-Plugins declare actions in `package.json`:
+Plugins declare action exports in `plugin.yaml`:
 
-```json
-{
-  "name": "@jay-plugin-store",
-  "jay": {
-    "actions": "./dist/actions.js"
-  }
-}
+```yaml
+# @jay-plugin-store/plugin.yaml
+name: "@jay-plugin-store"
+version: "1.0.0"
+
+actions:
+  - addToCart
+  - removeFromCart
+  - getCart
+  - searchProducts
 ```
 
-Or use conventional export path:
+These are **named exports** from the plugin's backend bundle. The compiler:
+1. **Server build**: Imports these exports from the plugin backend bundle, auto-registers them
+2. **Client build**: Transforms imports of these exports to `createActionCaller()` calls
 
 ```typescript
-// @jay-plugin-store exports actions from /actions
-import { addToCart } from '@jay-plugin-store/actions';
+// Plugin backend bundle exports the actions
+// @jay-plugin-store/dist/backend.js
+export { addToCart, removeFromCart, getCart } from './actions/cart.actions';
+export { searchProducts } from './actions/search.actions';
 ```
 
 ### Registration Flow
 
-Actions must be registered on the server before they can be called:
+Actions are auto-registered - no manual registration needed:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ Build Time                                                       │
 │                                                                 │
-│  1. Discover actions (project + plugins)                        │
+│  1. Discover actions:                                           │
+│     - Project: scan src/actions/*.actions.ts                    │
+│     - Plugins: read plugin.yaml → actions array                 │
 │  2. Extract metadata (name, method, services)                   │
-│  3. Generate action manifest                                    │
+│  3. Generate registration code (injected into server entry)     │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│ Server Startup (jay.init.ts)                                    │
+│ Server Startup (auto-generated)                                 │
 │                                                                 │
-│  1. Import action modules                                       │
-│  2. Call registerAction() for each                              │
+│  1. Import discovered action modules                            │
+│  2. Auto-register all actions                                   │
 │  3. Actions available at /_jay/actions/*                        │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ Client Build                                                    │
+│                                                                 │
+│  1. Action imports transformed → createActionCaller()           │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
                               │
@@ -975,41 +992,67 @@ Actions must be registered on the server before they can be called:
 ┌─────────────────────────────────────────────────────────────────┐
 │ Client Runtime                                                  │
 │                                                                 │
-│  1. Transformed imports → createActionCaller()                  │
-│  2. Call action → HTTP request to server                        │
-│  3. Server executes handler, returns result                     │
+│  1. Call action → HTTP request to /_jay/actions/:name           │
+│  2. Server executes handler, returns result                     │
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Auto-Registration (Future Enhancement)
+### Auto-Registration (Default Behavior)
 
-Instead of manual `registerAction()` calls in `jay.init.ts`, auto-register discovered actions:
+Actions are auto-registered via generated code injected into the server entry:
+
+**Discovery sources:**
+1. **Project actions**: Scan `src/actions/*.actions.ts` for `JayAction` exports
+2. **Plugin actions**: Named exports listed in `plugin.yaml` → `actions` array
+
+**Generated registration code (injected into server entry):**
 
 ```typescript
-// Generated by compiler (injected into server entry)
+// Auto-generated by compiler
 import { registerAction } from '@jay-framework/stack-server-runtime';
-import * as cartActions from './src/actions/cart.actions';
-import * as storePluginActions from '@jay-plugin-store/actions';
 
-// Auto-register all discovered actions
-Object.values(cartActions).filter(isJayAction).forEach(registerAction);
-Object.values(storePluginActions).filter(isJayAction).forEach(registerAction);
+// Project actions
+import * as cartActions from './src/actions/cart.actions';
+import * as searchActions from './src/actions/search.actions';
+
+// Plugin actions (named exports from plugin.yaml)
+import { addToCart, getCart } from '@jay-plugin-store/backend';
+
+// Auto-register all
+[cartActions, searchActions].forEach(mod => 
+    Object.values(mod).filter(isJayAction).forEach(registerAction)
+);
+registerAction(addToCart);
+registerAction(getCart);
 ```
 
-This could be opt-in via config or the default behavior.
+**Manual Registration API** (for dynamic or conditional actions):
+
+```typescript
+// jay.init.ts - Optional manual registration
+import { registerAction } from '@jay-framework/stack-server-runtime';
+import { customAction } from './custom/my-action';
+
+export async function onInit() {
+    // Auto-registration already happened
+    // Manually register additional actions if needed
+    registerAction(customAction);
+}
+```
 
 ### Open Questions (Compiler)
 
 1. **Plugin action convention?**
    - Option A: `package.json` `jay.actions` field
    - Option B: Conventional `/actions` export
-   - **Leaning toward:** Support both, prefer convention
+   - Option C: `plugin.yaml` `actions` array
+   - **Answer:** Use `plugin.yaml` with named exports. The `actions` array lists export names from the plugin's backend bundle. Server imports and registers these exports; client build transforms them to `createActionCaller()` calls.
 
 2. **Auto-registration?**
    - Manual: Explicit in `jay.init.ts` (current)
    - Auto: Compiler generates registration code
-   - **Leaning toward:** Start manual, add auto-registration later
+   - **Answer:** Auto-registration is the default. Compiler generates registration code injected into server entry. Scans project `src/actions/` and plugin `plugin.yaml` action exports. Provide `registerAction()` API for optional manual registration of additional actions.
 
 3. **Development mode?**
    - Should dev server re-scan actions on file change?

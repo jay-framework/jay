@@ -22,6 +22,7 @@ import { Request, Response } from 'express';
 import { DevServerOptions } from './dev-server-options';
 import { ServiceLifecycleManager } from './service-lifecycle';
 import { deepMergeViewStates } from '@jay-framework/view-state-merge';
+import { createActionRouter, actionBodyParser, ACTION_ENDPOINT_BASE } from './action-router';
 
 async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
     return await scanRoutes(pagesBaseFolder, {
@@ -203,6 +204,9 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
     // Set up hot reload for jay.init.ts
     setupServiceHotReload(vite, lifecycleManager);
 
+    // Set up action router for /_jay/actions/* endpoints
+    setupActionRouter(vite);
+
     const routes: JayRoutes = await initRoutes(pagesRootFolder);
     const slowlyPhase = new DevSlowlyChangingPhase(dontCacheSlowly);
 
@@ -262,4 +266,18 @@ function setupServiceHotReload(
             }
         }
     });
+}
+
+/**
+ * Sets up the action router for handling /_jay/actions/* requests.
+ * Actions are RPC-style endpoints that can be called from the client.
+ */
+function setupActionRouter(vite: ViteDevServer): void {
+    // Add body parser middleware for action requests
+    vite.middlewares.use(actionBodyParser());
+
+    // Add action router
+    vite.middlewares.use(ACTION_ENDPOINT_BASE, createActionRouter());
+
+    console.log(`[Actions] Action router mounted at ${ACTION_ENDPOINT_BASE}`);
 }
