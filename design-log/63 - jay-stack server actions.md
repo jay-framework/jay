@@ -156,6 +156,96 @@ export class ActionError extends Error {
 
 Both can override the method with `.withMethod()` if needed, but the defaults express intent clearly.
 
+### Error Handling and HTTP Status Codes
+
+Actions distinguish between **business logic errors** (4xx) and **system errors** (5xx):
+
+| Error Type | HTTP Status | When |
+|------------|-------------|------|
+| `ActionError` thrown | **422** Unprocessable Entity | Business logic failure (out of stock, invalid input, etc.) |
+| Other `Error` thrown | **500** Internal Server Error | Unexpected system failure |
+| Action not found | **404** Not Found | Invalid action name |
+| Wrong HTTP method | **405** Method Not Allowed | GET vs POST mismatch |
+| Invalid JSON input | **400** Bad Request | Malformed request body |
+
+**Example:**
+
+```typescript
+export const addToCart = makeJayAction('cart.addToCart')
+    .withServices(INVENTORY_SERVICE)
+    .withHandler(async (input, inventory) => {
+        const available = await inventory.getAvailableUnits(input.productId);
+        
+        // ActionError → 422 (client can handle gracefully)
+        if (available < input.quantity) {
+            throw new ActionError('NOT_AVAILABLE', 'Product is out of stock');
+        }
+        
+        // Unexpected error → 500 (system failure)
+        if (!input.productId) {
+            throw new Error('Missing productId'); // Should not happen
+        }
+        
+        return { success: true };
+    });
+```
+
+**Client-side handling:**
+
+```typescript
+try {
+    const result = await addToCart({ productId: '123', quantity: 1 });
+} catch (error) {
+    if (error instanceof ActionError) {
+        // Business logic error (4xx) - show to user
+        showNotification(error.message);
+    } else {
+        // System error (5xx) - generic message
+        showNotification('Something went wrong. Please try again.');
+    }
+}
+```
+
+### Timeout Configuration
+
+Actions have a configurable timeout to prevent hung requests:
+
+```typescript
+interface JayActionBuilder<...> {
+    // ... existing methods ...
+    
+    // Set action timeout (default: 30 seconds)
+    withTimeout(ms: number): JayActionBuilder<...>;
+}
+```
+
+**Server-side timeout:**
+
+```typescript
+// Action with custom timeout
+export const generateReport = makeJayAction('reports.generate')
+    .withTimeout(60000) // 60 seconds for long-running operation
+    .withHandler(async (input) => {
+        return await generateLargeReport(input);
+    });
+```
+
+**Default timeout:** 30 seconds (configurable globally)
+
+```typescript
+// In jay.init.ts - set global default
+import { setActionDefaults } from '@jay-framework/stack-server-runtime';
+
+setActionDefaults({
+    timeout: 15000, // 15 seconds default for all actions
+});
+```
+
+**Timeout behavior:**
+- Server cancels handler execution after timeout
+- Returns **504 Gateway Timeout** status
+- Client receives `ActionError` with code `'TIMEOUT'`
+
 ### Defining Actions
 
 Input and output types are inferred from the handler function signature:
@@ -651,6 +741,283 @@ function ProductsPageConstructor(
     };
 }
 ```
+
+## Build Transform Design
+
+Actions need different handling on server vs client:
+- **Server**: Execute handler directly with service injection
+- **Client**: Make HTTP request to `/_jay/actions/:actionName`
+
+The jay-stack compiler plugin handles this transformation.
+
+### Action Sources
+
+Actions can come from two places:
+
+| Source | Location | Example |
+|--------|----------|---------|
+| **Project actions** | `src/actions/*.ts` | `src/actions/cart.actions.ts` |
+| **Plugin actions** | `node_modules/@jay-plugin-*/actions.ts` | `@jay-plugin-store/actions` |
+
+Both follow the same pattern - export `JayAction` instances created with `makeJayAction`/`makeJayQuery`.
+
+### Plugin Action Pattern
+
+Plugins export actions alongside their components:
+
+```typescript
+// @jay-plugin-store/lib/actions.ts
+import { makeJayAction, makeJayQuery } from '@jay-framework/fullstack-component';
+
+export const addToCart = makeJayAction('store.addToCart')
+    .withServices(STORE_SERVICE)
+    .withHandler(async (input, storeService) => {
+        return storeService.addToCart(input.productId, input.quantity);
+    });
+
+export const searchProducts = makeJayQuery('store.search')
+    .withServices(STORE_SERVICE)
+    .withCaching({ maxAge: 60 })
+    .withHandler(async (input, storeService) => {
+        return storeService.search(input.query);
+    });
+```
+
+```typescript
+// @jay-plugin-store/lib/index.ts
+export * from './actions';
+export * from './components';
+```
+
+### Transformation Location
+
+The transformation happens in **`@jay-framework/compiler-jay-stack`** (the jay-stack Vite/Rollup plugin).
+
+**Why this plugin?**
+- Already handles jay-stack specific transforms (client/server code splitting)
+- Has access to build context (client vs SSR)
+- Runs for both project code and plugin dependencies
+
+### Detection: What to Transform
+
+The transform identifies action imports by:
+
+1. **Import source detection** - Imports from:
+   - `src/actions/*` (project actions)
+   - `@jay-plugin-*/actions` (plugin actions)
+   - Any module exporting `JayAction` types
+
+2. **Runtime marker detection** - The `JayAction` has `_brand: 'JayAction'` marker
+
+3. **Export analysis** - Scan exports for `JayAction` type instances
+
+### Transform Rules
+
+| Build Target | Import Statement | Transformation |
+|--------------|------------------|----------------|
+| **SSR/Server** | `import { addToCart } from './actions/cart.actions'` | **No change** - use original handler |
+| **Client** | `import { addToCart } from './actions/cart.actions'` | Replace with `createActionCaller` |
+
+### Client Transform
+
+```typescript
+// BEFORE (source code)
+import { addToCart, searchProducts } from '../actions/cart.actions';
+
+const result = await addToCart({ productId: '123', quantity: 1 });
+
+// AFTER (client build)
+import { createActionCaller } from '@jay-framework/stack-client-runtime';
+
+const addToCart = createActionCaller('cart.addToCart', 'POST');
+const searchProducts = createActionCaller('products.search', 'GET');
+
+const result = await addToCart({ productId: '123', quantity: 1 });
+```
+
+### Implementation Approach
+
+#### Option A: Static Analysis (Recommended)
+
+Parse imports, identify action exports, replace with `createActionCaller`:
+
+```typescript
+// In compiler-jay-stack plugin
+function transformActionImports(code: string, id: string, isSSR: boolean) {
+    if (isSSR) return code; // No transform for server
+    
+    // Parse and find action imports
+    const actionImports = findActionImports(code);
+    
+    for (const imp of actionImports) {
+        // Load the action module to get metadata
+        const actionModule = await loadActionModule(imp.source);
+        
+        // Replace import with createActionCaller calls
+        code = replaceImportWithCallers(code, imp, actionModule);
+    }
+    
+    return code;
+}
+```
+
+**Pros:**
+- Clean separation of concerns
+- No runtime overhead
+- Works with tree-shaking
+
+**Cons:**
+- Requires parsing action modules at build time
+- Need to track action metadata (name, method)
+
+#### Option B: Virtual Module Pattern
+
+Create virtual modules that re-export actions appropriately:
+
+```typescript
+// For client builds, resolve 'src/actions/cart.actions' to:
+// 'virtual:jay-actions/cart.actions'
+
+// Virtual module content:
+import { createActionCaller } from '@jay-framework/stack-client-runtime';
+export const addToCart = createActionCaller('cart.addToCart', 'POST');
+export const searchProducts = createActionCaller('products.search', 'GET');
+```
+
+**Pros:**
+- Cleaner transform (no code rewriting)
+- Easy to debug (can inspect virtual module)
+
+**Cons:**
+- More complex Vite plugin setup
+- Need to generate virtual modules dynamically
+
+### Recommended: Option A with Metadata Extraction
+
+1. **At build start**: Scan action files, extract metadata (name, method) from each action
+2. **During transform**: Replace client imports using cached metadata
+3. **For plugins**: Scan plugin package.json for `jay-actions` field or `exports` conventions
+
+### Action Discovery
+
+#### Project Actions
+
+Scan `src/actions/` for files matching `*.actions.ts`:
+
+```typescript
+async function discoverProjectActions(projectRoot: string) {
+    const actionsDir = path.join(projectRoot, 'src/actions');
+    const files = await glob('**/*.actions.ts', { cwd: actionsDir });
+    
+    const actions = new Map<string, ActionMetadata>();
+    
+    for (const file of files) {
+        const module = await parseActionModule(path.join(actionsDir, file));
+        for (const action of module.exports) {
+            actions.set(action.name, {
+                name: action.name,
+                method: action.method,
+                importPath: `./src/actions/${file}`,
+                exportName: action.exportName,
+            });
+        }
+    }
+    
+    return actions;
+}
+```
+
+#### Plugin Actions
+
+Plugins declare actions in `package.json`:
+
+```json
+{
+  "name": "@jay-plugin-store",
+  "jay": {
+    "actions": "./dist/actions.js"
+  }
+}
+```
+
+Or use conventional export path:
+
+```typescript
+// @jay-plugin-store exports actions from /actions
+import { addToCart } from '@jay-plugin-store/actions';
+```
+
+### Registration Flow
+
+Actions must be registered on the server before they can be called:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Build Time                                                       │
+│                                                                 │
+│  1. Discover actions (project + plugins)                        │
+│  2. Extract metadata (name, method, services)                   │
+│  3. Generate action manifest                                    │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ Server Startup (jay.init.ts)                                    │
+│                                                                 │
+│  1. Import action modules                                       │
+│  2. Call registerAction() for each                              │
+│  3. Actions available at /_jay/actions/*                        │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ Client Runtime                                                  │
+│                                                                 │
+│  1. Transformed imports → createActionCaller()                  │
+│  2. Call action → HTTP request to server                        │
+│  3. Server executes handler, returns result                     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Auto-Registration (Future Enhancement)
+
+Instead of manual `registerAction()` calls in `jay.init.ts`, auto-register discovered actions:
+
+```typescript
+// Generated by compiler (injected into server entry)
+import { registerAction } from '@jay-framework/stack-server-runtime';
+import * as cartActions from './src/actions/cart.actions';
+import * as storePluginActions from '@jay-plugin-store/actions';
+
+// Auto-register all discovered actions
+Object.values(cartActions).filter(isJayAction).forEach(registerAction);
+Object.values(storePluginActions).filter(isJayAction).forEach(registerAction);
+```
+
+This could be opt-in via config or the default behavior.
+
+### Open Questions (Compiler)
+
+1. **Plugin action convention?**
+   - Option A: `package.json` `jay.actions` field
+   - Option B: Conventional `/actions` export
+   - **Leaning toward:** Support both, prefer convention
+
+2. **Auto-registration?**
+   - Manual: Explicit in `jay.init.ts` (current)
+   - Auto: Compiler generates registration code
+   - **Leaning toward:** Start manual, add auto-registration later
+
+3. **Development mode?**
+   - Should dev server re-scan actions on file change?
+   - **Answer:** Yes, watch `src/actions/` and plugin changes
+
+4. **Type generation?**
+   - Generate `.d.ts` for client callers?
+   - **Answer:** Not needed if transform preserves types
 
 ## Trade-offs Accepted
 
