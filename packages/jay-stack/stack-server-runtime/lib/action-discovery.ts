@@ -7,9 +7,12 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { createRequire } from 'node:module';
 import { ActionRegistry, actionRegistry } from './action-registry';
 import { isJayAction } from '@jay-framework/fullstack-component';
-import { loadPluginManifest } from '@jay-framework/compiler-shared';
+import { loadPluginManifest, PluginManifest } from '@jay-framework/compiler-shared';
+
+const require = createRequire(import.meta.url);
 
 /**
  * Vite server interface for SSR module loading.
@@ -199,7 +202,138 @@ export async function discoverAllPluginActions(
         }
     }
 
+    // Discover npm package plugins
+    const npmActions = await discoverNpmPluginActions(projectRoot, registry, verbose, viteServer);
+    allActions.push(...npmActions);
+
     return allActions;
+}
+
+/**
+ * Discovers actions from npm package plugins.
+ *
+ * Scans project's package.json for dependencies that have a plugin.yaml export.
+ */
+async function discoverNpmPluginActions(
+    projectRoot: string,
+    registry: ActionRegistry,
+    verbose: boolean,
+    viteServer?: ViteSSRLoader,
+): Promise<string[]> {
+    const allActions: string[] = [];
+    const packageJsonPath = path.join(projectRoot, 'package.json');
+
+    if (!fs.existsSync(packageJsonPath)) {
+        return allActions;
+    }
+
+    try {
+        const packageJson = JSON.parse(await fs.promises.readFile(packageJsonPath, 'utf-8'));
+        const dependencies = {
+            ...packageJson.dependencies,
+            ...packageJson.devDependencies,
+        };
+
+        for (const packageName of Object.keys(dependencies)) {
+            try {
+                // Try to resolve the package's plugin.yaml
+                const pluginYamlPath = tryResolvePluginYaml(packageName, projectRoot);
+                if (!pluginYamlPath) {
+                    continue;
+                }
+
+                // Load the plugin manifest
+                const pluginDir = path.dirname(pluginYamlPath);
+                const pluginConfig = loadPluginManifest(pluginDir);
+
+                if (!pluginConfig || !pluginConfig.actions || !Array.isArray(pluginConfig.actions)) {
+                    continue;
+                }
+
+                if (verbose) {
+                    console.log(`[Actions] NPM plugin "${packageName}" declares actions:`, pluginConfig.actions);
+                }
+
+                // Import the package's main module
+                const actions = await registerNpmPluginActions(
+                    packageName,
+                    pluginConfig,
+                    registry,
+                    verbose,
+                    viteServer,
+                );
+                allActions.push(...actions);
+            } catch {
+                // Package doesn't have plugin.yaml or other resolution error - skip
+                continue;
+            }
+        }
+    } catch (error) {
+        console.error('[Actions] Failed to read project package.json:', error);
+    }
+
+    return allActions;
+}
+
+/**
+ * Tries to resolve the plugin.yaml path for an npm package.
+ * Returns the path if found, null otherwise.
+ */
+function tryResolvePluginYaml(packageName: string, projectRoot: string): string | null {
+    try {
+        // First try the package's plugin.yaml export
+        return require.resolve(`${packageName}/plugin.yaml`, {
+            paths: [projectRoot],
+        });
+    } catch {
+        // Not all packages have plugin.yaml
+        return null;
+    }
+}
+
+/**
+ * Registers actions from an npm package plugin.
+ */
+async function registerNpmPluginActions(
+    packageName: string,
+    pluginConfig: PluginManifest,
+    registry: ActionRegistry,
+    verbose: boolean,
+    viteServer?: ViteSSRLoader,
+): Promise<string[]> {
+    const registeredActions: string[] = [];
+
+    try {
+        // Import the package's main module
+        let pluginModule: Record<string, any>;
+        if (viteServer) {
+            pluginModule = await viteServer.ssrLoadModule(packageName);
+        } else {
+            pluginModule = await import(packageName);
+        }
+
+        // Register each declared action
+        for (const actionName of pluginConfig.actions!) {
+            const actionExport = pluginModule[actionName];
+
+            if (actionExport && isJayAction(actionExport)) {
+                registry.register(actionExport as any);
+                registeredActions.push((actionExport as any).actionName);
+
+                if (verbose) {
+                    console.log(`[Actions] Registered NPM plugin action: ${(actionExport as any).actionName}`);
+                }
+            } else {
+                console.warn(
+                    `[Actions] NPM plugin "${packageName}" declares action "${actionName}" but it's not exported or not a JayAction`,
+                );
+            }
+        }
+    } catch (importError) {
+        console.error(`[Actions] Failed to import NPM plugin "${packageName}":`, importError);
+    }
+
+    return registeredActions;
 }
 
 /**

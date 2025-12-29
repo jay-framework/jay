@@ -1284,6 +1284,82 @@ Key implementation files:
 
 ---
 
+### Dev Server Action Discovery Fix
+
+**Problem:** Action discovery used native `import()` which cannot load TypeScript files:
+```
+TypeError [ERR_UNKNOWN_FILE_EXTENSION]: Unknown file extension ".ts" for cart.actions.ts
+```
+
+**Solution:** Pass Vite server to discovery functions and use `ssrLoadModule`:
+
+```typescript
+// action-discovery.ts
+export interface ViteSSRLoader {
+    ssrLoadModule: (url: string) => Promise<Record<string, any>>;
+}
+
+export interface ActionDiscoveryOptions {
+    // ...
+    viteServer?: ViteSSRLoader;
+}
+
+// In discovery function:
+if (viteServer) {
+    module = await viteServer.ssrLoadModule(filePath);
+} else {
+    module = await import(filePath); // Production: pre-compiled .js
+}
+```
+
+**Additional fix for module paths without extensions:**
+```typescript
+// Handle paths like "./product-rating" without .ts or .js
+if (!fs.existsSync(modulePath)) {
+    const tsPath = modulePath + '.ts';
+    const jsPath = modulePath + '.js';
+    if (fs.existsSync(tsPath)) modulePath = tsPath;
+    else if (fs.existsSync(jsPath)) modulePath = jsPath;
+}
+```
+
+---
+
+### NPM Package Plugin Action Discovery
+
+**Problem:** `discoverAllPluginActions` only scanned local plugins in `src/plugins/`, not npm package dependencies like `example-jay-mood-tracker-plugin`.
+
+**Solution:** Added `discoverNpmPluginActions()` to scan project dependencies:
+
+1. Read `package.json` for dependencies
+2. For each dependency, try to resolve `{package}/plugin.yaml`
+3. If plugin.yaml exists and has `actions` array, import and register them
+
+```typescript
+function tryResolvePluginYaml(packageName: string, projectRoot: string): string | null {
+    try {
+        return require.resolve(`${packageName}/plugin.yaml`, {
+            paths: [projectRoot],
+        });
+    } catch {
+        return null; // Package doesn't export plugin.yaml
+    }
+}
+```
+
+**Result:** All action types now discovered:
+```
+[Actions] Found 2 action file(s)                    # Project actions
+[Actions] Registered: cart.addToCart
+[Actions] Plugin "product-rating" declares actions  # Local plugins
+[Actions] Registered plugin action: productRating.submit
+[Actions] NPM plugin "example-jay-mood-tracker-plugin" declares actions  # NPM packages
+[Actions] Registered NPM plugin action: moodTracker.submitMood
+[Actions] Auto-registered 13 action(s) total
+```
+
+---
+
 ## Implementation Complete
 
 All phases of server actions are now implemented:
@@ -1293,5 +1369,7 @@ All phases of server actions are now implemented:
 4. ✅ Client Action Caller
 5. ✅ Compiler Transform
 6. ✅ Auto-Registration (project actions)
-7. ✅ Plugin Actions
-8. ✅ Plugin Client Build (with resolveId + load pattern)
+7. ✅ Plugin Actions (local src/plugins/)
+8. ✅ NPM Plugin Actions (package dependencies)
+9. ✅ Plugin Client Build (with resolveId + load pattern)
+10. ✅ Vite SSR Loading (for TypeScript in dev mode)
