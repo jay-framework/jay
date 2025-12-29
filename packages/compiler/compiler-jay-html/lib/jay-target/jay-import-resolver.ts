@@ -8,6 +8,8 @@ import {
     WithValidations,
     resolvePluginComponent as resolvePlugin,
     PluginComponentResolution,
+    resolvePluginManifest,
+    PluginManifest,
 } from '@jay-framework/compiler-shared';
 import fs from 'fs';
 import path from 'path';
@@ -26,6 +28,7 @@ export interface JayImportResolver {
         contractName: string,
         projectRoot: string,
     ): WithValidations<PluginComponentResolution>;
+    resolvePluginManifest(pluginName: string, projectRoot: string): WithValidations<PluginManifest>;
 }
 
 export const JAY_IMPORT_RESOLVER: JayImportResolver = {
@@ -48,5 +51,8 @@ export const JAY_IMPORT_RESOLVER: JayImportResolver = {
         // Use shared plugin resolution logic from compiler-shared
         // This handles both local plugins (src/plugins/) and NPM packages (node_modules/)
         return resolvePlugin(projectRoot, pluginName, contractName);
+    },
+    resolvePluginManifest(pluginName: string, projectRoot: string): WithValidations<PluginManifest> {
+        return resolvePluginManifest(projectRoot, pluginName);
     },
 };
