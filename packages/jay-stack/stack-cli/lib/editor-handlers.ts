@@ -1,7 +1,6 @@
 import path from 'path';
 import fs from 'fs';
 import YAML from 'yaml';
-import { createRequire } from 'module';
 import type {
     PublishMessage,
     PublishComponent,
@@ -27,7 +26,6 @@ import {
     parseJayFile,
     parseContract,
     ContractTag,
-    ContractTagType,
 } from '@jay-framework/compiler-jay-html';
 import {
     JAY_EXTENSION,
@@ -39,7 +37,6 @@ import {
 const PAGE_FILENAME = `page${JAY_EXTENSION}`;
 const PAGE_CONTRACT_FILENAME = `page${JAY_CONTRACT_EXTENSION}`;
 const PAGE_CONFIG_FILENAME = 'page.conf.yaml';
-
 
 
 // Helper function to check if a directory is a page
