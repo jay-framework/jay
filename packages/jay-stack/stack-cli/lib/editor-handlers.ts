@@ -26,8 +26,12 @@ import {
     parseJayFile,
     parseContract,
     ContractTag,
+    ContractTagType,
 } from '@jay-framework/compiler-jay-html';
 import {
+    JayType,
+    JayEnumType,
+    JayAtomicType,
     JAY_EXTENSION,
     JAY_CONTRACT_EXTENSION,
     LOCAL_PLUGIN_PATH,
@@ -38,6 +42,49 @@ const PAGE_FILENAME = `page${JAY_EXTENSION}`;
 const PAGE_CONTRACT_FILENAME = `page${JAY_CONTRACT_EXTENSION}`;
 const PAGE_CONFIG_FILENAME = 'page.conf.yaml';
 
+// Helper function to convert JayType to string representation for protocol
+function jayTypeToString(jayType: JayType | undefined): string | undefined {
+    if (!jayType) return undefined;
+
+    if (jayType instanceof JayAtomicType) {
+        return jayType.name;
+    } else if (jayType instanceof JayEnumType) {
+        return `enum (${jayType.values.join(' | ')})`;
+    } else {
+        // For other types, try to get a string representation
+        return (jayType as any).name || 'unknown';
+    }
+}
+
+// Helper function to convert compiler ContractTag to protocol ContractTag
+function convertContractTagToProtocol(tag: ContractTag): Contract['tags'][0] {
+    // Ensure tag.type is always treated as an array
+    const typeArray = Array.isArray(tag.type) ? tag.type : [tag.type];
+    // Convert enum array to string array
+    const typeStrings = typeArray.map((t) => ContractTagType[t]);
+
+    return {
+        tag: tag.tag,
+        type: typeStrings.length === 1 ? typeStrings[0] : typeStrings,
+        dataType: tag.dataType ? jayTypeToString(tag.dataType) : undefined,
+        elementType: tag.elementType ? tag.elementType.join(' | ') : undefined,
+        required: tag.required,
+        repeated: tag.repeated,
+        trackBy: tag.trackBy,
+        async: tag.async,
+        phase: tag.phase,
+        link: tag.link,
+        tags: tag.tags ? tag.tags.map(convertContractTagToProtocol) : undefined,
+    };
+}
+
+// Helper function to convert compiler Contract to protocol Contract
+function convertContractToProtocol(contract: { name: string; tags: ContractTag[] }): Contract {
+    return {
+        name: contract.name,
+        tags: contract.tags.map(convertContractTagToProtocol),
+    };
+}
 
 // Helper function to check if a directory is a page
 // A directory is a page if it has .jay-html OR .jay-contract OR page.conf.yaml
@@ -131,10 +178,10 @@ async function parseContractFile(contractFilePath: string): Promise<Contract | n
                 path.dirname(contractFilePath),
             );
 
-            return {
+            return convertContractToProtocol({
                 name: parsedContract.val.name,
                 tags: resolvedTags,
-            };
+            });
         }
     } catch (error) {
         console.warn(`Failed to parse contract file ${contractFilePath}:`, error);
@@ -143,10 +190,7 @@ async function parseContractFile(contractFilePath: string): Promise<Contract | n
 }
 
 // Helper function to recursively resolve linked sub-contracts
-async function resolveLinkedTags(
-    tags: ContractTag[],
-    baseDir: string,
-): Promise<ContractTag[]> {
+async function resolveLinkedTags(tags: ContractTag[], baseDir: string): Promise<ContractTag[]> {
     const resolvedTags: ContractTag[] = [];
 
     for (const tag of tags) {
@@ -553,7 +597,7 @@ async function scanPlugins(projectRootPath: string): Promise<Plugin[]> {
                         );
                         return null;
                     }
-                    return contractLoadResult.val;
+                    return convertContractToProtocol(contractLoadResult.val);
                 }),
             });
         }

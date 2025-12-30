@@ -1,8 +1,24 @@
-// Import for internal use and re-export for external consumers
-import type { Contract } from '@jay-framework/compiler-jay-html';
+// Protocol-specific contract types optimized for external consumers
+// These mirror compiler types but use simple, serializable representations
 
-// Re-export contract types from compiler-jay-html as the single source of truth
-export type { ContractTag, Contract } from '@jay-framework/compiler-jay-html';
+export interface ContractTag {
+    tag: string; // tag ID
+    type: string | string[]; // tag type(s) - simplified from enum to strings
+    dataType?: string; // string representation of JayType (e.g. "string", "enum (active | inactive)")
+    elementType?: string; // string representation of element types
+    required?: boolean;
+    repeated?: boolean;
+    tags?: ContractTag[]; // for sub-contracts
+    link?: string; // for linked sub-contracts
+    trackBy?: string; // for repeated sub-contracts
+    async?: boolean;
+    phase?: string; // rendering phase as string
+}
+
+export interface Contract {
+    name: string;
+    tags: ContractTag[];
+}
 
 // Base message type with discriminator and generic response type
 export interface BaseMessage<TResponse extends BaseResponse = BaseResponse> {
