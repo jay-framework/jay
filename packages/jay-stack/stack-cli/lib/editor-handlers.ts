@@ -157,83 +157,57 @@ async function scanPageDirectories(
     await scanDirectory(pagesBasePath);
 }
 
-// Helper function to scan page contracts (only checks for .jay-contract files, doesn't parse HTML)
-// Helper function to parse a contract file and return Contract
-async function parseContractFile(contractFilePath: string): Promise<Contract | null> {
-    try {
-        const contractYaml = await fs.promises.readFile(contractFilePath, 'utf-8');
-        const parsedContract = parseContract(contractYaml, contractFilePath);
-
-        if (parsedContract.validations.length > 0) {
-            console.warn(
-                `Contract validation errors in ${contractFilePath}:`,
-                parsedContract.validations,
-            );
-        }
-
-        if (parsedContract.val) {
-            // Resolve any linked sub-contracts
-            const resolvedTags = await resolveLinkedTags(
-                parsedContract.val.tags,
-                path.dirname(contractFilePath),
-            );
-
-            return convertContractToProtocol({
-                name: parsedContract.val.name,
-                tags: resolvedTags,
-            });
-        }
-    } catch (error) {
-        console.warn(`Failed to parse contract file ${contractFilePath}:`, error);
-    }
-    return null;
-}
-
 // Helper function to recursively resolve linked sub-contracts
-async function resolveLinkedTags(tags: ContractTag[], baseDir: string): Promise<ContractTag[]> {
+// Synchronous to match JAY_IMPORT_RESOLVER and support use in scanPlugins
+function expandContractTags(tags: ContractTag[], baseDir: string): ContractTag[] {
     const resolvedTags: ContractTag[] = [];
 
     for (const tag of tags) {
         if (tag.link) {
             // This is a linked sub-contract - load it from the file
             try {
-                const linkedPath = path.resolve(baseDir, tag.link);
-                const linkedContract = await parseContractFile(linkedPath);
+                const linkWithExtension = tag.link.endsWith(JAY_CONTRACT_EXTENSION)
+                    ? tag.link
+                    : tag.link + JAY_CONTRACT_EXTENSION;
 
-                if (linkedContract) {
-                    // Create a sub-contract tag with the linked contract's tags
+                // Use resolver to handle both relative and package paths
+                const linkedPath = JAY_IMPORT_RESOLVER.resolveLink(baseDir, linkWithExtension);
+
+                // Load the raw contract
+                const loadResult = JAY_IMPORT_RESOLVER.loadContract(linkedPath);
+
+                if (loadResult.val) {
+                    // Recursively expand its tags
+                    const expandedSubTags = expandContractTags(
+                        loadResult.val.tags,
+                        path.dirname(linkedPath),
+                    );
+
+                    // Create a sub-contract tag with the expanded tags
                     const resolvedTag: ContractTag = {
                         tag: tag.tag,
                         type: tag.type, // Keep the original enum type
-                        tags: linkedContract.tags, // Use tags from linked contract
+                        tags: expandedSubTags,
+                        required: tag.required,
+                        repeated: tag.repeated,
+                        trackBy: tag.trackBy,
+                        async: tag.async,
+                        phase: tag.phase,
+                        link: tag.link,
                     };
-
-                    if (tag.required !== undefined) {
-                        resolvedTag.required = tag.required;
-                    }
-
-                    if (tag.repeated !== undefined) {
-                        resolvedTag.repeated = tag.repeated;
-                    }
-
-                    if (tag.trackBy !== undefined) {
-                        resolvedTag.trackBy = tag.trackBy;
-                    }
 
                     resolvedTags.push(resolvedTag);
                 } else {
                     console.warn(`Failed to load linked contract: ${tag.link} from ${baseDir}`);
-                    // Fall back to including the original tag
                     resolvedTags.push(tag);
                 }
             } catch (error) {
                 console.warn(`Error resolving linked contract ${tag.link}:`, error);
-                // Fall back to including the original tag
                 resolvedTags.push(tag);
             }
         } else if (tag.tags) {
             // This is an inline sub-contract - recursively resolve its tags
-            const resolvedSubTags = await resolveLinkedTags(tag.tags, baseDir);
+            const resolvedSubTags = expandContractTags(tag.tags, baseDir);
             const resolvedTag: ContractTag = {
                 ...tag,
                 tags: resolvedSubTags,
@@ -246,6 +220,37 @@ async function resolveLinkedTags(tags: ContractTag[], baseDir: string): Promise<
     }
 
     return resolvedTags;
+}
+
+// Helper function to parse a contract file and return Contract with expanded tags
+// Replaces parseContractFile and is used by scanPlugins
+function loadAndExpandContract(contractFilePath: string): Contract | null {
+    try {
+        const loadResult = JAY_IMPORT_RESOLVER.loadContract(contractFilePath);
+
+        if (loadResult.validations.length > 0) {
+            console.warn(
+                `Contract validation errors in ${contractFilePath}:`,
+                loadResult.validations,
+            );
+        }
+
+        if (loadResult.val) {
+            // Resolve any linked sub-contracts
+            const resolvedTags = expandContractTags(
+                loadResult.val.tags,
+                path.dirname(contractFilePath),
+            );
+
+            return convertContractToProtocol({
+                name: loadResult.val.name,
+                tags: resolvedTags,
+            });
+        }
+    } catch (error) {
+        console.warn(`Failed to parse contract file ${contractFilePath}:`, error);
+    }
+    return null;
 }
 
 // Helper function to build full page contracts (combines page contracts with installed app components)
@@ -580,24 +585,11 @@ async function scanPlugins(projectRootPath: string): Promise<Plugin[]> {
                         return null;
                     }
 
-                    const contractLoadResult = JAY_IMPORT_RESOLVER.loadContract(
-                        resolveResult.val.contractPath,
-                    );
-                    if (contractLoadResult.validations.length > 0) {
-                        console.warn(
-                            `Failed to load contract for ${pluginName}:${contract.name}:`,
-                            contractLoadResult.validations,
-                        );
+                    const expandedContract = loadAndExpandContract(resolveResult.val.contractPath);
+                    if (!expandedContract) {
                         return null;
                     }
-                    if (!contractLoadResult.val) {
-                        console.warn(
-                            `Failed to load contract for ${pluginName}:${contract.name}:`,
-                            contractLoadResult.validations,
-                        );
-                        return null;
-                    }
-                    return convertContractToProtocol(contractLoadResult.val);
+                    return expandedContract;
                 }),
             });
         }
@@ -640,13 +632,9 @@ async function scanProjectInfo(
 
         // Parse contract if exists
         if (hasPageContract) {
-            try {
-                const parsedContract = await parseContractFile(contractPath);
-                if (parsedContract) {
-                    contract = parsedContract;
-                }
-            } catch (error) {
-                console.warn(`Failed to parse contract file ${contractPath}:`, error);
+            const parsedContract = loadAndExpandContract(contractPath);
+            if (parsedContract) {
+                contract = parsedContract;
             }
         }
 
