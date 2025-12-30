@@ -729,7 +729,6 @@ tags:
 
     describe('GetContracts API', () => {
         const configDir = path.resolve('./tmp-config');
-        const installedAppsDir = path.join(configDir, 'installedApps');
 
         beforeEach(() => {
             // Clean up config directory
@@ -754,7 +753,6 @@ tags:
 
             expect(result.success).toBe(true);
             expect(result.info.pages).toEqual([]);
-            expect(result.info.installedAppContracts).toEqual({});
         });
 
         it('should return pages without contracts', async () => {

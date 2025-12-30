@@ -713,8 +713,6 @@ async function scanProjectInfo(
         pages,
         components,
         plugins,
-        installedApps: [],
-        installedAppContracts: {},
     };
 }
 
@@ -984,8 +982,6 @@ export function createEditorHandlers(
                     localPath: process.cwd(),
                     pages: [],
                     components: [],
-                    installedApps: [],
-                    installedAppContracts: {},
                     plugins: [],
                 },
             };

@@ -14,12 +14,9 @@ export type {
     BaseResponse,
     ContractTag,
     Contract,
-    InstalledAppContracts,
     ProjectInfo,
     ProjectPage,
     ProjectComponent,
-    InstalledApp,
-    // New plugin system types
     Plugin,
 } from './protocol';
 

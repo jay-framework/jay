@@ -116,61 +116,17 @@ export interface Plugin {
     contracts: Contract[]; // Array of available contracts
 }
 
-// Legacy type for backward compatibility
-export interface InstalledApp {
-    name: string;
-    module: string;
-    pages: {
-        name: string;
-        headless_components: {
-            name: string;
-            key: string;
-            contract: string;
-            slugs?: string[];
-        }[];
-    }[];
-    components: {
-        name: string;
-        headless_components: {
-            name: string;
-            key: string;
-            contract: string;
-        }[];
-    }[];
-    config_map?: {
-        display_name: string;
-        key: string;
-    }[];
-}
-
 export interface ProjectInfo {
     name: string;
     localPath: string;
     pages: ProjectPage[];
     components: ProjectComponent[];
-    plugins: Plugin[]; // New plugin system
-    installedApps: InstalledApp[]; // Legacy - for backward compatibility
-    installedAppContracts: {
-        [appName: string]: InstalledAppContracts;
-    };
+    plugins: Plugin[];
 }
 
 export interface GetProjectInfoResponse extends BaseResponse {
     type: 'getProjectInfo';
     info: ProjectInfo;
-}
-
-export interface InstalledAppContracts {
-    appName: string;
-    module: string;
-    pages: Array<{
-        pageName: string;
-        contract: Contract;
-    }>;
-    components: Array<{
-        componentName: string;
-        contract: Contract;
-    }>;
 }
 
 // Union types for all messages and responses
