@@ -24,6 +24,7 @@
     "test:watch": ":"
   },
   "devDependencies": {
+    "@jay-framework/compiler-jay-html": "workspace:^",
     "@jay-framework/dev-environment": "workspace:^",
     "@jay-framework/jay-cli": "workspace:^",
     "@types/node": "^22.15.21",

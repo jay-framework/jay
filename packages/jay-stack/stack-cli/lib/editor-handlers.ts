@@ -17,8 +17,7 @@ import type {
     ProjectInfo,
     ProjectPage,
     ProjectComponent,
-    ContractTag as ProtocolContractTag,
-    ContractSchema,
+    Contract,
     Plugin,
 } from '@jay-framework/editor-protocol';
 import type { JayConfig } from './config';
@@ -31,9 +30,6 @@ import {
     ContractTagType,
 } from '@jay-framework/compiler-jay-html';
 import {
-    JayType,
-    JayEnumType,
-    JayAtomicType,
     JAY_EXTENSION,
     JAY_CONTRACT_EXTENSION,
     LOCAL_PLUGIN_PATH,
@@ -44,56 +40,7 @@ const PAGE_FILENAME = `page${JAY_EXTENSION}`;
 const PAGE_CONTRACT_FILENAME = `page${JAY_CONTRACT_EXTENSION}`;
 const PAGE_CONFIG_FILENAME = 'page.conf.yaml';
 
-// Helper function to convert JayType to string representation
-function jayTypeToString(jayType: JayType | undefined): string | undefined {
-    if (!jayType) return undefined;
 
-    if (jayType instanceof JayAtomicType) {
-        return jayType.name;
-    } else if (jayType instanceof JayEnumType) {
-        return `enum (${jayType.values.join(' | ')})`;
-    } else {
-        // For other types, try to get a string representation
-        return (jayType as any).name || 'unknown';
-    }
-}
-
-// Helper function to convert ContractTag to protocol format
-function convertContractTagToProtocol(tag: ContractTag): ProtocolContractTag {
-    const protocolTag: ProtocolContractTag = {
-        tag: tag.tag,
-        type:
-            tag.type.length === 1
-                ? ContractTagType[tag.type[0]]
-                : tag.type.map((t) => ContractTagType[t]),
-    };
-
-    if (tag.dataType) {
-        protocolTag.dataType = jayTypeToString(tag.dataType);
-    }
-
-    if (tag.elementType) {
-        protocolTag.elementType = tag.elementType.join(' | ');
-    }
-
-    if (tag.required !== undefined) {
-        protocolTag.required = tag.required;
-    }
-
-    if (tag.repeated !== undefined) {
-        protocolTag.repeated = tag.repeated;
-    }
-
-    if (tag.link) {
-        protocolTag.link = tag.link;
-    }
-
-    if (tag.tags) {
-        protocolTag.tags = tag.tags.map(convertContractTagToProtocol);
-    }
-
-    return protocolTag;
-}
 
 // Helper function to check if a directory is a page
 // A directory is a page if it has .jay-html OR .jay-contract OR page.conf.yaml
@@ -167,8 +114,8 @@ async function scanPageDirectories(
 }
 
 // Helper function to scan page contracts (only checks for .jay-contract files, doesn't parse HTML)
-// Helper function to parse a contract file and return ContractSchema
-async function parseContractFile(contractFilePath: string): Promise<ContractSchema | null> {
+// Helper function to parse a contract file and return Contract
+async function parseContractFile(contractFilePath: string): Promise<Contract | null> {
     try {
         const contractYaml = await fs.promises.readFile(contractFilePath, 'utf-8');
         const parsedContract = parseContract(contractYaml, contractFilePath);
@@ -202,8 +149,8 @@ async function parseContractFile(contractFilePath: string): Promise<ContractSche
 async function resolveLinkedTags(
     tags: ContractTag[],
     baseDir: string,
-): Promise<ProtocolContractTag[]> {
-    const resolvedTags: ProtocolContractTag[] = [];
+): Promise<ContractTag[]> {
+    const resolvedTags: ContractTag[] = [];
 
     for (const tag of tags) {
         if (tag.link) {
@@ -214,12 +161,9 @@ async function resolveLinkedTags(
 
                 if (linkedContract) {
                     // Create a sub-contract tag with the linked contract's tags
-                    const resolvedTag: ProtocolContractTag = {
+                    const resolvedTag: ContractTag = {
                         tag: tag.tag,
-                        type:
-                            tag.type.length === 1
-                                ? ContractTagType[tag.type[0]]
-                                : tag.type.map((t) => ContractTagType[t]),
+                        type: tag.type, // Keep the original enum type
                         tags: linkedContract.tags, // Use tags from linked contract
                     };
 
@@ -231,26 +175,32 @@ async function resolveLinkedTags(
                         resolvedTag.repeated = tag.repeated;
                     }
 
+                    if (tag.trackBy !== undefined) {
+                        resolvedTag.trackBy = tag.trackBy;
+                    }
+
                     resolvedTags.push(resolvedTag);
                 } else {
                     console.warn(`Failed to load linked contract: ${tag.link} from ${baseDir}`);
-                    // Fall back to including the link reference
-                    resolvedTags.push(convertContractTagToProtocol(tag));
+                    // Fall back to including the original tag
+                    resolvedTags.push(tag);
                 }
             } catch (error) {
                 console.warn(`Error resolving linked contract ${tag.link}:`, error);
-                // Fall back to including the link reference
-                resolvedTags.push(convertContractTagToProtocol(tag));
+                // Fall back to including the original tag
+                resolvedTags.push(tag);
             }
         } else if (tag.tags) {
             // This is an inline sub-contract - recursively resolve its tags
             const resolvedSubTags = await resolveLinkedTags(tag.tags, baseDir);
-            const protocolTag = convertContractTagToProtocol(tag);
-            protocolTag.tags = resolvedSubTags;
-            resolvedTags.push(protocolTag);
+            const resolvedTag: ContractTag = {
+                ...tag,
+                tags: resolvedSubTags,
+            };
+            resolvedTags.push(resolvedTag);
         } else {
-            // Regular tag (data, interactive, variant)
-            resolvedTags.push(convertContractTagToProtocol(tag));
+            // Regular tag (data, interactive, variant) - include as-is
+            resolvedTags.push(tag);
         }
     }
 
@@ -645,14 +595,14 @@ async function scanProjectInfo(
             componentName: string;
             key: string;
         }[] = [];
-        let contractSchema: ContractSchema | undefined;
+        let contract: Contract | undefined;
 
         // Parse contract if exists
         if (hasPageContract) {
             try {
                 const parsedContract = await parseContractFile(contractPath);
                 if (parsedContract) {
-                    contractSchema = parsedContract;
+                    contract = parsedContract;
                 }
             } catch (error) {
                 console.warn(`Failed to parse contract file ${contractPath}:`, error);
@@ -723,7 +673,7 @@ async function scanProjectInfo(
             name: pageName,
             url: pageUrl,
             filePath: pageFilePath,
-            contractSchema,
+            contract,
             usedComponents,
         });
     });

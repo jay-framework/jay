@@ -77,7 +77,7 @@ interface ProjectPage {
   filePath: string; // Path to page.jay-html
 
   // Contract info
-  contractSchema?: ContractSchema; // Page's own contract from .jay-contract file
+  contract?: Contract; // Page's own contract from .jay-contract file
 
   // Used components
   usedComponents: {
@@ -107,7 +107,7 @@ interface ProjectComponent {
 
 interface Plugin {
   name: string; // Plugin name (kebab-case) for the plugin attribute
-  contracts: ContractSchema[]; // Array of available contracts
+  contracts: Contract[]; // Array of available contracts
 }
 
 interface InstalledApp {
@@ -141,15 +141,15 @@ interface InstalledAppContracts {
   module: string;
   pages: Array<{
     pageName: string;
-    contractSchema: ContractSchema;
+    contract: Contract;
   }>;
   components: Array<{
     componentName: string;
-    contractSchema: ContractSchema;
+    contract: Contract;
   }>;
 }
 
-interface ContractSchema {
+interface Contract {
   name: string;
   tags: ContractTag[];
 }
@@ -183,7 +183,7 @@ interface ContractTag {
         filePath: '/Users/dev/my-project/src/pages/page.jay-html',
 
         // Page's own contract
-        contractSchema: {
+        contract: {
           name: 'home',
           tags: [
             { tag: 'siteTitle', type: 'data', dataType: 'string' },
@@ -252,7 +252,7 @@ interface ContractTag {
         pages: [
           {
             pageName: 'productPage',
-            contractSchema: {
+            contract: {
               name: 'product-page',
               tags: [
                 { tag: 'title', type: 'data', dataType: 'string' },
@@ -298,9 +298,9 @@ if (homePage) {
   console.log(`\nPage: ${homePage.name} (${homePage.url})`);
 
   // Show page's own contract
-  if (homePage.contractSchema) {
+  if (homePage.contract) {
     console.log('\nPage Contract:');
-    homePage.contractSchema.tags.forEach((tag) => {
+    homePage.contract.tags.forEach((tag) => {
       console.log(`  - ${tag.tag}: ${tag.type}`);
     });
   }
@@ -316,7 +316,7 @@ if (homePage) {
 
     if (contract) {
       console.log(`\nComponent: ${ref.appName}.${ref.componentName}`);
-      contract.contractSchema.tags.forEach((tag) => {
+      contract.contract.tags.forEach((tag) => {
         console.log(`  - ${tag.tag}: ${tag.type}`);
       });
     }
@@ -334,8 +334,8 @@ function getAllPageTags(
   const allTags: ContractTag[] = [];
 
   // 1. Add page's own tags
-  if (page.contractSchema) {
-    allTags.push(...page.contractSchema.tags);
+  if (page.contract) {
+    allTags.push(...page.contract.tags);
   }
 
   // 2. Add tags from used components
@@ -348,7 +348,7 @@ function getAllPageTags(
       app.components.find((c) => c.componentName === ref.componentName);
 
     if (contract) {
-      allTags.push(...contract.contractSchema.tags);
+      allTags.push(...contract.contract.tags);
     }
   });
 
@@ -384,7 +384,7 @@ function findPluginContract(
   plugins: Plugin[],
   pluginName: string,
   contractName: string,
-): ContractSchema | null {
+): Contract | null {
   const plugin = plugins.find((p) => p.name === pluginName);
   if (!plugin) return null;
 
@@ -412,12 +412,12 @@ Object.values(response.info.installedAppContracts).forEach((app) => {
 
   console.log(`  Pages: ${app.pages.length}`);
   app.pages.forEach((page) => {
-    console.log(`    - ${page.pageName}: ${page.contractSchema.tags.length} tags`);
+    console.log(`    - ${page.pageName}: ${page.contract.tags.length} tags`);
   });
 
   console.log(`  Components: ${app.components.length}`);
   app.components.forEach((comp) => {
-    console.log(`    - ${comp.componentName}: ${comp.contractSchema.tags.length} tags`);
+    console.log(`    - ${comp.componentName}: ${comp.contract.tags.length} tags`);
   });
 });
 ```
@@ -573,9 +573,9 @@ if (response.success) {
   info.pages.forEach((page) => {
     console.log(`\n\nPage: ${page.name} (${page.url})`);
 
-    if (page.contractSchema) {
+    if (page.contract) {
       console.log('  Own Contract:');
-      page.contractSchema.tags.forEach((tag) => {
+      page.contract.tags.forEach((tag) => {
         console.log(`    - ${tag.tag}: ${tag.type}${tag.dataType ? ` (${tag.dataType})` : ''}`);
       });
     }
@@ -624,7 +624,7 @@ function findPluginContract(
   plugins: Plugin[],
   pluginName: string,
   contractName: string,
-): ContractSchema | null {
+): Contract | null {
   const plugin = plugins.find((p) => p.name === pluginName);
   if (!plugin) return null;
 
@@ -651,17 +651,17 @@ function generateHeadlessScriptAttributes(
 function lookupComponentContract(
   ref: { appName: string; componentName: string },
   installedAppContracts: { [appName: string]: InstalledAppContracts },
-): ContractSchema | null {
+): Contract | null {
   const app = installedAppContracts[ref.appName];
   if (!app) return null;
 
   // Check pages
   const pageContract = app.pages.find((p) => p.pageName === ref.componentName);
-  if (pageContract) return pageContract.contractSchema;
+  if (pageContract) return pageContract.contract;
 
   // Check components
   const componentContract = app.components.find((c) => c.componentName === ref.componentName);
-  if (componentContract) return componentContract.contractSchema;
+  if (componentContract) return componentContract.contract;
 
   return null;
 }
@@ -675,8 +675,8 @@ const page = response.info.pages.find((p) => p.url === targetUrl);
 
 if (page) {
   // Display page-level tags
-  if (page.contractSchema) {
-    displayContract(page.contractSchema);
+  if (page.contract) {
+    displayContract(page.contract);
   }
 
   // Display used component tags (try plugin system first, then legacy)

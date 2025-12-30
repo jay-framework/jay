@@ -13,7 +13,7 @@ export type {
     BaseMessage,
     BaseResponse,
     ContractTag,
-    ContractSchema,
+    Contract,
     InstalledAppContracts,
     ProjectInfo,
     ProjectPage,

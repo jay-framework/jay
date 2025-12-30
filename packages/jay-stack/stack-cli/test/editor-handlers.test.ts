@@ -783,13 +783,13 @@ tags:
             const homePage = result.info.pages.find((p) => p.url === '/');
             expect(homePage).toBeDefined();
             expect(homePage.name).toBe('Home');
-            expect(homePage.contractSchema).toBeUndefined();
+            expect(homePage.contract).toBeUndefined();
             expect(homePage.usedComponents).toEqual([]);
 
             const aboutPage = result.info.pages.find((p) => p.url === '/about');
             expect(aboutPage).toBeDefined();
             expect(aboutPage.name).toBe('about');
-            expect(aboutPage.contractSchema).toBeUndefined();
+            expect(aboutPage.contract).toBeUndefined();
             expect(aboutPage.usedComponents).toEqual([]);
         });
 
@@ -846,32 +846,32 @@ tags:
             // Check home page
             const homePage = result.info.pages.find((p) => p.url === '/');
             expect(homePage).toBeDefined();
-            expect(homePage.contractSchema).toBeDefined();
-            expect(homePage.contractSchema.name).toBe('home');
-            expect(homePage.contractSchema.tags).toHaveLength(2);
-            expect(homePage.contractSchema.tags[0].tag).toBe('siteTitle');
-            expect(homePage.contractSchema.tags[0].type).toBe('data');
-            expect(homePage.contractSchema.tags[0].dataType).toBe('string');
-            expect(homePage.contractSchema.tags[1].tag).toBe('address');
-            expect(homePage.contractSchema.tags[1].type).toBe('data');
-            expect(homePage.contractSchema.tags[1].dataType).toBe('string');
+            expect(homePage.contract).toBeDefined();
+            expect(homePage.contract.name).toBe('home');
+            expect(homePage.contract.tags).toHaveLength(2);
+            expect(homePage.contract.tags[0].tag).toBe('siteTitle');
+            expect(homePage.contract.tags[0].type).toBe('data');
+            expect(homePage.contract.tags[0].dataType).toBe('string');
+            expect(homePage.contract.tags[1].tag).toBe('address');
+            expect(homePage.contract.tags[1].type).toBe('data');
+            expect(homePage.contract.tags[1].dataType).toBe('string');
 
             // Check products page
             const productsPage = result.info.pages.find((p) => p.url === '/products');
             expect(productsPage).toBeDefined();
-            expect(productsPage.contractSchema).toBeDefined();
-            expect(productsPage.contractSchema.name).toBe('products');
-            expect(productsPage.contractSchema.tags).toHaveLength(1);
-            expect(productsPage.contractSchema.tags[0].tag).toBe('productList');
-            expect(productsPage.contractSchema.tags[0].type).toBe('subContract');
-            expect(productsPage.contractSchema.tags[0].repeated).toBe(true);
-            expect(productsPage.contractSchema.tags[0].tags).toHaveLength(2);
-            expect(productsPage.contractSchema.tags[0].tags[0].tag).toBe('name');
-            expect(productsPage.contractSchema.tags[0].tags[0].type).toBe('data');
-            expect(productsPage.contractSchema.tags[0].tags[0].dataType).toBe('string');
-            expect(productsPage.contractSchema.tags[0].tags[1].tag).toBe('price');
-            expect(productsPage.contractSchema.tags[0].tags[1].type).toBe('data');
-            expect(productsPage.contractSchema.tags[0].tags[1].dataType).toBe('number');
+            expect(productsPage.contract).toBeDefined();
+            expect(productsPage.contract.name).toBe('products');
+            expect(productsPage.contract.tags).toHaveLength(1);
+            expect(productsPage.contract.tags[0].tag).toBe('productList');
+            expect(productsPage.contract.tags[0].type).toBe('subContract');
+            expect(productsPage.contract.tags[0].repeated).toBe(true);
+            expect(productsPage.contract.tags[0].tags).toHaveLength(2);
+            expect(productsPage.contract.tags[0].tags[0].tag).toBe('name');
+            expect(productsPage.contract.tags[0].tags[0].type).toBe('data');
+            expect(productsPage.contract.tags[0].tags[0].dataType).toBe('string');
+            expect(productsPage.contract.tags[0].tags[1].tag).toBe('price');
+            expect(productsPage.contract.tags[0].tags[1].type).toBe('data');
+            expect(productsPage.contract.tags[0].tags[1].dataType).toBe('number');
         });
 
         it('should return pages with used component contracts (references only)', async () => {
@@ -1094,8 +1094,8 @@ tags:
             const productPage = result.info.pages.find((p) => p.url === '/products/:productId');
             expect(productPage).toBeDefined();
             expect(productPage.name).toBe('[productId]');
-            expect(productPage.contractSchema).toBeDefined();
-            expect(productPage.contractSchema.tags[0].tag).toBe('productId');
+            expect(productPage.contract).toBeDefined();
+            expect(productPage.contract.tags[0].tag).toBe('productId');
         });
 
         it('should handle nested parameterized routes', async () => {
@@ -1170,11 +1170,11 @@ tags:
 
             expect(result.success).toBe(true);
             const homePage = result.info.pages[0];
-            expect(homePage.contractSchema).toBeDefined();
-            expect(homePage.contractSchema.tags).toHaveLength(2);
+            expect(homePage.contract).toBeDefined();
+            expect(homePage.contract.tags).toHaveLength(2);
 
             // Check that the linked sub-contract was resolved
-            const featuredTag = homePage.contractSchema.tags[1];
+            const featuredTag = homePage.contract.tags[1];
             expect(featuredTag.tag).toBe('featured');
             expect(featuredTag.type).toBe('subContract');
             expect(featuredTag.tags).toBeDefined();
@@ -1416,11 +1416,11 @@ tags:
             const homePage = result.info.pages[0];
 
             // Check page's own contract
-            expect(homePage.contractSchema).toBeDefined();
-            expect(homePage.contractSchema.name).toBe('home');
-            expect(homePage.contractSchema.tags).toHaveLength(2);
-            expect(homePage.contractSchema.tags[0].tag).toBe('siteTitle');
-            expect(homePage.contractSchema.tags[1].tag).toBe('description');
+            expect(homePage.contract).toBeDefined();
+            expect(homePage.contract.name).toBe('home');
+            expect(homePage.contract.tags).toHaveLength(2);
+            expect(homePage.contract.tags[0].tag).toBe('siteTitle');
+            expect(homePage.contract.tags[1].tag).toBe('description');
 
             // Check used component references
             expect(homePage.usedComponents).toHaveLength(2);

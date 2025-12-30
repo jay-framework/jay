@@ -1,3 +1,9 @@
+// Import for internal use and re-export for external consumers
+import type { Contract } from '@jay-framework/compiler-jay-html';
+
+// Re-export contract types from compiler-jay-html as the single source of truth
+export type { ContractTag, Contract } from '@jay-framework/compiler-jay-html';
+
 // Base message type with discriminator and generic response type
 export interface BaseMessage<TResponse extends BaseResponse = BaseResponse> {
     type: string;
@@ -74,7 +80,7 @@ export interface ProjectPage {
     name: string;
     url: string;
     filePath: string;
-    contractSchema?: ContractSchema; // Page's own contract if it has a .jay-contract file
+    contract?: Contract; // Page's own contract if it has a .jay-contract file
     usedComponents: {
         appName: string;
         componentName: string;
@@ -91,7 +97,7 @@ export interface ProjectComponent {
 // Simplified plugin interface focused on editor needs
 export interface Plugin {
     name: string; // Plugin name (kebab-case) for the plugin attribute
-    contracts: ContractSchema[]; // Array of available contracts
+    contracts: Contract[]; // Array of available contracts
 }
 
 // Legacy type for backward compatibility
@@ -138,32 +144,16 @@ export interface GetProjectInfoResponse extends BaseResponse {
     info: ProjectInfo;
 }
 
-export interface ContractTag {
-    tag: string; // tag ID
-    type: string | string[]; // tag type(s)
-    dataType?: string;
-    elementType?: string;
-    required?: boolean;
-    repeated?: boolean;
-    tags?: ContractTag[]; // for sub-contracts
-    link?: string; // for linked sub-contracts
-}
-
-export interface ContractSchema {
-    name: string;
-    tags: ContractTag[];
-}
-
 export interface InstalledAppContracts {
     appName: string;
     module: string;
     pages: Array<{
         pageName: string;
-        contractSchema: ContractSchema;
+        contract: Contract;
     }>;
     components: Array<{
         componentName: string;
-        contractSchema: ContractSchema;
+        contract: Contract;
     }>;
 }
 
