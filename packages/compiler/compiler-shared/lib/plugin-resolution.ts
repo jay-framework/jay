@@ -6,7 +6,7 @@ import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 
-const LOCAL_PLUGIN_PATH = 'src/plugins';
+export const LOCAL_PLUGIN_PATH = 'src/plugins';
 
 /**
  * Plugin manifest structure (contracts section only - subset of full PluginManifest)
@@ -353,11 +353,11 @@ export function resolvePluginManifest(
     pluginName: string,
 ): WithValidations<PluginManifest> {
     const localResult = resolveLocalPluginManifest(projectRoot, pluginName);
-    if (localResult.val !== null && localResult.validations.length === 0) {
+    if (localResult && localResult.val !== null && localResult.validations.length === 0) {
         return localResult;
     }
     const npmResult = resolveNpmPluginManifest(projectRoot, pluginName);
-    if (npmResult.val !== null && npmResult.validations.length === 0) {
+    if (npmResult && npmResult.val !== null && npmResult.validations.length === 0) {
         return npmResult;
     }
     return new WithValidations(null as any, [

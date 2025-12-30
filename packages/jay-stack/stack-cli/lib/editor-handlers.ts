@@ -17,12 +17,9 @@ import type {
     ProjectInfo,
     ProjectPage,
     ProjectComponent,
-    InstalledApp,
     ContractTag as ProtocolContractTag,
     ContractSchema,
-    InstalledAppContracts,
     Plugin,
-    PluginManifest,
 } from '@jay-framework/editor-protocol';
 import type { JayConfig } from './config';
 import {
@@ -39,6 +36,8 @@ import {
     JayAtomicType,
     JAY_EXTENSION,
     JAY_CONTRACT_EXTENSION,
+    LOCAL_PLUGIN_PATH,
+    resolvePluginManifest,
 } from '@jay-framework/compiler-shared';
 
 const PAGE_FILENAME = `page${JAY_EXTENSION}`;
@@ -258,70 +257,6 @@ async function resolveLinkedTags(
     return resolvedTags;
 }
 
-// Helper function to scan plugin contracts and build installedAppContracts from plugin information
-async function scanPluginContracts(
-    plugins: Plugin[],
-    projectRootPath: string,
-): Promise<{ [appName: string]: InstalledAppContracts }> {
-    const pluginContracts: { [appName: string]: InstalledAppContracts } = {};
-
-    for (const plugin of plugins) {
-        const pluginName = plugin.manifest.name;
-        if (!plugin.manifest.contracts || plugin.manifest.contracts.length === 0) {
-            continue;
-        }
-
-        const appContracts: InstalledAppContracts = {
-            appName: pluginName,
-            module: plugin.manifest.module || pluginName,
-            pages: [],
-            components: [],
-        };
-
-        // Process each contract in the plugin
-        for (const contractDef of plugin.manifest.contracts) {
-            try {
-                // Resolve the contract file using the plugin resolution system
-                const resolveResult = JAY_IMPORT_RESOLVER.resolvePluginComponent(
-                    pluginName,
-                    contractDef.name,
-                    projectRootPath,
-                );
-
-                if (resolveResult.validations.length > 0) {
-                    console.warn(
-                        `Plugin contract resolution warnings for ${pluginName}/${contractDef.name}:`,
-                        resolveResult.validations,
-                    );
-                }
-
-                if (resolveResult.val && resolveResult.val.contractPath) {
-                    const contractSchema = await parseContractFile(resolveResult.val.contractPath);
-                    if (contractSchema) {
-                        // For plugins, we treat all contracts as components
-                        // (since we don't have the old page/component distinction)
-                        appContracts.components.push({
-                            componentName: contractDef.name,
-                            contractSchema,
-                        });
-                    }
-                }
-            } catch (error) {
-                console.warn(
-                    `Failed to resolve plugin contract ${pluginName}/${contractDef.name}:`,
-                    error,
-                );
-            }
-        }
-
-        if (appContracts.components.length > 0) {
-            pluginContracts[pluginName] = appContracts;
-        }
-    }
-
-    return pluginContracts;
-}
-
 // Helper function to build full page contracts (combines page contracts with installed app components)
 // Helper function to extract headless components from parsed jay-html and resolve to app/component names
 async function extractHeadlessComponentsFromJayHtml(
@@ -430,47 +365,6 @@ async function scanProjectComponents(componentsBasePath: string): Promise<Projec
     return components;
 }
 
-// Helper function to scan installed apps
-async function scanInstalledApps(configBasePath: string): Promise<InstalledApp[]> {
-    const installedApps: InstalledApp[] = [];
-    const installedAppsPath = path.join(configBasePath, 'installedApps');
-
-    try {
-        if (!fs.existsSync(installedAppsPath)) {
-            return installedApps;
-        }
-
-        const appDirs = await fs.promises.readdir(installedAppsPath, { withFileTypes: true });
-
-        for (const appDir of appDirs) {
-            if (appDir.isDirectory()) {
-                const appConfigPath = path.join(installedAppsPath, appDir.name, 'app.conf.yaml');
-
-                try {
-                    if (fs.existsSync(appConfigPath)) {
-                        const configContent = await fs.promises.readFile(appConfigPath, 'utf-8');
-                        const appConfig = YAML.parse(configContent);
-
-                        installedApps.push({
-                            name: appConfig.name || appDir.name,
-                            module: appConfig.module || appDir.name,
-                            pages: appConfig.pages || [],
-                            components: appConfig.components || [],
-                            config_map: appConfig.config_map || [],
-                        });
-                    }
-                } catch (error) {
-                    console.warn(`Failed to parse app config ${appConfigPath}:`, error);
-                }
-            }
-        }
-    } catch (error) {
-        console.warn(`Failed to scan installed apps directory ${installedAppsPath}:`, error);
-    }
-
-    return installedApps;
-}
-
 // Helper function to get project name from project.conf.yaml
 async function getProjectName(configBasePath: string): Promise<string> {
     const projectConfigPath = path.join(configBasePath, 'project.conf.yaml');
@@ -489,118 +383,235 @@ async function getProjectName(configBasePath: string): Promise<string> {
 }
 
 /**
- * Scans for Jay Stack plugins in both src/plugins/ (local) and node_modules/ (npm packages)
+ * Scans for local plugins in src/plugins/ and extracts plugin names that have plugin.yaml
+ */
+async function scanLocalPluginNames(projectRoot: string): Promise<string[]> {
+    const plugins: string[] = [];
+    const localPluginsDir = path.join(projectRoot, LOCAL_PLUGIN_PATH);
+
+    if (!fs.existsSync(localPluginsDir)) {
+        return plugins;
+    }
+
+    try {
+        const entries = await fs.promises.readdir(localPluginsDir, { withFileTypes: true });
+
+        for (const entry of entries) {
+            if (entry.isDirectory()) {
+                const pluginDir = path.join(localPluginsDir, entry.name);
+                const pluginYamlPath = path.join(pluginDir, 'plugin.yaml');
+
+                if (fs.existsSync(pluginYamlPath)) {
+                    plugins.push(entry.name);
+                }
+            }
+        }
+    } catch (error) {
+        console.warn(`Failed to scan local plugins directory ${localPluginsDir}:`, error);
+    }
+
+    return plugins;
+}
+
+/**
+ * Finds all plugin names installed as dependencies in package.json
+ * Checks both regular node_modules and workspace node_modules
+ * @param projectRootPath - Project root path
+ * @returns Array of plugin names that have plugin.yaml
+ */
+async function findPluginNamesFromPackageJson(projectRootPath: string): Promise<string[]> {
+    const pluginNames: string[] = [];
+
+    try {
+        // Read package.json
+        const packageJsonPath = path.join(projectRootPath, 'package.json');
+        if (!fs.existsSync(packageJsonPath)) {
+            console.warn('package.json not found');
+            return pluginNames;
+        }
+
+        const packageJsonContent = await fs.promises.readFile(packageJsonPath, 'utf-8');
+        const packageJson = JSON.parse(packageJsonContent);
+
+        // Separate workspace dependencies from regular ones
+        const workspaceDependencies = new Set<string>();
+        const regularDependencies = new Set<string>();
+
+        for (const [depName, version] of Object.entries({
+            ...packageJson.dependencies,
+        })) {
+            if (typeof version === 'string' && version.startsWith('workspace:')) {
+                workspaceDependencies.add(depName);
+            } else {
+                regularDependencies.add(depName);
+            }
+        }
+
+        // Check regular dependencies in node_modules
+        const nodeModulesPath = path.join(projectRootPath, 'node_modules');
+        for (const depName of regularDependencies) {
+            if (await checkPackageForPlugin(nodeModulesPath, depName)) {
+                pluginNames.push(depName);
+            }
+        }
+
+        // Check workspace dependencies
+        if (workspaceDependencies.size > 0) {
+            const workspaceNodeModules = await findWorkspaceNodeModulesPath(
+                projectRootPath,
+                Array.from(workspaceDependencies),
+            );
+            if (workspaceNodeModules) {
+                for (const depName of workspaceDependencies) {
+                    if (await checkPackageForPlugin(workspaceNodeModules, depName)) {
+                        pluginNames.push(depName);
+                    }
+                }
+            }
+        }
+    } catch (error) {
+        console.error('Error finding plugins from package.json:', error);
+    }
+
+    return pluginNames;
+}
+
+/**
+ * Checks if a package in node_modules has a plugin.yaml file
+ * @param nodeModulesDir - Path to node_modules directory
+ * @param packageName - Name of the package to check
+ * @returns true if the package has plugin.yaml
+ */
+async function checkPackageForPlugin(
+    nodeModulesDir: string,
+    packageName: string,
+): Promise<boolean> {
+    try {
+        const packageDir = path.join(nodeModulesDir, packageName);
+        const pluginYamlPath = path.join(packageDir, 'plugin.yaml');
+
+        return fs.existsSync(pluginYamlPath);
+    } catch (error) {
+        return false;
+    }
+}
+
+/**
+ * Finds the workspace node_modules directory that contains the workspace dependencies
+ * @param startPath - Starting path to search from
+ * @param workspaceDeps - List of workspace dependency names
+ * @returns Path to workspace node_modules or null if not found
+ */
+async function findWorkspaceNodeModulesPath(
+    startPath: string,
+    workspaceDeps: string[],
+): Promise<string | null> {
+    let currentPath = startPath;
+
+    // Walk up the directory tree looking for a node_modules that contains the workspace deps
+    while (currentPath !== path.dirname(currentPath)) {
+        // Stop at filesystem root
+        const nodeModulesPath = path.join(currentPath, 'node_modules');
+
+        if (fs.existsSync(nodeModulesPath)) {
+            // Check if this node_modules contains any of our workspace dependencies
+            for (const depName of workspaceDeps) {
+                const depPath = path.join(nodeModulesPath, depName);
+                if (fs.existsSync(depPath)) {
+                    return nodeModulesPath;
+                }
+            }
+        }
+
+        currentPath = path.dirname(currentPath);
+    }
+
+    return null;
+}
+
+/**
+ * Scans for Jay Stack plugins in both src/plugins/ (local) and node_modules/ (npm packages) and package.json (workspace dependencies)
  */
 async function scanPlugins(projectRootPath: string): Promise<Plugin[]> {
     const plugins: Plugin[] = [];
 
-    // 1. Scan local plugins in src/plugins/
-    const localPluginsPath = path.join(projectRootPath, 'src/plugins');
-    if (fs.existsSync(localPluginsPath)) {
-        try {
-            const pluginDirs = await fs.promises.readdir(localPluginsPath, { withFileTypes: true });
+    try {
+        // Get all plugin names from different sources
+        const [localPluginNames, dependencyPluginNames] = await Promise.all([
+            scanLocalPluginNames(projectRootPath),
+            findPluginNamesFromPackageJson(projectRootPath),
+        ]);
 
-            for (const dir of pluginDirs) {
-                if (!dir.isDirectory()) continue;
+        // Combine and deduplicate plugin names
+        const allPluginNames = [...new Set([...localPluginNames, ...dependencyPluginNames])];
 
-                const pluginPath = path.join(localPluginsPath, dir.name);
-                const pluginYamlPath = path.join(pluginPath, 'plugin.yaml');
+        console.log(`Found ${allPluginNames.length} plugins: ${allPluginNames.join(', ')}`);
 
-                if (fs.existsSync(pluginYamlPath)) {
-                    try {
-                        const yamlContent = await fs.promises.readFile(pluginYamlPath, 'utf-8');
-                        const manifest: PluginManifest = YAML.parse(yamlContent);
-
-                        plugins.push({
-                            manifest,
-                            location: {
-                                type: 'local',
-                                path: pluginPath,
-                            },
-                        });
-                    } catch (error) {
-                        console.warn(`Failed to parse plugin.yaml for ${dir.name}:`, error);
-                    }
-                }
+        // For now, return basic plugin structure with names
+        // This can be expanded later to load full plugin manifests and contracts
+        for (const pluginName of allPluginNames) {
+            const manifest = resolvePluginManifest(projectRootPath, pluginName);
+            if (manifest.validations.length > 0) {
+                console.warn(
+                    `Failed to resolve plugin manifest for ${pluginName}:`,
+                    manifest.validations,
+                );
+                continue;
             }
-        } catch (error) {
-            console.warn(`Failed to scan local plugins directory ${localPluginsPath}:`, error);
-        }
-    }
+            if (!manifest.val) {
+                console.warn(
+                    `Failed to resolve plugin manifest for ${pluginName}:`,
+                    manifest.validations,
+                );
+                continue;
+            }
+            const contracts = manifest.val.contracts;
+            plugins.push({
+                name: pluginName,
+                contracts: contracts.map((contract) => {
+                    const resolveResult = JAY_IMPORT_RESOLVER.resolvePluginComponent(
+                        pluginName,
+                        contract.name,
+                        projectRootPath,
+                    );
+                    if (resolveResult.validations.length > 0) {
+                        console.warn(
+                            `Failed to resolve plugin component for ${pluginName}:${contract.name}:`,
+                            resolveResult.validations,
+                        );
+                        return null;
+                    }
+                    if (!resolveResult.val) {
+                        console.warn(
+                            `Failed to resolve plugin component for ${pluginName}:${contract.name}:`,
+                            resolveResult.validations,
+                        );
+                        return null;
+                    }
 
-    // 2. Scan npm package plugins in node_modules/
-    const nodeModulesPath = path.join(projectRootPath, 'node_modules');
-    if (fs.existsSync(nodeModulesPath)) {
-        try {
-            // Check all @scoped and unscoped packages
-            const topLevelDirs = await fs.promises.readdir(nodeModulesPath, {
-                withFileTypes: true,
+                    const contractLoadResult = JAY_IMPORT_RESOLVER.loadContract(
+                        resolveResult.val.contractPath,
+                    );
+                    if (contractLoadResult.validations.length > 0) {
+                        console.warn(
+                            `Failed to load contract for ${pluginName}:${contract.name}:`,
+                            contractLoadResult.validations,
+                        );
+                        return null;
+                    }
+                    if (!contractLoadResult.val) {
+                        console.warn(
+                            `Failed to load contract for ${pluginName}:${contract.name}:`,
+                            contractLoadResult.validations,
+                        );
+                        return null;
+                    }
+                    return contractLoadResult.val;
+                }),
             });
-
-            for (const entry of topLevelDirs) {
-                if (!entry.isDirectory()) continue;
-
-                const packageDirs: string[] = [];
-
-                if (entry.name.startsWith('@')) {
-                    // Scoped package - check subdirectories
-                    const scopePath = path.join(nodeModulesPath, entry.name);
-                    const scopedPackages = await fs.promises.readdir(scopePath, {
-                        withFileTypes: true,
-                    });
-
-                    for (const scopedPkg of scopedPackages) {
-                        if (scopedPkg.isDirectory()) {
-                            packageDirs.push(path.join(scopePath, scopedPkg.name));
-                        }
-                    }
-                } else {
-                    // Unscoped package
-                    packageDirs.push(path.join(nodeModulesPath, entry.name));
-                }
-
-                // Check each package for plugin.yaml
-                for (const pkgPath of packageDirs) {
-                    const pluginYamlPath = path.join(pkgPath, 'plugin.yaml');
-
-                    if (fs.existsSync(pluginYamlPath)) {
-                        try {
-                            const yamlContent = await fs.promises.readFile(pluginYamlPath, 'utf-8');
-                            const manifest: PluginManifest = YAML.parse(yamlContent);
-
-                            // Read package.json to get module name
-                            const packageJsonPath = path.join(pkgPath, 'package.json');
-                            let moduleName = manifest.module;
-
-                            if (fs.existsSync(packageJsonPath)) {
-                                const packageJson = JSON.parse(
-                                    await fs.promises.readFile(packageJsonPath, 'utf-8'),
-                                );
-                                moduleName = packageJson.name;
-                            }
-
-                            plugins.push({
-                                manifest: {
-                                    ...manifest,
-                                    module: moduleName,
-                                },
-                                location: {
-                                    type: 'npm',
-                                    module: moduleName || manifest.name,
-                                },
-                            });
-                        } catch (error) {
-                            console.warn(
-                                `Failed to parse plugin.yaml for package ${pkgPath}:`,
-                                error,
-                            );
-                        }
-                    }
-                }
-            }
-        } catch (error) {
-            console.warn(`Failed to scan node_modules for plugins:`, error);
         }
+    } catch (error) {
+        console.error('Error scanning plugins:', error);
     }
 
     return plugins;
@@ -614,15 +625,11 @@ async function scanProjectInfo(
     projectRootPath: string,
 ): Promise<ProjectInfo> {
     // Scan basic project info
-    const [projectName, components, installedApps, plugins] = await Promise.all([
+    const [projectName, components, plugins] = await Promise.all([
         getProjectName(configBasePath),
         scanProjectComponents(componentsBasePath),
-        scanInstalledApps(configBasePath),
         scanPlugins(projectRootPath),
     ]);
-
-    // Scan plugin contracts to build installedAppContracts information
-    const installedAppContracts = await scanPluginContracts(plugins, projectRootPath);
 
     // Scan pages with full information (basic info + contracts + used components)
     const pages: ProjectPage[] = [];
@@ -678,9 +685,9 @@ async function scanProjectInfo(
                         // Only support plugin + contract syntax for headless components
                         if (comp.plugin && comp.contract) {
                             // For plugin-based references, we look up the plugin in the plugins array
-                            const plugin = plugins.find((p) => p.manifest.name === comp.plugin);
-                            if (plugin && plugin.manifest.contracts) {
-                                const contract = plugin.manifest.contracts.find(
+                            const plugin = plugins.find((p) => p.name === comp.plugin);
+                            if (plugin && plugin.contracts) {
+                                const contract = plugin.contracts.find(
                                     (c) => c.name === comp.contract,
                                 );
                                 if (contract) {
@@ -726,9 +733,9 @@ async function scanProjectInfo(
         localPath: projectRootPath,
         pages,
         components,
-        installedApps,
-        installedAppContracts,
         plugins,
+        installedApps: [],
+        installedAppContracts: {},
     };
 }
 
@@ -980,8 +987,7 @@ export function createEditorHandlers(
             console.log(`📋 Retrieved project info: ${info.name}`);
             console.log(`   Pages: ${info.pages.length}`);
             console.log(`   Components: ${info.components.length}`);
-            console.log(`   Installed Apps: ${info.installedApps.length}`);
-            console.log(`   App Contracts: ${Object.keys(info.installedAppContracts).length}`);
+            console.log(`   plugins: ${info.plugins.length}`);
 
             return {
                 type: 'getProjectInfo',

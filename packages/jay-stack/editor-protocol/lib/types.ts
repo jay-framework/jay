@@ -20,9 +20,6 @@ export type {
     ProjectComponent,
     InstalledApp,
     // New plugin system types
-    PluginManifest,
-    StaticContractDef,
-    DynamicContractDef,
     Plugin,
 } from './protocol';
 

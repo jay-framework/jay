@@ -52,7 +52,10 @@ export const JAY_IMPORT_RESOLVER: JayImportResolver = {
         // This handles both local plugins (src/plugins/) and NPM packages (node_modules/)
         return resolvePlugin(projectRoot, pluginName, contractName);
     },
-    resolvePluginManifest(pluginName: string, projectRoot: string): WithValidations<PluginManifest> {
+    resolvePluginManifest(
+        pluginName: string,
+        projectRoot: string,
+    ): WithValidations<PluginManifest> {
         return resolvePluginManifest(projectRoot, pluginName);
     },
 };
