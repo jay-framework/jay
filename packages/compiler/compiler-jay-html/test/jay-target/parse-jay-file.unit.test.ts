@@ -67,6 +67,11 @@ describe('compiler', () => {
             }
             return new WithValidations(null as any, [`Plugin "${pluginName}" not found in test`]);
         },
+        resolvePluginManifest(pluginName: string, projectRoot: string) {
+            return new WithValidations(null as any, [
+                `Plugin manifest resolution not supported in this test`,
+            ]);
+        },
     };
 
     function jayFileWith(jayYaml, body, scripts?) {

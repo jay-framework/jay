@@ -6,6 +6,8 @@ import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 
+export const LOCAL_PLUGIN_PATH = 'src/plugins';
+
 /**
  * Plugin manifest structure from plugin.yaml
  */
@@ -18,6 +20,7 @@ export interface PluginManifest {
         contract: string; // For NPM: export subpath (e.g., "contract.jay-contract"). For local: relative path.
         component: string; // Exported member name from module (e.g., "moodTracker")
         description?: string;
+        slugs?: string[]; // Dynamic URL slugs expected by this contract (e.g., ["productId", "userId"])
     }>;
     dynamic_contracts?: {
         generator: string;
@@ -73,12 +76,11 @@ export function loadPluginManifest(pluginDir: string): PluginManifest | null {
  * @param contractName - Name of the contract to resolve
  * @returns Resolution result with validation messages
  */
-export function resolveLocalPlugin(
+function resolveLocalPluginManifest(
     projectRoot: string,
     pluginName: string,
-    contractName: string,
-): WithValidations<PluginComponentResolution> | null {
-    const localPluginPath = path.join(projectRoot, 'src/plugins', pluginName);
+): WithValidations<PluginManifest> | null {
+    const localPluginPath = path.join(projectRoot, LOCAL_PLUGIN_PATH, pluginName);
     const pluginYamlPath = path.join(localPluginPath, 'plugin.yaml');
 
     if (!fs.existsSync(localPluginPath)) {
@@ -105,6 +107,31 @@ export function resolveLocalPlugin(
         ]);
     }
 
+    return new WithValidations(manifest, []);
+}
+
+/**
+ * Resolves a plugin component from a local plugin directory (src/plugins/)
+ *
+ * @param projectRoot - Project root directory
+ * @param pluginName - Name of the plugin
+ * @param contractName - Name of the contract to resolve
+ * @returns Resolution result with validation messages
+ */
+function resolveLocalPlugin(
+    projectRoot: string,
+    pluginName: string,
+    contractName: string,
+): WithValidations<PluginComponentResolution> | null {
+    let manifestWithValidations = resolveLocalPluginManifest(projectRoot, pluginName);
+    if (!manifestWithValidations) {
+        return null;
+    }
+
+    if (!manifestWithValidations.val || manifestWithValidations.validations.length > 0)
+        return new WithValidations(null, manifestWithValidations.validations);
+
+    const manifest = manifestWithValidations.val;
     const contract = manifest.contracts.find((c) => c.name === contractName);
     if (!contract) {
         const availableContracts = manifest.contracts.map((c) => c.name).join(', ');
@@ -115,6 +142,7 @@ export function resolveLocalPlugin(
 
     // Component path comes from manifest.module (or defaults to index.js)
     const componentModule = manifest.module || 'index.js';
+    const localPluginPath = path.join(projectRoot, LOCAL_PLUGIN_PATH, pluginName);
     const componentPath = path.join(localPluginPath, componentModule);
 
     return new WithValidations(
@@ -136,11 +164,10 @@ export function resolveLocalPlugin(
  * @param contractName - Name of the contract to resolve
  * @returns Resolution result with validation messages
  */
-export function resolveNpmPlugin(
+function resolveNpmPluginManifest(
     projectRoot: string,
     pluginName: string,
-    contractName: string,
-): WithValidations<PluginComponentResolution> | null {
+): WithValidations<PluginManifest> | null {
     // Use Node's require.resolve to find plugin.yaml directly
     let pluginYamlPath: string;
     try {
@@ -176,6 +203,32 @@ export function resolveNpmPlugin(
         ]);
     }
 
+    return new WithValidations(manifest, []);
+}
+
+/**
+ * Resolves a plugin component from an NPM package (node_modules/)
+ *
+ * @param projectRoot - Project root directory
+ * @param pluginName - Name of the NPM package
+ * @param contractName - Name of the contract to resolve
+ * @returns Resolution result with validation messages
+ */
+function resolveNpmPlugin(
+    projectRoot: string,
+    pluginName: string,
+    contractName: string,
+): WithValidations<PluginComponentResolution> | null {
+    const manifestWithValidations = resolveNpmPluginManifest(projectRoot, pluginName);
+    if (!manifestWithValidations) {
+        return null;
+    }
+
+    if (!manifestWithValidations.val || manifestWithValidations.validations.length > 0)
+        return new WithValidations(null, manifestWithValidations.validations);
+
+    const manifest = manifestWithValidations.val;
+
     const contract = manifest.contracts.find((c) => c.name === contractName);
     if (!contract) {
         const availableContracts = manifest.contracts.map((c) => c.name).join(', ');
@@ -185,6 +238,10 @@ export function resolveNpmPlugin(
     }
 
     // For NPM packages, resolve through package.json exports
+    const pluginYamlPath: string = require.resolve(`${pluginName}/plugin.yaml`, {
+        paths: [projectRoot],
+    });
+    const npmPluginPath = path.dirname(pluginYamlPath);
     const packageJsonPath = path.join(npmPluginPath, 'package.json');
     let componentPath: string;
     let contractPath: string;
@@ -280,6 +337,32 @@ export function resolvePluginComponent(
     }
 
     // Not found anywhere
+    return new WithValidations(null as any, [
+        `Plugin "${pluginName}" not found. ` +
+            `Searched in src/plugins/${pluginName}/ and node_modules/${pluginName}/. ` +
+            `Ensure the plugin is installed or exists in your project.`,
+    ]);
+}
+
+/**
+ * Resolves a plugin manifest from a local plugin or NPM package
+ *
+ * @param projectRoot - Project root directory
+ * @param pluginName - Name of the plugin
+ * @returns Resolution result with validation messages
+ */
+export function resolvePluginManifest(
+    projectRoot: string,
+    pluginName: string,
+): WithValidations<PluginManifest> {
+    const localResult = resolveLocalPluginManifest(projectRoot, pluginName);
+    if (localResult && localResult.val !== null && localResult.validations.length === 0) {
+        return localResult;
+    }
+    const npmResult = resolveNpmPluginManifest(projectRoot, pluginName);
+    if (npmResult && npmResult.val !== null && npmResult.validations.length === 0) {
+        return npmResult;
+    }
     return new WithValidations(null as any, [
         `Plugin "${pluginName}" not found. ` +
             `Searched in src/plugins/${pluginName}/ and node_modules/${pluginName}/. ` +

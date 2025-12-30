@@ -1,3 +1,25 @@
+// Protocol-specific contract types optimized for external consumers
+// These mirror compiler types but use simple, serializable representations
+
+export interface ContractTag {
+    tag: string; // tag ID
+    type: string | string[]; // tag type(s) - simplified from enum to strings
+    dataType?: string; // string representation of JayType (e.g. "string", "enum (active | inactive)")
+    elementType?: string; // string representation of element types
+    required?: boolean;
+    repeated?: boolean;
+    tags?: ContractTag[]; // for sub-contracts
+    link?: string; // for linked sub-contracts
+    trackBy?: string; // for repeated sub-contracts
+    async?: boolean;
+    phase?: string; // rendering phase as string
+}
+
+export interface Contract {
+    name: string;
+    tags: ContractTag[];
+}
+
 // Base message type with discriminator and generic response type
 export interface BaseMessage<TResponse extends BaseResponse = BaseResponse> {
     type: string;
@@ -74,7 +96,7 @@ export interface ProjectPage {
     name: string;
     url: string;
     filePath: string;
-    contractSchema?: ContractSchema; // Page's own contract if it has a .jay-contract file
+    contract?: Contract; // Page's own contract if it has a .jay-contract file
     usedComponents: {
         appName: string;
         componentName: string;
@@ -88,61 +110,10 @@ export interface ProjectComponent {
     contractPath?: string;
 }
 
-// Plugin types (replaces InstalledApp)
-export interface StaticContractDef {
-    name: string; // Contract name (kebab-case)
-    contract: string; // Path to contract file
-    component: string; // Exported member name from the module (e.g., "moodTracker")
-    description?: string; // Optional description
-}
-
-export interface DynamicContractDef {
-    prefix: string; // Namespace prefix (e.g., "cms")
-    component: string; // Shared component for all dynamic contracts
-    generator: string; // Path to generator file
-}
-
-export interface PluginManifest {
-    name: string; // Plugin name (kebab-case)
-    module?: string; // NPM module name (optional for local plugins)
-    contracts?: StaticContractDef[];
-    dynamic_contracts?: DynamicContractDef;
-}
-
+// Simplified plugin interface focused on editor needs
 export interface Plugin {
-    manifest: PluginManifest;
-    location: {
-        type: 'local' | 'npm';
-        path?: string; // For local plugins (src/plugins/my-plugin)
-        module?: string; // For npm plugins (@wix/stores)
-    };
-}
-
-// Legacy type for backward compatibility
-export interface InstalledApp {
-    name: string;
-    module: string;
-    pages: {
-        name: string;
-        headless_components: {
-            name: string;
-            key: string;
-            contract: string;
-            slugs?: string[];
-        }[];
-    }[];
-    components: {
-        name: string;
-        headless_components: {
-            name: string;
-            key: string;
-            contract: string;
-        }[];
-    }[];
-    config_map?: {
-        display_name: string;
-        key: string;
-    }[];
+    name: string; // Plugin name (kebab-case) for the plugin attribute
+    contracts: Contract[]; // Array of available contracts
 }
 
 export interface ProjectInfo {
@@ -150,45 +121,12 @@ export interface ProjectInfo {
     localPath: string;
     pages: ProjectPage[];
     components: ProjectComponent[];
-    plugins: Plugin[]; // New plugin system
-    installedApps: InstalledApp[]; // Legacy - for backward compatibility
-    installedAppContracts: {
-        [appName: string]: InstalledAppContracts;
-    };
+    plugins: Plugin[];
 }
 
 export interface GetProjectInfoResponse extends BaseResponse {
     type: 'getProjectInfo';
     info: ProjectInfo;
-}
-
-export interface ContractTag {
-    tag: string; // tag ID
-    type: string | string[]; // tag type(s)
-    dataType?: string;
-    elementType?: string;
-    required?: boolean;
-    repeated?: boolean;
-    tags?: ContractTag[]; // for sub-contracts
-    link?: string; // for linked sub-contracts
-}
-
-export interface ContractSchema {
-    name: string;
-    tags: ContractTag[];
-}
-
-export interface InstalledAppContracts {
-    appName: string;
-    module: string;
-    pages: Array<{
-        pageName: string;
-        contractSchema: ContractSchema;
-    }>;
-    components: Array<{
-        componentName: string;
-        contractSchema: ContractSchema;
-    }>;
 }
 
 // Union types for all messages and responses
