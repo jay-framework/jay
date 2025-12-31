@@ -131,4 +131,3 @@ export const clearCart = makeJayAction('cart.clear')
         cart.length = 0;
         return { success: true, message: 'Cart cleared' };
     });
-

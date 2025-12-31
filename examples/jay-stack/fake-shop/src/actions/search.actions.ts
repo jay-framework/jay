@@ -66,4 +66,3 @@ export const getAllProducts = makeJayQuery('products.getAll')
         const products = await productsDb.getProducts();
         return { products, count: products.length };
     });
-

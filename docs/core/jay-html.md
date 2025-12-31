@@ -492,6 +492,50 @@ Use `{expression}` to display data:
 </div>
 ```
 
+### Class Binding
+
+Jay-HTML supports dynamic class binding with conditional expressions:
+
+#### Static Classes with Dynamic Additions
+
+```html
+<div class="button {variant}">Click me</div>
+```
+
+#### Conditional Classes
+
+Use the `{condition ? class-name}` syntax to conditionally add a class:
+
+```html
+<div class="cart-indicator {hasItems ? has-items} {isLoading ? is-loading}">
+  Cart
+</div>
+```
+
+When the condition is true, the class is added. When false, it's omitted. Note that the class name is **not quoted** in this syntax.
+
+#### Full Ternary for Class Switching
+
+Use the full ternary syntax `{condition ? class-a : class-b}` to switch between two classes:
+
+```html
+<div class="button {isPrimary ? primary : secondary}">
+  Click me
+</div>
+```
+
+#### Combining Multiple Conditional Classes
+
+You can combine static classes with multiple conditional classes:
+
+```html
+<a href="/cart" 
+   class="cart-indicator {hasItems ? has-items} {isLoading ? is-loading} {justAdded ? just-added}">
+  <span class="icon">🛒</span>
+  <span class="count" if="hasItems">{itemCount}</span>
+</a>
+```
+
 ### Conditional Rendering
 
 Use `if="condition"` for conditional elements:
