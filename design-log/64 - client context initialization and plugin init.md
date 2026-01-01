@@ -119,29 +119,51 @@ Components continue to use the standard `useContext` API - registered global con
 
 ### 4. Plugin Init Files
 
-Plugins declare init capability in `plugin.yaml` using boolean flags, and export conventionally-named functions:
+Plugins declare init capability in `plugin.yaml`. The schema supports both simple boolean flags (use defaults) and detailed override objects:
 
 ```yaml
-# plugin.yaml
-name: wix-stores
-version: 1.0.0
-
-# Existing
-actions:
-  - addToCart
-  - getProduct
-
-# New: Boolean flags for init (optional)
-# Convention: exports "serverInit" from server bundle, "clientInit" from client bundle
+# plugin.yaml - Simple form (use all defaults)
 init:
-  server: true
-  client: true
+  server: true   # Convention: export "serverInit" from "./init/server"
+  client: true   # Convention: export "clientInit" from "./init/client"
 ```
 
-**Convention over configuration:**
-- `init.server: true` → Framework looks for `serverInit` export in server bundle
-- `init.client: true` → Framework looks for `clientInit` export in client bundle
-- No need to specify export names (reduces duplication)
+```yaml
+# plugin.yaml - Override form (customize names/paths)
+init:
+  server:
+    export: myServerInit        # Override export name (default: "serverInit")
+    module: ./custom/setup      # Override module path (default: "./init/server")
+  client:
+    export: initializeClient    # Override export name (default: "clientInit")
+    module: ./bootstrap/client  # Override module path (default: "./init/client")
+```
+
+```yaml
+# plugin.yaml - Mixed form
+init:
+  server: true                  # Use defaults
+  client:
+    export: setupClient         # Custom export name, default module path
+```
+
+**Schema definition:**
+```typescript
+interface PluginInitConfig {
+  server?: boolean | {
+    export?: string;   // Default: "serverInit"
+    module?: string;   // Default: "./init/server"
+  };
+  client?: boolean | {
+    export?: string;   // Default: "clientInit"  
+    module?: string;   // Default: "./init/client"
+  };
+}
+```
+
+**Defaults (convention over configuration):**
+- `init.server: true` → `{ export: "serverInit", module: "./init/server" }`
+- `init.client: true` → `{ export: "clientInit", module: "./init/client" }`
 - Declaration allows framework to know which plugins have init without importing
 
 **Build approach:** Plugins use the existing `isSsrBuild` pattern with two entry points:
@@ -253,6 +275,70 @@ export function clientInit() {
    - Run all `onClientInit` callbacks with merged server data
    - Mount component tree (all contexts now available)
 
+### Data Flow Diagram
+
+```mermaid
+flowchart TB
+    subgraph ServerStartup["Server Startup (once)"]
+        direction TB
+        S1[Discover plugins with init.server]
+        S2[Topological sort by package.json deps]
+        S3[Plugin A: serverInit → onInit callback]
+        S4[Plugin B: serverInit → onInit callback]
+        S5[Project: jay.init.ts → onInit callback]
+        S6[Run all onInit callbacks in order]
+        S7[Merge all setClientInitData calls]
+        
+        S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7
+    end
+    
+    subgraph ServerRender["Page Render (per request)"]
+        R1[Embed merged clientInitData as JSON in HTML]
+    end
+    
+    subgraph ClientLoad["Client Page Load"]
+        direction TB
+        C1[Parse clientInitData from HTML]
+        C2[Plugin A: clientInit → onClientInit callback]
+        C3[Plugin B: clientInit → onClientInit callback]
+        C4[Project: jay.client-init.ts → onClientInit callback]
+        C5[runClientInit with merged data]
+        C6[All contexts registered via registerGlobalContext]
+        C7[Mount component tree]
+        
+        C1 --> C2 --> C3 --> C4 --> C5 --> C6 --> C7
+    end
+    
+    S7 --> R1
+    R1 -->|"Static JSON in HTML"| C1
+```
+
+```mermaid
+flowchart LR
+    subgraph Server["Server"]
+        SI[setClientInitData]
+        MD[Merged Data]
+        SI -->|"Plugin A data"| MD
+        SI -->|"Plugin B data"| MD
+        SI -->|"Project data"| MD
+    end
+    
+    subgraph HTML["HTML Response"]
+        JSON["&lt;script&gt;const clientInitData = {...}&lt;/script&gt;"]
+    end
+    
+    subgraph Client["Client"]
+        CI[onClientInit callbacks]
+        CTX[registerGlobalContext]
+        COMP[Components use useContext]
+        
+        CI --> CTX --> COMP
+    end
+    
+    MD -->|"Serialized"| JSON
+    JSON -->|"Parsed"| CI
+```
+
 ### 6. Generated Client Script Updates
 
 The `generateClientScript` function adds client init imports and execution:
@@ -319,21 +405,41 @@ The `generateClientScript` function adds client init imports and execution:
 ### Phase 3: Plugin Init Files
 1. Extend `PluginManifest` interface:
    ```typescript
-   init?: { 
-     server?: boolean;  // If true, export "serverInit" from server bundle
-     client?: boolean;  // If true, export "clientInit" from client bundle
+   interface PluginInitConfig {
+     server?: boolean | { export?: string; module?: string };
+     client?: boolean | { export?: string; module?: string };
+   }
+   
+   interface PluginManifest {
+     // ... existing fields
+     init?: PluginInitConfig;
    }
    ```
-2. Update `ServiceLifecycleManager` to:
-   - Discover plugins with `init.server: true` in plugin.yaml
+2. Add helper to normalize init config:
+   ```typescript
+   function normalizeInitConfig(init: boolean | { export?: string; module?: string }, env: 'server' | 'client') {
+     if (init === true) {
+       return { 
+         export: env === 'server' ? 'serverInit' : 'clientInit',
+         module: env === 'server' ? './init/server' : './init/client'
+       };
+     }
+     return {
+       export: init.export ?? (env === 'server' ? 'serverInit' : 'clientInit'),
+       module: init.module ?? (env === 'server' ? './init/server' : './init/client'),
+     };
+   }
+   ```
+3. Update `ServiceLifecycleManager` to:
+   - Discover plugins with `init.server` in plugin.yaml
    - Read package.json dependencies for topological sort
-   - Import plugin server bundle and call `serverInit()` (convention name)
+   - Import plugin module and call normalized export name
    - Then load project jay.init.ts
-3. Update `generateClientScript` to:
-   - Generate imports for plugin client bundles with `init.client: true`
-   - Generate calls to `clientInit()` functions (convention name)
+4. Update `generateClientScript` to:
+   - Generate imports for plugin client bundles with `init.client`
+   - Use normalized export/module names
    - Import project client init last
-4. Test with multi-plugin dependency chains
+5. Test with multi-plugin dependency chains and custom names
 
 ## Examples
 
@@ -551,22 +657,25 @@ export function clientInit() {
 - ✅ Familiar to developers
 - ❌ Less explicit in plugin.yaml
 
-### Init Export Names: Explicit vs Convention
+### Init Export Names: Convention with Override
 
-**Convention names with boolean flags (chosen):**
+**Convention names with optional override (chosen):**
 ```yaml
+# Simple - use defaults
 init:
-  server: true   # Implies export name "serverInit"
-  client: true   # Implies export name "clientInit"
-```
-- ✅ No duplication (name only in code, not also in yaml)
-- ✅ Boolean flag tells framework which plugins have init (no need to try-import)
-- ✅ Consistent naming across all plugins
-- ❌ Less flexible (can't customize names)
+  server: true   # export "serverInit" from "./init/server"
+  client: true   # export "clientInit" from "./init/client"
 
-**Alternative rejected:** Explicit names (`init: { server: "myInit" }`)
-- Would require specifying name twice (yaml + actual export)
-- No real benefit to custom names
+# Override when needed
+init:
+  server:
+    export: customServerInit
+    module: ./setup/server
+```
+- ✅ Simple case is simple (just `true`)
+- ✅ Flexibility when needed (custom names/paths)
+- ✅ Boolean flag tells framework which plugins have init
+- ✅ Supports existing codebases with different conventions
 
 ### Init Order: Plugins First vs Project First
 
