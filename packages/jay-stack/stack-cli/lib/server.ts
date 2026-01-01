@@ -7,6 +7,8 @@ import fs from 'fs';
 import { loadConfig, updateConfig, getConfigWithDefaults } from './config';
 import { createEditorHandlers } from './editor-handlers';
 import { generatePageDefinitionFiles } from './generate-page-definition-files';
+import { createVendorRegistry } from './vendor-adapters';
+import { createVendorHandlers } from './vendor-api-handlers';
 
 export interface StartDevServerOptions {
     projectPath?: string;
@@ -62,6 +64,18 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
     editorServer.onHasImage(handlers.onHasImage);
     editorServer.onGetProjectInfo(handlers.onGetProjectInfo);
 
+    // Set up vendor handlers
+    const vendorRegistry = createVendorRegistry();
+    const vendorHandlers = createVendorHandlers(
+        vendorRegistry,
+        path.resolve(resolvedConfig.devServer.pagesBase),
+        process.cwd()
+    );
+    
+    // Register vendor protocol handlers
+    editorServer.onExport(vendorHandlers.onExport);
+    editorServer.onImport(vendorHandlers.onImport);
+    
     // Start dev server
     const { server, viteServer, routes } = await mkDevServer({
         pagesRootFolder: path.resolve(resolvedConfig.devServer.pagesBase),

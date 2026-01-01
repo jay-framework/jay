@@ -38,6 +38,13 @@ Jay enables you to:
 - [Component Development](./core/components.md) - Building Jay components with reactive state
 - [Jay Stack Components](./core/jay-stack.md) - Full-stack components with server-side rendering
 
+### Vendor Integration
+
+- [Vendor Integration](./vendors/vendor-integration.md) - Complete guide to integrating external design editors (Figma, Wix, etc.) using the Editor Protocol
+- [Vendor Integration Flows](./vendors/vendor-integration-diagrams.md) - Vendor Integration Architecture Diagrams
+- [Vendor API Quick Reference](./vendors/vendor-api-quick-reference.md) - Quick reference for vendor protocol messages
+- [Example Vendor Plugin](./vendors/example-vendor-plugin.ts) - Sample code for building editor plugins
+
 ### Advanced Topics
 
 - [State Management](./advanced/state-management.md) - Advanced reactive patterns

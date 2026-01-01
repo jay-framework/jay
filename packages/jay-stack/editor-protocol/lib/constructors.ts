@@ -100,7 +100,9 @@ function generateMessageId(): string {
 }
 
 // Protocol wrapper constructors
-export function createProtocolMessage(payload: EditorProtocolMessageTypes): ProtocolMessage {
+export function createProtocolMessage<TVendorDoc>(
+    payload: EditorProtocolMessageTypes<TVendorDoc>,
+): ProtocolMessage<TVendorDoc> {
     return {
         id: generateMessageId(),
         timestamp: Date.now(),
@@ -108,10 +110,10 @@ export function createProtocolMessage(payload: EditorProtocolMessageTypes): Prot
     };
 }
 
-export function createProtocolResponse(
+export function createProtocolResponse<TVendorDoc>(
     id: string,
-    payload: EditorProtocolResponseTypes,
-): ProtocolResponse {
+    payload: EditorProtocolResponseTypes<TVendorDoc>,
+): ProtocolResponse<TVendorDoc> {
     return {
         id,
         timestamp: Date.now(),
