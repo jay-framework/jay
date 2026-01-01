@@ -63,8 +63,8 @@ import { onClientInit, registerGlobalContext } from '@jay-framework/stack-client
 import { APP_CONFIG_CONTEXT } from './contexts/app-config';
 import { THEME_CONTEXT, createThemeContext } from './contexts/theme';
 
-// Called with static config data from server
-onClientInit((serverData) => {
+// Called with only the 'project' namespace data from server
+onClientInit('project', (serverData) => {
   // Register app-wide contexts using server config
   registerGlobalContext(APP_CONFIG_CONTEXT, {
     itemsPerPage: serverData.itemsPerPage,
@@ -80,14 +80,15 @@ The server provides static application-level data for client initialization. Thi
 - Set once at application startup (not per-request)
 - Slowly changing (configuration, feature flags)
 - Serializable to JSON
+- **Namespaced by key** so each client init receives only its own data
 
 ```typescript
 // src/jay.init.ts
 import { onInit, setClientInitData } from '@jay-framework/stack-server-runtime';
 
 onInit(async () => {
-  // Set static client init data (not per-request)
-  setClientInitData({
+  // Set static client init data with namespace key
+  setClientInitData('project', {
     oauthClientId: process.env.OAUTH_CLIENT_ID,
     itemsPerPage: 20,
     featureFlags: await loadFeatureFlags(),
@@ -96,7 +97,7 @@ onInit(async () => {
 });
 ```
 
-The data is serialized once and embedded in all page HTML, then passed to `onClientInit` callbacks.
+The data is serialized once and embedded in all page HTML. Each `onClientInit` callback receives only the data matching its namespace key.
 
 ### 3. Client Context Registry
 
@@ -214,18 +215,19 @@ export { clientInit } from './init/client';
 ```typescript
 // lib/init/server.ts
 import { onInit, getService, setClientInitData, registerService } from '@jay-framework/stack-server-runtime';
+import type { PluginInitContext } from '@jay-framework/stack-server-runtime';
 import { AUTH_SERVICE } from '@wix/auth';
 import { STORES_SERVICE, createStoresService } from '../services/stores';
 
-// Exported function - framework calls this during plugin init phase
-export function serverInit() {
+// Exported function - framework calls this with plugin context
+export function serverInit({ pluginName }: PluginInitContext) {
   onInit(async () => {
     const auth = getService(AUTH_SERVICE);  // Available because wix-auth init ran first
     const stores = await createStoresService(auth);
     registerService(STORES_SERVICE, stores);
     
-    // Plugins can contribute to client init data
-    setClientInitData({
+    // Use pluginName as key so client init receives only this plugin's data
+    setClientInitData(pluginName, {
       storesApiEndpoint: process.env.STORES_API_URL,
       defaultCurrency: 'USD',
     });
@@ -236,11 +238,13 @@ export function serverInit() {
 ```typescript
 // lib/init/client.ts
 import { onClientInit, registerGlobalContext } from '@jay-framework/stack-client-runtime';
+import type { PluginInitContext } from '@jay-framework/stack-server-runtime';
 import { STORES_CONTEXT, createStoresContext } from '../stores-client/stores-context';
 
-// Exported function - framework calls this during plugin init phase
-export function clientInit() {
-  onClientInit((serverData) => {
+// Exported function - framework calls this with plugin context
+export function clientInit({ pluginName }: PluginInitContext) {
+  // Register with same key - receives only this plugin's data
+  onClientInit(pluginName, (serverData) => {
     registerGlobalContext(STORES_CONTEXT, createStoresContext({
       apiEndpoint: serverData.storesApiEndpoint,
       currency: serverData.defaultCurrency,
@@ -465,7 +469,8 @@ import { onInit, setClientInitData } from '@jay-framework/stack-server-runtime';
 onInit(async () => {
   const featureFlags = await loadFeatureFlags();
   
-  setClientInitData({
+  // Use 'project' as namespace key
+  setClientInitData('project', {
     itemsPerPage: 20,
     enableNewCheckout: featureFlags.newCheckout,
     abTestVariant: await getABTestVariant('checkout-flow'),
@@ -478,7 +483,8 @@ onInit(async () => {
 import { onClientInit, registerGlobalContext } from '@jay-framework/stack-client-runtime';
 import { APP_CONFIG_CONTEXT, AppConfig } from './contexts/app-config';
 
-onClientInit((data: AppConfig) => {
+// Use 'project' key to receive only project's data
+onClientInit('project', (data: AppConfig) => {
   registerGlobalContext(APP_CONFIG_CONTEXT, data);
 });
 ```
@@ -574,16 +580,18 @@ export { clientInit } from './init/client';
 ```typescript
 // lib/init/server.ts
 import { onInit, registerService, setClientInitData, getService } from '@jay-framework/stack-server-runtime';
+import type { PluginInitContext } from '@jay-framework/stack-server-runtime';
 import { AUTH_SERVICE } from '@wix/auth';
 import { STORES_SERVICE, createStoresService } from '../stores-client/stores-service';
 
-export function serverInit() {
+export function serverInit({ pluginName }: PluginInitContext) {
   onInit(async () => {
     const auth = getService(AUTH_SERVICE);
     const storesService = await createStoresService(auth);
     registerService(STORES_SERVICE, storesService);
     
-    setClientInitData({
+    // Use pluginName as key
+    setClientInitData(pluginName, {
       storesApiEndpoint: process.env.STORES_API_URL,
       defaultCurrency: 'USD',
     });
@@ -594,10 +602,12 @@ export function serverInit() {
 ```typescript
 // lib/init/client.ts
 import { onClientInit, registerGlobalContext } from '@jay-framework/stack-client-runtime';
+import type { PluginInitContext } from '@jay-framework/stack-server-runtime';
 import { STORES_CONTEXT, createStoresContext } from '../stores-client/stores-context';
 
-export function clientInit() {
-  onClientInit((serverData) => {
+export function clientInit({ pluginName }: PluginInitContext) {
+  // Use pluginName as key to receive only this plugin's data
+  onClientInit(pluginName, (serverData) => {
     registerGlobalContext(STORES_CONTEXT, createStoresContext({
       apiEndpoint: serverData.storesApiEndpoint,
       currency: serverData.defaultCurrency,

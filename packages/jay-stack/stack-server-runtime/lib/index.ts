@@ -5,3 +5,4 @@ export { loadPageParts, type LoadedPageParts, type DevServerPagePart } from './l
 export * from './services';
 export * from './action-registry';
 export * from './action-discovery';
+export * from './plugin-init-discovery';

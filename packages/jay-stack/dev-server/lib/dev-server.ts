@@ -5,7 +5,7 @@ import {
     routeToExpressRoute,
     scanRoutes,
 } from '@jay-framework/stack-route-scanner';
-import { DevSlowlyChangingPhase, SlowlyChangingPhase } from '@jay-framework/stack-server-runtime';
+import { DevSlowlyChangingPhase, SlowlyChangingPhase, getClientInitData, type PluginWithInit } from '@jay-framework/stack-server-runtime';
 import type {
     ClientError4xx,
     PageProps,
@@ -82,6 +82,8 @@ function mkRoute(
     vite: ViteDevServer,
     slowlyPhase: SlowlyChangingPhase,
     options: DevServerOptions,
+    clientInitFilePath?: string,
+    allPluginsWithInit: PluginWithInit[] = [],
 ): DevServerRoute {
     const path = routeToExpressRoute(route);
     const handler = async (req: Request, res: Response) => {
@@ -107,7 +109,13 @@ function mkRoute(
                     parts: pageParts,
                     serverTrackByMap,
                     clientTrackByMap,
+                    usedPackages,
                 } = pagePartsResult.val;
+
+                // Filter plugins to only those used on this page
+                const pluginsForPage = allPluginsWithInit.filter(
+                    (plugin) => usedPackages.has(plugin.packageName),
+                );
 
                 const renderedSlowly = await slowlyPhase.runSlowlyForPage(
                     pageParams,
@@ -137,12 +145,17 @@ function mkRoute(
                         carryForward = renderedFast.carryForward;
 
                         // Pass clientTrackByMap to client (excludes fast+interactive arrays)
+                        // Include static client init data (feature flags, config, etc.)
+                        // Only include plugins that are actually used on this page
                         const pageHtml = generateClientScript(
                             viewState,
                             carryForward,
                             pageParts,
                             route.jayHtmlPath,
                             clientTrackByMap,
+                            getClientInitData(),
+                            clientInitFilePath,
+                            pluginsForPage,
                         );
 
                         const compiledPageHtml = await vite.transformIndexHtml(
@@ -210,8 +223,12 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
     const routes: JayRoutes = await initRoutes(pagesRootFolder);
     const slowlyPhase = new DevSlowlyChangingPhase(dontCacheSlowly);
 
+    // Get client init info for embedding in generated pages
+    const clientInitFilePath = lifecycleManager.getClientInitFilePath() ?? undefined;
+    const pluginsWithInit = lifecycleManager.getPluginsWithInit();
+
     const devServerRoutes: DevServerRoute[] = routes.map((route: JayRoute) =>
-        mkRoute(route, vite, slowlyPhase, options),
+        mkRoute(route, vite, slowlyPhase, options, clientInitFilePath, pluginsWithInit),
     );
 
     return {
