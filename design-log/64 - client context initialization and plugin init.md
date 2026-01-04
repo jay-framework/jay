@@ -210,48 +210,60 @@ export { clientInit } from './init/client';
 
 **Dependency ordering:** Uses `package.json` dependencies. If `wix-stores` depends on `wix-auth` in package.json, then `wix-auth`'s init runs before `wix-stores`'s init.
 
-**Init function implementation** uses the same hooks as project init:
+**Init uses typed markers for type-safe server-to-client data passing:**
+
+```typescript
+// lib/init-marker.ts (shared - no server/client deps)
+import { createInitMarker } from '@jay-framework/fullstack-component';
+
+export interface StoresInitData {
+  storesApiEndpoint: string;
+  defaultCurrency: string;
+}
+
+export const STORES_INIT = createInitMarker<StoresInitData>('wix-stores');
+```
 
 ```typescript
 // lib/init/server.ts
-import { onInit, getService, setClientInitData, registerService } from '@jay-framework/stack-server-runtime';
-import type { PluginInitContext } from '@jay-framework/stack-server-runtime';
+import { serverInit, getService, registerService } from '@jay-framework/stack-server-runtime';
 import { AUTH_SERVICE } from '@wix/auth';
 import { STORES_SERVICE, createStoresService } from '../services/stores';
+import { STORES_INIT } from '../init-marker';
 
-// Exported function - framework calls this with plugin context
-export function serverInit({ pluginName }: PluginInitContext) {
-  onInit(async () => {
-    const auth = getService(AUTH_SERVICE);  // Available because wix-auth init ran first
-    const stores = await createStoresService(auth);
-    registerService(STORES_SERVICE, stores);
-    
-    // Use pluginName as key so client init receives only this plugin's data
-    setClientInitData(pluginName, {
-      storesApiEndpoint: process.env.STORES_API_URL,
-      defaultCurrency: 'USD',
-    });
+serverInit(STORES_INIT, async (setClientData) => {
+  const auth = getService(AUTH_SERVICE);  // Available because wix-auth init ran first
+  const stores = await createStoresService(auth);
+  registerService(STORES_SERVICE, stores);
+  
+  // setClientData is typed: (data: StoresInitData) => void
+  setClientData({
+    storesApiEndpoint: process.env.STORES_API_URL || '/api',
+    defaultCurrency: 'USD',
   });
-}
+});
 ```
 
 ```typescript
 // lib/init/client.ts
-import { onClientInit, registerGlobalContext } from '@jay-framework/stack-client-runtime';
-import type { PluginInitContext } from '@jay-framework/stack-server-runtime';
+import { clientInit, registerGlobalContext } from '@jay-framework/stack-client-runtime';
 import { STORES_CONTEXT, createStoresContext } from '../stores-client/stores-context';
+import { STORES_INIT } from '../init-marker';
 
-// Exported function - framework calls this with plugin context
-export function clientInit({ pluginName }: PluginInitContext) {
-  // Register with same key - receives only this plugin's data
-  onClientInit(pluginName, (serverData) => {
-    registerGlobalContext(STORES_CONTEXT, createStoresContext({
-      apiEndpoint: serverData.storesApiEndpoint,
-      currency: serverData.defaultCurrency,
-    }));
-  });
-}
+clientInit(STORES_INIT, (data) => {
+  // data is typed as StoresInitData!
+  registerGlobalContext(STORES_CONTEXT, createStoresContext({
+    apiEndpoint: data.storesApiEndpoint,
+    currency: data.defaultCurrency,
+  }));
+});
 ```
+
+**Benefits of typed markers:**
+- ✅ Type-safe data passing - data is typed end-to-end
+- ✅ No string duplication - marker encapsulates the key
+- ✅ Same pattern as other markers (`createJayContext`, `createJayService`)
+- ✅ No server deps in client code - marker is in shared file
 
 ### 5. Initialization Order
 
@@ -274,10 +286,12 @@ export function clientInit({ pluginName }: PluginInitContext) {
    - Parse embedded client init data from HTML
    - For each plugin with `init.client` (in dependency order):
      - Import plugin's client bundle
-     - Call exported `clientInit()` function (registers `onClientInit` callbacks)
+     - Call exported `clientInit(serverData)` with the plugin's namespaced data
    - Import project `jay.client-init.ts` (registers `onClientInit` callbacks)
-   - Run all `onClientInit` callbacks with merged server data
+   - Run all `onClientInit` callbacks with their namespaced server data
    - Mount component tree (all contexts now available)
+
+**Note:** Plugin client init receives its data directly via function parameter. Project init uses `onClientInit('project', callback)` to register callbacks that receive the `'project'` namespaced data. This keeps plugin client code free of server dependencies.
 
 ### Data Flow Diagram
 
@@ -601,18 +615,15 @@ export function serverInit({ pluginName }: PluginInitContext) {
 
 ```typescript
 // lib/init/client.ts
-import { onClientInit, registerGlobalContext } from '@jay-framework/stack-client-runtime';
-import type { PluginInitContext } from '@jay-framework/stack-server-runtime';
+import { registerGlobalContext } from '@jay-framework/stack-client-runtime';
 import { STORES_CONTEXT, createStoresContext } from '../stores-client/stores-context';
 
-export function clientInit({ pluginName }: PluginInitContext) {
-  // Use pluginName as key to receive only this plugin's data
-  onClientInit(pluginName, (serverData) => {
-    registerGlobalContext(STORES_CONTEXT, createStoresContext({
-      apiEndpoint: serverData.storesApiEndpoint,
-      currency: serverData.defaultCurrency,
-    }));
-  });
+// Framework calls this with the plugin's namespaced serverData directly
+export async function clientInit(serverData: Record<string, any>): Promise<void> {
+  registerGlobalContext(STORES_CONTEXT, createStoresContext({
+    apiEndpoint: serverData.storesApiEndpoint,
+    currency: serverData.defaultCurrency,
+  }));
 }
 ```
 
