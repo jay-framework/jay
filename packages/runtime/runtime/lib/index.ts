@@ -20,6 +20,7 @@ export {
     ConstructContext,
     currentConstructionContext,
     registerGlobalContext,
+    useGlobalContext,
     clearGlobalContextRegistry,
 } from './context';
 export {

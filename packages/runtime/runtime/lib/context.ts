@@ -65,7 +65,7 @@ export function clearGlobalContextRegistry(): void {
  * Gets a global context by marker.
  * Internal API used by findContext.
  */
-function getGlobalContext<ContextType>(
+export function useGlobalContext<ContextType>(
     marker: ContextMarker<ContextType>,
 ): ContextType | undefined {
     return globalContextRegistry.get(marker as symbol);
