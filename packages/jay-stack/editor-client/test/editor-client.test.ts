@@ -212,7 +212,7 @@ describe('Connection Manager', () => {
 
         await manager.connect();
 
-        const result = await manager.sendMessage<PublishMessage>({
+        const result = await manager.sendMessage<never, PublishMessage>({
             type: 'publish',
             pages: [
                 {

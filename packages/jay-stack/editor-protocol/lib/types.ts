@@ -18,6 +18,8 @@ export type {
     ProjectPage,
     ProjectComponent,
     Plugin,
+    EditorProtocolMessageTypes,
+    EditorProtocolResponseTypes,
 } from './protocol';
 
 // Connection configuration

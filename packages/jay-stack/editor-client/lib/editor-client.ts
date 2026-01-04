@@ -4,10 +4,14 @@ import {
     SaveImageMessage,
     HasImageMessage,
     GetProjectInfoMessage,
+    ExportMessage,
+    ImportMessage,
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
     GetProjectInfoResponse,
+    ExportResponse,
+    ImportResponse,
     EditorProtocolMessageTypes,
     EditorProtocolResponseTypes,
 } from '@jay-framework/editor-protocol';
@@ -47,23 +51,38 @@ export class EditorClient implements EditorProtocol {
 
     // EditorProtocol implementation - delegate to ConnectionManager
     async publish(params: PublishMessage): Promise<PublishResponse> {
-        return this.connectionManager.sendMessage<PublishMessage>(params);
+        return this.connectionManager.sendMessage<never, PublishMessage>(params);
     }
 
     async saveImage(params: SaveImageMessage): Promise<SaveImageResponse> {
-        return this.connectionManager.sendMessage<SaveImageMessage>(params);
+        return this.connectionManager.sendMessage<never, SaveImageMessage>(params);
     }
 
     async hasImage(params: HasImageMessage): Promise<HasImageResponse> {
-        return this.connectionManager.sendMessage<HasImageMessage>(params);
+        return this.connectionManager.sendMessage<never, HasImageMessage>(params);
     }
 
     async getProjectInfo(params: GetProjectInfoMessage): Promise<GetProjectInfoResponse> {
-        return this.connectionManager.sendMessage<GetProjectInfoMessage>(params);
+        return this.connectionManager.sendMessage<never, GetProjectInfoMessage>(params);
     }
 
-    async send(params: EditorProtocolMessageTypes): Promise<EditorProtocolResponseTypes> {
-        return this.connectionManager.sendMessage<EditorProtocolMessageTypes>(params);
+    async export<TVendorDoc>(params: ExportMessage<TVendorDoc>): Promise<ExportResponse> {
+        return this.connectionManager.sendMessage<TVendorDoc, ExportMessage<TVendorDoc>>(params);
+    }
+
+    async import<TVendorDoc>(
+        params: ImportMessage<TVendorDoc>,
+    ): Promise<ImportResponse<TVendorDoc>> {
+        return this.connectionManager.sendMessage<TVendorDoc, ImportMessage<TVendorDoc>>(params);
+    }
+
+    async send<TVendorDoc>(
+        params: EditorProtocolMessageTypes<TVendorDoc>,
+    ): Promise<EditorProtocolResponseTypes<TVendorDoc>> {
+        return this.connectionManager.sendMessage<
+            TVendorDoc,
+            EditorProtocolMessageTypes<TVendorDoc>
+        >(params);
     }
 
     // Get access to the underlying connection manager if needed

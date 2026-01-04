@@ -8,10 +8,14 @@ import type {
     SaveImageMessage,
     HasImageMessage,
     GetProjectInfoMessage,
+    ExportMessage,
+    ImportMessage,
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
     GetProjectInfoResponse,
+    ExportResponse,
+    ImportResponse,
     EditorProtocolMessageTypes,
     EditorProtocolResponseTypes,
 } from '@jay-framework/editor-protocol';
@@ -103,7 +107,7 @@ export class ConnectionManager {
         };
     }
 
-    async sendMessage<T extends EditorProtocolMessageTypes>(
+    async sendMessage<TVendorDoc, T extends EditorProtocolMessageTypes<TVendorDoc>>(
         message: T,
     ): Promise<
         T extends PublishMessage
@@ -114,7 +118,11 @@ export class ConnectionManager {
                 ? HasImageResponse
                 : T extends GetProjectInfoMessage
                   ? GetProjectInfoResponse
-                  : never
+                  : T extends ExportMessage<TVendorDoc>
+                    ? ExportResponse
+                    : T extends ImportMessage<TVendorDoc>
+                      ? ImportResponse<TVendorDoc>
+                      : EditorProtocolResponseTypes<TVendorDoc>
     > {
         if (this.connectionState !== 'connected') {
             throw new Error('Not connected to editor server');
@@ -269,7 +277,7 @@ export class ConnectionManager {
     private setupSocketHandlers(): void {
         if (!this.socket) return;
 
-        this.socket.on('protocol-response', (response: ProtocolResponse) => {
+        this.socket.on('protocol-response', (response: ProtocolResponse<unknown>) => {
             const pendingRequest = this.pendingRequests.get(response.id);
             if (pendingRequest) {
                 this.pendingRequests.delete(response.id);
