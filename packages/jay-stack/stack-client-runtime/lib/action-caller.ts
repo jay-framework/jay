@@ -147,12 +147,18 @@ export function createActionCaller<Input, Output>(
 
             // Handle abort (timeout)
             if (error instanceof Error && error.name === 'AbortError') {
-                throw new ActionError('TIMEOUT', `Action '${actionName}' timed out after ${timeout}ms`);
+                throw new ActionError(
+                    'TIMEOUT',
+                    `Action '${actionName}' timed out after ${timeout}ms`,
+                );
             }
 
             // Handle network errors
             if (error instanceof TypeError) {
-                throw new ActionError('NETWORK_ERROR', `Network error calling '${actionName}': ${error.message}`);
+                throw new ActionError(
+                    'NETWORK_ERROR',
+                    `Network error calling '${actionName}': ${error.message}`,
+                );
             }
 
             // Re-throw unknown errors
@@ -212,4 +218,3 @@ function isSimpleObject(obj: unknown): boolean {
 
     return true;
 }
-

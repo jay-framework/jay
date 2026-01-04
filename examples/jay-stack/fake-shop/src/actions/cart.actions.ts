@@ -22,10 +22,7 @@ const cart: CartItem[] = [];
  */
 export const addToCart = makeJayAction('cart.addToCart')
     .withServices(INVENTORY_SERVICE)
-    .withHandler(async (
-        input: { productId: string; quantity: number },
-        inventory,
-    ) => {
+    .withHandler(async (input: { productId: string; quantity: number }, inventory) => {
         // Validate quantity
         if (input.quantity < 1) {
             throw new ActionError('INVALID_QUANTITY', 'Quantity must be at least 1');
@@ -36,9 +33,7 @@ export const addToCart = makeJayAction('cart.addToCart')
         if (available < input.quantity) {
             throw new ActionError(
                 'NOT_AVAILABLE',
-                available === 0
-                    ? 'Product is out of stock'
-                    : `Only ${available} units available`,
+                available === 0 ? 'Product is out of stock' : `Only ${available} units available`,
             );
         }
 
@@ -50,7 +45,7 @@ export const addToCart = makeJayAction('cart.addToCart')
             cart.push({ productId: input.productId, quantity: input.quantity });
         }
 
-        console.log('Item added to cart, id: ', input.productId, "quantity:", input.quantity);
+        console.log('Item added to cart, id: ', input.productId, 'quantity:', input.quantity);
         return {
             cartItemCount: cart.reduce((sum, item) => sum + item.quantity, 0),
             message: `Added ${input.quantity} item(s) to cart`,
@@ -60,13 +55,12 @@ export const addToCart = makeJayAction('cart.addToCart')
 /**
  * Get the current cart contents.
  */
-export const getCart = makeJayAction('cart.getCart')
-    .withHandler(async (_input: void) => {
-        return {
-            items: [...cart],
-            itemCount: cart.reduce((sum, item) => sum + item.quantity, 0),
-        };
-    });
+export const getCart = makeJayAction('cart.getCart').withHandler(async (_input: void) => {
+    return {
+        items: [...cart],
+        itemCount: cart.reduce((sum, item) => sum + item.quantity, 0),
+    };
+});
 
 /**
  * Remove an item from the cart.
@@ -93,10 +87,7 @@ export const removeFromCart = makeJayAction('cart.removeFromCart')
 export const updateCartQuantity = makeJayAction('cart.updateQuantity')
     .withServices(INVENTORY_SERVICE)
     .withMethod('PATCH')
-    .withHandler(async (
-        input: { productId: string; quantity: number },
-        inventory,
-    ) => {
+    .withHandler(async (input: { productId: string; quantity: number }, inventory) => {
         const item = cart.find((i) => i.productId === input.productId);
         if (!item) {
             throw new ActionError('NOT_IN_CART', 'Item is not in cart');
@@ -109,10 +100,7 @@ export const updateCartQuantity = makeJayAction('cart.updateQuantity')
         // Check availability for new quantity
         const available = await inventory.getAvailableUnits(input.productId);
         if (available < input.quantity) {
-            throw new ActionError(
-                'NOT_AVAILABLE',
-                `Only ${available} units available`,
-            );
+            throw new ActionError('NOT_AVAILABLE', `Only ${available} units available`);
         }
 
         item.quantity = input.quantity;
@@ -126,8 +114,7 @@ export const updateCartQuantity = makeJayAction('cart.updateQuantity')
 /**
  * Clear the entire cart.
  */
-export const clearCart = makeJayAction('cart.clear')
-    .withHandler(async (_input: void) => {
-        cart.length = 0;
-        return { success: true, message: 'Cart cleared' };
-    });
+export const clearCart = makeJayAction('cart.clear').withHandler(async (_input: void) => {
+    cart.length = 0;
+    return { success: true, message: 'Cart cleared' };
+});

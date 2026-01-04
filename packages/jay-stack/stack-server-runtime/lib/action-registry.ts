@@ -84,9 +84,7 @@ export class ActionRegistry {
      *
      * @param action - The JayAction to register (created via makeJayAction/makeJayQuery)
      */
-    register<I, O, S extends any[]>(
-        action: JayAction<I, O> & JayActionDefinition<I, O, S>,
-    ): void {
+    register<I, O, S extends any[]>(action: JayAction<I, O> & JayActionDefinition<I, O, S>): void {
         const entry: RegisteredAction = {
             actionName: action.actionName,
             method: action.method,
@@ -142,10 +140,7 @@ export class ActionRegistry {
      * @param input - The input data for the action
      * @returns The action result or error
      */
-    async execute<T = any>(
-        actionName: string,
-        input: unknown,
-    ): Promise<ActionExecutionResult<T>> {
+    async execute<T = any>(actionName: string, input: unknown): Promise<ActionExecutionResult<T>> {
         const action = this.actions.get(actionName);
 
         if (!action) {

@@ -15,10 +15,7 @@ import { PRODUCTS_DATABASE_SERVICE, Product } from '../products-database';
 export const searchProducts = makeJayQuery('products.search')
     .withServices(PRODUCTS_DATABASE_SERVICE)
     .withCaching({ maxAge: 60, staleWhileRevalidate: 120 })
-    .withHandler(async (
-        input: { query: string; limit?: number },
-        productsDb,
-    ) => {
+    .withHandler(async (input: { query: string; limit?: number }, productsDb) => {
         const allProducts = await productsDb.getProducts();
 
         // Simple search by name (case-insensitive)

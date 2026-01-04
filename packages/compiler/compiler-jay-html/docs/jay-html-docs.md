@@ -151,8 +151,10 @@ Use the full ternary syntax `{condition ? class-a : class-b}` to switch between 
 #### Combining Static and Conditional Classes
 
 ```html
-<a href="/cart" 
-   class="cart-indicator {hasItems ? has-items} {isLoading ? is-loading} {justAdded ? just-added}">
+<a
+  href="/cart"
+  class="cart-indicator {hasItems ? has-items} {isLoading ? is-loading} {justAdded ? just-added}"
+>
   <span class="icon">🛒</span>
   <span class="count" if="hasItems">{itemCount}</span>
 </a>

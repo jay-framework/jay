@@ -10,8 +10,8 @@ import {
     MoodTrackerFastViewState,
     MoodTrackerRefs,
 } from './mood-tracker.jay-contract';
-import {submitMood, getMoodStats, MoodEntry} from './mood-actions';
-import {createEffect} from "@jay-framework/component";
+import { submitMood, getMoodStats, MoodEntry } from './mood-actions';
+import { createEffect } from '@jay-framework/component';
 
 export interface MoodTrackerProps {}
 
@@ -52,7 +52,7 @@ function MoodTracker(
     console.log('**** running on the client environment ****');
 
     // Helper to record mood on the server and update local state
-    const recordMood = async (mood: MoodEntry["mood"]) => {
+    const recordMood = async (mood: MoodEntry['mood']) => {
         try {
             // Call server action to persist the mood
             await submitMood({ mood });
@@ -69,8 +69,8 @@ function MoodTracker(
             isFirst = false;
             return;
         }
-        recordMood(CurrentMood[currentMood] as MoodEntry["mood"])
-    })
+        recordMood(CurrentMood[currentMood] as MoodEntry['mood']);
+    });
 
     refs.happy.onclick(async () => {
         setHappy((_) => _ + 1);

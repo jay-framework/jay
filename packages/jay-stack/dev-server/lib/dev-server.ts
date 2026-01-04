@@ -5,7 +5,14 @@ import {
     routeToExpressRoute,
     scanRoutes,
 } from '@jay-framework/stack-route-scanner';
-import { DevSlowlyChangingPhase, SlowlyChangingPhase, getClientInitData, type PluginWithInit } from '@jay-framework/stack-server-runtime';
+import {
+    DevSlowlyChangingPhase,
+    SlowlyChangingPhase,
+    getClientInitData,
+    preparePluginClientInits,
+    type PluginWithInit,
+    type PluginClientInitInfo,
+} from '@jay-framework/stack-server-runtime';
 import type {
     ClientError4xx,
     PageProps,
@@ -17,7 +24,7 @@ import path from 'node:path';
 import { RequestHandler } from 'express-serve-static-core';
 import { renderFastChangingData } from '@jay-framework/stack-server-runtime';
 import { loadPageParts } from '@jay-framework/stack-server-runtime';
-import { generateClientScript } from '@jay-framework/stack-server-runtime';
+import { generateClientScript, ProjectClientInitInfo } from '@jay-framework/stack-server-runtime';
 import { Request, Response } from 'express';
 import { DevServerOptions } from './dev-server-options';
 import { ServiceLifecycleManager } from './service-lifecycle';
@@ -82,8 +89,9 @@ function mkRoute(
     vite: ViteDevServer,
     slowlyPhase: SlowlyChangingPhase,
     options: DevServerOptions,
-    clientInitFilePath?: string,
+    projectInit?: ProjectClientInitInfo,
     allPluginsWithInit: PluginWithInit[] = [],
+    allPluginClientInits: PluginClientInitInfo[] = [],
 ): DevServerRoute {
     const path = routeToExpressRoute(route);
     const handler = async (req: Request, res: Response) => {
@@ -113,9 +121,11 @@ function mkRoute(
                 } = pagePartsResult.val;
 
                 // Filter plugins to only those used on this page
-                const pluginsForPage = allPluginsWithInit.filter(
-                    (plugin) => usedPackages.has(plugin.packageName),
-                );
+                const pluginsForPage = allPluginClientInits.filter((plugin) => {
+                    // Find the matching PluginWithInit to check packageName
+                    const pluginInfo = allPluginsWithInit.find((p) => p.name === plugin.name);
+                    return pluginInfo && usedPackages.has(pluginInfo.packageName);
+                });
 
                 const renderedSlowly = await slowlyPhase.runSlowlyForPage(
                     pageParams,
@@ -154,7 +164,7 @@ function mkRoute(
                             route.jayHtmlPath,
                             clientTrackByMap,
                             getClientInitData(),
-                            clientInitFilePath,
+                            projectInit,
                             pluginsForPage,
                         );
 
@@ -205,7 +215,7 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
         root: pagesRootFolder,
         ssr: {
             // Mark stack-server-runtime as external so Vite uses Node's require
-            // This ensures jay.init.ts and dev-server share the same module instance
+            // This ensures lib/init.ts and dev-server share the same module instance
             external: ['@jay-framework/stack-server-runtime'],
         },
     });
@@ -214,7 +224,7 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
     lifecycleManager.setViteServer(vite);
     await lifecycleManager.initialize();
 
-    // Set up hot reload for jay.init.ts
+    // Set up hot reload for lib/init.ts
     setupServiceHotReload(vite, lifecycleManager);
 
     // Set up action router for /_jay/actions/* endpoints
@@ -223,12 +233,13 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
     const routes: JayRoutes = await initRoutes(pagesRootFolder);
     const slowlyPhase = new DevSlowlyChangingPhase(dontCacheSlowly);
 
-    // Get client init info for embedding in generated pages
-    const clientInitFilePath = lifecycleManager.getClientInitFilePath() ?? undefined;
+    // Get init info for embedding in generated pages
+    const projectInit = lifecycleManager.getProjectInit() ?? undefined;
     const pluginsWithInit = lifecycleManager.getPluginsWithInit();
+    const pluginClientInits = preparePluginClientInits(pluginsWithInit);
 
     const devServerRoutes: DevServerRoute[] = routes.map((route: JayRoute) =>
-        mkRoute(route, vite, slowlyPhase, options, clientInitFilePath, pluginsWithInit),
+        mkRoute(route, vite, slowlyPhase, options, projectInit, pluginsWithInit, pluginClientInits),
     );
 
     return {
@@ -254,7 +265,7 @@ function setupGracefulShutdown(lifecycleManager: ServiceLifecycleManager): void 
 }
 
 /**
- * Sets up hot reload for jay.init.ts file changes
+ * Sets up hot reload for lib/init.ts file changes
  */
 function setupServiceHotReload(
     vite: ViteDevServer,
@@ -270,7 +281,7 @@ function setupServiceHotReload(
 
     vite.watcher.on('change', async (changedPath) => {
         if (changedPath === initFilePath) {
-            console.log('[Services] jay.init.ts changed, reloading services...');
+            console.log('[Services] lib/init.ts changed, reloading services...');
             try {
                 await lifecycleManager.reload();
                 // Trigger browser reload

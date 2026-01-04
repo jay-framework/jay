@@ -11,3 +11,6 @@ actions:
   - submitMood
   - getMoodStats
   - clearMoodHistory
+# Plugin initialization
+# Auto-discovers lib/init.ts which exports the makeJayInit constant
+# For compiled packages, specify the export name: init: "myPluginInit"

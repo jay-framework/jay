@@ -878,10 +878,10 @@ Server actions enable client-side code to call server-side functions after the i
 import { makeJayAction, makeJayQuery, ActionError } from '@jay-framework/fullstack-component';
 ```
 
-| Builder | Default Method | Use Case |
-|---------|---------------|----------|
-| `makeJayAction` | POST | Mutations: add to cart, submit form, update profile |
-| `makeJayQuery` | GET | Reads: search, get details, list items (cacheable) |
+| Builder         | Default Method | Use Case                                            |
+| --------------- | -------------- | --------------------------------------------------- |
+| `makeJayAction` | POST           | Mutations: add to cart, submit form, update profile |
+| `makeJayQuery`  | GET            | Reads: search, get details, list items (cacheable)  |
 
 ### Defining Actions
 
@@ -891,20 +891,16 @@ import { makeJayAction, ActionError } from '@jay-framework/fullstack-component';
 import { CART_SERVICE, INVENTORY_SERVICE } from '../services';
 
 export const addToCart = makeJayAction('cart.addToCart')
-    .withServices(CART_SERVICE, INVENTORY_SERVICE)
-    .withHandler(async (
-        input: { productId: string; quantity: number },
-        cartService,
-        inventory,
-    ) => {
-        const available = await inventory.getAvailableUnits(input.productId);
-        if (available < input.quantity) {
-            throw new ActionError('NOT_AVAILABLE', `Only ${available} units available`);
-        }
-        
-        const cart = await cartService.addItem(input.productId, input.quantity);
-        return { cartItemCount: cart.items.length };
-    });
+  .withServices(CART_SERVICE, INVENTORY_SERVICE)
+  .withHandler(async (input: { productId: string; quantity: number }, cartService, inventory) => {
+    const available = await inventory.getAvailableUnits(input.productId);
+    if (available < input.quantity) {
+      throw new ActionError('NOT_AVAILABLE', `Only ${available} units available`);
+    }
+
+    const cart = await cartService.addItem(input.productId, input.quantity);
+    return { cartItemCount: cart.items.length };
+  });
 ```
 
 ### Defining Queries (GET with Caching)
@@ -915,22 +911,19 @@ import { makeJayQuery } from '@jay-framework/fullstack-component';
 import { PRODUCTS_DATABASE_SERVICE } from '../services';
 
 export const searchProducts = makeJayQuery('products.search')
-    .withServices(PRODUCTS_DATABASE_SERVICE)
-    .withCaching({ maxAge: 60, staleWhileRevalidate: 120 })
-    .withHandler(async (
-        input: { query: string; page?: number },
-        productsDb,
-    ) => {
-        const results = await productsDb.search(input.query, {
-            page: input.page ?? 1,
-            limit: 20,
-        });
-        return {
-            products: results.items,
-            totalCount: results.total,
-            hasMore: results.hasMore,
-        };
+  .withServices(PRODUCTS_DATABASE_SERVICE)
+  .withCaching({ maxAge: 60, staleWhileRevalidate: 120 })
+  .withHandler(async (input: { query: string; page?: number }, productsDb) => {
+    const results = await productsDb.search(input.query, {
+      page: input.page ?? 1,
+      limit: 20,
     });
+    return {
+      products: results.items,
+      totalCount: results.total,
+      hasMore: results.hasMore,
+    };
+  });
 ```
 
 ### Builder Methods
@@ -941,10 +934,10 @@ Inject server-side services (same pattern as `makeJayStackComponent`):
 
 ```typescript
 export const addToCart = makeJayAction('cart.addToCart')
-    .withServices(CART_SERVICE, INVENTORY_SERVICE)
-    .withHandler(async (input, cartService, inventory) => {
-        // Services are injected after input
-    });
+  .withServices(CART_SERVICE, INVENTORY_SERVICE)
+  .withHandler(async (input, cartService, inventory) => {
+    // Services are injected after input
+  });
 ```
 
 #### `.withMethod(method)`
@@ -953,8 +946,10 @@ Override the default HTTP method (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`):
 
 ```typescript
 export const deleteProduct = makeJayAction('products.delete')
-    .withMethod('DELETE')
-    .withHandler(async (input: { id: string }) => { /* ... */ });
+  .withMethod('DELETE')
+  .withHandler(async (input: { id: string }) => {
+    /* ... */
+  });
 ```
 
 #### `.withCaching(options)`
@@ -963,8 +958,10 @@ Enable caching for GET requests:
 
 ```typescript
 export const getCategories = makeJayQuery('products.categories')
-    .withCaching({ maxAge: 300, staleWhileRevalidate: 600 })
-    .withHandler(async () => { /* ... */ });
+  .withCaching({ maxAge: 300, staleWhileRevalidate: 600 })
+  .withHandler(async () => {
+    /* ... */
+  });
 ```
 
 ### Error Handling
@@ -974,16 +971,17 @@ Use `ActionError` for business logic errors (returns 422 status):
 ```typescript
 import { ActionError } from '@jay-framework/fullstack-component';
 
-export const addToCart = makeJayAction('cart.addToCart')
-    .withHandler(async (input, cartService, inventory) => {
-        const available = await inventory.check(input.productId);
-        
-        if (available < input.quantity) {
-            throw new ActionError('NOT_AVAILABLE', 'Product is out of stock');
-        }
-        
-        return { success: true };
-    });
+export const addToCart = makeJayAction('cart.addToCart').withHandler(
+  async (input, cartService, inventory) => {
+    const available = await inventory.check(input.productId);
+
+    if (available < input.quantity) {
+      throw new ActionError('NOT_AVAILABLE', 'Product is out of stock');
+    }
+
+    return { success: true };
+  },
+);
 ```
 
 ### Client Usage
@@ -996,21 +994,21 @@ import { addToCart } from '../../../actions/cart.actions';
 import { ActionError } from '@jay-framework/fullstack-component';
 
 function ProductPageInteractive(props, refs, viewState, carryForward) {
-    refs.addToCart.onclick(async () => {
-        try {
-            const result = await addToCart({
-                productId: carryForward.productId,
-                quantity: 1,
-            });
-            // Success! result.cartItemCount is available
-        } catch (e) {
-            if (e instanceof ActionError) {
-                showNotification(e.message); // "Product is out of stock"
-            }
-        }
-    });
+  refs.addToCart.onclick(async () => {
+    try {
+      const result = await addToCart({
+        productId: carryForward.productId,
+        quantity: 1,
+      });
+      // Success! result.cartItemCount is available
+    } catch (e) {
+      if (e instanceof ActionError) {
+        showNotification(e.message); // "Product is out of stock"
+      }
+    }
+  });
 
-    return { render: () => ({}) };
+  return { render: () => ({}) };
 }
 ```
 
@@ -1023,12 +1021,13 @@ Actions in `src/actions/*.actions.ts` are automatically discovered and registere
 Input and output types are inferred from the handler function:
 
 ```typescript
-export const addToCart = makeJayAction('cart.addToCart')
-    .withHandler(async (
-        input: { productId: string; quantity: number },  // ← Input type
-    ) => {
-        return { cartItemCount: 5 };  // ← Output type
-    });
+export const addToCart = makeJayAction('cart.addToCart').withHandler(
+  async (
+    input: { productId: string; quantity: number }, // ← Input type
+  ) => {
+    return { cartItemCount: 5 }; // ← Output type
+  },
+);
 
 // Client gets full type safety
 const result = await addToCart({ productId: '123', quantity: 1 });

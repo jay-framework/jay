@@ -57,6 +57,8 @@ describe('dev server', () => {
 
         expect(scriptForMatching).toEqual(`
 import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
+
+
 import { render } from "/page.jay-html.ts";
 
 const viewState = {};
@@ -103,6 +105,8 @@ target.appendChild(instance.element.dom);
 
         expect(scriptForMatching).toEqual(`
 import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
+
+
 import { render } from "/page.jay-html.ts";
 import {page} from "/page.ts"
 
@@ -152,6 +156,8 @@ target.appendChild(instance.element.dom);
 
         expect(scriptForMatching).toEqual(`
 import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
+
+
 import { render } from "/page.jay-html.ts";
 import {page} from "/page.ts"
 import {headless} from "/headless-component.ts"

@@ -61,23 +61,59 @@ Tracks product inventory with methods:
 - `getAvailableUnits(productId)` - Returns stock count
 - `isInStock(productId)` - Checks if product is available
 
-### Service Initialization (`src/jay.init.ts`)
+### Project Initialization (`src/lib/init.ts`)
 
-Services are registered in the `src/jay.init.ts` file:
+Project initialization uses the `makeJayInit` pattern to define both server and client initialization in a single file:
 
 ```typescript
-import { onInit, registerService } from '@jay-framework/stack-server-runtime';
+import { makeJayInit } from '@jay-framework/fullstack-component';
+import { registerService, onShutdown } from '@jay-framework/stack-server-runtime';
+import { createJayContext, registerGlobalContext } from '@jay-framework/runtime';
 
-onInit(async () => {
-  const productsDb = createProductsDatabaseService();
-  registerService(PRODUCTS_DATABASE_SERVICE, productsDb);
+// Context definitions
+export const STORE_CONFIG_CONTEXT = createJayContext<StoreConfig>();
+export const FEATURE_FLAGS_CONTEXT = createJayContext<FeatureFlags>();
 
-  const inventory = createInventoryService();
-  registerService(INVENTORY_SERVICE, inventory);
-});
+export const init = makeJayInit()
+  .withServer(async () => {
+    // Register services
+    registerService(PRODUCTS_DATABASE_SERVICE, createProductsDatabaseService());
+    registerService(INVENTORY_SERVICE, createInventoryService());
+
+    // Return config to pass to client (type flows automatically!)
+    return {
+      store: { storeName: 'Fake Shop', currency: 'USD', currencySymbol: '$' },
+      features: { enableWishlist: true, enableProductComparison: false },
+      ui: { itemsPerPage: 12, analyticsEnabled: false },
+    };
+  })
+  .withClient((config) => {
+    // config is typed based on what withServer returns
+    registerGlobalContext(STORE_CONFIG_CONTEXT, config.store);
+    registerGlobalContext(FEATURE_FLAGS_CONTEXT, config.features);
+  });
 ```
 
-The dev server automatically loads this file on startup and provides lifecycle hooks for service initialization and cleanup.
+The dev server automatically loads this file on startup.
+
+### Server-to-Client Data Flow
+
+```mermaid
+flowchart TB
+    subgraph Server["Server (lib/init.ts)"]
+        SI["makeJayInit().withServer()"]
+        SI --> |"returns config"| DATA["{ store, features, ui }"]
+    end
+
+    DATA --> |"embedded in HTML"| HTML["Page HTML"]
+
+    subgraph Client["Client (lib/init.ts)"]
+        HTML --> CI["makeJayInit().withClient(config)"]
+        CI --> CTX["registerGlobalContext()"]
+    end
+
+    CTX --> COMP["Components use useContext()"]
+```
 
 ### Using Services in Pages
 
@@ -90,6 +126,61 @@ export const page = makeJayStackComponent<PageContract>()
     const products = await productsDb.getProducts();
     // ...
   });
+```
+
+## Plugins
+
+This example uses two plugins that demonstrate plugin initialization:
+
+### 1. Mood Tracker Plugin (NPM Package)
+
+An external plugin (`example-jay-mood-tracker-plugin`) that demonstrates:
+
+- Server init: Registers `MOOD_ANALYTICS_SERVICE` and passes analytics config to client
+- Client init: Registers `MOOD_TRACKER_CONFIG_CONTEXT` with the server config
+
+### 2. Product Rating Plugin (Local)
+
+A local plugin in `src/plugins/product-rating` that demonstrates:
+
+- Server init: Registers `RATINGS_SERVICE` and passes UI config to client
+- Client init: Registers `RATING_UI_CONFIG_CONTEXT` with the server config
+
+### Plugin Initialization Order
+
+Plugins are initialized in dependency order (from `package.json`), followed by the project:
+
+```
+1. mood-tracker-plugin (init.ts)
+2. product-rating (init.ts)
+3. project (lib/init.ts)
+```
+
+### Plugin init.ts Example
+
+```typescript
+// src/plugins/product-rating/init.ts
+import { makeJayInit } from '@jay-framework/fullstack-component';
+import { registerService } from '@jay-framework/stack-server-runtime';
+import { registerGlobalContext } from '@jay-framework/stack-client-runtime';
+
+export const init = makeJayInit()
+  .withServer(async () => {
+    registerService(RATINGS_SERVICE, createRatingsService());
+    return { maxStars: 5, allowHalfStars: false };
+  })
+  .withClient((data) => {
+    registerGlobalContext(RATING_UI_CONFIG_CONTEXT, data);
+  });
+```
+
+### Plugin plugin.yaml Configuration
+
+```yaml
+name: product-rating
+# init is auto-discovered from lib/init.ts (or init.ts)
+# Optional: override the export name
+init: init
 ```
 
 ## Contract Files
@@ -120,11 +211,42 @@ This example demonstrates the use of **contract files** (`.jay-contract`) to def
 - [`CONTRACTS.md`](./CONTRACTS.md) - Comprehensive guide to contract files
 - [`CONTRACT_FILES_SUMMARY.md`](./CONTRACT_FILES_SUMMARY.md) - Implementation summary
 
+## Project Structure
+
+```
+fake-shop/
+├── src/
+│   ├── lib/
+│   │   └── init.ts               # Consolidated server+client initialization
+│   ├── products-database.ts      # Products service
+│   ├── inventory-service.ts      # Inventory service
+│   ├── actions/
+│   │   ├── cart.actions.ts       # Cart actions
+│   │   └── search.actions.ts     # Search actions
+│   ├── pages/
+│   │   ├── page.jay-html         # Homepage
+│   │   ├── products/             # Products listing
+│   │   ├── cart/                 # Shopping cart
+│   │   └── checkout/             # Checkout flow
+│   └── plugins/
+│       └── product-rating/       # Local plugin
+│           ├── plugin.yaml
+│           ├── product-rating.ts
+│           ├── product-rating.jay-contract
+│           ├── init.ts           # Plugin init (makeJayInit pattern)
+│           └── README.md
+├── .jay                          # Jay configuration
+└── package.json
+```
+
 ## Benefits
 
 - ✅ **Type-safe** - Full TypeScript support for services and rendering phases
+- ✅ **Automatic type flow** - Server return type flows to client callback
+- ✅ **Single file init** - Server and client init in one file with `makeJayInit`
 - ✅ **Testable** - Services can be easily mocked
 - ✅ **Hot reload** - Services reload automatically during development
 - ✅ **Clean architecture** - Clear separation between UI and business logic
 - ✅ **Phase validation** - Compile-time checks for rendering boundaries
 - ✅ **Performance** - Optimal caching strategy with phase separation
+- ✅ **Plugin system** - Modular plugins with their own services and contexts

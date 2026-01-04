@@ -7,70 +7,20 @@ import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
 
 /**
- * Init configuration for a single environment (server or client).
- * Can be:
- * - boolean: true means use defaults (export "serverInit"/"clientInit" from "./init/server" or "./init/client")
- * - object: override export name and/or module path
- */
-export type PluginInitEnvConfig =
-    | boolean
-    | {
-          /** Export name from the bundle. Default: "serverInit" or "clientInit" */
-          export?: string;
-          /** Module path relative to plugin root. Default: "./init/server" or "./init/client" */
-          module?: string;
-      };
-
-/**
  * Plugin initialization configuration.
- * Declares whether the plugin has server and/or client initialization functions.
- */
-export interface PluginInitConfig {
-    /** Server-side init configuration */
-    server?: PluginInitEnvConfig;
-    /** Client-side init configuration */
-    client?: PluginInitEnvConfig;
-}
-
-/**
- * Normalized init config with resolved defaults.
- */
-export interface NormalizedPluginInitConfig {
-    /** Export name from the bundle */
-    export: string;
-    /** Module path relative to plugin root */
-    module: string;
-}
-
-/**
- * Normalizes a plugin init env config to resolved values.
  *
- * @param config - The init config (boolean or object)
- * @param env - 'server' or 'client' to determine defaults
- * @returns Normalized config with export and module, or null if disabled
+ * For the `makeJayInit` pattern:
+ * - undefined: Auto-discover `lib/init.ts` (for uncompiled/local plugins)
+ * - string: Export name for the JayInit constant (for compiled/NPM packages)
+ *
+ * @example
+ * ```yaml
+ * # For compiled NPM packages - specify the export name
+ * name: my-plugin
+ * init: myPluginInit
+ * ```
  */
-export function normalizePluginInitConfig(
-    config: PluginInitEnvConfig | undefined,
-    env: 'server' | 'client',
-): NormalizedPluginInitConfig | null {
-    if (!config) {
-        return null;
-    }
-
-    const defaults = {
-        server: { export: 'serverInit', module: './init/server' },
-        client: { export: 'clientInit', module: './init/client' },
-    };
-
-    if (config === true) {
-        return defaults[env];
-    }
-
-    return {
-        export: config.export ?? defaults[env].export,
-        module: config.module ?? defaults[env].module,
-    };
-}
+export type PluginInitConfig = string;
 
 /**
  * Plugin manifest structure from plugin.yaml

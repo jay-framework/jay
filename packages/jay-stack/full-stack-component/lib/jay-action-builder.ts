@@ -164,7 +164,9 @@ class JayActionBuilderImpl<Services extends any[], DefaultMethod extends HttpMet
         return this as unknown as JayActionBuilder<Services, unknown, unknown, M>;
     }
 
-    withCaching(options?: CacheOptions): JayActionBuilder<Services, unknown, unknown, DefaultMethod> {
+    withCaching(
+        options?: CacheOptions,
+    ): JayActionBuilder<Services, unknown, unknown, DefaultMethod> {
         this._cacheOptions = options ?? { maxAge: 60 };
         return this;
     }
@@ -265,4 +267,3 @@ export function isJayAction(value: unknown): value is JayAction<unknown, unknown
         typeof (value as any).actionName === 'string'
     );
 }
-

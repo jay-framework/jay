@@ -1,9 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import {
-    createActionCaller,
-    setActionCallerOptions,
-    ActionError,
-} from '../lib/action-caller';
+import { createActionCaller, setActionCallerOptions, ActionError } from '../lib/action-caller';
 
 // Mock fetch globally
 const mockFetch = vi.fn();
@@ -53,7 +49,10 @@ describe('Action Caller', () => {
         it('should make POST request by default', async () => {
             mockFetch.mockResolvedValueOnce(mockResponse({ result: 'ok' }));
 
-            const caller = createActionCaller<{ name: string }, { result: string }>('test.greet', 'POST');
+            const caller = createActionCaller<{ name: string }, { result: string }>(
+                'test.greet',
+                'POST',
+            );
             const result = await caller({ name: 'World' });
 
             expect(result).toEqual({ result: 'ok' });
@@ -72,7 +71,10 @@ describe('Action Caller', () => {
         it('should make GET request with query params', async () => {
             mockFetch.mockResolvedValueOnce(mockResponse({ items: [] }));
 
-            const caller = createActionCaller<{ query: string }, { items: any[] }>('products.search', 'GET');
+            const caller = createActionCaller<{ query: string }, { items: any[] }>(
+                'products.search',
+                'GET',
+            );
             await caller({ query: 'test' });
 
             expect(mockFetch).toHaveBeenCalledWith(
@@ -96,14 +98,18 @@ describe('Action Caller', () => {
 
             const calledUrl = mockFetch.mock.calls[0][0] as string;
             expect(calledUrl).toContain('_input=');
-            expect(calledUrl).toContain(encodeURIComponent(JSON.stringify({ filters: { category: 'electronics' } })));
+            expect(calledUrl).toContain(
+                encodeURIComponent(JSON.stringify({ filters: { category: 'electronics' } })),
+            );
         });
 
         it('should return data on success', async () => {
             const expectedData = { cartCount: 5 };
             mockFetch.mockResolvedValueOnce(mockResponse(expectedData));
 
-            const caller = createActionCaller<{ productId: string }, { cartCount: number }>('cart.addToCart');
+            const caller = createActionCaller<{ productId: string }, { cartCount: number }>(
+                'cart.addToCart',
+            );
             const result = await caller({ productId: '123' });
 
             expect(result).toEqual(expectedData);
@@ -112,7 +118,9 @@ describe('Action Caller', () => {
 
     describe('error handling', () => {
         it('should throw ActionError for business logic errors', async () => {
-            mockFetch.mockResolvedValueOnce(mockErrorResponse('OUT_OF_STOCK', 'Product is out of stock'));
+            mockFetch.mockResolvedValueOnce(
+                mockErrorResponse('OUT_OF_STOCK', 'Product is out of stock'),
+            );
 
             const caller = createActionCaller('cart.addToCart');
 
@@ -129,7 +137,9 @@ describe('Action Caller', () => {
         });
 
         it('should throw ActionError for server errors', async () => {
-            mockFetch.mockResolvedValueOnce(mockErrorResponse('INTERNAL_ERROR', 'Database connection failed', false));
+            mockFetch.mockResolvedValueOnce(
+                mockErrorResponse('INTERNAL_ERROR', 'Database connection failed', false),
+            );
 
             const caller = createActionCaller('test.action');
 
@@ -262,20 +272,23 @@ describe('Action Caller', () => {
     });
 
     describe('HTTP methods', () => {
-        it.each(['POST', 'PUT', 'PATCH', 'DELETE'] as const)('should make %s request with body', async (method) => {
-            mockFetch.mockResolvedValueOnce(mockResponse({ ok: true }));
+        it.each(['POST', 'PUT', 'PATCH', 'DELETE'] as const)(
+            'should make %s request with body',
+            async (method) => {
+                mockFetch.mockResolvedValueOnce(mockResponse({ ok: true }));
 
-            const caller = createActionCaller('test.action', method);
-            await caller({ data: 'test' });
+                const caller = createActionCaller('test.action', method);
+                await caller({ data: 'test' });
 
-            expect(mockFetch).toHaveBeenCalledWith(
-                '/_jay/actions/test.action',
-                expect.objectContaining({
-                    method,
-                    body: JSON.stringify({ data: 'test' }),
-                }),
-            );
-        });
+                expect(mockFetch).toHaveBeenCalledWith(
+                    '/_jay/actions/test.action',
+                    expect.objectContaining({
+                        method,
+                        body: JSON.stringify({ data: 'test' }),
+                    }),
+                );
+            },
+        );
 
         it('should make GET request without body', async () => {
             mockFetch.mockResolvedValueOnce(mockResponse({ ok: true }));
@@ -298,4 +311,3 @@ describe('Action Caller', () => {
         });
     });
 });
-

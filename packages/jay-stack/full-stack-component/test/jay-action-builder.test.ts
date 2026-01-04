@@ -31,10 +31,9 @@ const PRODUCTS_DATABASE_SERVICE = createJayService<ProductsDatabase>('ProductsDa
 
 describe('makeJayAction', () => {
     it('should create an action with POST method by default', () => {
-        const action = makeJayAction('test.action')
-            .withHandler(async (input: { name: string }) => {
-                return { success: true };
-            });
+        const action = makeJayAction('test.action').withHandler(async (input: { name: string }) => {
+            return { success: true };
+        });
 
         expect(action.actionName).toBe('test.action');
         expect(action.method).toBe('POST');
@@ -44,10 +43,7 @@ describe('makeJayAction', () => {
     it('should infer input and output types from handler', () => {
         const action = makeJayAction('cart.addToCart')
             .withServices(CART_SERVICE)
-            .withHandler(async (
-                input: { productId: string; quantity: number },
-                cartService,
-            ) => {
+            .withHandler(async (input: { productId: string; quantity: number }, cartService) => {
                 const cart = await cartService.addItem(input.productId, input.quantity);
                 return { cartItemCount: cart.items.length };
             });
@@ -63,18 +59,16 @@ describe('makeJayAction', () => {
     it('should allow multiple services', () => {
         const action = makeJayAction('cart.addToCart')
             .withServices(CART_SERVICE, INVENTORY_SERVICE)
-            .withHandler(async (
-                input: { productId: string; quantity: number },
-                cartService,
-                inventory,
-            ) => {
-                const available = await inventory.getAvailableUnits(input.productId);
-                if (available < input.quantity) {
-                    throw new ActionError('NOT_AVAILABLE', `Only ${available} available`);
-                }
-                const cart = await cartService.addItem(input.productId, input.quantity);
-                return { cartItemCount: cart.items.length };
-            });
+            .withHandler(
+                async (input: { productId: string; quantity: number }, cartService, inventory) => {
+                    const available = await inventory.getAvailableUnits(input.productId);
+                    if (available < input.quantity) {
+                        throw new ActionError('NOT_AVAILABLE', `Only ${available} available`);
+                    }
+                    const cart = await cartService.addItem(input.productId, input.quantity);
+                    return { cartItemCount: cart.items.length };
+                },
+            );
 
         expect(action.services).toHaveLength(2);
     });
@@ -101,10 +95,11 @@ describe('makeJayAction', () => {
 
 describe('makeJayQuery', () => {
     it('should create a query with GET method by default', () => {
-        const query = makeJayQuery('products.search')
-            .withHandler(async (input: { query: string }) => {
+        const query = makeJayQuery('products.search').withHandler(
+            async (input: { query: string }) => {
                 return { products: [], total: 0 };
-            });
+            },
+        );
 
         expect(query.actionName).toBe('products.search');
         expect(query.method).toBe('GET');
@@ -148,8 +143,7 @@ describe('ActionError', () => {
 
 describe('isJayAction', () => {
     it('should return true for JayAction', () => {
-        const action = makeJayAction('test.action')
-            .withHandler(async () => ({ ok: true }));
+        const action = makeJayAction('test.action').withHandler(async () => ({ ok: true }));
 
         expect(isJayAction(action)).toBe(true);
     });
@@ -190,17 +184,17 @@ describe('Type inference', () => {
             hasMore: boolean;
         }
 
-        const query = makeJayQuery('products.search')
-            .withHandler(async (input: { query: string; page?: number }): Promise<SearchResult> => {
+        const query = makeJayQuery('products.search').withHandler(
+            async (input: { query: string; page?: number }): Promise<SearchResult> => {
                 return {
                     products: [],
                     totalCount: 0,
                     hasMore: false,
                 };
-            });
+            },
+        );
 
         type Output = ActionOutput<typeof query>;
         expectTypeOf<Output>().toEqualTypeOf<SearchResult>();
     });
 });
-

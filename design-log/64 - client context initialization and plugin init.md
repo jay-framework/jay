@@ -3,16 +3,19 @@
 ## Background
 
 Jay Stack has a server-side initialization pattern via `jay.init.ts`:
+
 - Uses `onInit()` / `onShutdown()` hooks to register services
 - Services are global singletons available during server rendering
 - Dev-server loads and executes `jay.init.ts` on startup
 
 Currently, client-side contexts are:
+
 - Created inside component constructors via `provideReactiveContext()`
 - Cannot receive data from the server (like access tokens)
 - Must be initialized inline, no centralized initialization
 
 Plugins can declare:
+
 - `actions` - server-side actions auto-registered
 - `contracts` - component contracts for pages
 - No client or server init files
@@ -28,27 +31,34 @@ Plugins can declare:
 ## Questions and Answers
 
 ### Q1: What data needs to flow from server to client for context initialization?
+
 **Answer:** Static/slowly-changing application configuration:
+
 - Configuration values (e.g., items per page in product search)
 - OAuth client IDs
 - Feature flags
 - A/B test information
 
 **Key constraints:**
+
 - Data is set at build/application initialization time (slowly changing)
 - Data does NOT change during the lifecycle of a client page
 - NOT per-request or per-page dynamic data
 
 ### Q2: Should client init run before or after component tree creation?
+
 **Answer:** Before - contexts must be available when components construct.
 
 ### Q3: How do plugins declare init dependencies on other plugins?
+
 **Answer:** Use `package.json` dependencies. The framework reads dependency graph from package.json to determine init order.
 
 ### Q4: Should there be separate init files for server and client in plugins, or one file with both?
+
 **Answer:** Separate files - different concerns with different dependencies (server code should never reach client bundle).
 
 ### Q5: What's the lifecycle of client contexts - per page load or per SPA navigation?
+
 **Answer:** Per page for now. Future SPA support may change this.
 
 ## Design
@@ -77,6 +87,7 @@ onClientInit('project', (serverData) => {
 ### 2. Server-to-Client Data via `setClientInitData`
 
 The server provides static application-level data for client initialization. This data is:
+
 - Set once at application startup (not per-request)
 - Slowly changing (configuration, feature flags)
 - Serializable to JSON
@@ -107,10 +118,7 @@ The Jay runtime library already has a context registry infrastructure. We extend
 // In @jay-framework/runtime (existing infrastructure)
 // We add functions to register contexts at the app level
 
-export function registerGlobalContext<T>(
-  marker: ContextMarker<T>,
-  context: T
-): void {
+export function registerGlobalContext<T>(marker: ContextMarker<T>, context: T): void {
   // Registers context in existing runtime infrastructure
   // Available to all components via useContext(marker)
 }
@@ -125,44 +133,50 @@ Plugins declare init capability in `plugin.yaml`. The schema supports both simpl
 ```yaml
 # plugin.yaml - Simple form (use all defaults)
 init:
-  server: true   # Convention: export "serverInit" from "./init/server"
-  client: true   # Convention: export "clientInit" from "./init/client"
+  server: true # Convention: export "serverInit" from "./init/server"
+  client: true # Convention: export "clientInit" from "./init/client"
 ```
 
 ```yaml
 # plugin.yaml - Override form (customize names/paths)
 init:
   server:
-    export: myServerInit        # Override export name (default: "serverInit")
-    module: ./custom/setup      # Override module path (default: "./init/server")
+    export: myServerInit # Override export name (default: "serverInit")
+    module: ./custom/setup # Override module path (default: "./init/server")
   client:
-    export: initializeClient    # Override export name (default: "clientInit")
-    module: ./bootstrap/client  # Override module path (default: "./init/client")
+    export: initializeClient # Override export name (default: "clientInit")
+    module: ./bootstrap/client # Override module path (default: "./init/client")
 ```
 
 ```yaml
 # plugin.yaml - Mixed form
 init:
-  server: true                  # Use defaults
+  server: true # Use defaults
   client:
-    export: setupClient         # Custom export name, default module path
+    export: setupClient # Custom export name, default module path
 ```
 
 **Schema definition:**
+
 ```typescript
 interface PluginInitConfig {
-  server?: boolean | {
-    export?: string;   // Default: "serverInit"
-    module?: string;   // Default: "./init/server"
-  };
-  client?: boolean | {
-    export?: string;   // Default: "clientInit"  
-    module?: string;   // Default: "./init/client"
-  };
+  server?:
+    | boolean
+    | {
+        export?: string; // Default: "serverInit"
+        module?: string; // Default: "./init/server"
+      };
+  client?:
+    | boolean
+    | {
+        export?: string; // Default: "clientInit"
+        module?: string; // Default: "./init/client"
+      };
 }
 ```
 
 **Defaults (convention over configuration):**
+
 - `init.server: true` → `{ export: "serverInit", module: "./init/server" }`
 - `init.client: true` → `{ export: "clientInit", module: "./init/client" }`
 - Declaration allows framework to know which plugins have init without importing
@@ -176,8 +190,8 @@ export default defineConfig(({ isSsrBuild }) => ({
     ssr: isSsrBuild,
     lib: {
       entry: isSsrBuild
-        ? { index: resolve(__dirname, 'lib/index.ts') }           // Server
-        : { 'index.client': resolve(__dirname, 'lib/index.client.ts') },  // Client
+        ? { index: resolve(__dirname, 'lib/index.ts') } // Server
+        : { 'index.client': resolve(__dirname, 'lib/index.client.ts') }, // Client
       formats: ['es'],
     },
   },
@@ -185,6 +199,7 @@ export default defineConfig(({ isSsrBuild }) => ({
 ```
 
 Build commands:
+
 - `vite build` → Client bundle from `lib/index.client.ts`
 - `vite build --ssr` → Server bundle from `lib/index.ts`
 
@@ -202,7 +217,7 @@ export { serverInit } from './init/server';
 ```typescript
 // lib/index.client.ts (client entry point)
 export * from './components';
-export * from './stores-actions';  // Transformed to action callers
+export * from './stores-actions'; // Transformed to action callers
 
 // Export client init function (convention name)
 export { clientInit } from './init/client';
@@ -232,10 +247,10 @@ import { STORES_SERVICE, createStoresService } from '../services/stores';
 import { STORES_INIT } from '../init-marker';
 
 serverInit(STORES_INIT, async (setClientData) => {
-  const auth = getService(AUTH_SERVICE);  // Available because wix-auth init ran first
+  const auth = getService(AUTH_SERVICE); // Available because wix-auth init ran first
   const stores = await createStoresService(auth);
   registerService(STORES_SERVICE, stores);
-  
+
   // setClientData is typed: (data: StoresInitData) => void
   setClientData({
     storesApiEndpoint: process.env.STORES_API_URL || '/api',
@@ -252,14 +267,18 @@ import { STORES_INIT } from '../init-marker';
 
 clientInit(STORES_INIT, (data) => {
   // data is typed as StoresInitData!
-  registerGlobalContext(STORES_CONTEXT, createStoresContext({
-    apiEndpoint: data.storesApiEndpoint,
-    currency: data.defaultCurrency,
-  }));
+  registerGlobalContext(
+    STORES_CONTEXT,
+    createStoresContext({
+      apiEndpoint: data.storesApiEndpoint,
+      currency: data.defaultCurrency,
+    }),
+  );
 });
 ```
 
 **Benefits of typed markers:**
+
 - ✅ Type-safe data passing - data is typed end-to-end
 - ✅ No string duplication - marker encapsulates the key
 - ✅ Same pattern as other markers (`createJayContext`, `createJayService`)
@@ -270,6 +289,7 @@ clientInit(STORES_INIT, (data) => {
 **Key principle:** Plugins initialize first, project last. This allows the project to extend, override, or depend on plugin-provided services and contexts.
 
 1. **Server startup:**
+
    - Discover plugins with `init.server` in `plugin.yaml`
    - Topologically sort plugins by `package.json` dependencies
    - For each plugin (in order):
@@ -280,6 +300,7 @@ clientInit(STORES_INIT, (data) => {
    - Collect all `setClientInitData` contributions into merged object
 
 2. **Page render (server):**
+
    - Embed merged client init data in page HTML (static, same for all pages)
 
 3. **Client page load:**
@@ -306,14 +327,14 @@ flowchart TB
         S5[Project: jay.init.ts → onInit callback]
         S6[Run all onInit callbacks in order]
         S7[Merge all setClientInitData calls]
-        
+
         S1 --> S2 --> S3 --> S4 --> S5 --> S6 --> S7
     end
-    
+
     subgraph ServerRender["Page Render (per request)"]
         R1[Embed merged clientInitData as JSON in HTML]
     end
-    
+
     subgraph ClientLoad["Client Page Load"]
         direction TB
         C1[Parse clientInitData from HTML]
@@ -323,10 +344,10 @@ flowchart TB
         C5[runClientInit with merged data]
         C6[All contexts registered via registerGlobalContext]
         C7[Mount component tree]
-        
+
         C1 --> C2 --> C3 --> C4 --> C5 --> C6 --> C7
     end
-    
+
     S7 --> R1
     R1 -->|"Static JSON in HTML"| C1
 ```
@@ -340,19 +361,19 @@ flowchart LR
         SI -->|"Plugin B data"| MD
         SI -->|"Project data"| MD
     end
-    
+
     subgraph HTML["HTML Response"]
         JSON["&lt;script&gt;const clientInitData = {...}&lt;/script&gt;"]
     end
-    
+
     subgraph Client["Client"]
         CI[onClientInit callbacks]
         CTX[registerGlobalContext]
         COMP[Components use useContext]
-        
+
         CI --> CTX --> COMP
     end
-    
+
     MD -->|"Serialized"| JSON
     JSON -->|"Parsed"| CI
 ```
@@ -363,43 +384,49 @@ The `generateClientScript` function adds client init imports and execution:
 
 ```html
 <script type="module">
-  import { runClientInit } from "@jay-framework/stack-client-runtime";
-  
+  import { runClientInit } from '@jay-framework/stack-client-runtime';
+
   // Plugin client bundles - import and call clientInit (convention name, dependency order)
-  import { clientInit as authClientInit } from "@wix/auth/client";
-  import { clientInit as storesClientInit } from "@wix/stores/client";
-  authClientInit();   // Registers onClientInit callbacks
+  import { clientInit as authClientInit } from '@wix/auth/client';
+  import { clientInit as storesClientInit } from '@wix/stores/client';
+  authClientInit(); // Registers onClientInit callbacks
   storesClientInit(); // Registers onClientInit callbacks
-  
+
   // Project client init (last)
-  import "./jay.client-init";  // Top-level onClientInit calls register callbacks
-  
+  import './jay.client-init'; // Top-level onClientInit calls register callbacks
+
   // Server-generated init data (static, merged from all plugins + project)
-  const clientInitData = {"itemsPerPage":20,"storesApiEndpoint":"https://api.wix.com/stores","defaultCurrency":"USD"};
-  
+  const clientInitData = {
+    itemsPerPage: 20,
+    storesApiEndpoint: 'https://api.wix.com/stores',
+    defaultCurrency: 'USD',
+  };
+
   // Run all registered onClientInit callbacks with merged data
   await runClientInit(clientInitData);
-  
+
   // Then mount component tree (existing code)
-  import { makeCompositeJayComponent } from "@jay-framework/stack-client-runtime";
+  import { makeCompositeJayComponent } from '@jay-framework/stack-client-runtime';
   // ... component mounting ...
 </script>
 ```
 
 **Init function patterns:**
 
-| Source | Pattern | Reason |
-|--------|---------|--------|
-| Project `jay.client-init.ts` | Top-level `onClientInit()` calls | File loaded directly, side effects OK |
-| Plugin client bundle | Explicit `clientInit()` export | Part of larger bundle, avoid side effects on component import |
+| Source                       | Pattern                          | Reason                                                        |
+| ---------------------------- | -------------------------------- | ------------------------------------------------------------- |
+| Project `jay.client-init.ts` | Top-level `onClientInit()` calls | File loaded directly, side effects OK                         |
+| Plugin client bundle         | Explicit `clientInit()` export   | Part of larger bundle, avoid side effects on component import |
 
 **Build integration:** Plugins continue using the existing `isSsrBuild` pattern:
+
 - `vite build` → builds client bundle including `clientInit` export
 - `vite build --ssr` → builds server bundle including `serverInit` export
 
 ## Implementation Plan
 
 ### Phase 1: Server-Side Client Data API
+
 1. Add `setClientInitData(data)` to `stack-server-runtime`
    - Merges data into a global client init data object (shallow merge)
    - Can be called multiple times (plugins + project)
@@ -408,6 +435,7 @@ The `generateClientScript` function adds client init imports and execution:
 4. Update page rendering to embed client init data in HTML as JSON
 
 ### Phase 2: Client Init File Support
+
 1. Add `onClientInit(callback)` to `stack-client-runtime`
    - Registers callback to receive server data
 2. Add `runClientInit(data)` internal API
@@ -421,25 +449,31 @@ The `generateClientScript` function adds client init imports and execution:
    - Call `runClientInit()` before component mounting
 
 ### Phase 3: Plugin Init Files
+
 1. Extend `PluginManifest` interface:
+
    ```typescript
    interface PluginInitConfig {
      server?: boolean | { export?: string; module?: string };
      client?: boolean | { export?: string; module?: string };
    }
-   
+
    interface PluginManifest {
      // ... existing fields
      init?: PluginInitConfig;
    }
    ```
+
 2. Add helper to normalize init config:
    ```typescript
-   function normalizeInitConfig(init: boolean | { export?: string; module?: string }, env: 'server' | 'client') {
+   function normalizeInitConfig(
+     init: boolean | { export?: string; module?: string },
+     env: 'server' | 'client',
+   ) {
      if (init === true) {
-       return { 
+       return {
          export: env === 'server' ? 'serverInit' : 'clientInit',
-         module: env === 'server' ? './init/server' : './init/client'
+         module: env === 'server' ? './init/server' : './init/client',
        };
      }
      return {
@@ -482,7 +516,7 @@ import { onInit, setClientInitData } from '@jay-framework/stack-server-runtime';
 
 onInit(async () => {
   const featureFlags = await loadFeatureFlags();
-  
+
   // Use 'project' as namespace key
   setClientInitData('project', {
     itemsPerPage: 20,
@@ -593,7 +627,12 @@ export { clientInit } from './init/client';
 
 ```typescript
 // lib/init/server.ts
-import { onInit, registerService, setClientInitData, getService } from '@jay-framework/stack-server-runtime';
+import {
+  onInit,
+  registerService,
+  setClientInitData,
+  getService,
+} from '@jay-framework/stack-server-runtime';
 import type { PluginInitContext } from '@jay-framework/stack-server-runtime';
 import { AUTH_SERVICE } from '@wix/auth';
 import { STORES_SERVICE, createStoresService } from '../stores-client/stores-service';
@@ -603,7 +642,7 @@ export function serverInit({ pluginName }: PluginInitContext) {
     const auth = getService(AUTH_SERVICE);
     const storesService = await createStoresService(auth);
     registerService(STORES_SERVICE, storesService);
-    
+
     // Use pluginName as key
     setClientInitData(pluginName, {
       storesApiEndpoint: process.env.STORES_API_URL,
@@ -620,10 +659,13 @@ import { STORES_CONTEXT, createStoresContext } from '../stores-client/stores-con
 
 // Framework calls this with the plugin's namespaced serverData directly
 export async function clientInit(serverData: Record<string, any>): Promise<void> {
-  registerGlobalContext(STORES_CONTEXT, createStoresContext({
-    apiEndpoint: serverData.storesApiEndpoint,
-    currency: serverData.defaultCurrency,
-  }));
+  registerGlobalContext(
+    STORES_CONTEXT,
+    createStoresContext({
+      apiEndpoint: serverData.storesApiEndpoint,
+      currency: serverData.defaultCurrency,
+    }),
+  );
 }
 ```
 
@@ -632,12 +674,14 @@ export async function clientInit(serverData: Record<string, any>): Promise<void>
 ### Centralized vs Component-Inline Context Initialization
 
 **Centralized (`jay.client-init.ts`):**
+
 - ✅ Single place for app-wide context initialization
 - ✅ Can receive server configuration data
 - ✅ Clear initialization order (plugins → project)
 - ❌ Another file to manage
 
 **Component-Inline (`provideReactiveContext`):**
+
 - ✅ Context defined close to where it's used
 - ✅ Good for component-subtree-scoped contexts
 - ❌ Cannot receive server data
@@ -648,6 +692,7 @@ export async function clientInit(serverData: Record<string, any>): Promise<void>
 ### Plugin Init: Single File vs Separate Files
 
 **Separate source files, exported from existing bundles (chosen):**
+
 - ✅ Clean separation for bundling
 - ✅ Server init in server bundle, client init in client bundle
 - ✅ No side effects on bundle import (framework calls init explicitly)
@@ -658,12 +703,14 @@ export async function clientInit(serverData: Record<string, any>): Promise<void>
 ### Static vs Dynamic Client Init Data
 
 **Static (chosen):**
+
 - ✅ Set once at server startup
 - ✅ Same for all pages/requests
 - ✅ Cacheable
 - ❌ Cannot vary per request/user
 
 **Dynamic (rejected for now):**
+
 - ✅ Could vary per user/request
 - ❌ Adds complexity
 - ❌ Blurs line with page props
@@ -673,6 +720,7 @@ export async function clientInit(serverData: Record<string, any>): Promise<void>
 ### Dependency Order: Explicit vs package.json
 
 **Using package.json (chosen):**
+
 - ✅ Already maintained for npm
 - ✅ Single source of truth
 - ✅ Familiar to developers
@@ -681,6 +729,7 @@ export async function clientInit(serverData: Record<string, any>): Promise<void>
 ### Init Export Names: Convention with Override
 
 **Convention names with optional override (chosen):**
+
 ```yaml
 # Simple - use defaults
 init:
@@ -693,6 +742,7 @@ init:
     export: customServerInit
     module: ./setup/server
 ```
+
 - ✅ Simple case is simple (just `true`)
 - ✅ Flexibility when needed (custom names/paths)
 - ✅ Boolean flag tells framework which plugins have init
@@ -701,7 +751,7 @@ init:
 ### Init Order: Plugins First vs Project First
 
 **Plugins first, project last (chosen):**
+
 - ✅ Project can depend on plugin services/contexts
 - ✅ Project can override plugin defaults
 - ✅ Mirrors typical extension patterns
-

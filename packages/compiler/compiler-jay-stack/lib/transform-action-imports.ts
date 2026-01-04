@@ -100,13 +100,20 @@ export function extractActionsFromSource(sourceCode: string, filePath: string): 
     const actions: ActionMetadata[] = [];
 
     // Parse the source file
-    const sourceFile = tsBridge.createSourceFile(filePath, sourceCode, tsBridge.ScriptTarget.Latest, true);
+    const sourceFile = tsBridge.createSourceFile(
+        filePath,
+        sourceCode,
+        tsBridge.ScriptTarget.Latest,
+        true,
+    );
 
     // Find all exported variable declarations with makeJayAction/makeJayQuery
     function visit(node: ts.Node): void {
         // Look for: export const foo = makeJayAction('name')...
         if (tsBridge.isVariableStatement(node)) {
-            const hasExport = node.modifiers?.some((m) => m.kind === tsBridge.SyntaxKind.ExportKeyword);
+            const hasExport = node.modifiers?.some(
+                (m) => m.kind === tsBridge.SyntaxKind.ExportKeyword,
+            );
             if (!hasExport) {
                 tsBridge.forEachChild(node, visit);
                 return;
@@ -227,7 +234,10 @@ export interface TransformResult {
 export async function transformActionImports(
     code: string,
     id: string,
-    resolveActionModule: (importSource: string, importer: string) => Promise<{ path: string; code: string } | null>,
+    resolveActionModule: (
+        importSource: string,
+        importer: string,
+    ) => Promise<{ path: string; code: string } | null>,
 ): Promise<TransformResult | null> {
     // Skip if no imports
     if (!code.includes('import')) {
@@ -353,4 +363,3 @@ export async function transformActionImports(
 
     return { code: result };
 }
-

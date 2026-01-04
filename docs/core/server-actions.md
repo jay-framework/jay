@@ -21,20 +21,16 @@ import { makeJayAction, ActionError } from '@jay-framework/fullstack-component';
 import { CART_SERVICE, INVENTORY_SERVICE } from '../services';
 
 export const addToCart = makeJayAction('cart.addToCart')
-    .withServices(CART_SERVICE, INVENTORY_SERVICE)
-    .withHandler(async (
-        input: { productId: string; quantity: number },
-        cartService,
-        inventory,
-    ) => {
-        const available = await inventory.getAvailableUnits(input.productId);
-        if (available < input.quantity) {
-            throw new ActionError('NOT_AVAILABLE', `Only ${available} units available`);
-        }
-        
-        const cart = await cartService.addItem(input.productId, input.quantity);
-        return { cartItemCount: cart.items.length };
-    });
+  .withServices(CART_SERVICE, INVENTORY_SERVICE)
+  .withHandler(async (input: { productId: string; quantity: number }, cartService, inventory) => {
+    const available = await inventory.getAvailableUnits(input.productId);
+    if (available < input.quantity) {
+      throw new ActionError('NOT_AVAILABLE', `Only ${available} units available`);
+    }
+
+    const cart = await cartService.addItem(input.productId, input.quantity);
+    return { cartItemCount: cart.items.length };
+  });
 ```
 
 ### 2. Call from Client
@@ -45,21 +41,21 @@ import { addToCart } from '../../../actions/cart.actions';
 import { ActionError } from '@jay-framework/fullstack-component';
 
 function ProductPageInteractive(props, refs, viewState, carryForward) {
-    refs.addToCart.onclick(async () => {
-        try {
-            const result = await addToCart({
-                productId: carryForward.productId,
-                quantity: 1,
-            });
-            console.log(`Cart now has ${result.cartItemCount} items`);
-        } catch (e) {
-            if (e instanceof ActionError) {
-                showNotification(e.message); // "Only 2 units available"
-            }
-        }
-    });
+  refs.addToCart.onclick(async () => {
+    try {
+      const result = await addToCart({
+        productId: carryForward.productId,
+        quantity: 1,
+      });
+      console.log(`Cart now has ${result.cartItemCount} items`);
+    } catch (e) {
+      if (e instanceof ActionError) {
+        showNotification(e.message); // "Only 2 units available"
+      }
+    }
+  });
 
-    return { render: () => ({}) };
+  return { render: () => ({}) };
 }
 ```
 
@@ -67,10 +63,10 @@ function ProductPageInteractive(props, refs, viewState, carryForward) {
 
 Jay Stack provides two builders for different use cases:
 
-| Builder | Default Method | Use Case |
-|---------|---------------|----------|
-| `makeJayAction` | POST | Mutations: add to cart, submit form, update profile |
-| `makeJayQuery` | GET | Reads: search, get details, list items (cacheable) |
+| Builder         | Default Method | Use Case                                            |
+| --------------- | -------------- | --------------------------------------------------- |
+| `makeJayAction` | POST           | Mutations: add to cart, submit form, update profile |
+| `makeJayQuery`  | GET            | Reads: search, get details, list items (cacheable)  |
 
 ### makeJayAction (Mutations)
 
@@ -80,18 +76,18 @@ For operations that modify data:
 import { makeJayAction } from '@jay-framework/fullstack-component';
 
 export const addToCart = makeJayAction('cart.addToCart')
-    .withServices(CART_SERVICE)
-    .withHandler(async (input: { productId: string; quantity: number }, cartService) => {
-        const cart = await cartService.addItem(input.productId, input.quantity);
-        return { success: true, cartItemCount: cart.items.length };
-    });
+  .withServices(CART_SERVICE)
+  .withHandler(async (input: { productId: string; quantity: number }, cartService) => {
+    const cart = await cartService.addItem(input.productId, input.quantity);
+    return { success: true, cartItemCount: cart.items.length };
+  });
 
 export const updateProfile = makeJayAction('user.updateProfile')
-    .withServices(USER_SERVICE)
-    .withHandler(async (input: { name: string; email: string }, userService) => {
-        await userService.update(input);
-        return { updated: true };
-    });
+  .withServices(USER_SERVICE)
+  .withHandler(async (input: { name: string; email: string }, userService) => {
+    await userService.update(input);
+    return { updated: true };
+  });
 ```
 
 ### makeJayQuery (Reads)
@@ -102,22 +98,19 @@ For read-only operations that can be cached:
 import { makeJayQuery } from '@jay-framework/fullstack-component';
 
 export const searchProducts = makeJayQuery('products.search')
-    .withServices(PRODUCTS_DATABASE_SERVICE)
-    .withCaching({ maxAge: 60, staleWhileRevalidate: 120 })
-    .withHandler(async (
-        input: { query: string; page?: number },
-        productsDb,
-    ) => {
-        const results = await productsDb.search(input.query, {
-            page: input.page ?? 1,
-            limit: 20,
-        });
-        return {
-            products: results.items,
-            totalCount: results.total,
-            hasMore: results.hasMore,
-        };
+  .withServices(PRODUCTS_DATABASE_SERVICE)
+  .withCaching({ maxAge: 60, staleWhileRevalidate: 120 })
+  .withHandler(async (input: { query: string; page?: number }, productsDb) => {
+    const results = await productsDb.search(input.query, {
+      page: input.page ?? 1,
+      limit: 20,
     });
+    return {
+      products: results.items,
+      totalCount: results.total,
+      hasMore: results.hasMore,
+    };
+  });
 ```
 
 ## Builder API
@@ -133,10 +126,10 @@ const CART_SERVICE = createJayService<CartService>('Cart');
 const INVENTORY_SERVICE = createJayService<InventoryService>('Inventory');
 
 export const addToCart = makeJayAction('cart.addToCart')
-    .withServices(CART_SERVICE, INVENTORY_SERVICE)
-    .withHandler(async (input, cartService, inventory) => {
-        // cartService and inventory are injected
-    });
+  .withServices(CART_SERVICE, INVENTORY_SERVICE)
+  .withHandler(async (input, cartService, inventory) => {
+    // cartService and inventory are injected
+  });
 ```
 
 ### `.withMethod(method)`
@@ -145,12 +138,16 @@ Override the default HTTP method:
 
 ```typescript
 export const createProduct = makeJayAction('products.create')
-    .withMethod('PUT')
-    .withHandler(async (input) => { /* ... */ });
+  .withMethod('PUT')
+  .withHandler(async (input) => {
+    /* ... */
+  });
 
 export const deleteProduct = makeJayAction('products.delete')
-    .withMethod('DELETE')
-    .withHandler(async (input: { id: string }) => { /* ... */ });
+  .withMethod('DELETE')
+  .withHandler(async (input: { id: string }) => {
+    /* ... */
+  });
 ```
 
 Supported methods: `GET`, `POST`, `PUT`, `PATCH`, `DELETE`
@@ -161,11 +158,13 @@ Enable caching for GET requests:
 
 ```typescript
 export const getCategories = makeJayQuery('products.categories')
-    .withCaching({ 
-        maxAge: 300,              // Cache for 5 minutes
-        staleWhileRevalidate: 600 // Serve stale for 10 minutes while revalidating
-    })
-    .withHandler(async () => { /* ... */ });
+  .withCaching({
+    maxAge: 300, // Cache for 5 minutes
+    staleWhileRevalidate: 600, // Serve stale for 10 minutes while revalidating
+  })
+  .withHandler(async () => {
+    /* ... */
+  });
 ```
 
 ## Error Handling
@@ -177,21 +176,22 @@ Use `ActionError` for expected error conditions that the client should handle:
 ```typescript
 import { ActionError } from '@jay-framework/fullstack-component';
 
-export const addToCart = makeJayAction('cart.addToCart')
-    .withHandler(async (input, cartService, inventory) => {
-        const available = await inventory.getAvailableUnits(input.productId);
-        
-        if (available < input.quantity) {
-            // Returns 422 Unprocessable Entity
-            throw new ActionError('NOT_AVAILABLE', 'Product is out of stock');
-        }
-        
-        if (!input.productId) {
-            throw new ActionError('INVALID_INPUT', 'Product ID is required');
-        }
-        
-        return { success: true };
-    });
+export const addToCart = makeJayAction('cart.addToCart').withHandler(
+  async (input, cartService, inventory) => {
+    const available = await inventory.getAvailableUnits(input.productId);
+
+    if (available < input.quantity) {
+      // Returns 422 Unprocessable Entity
+      throw new ActionError('NOT_AVAILABLE', 'Product is out of stock');
+    }
+
+    if (!input.productId) {
+      throw new ActionError('INVALID_INPUT', 'Product ID is required');
+    }
+
+    return { success: true };
+  },
+);
 ```
 
 ### Client-Side Error Handling
@@ -200,29 +200,29 @@ export const addToCart = makeJayAction('cart.addToCart')
 import { ActionError } from '@jay-framework/stack-client-runtime';
 
 try {
-    const result = await addToCart({ productId: '123', quantity: 1 });
+  const result = await addToCart({ productId: '123', quantity: 1 });
 } catch (error) {
-    if (error instanceof ActionError) {
-        // Business logic error (4xx) - show to user
-        console.log(error.code);    // 'NOT_AVAILABLE'
-        console.log(error.message); // 'Product is out of stock'
-        showNotification(error.message);
-    } else {
-        // System error (5xx) - generic message
-        showNotification('Something went wrong. Please try again.');
-    }
+  if (error instanceof ActionError) {
+    // Business logic error (4xx) - show to user
+    console.log(error.code); // 'NOT_AVAILABLE'
+    console.log(error.message); // 'Product is out of stock'
+    showNotification(error.message);
+  } else {
+    // System error (5xx) - generic message
+    showNotification('Something went wrong. Please try again.');
+  }
 }
 ```
 
 ### HTTP Status Codes
 
-| Error Type | HTTP Status | When |
-|------------|-------------|------|
-| `ActionError` thrown | **422** Unprocessable Entity | Business logic failure |
+| Error Type           | HTTP Status                   | When                      |
+| -------------------- | ----------------------------- | ------------------------- |
+| `ActionError` thrown | **422** Unprocessable Entity  | Business logic failure    |
 | Other `Error` thrown | **500** Internal Server Error | Unexpected system failure |
-| Action not found | **404** Not Found | Invalid action name |
-| Wrong HTTP method | **405** Method Not Allowed | GET vs POST mismatch |
-| Invalid JSON input | **400** Bad Request | Malformed request body |
+| Action not found     | **404** Not Found             | Invalid action name       |
+| Wrong HTTP method    | **405** Method Not Allowed    | GET vs POST mismatch      |
+| Invalid JSON input   | **400** Bad Request           | Malformed request body    |
 
 ## Project Structure
 
@@ -266,51 +266,51 @@ import { createJayContext } from '@jay-framework/runtime';
 import { addToCart, getCart, removeFromCart } from '../actions/cart.actions';
 
 export interface CartContextValue {
-    items: () => CartItem[];
-    itemCount: () => number;
-    isLoading: () => boolean;
-    add: (productId: string, quantity: number) => Promise<boolean>;
-    remove: (itemId: string) => Promise<void>;
+  items: () => CartItem[];
+  itemCount: () => number;
+  isLoading: () => boolean;
+  add: (productId: string, quantity: number) => Promise<boolean>;
+  remove: (itemId: string) => Promise<void>;
 }
 
 export const CART_CONTEXT = createJayContext<CartContextValue>();
 
 // Call this in a parent component to provide the cart context
 export const provideCartContext = () =>
-    provideReactiveContext(CART_CONTEXT, () => {
-        const [items, setItems] = createSignal<CartItem[]>([]);
-        const [isLoading, setIsLoading] = createSignal(false);
+  provideReactiveContext(CART_CONTEXT, () => {
+    const [items, setItems] = createSignal<CartItem[]>([]);
+    const [isLoading, setIsLoading] = createSignal(false);
 
-        const refresh = async () => {
-            const cart = await getCart({});
-            setItems(cart.items);
-        };
+    const refresh = async () => {
+      const cart = await getCart({});
+      setItems(cart.items);
+    };
 
-        const add = async (productId: string, quantity: number) => {
-            setIsLoading(true);
-            try {
-                await addToCart({ productId, quantity });
-                await refresh();
-                return true;
-            } catch (e) {
-                return false;
-            } finally {
-                setIsLoading(false);
-            }
-        };
+    const add = async (productId: string, quantity: number) => {
+      setIsLoading(true);
+      try {
+        await addToCart({ productId, quantity });
+        await refresh();
+        return true;
+      } catch (e) {
+        return false;
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-        const remove = async (itemId: string) => {
-            setIsLoading(true);
-            try {
-                await removeFromCart({ itemId });
-                await refresh();
-            } finally {
-                setIsLoading(false);
-            }
-        };
+    const remove = async (itemId: string) => {
+      setIsLoading(true);
+      try {
+        await removeFromCart({ itemId });
+        await refresh();
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-        return { items, itemCount: () => items().length, isLoading, add, remove };
-    });
+    return { items, itemCount: () => items().length, isLoading, add, remove };
+  });
 ```
 
 ## Type Inference
@@ -319,13 +319,14 @@ Input and output types are automatically inferred from the handler function:
 
 ```typescript
 // Types are inferred from handler signature
-export const addToCart = makeJayAction('cart.addToCart')
-    .withHandler(async (
-        input: { productId: string; quantity: number },  // Input type
-        // services...
-    ) => {
-        return { cartItemCount: 5 };  // Output type
-    });
+export const addToCart = makeJayAction('cart.addToCart').withHandler(
+  async (
+    input: { productId: string; quantity: number }, // Input type
+    // services...
+  ) => {
+    return { cartItemCount: 5 }; // Output type
+  },
+);
 
 // Client gets full type safety
 const result = await addToCart({ productId: '123', quantity: 1 });
@@ -399,8 +400,8 @@ In your plugin's `plugin.yaml`, declare which exports are actions:
 
 ```yaml
 # @jay-plugin-store/plugin.yaml
-name: "@jay-plugin-store"
-version: "1.0.0"
+name: '@jay-plugin-store'
+version: '1.0.0'
 
 actions:
   - addToCart
@@ -419,16 +420,16 @@ import { makeJayAction, makeJayQuery } from '@jay-framework/fullstack-component'
 import { STORE_SERVICE } from '../services';
 
 export const addToCart = makeJayAction('store.addToCart')
-    .withServices(STORE_SERVICE)
-    .withHandler(async (input, storeService) => {
-        return storeService.addToCart(input.productId, input.quantity);
-    });
+  .withServices(STORE_SERVICE)
+  .withHandler(async (input, storeService) => {
+    return storeService.addToCart(input.productId, input.quantity);
+  });
 
 export const getCart = makeJayQuery('store.getCart')
-    .withServices(STORE_SERVICE)
-    .withHandler(async (_input, storeService) => {
-        return storeService.getCart();
-    });
+  .withServices(STORE_SERVICE)
+  .withHandler(async (_input, storeService) => {
+    return storeService.getCart();
+  });
 ```
 
 Export them from your plugin's main module:
@@ -450,7 +451,7 @@ import { addToCart, searchProducts } from '@jay-plugin-store';
 
 // In an interactive component
 refs.addToCart.onclick(async () => {
-    const result = await addToCart({ productId: '123', quantity: 1 });
+  const result = await addToCart({ productId: '123', quantity: 1 });
 });
 ```
 
@@ -464,17 +465,17 @@ import { defineConfig } from 'vite';
 import { jayStackCompiler, jayOptions } from '@jay-framework/compiler-jay-stack';
 
 export default defineConfig(({ isSsrBuild }) => ({
-    plugins: [...jayStackCompiler(jayOptions)],
-    build: {
-        ssr: isSsrBuild,
-        rollupOptions: {
-            external: [
-                '@jay-framework/fullstack-component',
-                '@jay-framework/stack-client-runtime', // Required for action callers
-                // ... other externals
-            ],
-        },
+  plugins: [...jayStackCompiler(jayOptions)],
+  build: {
+    ssr: isSsrBuild,
+    rollupOptions: {
+      external: [
+        '@jay-framework/fullstack-component',
+        '@jay-framework/stack-client-runtime', // Required for action callers
+        // ... other externals
+      ],
     },
+  },
 }));
 ```
 
@@ -498,13 +499,13 @@ Use `domain.action` naming convention:
 
 ```typescript
 // ✅ Good - clear domain and action
-makeJayAction('cart.addToCart')
-makeJayAction('user.updateProfile')
-makeJayQuery('products.search')
+makeJayAction('cart.addToCart');
+makeJayAction('user.updateProfile');
+makeJayQuery('products.search');
 
 // ❌ Avoid - too generic
-makeJayAction('add')
-makeJayAction('update')
+makeJayAction('add');
+makeJayAction('update');
 ```
 
 ### 2. Throw ActionError for Business Logic
@@ -512,7 +513,7 @@ makeJayAction('update')
 ```typescript
 // ✅ Good - use ActionError for expected failures
 if (available < quantity) {
-    throw new ActionError('NOT_AVAILABLE', 'Product is out of stock');
+  throw new ActionError('NOT_AVAILABLE', 'Product is out of stock');
 }
 
 // ❌ Avoid - returning error in result
@@ -524,31 +525,41 @@ return { success: false, error: 'Not available' };
 ```typescript
 // ✅ Good - GET for reads, enables caching
 export const searchProducts = makeJayQuery('products.search')
-    .withCaching({ maxAge: 60 })
-    .withHandler(async (input) => { /* ... */ });
+  .withCaching({ maxAge: 60 })
+  .withHandler(async (input) => {
+    /* ... */
+  });
 
 // ❌ Avoid - POST for read-only operations
-export const searchProducts = makeJayAction('products.search')
-    .withHandler(async (input) => { /* ... */ });
+export const searchProducts = makeJayAction('products.search').withHandler(async (input) => {
+  /* ... */
+});
 ```
 
 ### 4. Keep Actions Focused
 
 ```typescript
 // ✅ Good - single responsibility
-export const addToCart = makeJayAction('cart.addToCart')
-    .withHandler(async (input) => { /* add item */ });
+export const addToCart = makeJayAction('cart.addToCart').withHandler(async (input) => {
+  /* add item */
+});
 
-export const updateQuantity = makeJayAction('cart.updateQuantity')
-    .withHandler(async (input) => { /* update quantity */ });
+export const updateQuantity = makeJayAction('cart.updateQuantity').withHandler(async (input) => {
+  /* update quantity */
+});
 
 // ❌ Avoid - doing too much
-export const cartOperation = makeJayAction('cart.operation')
-    .withHandler(async (input) => {
-        if (input.type === 'add') { /* ... */ }
-        if (input.type === 'update') { /* ... */ }
-        if (input.type === 'remove') { /* ... */ }
-    });
+export const cartOperation = makeJayAction('cart.operation').withHandler(async (input) => {
+  if (input.type === 'add') {
+    /* ... */
+  }
+  if (input.type === 'update') {
+    /* ... */
+  }
+  if (input.type === 'remove') {
+    /* ... */
+  }
+});
 ```
 
 ## Next Steps
@@ -556,4 +567,3 @@ export const cartOperation = makeJayAction('cart.operation')
 - Learn about [Jay Stack Components](./jay-stack.md) for full-stack page development
 - Explore [Service Management](./jay-stack.md#service-management) for server-side dependencies
 - Check out the [Examples](../examples/) for working patterns
-

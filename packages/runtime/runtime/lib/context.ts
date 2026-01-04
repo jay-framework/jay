@@ -24,7 +24,7 @@ function NewContextStack<ContextType>(
  * Global contexts are registered at application startup (before component tree)
  * and available to all components via useContext().
  *
- * Used by jay.client-init.ts to register app-wide contexts with server config.
+ * Used by makeJayInit().withClient() to register app-wide contexts with server config.
  */
 const globalContextRegistry = new Map<symbol, any>();
 
@@ -38,12 +38,12 @@ const globalContextRegistry = new Map<symbol, any>();
  *
  * @example
  * ```typescript
- * // In jay.client-init.ts
- * onClientInit((serverData) => {
- *   registerGlobalContext(APP_CONFIG_CONTEXT, {
- *     itemsPerPage: serverData.itemsPerPage,
+ * // In lib/init.ts (using makeJayInit pattern)
+ * export const init = makeJayInit()
+ *   .withServer(() => ({ itemsPerPage: 10 }))
+ *   .withClient((serverData) => {
+ *     registerGlobalContext(APP_CONFIG_CONTEXT, serverData);
  *   });
- * });
  * ```
  */
 export function registerGlobalContext<ContextType>(
@@ -65,7 +65,9 @@ export function clearGlobalContextRegistry(): void {
  * Gets a global context by marker.
  * Internal API used by findContext.
  */
-function getGlobalContext<ContextType>(marker: ContextMarker<ContextType>): ContextType | undefined {
+function getGlobalContext<ContextType>(
+    marker: ContextMarker<ContextType>,
+): ContextType | undefined {
     return globalContextRegistry.get(marker as symbol);
 }
 

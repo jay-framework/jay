@@ -117,4 +117,26 @@ describe('Jay Stack Builder Code Splitting', () => {
             expect(actual).toEqual(expected);
         });
     });
+
+    describe('makeJayInit', () => {
+        it('should strip withServer for client build', async () => {
+            const source = await readFixtureSource('make-jay-init');
+            const expected = await readFixtureExpectedClient('make-jay-init');
+
+            const result = transformJayStackBuilder(source, 'init.ts', 'client');
+            const actual = await prettify(result.code);
+
+            expect(actual).toEqual(expected);
+        });
+
+        it('should strip withClient for server build', async () => {
+            const source = await readFixtureSource('make-jay-init');
+            const expected = await readFixtureExpectedServer('make-jay-init');
+
+            const result = transformJayStackBuilder(source, 'init.ts', 'server');
+            const actual = await prettify(result.code);
+
+            expect(actual).toEqual(expected);
+        });
+    });
 });

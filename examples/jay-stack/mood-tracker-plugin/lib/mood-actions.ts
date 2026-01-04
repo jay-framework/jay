@@ -52,7 +52,10 @@ export const submitMood = makeJayAction('moodTracker.submitMood').withHandler(
     async (input: MoodEntry) => {
         // Validate input
         if (!['happy', 'neutral', 'sad'].includes(input.mood)) {
-            throw new ActionError('INVALID_MOOD', `Invalid mood: ${input.mood}. Must be happy, neutral, or sad.`);
+            throw new ActionError(
+                'INVALID_MOOD',
+                `Invalid mood: ${input.mood}. Must be happy, neutral, or sad.`,
+            );
         }
 
         // Record the mood entry
@@ -133,4 +136,3 @@ function calculateStreak(): number {
 
     return streak;
 }
-

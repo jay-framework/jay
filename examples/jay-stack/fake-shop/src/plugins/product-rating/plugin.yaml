@@ -8,3 +8,4 @@ contracts:
 actions:
   - submitRating
   - getRatings
+# Plugin initialization - auto-discovered from init.ts using makeJayInit pattern

@@ -1,7 +1,7 @@
 /**
  * Service lifecycle management for the Jay Stack dev-server.
  *
- * Handles loading jay.init.ts, running init/shutdown callbacks,
+ * Handles loading lib/init.ts, running init/shutdown callbacks,
  * hot reloading services, graceful shutdown, and action auto-discovery.
  */
 
@@ -19,14 +19,15 @@ import {
     executePluginServerInits,
     type PluginWithInit,
 } from '@jay-framework/stack-server-runtime';
+import type { ProjectClientInitInfo } from '@jay-framework/stack-server-runtime';
 import * as path from 'node:path';
 import * as fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import type { ViteDevServer } from 'vite';
 
 export class ServiceLifecycleManager {
-    private initFilePath: string | null = null;
-    private clientInitFilePath: string | null = null;
+    /** Path to project's lib/init.ts (makeJayInit pattern) */
+    private projectInitFilePath: string | null = null;
     private isInitialized = false;
     private viteServer: ViteDevServer | null = null;
     private pluginsWithInit: PluginWithInit[] = [];
@@ -44,29 +45,14 @@ export class ServiceLifecycleManager {
     }
 
     /**
-     * Finds the jay.init.ts (or .js) file in the source directory.
-     * Looks in: {projectRoot}/{sourceBase}/jay.init.{ts,js,mts,mjs}
+     * Finds the project init file using makeJayInit pattern.
+     * Looks in: {projectRoot}/{sourceBase}/lib/init.{ts,js}
      */
-    private findInitFile(): string | null {
-        return this.findFileWithExtensions('jay.init');
-    }
-
-    /**
-     * Finds the jay.client-init.ts (or .js) file in the source directory.
-     * Looks in: {projectRoot}/{sourceBase}/jay.client-init.{ts,js,mts,mjs}
-     */
-    private findClientInitFile(): string | null {
-        return this.findFileWithExtensions('jay.client-init');
-    }
-
-    /**
-     * Helper to find a file with various extensions.
-     */
-    private findFileWithExtensions(baseFilename: string): string | null {
-        const extensions = ['.ts', '.js', '.mts', '.mjs'];
+    private findProjectInitFile(): string | null {
+        const extensions = ['.ts', '.js'];
 
         for (const ext of extensions) {
-            const filePath = path.join(this.projectRoot, this.sourceBase, baseFilename + ext);
+            const filePath = path.join(this.projectRoot, this.sourceBase, 'lib/init' + ext);
             if (fs.existsSync(filePath)) {
                 return filePath;
             }
@@ -78,7 +64,7 @@ export class ServiceLifecycleManager {
     /**
      * Initializes services by:
      * 1. Discovering and executing plugin server inits (in dependency order)
-     * 2. Loading and executing project jay.init.ts
+     * 2. Loading and executing project lib/init.ts
      * 3. Running all registered onInit callbacks
      * 4. Auto-discovering and registering actions
      */
@@ -88,8 +74,7 @@ export class ServiceLifecycleManager {
             return;
         }
 
-        this.initFilePath = this.findInitFile();
-        this.clientInitFilePath = this.findClientInitFile();
+        this.projectInitFilePath = this.findProjectInitFile();
 
         // Step 1: Discover plugins with init configurations
         const discoveredPlugins = await discoverPluginsWithInit({
@@ -105,25 +90,30 @@ export class ServiceLifecycleManager {
         }
 
         // Step 2: Execute plugin server inits (in dependency order)
-        await executePluginServerInits(
-            this.pluginsWithInit,
-            this.viteServer ?? undefined,
-            true,
-        );
+        await executePluginServerInits(this.pluginsWithInit, this.viteServer ?? undefined, true);
 
-        // Step 3: Load project jay.init.ts (last, so it can depend on plugin services)
-        if (this.initFilePath) {
-            console.log(`[Services] Loading project initialization file: ${this.initFilePath}`);
+        // Step 3: Load project init (last, so it can depend on plugin services)
+        if (this.projectInitFilePath) {
+            console.log('[DevServer] Loading project init: lib/init.ts');
 
             try {
-                // Load jay.init.ts through Vite's SSR loader (handles TypeScript)
-                // Vite is configured to treat @jay-framework/stack-server-runtime as external,
-                // so both this file and jay.init.ts will share the same module instance
                 if (this.viteServer) {
-                    await this.viteServer.ssrLoadModule(this.initFilePath);
+                    const module = await this.viteServer.ssrLoadModule(this.projectInitFilePath);
+
+                    // Execute the _serverInit function from makeJayInit
+                    if (module.init?._serverInit) {
+                        console.log('[DevServer] Running server init: project');
+                        const { setClientInitData } = await import(
+                            '@jay-framework/stack-server-runtime'
+                        );
+                        const clientData = await module.init._serverInit();
+                        if (clientData !== undefined && clientData !== null) {
+                            setClientInitData('project', clientData);
+                        }
+                    }
                 } else {
                     // Fallback for production: use native import (requires .js files)
-                    const fileUrl = pathToFileURL(this.initFilePath).href;
+                    const fileUrl = pathToFileURL(this.projectInitFilePath).href;
                     await import(fileUrl);
                 }
             } catch (error) {
@@ -131,10 +121,10 @@ export class ServiceLifecycleManager {
                 throw error;
             }
         } else {
-            console.log('[Services] No jay.init.ts found in src/, skipping project service initialization');
+            console.log('[Services] No lib/init.ts found, skipping project initialization');
         }
 
-        // Step 4: Execute all registered init callbacks (from plugins and project)
+        // Step 4: Execute all registered init callbacks (from onInit calls)
         await runInitCallbacks();
         console.log('[Services] Initialization complete');
 
@@ -195,7 +185,6 @@ export class ServiceLifecycleManager {
         console.log('[Services] Shutting down...');
 
         try {
-            // Use the same stack-server-runtime instance due to Vite's external config
             await Promise.race([
                 runShutdownCallbacks(),
                 new Promise((_, reject) =>
@@ -225,22 +214,20 @@ export class ServiceLifecycleManager {
         await this.shutdown();
 
         // Step 2: Clear all caches
-        // Uses the same stack-server-runtime instance due to Vite's external config
         clearLifecycleCallbacks();
         clearServiceRegistry();
         clearClientInitData();
         actionRegistry.clear();
 
         // Step 3: Invalidate module caches
-        if (this.initFilePath && this.viteServer) {
-            // Invalidate Vite's module cache for jay.init.ts
-            const moduleNode = this.viteServer.moduleGraph.getModuleById(this.initFilePath);
+        if (this.projectInitFilePath && this.viteServer) {
+            const moduleNode = this.viteServer.moduleGraph.getModuleById(this.projectInitFilePath);
             if (moduleNode) {
                 await this.viteServer.moduleGraph.invalidateModule(moduleNode);
             }
-        } else if (this.initFilePath) {
+        } else if (this.projectInitFilePath) {
             // Clear Node.js module cache (production fallback)
-            delete require.cache[require.resolve(this.initFilePath)];
+            delete require.cache[require.resolve(this.projectInitFilePath)];
         }
 
         // Step 4: Re-import and re-initialize
@@ -251,17 +238,24 @@ export class ServiceLifecycleManager {
     }
 
     /**
-     * Returns the path to the server init file if found
+     * Returns the path to the init file if found.
      */
     getInitFilePath(): string | null {
-        return this.initFilePath;
+        return this.projectInitFilePath;
     }
 
     /**
-     * Returns the path to the client init file if found
+     * Returns project init info for client-side embedding.
      */
-    getClientInitFilePath(): string | null {
-        return this.clientInitFilePath;
+    getProjectInit(): ProjectClientInitInfo | null {
+        if (!this.projectInitFilePath) {
+            return null;
+        }
+
+        return {
+            importPath: this.projectInitFilePath,
+            initExport: 'init',
+        };
     }
 
     /**

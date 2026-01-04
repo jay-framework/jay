@@ -121,8 +121,8 @@ const ratingsStore: Rating[] = [];
 /**
  * Submit a rating for a product.
  */
-export const submitRating = makeJayAction('productRating.submit')
-    .withHandler(async (input: { productId: string; userId: string; rating: number }) => {
+export const submitRating = makeJayAction('productRating.submit').withHandler(
+    async (input: { productId: string; userId: string; rating: number }) => {
         // Validate rating
         if (input.rating < 1 || input.rating > 5) {
             throw new ActionError('INVALID_RATING', 'Rating must be between 1 and 5');
@@ -151,7 +151,8 @@ export const submitRating = makeJayAction('productRating.submit')
             success: true,
             message: 'Rating submitted',
         };
-    });
+    },
+);
 
 /**
  * Get ratings for a product.

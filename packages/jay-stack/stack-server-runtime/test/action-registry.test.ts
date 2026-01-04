@@ -47,8 +47,9 @@ describe('ActionRegistry', () => {
 
     describe('register', () => {
         it('should register an action', () => {
-            const action = makeJayAction('test.action')
-                .withHandler(async (input: { name: string }) => ({ greeting: `Hello ${input.name}` }));
+            const action = makeJayAction('test.action').withHandler(
+                async (input: { name: string }) => ({ greeting: `Hello ${input.name}` }),
+            );
 
             registry.register(action);
 
@@ -58,10 +59,12 @@ describe('ActionRegistry', () => {
         it('should register action with services', () => {
             const action = makeJayAction('cart.addToCart')
                 .withServices(CART_SERVICE)
-                .withHandler(async (input: { productId: string; quantity: number }, cartService) => {
-                    const cart = await cartService.addItem(input.productId, input.quantity);
-                    return { cartItemCount: cart.items.length };
-                });
+                .withHandler(
+                    async (input: { productId: string; quantity: number }, cartService) => {
+                        const cart = await cartService.addItem(input.productId, input.quantity);
+                        return { cartItemCount: cart.items.length };
+                    },
+                );
 
             registry.register(action);
 
@@ -90,12 +93,9 @@ describe('ActionRegistry', () => {
 
     describe('getNames', () => {
         it('should return all registered action names', () => {
-            const action1 = makeJayAction('action.one')
-                .withHandler(async () => ({}));
-            const action2 = makeJayAction('action.two')
-                .withHandler(async () => ({}));
-            const query = makeJayQuery('query.one')
-                .withHandler(async () => ({}));
+            const action1 = makeJayAction('action.one').withHandler(async () => ({}));
+            const action2 = makeJayAction('action.two').withHandler(async () => ({}));
+            const query = makeJayQuery('query.one').withHandler(async () => ({}));
 
             registry.register(action1);
             registry.register(action2);
@@ -111,10 +111,11 @@ describe('ActionRegistry', () => {
 
     describe('execute', () => {
         it('should execute action successfully', async () => {
-            const action = makeJayAction('test.greet')
-                .withHandler(async (input: { name: string }) => ({
+            const action = makeJayAction('test.greet').withHandler(
+                async (input: { name: string }) => ({
                     greeting: `Hello ${input.name}!`,
-                }));
+                }),
+            );
 
             registry.register(action);
 
@@ -129,14 +130,19 @@ describe('ActionRegistry', () => {
         it('should execute action with services', async () => {
             const action = makeJayAction('cart.addToCart')
                 .withServices(CART_SERVICE)
-                .withHandler(async (input: { productId: string; quantity: number }, cartService) => {
-                    const cart = await cartService.addItem(input.productId, input.quantity);
-                    return { cartItemCount: cart.items.length };
-                });
+                .withHandler(
+                    async (input: { productId: string; quantity: number }, cartService) => {
+                        const cart = await cartService.addItem(input.productId, input.quantity);
+                        return { cartItemCount: cart.items.length };
+                    },
+                );
 
             registry.register(action);
 
-            const result = await registry.execute('cart.addToCart', { productId: 'prod-1', quantity: 3 });
+            const result = await registry.execute('cart.addToCart', {
+                productId: 'prod-1',
+                quantity: 3,
+            });
 
             expect(result.success).toBe(true);
             if (result.success) {
@@ -158,13 +164,17 @@ describe('ActionRegistry', () => {
         });
 
         it('should handle ActionError from handler', async () => {
-            const action = makeJayAction('cart.addToCart')
-                .withHandler(async (input: { quantity: number }) => {
+            const action = makeJayAction('cart.addToCart').withHandler(
+                async (input: { quantity: number }) => {
                     if (input.quantity > 10) {
-                        throw new ActionError('MAX_QUANTITY_EXCEEDED', 'Cannot add more than 10 items');
+                        throw new ActionError(
+                            'MAX_QUANTITY_EXCEEDED',
+                            'Cannot add more than 10 items',
+                        );
                     }
                     return { success: true };
-                });
+                },
+            );
 
             registry.register(action);
 
@@ -182,10 +192,9 @@ describe('ActionRegistry', () => {
         });
 
         it('should handle generic errors from handler', async () => {
-            const action = makeJayAction('test.failing')
-                .withHandler(async () => {
-                    throw new Error('Something went wrong');
-                });
+            const action = makeJayAction('test.failing').withHandler(async () => {
+                throw new Error('Something went wrong');
+            });
 
             registry.register(action);
 
@@ -227,8 +236,9 @@ describe('ActionRegistry', () => {
         });
 
         it('should return undefined for POST actions', () => {
-            const action = makeJayAction('cart.addToCart')
-                .withHandler(async () => ({ success: true }));
+            const action = makeJayAction('cart.addToCart').withHandler(async () => ({
+                success: true,
+            }));
 
             registry.register(action);
 
@@ -237,8 +247,7 @@ describe('ActionRegistry', () => {
         });
 
         it('should return undefined for GET without caching', () => {
-            const query = makeJayQuery('products.search')
-                .withHandler(async () => ({ items: [] }));
+            const query = makeJayQuery('products.search').withHandler(async () => ({ items: [] }));
 
             registry.register(query);
 
@@ -275,8 +284,7 @@ describe('ActionRegistry', () => {
             const registry1 = new ActionRegistry();
             const registry2 = new ActionRegistry();
 
-            const action = makeJayAction('test.action')
-                .withHandler(async () => ({ value: 1 }));
+            const action = makeJayAction('test.action').withHandler(async () => ({ value: 1 }));
 
             registry1.register(action);
 

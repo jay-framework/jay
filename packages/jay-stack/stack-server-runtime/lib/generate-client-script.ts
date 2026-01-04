@@ -1,6 +1,16 @@
 import { DevServerPagePart } from './load-page-parts';
 import type { TrackByMap } from '@jay-framework/view-state-merge';
-import type { PluginWithInit } from './plugin-init-discovery';
+import type { PluginClientInitInfo } from './plugin-init-discovery';
+
+/**
+ * Information needed to generate client init script for the project.
+ */
+export interface ProjectClientInitInfo {
+    /** Import path for the init module */
+    importPath: string;
+    /** Export name for the JayInit constant (default: 'init') */
+    initExport?: string;
+}
 
 export function generateClientScript(
     defaultViewState: object,
@@ -8,9 +18,9 @@ export function generateClientScript(
     parts: DevServerPagePart[],
     jayHtmlPath: string,
     trackByMap: TrackByMap = {},
-    clientInitData: Record<string, any> = {},
-    clientInitFilePath?: string,
-    pluginsWithClientInit: PluginWithInit[] = [],
+    clientInitData: Record<string, Record<string, any>> = {},
+    projectInit?: ProjectClientInitInfo,
+    pluginInits: PluginClientInitInfo[] = [],
 ) {
     const imports =
         parts.length > 0 ? parts.map((part) => part.clientImport).join('\n') + '\n' : '';
@@ -21,44 +31,49 @@ ${parts.map((part) => '        ' + part.clientPart).join(',\n')}
         ]`
             : '[]';
 
-    // Filter plugins that have client init
-    const clientInitPlugins = pluginsWithClientInit.filter((p) => p.clientInit);
-
     // Client init imports and execution
-    const hasClientInit =
-        Object.keys(clientInitData).length > 0 ||
-        clientInitFilePath ||
-        clientInitPlugins.length > 0;
+    const hasClientInit = projectInit || pluginInits.length > 0;
 
-    const clientInitImport = hasClientInit
-        ? `import { runClientInit } from "@jay-framework/stack-client-runtime";`
-        : '';
-
-    // Generate plugin client init imports and calls
-    const pluginClientInitImports = clientInitPlugins
+    // Generate plugin client init imports
+    // Each plugin exports a JayInit object, we need to import it and call _clientInit
+    const pluginClientInitImports = pluginInits
         .map((plugin, idx) => {
-            const importPath = plugin.isLocal
-                ? `${plugin.pluginPath}/lib/index.client` // Local plugin client bundle
-                : `${plugin.packageName}/client`; // NPM plugin client export
-            return `import { ${plugin.clientInit!.export} as pluginClientInit${idx} } from "${importPath}";`;
+            return `import { ${plugin.initExport} as jayInit${idx} } from "${plugin.importPath}";`;
         })
         .join('\n      ');
 
-    // Pass plugin name to each client init so it can register with the correct key
-    const pluginClientInitCalls = clientInitPlugins
-        .map((plugin, idx) => `pluginClientInit${idx}({ pluginName: "${plugin.name}" });`)
+    // Generate project init import
+    const projectInitImport = projectInit
+        ? `import { ${projectInit.initExport || 'init'} as projectJayInit } from "${projectInit.importPath}";`
+        : '';
+
+    // Call each plugin's _clientInit with its namespaced serverData
+    const pluginClientInitCalls = pluginInits
+        .map((plugin, idx) => {
+            const pluginData = clientInitData[plugin.name] || {};
+            return `if (typeof jayInit${idx}._clientInit === 'function') {
+        console.log('[DevServer] Running client init: ${plugin.name}');
+        await jayInit${idx}._clientInit(${JSON.stringify(pluginData)});
+      }`;
+        })
         .join('\n      ');
 
-    const clientInitFileImport = clientInitFilePath ? `import "${clientInitFilePath}";` : '';
+    // Call project's _clientInit
+    const projectInitCall = projectInit
+        ? `if (typeof projectJayInit._clientInit === 'function') {
+        console.log('[DevServer] Running client init: project');
+        const projectData = ${JSON.stringify(clientInitData['project'] || {})};
+        await projectJayInit._clientInit(projectData);
+      }`
+        : '';
 
     const clientInitExecution = hasClientInit
         ? `
       // Plugin client initialization (in dependency order)
       ${pluginClientInitCalls}
       
-      // Client initialization (static config from server)
-      const clientInitData = ${JSON.stringify(clientInitData)};
-      await runClientInit(clientInitData);
+      // Project client initialization
+      ${projectInitCall}
 `
         : '';
 
@@ -73,10 +88,9 @@ ${parts.map((part) => '        ' + part.clientPart).join(',\n')}
     <div id="target"></div>
     <script type="module">
       import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
-      ${clientInitImport}
       ${pluginClientInitImports}
+      ${projectInitImport}
       import { render } from '${jayHtmlPath}';
-      ${clientInitFileImport}
       ${imports}
       const viewState = ${JSON.stringify(defaultViewState)};
       const fastCarryForward = ${JSON.stringify(fastCarryForward)};

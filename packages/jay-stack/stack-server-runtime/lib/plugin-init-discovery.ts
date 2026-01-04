@@ -1,34 +1,28 @@
 /**
  * Plugin initialization discovery and execution for Jay Stack.
  *
- * Discovers plugins with init configurations, sorts them by dependencies,
- * and executes their init functions in order.
+ * Discovers plugins with init configurations (using makeJayInit pattern),
+ * sorts them by dependencies, and executes their init functions in order.
+ *
+ * Auto-discovers `lib/init.ts` files in plugins, or uses the path specified
+ * in `plugin.yaml` via the `init` property.
  */
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { createRequire } from 'node:module';
-import {
-    loadPluginManifest,
-    normalizePluginInitConfig,
-    type PluginManifest,
-    type NormalizedPluginInitConfig,
-} from '@jay-framework/compiler-shared';
+import { loadPluginManifest } from '@jay-framework/compiler-shared';
+import type { JayInit } from '@jay-framework/fullstack-component';
+import type { ViteSSRLoader } from './action-discovery';
+import { setClientInitData } from './services';
 
 const require = createRequire(import.meta.url);
-
-/**
- * Vite server interface for SSR module loading.
- */
-export interface ViteSSRLoader {
-    ssrLoadModule: (url: string) => Promise<Record<string, any>>;
-}
 
 /**
  * Information about a discovered plugin with init.
  */
 export interface PluginWithInit {
-    /** Plugin name from plugin.yaml */
+    /** Plugin name from plugin.yaml (used as default init key) */
     name: string;
     /** Plugin path (directory containing plugin.yaml) */
     pluginPath: string;
@@ -36,10 +30,18 @@ export interface PluginWithInit {
     packageName: string;
     /** Whether this is a local plugin (src/plugins/) or NPM */
     isLocal: boolean;
-    /** Server init config (normalized) */
-    serverInit: NormalizedPluginInitConfig | null;
-    /** Client init config (normalized) */
-    clientInit: NormalizedPluginInitConfig | null;
+    /**
+     * Init module path relative to plugin root.
+     * Default is 'lib/init' (auto-discovered).
+     * Can be overridden via `init` property in plugin.yaml.
+     */
+    initModule: string;
+    /**
+     * Export name for the init constant.
+     * Default is 'init'.
+     * Can be overridden via `init` property in plugin.yaml (for compiled packages).
+     */
+    initExport: string;
     /** Dependencies from package.json (for ordering) */
     dependencies: string[];
 }
@@ -57,8 +59,10 @@ export interface PluginInitDiscoveryOptions {
 /**
  * Discovers all plugins with init configurations.
  *
- * Scans both local plugins (src/plugins/) and NPM plugins (node_modules/)
- * for plugin.yaml files with init configurations.
+ * Auto-discovers `lib/init.ts` files in plugins, or uses the path specified
+ * in `plugin.yaml` via the `init` property.
+ *
+ * Scans both local plugins (src/plugins/) and NPM plugins (node_modules/).
  */
 export async function discoverPluginsWithInit(
     options: PluginInitDiscoveryOptions,
@@ -78,29 +82,28 @@ export async function discoverPluginsWithInit(
                 const pluginPath = path.join(localPluginsPath, entry.name);
                 const manifest = loadPluginManifest(pluginPath);
 
-                if (manifest?.init) {
-                    const serverInit = normalizePluginInitConfig(manifest.init.server, 'server');
-                    const clientInit = normalizePluginInitConfig(manifest.init.client, 'client');
+                if (!manifest) continue;
 
-                    if (serverInit || clientInit) {
-                        const dependencies = await getPackageDependencies(pluginPath);
+                // Determine init module and export
+                const initConfig = resolvePluginInit(pluginPath, manifest.init, true);
+                if (!initConfig) continue;
 
-                        plugins.push({
-                            name: manifest.name || entry.name,
-                            pluginPath,
-                            packageName: pluginPath, // For local, use path
-                            isLocal: true,
-                            serverInit,
-                            clientInit,
-                            dependencies,
-                        });
+                const dependencies = await getPackageDependencies(pluginPath);
 
-                        if (verbose) {
-                            console.log(
-                                `[PluginInit] Found local plugin with init: ${manifest.name || entry.name}`,
-                            );
-                        }
-                    }
+                plugins.push({
+                    name: manifest.name || entry.name,
+                    pluginPath,
+                    packageName: pluginPath, // For local, use path
+                    isLocal: true,
+                    initModule: initConfig.module,
+                    initExport: initConfig.export,
+                    dependencies,
+                });
+
+                if (verbose) {
+                    console.log(
+                        `[PluginInit] Found local plugin with init: ${manifest.name || entry.name}`,
+                    );
                 }
             }
         } catch (error) {
@@ -133,27 +136,26 @@ export async function discoverPluginsWithInit(
                 const pluginPath = path.dirname(pluginYamlPath);
                 const manifest = loadPluginManifest(pluginPath);
 
-                if (manifest?.init) {
-                    const serverInit = normalizePluginInitConfig(manifest.init.server, 'server');
-                    const clientInit = normalizePluginInitConfig(manifest.init.client, 'client');
+                if (!manifest) continue;
 
-                    if (serverInit || clientInit) {
-                        const dependencies = await getPackageDependencies(pluginPath);
+                // Determine init module and export
+                const initConfig = resolvePluginInit(pluginPath, manifest.init, false);
+                if (!initConfig) continue;
 
-                        plugins.push({
-                            name: manifest.name || depName,
-                            pluginPath,
-                            packageName: depName,
-                            isLocal: false,
-                            serverInit,
-                            clientInit,
-                            dependencies,
-                        });
+                const dependencies = await getPackageDependencies(pluginPath);
 
-                        if (verbose) {
-                            console.log(`[PluginInit] Found NPM plugin with init: ${depName}`);
-                        }
-                    }
+                plugins.push({
+                    name: manifest.name || depName,
+                    pluginPath,
+                    packageName: depName,
+                    isLocal: false,
+                    initModule: initConfig.module,
+                    initExport: initConfig.export,
+                    dependencies,
+                });
+
+                if (verbose) {
+                    console.log(`[PluginInit] Found NPM plugin with init: ${depName}`);
                 }
             }
         } catch (error) {
@@ -162,6 +164,43 @@ export async function discoverPluginsWithInit(
     }
 
     return plugins;
+}
+
+/**
+ * Resolves plugin init configuration.
+ *
+ * - Auto-discovers `lib/init.ts` or `lib/init.js`
+ * - `init` in plugin.yaml can override the export name (for compiled packages)
+ * - Returns null if no init is found
+ */
+function resolvePluginInit(
+    pluginPath: string,
+    initConfig: string | undefined,
+    isLocal: boolean,
+): { module: string; export: string } | null {
+    // Default paths
+    const defaultModulePath = 'lib/init';
+    const defaultExport = 'init';
+
+    // Check if init file exists at default location
+    const tsPath = path.join(pluginPath, 'lib/init.ts');
+    const jsPath = path.join(pluginPath, 'lib/init.js');
+
+    const hasInitFile = fs.existsSync(tsPath) || fs.existsSync(jsPath);
+
+    if (!hasInitFile && !initConfig) {
+        // No init file and no config
+        return null;
+    }
+
+    // If plugin.yaml specifies init, it's the export name for compiled packages
+    // e.g., init: myPluginInit -> exports { myPluginInit } from the package
+    const exportName = typeof initConfig === 'string' ? initConfig : defaultExport;
+
+    return {
+        module: defaultModulePath,
+        export: exportName,
+    };
 }
 
 /**
@@ -223,17 +262,12 @@ export function sortPluginsByDependencies(plugins: PluginWithInit[]): PluginWith
 }
 
 /**
- * Context passed to plugin init functions.
- */
-export interface PluginInitContext {
-    /** Plugin name (for namespacing client init data) */
-    pluginName: string;
-}
-
-/**
  * Executes server init for all plugins in order.
- * Each plugin's init function receives a context with the plugin name,
- * which should be used as the key for setClientInitData.
+ *
+ * Uses the `makeJayInit` pattern:
+ * - Loads the init module and finds the JayInit object
+ * - Calls `_serverInit()` if defined
+ * - Stores returned data via `setClientInitData(pluginName, data)`
  *
  * @param plugins - Sorted list of plugins with init
  * @param viteServer - Vite server for SSR module loading (optional)
@@ -245,45 +279,78 @@ export async function executePluginServerInits(
     verbose: boolean = false,
 ): Promise<void> {
     for (const plugin of plugins) {
-        if (!plugin.serverInit) continue;
-
         try {
             const modulePath = plugin.isLocal
-                ? path.join(plugin.pluginPath, plugin.serverInit.module)
-                : plugin.packageName; // For NPM, import the package directly
+                ? path.join(plugin.pluginPath, plugin.initModule)
+                : `${plugin.packageName}/${plugin.initModule}`;
 
             let pluginModule: Record<string, any>;
 
             if (viteServer) {
                 // In dev mode, use Vite's SSR loader for TypeScript support
-                if (plugin.isLocal) {
-                    pluginModule = await viteServer.ssrLoadModule(modulePath);
-                } else {
-                    // For NPM packages, load the main export
-                    pluginModule = await viteServer.ssrLoadModule(plugin.packageName);
-                }
+                pluginModule = await viteServer.ssrLoadModule(modulePath);
             } else {
                 // Production: use native import
                 pluginModule = await import(modulePath);
             }
 
-            const initFn = pluginModule[plugin.serverInit.export];
+            const jayInit = pluginModule[plugin.initExport] as JayInit<any> | undefined;
 
-            if (typeof initFn === 'function') {
-                if (verbose) {
-                    console.log(`[PluginInit] Executing server init for: ${plugin.name}`);
-                }
-                // Pass context with plugin name for namespacing
-                const context: PluginInitContext = { pluginName: plugin.name };
-                await initFn(context);
-            } else {
+            if (!jayInit || jayInit.__brand !== 'JayInit') {
                 console.warn(
-                    `[PluginInit] Plugin "${plugin.name}" declares server init but "${plugin.serverInit.export}" is not a function`,
+                    `[PluginInit] Plugin "${plugin.name}" init module doesn't export a valid JayInit at "${plugin.initExport}"`,
                 );
+                continue;
+            }
+
+            // Execute server init if defined
+            if (typeof jayInit._serverInit === 'function') {
+                if (verbose) {
+                    console.log(`[DevServer] Running server init: ${plugin.name}`);
+                }
+
+                // Run server init and capture returned data
+                const clientData = await jayInit._serverInit();
+
+                // Store client data if server init returned something
+                if (clientData !== undefined && clientData !== null) {
+                    // Use plugin name as the key (it's also the default for JayInit.key)
+                    setClientInitData(plugin.name, clientData);
+                }
             }
         } catch (error) {
-            console.error(`[PluginInit] Failed to execute server init for "${plugin.name}":`, error);
+            console.error(
+                `[PluginInit] Failed to execute server init for "${plugin.name}":`,
+                error,
+            );
         }
     }
 }
 
+/**
+ * Information needed to generate client init script for a plugin.
+ */
+export interface PluginClientInitInfo {
+    /** Plugin name (used for logging and as data key) */
+    name: string;
+    /** Import path for the init module */
+    importPath: string;
+    /** Export name for the JayInit constant */
+    initExport: string;
+}
+
+/**
+ * Prepares plugin information for client init script generation.
+ *
+ * Filters to only plugins that have init modules and returns the
+ * information needed to generate client-side imports and execution.
+ */
+export function preparePluginClientInits(plugins: PluginWithInit[]): PluginClientInitInfo[] {
+    return plugins.map((plugin) => ({
+        name: plugin.name,
+        importPath: plugin.isLocal
+            ? path.join(plugin.pluginPath, plugin.initModule)
+            : `${plugin.packageName}/${plugin.initModule}`,
+        initExport: plugin.initExport,
+    }));
+}

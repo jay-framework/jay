@@ -66,10 +66,11 @@ describe('Action Router', () => {
 
     describe('createActionRouter', () => {
         it('should handle successful action execution', async () => {
-            const action = makeJayAction('test.greet')
-                .withHandler(async (input: { name: string }) => ({
+            const action = makeJayAction('test.greet').withHandler(
+                async (input: { name: string }) => ({
                     greeting: `Hello ${input.name}!`,
-                }));
+                }),
+            );
 
             registry.register(action);
 
@@ -105,8 +106,7 @@ describe('Action Router', () => {
         });
 
         it('should return 405 for wrong HTTP method', async () => {
-            const action = makeJayAction('test.action')
-                .withHandler(async () => ({ ok: true }));
+            const action = makeJayAction('test.action').withHandler(async () => ({ ok: true }));
 
             registry.register(action);
 
@@ -124,10 +124,11 @@ describe('Action Router', () => {
         });
 
         it('should handle GET query with query params', async () => {
-            const query = makeJayQuery('products.search')
-                .withHandler(async (input: { query: string }) => ({
+            const query = makeJayQuery('products.search').withHandler(
+                async (input: { query: string }) => ({
                     results: [`Result for: ${input.query}`],
-                }));
+                }),
+            );
 
             registry.register(query);
 
@@ -149,10 +150,11 @@ describe('Action Router', () => {
         });
 
         it('should handle GET query with _input param for complex objects', async () => {
-            const query = makeJayQuery('products.search')
-                .withHandler(async (input: { filters: { category: string } }) => ({
+            const query = makeJayQuery('products.search').withHandler(
+                async (input: { filters: { category: string } }) => ({
                     results: [input.filters.category],
-                }));
+                }),
+            );
 
             registry.register(query);
 
@@ -171,10 +173,9 @@ describe('Action Router', () => {
         });
 
         it('should return 422 for ActionError', async () => {
-            const action = makeJayAction('cart.addToCart')
-                .withHandler(async () => {
-                    throw new ActionError('OUT_OF_STOCK', 'Product is out of stock');
-                });
+            const action = makeJayAction('cart.addToCart').withHandler(async () => {
+                throw new ActionError('OUT_OF_STOCK', 'Product is out of stock');
+            });
 
             registry.register(action);
 

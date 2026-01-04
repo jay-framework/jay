@@ -196,7 +196,13 @@ export async function discoverAllPluginActions(
         for (const entry of pluginDirs) {
             if (entry.isDirectory()) {
                 const pluginPath = path.join(localPluginsPath, entry.name);
-                const actions = await discoverPluginActions(pluginPath, projectRoot, registry, verbose, viteServer);
+                const actions = await discoverPluginActions(
+                    pluginPath,
+                    projectRoot,
+                    registry,
+                    verbose,
+                    viteServer,
+                );
                 allActions.push(...actions);
             }
         }
@@ -246,12 +252,19 @@ async function discoverNpmPluginActions(
                 const pluginDir = path.dirname(pluginYamlPath);
                 const pluginConfig = loadPluginManifest(pluginDir);
 
-                if (!pluginConfig || !pluginConfig.actions || !Array.isArray(pluginConfig.actions)) {
+                if (
+                    !pluginConfig ||
+                    !pluginConfig.actions ||
+                    !Array.isArray(pluginConfig.actions)
+                ) {
                     continue;
                 }
 
                 if (verbose) {
-                    console.log(`[Actions] NPM plugin "${packageName}" declares actions:`, pluginConfig.actions);
+                    console.log(
+                        `[Actions] NPM plugin "${packageName}" declares actions:`,
+                        pluginConfig.actions,
+                    );
                 }
 
                 // Import the package's main module
@@ -321,7 +334,9 @@ async function registerNpmPluginActions(
                 registeredActions.push((actionExport as any).actionName);
 
                 if (verbose) {
-                    console.log(`[Actions] Registered NPM plugin action: ${(actionExport as any).actionName}`);
+                    console.log(
+                        `[Actions] Registered NPM plugin action: ${(actionExport as any).actionName}`,
+                    );
                 }
             } else {
                 console.warn(
@@ -413,7 +428,9 @@ export async function discoverPluginActions(
                 registeredActions.push((actionExport as any).actionName);
 
                 if (verbose) {
-                    console.log(`[Actions] Registered plugin action: ${(actionExport as any).actionName}`);
+                    console.log(
+                        `[Actions] Registered plugin action: ${(actionExport as any).actionName}`,
+                    );
                 }
             } else {
                 console.warn(
@@ -427,5 +444,3 @@ export async function discoverPluginActions(
 
     return registeredActions;
 }
-
-

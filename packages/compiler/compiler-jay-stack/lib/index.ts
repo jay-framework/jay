@@ -7,6 +7,7 @@ import {
     extractActionsFromSource,
     clearActionMetadataCache,
 } from './transform-action-imports';
+import { createImportChainTracker, ImportChainTrackerOptions } from './import-chain-tracker';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -21,6 +22,16 @@ export {
     type ActionMetadata,
     type ExtractedActions,
 } from './transform-action-imports';
+export { createImportChainTracker, type ImportChainTrackerOptions } from './import-chain-tracker';
+
+export interface JayStackCompilerOptions extends JayRollupConfig {
+    /**
+     * Enable import chain tracking for debugging server code leaking into client builds.
+     * When enabled, logs the full import chain when server-only modules are detected.
+     * @default false (but auto-enabled when DEBUG_IMPORTS=1 env var is set)
+     */
+    trackImports?: boolean | ImportChainTrackerOptions;
+}
 
 /**
  * Jay Stack Compiler - Handles both Jay runtime compilation and Jay Stack code splitting
@@ -47,14 +58,41 @@ export {
  * });
  * ```
  *
- * @param jayOptions - Configuration for Jay runtime (passed to jay:runtime plugin)
- * @returns Array of Vite plugins [codeSplitPlugin, actionTransformPlugin, jayRuntimePlugin]
+ * To debug import chain issues (server code leaking to client):
+ * ```bash
+ * DEBUG_IMPORTS=1 npm run build
+ * ```
+ *
+ * Or enable in config:
+ * ```typescript
+ * ...jayStackCompiler({ trackImports: true })
+ * ```
+ *
+ * @param options - Configuration for Jay Stack compiler
+ * @returns Array of Vite plugins
  */
-export function jayStackCompiler(jayOptions: JayRollupConfig = {}): Plugin[] {
+export function jayStackCompiler(options: JayStackCompilerOptions = {}): Plugin[] {
+    const { trackImports, ...jayOptions } = options;
+
     // Cache for resolved module paths
     const moduleCache = new Map<string, { path: string; code: string }>();
 
-    return [
+    // Determine if import tracking should be enabled
+    const shouldTrackImports = trackImports || process.env.DEBUG_IMPORTS === '1';
+    const trackerOptions: ImportChainTrackerOptions =
+        typeof trackImports === 'object'
+            ? trackImports
+            : { verbose: process.env.DEBUG_IMPORTS === '1' };
+
+    // Build the plugin array
+    const plugins: Plugin[] = [];
+
+    // Optional: Import chain tracker for debugging (runs first to see all imports)
+    if (shouldTrackImports) {
+        plugins.push(createImportChainTracker(trackerOptions));
+    }
+
+    plugins.push(
         // First: Jay Stack code splitting transformation
         {
             name: 'jay-stack:code-split',
@@ -66,9 +104,10 @@ export function jayStackCompiler(jayOptions: JayRollupConfig = {}): Plugin[] {
                     return null;
                 }
 
-                // Quick check: skip files that don't use makeJayStackComponent
+                // Quick check: skip files that don't use makeJayStackComponent or makeJayInit
                 const hasComponent = code.includes('makeJayStackComponent');
-                if (!hasComponent) {
+                const hasInit = code.includes('makeJayInit');
+                if (!hasComponent && !hasInit) {
                     return null;
                 }
 
@@ -110,7 +149,11 @@ export function jayStackCompiler(jayOptions: JayRollupConfig = {}): Plugin[] {
                     moduleCache.clear();
                 },
 
-                async resolveId(source: string, importer: string | undefined, options: { ssr?: boolean } | undefined) {
+                async resolveId(
+                    source: string,
+                    importer: string | undefined,
+                    options: { ssr?: boolean } | undefined,
+                ) {
                     // Skip SSR builds - actions should run directly on server
                     if (options?.ssr || isSSRBuild) {
                         return null;
@@ -190,7 +233,9 @@ export function jayStackCompiler(jayOptions: JayRollupConfig = {}): Plugin[] {
                     // Also export any non-action exports (like types, interfaces)
                     // For now, we export ActionError from client-runtime
                     if (code.includes('ActionError')) {
-                        lines.push(`export { ActionError } from '@jay-framework/stack-client-runtime';`);
+                        lines.push(
+                            `export { ActionError } from '@jay-framework/stack-client-runtime';`,
+                        );
                     }
 
                     const result = lines.join('\n');
@@ -201,5 +246,7 @@ export function jayStackCompiler(jayOptions: JayRollupConfig = {}): Plugin[] {
 
         // Third: Jay runtime compilation (existing plugin)
         jayRuntime(jayOptions),
-    ];
+    );
+
+    return plugins;
 }

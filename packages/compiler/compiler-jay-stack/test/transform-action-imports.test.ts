@@ -120,7 +120,11 @@ describe('transform-action-imports', () => {
             const actions = extractActionsFromSource(source, 'test.ts');
 
             expect(actions).toHaveLength(3);
-            expect(actions.map((a) => a.exportName)).toEqual(['addToCart', 'getCart', 'removeFromCart']);
+            expect(actions.map((a) => a.exportName)).toEqual([
+                'addToCart',
+                'getCart',
+                'removeFromCart',
+            ]);
         });
 
         it('should ignore non-exported actions', () => {
@@ -265,7 +269,11 @@ describe('transform-action-imports', () => {
                 await addToCart({ productId: '123' });
             `;
 
-            const result = await transformActionImports(source, '/test/nested/page.ts', mockResolveModule);
+            const result = await transformActionImports(
+                source,
+                '/test/nested/page.ts',
+                mockResolveModule,
+            );
 
             expect(result).not.toBeNull();
 
@@ -339,4 +347,3 @@ describe('transform-action-imports', () => {
         });
     });
 });
-

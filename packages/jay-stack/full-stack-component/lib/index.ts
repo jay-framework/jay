@@ -4,6 +4,7 @@ export * from './jay-stack-builder';
 export * from './contract-generator-builder';
 export * from './render-pipeline';
 export * from './jay-action-builder';
+export * from './jay-init-builder';
 
 // Re-export core types from runtime for convenience
 export type {
