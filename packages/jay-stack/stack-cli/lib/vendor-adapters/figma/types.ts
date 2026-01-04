@@ -1,9 +1,9 @@
 /**
  * Figma-specific types
- * 
+ *
  * This file defines the shape of the Figma document that will be sent
  * from the Figma plugin to the dev server.
- * 
+ *
  * NOTE: This is a placeholder/example structure. The actual Figma plugin
  * should define and maintain these types based on what it serializes.
  */
@@ -15,16 +15,16 @@
 export interface FigmaDoc {
     /** The name of the page/frame being exported */
     name: string;
-    
+
     /** The Figma node ID */
     nodeId: string;
-    
+
     /** Figma node type */
     type: string;
-    
+
     /** Child nodes */
     children?: FigmaDoc[];
-    
+
     /** Layout properties (AutoLayout, etc.) */
     layout?: {
         mode?: 'HORIZONTAL' | 'VERTICAL' | 'NONE';
@@ -36,7 +36,7 @@ export interface FigmaDoc {
         paddingBottom?: number;
         itemSpacing?: number;
     };
-    
+
     /** Style properties */
     style?: {
         backgroundColor?: string;
@@ -44,10 +44,10 @@ export interface FigmaDoc {
         strokes?: any[];
         effects?: any[];
     };
-    
+
     /** Text content (for text nodes) */
     characters?: string;
-    
+
     /** Size and position */
     absoluteBoundingBox?: {
         x: number;
@@ -55,12 +55,10 @@ export interface FigmaDoc {
         width: number;
         height: number;
     };
-    
+
     /** Component properties (for instances) */
     componentProperties?: Record<string, any>;
-    
+
     /** Additional metadata */
     metadata?: Record<string, any>;
 }
-
-

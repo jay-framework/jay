@@ -11,6 +11,7 @@ The vendor integration uses the **Jay Editor Server Protocol** (WebSocket-based)
 Send a design from your editor to Jay.
 
 **Message:**
+
 ```typescript
 {
   type: 'export',
@@ -21,6 +22,7 @@ Send a design from your editor to Jay.
 ```
 
 **Response:**
+
 ```typescript
 {
   type: 'export',
@@ -40,6 +42,7 @@ Send a design from your editor to Jay.
 Retrieve a design from Jay to your editor.
 
 **Message:**
+
 ```typescript
 {
   type: 'import',
@@ -49,6 +52,7 @@ Retrieve a design from Jay to your editor.
 ```
 
 **Response:**
+
 ```typescript
 {
   type: 'import',
@@ -85,9 +89,9 @@ async function exportToJay(pageUrl: string, design: MyDesignDoc) {
     type: 'export',
     vendorId: 'myeditor',
     pageUrl: pageUrl,
-    vendorDoc: design  // ✅ Strongly typed
+    vendorDoc: design, // ✅ Strongly typed
   });
-  
+
   console.log(response.success ? 'Exported!' : response.error);
 }
 
@@ -96,11 +100,11 @@ async function importFromJay(pageUrl: string) {
   const response = await client.import<MyDesignDoc>({
     type: 'import',
     vendorId: 'myeditor',
-    pageUrl: pageUrl
+    pageUrl: pageUrl,
   });
-  
+
   if (response.success && response.vendorDoc) {
-    return response.vendorDoc;  // ✅ Typed as MyDesignDoc
+    return response.vendorDoc; // ✅ Typed as MyDesignDoc
   }
   throw new Error(response.error);
 }
@@ -133,7 +137,7 @@ function sendExport<TVendorDoc>(vendorId: string, pageUrl: string, vendorDoc: TV
       vendorDoc,
     },
   };
-  
+
   socket.emit('protocol-message', message);
 }
 
@@ -164,6 +168,7 @@ All protocol responses include consistent error handling:
 ```
 
 Common error scenarios:
+
 - **Adapter not found**: Unknown `vendorId`
 - **Page not found**: No vendor source file exists for import
 - **Conversion failure**: Adapter failed to convert document
@@ -200,4 +205,3 @@ src/pages/home/
 
 - [Complete Vendor Integration Guide](./vendor-integration.md) - Full documentation
 - [Creating a Vendor Adapter](../packages/jay-stack/stack-cli/lib/vendor-adapters/README.md) - Implementation guide
-

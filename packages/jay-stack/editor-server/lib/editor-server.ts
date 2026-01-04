@@ -50,7 +50,9 @@ export class EditorServer implements DevServerProtocol {
         hasImage?: (params: HasImageMessage) => Promise<HasImageResponse>;
         getProjectInfo?: (params: GetProjectInfoMessage) => Promise<GetProjectInfoResponse>;
         export?: <TVendorDoc>(params: ExportMessage<TVendorDoc>) => Promise<ExportResponse>;
-        import?: <TVendorDoc>(params: ImportMessage<TVendorDoc>) => Promise<ImportResponse<TVendorDoc>>;
+        import?: <TVendorDoc>(
+            params: ImportMessage<TVendorDoc>,
+        ) => Promise<ImportResponse<TVendorDoc>>;
     } = {};
 
     constructor(options: EditorServerOptions) {
@@ -160,7 +162,9 @@ export class EditorServer implements DevServerProtocol {
     }
 
     onImport(
-        callback: <TVendorDoc>(params: ImportMessage<TVendorDoc>) => Promise<ImportResponse<TVendorDoc>>,
+        callback: <TVendorDoc>(
+            params: ImportMessage<TVendorDoc>,
+        ) => Promise<ImportResponse<TVendorDoc>>,
     ): void {
         this.handlers.import = callback;
     }
@@ -233,7 +237,9 @@ export class EditorServer implements DevServerProtocol {
         );
     }
 
-    private async handleProtocolMessage(message: ProtocolMessage<any>): Promise<ProtocolResponse<any>> {
+    private async handleProtocolMessage(
+        message: ProtocolMessage<any>,
+    ): Promise<ProtocolResponse<any>> {
         const { id, payload } = message;
 
         switch (payload.type) {
@@ -271,18 +277,14 @@ export class EditorServer implements DevServerProtocol {
                 if (!this.handlers.export) {
                     throw new Error('Export handler not registered');
                 }
-                const exportResult = await this.handlers.export(
-                    payload as ExportMessage<any>,
-                );
+                const exportResult = await this.handlers.export(payload as ExportMessage<any>);
                 return createProtocolResponse(id, exportResult);
 
             case 'import':
                 if (!this.handlers.import) {
                     throw new Error('Import handler not registered');
                 }
-                const importResult = await this.handlers.import(
-                    payload as ImportMessage<any>,
-                );
+                const importResult = await this.handlers.import(payload as ImportMessage<any>);
                 return createProtocolResponse(id, importResult);
 
             default:

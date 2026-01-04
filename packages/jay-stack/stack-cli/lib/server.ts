@@ -69,13 +69,13 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
     const vendorHandlers = createVendorHandlers(
         vendorRegistry,
         path.resolve(resolvedConfig.devServer.pagesBase),
-        process.cwd()
+        process.cwd(),
     );
-    
+
     // Register vendor protocol handlers
     editorServer.onExport(vendorHandlers.onExport);
     editorServer.onImport(vendorHandlers.onImport);
-    
+
     // Start dev server
     const { server, viteServer, routes } = await mkDevServer({
         pagesRootFolder: path.resolve(resolvedConfig.devServer.pagesBase),

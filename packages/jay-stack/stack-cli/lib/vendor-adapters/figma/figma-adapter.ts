@@ -1,6 +1,6 @@
 /**
  * Figma Vendor Adapter
- * 
+ *
  * This is a PLACEHOLDER implementation that demonstrates the structure
  * of a vendor adapter. The actual conversion logic should be implemented
  * based on the specific requirements of the Figma-to-Jay conversion.
@@ -11,7 +11,7 @@ import { FigmaDoc } from './types';
 
 export class FigmaAdapter implements VendorAdapter<FigmaDoc> {
     readonly vendorId = 'figma';
-    
+
     async convert(figmaDoc: FigmaDoc, context: ConversionContext): Promise<ConversionResult> {
         try {
             // TODO: Implement actual Figma to Jay conversion logic
@@ -21,17 +21,17 @@ export class FigmaAdapter implements VendorAdapter<FigmaDoc> {
             // 3. Map Figma AutoLayout to Jay layout system
             // 4. Convert styles, text, images, etc.
             // 5. Generate appropriate Jay contracts if needed
-            
+
             const jayHtml = this.generatePlaceholderJayHtml(figmaDoc);
             const contract = this.generatePlaceholderContract(figmaDoc);
-            
+
             return {
                 success: true,
                 jayHtml,
                 contract: contract || undefined,
                 warnings: [
                     'This is a placeholder implementation',
-                    'Actual Figma conversion logic needs to be implemented'
+                    'Actual Figma conversion logic needs to be implemented',
                 ],
             };
         } catch (error) {
@@ -41,7 +41,7 @@ export class FigmaAdapter implements VendorAdapter<FigmaDoc> {
             };
         }
     }
-    
+
     /**
      * Generate a placeholder jay-html file
      * This demonstrates the expected output format
@@ -62,7 +62,7 @@ export class FigmaAdapter implements VendorAdapter<FigmaDoc> {
 </view>
 `;
     }
-    
+
     /**
      * Generate a placeholder contract file
      * Returns null if no contract is needed
@@ -79,10 +79,10 @@ page {
 }
 `;
         }
-        
+
         return null;
     }
-    
+
     /**
      * Check if the Figma document has interactive elements
      * This is a placeholder heuristic
@@ -90,9 +90,9 @@ page {
     private hasInteractiveElements(figmaDoc: FigmaDoc): boolean {
         // TODO: Implement actual logic to detect interactive elements
         // For now, just check if there are component properties
-        return figmaDoc.componentProperties !== undefined && 
-               Object.keys(figmaDoc.componentProperties).length > 0;
+        return (
+            figmaDoc.componentProperties !== undefined &&
+            Object.keys(figmaDoc.componentProperties).length > 0
+        );
     }
 }
-
-

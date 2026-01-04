@@ -220,8 +220,14 @@ export interface DevServerProtocol {
     onGetProjectInfo(callback: EditorProtocol['getProjectInfo']): void;
 
     // Handle vendor export requests
-    onExport(callback: <TVendorDoc>(params: ExportMessage<TVendorDoc>) => Promise<ExportResponse>): void;
+    onExport(
+        callback: <TVendorDoc>(params: ExportMessage<TVendorDoc>) => Promise<ExportResponse>,
+    ): void;
 
     // Handle vendor import requests
-    onImport(callback: <TVendorDoc>(params: ImportMessage<TVendorDoc>) => Promise<ImportResponse<TVendorDoc>>): void;
+    onImport(
+        callback: <TVendorDoc>(
+            params: ImportMessage<TVendorDoc>,
+        ) => Promise<ImportResponse<TVendorDoc>>,
+    ): void;
 }

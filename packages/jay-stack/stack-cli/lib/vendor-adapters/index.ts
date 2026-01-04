@@ -1,6 +1,6 @@
 /**
  * Vendor Adapters Module
- * 
+ *
  * This module provides the infrastructure for pluggable vendor adapters
  * that convert external design editor formats to Jay.
  */
@@ -18,15 +18,13 @@ import { FigmaAdapter } from './figma/figma-adapter';
  */
 export function createVendorRegistry(): VendorAdapterRegistry {
     const registry = new VendorAdapterRegistry();
-    
+
     // Register built-in adapters
     registry.register(new FigmaAdapter());
-    
+
     // Add more adapters here as they are implemented:
     // registry.register(new WixAdapter());
     // registry.register(new PenpotAdapter());
-    
+
     return registry;
 }
-
-

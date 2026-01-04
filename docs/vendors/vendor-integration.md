@@ -13,6 +13,7 @@ The vendor integration system uses a **Vendor Adapter Pattern** with three main 
 1. **Vendor Client (Plugin)**: A lightweight client (e.g., Figma Plugin) that serializes the editor's document structure and communicates with the Jay Dev Server via the **Editor Server Protocol** (WebSocket-based).
 
 2. **Jay Dev Server**: The central hub that:
+
    - Provides WebSocket-based Editor Protocol for real-time communication
    - Routes protocol messages to appropriate vendor adapters
    - Stores raw vendor documents as the source of truth
@@ -61,16 +62,18 @@ Receives a design document from an external editor, saves it, and converts it to
 **Message Type**: `export`
 
 **Message Structure**:
+
 ```typescript
 interface ExportMessage<TVendorDoc> {
   type: 'export';
-  vendorId: string;        // e.g., 'figma', 'wix'
-  pageUrl: string;         // e.g., '/home', '/products/:id'
-  vendorDoc: TVendorDoc;   // Your vendor-specific document (strongly typed!)
+  vendorId: string; // e.g., 'figma', 'wix'
+  pageUrl: string; // e.g., '/home', '/products/:id'
+  vendorDoc: TVendorDoc; // Your vendor-specific document (strongly typed!)
 }
 ```
 
 **Response**:
+
 ```typescript
 interface ExportResponse {
   type: 'export';
@@ -84,6 +87,7 @@ interface ExportResponse {
 ```
 
 **Flow**:
+
 1. Client sends `ExportMessage` via WebSocket
 2. Server saves raw vendor JSON as `page.[vendorId].json`
 3. Invokes the vendor adapter's `convert()` method
@@ -97,6 +101,7 @@ Retrieves the stored vendor document for a page, allowing the editor to reconstr
 **Message Type**: `import`
 
 **Message Structure**:
+
 ```typescript
 interface ImportMessage<TVendorDoc> {
   type: 'import';
@@ -106,11 +111,12 @@ interface ImportMessage<TVendorDoc> {
 ```
 
 **Response**:
+
 ```typescript
 interface ImportResponse<TVendorDoc> {
   type: 'import';
   success: boolean;
-  vendorDoc?: TVendorDoc;  // Your vendor document (strongly typed!)
+  vendorDoc?: TVendorDoc; // Your vendor document (strongly typed!)
   error?: string;
 }
 ```
@@ -153,9 +159,9 @@ async function exportToJay(pageUrl: string, figmaDoc: FigmaDoc) {
     type: 'export',
     vendorId: 'figma',
     pageUrl: pageUrl,
-    vendorDoc: figmaDoc,  // ✅ TypeScript validates this is FigmaDoc
+    vendorDoc: figmaDoc, // ✅ TypeScript validates this is FigmaDoc
   });
-  
+
   if (response.success) {
     console.log('✓ Export successful!');
     console.log('Files created:', response.jayHtmlPath);
@@ -171,9 +177,9 @@ async function importFromJay(pageUrl: string) {
     vendorId: 'figma',
     pageUrl: pageUrl,
   });
-  
+
   if (response.success && response.vendorDoc) {
-    const figmaDoc = response.vendorDoc;  // ✅ Typed as FigmaDoc
+    const figmaDoc = response.vendorDoc; // ✅ Typed as FigmaDoc
     // Rebuild design in Figma from figmaDoc
   }
 }
@@ -218,48 +224,45 @@ import { MyEditorDoc } from './types';
 
 export class MyEditorAdapter implements VendorAdapter<MyEditorDoc> {
   readonly vendorId = 'myeditor';
-  
-  async convert(
-    editorDoc: MyEditorDoc, 
-    context: ConversionContext
-  ): Promise<ConversionResult> {
+
+  async convert(editorDoc: MyEditorDoc, context: ConversionContext): Promise<ConversionResult> {
     try {
       // Convert your editor's document structure to Jay HTML
       const jayHtml = this.convertToJayHtml(editorDoc);
-      
+
       // Optionally generate a contract if needed
       const contract = this.generateContract(editorDoc);
-      
+
       return {
         success: true,
         jayHtml,
         contract: contract || undefined,
-        warnings: []
+        warnings: [],
       };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Conversion failed'
+        error: error instanceof Error ? error.message : 'Conversion failed',
       };
     }
   }
-  
+
   private convertToJayHtml(doc: MyEditorDoc): string {
     // Your conversion logic here
     // Map your editor's components to Jay components
     // Handle layouts, styles, text, images, etc.
-    
+
     let jayHtml = '<view>\n';
-    
+
     for (const node of doc.nodes) {
       jayHtml += this.convertNode(node);
     }
-    
+
     jayHtml += '</view>\n';
-    
+
     return jayHtml;
   }
-  
+
   private convertNode(node: MyEditorNode): string {
     switch (node.type) {
       case 'text':
@@ -271,7 +274,7 @@ export class MyEditorAdapter implements VendorAdapter<MyEditorDoc> {
         return '';
     }
   }
-  
+
   private generateContract(doc: MyEditorDoc): string | null {
     // Generate a contract if your editor has interactive elements
     // or data requirements
@@ -280,10 +283,10 @@ export class MyEditorAdapter implements VendorAdapter<MyEditorDoc> {
     }
     return null;
   }
-  
+
   private hasInteractiveElements(doc: MyEditorDoc): boolean {
     // Check if the document has buttons, forms, etc.
-    return doc.nodes.some(n => n.type === 'button');
+    return doc.nodes.some((n) => n.type === 'button');
   }
 }
 ```
@@ -302,11 +305,11 @@ import { MyEditorAdapter } from './myeditor/myeditor-adapter';
 
 export function createVendorRegistry(): VendorAdapterRegistry {
   const registry = new VendorAdapterRegistry();
-  
+
   // Register built-in adapters
   registry.register(new FigmaAdapter());
   registry.register(new MyEditorAdapter()); // Add your adapter here
-  
+
   return registry;
 }
 ```
@@ -344,15 +347,15 @@ await client.connect();
 async function publishToJay(pageUrl: string) {
   // 1. Serialize your editor's current design
   const myEditorDoc: MyEditorDoc = serializeCurrentDesign();
-  
+
   // 2. Send to Jay Dev Server via protocol
   const response = await client.export<MyEditorDoc>({
     type: 'export',
     vendorId: 'myeditor',
     pageUrl: pageUrl,
-    vendorDoc: myEditorDoc
+    vendorDoc: myEditorDoc,
   });
-  
+
   if (response.success) {
     console.log('Published successfully!');
     if (response.warnings?.length) {
@@ -369,9 +372,9 @@ async function loadFromJay(pageUrl: string) {
   const response = await client.import<MyEditorDoc>({
     type: 'import',
     vendorId: 'myeditor',
-    pageUrl: pageUrl
+    pageUrl: pageUrl,
   });
-  
+
   if (response.success && response.vendorDoc) {
     // Rebuild your editor's design from the vendor document
     rebuildDesignFromDoc(response.vendorDoc);
@@ -385,14 +388,14 @@ function serializeCurrentDesign(): MyEditorDoc {
   return {
     name: getCurrentPageName(),
     version: '1.0',
-    nodes: getAllNodes().map(serializeNode)
+    nodes: getAllNodes().map(serializeNode),
   };
 }
 
 function rebuildDesignFromDoc(doc: MyEditorDoc) {
   // Convert MyEditorDoc back to your editor's internal state
   clearCanvas();
-  doc.nodes.forEach(node => createNodeInEditor(node));
+  doc.nodes.forEach((node) => createNodeInEditor(node));
 }
 ```
 
@@ -409,6 +412,7 @@ function rebuildDesignFromDoc(doc: MyEditorDoc) {
 Converts a vendor-specific document to Jay format.
 
 **Parameters**:
+
 - `vendorDoc`: Your typed vendor document
 - `context`: Conversion context object containing:
   - `pageDirectory`: Absolute path to the page directory
@@ -417,6 +421,7 @@ Converts a vendor-specific document to Jay format.
   - `pagesBase`: Pages base path
 
 **Returns**: `ConversionResult` object with:
+
 - `success: boolean` - Whether conversion succeeded
 - `jayHtml?: string` - Generated Jay HTML
 - `contract?: string` - Optional contract file content
@@ -501,7 +506,7 @@ if (node.type === 'unsupported-element') {
 return {
   success: true,
   jayHtml,
-  warnings
+  warnings,
 };
 ```
 
@@ -513,7 +518,7 @@ Store editor-specific metadata in the vendor JSON for perfect round-trips:
 export interface MyEditorDoc {
   // Core structure
   nodes: Node[];
-  
+
   // Preserve editor-specific data for import
   metadata: {
     editorVersion: string;
@@ -528,64 +533,64 @@ export interface MyEditorDoc {
 ```typescript
 export class FigmaAdapter implements VendorAdapter<FigmaDoc> {
   readonly vendorId = 'figma';
-  
+
   async convert(figmaDoc: FigmaDoc, context: ConversionContext): Promise<ConversionResult> {
     const warnings: string[] = [];
-    
+
     try {
       // Build Jay HTML
       let jayHtml = '<!-- Generated from Figma -->\n<view>\n';
-      
+
       // Convert Figma AutoLayout to Jay layout
       if (figmaDoc.layout?.mode === 'HORIZONTAL') {
         jayHtml += '  <hstack>\n';
       } else if (figmaDoc.layout?.mode === 'VERTICAL') {
         jayHtml += '  <vstack>\n';
       }
-      
+
       // Convert children
       for (const child of figmaDoc.children || []) {
         jayHtml += this.convertFigmaNode(child, warnings);
       }
-      
+
       // Close layout
       if (figmaDoc.layout?.mode === 'HORIZONTAL') {
         jayHtml += '  </hstack>\n';
       } else if (figmaDoc.layout?.mode === 'VERTICAL') {
         jayHtml += '  </vstack>\n';
       }
-      
+
       jayHtml += '</view>\n';
-      
+
       // Generate contract if needed
       let contract: string | undefined;
       if (this.hasVariants(figmaDoc)) {
         contract = this.generateFigmaContract(figmaDoc);
       }
-      
+
       return {
         success: true,
         jayHtml,
         contract,
-        warnings
+        warnings,
       };
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Conversion failed'
+        error: error instanceof Error ? error.message : 'Conversion failed',
       };
     }
   }
-  
+
   private convertFigmaNode(node: FigmaNode, warnings: string[]): string {
     switch (node.type) {
       case 'TEXT':
         return `    <text>${node.characters || ''}</text>\n`;
-      
+
       case 'RECTANGLE':
         const bg = node.style?.backgroundColor || '#FFFFFF';
         return `    <view style="background-color: ${bg}"></view>\n`;
-      
+
       case 'FRAME':
         // Recursively convert frame children
         let html = '    <view>\n';
@@ -594,27 +599,27 @@ export class FigmaAdapter implements VendorAdapter<FigmaDoc> {
         }
         html += '    </view>\n';
         return html;
-      
+
       default:
         warnings.push(`Unsupported Figma node type: ${node.type}`);
         return '';
     }
   }
-  
+
   private hasVariants(doc: FigmaDoc): boolean {
     return doc.componentProperties !== undefined;
   }
-  
+
   private generateFigmaContract(doc: FigmaDoc): string {
     let contract = 'page {\n';
-    
+
     // Convert Figma component properties to Jay variants
     for (const [key, prop] of Object.entries(doc.componentProperties || {})) {
       contract += `  variant ${key} {\n`;
       contract += `    // TODO: Define variant options\n`;
       contract += `  }\n`;
     }
-    
+
     contract += '}\n';
     return contract;
   }
@@ -656,20 +661,20 @@ import { MyEditorAdapter } from './myeditor-adapter';
 
 describe('MyEditorAdapter', () => {
   const adapter = new MyEditorAdapter();
-  
+
   it('should convert a simple document', async () => {
     const doc = {
       name: 'test',
-      nodes: [{ type: 'text', properties: { content: 'Hello' } }]
+      nodes: [{ type: 'text', properties: { content: 'Hello' } }],
     };
-    
+
     const result = await adapter.convert(doc, {
       pageDirectory: '/tmp/test',
       pageUrl: '/test',
       projectRoot: '/project',
-      pagesBase: '/project/src/pages'
+      pagesBase: '/project/src/pages',
     });
-    
+
     expect(result.success).toBe(true);
     expect(result.jayHtml).toContain('<text>Hello</text>');
   });
@@ -698,8 +703,8 @@ const exportResponse = await client.export({
   pageUrl: '/test',
   vendorDoc: {
     name: 'Test Page',
-    nodes: []
-  }
+    nodes: [],
+  },
 });
 
 console.log('Export result:', exportResponse);
@@ -708,7 +713,7 @@ console.log('Export result:', exportResponse);
 const importResponse = await client.import({
   type: 'import',
   vendorId: 'myeditor',
-  pageUrl: '/test'
+  pageUrl: '/test',
 });
 
 console.log('Import result:', importResponse);
@@ -733,7 +738,7 @@ Example:
 const imageResponse = await client.saveImage({
   type: 'saveImage',
   imageUrl: 'https://example.com/image.png',
-  imageName: 'hero-image.png'
+  imageName: 'hero-image.png',
 });
 
 // Reference in generated Jay HTML
@@ -787,6 +792,7 @@ The Vendor Integration system provides a clean, extensible way to connect any de
 5. **Test** using the Editor Client
 
 The system handles:
+
 - ✅ WebSocket-based real-time communication via Editor Protocol
 - ✅ Storing source documents as source of truth
 - ✅ Routing protocol messages to the correct adapter
@@ -796,6 +802,7 @@ The system handles:
 - ✅ Full TypeScript type safety with generics
 
 You focus on:
+
 - ✅ Serializing your editor's format
 - ✅ Converting to Jay HTML
 - ✅ Mapping your editor's concepts to Jay's concepts
@@ -805,4 +812,3 @@ You focus on:
 - [Editor Protocol Documentation](../jay-stack-project-info-api.md) - Core protocol details
 - [Creating Vendor Adapters](../../packages/jay-stack/stack-cli/lib/vendor-adapters/README.md) - Implementation guide
 - [Editor Client API](https://github.com/jay-framework/jay/tree/main/packages/jay-stack/editor-client) - Client library reference
-
