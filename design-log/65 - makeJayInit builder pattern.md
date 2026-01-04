@@ -523,6 +523,7 @@ Rationale: Aligns with simpler directory structure. Plugins use `lib/init.ts` be
 **Final implementation:** All legacy APIs removed
 
 Files removed:
+
 - `stack-client-runtime/lib/client-init.ts` - removed `onClientInit`, `runClientInit`, `clearClientInitCallbacks`
 - `stack-server-runtime/lib/services.ts` - removed `serverInit()` function using `InitMarker`
 - `full-stack-component/lib/jay-stack-types.ts` - removed `InitMarker` interface and `createInitMarker` function
@@ -551,6 +552,7 @@ Added debugging capability to the compiler to detect and log import chains that 
 ### File Structure Summary
 
 **Plugins (NPM or local):**
+
 ```
 my-plugin/
 ├── lib/
@@ -560,6 +562,7 @@ my-plugin/
 ```
 
 **Projects:**
+
 ```
 my-project/
 ├── src/

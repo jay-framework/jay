@@ -482,11 +482,10 @@ import { makeJayInit } from '@jay-framework/fullstack-component';
 import { registerService } from '@jay-framework/stack-server-runtime';
 import { WEATHER_SERVICE, createWeatherService } from 'my-weather-plugin';
 
-export const init = makeJayInit()
-  .withServer(async () => {
-    registerService(WEATHER_SERVICE, createWeatherService());
-    return {};
-  });
+export const init = makeJayInit().withServer(async () => {
+  registerService(WEATHER_SERVICE, createWeatherService());
+  return {};
+});
 ```
 
 See [Jay Stack Components - Service Management](./jay-stack.md#service-management) for details.
@@ -539,7 +538,7 @@ export const init = makeJayInit()
 
 ```yaml
 name: weather-plugin
-init: myCustomInit  # Look for 'myCustomInit' instead of 'init'
+init: myCustomInit # Look for 'myCustomInit' instead of 'init'
 
 contracts:
   - name: weather-widget
