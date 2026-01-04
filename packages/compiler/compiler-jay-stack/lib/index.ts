@@ -173,13 +173,21 @@ export function jayStackCompiler(options: JayStackCompilerOptions = {}): Plugin[
                     const importerDir = path.dirname(importer);
                     let resolvedPath = path.resolve(importerDir, source);
 
-                    // Add .ts extension if not present
+                    // Handle extension resolution
                     if (!resolvedPath.endsWith('.ts') && !resolvedPath.endsWith('.js')) {
-                        // Try .ts first
+                        // No extension - try .ts first
                         if (fs.existsSync(resolvedPath + '.ts')) {
                             resolvedPath += '.ts';
                         } else if (fs.existsSync(resolvedPath + '.js')) {
                             resolvedPath += '.js';
+                        } else {
+                            return null;
+                        }
+                    } else if (resolvedPath.endsWith('.js') && !fs.existsSync(resolvedPath)) {
+                        // .js extension but file doesn't exist - try .ts (common ESM pattern)
+                        const tsPath = resolvedPath.slice(0, -3) + '.ts';
+                        if (fs.existsSync(tsPath)) {
+                            resolvedPath = tsPath;
                         } else {
                             return null;
                         }
