@@ -35,7 +35,8 @@ A builder pattern that mirrors `makeJayStackComponent`:
 // lib/init.ts (single file!)
 import { makeJayInit } from '@jay-framework/fullstack-component';
 
-export const init = makeJayInit('my-plugin')
+// No key needed - defaults to plugin name from plugin.yaml
+export const init = makeJayInit()
     .withServer(async () => {
         registerService(MY_SERVICE, createService());
         
@@ -155,21 +156,61 @@ function executeClientInit(init: JayInit<any>, serverData: Record<string, any>):
 
 ### Plugin Discovery
 
-The `plugin.yaml` changes slightly:
+The `plugin.yaml` changes:
 
 ```yaml
-# Before
+# Default: auto-discover lib/init.ts, looks for export named 'init'
 name: my-plugin
-init:
-  server: true
-  client: true
+# (no init field needed)
 
-# After
+# Override export name (looks for export named 'myCustomInit')
 name: my-plugin
-init: ./lib/init  # Single file, exports `init`
+init: myCustomInit
 ```
 
-Or by convention, if no `init` specified, look for `lib/init.ts` that exports `init`.
+**Discovery order:**
+1. Look for `lib/init.ts` (or `lib/init/index.ts`)
+2. Import and get the export named by `init` field (default: `'init'`)
+3. The exported `JayInit` object contains `_serverInit` and `_clientInit`
+
+### Dev Server Logging
+
+Log init execution using the plugin name for readability:
+
+```
+[DevServer] Running server init: my-plugin
+[DevServer] Running server init: @wix/stores
+[DevServer] Running server init: project
+```
+
+### Plugin Dependencies
+
+If a plugin's init depends on another plugin's init output, use:
+- **Server:** Services via `getService()` (available because dependencies run first)
+- **Client:** Contexts via `useContext()` (available because dependencies run first)
+
+```typescript
+// @wix/stores depends on @wix/auth (declared in package.json)
+export const init = makeJayInit()
+    .withServer(async () => {
+        // @wix/auth init already ran, service is available
+        const authService = getService(AUTH_SERVICE);
+        const storesService = createStoresService(authService);
+        registerService(STORES_SERVICE, storesService);
+        
+        return { currency: 'USD' };
+    })
+    .withClient((data) => {
+        // @wix/auth client init already ran, context is available
+        const authContext = useContext(AUTH_CONTEXT);
+        registerGlobalContext(STORES_CONTEXT, {
+            ...data,
+            isAuthenticated: authContext.isLoggedIn,
+        });
+    });
+```
+
+**Dependency order** is determined by `package.json` dependencies - same as current behavior.
 
 ## Data Flow Diagram
 
@@ -210,19 +251,14 @@ flowchart TB
 import { makeJayInit } from '@jay-framework/fullstack-component';
 import { registerService, registerGlobalContext } from '...';
 
-interface StoresInitData {
-    currency: string;
-    enableCart: boolean;
-    enableSearch: boolean;
-}
-
-export const init = makeJayInit('@wix/stores')
+// No key needed - defaults to plugin name from plugin.yaml
+export const init = makeJayInit()
     .withServer(async () => {
         // Register server service
         const wixClient = getWixClient();
         registerService(STORES_SERVICE, createStoresService(wixClient));
         
-        // Return data for client
+        // Return data for client (type inferred)
         return {
             currency: 'USD',
             enableCart: true,
@@ -230,7 +266,7 @@ export const init = makeJayInit('@wix/stores')
         };
     })
     .withClient((data) => {
-        // data is typed as StoresInitData
+        // data is typed as { currency: string, enableCart: boolean, enableSearch: boolean }
         registerGlobalContext(STORES_CONFIG_CONTEXT, data);
         
         if (data.enableCart) {
@@ -245,12 +281,8 @@ export const init = makeJayInit('@wix/stores')
 // src/jay.init.ts
 import { makeJayInit } from '@jay-framework/fullstack-component';
 
-interface ProjectConfig {
-    itemsPerPage: number;
-    featureFlags: Record<string, boolean>;
-}
-
-export const init = makeJayInit('project')
+// No key needed - defaults to 'project' for project init
+export const init = makeJayInit()
     .withServer(async () => {
         const flags = await loadFeatureFlags();
         
@@ -260,6 +292,7 @@ export const init = makeJayInit('project')
         };
     })
     .withClient((config) => {
+        // config is typed as { itemsPerPage: number, featureFlags: ... }
         registerGlobalContext(APP_CONFIG_CONTEXT, config);
     });
 ```
@@ -268,7 +301,7 @@ export const init = makeJayInit('project')
 
 ```typescript
 // Just server, no client data
-export const init = makeJayInit('db-plugin')
+export const init = makeJayInit()
     .withServer(async () => {
         const db = await connectDatabase();
         registerService(DB_SERVICE, db);
@@ -280,7 +313,7 @@ export const init = makeJayInit('db-plugin')
 
 ```typescript
 // Just client, no server data needed
-export const init = makeJayInit('analytics')
+export const init = makeJayInit()
     .withClient(() => {
         initializeAnalytics();
     });
