@@ -34,8 +34,8 @@
     "@jay-framework/fullstack-component": "workspace:^",
     "@jay-framework/reactive": "workspace:^",
     "@jay-framework/runtime": "workspace:^",
-    "@jay-framework/stack-server-runtime": "workspace:^",
-    "@jay-framework/stack-client-runtime": "workspace:^"
+    "@jay-framework/stack-client-runtime": "workspace:^",
+    "@jay-framework/stack-server-runtime": "workspace:^"
   },
   "devDependencies": {
     "@babel/core": "^7.23.7",

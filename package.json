@@ -25,9 +25,10 @@
     "version:packages:major": "wsrun -p '@jay-framework/*' -s -e --report --prefix version major --deferred && yarn version apply --all",
     "publish": "node scripts/publish.cjs",
     "publish:interactive": "yarn workspaces foreach -p --no-private exec \"yarn npm publish --access public\"",
-    "publish:manual": "yarn workspaces foreach -p --no-private exec \"yarn npm publish --access public --otp ${NPM_OTP}\""
+    "publish:manual": "yarn workspaces foreach -p --no-private exec \"yarn npm publish --access public --otp ${NPM_OTP}\"",
+    "_install": "NPQ_PKG_MGR=yarn npx npq install"
   },
-  "packageManager": "yarn@3.6.4",
+  "packageManager": "yarn@4.12.0",
   "workspaces": {
     "packages": [
       "dev-environment",
