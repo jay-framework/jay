@@ -61,7 +61,7 @@ Tracks product inventory with methods:
 - `getAvailableUnits(productId)` - Returns stock count
 - `isInStock(productId)` - Checks if product is available
 
-### Project Initialization (`src/lib/init.ts`)
+### Project Initialization (`src/init.ts`)
 
 Project initialization uses the `makeJayInit` pattern to define both server and client initialization in a single file:
 
@@ -100,14 +100,14 @@ The dev server automatically loads this file on startup.
 
 ```mermaid
 flowchart TB
-    subgraph Server["Server (lib/init.ts)"]
+    subgraph Server["Server (src/init.ts)"]
         SI["makeJayInit().withServer()"]
         SI --> |"returns config"| DATA["{ store, features, ui }"]
     end
 
     DATA --> |"embedded in HTML"| HTML["Page HTML"]
 
-    subgraph Client["Client (lib/init.ts)"]
+    subgraph Client["Client (src/init.ts)"]
         HTML --> CI["makeJayInit().withClient(config)"]
         CI --> CTX["registerGlobalContext()"]
     end
@@ -153,7 +153,7 @@ Plugins are initialized in dependency order (from `package.json`), followed by t
 ```
 1. mood-tracker-plugin (init.ts)
 2. product-rating (init.ts)
-3. project (lib/init.ts)
+3. project (src/init.ts)
 ```
 
 ### Plugin init.ts Example
@@ -216,8 +216,7 @@ This example demonstrates the use of **contract files** (`.jay-contract`) to def
 ```
 fake-shop/
 ├── src/
-│   ├── lib/
-│   │   └── init.ts               # Consolidated server+client initialization
+│   ├── init.ts                   # Consolidated server+client initialization
 │   ├── products-database.ts      # Products service
 │   ├── inventory-service.ts      # Inventory service
 │   ├── actions/

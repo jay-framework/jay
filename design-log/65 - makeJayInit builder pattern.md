@@ -501,13 +501,97 @@ export const init = makeJayInit('custom-key')
 - `jay/packages/jay-stack/dev-server/lib/service-lifecycle.ts`
 - `jay/examples/jay-stack/mood-tracker-plugin/lib/init.ts` (new)
 
-### Backwards Compatibility
-
-- Legacy `jay.init.ts` with `onInit()` callbacks still supported
-- Legacy `jay.client-init.ts` with `onClientInit()` still supported
-- New pattern preferred for new plugins
-
 ### Test Results
 
 - `compiler-jay-stack/test/transform.test.ts`: 12/12 passing
 - `stack-server-runtime/test/generate-client-script.test.ts`: 11/11 passing
+
+---
+
+## Implementation Deviations and Refinements
+
+### 1. Project Init File Location
+
+**Original design:** `src/lib/init.ts`  
+**Final implementation:** `src/init.ts`
+
+Rationale: Aligns with simpler directory structure. Plugins use `lib/init.ts` because they don't have a `src/` directory distinction.
+
+### 2. Legacy API Removal
+
+**Original expectation:** Maintain backward compatibility with `jay.init.ts`, `jay.client-init.ts`, `onInit()`, and `onClientInit()`  
+**Final implementation:** All legacy APIs removed
+
+Files removed:
+- `stack-client-runtime/lib/client-init.ts` - removed `onClientInit`, `runClientInit`, `clearClientInitCallbacks`
+- `stack-server-runtime/lib/services.ts` - removed `serverInit()` function using `InitMarker`
+- `full-stack-component/lib/jay-stack-types.ts` - removed `InitMarker` interface and `createInitMarker` function
+
+### 3. `createJayService` Import Source
+
+**Issue discovered:** Client builds were pulling in server code due to `createJayService` being imported from `@jay-framework/stack-server-runtime`  
+**Solution:** Changed import to `@jay-framework/fullstack-component` which is client-safe (server code is stripped during compilation)
+
+### 4. NPM Package Init Resolution
+
+**Original design:** Look for `lib/init.ts` export  
+**Final implementation:** For compiled NPM packages, the init is exported from the package root or a subpath (e.g., `example-jay-mood-tracker-plugin` or `example-jay-mood-tracker-plugin/client`), not from `lib/init`
+
+The `resolvePluginInit()` function sets `initModule` to empty string for NPM packages, using the package name as the import path.
+
+### 5. Import Chain Tracking
+
+Added debugging capability to the compiler to detect and log import chains that cause server-only code to be pulled into client builds. Enabled via `trackImports` option in `jayStackPlugin()`.
+
+### 6. Project Init Key
+
+**Original design:** Project init key defaults to `'project'`  
+**Final implementation:** Confirmed - project init uses `'project'` as its key when storing client init data
+
+### File Structure Summary
+
+**Plugins (NPM or local):**
+```
+my-plugin/
+├── lib/
+│   └── init.ts           # makeJayInit() here
+├── plugin.yaml           # Optional: override export name
+└── package.json
+```
+
+**Projects:**
+```
+my-project/
+├── src/
+│   └── init.ts           # makeJayInit() here
+└── package.json
+```
+
+### Initialization Flow (Final)
+
+```mermaid
+sequenceDiagram
+    participant DevServer
+    participant Plugin1 as Plugin 1<br/>(lib/init.ts)
+    participant Plugin2 as Plugin 2<br/>(lib/init.ts)
+    participant Project as Project<br/>(src/init.ts)
+    participant ClientHTML as Client HTML
+    participant Browser
+
+    Note over DevServer: Server Startup
+    DevServer->>Plugin1: Load & call _serverInit()
+    Plugin1-->>DevServer: Return client data
+    DevServer->>Plugin2: Load & call _serverInit()
+    Plugin2-->>DevServer: Return client data
+    DevServer->>Project: Load & call _serverInit()
+    Project-->>DevServer: Return client data
+
+    Note over DevServer: Request Handling
+    DevServer->>ClientHTML: Generate with embedded data
+    ClientHTML-->>Browser: HTML + script imports
+
+    Note over Browser: Client Startup
+    Browser->>Plugin1: Import & call _clientInit(data)
+    Browser->>Plugin2: Import & call _clientInit(data)
+    Browser->>Project: Import & call _clientInit(data)
+```

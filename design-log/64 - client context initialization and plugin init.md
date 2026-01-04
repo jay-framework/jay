@@ -1,5 +1,7 @@
 # Client Context Initialization and Plugin Init Files
 
+> **⚠️ SUPERSEDED:** This design log has been largely superseded by [Design Log #65 - makeJayInit Builder Pattern](./65%20-%20makeJayInit%20builder%20pattern.md). The core concepts remain valid, but the implementation has evolved to use the `makeJayInit()` builder pattern instead of separate `serverInit`/`clientInit` functions and `InitMarker` types.
+
 ## Background
 
 Jay Stack has a server-side initialization pattern via `jay.init.ts`:

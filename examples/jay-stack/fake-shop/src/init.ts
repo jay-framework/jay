@@ -8,8 +8,8 @@
 import { makeJayInit } from '@jay-framework/fullstack-component';
 import { registerService, onShutdown } from '@jay-framework/stack-server-runtime';
 import { createJayContext, registerGlobalContext } from '@jay-framework/runtime';
-import { PRODUCTS_DATABASE_SERVICE, createProductsDatabaseService } from '../products-database';
-import { INVENTORY_SERVICE, createInventoryService } from '../inventory-service';
+import { PRODUCTS_DATABASE_SERVICE, createProductsDatabaseService } from './products-database';
+import { INVENTORY_SERVICE, createInventoryService } from './inventory-service';
 
 // ============================================================================
 // Type Definitions (shared between server and client)
@@ -98,6 +98,7 @@ export const init = makeJayInit()
             },
             ui: {
                 itemsPerPage: 12,
+                // @ts-ignore
                 analyticsEnabled: process.env.NODE_ENV === 'production',
             },
         };

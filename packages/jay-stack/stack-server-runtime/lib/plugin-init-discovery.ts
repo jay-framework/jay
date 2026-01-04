@@ -169,38 +169,71 @@ export async function discoverPluginsWithInit(
 /**
  * Resolves plugin init configuration.
  *
- * - Auto-discovers `lib/init.ts` or `lib/init.js`
- * - `init` in plugin.yaml can override the export name (for compiled packages)
- * - Returns null if no init is found
+ * For LOCAL plugins (development):
+ * - Auto-discovers `lib/init.ts` or `init.ts`
+ * - Module path points to the actual file
+ *
+ * For NPM plugins (compiled packages):
+ * - Init is exported from the main package entry (dist/index.js)
+ * - Module path is empty (import directly from package)
+ * - `init` in plugin.yaml can override the export name
+ *
+ * Returns null if no init is found.
  */
 function resolvePluginInit(
     pluginPath: string,
     initConfig: string | undefined,
     isLocal: boolean,
 ): { module: string; export: string } | null {
-    // Default paths
-    const defaultModulePath = 'lib/init';
     const defaultExport = 'init';
 
-    // Check if init file exists at default location
-    const tsPath = path.join(pluginPath, 'lib/init.ts');
-    const jsPath = path.join(pluginPath, 'lib/init.js');
+    if (isLocal) {
+        // For local plugins, look for actual init files
+        const initPaths = [
+            path.join(pluginPath, 'lib/init.ts'),
+            path.join(pluginPath, 'lib/init.js'),
+            path.join(pluginPath, 'init.ts'),
+            path.join(pluginPath, 'init.js'),
+        ];
 
-    const hasInitFile = fs.existsSync(tsPath) || fs.existsSync(jsPath);
+        for (const initPath of initPaths) {
+            if (fs.existsSync(initPath)) {
+                // Return relative path from plugin root
+                const relativePath = path.relative(pluginPath, initPath);
+                const modulePath = relativePath.replace(/\.(ts|js)$/, '');
+                const exportName = typeof initConfig === 'string' ? initConfig : defaultExport;
+                return { module: modulePath, export: exportName };
+            }
+        }
 
-    if (!hasInitFile && !initConfig) {
-        // No init file and no config
+        // No init file found for local plugin
         return null;
     }
 
-    // If plugin.yaml specifies init, it's the export name for compiled packages
-    // e.g., init: myPluginInit -> exports { myPluginInit } from the package
-    const exportName = typeof initConfig === 'string' ? initConfig : defaultExport;
+    // For NPM plugins (compiled), init is exported from main package entry
+    // Check if package.json exists and has proper exports
+    const packageJsonPath = path.join(pluginPath, 'package.json');
+    if (!fs.existsSync(packageJsonPath)) {
+        return null;
+    }
 
-    return {
-        module: defaultModulePath,
-        export: exportName,
-    };
+    try {
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+
+        // Check if this package exports 'init' (or custom name from plugin.yaml)
+        // This is a heuristic - the actual export check happens at runtime
+        const hasMain = packageJson.main || packageJson.exports;
+        if (!hasMain && !initConfig) {
+            return null;
+        }
+
+        // For NPM packages, module path is empty (import from package root)
+        // Export name comes from plugin.yaml or defaults to 'init'
+        const exportName = typeof initConfig === 'string' ? initConfig : defaultExport;
+        return { module: '', export: exportName };
+    } catch {
+        return null;
+    }
 }
 
 /**
@@ -280,9 +313,19 @@ export async function executePluginServerInits(
 ): Promise<void> {
     for (const plugin of plugins) {
         try {
-            const modulePath = plugin.isLocal
-                ? path.join(plugin.pluginPath, plugin.initModule)
-                : `${plugin.packageName}/${plugin.initModule}`;
+            // Build the module path
+            let modulePath: string;
+
+            if (plugin.isLocal) {
+                // Local plugins: full path to the init file
+                modulePath = path.join(plugin.pluginPath, plugin.initModule);
+            } else if (plugin.initModule) {
+                // NPM plugins with sub-path
+                modulePath = `${plugin.packageName}/${plugin.initModule}`;
+            } else {
+                // NPM plugins: import from package root (init exported from main bundle)
+                modulePath = plugin.packageName;
+            }
 
             let pluginModule: Record<string, any>;
 
@@ -342,15 +385,31 @@ export interface PluginClientInitInfo {
 /**
  * Prepares plugin information for client init script generation.
  *
+ * For LOCAL plugins: Use the init file path directly
+ * For NPM plugins: Use the `/client` subpath (client bundle exports init)
+ *
  * Filters to only plugins that have init modules and returns the
  * information needed to generate client-side imports and execution.
  */
 export function preparePluginClientInits(plugins: PluginWithInit[]): PluginClientInitInfo[] {
-    return plugins.map((plugin) => ({
-        name: plugin.name,
-        importPath: plugin.isLocal
-            ? path.join(plugin.pluginPath, plugin.initModule)
-            : `${plugin.packageName}/${plugin.initModule}`,
-        initExport: plugin.initExport,
-    }));
+    return plugins.map((plugin) => {
+        let importPath: string;
+
+        if (plugin.isLocal) {
+            // Local plugins: full path to the init file
+            importPath = path.join(plugin.pluginPath, plugin.initModule);
+        } else if (plugin.initModule) {
+            // NPM plugins with explicit sub-path
+            importPath = `${plugin.packageName}/${plugin.initModule}`;
+        } else {
+            // NPM plugins: import from /client subpath (client bundle)
+            importPath = `${plugin.packageName}/client`;
+        }
+
+        return {
+            name: plugin.name,
+            importPath,
+            initExport: plugin.initExport,
+        };
+    });
 }

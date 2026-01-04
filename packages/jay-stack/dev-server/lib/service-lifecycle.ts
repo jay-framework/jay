@@ -46,13 +46,13 @@ export class ServiceLifecycleManager {
 
     /**
      * Finds the project init file using makeJayInit pattern.
-     * Looks in: {projectRoot}/{sourceBase}/lib/init.{ts,js}
+     * Looks in: {projectRoot}/{sourceBase}/init.{ts,js}
      */
     private findProjectInitFile(): string | null {
         const extensions = ['.ts', '.js'];
 
         for (const ext of extensions) {
-            const filePath = path.join(this.projectRoot, this.sourceBase, 'lib/init' + ext);
+            const filePath = path.join(this.projectRoot, this.sourceBase, 'init' + ext);
             if (fs.existsSync(filePath)) {
                 return filePath;
             }
@@ -94,7 +94,7 @@ export class ServiceLifecycleManager {
 
         // Step 3: Load project init (last, so it can depend on plugin services)
         if (this.projectInitFilePath) {
-            console.log('[DevServer] Loading project init: lib/init.ts');
+            console.log('[DevServer] Loading project init: src/init.ts');
 
             try {
                 if (this.viteServer) {
@@ -121,7 +121,7 @@ export class ServiceLifecycleManager {
                 throw error;
             }
         } else {
-            console.log('[Services] No lib/init.ts found, skipping project initialization');
+            console.log('[Services] No init.ts found, skipping project initialization');
         }
 
         // Step 4: Execute all registered init callbacks (from onInit calls)
