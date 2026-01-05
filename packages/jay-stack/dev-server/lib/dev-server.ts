@@ -84,6 +84,48 @@ function handleOtherResponseCodes(
     else res.status(renderedResult.status).end('redirect to ' + renderedResult.location);
 }
 
+/**
+ * Filters plugins for a page, including transitive plugin dependencies.
+ *
+ * When a page uses wix-stores, we also need to include wix-server-client
+ * (which wix-stores depends on) in the client init.
+ */
+function filterPluginsForPage(
+    allPluginClientInits: PluginClientInitInfo[],
+    allPluginsWithInit: PluginWithInit[],
+    usedPackages: Set<string>,
+): PluginClientInitInfo[] {
+    // Build a map of package name -> plugin info for quick lookup
+    const pluginsByPackage = new Map<string, PluginWithInit>();
+    for (const plugin of allPluginsWithInit) {
+        pluginsByPackage.set(plugin.packageName, plugin);
+    }
+
+    // Expand usedPackages to include transitive plugin dependencies
+    const expandedPackages = new Set<string>(usedPackages);
+    const toProcess = [...usedPackages];
+
+    while (toProcess.length > 0) {
+        const packageName = toProcess.pop()!;
+        const plugin = pluginsByPackage.get(packageName);
+        if (!plugin) continue;
+
+        // Add this plugin's dependencies that are also plugins
+        for (const dep of plugin.dependencies) {
+            if (pluginsByPackage.has(dep) && !expandedPackages.has(dep)) {
+                expandedPackages.add(dep);
+                toProcess.push(dep);
+            }
+        }
+    }
+
+    // Filter plugin client inits to those in the expanded set
+    return allPluginClientInits.filter((plugin) => {
+        const pluginInfo = allPluginsWithInit.find((p) => p.name === plugin.name);
+        return pluginInfo && expandedPackages.has(pluginInfo.packageName);
+    });
+}
+
 function mkRoute(
     route: JayRoute,
     vite: ViteDevServer,
@@ -120,12 +162,12 @@ function mkRoute(
                     usedPackages,
                 } = pagePartsResult.val;
 
-                // Filter plugins to only those used on this page
-                const pluginsForPage = allPluginClientInits.filter((plugin) => {
-                    // Find the matching PluginWithInit to check packageName
-                    const pluginInfo = allPluginsWithInit.find((p) => p.name === plugin.name);
-                    return pluginInfo && usedPackages.has(pluginInfo.packageName);
-                });
+                // Filter plugins to only those used on this page (including transitive dependencies)
+                const pluginsForPage = filterPluginsForPage(
+                    allPluginClientInits,
+                    allPluginsWithInit,
+                    usedPackages,
+                );
 
                 const renderedSlowly = await slowlyPhase.runSlowlyForPage(
                     pageParams,

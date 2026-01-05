@@ -8,6 +8,7 @@ import {
     clearActionMetadataCache,
 } from './transform-action-imports';
 import { createImportChainTracker, ImportChainTrackerOptions } from './import-chain-tracker';
+import { createPluginClientImportResolver } from './plugin-client-import-resolver';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -23,6 +24,17 @@ export {
     type ExtractedActions,
 } from './transform-action-imports';
 export { createImportChainTracker, type ImportChainTrackerOptions } from './import-chain-tracker';
+export {
+    createPluginClientImportResolver,
+    createDefaultPluginDetector,
+    transformImports,
+    extractPackageName,
+    isSubpathImport,
+    type PluginClientImportResolverOptions,
+    type PluginDetector,
+    type TransformImportsOptions,
+    type TransformImportsResult,
+} from './plugin-client-import-resolver';
 
 export interface JayStackCompilerOptions extends JayRollupConfig {
     /**
@@ -91,6 +103,10 @@ export function jayStackCompiler(options: JayStackCompilerOptions = {}): Plugin[
     if (shouldTrackImports) {
         plugins.push(createImportChainTracker(trackerOptions));
     }
+
+    // Plugin client import resolver - rewrites plugin package imports to /client in client builds
+    // This handles transitive plugin dependencies (e.g., wix-stores -> wix-server-client)
+    plugins.push(createPluginClientImportResolver({ verbose: !!shouldTrackImports }));
 
     plugins.push(
         // First: Jay Stack code splitting transformation
