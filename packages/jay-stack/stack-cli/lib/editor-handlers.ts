@@ -10,9 +10,13 @@ import type {
     SaveImageMessage,
     HasImageMessage,
     GetProjectInfoMessage,
+    ExportMessage,
+    ImportMessage,
     SaveImageResponse,
     HasImageResponse,
     GetProjectInfoResponse,
+    ExportResponse,
+    ImportResponse,
     ProjectInfo,
     ProjectPage,
     ProjectComponent,
@@ -41,6 +45,30 @@ import {
 const PAGE_FILENAME = `page${JAY_EXTENSION}`;
 const PAGE_CONTRACT_FILENAME = `page${JAY_CONTRACT_EXTENSION}`;
 const PAGE_CONFIG_FILENAME = 'page.conf.yaml';
+
+/**
+ * Converts a page URL/route to a directory path within the pages base directory.
+ * The root path '/' is converted to an empty string.
+ * Dynamic route parameters are converted from URL format to filesystem format:
+ * - URL format: ':paramName' → Filesystem format: '[paramName]'
+ * 
+ * @param pageUrl - The page URL or route (e.g., '/', '/about', '/products/:id')
+ * @param pagesBasePath - The base path for pages
+ * @returns The full directory path for the page
+ * 
+ * @example
+ * pageUrlToDirectoryPath('/', '/src/pages') → '/src/pages'
+ * pageUrlToDirectoryPath('/about', '/src/pages') → '/src/pages/about'
+ * pageUrlToDirectoryPath('/products/:id', '/src/pages') → '/src/pages/products/[id]'
+ */
+function pageUrlToDirectoryPath(pageUrl: string, pagesBasePath: string): string {
+    const routePath = pageUrl === '/' ? '' : pageUrl;
+    
+    // Convert dynamic route parameters from URL format (:param) to filesystem format ([param])
+    const fsPath = routePath.replace(/:([^/]+)/g, '[$1]');
+    
+    return path.join(pagesBasePath, fsPath);
+}
 
 // Helper function to convert JayType to string representation for protocol
 function jayTypeToString(jayType: JayType | undefined): string | undefined {
@@ -731,8 +759,7 @@ async function handlePagePublish(
         const pagesBasePath = path.resolve(resolvedConfig.devServer.pagesBase);
 
         // Convert route to file path
-        const routePath = page.route === '/' ? '' : page.route;
-        const dirname = path.join(pagesBasePath, routePath);
+        const dirname = pageUrlToDirectoryPath(page.route, pagesBasePath);
         const fullPath = path.join(dirname, PAGE_FILENAME);
 
         // Ensure directory exists
@@ -988,10 +1015,93 @@ export function createEditorHandlers(
         }
     };
 
+    const onExport = async <TVendorDoc>(
+        params: ExportMessage<TVendorDoc>,
+    ): Promise<ExportResponse> => {
+        try {
+            const pagesBasePath = path.resolve(config.devServer.pagesBase);
+            const { vendorId, pageUrl, vendorDoc } = params;
+
+            // Convert route to file path
+            const dirname = pageUrlToDirectoryPath(pageUrl, pagesBasePath);
+            const vendorFilename = `page.${vendorId}.json`;
+            const vendorFilePath = path.join(dirname, vendorFilename);
+
+            // Ensure directory exists
+            await fs.promises.mkdir(dirname, { recursive: true });
+
+            // Write the vendor document as JSON
+            await fs.promises.writeFile(
+                vendorFilePath,
+                JSON.stringify(vendorDoc, null, 2),
+                'utf-8',
+            );
+
+            console.log(`📦 Exported ${vendorId} document to: ${vendorFilePath}`);
+
+            return {
+                type: 'export',
+                success: true,
+                vendorSourcePath: vendorFilePath,
+            };
+        } catch (error) {
+            console.error('Failed to export vendor document:', error);
+            return {
+                type: 'export',
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error',
+            };
+        }
+    };
+
+    const onImport = async <TVendorDoc>(
+        params: ImportMessage<TVendorDoc>,
+    ): Promise<ImportResponse<TVendorDoc>> => {
+        try {
+            const pagesBasePath = path.resolve(config.devServer.pagesBase);
+            const { vendorId, pageUrl } = params;
+
+            // Convert route to file path
+            const dirname = pageUrlToDirectoryPath(pageUrl, pagesBasePath);
+            const vendorFilename = `page.${vendorId}.json`;
+            const vendorFilePath = path.join(dirname, vendorFilename);
+
+            // Check if the file exists
+            if (!fs.existsSync(vendorFilePath)) {
+                return {
+                    type: 'import',
+                    success: false,
+                    error: `No ${vendorId} document found at ${pageUrl}. File not found: ${vendorFilePath}`,
+                };
+            }
+
+            // Read and parse the vendor document
+            const fileContent = await fs.promises.readFile(vendorFilePath, 'utf-8');
+            const vendorDoc = JSON.parse(fileContent) as TVendorDoc;
+
+            console.log(`📥 Imported ${vendorId} document from: ${vendorFilePath}`);
+
+            return {
+                type: 'import',
+                success: true,
+                vendorDoc,
+            };
+        } catch (error) {
+            console.error('Failed to import vendor document:', error);
+            return {
+                type: 'import',
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error',
+            };
+        }
+    };
+
     return {
         onPublish,
         onSaveImage,
         onHasImage,
         onGetProjectInfo,
+        onExport,
+        onImport,
     };
 }

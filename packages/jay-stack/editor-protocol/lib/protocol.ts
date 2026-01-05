@@ -66,6 +66,19 @@ export interface GetProjectInfoMessage extends BaseMessage<GetProjectInfoRespons
     type: 'getProjectInfo';
 }
 
+export interface ExportMessage<TVendorDoc> extends BaseMessage<ExportResponse> {
+    type: 'export';
+    vendorId: string;
+    pageUrl: string;
+    vendorDoc: TVendorDoc;
+}
+
+export interface ImportMessage<TVendorDoc> extends BaseMessage<ImportResponse<TVendorDoc>> {
+    type: 'import';
+    vendorId: string;
+    pageUrl: string;
+}
+
 // Response types with discriminators
 export interface PublishResponse extends BaseResponse {
     type: 'publish';
@@ -129,27 +142,46 @@ export interface GetProjectInfoResponse extends BaseResponse {
     info: ProjectInfo;
 }
 
+export interface ExportResponse extends BaseResponse {
+    type: 'export';
+    vendorSourcePath?: string;
+    jayHtmlPath?: string;
+    contractPath?: string;
+    warnings?: string[];
+}
+
+export interface ImportResponse<TVendorDoc> extends BaseResponse {
+    type: 'import';
+    vendorDoc?: TVendorDoc;
+}
+
 // Union types for all messages and responses
-export type EditorProtocolMessageTypes =
+export type EditorProtocolMessageTypes<TVendorDoc> =
     | PublishMessage
     | SaveImageMessage
     | HasImageMessage
-    | GetProjectInfoMessage;
-export type EditorProtocolResponseTypes =
+    | GetProjectInfoMessage
+    | ExportMessage<TVendorDoc>
+    | ImportMessage<TVendorDoc>;
+
+export type EditorProtocolResponseTypes<TVendorDoc> =
     | PublishResponse
     | SaveImageResponse
     | HasImageResponse
-    | GetProjectInfoResponse;
+    | GetProjectInfoResponse
+    | ExportResponse
+    | ImportResponse<TVendorDoc>;
 
-export interface ProtocolMessage {
+export interface ProtocolMessage<TVendorDoc> {
     id: string;
     timestamp: number;
-    payload: EditorProtocolMessageTypes;
+    payload: EditorProtocolMessageTypes<TVendorDoc>;
 }
-export interface ProtocolResponse {
+
+export interface ProtocolResponse<TVendorDoc> {
     id: string;
     timestamp: number;
-    payload: EditorProtocolResponseTypes;
+    payload: EditorProtocolResponseTypes<TVendorDoc>;
 }
 
 // Editor side interface for communicating with dev server
@@ -165,6 +197,12 @@ export interface EditorProtocol {
 
     // Get comprehensive project information including configuration and contracts
     getProjectInfo(params: GetProjectInfoMessage): Promise<GetProjectInfoResponse>;
+
+    // Export design from vendor (e.g., Figma) to Jay
+    export<TVendorDoc>(params: ExportMessage<TVendorDoc>): Promise<ExportResponse>;
+
+    // Import design from Jay back to vendor
+    import<TVendorDoc>(params: ImportMessage<TVendorDoc>): Promise<ImportResponse<TVendorDoc>>;
 }
 
 // Dev server side interface for handling editor requests
@@ -180,4 +218,10 @@ export interface DevServerProtocol {
 
     // Handle project info requests
     onGetProjectInfo(callback: EditorProtocol['getProjectInfo']): void;
+
+    // Handle vendor export requests
+    onExport(callback: EditorProtocol['export']): void;
+
+    // Handle vendor import requests
+    onImport(callback: EditorProtocol['import']): void;
 }

@@ -38,6 +38,12 @@ Jay enables you to:
 - [Component Development](./core/components.md) - Building Jay components with reactive state
 - [Jay Stack Components](./core/jay-stack.md) - Full-stack components with server-side rendering
 
+### Design Tool Integration
+
+- [Editor Protocol](./jay-stack-editor-protocol.md) - Connect design tools (Figma, Wix, etc.) to Jay
+- [Project Info API](./jay-stack-project-info-api.md) - Query project structure and contracts
+- [Export/Import API](./jay-stack-editor-protocol.md#3-exportimport-api) - Save and restore vendor-specific designs
+
 ### Advanced Topics
 
 - [State Management](./advanced/state-management.md) - Advanced reactive patterns
@@ -86,7 +92,8 @@ Jay enables you to:
 
 Jay uses contracts to define the interface between design tools and components. This enables:
 
-- **Design tool integration** - Connect Figma, Sketch, or other design tools
+- **Design tool integration** - Connect Figma, Sketch, Wix, or other design tools via the Editor Protocol
+- **Bidirectional sync** - Export designs to Jay and import them back to your design tool
 - **Component reusability** - Use the same component with different designs
 - **Type safety** - Automatic TypeScript generation from contracts
 
