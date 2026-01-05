@@ -253,46 +253,50 @@ Note: Using `transform` instead of `resolveId` is critical because rollup's `ext
 The dev server filters which plugin inits to include in each page's client script based on `usedPackages`. However, this only included directly-used packages, not their transitive plugin dependencies.
 
 Fixed in `dev-server/lib/dev-server.ts`:
+
 - Added `filterPluginsForPage()` function
 - Expands `usedPackages` to include transitive plugin dependencies
 - Uses the plugin's `dependencies` array to find plugin-to-plugin dependencies
 
 ```typescript
 function filterPluginsForPage(
-    allPluginClientInits: PluginClientInitInfo[],
-    allPluginsWithInit: PluginWithInit[],
-    usedPackages: Set<string>,
+  allPluginClientInits: PluginClientInitInfo[],
+  allPluginsWithInit: PluginWithInit[],
+  usedPackages: Set<string>,
 ): PluginClientInitInfo[] {
-    // Expand usedPackages to include transitive plugin dependencies
-    const expandedPackages = new Set<string>(usedPackages);
-    const toProcess = [...usedPackages];
+  // Expand usedPackages to include transitive plugin dependencies
+  const expandedPackages = new Set<string>(usedPackages);
+  const toProcess = [...usedPackages];
 
-    while (toProcess.length > 0) {
-        const packageName = toProcess.pop()!;
-        const plugin = pluginsByPackage.get(packageName);
-        if (!plugin) continue;
+  while (toProcess.length > 0) {
+    const packageName = toProcess.pop()!;
+    const plugin = pluginsByPackage.get(packageName);
+    if (!plugin) continue;
 
-        for (const dep of plugin.dependencies) {
-            if (pluginsByPackage.has(dep) && !expandedPackages.has(dep)) {
-                expandedPackages.add(dep);
-                toProcess.push(dep);
-            }
-        }
+    for (const dep of plugin.dependencies) {
+      if (pluginsByPackage.has(dep) && !expandedPackages.has(dep)) {
+        expandedPackages.add(dep);
+        toProcess.push(dep);
+      }
     }
-    // ...filter using expandedPackages
+  }
+  // ...filter using expandedPackages
 }
 ```
 
 ### Files Changed
 
 1. `stack-server-runtime/lib/plugin-init-discovery.ts`
+
    - Added transitive dependency discovery
 
 2. `compiler-jay-stack/lib/plugin-client-import-resolver.ts` (new)
+
    - Vite plugin for client import resolution
    - Extracted `PluginDetector` interface for testability
 
 3. `compiler-jay-stack/lib/index.ts`
+
    - Added import and usage of plugin client import resolver
    - Exported new utilities
 
