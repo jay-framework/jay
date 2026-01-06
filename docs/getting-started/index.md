@@ -74,6 +74,7 @@ A typical Jay project looks like this:
 ```
 my-jay-project/
 ├── src/
+│   ├── init.ts                 # Application initialization
 │   ├── components/
 │   │   ├── counter/
 │   │   │   ├── counter.jay-html    # Design contract
@@ -87,6 +88,25 @@ my-jay-project/
 ├── package.json
 ├── tsconfig.json
 └── vite.config.ts
+```
+
+The `src/init.ts` file provides centralized initialization for both server and client:
+
+```typescript
+import { makeJayInit } from '@jay-framework/fullstack-component';
+import { registerService } from '@jay-framework/stack-server-runtime';
+import { registerGlobalContext } from '@jay-framework/runtime';
+
+export const init = makeJayInit()
+  .withServer(async () => {
+    // Register server services
+    registerService(MY_SERVICE, createService());
+    return { config: 'data for client' };
+  })
+  .withClient((data) => {
+    // Register global contexts
+    registerGlobalContext(MY_CONTEXT, data.config);
+  });
 ```
 
 ## Key Concepts to Understand

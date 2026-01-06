@@ -37,5 +37,14 @@ export interface JayHtmlSourceFile extends CompilerSourceFile {
     contract?: Contract; // The parsed contract if using contract reference
     contractRef?: string; // Path to contract file if using contract reference
     hasInlineData?: boolean; // True if using inline data structure
-    trackByMap?: Record<string, string>; // Map from array property path to trackBy field name for deep merge
+    /**
+     * TrackBy map for server-side merge (slow → fast).
+     * Includes all tracked arrays.
+     */
+    serverTrackByMap?: Record<string, string>;
+    /**
+     * TrackBy map for client-side merge (fast → interactive).
+     * Excludes arrays with phase 'fast+interactive' (dynamic arrays that can be fully replaced).
+     */
+    clientTrackByMap?: Record<string, string>;
 }

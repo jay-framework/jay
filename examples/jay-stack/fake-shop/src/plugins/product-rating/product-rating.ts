@@ -1,6 +1,8 @@
 import {
     makeJayStackComponent,
-    partialRender,
+    makeJayAction,
+    makeJayQuery,
+    ActionError,
     phaseOutput,
     RenderPipeline,
     Signals,
@@ -10,7 +12,6 @@ import {
     ProductRatingRefs,
     ProductRatingSlowViewState,
     ProductRatingFastViewState,
-    ProductRatingInteractiveViewState,
 } from './product-rating.jay-contract';
 import { createMemo, createSignal, Props } from '@jay-framework/component';
 
@@ -102,3 +103,77 @@ export const productRating = makeJayStackComponent<ProductRatingContract>()
             };
         },
     );
+
+// ============================================================================
+// Plugin Actions
+// ============================================================================
+
+// In-memory ratings store (in a real app, this would be database-backed)
+interface Rating {
+    productId: string;
+    userId: string;
+    rating: number;
+    createdAt: Date;
+}
+
+const ratingsStore: Rating[] = [];
+
+/**
+ * Submit a rating for a product.
+ */
+export const submitRating = makeJayAction('productRating.submit').withHandler(
+    async (input: { productId: string; userId: string; rating: number }) => {
+        // Validate rating
+        if (input.rating < 1 || input.rating > 5) {
+            throw new ActionError('INVALID_RATING', 'Rating must be between 1 and 5');
+        }
+
+        // Check if user already rated this product
+        const existingRating = ratingsStore.find(
+            (r) => r.productId === input.productId && r.userId === input.userId,
+        );
+
+        if (existingRating) {
+            // Update existing rating
+            existingRating.rating = input.rating;
+            existingRating.createdAt = new Date();
+        } else {
+            // Add new rating
+            ratingsStore.push({
+                productId: input.productId,
+                userId: input.userId,
+                rating: input.rating,
+                createdAt: new Date(),
+            });
+        }
+
+        return {
+            success: true,
+            message: 'Rating submitted',
+        };
+    },
+);
+
+/**
+ * Get ratings for a product.
+ */
+export const getRatings = makeJayQuery('productRating.get')
+    .withCaching({ maxAge: 60 })
+    .withHandler(async (input: { productId: string }) => {
+        const productRatings = ratingsStore.filter((r) => r.productId === input.productId);
+
+        if (productRatings.length === 0) {
+            return {
+                averageRating: 0,
+                totalRatings: 0,
+            };
+        }
+
+        const sum = productRatings.reduce((acc, r) => acc + r.rating, 0);
+        const average = sum / productRatings.length;
+
+        return {
+            averageRating: Math.round(average * 10) / 10, // Round to 1 decimal
+            totalRatings: productRatings.length,
+        };
+    });

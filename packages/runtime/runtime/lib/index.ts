@@ -19,6 +19,9 @@ export {
     restoreContext,
     ConstructContext,
     currentConstructionContext,
+    registerGlobalContext,
+    useGlobalContext,
+    clearGlobalContextRegistry,
 } from './context';
 export {
     type ManagedRefs,

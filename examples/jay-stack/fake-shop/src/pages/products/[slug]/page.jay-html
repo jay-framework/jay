@@ -14,7 +14,14 @@
   <h1>{name}</h1>
   <h2>{price}</h2>
   <h2>{sku}</h2>
-  
+    <div if="type===physical">physical</div>
+    <div if="type===virtual">virtual</div>
+
+  <button ref="addToCart">Add to Cart (will print in client and server consoles)</button>
+    <div if="!inStock">
+        out of stock, come back later
+    </div>
+
   <!-- Product Rating Widget (Local Plugin) -->
   <div class="rating-display">
     <span class="rating-value">★ {rating.rating}</span>
@@ -37,11 +44,6 @@
   <div if="inStock">
     <button ref="add-to-cart">add to cart</button>
   </div>
-  <div if="!inStock">
-    out of stock, come back later
-  </div>
-  <div if="type===physical">physical</div>
-  <div if="type===virtual">virtual</div>
 </div>
 </body>
 </html>

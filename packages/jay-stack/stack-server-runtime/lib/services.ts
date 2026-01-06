@@ -177,3 +177,84 @@ export function clearLifecycleCallbacks(): void {
     initCallbacks.length = 0;
     shutdownCallbacks.length = 0;
 }
+
+// ============================================================================
+// Client Init Data
+// ============================================================================
+
+/**
+ * Client init data is static configuration passed from server to client.
+ * It's set once at server startup (not per-request) and embedded in all page HTML.
+ *
+ * Data is namespaced by key (typically plugin name or 'project') so each
+ * client init callback receives only its own data.
+ *
+ * Use cases:
+ * - OAuth client IDs
+ * - Feature flags
+ * - A/B test configuration
+ * - Items per page defaults
+ *
+ * Note: This data should be slowly-changing and NOT per-request/per-user.
+ * For dynamic data, use page props and component rendering.
+ */
+let clientInitData: Record<string, Record<string, any>> = {};
+
+/**
+ * Sets client init data for a specific namespace (plugin or project).
+ * Each namespace's data is kept separate and passed only to the matching
+ * client init callback.
+ *
+ * @param key - Namespace key (plugin name or 'project')
+ * @param data - Data object for this namespace
+ *
+ * @example
+ * ```typescript
+ * // In plugin server init
+ * onInit(async () => {
+ *   setClientInitData('wix-stores', {
+ *     currency: 'USD',
+ *     apiEndpoint: process.env.STORES_API_URL,
+ *   });
+ * });
+ *
+ * // In project jay.init.ts
+ * onInit(async () => {
+ *   setClientInitData('project', {
+ *     oauthClientId: process.env.OAUTH_CLIENT_ID,
+ *     featureFlags: await loadFeatureFlags(),
+ *   });
+ * });
+ * ```
+ */
+export function setClientInitData(key: string, data: Record<string, any>): void {
+    clientInitData[key] = { ...(clientInitData[key] || {}), ...data };
+}
+
+/**
+ * Gets all namespaced client init data.
+ * Internal API used by page rendering to embed data in HTML.
+ *
+ * @returns Object with namespace keys and their data
+ */
+export function getClientInitData(): Record<string, Record<string, any>> {
+    return clientInitData;
+}
+
+/**
+ * Gets client init data for a specific namespace.
+ *
+ * @param key - Namespace key
+ * @returns Data for that namespace, or empty object if not set
+ */
+export function getClientInitDataForKey(key: string): Record<string, any> {
+    return clientInitData[key] || {};
+}
+
+/**
+ * Clears client init data.
+ * Internal API used by dev-server during hot reload.
+ */
+export function clearClientInitData(): void {
+    clientInitData = {};
+}

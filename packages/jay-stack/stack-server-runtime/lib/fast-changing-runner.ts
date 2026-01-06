@@ -1,4 +1,4 @@
-import { AnyFastRenderResult, PageProps, partialRender } from '@jay-framework/fullstack-component';
+import { AnyFastRenderResult, PageProps, phaseOutput } from '@jay-framework/fullstack-component';
 import { DevServerPagePart } from './load-page-parts';
 import { resolveServices } from './services';
 
@@ -35,5 +35,5 @@ export async function renderFastChangingData(
         }
     }
 
-    return Promise.resolve(partialRender(fastViewState, fastCarryForward));
+    return Promise.resolve(phaseOutput(fastViewState, fastCarryForward));
 }

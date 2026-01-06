@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/stack-client-runtime",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "type": "module",
   "license": "Apache-2.0",
   "main": "dist/index.js",
@@ -29,7 +29,8 @@
   "dependencies": {
     "@jay-framework/component": "workspace:^",
     "@jay-framework/fullstack-component": "workspace:^",
-    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/runtime": "workspace:^",
+    "@jay-framework/view-state-merge": "workspace:^"
   },
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",

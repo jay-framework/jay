@@ -3,3 +3,6 @@ export * from './fast-changing-runner';
 export * from './generate-client-script';
 export { loadPageParts, type LoadedPageParts, type DevServerPagePart } from './load-page-parts';
 export * from './services';
+export * from './action-registry';
+export * from './action-discovery';
+export * from './plugin-init-discovery';

@@ -23,11 +23,12 @@ my-plugin/
 ├── vite.config.ts            # Build configuration for dual builds
 ├── lib/                      # Source files
 │   ├── index.ts              # Main entry - exports all components
+│   ├── init.ts               # Plugin initialization (optional)
 │   ├── my-component.ts       # Component implementation
 │   └── my-component.jay-contract  # Component contract
 └── dist/                     # Built output (generated)
-    ├── index.js              # Server build
-    ├── index.client.js       # Client build
+    ├── index.js              # Server build (includes init)
+    ├── index.client.js       # Client build (includes init)
     ├── index.d.ts            # TypeScript declarations
     └── my-component.jay-contract  # Copied contract files
         └── my-component.jay-contract.d.ts
@@ -176,12 +177,15 @@ export const moodTracker = makeJayStackComponent<MoodTrackerContract>()
 
 ### 5. Export from Index
 
-Export all components from the main entry point:
+Export all components (and optionally init) from the main entry point:
 
 **`lib/index.ts`:**
 
 ```typescript
 export { moodTracker } from './mood-tracker';
+
+// Export init if you have plugin initialization
+export { init } from './init';
 ```
 
 ### 6. Create the Plugin Manifest
@@ -480,16 +484,77 @@ export const weatherWidget = makeJayStackComponent<WeatherContract>()
   });
 ```
 
-**Important:** Consumers of your plugin must register the service in their `src/jay.init.ts`:
+**Important:** Consumers of your plugin must register the service in their `src/init.ts`:
 
 ```typescript
+import { makeJayInit } from '@jay-framework/fullstack-component';
 import { registerService } from '@jay-framework/stack-server-runtime';
 import { WEATHER_SERVICE, createWeatherService } from 'my-weather-plugin';
 
-registerService(WEATHER_SERVICE, createWeatherService());
+export const init = makeJayInit().withServer(async () => {
+  registerService(WEATHER_SERVICE, createWeatherService());
+  return {};
+});
 ```
 
 See [Jay Stack Components - Service Management](./jay-stack.md#service-management) for details.
+
+### Plugin Initialization
+
+Plugins can provide their own initialization logic that runs automatically when the plugin is loaded. Use `makeJayInit` in `lib/init.ts`:
+
+**`lib/init.ts`:**
+
+```typescript
+import { makeJayInit } from '@jay-framework/fullstack-component';
+import { registerService } from '@jay-framework/stack-server-runtime';
+import { createJayContext, registerGlobalContext } from '@jay-framework/runtime';
+import { WEATHER_SERVICE, createWeatherService } from './weather-service';
+
+// Context available to all client components using this plugin
+export const WEATHER_CONFIG_CONTEXT = createJayContext<WeatherConfig>();
+
+export const init = makeJayInit()
+  .withServer(async () => {
+    // Register plugin services
+    const weatherService = createWeatherService({
+      apiKey: process.env.WEATHER_API_KEY,
+    });
+    registerService(WEATHER_SERVICE, weatherService);
+
+    // Return configuration for client
+    return {
+      refreshInterval: 30000,
+      units: 'metric',
+      showAlerts: true,
+    };
+  })
+  .withClient((config) => {
+    // config is typed based on withServer return
+    console.log('[Weather Plugin] Initializing client');
+    registerGlobalContext(WEATHER_CONFIG_CONTEXT, config);
+  });
+```
+
+**Key points:**
+
+- **Single file**: Server and client init co-located with automatic type flow
+- **Auto-discovery**: Framework finds `lib/init.ts` automatically
+- **Dependency order**: Plugin inits run before project init, in dependency order from `package.json`
+- **Compiler transformation**: `withServer` is stripped from client builds, `withClient` from server builds
+
+**Optional: Override export name in `plugin.yaml`:**
+
+```yaml
+name: weather-plugin
+init: myCustomInit # Look for 'myCustomInit' instead of 'init'
+
+contracts:
+  - name: weather-widget
+    # ...
+```
+
+See [Design Log #65](../design-log/65%20-%20makeJayInit%20builder%20pattern.md) for full implementation details.
 
 ### Dynamic Contracts
 

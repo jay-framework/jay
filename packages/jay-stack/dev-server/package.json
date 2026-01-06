@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/dev-server",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "type": "module",
   "license": "Apache-2.0",
   "main": "dist/index.js",
@@ -30,6 +30,7 @@
     "@jay-framework/stack-client-runtime": "workspace:^",
     "@jay-framework/stack-route-scanner": "workspace:^",
     "@jay-framework/stack-server-runtime": "workspace:^",
+    "@jay-framework/view-state-merge": "workspace:^",
     "vite": "^5.0.11"
   },
   "devDependencies": {

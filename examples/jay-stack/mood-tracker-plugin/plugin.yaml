@@ -5,3 +5,12 @@ contracts:
     contract: mood-tracker.jay-contract # Export subpath (matches package.json exports key)
     component: moodTracker # Exported full stack component in index.ts
     description: A mood tracker component with happy, neutral, and sad states
+
+# Actions exported from this plugin (named exports from main module)
+actions:
+  - submitMood
+  - getMoodStats
+  - clearMoodHistory
+# Plugin initialization
+# Auto-discovers lib/init.ts which exports the makeJayInit constant
+# For compiled packages, specify the export name: init: "myPluginInit"

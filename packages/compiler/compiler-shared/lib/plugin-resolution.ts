@@ -9,10 +9,27 @@ const require = createRequire(import.meta.url);
 export const LOCAL_PLUGIN_PATH = 'src/plugins';
 
 /**
- * Plugin manifest structure (contracts section only - subset of full PluginManifest)
+ * Plugin initialization configuration.
+ *
+ * For the `makeJayInit` pattern:
+ * - undefined: Auto-discover `lib/init.ts` (for uncompiled/local plugins)
+ * - string: Export name for the JayInit constant (for compiled/NPM packages)
+ *
+ * @example
+ * ```yaml
+ * # For compiled NPM packages - specify the export name
+ * name: my-plugin
+ * init: myPluginInit
+ * ```
+ */
+export type PluginInitConfig = string;
+
+/**
+ * Plugin manifest structure from plugin.yaml
  */
 export interface PluginManifest {
     name: string;
+    version?: string;
     module?: string; // Optional: For local plugins, relative path to module (e.g., "dist/index.js"). For NPM packages, omit to use main export.
     contracts?: Array<{
         name: string;
@@ -26,6 +43,10 @@ export interface PluginManifest {
         component: string;
         prefix: string;
     };
+    /** Named exports from plugin backend bundle that are JayAction instances */
+    actions?: string[];
+    /** Plugin initialization configuration */
+    init?: PluginInitConfig;
 }
 
 /**

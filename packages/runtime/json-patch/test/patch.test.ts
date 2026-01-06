@@ -21,7 +21,7 @@ describe('apply JSON patch', () => {
         });
 
         it('should apply an add patch', () => {
-            let obj = { a: 1, b: 2, c: 3 };
+            let obj: Record<string, number> = { a: 1, b: 2, c: 3 };
             obj = patch(obj, [{ op: ADD, path: ['d'], value: 4 }]);
             expect(obj).toEqual({ a: 1, b: 2, c: 3, d: 4 });
         });
@@ -30,6 +30,13 @@ describe('apply JSON patch', () => {
             let obj = { a: 1, b: 2, c: 3 };
             obj = patch(obj, [{ op: REMOVE, path: ['c'] }]);
             expect(obj).toEqual({ a: 1, b: 2 });
+        });
+
+        it('add for existing path acts as replace', () => {
+            let obj = { x: { a: 1, b: 2, c: 3 } };
+            // Intentionally testing invalid path - bypassing type check
+            obj = patch(obj, [{ op: ADD, path: ['x', 'a'], value: 12 } as any]);
+            expect(obj).toEqual({ x: { a: 12, b: 2, c: 3 } });
         });
     });
 
@@ -62,7 +69,7 @@ describe('apply JSON patch', () => {
         });
 
         it('should apply an add patch', () => {
-            let obj = { x: { a: 1, b: 2, c: 3 } };
+            let obj: { x: Record<string, number> } = { x: { a: 1, b: 2, c: 3 } };
             obj = patch(obj, [{ op: ADD, path: ['x', 'd'], value: 4 }]);
             expect(obj).toEqual({ x: { a: 1, b: 2, c: 3, d: 4 } });
         });
@@ -238,7 +245,7 @@ describe('apply JSON patch', () => {
             open: true,
         };
 
-        const patchForTree: JSONPatch = [
+        const patchForTree: JSONPatch<typeof originalTree> = [
             { op: 'remove', path: ['node', 'children', 2] },
             {
                 op: 'add',
@@ -249,7 +256,7 @@ describe('apply JSON patch', () => {
                     children: [{ id: 'ea', name: 'ea node', children: [] }],
                 },
             },
-            { op: 'remove', path: ['node', 'children', '0', 'children', '1'] },
+            { op: 'remove', path: ['node', 'children', 0, 'children', 1] },
         ];
 
         it('should patch a complex tree', () => {
@@ -261,13 +268,15 @@ describe('apply JSON patch', () => {
     describe('problems', () => {
         it('should ignore replace for non existing path', () => {
             let obj = { a: { b: { c: { d: 1 } } } };
-            obj = patch(obj, [{ op: REPLACE, path: ['a', 'x', 'y', 'z'], value: 5 }]);
+            // Intentionally testing invalid path - bypassing type check
+            obj = patch(obj, [{ op: REPLACE, path: ['a', 'x', 'y', 'z'], value: 5 } as any]);
             expect(obj).toEqual({ a: { b: { c: { d: 1 } } } });
         });
 
         it('should ignore add for non existing path', () => {
             let obj = { x: { a: 1, b: 2, c: 3 } };
-            obj = patch(obj, [{ op: ADD, path: ['x', 'y', 'z'], value: 12 }]);
+            // Intentionally testing invalid path - bypassing type check
+            obj = patch(obj, [{ op: ADD, path: ['x', 'y', 'z'], value: 12 } as any]);
             expect(obj).toEqual({ x: { a: 1, b: 2, c: 3 } });
         });
 

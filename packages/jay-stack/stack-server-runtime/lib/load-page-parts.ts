@@ -19,7 +19,12 @@ export interface DevServerPagePart {
 
 export interface LoadedPageParts {
     parts: DevServerPagePart[];
-    trackByMap?: Record<string, string>;
+    /** TrackBy map for server-side merge (slow → fast) */
+    serverTrackByMap?: Record<string, string>;
+    /** TrackBy map for client-side merge (fast → interactive) */
+    clientTrackByMap?: Record<string, string>;
+    /** NPM package names used on this page (for filtering plugin inits) */
+    usedPackages: Set<string>;
 }
 
 export async function loadPageParts(
@@ -62,6 +67,8 @@ export async function loadPageParts(
     );
 
     return jayHtmlWithValidations.mapAsync(async (jayHtml) => {
+        const usedPackages = new Set<string>();
+
         for await (const headlessImport of jayHtml.headlessImports) {
             const module = headlessImport.codeLink.module;
             const name = headlessImport.codeLink.names[0].name;
@@ -81,6 +88,15 @@ export async function loadPageParts(
                 ? `${moduleImport}/client` // npm packages: use /client export
                 : `${moduleImport}`; // local files: use ?jay-client query
 
+            // Track NPM packages used on this page (for plugin init filtering)
+            if (isNpmPackage) {
+                // Extract the package name (handle scoped packages like @wix/stores)
+                const packageName = module.startsWith('@')
+                    ? module.split('/').slice(0, 2).join('/')
+                    : module.split('/')[0];
+                usedPackages.add(packageName);
+            }
+
             const key = headlessImport.key;
             const part: DevServerPagePart = {
                 key,
@@ -92,7 +108,9 @@ export async function loadPageParts(
         }
         return {
             parts,
-            trackByMap: jayHtml.trackByMap,
+            serverTrackByMap: jayHtml.serverTrackByMap,
+            clientTrackByMap: jayHtml.clientTrackByMap,
+            usedPackages,
         };
     });
 }

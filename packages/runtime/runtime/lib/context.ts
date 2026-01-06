@@ -16,6 +16,61 @@ function NewContextStack<ContextType>(
     return { context, marker, parent };
 }
 
+// ============================================================================
+// Global Context Registry
+// ============================================================================
+
+/**
+ * Global contexts are registered at application startup (before component tree)
+ * and available to all components via useContext().
+ *
+ * Used by makeJayInit().withClient() to register app-wide contexts with server config.
+ */
+const globalContextRegistry = new Map<symbol, any>();
+
+/**
+ * Registers a global context that will be available to all components.
+ * Global contexts are checked after the context stack, so component-provided
+ * contexts can override global ones.
+ *
+ * @param marker - The context marker created with createJayContext()
+ * @param context - The context value to register
+ *
+ * @example
+ * ```typescript
+ * // In lib/init.ts (using makeJayInit pattern)
+ * export const init = makeJayInit()
+ *   .withServer(() => ({ itemsPerPage: 10 }))
+ *   .withClient((serverData) => {
+ *     registerGlobalContext(APP_CONFIG_CONTEXT, serverData);
+ *   });
+ * ```
+ */
+export function registerGlobalContext<ContextType>(
+    marker: ContextMarker<ContextType>,
+    context: ContextType,
+): void {
+    globalContextRegistry.set(marker as symbol, context);
+}
+
+/**
+ * Clears all registered global contexts.
+ * Internal API for testing and hot reload.
+ */
+export function clearGlobalContextRegistry(): void {
+    globalContextRegistry.clear();
+}
+
+/**
+ * Gets a global context by marker.
+ * Internal API used by findContext.
+ */
+export function useGlobalContext<ContextType>(
+    marker: ContextMarker<ContextType>,
+): ContextType | undefined {
+    return globalContextRegistry.get(marker as symbol);
+}
+
 export function createJayContext<ContextType = unknown>(): ContextMarker<ContextType> {
     return Symbol();
 }
@@ -43,11 +98,21 @@ export function useContext<ContextType>(marker: ContextMarker<ContextType>): Con
 export function findContext<ContextType>(
     predicate: (marker: ContextMarker<ContextType>) => boolean,
 ): ContextType | undefined {
+    // First, check the context stack (component-provided contexts)
     let aContext = currentContext;
     while (aContext) {
         if (predicate(aContext.marker)) return aContext.context;
         aContext = aContext.parent;
     }
+
+    // Fallback: check global context registry
+    // This allows registerGlobalContext to work as a default
+    for (const [marker, context] of globalContextRegistry.entries()) {
+        if (predicate(marker as ContextMarker<ContextType>)) {
+            return context as ContextType;
+        }
+    }
+
     return undefined;
 }
 

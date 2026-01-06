@@ -1,20 +1,37 @@
 import type { BuildEnvironment } from '../transform-jay-stack-builder';
 
-const SERVER_METHODS = new Set([
+// ============================================================================
+// makeJayStackComponent methods
+// ============================================================================
+
+const COMPONENT_SERVER_METHODS = new Set([
     'withServices',
     'withLoadParams',
     'withSlowlyRender',
     'withFastRender',
 ]);
 
-const CLIENT_METHODS = new Set(['withInteractive', 'withContexts']);
+const COMPONENT_CLIENT_METHODS = new Set(['withInteractive', 'withContexts']);
+
+// ============================================================================
+// makeJayInit methods
+// ============================================================================
+
+const INIT_SERVER_METHODS = new Set(['withServer']);
+
+const INIT_CLIENT_METHODS = new Set(['withClient']);
 
 /**
  * Check if a builder method should be removed for the given environment
  */
 export function shouldRemoveMethod(methodName: string, environment: BuildEnvironment): boolean {
-    return (
-        (environment === 'client' && SERVER_METHODS.has(methodName)) ||
-        (environment === 'server' && CLIENT_METHODS.has(methodName))
-    );
+    // Component methods
+    if (environment === 'client' && COMPONENT_SERVER_METHODS.has(methodName)) return true;
+    if (environment === 'server' && COMPONENT_CLIENT_METHODS.has(methodName)) return true;
+
+    // Init methods
+    if (environment === 'client' && INIT_SERVER_METHODS.has(methodName)) return true;
+    if (environment === 'server' && INIT_CLIENT_METHODS.has(methodName)) return true;
+
+    return false;
 }

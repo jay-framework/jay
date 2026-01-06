@@ -4,9 +4,7 @@ import {
     flattenVariable,
     SourceFileBindingResolver,
     FlattenedAccessChain,
-    VariableRootType,
     isImportModuleVariableRoot,
-    Variable,
 } from '@jay-framework/compiler';
 import type { BuildEnvironment } from '../transform-jay-stack-builder';
 import { shouldRemoveMethod } from './check-method-should-remove';
@@ -61,8 +59,14 @@ export function findBuilderMethodsToRemove(
 }
 
 /**
- * Check if a call expression is part of a makeJayStackComponent builder chain
- * Walks up the chain to find if it eventually calls makeJayStackComponent
+ * Builder function names that should be detected for code splitting
+ */
+const JAY_BUILDER_FUNCTIONS = new Set(['makeJayStackComponent', 'makeJayInit']);
+
+/**
+ * Check if a call expression is part of a Jay builder chain
+ * (makeJayStackComponent or makeJayInit)
+ * Walks up the chain to find if it eventually calls one of the builder functions
  */
 function isPartOfJayStackChain(
     callExpr: ts.CallExpression,
@@ -76,13 +80,13 @@ function isPartOfJayStackChain(
             // Keep going down the chain
             current = current.expression;
         } else if (isCallExpression(current)) {
-            // Check if this is the makeJayStackComponent() call
+            // Check if this is a Jay builder call
             if (isIdentifier(current.expression)) {
                 const variable = bindingResolver.explain(current.expression);
                 const flattened: FlattenedAccessChain = flattenVariable(variable);
                 if (
                     flattened.path.length === 1 &&
-                    flattened.path[0] === 'makeJayStackComponent' &&
+                    JAY_BUILDER_FUNCTIONS.has(flattened.path[0]) &&
                     isImportModuleVariableRoot(flattened.root) &&
                     isStringLiteral(flattened.root.module) &&
                     flattened.root.module.text === '@jay-framework/fullstack-component'

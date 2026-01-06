@@ -12,9 +12,17 @@ import {
     PageSlowViewState,
     PageFastViewState,
 } from './page.jay-contract';
-import { Props } from '@jay-framework/component';
+import { Props, createSignal } from '@jay-framework/component';
 import { PRODUCTS_DATABASE_SERVICE, ProductsDatabaseService } from '../../../products-database';
 import { INVENTORY_SERVICE, InventoryService } from '../../../inventory-service';
+import { createActionCaller, ActionError } from '@jay-framework/stack-client-runtime';
+
+// Create client-side action callers
+// In a future version, this will be handled automatically by a build transform
+const addToCartAction = createActionCaller<
+    { productId: string; quantity: number },
+    { cartItemCount: number; message: string }
+>('cart.addToCart', 'POST');
 
 interface ProductPageParams extends UrlParams {
     slug: string;
@@ -60,20 +68,20 @@ async function renderSlowlyChanging(
 }
 
 async function renderFastChanging(
-    props: PageProps & ProductPageParams & ProductsCarryForward,
+    props: PageProps & ProductPageParams,
     carryForward: ProductsCarryForward,
     productsDb: ProductsDatabaseService,
     inventory: InventoryService,
 ) {
     const Pipeline = RenderPipeline.for<PageFastViewState, ProductAndInventoryCarryForward>();
 
-    return Pipeline.try(() => inventory.getAvailableUnits(props.productId))
+    return Pipeline.try(() => inventory.getAvailableUnits(carryForward.productId))
         .recover(() => Pipeline.serverError(503, 'Inventory service unavailable'))
         .map((availableUnits) => availableUnits > 0)
         .toPhaseOutput((inStock) => ({
             viewState: { inStock },
             carryForward: {
-                productId: props.productId,
+                productId: carryForward.productId,
                 inStock,
             },
         }));
@@ -91,8 +99,44 @@ function ProductsPageConstructor(
     // Can access carry forward as plain object
     const { productId, inStock } = fastCarryForward;
 
+    // Local state for add to cart UI
+    const [isAdding, setIsAdding] = createSignal(false);
+    const [cartMessage, setCartMessage] = createSignal<string | null>(null);
+    const [cartError, setCartError] = createSignal<string | null>(null);
+
+    // Handle add to cart button click
+    refs.addToCart.onclick(async () => {
+        setIsAdding(true);
+        setCartError(null);
+        setCartMessage(null);
+
+        try {
+            const result = await addToCartAction({
+                productId: productId,
+                quantity: 1,
+            });
+            setCartMessage(result.message);
+            console.log(`[Cart] Added to cart! Total items: ${result.cartItemCount}`);
+        } catch (error) {
+            if (error instanceof ActionError) {
+                setCartError(error.message);
+                console.error(`[Cart] Error: ${error.code} - ${error.message}`);
+            } else {
+                setCartError('Failed to add to cart. Please try again.');
+                console.error('[Cart] Unknown error:', error);
+            }
+        } finally {
+            setIsAdding(false);
+        }
+    });
+
     return {
-        render: () => ({}),
+        render: () => ({
+            // Future: could bind these to UI elements
+            // isAdding: isAdding(),
+            // cartMessage: cartMessage(),
+            // cartError: cartError(),
+        }),
     };
 }
 

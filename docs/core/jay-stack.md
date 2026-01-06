@@ -694,49 +694,69 @@ export const PRODUCTS_DATABASE_SERVICE = createJayService<ProductsDatabase>('Pro
 
 ### Registering Services
 
-Services are registered in the `src/jay.init.ts` file:
+Services are registered in the `src/init.ts` file using the `makeJayInit` pattern:
 
 ```typescript
-// src/jay.init.ts
-import {
-  onInit,
-  onShutdown,
-  registerService,
-  getService,
-} from '@jay-framework/stack-server-runtime';
+// src/init.ts
+import { makeJayInit } from '@jay-framework/fullstack-component';
+import { registerService, onShutdown, getService } from '@jay-framework/stack-server-runtime';
+import { registerGlobalContext, createJayContext } from '@jay-framework/runtime';
 import { PRODUCTS_DATABASE_SERVICE, createProductsDatabase } from './services/products-database';
 import { INVENTORY_SERVICE, createInventoryService } from './services/inventory';
 
-onInit(async () => {
-  // Initialize and register services
-  const productsDb = await createProductsDatabase();
-  registerService(PRODUCTS_DATABASE_SERVICE, productsDb);
+// Define a context for app configuration (available to client components)
+export const APP_CONFIG_CONTEXT = createJayContext<AppConfig>();
 
-  const inventory = await createInventoryService();
-  registerService(INVENTORY_SERVICE, inventory);
+export const init = makeJayInit()
+  .withServer(async () => {
+    // Initialize and register services
+    const productsDb = await createProductsDatabase();
+    registerService(PRODUCTS_DATABASE_SERVICE, productsDb);
 
-  console.log('Services initialized');
-});
+    const inventory = await createInventoryService();
+    registerService(INVENTORY_SERVICE, inventory);
 
-onShutdown(async () => {
-  // Clean up services
-  const productsDb = getService(PRODUCTS_DATABASE_SERVICE);
-  await productsDb.close();
+    // Register shutdown callback
+    onShutdown(async () => {
+      const productsDb = getService(PRODUCTS_DATABASE_SERVICE);
+      await productsDb.close();
 
-  const inventory = getService(INVENTORY_SERVICE);
-  await inventory.dispose();
+      const inventory = getService(INVENTORY_SERVICE);
+      await inventory.dispose();
 
-  console.log('Services shut down');
-});
+      console.log('Services shut down');
+    });
+
+    console.log('Services initialized');
+
+    // Return data to pass to client (type flows automatically)
+    return {
+      storeName: 'My Store',
+      currency: 'USD',
+      features: {
+        enableCart: true,
+        enableWishlist: false,
+      },
+    };
+  })
+  .withClient((config) => {
+    // config is typed based on withServer return type
+    console.log('Client initialized with config:', config);
+
+    // Register global contexts available to all components
+    registerGlobalContext(APP_CONFIG_CONTEXT, config);
+  });
 ```
 
-The `src/jay.init.ts` file:
+The `src/init.ts` file:
 
 - Is automatically loaded by the dev server on startup
+- Uses `makeJayInit()` to co-locate server and client initialization
 - Supports hot reload - services are reinitialized when the file changes
-- Provides lifecycle hooks for initialization and cleanup
+- Provides lifecycle hooks via `onShutdown()` for cleanup
 - Manages graceful shutdown in production
-- Has full TypeScript support since it's in the `src/` directory
+- Has full TypeScript support with automatic type flow from server to client
+- Data returned from `withServer()` is automatically passed to `withClient()`
 
 ### Using Services in Pages
 
@@ -755,6 +775,46 @@ export const page = makeJayStackComponent<PageContract>()
 ```
 
 ## Context Management
+
+### Global Contexts
+
+Global contexts are registered during initialization and are available to all components without being passed through the component tree. Use `registerGlobalContext` in your `src/init.ts`:
+
+```typescript
+// src/init.ts
+import { makeJayInit } from '@jay-framework/fullstack-component';
+import { registerGlobalContext, createJayContext } from '@jay-framework/runtime';
+
+export const APP_CONFIG_CONTEXT = createJayContext<AppConfig>();
+export const FEATURE_FLAGS_CONTEXT = createJayContext<FeatureFlags>();
+
+export const init = makeJayInit()
+  .withServer(async () => {
+    return {
+      config: { storeName: 'My Store', currency: 'USD' },
+      features: { enableCart: true, enableWishlist: false },
+    };
+  })
+  .withClient((data) => {
+    // Register global contexts - available to all components
+    registerGlobalContext(APP_CONFIG_CONTEXT, data.config);
+    registerGlobalContext(FEATURE_FLAGS_CONTEXT, data.features);
+  });
+```
+
+Global contexts are resolved automatically when components request them via `withContexts()`:
+
+```typescript
+// Any component can access global contexts
+export const page = makeJayStackComponent<PageContract>()
+  .withContexts(APP_CONFIG_CONTEXT, FEATURE_FLAGS_CONTEXT)
+  .withInteractive((props, refs, viewStateSignals, carryForward, appConfig, features) => {
+    // appConfig and features are automatically resolved from global registry
+    console.log('Store:', appConfig.storeName);
+    console.log('Cart enabled:', features.enableCart);
+    // ...
+  });
+```
 
 ### Client Contexts
 

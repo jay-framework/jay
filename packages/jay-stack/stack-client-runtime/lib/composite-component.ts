@@ -8,6 +8,7 @@ import {
 import { JayElement, PreRenderElement } from '@jay-framework/runtime';
 import { CompositePart } from './composite-part';
 import { Signals } from '@jay-framework/fullstack-component';
+import { deepMergeViewStates, TrackByMap } from '@jay-framework/view-state-merge';
 
 function makeSignals<T extends object>(obj: T): Signals<T> {
     return Object.keys(obj).reduce((signals, key) => {
@@ -27,6 +28,7 @@ export function makeCompositeJayComponent<
     defaultViewState: ViewState,
     fastCarryForward: object,
     parts: Array<CompositePart>,
+    trackByMap: TrackByMap = {},
 ) {
     // Determine if we have fast rendering
     // Both params are always provided when fast rendering exists (even if empty objects)
@@ -64,12 +66,23 @@ export function makeCompositeJayComponent<
             render: () => {
                 let viewState = defaultViewState;
                 instances.forEach(([key, instance]) => {
-                    if (key)
-                        viewState[key] = {
-                            ...defaultViewState[key],
-                            ...materializeViewState(instance.render()),
-                        };
-                    else viewState = { ...viewState, ...instance.render() };
+                    const rendered = materializeViewState(instance.render());
+                    if (key) {
+                        // Deep merge using trackBy for arrays (handles empty trackByMap gracefully)
+                        viewState[key] = deepMergeViewStates(
+                            defaultViewState[key],
+                            rendered,
+                            trackByMap,
+                            key,
+                        );
+                    } else {
+                        // Deep merge using trackBy for arrays
+                        viewState = deepMergeViewStates(
+                            viewState,
+                            rendered,
+                            trackByMap,
+                        ) as ViewState;
+                    }
                 });
                 return viewState;
             },

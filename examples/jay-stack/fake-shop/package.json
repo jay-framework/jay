@@ -19,6 +19,9 @@
   "dependencies": {
     "@jay-framework/fullstack-component": "workspace:^",
     "@jay-framework/jay-stack-cli": "workspace:^",
+    "@jay-framework/runtime": "workspace:^",
+    "@jay-framework/stack-client-runtime": "workspace:^",
+    "@jay-framework/stack-server-runtime": "workspace:^",
     "compression": "^1.7.5",
     "example-jay-mood-tracker-plugin": "workspace:^",
     "express": "^5.0.1",

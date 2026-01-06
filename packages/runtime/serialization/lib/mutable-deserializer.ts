@@ -1,13 +1,13 @@
 import { ADD, JSONPatch, REPLACE } from '@jay-framework/json-patch';
 import { patch } from '@jay-framework/json-patch';
 
-export type Deserialize<T extends object> = (jsonPatch: JSONPatch) => [T, Deserialize<T>];
-export function deserialize<T extends object>(jsonPatch: JSONPatch): [T, Deserialize<T>] {
+export type Deserialize<T extends object> = (jsonPatch: JSONPatch<T>) => [T, Deserialize<T>];
+export function deserialize<T extends object>(jsonPatch: JSONPatch<T>): [T, Deserialize<T>] {
     return _deserialize<T>(undefined)(jsonPatch);
 }
 
-function _deserialize<T extends object>(obj: T): (jsonPatch: JSONPatch) => [T, Deserialize<T>] {
-    return (jsonPatch: JSONPatch) => {
+function _deserialize<T extends object>(obj: T): (jsonPatch: JSONPatch<T>) => [T, Deserialize<T>] {
+    return (jsonPatch: JSONPatch<T>) => {
         if (
             jsonPatch.length === 1 &&
             jsonPatch[0].path.length === 0 &&

@@ -5,7 +5,14 @@ import {
     routeToExpressRoute,
     scanRoutes,
 } from '@jay-framework/stack-route-scanner';
-import { DevSlowlyChangingPhase, SlowlyChangingPhase } from '@jay-framework/stack-server-runtime';
+import {
+    DevSlowlyChangingPhase,
+    SlowlyChangingPhase,
+    getClientInitData,
+    preparePluginClientInits,
+    type PluginWithInit,
+    type PluginClientInitInfo,
+} from '@jay-framework/stack-server-runtime';
 import type {
     ClientError4xx,
     PageProps,
@@ -17,11 +24,12 @@ import path from 'node:path';
 import { RequestHandler } from 'express-serve-static-core';
 import { renderFastChangingData } from '@jay-framework/stack-server-runtime';
 import { loadPageParts } from '@jay-framework/stack-server-runtime';
-import { generateClientScript } from '@jay-framework/stack-server-runtime';
+import { generateClientScript, ProjectClientInitInfo } from '@jay-framework/stack-server-runtime';
 import { Request, Response } from 'express';
 import { DevServerOptions } from './dev-server-options';
 import { ServiceLifecycleManager } from './service-lifecycle';
-import { deepMergeViewStates } from './view-state-merger';
+import { deepMergeViewStates } from '@jay-framework/view-state-merge';
+import { createActionRouter, actionBodyParser, ACTION_ENDPOINT_BASE } from './action-router';
 
 async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
     return await scanRoutes(pagesBaseFolder, {
@@ -81,6 +89,9 @@ function mkRoute(
     vite: ViteDevServer,
     slowlyPhase: SlowlyChangingPhase,
     options: DevServerOptions,
+    projectInit?: ProjectClientInitInfo,
+    allPluginsWithInit: PluginWithInit[] = [],
+    allPluginClientInits: PluginClientInitInfo[] = [],
 ): DevServerRoute {
     const path = routeToExpressRoute(route);
     const handler = async (req: Request, res: Response) => {
@@ -102,7 +113,19 @@ function mkRoute(
             );
 
             if (pagePartsResult.val) {
-                const { parts: pageParts, trackByMap } = pagePartsResult.val;
+                const {
+                    parts: pageParts,
+                    serverTrackByMap,
+                    clientTrackByMap,
+                    usedPackages,
+                } = pagePartsResult.val;
+
+                // Filter plugins to only those used on this page
+                const pluginsForPage = allPluginClientInits.filter((plugin) => {
+                    // Find the matching PluginWithInit to check packageName
+                    const pluginInfo = allPluginsWithInit.find((p) => p.name === plugin.name);
+                    return pluginInfo && usedPackages.has(pluginInfo.packageName);
+                });
 
                 const renderedSlowly = await slowlyPhase.runSlowlyForPage(
                     pageParams,
@@ -118,12 +141,12 @@ function mkRoute(
                         pageParts,
                     );
                     if (renderedFast.kind === 'PhaseOutput') {
-                        // Deep merge view states using trackBy metadata
-                        if (trackByMap && Object.keys(trackByMap).length > 0) {
+                        // Deep merge view states using trackBy metadata (server-side: slow + fast)
+                        if (serverTrackByMap && Object.keys(serverTrackByMap).length > 0) {
                             viewState = deepMergeViewStates(
                                 renderedSlowly.rendered,
                                 renderedFast.rendered,
-                                trackByMap,
+                                serverTrackByMap,
                             );
                         } else {
                             // Fallback to shallow merge if no trackBy info available
@@ -131,11 +154,18 @@ function mkRoute(
                         }
                         carryForward = renderedFast.carryForward;
 
+                        // Pass clientTrackByMap to client (excludes fast+interactive arrays)
+                        // Include static client init data (feature flags, config, etc.)
+                        // Only include plugins that are actually used on this page
                         const pageHtml = generateClientScript(
                             viewState,
                             carryForward,
                             pageParts,
                             route.jayHtmlPath,
+                            clientTrackByMap,
+                            getClientInitData(),
+                            projectInit,
+                            pluginsForPage,
                         );
 
                         const compiledPageHtml = await vite.transformIndexHtml(
@@ -185,7 +215,7 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
         root: pagesRootFolder,
         ssr: {
             // Mark stack-server-runtime as external so Vite uses Node's require
-            // This ensures jay.init.ts and dev-server share the same module instance
+            // This ensures lib/init.ts and dev-server share the same module instance
             external: ['@jay-framework/stack-server-runtime'],
         },
     });
@@ -194,14 +224,22 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
     lifecycleManager.setViteServer(vite);
     await lifecycleManager.initialize();
 
-    // Set up hot reload for jay.init.ts
+    // Set up hot reload for lib/init.ts
     setupServiceHotReload(vite, lifecycleManager);
+
+    // Set up action router for /_jay/actions/* endpoints
+    setupActionRouter(vite);
 
     const routes: JayRoutes = await initRoutes(pagesRootFolder);
     const slowlyPhase = new DevSlowlyChangingPhase(dontCacheSlowly);
 
+    // Get init info for embedding in generated pages
+    const projectInit = lifecycleManager.getProjectInit() ?? undefined;
+    const pluginsWithInit = lifecycleManager.getPluginsWithInit();
+    const pluginClientInits = preparePluginClientInits(pluginsWithInit);
+
     const devServerRoutes: DevServerRoute[] = routes.map((route: JayRoute) =>
-        mkRoute(route, vite, slowlyPhase, options),
+        mkRoute(route, vite, slowlyPhase, options, projectInit, pluginsWithInit, pluginClientInits),
     );
 
     return {
@@ -227,7 +265,7 @@ function setupGracefulShutdown(lifecycleManager: ServiceLifecycleManager): void 
 }
 
 /**
- * Sets up hot reload for jay.init.ts file changes
+ * Sets up hot reload for lib/init.ts file changes
  */
 function setupServiceHotReload(
     vite: ViteDevServer,
@@ -243,7 +281,7 @@ function setupServiceHotReload(
 
     vite.watcher.on('change', async (changedPath) => {
         if (changedPath === initFilePath) {
-            console.log('[Services] jay.init.ts changed, reloading services...');
+            console.log('[Services] lib/init.ts changed, reloading services...');
             try {
                 await lifecycleManager.reload();
                 // Trigger browser reload
@@ -256,4 +294,18 @@ function setupServiceHotReload(
             }
         }
     });
+}
+
+/**
+ * Sets up the action router for handling /_jay/actions/* requests.
+ * Actions are RPC-style endpoints that can be called from the client.
+ */
+function setupActionRouter(vite: ViteDevServer): void {
+    // Add body parser middleware for action requests
+    vite.middlewares.use(actionBodyParser());
+
+    // Add action router
+    vite.middlewares.use(ACTION_ENDPOINT_BASE, createActionRouter());
+
+    console.log(`[Actions] Action router mounted at ${ACTION_ENDPOINT_BASE}`);
 }
