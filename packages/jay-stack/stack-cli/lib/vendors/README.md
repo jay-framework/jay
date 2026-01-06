@@ -85,7 +85,6 @@ export type YourVendorNode = {
   type: string;
   // ... node properties
 };
-
 ```
 
 This allows **both plugin developers AND the vendor implementation** to import:
@@ -140,18 +139,19 @@ function generateJayHtml(elements: any[]): string {
 - ✅ **No duplicate definitions** - there's only one source of truth
 - ✅ **Use `import type`** for type-only imports (better for tree-shaking)
   vendorId: 'your-vendor-id',
-      async convertToJayHtml(
-          vendorDoc: YourVendorDocument,
-          pageUrl: string,
-      ): Promise<string> {
-          // Parse vendor document
-          const elements = parseVendorDocument(vendorDoc);
+  async convertToJayHtml(
+  vendorDoc: YourVendorDocument,
+  pageUrl: string,
+  ): Promise<string> {
+  // Parse vendor document
+  const elements = parseVendorDocument(vendorDoc);
 
           // Generate Jay HTML
           const jayHtml = generateJayHtml(elements);
 
           return jayHtml;
       },
+
   };
 
 function parseVendorDocument(doc: YourVendorDocument) {

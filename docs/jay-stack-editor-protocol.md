@@ -352,7 +352,6 @@ import { SketchVendorDocument } from '@jay-framework/editor-protocol';
 
 // Adobe XD
 import { XdVendorDocument } from '@jay-framework/editor-protocol';
-
 ```
 
 **Type Safety**: TypeScript will validate that your `vendorDoc` matches the expected type for your `vendorId`.
