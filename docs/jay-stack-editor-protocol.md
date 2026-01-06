@@ -64,19 +64,23 @@ if (response.success) {
 ```
 
 **Note**: Dynamic route parameters are automatically converted:
+
 - URL format: `/products/:id` → Filesystem: `src/pages/products/[id]/`
 
 #### Publishing a Component
 
 ```typescript
 const response = await client.publish(
-  createPublishMessage([], [
-    {
-      name: 'ProductCard',
-      jayHtml: '<div>Product card content</div>',
-      contract: 'contract ProductCard { ... }', // Optional
-    },
-  ]),
+  createPublishMessage(
+    [],
+    [
+      {
+        name: 'ProductCard',
+        jayHtml: '<div>Product card content</div>',
+        contract: 'contract ProductCard { ... }', // Optional
+      },
+    ],
+  ),
 );
 ```
 
@@ -89,21 +93,21 @@ const response = await client.getProjectInfo({ type: 'getProjectInfo' });
 
 if (response.success) {
   const { info } = response;
-  
+
   console.log(`Project: ${info.name}`);
   console.log(`Pages: ${info.pages.length}`);
   console.log(`Components: ${info.components.length}`);
   console.log(`Plugins: ${info.plugins.length}`);
-  
+
   // Access page details
   info.pages.forEach((page) => {
     console.log(`- ${page.name} (${page.url})`);
-    
+
     // Page's own contract
     if (page.contract) {
       console.log(`  Contract: ${page.contract.tags.length} tags`);
     }
-    
+
     // Used headless components
     if (page.usedComponents.length > 0) {
       console.log(`  Uses: ${page.usedComponents.length} components`);
@@ -138,14 +142,16 @@ const figmaDoc: FigmaDocument = {
   nodeId: 'abc-123-def',
   name: 'Homepage Design',
   type: 'FRAME',
-  layers: [/* ... */],
+  layers: [
+    /* ... */
+  ],
 };
 
 // Export it
 const response = await client.export(
   createExportMessage<FigmaDocument>(
-    'figma',  // vendorId - identifies your editor
-    '/home',  // pageUrl - route of the page
+    'figma', // vendorId - identifies your editor
+    '/home', // pageUrl - route of the page
     figmaDoc, // your vendor document
   ),
 );
@@ -172,11 +178,11 @@ const response = await client.import<FigmaDocument>(
 
 if (response.success && response.vendorDoc) {
   const figmaDoc = response.vendorDoc;
-  
+
   // Restore your editor state from the saved document
   console.log('Restored design:', figmaDoc.name);
   console.log('Node ID:', figmaDoc.nodeId);
-  
+
   // Use the document to restore node references, layers, etc.
   restoreFigmaDesign(figmaDoc);
 } else {
@@ -222,32 +228,34 @@ class FigmaToJayPlugin {
     // 1. Convert Figma node to Jay HTML
     const node = figma.getNodeById(nodeId);
     const jayHtml = convertFigmaToJayHtml(node);
-    
+
     // 2. Create Figma document to save
     const figmaDoc: FigmaDocument = {
       nodeId: node.id,
       name: node.name,
       layers: serializeFigmaNode(node),
     };
-    
+
     // 3. Publish the Jay HTML
     const publishResponse = await this.client.publish(
-      createPublishMessage([{
-        route: pageRoute,
-        jayHtml: jayHtml,
-        name: node.name,
-      }]),
+      createPublishMessage([
+        {
+          route: pageRoute,
+          jayHtml: jayHtml,
+          name: node.name,
+        },
+      ]),
     );
-    
+
     if (!publishResponse.success) {
       throw new Error('Failed to publish page');
     }
-    
+
     // 4. Export the Figma document
     const exportResponse = await this.client.export(
       createExportMessage<FigmaDocument>('figma', pageRoute, figmaDoc),
     );
-    
+
     console.log('✅ Exported to Jay:', publishResponse.status[0].filePath);
     console.log('📦 Saved Figma doc:', exportResponse.vendorSourcePath);
   }
@@ -260,16 +268,16 @@ class FigmaToJayPlugin {
     const importResponse = await this.client.import<FigmaDocument>(
       createImportMessage<FigmaDocument>('figma', pageRoute),
     );
-    
+
     if (!importResponse.success || !importResponse.vendorDoc) {
       throw new Error('No Figma document found for this page');
     }
-    
+
     const figmaDoc = importResponse.vendorDoc;
-    
+
     // 2. Check if the node still exists in Figma
     const existingNode = figma.getNodeById(figmaDoc.nodeId);
-    
+
     if (existingNode) {
       // Node exists - select it
       figma.currentPage.selection = [existingNode as SceneNode];
@@ -279,18 +287,247 @@ class FigmaToJayPlugin {
       // Node doesn't exist - could recreate from saved data
       console.log('⚠️ Original Figma node not found, but document data available');
     }
-    
+
     return figmaDoc;
   }
 }
 ```
 
 **For complete export/import documentation, see:**
+
 - Quick reference: `/packages/jay-stack/editor-protocol/QUICK_REFERENCE.md`
 - Complete guide: `/packages/jay-stack/editor-protocol/EXPORT_IMPORT_GUIDE.md`
 - Implementation details: `/packages/jay-stack/editor-protocol/IMPLEMENTATION_SUMMARY.md`
 
-### 4. Image Management API
+### 4. Vendors: Automatic Conversion to Jay HTML
+
+The Jay Framework includes a **Vendor System** that automatically converts vendor-specific documents (like Figma, Sketch, Adobe XD) into Jay HTML when the export API is called.
+
+#### Overview
+
+When you call the `export()` API:
+
+1. Your vendor document is saved as `page.<vendorId>.json`
+2. If a vendor converter exists for your `vendorId`, it automatically runs
+3. The converter generates `page.jay-html` from your document
+4. You get back paths to both files in the response
+
+#### How It Works
+
+```typescript
+import { FigmaVendorDocument } from '@jay-framework/editor-protocol';
+
+// 1. Define your vendor document (using the official type)
+const vendorDoc: FigmaVendorDocument = {
+  type: selectedNode.type,
+  name: selectedNode.name,
+  children: selectedNode.children,
+};
+
+// 2. Call export
+const response = await client.export({
+  type: 'export',
+  vendorId: 'figma',
+  pageUrl: '/home',
+  vendorDoc,
+});
+
+// 3. Vendor automatically converts to Jay HTML
+if (response.success) {
+  console.log('Vendor JSON:', response.vendorSourcePath); // page.figma.json
+  console.log('Jay HTML:', response.jayHtmlPath); // page.jay-html (auto-generated!)
+}
+```
+
+#### Vendor Document Types
+
+Each vendor defines a document type that plugins must use. Import these types from `@jay-framework/editor-protocol`:
+
+```typescript
+// Figma
+import { FigmaVendorDocument } from '@jay-framework/editor-protocol';
+
+// Sketch
+import { SketchVendorDocument } from '@jay-framework/editor-protocol';
+
+// Adobe XD
+import { XdVendorDocument } from '@jay-framework/editor-protocol';
+
+// All vendor documents
+import { AnyVendorDocument, VendorDocumentMap } from '@jay-framework/editor-protocol';
+```
+
+**Type Safety**: TypeScript will validate that your `vendorDoc` matches the expected type for your `vendorId`.
+
+#### Example: Figma Plugin with Vendor
+
+```typescript
+import { createEditorClient } from '@jay-framework/editor-client';
+import { FigmaVendorDocument } from '@jay-framework/editor-protocol';
+
+class FigmaPlugin {
+  private client = createEditorClient({ editorId: figma.root.id });
+
+  async exportPage(node: SectionNode, pageUrl: string) {
+    await this.client.connect();
+
+    // Create vendor document using official type
+    const vendorDoc: FigmaVendorDocument = {
+      type: node.type,
+      name: node.name,
+      children: node.children.map((child) => ({
+        // ... serialize Figma node
+      })),
+    };
+
+    // Export - vendor will automatically convert to Jay HTML
+    const response = await this.client.export({
+      type: 'export',
+      vendorId: 'figma',
+      pageUrl,
+      vendorDoc,
+    });
+
+    if (response.success) {
+      figma.notify(`✅ Exported! Jay HTML created at: ${response.jayHtmlPath}`);
+    }
+  }
+}
+```
+
+#### File Organization with Vendors
+
+When a vendor converter runs, it creates both files:
+
+```
+src/pages/
+  home/
+    ├── page.figma.json      # Your vendor document (saved by export API)
+    ├── page.jay-html        # Jay HTML (generated by Figma vendor)
+    └── page.jay-html.d.ts   # TypeScript definitions
+```
+
+#### Available Vendors
+
+The following vendors are built into the Jay Framework:
+
+- **Figma** (`vendorId: 'figma'`) - Converts Figma SectionNodes to Jay HTML
+- **Sketch** (`vendorId: 'sketch'`) - Coming soon
+- **Adobe XD** (`vendorId: 'xd'`) - Coming soon
+
+#### Contributing a Vendor
+
+Vendors are part of the Jay Framework open-source project. To contribute a new vendor:
+
+**Step 1: Define Document Type** in `@jay-framework/editor-protocol`
+
+```typescript
+// packages/jay-stack/editor-protocol/lib/vendor-documents.ts
+export type MyVendorDocument = {
+  id: string;
+  name: string;
+  elements: MyVendorElement[];
+};
+
+export type MyVendorElement = {
+  id: string;
+  type: string;
+};
+
+// Add to union and map
+export type AnyVendorDocument = FigmaVendorDocument | MyVendorDocument;
+
+export type VendorDocumentMap = {
+  figma: FigmaVendorDocument;
+  'my-vendor': MyVendorDocument;
+};
+```
+
+**Step 2: Implement Converter** in `@jay-framework/stack-cli`
+
+```typescript
+// packages/jay-stack/stack-cli/lib/vendors/my-vendor/index.ts
+import { Vendor } from '../types';
+import type { MyVendorDocument } from '@jay-framework/editor-protocol';
+
+export const myVendorVendor: Vendor<MyVendorDocument> = {
+  vendorId: 'my-vendor',
+
+  async convertToJayHtml(vendorDoc, pageUrl) {
+    // Parse your vendor document
+    const elements = parseVendorDocument(vendorDoc);
+
+    // Generate Jay HTML
+    const jayHtml = generateJayHtml(elements);
+
+    return jayHtml;
+  },
+};
+
+function parseVendorDocument(doc: MyVendorDocument) {
+  // Your parsing logic
+  return doc.elements.map(/* ... */);
+}
+
+function generateJayHtml(elements: any[]): string {
+  // Your Jay HTML generation logic
+  return '<section>...</section>';
+}
+```
+
+**Step 3: Register Vendor**
+
+```typescript
+// packages/jay-stack/stack-cli/lib/vendors/registry.ts
+import { myVendorVendor } from './my-vendor';
+
+const vendorRegistry = new Map<string, Vendor>([
+  [figmaVendor.vendorId, figmaVendor],
+  [myVendorVendor.vendorId, myVendorVendor], // Add here
+]);
+```
+
+**For complete vendor contribution guidelines, see:**
+
+- **[Vendors README](../packages/jay-stack/stack-cli/lib/vendors/README.md)** - Complete guide
+- **[Figma Vendor Example](../packages/jay-stack/stack-cli/lib/vendors/figma/)** - Reference implementation
+- **[Vendor Types](../packages/jay-stack/editor-protocol/lib/vendor-documents.ts)** - Document type definitions
+
+#### Vendor API Response
+
+When a vendor converter runs successfully:
+
+```typescript
+interface ExportResponse {
+  type: 'export';
+  success: true;
+  vendorSourcePath: string; // '/path/to/page.figma.json'
+  jayHtmlPath?: string; // '/path/to/page.jay-html' (if vendor converted it)
+  warnings?: string[]; // Conversion warnings (if any)
+}
+```
+
+If no vendor exists for your `vendorId`, only the JSON is saved:
+
+```typescript
+{
+    type: 'export',
+    success: true,
+    vendorSourcePath: '/path/to/page.my-vendor.json'
+    // No jayHtmlPath - no converter available
+}
+```
+
+#### Benefits
+
+1. **Automatic Conversion**: No manual Jay HTML generation needed
+2. **Type Safety**: Vendor document types validated by TypeScript
+3. **Single Source**: Vendor JSON is saved for future import
+4. **Extensible**: New vendors can be added as community contributions
+5. **Backward Compatible**: Export works even without a vendor converter
+6. **Open Source**: Vendors are contributed to the Jay Framework
+
+### 5. Image Management API
 
 Save and check for design assets (images) in your project.
 
@@ -305,8 +542,8 @@ const base64 = arrayBufferToBase64(imageData);
 
 const response = await client.saveImage(
   createSaveImageMessage(
-    'unique-image-id',  // Use node ID or hash
-    base64,             // Base64-encoded image data
+    'unique-image-id', // Use node ID or hash
+    base64, // Base64-encoded image data
   ),
 );
 
@@ -321,9 +558,7 @@ if (response.success) {
 ```typescript
 import { createHasImageMessage } from '@jay-framework/editor-protocol';
 
-const response = await client.hasImage(
-  createHasImageMessage('unique-image-id'),
-);
+const response = await client.hasImage(createHasImageMessage('unique-image-id'));
 
 if (response.exists) {
   console.log('Image already exists:', response.imageUrl);
@@ -366,11 +601,7 @@ interface MyVendorDoc {
 }
 
 // Type-safe export
-const exportMessage = createExportMessage<MyVendorDoc>(
-  'my-tool',
-  '/home',
-  myDoc,
-);
+const exportMessage = createExportMessage<MyVendorDoc>('my-tool', '/home', myDoc);
 
 // Type-safe import
 const importResponse = await client.import<MyVendorDoc>(
@@ -404,7 +635,7 @@ Always handle errors gracefully:
 ```typescript
 try {
   const response = await client.publish(message);
-  
+
   if (!response.success) {
     console.error('Publish failed:', response.error);
     // Show user-friendly error
@@ -450,7 +681,7 @@ The editor client manages the WebSocket connection automatically:
 const client = createEditorClient({
   portRange: [3101, 3200],
   editorId: 'unique-editor-id',
-  reconnect: true,        // Auto-reconnect on disconnect
+  reconnect: true, // Auto-reconnect on disconnect
   reconnectInterval: 3000, // Reconnect delay in ms
 });
 
@@ -477,6 +708,7 @@ Choose a clear, unique vendor ID for your design tool:
 - **Custom Tool**: `'my-design-tool'`
 
 Use lowercase, kebab-case identifiers:
+
 - ✅ `'figma'`, `'wix'`, `'sketch'`, `'adobe-xd'`
 - ❌ `'Figma'`, `'FIGMA'`, `'figma_plugin'`
 
@@ -490,7 +722,7 @@ Automatically sync to Jay when user saves in the design tool:
 // Listen for save events in your design tool
 figma.on('save', async () => {
   const selection = figma.currentPage.selection[0];
-  
+
   if (selection) {
     await plugin.exportToJay(selection.id, '/home');
     figma.notify('✅ Synced to Jay');
@@ -509,7 +741,7 @@ async function openPage(pageRoute: string) {
     const response = await client.import<FigmaDocument>(
       createImportMessage<FigmaDocument>('figma', pageRoute),
     );
-    
+
     if (response.success && response.vendorDoc) {
       // Restore from saved document
       restoreDesign(response.vendorDoc);
@@ -530,7 +762,7 @@ Keep design tool and Jay project in sync:
 ```typescript
 class JaySync {
   private watcher: FileWatcher;
-  
+
   async startWatching() {
     // Watch for changes in Jay project
     this.watcher = watchJayProject((event) => {
@@ -539,19 +771,19 @@ class JaySync {
       }
     });
   }
-  
+
   async onJayPageUpdated(pageUrl: string) {
     // Import updated Jay page
     const response = await client.import<MyVendorDoc>(
       createImportMessage<MyVendorDoc>('my-tool', pageUrl),
     );
-    
+
     if (response.success && response.vendorDoc) {
       // Update design tool
       updateDesign(response.vendorDoc);
     }
   }
-  
+
   async onDesignUpdated(nodeId: string, pageUrl: string) {
     // Export updated design to Jay
     await this.exportToJay(nodeId, pageUrl);
@@ -567,15 +799,15 @@ class JaySync {
 interface PublishMessage {
   type: 'publish';
   pages?: Array<{
-    route: string;      // e.g., '/home', '/products/:id'
-    jayHtml: string;    // Jay HTML content
-    name: string;       // Display name
-    contract?: string;  // Optional contract content
+    route: string; // e.g., '/home', '/products/:id'
+    jayHtml: string; // Jay HTML content
+    name: string; // Display name
+    contract?: string; // Optional contract content
   }>;
   components?: Array<{
-    name: string;       // Component name
-    jayHtml: string;    // Jay HTML content
-    contract?: string;  // Optional contract content
+    name: string; // Component name
+    jayHtml: string; // Jay HTML content
+    contract?: string; // Optional contract content
   }>;
 }
 ```
@@ -585,8 +817,8 @@ interface PublishMessage {
 ```typescript
 interface ExportMessage<TVendorDoc> {
   type: 'export';
-  vendorId: string;   // Your tool identifier
-  pageUrl: string;    // Page route
+  vendorId: string; // Your tool identifier
+  pageUrl: string; // Page route
   vendorDoc: TVendorDoc; // Your document data
 }
 ```
@@ -596,8 +828,8 @@ interface ExportMessage<TVendorDoc> {
 ```typescript
 interface ImportMessage<TVendorDoc> {
   type: 'import';
-  vendorId: string;   // Your tool identifier
-  pageUrl: string;    // Page route
+  vendorId: string; // Your tool identifier
+  pageUrl: string; // Page route
 }
 ```
 
@@ -614,8 +846,8 @@ interface GetProjectInfoMessage {
 ```typescript
 interface SaveImageMessage {
   type: 'saveImage';
-  imageId: string;    // Unique identifier
-  imageData: string;  // Base64-encoded image
+  imageId: string; // Unique identifier
+  imageData: string; // Base64-encoded image
 }
 ```
 
@@ -624,7 +856,7 @@ interface SaveImageMessage {
 ```typescript
 interface HasImageMessage {
   type: 'hasImage';
-  imageId: string;    // Unique identifier
+  imageId: string; // Unique identifier
 }
 ```
 
@@ -684,18 +916,18 @@ interface MyVendorDoc {
   // Essential identifiers
   nodeId: string;
   documentId: string;
-  
+
   // Layout information
   position: { x: number; y: number };
   size: { width: number; height: number };
-  
+
   // Style information
   colors: string[];
   fonts: string[];
-  
+
   // Hierarchy
   children: MyVendorDoc[];
-  
+
   // Metadata
   timestamp: number;
   version: string;
@@ -708,7 +940,7 @@ Include version information for backward compatibility:
 
 ```typescript
 interface MyVendorDoc {
-  version: string;  // '1.0.0'
+  version: string; // '1.0.0'
   // ... other fields
 }
 
@@ -739,8 +971,9 @@ if (doc.version === '1.0.0') {
 - [Editor Protocol Package](../packages/jay-stack/editor-protocol/readme.md) - Protocol package documentation
 - [Export/Import Guide](../packages/jay-stack/editor-protocol/EXPORT_IMPORT_GUIDE.md) - Detailed export/import examples
 - [Quick Reference](../packages/jay-stack/editor-protocol/QUICK_REFERENCE.md) - Quick API reference
+- **[Vendors System](../packages/jay-stack/stack-cli/lib/vendors/README.md)** - Complete vendor contribution guide
+- **[Vendor Document Types](../packages/jay-stack/editor-protocol/lib/vendor-documents.ts)** - Vendor document type definitions
 
 ---
 
 **Need help?** Check the examples in `/packages/jay-stack/editor-protocol/` or open an issue on GitHub.
-

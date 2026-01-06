@@ -24,6 +24,7 @@ import type {
     Plugin,
 } from '@jay-framework/editor-protocol';
 import type { JayConfig } from './config';
+import { getVendor, hasVendor } from './vendors';
 import {
     generateElementDefinitionFile,
     JAY_IMPORT_RESOLVER,
@@ -51,11 +52,11 @@ const PAGE_CONFIG_FILENAME = 'page.conf.yaml';
  * The root path '/' is converted to an empty string.
  * Dynamic route parameters are converted from URL format to filesystem format:
  * - URL format: ':paramName' → Filesystem format: '[paramName]'
- * 
+ *
  * @param pageUrl - The page URL or route (e.g., '/', '/about', '/products/:id')
  * @param pagesBasePath - The base path for pages
  * @returns The full directory path for the page
- * 
+ *
  * @example
  * pageUrlToDirectoryPath('/', '/src/pages') → '/src/pages'
  * pageUrlToDirectoryPath('/about', '/src/pages') → '/src/pages/about'
@@ -63,10 +64,10 @@ const PAGE_CONFIG_FILENAME = 'page.conf.yaml';
  */
 function pageUrlToDirectoryPath(pageUrl: string, pagesBasePath: string): string {
     const routePath = pageUrl === '/' ? '' : pageUrl;
-    
+
     // Convert dynamic route parameters from URL format (:param) to filesystem format ([param])
     const fsPath = routePath.replace(/:([^/]+)/g, '[$1]');
-    
+
     return path.join(pagesBasePath, fsPath);
 }
 
@@ -1038,6 +1039,43 @@ export function createEditorHandlers(
             );
 
             console.log(`📦 Exported ${vendorId} document to: ${vendorFilePath}`);
+
+            // Check if a vendor exists for this vendor ID
+            if (hasVendor(vendorId)) {
+                console.log(`🔄 Converting ${vendorId} document to Jay HTML...`);
+                const vendor = getVendor(vendorId)!;
+
+                try {
+                    // Run the vendor conversion
+                    const jayHtml = await vendor.convertToJayHtml(vendorDoc, pageUrl);
+
+                    // Write Jay HTML file
+                    const jayHtmlPath = path.join(dirname, 'page.jay-html');
+                    await fs.promises.writeFile(jayHtmlPath, jayHtml, 'utf-8');
+
+                    console.log(`✅ Successfully converted to Jay HTML: ${jayHtmlPath}`);
+
+                    return {
+                        type: 'export',
+                        success: true,
+                        vendorSourcePath: vendorFilePath,
+                        jayHtmlPath,
+                    };
+                } catch (conversionError) {
+                    console.error(`❌ Vendor conversion threw an error:`, conversionError);
+                    return {
+                        type: 'export',
+                        success: false,
+                        vendorSourcePath: vendorFilePath,
+                        error:
+                            conversionError instanceof Error
+                                ? conversionError.message
+                                : 'Unknown conversion error',
+                    };
+                }
+            } else {
+                console.log(`ℹ️  No vendor found for '${vendorId}'. Skipping conversion.`);
+            }
 
             return {
                 type: 'export',

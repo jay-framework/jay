@@ -7,6 +7,7 @@ import fs from 'fs';
 import { loadConfig, updateConfig, getConfigWithDefaults } from './config';
 import { createEditorHandlers } from './editor-handlers';
 import { generatePageDefinitionFiles } from './generate-page-definition-files';
+import { getRegisteredVendors } from './vendors';
 
 export interface StartDevServerOptions {
     projectPath?: string;
@@ -50,6 +51,17 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
     });
 
     const { port: editorPort, editorId } = await editorServer.start();
+
+    // Log registered vendors
+    console.log('📦 Registered vendors...');
+    const registeredVendors = getRegisteredVendors();
+    if (registeredVendors.length > 0) {
+        console.log(
+            `✅ Registered ${registeredVendors.length} vendor(s): ${registeredVendors.join(', ')}`,
+        );
+    } else {
+        console.log('ℹ️  No vendors registered');
+    }
 
     // Set up editor server callbacks
     const handlers = createEditorHandlers(
