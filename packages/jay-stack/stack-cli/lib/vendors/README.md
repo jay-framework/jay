@@ -86,14 +86,6 @@ export type YourVendorNode = {
   // ... node properties
 };
 
-// Add to the union type
-export type AnyVendorDocument = FigmaVendorDocument | YourVendorDocument; // Add here
-
-// Add to the map
-export type VendorDocumentMap = {
-  figma: FigmaVendorDocument;
-  'your-vendor-id': YourVendorDocument; // Add here
-};
 ```
 
 This allows **both plugin developers AND the vendor implementation** to import:

@@ -353,8 +353,6 @@ import { SketchVendorDocument } from '@jay-framework/editor-protocol';
 // Adobe XD
 import { XdVendorDocument } from '@jay-framework/editor-protocol';
 
-// All vendor documents
-import { AnyVendorDocument, VendorDocumentMap } from '@jay-framework/editor-protocol';
 ```
 
 **Type Safety**: TypeScript will validate that your `vendorDoc` matches the expected type for your `vendorId`.
@@ -432,14 +430,6 @@ export type MyVendorDocument = {
 export type MyVendorElement = {
   id: string;
   type: string;
-};
-
-// Add to union and map
-export type AnyVendorDocument = FigmaVendorDocument | MyVendorDocument;
-
-export type VendorDocumentMap = {
-  figma: FigmaVendorDocument;
-  'my-vendor': MyVendorDocument;
 };
 ```
 
