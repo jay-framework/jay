@@ -67,10 +67,12 @@ function generateGoogleFontsLinks(fontFamilies: Set<string>): string {
     }
 
     const families = Array.from(fontFamilies);
-    const googleFontsUrl = `https://fonts.googleapis.com/css2?${families.map(family => {
-        const encodedFamily = encodeURIComponent(family).replace(/%20/g, '+');
-        return `family=${encodedFamily}:wght@100;200;300;400;500;600;700;800;900`;
-    }).join('&')}&display=swap`;
+    const googleFontsUrl = `https://fonts.googleapis.com/css2?${families
+        .map((family) => {
+            const encodedFamily = encodeURIComponent(family).replace(/%20/g, '+');
+            return `family=${encodedFamily}:wght@100;200;300;400;500;600;700;800;900`;
+        })
+        .join('&')}&display=swap`;
 
     return `  <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -85,13 +87,14 @@ function generateHeadlessComponentScripts(components: HeadlessComponent[]): stri
         return '';
     }
 
-    const scriptTags = components.map(comp => 
-        `  <script
+    const scriptTags = components.map(
+        (comp) =>
+            `  <script
     type="application/jay-headless"
     plugin="${comp.plugin}"
     contract="${comp.contract}"
     key="${comp.key}"
-  ></script>`
+  ></script>`,
     );
 
     return '\n' + scriptTags.join('\n');
@@ -124,7 +127,7 @@ export function buildJayHtml(options: JayHtmlBuildOptions): string {
         fontFamilies,
         contractData,
         headlessComponents = [],
-        title = 'Page'
+        title = 'Page',
     } = options;
 
     // Generate head content
@@ -186,7 +189,7 @@ ${bodyHtml}
 export async function buildJayHtmlFromVendorResult(
     conversionResult: VendorConversionResult,
     pageDirectory: string,
-    pageTitle?: string
+    pageTitle?: string,
 ): Promise<string> {
     // Read page.conf.yaml to get used components
     const pageConfigPath = path.join(pageDirectory, 'page.conf.yaml');
@@ -200,7 +203,11 @@ export async function buildJayHtmlFromVendorResult(
             if (pageConfig.used_components && Array.isArray(pageConfig.used_components)) {
                 for (const comp of pageConfig.used_components) {
                     if (comp.plugin && comp.contract && comp.key) {
-                        console.log('#####\n\n\nused component temporarily disabled: ', comp, '\n\n\n#####');
+                        console.log(
+                            '#####\n\n\nused component temporarily disabled: ',
+                            comp,
+                            '\n\n\n#####',
+                        );
                         // headlessComponents.push({
                         //     plugin: comp.plugin,
                         //     contract: comp.contract,
@@ -222,7 +229,6 @@ export async function buildJayHtmlFromVendorResult(
         fontFamilies: conversionResult.fontFamilies,
         contractData: conversionResult.contractData,
         headlessComponents,
-        title
+        title,
     });
 }
-

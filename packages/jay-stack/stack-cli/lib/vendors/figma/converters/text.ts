@@ -1,10 +1,5 @@
 import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
-import { 
-    getPositionStyle, 
-    getNodeSizeStyles, 
-    getCommonStyles,
-    rgbToHex
-} from '../utils';
+import { getPositionStyle, getNodeSizeStyles, getCommonStyles, rgbToHex } from '../utils';
 
 /**
  * Escapes HTML special characters
@@ -15,7 +10,7 @@ function escapeHtmlContent(text: string): string {
         '<': '&lt;',
         '>': '&gt;',
         '"': '&quot;',
-        "'": '&#39;'
+        "'": '&#39;',
     };
     return text.replace(/[&<>"']/g, (char) => map[char]);
 }
@@ -24,10 +19,27 @@ function escapeHtmlContent(text: string): string {
  * Converts a TEXT node to HTML with full styling
  */
 export function convertTextNodeToHtml(node: FigmaVendorDocument, indent: string): string {
-    const { name, id, characters, fontName, fontSize, fontWeight, fills,
-            textAlignHorizontal, textAlignVertical, letterSpacing, lineHeight,
-            textDecoration, textCase, textTruncation, maxLines, maxWidth,
-            textAutoResize, hasMissingFont, hyperlinks } = node;
+    const {
+        name,
+        id,
+        characters,
+        fontName,
+        fontSize,
+        fontWeight,
+        fills,
+        textAlignHorizontal,
+        textAlignVertical,
+        letterSpacing,
+        lineHeight,
+        textDecoration,
+        textCase,
+        textTruncation,
+        maxLines,
+        maxWidth,
+        textAutoResize,
+        hasMissingFont,
+        hyperlinks,
+    } = node;
 
     // Handle missing fonts
     if (hasMissingFont || !characters) {
@@ -53,7 +65,13 @@ export function convertTextNodeToHtml(node: FigmaVendorDocument, indent: string)
 
     // Text color
     let textColor = '#000000';
-    if (fills && Array.isArray(fills) && fills.length > 0 && fills[0].type === 'SOLID' && fills[0].color) {
+    if (
+        fills &&
+        Array.isArray(fills) &&
+        fills.length > 0 &&
+        fills[0].type === 'SOLID' &&
+        fills[0].color
+    ) {
         textColor = rgbToHex(fills[0].color);
     }
     const colorStyle = `color: ${textColor};`;
@@ -177,14 +195,15 @@ export function convertTextNodeToHtml(node: FigmaVendorDocument, indent: string)
 
     if (verticalAlignWrapperStyle) {
         // With vertical alignment wrapper
-        return `${indent}<div data-figma-id="${id}" style="${styleAttr}${verticalAlignWrapperStyle}">\n` +
-               `${childIndent}<div style="${textStyles}">\n` +
-               `${innerIndent}${htmlContent}\n` +
-               `${childIndent}</div>\n` +
-               `${indent}</div>\n`;
+        return (
+            `${indent}<div data-figma-id="${id}" style="${styleAttr}${verticalAlignWrapperStyle}">\n` +
+            `${childIndent}<div style="${textStyles}">\n` +
+            `${innerIndent}${htmlContent}\n` +
+            `${childIndent}</div>\n` +
+            `${indent}</div>\n`
+        );
     } else {
         // Simple text div
         return `${indent}<div data-figma-id="${id}" style="${styleAttr}">${htmlContent}</div>\n`;
     }
 }
-

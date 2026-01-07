@@ -1054,7 +1054,7 @@ export function createEditorHandlers(
                     const fullJayHtml = await buildJayHtmlFromVendorResult(
                         conversionResult,
                         dirname,
-                        path.basename(dirname)
+                        path.basename(dirname),
                     );
 
                     // Write Jay HTML file

@@ -12,9 +12,11 @@ export function rgbToHex(color: { r: number; g: number; b: number }, opacity?: n
     const r = Math.round(color.r * 255);
     const g = Math.round(color.g * 255);
     const b = Math.round(color.b * 255);
-    
+
     if (opacity !== undefined && opacity < 1) {
-        const alphaHex = Math.round(opacity * 255).toString(16).padStart(2, '0');
+        const alphaHex = Math.round(opacity * 255)
+            .toString(16)
+            .padStart(2, '0');
         return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}${alphaHex}`;
     } else {
         return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
@@ -24,7 +26,9 @@ export function rgbToHex(color: { r: number; g: number; b: number }, opacity?: n
 /**
  * Calculates the position type for a node based on its layout context
  */
-function getPositionType(node: FigmaVendorDocument): 'absolute' | 'fixed' | 'static' | 'relative' | 'sticky' {
+function getPositionType(
+    node: FigmaVendorDocument,
+): 'absolute' | 'fixed' | 'static' | 'relative' | 'sticky' {
     // If node has explicit absolute positioning
     if (node.layoutPositioning === 'ABSOLUTE') {
         return 'absolute';
@@ -34,7 +38,10 @@ function getPositionType(node: FigmaVendorDocument): 'absolute' | 'fixed' | 'sta
     if (node.parentOverflowDirection && node.parentOverflowDirection !== 'NONE') {
         // Check if this node should be fixed during scroll
         if (node.parentNumberOfFixedChildren && node.parentChildIndex !== undefined) {
-            if (node.parentChildIndex >= 0 && node.parentChildIndex < node.parentNumberOfFixedChildren) {
+            if (
+                node.parentChildIndex >= 0 &&
+                node.parentChildIndex < node.parentNumberOfFixedChildren
+            ) {
                 return 'sticky';
             }
         }
@@ -70,24 +77,24 @@ export function getPositionStyle(node: FigmaVendorDocument): string {
     if (node.type === 'COMPONENT') {
         return '';
     }
-    
+
     const positionType = getPositionType(node);
     if (positionType === 'static') {
         return ''; // Empty string for flex layout
     }
-    
+
     // Only include top/left for absolute or fixed positioning
     if (positionType === 'absolute' || positionType === 'fixed') {
         const top = node.y !== undefined ? node.y : 0;
         const left = node.x !== undefined ? node.x : 0;
         return `position: ${positionType};top: ${top}px;left: ${left}px;`;
     }
-    
+
     // For sticky positioning, include top position and z-index
     if (positionType === 'sticky') {
         return `position: ${positionType};top: 0;z-index: 10;`;
     }
-    
+
     // For relative positioning, just return the position type
     return `position: ${positionType};`;
 }
@@ -105,7 +112,7 @@ function getAutoLayoutChildSizeStyles(node: FigmaVendorDocument): string {
     }
 
     let styles = '';
-    
+
     // Check if node has auto layout child properties
     if (!node.layoutGrow && !node.layoutAlign) {
         // Node doesn't have auto layout properties, use fixed dimensions
@@ -117,7 +124,7 @@ function getAutoLayoutChildSizeStyles(node: FigmaVendorDocument): string {
     const isHorizontalLayout = node.parentLayoutMode === 'HORIZONTAL';
     const width = node.width !== undefined ? node.width : 0;
     const height = node.height !== undefined ? node.height : 0;
-    
+
     // Handle horizontal sizing (width)
     if (node.layoutSizingHorizontal) {
         // Use modern API if available
@@ -140,7 +147,7 @@ function getAutoLayoutChildSizeStyles(node: FigmaVendorDocument): string {
         // Fallback: use fixed dimensions
         styles += `width: ${width}px;`;
     }
-    
+
     // Handle vertical sizing (height)
     if (node.layoutSizingVertical) {
         // Use modern API if available
@@ -159,7 +166,7 @@ function getAutoLayoutChildSizeStyles(node: FigmaVendorDocument): string {
         // Fallback: use fixed dimensions
         styles += `height: ${height}px;`;
     }
-    
+
     return styles;
 }
 
@@ -172,7 +179,7 @@ export function getNodeSizeStyles(node: FigmaVendorDocument): string {
         const height = node.height !== undefined ? node.height : 0;
         return `width: 100%;height: ${height}px;`;
     }
-    
+
     return getAutoLayoutChildSizeStyles(node);
 }
 
@@ -202,9 +209,7 @@ export function getCommonStyles(node: FigmaVendorDocument): string {
     if (node.effects && Array.isArray(node.effects) && node.effects.length > 0) {
         // Process effects in reverse order for CSS (like Figma layers)
         // Only process visible effects (visible !== false)
-        const visibleEffects = node.effects
-            .filter(e => e.visible !== false)
-            .reverse();
+        const visibleEffects = node.effects.filter((e) => e.visible !== false).reverse();
 
         const filterFunctions: string[] = [];
         const boxShadows: string[] = [];
@@ -218,7 +223,9 @@ export function getCommonStyles(node: FigmaVendorDocument): string {
                         const shadowColor = `rgba(${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)}, ${color.a ?? 1})`;
                         const inset = effect.type === 'INNER_SHADOW' ? 'inset ' : '';
                         // CSS: h-offset v-offset blur spread color
-                        boxShadows.push(`${inset}${offset.x}px ${offset.y}px ${radius}px ${spread ?? 0}px ${shadowColor}`);
+                        boxShadows.push(
+                            `${inset}${offset.x}px ${offset.y}px ${radius}px ${spread ?? 0}px ${shadowColor}`,
+                        );
                     }
                     break;
                 }
@@ -335,9 +342,11 @@ export function getAutoLayoutStyles(node: FigmaVendorDocument): string {
 
     // Add padding if specified
     if (typeof node.paddingLeft === 'number') flexStyles += `padding-left: ${node.paddingLeft}px;`;
-    if (typeof node.paddingRight === 'number') flexStyles += `padding-right: ${node.paddingRight}px;`;
+    if (typeof node.paddingRight === 'number')
+        flexStyles += `padding-right: ${node.paddingRight}px;`;
     if (typeof node.paddingTop === 'number') flexStyles += `padding-top: ${node.paddingTop}px;`;
-    if (typeof node.paddingBottom === 'number') flexStyles += `padding-bottom: ${node.paddingBottom}px;`;
+    if (typeof node.paddingBottom === 'number')
+        flexStyles += `padding-bottom: ${node.paddingBottom}px;`;
 
     return flexStyles;
 }
@@ -353,10 +362,14 @@ export function getOverflowStyles(node: FigmaVendorDocument): string {
 
     switch (overflowDirection) {
         case 'HORIZONTAL':
-            overflowStyles += shouldClip ? 'overflow-x: auto; overflow-y: hidden;' : 'overflow-x: auto; overflow-y: visible;';
+            overflowStyles += shouldClip
+                ? 'overflow-x: auto; overflow-y: hidden;'
+                : 'overflow-x: auto; overflow-y: visible;';
             break;
         case 'VERTICAL':
-            overflowStyles += shouldClip ? 'overflow-x: hidden; overflow-y: auto;' : 'overflow-x: visible; overflow-y: auto;';
+            overflowStyles += shouldClip
+                ? 'overflow-x: hidden; overflow-y: auto;'
+                : 'overflow-x: visible; overflow-y: auto;';
             break;
         case 'BOTH':
             overflowStyles += 'overflow: auto;';
@@ -397,7 +410,9 @@ export function getBackgroundFillsStyle(node: FigmaVendorDocument): string {
             const opacity = fill.opacity !== undefined ? fill.opacity : 1;
 
             // Create a solid color layer using linear-gradient
-            backgrounds.push(`linear-gradient(rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${opacity}), rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${opacity}))`);
+            backgrounds.push(
+                `linear-gradient(rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${opacity}), rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${opacity}))`,
+            );
             backgroundSizes.push('100% 100%');
             backgroundPositions.push('center');
             backgroundRepeats.push('no-repeat');
@@ -456,10 +471,30 @@ export function getStrokeStyles(node: FigmaVendorDocument): string {
     }
 
     // Handle stroke width (per-side if available)
-    const top = typeof node.strokeTopWeight === 'number' ? node.strokeTopWeight : (typeof node.strokeWeight === 'number' ? node.strokeWeight : 0);
-    const right = typeof node.strokeRightWeight === 'number' ? node.strokeRightWeight : (typeof node.strokeWeight === 'number' ? node.strokeWeight : 0);
-    const bottom = typeof node.strokeBottomWeight === 'number' ? node.strokeBottomWeight : (typeof node.strokeWeight === 'number' ? node.strokeWeight : 0);
-    const left = typeof node.strokeLeftWeight === 'number' ? node.strokeLeftWeight : (typeof node.strokeWeight === 'number' ? node.strokeWeight : 0);
+    const top =
+        typeof node.strokeTopWeight === 'number'
+            ? node.strokeTopWeight
+            : typeof node.strokeWeight === 'number'
+              ? node.strokeWeight
+              : 0;
+    const right =
+        typeof node.strokeRightWeight === 'number'
+            ? node.strokeRightWeight
+            : typeof node.strokeWeight === 'number'
+              ? node.strokeWeight
+              : 0;
+    const bottom =
+        typeof node.strokeBottomWeight === 'number'
+            ? node.strokeBottomWeight
+            : typeof node.strokeWeight === 'number'
+              ? node.strokeWeight
+              : 0;
+    const left =
+        typeof node.strokeLeftWeight === 'number'
+            ? node.strokeLeftWeight
+            : typeof node.strokeWeight === 'number'
+              ? node.strokeWeight
+              : 0;
 
     if (top !== 0 || right !== 0 || bottom !== 0 || left !== 0) {
         // Check if all sides are equal
@@ -545,4 +580,3 @@ export function getFrameSizeStyles(node: FigmaVendorDocument): string {
 
     return sizeStyles;
 }
-

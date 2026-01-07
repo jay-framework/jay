@@ -1,8 +1,8 @@
 import { Vendor, VendorConversionResult } from '../types';
 import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
-import { 
-    getPositionStyle, 
-    getNodeSizeStyles, 
+import {
+    getPositionStyle,
+    getNodeSizeStyles,
     getCommonStyles,
     getBorderRadius,
     getAutoLayoutStyles,
@@ -10,7 +10,7 @@ import {
     getBackgroundFillsStyle,
     getStrokeStyles,
     getFrameSizeStyles,
-    rgbToHex
+    rgbToHex,
 } from './utils';
 import { convertTextNodeToHtml } from './converters/text';
 import { convertRectangleToHtml } from './converters/rectangle';
@@ -41,7 +41,11 @@ import { convertVectorToHtml } from './converters/vector';
  * @param fontFamilies - Set to collect font families encountered during conversion
  * @param indent - Current indentation level
  */
-function convertNodeToJayHtml(node: FigmaVendorDocument, fontFamilies: Set<string>, indent: string = ''): string {
+function convertNodeToJayHtml(
+    node: FigmaVendorDocument,
+    fontFamilies: Set<string>,
+    indent: string = '',
+): string {
     const { name, type, children, pluginData, width, height } = node;
 
     // Extract Jay-specific data from pluginData
@@ -86,20 +90,20 @@ function convertNodeToJayHtml(node: FigmaVendorDocument, fontFamilies: Set<strin
     } else if (type === 'FRAME') {
         // Convert frames to divs with full styling (layout, background, borders, etc.)
         const tag = semanticHtml || 'div';
-        
+
         // Build Frame-specific styles
         const backgroundStyle = getBackgroundFillsStyle(node);
         const borderRadius = getBorderRadius(node);
         const strokeStyles = getStrokeStyles(node);
         const flexStyles = getAutoLayoutStyles(node);
         const overflowStyles = getOverflowStyles(node);
-        
+
         // For frames, use getFrameSizeStyles instead of getNodeSizeStyles
         const sizeStyles = getFrameSizeStyles(node);
-        
+
         // Combine all styles
         const allStyles = `${positionStyle}${sizeStyles}${backgroundStyle}${strokeStyles}${borderRadius}${overflowStyles}${commonStyles}${flexStyles}box-sizing: border-box;`;
-        
+
         html += `${indent}<${tag} data-figma-id="${node.id}" data-figma-type="frame" style="${allStyles}">\n`;
         html += `${indent}  <!-- ${name} -->\n`;
 
@@ -119,7 +123,13 @@ function convertNodeToJayHtml(node: FigmaVendorDocument, fontFamilies: Set<strin
     } else if (type === 'ELLIPSE') {
         // Convert ellipses to divs with circular border radius
         html += convertEllipseToHtml(node, indent);
-    } else if (type === 'VECTOR' || type === 'STAR' || type === 'POLYGON' || type === 'LINE' || type === 'BOOLEAN_OPERATION') {
+    } else if (
+        type === 'VECTOR' ||
+        type === 'STAR' ||
+        type === 'POLYGON' ||
+        type === 'LINE' ||
+        type === 'BOOLEAN_OPERATION'
+    ) {
         // Convert vectors and vector-based shapes to divs with embedded SVG
         html += convertVectorToHtml(node, indent);
     } else if (children && children.length > 0) {
@@ -146,32 +156,32 @@ function convertNodeToJayHtml(node: FigmaVendorDocument, fontFamilies: Set<strin
  * @param section - The Jay Page section node
  * @returns The content FrameNode, or null with error/warning info
  */
-function findContentFrame(section: FigmaVendorDocument): { 
-    frame: FigmaVendorDocument | null; 
-    error?: string; 
-    warning?: string 
+function findContentFrame(section: FigmaVendorDocument): {
+    frame: FigmaVendorDocument | null;
+    error?: string;
+    warning?: string;
 } {
     if (!section.children || section.children.length === 0) {
-        return { 
-            frame: null, 
-            error: `Jay Page section "${section.name}" has no children` 
+        return {
+            frame: null,
+            error: `Jay Page section "${section.name}" has no children`,
         };
     }
 
     // Find all FrameNodes among the children
-    const frameNodes = section.children.filter(child => child.type === 'FRAME');
+    const frameNodes = section.children.filter((child) => child.type === 'FRAME');
 
     if (frameNodes.length === 0) {
-        return { 
-            frame: null, 
-            error: `Jay Page section "${section.name}" has no FrameNode children. Found: ${section.children.map(c => c.type).join(', ')}` 
+        return {
+            frame: null,
+            error: `Jay Page section "${section.name}" has no FrameNode children. Found: ${section.children.map((c) => c.type).join(', ')}`,
         };
     }
 
     if (frameNodes.length > 1) {
-        return { 
-            frame: frameNodes[0], 
-            warning: `Jay Page section "${section.name}" has ${frameNodes.length} FrameNodes, using the first one` 
+        return {
+            frame: frameNodes[0],
+            warning: `Jay Page section "${section.name}" has ${frameNodes.length} FrameNodes, using the first one`,
         };
     }
 
@@ -182,14 +192,19 @@ function findContentFrame(section: FigmaVendorDocument): {
 export const figmaVendor: Vendor<FigmaVendorDocument> = {
     vendorId: 'figma',
 
-    async convertToBodyHtml(vendorDoc: FigmaVendorDocument, pageUrl: string): Promise<VendorConversionResult> {
+    async convertToBodyHtml(
+        vendorDoc: FigmaVendorDocument,
+        pageUrl: string,
+    ): Promise<VendorConversionResult> {
         console.log(`🎨 Converting Figma document for page: ${pageUrl}`);
         console.log(`   Document type: ${vendorDoc.type}, name: ${vendorDoc.name}`);
 
         // Check if this is a Jay Page
         const isJPage = vendorDoc.pluginData?.['jpage'] === 'true';
         if (!isJPage) {
-            throw new Error(`Document "${vendorDoc.name}" is not marked as a Jay Page (missing jpage='true' in pluginData)`);
+            throw new Error(
+                `Document "${vendorDoc.name}" is not marked as a Jay Page (missing jpage='true' in pluginData)`,
+            );
         }
 
         // Find the content FrameNode
@@ -214,9 +229,11 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
 
         // Convert the content frame to body HTML (fontFamilies will be populated during conversion)
         const bodyHtml = convertNodeToJayHtml(frame, fontFamilies, '  ');
-        
+
         if (fontFamilies.size > 0) {
-            console.log(`   Found ${fontFamilies.size} font families: ${Array.from(fontFamilies).join(', ')}`);
+            console.log(
+                `   Found ${fontFamilies.size} font families: ${Array.from(fontFamilies).join(', ')}`,
+            );
         }
 
         return {

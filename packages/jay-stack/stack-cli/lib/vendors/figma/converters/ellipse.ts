@@ -1,10 +1,10 @@
 import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
-import { 
-    getPositionStyle, 
-    getNodeSizeStyles, 
+import {
+    getPositionStyle,
+    getNodeSizeStyles,
     getCommonStyles,
     getBackgroundFillsStyle,
-    getStrokeStyles
+    getStrokeStyles,
 } from '../utils';
 
 /**
@@ -30,4 +30,3 @@ export function convertEllipseToHtml(node: FigmaVendorDocument, indent: string):
 
     return `${indent}<div data-figma-id="${id}" style="${allStyles}"></div>\n`;
 }
-

@@ -1,11 +1,11 @@
 import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
-import { 
-    getPositionStyle, 
-    getNodeSizeStyles, 
+import {
+    getPositionStyle,
+    getNodeSizeStyles,
     getCommonStyles,
     getBackgroundFillsStyle,
     getStrokeStyles,
-    getBorderRadius
+    getBorderRadius,
 } from '../utils';
 
 /**
@@ -29,4 +29,3 @@ export function convertRectangleToHtml(node: FigmaVendorDocument, indent: string
 
     return `${indent}<div data-figma-id="${id}" style="${allStyles}"></div>\n`;
 }
-
