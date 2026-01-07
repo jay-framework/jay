@@ -12,6 +12,10 @@ import {
     getFrameSizeStyles,
     rgbToHex
 } from './utils';
+import { convertTextNodeToHtml } from './converters/text';
+import { convertRectangleToHtml } from './converters/rectangle';
+import { convertEllipseToHtml } from './converters/ellipse';
+import { convertVectorToHtml } from './converters/vector';
 
 /**
  * Figma Vendor Implementation
@@ -23,194 +27,12 @@ import {
  */
 
 /**
- * Escapes HTML special characters
- */
-function escapeHtmlContent(text: string): string {
-    const map: Record<string, string> = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-    };
-    return text.replace(/[&<>"']/g, (char) => map[char]);
-}
 
 /**
- * Converts a TEXT node to HTML with full styling
- */
-function convertTextNodeToHtml(node: FigmaVendorDocument, indent: string): string {
-    const { name, id, characters, fontName, fontSize, fontWeight, fills, 
-            textAlignHorizontal, textAlignVertical, letterSpacing, lineHeight,
-            textDecoration, textCase, textTruncation, maxLines, maxWidth,
-            textAutoResize, hasMissingFont, hyperlinks, width, height } = node;
-    
-    // Handle missing fonts
-    if (hasMissingFont || !characters) {
-        if (hasMissingFont) {
-            return `${indent}<!-- Text node "${name}" has missing fonts -->\n`;
-        }
-        return '';
-    }
-    
-    // Font family
-    let fontFamilyStyle = 'font-family: sans-serif;';
-    if (fontName && typeof fontName === 'object' && fontName.family) {
-        fontFamilyStyle = `font-family: '${fontName.family}', sans-serif;`;
-    }
-    
-    // Font size
-    const fontSizeValue = typeof fontSize === 'number' ? fontSize : 16;
-    const fontSizeStyle = `font-size: ${fontSizeValue}px;`;
-    
-    // Font weight
-    const fontWeightValue = typeof fontWeight === 'number' ? fontWeight : 400;
-    const fontWeightStyle = `font-weight: ${fontWeightValue};`;
-    
-    // Text color
-    let textColor = '#000000';
-    if (fills && Array.isArray(fills) && fills.length > 0 && fills[0].type === 'SOLID' && fills[0].color) {
-        textColor = rgbToHex(fills[0].color);
-    }
-    const colorStyle = `color: ${textColor};`;
-    
-    // Text alignment
-    const textAlign = textAlignHorizontal ? textAlignHorizontal.toLowerCase() : 'left';
-    const textAlignStyle = `text-align: ${textAlign};`;
-    
-    // Vertical alignment wrapper
-    let verticalAlignWrapperStyle = '';
-    if (textAlignVertical) {
-        verticalAlignWrapperStyle = 'display: flex; flex-direction: column;';
-        switch (textAlignVertical) {
-            case 'TOP':
-                verticalAlignWrapperStyle += 'justify-content: flex-start;';
-                break;
-            case 'CENTER':
-                verticalAlignWrapperStyle += 'justify-content: center;';
-                break;
-            case 'BOTTOM':
-                verticalAlignWrapperStyle += 'justify-content: flex-end;';
-                break;
-        }
-    }
-    
-    // Letter spacing
-    let letterSpacingStyle = '';
-    if (letterSpacing && letterSpacing.value !== 0) {
-        const unit = letterSpacing.unit === 'PIXELS' ? 'px' : '%';
-        letterSpacingStyle = `letter-spacing: ${letterSpacing.value}${unit};`;
-    }
-    
-    // Line height
-    let lineHeightStyle = '';
-    if (lineHeight) {
-        if (lineHeight.unit === 'AUTO') {
-            lineHeightStyle = 'line-height: normal;';
-        } else {
-            const unit = lineHeight.unit === 'PIXELS' ? 'px' : '%';
-            lineHeightStyle = `line-height: ${lineHeight.value}${unit};`;
-        }
-    }
-    
-    // Text decoration
-    let textDecorationStyle = '';
-    if (textDecoration === 'UNDERLINE') {
-        textDecorationStyle = 'text-decoration: underline;';
-    } else if (textDecoration === 'STRIKETHROUGH') {
-        textDecorationStyle = 'text-decoration: line-through;';
-    }
-    
-    // Text case transformation
-    let textTransformStyle = '';
-    if (textCase && textCase !== 'ORIGINAL') {
-        switch (textCase) {
-            case 'UPPER':
-                textTransformStyle = 'text-transform: uppercase;';
-                break;
-            case 'LOWER':
-                textTransformStyle = 'text-transform: lowercase;';
-                break;
-            case 'TITLE':
-                textTransformStyle = 'text-transform: capitalize;';
-                break;
-        }
-    }
-    
-    // Text truncation
-    let truncationStyle = '';
-    if (textTruncation === 'ENDING') {
-        if (maxLines && maxLines > 1) {
-            // Multi-line truncation
-            truncationStyle = `display: -webkit-box; -webkit-line-clamp: ${maxLines}; -webkit-box-orient: vertical; overflow: hidden;`;
-        } else {
-            // Single-line truncation
-            truncationStyle = 'white-space: nowrap; overflow: hidden; text-overflow: ellipsis;';
-        }
-    }
-    if (maxWidth && maxWidth > 0) {
-        truncationStyle += `max-width: ${maxWidth}px;`;
-    }
-    
-    // Size styles - use utility function instead of hardcoded dimensions
-    let sizeStyles = getNodeSizeStyles(node);
-    if (textAutoResize === 'HEIGHT') {
-        // Override height for auto-resize text
-        sizeStyles = sizeStyles.replace(/height: \d+px;/, 'height: auto;');
-    }
-    
-    // Position style - use utility function
-    const positionStyle = getPositionStyle(node);
-    
-    // Common styles (opacity, rotation, effects)
-    const commonStyles = getCommonStyles(node);
-    
-    // Process text content with hyperlinks
-    let htmlContent = '';
-    if (hyperlinks && hyperlinks.length > 0) {
-        let lastEnd = -1;
-        for (const link of hyperlinks) {
-            // Add text before link
-            if (link.start > lastEnd + 1) {
-                const beforeText = characters.substring(lastEnd + 1, link.start);
-                htmlContent += escapeHtmlContent(beforeText).replace(/\n/g, '<br>');
-            }
-            // Add link
-            const linkText = characters.substring(link.start, link.end + 1);
-            htmlContent += `<a href="${link.url}" style="color: inherit;">${escapeHtmlContent(linkText).replace(/\n/g, '<br>')}</a>`;
-            lastEnd = link.end;
-        }
-        // Add remaining text after last link
-        if (lastEnd + 1 < characters.length) {
-            const afterText = characters.substring(lastEnd + 1);
-            htmlContent += escapeHtmlContent(afterText).replace(/\n/g, '<br>');
-        }
-    } else {
-        // No hyperlinks, just escape and convert newlines
-        htmlContent = escapeHtmlContent(characters).replace(/\n/g, '<br>');
-    }
-    
-    // Combine all text styles
-    const textStyles = `${fontFamilyStyle}${fontSizeStyle}${fontWeightStyle}${colorStyle}${textAlignStyle}${letterSpacingStyle}${lineHeightStyle}${textDecorationStyle}${textTransformStyle}${truncationStyle}`;
-    
-    // Build HTML with proper indentation
-    const childIndent = indent + '  ';
-    const innerIndent = indent + '    ';
-    
-    if (verticalAlignWrapperStyle) {
-        // With vertical alignment wrapper
-        return `${indent}<div data-figma-id="${id}" style="${positionStyle}${sizeStyles}${commonStyles}${verticalAlignWrapperStyle}">\n` +
-               `${childIndent}<div style="${textStyles}">\n` +
-               `${innerIndent}${htmlContent}\n` +
-               `${childIndent}</div>\n` +
-               `${indent}</div>\n`;
-    } else {
-        // Simple text div
-        return `${indent}<div data-figma-id="${id}" style="${positionStyle}${sizeStyles}${commonStyles}${textStyles}">\n` +
-               `${childIndent}${htmlContent}\n` +
-               `${indent}</div>\n`;
-    }
-}
+
+/**
+
+/**
 
 /**
  * Basic converter for Figma nodes to Jay HTML
@@ -291,10 +113,15 @@ function convertNodeToJayHtml(node: FigmaVendorDocument, fontFamilies: Set<strin
     } else if (type === 'TEXT') {
         // Convert text nodes with full styling
         html += convertTextNodeToHtml(node, indent);
-    } else if (type === 'RECTANGLE' || type === 'ELLIPSE' || type === 'VECTOR') {
-        // Convert shapes to placeholder divs with positioning
-        const tag = semanticHtml || 'div';
-        html += `${indent}<${tag} data-figma-id="${node.id}" data-figma-type="${type.toLowerCase()}" ${styleAttr}><!-- ${name} --></${tag}>\n`;
+    } else if (type === 'RECTANGLE') {
+        // Convert rectangles to divs with background, border radius, and strokes
+        html += convertRectangleToHtml(node, indent);
+    } else if (type === 'ELLIPSE') {
+        // Convert ellipses to divs with circular border radius
+        html += convertEllipseToHtml(node, indent);
+    } else if (type === 'VECTOR' || type === 'STAR' || type === 'POLYGON' || type === 'LINE' || type === 'BOOLEAN_OPERATION') {
+        // Convert vectors and vector-based shapes to divs with embedded SVG
+        html += convertVectorToHtml(node, indent);
     } else if (children && children.length > 0) {
         // Generic container with children
         const tag = semanticHtml || 'div';
@@ -400,17 +227,3 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
         };
     },
 };
-
-/**
- * Escapes HTML special characters
- */
-function escapeHtml(text: string): string {
-    const map: Record<string, string> = {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#39;'
-    };
-    return text.replace(/[&<>"']/g, (char) => map[char]);
-}
