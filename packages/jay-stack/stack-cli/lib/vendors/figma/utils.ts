@@ -162,10 +162,11 @@ export function getNodeSizeStyles(node: FigmaVendorDocument): string {
 
 /**
  * Gets common styles like opacity, rotation, effects
+ * Mirrors the logic from the old plugin's getCommonStyles function
  */
 export function getCommonStyles(node: FigmaVendorDocument): string {
     let styles = '';
-    const transformStyles: string[] = [];
+    const transformStyles: string[] = []; // Collect transform functions
 
     // Opacity
     if (node.opacity !== undefined && node.opacity < 1) {
@@ -174,24 +175,34 @@ export function getCommonStyles(node: FigmaVendorDocument): string {
 
     // Rotation
     if (node.rotation !== undefined && node.rotation !== 0) {
+        // Figma rotation is clockwise, CSS is clockwise
         transformStyles.push(`rotate(${node.rotation}deg)`);
     }
 
-    // Effects (shadows, blurs)
-    if (node.effects && Array.isArray(node.effects) && node.effects.length > 0) {
-        const boxShadows: string[] = [];
-        const filterFunctions: string[] = [];
+    // Handle potential scale/flip (if export settings preserve them)
+    // if ('scale' in node...) { transformStyles.push(`scale(${node.scaleX}, ${node.scaleY})`) }
 
-        for (const effect of node.effects) {
+    // --- Effects ---
+    if (node.effects && Array.isArray(node.effects) && node.effects.length > 0) {
+        // Process effects in reverse order for CSS (like Figma layers)
+        // Only process visible effects (visible !== false)
+        const visibleEffects = node.effects
+            .filter(e => e.visible !== false)
+            .reverse();
+
+        const filterFunctions: string[] = [];
+        const boxShadows: string[] = [];
+
+        for (const effect of visibleEffects) {
             switch (effect.type) {
                 case 'DROP_SHADOW':
                 case 'INNER_SHADOW': {
                     if (effect.color && effect.offset && effect.radius !== undefined) {
-                        const { r, g, b, a } = effect.color;
-                        const shadowColor = `rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${a !== undefined ? a : 1})`;
+                        const { offset, radius, color, spread } = effect;
+                        const shadowColor = `rgba(${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)}, ${color.a ?? 1})`;
                         const inset = effect.type === 'INNER_SHADOW' ? 'inset ' : '';
-                        const spread = effect.spread !== undefined ? effect.spread : 0;
-                        boxShadows.push(`${inset}${effect.offset.x}px ${effect.offset.y}px ${effect.radius}px ${spread}px ${shadowColor}`);
+                        // CSS: h-offset v-offset blur spread color
+                        boxShadows.push(`${inset}${offset.x}px ${offset.y}px ${radius}px ${spread ?? 0}px ${shadowColor}`);
                     }
                     break;
                 }
@@ -201,26 +212,36 @@ export function getCommonStyles(node: FigmaVendorDocument): string {
                     }
                     break;
                 case 'BACKGROUND_BLUR':
+                    // Requires backdrop-filter, might need specific stacking context
                     if (effect.radius !== undefined) {
                         styles += `backdrop-filter: blur(${effect.radius}px);`;
+                        // Need -webkit-backdrop-filter: blur(...) for Safari etc.
                         styles += `-webkit-backdrop-filter: blur(${effect.radius}px);`;
                     }
                     break;
+                // Add other effect types if needed
             }
         }
 
         if (boxShadows.length > 0) {
+            // Multiple box shadows are comma-separated
             styles += `box-shadow: ${boxShadows.join(', ')};`;
         }
         if (filterFunctions.length > 0) {
+            // Multiple filters are space-separated
             styles += `filter: ${filterFunctions.join(' ')};`;
         }
     }
 
-    // Apply transforms
+    // --- Apply Transforms ---
     if (transformStyles.length > 0) {
+        // Combine multiple transforms
         styles += `transform: ${transformStyles.join(' ')};`;
-        // Set transform origin to center to match Figma
+        // Consider setting transform-origin, especially if rotation/scaling occurs
+        // Origin is node's top-left in Figma's model before rotation.
+        // CSS default is '50% 50%'. To match Figma's visual if rotated around top-left:
+        // styles += 'transform-origin: 0 0;';
+        // Or around center:
         const width = node.width !== undefined ? node.width : 0;
         const height = node.height !== undefined ? node.height : 0;
         styles += `transform-origin: ${width / 2}px ${height / 2}px;`;
