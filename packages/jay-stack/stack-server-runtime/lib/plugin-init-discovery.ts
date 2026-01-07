@@ -63,12 +63,14 @@ export interface PluginInitDiscoveryOptions {
  * in `plugin.yaml` via the `init` property.
  *
  * Scans both local plugins (src/plugins/) and NPM plugins (node_modules/).
+ * Also discovers transitive plugin dependencies (plugins that depend on other plugins).
  */
 export async function discoverPluginsWithInit(
     options: PluginInitDiscoveryOptions,
 ): Promise<PluginWithInit[]> {
     const { projectRoot, verbose = false } = options;
     const plugins: PluginWithInit[] = [];
+    const visitedPackages = new Set<string>();
 
     // 1. Scan local plugins in src/plugins/
     const localPluginsPath = path.join(projectRoot, 'src/plugins');
@@ -100,6 +102,8 @@ export async function discoverPluginsWithInit(
                     dependencies,
                 });
 
+                visitedPackages.add(pluginPath);
+
                 if (verbose) {
                     console.log(
                         `[PluginInit] Found local plugin with init: ${manifest.name || entry.name}`,
@@ -111,17 +115,26 @@ export async function discoverPluginsWithInit(
         }
     }
 
-    // 2. Scan NPM plugins by looking at project's package.json dependencies
+    // 2. Scan NPM plugins - start with project's package.json dependencies
+    //    then recursively check transitive plugin dependencies
     const projectPackageJsonPath = path.join(projectRoot, 'package.json');
     if (fs.existsSync(projectPackageJsonPath)) {
         try {
             const projectPackageJson = JSON.parse(fs.readFileSync(projectPackageJsonPath, 'utf-8'));
-            const allDeps = {
-                ...projectPackageJson.dependencies,
-                ...projectPackageJson.devDependencies,
-            };
+            // Only check runtime dependencies, not devDependencies
+            // devDependencies are build tools, not runtime plugins
+            const initialDeps = Object.keys(projectPackageJson.dependencies || {});
 
-            for (const depName of Object.keys(allDeps)) {
+            // Queue-based traversal for transitive dependencies
+            const packagesToCheck = [...initialDeps];
+
+            while (packagesToCheck.length > 0) {
+                const depName = packagesToCheck.shift()!;
+
+                // Skip if already visited
+                if (visitedPackages.has(depName)) continue;
+                visitedPackages.add(depName);
+
                 // Try to resolve plugin.yaml from the package
                 let pluginYamlPath: string;
                 try {
@@ -156,6 +169,13 @@ export async function discoverPluginsWithInit(
 
                 if (verbose) {
                     console.log(`[PluginInit] Found NPM plugin with init: ${depName}`);
+                }
+
+                // Add this plugin's dependencies to the queue for transitive discovery
+                for (const transitiveDep of dependencies) {
+                    if (!visitedPackages.has(transitiveDep)) {
+                        packagesToCheck.push(transitiveDep);
+                    }
                 }
             }
         } catch (error) {
