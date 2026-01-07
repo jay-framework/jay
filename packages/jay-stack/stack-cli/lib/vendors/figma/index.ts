@@ -11,6 +11,17 @@ import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
  */
 
 /**
+ * Creates a jay-data script tag
+ * For now returns an empty data structure
+ * TODO: Generate proper data contract from Figma bindings
+ */
+function createJayDataScript(): string {
+    return `  <script type="application/jay-data">
+    data:
+  </script>`;
+}
+
+/**
  * Basic converter for Figma nodes to Jay HTML
  * This is a simple implementation for initial end-to-end testing
  */
@@ -146,9 +157,68 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
 
         console.log(`   Converting content frame: ${frame.name} (${frame.type})`);
 
-        // Convert the content frame to Jay HTML
-        const jayHtml = convertNodeToJayHtml(frame);
+        // Convert the content frame to Jay HTML body content
+        const bodyContent = convertNodeToJayHtml(frame, '  ');
 
-        return jayHtml.trim();
+        // Create the full Jay HTML document structure
+        const fullHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+${createJayDataScript()}
+  <title>${escapeHtml(vendorDoc.name)}</title>
+  <style>
+    /* Basic reset */
+    body { margin: 0; font-family: sans-serif; }
+    a { color: inherit; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    div { box-sizing: border-box; }
+    
+    /* Scrollbar styling for Webkit browsers */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.5);
+    }
+    
+    /* Smooth scrolling */
+    * {
+      scroll-behavior: smooth;
+    }
+  </style>
+</head>
+<body>
+${bodyContent}
+</body>
+</html>`;
+
+        return fullHtml;
     },
 };
+
+/**
+ * Escapes HTML special characters
+ */
+function escapeHtml(text: string): string {
+    const map: Record<string, string> = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    };
+    return text.replace(/[&<>"']/g, (char) => map[char]);
+}
