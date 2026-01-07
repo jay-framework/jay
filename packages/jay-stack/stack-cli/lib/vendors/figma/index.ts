@@ -1,5 +1,6 @@
 import { Vendor } from '../types';
 import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
+import { getPositionStyle, getNodeSizeStyles, getCommonStyles } from './utils';
 
 /**
  * Figma Vendor Implementation
@@ -182,18 +183,18 @@ function convertTextNodeToHtml(node: FigmaVendorDocument, indent: string): strin
         truncationStyle += `max-width: ${maxWidth}px;`;
     }
     
-    // Size styles
-    let sizeStyles = '';
-    if (width !== undefined && height !== undefined) {
-        if (textAutoResize === 'HEIGHT') {
-            sizeStyles = `width: ${width}px; height: auto;`;
-        } else {
-            sizeStyles = `width: ${width}px; height: ${height}px;`;
-        }
+    // Size styles - use utility function instead of hardcoded dimensions
+    let sizeStyles = getNodeSizeStyles(node);
+    if (textAutoResize === 'HEIGHT') {
+        // Override height for auto-resize text
+        sizeStyles = sizeStyles.replace(/height: \d+px;/, 'height: auto;');
     }
     
-    // Position style (for absolute positioning)
-    const positionStyle = 'position: absolute;';
+    // Position style - use utility function
+    const positionStyle = getPositionStyle(node);
+    
+    // Common styles (opacity, rotation, effects)
+    const commonStyles = getCommonStyles(node);
     
     // Process text content with hyperlinks
     let htmlContent = '';
@@ -229,14 +230,14 @@ function convertTextNodeToHtml(node: FigmaVendorDocument, indent: string): strin
     
     if (verticalAlignWrapperStyle) {
         // With vertical alignment wrapper
-        return `${indent}<div data-figma-id="${id}" style="${positionStyle}${sizeStyles}${verticalAlignWrapperStyle}">\n` +
+        return `${indent}<div data-figma-id="${id}" style="${positionStyle}${sizeStyles}${commonStyles}${verticalAlignWrapperStyle}">\n` +
                `${childIndent}<div style="${textStyles}">\n` +
                `${innerIndent}${htmlContent}\n` +
                `${childIndent}</div>\n` +
                `${indent}</div>\n`;
     } else {
         // Simple text div
-        return `${indent}<div data-figma-id="${id}" style="${positionStyle}${sizeStyles}${textStyles}">\n` +
+        return `${indent}<div data-figma-id="${id}" style="${positionStyle}${sizeStyles}${commonStyles}${textStyles}">\n` +
                `${childIndent}${htmlContent}\n` +
                `${indent}</div>\n`;
     }
@@ -270,6 +271,12 @@ function convertNodeToJayHtml(node: FigmaVendorDocument, fontFamilies: Set<strin
         // Mixed fonts can be handled in a future enhancement.
     }
 
+    // Get position, size, and common styles for most nodes
+    const positionStyle = getPositionStyle(node);
+    const sizeStyles = getNodeSizeStyles(node);
+    const commonStyles = getCommonStyles(node);
+    const styleAttr = `style="${positionStyle}${sizeStyles}${commonStyles}"`;
+
     // For now, we'll create simple HTML structure
     let html = '';
 
@@ -286,9 +293,9 @@ function convertNodeToJayHtml(node: FigmaVendorDocument, fontFamilies: Set<strin
 
         html += `${indent}</section>\n`;
     } else if (type === 'FRAME') {
-        // Convert frames to divs
+        // Convert frames to divs with proper positioning and sizing
         const tag = semanticHtml || 'div';
-        html += `${indent}<${tag} data-figma-id="${node.id}" data-figma-type="frame">\n`;
+        html += `${indent}<${tag} data-figma-id="${node.id}" data-figma-type="frame" ${styleAttr}>\n`;
         html += `${indent}  <!-- ${name} -->\n`;
 
         if (children && children.length > 0) {
@@ -302,13 +309,13 @@ function convertNodeToJayHtml(node: FigmaVendorDocument, fontFamilies: Set<strin
         // Convert text nodes with full styling
         html += convertTextNodeToHtml(node, indent);
     } else if (type === 'RECTANGLE' || type === 'ELLIPSE' || type === 'VECTOR') {
-        // Convert shapes to placeholder divs
+        // Convert shapes to placeholder divs with positioning
         const tag = semanticHtml || 'div';
-        html += `${indent}<${tag}><!-- ${name} --></${tag}>\n`;
+        html += `${indent}<${tag} data-figma-id="${node.id}" data-figma-type="${type.toLowerCase()}" ${styleAttr}><!-- ${name} --></${tag}>\n`;
     } else if (children && children.length > 0) {
         // Generic container with children
         const tag = semanticHtml || 'div';
-        html += `${indent}<${tag}>\n`;
+        html += `${indent}<${tag} data-figma-id="${node.id}" data-figma-type="${type.toLowerCase()}" ${styleAttr}>\n`;
         html += `${indent}  <!-- ${name} -->\n`;
 
         children.forEach((child) => {
