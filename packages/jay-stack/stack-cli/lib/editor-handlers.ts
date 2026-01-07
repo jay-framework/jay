@@ -25,6 +25,7 @@ import type {
 } from '@jay-framework/editor-protocol';
 import type { JayConfig } from './config';
 import { getVendor, hasVendor } from './vendors';
+import { buildJayHtmlFromVendorResult } from './vendors/jay-html-builder';
 import {
     generateElementDefinitionFile,
     JAY_IMPORT_RESOLVER,
@@ -1046,12 +1047,19 @@ export function createEditorHandlers(
                 const vendor = getVendor(vendorId)!;
 
                 try {
-                    // Run the vendor conversion
-                    const jayHtml = await vendor.convertToJayHtml(vendorDoc, pageUrl);
+                    // Run the vendor conversion to get body HTML and metadata
+                    const conversionResult = await vendor.convertToBodyHtml(vendorDoc, pageUrl);
+
+                    // Build the full Jay HTML document with headless components from page.conf.yaml
+                    const fullJayHtml = await buildJayHtmlFromVendorResult(
+                        conversionResult,
+                        dirname,
+                        path.basename(dirname)
+                    );
 
                     // Write Jay HTML file
                     const jayHtmlPath = path.join(dirname, 'page.jay-html');
-                    await fs.promises.writeFile(jayHtmlPath, jayHtml, 'utf-8');
+                    await fs.promises.writeFile(jayHtmlPath, fullJayHtml, 'utf-8');
 
                     console.log(`✅ Successfully converted to Jay HTML: ${jayHtmlPath}`);
 

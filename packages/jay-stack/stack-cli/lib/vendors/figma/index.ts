@@ -1,46 +1,15 @@
-import { Vendor } from '../types';
+import { Vendor, VendorConversionResult } from '../types';
 import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
 import { getPositionStyle, getNodeSizeStyles, getCommonStyles } from './utils';
 
 /**
  * Figma Vendor Implementation
  *
- * This converts Figma FigmaVendorDocument documents to Jay HTML.
+ * This converts Figma FigmaVendorDocument documents to Jay HTML body content.
  *
  * The FigmaVendorDocument type is imported from @jay-framework/editor-protocol,
  * which is the single source of truth for the vendor document structure.
  */
-
-/**
- * Creates a jay-data script tag
- * For now returns an empty data structure
- * TODO: Generate proper data contract from Figma bindings
- */
-function createJayDataScript(): string {
-    return `  <script type="application/jay-data">
-    data:
-  </script>`;
-}
-
-/**
- * Generates Google Fonts links for the collected font families
- */
-function generateGoogleFontsLinks(fontFamilies: Set<string>): string {
-    if (fontFamilies.size === 0) {
-        return '';
-    }
-
-    const families = Array.from(fontFamilies);
-    const googleFontsUrl = `https://fonts.googleapis.com/css2?${families.map(family => {
-        // First encode special characters, then replace %20 (encoded spaces) with +
-        const encodedFamily = encodeURIComponent(family).replace(/%20/g, '+');
-        return `family=${encodedFamily}:wght@100;200;300;400;500;600;700;800;900`;
-    }).join('&')}&display=swap`;
-
-    return `  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="${googleFontsUrl}" rel="stylesheet">`;
-}
 
 /**
  * Converts RGB color object to hex string
@@ -372,7 +341,7 @@ function findContentFrame(section: FigmaVendorDocument): {
 export const figmaVendor: Vendor<FigmaVendorDocument> = {
     vendorId: 'figma',
 
-    async convertToJayHtml(vendorDoc: FigmaVendorDocument, pageUrl: string): Promise<string> {
+    async convertToBodyHtml(vendorDoc: FigmaVendorDocument, pageUrl: string): Promise<VendorConversionResult> {
         console.log(`🎨 Converting Figma document for page: ${pageUrl}`);
         console.log(`   Document type: ${vendorDoc.type}, name: ${vendorDoc.name}`);
 
@@ -402,63 +371,19 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
         // Create empty set to collect font families during conversion
         const fontFamilies = new Set<string>();
 
-        // Convert the content frame to Jay HTML body content (fontFamilies will be populated during conversion)
-        const bodyContent = convertNodeToJayHtml(frame, fontFamilies, '  ');
+        // Convert the content frame to body HTML (fontFamilies will be populated during conversion)
+        const bodyHtml = convertNodeToJayHtml(frame, fontFamilies, '  ');
         
         if (fontFamilies.size > 0) {
             console.log(`   Found ${fontFamilies.size} font families: ${Array.from(fontFamilies).join(', ')}`);
         }
 
-        // Generate Google Fonts links
-        const fontLinks = generateGoogleFontsLinks(fontFamilies);
-
-        // Create the full Jay HTML document structure
-        const fullHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-${fontLinks}
-${createJayDataScript()}
-  <title>${escapeHtml(vendorDoc.name)}</title>
-  <style>
-    /* Basic reset */
-    body { margin: 0; font-family: sans-serif; }
-    a { color: inherit; text-decoration: none; }
-    a:hover { text-decoration: underline; }
-    div { box-sizing: border-box; }
-    
-    /* Scrollbar styling for Webkit browsers */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-    
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 4px;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(0, 0, 0, 0.5);
-    }
-    
-    /* Smooth scrolling */
-    * {
-      scroll-behavior: smooth;
-    }
-  </style>
-</head>
-<body>
-${bodyContent}
-</body>
-</html>`;
-
-        return fullHtml;
+        return {
+            bodyHtml,
+            fontFamilies,
+            // No contract data for now - Figma vendor doesn't generate contracts yet
+            contractData: undefined,
+        };
     },
 };
 
