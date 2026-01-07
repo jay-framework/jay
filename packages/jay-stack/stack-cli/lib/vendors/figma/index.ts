@@ -78,6 +78,44 @@ function convertNodeToJayHtml(node: FigmaVendorDocument, indent: string = ''): s
     return html;
 }
 
+/**
+ * Finds the content FrameNode from a Jay Page section's children
+ * @param section - The Jay Page section node
+ * @returns The content FrameNode, or null with error/warning info
+ */
+function findContentFrame(section: FigmaVendorDocument): { 
+    frame: FigmaVendorDocument | null; 
+    error?: string; 
+    warning?: string 
+} {
+    if (!section.children || section.children.length === 0) {
+        return { 
+            frame: null, 
+            error: `Jay Page section "${section.name}" has no children` 
+        };
+    }
+
+    // Find all FrameNodes among the children
+    const frameNodes = section.children.filter(child => child.type === 'FRAME');
+
+    if (frameNodes.length === 0) {
+        return { 
+            frame: null, 
+            error: `Jay Page section "${section.name}" has no FrameNode children. Found: ${section.children.map(c => c.type).join(', ')}` 
+        };
+    }
+
+    if (frameNodes.length > 1) {
+        return { 
+            frame: frameNodes[0], 
+            warning: `Jay Page section "${section.name}" has ${frameNodes.length} FrameNodes, using the first one` 
+        };
+    }
+
+    // Exactly one frame found - ideal case
+    return { frame: frameNodes[0] };
+}
+
 export const figmaVendor: Vendor<FigmaVendorDocument> = {
     vendorId: 'figma',
 
@@ -88,11 +126,28 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
         // Check if this is a Jay Page
         const isJPage = vendorDoc.pluginData?.['jpage'] === 'true';
         if (!isJPage) {
-            console.warn(`⚠️  Document is not marked as a Jay Page`);
+            throw new Error(`Document "${vendorDoc.name}" is not marked as a Jay Page (missing jpage='true' in pluginData)`);
         }
 
-        // Convert the node tree to Jay HTML
-        const jayHtml = convertNodeToJayHtml(vendorDoc);
+        // Find the content FrameNode
+        const { frame, error, warning } = findContentFrame(vendorDoc);
+
+        if (error) {
+            throw new Error(`Cannot convert to Jay HTML: ${error}`);
+        }
+
+        if (warning) {
+            console.warn(`⚠️  ${warning}`);
+        }
+
+        if (!frame) {
+            throw new Error(`Cannot convert to Jay HTML: No content frame found`);
+        }
+
+        console.log(`   Converting content frame: ${frame.name} (${frame.type})`);
+
+        // Convert the content frame to Jay HTML
+        const jayHtml = convertNodeToJayHtml(frame);
 
         return jayHtml.trim();
     },
