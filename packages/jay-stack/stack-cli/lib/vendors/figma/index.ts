@@ -1,6 +1,17 @@
 import { Vendor, VendorConversionResult } from '../types';
 import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
-import { getPositionStyle, getNodeSizeStyles, getCommonStyles } from './utils';
+import { 
+    getPositionStyle, 
+    getNodeSizeStyles, 
+    getCommonStyles,
+    getBorderRadius,
+    getAutoLayoutStyles,
+    getOverflowStyles,
+    getBackgroundFillsStyle,
+    getStrokeStyles,
+    getFrameSizeStyles,
+    rgbToHex
+} from './utils';
 
 /**
  * Figma Vendor Implementation
@@ -10,17 +21,6 @@ import { getPositionStyle, getNodeSizeStyles, getCommonStyles } from './utils';
  * The FigmaVendorDocument type is imported from @jay-framework/editor-protocol,
  * which is the single source of truth for the vendor document structure.
  */
-
-/**
- * Converts RGB color object to hex string
- */
-function rgbToHex(color: { r: number; g: number; b: number }): string {
-    const toHex = (n: number) => {
-        const hex = Math.round(n * 255).toString(16);
-        return hex.length === 1 ? '0' + hex : hex;
-    };
-    return `#${toHex(color.r)}${toHex(color.g)}${toHex(color.b)}`;
-}
 
 /**
  * Escapes HTML special characters
@@ -262,9 +262,23 @@ function convertNodeToJayHtml(node: FigmaVendorDocument, fontFamilies: Set<strin
 
         html += `${indent}</section>\n`;
     } else if (type === 'FRAME') {
-        // Convert frames to divs with proper positioning and sizing
+        // Convert frames to divs with full styling (layout, background, borders, etc.)
         const tag = semanticHtml || 'div';
-        html += `${indent}<${tag} data-figma-id="${node.id}" data-figma-type="frame" ${styleAttr}>\n`;
+        
+        // Build Frame-specific styles
+        const backgroundStyle = getBackgroundFillsStyle(node);
+        const borderRadius = getBorderRadius(node);
+        const strokeStyles = getStrokeStyles(node);
+        const flexStyles = getAutoLayoutStyles(node);
+        const overflowStyles = getOverflowStyles(node);
+        
+        // For frames, use getFrameSizeStyles instead of getNodeSizeStyles
+        const sizeStyles = getFrameSizeStyles(node);
+        
+        // Combine all styles
+        const allStyles = `${positionStyle}${sizeStyles}${backgroundStyle}${strokeStyles}${borderRadius}${overflowStyles}${commonStyles}${flexStyles}box-sizing: border-box;`;
+        
+        html += `${indent}<${tag} data-figma-id="${node.id}" data-figma-type="frame" style="${allStyles}">\n`;
         html += `${indent}  <!-- ${name} -->\n`;
 
         if (children && children.length > 0) {
