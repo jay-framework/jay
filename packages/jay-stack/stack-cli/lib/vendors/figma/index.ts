@@ -27,10 +27,49 @@ import { convertVectorToHtml } from './converters/vector';
  */
 
 /**
-
-/**
-
-/**
+ * Builds a mapping from pageContractPath to component key
+ * 
+ * Extracts contract names from binding data and converts them to camelCase keys.
+ * 
+ * Example:
+ * - Input pageContractPath: "/products/:slug:@jay-framework/wix-stores.product-page"
+ * - Extracted contract: "product-page"
+ * - Output key: "productPage"
+ * 
+ * @param bindingData - The binding data containing pageContractPath references
+ * @returns A map from full pageContractPath to simple component key
+ */
+function buildContractKeyMap(
+    bindingData: { [layerId: string]: Array<{ pageContractPath: string; tagPath: string[]; attribute?: string; property?: string }> }
+): { [pageContractPath: string]: string } {
+    const contractKeyMap: { [pageContractPath: string]: string } = {};
+    
+    for (const layerBindings of Object.values(bindingData)) {
+        for (const binding of layerBindings) {
+            const pageContractPath = binding.pageContractPath;
+            
+            if (!contractKeyMap[pageContractPath]) {
+                // Check if this is an extended contract path with @ notation
+                if (pageContractPath.includes(':@')) {
+                    // Extract the contract part: "@jay-framework/wix-stores.product-page"
+                    const contractPart = pageContractPath.split(':@')[1];
+                    if (contractPart) {
+                        // Extract the contract name: "product-page" from "@plugin/package.contract-name"
+                        const lastDot = contractPart.lastIndexOf('.');
+                        if (lastDot !== -1) {
+                            const contractName = contractPart.substring(lastDot + 1);
+                            // Convert "product-page" to camelCase "productPage"
+                            const key = contractName.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+                            contractKeyMap[pageContractPath] = key;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    return contractKeyMap;
+}
 
 /**
 
@@ -40,11 +79,15 @@ import { convertVectorToHtml } from './converters/vector';
  * @param node - The Figma node to convert
  * @param fontFamilies - Set to collect font families encountered during conversion
  * @param indent - Current indentation level
+ * @param bindingData - Optional binding data for data bindings
+ * @param contractKeyMap - Optional map from pageContractPath to component key
  */
 function convertNodeToJayHtml(
     node: FigmaVendorDocument,
     fontFamilies: Set<string>,
     indent: string = '',
+    bindingData?: { [layerId: string]: Array<{ pageContractPath: string; tagPath: string[]; attribute?: string; property?: string }> },
+    contractKeyMap?: { [pageContractPath: string]: string },
 ): string {
     const { name, type, children, pluginData, width, height } = node;
 
@@ -82,7 +125,7 @@ function convertNodeToJayHtml(
 
         if (children && children.length > 0) {
             children.forEach((child) => {
-                html += convertNodeToJayHtml(child, fontFamilies, indent + '  ');
+                html += convertNodeToJayHtml(child, fontFamilies, indent + '  ', bindingData, contractKeyMap);
             });
         }
 
@@ -109,14 +152,14 @@ function convertNodeToJayHtml(
 
         if (children && children.length > 0) {
             children.forEach((child) => {
-                html += convertNodeToJayHtml(child, fontFamilies, indent + '  ');
+                html += convertNodeToJayHtml(child, fontFamilies, indent + '  ', bindingData, contractKeyMap);
             });
         }
 
         html += `${indent}</${tag}>\n`;
     } else if (type === 'TEXT') {
-        // Convert text nodes with full styling
-        html += convertTextNodeToHtml(node, indent);
+        // Convert text nodes with full styling and data binding support
+        html += convertTextNodeToHtml(node, indent, bindingData, contractKeyMap);
     } else if (type === 'RECTANGLE') {
         // Convert rectangles to divs with background, border radius, and strokes
         html += convertRectangleToHtml(node, indent);
@@ -139,7 +182,7 @@ function convertNodeToJayHtml(
         html += `${indent}  <!-- ${name} -->\n`;
 
         children.forEach((child) => {
-            html += convertNodeToJayHtml(child, fontFamilies, indent + '  ');
+            html += convertNodeToJayHtml(child, fontFamilies, indent + '  ', bindingData, contractKeyMap);
         });
 
         html += `${indent}</${tag}>\n`;
@@ -224,11 +267,24 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
 
         console.log(`   Converting content frame: ${frame.name} (${frame.type})`);
 
+        // Extract binding data from the vendor document
+        const bindingData = vendorDoc.bindingData?.layerBindings || {};
+        if (Object.keys(bindingData).length > 0) {
+            console.log(`   Found ${Object.keys(bindingData).length} bound layers`);
+        }
+
+        // Build a mapping from pageContractPath to component key
+        const contractKeyMap = buildContractKeyMap(bindingData);
+        
+        if (Object.keys(contractKeyMap).length > 0) {
+            console.log(`   Built contract key map:`, contractKeyMap);
+        }
+
         // Create empty set to collect font families during conversion
         const fontFamilies = new Set<string>();
 
         // Convert the content frame to body HTML (fontFamilies will be populated during conversion)
-        const bodyHtml = convertNodeToJayHtml(frame, fontFamilies, '  ');
+        const bodyHtml = convertNodeToJayHtml(frame, fontFamilies, '  ', bindingData, contractKeyMap);
 
         if (fontFamilies.size > 0) {
             console.log(

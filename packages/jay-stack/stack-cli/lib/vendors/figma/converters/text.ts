@@ -2,6 +2,42 @@ import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
 import { getPositionStyle, getNodeSizeStyles, getCommonStyles, rgbToHex } from '../utils';
 
 /**
+ * Checks if a text node has a data binding (non-interactive binding)
+ * @param nodeId - The Figma node ID
+ * @param bindingData - The binding data from the document
+ * @param contractKeyMap - Map from pageContractPath to headless component key
+ * @returns The tag path string if bound to data, null otherwise
+ */
+function getTextDataBinding(
+    nodeId: string,
+    bindingData?: { [layerId: string]: Array<{ pageContractPath: string; tagPath: string[]; attribute?: string; property?: string }> },
+    contractKeyMap?: { [pageContractPath: string]: string },
+): string | null {
+    if (!bindingData || !bindingData[nodeId]) {
+        return null;
+    }
+
+    const bindings = bindingData[nodeId];
+
+    // Look for a content binding (no attribute or property)
+    for (const binding of bindings) {
+        if (!binding.attribute && !binding.property) {
+            // This is a content binding - build the tag path
+            const tagPath = [...binding.tagPath];
+            
+            // Replace the first element (pageContractPath) with the component key
+            if (tagPath.length > 0 && contractKeyMap && contractKeyMap[binding.pageContractPath]) {
+                tagPath[0] = contractKeyMap[binding.pageContractPath];
+            }
+            
+            return `{${tagPath.join('.')}}`;
+        }
+    }
+
+    return null;
+}
+
+/**
  * Escapes HTML special characters
  */
 function escapeHtmlContent(text: string): string {
@@ -16,9 +52,18 @@ function escapeHtmlContent(text: string): string {
 }
 
 /**
- * Converts a TEXT node to HTML with full styling
+ * Converts a TEXT node to HTML with full styling and data binding support
+ * @param node - The serialized TEXT node
+ * @param indent - Indentation string
+ * @param bindingData - Optional binding data for the page
+ * @param contractKeyMap - Optional map from pageContractPath to headless component key
  */
-export function convertTextNodeToHtml(node: FigmaVendorDocument, indent: string): string {
+export function convertTextNodeToHtml(
+    node: FigmaVendorDocument,
+    indent: string,
+    bindingData?: { [layerId: string]: Array<{ pageContractPath: string; tagPath: string[]; attribute?: string; property?: string }> },
+    contractKeyMap?: { [pageContractPath: string]: string },
+): string {
     const {
         name,
         id,
@@ -162,9 +207,15 @@ export function convertTextNodeToHtml(node: FigmaVendorDocument, indent: string)
     // Combine all text styles
     const textStyles = `${fontFamilyStyle}${fontSizeStyle}${fontWeightStyle}${colorStyle}${textAlignStyle}${letterSpacingStyle}${lineHeightStyle}${textDecorationStyle}${textTransformStyle}${truncationStyle}`;
 
-    // Process text content with hyperlinks
+    // Check if this text node has a data binding
+    const dataBinding = getTextDataBinding(id, bindingData, contractKeyMap);
+
+    // Process text content - use binding if available, otherwise use static text
     let htmlContent = '';
-    if (hyperlinks && hyperlinks.length > 0) {
+    if (dataBinding) {
+        // Text is bound to data - use the binding expression
+        htmlContent = dataBinding;
+    } else if (hyperlinks && hyperlinks.length > 0) {
         let lastEnd = 0;
         for (const link of hyperlinks) {
             // Add text before link
