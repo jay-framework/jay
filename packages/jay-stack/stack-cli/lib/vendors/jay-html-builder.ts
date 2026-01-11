@@ -203,16 +203,11 @@ export async function buildJayHtmlFromVendorResult(
             if (pageConfig.used_components && Array.isArray(pageConfig.used_components)) {
                 for (const comp of pageConfig.used_components) {
                     if (comp.plugin && comp.contract && comp.key) {
-                        console.log(
-                            '#####\n\n\nused component temporarily disabled: ',
-                            comp,
-                            '\n\n\n#####',
-                        );
-                        // headlessComponents.push({
-                        //     plugin: comp.plugin,
-                        //     contract: comp.contract,
-                        //     key: comp.key
-                        // });
+                        headlessComponents.push({
+                            plugin: comp.plugin,
+                            contract: comp.contract,
+                            key: comp.key
+                        });
                     }
                 }
             }
