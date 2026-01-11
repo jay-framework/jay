@@ -7,7 +7,7 @@ build
 examples/**/*.d.ts
 examples/**/lib/**/*.jay-html.ts
 **/coverage/
-.yarn/install-state.gz
+.yarn/
 /.idea/prettier.xml
 /.idea/workspace.xml
 
