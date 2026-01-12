@@ -118,12 +118,13 @@ function convertContractToProtocol(contract: { name: string; tags: ContractTag[]
 
 // Helper function to check if a directory is a page
 // A directory is a page if it has .jay-html OR .jay-contract OR page.conf.yaml
-function isPageDirectory(entries: fs.Dirent[]): {
+async function isPageDirectory(dirPath: string): Promise<{
     isPage: boolean;
     hasPageHtml: boolean;
     hasPageContract: boolean;
     hasPageConfig: boolean;
-} {
+}> {
+    const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
     const hasPageHtml = entries.some((e) => e.name === PAGE_FILENAME);
     const hasPageContract = entries.some((e) => e.name === PAGE_CONTRACT_FILENAME);
     const hasPageConfig = entries.some((e) => e.name === PAGE_CONFIG_FILENAME);
@@ -148,11 +149,8 @@ async function scanPageDirectories(
 ): Promise<void> {
     async function scanDirectory(dirPath: string, urlPath: string = '') {
         try {
-            const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
-
             // Check if this directory is a page (has .jay-html OR .jay-contract OR page.conf.yaml)
-            const { isPage, hasPageHtml, hasPageContract, hasPageConfig } =
-                isPageDirectory(entries);
+            const { isPage, hasPageHtml, hasPageContract, hasPageConfig } = await isPageDirectory(dirPath);
 
             if (isPage) {
                 const pageUrl = urlPath || '/';
@@ -170,6 +168,7 @@ async function scanPageDirectories(
             }
 
             // Recursively scan subdirectories
+            const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
             for (const entry of entries) {
                 const fullPath = path.join(dirPath, entry.name);
 
@@ -632,13 +631,12 @@ async function scanPlugins(projectRootPath: string): Promise<Plugin[]> {
     return plugins;
 }
 
-async function loadProjectPage(pageContext: PageContext): Promise<ProjectPage> {
+async function loadProjectPage(pageContext: PageContext, plugins:Plugin[]): Promise<ProjectPage> {
     const { dirPath, pageUrl, pageName, hasPageHtml, hasPageContract, hasPageConfig } = pageContext;
     const pageFilePath = path.join(dirPath, PAGE_FILENAME);
     const pageConfigPath = path.join(dirPath, PAGE_CONFIG_FILENAME);
     const contractPath = path.join(dirPath, PAGE_CONTRACT_FILENAME);
     const projectRootPath = process.cwd();
-    const plugins = await scanPlugins(projectRootPath);
 
     let usedComponents: {
         appName: string;
@@ -742,7 +740,7 @@ async function scanProjectInfo(
     const pages: ProjectPage[] = [];
 
     await scanPageDirectories(pagesBasePath, async (context) => {
-        const page = await loadProjectPage(context);
+        const page = await loadProjectPage(context, plugins);
         pages.push(page);
     });
 
@@ -867,6 +865,30 @@ async function handleComponentPublish(
             undefined,
         ];
     }
+}
+
+async function loadPageContracts(dirPath: string, pageUrl: string): Promise<Contract[]> {
+    //load page's info - with it's contract and its used components contracts
+    const { hasPageHtml, hasPageContract, hasPageConfig } = await isPageDirectory(dirPath);
+    const projectRootPath = process.cwd();
+    const plugins = await scanPlugins(projectRootPath);
+    const pageInfo = await loadProjectPage({
+        dirPath,
+        pageUrl,
+        pageName: path.basename(dirPath),
+        hasPageHtml,
+        hasPageContract,
+        hasPageConfig,
+    }, plugins);
+
+    //get used components contracts
+    const usedComponentsContracts = pageInfo.usedComponents.map((usedComponent) => {
+        const plugin = plugins.find((p) => p.name === usedComponent.appName);
+        const contract = plugin?.contracts.find((c) => c?.name === usedComponent.componentName);
+        return contract;
+    });
+
+    return [pageInfo.contract, ...usedComponentsContracts];
 }
 
 export function createEditorHandlers(
@@ -1057,6 +1079,8 @@ export function createEditorHandlers(
 
                 try {
                     //load page's info - with it's contract and its used components contracts
+                    const contracts = await loadPageContracts(dirname, pageUrl);
+                    console.log(`contracts: ${JSON.stringify(contracts, null, 2)}`);
 
                     // Run the vendor conversion to get body HTML and metadata
                     const conversionResult = await vendor.convertToBodyHtml(vendorDoc, pageUrl);
