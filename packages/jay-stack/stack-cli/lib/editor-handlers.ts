@@ -132,17 +132,19 @@ function isPageDirectory(entries: fs.Dirent[]): {
     return { isPage, hasPageHtml, hasPageContract, hasPageConfig };
 }
 
+type PageContext = {
+    dirPath: string;
+    pageUrl: string;
+    pageName: string;
+    hasPageHtml: boolean;
+    hasPageContract: boolean;
+    hasPageConfig: boolean;
+};
+
 // Generic page directory scanner that accepts a callback for processing each page
 async function scanPageDirectories(
     pagesBasePath: string,
-    onPageFound: (context: {
-        dirPath: string;
-        pageUrl: string;
-        pageName: string;
-        hasPageHtml: boolean;
-        hasPageContract: boolean;
-        hasPageConfig: boolean;
-    }) => Promise<void>,
+    onPageFound: (context: PageContext) => Promise<void>,
 ): Promise<void> {
     async function scanDirectory(dirPath: string, urlPath: string = '') {
         try {
@@ -630,6 +632,98 @@ async function scanPlugins(projectRootPath: string): Promise<Plugin[]> {
     return plugins;
 }
 
+async function loadProjectPage(pageContext: PageContext): Promise<ProjectPage> {
+    const { dirPath, pageUrl, pageName, hasPageHtml, hasPageContract, hasPageConfig } = pageContext;
+    const pageFilePath = path.join(dirPath, PAGE_FILENAME);
+    const pageConfigPath = path.join(dirPath, PAGE_CONFIG_FILENAME);
+    const contractPath = path.join(dirPath, PAGE_CONTRACT_FILENAME);
+    const projectRootPath = process.cwd();
+    const plugins = await scanPlugins(projectRootPath);
+
+    let usedComponents: {
+        appName: string;
+        componentName: string;
+        key: string;
+    }[] = [];
+    let contract: Contract | undefined;
+
+    // Parse contract if exists
+    if (hasPageContract) {
+        const parsedContract = loadAndExpandContract(contractPath);
+        if (parsedContract) {
+            contract = parsedContract;
+        }
+    }
+
+    // Parse used components - Priority 1: jay-html
+    if (hasPageHtml) {
+        try {
+            const jayHtmlContent = await fs.promises.readFile(pageFilePath, 'utf-8');
+            usedComponents = await extractHeadlessComponentsFromJayHtml(
+                jayHtmlContent,
+                pageFilePath,
+                projectRootPath,
+            );
+        } catch (error) {
+            console.warn(`Failed to read page file ${pageFilePath}:`, error);
+        }
+    }
+    // Priority 2: page.conf.yaml
+    else if (hasPageConfig) {
+        try {
+            const configContent = await fs.promises.readFile(pageConfigPath, 'utf-8');
+            const pageConfig = YAML.parse(configContent);
+            if (pageConfig.used_components && Array.isArray(pageConfig.used_components)) {
+                // Resolve headless components using plugin/contract syntax
+                for (const comp of pageConfig.used_components) {
+                    const key = comp.key || '';
+
+                    // Only support plugin + contract syntax for headless components
+                    if (comp.plugin && comp.contract) {
+                        // For plugin-based references, we look up the plugin in the plugins array
+                        const plugin = plugins.find((p) => p.name === comp.plugin);
+                        if (plugin && plugin.contracts) {
+                            const contract = plugin.contracts.find(
+                                (c) => c.name === comp.contract,
+                            );
+                            if (contract) {
+                                // Use plugin name as appName and contract name as componentName
+                                usedComponents.push({
+                                    appName: comp.plugin,
+                                    componentName: comp.contract,
+                                    key,
+                                });
+                                continue;
+                            }
+                        }
+                        // If not resolved, still add it (may be resolved later)
+                        usedComponents.push({
+                            appName: comp.plugin,
+                            componentName: comp.contract,
+                            key,
+                        });
+                    } else {
+                        console.warn(
+                            `Invalid component definition in ${pageConfigPath}: Only plugin/contract syntax is supported for headless components. Found:`,
+                            comp,
+                        );
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn(`Failed to parse page config ${pageConfigPath}:`, error);
+        }
+    }
+
+    return {
+        name: pageName,
+        url: pageUrl,
+        filePath: pageFilePath,
+        contract,
+        usedComponents,
+    };
+}
+
 // Comprehensive function to scan all project information in one pass
 async function scanProjectInfo(
     pagesBasePath: string,
@@ -648,93 +742,8 @@ async function scanProjectInfo(
     const pages: ProjectPage[] = [];
 
     await scanPageDirectories(pagesBasePath, async (context) => {
-        const { dirPath, pageUrl, pageName, hasPageHtml, hasPageContract, hasPageConfig } = context;
-        const pageFilePath = path.join(dirPath, PAGE_FILENAME);
-        const pageConfigPath = path.join(dirPath, PAGE_CONFIG_FILENAME);
-        const contractPath = path.join(dirPath, PAGE_CONTRACT_FILENAME);
-
-        let usedComponents: {
-            appName: string;
-            componentName: string;
-            key: string;
-        }[] = [];
-        let contract: Contract | undefined;
-
-        // Parse contract if exists
-        if (hasPageContract) {
-            const parsedContract = loadAndExpandContract(contractPath);
-            if (parsedContract) {
-                contract = parsedContract;
-            }
-        }
-
-        // Parse used components - Priority 1: jay-html
-        if (hasPageHtml) {
-            try {
-                const jayHtmlContent = await fs.promises.readFile(pageFilePath, 'utf-8');
-                usedComponents = await extractHeadlessComponentsFromJayHtml(
-                    jayHtmlContent,
-                    pageFilePath,
-                    projectRootPath,
-                );
-            } catch (error) {
-                console.warn(`Failed to read page file ${pageFilePath}:`, error);
-            }
-        }
-        // Priority 2: page.conf.yaml
-        else if (hasPageConfig) {
-            try {
-                const configContent = await fs.promises.readFile(pageConfigPath, 'utf-8');
-                const pageConfig = YAML.parse(configContent);
-                if (pageConfig.used_components && Array.isArray(pageConfig.used_components)) {
-                    // Resolve headless components using plugin/contract syntax
-                    for (const comp of pageConfig.used_components) {
-                        const key = comp.key || '';
-
-                        // Only support plugin + contract syntax for headless components
-                        if (comp.plugin && comp.contract) {
-                            // For plugin-based references, we look up the plugin in the plugins array
-                            const plugin = plugins.find((p) => p.name === comp.plugin);
-                            if (plugin && plugin.contracts) {
-                                const contract = plugin.contracts.find(
-                                    (c) => c.name === comp.contract,
-                                );
-                                if (contract) {
-                                    // Use plugin name as appName and contract name as componentName
-                                    usedComponents.push({
-                                        appName: comp.plugin,
-                                        componentName: comp.contract,
-                                        key,
-                                    });
-                                    continue;
-                                }
-                            }
-                            // If not resolved, still add it (may be resolved later)
-                            usedComponents.push({
-                                appName: comp.plugin,
-                                componentName: comp.contract,
-                                key,
-                            });
-                        } else {
-                            console.warn(
-                                `Invalid component definition in ${pageConfigPath}: Only plugin/contract syntax is supported for headless components. Found:`,
-                                comp,
-                            );
-                        }
-                    }
-                }
-            } catch (error) {
-                console.warn(`Failed to parse page config ${pageConfigPath}:`, error);
-            }
-        }
-
-        pages.push({
-            name: pageName,
-            url: pageUrl,
-            filePath: pageFilePath,
-            contract,
-            usedComponents,
-        });
+        const page = await loadProjectPage(context);
+        pages.push(page);
     });
 
     return {
@@ -1047,6 +1056,8 @@ export function createEditorHandlers(
                 const vendor = getVendor(vendorId)!;
 
                 try {
+                    //load page's info - with it's contract and its used components contracts
+
                     // Run the vendor conversion to get body HTML and metadata
                     const conversionResult = await vendor.convertToBodyHtml(vendorDoc, pageUrl);
 
