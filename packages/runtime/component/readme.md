@@ -27,6 +27,7 @@ Hooks for providing context:
 
 - [provideContext](./docs/provide-context.md)
 - [provideReactiveContext](./docs/provide-reactive-context.md)
+- [registerReactiveGlobalContext](./docs/register-reactive-global-context.md)
 
 Hooks to get Component Reactive Instance:
 

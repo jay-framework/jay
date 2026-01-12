@@ -687,6 +687,57 @@ function AppConstructor(props, refs) {
 
 **`provideReactiveContext`** provides a reactive context that automatically updates child components when the context's reactive dependencies change. This is useful for values that change frequently and should trigger re-renders.
 
+### Global Reactive Contexts
+
+For app-wide contexts that need to be available to all components without a parent provider, use `registerReactiveGlobalContext` in your initialization:
+
+```typescript
+import { createJayContext } from '@jay-framework/runtime';
+import { createSignal, registerReactiveGlobalContext } from '@jay-framework/component';
+import { makeJayInit } from '@jay-framework/fullstack-component';
+
+// Define the context
+interface AppConfigContext {
+  theme: () => 'light' | 'dark';
+  toggleTheme: () => void;
+}
+export const APP_CONFIG_CTX = createJayContext<AppConfigContext>();
+
+// Register in init
+export const init = makeJayInit()
+  .withClient(() => {
+    registerReactiveGlobalContext(APP_CONFIG_CTX, () => {
+      const [theme, setTheme] = createSignal<'light' | 'dark'>('light');
+      return {
+        theme,
+        toggleTheme: () => setTheme(t => t === 'light' ? 'dark' : 'light'),
+      };
+    });
+  });
+```
+
+Components can then access this context anywhere in the app:
+
+```typescript
+function MyComponent(props, refs) {
+  const appConfig = useContext(APP_CONFIG_CTX);
+  
+  refs.themeToggle.onclick(() => appConfig.toggleTheme());
+  
+  return {
+    render: () => ({ theme: appConfig.theme() }),
+  };
+}
+```
+
+**When to use each:**
+
+| Context Type | Use Case |
+|--------------|----------|
+| `provideContext` | Static values, dependency injection |
+| `provideReactiveContext` | Reactive values scoped to component subtree |
+| `registerReactiveGlobalContext` | Reactive values available app-wide (in init) |
+
 ## Component Lifecycle
 
 ### Initialization and Cleanup
