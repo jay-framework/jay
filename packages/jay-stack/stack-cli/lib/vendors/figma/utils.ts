@@ -138,14 +138,27 @@ function getAutoLayoutChildSizeStyles(node: FigmaVendorDocument): string {
             case 'FILL':
                 if (node.type === 'TEXT') {
                     styles += 'width: auto;';
+                } else if (isHorizontalLayout) {
+                    // Fill on main axis (horizontal) - use flex-grow
+                    styles += 'flex-grow: 1;';
                 } else {
+                    // Fill on counter axis (parent is vertical) - use 100%
                     styles += 'width: 100%;';
                 }
                 break;
         }
     } else {
-        // Fallback: use fixed dimensions
-        styles += `width: ${width}px;`;
+        // Fallback to legacy properties for horizontal sizing
+        if (isHorizontalLayout && node.layoutGrow && node.layoutGrow > 0) {
+            // Fill on main axis (horizontal)
+            styles += `flex-grow: ${node.layoutGrow};width: 0;`;
+        } else if (!isHorizontalLayout && node.layoutAlign === 'STRETCH') {
+            // Stretch on counter axis
+            styles += 'width: 100%;';
+        } else {
+            // Fixed width
+            styles += `width: ${width}px;`;
+        }
     }
 
     // Handle vertical sizing (height)
@@ -159,12 +172,45 @@ function getAutoLayoutChildSizeStyles(node: FigmaVendorDocument): string {
                 styles += 'height: fit-content;';
                 break;
             case 'FILL':
-                styles += 'height: 100%;';
+                if (!isHorizontalLayout) {
+                    // Fill on main axis (vertical) - use flex-grow
+                    styles += 'flex-grow: 1;';
+                } else {
+                    // Fill on counter axis (parent is horizontal) - use 100%
+                    styles += 'height: 100%;';
+                }
                 break;
         }
     } else {
-        // Fallback: use fixed dimensions
-        styles += `height: ${height}px;`;
+        // Fallback to legacy properties for vertical sizing
+        if (!isHorizontalLayout && node.layoutGrow && node.layoutGrow > 0) {
+            // Fill on main axis (vertical)
+            styles += `flex-grow: ${node.layoutGrow};height: 0;`;
+        } else if (isHorizontalLayout && node.layoutAlign === 'STRETCH') {
+            // Stretch on counter axis
+            styles += 'height: 100%;';
+        } else {
+            // Fixed height
+            styles += `height: ${height}px;`;
+        }
+    }
+
+    // Handle align-self for cross axis alignment
+    if (node.layoutAlign && node.layoutAlign !== 'INHERIT') {
+        switch (node.layoutAlign) {
+            case 'MIN':
+                styles += 'align-self: flex-start;';
+                break;
+            case 'CENTER':
+                styles += 'align-self: center;';
+                break;
+            case 'MAX':
+                styles += 'align-self: flex-end;';
+                break;
+            case 'STRETCH':
+                styles += 'align-self: stretch;';
+                break;
+        }
     }
 
     return styles;

@@ -168,8 +168,14 @@ export function convertTextNodeToHtml(
 
     // Position, size, and common styles
     const positionStyle = getPositionStyle(node);
-    const sizeStyles = getNodeSizeStyles(node);
+    let sizeStyles = getNodeSizeStyles(node);
     const commonStyles = getCommonStyles(node);
+
+    // For text nodes, handle auto-resize height specially
+    if (textAutoResize === 'HEIGHT') {
+        // Override height for auto-resize text
+        sizeStyles = sizeStyles.replace(/height: [^;]+;/, 'height: auto;');
+    }
 
     // Combine all text styles
     const textStyles = `${fontFamilyStyle}${fontSizeStyle}${fontWeightStyle}${colorStyle}${textAlignStyle}${letterSpacingStyle}${lineHeightStyle}${textDecorationStyle}${textTransformStyle}${truncationStyle}`;
