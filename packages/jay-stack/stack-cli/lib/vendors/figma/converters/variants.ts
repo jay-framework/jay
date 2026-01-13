@@ -1,5 +1,15 @@
 import type { FigmaVendorDocument, ContractTag } from '@jay-framework/editor-protocol';
 import type { ConversionContext, BindingAnalysis } from '../types';
+import {
+    getPositionStyle,
+    getFrameSizeStyles,
+    getCommonStyles,
+    getBorderRadius,
+    getAutoLayoutStyles,
+    getOverflowStyles,
+    getBackgroundFillsStyle,
+    getStrokeStyles,
+} from '../utils';
 
 /**
  * Gets all variant values for a component set's properties
@@ -224,6 +234,11 @@ function buildVariantCondition(
  * Handles both boolean and enum variant properties:
  * - Boolean properties (true/false) → `if="prop"` or `if="!prop"`
  * - Enum properties → `if="prop == value"`
+ * 
+ * Structure:
+ * 1. Outer wrapper div - has the instance node's Frame styling (position, size, layout, etc.)
+ * 2. Inner if divs - one per variant permutation
+ * 3. Variant children - inside each if div
  */
 export function convertVariantNode(
     node: FigmaVendorDocument,
@@ -232,7 +247,7 @@ export function convertVariantNode(
     convertNodeToJayHtml: (node: FigmaVendorDocument, context: ConversionContext) => string,
 ): string {
     const indent = '  '.repeat(context.indentLevel);
-    let html = '';
+    const innerIndent = '  '.repeat(context.indentLevel + 1);
     
     // 1. Get all variant property values
     const propertyValues = getComponentVariantValues(node, analysis.propertyBindings);
@@ -244,7 +259,8 @@ export function convertVariantNode(
         return `${indent}<!-- Variant node "${node.name}" has no permutations -->\n`;
     }
 
-    // 3. Convert each permutation
+    // 3. Build the variant if divs
+    let variantHtml = '';
     for (const permutation of permutations) {
         // Build if condition (handles both boolean and enum properties)
         const conditions = buildVariantCondition(permutation);
@@ -252,23 +268,49 @@ export function convertVariantNode(
         // Find variant component
         const variantNode = findComponentVariant(node, permutation);
 
-        // Convert variant
-        html += `${indent}<div if="${conditions}">\n`;
+        // Convert variant with if condition
+        variantHtml += `${innerIndent}<div if="${conditions}">\n`;
 
         const variantContext: ConversionContext = {
             ...context,
-            indentLevel: context.indentLevel + 1,
+            indentLevel: context.indentLevel + 2, // +2 because we're inside wrapper and if div
         };
 
         // Convert variant node's children
         if (variantNode.children && variantNode.children.length > 0) {
             for (const child of variantNode.children) {
-                html += convertNodeToJayHtml(child, variantContext);
+                variantHtml += convertNodeToJayHtml(child, variantContext);
             }
         }
 
-        html += `${indent}</div>\n`;
+        variantHtml += `${innerIndent}</div>\n`;
     }
 
-    return html;
+    // 4. Build styles for the outer wrapper (the instance node's Frame styling)
+    // This wrapper is positioned once and contains all variant permutations
+    const positionStyle = getPositionStyle(node);
+    const frameSizeStyles = getFrameSizeStyles(node);
+    const backgroundStyle = getBackgroundFillsStyle(node);
+    const borderRadius = getBorderRadius(node);
+    const strokeStyles = getStrokeStyles(node);
+    const flexStyles = getAutoLayoutStyles(node);
+    const overflowStyles = getOverflowStyles(node);
+    const commonStyles = getCommonStyles(node);
+
+    const wrapperStyleAttr = `${positionStyle}${frameSizeStyles}${backgroundStyle}${strokeStyles}${borderRadius}${overflowStyles}${commonStyles}${flexStyles}box-sizing: border-box;`;
+
+    // Determine ref attribute from analysis
+    let refAttr = '';
+    if (analysis.refPath) {
+        refAttr = ` ref="${analysis.refPath}"`;
+    } else if (analysis.dualPath) {
+        refAttr = ` ref="${analysis.dualPath}"`;
+    }
+
+    // 5. Wrap everything in the outer container with Frame styling
+    return (
+        `${indent}<div id="${node.id}" data-figma-id="${node.id}" data-figma-type="variant-container"${refAttr} style="${wrapperStyleAttr}">\n` +
+        variantHtml +
+        `${indent}</div>\n`
+    );
 }
