@@ -704,16 +704,15 @@ interface AppConfigContext {
 export const APP_CONFIG_CTX = createJayContext<AppConfigContext>();
 
 // Register in init
-export const init = makeJayInit()
-  .withClient(() => {
-    registerReactiveGlobalContext(APP_CONFIG_CTX, () => {
-      const [theme, setTheme] = createSignal<'light' | 'dark'>('light');
-      return {
-        theme,
-        toggleTheme: () => setTheme(t => t === 'light' ? 'dark' : 'light'),
-      };
-    });
+export const init = makeJayInit().withClient(() => {
+  registerReactiveGlobalContext(APP_CONFIG_CTX, () => {
+    const [theme, setTheme] = createSignal<'light' | 'dark'>('light');
+    return {
+      theme,
+      toggleTheme: () => setTheme((t) => (t === 'light' ? 'dark' : 'light')),
+    };
   });
+});
 ```
 
 Components can then access this context anywhere in the app:
@@ -721,9 +720,9 @@ Components can then access this context anywhere in the app:
 ```typescript
 function MyComponent(props, refs) {
   const appConfig = useContext(APP_CONFIG_CTX);
-  
+
   refs.themeToggle.onclick(() => appConfig.toggleTheme());
-  
+
   return {
     render: () => ({ theme: appConfig.theme() }),
   };
@@ -732,10 +731,10 @@ function MyComponent(props, refs) {
 
 **When to use each:**
 
-| Context Type | Use Case |
-|--------------|----------|
-| `provideContext` | Static values, dependency injection |
-| `provideReactiveContext` | Reactive values scoped to component subtree |
+| Context Type                    | Use Case                                     |
+| ------------------------------- | -------------------------------------------- |
+| `provideContext`                | Static values, dependency injection          |
+| `provideReactiveContext`        | Reactive values scoped to component subtree  |
 | `registerReactiveGlobalContext` | Reactive values available app-wide (in init) |
 
 ## Component Lifecycle

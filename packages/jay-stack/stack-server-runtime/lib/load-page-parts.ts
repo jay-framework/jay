@@ -48,7 +48,7 @@ export async function loadPageParts(
             compDefinition: pageComponent,
             // Client import uses client-only code (server code stripped)
             clientImport: `import {page} from '${route.compPath}'`,
-            clientPart: `{comp: page.comp, contextMarkers: []}`,
+            clientPart: `{comp: page.comp, contextMarkers: page.contexts || []}`,
         });
     }
 
@@ -102,7 +102,7 @@ export async function loadPageParts(
                 key,
                 compDefinition,
                 clientImport: `import {${name}} from '${clientModuleImport}'`,
-                clientPart: `{comp: ${name}.comp, contextMarkers: [], key: '${headlessImport.key}'}`,
+                clientPart: `{comp: ${name}.comp, contextMarkers: ${name}.contexts || [], key: '${headlessImport.key}'}`,
             };
             parts.push(part);
         }

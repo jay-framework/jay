@@ -116,7 +116,7 @@ const trackByMap = {};
 
 const target = document.getElementById('target');
 const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [
-{comp: page.comp, contextMarkers: []}
+{comp: page.comp, contextMarkers: page.contexts || []}
 ], trackByMap)
 
 const instance = pageComp({...viewState, ...fastCarryForward})
@@ -168,8 +168,8 @@ const trackByMap = {};
 
 const target = document.getElementById('target');
 const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [
-{comp: page.comp, contextMarkers: []},
-{comp: headless.comp, contextMarkers: [], key: 'headless'}
+{comp: page.comp, contextMarkers: page.contexts || []},
+{comp: headless.comp, contextMarkers: headless.contexts || [], key: 'headless'}
 ], trackByMap)
 
 const instance = pageComp({...viewState, ...fastCarryForward})

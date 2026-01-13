@@ -45,16 +45,15 @@ interface CounterContext {
 
 export const COUNTER_CTX = createJayContext<CounterContext>();
 
-export const init = makeJayInit()
-  .withClient(() => {
-    registerReactiveGlobalContext(COUNTER_CTX, () => {
-      const [count, setCount] = createSignal(0);
-      return {
-        count,
-        increment: () => setCount(n => n + 1),
-      };
-    });
+export const init = makeJayInit().withClient(() => {
+  registerReactiveGlobalContext(COUNTER_CTX, () => {
+    const [count, setCount] = createSignal(0);
+    return {
+      count,
+      increment: () => setCount((n) => n + 1),
+    };
   });
+});
 ```
 
 ### Async Initialization Pattern
@@ -70,25 +69,24 @@ interface WixClientContext {
 
 export const WIX_CLIENT_CTX = createJayContext<WixClientContext>();
 
-export const init = makeJayInit()
-  .withClient(async () => {
-    const ctx = registerReactiveGlobalContext(WIX_CLIENT_CTX, () => {
-      const [isReady, setIsReady] = createSignal(false);
-      
-      return {
-        client: wixClient,
-        isReady,
-        async init() {
-          const tokens = await wixClient.auth.generateVisitorTokens();
-          wixClient.auth.setTokens(tokens);
-          setIsReady(true);
-        },
-      };
-    });
-    
-    // Call init immediately
-    await ctx.init();
+export const init = makeJayInit().withClient(async () => {
+  const ctx = registerReactiveGlobalContext(WIX_CLIENT_CTX, () => {
+    const [isReady, setIsReady] = createSignal(false);
+
+    return {
+      client: wixClient,
+      isReady,
+      async init() {
+        const tokens = await wixClient.auth.generateVisitorTokens();
+        wixClient.auth.setTokens(tokens);
+        setIsReady(true);
+      },
+    };
   });
+
+  // Call init immediately
+  await ctx.init();
+});
 ```
 
 ### Using the Context in Components
@@ -100,11 +98,11 @@ import { COUNTER_CTX } from '../lib/init';
 function MyComponent(props, refs) {
   // Access the global context
   const counter = useContext(COUNTER_CTX);
-  
+
   refs.incrementButton.onclick(() => {
     counter.increment();
   });
-  
+
   return {
     render: () => ({
       count: counter.count(),
@@ -115,15 +113,16 @@ function MyComponent(props, refs) {
 
 ## Comparison with provideReactiveContext
 
-| Feature | `provideReactiveContext` | `registerReactiveGlobalContext` |
-|---------|--------------------------|--------------------------------|
-| Scope | Component subtree | Entire application |
-| When to use | Component provides context to children | App initialization |
-| Where to call | Inside component constructor | Inside `withClient` |
-| Override | Child components can provide different value | Cannot be overridden |
+| Feature       | `provideReactiveContext`                     | `registerReactiveGlobalContext` |
+| ------------- | -------------------------------------------- | ------------------------------- |
+| Scope         | Component subtree                            | Entire application              |
+| When to use   | Component provides context to children       | App initialization              |
+| Where to call | Inside component constructor                 | Inside `withClient`             |
+| Override      | Child components can provide different value | Cannot be overridden            |
 
 ## Design Log
 
 For additional information on the design decisions, read:
+
 - [67 - registerReactiveGlobalContext.md](../../../../design-log/67%20-%20registerReactiveGlobalContext.md)
 - [65 - makeJayInit builder pattern.md](../../../../design-log/65%20-%20makeJayInit%20builder%20pattern.md)
