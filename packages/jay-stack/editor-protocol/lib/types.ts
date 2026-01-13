@@ -13,16 +13,10 @@ export type {
     BaseMessage,
     BaseResponse,
     ContractTag,
-    ContractSchema,
-    InstalledAppContracts,
+    Contract,
     ProjectInfo,
     ProjectPage,
     ProjectComponent,
-    InstalledApp,
-    // New plugin system types
-    PluginManifest,
-    StaticContractDef,
-    DynamicContractDef,
     Plugin,
 } from './protocol';
 

@@ -7,8 +7,9 @@ The `getProjectInfo` endpoint retrieves comprehensive project information in a s
 - Project metadata (name, path)
 - All pages with their contracts and used components
 - All components in the project
-- All installed applications
-- Complete contract schemas for all installed applications
+- All plugins with their contract schemas
+- Legacy installed applications (for backward compatibility)
+- Complete contract schemas for all applications
 
 ## Request
 
@@ -49,7 +50,10 @@ interface ProjectInfo {
   // Components in the project
   components: ProjectComponent[];
 
-  // Installed applications (basic info)
+  // New plugin system
+  plugins: Plugin[];
+
+  // Legacy installed applications (for backward compatibility)
   installedApps: InstalledApp[];
 
   // Full contract schemas from installed applications
@@ -73,7 +77,7 @@ interface ProjectPage {
   filePath: string; // Path to page.jay-html
 
   // Contract info
-  contractSchema?: ContractSchema; // Page's own contract from .jay-contract file
+  contract?: Contract; // Page's own contract from .jay-contract file
 
   // Used components
   usedComponents: {
@@ -99,6 +103,11 @@ interface ProjectComponent {
   name: string;
   filePath: string;
   contractPath?: string;
+}
+
+interface Plugin {
+  name: string; // Plugin name (kebab-case) for the plugin attribute
+  contracts: Contract[]; // Array of available contracts
 }
 
 interface InstalledApp {
@@ -132,15 +141,15 @@ interface InstalledAppContracts {
   module: string;
   pages: Array<{
     pageName: string;
-    contractSchema: ContractSchema;
+    contract: Contract;
   }>;
   components: Array<{
     componentName: string;
-    contractSchema: ContractSchema;
+    contract: Contract;
   }>;
 }
 
-interface ContractSchema {
+interface Contract {
   name: string;
   tags: ContractTag[];
 }
@@ -174,7 +183,7 @@ interface ContractTag {
         filePath: '/Users/dev/my-project/src/pages/page.jay-html',
 
         // Page's own contract
-        contractSchema: {
+        contract: {
           name: 'home',
           tags: [
             { tag: 'siteTitle', type: 'data', dataType: 'string' },
@@ -210,6 +219,22 @@ interface ContractTag {
       }
     ],
 
+    plugins: [
+      {
+        name: 'wix-jay-headless-store',
+        contracts: [
+          {
+            name: 'product-page',
+            tags: [
+              { tag: 'title', type: 'data', dataType: 'string' },
+              { tag: 'price', type: 'data', dataType: 'number' },
+              { tag: 'addToCartButton', type: 'interactive' }
+            ]
+          }
+        ]
+      }
+    ],
+
     installedApps: [
       {
         name: 'wix-jay-headless-store',
@@ -227,7 +252,7 @@ interface ContractTag {
         pages: [
           {
             pageName: 'productPage',
-            contractSchema: {
+            contract: {
               name: 'product-page',
               tags: [
                 { tag: 'title', type: 'data', dataType: 'string' },
@@ -258,7 +283,8 @@ if (response.success) {
   console.log(`Location: ${info.localPath}`);
   console.log(`Pages: ${info.pages.length}`);
   console.log(`Components: ${info.components.length}`);
-  console.log(`Installed Apps: ${info.installedApps.length}`);
+  console.log(`Plugins: ${info.plugins.length}`);
+  console.log(`Installed Apps (Legacy): ${info.installedApps.length}`);
 }
 ```
 
@@ -272,9 +298,9 @@ if (homePage) {
   console.log(`\nPage: ${homePage.name} (${homePage.url})`);
 
   // Show page's own contract
-  if (homePage.contractSchema) {
+  if (homePage.contract) {
     console.log('\nPage Contract:');
-    homePage.contractSchema.tags.forEach((tag) => {
+    homePage.contract.tags.forEach((tag) => {
       console.log(`  - ${tag.tag}: ${tag.type}`);
     });
   }
@@ -290,7 +316,7 @@ if (homePage) {
 
     if (contract) {
       console.log(`\nComponent: ${ref.appName}.${ref.componentName}`);
-      contract.contractSchema.tags.forEach((tag) => {
+      contract.contract.tags.forEach((tag) => {
         console.log(`  - ${tag.tag}: ${tag.type}`);
       });
     }
@@ -308,8 +334,8 @@ function getAllPageTags(
   const allTags: ContractTag[] = [];
 
   // 1. Add page's own tags
-  if (page.contractSchema) {
-    allTags.push(...page.contractSchema.tags);
+  if (page.contract) {
+    allTags.push(...page.contract.tags);
   }
 
   // 2. Add tags from used components
@@ -322,7 +348,7 @@ function getAllPageTags(
       app.components.find((c) => c.componentName === ref.componentName);
 
     if (contract) {
-      allTags.push(...contract.contractSchema.tags);
+      allTags.push(...contract.contract.tags);
     }
   });
 
@@ -335,7 +361,48 @@ const homePage = response.info.pages.find((p) => p.url === '/');
 const allTags = getAllPageTags(homePage, response.info.installedAppContracts);
 ```
 
-### Example 4: List All Available Apps and Their Contracts
+### Example 4: Use New Plugin System
+
+```typescript
+const response = await client.getProjectInfo({ type: 'getProjectInfo' });
+
+// Display all plugins and their contracts
+response.info.plugins.forEach((plugin) => {
+  console.log(`\nPlugin: ${plugin.name}`);
+  console.log(`  Contracts: ${plugin.contracts.length}`);
+
+  plugin.contracts.forEach((contract) => {
+    console.log(`    - ${contract.name}: ${contract.tags.length} tags`);
+    contract.tags.forEach((tag) => {
+      console.log(`      • ${tag.tag}: ${tag.type}${tag.dataType ? ` (${tag.dataType})` : ''}`);
+    });
+  });
+});
+
+// Find a specific plugin contract
+function findPluginContract(
+  plugins: Plugin[],
+  pluginName: string,
+  contractName: string,
+): Contract | null {
+  const plugin = plugins.find((p) => p.name === pluginName);
+  if (!plugin) return null;
+
+  return plugin.contracts.find((c) => c.name === contractName) || null;
+}
+
+// Usage
+const productContract = findPluginContract(
+  response.info.plugins,
+  'wix-jay-headless-store',
+  'product-page',
+);
+if (productContract) {
+  console.log(`Found contract: ${productContract.name} with ${productContract.tags.length} tags`);
+}
+```
+
+### Example 5: List All Available Apps and Their Contracts (Legacy)
 
 ```typescript
 const response = await client.getProjectInfo({ type: 'getProjectInfo' });
@@ -345,12 +412,12 @@ Object.values(response.info.installedAppContracts).forEach((app) => {
 
   console.log(`  Pages: ${app.pages.length}`);
   app.pages.forEach((page) => {
-    console.log(`    - ${page.pageName}: ${page.contractSchema.tags.length} tags`);
+    console.log(`    - ${page.pageName}: ${page.contract.tags.length} tags`);
   });
 
   console.log(`  Components: ${app.components.length}`);
   app.components.forEach((comp) => {
-    console.log(`    - ${comp.componentName}: ${comp.contractSchema.tags.length} tags`);
+    console.log(`    - ${comp.componentName}: ${comp.contract.tags.length} tags`);
   });
 });
 ```
@@ -499,15 +566,16 @@ if (response.success) {
   console.log(`📁 Location: ${info.localPath}`);
   console.log(`📄 Pages: ${info.pages.length}`);
   console.log(`🧩 Components: ${info.components.length}`);
-  console.log(`⚙️  Installed Apps: ${info.installedApps.length}`);
+  console.log(`🔌 Plugins: ${info.plugins.length}`);
+  console.log(`⚙️  Installed Apps (Legacy): ${info.installedApps.length}`);
 
   // Display each page with its contracts
   info.pages.forEach((page) => {
     console.log(`\n\nPage: ${page.name} (${page.url})`);
 
-    if (page.contractSchema) {
+    if (page.contract) {
       console.log('  Own Contract:');
-      page.contractSchema.tags.forEach((tag) => {
+      page.contract.tags.forEach((tag) => {
         console.log(`    - ${tag.tag}: ${tag.type}${tag.dataType ? ` (${tag.dataType})` : ''}`);
       });
     }
@@ -520,10 +588,19 @@ if (response.success) {
     }
   });
 
-  // List all available contracts
-  console.log('\n\n📋 Available Contracts:');
+  // List all available contracts from plugins
+  console.log('\n\n📋 Plugin Contracts:');
+  info.plugins.forEach((plugin) => {
+    console.log(`\n  🔌 ${plugin.name}:`);
+    plugin.contracts.forEach((contract) => {
+      console.log(`    📋 ${contract.name} (${contract.tags.length} tags)`);
+    });
+  });
+
+  // List legacy app contracts
+  console.log('\n\n📋 Legacy App Contracts:');
   Object.values(info.installedAppContracts).forEach((app) => {
-    console.log(`\n  ${app.appName}:`);
+    console.log(`\n  ⚙️  ${app.appName}:`);
     app.pages.forEach((p) => {
       console.log(`    📄 ${p.pageName}`);
     });
@@ -540,23 +617,51 @@ if (response.success) {
 
 ### For Design Tools
 
-**Create a helper function to resolve component references:**
+**Use the new Plugin system for headless script generation:**
+
+```typescript
+function findPluginContract(
+  plugins: Plugin[],
+  pluginName: string,
+  contractName: string,
+): Contract | null {
+  const plugin = plugins.find((p) => p.name === pluginName);
+  if (!plugin) return null;
+
+  return plugin.contracts.find((c) => c.name === contractName) || null;
+}
+
+// Generate headless script tag attributes
+function generateHeadlessScriptAttributes(
+  pluginName: string,
+  contractName: string,
+  key: string,
+): { plugin: string; contract: string; key: string } {
+  return {
+    plugin: pluginName,
+    contract: contractName,
+    key: key,
+  };
+}
+```
+
+**Create a helper function to resolve component references (Legacy):**
 
 ```typescript
 function lookupComponentContract(
   ref: { appName: string; componentName: string },
   installedAppContracts: { [appName: string]: InstalledAppContracts },
-): ContractSchema | null {
+): Contract | null {
   const app = installedAppContracts[ref.appName];
   if (!app) return null;
 
   // Check pages
   const pageContract = app.pages.find((p) => p.pageName === ref.componentName);
-  if (pageContract) return pageContract.contractSchema;
+  if (pageContract) return pageContract.contract;
 
   // Check components
   const componentContract = app.components.find((c) => c.componentName === ref.componentName);
-  if (componentContract) return componentContract.contractSchema;
+  if (componentContract) return componentContract.contract;
 
   return null;
 }
@@ -570,15 +675,27 @@ const page = response.info.pages.find((p) => p.url === targetUrl);
 
 if (page) {
   // Display page-level tags
-  if (page.contractSchema) {
-    displayContract(page.contractSchema);
+  if (page.contract) {
+    displayContract(page.contract);
   }
 
-  // Display used component tags
+  // Display used component tags (try plugin system first, then legacy)
   page.usedComponentContracts.forEach((ref) => {
-    const contract = lookupComponentContract(ref, response.info.installedAppContracts);
-    if (contract) {
-      displayContract(contract);
+    // Try new plugin system first
+    const pluginContract = findPluginContract(
+      response.info.plugins,
+      ref.appName,
+      ref.componentName,
+    );
+    if (pluginContract) {
+      displayContract(pluginContract);
+      return;
+    }
+
+    // Fall back to legacy system
+    const legacyContract = lookupComponentContract(ref, response.info.installedAppContracts);
+    if (legacyContract) {
+      displayContract(legacyContract);
     }
   });
 }

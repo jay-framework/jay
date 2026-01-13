@@ -18,6 +18,18 @@ describe('Editor Server', () => {
     });
 
     it('should start server and return port and editor ID', async () => {
+        const fixedEditorId = 'test-editor-id';
+        server = createEditorServer({
+            editorId: fixedEditorId,
+        });
+
+        const result = await server.start();
+
+        expect(result.port).toBeGreaterThan(0);
+        expect(result.editorId).toBe(fixedEditorId);
+    });
+
+    it('should default to "init" when no editor ID is provided', async () => {
         server = createEditorServer({});
 
         const result = await server.start();
@@ -40,8 +52,13 @@ describe('Editor Server End-to-End Tests', () => {
             directories: new Set(),
         };
 
-        // Create server with memory-based handlers
-        server = createEditorServer({});
+        // Use a fixed editorId to avoid race conditions
+        const fixedEditorId = 'test-editor-id';
+
+        // Create server with fixed editorId
+        server = createEditorServer({
+            editorId: fixedEditorId,
+        });
 
         const handlers = createDefaultHandlers({
             projectRoot: '/test-project',
@@ -55,12 +72,12 @@ describe('Editor Server End-to-End Tests', () => {
         // Start server
         serverInfo = await server.start();
 
-        // Create client
+        // Create client with matching editorId
         client = createEditorClient({
             portRange: [serverInfo.port, serverInfo.port],
             scanTimeout: 1000,
             retryAttempts: 1,
-            editorId: serverInfo.editorId,
+            editorId: fixedEditorId,
         });
     });
 

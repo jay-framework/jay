@@ -10,7 +10,6 @@ import type {
     HasImageResponse,
     GetProjectInfoResponse,
     ProjectInfo,
-    InstalledAppContracts,
     EditorProtocolMessageTypes,
     EditorProtocolResponseTypes,
 } from './protocol';
