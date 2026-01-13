@@ -284,10 +284,11 @@ function convertRepeaterNode(
   // Push repeater path to context
   context.repeaterPathStack.push(repeaterPath.split('.'));
   
-  // Convert children in new context
+  // Convert only the FIRST child - it's the template that gets repeated
+  // Other sibling nodes are ignored as they're not part of the repeater pattern
   let childrenHtml = '';
-  for (const child of node.children || []) {
-    childrenHtml += convertNodeToJayHtml(child, {
+  if (node.children && node.children.length > 0) {
+    childrenHtml = convertNodeToJayHtml(node.children[0], {
       ...context,
       indentLevel: context.indentLevel + 1
     });

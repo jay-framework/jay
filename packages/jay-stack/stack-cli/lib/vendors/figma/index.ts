@@ -21,7 +21,6 @@ import {
     getBindingsData,
     analyzeBindings,
     validateBindings,
-    applyRepeaterContext,
 } from './binding-analysis';
 
 /**
@@ -51,12 +50,10 @@ function convertRepeaterNode(
         indentLevel: context.indentLevel + 1,
     };
 
-    // Convert children in new context
+    // Convert only the first child - it's the template that gets repeated
     let childrenHtml = '';
     if (node.children && node.children.length > 0) {
-        for (const child of node.children) {
-            childrenHtml += convertNodeToJayHtml(child, newContext);
-        }
+        childrenHtml = convertNodeToJayHtml(node.children[0], newContext);
     }
 
     // Build forEach HTML

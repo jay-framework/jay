@@ -198,6 +198,8 @@ This filtering prevents invalid expressions like `if="media == image:hover"` fro
 </div>
 ```
 
+**Important:** Only the **first child** of a repeater node is converted. This first child serves as the template that gets repeated for each item in the array. Other sibling nodes are ignored as they are not part of the repeater pattern.
+
 ## Repeater Context
 
 Repeaters change the path context for their children:
