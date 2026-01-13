@@ -17,6 +17,7 @@ import { convertRectangleToHtml } from './converters/rectangle';
 import { convertEllipseToHtml } from './converters/ellipse';
 import { convertVectorToHtml } from './converters/vector';
 import { convertVariantNode } from './converters/variants';
+import { convertRepeaterNode } from './converters/repeater';
 import type { ConversionContext, BindingAnalysis } from './types';
 import {
     getBindingsData,
@@ -32,38 +33,6 @@ import {
  * The FigmaVendorDocument type is imported from @jay-framework/editor-protocol,
  * which is the single source of truth for the vendor document structure.
  */
-
-/**
- * Converts a repeater node to Jay HTML with forEach
- */
-function convertRepeaterNode(
-    node: FigmaVendorDocument,
-    analysis: BindingAnalysis,
-    context: ConversionContext,
-): string {
-    const { repeaterPath, trackByKey } = analysis;
-    const indent = '  '.repeat(context.indentLevel);
-
-    // Push repeater path to context stack
-    const newContext: ConversionContext = {
-        ...context,
-        repeaterPathStack: [...context.repeaterPathStack, repeaterPath!.split('.')],
-        indentLevel: context.indentLevel + 1,
-    };
-
-    // Convert only the first child - it's the template that gets repeated
-    let childrenHtml = '';
-    if (node.children && node.children.length > 0) {
-        childrenHtml = convertNodeToJayHtml(node.children[0], newContext);
-    }
-
-    // Build forEach HTML
-    return (
-        `${indent}<div forEach="${repeaterPath}" trackBy="${trackByKey}">\n` +
-        childrenHtml +
-        `${indent}</div>\n`
-    );
-}
 
 /**
  * Converts a regular node (non-repeater, non-variant) to Jay HTML
@@ -252,7 +221,7 @@ function convertNodeToJayHtml(node: FigmaVendorDocument, context: ConversionCont
 
     // 4. Handle repeater
     if (analysis.isRepeater) {
-        return convertRepeaterNode(node, analysis, context);
+        return convertRepeaterNode(node, analysis, context, convertNodeToJayHtml);
     }
 
     // 5. Handle property variants
