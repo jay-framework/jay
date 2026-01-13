@@ -259,6 +259,16 @@ export function analyzeBindings(
             tagPath: r.fullPath!,
             contractTag: r.contractTag!,
         }));
+        
+        // Check if any of the variant properties are also interactive
+        // This handles the case where a tag has type: [variant, interactive]
+        for (const r of propertyBindings) {
+            if (isInteractiveTag(r.contractTag!)) {
+                analysis.interactiveVariantPath = r.fullPath;
+                break; // Use the first interactive variant property
+            }
+        }
+        
         return analysis;
     }
 

@@ -299,12 +299,15 @@ export function convertVariantNode(
 
     const wrapperStyleAttr = `${positionStyle}${frameSizeStyles}${backgroundStyle}${strokeStyles}${borderRadius}${overflowStyles}${commonStyles}${flexStyles}box-sizing: border-box;`;
 
-    // Determine ref attribute from analysis
+    // Determine ref attribute from analysis (checked in binding analysis phase)
     let refAttr = '';
     if (analysis.refPath) {
         refAttr = ` ref="${analysis.refPath}"`;
     } else if (analysis.dualPath) {
         refAttr = ` ref="${analysis.dualPath}"`;
+    } else if (analysis.interactiveVariantPath) {
+        // Variant property that is also interactive (type: [variant, interactive])
+        refAttr = ` ref="${analysis.interactiveVariantPath}"`;
     }
 
     // 5. Wrap everything in the outer container with Frame styling

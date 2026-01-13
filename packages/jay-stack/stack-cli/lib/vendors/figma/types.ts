@@ -46,6 +46,8 @@ export interface BindingAnalysis {
         contractTag: ContractTag;
     }>;
 
+    // For property variants that are also interactive (type: [variant, interactive])
+    interactiveVariantPath?: string;
     // For repeaters
     isRepeater: boolean;
     repeaterPath?: string;
