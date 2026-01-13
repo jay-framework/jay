@@ -192,3 +192,49 @@ registerReactiveGlobalContext(CTX, () => {
 const ctx = registerReactiveGlobalContext(CTX, () => ...);
 await ctx.init();
 ```
+
+---
+
+## Implementation Results
+
+### Phase 1: Add the function ✅
+
+- Added `registerReactiveGlobalContext` to `component/lib/context-api.ts`
+- Already exported via `export * from './context-api'` in `index.ts`
+- Implementation reuses `createReactiveContext` and calls `registerGlobalContext`
+
+### Phase 2: Tests ✅
+
+Added 5 tests in `context-api.test.ts`:
+- `registers a reactive context globally`
+- `returns the created context for immediate use`
+- `supports async init pattern`
+- `consuming component should read a value from a global reactive context`
+- `component should react to signal changes in global reactive context`
+
+All 56 tests pass.
+
+### Phase 3: Documentation ✅
+
+1. Created `packages/runtime/component/docs/register-reactive-global-context.md`
+2. Updated `docs/core/components.md` with "Global Reactive Contexts" section
+3. Updated `packages/runtime/component/readme.md` to reference new doc
+
+### Real-world Usage: wix-stores ✅
+
+Updated `wix/packages/wix-stores` to use `registerReactiveGlobalContext`:
+- `WixStoresContext` now has reactive `cartIndicator` signals (`itemCount`, `hasItems`)
+- Added `addToCart(productId, quantity?, variantId?)` that updates indicator
+- Added `refreshCartIndicator()` to fetch initial state
+- Init calls `refreshCartIndicator()` on startup
+
+### Files Modified
+
+- `jay/packages/runtime/component/lib/context-api.ts`
+- `jay/packages/runtime/component/test/context-api.test.ts`
+- `jay/packages/runtime/component/docs/register-reactive-global-context.md` (new)
+- `jay/packages/runtime/component/readme.md`
+- `jay/docs/core/components.md`
+- `wix/packages/wix-stores/lib/contexts/wix-stores-context.ts`
+- `wix/packages/wix-stores/lib/init.ts`
+- `wix/packages/wix-stores/lib/index.client.ts`
