@@ -867,7 +867,7 @@ async function handleComponentPublish(
     }
 }
 
-async function loadPageContracts(dirPath: string, pageUrl: string): Promise<Contract[]> {
+async function loadPageContracts(dirPath: string, pageUrl: string): Promise<{projectPage: ProjectPage, plugins: Plugin[]}> {
     //load page's info - with it's contract and its used components contracts
     const { hasPageHtml, hasPageContract, hasPageConfig } = await isPageDirectory(dirPath);
     const projectRootPath = process.cwd();
@@ -881,14 +881,7 @@ async function loadPageContracts(dirPath: string, pageUrl: string): Promise<Cont
         hasPageConfig,
     }, plugins);
 
-    //get used components contracts
-    const usedComponentsContracts = pageInfo.usedComponents.map((usedComponent) => {
-        const plugin = plugins.find((p) => p.name === usedComponent.appName);
-        const contract = plugin?.contracts.find((c) => c?.name === usedComponent.componentName);
-        return contract;
-    });
-
-    return [pageInfo.contract, ...usedComponentsContracts];
+    return {projectPage: pageInfo, plugins};
 }
 
 export function createEditorHandlers(
@@ -1079,11 +1072,10 @@ export function createEditorHandlers(
 
                 try {
                     //load page's info - with it's contract and its used components contracts
-                    const contracts = await loadPageContracts(dirname, pageUrl);
-                    console.log(`contracts: ${JSON.stringify(contracts, null, 2)}`);
+                    const {projectPage, plugins} = await loadPageContracts(dirname, pageUrl);
 
                     // Run the vendor conversion to get body HTML and metadata
-                    const conversionResult = await vendor.convertToBodyHtml(vendorDoc, pageUrl);
+                    const conversionResult = await vendor.convertToBodyHtml(vendorDoc, pageUrl, projectPage, plugins);
 
                     // Build the full Jay HTML document with headless components from page.conf.yaml
                     const fullJayHtml = await buildJayHtmlFromVendorResult(

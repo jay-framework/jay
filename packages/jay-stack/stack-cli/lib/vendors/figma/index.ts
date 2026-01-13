@@ -1,5 +1,5 @@
 import { Vendor, VendorConversionResult } from '../types';
-import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
+import type { FigmaVendorDocument, ProjectPage, Plugin } from '@jay-framework/editor-protocol';
 import {
     getPositionStyle,
     getNodeSizeStyles,
@@ -10,12 +10,18 @@ import {
     getBackgroundFillsStyle,
     getStrokeStyles,
     getFrameSizeStyles,
-    rgbToHex,
 } from './utils';
 import { convertTextNodeToHtml } from './converters/text';
 import { convertRectangleToHtml } from './converters/rectangle';
 import { convertEllipseToHtml } from './converters/ellipse';
 import { convertVectorToHtml } from './converters/vector';
+import type { ConversionContext, BindingAnalysis } from './types';
+import {
+    getBindingsData,
+    analyzeBindings,
+    validateBindings,
+    applyRepeaterContext,
+} from './binding-analysis';
 
 /**
  * Figma Vendor Implementation
@@ -27,145 +33,333 @@ import { convertVectorToHtml } from './converters/vector';
  */
 
 /**
- * Builds a mapping from pageContractPath to component key
- * 
- * Extracts contract names from binding data and converts them to camelCase keys.
- * 
- * Example:
- * - Input pageContractPath: "/products/:slug:@jay-framework/wix-stores.product-page"
- * - Extracted contract: "product-page"
- * - Output key: "productPage"
- * 
- * @param bindingData - The binding data containing pageContractPath references
- * @returns A map from full pageContractPath to simple component key
+ * Converts a repeater node to Jay HTML with forEach
  */
-function buildContractKeyMap(
-    bindingData: { [layerId: string]: Array<{ pageContractPath: string; tagPath: string[]; attribute?: string; property?: string }> }
-): { [pageContractPath: string]: string } {
-    const contractKeyMap: { [pageContractPath: string]: string } = {};
-    
-    for (const layerBindings of Object.values(bindingData)) {
-        for (const binding of layerBindings) {
-            const pageContractPath = binding.pageContractPath;
-            
-            if (!contractKeyMap[pageContractPath]) {
-                // Check if this is an extended contract path with @ notation
-                if (pageContractPath.includes(':@')) {
-                    // Extract the contract part: "@jay-framework/wix-stores.product-page"
-                    const contractPart = pageContractPath.split(':@')[1];
-                    if (contractPart) {
-                        // Extract the contract name: "product-page" from "@plugin/package.contract-name"
-                        const lastDot = contractPart.lastIndexOf('.');
-                        if (lastDot !== -1) {
-                            const contractName = contractPart.substring(lastDot + 1);
-                            // Convert "product-page" to camelCase "productPage"
-                            const key = contractName.replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
-                            contractKeyMap[pageContractPath] = key;
-                        }
-                    }
+function convertRepeaterNode(
+    node: FigmaVendorDocument,
+    analysis: BindingAnalysis,
+    context: ConversionContext,
+): string {
+    const { repeaterPath, trackByKey } = analysis;
+    const indent = '  '.repeat(context.indentLevel);
+
+    // Push repeater path to context stack
+    const newContext: ConversionContext = {
+        ...context,
+        repeaterPathStack: [...context.repeaterPathStack, repeaterPath!.split('.')],
+        indentLevel: context.indentLevel + 1,
+    };
+
+    // Convert children in new context
+    let childrenHtml = '';
+    if (node.children && node.children.length > 0) {
+        for (const child of node.children) {
+            childrenHtml += convertNodeToJayHtml(child, newContext);
+        }
+    }
+
+    // Build forEach HTML
+    return (
+        `${indent}<div forEach="${repeaterPath}" trackBy="${trackByKey}">\n` +
+        childrenHtml +
+        `${indent}</div>\n`
+    );
+}
+
+/**
+ * Gets all variant values for a component set's properties
+ * Returns a map of property name to array of possible values
+ * 
+ * Works with both:
+ * - Component nodes (componentPropertyDefinitions on the node itself)
+ * - Instance nodes (componentPropertyDefinitions + variants array serialized from component set)
+ * 
+ * Filters out pseudo-CSS class variants (values containing ':') as these are handled
+ * via CSS display toggling, not Jay-HTML if conditions.
+ */
+function getComponentVariantValues(
+    node: FigmaVendorDocument,
+    propertyBindings: Array<{ property: string }>,
+): Map<string, string[]> {
+    const values = new Map<string, string[]>();
+
+    // Helper to filter out pseudo-CSS variants
+    const filterPseudoVariants = (variantValues: string[]): string[] => {
+        return variantValues.filter(value => !value.includes(':'));
+    };
+
+    // Extract from node.componentPropertyDefinitions if available
+    if (node.componentPropertyDefinitions) {
+        for (const binding of propertyBindings) {
+            const propDef = node.componentPropertyDefinitions[binding.property];
+            if (propDef && propDef.type === 'VARIANT' && propDef.variantOptions) {
+                const filtered = filterPseudoVariants(propDef.variantOptions);
+                if (filtered.length > 0) {
+                    values.set(binding.property, filtered);
                 }
             }
         }
     }
-    
-    return contractKeyMap;
+
+    // If we didn't get values from componentPropertyDefinitions,
+    // try to extract from the variants array
+    if (values.size === 0 && node.variants && node.variants.length > 0) {
+        // Build set of unique values for each property from all variants
+        const propertyValuesMap = new Map<string, Set<string>>();
+        
+        for (const variant of node.variants) {
+            if (variant.variantProperties) {
+                for (const binding of propertyBindings) {
+                    const propValue = variant.variantProperties[binding.property];
+                    // Skip pseudo-CSS variants (values containing ':')
+                    if (propValue && !propValue.includes(':')) {
+                        if (!propertyValuesMap.has(binding.property)) {
+                            propertyValuesMap.set(binding.property, new Set());
+                        }
+                        propertyValuesMap.get(binding.property)!.add(propValue);
+                    }
+                }
+            }
+        }
+        
+        // Convert sets to arrays
+        for (const [prop, valueSet] of propertyValuesMap) {
+            if (valueSet.size > 0) {
+                values.set(prop, Array.from(valueSet));
+            }
+        }
+    }
+
+    return values;
 }
 
 /**
-
-/**
- * Basic converter for Figma nodes to Jay HTML
- * This is a simple implementation for initial end-to-end testing
- * @param node - The Figma node to convert
- * @param fontFamilies - Set to collect font families encountered during conversion
- * @param indent - Current indentation level
- * @param bindingData - Optional binding data for data bindings
- * @param contractKeyMap - Optional map from pageContractPath to component key
+ * Generates all permutations of variant property values
  */
-function convertNodeToJayHtml(
-    node: FigmaVendorDocument,
-    fontFamilies: Set<string>,
-    indent: string = '',
-    bindingData?: { [layerId: string]: Array<{ pageContractPath: string; tagPath: string[]; attribute?: string; property?: string }> },
-    contractKeyMap?: { [pageContractPath: string]: string },
-): string {
-    const { name, type, children, pluginData, width, height } = node;
-
-    // Extract Jay-specific data from pluginData
-    const isJPage = pluginData?.['jpage'] === 'true';
-    const urlRoute = pluginData?.['urlRoute'];
-    const semanticHtml = pluginData?.['semanticHtml'];
-    const bindingsData = pluginData?.['jay-layer-bindings'];
-
-    // Collect font family if this is a TEXT node
-    if (type === 'TEXT' && node.fontName) {
-        if (typeof node.fontName === 'object' && node.fontName.family) {
-            // Single font for the entire text
-            fontFamilies.add(node.fontName.family);
-        }
-        // Note: For MIXED fonts, we would need to access the original Figma node
-        // to call getRangeFontName() for each character. This is not available in the
-        // serialized document. For now, we'll only collect single fonts.
-        // Mixed fonts can be handled in a future enhancement.
+function generatePermutations(
+    propertyValues: Map<string, string[]>,
+    bindings: Array<{ property: string; tagPath: string }>,
+): Array<Array<{ property: string; tagPath: string; value: string }>> {
+    const properties = Array.from(propertyValues.entries());
+    if (properties.length === 0) {
+        return [];
     }
 
-    // Get position, size, and common styles for most nodes
+    const permutations: Array<Array<{ property: string; tagPath: string; value: string }>> = [];
+
+    function generate(index: number, current: Array<{ property: string; tagPath: string; value: string }>) {
+        if (index === properties.length) {
+            permutations.push([...current]);
+            return;
+        }
+
+        const [propName, propValues] = properties[index];
+        const binding = bindings.find((b) => b.property === propName);
+        if (!binding) return;
+
+        for (const value of propValues) {
+            current.push({ property: propName, tagPath: binding.tagPath, value });
+            generate(index + 1, current);
+            current.pop();
+        }
+    }
+
+    generate(0, []);
+    return permutations;
+}
+
+/**
+ * Finds the variant component that matches the given property values
+ * 
+ * When property bindings are on an INSTANCE node, the serialization includes:
+ * - node.variants: Array of all variants from the component set
+ * - each variant has variantProperties: { property: value }
+ * 
+ * This function finds the matching variant by comparing property values.
+ * 
+ * Note: Pseudo-CSS variants (with ':' in values) are filtered out before this function
+ * is called, so only actual Jay variants are matched here.
+ */
+function findComponentVariant(
+    node: FigmaVendorDocument,
+    permutation: Array<{ property: string; value: string }>,
+): FigmaVendorDocument {
+    // If node has variants array (serialized from component set)
+    if (!node.variants || node.variants.length === 0) {
+        console.warn(`Node "${node.name}" has no variants array, using node itself`);
+        return node;
+    }
+
+    // Build target property map from permutation
+    const targetProps = new Map<string, string>();
+    for (const { property, value } of permutation) {
+        targetProps.set(property, value);
+    }
+
+    // Find matching variant
+    const matchingVariant = node.variants.find((variant) => {
+        if (!variant.variantProperties) {
+            return false;
+        }
+
+        // Check if all target properties match
+        for (const [prop, value] of targetProps) {
+            if (variant.variantProperties[prop] !== value) {
+                return false;
+            }
+        }
+
+        // Also verify no extra properties that differ
+        // (This ensures exact match for component sets with >2 properties)
+        for (const [prop, value] of Object.entries(variant.variantProperties)) {
+            if (targetProps.has(prop) && targetProps.get(prop) !== value) {
+                return false;
+            }
+        }
+
+        return true;
+    });
+
+    if (!matchingVariant) {
+        console.warn(
+            `No matching variant found for "${node.name}" with properties:`,
+            Object.fromEntries(targetProps),
+            '\nAvailable variants:',
+            node.variants.map((v) => v.variantProperties),
+        );
+        // Fallback to first variant or the node itself
+        return node.variants[0] || node;
+    }
+
+    return matchingVariant;
+}
+
+/**
+ * Converts a variant node to Jay HTML with if conditions
+ */
+function convertVariantNode(
+    node: FigmaVendorDocument,
+    analysis: BindingAnalysis,
+    context: ConversionContext,
+): string {
+    const indent = '  '.repeat(context.indentLevel);
+    let html = '';
+    // 1. Get all variant property values
+    const propertyValues = getComponentVariantValues(node, analysis.propertyBindings);
+    // 2. Generate all permutations
+    const permutations = generatePermutations(propertyValues, analysis.propertyBindings);
+    if (permutations.length === 0) {
+        console.warn(`No permutations generated for variant node: ${node.name}`);
+        return `${indent}<!-- Variant node "${node.name}" has no permutations -->\n`;
+    }
+
+    // 3. Convert each permutation
+    for (const permutation of permutations) {
+        // Build if condition
+        const conditions = permutation
+            .map(({ tagPath, value }) => `${tagPath} == ${value}`)
+            .join(' && ');
+
+        // Find variant component
+        const variantNode = findComponentVariant(node, permutation);
+
+        // Convert variant
+        html += `${indent}<div if="${conditions}">\n`;
+
+        const variantContext: ConversionContext = {
+            ...context,
+            indentLevel: context.indentLevel + 1,
+        };
+
+        // Convert variant node's children
+        if (variantNode.children && variantNode.children.length > 0) {
+            for (const child of variantNode.children) {
+                html += convertNodeToJayHtml(child, variantContext);
+            }
+        }
+
+        html += `${indent}</div>\n`;
+    }
+
+    return html;
+}
+
+/**
+ * Converts a regular node (non-repeater, non-variant) to Jay HTML
+ */
+function convertRegularNode(
+    node: FigmaVendorDocument,
+    analysis: BindingAnalysis,
+    context: ConversionContext,
+): string {
+    const indent = '  '.repeat(context.indentLevel);
+    const { type, children, pluginData } = node;
+
+    const semanticHtml = pluginData?.['semanticHtml'];
+
+    // For text nodes, handle specially
+    if (type === 'TEXT') {
+        const dynamicContent = analysis.dynamicContentPath ? `{${analysis.dynamicContentPath}}` : '';
+        const refAttr = analysis.refPath ? ` ref="${analysis.refPath}"` : '';
+        const dualContent = analysis.dualPath ? `{${analysis.dualPath}}` : '';
+        const dualRef = analysis.dualPath ? ` ref="${analysis.dualPath}"` : '';
+
+        // Build attribute string
+        let attributesHtml = '';
+        for (const [attr, tagPath] of analysis.attributes) {
+            attributesHtml += ` ${attr}="{${tagPath}}"`;
+        }
+
+        return convertTextNodeToHtml(
+            node,
+            indent,
+            dynamicContent || dualContent,
+            refAttr || dualRef,
+            attributesHtml,
+        );
+    }
+
+    // Get position, size, and common styles
     const positionStyle = getPositionStyle(node);
     const sizeStyles = getNodeSizeStyles(node);
     const commonStyles = getCommonStyles(node);
-    const styleAttr = `style="${positionStyle}${sizeStyles}${commonStyles}"`;
 
-    // For now, we'll create simple HTML structure
-    let html = '';
-
-    if (type === 'SECTION' && isJPage) {
-        // This is a Jay Page - the root container
-        html += `${indent}<section data-figma-id="${node.id}" data-page-url="${urlRoute || ''}">\n`;
-        html += `${indent}  <!-- Jay Page: ${name} -->\n`;
-
-        if (children && children.length > 0) {
-            children.forEach((child) => {
-                html += convertNodeToJayHtml(child, fontFamilies, indent + '  ', bindingData, contractKeyMap);
-            });
-        }
-
-        html += `${indent}</section>\n`;
-    } else if (type === 'FRAME') {
-        // Convert frames to divs with full styling (layout, background, borders, etc.)
-        const tag = semanticHtml || 'div';
-
-        // Build Frame-specific styles
+    // For frames, build full styling
+    let styleAttr = '';
+    if (type === 'FRAME') {
         const backgroundStyle = getBackgroundFillsStyle(node);
         const borderRadius = getBorderRadius(node);
         const strokeStyles = getStrokeStyles(node);
         const flexStyles = getAutoLayoutStyles(node);
         const overflowStyles = getOverflowStyles(node);
+        const frameSizeStyles = getFrameSizeStyles(node);
 
-        // For frames, use getFrameSizeStyles instead of getNodeSizeStyles
-        const sizeStyles = getFrameSizeStyles(node);
+        styleAttr = `${positionStyle}${frameSizeStyles}${backgroundStyle}${strokeStyles}${borderRadius}${overflowStyles}${commonStyles}${flexStyles}box-sizing: border-box;`;
+    } else {
+        styleAttr = `${positionStyle}${sizeStyles}${commonStyles}`;
+    }
 
-        // Combine all styles
-        const allStyles = `${positionStyle}${sizeStyles}${backgroundStyle}${strokeStyles}${borderRadius}${overflowStyles}${commonStyles}${flexStyles}box-sizing: border-box;`;
+    // Build HTML attributes
+    const tag = semanticHtml || 'div';
+    let htmlAttrs = `data-figma-id="${node.id}" data-figma-type="${type.toLowerCase()}" style="${styleAttr}"`;
 
-        html += `${indent}<${tag} data-figma-id="${node.id}" data-figma-type="frame" style="${allStyles}">\n`;
-        html += `${indent}  <!-- ${name} -->\n`;
+    // Add ref attribute
+    if (analysis.refPath) {
+        htmlAttrs += ` ref="${analysis.refPath}"`;
+    } else if (analysis.dualPath) {
+        htmlAttrs += ` ref="${analysis.dualPath}"`;
+    }
 
-        if (children && children.length > 0) {
-            children.forEach((child) => {
-                html += convertNodeToJayHtml(child, fontFamilies, indent + '  ', bindingData, contractKeyMap);
-            });
-        }
+    // Add other attributes (like src, href, value, etc.)
+    for (const [attr, tagPath] of analysis.attributes) {
+        htmlAttrs += ` ${attr}="{${tagPath}}"`;
+    }
 
-        html += `${indent}</${tag}>\n`;
-    } else if (type === 'TEXT') {
-        // Convert text nodes with full styling and data binding support
-        html += convertTextNodeToHtml(node, indent, bindingData, contractKeyMap);
-    } else if (type === 'RECTANGLE') {
-        // Convert rectangles to divs with background, border radius, and strokes
-        html += convertRectangleToHtml(node, indent);
+    // Handle based on node type
+    if (type === 'RECTANGLE') {
+        return convertRectangleToHtml(node, indent);
     } else if (type === 'ELLIPSE') {
-        // Convert ellipses to divs with circular border radius
-        html += convertEllipseToHtml(node, indent);
+        return convertEllipseToHtml(node, indent);
     } else if (
         type === 'VECTOR' ||
         type === 'STAR' ||
@@ -173,25 +367,87 @@ function convertNodeToJayHtml(
         type === 'LINE' ||
         type === 'BOOLEAN_OPERATION'
     ) {
-        // Convert vectors and vector-based shapes to divs with embedded SVG
-        html += convertVectorToHtml(node, indent);
+        return convertVectorToHtml(node, indent);
     } else if (children && children.length > 0) {
-        // Generic container with children
-        const tag = semanticHtml || 'div';
-        html += `${indent}<${tag} data-figma-id="${node.id}" data-figma-type="${type.toLowerCase()}" ${styleAttr}>\n`;
-        html += `${indent}  <!-- ${name} -->\n`;
+        // Container with children
+        let html = `${indent}<${tag} ${htmlAttrs}>\n`;
+        html += `${indent}  <!-- ${node.name} -->\n`;
 
-        children.forEach((child) => {
-            html += convertNodeToJayHtml(child, fontFamilies, indent + '  ', bindingData, contractKeyMap);
-        });
+        const childContext: ConversionContext = {
+            ...context,
+            indentLevel: context.indentLevel + 1,
+        };
+
+        for (const child of children) {
+            html += convertNodeToJayHtml(child, childContext);
+        }
 
         html += `${indent}</${tag}>\n`;
+        return html;
     } else {
         // Leaf node
-        html += `${indent}<!-- ${name} (${type}) -->\n`;
+        return `${indent}<!-- ${node.name} (${type}) -->\n`;
+    }
+}
+/**
+ * Main converter for Figma nodes to Jay HTML
+ * Implements the conversion pipeline with binding analysis
+ */
+function convertNodeToJayHtml(node: FigmaVendorDocument, context: ConversionContext): string {
+    const { name, type, children, pluginData } = node;
+    // Extract Jay-specific data from pluginData
+    const isJPage = pluginData?.['jpage'] === 'true';
+    const urlRoute = pluginData?.['urlRoute'];
+
+    // Collect font family if this is a TEXT node
+    if (type === 'TEXT' && node.fontName) {
+        if (typeof node.fontName === 'object' && node.fontName.family) {
+            context.fontFamilies.add(node.fontName.family);
+        }
     }
 
-    return html;
+    const indent = '  '.repeat(context.indentLevel);
+
+    // Handle Jay Page sections (don't process bindings for top-level sections)
+    if (type === 'SECTION' && isJPage) {
+        let html = `${indent}<section data-figma-id="${node.id}" data-page-url="${urlRoute || ''}">\n`;
+        html += `${indent}  <!-- Jay Page: ${name} -->\n`;
+
+        if (children && children.length > 0) {
+            const childContext: ConversionContext = {
+                ...context,
+                indentLevel: context.indentLevel + 1,
+            };
+            for (const child of children) {
+                html += convertNodeToJayHtml(child, childContext);
+            }
+        }
+
+        html += `${indent}</section>\n`;
+        return html;
+    }
+
+    // 1. Get bindings from plugin data
+    const bindings = getBindingsData(node);
+
+    // 2. Analyze bindings
+    const analysis = analyzeBindings(bindings, context);
+
+    // 3. Validate bindings
+    validateBindings(analysis, node);
+
+    // 4. Handle repeater
+    if (analysis.isRepeater) {
+        return convertRepeaterNode(node, analysis, context);
+    }
+
+    // 5. Handle property variants
+    if (analysis.type === 'property-variant') {
+        return convertVariantNode(node, analysis, context);
+    }
+
+    // 6. Convert regular node
+    return convertRegularNode(node, analysis, context);
 }
 
 /**
@@ -238,6 +494,8 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
     async convertToBodyHtml(
         vendorDoc: FigmaVendorDocument,
         pageUrl: string,
+        projectPage: ProjectPage,
+        plugins: Plugin[],
     ): Promise<VendorConversionResult> {
         console.log(`🎨 Converting Figma document for page: ${pageUrl}`);
         console.log(`   Document type: ${vendorDoc.type}, name: ${vendorDoc.name}`);
@@ -267,24 +525,20 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
 
         console.log(`   Converting content frame: ${frame.name} (${frame.type})`);
 
-        // Extract binding data from the vendor document
-        const bindingData = vendorDoc.bindingData?.layerBindings || {};
-        if (Object.keys(bindingData).length > 0) {
-            console.log(`   Found ${Object.keys(bindingData).length} bound layers`);
-        }
-
-        // Build a mapping from pageContractPath to component key
-        const contractKeyMap = buildContractKeyMap(bindingData);
-        
-        if (Object.keys(contractKeyMap).length > 0) {
-            console.log(`   Built contract key map:`, contractKeyMap);
-        }
-
         // Create empty set to collect font families during conversion
         const fontFamilies = new Set<string>();
 
+        // Create conversion context
+        const context: ConversionContext = {
+            repeaterPathStack: [],
+            indentLevel: 1, // Start at 1 for body content
+            fontFamilies,
+            projectPage,
+            plugins,
+        };
+
         // Convert the content frame to body HTML (fontFamilies will be populated during conversion)
-        const bodyHtml = convertNodeToJayHtml(frame, fontFamilies, '  ', bindingData, contractKeyMap);
+        const bodyHtml = convertNodeToJayHtml(frame, context);
 
         if (fontFamilies.size > 0) {
             console.log(

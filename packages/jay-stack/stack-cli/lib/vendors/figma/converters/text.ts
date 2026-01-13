@@ -1,41 +1,6 @@
-import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
+import type { FigmaVendorDocument, Plugin, ProjectPage } from '@jay-framework/editor-protocol';
 import { getPositionStyle, getNodeSizeStyles, getCommonStyles, rgbToHex } from '../utils';
-
-/**
- * Checks if a text node has a data binding (non-interactive binding)
- * @param nodeId - The Figma node ID
- * @param bindingData - The binding data from the document
- * @param contractKeyMap - Map from pageContractPath to headless component key
- * @returns The tag path string if bound to data, null otherwise
- */
-function getTextDataBinding(
-    nodeId: string,
-    bindingData?: { [layerId: string]: Array<{ pageContractPath: string; tagPath: string[]; attribute?: string; property?: string }> },
-    contractKeyMap?: { [pageContractPath: string]: string },
-): string | null {
-    if (!bindingData || !bindingData[nodeId]) {
-        return null;
-    }
-
-    const bindings = bindingData[nodeId];
-
-    // Look for a content binding (no attribute or property)
-    for (const binding of bindings) {
-        if (!binding.attribute && !binding.property) {
-            // This is a content binding - build the tag path
-            const tagPath = [...binding.tagPath];
-            
-            // Replace the first element (pageContractPath) with the component key
-            if (tagPath.length > 0 && contractKeyMap && contractKeyMap[binding.pageContractPath]) {
-                tagPath[0] = contractKeyMap[binding.pageContractPath];
-            }
-            
-            return `{${tagPath.join('.')}}`;
-        }
-    }
-
-    return null;
-}
+import type { PageContractPath } from '../pageContractPath';
 
 /**
  * Escapes HTML special characters
@@ -55,14 +20,16 @@ function escapeHtmlContent(text: string): string {
  * Converts a TEXT node to HTML with full styling and data binding support
  * @param node - The serialized TEXT node
  * @param indent - Indentation string
- * @param bindingData - Optional binding data for the page
- * @param contractKeyMap - Optional map from pageContractPath to headless component key
+ * @param dynamicContent - Optional dynamic content binding (e.g., "{user.name}")
+ * @param refAttr - Optional ref attribute (e.g., ' ref="email"')
+ * @param attributesHtml - Optional HTML attributes (e.g., ' value="{email}"')
  */
 export function convertTextNodeToHtml(
     node: FigmaVendorDocument,
     indent: string,
-    bindingData?: { [layerId: string]: Array<{ pageContractPath: string; tagPath: string[]; attribute?: string; property?: string }> },
-    contractKeyMap?: { [pageContractPath: string]: string },
+    dynamicContent?: string,
+    refAttr?: string,
+    attributesHtml?: string,
 ): string {
     const {
         name,
@@ -207,14 +174,11 @@ export function convertTextNodeToHtml(
     // Combine all text styles
     const textStyles = `${fontFamilyStyle}${fontSizeStyle}${fontWeightStyle}${colorStyle}${textAlignStyle}${letterSpacingStyle}${lineHeightStyle}${textDecorationStyle}${textTransformStyle}${truncationStyle}`;
 
-    // Check if this text node has a data binding
-    const dataBinding = getTextDataBinding(id, bindingData, contractKeyMap);
-
     // Process text content - use binding if available, otherwise use static text
     let htmlContent = '';
-    if (dataBinding) {
+    if (dynamicContent) {
         // Text is bound to data - use the binding expression
-        htmlContent = dataBinding;
+        htmlContent = dynamicContent;
     } else if (hyperlinks && hyperlinks.length > 0) {
         let lastEnd = 0;
         for (const link of hyperlinks) {
@@ -243,11 +207,13 @@ export function convertTextNodeToHtml(
     const innerIndent = indent + '    ';
 
     const styleAttr = `${positionStyle}${sizeStyles}${commonStyles}${textStyles}`;
+    const refString = refAttr || '';
+    const attrsString = attributesHtml || '';
 
     if (verticalAlignWrapperStyle) {
         // With vertical alignment wrapper
         return (
-            `${indent}<div data-figma-id="${id}" style="${styleAttr}${verticalAlignWrapperStyle}">\n` +
+            `${indent}<div data-figma-id="${id}"${refString}${attrsString} style="${styleAttr}${verticalAlignWrapperStyle}">\n` +
             `${childIndent}<div style="${textStyles}">\n` +
             `${innerIndent}${htmlContent}\n` +
             `${childIndent}</div>\n` +
@@ -255,6 +221,6 @@ export function convertTextNodeToHtml(
         );
     } else {
         // Simple text div
-        return `${indent}<div data-figma-id="${id}" style="${styleAttr}">${htmlContent}</div>\n`;
+        return `${indent}<div data-figma-id="${id}"${refString}${attrsString} style="${styleAttr}">${htmlContent}</div>\n`;
     }
 }
