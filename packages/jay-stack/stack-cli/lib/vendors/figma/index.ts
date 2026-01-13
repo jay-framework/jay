@@ -12,6 +12,7 @@ import {
     getFrameSizeStyles,
 } from './utils';
 import { convertTextNodeToHtml } from './converters/text';
+import { convertImageNodeToHtml, extractStaticImageUrl } from './converters/image';
 import { convertRectangleToHtml } from './converters/rectangle';
 import { convertEllipseToHtml } from './converters/ellipse';
 import { convertVectorToHtml } from './converters/vector';
@@ -316,6 +317,39 @@ function convertRegularNode(
             dynamicContent || dualContent,
             refAttr || dualRef,
             attributesHtml,
+        );
+    }
+
+    // For image semantic nodes, handle specially
+    if (semanticHtml === 'img') {
+        // Extract src and alt bindings
+        let srcBinding: string | undefined;
+        let altBinding: string | undefined;
+        
+        for (const [attr, tagPath] of analysis.attributes) {
+            if (attr === 'src') {
+                srcBinding = `{${tagPath}}`;
+            } else if (attr === 'alt') {
+                altBinding = `{${tagPath}}`;
+            }
+        }
+
+        // Check for static image (no src binding)
+        let staticImageUrl: string | undefined;
+        if (!srcBinding) {
+            staticImageUrl = extractStaticImageUrl(node);
+        }
+
+        const refAttr = analysis.refPath ? ` ref="${analysis.refPath}"` : 
+                       (analysis.dualPath ? ` ref="${analysis.dualPath}"` : '');
+
+        return convertImageNodeToHtml(
+            node,
+            indent,
+            srcBinding,
+            altBinding,
+            refAttr,
+            staticImageUrl,
         );
     }
 

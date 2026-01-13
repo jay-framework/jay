@@ -107,6 +107,39 @@ Jay-HTML output
 <img src="{product.imageUrl}" alt="..." />
 ```
 
+**Supported Attributes:**
+- `src` - Image sources (requires `semanticHtml: 'img'`)
+- `href` - Link destinations (requires `semanticHtml: 'a'`)
+- `value` - Input field values (requires `semanticHtml: 'input'`)
+- `alt` - Image alt text
+- `placeholder` - Input placeholders
+
+#### Image Conversion (Semantic HTML: `img`)
+
+When a node has `semanticHtml: 'img'` in its plugin data:
+
+**Bound Image** (with `src` attribute binding):
+```html
+<img src="{productPage.imageUrl}" alt="{productPage.imageAlt}" data-figma-id="..." />
+```
+
+**Static Image** (no bindings, uses Figma fills):
+```html
+<img src="/assets/images/product-hero.png" alt="Product Hero" data-figma-id="..." />
+```
+
+For static images, the plugin must export and save the image:
+```typescript
+// In plugin serialization for IMAGE fills:
+if (fill.type === 'IMAGE' && fill.imageHash) {
+  const imageBytes = await figma.getImageByHash(fill.imageHash)?.getBytesAsync();
+  if (imageBytes) {
+    const imageUrl = await saveImageToAssets(imageBytes, node.id);
+    serializedFill.imageUrl = imageUrl; // ← Add this!
+  }
+}
+```
+
 ### 5. Property Binding (Variants)
 
 **Figma Bindings:**
