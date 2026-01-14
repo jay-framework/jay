@@ -16,6 +16,11 @@ describe('route-to-express-route', () => {
                 '/segment3',
                 '/segment4/:catchall*',
                 '/segment4',
+                // Priority test fixtures
+                '/priority/:path*',
+                '/priority/products',
+                '/priority/products/:slug',
+                '/priority/products/ceramic-flower-vase',
             ]),
         );
     });

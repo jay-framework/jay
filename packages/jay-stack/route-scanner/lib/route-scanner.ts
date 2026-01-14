@@ -91,9 +91,70 @@ async function scanDirectory(
     return routes;
 }
 
+/**
+ * Get the priority of a segment for sorting purposes.
+ * Lower number = higher priority (matches first).
+ *
+ * Priority order:
+ * 0 - Static segments (e.g., "products")
+ * 1 - Single params (e.g., [slug])
+ * 2 - Optional params (e.g., [[slug]])
+ * 3 - Catch-all params (e.g., [...path])
+ */
+function getSegmentPriority(segment: JayRouteSegment): number {
+    if (typeof segment === 'string') return 0;
+    switch (segment.type) {
+        case JayRouteParamType.single:
+            return 1;
+        case JayRouteParamType.optional:
+            return 2;
+        case JayRouteParamType.catchAll:
+            return 3;
+    }
+}
+
+/**
+ * Compare two routes for sorting by specificity.
+ * More specific routes (static) come before less specific (dynamic).
+ */
+function compareRoutes(a: JayRoute, b: JayRoute): number {
+    const maxLen = Math.max(a.segments.length, b.segments.length);
+
+    for (let i = 0; i < maxLen; i++) {
+        const segA = a.segments[i];
+        const segB = b.segments[i];
+
+        // If one route is shorter, it's less specific (comes later)
+        if (segA === undefined) return 1;
+        if (segB === undefined) return -1;
+
+        const priorityA = getSegmentPriority(segA);
+        const priorityB = getSegmentPriority(segB);
+
+        if (priorityA !== priorityB) return priorityA - priorityB;
+
+        // Both same type - if static, compare alphabetically for determinism
+        if (typeof segA === 'string' && typeof segB === 'string') {
+            const cmp = segA.localeCompare(segB);
+            if (cmp !== 0) return cmp;
+        }
+    }
+
+    return 0;
+}
+
+/**
+ * Sort routes by priority so that more specific routes match first.
+ * Static routes come before dynamic routes at the same position.
+ */
+export function sortRoutesByPriority(routes: JayRoutes): JayRoutes {
+    return [...routes].sort(compareRoutes);
+}
+
 export async function scanRoutes(baseDir: string, options: ScanFilesOptions): Promise<JayRoutes> {
     // Normalize base directory path
     const BASE_DIR = path.resolve(baseDir);
 
-    return await scanDirectory(BASE_DIR, BASE_DIR, options);
+    const routes = await scanDirectory(BASE_DIR, BASE_DIR, options);
+    return sortRoutesByPriority(routes);
 }
