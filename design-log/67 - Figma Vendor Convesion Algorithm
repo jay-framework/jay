@@ -654,7 +654,114 @@ None - Implementation follows the design log closely.
 **Status:** 🎉 **COMPLETE** - All core conversion algorithms implemented and ready for integration testing with Figma plugin.
 
 
-This somehow needs to propagate in the recursive algoruthm down to the children of the repeater…
+### Boolean Variant Support ✅
+
+**Implementation Detail Not in Original Design**
+
+When a variant property's contract tag has `dataType: boolean` AND Figma values are exactly "true" and "false", the conversion uses simplified boolean syntax:
+
+- `if="propertyPath"` for true value
+- `if="!propertyPath"` for false value
+
+**Example:**
+```yaml
+# Contract
+- tag: isActive
+  type: variant
+  dataType: boolean
+```
+
+**Jay-HTML Output:**
+```html
+<div if="isActive">Active variant</div>
+<div if="!isActive">Inactive variant</div>
+```
+
+This is more readable than `if="isActive == true"` and matches Jay-HTML's natural boolean expression syntax.
+
+### Pseudo-CSS Variant Filtering ✅
+
+**Implementation Detail Not in Original Design**
+
+Figma components may have variant values containing `:` (e.g., `default`, `:hover`, `:pressed`) for CSS-based state management. These pseudo-CSS variants are filtered out during permutation generation since they're handled via CSS `:hover` selectors, not Jay-HTML if conditions.
+
+**Filtering Logic:**
+```typescript
+const isRealVariant = !value.includes(':');
+```
+
+**Rationale:** Mixing CSS pseudo-classes with Jay-HTML if conditions would create conflicts. CSS pseudo-classes are purely presentational and should not affect Jay's data-driven rendering.
+
+### Repeater Dual-Wrapper Architecture ✅
+
+**Implementation Differs from Design**
+
+The design log showed a single div with forEach attribute. The actual implementation uses a dual-wrapper structure:
+
+1. **Outer div** - Positioned once, has Frame's styling (position, size, auto-layout, background, etc.)
+2. **Inner div** - Has forEach attribute, minimal positioning, allows items to flow
+
+**Structure:**
+```html
+<div data-figma-type="frame-repeater" style="position: absolute; width: 800px; height: 600px; display: flex; ...">
+  <div style="position: relative; width: 100%;" forEach="items" trackBy="id">
+    <!-- Template item -->
+  </div>
+</div>
+```
+
+**Why This Design:**
+- Figma's absolute positioning conflicts with forEach's dynamic content generation
+- The outer div maintains Figma's intended position/layout in the parent
+- The inner forEach div enables proper item repetition and flow
+- Without this separation, repeated items would stack incorrectly
+
+### Interactive Variant Properties ✅
+
+**Implementation Detail Not in Original Design**
+
+When a variant property has `type: [variant, interactive]` in the contract, the binding is treated as both a variant condition and an interactive ref. This handles the case where component state is both:
+- A variant property (affects which variant is shown)
+- An interactive element (can be modified by user actions)
+
+**Example Contract:**
+```yaml
+- tag: state
+  type: [variant, interactive]
+  dataType: enum
+  values: [idle, loading, success, error]
+```
+
+**Conversion Result:**
+The wrapper div gets a ref attribute to enable interactivity:
+```html
+<div ref="state" data-figma-id="..." style="...">
+  <div if="state == idle"><!-- idle variant --></div>
+  <div if="state == loading"><!-- loading variant --></div>
+  <div if="state == success"><!-- success variant --></div>
+  <div if="state == error"><!-- error variant --></div>
+</div>
+```
+
+This enables patterns like `<button onClick="state = 'loading'">` to switch variants dynamically.
+
+### Variant Wrapper Styling ✅
+
+**Implementation Detail Not in Original Design**
+
+For variant nodes (INSTANCE nodes bound to variant properties), the outer wrapper div includes all Frame styling from the instance node:
+- Position and size
+- Background, borders, effects
+- Auto-layout (flex) properties
+- Overflow and clipping
+
+This ensures the variant container is positioned and styled correctly in its parent, while the inner if divs handle variant switching without additional styling overhead.
+
+---
+
+**Last Updated:** January 14, 2026  
+**Implementation Status:** Core algorithms complete ✅  
+**Next Steps:** Add comprehensive test coverage (see PR_READINESS_ANALYSIS.md)
 
 
 
