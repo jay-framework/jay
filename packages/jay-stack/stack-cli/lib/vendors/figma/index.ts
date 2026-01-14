@@ -18,6 +18,7 @@ import { convertEllipseToHtml } from './converters/ellipse';
 import { convertVectorToHtml } from './converters/vector';
 import { convertVariantNode } from './converters/variants';
 import { convertRepeaterNode } from './converters/repeater';
+import { convertGroupNode } from './converters/group';
 import type { ConversionContext, BindingAnalysis } from './types';
 import {
     getBindingsData,
@@ -143,6 +144,9 @@ function convertRegularNode(
         return convertRectangleToHtml(node, indent);
     } else if (type === 'ELLIPSE') {
         return convertEllipseToHtml(node, indent);
+    } else if (type === 'GROUP') {
+        // Groups need special handling for layout
+        return convertGroupNode(node, analysis, context, convertNodeToJayHtml);
     } else if (
         type === 'VECTOR' ||
         type === 'STAR' ||
