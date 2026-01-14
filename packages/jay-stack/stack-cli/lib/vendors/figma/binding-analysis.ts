@@ -122,18 +122,16 @@ function resolveBinding(
         // Plugin contract
         const plugin = findPlugin(context.plugins, binding.pageContractPath.pluginName);
         if (!plugin) {
-            console.warn(
+            throw new Error(
                 `Plugin not found: ${binding.pageContractPath.pluginName}`,
             );
-            return undefined;
         }
 
         contract = findPluginContract(plugin, binding.pageContractPath.componentName);
         if (!contract) {
-            console.warn(
-                `Contract not found in plugin: ${binding.pageContractPath.componentName}`,
+            throw new Error(
+                `Contract not found in plugin ${binding.pageContractPath.pluginName}: ${binding.pageContractPath.componentName}`,
             );
-            return undefined;
         }
 
         // Find the key (component instance key)
@@ -141,10 +139,9 @@ function resolveBinding(
             (c: any) => c.componentName === binding.pageContractPath.componentName,
         );
         if (!usedComponent) {
-            console.warn(
-                `Used component not found: ${binding.pageContractPath.componentName}`,
+            throw new Error(
+                `Used component not found in page: ${binding.pageContractPath.componentName}`,
             );
-            return undefined;
         }
         key = usedComponent.key;
         
@@ -154,8 +151,7 @@ function resolveBinding(
         // Page contract
         contract = findPageContract(context.projectPage);
         if (!contract) {
-            console.warn(`Page contract not found`);
-            return undefined;
+            throw new Error(`Page contract not found for page ${context.projectPage.url}`);
         }
         
         // For page contracts, use full path (no key to skip)
@@ -165,10 +161,9 @@ function resolveBinding(
     // 2. Find tag in contract
     const contractTag = findContractTag(contract.tags, tagPathWithoutKey);
     if (!contractTag) {
-        console.warn(
-            `Contract tag not found: ${tagPathWithoutKey.join('.')}`,
+        throw new Error(
+            `Contract tag not found: ${tagPathWithoutKey.join('.')} in contract`,
         );
-        return undefined;
     }
 
     // 3. Build full path
@@ -249,7 +244,7 @@ export function analyzeBindings(
     if (propertyBindings.length > 0) {
         // All bindings must be property bindings
         if (propertyBindings.length !== resolved.length) {
-            console.warn(
+            throw new Error(
                 `Node has mixed property and non-property bindings - this is invalid`,
             );
         }
@@ -314,14 +309,14 @@ export function analyzeBindings(
 export function validateBindings(analysis: BindingAnalysis, node: FigmaVendorDocument): void {
     // Property bindings must be exclusive
     if (analysis.type === 'property-variant' && analysis.attributes.size > 0) {
-        console.warn(
+        throw new Error(
             `Node "${node.name}" has both property and attribute bindings - this is invalid`,
         );
     }
 
     // Interactive bindings cannot have attributes or properties
     if (analysis.type === 'interactive' && analysis.attributes.size > 0) {
-        console.warn(
+        throw new Error(
             `Node "${node.name}" has interactive binding with attributes - this is invalid`,
         );
     }

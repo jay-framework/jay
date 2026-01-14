@@ -156,8 +156,7 @@ export function findComponentVariant(
 ): FigmaVendorDocument {
     // If node has variants array (serialized from component set)
     if (!node.variants || node.variants.length === 0) {
-        console.warn(`Node "${node.name}" has no variants array, using node itself`);
-        return node;
+        throw new Error(`Node "${node.name}" has no variants array - cannot find variant component`);
     }
 
     // Build target property map from permutation
@@ -191,11 +190,13 @@ export function findComponentVariant(
     });
 
     if (!matchingVariant) {
-        console.warn(
+        // Log for debugging but use fallback
+        console.log(
             `No matching variant found for "${node.name}" with properties:`,
             Object.fromEntries(targetProps),
             '\nAvailable variants:',
             node.variants.map((v) => v.variantProperties),
+            '\nUsing first variant as fallback',
         );
         // Fallback to first variant or the node itself
         return node.variants[0] || node;
@@ -255,8 +256,7 @@ export function convertVariantNode(
     // 2. Generate all permutations
     const permutations = generatePermutations(propertyValues, analysis.propertyBindings);
     if (permutations.length === 0) {
-        console.warn(`No permutations generated for variant node: ${node.name}`);
-        return `${indent}<!-- Variant node "${node.name}" has no permutations -->\n`;
+        throw new Error(`No permutations generated for variant node "${node.name}" - check property definitions`);
     }
 
     // 3. Build the variant if divs

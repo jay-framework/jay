@@ -31,14 +31,14 @@ export function convertRepeaterNode(
 
     // Validate that this is a Frame with auto-layout
     if (node.type !== 'FRAME') {
-        console.warn(
-            `Repeater node "${node.name}" is not a FRAME (type: ${node.type}). Repeaters must be FrameNodes.`,
+        throw new Error(
+            `Repeater node "${node.name}" must be a FRAME (got: ${node.type})`,
         );
     }
 
     if (!node.layoutMode || node.layoutMode === 'NONE') {
-        console.warn(
-            `Repeater node "${node.name}" does not have auto-layout. Repeaters must use auto-layout.`,
+        throw new Error(
+            `Repeater node "${node.name}" must have auto-layout (HORIZONTAL or VERTICAL)`,
         );
     }
 
@@ -85,7 +85,7 @@ export function convertRepeaterNode(
     if (node.children && node.children.length > 0) {
         html += convertNodeToJayHtml(node.children[0], newContext);
     } else {
-        console.warn(`Repeater node "${node.name}" has no children to repeat.`);
+        throw new Error(`Repeater node "${node.name}" has no children - repeater template is required`);
     }
 
     // Close inner forEach div
