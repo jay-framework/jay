@@ -211,11 +211,11 @@ if (homePage) {
   homePage.usedComponents.forEach((ref) => {
     // Find the plugin
     const plugin = response.info.plugins.find((p) => p.name === ref.appName);
-    
+
     if (plugin) {
       // Find the contract within the plugin
       const contract = plugin.contracts.find((c) => c.name === ref.componentName);
-      
+
       if (contract) {
         console.log(`\nComponent: ${ref.appName}.${ref.componentName}`);
         contract.tags.forEach((tag) => {
@@ -230,10 +230,7 @@ if (homePage) {
 ### Example 3: Build Complete Tag List for a Page
 
 ```typescript
-function getAllPageTags(
-  page: ProjectPage,
-  plugins: Plugin[],
-): ContractTag[] {
+function getAllPageTags(page: ProjectPage, plugins: Plugin[]): ContractTag[] {
   const allTags: ContractTag[] = [];
 
   // 1. Add page's own tags
@@ -292,11 +289,7 @@ function findPluginContract(
 }
 
 // Usage
-const productContract = findPluginContract(
-  response.info.plugins,
-  'wix-stores',
-  'product-page',
-);
+const productContract = findPluginContract(response.info.plugins, 'wix-stores', 'product-page');
 if (productContract) {
   console.log(`Found contract: ${productContract.name} with ${productContract.tags.length} tags`);
 }
