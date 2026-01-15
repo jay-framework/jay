@@ -293,13 +293,7 @@ class FigmaToJayPlugin {
 }
 ```
 
-**For complete export/import documentation, see:**
-
-- Quick reference: `/packages/jay-stack/editor-protocol/QUICK_REFERENCE.md`
-- Complete guide: `/packages/jay-stack/editor-protocol/EXPORT_IMPORT_GUIDE.md`
-- Implementation details: `/packages/jay-stack/editor-protocol/IMPLEMENTATION_SUMMARY.md`
-
-### 4. Vendors: Automatic Conversion to Jay HTML
+### 3. Vendors: Automatic Conversion to Jay HTML
 
 The Jay Framework includes a **Vendor System** that automatically converts vendor-specific documents (like Figma, Sketch, Adobe XD) into Jay HTML when the export API is called.
 
@@ -409,8 +403,6 @@ src/pages/
 The following vendors are built into the Jay Framework:
 
 - **Figma** (`vendorId: 'figma'`) - Converts Figma SectionNodes to Jay HTML
-- **Sketch** (`vendorId: 'sketch'`) - Coming soon
-- **Adobe XD** (`vendorId: 'xd'`) - Coming soon
 
 #### Contributing a Vendor
 
@@ -691,94 +683,12 @@ await client.disconnect();
 Choose a clear, unique vendor ID for your design tool:
 
 - **Figma**: `'figma'`
-- **Wix**: `'wix'`
-- **Sketch**: `'sketch'`
-- **Adobe XD**: `'xd'`
 - **Custom Tool**: `'my-design-tool'`
 
 Use lowercase, kebab-case identifiers:
 
-- ✅ `'figma'`, `'wix'`, `'sketch'`, `'adobe-xd'`
+- ✅ `'figma'`, `'wix'`
 - ❌ `'Figma'`, `'FIGMA'`, `'figma_plugin'`
-
-## Common Patterns
-
-### Pattern 1: Sync on Save
-
-Automatically sync to Jay when user saves in the design tool:
-
-```typescript
-// Listen for save events in your design tool
-figma.on('save', async () => {
-  const selection = figma.currentPage.selection[0];
-
-  if (selection) {
-    await plugin.exportToJay(selection.id, '/home');
-    figma.notify('✅ Synced to Jay');
-  }
-});
-```
-
-### Pattern 2: Restore on Open
-
-Restore design state when opening a Jay page:
-
-```typescript
-async function openPage(pageRoute: string) {
-  try {
-    // Try to import existing vendor document
-    const response = await client.import<FigmaDocument>(
-      createImportMessage<FigmaDocument>('figma', pageRoute),
-    );
-
-    if (response.success && response.vendorDoc) {
-      // Restore from saved document
-      restoreDesign(response.vendorDoc);
-    } else {
-      // Start fresh
-      startNewDesign(pageRoute);
-    }
-  } catch (error) {
-    console.error('Failed to open page:', error);
-  }
-}
-```
-
-### Pattern 3: Two-Way Sync
-
-Keep design tool and Jay project in sync:
-
-```typescript
-class JaySync {
-  private watcher: FileWatcher;
-
-  async startWatching() {
-    // Watch for changes in Jay project
-    this.watcher = watchJayProject((event) => {
-      if (event.type === 'page-updated') {
-        this.onJayPageUpdated(event.pageUrl);
-      }
-    });
-  }
-
-  async onJayPageUpdated(pageUrl: string) {
-    // Import updated Jay page
-    const response = await client.import<MyVendorDoc>(
-      createImportMessage<MyVendorDoc>('my-tool', pageUrl),
-    );
-
-    if (response.success && response.vendorDoc) {
-      // Update design tool
-      updateDesign(response.vendorDoc);
-    }
-  }
-
-  async onDesignUpdated(nodeId: string, pageUrl: string) {
-    // Export updated design to Jay
-    await this.exportToJay(nodeId, pageUrl);
-  }
-}
-```
 
 ## Protocol Messages Reference
 
@@ -958,11 +868,7 @@ if (doc.version === '1.0.0') {
 - [Contract Files](./core/contract-files.md) - Understanding Jay contracts
 - [Jay HTML Format](./core/jay-html.md) - Jay HTML syntax reference
 - [Editor Protocol Package](../packages/jay-stack/editor-protocol/readme.md) - Protocol package documentation
-- [Export/Import Guide](../packages/jay-stack/editor-protocol/EXPORT_IMPORT_GUIDE.md) - Detailed export/import examples
-- [Quick Reference](../packages/jay-stack/editor-protocol/QUICK_REFERENCE.md) - Quick API reference
 - **[Vendors System](../packages/jay-stack/stack-cli/lib/vendors/README.md)** - Complete vendor contribution guide
 - **[Vendor Document Types](../packages/jay-stack/editor-protocol/lib/vendor-documents.ts)** - Vendor document type definitions
 
 ---
-
-**Need help?** Check the examples in `/packages/jay-stack/editor-protocol/` or open an issue on GitHub.

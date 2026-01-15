@@ -619,8 +619,7 @@ contracts:
 
 1. **Declaration** - The `slugs` array declares what URL parameters your contract expects
 2. **Route matching** - Jay Stack matches these to dynamic route segments like `[category]` and `[productId]`
-3. **Type safety** - Slugs are included in the generated TypeScript types for your component props
-4. **URL loading** - Your component's `urlLoader` can access these parameters to generate static paths
+3. **URL loading** - Your component's `urlLoader` can access these parameters to generate static paths
 
 **Example component using slugs:**
 

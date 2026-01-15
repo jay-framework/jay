@@ -42,7 +42,7 @@ Jay enables you to:
 
 - [Editor Protocol](./jay-stack-editor-protocol.md) - Connect design tools (Figma, Wix, etc.) to Jay
 - [Project Info API](./jay-stack-project-info-api.md) - Query project structure and contracts
-- [Export/Import API](./jay-stack-editor-protocol.md#3-exportimport-api) - Save and restore vendor-specific designs
+- [Export/Import API](./jay-stack-editor-protocol.md) - Save and restore vendor-specific designs
 
 ### Advanced Topics
 
