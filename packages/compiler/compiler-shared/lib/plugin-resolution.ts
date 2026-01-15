@@ -344,14 +344,30 @@ export function resolvePluginComponent(
 ): WithValidations<PluginComponentResolution> {
     // Try local plugins first
     const localResult = resolveLocalPlugin(projectRoot, pluginName, contractName);
-    if (localResult !== null) {
-        return localResult; // Found locally (success or error)
+    if (localResult && localResult.val !== null && localResult.validations.length === 0) {
+        return localResult; // Found locally successfully
     }
 
     // Try NPM packages
     const npmResult = resolveNpmPlugin(projectRoot, pluginName, contractName);
-    if (npmResult !== null) {
-        return npmResult; // Found in NPM (success or error)
+    if (npmResult && npmResult.val !== null && npmResult.validations.length === 0) {
+        return npmResult; // Found in NPM successfully
+    }
+
+    // If local plugin exists but has errors, return those (prefer local over NPM)
+    // localResult is non-null when the directory exists but has issues
+    if (localResult && localResult.validations.length > 0) {
+        return localResult;
+    }
+    
+    // If NPM plugin exists but has errors, return those
+    // However, only if local didn't exist at all (localResult is null)
+    if (npmResult && npmResult.validations.length > 0 && localResult === null) {
+        // But if it's just a generic "not found" error from NPM, show our combined message instead
+        const npmError = npmResult.validations[0];
+        if (!npmError.includes('not found')) {
+            return npmResult;
+        }
     }
 
     // Not found anywhere
@@ -382,14 +398,20 @@ export function resolvePluginManifest(
         return npmResult;
     }
     
-    // If local plugin had errors, return those (prefer local over NPM)
+    // If local plugin exists but has errors, return those (prefer local over NPM)
+    // localResult is non-null when the directory exists but has issues
     if (localResult && localResult.validations.length > 0) {
         return localResult;
     }
     
-    // If NPM plugin had errors, return those
-    if (npmResult && npmResult.validations.length > 0) {
-        return npmResult;
+    // If NPM plugin exists but has errors, return those
+    // However, only if local didn't exist at all (localResult is null)
+    if (npmResult && npmResult.validations.length > 0 && localResult === null) {
+        // But if it's just a generic "not found" error from NPM, show our combined message instead
+        const npmError = npmResult.validations[0];
+        if (!npmError.includes('not found')) {
+            return npmResult;
+        }
     }
     
     // Neither found - return a "not found" error
