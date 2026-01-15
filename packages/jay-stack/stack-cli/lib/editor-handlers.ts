@@ -867,10 +867,9 @@ async function handleComponentPublish(
     }
 }
 
-async function loadPageContracts(dirPath: string, pageUrl: string): Promise<{projectPage: ProjectPage, plugins: Plugin[]}> {
+async function loadPageContracts(dirPath: string, pageUrl: string, projectRootPath: string): Promise<{projectPage: ProjectPage, plugins: Plugin[]}> {
     //load page's info - with it's contract and its used components contracts
     const { hasPageHtml, hasPageContract, hasPageConfig } = await isPageDirectory(dirPath);
-    const projectRootPath = process.cwd();
     const plugins = await scanPlugins(projectRootPath);
     const pageInfo = await loadProjectPage({
         dirPath,
@@ -1004,14 +1003,13 @@ export function createEditorHandlers(
             const pagesBasePath = path.resolve(config.devServer.pagesBase);
             const componentsBasePath = path.resolve(config.devServer.componentsBase);
             const configBasePath = path.resolve(config.devServer.configBase);
-            const projectRootPath = process.cwd();
 
             // Scan all project information in one comprehensive pass
             const info = await scanProjectInfo(
                 pagesBasePath,
                 componentsBasePath,
                 configBasePath,
-                projectRootPath,
+                projectRoot,
             );
 
             console.log(`📋 Retrieved project info: ${info.name}`);
@@ -1072,7 +1070,7 @@ export function createEditorHandlers(
 
                 try {
                     //load page's info - with it's contract and its used components contracts
-                    const {projectPage, plugins} = await loadPageContracts(dirname, pageUrl);
+                    const {projectPage, plugins} = await loadPageContracts(dirname, pageUrl, projectRoot);
 
                     // Run the vendor conversion to get body HTML and metadata
                     const conversionResult = await vendor.convertToBodyHtml(vendorDoc, pageUrl, projectPage, plugins);
