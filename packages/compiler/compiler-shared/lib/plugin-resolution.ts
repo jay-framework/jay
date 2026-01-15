@@ -359,13 +359,21 @@ export function resolvePluginComponent(
     if (localResult && localResult.validations.length > 0) {
         return localResult;
     }
-    
+
     // If NPM plugin exists but has errors, return those
     // However, only if local didn't exist at all (localResult is null)
     if (npmResult && npmResult.validations.length > 0 && localResult === null) {
-        // But if it's just a generic "not found" error from NPM, show our combined message instead
+        // But if it's a generic "plugin/package not found" error, show our combined message instead
+        // We want to replace errors like:
+        // - "NPM package X not found..."
+        // But keep specific errors like:
+        // - "Contract X not found in NPM package Y"
+        // - "Failed to parse plugin.yaml for NPM package X"
         const npmError = npmResult.validations[0];
-        if (!npmError.includes('not found')) {
+        const isGenericPackageNotFound =
+            (npmError.startsWith('NPM package') && npmError.includes('not found')) ||
+            (npmError.startsWith('Plugin') && npmError.includes('not found'));
+        if (!isGenericPackageNotFound) {
             return npmResult;
         }
     }
@@ -397,23 +405,31 @@ export function resolvePluginManifest(
     if (npmResult && npmResult.val !== null && npmResult.validations.length === 0) {
         return npmResult;
     }
-    
+
     // If local plugin exists but has errors, return those (prefer local over NPM)
     // localResult is non-null when the directory exists but has issues
     if (localResult && localResult.validations.length > 0) {
         return localResult;
     }
-    
+
     // If NPM plugin exists but has errors, return those
     // However, only if local didn't exist at all (localResult is null)
     if (npmResult && npmResult.validations.length > 0 && localResult === null) {
-        // But if it's just a generic "not found" error from NPM, show our combined message instead
+        // But if it's a generic "plugin/package not found" error, show our combined message instead
+        // We want to replace errors like:
+        // - "NPM package X not found..."
+        // But keep specific errors like:
+        // - "Failed to parse plugin.yaml for NPM package X"
+        // - "NPM package X has no contracts defined"
         const npmError = npmResult.validations[0];
-        if (!npmError.includes('not found')) {
+        const isGenericPackageNotFound =
+            (npmError.startsWith('NPM package') && npmError.includes('not found')) ||
+            (npmError.startsWith('Plugin') && npmError.includes('not found'));
+        if (!isGenericPackageNotFound) {
             return npmResult;
         }
     }
-    
+
     // Neither found - return a "not found" error
     return new WithValidations(null as any, [
         `Plugin "${pluginName}" not found. ` +
