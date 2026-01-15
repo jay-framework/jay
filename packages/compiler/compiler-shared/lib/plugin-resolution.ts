@@ -385,5 +385,5 @@ export function resolvePluginManifest(
         `Plugin "${pluginName}" not found. ` +
             `Searched in src/plugins/${pluginName}/ and node_modules/${pluginName}/. ` +
             `Ensure the plugin is installed or exists in your project.`,
-    ]);
+    , ...localResult?.validations || [], ...npmResult?.validations || []]);
 }
