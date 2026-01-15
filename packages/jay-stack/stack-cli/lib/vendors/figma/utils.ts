@@ -63,7 +63,7 @@ function getPositionType(
     }
 
     // For nodes in auto-layout parents, use relative positioning
-    if (node.parentLayoutMode && node.parentLayoutMode !== 'NONE') {
+    if (node.parentLayoutMode && (node.parentLayoutMode === 'HORIZONTAL' || node.parentLayoutMode === 'VERTICAL')) {
         return 'relative';
     }
 
@@ -196,7 +196,7 @@ function getAutoLayoutChildSizeStyles(node: FigmaVendorDocument): string {
     }
 
     // Handle align-self for cross axis alignment
-    if (node.layoutAlign && node.layoutAlign !== 'INHERIT') {
+    if (node.layoutAlign) {
         switch (node.layoutAlign) {
             case 'MIN':
                 styles += 'align-self: flex-start;';
