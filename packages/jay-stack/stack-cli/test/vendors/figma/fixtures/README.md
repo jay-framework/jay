@@ -5,6 +5,7 @@ This directory contains fixture-based integration tests for the Figma vendor con
 ## Structure
 
 Each fixture is a directory containing:
+
 - **`page.figma.json`** - Input Figma document (serialized from Figma plugin)
 - **`page.jay-contract`** - Contract defining data bindings and structure
 - **`expected.jay-html`** - Expected HTML output after conversion
@@ -12,9 +13,11 @@ Each fixture is a directory containing:
 ## Current Fixtures
 
 ### 1. `basic-text/` ✅ **Working**
+
 Tests basic text rendering with multiple text nodes and font families.
 
 **Features tested:**
+
 - Static text conversion
 - Font family collection (Inter)
 - Font weight and size
@@ -25,9 +28,11 @@ Tests basic text rendering with multiple text nodes and font families.
 ---
 
 ### 2. `button-with-variants/` ✅ **Working**
+
 Tests variant components with multiple properties.
 
 **Features tested:**
+
 - COMPONENT_SET with variants
 - Boolean variants (disabled: true/false)
 - Enum variants (variant: primary/secondary)
@@ -38,9 +43,11 @@ Tests variant components with multiple properties.
 ---
 
 ### 3. `repeater-list/` ✅ **Working**
+
 Tests repeater (forEach) functionality with nested bindings.
 
 **Features tested:**
+
 - Frame with repeater binding
 - `forEach` attribute generation
 - `trackBy` attribute
@@ -51,9 +58,11 @@ Tests repeater (forEach) functionality with nested bindings.
 ---
 
 ### 4. `complex-page/` ✅ **Working**
+
 Tests a realistic product page with multiple features combined.
 
 **Features tested:**
+
 - Dynamic text content bindings (product.name, product.price)
 - Nested repeater (product.reviews)
 - Parameterized route (/products/:id)
@@ -65,21 +74,25 @@ Tests a realistic product page with multiple features combined.
 ## Adding New Fixtures
 
 1. **Create a directory** under `fixtures/`:
+
    ```bash
    mkdir test/vendors/figma/fixtures/my-new-test
    ```
 
 2. **Add required files**:
+
    - `page.figma.json` - Figma document structure
    - `expected.jay-html` - Expected HTML output
    - `page.jay-contract` OR `page.conf.yaml` - Contract or plugin config
 
 3. **Add fixture content** - You can:
+
    - Export a real Figma document using the plugin
    - Hand-craft a test case
    - Copy and modify an existing fixture
 
 4. **Run the test** to generate `actual-output.jay-html`:
+
    ```bash
    npm test -- test/vendors/figma/fixtures.test.ts -t "my-new-test"
    ```
@@ -91,11 +104,13 @@ Tests a realistic product page with multiple features combined.
 ## Running Tests
 
 Run all fixture tests (auto-discovers all fixture directories):
+
 ```bash
 npm test -- test/vendors/figma/fixtures.test.ts
 ```
 
 Run a specific fixture (via filtering):
+
 ```bash
 npm test -- test/vendors/figma/fixtures.test.ts -t "basic-text"
 ```
@@ -105,15 +120,19 @@ The test runner **automatically discovers** all directories under `fixtures/` - 
 ## Tips
 
 ### Debugging Failed Tests
+
 When a test fails, check the `actual-output.jay-html` file saved in the fixture directory.
 
 ### Contract Requirements
+
 - Use `type: sub-contract` (not `subContract`)
 - Include all fields referenced by `trackBy` attributes
 - Check console warnings for validation errors
 
 ### Normalizing HTML
+
 The test normalizes HTML before comparison to handle:
+
 - Whitespace differences
 - Comment removal
 - Line break variations
@@ -121,6 +140,7 @@ The test normalizes HTML before comparison to handle:
 ## Test Coverage
 
 Current fixtures cover:
+
 - ✅ Static text rendering (basic-text)
 - ✅ Font collection (basic-text)
 - ✅ FRAME containers with layout (basic-text)
@@ -135,6 +155,7 @@ Current fixtures cover:
 **Current Status:** 5 fixtures fully working (22 passing tests total in vendor suite)
 
 Missing coverage (potential future fixtures):
+
 - ⬜ Interactive bindings (ref)
 - ⬜ Dual bindings (data + interactive)
 - ⬜ Error cases (invalid bindings, missing contracts)

@@ -1,4 +1,9 @@
-import type { ContractTag, FigmaVendorDocument, Plugin, ProjectPage } from '@jay-framework/editor-protocol';
+import type {
+    ContractTag,
+    FigmaVendorDocument,
+    Plugin,
+    ProjectPage,
+} from '@jay-framework/editor-protocol';
 import type { LayerBinding, BindingAnalysis, ConversionContext } from './types';
 
 /**
@@ -122,9 +127,7 @@ function resolveBinding(
         // Plugin contract
         const plugin = findPlugin(context.plugins, binding.pageContractPath.pluginName);
         if (!plugin) {
-            throw new Error(
-                `Plugin not found: ${binding.pageContractPath.pluginName}`,
-            );
+            throw new Error(`Plugin not found: ${binding.pageContractPath.pluginName}`);
         }
 
         contract = findPluginContract(plugin, binding.pageContractPath.componentName);
@@ -144,7 +147,7 @@ function resolveBinding(
             );
         }
         key = usedComponent.key;
-        
+
         // For plugin contracts, skip first element (contract key from binding)
         tagPathWithoutKey = binding.tagPath.slice(1);
     } else {
@@ -153,7 +156,7 @@ function resolveBinding(
         if (!contract) {
             throw new Error(`Page contract not found for page ${context.projectPage.url}`);
         }
-        
+
         // For page contracts, use full path (no key to skip)
         tagPathWithoutKey = binding.tagPath;
     }
@@ -161,9 +164,7 @@ function resolveBinding(
     // 2. Find tag in contract
     const contractTag = findContractTag(contract.tags, tagPathWithoutKey);
     if (!contractTag) {
-        throw new Error(
-            `Contract tag not found: ${tagPathWithoutKey.join('.')} in contract`,
-        );
+        throw new Error(`Contract tag not found: ${tagPathWithoutKey.join('.')} in contract`);
     }
 
     // 3. Build full path
@@ -244,9 +245,7 @@ export function analyzeBindings(
     if (propertyBindings.length > 0) {
         // All bindings must be property bindings
         if (propertyBindings.length !== resolved.length) {
-            throw new Error(
-                `Node has mixed property and non-property bindings - this is invalid`,
-            );
+            throw new Error(`Node has mixed property and non-property bindings - this is invalid`);
         }
         analysis.type = 'property-variant';
         analysis.propertyBindings = propertyBindings.map((r) => ({
@@ -254,7 +253,7 @@ export function analyzeBindings(
             tagPath: r.fullPath!,
             contractTag: r.contractTag!,
         }));
-        
+
         // Check if any of the variant properties are also interactive
         // This handles the case where a tag has type: [variant, interactive]
         for (const r of propertyBindings) {
@@ -263,7 +262,7 @@ export function analyzeBindings(
                 break; // Use the first interactive variant property
             }
         }
-        
+
         return analysis;
     }
 

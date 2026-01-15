@@ -49,6 +49,7 @@ Jay-HTML output
 ### 1. Dynamic Content (Data)
 
 **Figma Binding:**
+
 ```json
 {
   "tagPath": ["productPage", "name"],
@@ -57,6 +58,7 @@ Jay-HTML output
 ```
 
 **Jay-HTML:**
+
 ```html
 <div>{productPage.name}</div>
 ```
@@ -64,6 +66,7 @@ Jay-HTML output
 ### 2. Interactive Ref
 
 **Figma Binding:**
+
 ```json
 {
   "tagPath": ["submitButton"],
@@ -72,6 +75,7 @@ Jay-HTML output
 ```
 
 **Jay-HTML:**
+
 ```html
 <button ref="submitButton">Submit</button>
 ```
@@ -79,6 +83,7 @@ Jay-HTML output
 ### 3. Dual Binding (Data + Interactive)
 
 **Figma Binding:**
+
 ```json
 {
   "tagPath": ["email"],
@@ -87,6 +92,7 @@ Jay-HTML output
 ```
 
 **Jay-HTML:**
+
 ```html
 <input ref="email" value="{email}" />
 ```
@@ -94,6 +100,7 @@ Jay-HTML output
 ### 4. Attribute Binding
 
 **Figma Binding:**
+
 ```json
 {
   "tagPath": ["product", "imageUrl"],
@@ -103,11 +110,13 @@ Jay-HTML output
 ```
 
 **Jay-HTML:**
+
 ```html
 <img src="{product.imageUrl}" alt="..." />
 ```
 
 **Supported Attributes:**
+
 - `src` - Image sources (requires `semanticHtml: 'img'`)
 - `href` - Link destinations (requires `semanticHtml: 'a'`)
 - `value` - Input field values (requires `semanticHtml: 'input'`)
@@ -119,16 +128,19 @@ Jay-HTML output
 When a node has `semanticHtml: 'img'` in its plugin data:
 
 **Bound Image** (with `src` attribute binding):
+
 ```html
 <img src="{productPage.imageUrl}" alt="{productPage.imageAlt}" data-figma-id="..." />
 ```
 
 **Static Image** (no bindings, uses Figma fills):
+
 ```html
 <img src="/assets/images/product-hero.png" alt="Product Hero" data-figma-id="..." />
 ```
 
 For static images, the plugin must export and save the image:
+
 ```typescript
 // In plugin serialization for IMAGE fills:
 if (fill.type === 'IMAGE' && fill.imageHash) {
@@ -143,6 +155,7 @@ if (fill.type === 'IMAGE' && fill.imageHash) {
 ### 5. Property Binding (Variants)
 
 **Figma Bindings:**
+
 ```json
 [
   { "property": "mediaType", "tagPath": ["productPage", "mediaType"] },
@@ -151,6 +164,7 @@ if (fill.type === 'IMAGE' && fill.imageHash) {
 ```
 
 **Jay-HTML:**
+
 ```html
 <div if="productPage.mediaType == IMAGE && productPage.isSelected == true">
   <!-- IMAGE + selected variant -->
@@ -167,8 +181,12 @@ Variant values containing `:` (like `image:hover`, `:active`, `:disabled`) are a
 
 ```css
 /* Pseudo-variant CSS (handled separately, not in conversion) */
-.mediaType_hover { display: none; }
-.mediaType:hover .mediaType_hover { display: block; }
+.mediaType_hover {
+  display: none;
+}
+.mediaType:hover .mediaType_hover {
+  display: block;
+}
 ```
 
 This filtering prevents invalid expressions like `if="media == image:hover"` from being generated.
@@ -176,6 +194,7 @@ This filtering prevents invalid expressions like `if="media == image:hover"` fro
 ### 6. Repeater
 
 **Figma Binding:**
+
 ```json
 {
   "tagPath": ["productPage", "items"],
@@ -184,6 +203,7 @@ This filtering prevents invalid expressions like `if="media == image:hover"` fro
 ```
 
 **Contract:**
+
 ```yaml
 - tag: items
   type: subContract
@@ -192,9 +212,11 @@ This filtering prevents invalid expressions like `if="media == image:hover"` fro
 ```
 
 **Jay-HTML:**
+
 ```html
 <div forEach="productPage.items" trackBy="id">
-  <div>{title}</div> <!-- Context-relative path -->
+  <div>{title}</div>
+  <!-- Context-relative path -->
 </div>
 ```
 
@@ -205,21 +227,27 @@ This filtering prevents invalid expressions like `if="media == image:hover"` fro
 Repeaters change the path context for their children:
 
 **Full Paths:**
+
 - Repeater: `productPage.products`
 - Child: `productPage.products.title`
 
 **In Jay-HTML:**
+
 ```html
 <div forEach="productPage.products" trackBy="id">
-  <div>{title}</div> <!-- Not productPage.products.title -->
+  <div>{title}</div>
+  <!-- Not productPage.products.title -->
 </div>
 ```
 
 **Nested Repeaters:**
+
 ```html
 <div forEach="compKey.items" trackBy="id">
-  <div forEach="subItems" trackBy="id">  <!-- No prefix -->
-    <div>{name}</div>  <!-- Relative to subItems -->
+  <div forEach="subItems" trackBy="id">
+    <!-- No prefix -->
+    <div>{name}</div>
+    <!-- Relative to subItems -->
   </div>
 </div>
 ```
@@ -270,6 +298,7 @@ await editorProtocol.export({
 ### Plugin Data Format
 
 **`jay-layer-bindings`** - Array of LayerBinding:
+
 ```typescript
 type LayerBinding = {
   pageContractPath: PageContractPath;
@@ -281,6 +310,7 @@ type LayerBinding = {
 ```
 
 **`jpage`** - Marks top-level section as a Jay Page:
+
 ```typescript
 pluginData: {
   'jpage': 'true',
@@ -289,6 +319,7 @@ pluginData: {
 ```
 
 **`semanticHtml`** - Specifies HTML tag:
+
 ```typescript
 pluginData: {
   'semanticHtml': 'img'  // or 'button', 'input', etc.
@@ -304,7 +335,7 @@ const result = await figmaVendor.convertToBodyHtml(
   vendorDoc,
   '/products/:slug',
   projectPage,
-  plugins
+  plugins,
 );
 
 console.log(result.bodyHtml);
@@ -335,6 +366,7 @@ console.log(result.bodyHtml);
 ### Extending Path Resolution
 
 Modify `resolveBinding()` in `binding-analysis.ts` to handle:
+
 - New contract sources
 - Custom path transformations
 - Additional context types
@@ -348,11 +380,12 @@ Modify `resolveBinding()` in `binding-analysis.ts` to handle:
 
 ## Testing
 
-*To be added - See design-log/67 for test plan*
+_To be added - See design-log/67 for test plan_
 
 ## Design Documentation
 
 See `design-log/67 - Figma Vendor Conversion Algorithm` for:
+
 - Complete design rationale
 - Implementation details
 - Examples and edge cases

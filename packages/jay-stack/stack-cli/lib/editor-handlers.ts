@@ -150,7 +150,8 @@ async function scanPageDirectories(
     async function scanDirectory(dirPath: string, urlPath: string = '') {
         try {
             // Check if this directory is a page (has .jay-html OR .jay-contract OR page.conf.yaml)
-            const { isPage, hasPageHtml, hasPageContract, hasPageConfig } = await isPageDirectory(dirPath);
+            const { isPage, hasPageHtml, hasPageContract, hasPageConfig } =
+                await isPageDirectory(dirPath);
 
             if (isPage) {
                 const pageUrl = urlPath || '/';
@@ -631,7 +632,7 @@ async function scanPlugins(projectRootPath: string): Promise<Plugin[]> {
     return plugins;
 }
 
-async function loadProjectPage(pageContext: PageContext, plugins:Plugin[]): Promise<ProjectPage> {
+async function loadProjectPage(pageContext: PageContext, plugins: Plugin[]): Promise<ProjectPage> {
     const { dirPath, pageUrl, pageName, hasPageHtml, hasPageContract, hasPageConfig } = pageContext;
     const pageFilePath = path.join(dirPath, PAGE_FILENAME);
     const pageConfigPath = path.join(dirPath, PAGE_CONFIG_FILENAME);
@@ -681,9 +682,7 @@ async function loadProjectPage(pageContext: PageContext, plugins:Plugin[]): Prom
                         // For plugin-based references, we look up the plugin in the plugins array
                         const plugin = plugins.find((p) => p.name === comp.plugin);
                         if (plugin && plugin.contracts) {
-                            const contract = plugin.contracts.find(
-                                (c) => c.name === comp.contract,
-                            );
+                            const contract = plugin.contracts.find((c) => c.name === comp.contract);
                             if (contract) {
                                 // Use plugin name as appName and contract name as componentName
                                 usedComponents.push({
@@ -867,20 +866,27 @@ async function handleComponentPublish(
     }
 }
 
-async function loadPageContracts(dirPath: string, pageUrl: string, projectRootPath: string): Promise<{projectPage: ProjectPage, plugins: Plugin[]}> {
+async function loadPageContracts(
+    dirPath: string,
+    pageUrl: string,
+    projectRootPath: string,
+): Promise<{ projectPage: ProjectPage; plugins: Plugin[] }> {
     //load page's info - with it's contract and its used components contracts
     const { hasPageHtml, hasPageContract, hasPageConfig } = await isPageDirectory(dirPath);
     const plugins = await scanPlugins(projectRootPath);
-    const pageInfo = await loadProjectPage({
-        dirPath,
-        pageUrl,
-        pageName: path.basename(dirPath),
-        hasPageHtml,
-        hasPageContract,
-        hasPageConfig,
-    }, plugins);
+    const pageInfo = await loadProjectPage(
+        {
+            dirPath,
+            pageUrl,
+            pageName: path.basename(dirPath),
+            hasPageHtml,
+            hasPageContract,
+            hasPageConfig,
+        },
+        plugins,
+    );
 
-    return {projectPage: pageInfo, plugins};
+    return { projectPage: pageInfo, plugins };
 }
 
 export function createEditorHandlers(
@@ -1070,10 +1076,19 @@ export function createEditorHandlers(
 
                 try {
                     //load page's info - with it's contract and its used components contracts
-                    const {projectPage, plugins} = await loadPageContracts(dirname, pageUrl, projectRoot);
+                    const { projectPage, plugins } = await loadPageContracts(
+                        dirname,
+                        pageUrl,
+                        projectRoot,
+                    );
 
                     // Run the vendor conversion to get body HTML and metadata
-                    const conversionResult = await vendor.convertToBodyHtml(vendorDoc, pageUrl, projectPage, plugins);
+                    const conversionResult = await vendor.convertToBodyHtml(
+                        vendorDoc,
+                        pageUrl,
+                        projectPage,
+                        plugins,
+                    );
 
                     // Build the full Jay HTML document with headless components from page.conf.yaml
                     const fullJayHtml = await buildJayHtmlFromVendorResult(

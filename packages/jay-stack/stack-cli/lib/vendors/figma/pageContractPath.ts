@@ -4,9 +4,9 @@
  */
 
 export interface PageContractPath {
-    pageUrl: string;           // e.g., "/products/:id"
-    pluginName?: string;       // e.g., "@jay-framework/wix-stores" (only for plugin contracts)
-    componentName?: string;    // e.g., "product-page" (only for plugin contracts)
+    pageUrl: string; // e.g., "/products/:id"
+    pluginName?: string; // e.g., "@jay-framework/wix-stores" (only for plugin contracts)
+    componentName?: string; // e.g., "product-page" (only for plugin contracts)
 }
 
 /**

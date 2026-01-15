@@ -1,4 +1,4 @@
 used_components:
-  - plugin: "test-product"
+  - plugin: 'test-product'
     contract: product-card
     key: productCard

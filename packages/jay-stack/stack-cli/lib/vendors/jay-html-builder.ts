@@ -206,7 +206,7 @@ export async function buildJayHtmlFromVendorResult(
                         headlessComponents.push({
                             plugin: comp.plugin,
                             contract: comp.contract,
-                            key: comp.key
+                            key: comp.key,
                         });
                     }
                 }

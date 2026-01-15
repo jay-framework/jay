@@ -20,11 +20,7 @@ import { convertVariantNode } from './converters/variants';
 import { convertRepeaterNode } from './converters/repeater';
 import { convertGroupNode } from './converters/group';
 import type { ConversionContext, BindingAnalysis } from './types';
-import {
-    getBindingsData,
-    analyzeBindings,
-    validateBindings,
-} from './binding-analysis';
+import { getBindingsData, analyzeBindings, validateBindings } from './binding-analysis';
 
 /**
  * Figma Vendor Implementation
@@ -50,7 +46,9 @@ function convertRegularNode(
 
     // For text nodes, handle specially
     if (type === 'TEXT') {
-        const dynamicContent = analysis.dynamicContentPath ? `{${analysis.dynamicContentPath}}` : '';
+        const dynamicContent = analysis.dynamicContentPath
+            ? `{${analysis.dynamicContentPath}}`
+            : '';
         const refAttr = analysis.refPath ? ` ref="${analysis.refPath}"` : '';
         const dualContent = analysis.dualPath ? `{${analysis.dualPath}}` : '';
         const dualRef = analysis.dualPath ? ` ref="${analysis.dualPath}"` : '';
@@ -75,7 +73,7 @@ function convertRegularNode(
         // Extract src and alt bindings
         let srcBinding: string | undefined;
         let altBinding: string | undefined;
-        
+
         for (const [attr, tagPath] of analysis.attributes) {
             if (attr === 'src') {
                 srcBinding = `{${tagPath}}`;
@@ -90,8 +88,11 @@ function convertRegularNode(
             staticImageUrl = extractStaticImageUrl(node);
         }
 
-        const refAttr = analysis.refPath ? ` ref="${analysis.refPath}"` : 
-                       (analysis.dualPath ? ` ref="${analysis.dualPath}"` : '');
+        const refAttr = analysis.refPath
+            ? ` ref="${analysis.refPath}"`
+            : analysis.dualPath
+              ? ` ref="${analysis.dualPath}"`
+              : '';
 
         return convertImageNodeToHtml(
             node,

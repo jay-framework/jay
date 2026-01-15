@@ -1,20 +1,16 @@
 import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
 import type { ConversionContext, BindingAnalysis } from '../types';
-import {
-    getPositionStyle,
-    getNodeSizeStyles,
-    getCommonStyles,
-} from '../utils';
+import { getPositionStyle, getNodeSizeStyles, getCommonStyles } from '../utils';
 
 /**
  * Converts a GROUP node to Jay HTML
- * 
+ *
  * Groups in Figma are layout containers that:
  * - Have no visual styling (no background, borders, padding)
  * - Use absolute positioning for their children
  * - Act as a bounding box for their contained elements
  * - Size is determined by the union of all children's bounds
- * 
+ *
  * Structure:
  * - Outer div: has group's position, size, and common styles (opacity, rotation, effects)
  * - Children: positioned absolutely within the group

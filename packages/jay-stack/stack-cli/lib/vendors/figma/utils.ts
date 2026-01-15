@@ -63,7 +63,10 @@ function getPositionType(
     }
 
     // For nodes in auto-layout parents, use relative positioning
-    if (node.parentLayoutMode && (node.parentLayoutMode === 'HORIZONTAL' || node.parentLayoutMode === 'VERTICAL')) {
+    if (
+        node.parentLayoutMode &&
+        (node.parentLayoutMode === 'HORIZONTAL' || node.parentLayoutMode === 'VERTICAL')
+    ) {
         return 'relative';
     }
 

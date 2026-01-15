@@ -13,7 +13,7 @@ import {
 
 /**
  * Converts a repeater node to Jay HTML with forEach
- * 
+ *
  * A repeater must be a FrameNode with auto-layout. The structure is:
  * 1. Outer container div - has Frame's position, size, layout, background styles
  * 2. Inner forEach div - minimal positioning, this is what wraps the repeated template
@@ -31,9 +31,7 @@ export function convertRepeaterNode(
 
     // Validate that this is a Frame with auto-layout
     if (node.type !== 'FRAME') {
-        throw new Error(
-            `Repeater node "${node.name}" must be a FRAME (got: ${node.type})`,
-        );
+        throw new Error(`Repeater node "${node.name}" must be a FRAME (got: ${node.type})`);
     }
 
     if (!node.layoutMode || node.layoutMode === 'NONE') {
@@ -85,12 +83,14 @@ export function convertRepeaterNode(
     if (node.children && node.children.length > 0) {
         html += convertNodeToJayHtml(node.children[0], newContext);
     } else {
-        throw new Error(`Repeater node "${node.name}" has no children - repeater template is required`);
+        throw new Error(
+            `Repeater node "${node.name}" has no children - repeater template is required`,
+        );
     }
 
     // Close inner forEach div
     html += `${innerIndent}</div>\n`;
-    
+
     // Close outer container div
     html += `${indent}</div>\n`;
 

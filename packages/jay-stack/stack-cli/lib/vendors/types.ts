@@ -5,7 +5,7 @@
  * to provide conversion from their native format to Jay HTML format.
  */
 
-import { Plugin, ProjectPage } from "@jay-framework/editor-protocol";
+import { Plugin, ProjectPage } from '@jay-framework/editor-protocol';
 
 /**
  * Result of vendor conversion containing body HTML, fonts, and contract data
@@ -50,5 +50,10 @@ export interface Vendor<TVendorDoc = any> {
      * @param pageUrl - The page URL/route (e.g., '/home', '/products')
      * @returns Conversion result with body HTML, fonts, and contract data
      */
-    convertToBodyHtml(vendorDoc: TVendorDoc, pageUrl: string, projectPage: ProjectPage, plugins: Plugin[]): Promise<VendorConversionResult>;
+    convertToBodyHtml(
+        vendorDoc: TVendorDoc,
+        pageUrl: string,
+        projectPage: ProjectPage,
+        plugins: Plugin[],
+    ): Promise<VendorConversionResult>;
 }

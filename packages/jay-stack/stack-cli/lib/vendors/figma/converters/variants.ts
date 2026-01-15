@@ -14,11 +14,11 @@ import {
 /**
  * Gets all variant values for a component set's properties
  * Returns a map of property name to array of possible values
- * 
+ *
  * Works with both:
  * - Component nodes (componentPropertyDefinitions on the node itself)
  * - Instance nodes (componentPropertyDefinitions + variants array serialized from component set)
- * 
+ *
  * Filters out pseudo-CSS class variants (values containing ':') as these are handled
  * via CSS display toggling, not Jay-HTML if conditions.
  */
@@ -30,7 +30,7 @@ export function getComponentVariantValues(
 
     // Helper to filter out pseudo-CSS variants
     const filterPseudoVariants = (variantValues: string[]): string[] => {
-        return variantValues.filter(value => !value.includes(':'));
+        return variantValues.filter((value) => !value.includes(':'));
     };
 
     // Extract from node.componentPropertyDefinitions if available
@@ -51,7 +51,7 @@ export function getComponentVariantValues(
     if (values.size === 0 && node.variants && node.variants.length > 0) {
         // Build set of unique values for each property from all variants
         const propertyValuesMap = new Map<string, Set<string>>();
-        
+
         for (const variant of node.variants) {
             if (variant.variantProperties) {
                 for (const binding of propertyBindings) {
@@ -66,7 +66,7 @@ export function getComponentVariantValues(
                 }
             }
         }
-        
+
         // Convert sets to arrays
         for (const [prop, valueSet] of propertyValuesMap) {
             if (valueSet.size > 0) {
@@ -82,7 +82,7 @@ export function getComponentVariantValues(
  * Checks if a variant property is boolean based on:
  * 1. Contract tag dataType is "boolean"
  * 2. Figma variant values are exactly "true" and "false"
- * 
+ *
  * This dual check ensures we only use boolean syntax when the contract
  * explicitly declares the property as boolean AND Figma values match.
  */
@@ -91,7 +91,7 @@ function isBooleanVariant(values: string[], contractTag: ContractTag): boolean {
     if (contractTag.dataType !== 'boolean') {
         return false;
     }
-    
+
     // Then verify Figma values match boolean pattern
     if (values.length !== 2) {
         return false;
@@ -112,9 +112,14 @@ export function generatePermutations(
         return [];
     }
 
-    const permutations: Array<Array<{ property: string; tagPath: string; value: string; isBoolean: boolean }>> = [];
+    const permutations: Array<
+        Array<{ property: string; tagPath: string; value: string; isBoolean: boolean }>
+    > = [];
 
-    function generate(index: number, current: Array<{ property: string; tagPath: string; value: string; isBoolean: boolean }>) {
+    function generate(
+        index: number,
+        current: Array<{ property: string; tagPath: string; value: string; isBoolean: boolean }>,
+    ) {
         if (index === properties.length) {
             permutations.push([...current]);
             return;
@@ -140,13 +145,13 @@ export function generatePermutations(
 
 /**
  * Finds the variant component that matches the given property values
- * 
+ *
  * When property bindings are on an INSTANCE node, the serialization includes:
  * - node.variants: Array of all variants from the component set
  * - each variant has variantProperties: { property: value }
- * 
+ *
  * This function finds the matching variant by comparing property values.
- * 
+ *
  * Note: Pseudo-CSS variants (with ':' in values) are filtered out before this function
  * is called, so only actual Jay variants are matched here.
  */
@@ -156,7 +161,9 @@ export function findComponentVariant(
 ): FigmaVendorDocument {
     // If node has variants array (serialized from component set)
     if (!node.variants || node.variants.length === 0) {
-        throw new Error(`Node "${node.name}" has no variants array - cannot find variant component`);
+        throw new Error(
+            `Node "${node.name}" has no variants array - cannot find variant component`,
+        );
     }
 
     // Build target property map from permutation
@@ -225,17 +232,17 @@ function buildVariantCondition(
             return `${tagPath} == ${value}`;
         }
     });
-    
+
     return conditions.join(' && ');
 }
 
 /**
  * Converts a variant node to Jay HTML with if conditions
- * 
+ *
  * Handles both boolean and enum variant properties:
  * - Boolean properties (true/false) → `if="prop"` or `if="!prop"`
  * - Enum properties → `if="prop == value"`
- * 
+ *
  * Structure:
  * 1. Outer wrapper div - has the instance node's Frame styling (position, size, layout, etc.)
  * 2. Inner if divs - one per variant permutation
@@ -249,14 +256,16 @@ export function convertVariantNode(
 ): string {
     const indent = '  '.repeat(context.indentLevel);
     const innerIndent = '  '.repeat(context.indentLevel + 1);
-    
+
     // 1. Get all variant property values
     const propertyValues = getComponentVariantValues(node, analysis.propertyBindings);
-    
+
     // 2. Generate all permutations
     const permutations = generatePermutations(propertyValues, analysis.propertyBindings);
     if (permutations.length === 0) {
-        throw new Error(`No permutations generated for variant node "${node.name}" - check property definitions`);
+        throw new Error(
+            `No permutations generated for variant node "${node.name}" - check property definitions`,
+        );
     }
 
     // 3. Build the variant if divs
