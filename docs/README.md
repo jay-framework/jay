@@ -92,7 +92,7 @@ Jay enables you to:
 
 Jay uses contracts to define the interface between design tools and components. This enables:
 
-- **Design tool integration** - Connect Figma, Sketch, Wix, or other design tools via the Editor Protocol
+- **Design tool integration** - Connect Figma, Wix, or other design tools via the Editor Protocol
 - **Bidirectional sync** - Export designs to Jay and import them back to your design tool
 - **Component reusability** - Use the same component with different designs
 - **Type safety** - Automatic TypeScript generation from contracts
