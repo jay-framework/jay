@@ -381,9 +381,21 @@ export function resolvePluginManifest(
     if (npmResult && npmResult.val !== null && npmResult.validations.length === 0) {
         return npmResult;
     }
+    
+    // If local plugin had errors, return those (prefer local over NPM)
+    if (localResult && localResult.validations.length > 0) {
+        return localResult;
+    }
+    
+    // If NPM plugin had errors, return those
+    if (npmResult && npmResult.validations.length > 0) {
+        return npmResult;
+    }
+    
+    // Neither found - return a "not found" error
     return new WithValidations(null as any, [
         `Plugin "${pluginName}" not found. ` +
             `Searched in src/plugins/${pluginName}/ and node_modules/${pluginName}/. ` +
             `Ensure the plugin is installed or exists in your project.`,
-    , ...localResult?.validations || [], ...npmResult?.validations || []]);
+    ]);
 }
