@@ -120,6 +120,8 @@ function getExpressionHelp(startRule: string): string {
     ✓ disabled="!isValid"
     ✓ disabled="status == pending"  (enum comparison)
     ✓ disabled="count <= 0"         (numeric comparison)
+    ✓ disabled="count == 5"         (equality with number)
+    ✓ disabled="a >= b.value"       (field-to-field comparison)
     ✓ disabled="isLoading || !isValid"
     ✓ disabled (bare attribute for always-present)
     ✗ disabled="{isDisabled}" (no curly braces)`;
@@ -155,7 +157,9 @@ function getExpressionHelp(startRule: string): string {
     ✓ if="!isHidden"
     ✓ if="status == active"         (enum comparison)
     ✓ if="count > 0"                (numeric comparison)
+    ✓ if="count == 5"               (equality with number)
     ✓ if="page <= 1"                (<=, >=, <, > supported)
+    ✓ if="current >= other.value"   (field-to-field comparison)
     ✓ if="isEnabled && status != disabled"
     ✓ if="hasItems || count > 0"`;
 

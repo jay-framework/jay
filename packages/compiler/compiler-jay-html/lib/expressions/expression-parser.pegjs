@@ -295,7 +295,8 @@ logicalAndCondition
 
 primaryCondition
   = "(" _ cond:condition _ ")" { return cond; }
-  / comparisonCondition
+  / orderingCondition
+  / equalityComparisonCondition
   / enumCondition
   / booleanCondition
 
@@ -306,9 +307,34 @@ booleanCondition
       head.render()
   }
 
-comparisonCondition
-  = head:accessor _ oper:ComparisonOperator _ val:numericValue {
+// Ordering comparisons can use any accessor (no ambiguity with enums)
+orderingCondition
+  = head:accessor _ oper:OrderingOperator _ val:orderingValue {
     return head.render().map(_ => `${_} ${oper} ${val}`)
+  }
+
+orderingValue
+  = numericValue
+  / acc:accessor { return acc.render().rendered; }
+
+// Equality comparisons with numbers or dotted paths (single identifiers go to enumCondition)
+equalityComparisonCondition
+  = head:accessor _ oper:EqualityOperator _ val:equalityComparisonValue {
+    // Normalize == to === and != to !== for JavaScript output
+    if (oper === '==') oper = '===';
+    if (oper === '!=') oper = '!==';
+    return head.render().map(_ => `${_} ${oper} ${val}`)
+  }
+
+equalityComparisonValue
+  = numericValue
+  / acc:dottedAccessor { return acc.render().rendered; }
+
+// Accessor with at least one dot - distinguishes field paths from enum values
+dottedAccessor
+  = head:Identifier tail:(_ "." _ Identifier)+ {
+    let terms = [head, ...tail.map(_ => _[3])];
+    return vars.resolveAccessor(terms);
   }
 
 numericValue
@@ -355,7 +381,7 @@ EqualityOperator
   / "=="
   / "!="
 
-ComparisonOperator
+OrderingOperator
   = "<="
   / ">="
   / "<"

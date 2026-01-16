@@ -205,6 +205,52 @@ describe('expression-compiler', () => {
             expect(actual.rendered).toEqual('vs => (vs.count <= 1) || (vs.anEnum === AnEnum.one)');
         });
 
+        it('comparison between two fields', () => {
+            const actual = parseCondition('count >= nested.page', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count >= vs.nested?.page');
+        });
+
+        it('comparison between nested fields', () => {
+            const actual = parseCondition('nested.page <= count', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.nested?.page <= vs.count');
+        });
+
+        it('field comparison combined with boolean using AND', () => {
+            const actual = parseCondition('count > nested.page && member2', defaultVars);
+            expect(actual.rendered).toEqual('vs => (vs.count > vs.nested?.page) && (vs.member2)');
+        });
+
+        it('equality comparison with number using ==', () => {
+            const actual = parseCondition('count == 0', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count === 0');
+        });
+
+        it('equality comparison with number using ===', () => {
+            const actual = parseCondition('count === 5', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count === 5');
+        });
+
+        it('inequality comparison with number using !=', () => {
+            const actual = parseCondition('count != 0', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count !== 0');
+        });
+
+        it('inequality comparison with number using !==', () => {
+            const actual = parseCondition('count !== 10', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count !== 10');
+        });
+
+        it('equality comparison between dotted fields using ==', () => {
+            const actual = parseCondition('count == nested.page', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count === vs.nested?.page');
+        });
+
+        it('enum comparison still works with single identifier', () => {
+            // Single identifier on right side should be treated as enum value
+            const actual = parseCondition('anEnum == one', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.anEnum === AnEnum.one');
+        });
+
         it('basic condition with member not in type should report a problem', () => {
             const actual = parseCondition('notAMember', defaultVars);
             expect(actual.rendered).toEqual('vs => vs.notAMember');

@@ -60,7 +60,23 @@ booleanAttribute
 
    - `sortBy.currentSort == newest` → `ba(vs => vs.sortBy.currentSort === CurrentSort.newest)`
 
-5. **Boolean attributes are always dynamic if present with a value**:
+5. **Comparison operators supported** (`<`, `<=`, `>`, `>=`):
+
+   - `count > 0` → `ba(vs => vs.count > 0)`
+   - `page <= 1` → `ba(vs => vs.page <= 1)`
+   - `current >= total` → `ba(vs => vs.current >= vs.total)`
+
+6. **Equality with numbers**:
+
+   - `count == 5` → `ba(vs => vs.count === 5)`
+   - `count != 0` → `ba(vs => vs.count !== 0)`
+
+7. **Field-to-field comparisons** (using dotted paths for equality):
+
+   - `a >= b.value` → `ba(vs => vs.a >= vs.b?.value)`
+   - `current == options.default` → `ba(vs => vs.current === vs.options?.default)`
+
+8. **Boolean attributes are always dynamic if present with a value**:
    - `disabled` (bare) → static, always present
    - `disabled="condition"` → dynamic, controlled by condition
    - Omit attribute → never present
@@ -108,14 +124,50 @@ Extended the list of recognized boolean attributes:
 
 All tests pass: `yarn confirm` succeeds with exit code 0.
 
+### Phase 5: Error Handling Improvements (DONE)
+
+- [x] Added `getExpressionHelp()` function in `expression-compiler.ts`
+- [x] Enhanced error messages with context-specific examples for each expression type
+- [x] Error messages now include:
+  - The expression that failed to parse
+  - The underlying parse error
+  - Examples of valid syntax with ✓ markers
+
+### Phase 6: Comparison Operators (DONE)
+
+Extended condition expressions to support comparison operators beyond just enum equality.
+
+#### Ordering Operators (`<`, `<=`, `>`, `>=`)
+
+- [x] Added `orderingCondition` rule in PEG.js parser
+- [x] Supports comparison with numeric literals: `count > 0`, `page <= 1`
+- [x] Supports comparison with any accessor: `current >= total`, `a.value < b.value`
+
+#### Equality with Numbers
+
+- [x] Added `equalityComparisonCondition` rule in PEG.js parser
+- [x] Supports equality with numbers: `count == 5`, `count != 0`
+- [x] Normalizes `==` to `===` and `!=` to `!==` in output
+
+#### Field-to-Field Comparison
+
+- [x] Supports comparing two fields using dotted accessors
+- [x] For equality operators: right side must be dotted path to distinguish from enum values
+  - `current == options.default` → field comparison
+  - `status == active` → enum comparison (unchanged)
+- [x] For ordering operators: any accessor allowed (no ambiguity with enums)
+  - `count >= total` → works
+  - `a.page <= b.page` → works
+
 ### Documentation Updated
 
 - Added "Boolean Attributes" section to `docs/core/jay-html.md` with:
   - Syntax explanation
   - Full list of supported attributes
-  - Condition expression examples
+  - Condition expression examples (including comparison operators)
   - Static vs dynamic comparison table
   - Note about `checked`/`value` being properties, not boolean attributes
+- Updated conditional rendering section with comparison examples
 
 ## Examples
 
@@ -146,6 +198,28 @@ All tests pass: `yarn confirm` succeeds with exit code 0.
 <button disabled="!isValid || isProcessing">Submit</button>
 ```
 
+### Numeric comparison
+
+```html
+<button disabled="currentPage <= 1">Previous</button>
+<button disabled="count == 0">No items</button>
+<span if="count > 0">You have {count} items</span>
+```
+
+### Field-to-field comparison
+
+```html
+<button disabled="currentPage >= pagination.totalPages">Next</button>
+<span if="available >= required">In stock</span>
+```
+
+### Combined conditions
+
+```html
+<button disabled="count <= 0 || isLoading">Checkout</button>
+<button if="currentPage > 1 && !isLoading">Previous</button>
+```
+
 ## Trade-offs
 
 ### Pros
@@ -161,6 +235,11 @@ All tests pass: `yarn confirm` succeeds with exit code 0.
 
 ## Verification Criteria
 
-1. Unit tests pass for boolean, nested boolean, and enum comparison conditions
-2. Fixture tests compile correctly
-3. Expression `sortBy.currentSort == newest` works in boolean attribute context
+1. ✅ Unit tests pass for boolean, nested boolean, and enum comparison conditions
+2. ✅ Fixture tests compile correctly
+3. ✅ Expression `sortBy.currentSort == newest` works in boolean attribute context
+4. ✅ Comparison operators (`<`, `<=`, `>`, `>=`) work with numbers and fields
+5. ✅ Equality operators (`==`, `===`, `!=`, `!==`) work with numbers
+6. ✅ Field-to-field comparisons work with dotted paths
+7. ✅ Error messages provide helpful context-specific examples
+8. ✅ All 140 unit tests pass, `yarn confirm` succeeds

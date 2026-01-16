@@ -531,9 +531,13 @@ Boolean attributes support the full condition expression syntax:
 <!-- Enum comparison -->
 <option selected="status == active">Active</option>
 
-<!-- Numeric comparison (<=, >=, <, >) -->
+<!-- Numeric comparison (<=, >=, <, >, ==, !=) -->
 <button disabled="currentPage <= 1">Previous</button>
-<button disabled="currentPage >= totalPages">Next</button>
+<button disabled="count == 0">No items</button>
+
+<!-- Field-to-field comparison (use dotted paths for equality) -->
+<button disabled="currentPage >= pagination.totalPages">Next</button>
+<button disabled="selected == options.default">Reset</button>
 
 <!-- Nested property -->
 <input readonly="form.isLocked" />
@@ -621,9 +625,13 @@ Use `if="condition"` for conditional elements:
   <div if="status == inactive">Inactive</div>
   <div if="status == pending">Pending</div>
 
-  <!-- Numeric comparison -->
+  <!-- Numeric comparison (<=, >=, <, >, ==, !=) -->
   <span if="count > 0">You have {count} items</span>
-  <span if="count <= 0">Your cart is empty</span>
+  <span if="count == 0">Your cart is empty</span>
+
+  <!-- Field-to-field comparison -->
+  <span if="available >= required">In stock</span>
+  <span if="current == settings.default">Using default</span>
 
   <!-- Combined conditions -->
   <button if="currentPage > 1 && !isLoading">Previous</button>
