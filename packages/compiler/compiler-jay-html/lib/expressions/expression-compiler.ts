@@ -107,7 +107,98 @@ export class Variables {
     }
 }
 
-function doParse(expression: string, startRule, vars?: Variables) {
+/**
+ * Provides context-specific help for parsing errors based on the expression type
+ */
+function getExpressionHelp(startRule: string): string {
+    switch (startRule) {
+        case 'booleanAttribute':
+            return `
+  Boolean attributes use condition-style syntax (no curly braces).
+  Examples:
+    ✓ disabled="isDisabled"
+    ✓ disabled="!isValid"
+    ✓ disabled="status == pending"
+    ✓ disabled="isLoading || !isValid"
+    ✓ disabled (bare attribute for always-present)
+    ✗ disabled="{isDisabled}" (no curly braces)`;
+
+        case 'dynamicAttribute':
+        case 'dynamicProperty':
+            return `
+  Dynamic attributes/properties use template-style syntax with curly braces.
+  Examples:
+    ✓ value="{inputValue}"
+    ✓ href="/users/{userId}"
+    ✓ data-count="{items.length}"
+    ✓ title="Hello {name}!"`;
+
+        case 'classExpression':
+        case 'reactClassExpression':
+            return `
+  Class expressions support static classes and conditional classes.
+  Examples:
+    ✓ class="button primary"
+    ✓ class="{isActive ? active}"
+    ✓ class="{isActive ? active : inactive}"
+    ✓ class="button {isPrimary ? primary : secondary}"
+    ✓ class="{status == active ? active-class}"`;
+
+        case 'conditionFunc':
+        case 'condition':
+            return `
+  Conditions support boolean properties, negation, enum comparisons, and logical operators.
+  Examples:
+    ✓ if="isVisible"
+    ✓ if="!isHidden"
+    ✓ if="status == active"
+    ✓ if="isEnabled && status != disabled"
+    ✓ if="hasItems || showEmpty"`;
+
+        case 'dynamicText':
+        case 'reactDynamicText':
+            return `
+  Dynamic text uses curly braces for interpolation.
+  Examples:
+    ✓ {title}
+    ✓ Hello, {user.name}!
+    ✓ Count: {items.length}`;
+
+        case 'accessor':
+            return `
+  Accessors reference view state properties.
+  Examples:
+    ✓ propertyName
+    ✓ nested.property
+    ✓ . (self-reference)`;
+
+        case 'importNames':
+            return `
+  Import names are comma-separated identifiers with optional renaming.
+  Examples:
+    ✓ MyComponent
+    ✓ Component1, Component2
+    ✓ Original as Renamed`;
+
+        case 'enum':
+            return `
+  Enum values are defined with pipe-separated identifiers.
+  Examples:
+    ✓ enum(active | inactive | pending)`;
+
+        case 'styleDeclarations':
+            return `
+  Style declarations use CSS syntax with optional dynamic bindings.
+  Examples:
+    ✓ style="color: red; padding: 10px"
+    ✓ style="background: {bgColor}; width: {size}px"`;
+
+        default:
+            return '';
+    }
+}
+
+function doParse(expression: string, startRule: string, vars?: Variables) {
     try {
         return parse(expression, {
             vars,
@@ -120,7 +211,11 @@ function doParse(expression: string, startRule, vars?: Variables) {
             startRule,
         });
     } catch (e) {
-        throw new Error(`failed to parse expression [${expression}]. ${e.message}`);
+        const help = getExpressionHelp(startRule);
+        const contextInfo = help ? `\n\nExpected format for ${startRule}:${help}` : '';
+        throw new Error(`Failed to parse expression [${expression}].
+
+Parse error: ${e.message}${contextInfo}`);
     }
 }
 

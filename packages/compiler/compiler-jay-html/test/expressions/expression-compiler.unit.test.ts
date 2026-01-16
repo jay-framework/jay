@@ -598,7 +598,7 @@ describe('expression-compiler', () => {
         it('fail and report broken expression', () => {
             expect(() => {
                 parseTextExpression('some broken { expression', defaultVars);
-            }).toThrow('failed to parse expression [some broken { expression]. ');
+            }).toThrow(/Failed to parse expression \[some broken \{ expression\]/);
         });
     });
 
@@ -705,7 +705,7 @@ describe('expression-compiler', () => {
         it('fail and report broken expression', () => {
             expect(() => {
                 parseReactTextExpression('some broken { expression', defaultVars);
-            }).toThrow('failed to parse expression [some broken { expression]. ');
+            }).toThrow(/Failed to parse expression \[some broken \{ expression\]/);
         });
     });
 
@@ -808,9 +808,7 @@ describe('expression-compiler', () => {
         it('invalid import names', () => {
             expect(() => {
                 parseImportNames('name1 name2');
-            }).toThrow(
-                'failed to parse expression [name1 name2]. Expected "," or "as" but "n" found.',
-            );
+            }).toThrow('Failed to parse expression [name1 name2]');
         });
     });
 
@@ -833,9 +831,7 @@ describe('expression-compiler', () => {
         it('parses invalid enum', () => {
             expect(() => {
                 parseEnumValues('enum(not an enum');
-            }).toThrow(
-                'failed to parse expression [enum(not an enum]. Expected ")" or "|" but "a" found.',
-            );
+            }).toThrow('Failed to parse expression [enum(not an enum]');
         });
     });
 

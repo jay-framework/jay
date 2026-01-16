@@ -880,7 +880,7 @@ describe('compiler', () => {
 
             expect(jayFile.validations.length).toEqual(1);
             expect(jayFile.validations[0]).toMatch(
-                "failed to parse import names for module module - failed to parse expression [undefined]. Cannot read properties of undefined (reading 'charAt')",
+                'failed to parse import names for module module - Failed to parse expression [undefined]',
             );
         });
 
@@ -902,7 +902,7 @@ describe('compiler', () => {
 
             expect(jayFile.validations.length).toEqual(1);
             expect(jayFile.validations[0]).toMatch(
-                'failed to parse import names for module module - failed to parse expression []. Expected identifier but end of input found.',
+                'failed to parse import names for module module - Failed to parse expression []',
             );
         });
 
