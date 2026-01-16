@@ -492,6 +492,65 @@ Use `{expression}` to display data:
 </div>
 ```
 
+### Boolean Attributes
+
+Boolean HTML attributes like `disabled`, `hidden`, `required`, etc. use **condition-style syntax**. The attribute's presence is controlled by a condition expression—no curly braces needed.
+
+#### Syntax
+
+```html
+<!-- Condition-style: attribute present when condition is true -->
+<button disabled="isDisabled">Cannot Click</button>
+<input required="isFieldRequired" />
+<div hidden="!isVisible">Hidden content</div>
+```
+
+#### Supported Boolean Attributes
+
+Jay-HTML recognizes these HTML boolean attributes for condition-style parsing:
+
+| Category   | Attributes                                                                                  |
+| ---------- | ------------------------------------------------------------------------------------------- |
+| Form       | `disabled`, `readonly`, `required`, `autofocus`, `multiple`, `novalidate`, `formnovalidate` |
+| Selection  | `selected`                                                                                  |
+| Visibility | `hidden`, `open`, `inert`                                                                   |
+| Media      | `autoplay`, `controls`, `loop`, `muted`, `playsinline`                                      |
+| Other      | `reversed`, `ismap`, `defer`, `async`, `default`                                            |
+
+#### Condition Expressions
+
+Boolean attributes support the full condition expression syntax:
+
+```html
+<!-- Simple boolean property -->
+<button disabled="isLoading">Submit</button>
+
+<!-- Negation -->
+<button disabled="!isValid">Submit</button>
+
+<!-- Enum comparison -->
+<option selected="status == active">Active</option>
+
+<!-- Nested property -->
+<input readonly="form.isLocked" />
+
+<!-- Logical operators -->
+<button disabled="!isValid || isProcessing">Submit</button>
+<input required="isRequired && !hasDefault" />
+```
+
+#### Static vs Dynamic
+
+| Syntax                      | Behavior                         |
+| --------------------------- | -------------------------------- |
+| `disabled` (bare attribute) | Always present (static)          |
+| `disabled="condition"`      | Dynamic, controlled by condition |
+| Omit attribute              | Never present                    |
+
+There's no need for `disabled="true"` or `disabled="false"` - use the bare attribute for always-present, or omit it entirely for never-present.
+
+**Note:** `checked` and `value` are **not** boolean attributes - they're DOM properties that use template-style syntax with curly braces: `checked="{isChecked}"`, `value="{inputValue}"`.
+
 ### Class Binding
 
 Jay-HTML supports dynamic class binding with conditional expressions:

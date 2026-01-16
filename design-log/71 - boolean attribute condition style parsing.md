@@ -46,21 +46,38 @@ booleanAttribute
 1. **No curly braces required**: Conditions are parsed directly
 
    - Before: `{isEnabled}` → `ba(vs => vs.isEnabled)`
-   - After: `isEnabled` → `vs => vs.isEnabled`
+   - After: `isEnabled` → `ba(vs => vs.isEnabled)`
 
 2. **Enum comparisons supported**:
 
-   - `status == active` → `vs => vs.status === Status.active`
+   - `status == active` → `ba(vs => vs.status === Status.active)`
 
 3. **Logical operators supported**:
 
-   - `isEnabled && status == active` → `vs => (vs.isEnabled) && (vs.status === Status.active)`
+   - `isEnabled && status == active` → `ba(vs => (vs.isEnabled) && (vs.status === Status.active))`
 
 4. **Nested property access**:
 
-   - `sortBy.currentSort == newest` → `vs => vs.sortBy.currentSort === CurrentSort.newest`
+   - `sortBy.currentSort == newest` → `ba(vs => vs.sortBy.currentSort === CurrentSort.newest)`
 
-5. **No `ba()` import wrapper in parsed result**: The condition returns the function directly, wrapper is applied by the compiler at usage site.
+5. **Boolean attributes are always dynamic if present with a value**:
+   - `disabled` (bare) → static, always present
+   - `disabled="condition"` → dynamic, controlled by condition
+   - Omit attribute → never present
+
+### Supported Boolean Attributes
+
+Extended the list of recognized boolean attributes:
+
+| Category   | Attributes                                                                                  |
+| ---------- | ------------------------------------------------------------------------------------------- |
+| Form       | `disabled`, `readonly`, `required`, `autofocus`, `multiple`, `novalidate`, `formnovalidate` |
+| Selection  | `selected`                                                                                  |
+| Visibility | `hidden`, `open`, `inert`                                                                   |
+| Media      | `autoplay`, `controls`, `loop`, `muted`, `playsinline`                                      |
+| Other      | `reversed`, `ismap`, `defer`, `async`, `default`                                            |
+
+**Note:** `checked` and `value` remain as PROPERTY type (using `dp()` with template-style `{expr}` syntax) because they reflect DOM property values, not boolean presence.
 
 ## Implementation Plan
 
@@ -90,6 +107,15 @@ booleanAttribute
 ## Implementation Results
 
 All tests pass: `yarn confirm` succeeds with exit code 0.
+
+### Documentation Updated
+
+- Added "Boolean Attributes" section to `docs/core/jay-html.md` with:
+  - Syntax explanation
+  - Full list of supported attributes
+  - Condition expression examples
+  - Static vs dynamic comparison table
+  - Note about `checked`/`value` being properties, not boolean attributes
 
 ## Examples
 
