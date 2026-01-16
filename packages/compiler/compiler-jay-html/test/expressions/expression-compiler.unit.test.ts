@@ -71,6 +71,10 @@ describe('expression-compiler', () => {
                 member: JayString,
                 member2: JayBoolean,
                 anEnum: new JayEnumType('AnEnum', ['one', 'two', 'three']),
+                count: JayNumber,
+                nested: new JayObjectType('nested', {
+                    page: JayNumber,
+                }),
             }),
         );
 
@@ -154,6 +158,51 @@ describe('expression-compiler', () => {
             expect(actual.rendered).toEqual(
                 'vs => ((vs.member) || (vs.member2)) && (vs.anEnum === AnEnum.one)',
             );
+        });
+
+        it('less than comparison with number', () => {
+            const actual = parseCondition('count < 10', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count < 10');
+        });
+
+        it('less than or equal comparison with number', () => {
+            const actual = parseCondition('count <= 1', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count <= 1');
+        });
+
+        it('greater than comparison with number', () => {
+            const actual = parseCondition('count > 0', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count > 0');
+        });
+
+        it('greater than or equal comparison with number', () => {
+            const actual = parseCondition('count >= 5', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count >= 5');
+        });
+
+        it('nested property comparison with number', () => {
+            const actual = parseCondition('nested.page <= 1', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.nested?.page <= 1');
+        });
+
+        it('comparison with negative number', () => {
+            const actual = parseCondition('count > -5', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count > -5');
+        });
+
+        it('comparison with decimal number', () => {
+            const actual = parseCondition('count <= 3.14', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count <= 3.14');
+        });
+
+        it('comparison combined with boolean condition using AND', () => {
+            const actual = parseCondition('count > 0 && member2', defaultVars);
+            expect(actual.rendered).toEqual('vs => (vs.count > 0) && (vs.member2)');
+        });
+
+        it('comparison combined with enum condition using OR', () => {
+            const actual = parseCondition('count <= 1 || anEnum == one', defaultVars);
+            expect(actual.rendered).toEqual('vs => (vs.count <= 1) || (vs.anEnum === AnEnum.one)');
         });
 
         it('basic condition with member not in type should report a problem', () => {

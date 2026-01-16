@@ -118,7 +118,8 @@ function getExpressionHelp(startRule: string): string {
   Examples:
     ✓ disabled="isDisabled"
     ✓ disabled="!isValid"
-    ✓ disabled="status == pending"
+    ✓ disabled="status == pending"  (enum comparison)
+    ✓ disabled="count <= 0"         (numeric comparison)
     ✓ disabled="isLoading || !isValid"
     ✓ disabled (bare attribute for always-present)
     ✗ disabled="{isDisabled}" (no curly braces)`;
@@ -142,18 +143,21 @@ function getExpressionHelp(startRule: string): string {
     ✓ class="{isActive ? active}"
     ✓ class="{isActive ? active : inactive}"
     ✓ class="button {isPrimary ? primary : secondary}"
-    ✓ class="{status == active ? active-class}"`;
+    ✓ class="{status == active ? active-class}"
+    ✓ class="{count > 0 ? has-items}"`;
 
         case 'conditionFunc':
         case 'condition':
             return `
-  Conditions support boolean properties, negation, enum comparisons, and logical operators.
+  Conditions support boolean properties, negation, comparisons, and logical operators.
   Examples:
     ✓ if="isVisible"
     ✓ if="!isHidden"
-    ✓ if="status == active"
+    ✓ if="status == active"         (enum comparison)
+    ✓ if="count > 0"                (numeric comparison)
+    ✓ if="page <= 1"                (<=, >=, <, > supported)
     ✓ if="isEnabled && status != disabled"
-    ✓ if="hasItems || showEmpty"`;
+    ✓ if="hasItems || count > 0"`;
 
         case 'dynamicText':
         case 'reactDynamicText':

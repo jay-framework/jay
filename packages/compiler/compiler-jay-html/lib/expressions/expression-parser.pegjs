@@ -295,6 +295,7 @@ logicalAndCondition
 
 primaryCondition
   = "(" _ cond:condition _ ")" { return cond; }
+  / comparisonCondition
   / enumCondition
   / booleanCondition
 
@@ -304,6 +305,14 @@ booleanCondition
       head.render().map(_ => `!${_}`):
       head.render()
   }
+
+comparisonCondition
+  = head:accessor _ oper:ComparisonOperator _ val:numericValue {
+    return head.render().map(_ => `${_} ${oper} ${val}`)
+  }
+
+numericValue
+  = "-"? [0-9]+ ("." [0-9]+)? { return text(); }
 
 enumCondition
   = head:accessor _ oper:EqualityOperator _ val:Identifier {
@@ -345,6 +354,12 @@ EqualityOperator
   / "!=="
   / "=="
   / "!="
+
+ComparisonOperator
+  = "<="
+  / ">="
+  / "<"
+  / ">"
 
 // copied from https://github.com/pegjs/pegjs/blob/master/examples/javascript.pegjs#L123
 Identifier
