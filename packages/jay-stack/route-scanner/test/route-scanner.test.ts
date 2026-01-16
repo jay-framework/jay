@@ -1,4 +1,4 @@
-import { JayRouteParamType, ScanFilesOptions, scanRoutes, sortRoutesByPriority } from '../lib';
+import { JayRouteParamType, ScanFilesOptions, scanRoutes, sortRoutesByPriority, inferParamsForStaticRoutes } from '../lib';
 import path from 'path';
 
 describe('RouteScanner', () => {
@@ -105,6 +105,24 @@ describe('RouteScanner', () => {
 
         expect(vaseIndex).toBeLessThan(slugIndex);
     });
+
+    it('should infer params for static override routes', async () => {
+        const routes = await scanRoutes('./test/fixtures/priority', options);
+
+        // Find the static override route
+        const vaseRoute = routes.find((r) => r.rawRoute === '/products/ceramic-flower-vase');
+
+        // Should have inferred slug param from sibling /products/[slug]
+        expect(vaseRoute?.inferredParams).toEqual({ slug: 'ceramic-flower-vase' });
+    });
+
+    it('should not infer params for dynamic routes', async () => {
+        const routes = await scanRoutes('./test/fixtures/priority', options);
+
+        // Dynamic routes should not have inferredParams
+        const slugRoute = routes.find((r) => r.rawRoute === '/products/[slug]');
+        expect(slugRoute?.inferredParams).toBeUndefined();
+    });
 });
 
 describe('sortRoutesByPriority', () => {
@@ -150,6 +168,98 @@ describe('sortRoutesByPriority', () => {
         const sorted = sortRoutesByPriority(unsorted);
 
         expect(sorted.map((r) => r.rawRoute)).toEqual(['/alpha', '/zebra']);
+    });
+});
+
+describe('inferParamsForStaticRoutes', () => {
+    it('should infer params from sibling dynamic route', () => {
+        const routes = [
+            { segments: ['products', 'my-product'], rawRoute: '/products/my-product', jayHtmlPath: '', compPath: '' },
+            { segments: ['products', { name: 'slug', type: JayRouteParamType.single }], rawRoute: '/products/[slug]', jayHtmlPath: '', compPath: '' },
+        ];
+
+        const { routes: result, inferenceLog } = inferParamsForStaticRoutes(routes);
+
+        expect(result[0].inferredParams).toEqual({ slug: 'my-product' });
+        expect(result[1].inferredParams).toBeUndefined();
+        expect(inferenceLog).toHaveLength(1);
+        expect(inferenceLog[0]).toEqual({
+            staticRoute: '/products/my-product',
+            dynamicRoute: '/products/[slug]',
+            inferredParams: { slug: 'my-product' },
+        });
+    });
+
+    it('should not infer params when no sibling dynamic route exists', () => {
+        const routes = [
+            { segments: ['products', 'my-product'], rawRoute: '/products/my-product', jayHtmlPath: '', compPath: '' },
+            { segments: ['products'], rawRoute: '/products', jayHtmlPath: '', compPath: '' },
+        ];
+
+        const { routes: result, inferenceLog } = inferParamsForStaticRoutes(routes);
+
+        expect(result[0].inferredParams).toBeUndefined();
+        expect(inferenceLog).toHaveLength(0);
+    });
+
+    it('should infer multiple params from deeply nested routes', () => {
+        const routes = [
+            { 
+                segments: ['shop', 'electronics', 'phones'], 
+                rawRoute: '/shop/electronics/phones', 
+                jayHtmlPath: '', 
+                compPath: '' 
+            },
+            { 
+                segments: ['shop', { name: 'category', type: JayRouteParamType.single }, { name: 'subcategory', type: JayRouteParamType.single }], 
+                rawRoute: '/shop/[category]/[subcategory]', 
+                jayHtmlPath: '', 
+                compPath: '' 
+            },
+        ];
+
+        const { routes: result } = inferParamsForStaticRoutes(routes);
+
+        expect(result[0].inferredParams).toEqual({ 
+            category: 'electronics', 
+            subcategory: 'phones' 
+        });
+    });
+
+    it('should handle mixed static and dynamic segments', () => {
+        const routes = [
+            { 
+                segments: ['users', 'admin', 'settings'], 
+                rawRoute: '/users/admin/settings', 
+                jayHtmlPath: '', 
+                compPath: '' 
+            },
+            { 
+                segments: ['users', { name: 'id', type: JayRouteParamType.single }, 'settings'], 
+                rawRoute: '/users/[id]/settings', 
+                jayHtmlPath: '', 
+                compPath: '' 
+            },
+        ];
+
+        const { routes: result } = inferParamsForStaticRoutes(routes);
+
+        // Static segments that match should not become params
+        // Only the segment at position 1 differs: 'admin' vs [id]
+        expect(result[0].inferredParams).toEqual({ id: 'admin' });
+    });
+
+    it('should not infer for routes with different segment counts', () => {
+        const routes = [
+            { segments: ['products', 'featured', 'new'], rawRoute: '/products/featured/new', jayHtmlPath: '', compPath: '' },
+            { segments: ['products', { name: 'slug', type: JayRouteParamType.single }], rawRoute: '/products/[slug]', jayHtmlPath: '', compPath: '' },
+        ];
+
+        const { routes: result, inferenceLog } = inferParamsForStaticRoutes(routes);
+
+        // Different segment counts - not siblings
+        expect(result[0].inferredParams).toBeUndefined();
+        expect(inferenceLog).toHaveLength(0);
     });
 });
 

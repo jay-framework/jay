@@ -139,7 +139,10 @@ function mkRoute(
     const handler = async (req: Request, res: Response) => {
         try {
             const url = req.originalUrl.replace(options.publicBaseUrlPath, '');
-            const pageParams = req.params;
+            // Merge Express params with inferred params from static override routes
+            // Inferred params allow static routes like /products/ceramic-flower-vase
+            // to provide { slug: 'ceramic-flower-vase' } based on sibling /products/[slug]
+            const pageParams = { ...route.inferredParams, ...req.params };
             const pageProps: PageProps = {
                 language: 'en',
                 url,

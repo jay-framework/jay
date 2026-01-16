@@ -189,11 +189,37 @@ function renderElementRef(
 ): RenderFragment {
     if (element.attributes.ref) {
         if (importedRefNameToRef.has(element.attributes.ref)) {
-            const ref = importedRefNameToRef.get(element.attributes.ref);
-            // Register the imported ref's constName so later refs with the same name
-            // get a different suffix
-            refNameGenerator.registerUsedConstName(ref.constName, variables);
-            return new RenderFragment(`${ref.constName}()`);
+            const importedRef = importedRefNameToRef.get(element.attributes.ref);
+            // Generate a unique constName for this imported ref using the ref name generator
+            // This ensures that refs with the same base name (e.g., "removeButton" in different
+            // branches like lineItems.removeButton and coupon.removeButton) get unique variable names
+            const uniqueConstName = refNameGenerator.newConstantName(importedRef.ref, variables);
+            // Create a new ref with the unique constName so the declaration matches the usage
+            const refWithUniqueConstName = mkRef(
+                importedRef.ref,
+                importedRef.originalName,
+                uniqueConstName,
+                importedRef.repeated,
+                importedRef.autoRef,
+                importedRef.viewStateType,
+                importedRef.elementType,
+            );
+            // Nest the ref based on its path (e.g., "cartPage.lineItems.removeButton" -> nested under cartPage.lineItems)
+            const refPath = element.attributes.ref.split('.');
+            // Remove the last element (the ref name itself) to get the nesting path
+            const nestingPath = refPath.slice(0, -1);
+            const nestedRefs = nestRefs(nestingPath, new RenderFragment(
+                '',
+                Imports.none(),
+                [],
+                mkRefsTree([refWithUniqueConstName], {}),
+            ));
+            return new RenderFragment(
+                `${uniqueConstName}()`,
+                nestedRefs.imports,
+                nestedRefs.validations,
+                nestedRefs.refs,
+            );
         }
         let originalName = element.attributes.ref;
         let refName = camelCase(originalName);
@@ -255,11 +281,36 @@ function renderChildCompRef(
     { dynamicRef, variables, refNameGenerator, importedRefNameToRef }: RenderContext,
 ): RenderFragment {
     if (importedRefNameToRef.has(element.attributes.ref)) {
-        const ref = importedRefNameToRef.get(element.attributes.ref);
-        // Register the imported ref's constName so later refs with the same name
-        // get a different suffix
-        refNameGenerator.registerUsedConstName(ref.constName, variables);
-        return new RenderFragment(`${ref.constName}()`, Imports.none(), [], mkRefsTree([ref], {}));
+        const importedRef = importedRefNameToRef.get(element.attributes.ref);
+        // Generate a unique constName for this imported ref using the ref name generator
+        // This ensures that refs with the same base name get unique variable names
+        const uniqueConstName = refNameGenerator.newConstantName(importedRef.ref, variables);
+        // Create a new ref with the unique constName so the declaration matches the usage
+        const refWithUniqueConstName = mkRef(
+            importedRef.ref,
+            importedRef.originalName,
+            uniqueConstName,
+            importedRef.repeated,
+            importedRef.autoRef,
+            importedRef.viewStateType,
+            importedRef.elementType,
+        );
+        // Nest the ref based on its path (e.g., "cartPage.lineItems.removeButton" -> nested under cartPage.lineItems)
+        const refPath = element.attributes.ref.split('.');
+        // Remove the last element (the ref name itself) to get the nesting path
+        const nestingPath = refPath.slice(0, -1);
+        const nestedRefs = nestRefs(nestingPath, new RenderFragment(
+            '',
+            Imports.none(),
+            [],
+            mkRefsTree([refWithUniqueConstName], {}),
+        ));
+        return new RenderFragment(
+            `${uniqueConstName}()`,
+            nestedRefs.imports,
+            nestedRefs.validations,
+            nestedRefs.refs,
+        );
     }
     let originalName = element.attributes.ref || refNameGenerator.newAutoRefNameGenerator();
     let refName = camelCase(originalName);
