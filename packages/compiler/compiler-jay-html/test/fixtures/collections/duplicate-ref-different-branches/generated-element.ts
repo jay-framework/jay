@@ -107,8 +107,5 @@ export function render(
                 ),
             ]),
         ) as DuplicateRefDifferentBranchesElement;
-    return [
-        refManager.getPublicAPI() as DuplicateRefDifferentBranchesElementRefs,
-        render,
-    ];
+    return [refManager.getPublicAPI() as DuplicateRefDifferentBranchesElementRefs, render];
 }
