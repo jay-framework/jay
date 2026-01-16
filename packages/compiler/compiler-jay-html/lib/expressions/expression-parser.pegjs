@@ -157,11 +157,8 @@ enum
 }
 
 booleanAttribute
-  = template:template {
-  let [renderFragment, isDynamic] = template;
-  return isDynamic ?
-      renderFragment.map(_ => `ba(${vars.currentVar} => ${_})`).plusImport(ba):
-      renderFragment;
+  = cond:condition {
+  return cond.map(_ => `ba(${vars.currentVar} => ${_})`).plusImport(ba)
 }
 
 dynamicAttribute

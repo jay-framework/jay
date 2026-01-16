@@ -102,10 +102,36 @@ function renderTextNode(variables: Variables, text: string, indent: Indent): Ren
 
 const PROPERTY = 1,
     BOOLEAN_ATTRIBUTE = 3;
-const propertyMapping = {
+const propertyMapping: Record<string, { type: number }> = {
+    // DOM properties (use template-style parsing with dp())
     value: { type: PROPERTY },
     checked: { type: PROPERTY },
+
+    // Boolean attributes (use condition-style parsing with ba())
+    // The presence/absence of these attributes is controlled by a condition expression
     disabled: { type: BOOLEAN_ATTRIBUTE },
+    selected: { type: BOOLEAN_ATTRIBUTE },
+    readonly: { type: BOOLEAN_ATTRIBUTE },
+    required: { type: BOOLEAN_ATTRIBUTE },
+    hidden: { type: BOOLEAN_ATTRIBUTE },
+    autofocus: { type: BOOLEAN_ATTRIBUTE },
+    multiple: { type: BOOLEAN_ATTRIBUTE },
+    open: { type: BOOLEAN_ATTRIBUTE },
+    novalidate: { type: BOOLEAN_ATTRIBUTE },
+    formnovalidate: { type: BOOLEAN_ATTRIBUTE },
+    // Media attributes
+    autoplay: { type: BOOLEAN_ATTRIBUTE },
+    controls: { type: BOOLEAN_ATTRIBUTE },
+    loop: { type: BOOLEAN_ATTRIBUTE },
+    muted: { type: BOOLEAN_ATTRIBUTE },
+    playsinline: { type: BOOLEAN_ATTRIBUTE },
+    // Other
+    reversed: { type: BOOLEAN_ATTRIBUTE },
+    ismap: { type: BOOLEAN_ATTRIBUTE },
+    defer: { type: BOOLEAN_ATTRIBUTE },
+    async: { type: BOOLEAN_ATTRIBUTE },
+    default: { type: BOOLEAN_ATTRIBUTE },
+    inert: { type: BOOLEAN_ATTRIBUTE },
 };
 const attributesRequiresQuotes = /[- ]/;
 
@@ -164,11 +190,14 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
             let attributeExpression = parsePropertyExpression(attributes[attrName], variables);
             renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
         } else if (propertyMapping[attrCanonical]?.type === BOOLEAN_ATTRIBUTE) {
-            let attributeExpression = parseBooleanAttributeExpression(
-                attributes[attrName],
-                variables,
-            );
-            renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
+            const attrValue = attributes[attrName];
+            // Empty boolean attribute (e.g., <button disabled></button>) renders as empty string
+            if (attrValue === '') {
+                renderedAttributes.push(new RenderFragment(`${attrKey}: ''`, Imports.none()));
+            } else {
+                let attributeExpression = parseBooleanAttributeExpression(attrValue, variables);
+                renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
+            }
         } else {
             let attributeExpression = parseAttributeExpression(attributes[attrName], variables);
             renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
@@ -208,12 +237,15 @@ function renderElementRef(
             const refPath = element.attributes.ref.split('.');
             // Remove the last element (the ref name itself) to get the nesting path
             const nestingPath = refPath.slice(0, -1);
-            const nestedRefs = nestRefs(nestingPath, new RenderFragment(
-                '',
-                Imports.none(),
-                [],
-                mkRefsTree([refWithUniqueConstName], {}),
-            ));
+            const nestedRefs = nestRefs(
+                nestingPath,
+                new RenderFragment(
+                    '',
+                    Imports.none(),
+                    [],
+                    mkRefsTree([refWithUniqueConstName], {}),
+                ),
+            );
             return new RenderFragment(
                 `${uniqueConstName}()`,
                 nestedRefs.imports,
@@ -299,12 +331,10 @@ function renderChildCompRef(
         const refPath = element.attributes.ref.split('.');
         // Remove the last element (the ref name itself) to get the nesting path
         const nestingPath = refPath.slice(0, -1);
-        const nestedRefs = nestRefs(nestingPath, new RenderFragment(
-            '',
-            Imports.none(),
-            [],
-            mkRefsTree([refWithUniqueConstName], {}),
-        ));
+        const nestedRefs = nestRefs(
+            nestingPath,
+            new RenderFragment('', Imports.none(), [], mkRefsTree([refWithUniqueConstName], {})),
+        );
         return new RenderFragment(
             `${uniqueConstName}()`,
             nestedRefs.imports,

@@ -320,44 +320,95 @@ describe('expression-compiler', () => {
     describe('parseBooleanAttributeExpression', () => {
         let defaultVars = new Variables(
             new JayObjectType('data', {
-                string1: JayString,
-                string3: JayString,
+                isEnabled: JayBoolean,
+                isVisible: JayBoolean,
+                nested: new JayObjectType('nested', {
+                    isActive: JayBoolean,
+                    status: new JayEnumType('Status', ['pending', 'active', 'completed']),
+                }),
+                currentSort: new JayEnumType('CurrentSort', ['newest', 'oldest', 'priceAsc']),
             }),
         );
 
-        it('constant string expression', () => {
-            const actual = parseBooleanAttributeExpression('some constant string', defaultVars);
-            expect(actual.rendered).toEqual("'some constant string'");
-            expect(actual.imports.has(Import.booleanAttribute)).toBeFalsy();
-        });
-
-        it('constant number expression', () => {
-            const actual = parseBooleanAttributeExpression('123123', defaultVars);
-            expect(actual.rendered).toEqual("'123123'");
-            expect(actual.imports.has(Import.booleanAttribute)).toBeFalsy();
-        });
-
-        it('single accessor', () => {
-            const actual = parseBooleanAttributeExpression('{string1}', defaultVars);
-            expect(actual.rendered).toEqual('ba(vs => vs.string1)');
+        it('simple boolean condition', () => {
+            const actual = parseBooleanAttributeExpression('isEnabled', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => vs.isEnabled)');
             expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
         });
 
-        it('single accessor in text', () => {
-            const actual = parseBooleanAttributeExpression('some {string1} thing', defaultVars);
-            expect(actual.rendered).toEqual('ba(vs => `some ${vs.string1} thing`)');
+        it('negated boolean condition', () => {
+            const actual = parseBooleanAttributeExpression('!isEnabled', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => !vs.isEnabled)');
             expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
         });
 
-        it('single accessor with text before', () => {
-            const actual = parseBooleanAttributeExpression('some {string1}', defaultVars);
-            expect(actual.rendered).toEqual('ba(vs => `some ${vs.string1}`)');
+        it('nested boolean condition', () => {
+            const actual = parseBooleanAttributeExpression('nested.isActive', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => vs.nested?.isActive)');
             expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
         });
 
-        it('single accessor with text after', () => {
-            const actual = parseBooleanAttributeExpression('{string1} thing', defaultVars);
-            expect(actual.rendered).toEqual('ba(vs => `${vs.string1} thing`)');
+        it('enum comparison with ==', () => {
+            const actual = parseBooleanAttributeExpression('currentSort == newest', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => vs.currentSort === CurrentSort.newest)');
+            expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
+        });
+
+        it('enum comparison with ===', () => {
+            const actual = parseBooleanAttributeExpression('currentSort === newest', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => vs.currentSort === CurrentSort.newest)');
+            expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
+        });
+
+        it('enum not equal with !=', () => {
+            const actual = parseBooleanAttributeExpression('currentSort != newest', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => vs.currentSort !== CurrentSort.newest)');
+            expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
+        });
+
+        it('nested enum comparison', () => {
+            const actual = parseBooleanAttributeExpression('nested.status == active', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => vs.nested?.status === Status.active)');
+            expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
+        });
+
+        it('logical AND with two booleans', () => {
+            const actual = parseBooleanAttributeExpression('isEnabled && isVisible', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => (vs.isEnabled) && (vs.isVisible))');
+            expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
+        });
+
+        it('logical OR with two booleans', () => {
+            const actual = parseBooleanAttributeExpression('isEnabled || isVisible', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => (vs.isEnabled) || (vs.isVisible))');
+            expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
+        });
+
+        it('logical AND with negation', () => {
+            const actual = parseBooleanAttributeExpression('isEnabled && !isVisible', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => (vs.isEnabled) && (!vs.isVisible))');
+            expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
+        });
+
+        it('boolean AND enum comparison', () => {
+            const actual = parseBooleanAttributeExpression(
+                'isEnabled && currentSort == newest',
+                defaultVars,
+            );
+            expect(actual.rendered).toEqual(
+                'ba(vs => (vs.isEnabled) && (vs.currentSort === CurrentSort.newest))',
+            );
+            expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
+        });
+
+        it('complex condition with nested and enum', () => {
+            const actual = parseBooleanAttributeExpression(
+                'nested.isActive && nested.status == active',
+                defaultVars,
+            );
+            expect(actual.rendered).toEqual(
+                'ba(vs => (vs.nested?.isActive) && (vs.nested?.status === Status.active))',
+            );
             expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
         });
     });

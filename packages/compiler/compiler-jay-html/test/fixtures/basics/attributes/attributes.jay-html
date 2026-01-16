@@ -25,8 +25,8 @@ data:
     <div data-attribute="{text}-abcd"/>
     <div data-attribute="abcd-{text}"/>
     <div data-attribute="abcd-{text}-abcd"/>
-    <button disabled="{bool1}"></button>
-    <button disabled="{!bool1}"></button>
+    <button disabled="bool1"></button>
+    <button disabled="!bool1"></button>
     <button disabled></button>
 </div>
 </body>

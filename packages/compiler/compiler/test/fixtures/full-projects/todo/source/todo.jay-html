@@ -26,7 +26,7 @@ data:
             <input class="new-todo" placeholder="What needs to be done?" value="{newTodo}" ref="newTodo" autofocus/>
         </header>
         <section class="main" if="hasItems">
-            <input id="toggle-all" class="toggle-all" type="checkbox" ref="toggleAll" checked={noActiveItems}>
+            <input id="toggle-all" class="toggle-all" type="checkbox" ref="toggleAll" checked="{noActiveItems}">
             <label for="toggle-all"></label>
             <ul class="todo-list">
                 <Item title="{title}" isCompleted={isCompleted} forEach="shownTodos" trackBy="id" ref="items"/>
