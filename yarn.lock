@@ -4366,6 +4366,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@jay-framework/jay-stack-cli@workspace:packages/jay-stack/stack-cli"
   dependencies:
+    "@jay-framework/compiler-jay-html": "workspace:^"
+    "@jay-framework/compiler-shared": "workspace:^"
     "@jay-framework/dev-environment": "workspace:^"
     "@jay-framework/dev-server": "workspace:^"
     "@jay-framework/editor-server": "workspace:^"
@@ -4375,6 +4377,7 @@ __metadata:
     chalk: "npm:^4.1.2"
     commander: "npm:^14.0.0"
     express: "npm:^5.0.1"
+    glob: "npm:^10.3.10"
     nodemon: "npm:^3.0.3"
     replace-in-file: "npm:^7.1.0"
     rimraf: "npm:^5.0.5"

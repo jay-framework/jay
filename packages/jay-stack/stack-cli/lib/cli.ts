@@ -2,6 +2,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { validatePlugin, type ValidationResult } from '@jay-framework/plugin-validator';
 import { startDevServer } from './server';
+import { validateJayFiles, printJayValidationResult } from './validate';
 
 const program = new Command();
 
@@ -21,6 +22,35 @@ program
             });
         } catch (error: any) {
             console.error(chalk.red('Error starting dev server:'), error.message);
+            process.exit(1);
+        }
+    });
+
+// Jay file validation command
+program
+    .command('validate [path]')
+    .description('Validate all .jay-html and .jay-contract files in the project')
+    .option('-v, --verbose', 'Show per-file validation status')
+    .option('--json', 'Output results as JSON')
+    .action(async (scanPath, options) => {
+        try {
+            const result = await validateJayFiles({
+                path: scanPath,
+                verbose: options.verbose,
+                json: options.json,
+            });
+
+            printJayValidationResult(result, options);
+
+            if (!result.valid) {
+                process.exit(1);
+            }
+        } catch (error: any) {
+            if (options.json) {
+                console.log(JSON.stringify({ valid: false, error: error.message }, null, 2));
+            } else {
+                console.error(chalk.red('Validation error:'), error.message);
+            }
             process.exit(1);
         }
     });

@@ -14,15 +14,64 @@ npm install @jay-framework/stack-cli
 
 ## Usage
 
-### Basic Usage
+### Commands
 
-Simply run the CLI from your project root:
+#### `jay-stack dev [path]`
+
+Start the development server:
 
 ```bash
-@jay-framework/@jay-framework/jay-cli
+jay-stack dev              # Start dev server in current directory
+jay-stack dev ./my-project # Start dev server in specified directory
 ```
 
 This will start both the development server and editor server with default configuration.
+
+#### `jay-stack validate [path]`
+
+Validate all `.jay-html` and `.jay-contract` files in the project without creating output files:
+
+```bash
+jay-stack validate              # Validate files in pagesBase from config
+jay-stack validate ./src/pages  # Validate files in specified directory
+jay-stack validate --verbose    # Show per-file validation status
+jay-stack validate --json       # Output results as JSON (for CI/tooling)
+```
+
+This command is useful for:
+- **CI pipelines**: Returns exit code 1 on validation errors
+- **Development workflow**: Quick syntax checking without running the dev server
+- **Vite integration**: Validate generated `.jay-html` files
+
+Example output:
+```
+✅ Jay Stack validation successful!
+
+Scanned 12 .jay-html files, 5 .jay-contract files
+No errors found.
+```
+
+Or with errors:
+```
+❌ Jay Stack validation failed
+
+Errors:
+  ❌ src/pages/product/page.jay-html
+     jay file should have exactly one jay-data script, found 2
+
+1 error(s) found, 11 file(s) valid.
+```
+
+#### `jay-stack validate-plugin [path]`
+
+Validate a Jay Stack plugin package:
+
+```bash
+jay-stack validate-plugin              # Validate plugin in current directory
+jay-stack validate-plugin ./my-plugin  # Validate plugin in specified directory
+jay-stack validate-plugin --verbose    # Show detailed validation output
+jay-stack validate-plugin --strict     # Treat warnings as errors (for CI)
+```
 
 ### Configuration
 
@@ -143,15 +192,29 @@ The CLI is built using:
 - **get-port** - Automatic port discovery
 - **Vite** - Build tool integration
 
-## Future Enhancements
+## CLI Reference
 
-**Note**: The CLI currently does not accept command-line parameters. This will change in future versions to support:
+| Command | Description |
+|---------|-------------|
+| `jay-stack dev [path]` | Start the development server |
+| `jay-stack validate [path]` | Validate jay-html and jay-contract files |
+| `jay-stack validate-plugin [path]` | Validate a plugin package |
 
-- Custom pages directory path
-- Custom TypeScript configuration file
-- Custom output directory
-- Additional server configuration options
-- Development vs production modes
+### Validate Command Options
+
+| Option | Description |
+|--------|-------------|
+| `-v, --verbose` | Show per-file validation status |
+| `--json` | Output results as JSON |
+
+### Validate-Plugin Command Options
+
+| Option | Description |
+|--------|-------------|
+| `-v, --verbose` | Show detailed validation output |
+| `--strict` | Treat warnings as errors (for CI) |
+| `--local` | Validate local plugins in src/plugins/ |
+| `--generate-types` | Generate .d.ts files for contracts |
 
 ## Related Packages
 

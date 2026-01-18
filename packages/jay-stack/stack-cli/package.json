@@ -23,12 +23,15 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@jay-framework/compiler-jay-html": "workspace:^",
+    "@jay-framework/compiler-shared": "workspace:^",
     "@jay-framework/dev-server": "workspace:^",
     "@jay-framework/editor-server": "workspace:^",
     "@jay-framework/plugin-validator": "workspace:^",
     "chalk": "^4.1.2",
     "commander": "^14.0.0",
     "express": "^5.0.1",
+    "glob": "^10.3.10",
     "vite": "^5.0.11"
   },
   "devDependencies": {
