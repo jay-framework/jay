@@ -16,6 +16,7 @@ import {
 } from '@jay-framework/compiler-jay-html';
 import path from 'node:path';
 import { JayPluginContext } from './jay-plugin-context';
+import { watchChangesFor } from './watch';
 
 export function stripTSExtension(id: string) {
     // First get the base path without query parameters
@@ -81,8 +82,16 @@ export async function loadCssFile(
             JAY_IMPORT_RESOLVER,
             jayContext.projectRoot,
         );
+
+        // Watch linked CSS files so changes trigger recompilation
+        if (jayHtml.val?.linkedCssFiles) {
+            for (const cssFile of jayHtml.val.linkedCssFiles) {
+                watchChangesFor(context, cssFile);
+            }
+        }
+
         console.info(`[load] end ${id}`);
-        return { code: jayHtml.val.css };
+        return { code: jayHtml.val?.css };
     } else {
         console.info(`[load] rollup environment - css not supported - ignoring css ${id}`);
         return { code: '' };

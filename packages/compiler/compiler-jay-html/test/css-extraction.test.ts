@@ -1,5 +1,6 @@
 import { parseJayFile, JAY_IMPORT_RESOLVER } from '../lib';
 import { stripMargin } from './test-utils/strip-margin';
+import path from 'path';
 
 describe('CSS extraction', () => {
     const TEST_YAML = `data:
@@ -143,5 +144,100 @@ describe('CSS extraction', () => {
         expect(jayFile.val.css).toBeDefined();
         expect(jayFile.val.css).toContain('/* External CSS: styles/main.css */');
         expect(jayFile.val.css).toContain('.custom { font-weight: bold; }');
+    });
+
+    describe('linkedCssFiles for dev server watching', () => {
+        it('should include resolved paths for linked CSS files', async () => {
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    TEST_YAML,
+                    TEST_BODY,
+                    `<link rel="stylesheet" href="fixtures/css-test/styles.css">
+                      |<link rel="stylesheet" href="fixtures/css-test/components.css">`,
+                ),
+                'LinkedCssFilesTest',
+                './test',
+                {},
+                JAY_IMPORT_RESOLVER,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([]);
+            expect(jayFile.val.linkedCssFiles).toBeDefined();
+            expect(jayFile.val.linkedCssFiles).toHaveLength(2);
+            expect(jayFile.val.linkedCssFiles[0]).toBe(
+                path.resolve('./test', 'fixtures/css-test/styles.css'),
+            );
+            expect(jayFile.val.linkedCssFiles[1]).toBe(
+                path.resolve('./test', 'fixtures/css-test/components.css'),
+            );
+        });
+
+        it('should be undefined when no linked CSS files exist', async () => {
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    TEST_YAML,
+                    TEST_BODY,
+                    `<style>
+                      |   .counter { color: blue; }
+                      | </style>`,
+                ),
+                'InlineOnlyTest',
+                './test',
+                {},
+                JAY_IMPORT_RESOLVER,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([]);
+            expect(jayFile.val.linkedCssFiles).toBeUndefined();
+        });
+
+        it('should not include external URLs in linkedCssFiles', async () => {
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    TEST_YAML,
+                    TEST_BODY,
+                    `<link rel="stylesheet" href="https://example.com/styles.css">
+                      |<link rel="stylesheet" href="//cdn.example.com/styles.css">
+                      |<link rel="stylesheet" href="fixtures/css-test/styles.css">`,
+                ),
+                'ExternalUrlsTest',
+                './test',
+                {},
+                JAY_IMPORT_RESOLVER,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([]);
+            expect(jayFile.val.linkedCssFiles).toBeDefined();
+            expect(jayFile.val.linkedCssFiles).toHaveLength(1);
+            expect(jayFile.val.linkedCssFiles[0]).toBe(
+                path.resolve('./test', 'fixtures/css-test/styles.css'),
+            );
+        });
+
+        it('should include missing CSS files in linkedCssFiles for watch purposes', async () => {
+            // Even if a CSS file doesn't exist, we still want to watch for its creation
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    TEST_YAML,
+                    TEST_BODY,
+                    `<link rel="stylesheet" href="styles/missing.css">`,
+                ),
+                'MissingCssWatchTest',
+                './test',
+                {},
+                JAY_IMPORT_RESOLVER,
+                '',
+            );
+
+            // There should be a validation error for the missing file
+            expect(jayFile.validations).toContain(
+                'CSS file not found or unreadable: styles/missing.css',
+            );
+            // But the file should still be undefined because of validation errors
+            expect(jayFile.val).toBeUndefined();
+        });
     });
 });

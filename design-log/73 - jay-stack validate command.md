@@ -3,16 +3,19 @@
 ## Background
 
 The `jay-stack` CLI currently has two commands:
+
 - `dev` - starts the development server
 - `validate-plugin` - validates a plugin package
 
 When developing with Vite, developers create `.jay-html` files that get compiled on-the-fly. Currently, there's no way to validate all jay-html files in a project without either:
+
 1. Running the dev server and navigating to each page
 2. Actually compiling the files (which creates output files)
 
 ## Problem
 
 Need a CLI command that:
+
 1. Scans all `.jay-html` files in a jay-stack project
 2. Validates they will compile correctly (parsing + code generation)
 3. Does NOT create any output files
@@ -28,7 +31,8 @@ A: `jay-stack-cli` makes more sense since this is for jay-stack projects that us
 A: Yes - contracts are often referenced from jay-html files, and invalid contracts would cause compilation failures anyway.
 
 **Q3: What validation stages should be performed?**
-A: 
+A:
+
 1. Parse the jay-html file (structure, YAML, imports, types)
 2. Generate the code (catches expression compilation errors, template issues)
 
@@ -57,27 +61,27 @@ jay-stack validate ./custom/path    # Validate files in specific directory
 ```typescript
 // lib/validate.ts
 export interface ValidateOptions {
-    path?: string;           // Directory to scan (defaults to config pagesBase)
-    verbose?: boolean;       // Show per-file status
-    json?: boolean;          // JSON output format
+  path?: string; // Directory to scan (defaults to config pagesBase)
+  verbose?: boolean; // Show per-file status
+  json?: boolean; // JSON output format
 }
 
 export interface ValidationResult {
-    valid: boolean;
-    filesScanned: number;
-    errors: ValidationError[];
-    warnings: ValidationWarning[];
+  valid: boolean;
+  filesScanned: number;
+  errors: ValidationError[];
+  warnings: ValidationWarning[];
 }
 
 export interface ValidationError {
-    file: string;
-    line?: number;
-    column?: number;
-    message: string;
-    stage: 'parse' | 'generate' | 'typecheck';
+  file: string;
+  line?: number;
+  column?: number;
+  message: string;
+  stage: 'parse' | 'generate' | 'typecheck';
 }
 
-export async function validateJayFiles(options: ValidateOptions): Promise<ValidationResult>
+export async function validateJayFiles(options: ValidateOptions): Promise<ValidationResult>;
 ```
 
 ### Validation Flow
@@ -111,16 +115,19 @@ flowchart TD
 ## Implementation Plan
 
 ### Phase 1: Core Validation
+
 1. Create `validate.ts` with file scanning and validation logic
 2. Reuse existing `parseJayFile` and `generateElementFile` from compiler packages
 3. Collect errors without writing files
 
 ### Phase 2: CLI Integration
+
 1. Add `validate` command to `cli.ts`
 2. Add output formatting (human-readable and JSON)
 3. Handle exit codes
 
 ### Phase 3: Tests
+
 1. Test with valid files (should pass)
 2. Test with invalid jay-html (should report errors)
 3. Test with invalid contract references
@@ -149,8 +156,8 @@ $ jay-stack validate
 Errors:
   ❌ src/pages/product/page.jay-html
      Line 15: Unknown binding 'product.invalid_field' - field not found in contract
-     
-  ❌ src/pages/cart/page.jay-html  
+
+  ❌ src/pages/cart/page.jay-html
      Line 8: jay file should have exactly one jay-data script, found 2
 
 2 files with errors, 10 files valid.
@@ -176,10 +183,10 @@ Errors:
 
 ## Trade-offs
 
-| Approach | Pros | Cons |
-|----------|------|------|
-| Parse only | Fast, catches structure errors | Misses code generation bugs |
-| Parse + generate | Catches most real errors | Slightly slower |
+| Approach         | Pros                           | Cons                        |
+| ---------------- | ------------------------------ | --------------------------- |
+| Parse only       | Fast, catches structure errors | Misses code generation bugs |
+| Parse + generate | Catches most real errors       | Slightly slower             |
 
 **Decision**: Parse + generate is sufficient since generated code is expected to be valid TypeScript.
 
@@ -196,6 +203,7 @@ Errors:
 ## Implementation Results
 
 **Files Created/Modified:**
+
 - `lib/validate.ts` - Core validation logic (reuses `parseJayFile`, `generateElementFile`, `parseContract` from compiler packages)
 - `lib/cli.ts` - Added `validate [path]` command with `--verbose` and `--json` options
 - `package.json` - Added dependencies: `@jay-framework/compiler-jay-html`, `@jay-framework/compiler-shared`, `glob`
@@ -204,4 +212,5 @@ Errors:
 **Tests:** 39/39 passing
 
 **Deviations from Design:**
+
 - Function renamed from `printValidationResult` to `printJayValidationResult` to avoid conflict with existing plugin validator function

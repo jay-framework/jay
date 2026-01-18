@@ -39,11 +39,13 @@ jay-stack validate --json       # Output results as JSON (for CI/tooling)
 ```
 
 This command is useful for:
+
 - **CI pipelines**: Returns exit code 1 on validation errors
 - **Development workflow**: Quick syntax checking without running the dev server
 - **Vite integration**: Validate generated `.jay-html` files
 
 Example output:
+
 ```
 ✅ Jay Stack validation successful!
 
@@ -52,6 +54,7 @@ No errors found.
 ```
 
 Or with errors:
+
 ```
 ❌ Jay Stack validation failed
 
@@ -194,27 +197,27 @@ The CLI is built using:
 
 ## CLI Reference
 
-| Command | Description |
-|---------|-------------|
-| `jay-stack dev [path]` | Start the development server |
-| `jay-stack validate [path]` | Validate jay-html and jay-contract files |
-| `jay-stack validate-plugin [path]` | Validate a plugin package |
+| Command                            | Description                              |
+| ---------------------------------- | ---------------------------------------- |
+| `jay-stack dev [path]`             | Start the development server             |
+| `jay-stack validate [path]`        | Validate jay-html and jay-contract files |
+| `jay-stack validate-plugin [path]` | Validate a plugin package                |
 
 ### Validate Command Options
 
-| Option | Description |
-|--------|-------------|
+| Option          | Description                     |
+| --------------- | ------------------------------- |
 | `-v, --verbose` | Show per-file validation status |
-| `--json` | Output results as JSON |
+| `--json`        | Output results as JSON          |
 
 ### Validate-Plugin Command Options
 
-| Option | Description |
-|--------|-------------|
-| `-v, --verbose` | Show detailed validation output |
-| `--strict` | Treat warnings as errors (for CI) |
-| `--local` | Validate local plugins in src/plugins/ |
-| `--generate-types` | Generate .d.ts files for contracts |
+| Option             | Description                            |
+| ------------------ | -------------------------------------- |
+| `-v, --verbose`    | Show detailed validation output        |
+| `--strict`         | Treat warnings as errors (for CI)      |
+| `--local`          | Validate local plugins in src/plugins/ |
+| `--generate-types` | Generate .d.ts files for contracts     |
 
 ## Related Packages
 

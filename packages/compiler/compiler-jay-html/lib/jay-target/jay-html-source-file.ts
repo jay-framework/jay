@@ -33,6 +33,11 @@ export interface JayHtmlSourceFile extends CompilerSourceFile {
     headlessImports: JayHeadlessImports[];
     headLinks: JayHtmlHeadLink[];
     css?: string;
+    /**
+     * Absolute paths to linked CSS files referenced via <link rel="stylesheet">.
+     * Used by the dev server to watch these files for changes.
+     */
+    linkedCssFiles?: string[];
     filename?: string;
     contract?: Contract; // The parsed contract if using contract reference
     contractRef?: string; // Path to contract file if using contract reference

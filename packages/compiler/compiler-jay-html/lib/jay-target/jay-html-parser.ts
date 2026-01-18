@@ -712,12 +712,18 @@ function parseHeadLinks(root: HTMLElement, excludeCssLinks: boolean = false): Ja
         });
 }
 
+interface ExtractCssResult {
+    css: string | undefined;
+    linkedCssFiles: string[];
+}
+
 async function extractCss(
     root: HTMLElement,
     filePath: string,
-): Promise<WithValidations<string | undefined>> {
+): Promise<WithValidations<ExtractCssResult>> {
     const cssParts: string[] = [];
     const validations: string[] = [];
+    const linkedCssFiles: string[] = [];
 
     // Extract CSS from <link> tags with rel="stylesheet"
     const styleLinks = root.querySelectorAll('head link[rel="stylesheet"]');
@@ -736,9 +742,12 @@ async function extractCss(
 
             // Only attempt to read files if we have a valid file path
             if (filePath) {
+                // Resolve the CSS file path relative to the jay-html file
+                const cssFilePath = path.resolve(filePath, href);
+                // Track the CSS file for watching (even if it doesn't exist yet)
+                linkedCssFiles.push(cssFilePath);
+
                 try {
-                    // Resolve the CSS file path relative to the jay-html file
-                    const cssFilePath = path.resolve(filePath, href);
                     const cssContent = await fs.readFile(cssFilePath, 'utf-8');
                     cssParts.push(`/* External CSS: ${href} */\n${cssContent}`);
                 } catch (error) {
@@ -762,7 +771,7 @@ async function extractCss(
     }
 
     const css = cssParts.length > 0 ? cssParts.join('\n\n') : undefined;
-    return new WithValidations(css, validations);
+    return new WithValidations({ css, linkedCssFiles }, validations);
 }
 
 /**
@@ -904,7 +913,9 @@ export async function parseJayFile(
             namespaces,
             headlessImports,
             headLinks,
-            css: cssResult.val,
+            css: cssResult.val?.css,
+            linkedCssFiles:
+                cssResult.val?.linkedCssFiles.length > 0 ? cssResult.val.linkedCssFiles : undefined,
             filename: normalizedFileName,
             contract: jayYaml.parsedContract,
             contractRef: jayYaml.contractRef,

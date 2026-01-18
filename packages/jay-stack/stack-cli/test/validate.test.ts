@@ -14,7 +14,9 @@ describe('validateJayFiles', () => {
     });
 
     it('should return error for jay-html with missing jay-data script', async () => {
-        const result = await validateJayFiles({ path: path.join(baseFixturesDir, 'missing-jay-data') });
+        const result = await validateJayFiles({
+            path: path.join(baseFixturesDir, 'missing-jay-data'),
+        });
 
         expect(result.valid).toBe(false);
         expect(result.jayHtmlFilesScanned).toBe(1);
@@ -23,7 +25,9 @@ describe('validateJayFiles', () => {
     });
 
     it('should return error for jay-html with multiple jay-data scripts', async () => {
-        const result = await validateJayFiles({ path: path.join(baseFixturesDir, 'multiple-jay-data') });
+        const result = await validateJayFiles({
+            path: path.join(baseFixturesDir, 'multiple-jay-data'),
+        });
 
         expect(result.valid).toBe(false);
         expect(result.errors).toHaveLength(1);
@@ -31,7 +35,9 @@ describe('validateJayFiles', () => {
     });
 
     it('should validate jay-contract files', async () => {
-        const result = await validateJayFiles({ path: path.join(baseFixturesDir, 'valid-contract') });
+        const result = await validateJayFiles({
+            path: path.join(baseFixturesDir, 'valid-contract'),
+        });
 
         expect(result.valid).toBe(true);
         expect(result.contractFilesScanned).toBe(1);
@@ -39,7 +45,9 @@ describe('validateJayFiles', () => {
     });
 
     it('should return error for invalid jay-contract file', async () => {
-        const result = await validateJayFiles({ path: path.join(baseFixturesDir, 'invalid-contract') });
+        const result = await validateJayFiles({
+            path: path.join(baseFixturesDir, 'invalid-contract'),
+        });
 
         expect(result.valid).toBe(false);
         expect(result.contractFilesScanned).toBe(1);
