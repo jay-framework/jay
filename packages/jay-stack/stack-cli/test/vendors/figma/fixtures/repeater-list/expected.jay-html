@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <script type="application/jay-data">
+    data:
+  </script>
+  <title>pages</title>
+  <style>
+    /* Basic reset */
+    body { margin: 0; font-family: sans-serif; }
+    a { color: inherit; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    div { box-sizing: border-box; }
+    
+    /* Scrollbar styling for Webkit browsers */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.5);
+    }
+    
+    /* Smooth scrolling */
+    * {
+      scroll-behavior: smooth;
+    }
+  </style>
+</head>
+<body>
+  <div data-figma-id="frame-1" data-figma-type="frame" style="width: 600px;height: 800px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
+    <!-- Content -->
+    <div id="repeater-frame" data-figma-id="repeater-frame" data-figma-type="frame-repeater" style="width: 600px;height: 600px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
+      <div style="position: relative; width: 100%;" forEach="items" trackBy="id">
+        <div data-figma-id="item-template" data-figma-type="frame" style="width: 600px;height: 80px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: row;box-sizing: border-box;">
+          <!-- Item -->
+          <div data-figma-id="item-title" style="width: 400px;height: 30px;font-family: 'Inter', sans-serif;font-size: 20px;font-weight: 600;color: #000000;text-align: left;">{title}</div>
+          <div data-figma-id="item-description" style="width: 400px;height: 40px;font-family: 'Inter', sans-serif;font-size: 14px;font-weight: 400;color: #000000;text-align: left;">{description}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

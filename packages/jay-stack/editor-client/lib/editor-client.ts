@@ -4,10 +4,14 @@ import {
     SaveImageMessage,
     HasImageMessage,
     GetProjectInfoMessage,
+    ExportMessage,
+    ImportMessage,
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
     GetProjectInfoResponse,
+    ExportResponse,
+    ImportResponse,
     EditorProtocolMessageTypes,
     EditorProtocolResponseTypes,
 } from '@jay-framework/editor-protocol';
@@ -62,8 +66,18 @@ export class EditorClient implements EditorProtocol {
         return this.connectionManager.sendMessage<GetProjectInfoMessage>(params);
     }
 
-    async send(params: EditorProtocolMessageTypes): Promise<EditorProtocolResponseTypes> {
-        return this.connectionManager.sendMessage<EditorProtocolMessageTypes>(params);
+    async export<TVendorDoc>(params: ExportMessage<TVendorDoc>): Promise<ExportResponse> {
+        return this.connectionManager.sendMessage<ExportMessage<TVendorDoc>>(params);
+    }
+
+    async import<TVendorDoc>(
+        params: ImportMessage<TVendorDoc>,
+    ): Promise<ImportResponse<TVendorDoc>> {
+        return this.connectionManager.sendMessage<ImportMessage<TVendorDoc>>(params);
+    }
+
+    async send(params: EditorProtocolMessageTypes<any>): Promise<EditorProtocolResponseTypes<any>> {
+        return this.connectionManager.sendMessage<EditorProtocolMessageTypes<any>>(params);
     }
 
     // Get access to the underlying connection manager if needed

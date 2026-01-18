@@ -1,0 +1,380 @@
+{
+  "id": "section-1",
+  "name": "Button Variants Page",
+  "type": "SECTION",
+  "visible": true,
+  "locked": false,
+  "parentId": "page-1",
+  "parentType": "PAGE",
+  "x": 0,
+  "y": 0,
+  "width": 1440,
+  "height": 900,
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/"
+  },
+  "fills": [],
+  "children": [
+    {
+      "id": "frame-1",
+      "name": "Content",
+      "type": "FRAME",
+      "visible": true,
+      "locked": false,
+      "parentId": "section-1",
+      "parentType": "SECTION",
+      "x": 100,
+      "y": 100,
+      "width": 400,
+      "height": 200,
+      "layoutMode": "VERTICAL",
+      "primaryAxisAlignItems": "MIN",
+      "counterAxisAlignItems": "MIN",
+      "itemSpacing": 20,
+      "paddingLeft": 20,
+      "paddingRight": 20,
+      "paddingTop": 20,
+      "paddingBottom": 20,
+      "fills": [],
+      "strokes": [],
+      "children": [
+        {
+          "id": "button-instance",
+          "name": "Button Instance",
+          "type": "INSTANCE",
+          "visible": true,
+          "locked": false,
+          "parentId": "frame-1",
+          "parentType": "FRAME",
+          "parentLayoutMode": "VERTICAL",
+          "parentOverflowDirection": "NONE",
+          "x": 0,
+          "y": 0,
+          "width": 200,
+          "height": 50,
+          "rotation": 0,
+          "opacity": 1,
+          "blendMode": "PASS_THROUGH",
+          "isMask": false,
+          "absoluteRenderBounds": {
+            "x": 120,
+            "y": 120,
+            "width": 200,
+            "height": 50
+          },
+          "layoutPositioning": "AUTO",
+          "layoutGrow": 0,
+          "layoutAlign": "INHERIT",
+          "layoutSizingHorizontal": "FIXED",
+          "layoutSizingVertical": "FIXED",
+          "pluginData": {
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/\"},\"tagPath\":[\"buttonVariant\"],\"property\":\"buttonVariant\"},{\"pageContractPath\":{\"pageUrl\":\"/\"},\"tagPath\":[\"isDisabled\"],\"property\":\"isDisabled\"}]"
+          },
+          "mainComponentId": "button-primary-enabled",
+          "mainComponentName": "buttonVariant=primary, isDisabled=false",
+          "componentSetId": "button-component",
+          "componentSetName": "Button",
+          "componentPropertyDefinitions": {
+            "buttonVariant": {
+              "type": "VARIANT",
+              "variantOptions": ["primary", "secondary"],
+              "defaultValue": "primary"
+            },
+            "isDisabled": {
+              "type": "VARIANT",
+              "variantOptions": ["true", "false"],
+              "defaultValue": "false"
+            }
+          },
+          "variants": [
+            {
+              "id": "button-primary-enabled",
+              "name": "buttonVariant=primary, isDisabled=false",
+              "type": "COMPONENT",
+              "visible": true,
+              "locked": false,
+              "parentId": "button-component",
+              "parentType": "COMPONENT_SET",
+              "parentLayoutMode": "NONE",
+              "parentOverflowDirection": "NONE",
+              "x": 0,
+              "y": 0,
+              "width": 200,
+              "height": 50,
+              "rotation": 0,
+              "opacity": 1,
+              "blendMode": "PASS_THROUGH",
+              "isMask": false,
+              "absoluteRenderBounds": {
+                "x": 0,
+                "y": 0,
+                "width": 200,
+                "height": 50
+              },
+              "layoutPositioning": "AUTO",
+              "layoutGrow": 0,
+              "layoutAlign": "INHERIT",
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED",
+              "layoutMode": "HORIZONTAL",
+              "primaryAxisAlignItems": "CENTER",
+              "counterAxisAlignItems": "CENTER",
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.2,
+                    "g": 0.4,
+                    "b": 1
+                  }
+                }
+              ],
+              "children": [
+                {
+                  "id": "text-primary",
+                  "name": "Label",
+                  "type": "TEXT",
+                  "characters": "Click Me",
+                  "x": 50,
+                  "y": 15,
+                  "width": 100,
+                  "height": 20,
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Medium"
+                  },
+                  "fontSize": 16,
+                  "fontWeight": 500,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0,
+                        "g": 0,
+                        "b": 0
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "button-primary-disabled",
+              "name": "buttonVariant=primary, isDisabled=true",
+              "type": "COMPONENT",
+              "visible": true,
+              "locked": false,
+              "parentId": "button-component",
+              "parentType": "COMPONENT_SET",
+              "parentLayoutMode": "NONE",
+              "parentOverflowDirection": "NONE",
+              "x": 0,
+              "y": 70,
+              "width": 200,
+              "height": 50,
+              "rotation": 0,
+              "opacity": 1,
+              "blendMode": "PASS_THROUGH",
+              "isMask": false,
+              "absoluteRenderBounds": {
+                "x": 0,
+                "y": 70,
+                "width": 200,
+                "height": 50
+              },
+              "layoutPositioning": "AUTO",
+              "layoutGrow": 0,
+              "layoutAlign": "INHERIT",
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED",
+              "layoutMode": "HORIZONTAL",
+              "primaryAxisAlignItems": "CENTER",
+              "counterAxisAlignItems": "CENTER",
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.8,
+                    "g": 0.8,
+                    "b": 0.8
+                  }
+                }
+              ],
+              "children": [
+                {
+                  "id": "text-disabled",
+                  "name": "Label",
+                  "type": "TEXT",
+                  "characters": "Click Me",
+                  "x": 50,
+                  "y": 15,
+                  "width": 100,
+                  "height": 20,
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Medium"
+                  },
+                  "fontSize": 16,
+                  "fontWeight": 500,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0,
+                        "g": 0,
+                        "b": 0
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "button-secondary-enabled",
+              "name": "buttonVariant=secondary, isDisabled=false",
+              "type": "COMPONENT",
+              "visible": true,
+              "locked": false,
+              "parentId": "button-component",
+              "parentType": "COMPONENT_SET",
+              "parentLayoutMode": "NONE",
+              "parentOverflowDirection": "NONE",
+              "x": 220,
+              "y": 0,
+              "width": 200,
+              "height": 50,
+              "rotation": 0,
+              "opacity": 1,
+              "blendMode": "PASS_THROUGH",
+              "isMask": false,
+              "absoluteRenderBounds": {
+                "x": 220,
+                "y": 0,
+                "width": 200,
+                "height": 50
+              },
+              "layoutPositioning": "AUTO",
+              "layoutGrow": 0,
+              "layoutAlign": "INHERIT",
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED",
+              "layoutMode": "HORIZONTAL",
+              "primaryAxisAlignItems": "CENTER",
+              "counterAxisAlignItems": "CENTER",
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 1,
+                    "g": 1,
+                    "b": 1
+                  }
+                }
+              ],
+              "children": [
+                {
+                  "id": "text-secondary",
+                  "name": "Label",
+                  "type": "TEXT",
+                  "characters": "Click Me",
+                  "x": 50,
+                  "y": 15,
+                  "width": 100,
+                  "height": 20,
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Medium"
+                  },
+                  "fontSize": 16,
+                  "fontWeight": 500,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0,
+                        "g": 0,
+                        "b": 0
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "button-secondary-disabled",
+              "name": "buttonVariant=secondary, isDisabled=true",
+              "type": "COMPONENT",
+              "visible": true,
+              "locked": false,
+              "parentId": "button-component",
+              "parentType": "COMPONENT_SET",
+              "parentLayoutMode": "NONE",
+              "parentOverflowDirection": "NONE",
+              "x": 220,
+              "y": 70,
+              "width": 200,
+              "height": 50,
+              "rotation": 0,
+              "opacity": 1,
+              "blendMode": "PASS_THROUGH",
+              "isMask": false,
+              "absoluteRenderBounds": {
+                "x": 220,
+                "y": 70,
+                "width": 200,
+                "height": 50
+              },
+              "layoutPositioning": "AUTO",
+              "layoutGrow": 0,
+              "layoutAlign": "INHERIT",
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED",
+              "layoutMode": "HORIZONTAL",
+              "primaryAxisAlignItems": "CENTER",
+              "counterAxisAlignItems": "CENTER",
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.9,
+                    "g": 0.9,
+                    "b": 0.9
+                  }
+                }
+              ],
+              "children": [
+                {
+                  "id": "text-secondary-disabled",
+                  "name": "Label",
+                  "type": "TEXT",
+                  "characters": "Click Me",
+                  "x": 50,
+                  "y": 15,
+                  "width": 100,
+                  "height": 20,
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Medium"
+                  },
+                  "fontSize": 16,
+                  "fontWeight": 500,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0,
+                        "g": 0,
+                        "b": 0
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

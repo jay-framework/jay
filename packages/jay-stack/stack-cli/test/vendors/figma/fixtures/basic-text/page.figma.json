@@ -1,0 +1,82 @@
+{
+  "id": "section-1",
+  "name": "Basic Text Page",
+  "type": "SECTION",
+  "x": 0,
+  "y": 0,
+  "width": 1440,
+  "height": 900,
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/"
+  },
+  "children": [
+    {
+      "id": "frame-1",
+      "name": "Content",
+      "type": "FRAME",
+      "x": 0,
+      "y": 0,
+      "width": 800,
+      "height": 400,
+      "layoutMode": "VERTICAL",
+      "fills": [],
+      "children": [
+        {
+          "id": "text-1",
+          "name": "Title",
+          "type": "TEXT",
+          "characters": "Welcome to Jay Framework",
+          "x": 0,
+          "y": 0,
+          "width": 600,
+          "height": 60,
+          "fontName": {
+            "family": "Inter",
+            "style": "Bold"
+          },
+          "fontSize": 48,
+          "fontWeight": 700,
+          "textAlignHorizontal": "LEFT",
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0.1,
+                "g": 0.1,
+                "b": 0.1
+              }
+            }
+          ]
+        },
+        {
+          "id": "text-2",
+          "name": "Description",
+          "type": "TEXT",
+          "characters": "Build beautiful UIs with design tools",
+          "x": 0,
+          "y": 80,
+          "width": 500,
+          "height": 40,
+          "fontName": {
+            "family": "Inter",
+            "style": "Regular"
+          },
+          "fontSize": 24,
+          "fontWeight": 400,
+          "textAlignHorizontal": "LEFT",
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0.4,
+                "g": 0.4,
+                "b": 0.4
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

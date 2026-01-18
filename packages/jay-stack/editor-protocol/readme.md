@@ -25,12 +25,16 @@ import {
   createPublishMessage,
   createSaveImageMessage,
   createHasImageMessage,
+  createExportMessage,
+  createImportMessage,
   createProtocolMessage,
 } from '@jay-framework/editor-protocol';
 
 // Use in editor applications
 const editor: EditorProtocol = {
   publish: async (params) => ({
+    type: 'publish',
+    success: true,
     status: [
       {
         success: true,
@@ -39,8 +43,40 @@ const editor: EditorProtocol = {
       },
     ],
   }),
-  saveImage: async (params) => ({ success: true, imageUrl: '/assets/image.png' }),
-  hasImage: async (params) => ({ exists: true, imageUrl: '/assets/image.png' }),
+  saveImage: async (params) => ({
+    type: 'saveImage',
+    success: true,
+    imageUrl: '/assets/image.png',
+  }),
+  hasImage: async (params) => ({
+    type: 'hasImage',
+    success: true,
+    exists: true,
+    imageUrl: '/assets/image.png',
+  }),
+  getProjectInfo: async (params) => ({
+    type: 'getProjectInfo',
+    success: true,
+    info: {
+      name: 'My Project',
+      localPath: '/path/to/project',
+      pages: [],
+      components: [],
+      plugins: [],
+    },
+  }),
+  export: async (params) => ({
+    type: 'export',
+    success: true,
+    vendorSourcePath: '/pages/home/page.figma.json',
+  }),
+  import: async (params) => ({
+    type: 'import',
+    success: true,
+    vendorDoc: {
+      /* vendor document */
+    },
+  }),
 };
 
 // Use in dev servers
@@ -48,6 +84,9 @@ const server: DevServerProtocol = {
   onPublish: (callback) => {},
   onSaveImage: (callback) => {},
   onHasImage: (callback) => {},
+  onGetProjectInfo: (callback) => {},
+  onExport: (callback) => {},
+  onImport: (callback) => {},
 };
 
 // Create messages using constructors
@@ -91,6 +130,9 @@ const protocolMessage = createProtocolMessage(publishMessage);
 - `createPublishMessage(pages?, components?)` - Creates a publish message with optional pages and components
 - `createSaveImageMessage(imageId, imageData)` - Creates a save image message
 - `createHasImageMessage(imageId)` - Creates a has image message
+- `createGetProjectInfoMessage()` - Creates a get project info message
+- `createExportMessage<TVendorDoc>(vendorId, pageUrl, vendorDoc)` - Creates an export message with vendor document
+- `createImportMessage<TVendorDoc>(vendorId, pageUrl)` - Creates an import message to retrieve vendor document
 - `createProtocolMessage(payload)` - Creates a protocol message wrapper with auto-generated timestamp-based ID
 
 ### Response Constructors
@@ -98,6 +140,9 @@ const protocolMessage = createProtocolMessage(publishMessage);
 - `createPublishResponse(status)` - Creates a publish response
 - `createSaveImageResponse(success, imageUrl?, error?)` - Creates a save image response
 - `createHasImageResponse(exists, imageUrl?)` - Creates a has image response
+- `createGetProjectInfoResponse(info, success?, error?)` - Creates a get project info response
+- `createExportResponse(success, vendorSourcePath?, jayHtmlPath?, contractPath?, warnings?, error?)` - Creates an export response
+- `createImportResponse<TVendorDoc>(success, vendorDoc?, error?)` - Creates an import response with vendor document
 - `createProtocolResponse(id, payload)` - Creates a protocol response wrapper with timestamp
 
 ## Protocol Operations
@@ -120,6 +165,81 @@ Saves base64 image data to the dev server's public assets.
 ### Has Image
 
 Checks if an image with the given ID already exists on the server.
+
+### Get Project Info
+
+Retrieves comprehensive project information including pages, components, and installed plugins with their contracts.
+
+### Export
+
+Exports a vendor-specific document (e.g., Figma, Wix) to the dev server at a specific page route. The document is saved as `page.<vendorId>.json` alongside the page's jay-html file.
+
+**Use case**: When a designer exports a Figma design to Jay, the original Figma document can be saved so it can be re-imported later.
+
+**Example:**
+
+```typescript
+import { createExportMessage } from '@jay-framework/editor-protocol';
+
+interface FigmaDocument {
+  nodeId: string;
+  name: string;
+  layers: any[];
+}
+
+const figmaDoc: FigmaDocument = {
+  nodeId: 'abc123',
+  name: 'Homepage',
+  layers: [
+    /* ... */
+  ],
+};
+
+const exportMessage = createExportMessage<FigmaDocument>(
+  'figma', // vendorId
+  '/home', // pageUrl
+  figmaDoc, // vendor document
+);
+
+const response = await editorClient.export(exportMessage);
+// File saved at: src/pages/home/page.figma.json
+```
+
+### Import
+
+Imports a previously exported vendor document from the dev server for a specific page route.
+
+**Use case**: When reopening a page in Figma, retrieve the original Figma document to maintain design history and node references.
+
+**Example:**
+
+```typescript
+import { createImportMessage } from '@jay-framework/editor-protocol';
+
+interface FigmaDocument {
+  nodeId: string;
+  name: string;
+  layers: any[];
+}
+
+const importMessage = createImportMessage<FigmaDocument>(
+  'figma', // vendorId
+  '/home', // pageUrl
+);
+
+const response = await editorClient.import(importMessage);
+if (response.success && response.vendorDoc) {
+  const figmaDoc = response.vendorDoc;
+  // Restore Figma design from saved document
+  console.log('Restored Figma node:', figmaDoc.nodeId);
+}
+```
+
+**File naming convention**: Vendor documents are saved as `page.<vendorId>.json` in the same directory as the page's jay-html file. For example:
+
+- `/src/pages/home/page.jay-html`
+- `/src/pages/home/page.figma.json`
+- `/src/pages/home/page.wix.json`
 
 ## Contract Publishing
 

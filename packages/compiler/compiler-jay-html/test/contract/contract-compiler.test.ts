@@ -32,6 +32,11 @@ describe('compile contract', () => {
                 `Plugin resolution not supported in this test`,
             ]);
         },
+        resolvePluginManifest(pluginName: string, projectRoot: string) {
+            return new WithValidations(null as any, [
+                `Plugin manifest resolution not supported in this test`,
+            ]);
+        },
     };
     it('should compile counter contract', async () => {
         const contract = `
@@ -714,6 +719,11 @@ describe('compile contract', () => {
             },
             resolvePluginComponent() {
                 return null;
+            },
+            resolvePluginManifest(pluginName: string, projectRoot: string) {
+                return new WithValidations(null as any, [
+                    `Plugin manifest resolution not supported in this test`,
+                ]);
             },
         };
 

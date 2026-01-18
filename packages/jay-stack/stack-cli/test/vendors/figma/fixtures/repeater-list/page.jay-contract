@@ -1,0 +1,18 @@
+name: page
+tags:
+  - tag: items
+    type: sub-contract
+    repeated: true
+    trackBy: id
+    tags:
+      - tag: id
+        type: data
+        dataType: string
+        
+      - tag: title
+        type: data
+        dataType: string
+        
+      - tag: description
+        type: data
+        dataType: string

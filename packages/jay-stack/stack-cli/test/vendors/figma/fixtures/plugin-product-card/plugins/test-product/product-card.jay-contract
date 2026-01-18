@@ -1,0 +1,16 @@
+name: product-card
+tags:
+  - tag: name
+    type: data
+    dataType: string
+    description: Product name
+    
+  - tag: price
+    type: data
+    dataType: string
+    description: Product price
+    
+  - tag: image
+    type: data
+    dataType: string
+    description: Product image URL
