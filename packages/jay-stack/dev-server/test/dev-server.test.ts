@@ -103,21 +103,19 @@ target.appendChild(instance.element.dom);
 
         const scriptForMatching = clearScriptForTest(script);
 
+        // Note: page.ts doesn't have .withInteractive(), so it should NOT be in client script
         expect(scriptForMatching).toEqual(`
 import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
 
 
 import { render } from "/page.jay-html.ts";
-import {page} from "/page.ts"
 
 const viewState = {"title":"Page with Code","content":"This page has both a jay-html file and a code file"};
 const fastCarryForward = {};
 const trackByMap = {};
 
 const target = document.getElementById('target');
-const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [
-{comp: page.comp, contextMarkers: page.contexts || []}
-], trackByMap)
+const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [], trackByMap)
 
 const instance = pageComp({...viewState, ...fastCarryForward})
 target.appendChild(instance.element.dom);
@@ -154,23 +152,20 @@ target.appendChild(instance.element.dom);
 
         const scriptForMatching = clearScriptForTest(script);
 
+        // Note: neither page.ts nor headless-component.ts have .withInteractive(),
+        // so they should NOT be in client script
         expect(scriptForMatching).toEqual(`
 import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
 
 
 import { render } from "/page.jay-html.ts";
-import {page} from "/page.ts"
-import {headless} from "/headless-component.ts"
 
 const viewState = {"title":"Page with Headless","content":"This page has a headless component","headless":{"content":"This is from the headless component"}};
 const fastCarryForward = {};
 const trackByMap = {};
 
 const target = document.getElementById('target');
-const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [
-{comp: page.comp, contextMarkers: page.contexts || []},
-{comp: headless.comp, contextMarkers: headless.contexts || [], key: 'headless'}
-], trackByMap)
+const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [], trackByMap)
 
 const instance = pageComp({...viewState, ...fastCarryForward})
 target.appendChild(instance.element.dom);
