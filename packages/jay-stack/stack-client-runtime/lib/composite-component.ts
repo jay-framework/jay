@@ -30,37 +30,50 @@ export function makeCompositeJayComponent<
     parts: Array<CompositePart>,
     trackByMap: TrackByMap = {},
 ) {
+    // Filter out parts without interactive components (comp is undefined).
+    // This can happen when a full-stack component only has slow/fast phases
+    // but no .withInteractive() call. See Design Log #72.
+    const interactiveParts = parts.filter((part) => part.comp !== undefined);
+
     // Determine if we have fast rendering
     // Both params are always provided when fast rendering exists (even if empty objects)
     const hasFastRendering = defaultViewState !== null && defaultViewState !== undefined;
 
     const comp = (props: Props<any>, refs, ...contexts): CompCore => {
-        const instances: Array<[string, JayComponentCore<any, any>]> = parts.map((part) => {
-            const partRefs = part.key ? refs[part.key] : refs;
+        const instances: Array<[string, JayComponentCore<any, any>]> = interactiveParts.map(
+            (part) => {
+                const partRefs = part.key ? refs[part.key] : refs;
 
-            let partContexts: any[];
+                let partContexts: any[];
 
-            if (hasFastRendering) {
-                // Create signals for fast view state
-                const partViewState = part.key ? defaultViewState?.[part.key] : defaultViewState;
-                const partFastViewState = partViewState ? makeSignals(partViewState) : undefined;
+                if (hasFastRendering) {
+                    // Create signals for fast view state
+                    const partViewState = part.key
+                        ? defaultViewState?.[part.key]
+                        : defaultViewState;
+                    const partFastViewState = partViewState
+                        ? makeSignals(partViewState)
+                        : undefined;
 
-                // Carry forward as plain object (no signals)
-                const partCarryForward = part.key ? fastCarryForward?.[part.key] : fastCarryForward;
+                    // Carry forward as plain object (no signals)
+                    const partCarryForward = part.key
+                        ? fastCarryForward?.[part.key]
+                        : fastCarryForward;
 
-                // Always pass both parameters when fast rendering exists
-                partContexts = [
-                    partFastViewState,
-                    partCarryForward,
-                    ...contexts.splice(0, part.contextMarkers.length),
-                ];
-            } else {
-                // No fast rendering - just pass regular contexts
-                partContexts = [...contexts.splice(0, part.contextMarkers.length)];
-            }
+                    // Always pass both parameters when fast rendering exists
+                    partContexts = [
+                        partFastViewState,
+                        partCarryForward,
+                        ...contexts.splice(0, part.contextMarkers.length),
+                    ];
+                } else {
+                    // No fast rendering - just pass regular contexts
+                    partContexts = [...contexts.splice(0, part.contextMarkers.length)];
+                }
 
-            return [part.key, part.comp(props, partRefs, ...partContexts)];
-        });
+                return [part.key, part.comp(props, partRefs, ...partContexts)];
+            },
+        );
 
         return {
             render: () => {
@@ -89,7 +102,7 @@ export function makeCompositeJayComponent<
         } as unknown as CompCore;
     };
 
-    const contextMarkers = parts.reduce((cm, part) => {
+    const contextMarkers = interactiveParts.reduce((cm, part) => {
         return [...cm, ...part.contextMarkers];
     }, []);
 

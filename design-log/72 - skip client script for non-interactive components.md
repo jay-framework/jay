@@ -252,42 +252,69 @@ For now, keeping the client script but with an empty parts array is simpler and 
 
 **Date**: 2026-01-18
 
+### Why We Chose Client-Side Filtering (Option C)
+
+The original plan was to detect whether a component has an interactive phase on the server side and filter accordingly. However, this approach has a fundamental problem:
+
+**The code splitting plugin (Design Log #52) strips `.withInteractive()` from server builds.**
+
+When we load a component via `ssrLoadModule`, the `jay-stack:code-split` plugin removes the `.withInteractive()` call, so `page.comp` is ALWAYS `undefined` on the server - even for components that DO have an interactive phase.
+
+We considered several workarounds:
+
+1. **Check source file for `.withInteractive(`** - Works for local files, but not for npm packages where the source is compiled/bundled.
+
+2. **Check if package has `/client` export** - A package might have multiple components, some with interactive and some without. The presence of `/client` export doesn't tell us about a specific component.
+
+3. **Add a metadata flag that survives code splitting** - Would require modifying the builder and the code splitting plugin, adding complexity.
+
+**Final Decision**: Handle undefined `comp` on the client side. This is simpler, more robust, and works for all cases (local files, npm packages, any combination).
+
 ### Changes Made
 
-1. **`load-page-parts.ts`**:
+1. **`composite-part.ts`** (stack-client-runtime):
 
-   - Made `clientImport` and `clientPart` optional in `DevServerPagePart` interface
-   - Only set client properties if `pageComponent.comp` is defined (for page components)
-   - Only set client properties if `compDefinition.comp` is defined (for headless components)
+   - Made `comp` optional in `CompositePart` interface
+   - Added JSDoc explaining why it can be undefined
 
-2. **`generate-client-script.ts`**:
-   - Added filtering: `const interactiveParts = parts.filter((part) => part.clientImport && part.clientPart)`
-   - Use `interactiveParts` instead of `parts` for generating client imports and composite parts
+2. **`composite-component.ts`** (stack-client-runtime):
+
+   - Filter out parts with undefined `comp` at the start:
+     ```typescript
+     const interactiveParts = parts.filter((part) => part.comp !== undefined);
+     ```
+   - Use `interactiveParts` instead of `parts` throughout the function
+
+3. **No changes to server-side code** - All parts are still included in the client script, but non-interactive ones are filtered out at runtime.
+
+### Trade-offs
+
+**Pros:**
+
+- ✅ Simple implementation
+- ✅ Works for all cases (local files, npm packages)
+- ✅ No need to detect interactive phase on server
+- ✅ Robust against code splitting transformations
+
+**Cons:**
+
+- ⚠️ Client still imports components that have no interactive phase
+- ⚠️ Slightly larger client bundle (includes imports that aren't used)
+- ⚠️ Minor runtime overhead from filtering
+
+For future optimization, we could add a build-time analysis pass that detects non-interactive components and excludes them from the client script entirely.
 
 ### Test Results
 
-All 62 tests pass in `stack-server-runtime`:
-
-- action-registry.test.ts (16 tests)
-- generate-client-script.test.ts (9 tests)
-- action-discovery.test.ts (11 tests)
-- simple-page/simple-page.test.ts (4 tests)
-- param-page/param-page.test.ts (6 tests)
-- page-with-only-plugin/page-with-only-plugin.test.ts (4 tests)
-- product-page-test/product-page-test.test.ts (8 tests)
-- page-with-plugin-and-state/page-with-plugin-and-state.test.ts (4 tests)
-
-All 13 tests pass in `dev-server`:
-
-- action-router.test.ts (10 tests)
-- dev-server.test.ts (3 tests) - Updated expected output for tests with non-interactive components
+All 62 tests pass in `stack-server-runtime`.
+All 13 tests pass in `dev-server`.
 
 ### Behavior
 
 When a component has no interactive phase:
 
 - Server-side rendering works normally (slow/fast phases execute)
-- `clientImport` and `clientPart` are undefined
-- Client script is still generated but with `parts = []`
-- `makeCompositeJayComponent(render, viewState, fastCF, [])` receives empty array
+- Component is still included in client script parts
+- On client, `part.comp` is `undefined`
+- `makeCompositeJayComponent` filters out parts with undefined `comp`
 - No component constructors are called, avoiding the crash

@@ -13,10 +13,8 @@ const require = createRequire(import.meta.url);
 export interface DevServerPagePart {
     compDefinition: AnyJayStackComponentDefinition;
     key?: string;
-    /** Client import statement - only set if component has interactive phase */
-    clientImport?: string;
-    /** Client part object - only set if component has interactive phase */
-    clientPart?: string;
+    clientImport: string;
+    clientPart: string;
 }
 
 export interface LoadedPageParts {
@@ -48,11 +46,8 @@ export async function loadPageParts(
         const pageComponent = (await vite.ssrLoadModule(route.compPath)).page;
         parts.push({
             compDefinition: pageComponent,
-            // Only include client properties if there's an interactive component
-            ...(pageComponent.comp && {
-                clientImport: `import {page} from '${route.compPath}'`,
-                clientPart: `{comp: page.comp, contextMarkers: page.contexts || []}`,
-            }),
+            clientImport: `import {page} from '${route.compPath}'`,
+            clientPart: `{comp: page.comp, contextMarkers: page.contexts || []}`,
         });
     }
 
@@ -105,11 +100,8 @@ export async function loadPageParts(
             const part: DevServerPagePart = {
                 key,
                 compDefinition,
-                // Only include client properties if there's an interactive component
-                ...(compDefinition.comp && {
-                    clientImport: `import {${name}} from '${clientModuleImport}'`,
-                    clientPart: `{comp: ${name}.comp, contextMarkers: ${name}.contexts || [], key: '${headlessImport.key}'}`,
-                }),
+                clientImport: `import {${name}} from '${clientModuleImport}'`,
+                clientPart: `{comp: ${name}.comp, contextMarkers: ${name}.contexts || [], key: '${headlessImport.key}'}`,
             };
             parts.push(part);
         }

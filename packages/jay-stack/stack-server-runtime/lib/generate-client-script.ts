@@ -22,17 +22,12 @@ export function generateClientScript(
     projectInit?: ProjectClientInitInfo,
     pluginInits: PluginClientInitInfo[] = [],
 ) {
-    // Filter to only parts with interactive components
-    const interactiveParts = parts.filter((part) => part.clientImport && part.clientPart);
-
     const imports =
-        interactiveParts.length > 0
-            ? interactiveParts.map((part) => part.clientImport).join('\n') + '\n'
-            : '';
+        parts.length > 0 ? parts.map((part) => part.clientImport).join('\n') + '\n' : '';
     const compositeParts =
-        interactiveParts.length > 0
+        parts.length > 0
             ? `[
-${interactiveParts.map((part) => '        ' + part.clientPart).join(',\n')}
+${parts.map((part) => '        ' + part.clientPart).join(',\n')}
         ]`
             : '[]';
 
