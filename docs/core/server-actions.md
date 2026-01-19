@@ -390,6 +390,83 @@ const addToCart = createActionCaller('cart.addToCart', 'POST');
 
 ---
 
+## Calling Actions from Backend Code
+
+When you need to call an action from **server-side code** (e.g., from a render phase), you must use `runAction` instead of calling the action directly. Direct calls bypass service injection.
+
+### The Problem
+
+```typescript
+// In renderFastChanging (backend code)
+import { searchProducts } from '../actions/stores-actions';
+
+// ❌ Wrong - services are NOT injected
+const result = await searchProducts({ query: '', pageSize: 12 });
+// The wixStores service will be undefined!
+```
+
+Direct action calls are designed for client-side code, where the build system transforms them into HTTP requests. On the server, direct calls pass an empty array for services.
+
+### The Solution: runAction
+
+Use `runAction` from `@jay-framework/stack-server-runtime`:
+
+```typescript
+import { runAction } from '@jay-framework/stack-server-runtime';
+import { searchProducts } from '../actions/stores-actions';
+
+// ✅ Correct - services are properly injected
+const result = await runAction(searchProducts, { query: '', pageSize: 12 });
+```
+
+### When to Use runAction
+
+| Context | How to Call |
+|---------|-------------|
+| **Interactive phase** (client) | `await searchProducts({ ... })` |
+| **Render phases** (server) | `await runAction(searchProducts, { ... })` |
+| **Service init** (server) | `await runAction(myAction, { ... })` |
+
+### Full Example
+
+```typescript
+// In a component's fast render phase
+import { runAction } from '@jay-framework/stack-server-runtime';
+import { searchProducts } from '../actions/stores-actions';
+
+async function renderFastChanging(props, slowCarryForward, wixStores) {
+  const Pipeline = RenderPipeline.for<FastViewState, CarryForward>();
+
+  return Pipeline
+    .try(async () => {
+      // Use runAction for proper service injection in backend code
+      const result = await runAction(searchProducts, {
+        query: '',
+        pageSize: 12,
+      });
+      return result;
+    })
+    .toPhaseOutput((result) => ({
+      viewState: { products: result.products },
+      carryForward: {},
+    }));
+}
+```
+
+### Type Safety
+
+`runAction` preserves full type safety - input and output types are inferred from the action:
+
+```typescript
+const result = await runAction(searchProducts, { query: 'shoes' });
+//    ^? SearchProductsOutput
+
+// TypeScript error if input doesn't match
+await runAction(searchProducts, { wrongField: true }); // ❌ Type error
+```
+
+---
+
 # Plugin Actions
 
 Plugins can also define and export actions for use by projects that install them.
