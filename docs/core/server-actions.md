@@ -421,11 +421,11 @@ const result = await runAction(searchProducts, { query: '', pageSize: 12 });
 
 ### When to Use runAction
 
-| Context | How to Call |
-|---------|-------------|
-| **Interactive phase** (client) | `await searchProducts({ ... })` |
-| **Render phases** (server) | `await runAction(searchProducts, { ... })` |
-| **Service init** (server) | `await runAction(myAction, { ... })` |
+| Context                        | How to Call                                |
+| ------------------------------ | ------------------------------------------ |
+| **Interactive phase** (client) | `await searchProducts({ ... })`            |
+| **Render phases** (server)     | `await runAction(searchProducts, { ... })` |
+| **Service init** (server)      | `await runAction(myAction, { ... })`       |
 
 ### Full Example
 
@@ -437,19 +437,17 @@ import { searchProducts } from '../actions/stores-actions';
 async function renderFastChanging(props, slowCarryForward, wixStores) {
   const Pipeline = RenderPipeline.for<FastViewState, CarryForward>();
 
-  return Pipeline
-    .try(async () => {
-      // Use runAction for proper service injection in backend code
-      const result = await runAction(searchProducts, {
-        query: '',
-        pageSize: 12,
-      });
-      return result;
-    })
-    .toPhaseOutput((result) => ({
-      viewState: { products: result.products },
-      carryForward: {},
-    }));
+  return Pipeline.try(async () => {
+    // Use runAction for proper service injection in backend code
+    const result = await runAction(searchProducts, {
+      query: '',
+      pageSize: 12,
+    });
+    return result;
+  }).toPhaseOutput((result) => ({
+    viewState: { products: result.products },
+    carryForward: {},
+  }));
 }
 ```
 

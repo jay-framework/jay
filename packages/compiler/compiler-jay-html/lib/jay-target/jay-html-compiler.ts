@@ -3,6 +3,7 @@ import {
     Imports,
     ImportsFor,
     isArrayType,
+    isEnumType,
     isPromiseType,
     JayComponentType,
     JayErrorType,
@@ -86,6 +87,7 @@ interface RenderContext {
     importedRefNameToRef: Map<string, Ref>;
     recursiveRegions: RecursiveRegionInfo[]; // Stack of recursive regions we're currently inside
     isInsideGuard: boolean; // Are we currently inside a forEach or conditional?
+    usedComponentImports: Set<string>; // Tracks which component/contract types are actually used
 }
 
 function renderFunctionDeclaration(preRenderType: string): string {
@@ -224,12 +226,14 @@ function renderElementRef(
             // branches like lineItems.removeButton and coupon.removeButton) get unique variable names
             const uniqueConstName = refNameGenerator.newConstantName(importedRef.ref, variables);
             // Create a new ref with the unique constName so the declaration matches the usage
+            // Set autoRef to false since this ref is explicitly used in the template
+            // Use the full ref path from the template attribute as originalName for matching
             const refWithUniqueConstName = mkRef(
                 importedRef.ref,
-                importedRef.originalName,
+                element.attributes.ref, // Full path from template, e.g., "filters.filter2.categories.isSelected"
                 uniqueConstName,
                 importedRef.repeated,
-                importedRef.autoRef,
+                false, // Not autoRef - it's explicitly used in template
                 importedRef.viewStateType,
                 importedRef.elementType,
             );
@@ -318,12 +322,14 @@ function renderChildCompRef(
         // This ensures that refs with the same base name get unique variable names
         const uniqueConstName = refNameGenerator.newConstantName(importedRef.ref, variables);
         // Create a new ref with the unique constName so the declaration matches the usage
+        // Set autoRef to false since this ref is explicitly used in the template
+        // Use the full ref path from the template attribute as originalName for matching
         const refWithUniqueConstName = mkRef(
             importedRef.ref,
-            importedRef.originalName,
+            element.attributes.ref, // Full path from template, e.g., "filters.filter2.categories.isSelected"
             uniqueConstName,
             importedRef.repeated,
-            importedRef.autoRef,
+            false, // Not autoRef - it's explicitly used in template
             importedRef.viewStateType,
             importedRef.elementType,
         );
@@ -735,6 +741,10 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                     .render()
                     .map((_) => `(${paramName}: ${paramType}) => ${_}`);
                 let forEachVariables = variables.childVariableFor(forEachAccessor);
+
+                // Track the forEach iteration type as a used component import
+                context.usedComponentImports.add(forEachVariables.currentType.name);
+
                 let newContext = {
                     ...context,
                     variables: forEachVariables,
@@ -894,6 +904,7 @@ function renderFunctionImplementation(
     const importedRefNameToRef = processImportedHeadless(headlessImports);
     const rootElement = ensureSingleChildElement(rootBodyElement);
     let renderedRoot: RenderFragment;
+    const usedComponentImports = new Set<string>(); // Track used component types
     if (rootElement.val) {
         // Check if the root element is a directive that needs wrapping
         const needsWrapper =
@@ -917,6 +928,7 @@ function renderFunctionImplementation(
             importedRefNameToRef,
             recursiveRegions: [], // Initialize empty recursive regions stack
             isInsideGuard: false, // Not inside any guard initially
+            usedComponentImports, // Track which component types are used
         });
 
         if (needsWrapper) {
@@ -1002,6 +1014,7 @@ ${headLinksInjection}${recursiveFunctionsSection}    const render = (viewState: 
         preRenderType,
         refsType,
         renderedImplementation: new RenderFragment(body, imports, renderedRoot.validations),
+        usedComponentImports, // Track which component types were used
     };
 }
 
@@ -1163,6 +1176,7 @@ function renderBridge(
         importedRefNameToRef,
         recursiveRegions: [], // Initialize empty recursive regions stack
         isInsideGuard: false, // Not inside any guard initially
+        usedComponentImports: new Set<string>(), // Not used for bridge
     });
     renderedBridge = optimizeRefs(renderedBridge, headlessImports);
 
@@ -1209,6 +1223,7 @@ function renderSandboxRoot(
         importedRefNameToRef,
         recursiveRegions: [], // Initialize empty recursive regions stack
         isInsideGuard: false, // Not inside any guard initially
+        usedComponentImports: new Set<string>(), // Not used for sandbox
     });
     let refsPart =
         renderedBridge.rendered.length > 0
@@ -1340,16 +1355,17 @@ export function generateElementFile(
     importerMode: MainRuntimeModes,
 ): WithValidations<string> {
     const types = generateTypes(jayFile.types);
-    let { renderedRefs, renderedElement, renderedImplementation } = renderFunctionImplementation(
-        jayFile.types,
-        jayFile.body,
-        jayFile.imports,
-        jayFile.baseElementName,
-        jayFile.namespaces,
-        jayFile.headlessImports,
-        importerMode,
-        jayFile.headLinks,
-    );
+    let { renderedRefs, renderedElement, renderedImplementation, usedComponentImports } =
+        renderFunctionImplementation(
+            jayFile.types,
+            jayFile.body,
+            jayFile.imports,
+            jayFile.baseElementName,
+            jayFile.namespaces,
+            jayFile.headlessImports,
+            importerMode,
+            jayFile.headLinks,
+        );
     const cssImport = generateCssImport(jayFile);
     const phaseTypes = generatePhaseSpecificTypes(jayFile);
 
@@ -1374,11 +1390,51 @@ export function generateElementFile(
         });
     }
 
+    // Build the set of used component type names from headless imports
+    // Start with types tracked during rendering (forEach iteration types)
+    const usedHeadlessTypeNames = new Set(usedComponentImports);
+
+    // Add types that are used in the generated type definitions
+    // These come from headless imports and are used in ViewState/Refs interfaces
+    const headlessModules = new Set<string>();
+    for (const headless of jayFile.headlessImports) {
+        // The main ViewState and Refs types are always used when a headless import exists
+        usedHeadlessTypeNames.add(headless.rootType.name);
+        for (const link of headless.contractLinks) {
+            headlessModules.add(link.module);
+            for (const name of link.names) {
+                // Add the Refs types and enum types (they're always needed)
+                if (name.name.endsWith('Refs') || isEnumType(name.type)) {
+                    usedHeadlessTypeNames.add(name.name);
+                }
+            }
+        }
+    }
+
+    // Filter imports: only filter headless contract imports (to remove unused nested types)
+    // Keep all regular component imports unchanged
+    const filteredImports = jayFile.imports
+        .map((importLink) => {
+            // Only filter imports from headless contracts
+            if (!headlessModules.has(importLink.module)) {
+                return importLink; // Keep non-headless imports unchanged
+            }
+            // Filter to only include used names
+            const filteredNames = importLink.names.filter((name) =>
+                usedHeadlessTypeNames.has(name.as || name.name),
+            );
+            if (filteredNames.length === 0) {
+                return null;
+            }
+            return { ...importLink, names: filteredNames };
+        })
+        .filter((imp): imp is JayImportLink => imp !== null);
+
     const renderedFile = [
         renderImports(
             renderedImplementation.imports.plus(Import.element).plus(Import.jayElement),
             ImportsFor.implementation,
-            jayFile.imports,
+            filteredImports,
             importerMode,
         ),
         cssImport,

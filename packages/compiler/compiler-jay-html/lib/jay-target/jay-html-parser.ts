@@ -69,6 +69,29 @@ function isRecursiveReference(typeString: string): boolean {
 }
 
 /**
+ * Collects all nested object type names from a JayType tree.
+ * This is used to gather all types that need to be imported from a contract.
+ */
+function collectNestedTypeNames(type: JayType): string[] {
+    const names: string[] = [];
+
+    if (type instanceof JayObjectType) {
+        names.push(type.name);
+        for (const propType of Object.values(type.props)) {
+            names.push(...collectNestedTypeNames(propType));
+        }
+    } else if (type instanceof JayArrayType) {
+        names.push(...collectNestedTypeNames(type.itemType));
+    } else if (type instanceof JayPromiseType) {
+        names.push(...collectNestedTypeNames(type.itemType));
+    } else if (type instanceof JayImportedType) {
+        // Don't recurse into imported types - they have their own imports
+    }
+
+    return names;
+}
+
+/**
  * Parses array<$/...> syntax to extract the recursive reference
  * Returns the reference path if valid, null otherwise
  */
@@ -631,11 +654,20 @@ async function parseHeadlessImports(
                         .filter((_) => _.declaringModule === relativeContractPath)
                         .map((_) => _.type);
 
+                    // Collect all nested ViewState types from the contract
+                    // These are needed for forEach type annotations
+                    const nestedTypeNames = collectNestedTypeNames(type);
+                    // Filter to only include nested types (exclude the main ViewState which is already added)
+                    const nestedTypeImports = nestedTypeNames
+                        .filter((name) => name !== type.name)
+                        .map((name) => ({ name, type: JayUnknown }));
+
                     const contractLink: JayImportLink = {
                         module: relativeContractPath,
                         names: [
                             { name: type.name, type },
                             { name: refsTypeName, type: JayUnknown },
+                            ...nestedTypeImports,
                             ...enumsFromContract.map((_) => ({ name: _.name, type: _ })),
                         ],
                     };

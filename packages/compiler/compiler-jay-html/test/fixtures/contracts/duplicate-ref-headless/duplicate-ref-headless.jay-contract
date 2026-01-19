@@ -1,0 +1,36 @@
+name: duplicate-ref-headless
+tags:
+  # First branch with 'isSelected' ref in nested 'ranges' - NOT used in template
+  - tag: filter1
+    type: sub-contract
+    tags:
+      - tag: ranges
+        type: sub-contract
+        repeated: true
+        trackBy: id
+        tags:
+          - tag: id
+            type: data
+            dataType: string
+          - tag: isSelected
+            type: interactive
+            elementType: HTMLInputElement
+
+  # Second branch with the same 'isSelected' ref name in nested 'categories' - USED in template
+  - tag: filter2
+    type: sub-contract
+    tags:
+      - tag: categories
+        type: sub-contract
+        repeated: true
+        trackBy: id
+        tags:
+          - tag: id
+            type: data
+            dataType: string
+          - tag: name
+            type: data
+            dataType: string
+          - tag: isSelected
+            type: interactive
+            elementType: HTMLInputElement

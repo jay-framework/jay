@@ -61,6 +61,23 @@ export const TEST_IMPORT_RESOLVER: JayImportResolver = {
                 [],
             );
         }
+        if (pluginName === 'test-duplicate-ref' && contractName === 'duplicate-ref-headless') {
+            return new WithValidations(
+                {
+                    contractPath: path.resolve(
+                        projectRoot,
+                        'contracts/duplicate-ref-headless/duplicate-ref-headless.jay-contract',
+                    ),
+                    componentPath: path.resolve(
+                        projectRoot,
+                        'contracts/duplicate-ref-headless/duplicate-ref-headless',
+                    ),
+                    componentName: 'duplicateRefHeadless',
+                    isNpmPackage: false,
+                },
+                [],
+            );
+        }
 
         // Fall back to production resolver
         return JAY_IMPORT_RESOLVER.resolvePluginComponent(pluginName, contractName, projectRoot);
