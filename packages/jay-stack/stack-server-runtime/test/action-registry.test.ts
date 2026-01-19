@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ActionRegistry } from '../lib/action-registry';
+import { ActionRegistry, runAction } from '../lib/action-registry';
 import { registerService, clearServiceRegistry } from '../lib/services';
 import {
     makeJayAction,
@@ -291,5 +291,72 @@ describe('ActionRegistry', () => {
             expect(registry1.has('test.action')).toBe(true);
             expect(registry2.has('test.action')).toBe(false);
         });
+    });
+});
+
+describe('runAction', () => {
+    beforeEach(() => {
+        clearServiceRegistry();
+        // Register mock services
+        registerService(CART_SERVICE, mockCartService);
+        registerService(PRODUCTS_DATABASE_SERVICE, mockProductsDb);
+    });
+
+    it('should execute action with service injection', async () => {
+        const action = makeJayAction('cart.addToCart')
+            .withServices(CART_SERVICE)
+            .withHandler(async (input: { productId: string; quantity: number }, cartService) => {
+                const cart = await cartService.addItem(input.productId, input.quantity);
+                return { cartItemCount: cart.items.length };
+            });
+
+        // Direct call bypasses service injection
+        // const result = await action({ productId: 'prod-1', quantity: 3 }); // ❌ Would fail
+
+        // runAction properly injects services
+        const result = await runAction(action, { productId: 'prod-1', quantity: 3 });
+
+        expect(result).toEqual({ cartItemCount: 3 });
+    });
+
+    it('should execute action with multiple services', async () => {
+        const action = makeJayQuery('products.searchAndCart')
+            .withServices(PRODUCTS_DATABASE_SERVICE, CART_SERVICE)
+            .withHandler(
+                async (input: { query: string; addFirst: boolean }, productsDb, cartService) => {
+                    const results = await productsDb.search(input.query);
+                    if (input.addFirst && results.items.length > 0) {
+                        await cartService.addItem('first-item', 1);
+                    }
+                    return { found: results.total };
+                },
+            );
+
+        const result = await runAction(action, { query: 'test', addFirst: true });
+
+        expect(result).toEqual({ found: 1 });
+    });
+
+    it('should execute action without services', async () => {
+        const action = makeJayAction('test.simple').withHandler(
+            async (input: { value: number }) => ({ doubled: input.value * 2 }),
+        );
+
+        const result = await runAction(action, { value: 5 });
+
+        expect(result).toEqual({ doubled: 10 });
+    });
+
+    it('should propagate ActionError from handler', async () => {
+        const action = makeJayAction('cart.validate')
+            .withServices(CART_SERVICE)
+            .withHandler(async (input: { quantity: number }) => {
+                if (input.quantity > 10) {
+                    throw new ActionError('MAX_EXCEEDED', 'Cannot exceed 10');
+                }
+                return { ok: true };
+            });
+
+        await expect(runAction(action, { quantity: 20 })).rejects.toThrow('Cannot exceed 10');
     });
 });
