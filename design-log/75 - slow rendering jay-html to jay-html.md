@@ -424,22 +424,23 @@ When a slow array has mixed-phase child properties:
   <!-- fast: preserved as binding -->
 </li>
 
-<!-- → (unrolled with metadata, fast bindings use indexed access) -->
+<!-- → (unrolled with metadata, bindings remain item-scoped) -->
 <li slowForEach="products" trackBy="id" jayIndex="0" jayTrackBy="prod1">
   <span>Widget A</span>
-  <span>{products[0].price}</span>
+  <span>{price}</span>
 </li>
 <li slowForEach="products" trackBy="id" jayIndex="1" jayTrackBy="prod2">
   <span>Widget B</span>
-  <span>{products[1].price}</span>
+  <span>{price}</span>
 </li>
 ```
 
 **Key points**:
 
 - `forEach` replaced with `slowForEach` to indicate pre-rendered array
-- Fast bindings are rewritten to use indexed array access (`{products[0].price}`)
-- `jayIndex` enables correlation between pre-rendered items and fast ViewState array
+- Fast bindings remain item-scoped (`{price}` not `{products[0].price}`)
+- `slowForEachItem` runtime function changes context to the array item
+- `jayIndex` tells the runtime which item to use from the fast ViewState array
 
 #### Rule 7: Recursive Regions
 
@@ -607,31 +608,69 @@ async function handleRequest(req: Request) {
 3. Handle phase detection from contract metadata
 4. Generate valid jay-html output
 
+**Tests:**
+
+- Text binding resolution (slow → literal, fast → preserved)
+- Attribute binding resolution
+- Style binding resolution
+- Conditional evaluation (slow conditions resolved, fast preserved)
+- Basic forEach → slowForEach transformation
+- Mixed bindings in same element
+
 ### Phase 2: Array Handling
 
-1. Implement slow array unrolling
+1. Implement slow array unrolling with `slowForEach` attribute
 2. Handle mixed-phase arrays (slow structure, fast properties)
-3. Preserve track-by keys for client reconciliation
+3. Preserve trackBy and add jayIndex, jayTrackBy attributes
+4. Keep bindings item-scoped (no rewriting to indexed access)
 
-### Phase 3: Component Handling
+**Tests:**
+
+- Pure slow array unrolling
+- Mixed-phase array (slow structure, fast child properties)
+- Nested arrays
+- Array with conditionals inside
+- trackBy value extraction
+
+### Phase 3: Runtime Support for slowForEach
+
+1. Update jay-html parser to recognize `slowForEach` attribute
+2. Implement `slowForEachItem` runtime function that:
+   - Uses `jayIndex` to access `viewState[arrayName][index]`
+   - Sets up data context for child bindings (like `forEach`)
+   - Provides correct item context for events
+3. Ensure client reconciliation works with jayTrackBy
+
+**Tests:**
+
+- Fast render with slowForEach elements
+- Context switching (bindings use item scope)
+- Interactive updates to fast properties in slow arrays
+- Event handling with correct item context
+- Client hydration with slowForEach
+
+### Phase 4: Component Handling
 
 1. Handle nested component references
 2. Recursive region support
 3. Headless component slot content
 
-### Phase 4: Dev Server Integration
+### Phase 5: Dev Server Integration
 
 1. Add pre-render cache to dev server
-2. Integrate with file watcher for invalidation
+2. Integrate with file watcher for invalidation (jay-html and component files)
 3. Lazy pre-render on first request
+4. Cache keyed by (jayHtmlPath, params)
 
-### Phase 5: Production Build
+### Phase 6: Production Build (Future)
 
-1. CLI command: `jay-stack build --prerender`
-2. Generate pre-rendered jay-html files
-3. Configure which pages to pre-render
+> **Note**: Production build not yet supported. Skip for now.
 
-### Phase 6: Incremental Regeneration
+1. Pre-render all pages that have slow phase data (no configuration needed)
+2. Generate pre-rendered jay-html files in `.jay/pre-rendered/`
+3. Handle loadParams to generate multiple files per route
+
+### Phase 7: Incremental Regeneration (Future)
 
 1. API/webhook for triggering regeneration
 2. Dependency tracking (which pages depend on which data)
@@ -757,22 +796,195 @@ tags:
 <ul class="products">
   <li slowForEach="products" trackBy="id" jayIndex="0" jayTrackBy="prod1">
     <span class="name">Widget A</span>
-    <span class="price">{products[0].price}</span>
-    <button if="products[0].inStock">Add</button>
+    <span class="price">{price}</span>
+    <button if="inStock">Add</button>
   </li>
   <li slowForEach="products" trackBy="id" jayIndex="1" jayTrackBy="prod2">
     <span class="name">Widget B</span>
-    <span class="price">{products[1].price}</span>
-    <button if="products[1].inStock">Add</button>
+    <span class="price">{price}</span>
+    <button if="inStock">Add</button>
   </li>
 </ul>
 ```
 
 **Key points:**
 
-- `slowForEach="products"` identifies the source array for fast ViewState matching
-- `jayIndex` correlates each item to its position in the fast ViewState array
-- Fast bindings rewritten to indexed access (`{products[0].price}`)
+- `slowForEach="products"` + `jayIndex` tell the runtime which array item to use
+- Bindings remain item-scoped (`{price}` not `{products[0].price}`)
+- Runtime's `slowForEachItem` changes context to the correct array item
+
+## TypeScript Code Generation
+
+This section shows how pre-rendered jay-html compiles to TypeScript, validating that the runtime can handle the new constructs.
+
+### Key Insight: Context Switching
+
+`slowForEachItem` works like `forEach` by **changing the data context** to the array item. This means:
+
+- Bindings inside use item-scoped access (`vs.price`) not indexed access (`vs.products[0].price`)
+- Events get the correct item coordinates and data
+- The transformation is simpler - no need to rewrite bindings with indexes
+- Consistent with how `forEach` works
+
+### Example: slowForEach Compilation
+
+**Pre-rendered jay-html:**
+
+```html
+<ul class="products">
+  <li slowForEach="products" trackBy="id" jayIndex="0" jayTrackBy="prod1">
+    <span class="name">Widget A</span>
+    <span class="price">{price}</span>
+  </li>
+  <li slowForEach="products" trackBy="id" jayIndex="1" jayTrackBy="prod2">
+    <span class="name">Widget B</span>
+    <span class="price">{price}</span>
+  </li>
+</ul>
+```
+
+**Generated TypeScript:**
+
+```typescript
+import { element as e, dynamicText as dt, slowForEachItem } from '@jay-framework/runtime';
+
+// FastViewState item type (only fast/interactive fields)
+interface ProductFastItem {
+  price: number;
+  inStock: boolean;
+}
+
+export function render() {
+  return e('ul', { class: 'products' }, [
+    // slowForEachItem: changes context to vs.products[0]
+    slowForEachItem(
+      'products', // array name for context lookup
+      0, // jayIndex - which item in the array
+      'prod1', // jayTrackBy value
+      e('li', {}, [
+        e('span', { class: 'name' }, ['Widget A']), // static text (pre-rendered)
+        e('span', { class: 'price' }, [
+          dt((vs: ProductFastItem) => vs.price), // item-scoped binding (not indexed!)
+        ]),
+      ]),
+    ),
+    slowForEachItem(
+      'products',
+      1,
+      'prod2',
+      e('li', {}, [
+        e('span', { class: 'name' }, ['Widget B']),
+        e('span', { class: 'price' }, [
+          dt((vs: ProductFastItem) => vs.price), // same binding, different context
+        ]),
+      ]),
+    ),
+  ]);
+}
+```
+
+**How it works:**
+
+1. `slowForEachItem('products', 0, ...)` sets the data context to `viewState.products[0]`
+2. Inside the item, bindings use `vs.price` (item-scoped, like in regular `forEach`)
+3. The runtime's update function knows to get `viewState.products[0]` and pass it to child bindings
+4. Events fire with the correct array item context
+
+### Example: Mixed Bindings with Conditionals
+
+**Pre-rendered jay-html:**
+
+```html
+<li slowForEach="products" trackBy="id" jayIndex="0" jayTrackBy="prod1">
+  <span class="name">Widget A</span>
+  <span class="price">{price}</span>
+  <button if="inStock">Add to Cart</button>
+</li>
+```
+
+**Generated TypeScript:**
+
+```typescript
+slowForEachItem('products', 0, 'prod1',
+  e('li', {}, [
+    e('span', { class: 'name' }, ['Widget A']),
+    e('span', { class: 'price' }, [
+      dt((vs) => vs.price),  // item-scoped
+    ]),
+    conditional(
+      (vs) => vs.inStock,  // item-scoped conditional
+      () => e('button', {}, ['Add to Cart']),
+    ),
+  ]),
+)
+```
+
+### Example: Pure Slow Array (No Fast Properties)
+
+When all array item properties are slow:
+
+**Pre-rendered jay-html:**
+
+```html
+<ul class="images">
+  <li slowForEach="images" trackBy="id" jayIndex="0" jayTrackBy="1">
+    <img src="/hero.jpg" alt="Hero shot" />
+  </li>
+  <li slowForEach="images" trackBy="id" jayIndex="1" jayTrackBy="2">
+    <img src="/detail.jpg" alt="Detail view" />
+  </li>
+</ul>
+```
+
+**Generated TypeScript:**
+
+```typescript
+e('ul', { class: 'images' }, [
+  slowForEachItem('images', 0, '1',
+    e('li', {}, [
+      e('img', { src: '/hero.jpg', alt: 'Hero shot' }),  // fully static
+    ]),
+  ),
+  slowForEachItem('images', 1, '2',
+    e('li', {}, [
+      e('img', { src: '/detail.jpg', alt: 'Detail view' }),
+    ]),
+  ),
+])
+```
+
+**Note**: Even with no fast bindings, `slowForEachItem` sets up the context for events and potential interactive updates.
+
+### Runtime Function Signature
+
+```typescript
+/**
+ * Wraps a pre-rendered array item from slow phase.
+ * Sets the data context to viewState[arrayName][index] for child bindings.
+ * 
+ * @param arrayName - Name of the source array in parent ViewState
+ * @param index - Index of this item (used to access viewState[arrayName][index])
+ * @param trackByValue - The track-by value for client reconciliation
+ * @param element - The pre-rendered element (bindings are item-scoped)
+ */
+function slowForEachItem<ParentVS, ItemVS>(
+  arrayName: keyof ParentVS,
+  index: number,
+  trackByValue: string,
+  element: JayElement<ItemVS>,
+): JayElement<ParentVS>;
+```
+
+### Comparison: forEach vs slowForEachItem
+
+| Aspect            | `forEach`                     | `slowForEachItem`                |
+|-------------------|-------------------------------|----------------------------------|
+| Structure         | Dynamic (rendered at runtime) | Static (pre-rendered)            |
+| Item count        | Determined at runtime         | Fixed at slow-render time        |
+| Context switching | Yes                           | Yes                              |
+| Bindings          | Item-scoped (`vs.price`)      | Item-scoped (`vs.price`)         |
+| Track-by          | Computed at runtime           | Baked in as attribute            |
+| Add/remove items  | Supported                     | Not supported (frozen structure) |
 
 ## Trade-offs
 
@@ -828,7 +1040,7 @@ tags:
 4. **Fast ViewState array structure**: Fast ViewState only includes fast/interactive phase fields, consistent with the phase-specific type generation (Design Log #50). For unrolled slow arrays with mixed phases:
 
    ```typescript
-   // SlowViewState (already rendered)
+   // SlowViewState (already rendered, baked into jay-html)
    {
      products: [{ name: 'Widget A' }, { name: 'Widget B' }];
    }
@@ -842,7 +1054,7 @@ tags:
    }
    ```
 
-   Fast/interactive bindings in pre-rendered jay-html use indexed access to correlate with the fast ViewState array.
+   The `slowForEachItem` runtime function uses `jayIndex` to access the correct item from the fast ViewState array and sets up the data context. Bindings remain item-scoped (e.g., `{price}` not `{products[0].price}`).
 
 ---
 
