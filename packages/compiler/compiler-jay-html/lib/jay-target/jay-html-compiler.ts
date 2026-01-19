@@ -897,6 +897,7 @@ function renderFunctionImplementation(
     preRenderType: string;
     refsType: string;
     renderedImplementation: RenderFragment;
+    usedComponentImports: Set<string>;
 } {
     const variables = new Variables(types);
     const { importedSymbols, importedSandboxedSymbols } =
