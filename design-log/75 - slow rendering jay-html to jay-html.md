@@ -1,5 +1,20 @@
 # Slow Rendering: Jay-HTML to Jay-HTML
 
+## Summary
+
+Jay-html to jay-html slow rendering pre-renders slow-phase bindings at build time, producing a new jay-html file with static data "baked in" while preserving fast/interactive bindings. This enables faster request-time rendering by skipping slow-phase work.
+
+**Key features:**
+- Text/attribute bindings with `phase: slow` are resolved to literal values
+- Slow conditionals (`if`) are evaluated and removed or stripped
+- Slow arrays (`forEach`) are unrolled to `slowForEach` elements with `jayIndex` and `jayTrackBy` attributes
+- Fast/interactive bindings remain as template syntax for runtime resolution
+- Runtime `slowForEachItem()` function provides correct data context for item-scoped bindings
+
+**Status:** Core transformation engine and runtime support implemented (Phase 1-3). Dev server integration pending.
+
+---
+
 ## Background
 
 Jay Stack has three rendering phases (see Design Logs #34, #50):
@@ -304,11 +319,6 @@ interface SlowRenderInput {
 
 interface SlowRenderOutput {
   preRenderedJayHtml: string;
-  metadata: {
-    originalPath: string;
-    slowViewState: object;
-    timestamp: number;
-  };
 }
 ```
 
@@ -471,15 +481,6 @@ The output must be a valid jay-html that can be processed by the fast/interactiv
   <head>
     <!-- Contract reference preserved -->
     <script type="application/jay-contract" src="./page.jay-contract"></script>
-
-    <!-- Optional: Metadata about pre-rendering -->
-    <script type="application/jay-prerender-meta">
-      {
-        "source": "./page.jay-html",
-        "renderedAt": "2026-01-19T10:00:00Z",
-        "slowViewState": { ... }
-      }
-    </script>
 
     <!-- Component imports preserved -->
     <script type="application/jay-headless" src="@wix/stores" names="ProductCard"></script>
@@ -743,9 +744,6 @@ tags:
 <html>
   <head>
     <script type="application/jay-contract" src="./page.jay-contract"></script>
-    <script type="application/jay-prerender-meta">
-      {"source": "./page.jay-html", "renderedAt": "2026-01-19T10:00:00Z"}
-    </script>
   </head>
   <body>
     <article class="product">
@@ -861,7 +859,7 @@ export function render() {
       'products', // array name for context lookup
       0, // jayIndex - which item in the array
       'prod1', // jayTrackBy value
-      e('li', {}, [
+      () => e('li', {}, [  // elementCreator function
         e('span', { class: 'name' }, ['Widget A']), // static text (pre-rendered)
         e('span', { class: 'price' }, [
           dt((vs: ProductFastItem) => vs.price), // item-scoped binding (not indexed!)
@@ -872,7 +870,7 @@ export function render() {
       'products',
       1,
       'prod2',
-      e('li', {}, [
+      () => e('li', {}, [
         e('span', { class: 'name' }, ['Widget B']),
         e('span', { class: 'price' }, [
           dt((vs: ProductFastItem) => vs.price), // same binding, different context
@@ -906,7 +904,7 @@ export function render() {
 
 ```typescript
 slowForEachItem('products', 0, 'prod1',
-  e('li', {}, [
+  () => e('li', {}, [
     e('span', { class: 'name' }, ['Widget A']),
     e('span', { class: 'price' }, [
       dt((vs) => vs.price),  // item-scoped
@@ -941,19 +939,19 @@ When all array item properties are slow:
 ```typescript
 e('ul', { class: 'images' }, [
   slowForEachItem('images', 0, '1',
-    e('li', {}, [
+    () => e('li', {}, [
       e('img', { src: '/hero.jpg', alt: 'Hero shot' }),  // fully static
     ]),
   ),
   slowForEachItem('images', 1, '2',
-    e('li', {}, [
+    () => e('li', {}, [
       e('img', { src: '/detail.jpg', alt: 'Detail view' }),
     ]),
   ),
 ])
 ```
 
-**Note**: Even with no fast bindings, `slowForEachItem` sets up the context for events and potential interactive updates.
+**Note**: Even with no fast bindings, `slowForEachItem` sets up the context for events and potential interactive updates. The element is wrapped in a function so it's constructed within the correct data context.
 
 ### Runtime Function Signature
 
@@ -965,15 +963,17 @@ e('ul', { class: 'images' }, [
  * @param arrayName - Name of the source array in parent ViewState
  * @param index - Index of this item (used to access viewState[arrayName][index])
  * @param trackByValue - The track-by value for client reconciliation
- * @param element - The pre-rendered element (bindings are item-scoped)
+ * @param elementCreator - Function that creates the element (called within item context)
  */
 function slowForEachItem<ParentVS, ItemVS>(
   arrayName: keyof ParentVS,
   index: number,
   trackByValue: string,
-  element: JayElement<ItemVS>,
-): JayElement<ParentVS>;
+  elementCreator: () => BaseJayElement<ItemVS>,
+): BaseJayElement<ParentVS>;
 ```
+
+**Note**: The `elementCreator` is a function (not a direct element) because it must be invoked *within* the item's data context. This ensures bindings resolve against the correct array item during construction.
 
 ### Comparison: forEach vs slowForEachItem
 
@@ -1085,7 +1085,6 @@ function slowForEachItem<ParentVS, ItemVS>(
    - Slow arrays are unrolled to individual `slowForEach` elements
    - Each item gets `jayIndex`, `jayTrackBy` attributes
    - Mixed-phase arrays: slow bindings resolved, fast bindings preserved as item-scoped
-   - Pre-render metadata added to head
 
 3. **Compiler Integration**
    - Added `isSlowForEach()` and `getSlowForEachInfo()` helpers
@@ -1100,21 +1099,40 @@ function slowForEachItem<ParentVS, ItemVS>(
    - Context-aware update that resolves item from parent ViewState
 
 **Tests:**
-- 17 tests for slow-render-transform (all passing)
-- 3 tests for slowForEachItem runtime (all passing)
+- 15 tests for slow-render-transform (all passing)
+- 10 tests for slowForEachItem runtime (all passing)
 - 1 test for slowForEach compilation (all passing)
-- Total: 426 compiler tests passing, 181 runtime tests passing
+- Total: 424 compiler tests passing, 181 runtime tests passing
 
 **Files Created/Modified:**
 - NEW: `compiler-jay-html/lib/slow-render/slow-render-transform.ts`
 - NEW: `compiler-jay-html/test/slow-render/slow-render-transform.test.ts`
+- NEW: `compiler-jay-html/test/fixtures/slow-render/` (12 fixture directories with input/output/contract files)
 - NEW: `runtime/runtime/test/lib/slow-for-each-item.test.ts`
-- NEW: `compiler-jay-html/test/fixtures/collections/slow-for-each/slow-for-each.jay-html`
+- NEW: `compiler-jay-html/test/fixtures/collections/slow-for-each/`
 - MODIFIED: `compiler-jay-html/lib/jay-target/jay-html-helpers.ts`
 - MODIFIED: `compiler-jay-html/lib/jay-target/jay-html-compiler.ts`
 - MODIFIED: `compiler-jay-html/lib/index.ts`
 - MODIFIED: `compiler-shared/lib/imports.ts`
 - MODIFIED: `runtime/runtime/lib/element.ts`
+
+### Deviations from Original Design
+
+1. **Removed pre-render metadata script**: The design included an `application/jay-prerender-meta` script in the output head with `renderedAt` and `slowProperties`. This was removed as unnecessary - the `slowForEach`/`jayIndex`/`jayTrackBy` attributes provide sufficient information for runtime.
+
+2. **SlowRenderInput uses content instead of path**: 
+   - Design: `jayHtmlPath: string`
+   - Implementation: `jayHtmlContent: string`
+   - Rationale: More flexible - caller controls file loading
+
+3. **slowForEachItem takes elementCreator function**:
+   - Design: `element: JayElement<ItemVS>` (direct element)
+   - Implementation: `elementCreator: () => BaseJayElement<ItemVS>` (function)
+   - Rationale: The element must be constructed *within* the item context for bindings to resolve correctly. Passing a pre-constructed element would use the wrong context.
+
+4. **Style bindings not implemented**: Rule 3 (`style:background-color="{bgColor}"`) is not yet implemented in the transformation. Regular `style` attributes with bindings work, but the jay-specific `style:property` syntax is not handled.
+
+5. **Recursive regions not implemented**: Rule 7 for recursive structures (`<recurse ref="..."/>`) is deferred to Phase 4 with component handling.
 
 ### Phase 4: Dev Server Integration (PENDING)
 
