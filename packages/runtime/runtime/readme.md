@@ -105,7 +105,54 @@ interface JayElement<ViewState, Refs> extends BaseJayElement<ViewState> {
   These references can be used to set event listeners, interact with child elements or component APIs.
   Read more about `refs` in [refs.md](./docs/refs.md).
 
-## implementation details
+## Slow Rendering Support
+
+The runtime supports pre-rendered "slow" arrays via the `slowForEachItem` function. This is used when a `forEach` loop has been pre-rendered at build time (slow phase), but still needs fast/interactive updates at runtime.
+
+### slowForEachItem
+
+```typescript
+function slowForEachItem<ParentVS, ItemVS>(
+  arrayName: keyof ParentVS,
+  index: number,
+  trackByValue: string,
+  elementCreator: () => BaseJayElement<ItemVS>,
+): BaseJayElement<ParentVS>;
+```
+
+**Parameters:**
+- `arrayName` - The property name of the array in the parent ViewState
+- `index` - The position in the pre-rendered array (jayIndex)
+- `trackByValue` - The track-by value for client reconciliation (jayTrackBy)
+- `elementCreator` - Function that creates the element (called within item context)
+
+**How it works:**
+1. Sets the data context to `viewState[arrayName][index]`
+2. Calls `elementCreator()` within that context so bindings are item-scoped
+3. On update, retrieves the item from the new ViewState and updates with item context
+
+**Example generated code:**
+
+```typescript
+slowForEachItem('products', 0, 'p1',
+  () => e('li', {}, [
+    e('span', { class: 'name' }, ['Widget A']),  // static (pre-rendered)
+    e('span', { class: 'price' }, [
+      dt((vs) => vs.price),  // dynamic (fast phase) - item-scoped
+    ]),
+  ]),
+)
+```
+
+This corresponds to pre-rendered jay-html:
+```html
+<li slowForEach="products" trackBy="id" jayIndex="0" jayTrackBy="p1">
+  <span class="name">Widget A</span>
+  <span class="price">{price}</span>
+</li>
+```
+
+## Implementation Details
 
 - See the [Generated JayElement](./docs/jay-element.md) for the details of the `jay-html` generated target.
 - See the [Generated JayElement creation Functions](./docs/runtime.md) for the details of the jay element creation functions used by the `jay-html` generated target.
