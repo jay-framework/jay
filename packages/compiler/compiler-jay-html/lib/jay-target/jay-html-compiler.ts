@@ -52,6 +52,8 @@ import {
     ensureSingleChildElement,
     isConditional,
     isForEach,
+    isSlowForEach,
+    getSlowForEachInfo,
     isRecurse,
     isRecurseWithData,
     isWithData,
@@ -178,6 +180,9 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
             attrCanonical === 'foreach' ||
             attrCanonical === 'trackby' ||
             attrCanonical === 'ref' ||
+            attrCanonical === 'slowforeach' ||
+            attrCanonical === 'jayindex' ||
+            attrCanonical === 'jaytrackby' ||
             attrCanonical === AsyncDirectiveTypes.loading.directive ||
             attrCanonical === AsyncDirectiveTypes.resolved.directive ||
             attrCanonical === AsyncDirectiveTypes.rejected.directive
@@ -451,6 +456,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
                 (_) =>
                     isConditional(_) ||
                     isForEach(_) ||
+                    isSlowForEach(_) ||
                     isRecurseWithData(_) ||
                     isWithData(_) ||
                     checkAsync(_).isAsync,
@@ -758,6 +764,55 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                     forEachAccessPath,
                     renderForEach(forEachFragment, forEachVariables, trackBy, childElement),
                 );
+            } else if (isSlowForEach(htmlElement)) {
+                // Handle pre-rendered slow array items
+                const slowForEachInfo = getSlowForEachInfo(htmlElement);
+                if (!slowForEachInfo) {
+                    return new RenderFragment('', Imports.none(), [
+                        `slowForEach element is missing required attributes (slowForEach, jayIndex, jayTrackBy)`,
+                    ]);
+                }
+
+                const { arrayName, jayIndex, jayTrackBy } = slowForEachInfo;
+
+                // Parse the array accessor to get type info
+                const arrayAccessor = parseAccessor(arrayName, variables);
+                if (arrayAccessor.resolvedType === JayUnknown)
+                    return new RenderFragment('', Imports.none(), [
+                        `slowForEach directive - failed to resolve array type [slowForEach=${arrayName}]`,
+                    ]);
+                if (!isArrayType(arrayAccessor.resolvedType))
+                    return new RenderFragment('', Imports.none(), [
+                        `slowForEach directive - resolved type is not an array [slowForEach=${arrayName}]`,
+                    ]);
+
+                // Get the item type for the child context
+                let slowForEachVariables = variables.childVariableFor(arrayAccessor);
+
+                // Track the iteration type as a used component import
+                context.usedComponentImports.add(slowForEachVariables.currentType.name);
+
+                let newContext = {
+                    ...context,
+                    variables: slowForEachVariables,
+                    indent: indent.child().noFirstLineBreak().withLastLineBreak(),
+                    dynamicRef: true,
+                    isInsideGuard: true, // Mark that we're inside a guard
+                };
+
+                // Render the element (without the slowForEach directive attributes)
+                let childElement = renderHtmlElement(htmlElement, newContext);
+
+                // Wrap with slowForEachItem - element is wrapped in a function for context setup
+                const slowForEachFragment = new RenderFragment(
+                    `${indent.firstLine}slowForEachItem('${arrayName}', ${jayIndex}, '${jayTrackBy}',\n${indent.firstLine}() => ${childElement.rendered}\n${indent.firstLine})`,
+                    childElement.imports.plus(Import.slowForEachItem),
+                    childElement.validations,
+                    childElement.refs,
+                    childElement.recursiveRegions,
+                );
+
+                return nestRefs([arrayName], slowForEachFragment);
             } else if (checkAsync(htmlElement).isAsync) {
                 const asyncDirective = checkAsync(htmlElement);
                 const asyncProperty = htmlElement.getAttribute(asyncDirective.directive);

@@ -10,3 +10,11 @@ export { parseIsEnum, parseEnumValues } from './expressions/expression-compiler'
 export * from './contract';
 export { type JayImportResolver } from './jay-target/jay-import-resolver';
 export { JAY_IMPORT_RESOLVER } from './jay-target/jay-import-resolver';
+
+// Slow rendering
+export {
+    slowRenderTransform,
+    hasSlowPhaseProperties,
+    type SlowRenderInput,
+    type SlowRenderOutput,
+} from './slow-render/slow-render-transform';
