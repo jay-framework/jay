@@ -207,6 +207,13 @@ describe('generate jay-html element', () => {
             expect(elementFile.validations).toEqual([]);
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
+
+        it('for pre-rendered slow arrays with slowForEach', async () => {
+            const folder = 'collections/slow-for-each';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
     });
 
     describe('components', () => {

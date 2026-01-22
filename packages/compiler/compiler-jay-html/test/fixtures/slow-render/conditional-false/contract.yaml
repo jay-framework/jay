@@ -1,0 +1,6 @@
+name: Test
+tags:
+  - tag: showBanner
+    type: data
+    dataType: boolean
+    phase: slow

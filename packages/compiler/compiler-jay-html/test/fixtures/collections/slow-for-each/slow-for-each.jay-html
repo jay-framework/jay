@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data">
+        data:
+            products:
+                - id: string
+                  name: string
+                  price: number
+    </script>
+</head>
+<body>
+    <ul>
+        <li slowForEach="products" trackBy="id" jayIndex="0" jayTrackBy="p1">
+            <span class="name">Widget A</span>
+            <span class="price">{price}</span>
+        </li>
+        <li slowForEach="products" trackBy="id" jayIndex="1" jayTrackBy="p2">
+            <span class="name">Widget B</span>
+            <span class="price">{price}</span>
+        </li>
+    </ul>
+</body>
+</html>

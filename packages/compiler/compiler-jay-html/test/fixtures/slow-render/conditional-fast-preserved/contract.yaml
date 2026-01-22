@@ -1,0 +1,6 @@
+name: Test
+tags:
+  - tag: isLoading
+    type: data
+    dataType: boolean
+    phase: fast
