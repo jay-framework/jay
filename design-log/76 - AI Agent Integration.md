@@ -361,6 +361,9 @@ export interface AIPageState {
 
   /** All available interactions with their DOM elements */
   interactions: AIInteraction[];
+
+  /** Custom events the component can emit */
+  customEvents: Array<{ name: string }>;
 }
 
 export interface AIAgentAPI {
@@ -370,11 +373,17 @@ export interface AIAgentAPI {
   /** Trigger an event on an element by coordinate */
   triggerEvent(eventType: string, coordinate: Coordinate, eventData?: object): void;
 
-  /** Subscribe to state changes - called on every ViewState update */
+  /** Subscribe to ViewState changes - called on every ViewState update */
   onStateChange(callback: (state: AIPageState) => void): () => void;
 
   /** Get a specific interaction by coordinate */
   getInteraction(coordinate: Coordinate): AIInteraction | undefined;
+
+  /** Get list of custom events the component emits */
+  getCustomEvents(): Array<{ name: string }>;
+
+  /** Subscribe to a custom component event (e.g., 'AddToCart') */
+  onComponentEvent(eventName: string, callback: (eventData: any) => void): () => void;
 }
 ```
 
@@ -1083,19 +1092,102 @@ target.appendChild(instance.element.dom);
 
 ## Open Questions
 
-1. **Should coordinates be human-readable paths?**
+### Q1: Should coordinates be human-readable paths?
 
-   - Current: `['prod-123', 'remove']`
-   - Alternative: `'cartItems.prod-123.remove'`
+**Options:**
+- Array: `['prod-123', 'remove']`
+- String path: `'prod-123.remove'`
 
-2. **How to handle navigation events?**
+**Decision:** Keep arrays only in the core API.
 
-   - Links that cause page navigation
-   - Should `waitForStateChange` detect navigation?
+The code that interfaces with LLMs can:
+1. Convert arrays to strings before sending to LLM: `coordinate.join('/')`
+2. Parse strings back to arrays from LLM responses: `path.split('/')`
 
-3. **Support for custom events?**
-   - Components can emit custom events (e.g., `onAddToCart`)
-   - Should AI be able to listen/trigger these?
+This keeps the core API simple and moves formatting concerns to the integration layer where they belong.
+
+```typescript
+// Core API - arrays only
+ai.triggerEvent('click', ['prod-123', 'remove']);
+
+// LLM integration layer (not part of runtime-ai package)
+function formatForLLM(state: AIPageState): string {
+  return state.interactions.map(i => 
+    `${i.refName}: ${i.coordinate.join('/')}`
+  ).join('\n');
+}
+
+function parseFromLLM(path: string): Coordinate {
+  return path.split('/');
+}
+```
+
+---
+
+### Q2: How to handle navigation events?
+
+**Answer:** Ignore navigation listening for now.
+
+- AI can **trigger** navigation (click a link → browser navigates)
+- AI **cannot listen** to navigation (page unloads, new page loads)
+- This is a browser limitation, not a Jay limitation
+
+For SPA-style navigation within Jay Stack (if implemented), the page component would update its ViewState, which the AI would observe normally.
+
+---
+
+### Q3: Support for custom events?
+
+**Answer:** Yes, AI should be able to listen to component custom events.
+
+Components emit custom events via `createEvent`:
+```typescript
+// In component
+const onAddToCart = createEvent<{ productId: string; quantity: number }>();
+onAddToCart.emit({ productId: 'abc', quantity: 2 });
+```
+
+**Design for AI integration:**
+
+```typescript
+interface AIAgentAPI {
+  // ... existing
+  
+  /** Subscribe to a custom component event */
+  onComponentEvent(
+    eventName: string,  // e.g., 'AddToCart'
+    callback: (eventData: any) => void
+  ): () => void;
+  
+  /** Get list of available custom events */
+  getCustomEvents(): Array<{ name: string; description?: string }>;
+}
+```
+
+**Implementation:** The component already exposes custom events via `api[key]` with `.emit`. We can:
+1. Collect all event emitters from the component API
+2. Allow AI to subscribe to them via `onComponentEvent`
+3. Include them in `getPageState()` under a `customEvents` field
+
+```typescript
+// In AIAgent
+getCustomEvents(): Array<{ name: string }> {
+  const events: Array<{ name: string }> = [];
+  for (const key in this.component) {
+    if (this.component[key]?.emit) {
+      events.push({ name: key.replace(/^on/, '') });
+    }
+  }
+  return events;
+}
+
+onComponentEvent(eventName: string, callback: (data: any) => void): () => void {
+  const handler = this.component[`on${eventName}`];
+  if (!handler) throw new Error(`Unknown event: ${eventName}`);
+  handler(({ event }) => callback(event));
+  return () => handler(undefined);  // Unsubscribe
+}
+```
 
 ---
 
