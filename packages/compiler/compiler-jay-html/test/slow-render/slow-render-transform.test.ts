@@ -203,9 +203,7 @@ describe('Relative Path Resolution', () => {
 
         const result = slowRenderTransform(input);
         expect(result.validations).toEqual([]);
-        expect(result.val!.preRenderedJayHtml).toContain(
-            'src="/project/src/pages/home/header.ts"',
-        );
+        expect(result.val!.preRenderedJayHtml).toContain('src="/project/src/pages/home/header.ts"');
     });
 
     it('should resolve relative CSS link paths to absolute', () => {

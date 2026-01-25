@@ -158,9 +158,23 @@ function mkRoute(
             const useSlowRenderCache = !options.dontCacheSlowly;
 
             // Check if we have a cached pre-rendered jay-html
-            const cachedEntry = useSlowRenderCache
+            let cachedEntry = useSlowRenderCache
                 ? slowRenderCache.get(route.jayHtmlPath, pageParams)
                 : undefined;
+
+            // Verify the cached file still exists (could be deleted while server is running)
+            if (cachedEntry) {
+                try {
+                    await fs.access(cachedEntry.preRenderedPath);
+                } catch {
+                    // Cached file was deleted, invalidate and rebuild
+                    console.log(
+                        `[SlowRender] Cached file missing, rebuilding: ${cachedEntry.preRenderedPath}`,
+                    );
+                    await slowRenderCache.invalidate(route.jayHtmlPath);
+                    cachedEntry = undefined;
+                }
+            }
 
             if (cachedEntry) {
                 // Cache hit: use cached pre-rendered jay-html and carryForward
