@@ -69,7 +69,10 @@ describe('slowForEachItem', () => {
                         slowForEachItem<CartViewState, CartItem>('items', 0, 'c1', () =>
                             e('li', {}, [
                                 'Laptop - ',
-                                dt((item: CartItem) => `${item.product.category}: Qty ${item.quantity}`),
+                                dt(
+                                    (item: CartItem) =>
+                                        `${item.product.category}: Qty ${item.quantity}`,
+                                ),
                             ]),
                         ),
                     ]),
@@ -77,10 +80,14 @@ describe('slowForEachItem', () => {
             }
 
             const jayElement = makeCartElement({
-                items: [{ id: 'c1', product: { name: 'Laptop', category: 'Electronics' }, quantity: 2 }],
+                items: [
+                    { id: 'c1', product: { name: 'Laptop', category: 'Electronics' }, quantity: 2 },
+                ],
             });
 
-            expect(jayElement.dom.querySelector('li')?.textContent).toBe('Laptop - Electronics: Qty 2');
+            expect(jayElement.dom.querySelector('li')?.textContent).toBe(
+                'Laptop - Electronics: Qty 2',
+            );
         });
     });
 
@@ -324,21 +331,27 @@ describe('slowForEachItem', () => {
             products: ProductWithTags[];
         }
 
-        function makeTaggedProductElement(data: TaggedProductsViewState): JayElement<TaggedProductsViewState, any> {
+        function makeTaggedProductElement(
+            data: TaggedProductsViewState,
+        ): JayElement<TaggedProductsViewState, any> {
             const [refManager] = ReferencesManager.for({}, [], [], [], []);
             return ConstructContext.withRootContext(data, refManager, () =>
                 de('div', { class: 'products' }, [
                     // slowForEachItem wraps a pre-rendered product
-                    slowForEachItem<TaggedProductsViewState, ProductWithTags>('products', 0, 'prod1', () =>
-                        de('article', { class: 'product' }, [
-                            e('h3', {}, ['Widget']), // static (pre-rendered)
-                            // Dynamic forEach for tags (fast phase)
-                            forEach<ProductWithTags, Tag>(
-                                (item) => item.tags,
-                                (tag) => e('span', { class: 'tag' }, [dt((t: Tag) => t.label)]),
-                                'id',
-                            ),
-                        ]),
+                    slowForEachItem<TaggedProductsViewState, ProductWithTags>(
+                        'products',
+                        0,
+                        'prod1',
+                        () =>
+                            de('article', { class: 'product' }, [
+                                e('h3', {}, ['Widget']), // static (pre-rendered)
+                                // Dynamic forEach for tags (fast phase)
+                                forEach<ProductWithTags, Tag>(
+                                    (item) => item.tags,
+                                    (tag) => e('span', { class: 'tag' }, [dt((t: Tag) => t.label)]),
+                                    'id',
+                                ),
+                            ]),
                     ),
                 ]),
             );

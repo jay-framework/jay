@@ -135,7 +135,7 @@ function hasBindings(text: string): boolean {
 
 /**
  * Resolve bindings in a text string, replacing slow-phase bindings with values
- * 
+ *
  * @param text - The text containing bindings
  * @param contextData - The data object for the current context (could be root or array item)
  * @param phaseMap - Map of property paths to phase info
@@ -202,7 +202,9 @@ function transformElement(
 
                     // Get trackBy value
                     const trackByValue =
-                        item && typeof item === 'object' ? String((item as any)[trackBy] || index) : String(index);
+                        item && typeof item === 'object'
+                            ? String((item as any)[trackBy] || index)
+                            : String(index);
                     cloned.setAttribute('jayTrackBy', trackByValue);
 
                     // Transform children with new context - item becomes the new contextData
@@ -252,10 +254,14 @@ function transformElement(
 
     // Transform text content in child nodes (direct text, not nested elements)
     // Note: we don't process text here because transformChildren handles it
-    
+
     // Transform attributes
     for (const attrName of Object.keys(element.attributes)) {
-        if (['foreach', 'trackby', 'slowforeach', 'jayindex', 'jaytrackby', 'if', 'ref'].includes(attrName.toLowerCase())) {
+        if (
+            ['foreach', 'trackby', 'slowforeach', 'jayindex', 'jaytrackby', 'if', 'ref'].includes(
+                attrName.toLowerCase(),
+            )
+        ) {
             continue;
         }
 

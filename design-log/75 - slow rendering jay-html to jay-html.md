@@ -5,6 +5,7 @@
 Jay-html to jay-html slow rendering pre-renders slow-phase bindings at build time, producing a new jay-html file with static data "baked in" while preserving fast/interactive bindings. This enables faster request-time rendering by skipping slow-phase work.
 
 **Key features:**
+
 - Text/attribute bindings with `phase: slow` are resolved to literal values
 - Slow conditionals (`if`) are evaluated and removed or stripped
 - Slow arrays (`forEach`) are unrolled to `slowForEach` elements with `jayIndex` and `jayTrackBy` attributes
@@ -859,18 +860,17 @@ export function render() {
       'products', // array name for context lookup
       0, // jayIndex - which item in the array
       'prod1', // jayTrackBy value
-      () => e('li', {}, [  // elementCreator function
-        e('span', { class: 'name' }, ['Widget A']), // static text (pre-rendered)
-        e('span', { class: 'price' }, [
-          dt((vs: ProductFastItem) => vs.price), // item-scoped binding (not indexed!)
+      () =>
+        e('li', {}, [
+          // elementCreator function
+          e('span', { class: 'name' }, ['Widget A']), // static text (pre-rendered)
+          e('span', { class: 'price' }, [
+            dt((vs: ProductFastItem) => vs.price), // item-scoped binding (not indexed!)
+          ]),
         ]),
-      ]),
     ),
-    slowForEachItem(
-      'products',
-      1,
-      'prod2',
-      () => e('li', {}, [
+    slowForEachItem('products', 1, 'prod2', () =>
+      e('li', {}, [
         e('span', { class: 'name' }, ['Widget B']),
         e('span', { class: 'price' }, [
           dt((vs: ProductFastItem) => vs.price), // same binding, different context
@@ -903,18 +903,18 @@ export function render() {
 **Generated TypeScript:**
 
 ```typescript
-slowForEachItem('products', 0, 'prod1',
-  () => e('li', {}, [
+slowForEachItem('products', 0, 'prod1', () =>
+  e('li', {}, [
     e('span', { class: 'name' }, ['Widget A']),
     e('span', { class: 'price' }, [
-      dt((vs) => vs.price),  // item-scoped
+      dt((vs) => vs.price), // item-scoped
     ]),
     conditional(
-      (vs) => vs.inStock,  // item-scoped conditional
+      (vs) => vs.inStock, // item-scoped conditional
       () => e('button', {}, ['Add to Cart']),
     ),
   ]),
-)
+);
 ```
 
 ### Example: Pure Slow Array (No Fast Properties)
@@ -938,17 +938,15 @@ When all array item properties are slow:
 
 ```typescript
 e('ul', { class: 'images' }, [
-  slowForEachItem('images', 0, '1',
-    () => e('li', {}, [
-      e('img', { src: '/hero.jpg', alt: 'Hero shot' }),  // fully static
+  slowForEachItem('images', 0, '1', () =>
+    e('li', {}, [
+      e('img', { src: '/hero.jpg', alt: 'Hero shot' }), // fully static
     ]),
   ),
-  slowForEachItem('images', 1, '2',
-    () => e('li', {}, [
-      e('img', { src: '/detail.jpg', alt: 'Detail view' }),
-    ]),
+  slowForEachItem('images', 1, '2', () =>
+    e('li', {}, [e('img', { src: '/detail.jpg', alt: 'Detail view' })]),
   ),
-])
+]);
 ```
 
 **Note**: Even with no fast bindings, `slowForEachItem` sets up the context for events and potential interactive updates. The element is wrapped in a function so it's constructed within the correct data context.
@@ -959,7 +957,7 @@ e('ul', { class: 'images' }, [
 /**
  * Wraps a pre-rendered array item from slow phase.
  * Sets the data context to viewState[arrayName][index] for child bindings.
- * 
+ *
  * @param arrayName - Name of the source array in parent ViewState
  * @param index - Index of this item (used to access viewState[arrayName][index])
  * @param trackByValue - The track-by value for client reconciliation
@@ -973,12 +971,12 @@ function slowForEachItem<ParentVS, ItemVS>(
 ): BaseJayElement<ParentVS>;
 ```
 
-**Note**: The `elementCreator` is a function (not a direct element) because it must be invoked *within* the item's data context. This ensures bindings resolve against the correct array item during construction.
+**Note**: The `elementCreator` is a function (not a direct element) because it must be invoked _within_ the item's data context. This ensures bindings resolve against the correct array item during construction.
 
 ### Comparison: forEach vs slowForEachItem
 
 | Aspect            | `forEach`                     | `slowForEachItem`                |
-|-------------------|-------------------------------|----------------------------------|
+| ----------------- | ----------------------------- | -------------------------------- |
 | Structure         | Dynamic (rendered at runtime) | Static (pre-rendered)            |
 | Item count        | Determined at runtime         | Fixed at slow-render time        |
 | Context switching | Yes                           | Yes                              |
@@ -1074,6 +1072,7 @@ function slowForEachItem<ParentVS, ItemVS>(
 **Implemented:**
 
 1. **Core Transformation Engine** (`compiler-jay-html/lib/slow-render/slow-render-transform.ts`)
+
    - `slowRenderTransform()` function for jay-html to jay-html transformation
    - `hasSlowPhaseProperties()` utility to check if pre-rendering is applicable
    - Phase detection from contract metadata
@@ -1082,11 +1081,13 @@ function slowForEachItem<ParentVS, ItemVS>(
    - Conditional (if) handling - removes false slow conditions, strips if attr from true ones
 
 2. **Array Unrolling** (`forEach` → `slowForEach`)
+
    - Slow arrays are unrolled to individual `slowForEach` elements
    - Each item gets `jayIndex`, `jayTrackBy` attributes
    - Mixed-phase arrays: slow bindings resolved, fast bindings preserved as item-scoped
 
 3. **Compiler Integration**
+
    - Added `isSlowForEach()` and `getSlowForEachInfo()` helpers
    - Compiler generates `slowForEachItem()` calls for pre-rendered arrays
    - Proper imports for `slowForEachItem` from runtime
@@ -1099,12 +1100,14 @@ function slowForEachItem<ParentVS, ItemVS>(
    - Context-aware update that resolves item from parent ViewState
 
 **Tests:**
+
 - 18 tests for slow-render-transform (all passing)
 - 10 tests for slowForEachItem runtime (all passing)
 - 1 test for slowForEach compilation (all passing)
 - Total: 427 compiler tests passing, 181 runtime tests passing
 
 **Files Created/Modified:**
+
 - NEW: `compiler-jay-html/lib/slow-render/slow-render-transform.ts`
 - NEW: `compiler-jay-html/test/slow-render/slow-render-transform.test.ts`
 - NEW: `compiler-jay-html/test/fixtures/slow-render/` (12 fixture directories with input/output/contract files)
@@ -1120,15 +1123,17 @@ function slowForEachItem<ParentVS, ItemVS>(
 
 1. **Removed pre-render metadata script**: The design included an `application/jay-prerender-meta` script in the output head with `renderedAt` and `slowProperties`. This was removed as unnecessary - the `slowForEach`/`jayIndex`/`jayTrackBy` attributes provide sufficient information for runtime.
 
-2. **SlowRenderInput uses content instead of path**: 
+2. **SlowRenderInput uses content instead of path**:
+
    - Design: `jayHtmlPath: string`
    - Implementation: `jayHtmlContent: string`
    - Rationale: More flexible - caller controls file loading
 
 3. **slowForEachItem takes elementCreator function**:
+
    - Design: `element: JayElement<ItemVS>` (direct element)
    - Implementation: `elementCreator: () => BaseJayElement<ItemVS>` (function)
-   - Rationale: The element must be constructed *within* the item context for bindings to resolve correctly. Passing a pre-constructed element would use the wrong context.
+   - Rationale: The element must be constructed _within_ the item context for bindings to resolve correctly. Passing a pre-constructed element would use the wrong context.
 
 4. **Style binding syntax differs from design**: The design showed `style:background-color="{bgColor}"` syntax, but jay-html uses `style="background-color: {bgColor}"` (bindings embedded in the style attribute value). The implementation correctly handles this actual syntax.
 
@@ -1145,6 +1150,7 @@ function slowForEachItem<ParentVS, ItemVS>(
 3. **Slow bindings within components resolved**: Text/attribute bindings with slow phase data are still resolved within component templates.
 
 **Tests added:**
+
 - `recursive-preserved` - verifies recursive regions with fast data are unchanged
 - `headless-preserved` - verifies headless imports are preserved and slow bindings resolved
 
@@ -1153,6 +1159,7 @@ function slowForEachItem<ParentVS, ItemVS>(
 **Key Benefit:** Since slow ViewState is baked directly into the pre-rendered jay-html, we don't need to pass it to the client. The client only receives fast and interactive ViewState, reducing payload size and simplifying the client-side code.
 
 **Current flow (without pre-rendering):**
+
 ```
 Request → loadPageParts → runSlowlyForPage → renderFastChangingData → generateClientScript
                               ↓
@@ -1160,10 +1167,11 @@ Request → loadPageParts → runSlowlyForPage → renderFastChangingData → ge
 ```
 
 **New flow (with pre-rendering, `dontCacheSlowly: false`):**
+
 ```
 First Request (cache miss):
   loadPageParts → runSlowlyForPage → transform jay-html → cache(preRenderedHtml + carryForward) → renderFast
-  
+
 Subsequent Requests (cache hit):
   check cache → loadPageParts(preRenderedHtml) → renderFast(cached carryForward)
                                 ↓                            ↓
@@ -1171,6 +1179,7 @@ Subsequent Requests (cache hit):
 ```
 
 **Legacy flow (when `dontCacheSlowly: true`):**
+
 ```
 Request → loadPageParts → runSlowlyForPage → renderFastChangingData → generateClientScript
                               ↓
@@ -1180,6 +1189,7 @@ Request → loadPageParts → runSlowlyForPage → renderFastChangingData → ge
 **Implemented:**
 
 1. **SlowRenderCache class** (`stack-server-runtime/lib/slow-render-cache.ts`)
+
    - **Disk-based caching**: Pre-rendered jay-html files are written to `<buildFolder>/slow-render-cache/`
    - Cache keyed by `(jayHtmlPath, params)` with MD5 hash for params in filename
    - Caches `preRenderedPath` (file path), `carryForward`, and `slowViewState`
@@ -1188,14 +1198,17 @@ Request → loadPageParts → runSlowlyForPage → renderFastChangingData → ge
    - `pathToKeys` map for efficient invalidation of all param variants
 
 2. **LoadPageParts enhancement** (`stack-server-runtime/lib/load-page-parts.ts`)
+
    - Added `LoadPagePartsOptions` interface with `preRenderedPath?: string`
    - Reads from pre-rendered file path if provided, otherwise from original
    - Import resolution still uses original jay-html's directory
 
 3. **Dev server options** (`dev-server/lib/dev-server-options.ts`)
+
    - Added `buildFolder?: string` option (defaults to `<projectRootFolder>/build`)
 
 4. **Dev server integration** (`dev-server/lib/dev-server.ts`)
+
    - Creates `SlowRenderCache` with cache dir at `<buildFolder>/slow-render-cache/`
    - Three request handlers:
      - `handleCachedRequest`: Cache hit - skip slow render, use cached carryForward and file path
@@ -1205,6 +1218,7 @@ Request → loadPageParts → runSlowlyForPage → renderFastChangingData → ge
    - `setupSlowRenderCacheInvalidation()` for file watching
 
 5. **Contract loading for phase detection**
+
    - Tries to load `.jay-contract` file beside the jay-html
    - File not found is OK (may use headless component contracts)
    - Parse errors fail the function
@@ -1215,6 +1229,7 @@ Request → loadPageParts → runSlowlyForPage → renderFastChangingData → ge
    - Watches `*.jay-contract` files - invalidates corresponding jay-html
 
 **Files Created/Modified:**
+
 - NEW: `stack-server-runtime/lib/slow-render-cache.ts`
 - MODIFIED: `stack-server-runtime/lib/load-page-parts.ts`
 - MODIFIED: `stack-server-runtime/lib/index.ts`

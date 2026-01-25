@@ -30,10 +30,13 @@ type CacheKey = string;
 function makeCacheKey(jayHtmlPath: string, params: Record<string, string>): CacheKey {
     const sortedParams = Object.keys(params)
         .sort()
-        .reduce((acc, key) => {
-            acc[key] = params[key];
-            return acc;
-        }, {} as Record<string, string>);
+        .reduce(
+            (acc, key) => {
+                acc[key] = params[key];
+                return acc;
+            },
+            {} as Record<string, string>,
+        );
     return `${jayHtmlPath}:${JSON.stringify(sortedParams)}`;
 }
 
@@ -43,10 +46,13 @@ function makeCacheKey(jayHtmlPath: string, params: Record<string, string>): Cach
 function hashParams(params: Record<string, string>): string {
     const sortedParams = Object.keys(params)
         .sort()
-        .reduce((acc, key) => {
-            acc[key] = params[key];
-            return acc;
-        }, {} as Record<string, string>);
+        .reduce(
+            (acc, key) => {
+                acc[key] = params[key];
+                return acc;
+            },
+            {} as Record<string, string>,
+        );
     const json = JSON.stringify(sortedParams);
     if (json === '{}') return '';
     return '_' + crypto.createHash('md5').update(json).digest('hex').substring(0, 8);
@@ -54,12 +60,12 @@ function hashParams(params: Record<string, string>): string {
 
 /**
  * Cache for pre-rendered jay-html files.
- * 
+ *
  * This cache stores jay-html content that has been transformed with slow-phase
  * data baked in. The key insight is that since slow ViewState is embedded directly
  * into the jay-html, we don't need to pass it to the client - only fast and
  * interactive ViewState is sent.
- * 
+ *
  * Pre-rendered files are written to disk so Vite can pick them up and compile them.
  */
 export class SlowRenderCache {
@@ -97,7 +103,7 @@ export class SlowRenderCache {
         carryForward: object,
     ): Promise<string> {
         const key = makeCacheKey(jayHtmlPath, params);
-        
+
         // Calculate the cache file path
         // e.g., /project/src/pages/products/page.jay-html -> products/page_abc123.jay-html
         const relativePath = path.relative(this.pagesRoot, jayHtmlPath);
@@ -169,7 +175,7 @@ export class SlowRenderCache {
      * - A jay-html file itself
      * - A component file (page.ts)
      * - Any other dependency
-     * 
+     *
      * @param changedPath - Absolute path to the changed file
      * @param resolveDependencies - Optional function to resolve which jay-html files depend on the changed file
      */

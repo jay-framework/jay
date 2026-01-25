@@ -156,33 +156,58 @@ function mkRoute(
 
             // Check if slow render caching is enabled
             const useSlowRenderCache = !options.dontCacheSlowly;
-            
+
             // Check if we have a cached pre-rendered jay-html
-            const cachedEntry = useSlowRenderCache 
-                ? slowRenderCache.get(route.jayHtmlPath, pageParams) 
+            const cachedEntry = useSlowRenderCache
+                ? slowRenderCache.get(route.jayHtmlPath, pageParams)
                 : undefined;
 
             if (cachedEntry) {
                 // Cache hit: use cached pre-rendered jay-html and carryForward
                 // No need to run slow rendering - everything is cached
                 await handleCachedRequest(
-                    vite, route, options, cachedEntry, pageParams, pageProps,
-                    allPluginClientInits, allPluginsWithInit, projectInit,
-                    res, url,
+                    vite,
+                    route,
+                    options,
+                    cachedEntry,
+                    pageParams,
+                    pageProps,
+                    allPluginClientInits,
+                    allPluginsWithInit,
+                    projectInit,
+                    res,
+                    url,
                 );
             } else if (useSlowRenderCache) {
                 // Cache miss with caching enabled: pre-render and cache
                 await handlePreRenderRequest(
-                    vite, route, options, slowlyPhase, slowRenderCache,
-                    pageParams, pageProps, allPluginClientInits, allPluginsWithInit,
-                    projectInit, res, url,
+                    vite,
+                    route,
+                    options,
+                    slowlyPhase,
+                    slowRenderCache,
+                    pageParams,
+                    pageProps,
+                    allPluginClientInits,
+                    allPluginsWithInit,
+                    projectInit,
+                    res,
+                    url,
                 );
             } else {
                 // Caching disabled: run slow render on each request, full viewState to client
                 await handleDirectRequest(
-                    vite, route, options, slowlyPhase,
-                    pageParams, pageProps, allPluginClientInits, allPluginsWithInit,
-                    projectInit, res, url,
+                    vite,
+                    route,
+                    options,
+                    slowlyPhase,
+                    pageParams,
+                    pageProps,
+                    allPluginClientInits,
+                    allPluginsWithInit,
+                    projectInit,
+                    res,
+                    url,
                 );
             }
         } catch (e) {
@@ -251,8 +276,16 @@ async function handleCachedRequest(
     // Only fast+interactive viewState (slow is baked into jay-html)
     // Use the pre-rendered file path so Vite compiles it
     await sendResponse(
-        vite, res, url, cachedEntry.preRenderedPath, pageParts, renderedFast.rendered,
-        renderedFast.carryForward, clientTrackByMap, projectInit, pluginsForPage,
+        vite,
+        res,
+        url,
+        cachedEntry.preRenderedPath,
+        pageParts,
+        renderedFast.rendered,
+        renderedFast.carryForward,
+        clientTrackByMap,
+        projectInit,
+        pluginsForPage,
     );
 }
 
@@ -305,7 +338,7 @@ async function handlePreRenderRequest(
 
     // Pre-render the jay-html with slow viewState
     const preRenderedContent = await preRenderJayHtml(route, renderedSlowly.rendered);
-    
+
     if (!preRenderedContent) {
         res.status(500).end('Failed to pre-render jay-html');
         return;
@@ -361,8 +394,16 @@ async function handlePreRenderRequest(
     // Only fast+interactive viewState (slow is baked into jay-html)
     // Use the pre-rendered file path so Vite compiles it
     await sendResponse(
-        vite, res, url, preRenderedPath, pageParts, renderedFast.rendered,
-        renderedFast.carryForward, clientTrackByMap, projectInit, pluginsForPage,
+        vite,
+        res,
+        url,
+        preRenderedPath,
+        pageParts,
+        renderedFast.rendered,
+        renderedFast.carryForward,
+        clientTrackByMap,
+        projectInit,
+        pluginsForPage,
     );
 }
 
@@ -411,11 +452,7 @@ async function handleDirectRequest(
     );
 
     // Run slow phase
-    const renderedSlowly = await slowlyPhase.runSlowlyForPage(
-        pageParams,
-        pageProps,
-        pageParts,
-    );
+    const renderedSlowly = await slowlyPhase.runSlowlyForPage(pageParams, pageProps, pageParts);
 
     if (renderedSlowly.kind !== 'PhaseOutput') {
         if (renderedSlowly.kind === 'ClientError') {
@@ -451,8 +488,16 @@ async function handleDirectRequest(
 
     // Use original jay-html path (no pre-rendering)
     await sendResponse(
-        vite, res, url, route.jayHtmlPath, pageParts, viewState,
-        renderedFast.carryForward, clientTrackByMap, projectInit, pluginsForPage,
+        vite,
+        res,
+        url,
+        route.jayHtmlPath,
+        pageParts,
+        viewState,
+        renderedFast.carryForward,
+        clientTrackByMap,
+        projectInit,
+        pluginsForPage,
     );
 }
 
@@ -483,10 +528,7 @@ async function sendResponse(
         pluginsForPage,
     );
 
-    const compiledPageHtml = await vite.transformIndexHtml(
-        !!url ? url : '/',
-        pageHtml,
-    );
+    const compiledPageHtml = await vite.transformIndexHtml(!!url ? url : '/', pageHtml);
     res.status(200).set({ 'Content-Type': 'text/html' }).send(compiledPageHtml);
 }
 
@@ -500,14 +542,14 @@ async function preRenderJayHtml(
 ): Promise<string | undefined> {
     // Read the original jay-html
     const jayHtmlContent = await fs.readFile(route.jayHtmlPath, 'utf-8');
-    
+
     // Try to load and parse the contract for phase detection
     // The contract can come from:
     // 1. A .jay-contract file beside the jay-html
     // 2. Headless components imported in the jay-html (handled by slowRenderTransform via the jay-html content)
     const contractPath = route.jayHtmlPath.replace('.jay-html', '.jay-contract');
     let contract;
-    
+
     try {
         const contractContent = await fs.readFile(contractPath, 'utf-8');
         // Contract file exists - parse it (errors should fail the function)
@@ -515,7 +557,10 @@ async function preRenderJayHtml(
         if (parseResult.val) {
             contract = parseResult.val;
         } else if (parseResult.validations.length > 0) {
-            console.error(`[SlowRender] Contract parse error for ${contractPath}:`, parseResult.validations);
+            console.error(
+                `[SlowRender] Contract parse error for ${contractPath}:`,
+                parseResult.validations,
+            );
             return undefined;
         }
     } catch (error) {
@@ -540,7 +585,10 @@ async function preRenderJayHtml(
     }
 
     if (result.validations.length > 0) {
-        console.error(`[SlowRender] Transform failed for ${route.jayHtmlPath}:`, result.validations);
+        console.error(
+            `[SlowRender] Transform failed for ${route.jayHtmlPath}:`,
+            result.validations,
+        );
     }
     return undefined;
 }
@@ -601,7 +649,16 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
     const pluginClientInits = preparePluginClientInits(pluginsWithInit);
 
     const devServerRoutes: DevServerRoute[] = routes.map((route: JayRoute) =>
-        mkRoute(route, vite, slowlyPhase, options, slowRenderCache, projectInit, pluginsWithInit, pluginClientInits),
+        mkRoute(
+            route,
+            vite,
+            slowlyPhase,
+            options,
+            slowRenderCache,
+            projectInit,
+            pluginsWithInit,
+            pluginClientInits,
+        ),
     );
 
     return {
@@ -674,7 +731,7 @@ function setupActionRouter(vite: ViteDevServer): void {
 
 /**
  * Sets up file watching for slow render cache invalidation.
- * 
+ *
  * When jay-html, page.ts, or contract files change, the cached pre-rendered
  * jay-html is invalidated (deleted from disk) so it will be regenerated on the next request.
  */

@@ -121,12 +121,14 @@ function slowForEachItem<ParentVS, ItemVS>(
 ```
 
 **Parameters:**
+
 - `arrayName` - The property name of the array in the parent ViewState
 - `index` - The position in the pre-rendered array (jayIndex)
 - `trackByValue` - The track-by value for client reconciliation (jayTrackBy)
 - `elementCreator` - Function that creates the element (called within item context)
 
 **How it works:**
+
 1. Sets the data context to `viewState[arrayName][index]`
 2. Calls `elementCreator()` within that context so bindings are item-scoped
 3. On update, retrieves the item from the new ViewState and updates with item context
@@ -134,17 +136,18 @@ function slowForEachItem<ParentVS, ItemVS>(
 **Example generated code:**
 
 ```typescript
-slowForEachItem('products', 0, 'p1',
-  () => e('li', {}, [
-    e('span', { class: 'name' }, ['Widget A']),  // static (pre-rendered)
+slowForEachItem('products', 0, 'p1', () =>
+  e('li', {}, [
+    e('span', { class: 'name' }, ['Widget A']), // static (pre-rendered)
     e('span', { class: 'price' }, [
-      dt((vs) => vs.price),  // dynamic (fast phase) - item-scoped
+      dt((vs) => vs.price), // dynamic (fast phase) - item-scoped
     ]),
   ]),
-)
+);
 ```
 
 This corresponds to pre-rendered jay-html:
+
 ```html
 <li slowForEach="products" trackBy="id" jayIndex="0" jayTrackBy="p1">
   <span class="name">Widget A</span>
