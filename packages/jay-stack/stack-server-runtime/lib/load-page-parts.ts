@@ -27,12 +27,22 @@ export interface LoadedPageParts {
     usedPackages: Set<string>;
 }
 
+export interface LoadPagePartsOptions {
+    /**
+     * Path to pre-rendered jay-html file to use instead of the original.
+     * When provided, this file (with slow-phase bindings resolved) is read.
+     * Import resolution still uses the original jay-html's directory.
+     */
+    preRenderedPath?: string;
+}
+
 export async function loadPageParts(
     vite: ViteDevServer,
     route: JayRoute,
     pagesBase: string,
     projectBase: string,
     jayRollupConfig: JayRollupConfig,
+    options?: LoadPagePartsOptions,
 ): Promise<WithValidations<LoadedPageParts>> {
     const exists = await fs
         .access(route.compPath, fs.constants.F_OK)
@@ -51,7 +61,10 @@ export async function loadPageParts(
         });
     }
 
-    const jayHtmlSource = (await fs.readFile(route.jayHtmlPath)).toString();
+    // Use pre-rendered jay-html file if provided, otherwise read from original
+    const jayHtmlFilePath = options?.preRenderedPath ?? route.jayHtmlPath;
+    const jayHtmlSource = (await fs.readFile(jayHtmlFilePath)).toString();
+    // Import resolution uses the original jay-html's directory (not the cache dir)
     const fileName = path.basename(route.jayHtmlPath);
     const dirName = path.dirname(route.jayHtmlPath);
     const jayHtmlWithValidations = await parseJayFile(

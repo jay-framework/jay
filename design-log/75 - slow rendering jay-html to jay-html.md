@@ -11,7 +11,7 @@ Jay-html to jay-html slow rendering pre-renders slow-phase bindings at build tim
 - Fast/interactive bindings remain as template syntax for runtime resolution
 - Runtime `slowForEachItem()` function provides correct data context for item-scoped bindings
 
-**Status:** Core transformation engine, runtime support, and component handling implemented (Phase 1-4). Dev server integration pending (Phase 5).
+**Status:** Core transformation engine, runtime support, component handling, and dev server integration implemented (Phase 1-5). Production build pending (Phase 6-7).
 
 ---
 
@@ -1148,31 +1148,80 @@ function slowForEachItem<ParentVS, ItemVS>(
 - `recursive-preserved` - verifies recursive regions with fast data are unchanged
 - `headless-preserved` - verifies headless imports are preserved and slow bindings resolved
 
-### Phase 5: Dev Server Integration (PENDING)
+### Phase 5: Dev Server Integration (COMPLETED)
 
-Not yet implemented. This phase requires significant changes to the dev server request flow:
+**Key Benefit:** Since slow ViewState is baked directly into the pre-rendered jay-html, we don't need to pass it to the client. The client only receives fast and interactive ViewState, reducing payload size and simplifying the client-side code.
 
-**Current flow:**
+**Current flow (without pre-rendering):**
 ```
 Request → loadPageParts → runSlowlyForPage → renderFastChangingData → generateClientScript
+                              ↓
+                    (slow ViewState sent to client)
 ```
 
-**Proposed flow with pre-rendering:**
+**New flow (with pre-rendering, `dontCacheSlowly: false`):**
 ```
-Request → check pre-render cache → (if miss: load component, run slowlyRender, transform jay-html, cache) → loadPageParts(with pre-rendered jay-html) → renderFastChangingData → generateClientScript
+First Request (cache miss):
+  loadPageParts → runSlowlyForPage → transform jay-html → cache(preRenderedHtml + carryForward) → renderFast
+  
+Subsequent Requests (cache hit):
+  check cache → loadPageParts(preRenderedHtml) → renderFast(cached carryForward)
+                                ↓                            ↓
+                    (skip slow rendering)    (only fast+interactive ViewState to client)
 ```
 
-**Required work:**
-- Pre-render cache keyed by `(jayHtmlPath, params)`
-- Integration with `loadPageParts` to use pre-rendered jay-html
-- File watcher for jay-html/component changes to invalidate cache
-- Coordination between slow ViewState generation and jay-html transformation
+**Legacy flow (when `dontCacheSlowly: true`):**
+```
+Request → loadPageParts → runSlowlyForPage → renderFastChangingData → generateClientScript
+                              ↓
+                    (full slow+fast ViewState sent to client)
+```
 
-**Challenges:**
-- The slow ViewState comes from `slowlyRender()` in the component
-- The jay-html transformation needs the slow ViewState
-- Currently `loadPageParts` loads both jay-html and component together
-- Need to restructure to: load component → get slow ViewState → transform jay-html → compile
+**Implemented:**
+
+1. **SlowRenderCache class** (`stack-server-runtime/lib/slow-render-cache.ts`)
+   - **Disk-based caching**: Pre-rendered jay-html files are written to `<buildFolder>/slow-render-cache/`
+   - Cache keyed by `(jayHtmlPath, params)` with MD5 hash for params in filename
+   - Caches `preRenderedPath` (file path), `carryForward`, and `slowViewState`
+   - Async `set()` returns the path where the file was written
+   - Async `invalidate()` deletes cached files from disk
+   - `pathToKeys` map for efficient invalidation of all param variants
+
+2. **LoadPageParts enhancement** (`stack-server-runtime/lib/load-page-parts.ts`)
+   - Added `LoadPagePartsOptions` interface with `preRenderedPath?: string`
+   - Reads from pre-rendered file path if provided, otherwise from original
+   - Import resolution still uses original jay-html's directory
+
+3. **Dev server options** (`dev-server/lib/dev-server-options.ts`)
+   - Added `buildFolder?: string` option (defaults to `<projectRootFolder>/build`)
+
+4. **Dev server integration** (`dev-server/lib/dev-server.ts`)
+   - Creates `SlowRenderCache` with cache dir at `<buildFolder>/slow-render-cache/`
+   - Three request handlers:
+     - `handleCachedRequest`: Cache hit - skip slow render, use cached carryForward and file path
+     - `handlePreRenderRequest`: Cache miss - pre-render, write to disk, cache, then fast render
+     - `handleLegacyRequest`: Caching disabled - full viewState to client (backward compatible)
+   - `preRenderJayHtml()` helper function for transformation
+   - `setupSlowRenderCacheInvalidation()` for file watching
+
+5. **Contract loading for phase detection**
+   - Tries to load `.jay-contract` file beside the jay-html
+   - File not found is OK (may use headless component contracts)
+   - Parse errors fail the function
+
+6. **File watching for cache invalidation**
+   - Watches `*.jay-html` files - deletes cached file, invalidates entry
+   - Watches `page.ts` files - invalidates corresponding jay-html
+   - Watches `*.jay-contract` files - invalidates corresponding jay-html
+
+**Files Created/Modified:**
+- NEW: `stack-server-runtime/lib/slow-render-cache.ts`
+- MODIFIED: `stack-server-runtime/lib/load-page-parts.ts`
+- MODIFIED: `stack-server-runtime/lib/index.ts`
+- MODIFIED: `dev-server/lib/dev-server.ts`
+- MODIFIED: `dev-server/lib/dev-server-options.ts`
+
+**Tests:** All existing dev-server tests pass (13 tests), all stack-server-runtime tests pass (66 tests)
 
 ### Phase 6-7: Production Build & Incremental Regeneration (FUTURE)
 
