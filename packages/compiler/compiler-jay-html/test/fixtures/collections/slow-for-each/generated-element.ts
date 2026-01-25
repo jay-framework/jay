@@ -47,13 +47,13 @@ export function render(options?: RenderElementOptions): SlowForEachElementPreRen
     const render = (viewState: SlowForEachViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             de('ul', {}, [
-                slowForEachItem('products', 0, 'p1', () =>
+                slowForEachItem<SlowForEachViewState, ProductOfSlowForEachViewState>('products', 0, 'p1', () =>
                     e('li', {}, [
                         e('span', { class: 'name' }, ['Widget A']),
                         e('span', { class: 'price' }, [dt((vs1) => vs1.price)]),
                     ]),
                 ),
-                slowForEachItem('products', 1, 'p2', () =>
+                slowForEachItem<SlowForEachViewState, ProductOfSlowForEachViewState>('products', 1, 'p2', () =>
                     e('li', {}, [
                         e('span', { class: 'name' }, ['Widget B']),
                         e('span', { class: 'price' }, [dt((vs1) => vs1.price)]),

@@ -803,9 +803,14 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 // Render the element (without the slowForEach directive attributes)
                 let childElement = renderHtmlElement(htmlElement, newContext);
 
+                // Get type names for generic parameters
+                const parentTypeName = variables.currentType.name;
+                const itemTypeName = slowForEachVariables.currentType.name;
+
                 // Wrap with slowForEachItem - element is wrapped in a function for context setup
+                // Include generic types to ensure proper TypeScript inference
                 const slowForEachFragment = new RenderFragment(
-                    `${indent.firstLine}slowForEachItem('${arrayName}', ${jayIndex}, '${jayTrackBy}',\n${indent.firstLine}() => ${childElement.rendered}\n${indent.firstLine})`,
+                    `${indent.firstLine}slowForEachItem<${parentTypeName}, ${itemTypeName}>('${arrayName}', ${jayIndex}, '${jayTrackBy}',\n${indent.firstLine}() => ${childElement.rendered}\n${indent.firstLine})`,
                     childElement.imports.plus(Import.slowForEachItem),
                     childElement.validations,
                     childElement.refs,
