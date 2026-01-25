@@ -1,0 +1,14 @@
+name: Test
+tags:
+  - tag: bgColor
+    type: data
+    dataType: string
+    phase: slow
+  - tag: textColor
+    type: data
+    dataType: string
+    phase: slow
+  - tag: fontSize
+    type: data
+    dataType: number
+    phase: slow

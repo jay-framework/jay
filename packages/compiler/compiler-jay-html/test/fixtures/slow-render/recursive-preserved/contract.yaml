@@ -1,0 +1,19 @@
+name: Test
+tags:
+  - tag: name
+    type: data
+    dataType: string
+    phase: fast
+  - tag: open
+    type: data
+    dataType: boolean
+    phase: fast
+  - tag: children
+    type: sub-contract
+    repeated: true
+    trackBy: id
+    phase: fast
+    tags:
+      - tag: id
+        type: data
+        dataType: string

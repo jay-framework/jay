@@ -74,6 +74,12 @@ describe('Slow Render Transform', () => {
         });
     });
 
+    describe('Style Binding Resolution', () => {
+        it('should resolve slow bindings in style attributes', async () => {
+            await runSlowRenderTest('style-bindings');
+        });
+    });
+
     describe('Conditional (if) Handling', () => {
         it('should remove element when slow condition is false', async () => {
             await runSlowRenderTest('conditional-false');
@@ -99,6 +105,16 @@ describe('Slow Render Transform', () => {
 
         it('should preserve fast arrays', async () => {
             await runSlowRenderTest('foreach-fast-preserved');
+        });
+    });
+
+    describe('Component and Recursive Handling', () => {
+        it('should preserve recursive regions with fast phase data', async () => {
+            await runSlowRenderTest('recursive-preserved');
+        });
+
+        it('should preserve headless component references and resolve slow bindings', async () => {
+            await runSlowRenderTest('headless-preserved');
         });
     });
 });

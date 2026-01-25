@@ -11,7 +11,7 @@ Jay-html to jay-html slow rendering pre-renders slow-phase bindings at build tim
 - Fast/interactive bindings remain as template syntax for runtime resolution
 - Runtime `slowForEachItem()` function provides correct data context for item-scoped bindings
 
-**Status:** Core transformation engine and runtime support implemented (Phase 1-3). Dev server integration pending.
+**Status:** Core transformation engine, runtime support, and component handling implemented (Phase 1-4). Dev server integration pending (Phase 5).
 
 ---
 
@@ -1099,10 +1099,10 @@ function slowForEachItem<ParentVS, ItemVS>(
    - Context-aware update that resolves item from parent ViewState
 
 **Tests:**
-- 15 tests for slow-render-transform (all passing)
+- 18 tests for slow-render-transform (all passing)
 - 10 tests for slowForEachItem runtime (all passing)
 - 1 test for slowForEach compilation (all passing)
-- Total: 424 compiler tests passing, 181 runtime tests passing
+- Total: 427 compiler tests passing, 181 runtime tests passing
 
 **Files Created/Modified:**
 - NEW: `compiler-jay-html/lib/slow-render/slow-render-transform.ts`
@@ -1130,17 +1130,50 @@ function slowForEachItem<ParentVS, ItemVS>(
    - Implementation: `elementCreator: () => BaseJayElement<ItemVS>` (function)
    - Rationale: The element must be constructed *within* the item context for bindings to resolve correctly. Passing a pre-constructed element would use the wrong context.
 
-4. **Style bindings not implemented**: Rule 3 (`style:background-color="{bgColor}"`) is not yet implemented in the transformation. Regular `style` attributes with bindings work, but the jay-specific `style:property` syntax is not handled.
+4. **Style binding syntax differs from design**: The design showed `style:background-color="{bgColor}"` syntax, but jay-html uses `style="background-color: {bgColor}"` (bindings embedded in the style attribute value). The implementation correctly handles this actual syntax.
 
-5. **Recursive regions not implemented**: Rule 7 for recursive structures (`<recurse ref="..."/>`) is deferred to Phase 4 with component handling.
+5. **Recursive regions preserved, not unrolled**: The design mentioned full unrolling for slow recursive structures. The implementation preserves `<recurse>` elements as-is, deferring recursive evaluation to runtime. This simplifies implementation and handles the common case where recursive data is fast/interactive phase.
 
-### Phase 4: Dev Server Integration (PENDING)
+### Phase 4: Component and Recursive Handling (COMPLETED)
 
-Not yet implemented. Required work:
-- Pre-render cache integration
-- File watcher for jay-html/component changes
-- Lazy pre-render on first request
+**Implemented:**
 
-### Phase 5-6: Production Build & Incremental Regeneration (FUTURE)
+1. **Recursive regions preserved**: `<recurse ref="..."/>` elements pass through the transformation unchanged. If the recursive data is fast phase, the recursion is evaluated at runtime.
+
+2. **Headless component references preserved**: `<script type="application/jay-headless">` in head section is preserved. The transformation only modifies body content.
+
+3. **Slow bindings within components resolved**: Text/attribute bindings with slow phase data are still resolved within component templates.
+
+**Tests added:**
+- `recursive-preserved` - verifies recursive regions with fast data are unchanged
+- `headless-preserved` - verifies headless imports are preserved and slow bindings resolved
+
+### Phase 5: Dev Server Integration (PENDING)
+
+Not yet implemented. This phase requires significant changes to the dev server request flow:
+
+**Current flow:**
+```
+Request → loadPageParts → runSlowlyForPage → renderFastChangingData → generateClientScript
+```
+
+**Proposed flow with pre-rendering:**
+```
+Request → check pre-render cache → (if miss: load component, run slowlyRender, transform jay-html, cache) → loadPageParts(with pre-rendered jay-html) → renderFastChangingData → generateClientScript
+```
+
+**Required work:**
+- Pre-render cache keyed by `(jayHtmlPath, params)`
+- Integration with `loadPageParts` to use pre-rendered jay-html
+- File watcher for jay-html/component changes to invalidate cache
+- Coordination between slow ViewState generation and jay-html transformation
+
+**Challenges:**
+- The slow ViewState comes from `slowlyRender()` in the component
+- The jay-html transformation needs the slow ViewState
+- Currently `loadPageParts` loads both jay-html and component together
+- Need to restructure to: load component → get slow ViewState → transform jay-html → compile
+
+### Phase 6-7: Production Build & Incremental Regeneration (FUTURE)
 
 Deferred to future implementation.

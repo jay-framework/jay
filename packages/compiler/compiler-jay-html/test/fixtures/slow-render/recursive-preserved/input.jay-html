@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data" contract="./test.jay-contract"></script>
+</head>
+<body>
+    <div ref="treeNode">
+        <span class="name">{name}</span>
+        <ul if="open">
+            <li forEach="children" trackBy="id">
+                <recurse ref="treeNode" />
+            </li>
+        </ul>
+    </div>
+</body>
+</html>
