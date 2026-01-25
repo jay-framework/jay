@@ -394,10 +394,37 @@ export interface AIAgentAPI {
 
 import type { JayComponent } from '@jay-framework/runtime';
 
+/**
+ * Reads the current ViewState from a component.
+ * Requires the __viewState hook from the component package.
+ */
 export function readViewState(component: JayComponent<any, any, any>): object {
-  // Access the component's current ViewState
-  // This needs a hook in the runtime to expose ViewState
-  return component.__viewState ?? {};
+  if (component.__viewState === undefined) {
+    console.warn('AI Agent: Component does not expose __viewState. Update @jay-framework/component.');
+    return {};
+  }
+  return component.__viewState;
+}
+
+/**
+ * Sets up a ViewState change observer on the component.
+ * The callback is called every time ViewState changes (via the reactive system).
+ */
+export function observeViewState(
+  component: JayComponent<any, any, any>,
+  callback: (viewState: object) => void
+): () => void {
+  const prevObserver = component.__viewStateObserver;
+  
+  component.__viewStateObserver = (viewState) => {
+    prevObserver?.(viewState);  // Chain with any existing observer
+    callback(viewState);
+  };
+  
+  // Return unsubscribe function
+  return () => {
+    component.__viewStateObserver = prevObserver;
+  };
 }
 ```
 
@@ -511,31 +538,30 @@ function findElementByCoordinate(
 // packages/runtime-ai/lib/ai-agent-api.ts
 
 import type { JayComponent, JayElement } from '@jay-framework/runtime';
-import { readViewState } from './state-reader';
+import { readViewState, observeViewState } from './state-reader';
 import { collectInteractions } from './interaction-collector';
 import type { AIAgentAPI, AIPageState, AIInteraction, Coordinate } from './types';
 
 class AIAgent implements AIAgentAPI {
   private stateListeners = new Set<(state: AIPageState) => void>();
   private cachedInteractions: AIInteraction[] | null = null;
+  private unsubscribe: (() => void) | null = null;
 
   constructor(private component: JayComponent<any, any, any>) {
-    // Subscribe to component updates
     this.subscribeToUpdates();
   }
 
   private subscribeToUpdates(): void {
-    // Hook into component's update mechanism
-    // Intercept the update function to notify listeners
-    const originalUpdate = this.component.update;
-    this.component.update = (props) => {
-      originalUpdate(props);
+    // Use the __viewStateObserver hook from the component package
+    // This captures ALL ViewState changes (props updates, internal reactive changes, etc.)
+    this.unsubscribe = observeViewState(this.component, () => {
       this.cachedInteractions = null; // Invalidate cache
       this.notifyListeners();
-    };
+    });
   }
 
   private notifyListeners(): void {
+    if (this.stateListeners.size === 0) return;
     const state = this.getPageState();
     this.stateListeners.forEach((callback) => callback(state));
   }
@@ -564,14 +590,21 @@ class AIAgent implements AIAgentAPI {
   getInteraction(coordinate: Coordinate): AIInteraction | undefined {
     const state = this.getPageState();
     return state.interactions.find(
-      (i) => i.coordinate.length === coordinate.length &&
-             i.coordinate.every((c, idx) => c === coordinate[idx])
+      (i) =>
+        i.coordinate.length === coordinate.length &&
+        i.coordinate.every((c, idx) => c === coordinate[idx]),
     );
   }
 
   onStateChange(callback: (state: AIPageState) => void): () => void {
     this.stateListeners.add(callback);
     return () => this.stateListeners.delete(callback);
+  }
+
+  /** Cleanup - call when component is unmounted */
+  dispose(): void {
+    this.unsubscribe?.();
+    this.stateListeners.clear();
   }
 }
 
@@ -580,7 +613,7 @@ export type AIWrappedComponent<T> = T & { ai: AIAgentAPI };
 
 /**
  * Wraps a Jay component with AI agent capabilities.
- * Does not use any global state - the AI API is attached to the instance.
+ * Uses the __viewStateObserver hook to capture all state changes.
  */
 export function wrapWithAIAgent<T extends JayComponent<any, any, any>>(
   component: T,
@@ -590,52 +623,240 @@ export function wrapWithAIAgent<T extends JayComponent<any, any, any>>(
 }
 ```
 
+**Key improvements over intercepting `update()`:**
+1. Captures ALL ViewState changes, not just props updates
+2. Works with internal reactive state (signals, effects)
+3. Uses the official hook point from component package
+4. Clean unsubscribe mechanism
+
 ### Runtime Hooks Required
 
-The AI package needs minimal hooks in the main runtime:
+The AI package needs minimal hooks. Let's analyze what's already available and what needs to be added.
+
+#### Already Available
+
+1. **Refs with element and coordinate info**: `component.element.refs`
+   - Each ref has `element` (DOM), `coordinate`, and `viewState` (for collection items)
+   - This covers the "Interactions" part of the API
+
+2. **Component update**: `component.update(props)` 
+   - But this is for props, not internal ViewState changes
+
+#### The Gap: ViewState Access
+
+In `makeJayComponent`, the ViewState is materialized inside a reactive closure:
 
 ```typescript
-// Additions to @jay-framework/runtime
-
-// 1. Expose ViewState (read-only)
-interface JayComponent<Props, ViewState, JayElementT> {
-  // ... existing
-  __viewState?: ViewState; // Exposed for AI agent
-}
-
-// 2. Expose refs with element and coordinate info
-// Already available via component.element.refs
-// The ref implementations already have:
-// - element: the DOM element
-// - coordinate: the coordinate path
-// - viewState: the item's ViewState (for collection refs)
+componentContext.reactive.createReaction(() => {
+    let viewStateValueOrGetters = renderViewState();
+    let viewState = materializeViewState(viewStateValueOrGetters);  // ← local variable
+    if (!element)
+        element = renderWithContexts(..., viewState);
+    else element.update(viewState);
+});
 ```
 
-**Key insight**: Most functionality is already available:
-- `component.element.refs` exposes all refs
-- Each ref has `element`, `coordinate`, and `viewState`
-- The AI package wraps `component.update` to detect state changes
+The `viewState` is not exposed - it's local to the closure.
 
-The only new hook needed is `__viewState` for read access to current ViewState.
+#### Minimal Change Options
+
+**Option A: Simple Property + Observer (Recommended)**
+
+Add two optional properties to the component:
+
+```typescript
+// In makeJayComponent, after component object creation:
+let currentViewState: ViewState;
+
+componentContext.reactive.createReaction(() => {
+    let viewStateValueOrGetters = renderViewState();
+    let viewState = materializeViewState(viewStateValueOrGetters);
+    currentViewState = viewState;
+    
+    // Notify observer if registered (set by AI package)
+    component.__viewStateObserver?.(viewState);
+    
+    if (!element)
+        element = renderWithContexts(..., viewState);
+    else element.update(viewState);
+});
+
+// Add to component object:
+Object.defineProperty(component, '__viewState', {
+    get: () => currentViewState,
+    enumerable: false,
+});
+```
+
+**Component package changes:**
+- ~5 lines added to `makeJayComponent`
+- No new dependencies
+- Observer is optional (undefined by default)
+
+**AI package usage:**
+```typescript
+function wrapWithAIAgent<T extends JayComponent<any, any, any>>(component: T) {
+    // Set up observer
+    component.__viewStateObserver = (viewState) => {
+        notifyListeners({ viewState, interactions: collectInteractions(component.element.refs) });
+    };
+    
+    // Read current state
+    const state = component.__viewState;
+}
+```
+
+**Option B: Event Emitter Pattern**
+
+Use the existing `createEvent` hook infrastructure:
+
+```typescript
+// In component-contexts.ts, add to ComponentContext:
+interface ComponentContext extends HookContext {
+    // ... existing
+    viewStateEmitter?: EventEmitter<ViewState, any>;
+}
+
+// In makeJayComponent, optionally create emitter:
+if (componentContext.viewStateEmitter) {
+    componentContext.reactive.createReaction(() => {
+        // ... existing
+        componentContext.viewStateEmitter.emit(viewState);
+    });
+}
+```
+
+**Tradeoff**: More code, but follows existing event patterns.
+
+**Option C: External Wrapper Only (No Component Changes)**
+
+The AI package wraps the component externally, intercepting `element.update`:
+
+```typescript
+function wrapWithAIAgent<T>(component: T) {
+    const originalUpdate = component.element.update;
+    let lastViewState: ViewState;
+    
+    component.element.update = (viewState) => {
+        lastViewState = viewState;
+        notifyListeners(viewState);
+        originalUpdate(viewState);
+    };
+    
+    // Expose getter
+    Object.defineProperty(component, '__viewState', {
+        get: () => lastViewState,
+    });
+}
+```
+
+**Tradeoff**: 
+- ✅ Zero changes to component package
+- ❌ Only captures updates, not initial render
+- ❌ Doesn't capture internal reactive changes that don't go through `element.update`
+
+#### Recommendation: Option A
+
+**Changes to `component.ts`:**
+
+```typescript
+// Add after line 181 (let component = {...})
+let currentViewState: ViewState;
+
+// Modify the reaction (lines 165-175):
+componentContext.reactive.createReaction(() => {
+    let viewStateValueOrGetters = renderViewState();
+    let viewState = materializeViewState(viewStateValueOrGetters);
+    currentViewState = viewState;
+    
+    // Optional observer for AI integration (or other tools)
+    (component as any).__viewStateObserver?.(viewState);
+    
+    if (!element)
+        element = renderWithContexts(componentContext.provideContexts, render, viewState);
+    else element.update(viewState);
+});
+
+// Add after component object creation, before return:
+Object.defineProperty(component, '__viewState', {
+    get: () => currentViewState,
+    enumerable: false,  // Hidden from normal iteration
+    configurable: true,
+});
+```
+
+**Type additions (minimal, in a separate .d.ts or in element-types.ts):**
+
+```typescript
+// Optional AI integration properties
+interface JayComponent<Props, ViewState, JayElementT> {
+    // ... existing
+    __viewState?: ViewState;
+    __viewStateObserver?: (viewState: ViewState) => void;
+}
+```
+
+**Why this is minimal:**
+1. ~10 lines added to `makeJayComponent`
+2. No new imports or dependencies in component package
+3. Properties are optional and hidden (`enumerable: false`)
+4. No breaking changes to existing API
+5. AI package can work with or without the hooks (graceful degradation)
 
 ## Implementation Plan
 
-### Phase 1: Core Infrastructure
+### Phase 0: Component Package Hook (Prerequisite)
 
-1. Create `runtime-ai` package structure
-2. Define types (`types.ts`)
-3. Implement `wrapWithAIAgent` function
-4. Add `__viewState` hook to runtime component
+**Package:** `@jay-framework/component`
+
+Add ViewState exposure hooks to `makeJayComponent`:
+
+1. Add `currentViewState` variable to hold latest ViewState
+2. Add `__viewStateObserver` callback in reaction
+3. Add `__viewState` getter property on component
+4. Add types to `element-types.ts`
+
+**Changes to `component.ts` (~10 lines):**
+
+```typescript
+// After: let component = {...}
+let currentViewState: ViewState;
+
+// In reaction, after materializeViewState:
+currentViewState = viewState;
+(component as any).__viewStateObserver?.(viewState);
+
+// After component creation:
+Object.defineProperty(component, '__viewState', {
+    get: () => currentViewState,
+    enumerable: false,
+    configurable: true,
+});
+```
 
 **Tests:**
 
-- Can wrap component with AI agent
-- Wrapped component still functions normally
-- `ai` property available on wrapped component
+- `__viewState` returns current ViewState
+- `__viewStateObserver` called on every state change
+- Existing component behavior unchanged
+
+### Phase 1: AI Package Structure
+
+**Package:** `@jay-framework/runtime-ai` (NEW)
+
+1. Create package structure (`lib/`, `test/`, `package.json`)
+2. Define types (`types.ts`)
+3. Implement `readViewState` and `observeViewState`
+4. Implement `wrapWithAIAgent` skeleton
+
+**Tests:**
+
+- Can import from `@jay-framework/runtime-ai`
+- `wrapWithAIAgent` returns component with `ai` property
 
 ### Phase 2: State Reading & Interaction Collection
 
-1. Implement state reader (read ViewState via `__viewState`)
+1. Implement state reader using `__viewState` hook
 2. Implement interaction collector (traverse refs)
 3. Include DOM element references in interactions
 4. Handle collection refs (forEach items) with coordinates
@@ -662,13 +883,15 @@ The only new hook needed is `__viewState` for read access to current ViewState.
 
 ### Phase 4: State Change Notification
 
-1. Wrap component's update function to detect changes
+1. Use `observeViewState` to subscribe to changes
 2. Implement `onStateChange` callback registration
 3. Notify all listeners on ViewState change
+4. Implement `dispose()` for cleanup
 
 **Tests:**
 
-- Listener called on state change
+- Listener called on state change (props update)
+- Listener called on internal reactive change
 - Multiple listeners work
 - Unsubscribe works correctly
 - Listener receives updated state
