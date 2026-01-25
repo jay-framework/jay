@@ -1,6 +1,6 @@
 import { HTMLElement, parse, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
-import path from 'node:path';
+import path from 'path';
 import { Contract, ContractTag, RenderingPhase } from '../contract';
 import { WithValidations } from '@jay-framework/compiler-shared';
 
