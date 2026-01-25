@@ -202,8 +202,12 @@ function transformElement(
                     // Clone the element
                     const cloned = element.clone() as HTMLElement;
 
-                    // Remove forEach, add slowForEach
+                    // Remove forEach and trackBy, add slowForEach with jay* attributes
+                    // Note: removeAttribute is case-sensitive, so remove both cases
                     cloned.removeAttribute('forEach');
+                    cloned.removeAttribute('foreach');
+                    cloned.removeAttribute('trackBy');
+                    cloned.removeAttribute('trackby');
                     cloned.setAttribute('slowForEach', forEachAttr);
                     cloned.setAttribute('jayIndex', String(index));
 
@@ -254,6 +258,7 @@ function transformElement(
                 }
 
                 // If true, remove the if attribute and keep the element
+                // Note: use lowercase because the parser normalizes attribute names
                 element.removeAttribute('if');
             }
         }

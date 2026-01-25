@@ -5,10 +5,10 @@
 </head>
 <body>
     <ul>
-        <li trackBy="id" slowForEach="products" jayIndex="0" jayTrackBy="p1">
+        <li slowForEach="products" jayIndex="0" jayTrackBy="p1">
             <span>Widget A</span>
             <span>{price}</span>
-        </li><li trackBy="id" slowForEach="products" jayIndex="1" jayTrackBy="p2">
+        </li><li slowForEach="products" jayIndex="1" jayTrackBy="p2">
             <span>Widget B</span>
             <span>{price}</span>
         </li>

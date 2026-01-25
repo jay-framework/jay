@@ -5,7 +5,7 @@
 </head>
 <body>
     <ul>
-        <li trackBy="id" slowForEach="items" jayIndex="0" jayTrackBy="a">Item A</li><li trackBy="id" slowForEach="items" jayIndex="1" jayTrackBy="b">Item B</li>
+        <li slowForEach="items" jayIndex="0" jayTrackBy="a">Item A</li><li slowForEach="items" jayIndex="1" jayTrackBy="b">Item B</li>
     </ul>
 </body>
 </html>
