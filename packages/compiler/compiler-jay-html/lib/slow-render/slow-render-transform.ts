@@ -1,5 +1,6 @@
 import { HTMLElement, parse, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
+import path from 'node:path';
 import { Contract, ContractTag, RenderingPhase } from '../contract';
 import { WithValidations } from '@jay-framework/compiler-shared';
 
@@ -13,6 +14,12 @@ export interface SlowRenderInput {
     slowViewState: Record<string, unknown>;
     /** Contract metadata for phase detection */
     contract?: Contract;
+    /**
+     * Source directory of the original jay-html file.
+     * Used to resolve relative paths (contracts, CSS, components) to absolute paths
+     * so the pre-rendered file can be placed in a different directory.
+     */
+    sourceDir?: string;
 }
 
 /**
@@ -318,6 +325,64 @@ function transformChildren(
 }
 
 /**
+ * Resolve relative paths in script, link, and component imports to absolute paths.
+ * This is needed because the pre-rendered file may be placed in a different directory.
+ */
+function resolveRelativePaths(root: HTMLElement, sourceDir: string): void {
+    // Resolve contract paths in jay-data scripts
+    // e.g., <script type="application/jay-data" contract="./page.jay-contract">
+    const jayDataScripts = root.querySelectorAll('script[type="application/jay-data"]');
+    for (const script of jayDataScripts) {
+        const contract = script.getAttribute('contract');
+        if (contract && isRelativePath(contract)) {
+            script.setAttribute('contract', path.resolve(sourceDir, contract));
+        }
+    }
+
+    // Resolve headless component paths
+    // e.g., <script type="application/jay-headless" src="./header.ts">
+    const headlessScripts = root.querySelectorAll('script[type="application/jay-headless"]');
+    for (const script of headlessScripts) {
+        const src = script.getAttribute('src');
+        if (src && isRelativePath(src)) {
+            script.setAttribute('src', path.resolve(sourceDir, src));
+        }
+    }
+
+    // Resolve CSS link paths
+    // e.g., <link rel="stylesheet" href="./styles.css">
+    const links = root.querySelectorAll('link[rel="stylesheet"]');
+    for (const link of links) {
+        const href = link.getAttribute('href');
+        if (href && isRelativePath(href)) {
+            link.setAttribute('href', path.resolve(sourceDir, href));
+        }
+    }
+
+    // Resolve regular script src paths
+    // e.g., <script src="./app.ts">
+    const scripts = root.querySelectorAll('script[src]');
+    for (const script of scripts) {
+        const scriptType = script.getAttribute('type');
+        // Skip jay-specific scripts (already handled above)
+        if (scriptType === 'application/jay-data' || scriptType === 'application/jay-headless') {
+            continue;
+        }
+        const src = script.getAttribute('src');
+        if (src && isRelativePath(src)) {
+            script.setAttribute('src', path.resolve(sourceDir, src));
+        }
+    }
+}
+
+/**
+ * Check if a path is a relative path (starts with ./ or ../)
+ */
+function isRelativePath(p: string): boolean {
+    return p.startsWith('./') || p.startsWith('../');
+}
+
+/**
  * Transform a jay-html file by resolving slow-phase bindings
  *
  * This is the main entry point for slow rendering.
@@ -353,6 +418,12 @@ export function slowRenderTransform(input: SlowRenderInput): WithValidations<Slo
         body.innerHTML = '';
         for (const child of transformedChildren) {
             body.appendChild(child as any);
+        }
+
+        // Resolve relative paths if sourceDir is provided
+        // This allows the pre-rendered file to be placed in a different directory
+        if (input.sourceDir) {
+            resolveRelativePaths(root, input.sourceDir);
         }
 
         // Generate output

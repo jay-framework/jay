@@ -574,10 +574,12 @@ async function preRenderJayHtml(
     }
 
     // Transform the jay-html
+    // Pass sourceDir so relative paths (contracts, CSS, components) are resolved to absolute
     const result = slowRenderTransform({
         jayHtmlContent,
         slowViewState: slowViewState as Record<string, unknown>,
         contract,
+        sourceDir: path.dirname(route.jayHtmlPath),
     });
 
     if (result.val) {

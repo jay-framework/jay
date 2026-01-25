@@ -166,3 +166,102 @@ tags:
         expect(hasSlowPhaseProperties(undefined)).toBe(false);
     });
 });
+
+describe('Relative Path Resolution', () => {
+    it('should resolve relative contract paths to absolute when sourceDir is provided', () => {
+        const input: SlowRenderInput = {
+            jayHtmlContent: `<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body><h1>{title}</h1></body>
+</html>`,
+            slowViewState: { title: 'Test' },
+            sourceDir: '/project/src/pages/home',
+        };
+
+        const result = slowRenderTransform(input);
+        expect(result.validations).toEqual([]);
+        expect(result.val!.preRenderedJayHtml).toContain(
+            'contract="/project/src/pages/home/page.jay-contract"',
+        );
+    });
+
+    it('should resolve relative headless component paths to absolute', () => {
+        const input: SlowRenderInput = {
+            jayHtmlContent: `<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-headless" src="./header.ts"></script>
+</head>
+<body><h1>Test</h1></body>
+</html>`,
+            slowViewState: {},
+            sourceDir: '/project/src/pages/home',
+        };
+
+        const result = slowRenderTransform(input);
+        expect(result.validations).toEqual([]);
+        expect(result.val!.preRenderedJayHtml).toContain(
+            'src="/project/src/pages/home/header.ts"',
+        );
+    });
+
+    it('should resolve relative CSS link paths to absolute', () => {
+        const input: SlowRenderInput = {
+            jayHtmlContent: `<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="./styles.css">
+</head>
+<body><h1>Test</h1></body>
+</html>`,
+            slowViewState: {},
+            sourceDir: '/project/src/pages/home',
+        };
+
+        const result = slowRenderTransform(input);
+        expect(result.validations).toEqual([]);
+        expect(result.val!.preRenderedJayHtml).toContain(
+            'href="/project/src/pages/home/styles.css"',
+        );
+    });
+
+    it('should not modify paths when sourceDir is not provided', () => {
+        const input: SlowRenderInput = {
+            jayHtmlContent: `<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body><h1>Test</h1></body>
+</html>`,
+            slowViewState: {},
+        };
+
+        const result = slowRenderTransform(input);
+        expect(result.validations).toEqual([]);
+        expect(result.val!.preRenderedJayHtml).toContain('contract="./page.jay-contract"');
+    });
+
+    it('should not modify absolute paths', () => {
+        const input: SlowRenderInput = {
+            jayHtmlContent: `<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data" contract="/absolute/path/page.jay-contract"></script>
+</head>
+<body><h1>Test</h1></body>
+</html>`,
+            slowViewState: {},
+            sourceDir: '/project/src/pages/home',
+        };
+
+        const result = slowRenderTransform(input);
+        expect(result.validations).toEqual([]);
+        expect(result.val!.preRenderedJayHtml).toContain(
+            'contract="/absolute/path/page.jay-contract"',
+        );
+    });
+});
