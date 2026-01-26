@@ -4474,6 +4474,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@jay-framework/runtime-automation@workspace:^, @jay-framework/runtime-automation@workspace:packages/runtime/runtime-automation":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/runtime-automation@workspace:packages/runtime/runtime-automation"
+  dependencies:
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@types/node": "npm:^20.11.5"
+    rimraf: "npm:^5.0.5"
+    tsup: "npm:^8.0.1"
+    typescript: "npm:^5.3.3"
+    vite: "npm:^5.0.11"
+    vitest: "npm:^1.2.1"
+  languageName: unknown
+  linkType: soft
+
 "@jay-framework/runtime@workspace:^, @jay-framework/runtime@workspace:packages/runtime/runtime":
   version: 0.0.0-use.local
   resolution: "@jay-framework/runtime@workspace:packages/runtime/runtime"
@@ -10888,6 +10904,22 @@ __metadata:
     typescript: "npm:^5.3.3"
     vite: "npm:^5.0.11"
     vite-plugin-inspect: "npm:^0.8.1"
+  languageName: unknown
+  linkType: soft
+
+"example-jay-cart-automation@workspace:examples/jay/cart-automation":
+  version: 0.0.0-use.local
+  resolution: "example-jay-cart-automation@workspace:examples/jay/cart-automation"
+  dependencies:
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/runtime-automation": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
+    rimraf: "npm:^5.0.5"
+    typescript: "npm:^5.3.3"
+    vite: "npm:^5.0.11"
   languageName: unknown
   linkType: soft
 

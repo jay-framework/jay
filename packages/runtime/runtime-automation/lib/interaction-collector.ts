@@ -1,10 +1,10 @@
-import type { AIInteraction } from './types';
+import type { Interaction } from './types';
 
 /**
  * Collects all interactive elements from a component's refs.
  */
-export function collectInteractions(refs: any): AIInteraction[] {
-    const interactions: AIInteraction[] = [];
+export function collectInteractions(refs: any): Interaction[] {
+    const interactions: Interaction[] = [];
 
     if (!refs) return interactions;
 
@@ -47,11 +47,11 @@ export function collectInteractions(refs: any): AIInteraction[] {
     return interactions;
 }
 
-function getElementType(element: Element): string {
+function getElementType(element: HTMLElement): string {
     return element.constructor.name; // e.g., "HTMLButtonElement"
 }
 
-function getSupportedEvents(element: Element): string[] {
+function getSupportedEvents(element: HTMLElement): string[] {
     // Common events based on element type
     const base = ['click', 'focus', 'blur'];
 

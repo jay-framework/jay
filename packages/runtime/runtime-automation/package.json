@@ -1,9 +1,9 @@
 {
-  "name": "@jay-framework/runtime-ai",
+  "name": "@jay-framework/runtime-automation",
   "version": "0.10.0",
   "type": "module",
   "license": "Apache-2.0",
-  "description": "AI Agent integration for Jay components - enables AI to read state and trigger interactions",
+  "description": "Automation API for Jay components - enables programmatic state inspection and interaction triggering",
   "main": "./dist/index.js",
   "files": [
     "dist",
@@ -24,8 +24,8 @@
     "@jay-framework/runtime": "workspace:^"
   },
   "devDependencies": {
-    "@jay-framework/dev-environment": "workspace:^",
     "@jay-framework/component": "workspace:^",
+    "@jay-framework/dev-environment": "workspace:^",
     "@types/node": "^20.11.5",
     "rimraf": "^5.0.5",
     "tsup": "^8.0.1",

@@ -71,6 +71,7 @@ interface AIInteraction {
 ```
 
 The `element` reference allows the AI to:
+
 - Read current input values directly from DOM
 - Set input values before triggering events (e.g., set text, then trigger `input` event)
 - Inspect element attributes and state
@@ -156,7 +157,9 @@ target.appendChild(aiInstance.dom);
 
 // Use AI API directly on the instance
 const state = aiInstance.ai.getPageState();
-aiInstance.ai.onStateChange((newState) => { /* ... */ });
+aiInstance.ai.onStateChange((newState) => {
+  /* ... */
+});
 ```
 
 **Jay Stack usage:**
@@ -169,14 +172,13 @@ const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, 
 const instance = pageComp({ ...viewState, ...fastCarryForward });
 
 // Wrap with AI agent (e.g., in dev mode only)
-const aiInstance = process.env.DEV 
-  ? wrapWithAIAgent(instance)
-  : instance;
+const aiInstance = process.env.DEV ? wrapWithAIAgent(instance) : instance;
 
 target.appendChild(aiInstance.element.dom);
 ```
 
 **Key points:**
+
 - No `window.__JAY_AGENT__` global
 - AI API is a property on the wrapped instance
 - Clean separation - original component unchanged
@@ -209,6 +211,7 @@ unsubscribe();
 ```
 
 This is better than `waitForStateChange()` because:
+
 - Multiple updates are captured (not just the first)
 - No timeout guessing required
 - Aligns with reactive nature of Jay components
@@ -220,8 +223,8 @@ This is better than `waitForStateChange()` because:
 ```typescript
 // ViewState already contains form values
 interface CheckoutViewState {
-  customerName: string;    // Bound to <input ref="name" value="{customerName}">
-  email: string;           // Bound to <input ref="email" value="{email}">
+  customerName: string; // Bound to <input ref="name" value="{customerName}">
+  email: string; // Bound to <input ref="email" value="{email}">
 }
 
 // AI reads current values from ViewState
@@ -229,7 +232,7 @@ const state = ai.getPageState();
 console.log(state.viewState.customerName); // "John"
 
 // AI sets value on DOM element, then triggers event
-const nameInteraction = state.interactions.find(i => i.refName === 'name');
+const nameInteraction = state.interactions.find((i) => i.refName === 'name');
 (nameInteraction.element as HTMLInputElement).value = 'Jane';
 ai.triggerEvent('input', ['name']);
 ```
@@ -244,25 +247,29 @@ ai.triggerEvent('input', ['name']);
 // ViewState with headless components
 interface PageViewState {
   pageTitle: string;
-  cart: {              // Headless component key
+  cart: {
+    // Headless component key
     items: CartItem[];
     total: number;
   };
-  header: {            // Another headless component
+  header: {
+    // Another headless component
     userName: string;
   };
 }
 
 // Refs follow the same structure
 interface PageRefs {
-  checkout: HTMLButtonElement;       // Page-level ref
-  cart: {                            // Headless component refs
-    removeBtn: HTMLButtonElement[];  // Collection within cart
+  checkout: HTMLButtonElement; // Page-level ref
+  cart: {
+    // Headless component refs
+    removeBtn: HTMLButtonElement[]; // Collection within cart
   };
 }
 ```
 
 The AI agent works with this naturally - coordinates include the component path:
+
 - `['checkout']` - page-level button
 - `['cart', 'prod-123', 'removeBtn']` - remove button in cart for product prod-123
 
@@ -387,12 +394,14 @@ export interface AIAgentAPI {
 }
 ```
 
-**Note:** 
+**Note:**
+
 - No `setValue` method - AI sets values directly on `interaction.element`
 - No `waitForStateChange` - use event-based `onStateChange` instead
 - No component ID params - scoping is built into ViewState structure via headless keys
 - `triggerEvent` is synchronous - state changes arrive via `onStateChange` callback
-```
+
+````
 
 ### Implementation
 
@@ -411,7 +420,7 @@ component.addEventListener('viewStateChange', (event) => {
 
 // Unsubscribe
 component.removeEventListener('viewStateChange', handler);
-```
+````
 
 #### 2. Interaction Collector
 
@@ -432,7 +441,7 @@ export function collectInteractions(refs: ManagedRefs): AIInteraction[] {
         interactions.push({
           refName,
           coordinate: elem.coordinate,
-          element: elem.element,  // Direct DOM element reference
+          element: elem.element, // Direct DOM element reference
           elementType: getElementType(elem.element),
           supportedEvents: getSupportedEvents(elem.element),
           itemContext: elem.viewState,
@@ -443,7 +452,7 @@ export function collectInteractions(refs: ManagedRefs): AIInteraction[] {
       interactions.push({
         refName,
         coordinate: refImpl.coordinate,
-        element: refImpl.element,  // Direct DOM element reference
+        element: refImpl.element, // Direct DOM element reference
         elementType: getElementType(refImpl.element),
         supportedEvents: getSupportedEvents(refImpl.element),
       });
@@ -609,6 +618,7 @@ export function wrapWithAIAgent<T extends JayComponent<any, any, any>>(
 ```
 
 **Key improvements over intercepting `update()`:**
+
 1. Captures ALL ViewState changes, not just props updates
 2. Works with internal reactive state (signals, effects)
 3. Uses the official hook point from component package
@@ -625,15 +635,15 @@ The component package exposes ViewState access as official API, reusing the exis
 export const VIEW_STATE_CHANGE_EVENT = 'viewStateChange';
 
 export interface JayComponent<Props, ViewState, jayElement extends BaseJayElement<ViewState>> {
-    element: jayElement;
-    update: updateFunc<Props>;
-    mount: MountFunc;
-    unmount: MountFunc;
-    addEventListener: (type: string, handler: JayEventHandler<any, ViewState, void>) => void;
-    removeEventListener: (type: string, handler: JayEventHandler<any, ViewState, void>) => void;
+  element: jayElement;
+  update: updateFunc<Props>;
+  mount: MountFunc;
+  unmount: MountFunc;
+  addEventListener: (type: string, handler: JayEventHandler<any, ViewState, void>) => void;
+  removeEventListener: (type: string, handler: JayEventHandler<any, ViewState, void>) => void;
 
-    /** Current ViewState (read-only) */
-    readonly viewState: ViewState;
+  /** Current ViewState (read-only) */
+  readonly viewState: ViewState;
 }
 ```
 
@@ -672,18 +682,20 @@ Object.defineProperty(component, 'viewState', {
 ```
 
 **Component package changes:**
+
 - ~10 lines added to `makeJayComponent`
 - No new dependencies
 - Reuses existing `addEventListener`/`removeEventListener` pattern
 
 **AI package usage:**
+
 ```typescript
 function wrapWithAIAgent<T extends JayComponent<any, any, any>>(component: T) {
     // Subscribe using existing addEventListener
     component.addEventListener('viewStateChange', () => {
         notifyListeners({ viewState: component.viewState, interactions: ... });
     });
-    
+
     // Read current state
     const state = component.viewState;
 }
@@ -698,16 +710,16 @@ Use the existing `createEvent` hook infrastructure:
 ```typescript
 // In component-contexts.ts, add to ComponentContext:
 interface ComponentContext extends HookContext {
-    // ... existing
-    viewStateEmitter?: EventEmitter<ViewState, any>;
+  // ... existing
+  viewStateEmitter?: EventEmitter<ViewState, any>;
 }
 
 // In makeJayComponent, optionally create emitter:
 if (componentContext.viewStateEmitter) {
-    componentContext.reactive.createReaction(() => {
-        // ... existing
-        componentContext.viewStateEmitter.emit(viewState);
-    });
+  componentContext.reactive.createReaction(() => {
+    // ... existing
+    componentContext.viewStateEmitter.emit(viewState);
+  });
 }
 ```
 
@@ -719,23 +731,24 @@ The AI package wraps the component externally, intercepting `element.update`:
 
 ```typescript
 function wrapWithAIAgent<T>(component: T) {
-    const originalUpdate = component.element.update;
-    let lastViewState: ViewState;
-    
-    component.element.update = (viewState) => {
-        lastViewState = viewState;
-        notifyListeners(viewState);
-        originalUpdate(viewState);
-    };
-    
-    // Expose getter
-    Object.defineProperty(component, '__viewState', {
-        get: () => lastViewState,
-    });
+  const originalUpdate = component.element.update;
+  let lastViewState: ViewState;
+
+  component.element.update = (viewState) => {
+    lastViewState = viewState;
+    notifyListeners(viewState);
+    originalUpdate(viewState);
+  };
+
+  // Expose getter
+  Object.defineProperty(component, '__viewState', {
+    get: () => lastViewState,
+  });
 }
 ```
 
-**Tradeoff**: 
+**Tradeoff**:
+
 - ✅ Zero changes to component package
 - ❌ Only captures updates, not initial render
 - ❌ Doesn't capture internal reactive changes that don't go through `element.update`
@@ -750,23 +763,22 @@ let currentViewState: ViewState;
 
 // Modify the reaction (lines 165-175):
 componentContext.reactive.createReaction(() => {
-    let viewStateValueOrGetters = renderViewState();
-    let viewState = materializeViewState(viewStateValueOrGetters);
-    currentViewState = viewState;
-    
-    // Optional observer for AI integration (or other tools)
-    (component as any).__viewStateObserver?.(viewState);
-    
-    if (!element)
-        element = renderWithContexts(componentContext.provideContexts, render, viewState);
-    else element.update(viewState);
+  let viewStateValueOrGetters = renderViewState();
+  let viewState = materializeViewState(viewStateValueOrGetters);
+  currentViewState = viewState;
+
+  // Optional observer for AI integration (or other tools)
+  (component as any).__viewStateObserver?.(viewState);
+
+  if (!element) element = renderWithContexts(componentContext.provideContexts, render, viewState);
+  else element.update(viewState);
 });
 
 // Add after component object creation, before return:
 Object.defineProperty(component, '__viewState', {
-    get: () => currentViewState,
-    enumerable: false,  // Hidden from normal iteration
-    configurable: true,
+  get: () => currentViewState,
+  enumerable: false, // Hidden from normal iteration
+  configurable: true,
 });
 ```
 
@@ -775,13 +787,14 @@ Object.defineProperty(component, '__viewState', {
 ```typescript
 // Optional AI integration properties
 interface JayComponent<Props, ViewState, JayElementT> {
-    // ... existing
-    __viewState?: ViewState;
-    __viewStateObserver?: (viewState: ViewState) => void;
+  // ... existing
+  __viewState?: ViewState;
+  __viewStateObserver?: (viewState: ViewState) => void;
 }
 ```
 
 **Why this is minimal:**
+
 1. ~10 lines added to `makeJayComponent`
 2. No new imports or dependencies in component package
 3. Properties are optional and hidden (`enumerable: false`)
@@ -813,9 +826,9 @@ currentViewState = viewState;
 
 // After component creation:
 Object.defineProperty(component, '__viewState', {
-    get: () => currentViewState,
-    enumerable: false,
-    configurable: true,
+  get: () => currentViewState,
+  enumerable: false,
+  configurable: true,
 });
 ```
 
@@ -1029,8 +1042,8 @@ target.appendChild(instance.element.dom);
 2. **No global state**: AI API attached to component instance, not window
 3. **Type-safe**: Full TypeScript support
 4. **Consistent with Jay architecture**: Uses existing coordinate system and refs
-4. **Secure**: Can be disabled in production
-5. **Framework-agnostic**: AI agents work with any Jay component
+5. **Secure**: Can be disabled in production
+6. **Framework-agnostic**: AI agents work with any Jay component
 
 ### Disadvantages
 
@@ -1071,12 +1084,14 @@ target.appendChild(instance.element.dom);
 ### Q1: Should coordinates be human-readable paths?
 
 **Options:**
+
 - Array: `['prod-123', 'remove']`
 - String path: `'prod-123.remove'`
 
 **Decision:** Keep arrays only in the core API.
 
 The code that interfaces with LLMs can:
+
 1. Convert arrays to strings before sending to LLM: `coordinate.join('/')`
 2. Parse strings back to arrays from LLM responses: `path.split('/')`
 
@@ -1088,9 +1103,7 @@ ai.triggerEvent('click', ['prod-123', 'remove']);
 
 // LLM integration layer (not part of runtime-ai package)
 function formatForLLM(state: AIPageState): string {
-  return state.interactions.map(i => 
-    `${i.refName}: ${i.coordinate.join('/')}`
-  ).join('\n');
+  return state.interactions.map((i) => `${i.refName}: ${i.coordinate.join('/')}`).join('\n');
 }
 
 function parseFromLLM(path: string): Coordinate {
@@ -1117,6 +1130,7 @@ For SPA-style navigation within Jay Stack (if implemented), the page component w
 **Answer:** Yes, AI should be able to listen to component custom events.
 
 Components emit custom events via `createEvent`:
+
 ```typescript
 // In component
 const onAddToCart = createEvent<{ productId: string; quantity: number }>();
@@ -1128,19 +1142,20 @@ onAddToCart.emit({ productId: 'abc', quantity: 2 });
 ```typescript
 interface AIAgentAPI {
   // ... existing
-  
+
   /** Subscribe to a custom component event */
   onComponentEvent(
-    eventName: string,  // e.g., 'AddToCart'
-    callback: (eventData: any) => void
+    eventName: string, // e.g., 'AddToCart'
+    callback: (eventData: any) => void,
   ): () => void;
-  
+
   /** Get list of available custom events */
   getCustomEvents(): Array<{ name: string; description?: string }>;
 }
 ```
 
 **Implementation:** The component already exposes custom events via `api[key]` with `.emit`. We can:
+
 1. Collect all event emitters from the component API
 2. Allow AI to subscribe to them via `onComponentEvent`
 3. Include them in `getPageState()` under a `customEvents` field
@@ -1173,3 +1188,114 @@ onComponentEvent(eventName: string, callback: (data: any) => void): () => void {
 - **#14 - References API**: Ref implementation
 - **#50 - Rendering Phases**: ViewState and phases
 - **#75 - Slow Rendering**: slowForEach and coordinates
+
+---
+
+## Implementation Summary (Jan 2026)
+
+### Package Renamed
+
+Originally named `@jay-framework/runtime-ai`, renamed to `@jay-framework/runtime-automation` as the API is useful beyond AI:
+
+- Test automation (Playwright, Cypress)
+- Accessibility tools
+- E2E testing
+- Any programmatic automation
+
+### Files Created
+
+```
+packages/runtime/runtime-automation/
+├── lib/
+│   ├── index.ts                 # Public exports
+│   ├── types.ts                 # Interaction, PageState, AutomationAPI
+│   ├── automation-agent.ts      # Main wrapWithAutomation implementation
+│   └── interaction-collector.ts # Collects refs as interactions
+├── test/
+│   ├── automation-agent.test.ts # Unit tests (17 tests)
+│   └── integration.test.ts      # Real component tests (12 tests)
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+└── readme.md
+```
+
+### Component Package Changes
+
+Added to `@jay-framework/component`:
+
+1. `viewState` - read-only getter for current ViewState
+2. `viewStateChange` event - via existing `addEventListener` pattern
+
+```typescript
+// In element-types.ts
+export const VIEW_STATE_CHANGE_EVENT = 'viewStateChange';
+
+export interface JayComponent<Props, ViewState, jayElement> {
+  // ... existing
+  readonly viewState: ViewState;
+}
+
+// In component.ts - ~10 lines added
+let currentViewState: ViewState;
+let viewStateChangeListener: Function | undefined;
+
+// Inside reaction:
+viewStateChangeListener?.({ event: viewState, viewState, coordinate: [] });
+
+// Event registration:
+let events = {
+  [VIEW_STATE_CHANGE_EVENT]: (handler) => {
+    viewStateChangeListener = handler;
+  },
+};
+```
+
+### Public API
+
+```typescript
+import { wrapWithAutomation } from '@jay-framework/runtime-automation';
+
+const instance = MyComponent(props);
+const wrapped = wrapWithAutomation(instance);
+
+// Read state
+wrapped.automation.getPageState();
+// → { viewState: {...}, interactions: [...], customEvents: [...] }
+
+// Trigger events
+wrapped.automation.triggerEvent('click', ['product-123', 'removeBtn']);
+
+// Subscribe to changes
+wrapped.automation.onStateChange((state) => console.log(state));
+
+// Get specific interaction
+const btn = wrapped.automation.getInteraction(['addBtn']);
+btn.element.value = 'new text'; // Set input values directly
+
+// Clean up
+wrapped.automation.dispose();
+```
+
+### Browser Console Usage
+
+```javascript
+// In app initialization:
+window.app = wrapWithAutomation(MyComponent(props));
+
+// From browser console:
+app.automation.getPageState();
+app.automation.triggerEvent('click', ['item-1', 'removeBtn']);
+app.automation.onStateChange((s) => console.log('Changed:', s.viewState));
+```
+
+### Test Results
+
+- **Unit tests**: 17 passing (mock-based)
+- **Integration tests**: 12 passing (real Jay components including forEach)
+- **Component package**: 56 passing (no regressions)
+- **Runtime package**: 190 passing (no regressions)
+
+### Example
+
+See `examples/jay/cart-automation/` for a working example with console-based automation.

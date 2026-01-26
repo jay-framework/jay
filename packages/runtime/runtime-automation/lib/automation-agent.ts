@@ -1,16 +1,16 @@
-import type { JayComponent, VIEW_STATE_CHANGE_EVENT } from '@jay-framework/runtime';
+import type { JayComponent } from '@jay-framework/runtime';
 import { collectInteractions } from './interaction-collector';
-import type { AIAgentAPI, AIPageState, AIInteraction, Coordinate } from './types';
+import type { AutomationAPI, PageState, Interaction, Coordinate } from './types';
 
 /** Event type for ViewState change notifications (matches runtime export) */
 const VIEW_STATE_CHANGE = 'viewStateChange';
 
 /**
- * AI Agent implementation that wraps a Jay component.
+ * Automation agent implementation that wraps a Jay component.
  */
-class AIAgent implements AIAgentAPI {
-    private stateListeners = new Set<(state: AIPageState) => void>();
-    private cachedInteractions: AIInteraction[] | null = null;
+class AutomationAgent implements AutomationAPI {
+    private stateListeners = new Set<(state: PageState) => void>();
+    private cachedInteractions: Interaction[] | null = null;
     private viewStateHandler: (() => void) | null = null;
 
     constructor(private component: JayComponent<any, any, any>) {
@@ -32,7 +32,7 @@ class AIAgent implements AIAgentAPI {
         this.stateListeners.forEach((callback) => callback(state));
     }
 
-    getPageState(): AIPageState {
+    getPageState(): PageState {
         if (!this.cachedInteractions) {
             this.cachedInteractions = collectInteractions(this.component.element?.refs);
         }
@@ -56,7 +56,7 @@ class AIAgent implements AIAgentAPI {
         interaction.element.dispatchEvent(event);
     }
 
-    getInteraction(coordinate: Coordinate): AIInteraction | undefined {
+    getInteraction(coordinate: Coordinate): Interaction | undefined {
         const state = this.getPageState();
         return state.interactions.find(
             (i) =>
@@ -65,7 +65,7 @@ class AIAgent implements AIAgentAPI {
         );
     }
 
-    onStateChange(callback: (state: AIPageState) => void): () => void {
+    onStateChange(callback: (state: PageState) => void): () => void {
         this.stateListeners.add(callback);
         return () => this.stateListeners.delete(callback);
     }
@@ -114,26 +114,32 @@ class AIAgent implements AIAgentAPI {
     }
 }
 
-/** Wrapper type that adds AI capabilities to a component */
-export type AIWrappedComponent<T> = T & { ai: AIAgentAPI };
+/** Wrapper type that adds automation capabilities to a component */
+export type AutomationWrappedComponent<T> = T & { automation: AutomationAPI };
 
 /**
- * Wraps a Jay component with AI agent capabilities.
+ * Wraps a Jay component with automation capabilities.
  * Uses addEventListener('viewStateChange', ...) to capture all state changes.
  *
  * @example
  * ```typescript
  * const instance = MyComponent(props);
- * const aiInstance = wrapWithAIAgent(instance);
+ * const wrapped = wrapWithAutomation(instance);
  *
- * // Access AI API
- * const state = aiInstance.ai.getPageState();
- * aiInstance.ai.triggerEvent('click', ['button-ref']);
+ * // Access automation API
+ * const state = wrapped.automation.getPageState();
+ * wrapped.automation.triggerEvent('click', ['button-ref']);
  * ```
  */
-export function wrapWithAIAgent<T extends JayComponent<any, any, any>>(
+export function wrapWithAutomation<T extends JayComponent<any, any, any>>(
     component: T,
-): AIWrappedComponent<T> {
-    const agent = new AIAgent(component);
-    return Object.assign(component, { ai: agent });
+): AutomationWrappedComponent<T> {
+    const agent = new AutomationAgent(component);
+    return Object.assign(component, { automation: agent });
 }
+
+// Keep old names as aliases for backward compatibility
+/** @deprecated Use AutomationWrappedComponent instead */
+export type AIWrappedComponent<T> = AutomationWrappedComponent<T>;
+/** @deprecated Use wrapWithAutomation instead */
+export const wrapWithAIAgent = wrapWithAutomation;

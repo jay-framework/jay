@@ -7,7 +7,8 @@ import {
     useContext,
     PreRenderElement,
     RenderElement,
-    MountFunc, VIEW_STATE_CHANGE_EVENT,
+    MountFunc,
+    VIEW_STATE_CHANGE_EVENT,
 } from '@jay-framework/runtime';
 import { Getter, mkReactive, Reactive } from '@jay-framework/reactive';
 import { JSONPatch } from '@jay-framework/json-patch';

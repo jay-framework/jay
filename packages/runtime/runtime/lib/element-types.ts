@@ -41,8 +41,8 @@ export interface JayComponent<Props, ViewState, jayElement extends BaseJayElemen
     addEventListener: (type: string, handler: JayEventHandler<any, ViewState, void>) => void;
     removeEventListener: (type: string, handler: JayEventHandler<any, ViewState, void>) => void;
 
-    /** Current ViewState (read-only) */
-    readonly viewState: ViewState;
+    /** Current ViewState (read-only, available when using @jay-framework/component) */
+    readonly viewState?: ViewState;
 }
 
 export type PropsFrom<Type> = Type extends JayComponent<infer Props, any, any> ? Props : null;
