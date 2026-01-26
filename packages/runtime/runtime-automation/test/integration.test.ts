@@ -327,4 +327,212 @@ describe('AI Agent Integration Tests', () => {
             expect(item2Exists).toBe(false);
         });
     });
+
+    describe('Component with Nested Refs (Headless Components)', () => {
+        // Simulates a page with a nested "cart" headless component
+        interface CartItem {
+            id: string;
+            name: string;
+        }
+
+        interface PageViewState {
+            title: string;
+            cart: {
+                items: CartItem[];
+            };
+        }
+
+        interface CartRefs {
+            removeBtn: any; // Collection ref inside cart
+            checkoutBtn: any; // Single ref inside cart
+        }
+
+        interface PageRefs {
+            headerBtn: HTMLElementProxy<PageViewState, HTMLButtonElement>;
+            cart: CartRefs;
+        }
+
+        interface PageElement extends JayElement<PageViewState, PageRefs> {}
+
+        function renderPageElement(
+            options: RenderElementOptions = {},
+        ): [PageRefs, RenderElement<PageViewState, PageRefs, PageElement>] {
+            // Create nested ref manager for cart (simulates headless component)
+            const cartRefManager = new ReferencesManager(options?.eventWrapper);
+            const [cartCheckoutRef, cartRemoveRef] = cartRefManager.mkRefs(
+                ['checkoutBtn'], // single refs in cart
+                ['removeBtn'], // collection refs in cart
+                [],
+                [],
+            );
+
+            // Create main ref manager with nested cart refs
+            const [refManager, [headerRef]] = ReferencesManager.for(
+                options,
+                ['headerBtn'], // page-level single refs
+                [], // page-level collection refs
+                [],
+                [],
+                { cart: cartRefManager }, // nested ref managers
+            );
+
+            const render = (viewState: PageViewState) =>
+                ConstructContext.withRootContext(viewState, refManager, () => {
+                    return de('div', { class: 'page' }, [
+                        e('header', {}, [
+                            e('button', { class: 'header-btn' }, ['Menu'], headerRef()),
+                        ]),
+                        de('div', { class: 'cart' }, [
+                            e('button', { class: 'checkout' }, ['Checkout'], cartCheckoutRef()),
+                            de('ul', { class: 'cart-items' }, [
+                                forEach(
+                                    (vs: PageViewState) => vs.cart.items,
+                                    (item: CartItem) => {
+                                        return e('li', { 'data-id': item.id }, [
+                                            item.name,
+                                            e(
+                                                'button',
+                                                { class: 'remove' },
+                                                ['×'],
+                                                cartRemoveRef(),
+                                            ),
+                                        ]);
+                                    },
+                                    'id',
+                                ),
+                            ]),
+                        ]),
+                    ]);
+                }) as PageElement;
+
+            return [refManager.getPublicAPI() as PageRefs, render];
+        }
+
+        interface PageProps {
+            title: string;
+            cartItems: CartItem[];
+        }
+
+        function PageComponent({ title, cartItems }: Props<PageProps>, refs: PageRefs) {
+            const [items, setItems] = createSignal<CartItem[]>(cartItems());
+
+            refs.cart.removeBtn.onclick(({ viewState }: { viewState: CartItem }) => {
+                setItems(items().filter((item) => item.id !== viewState.id));
+            });
+
+            return {
+                render: () => ({
+                    title: title(),
+                    cart: {
+                        items: items(),
+                    },
+                }),
+                setItems,
+            };
+        }
+
+        const Page = makeJayComponent(renderPageElement, PageComponent);
+
+        const initialCartItems: CartItem[] = [
+            { id: 'prod-1', name: 'Widget' },
+            { id: 'prod-2', name: 'Gadget' },
+        ];
+
+        it('should collect interactions from nested refs (headless components)', () => {
+            const instance = Page({ title: 'Shop', cartItems: initialCartItems });
+            const wrapped = wrapWithAutomation(instance);
+
+            const state = wrapped.automation.getPageState();
+
+            // Should have: 1 headerBtn + 1 checkoutBtn + 2 removeBtn = 4 interactions
+            expect(state.interactions.length).toBe(4);
+
+            // Check that all ref names are present
+            const refNames = state.interactions.map((i) => i.refName);
+            expect(refNames).toContain('headerBtn');
+            expect(refNames).toContain('checkoutBtn');
+            expect(refNames.filter((n) => n === 'removeBtn').length).toBe(2);
+        });
+
+        it('should find interactions from nested refs by refName', () => {
+            const instance = Page({ title: 'Shop', cartItems: initialCartItems });
+            const wrapped = wrapWithAutomation(instance);
+
+            // Find checkout button (nested in cart)
+            const checkoutInteraction = wrapped.automation.getInteraction(['checkoutBtn']);
+            expect(checkoutInteraction).toBeDefined();
+            expect(checkoutInteraction!.refName).toBe('checkoutBtn');
+        });
+
+        it('should include coordinates for nested collection refs', () => {
+            const instance = Page({ title: 'Shop', cartItems: initialCartItems });
+            const wrapped = wrapWithAutomation(instance);
+
+            const state = wrapped.automation.getPageState();
+            const removeInteractions = state.interactions.filter((i) => i.refName === 'removeBtn');
+
+            expect(removeInteractions).toHaveLength(2);
+
+            // Each should have coordinate with item id
+            const coordinates = removeInteractions.map((i) => i.coordinate);
+            expect(coordinates.some((c) => c.includes('prod-1'))).toBe(true);
+            expect(coordinates.some((c) => c.includes('prod-2'))).toBe(true);
+        });
+
+        it('should update nested interactions after state change', () => {
+            const instance = Page({ title: 'Shop', cartItems: initialCartItems });
+            const wrapped = wrapWithAutomation(instance);
+
+            // Remove one item
+            instance.setItems([initialCartItems[0]]);
+
+            const state = wrapped.automation.getPageState();
+            const removeInteractions = state.interactions.filter((i) => i.refName === 'removeBtn');
+
+            // Should now have 1 remove button
+            expect(removeInteractions).toHaveLength(1);
+
+            // prod-2 should no longer be in interactions
+            const prod2Exists = removeInteractions.some((i) => i.coordinate.includes('prod-2'));
+            expect(prod2Exists).toBe(false);
+        });
+
+        it('should trigger events on nested refs and update state', () => {
+            const instance = Page({ title: 'Shop', cartItems: initialCartItems });
+            const wrapped = wrapWithAutomation(instance);
+
+            const callback = vi.fn();
+            wrapped.automation.onStateChange(callback);
+
+            // Find the remove button for prod-1
+            const state = wrapped.automation.getPageState();
+            const prod1RemoveBtn = state.interactions.find(
+                (i) => i.refName === 'removeBtn' && i.coordinate.includes('prod-1'),
+            );
+            expect(prod1RemoveBtn).toBeDefined();
+
+            // Trigger click on the remove button using its coordinate
+            wrapped.automation.triggerEvent('click', prod1RemoveBtn!.coordinate);
+
+            // State should have been updated
+            expect(callback).toHaveBeenCalled();
+            const newState = callback.mock.calls[0][0];
+            expect((newState.viewState as PageViewState).cart.items).toHaveLength(1);
+            expect((newState.viewState as PageViewState).cart.items[0].id).toBe('prod-2');
+        });
+
+        it('should trigger events on nested single refs', () => {
+            const instance = Page({ title: 'Shop', cartItems: initialCartItems });
+            const wrapped = wrapWithAutomation(instance);
+
+            // Find checkout button (nested single ref)
+            const checkoutBtn = wrapped.automation.getInteraction(['checkoutBtn']);
+            expect(checkoutBtn).toBeDefined();
+
+            // Should be able to click it (even if no handler, just verify no error)
+            expect(() => {
+                wrapped.automation.triggerEvent('click', ['checkoutBtn']);
+            }).not.toThrow();
+        });
+    });
 });
