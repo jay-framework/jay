@@ -21,7 +21,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/runtime": "workspace:^",
+    "@jay-framework/view-state-merge": "workspace:^"
   },
   "devDependencies": {
     "@jay-framework/component": "workspace:^",

@@ -5,7 +5,11 @@ export type { AutomationAPI, Interaction, PageState, Coordinate } from './types'
 export type { AIAgentAPI, AIInteraction, AIPageState } from './types';
 
 // Main API (new names)
-export { wrapWithAutomation, type AutomationWrappedComponent } from './automation-agent';
+export {
+    wrapWithAutomation,
+    type AutomationWrappedComponent,
+    type AutomationAgentOptions,
+} from './automation-agent';
 
 // Context for plugin/component access
 export { AUTOMATION_CONTEXT } from './automation-context';

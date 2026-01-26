@@ -289,6 +289,7 @@ async function handleCachedRequest(
 
     // Only fast+interactive viewState (slow is baked into jay-html)
     // Use the pre-rendered file path so Vite compiles it
+    // Pass slowViewState so automation can show full merged state
     await sendResponse(
         vite,
         res,
@@ -301,6 +302,7 @@ async function handleCachedRequest(
         projectInit,
         pluginsForPage,
         options,
+        cachedEntry.slowViewState,
     );
 }
 
@@ -408,6 +410,7 @@ async function handlePreRenderRequest(
 
     // Only fast+interactive viewState (slow is baked into jay-html)
     // Use the pre-rendered file path so Vite compiles it
+    // Pass slowViewState so automation can show full merged state
     await sendResponse(
         vite,
         res,
@@ -420,6 +423,7 @@ async function handlePreRenderRequest(
         projectInit,
         pluginsForPage,
         options,
+        renderedSlowly.rendered,
     );
 }
 
@@ -521,6 +525,7 @@ async function handleDirectRequest(
 /**
  * Send the final HTML response to the client.
  * @param jayHtmlPath - Path to the jay-html file (pre-rendered or original)
+ * @param slowViewState - Optional slow ViewState (for automation when slow rendering is used)
  */
 async function sendResponse(
     vite: ViteDevServer,
@@ -534,6 +539,7 @@ async function sendResponse(
     projectInit: ProjectClientInitInfo | undefined,
     pluginsForPage: PluginClientInitInfo[],
     options: DevServerOptions,
+    slowViewState?: object,
 ): Promise<void> {
     const pageHtml = generateClientScript(
         viewState,
@@ -544,7 +550,10 @@ async function sendResponse(
         getClientInitData(),
         projectInit,
         pluginsForPage,
-        { enableAutomation: !options.disableAutomation },
+        {
+            enableAutomation: !options.disableAutomation,
+            slowViewState,
+        },
     );
 
     const compiledPageHtml = await vite.transformIndexHtml(!!url ? url : '/', pageHtml);

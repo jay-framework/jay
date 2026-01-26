@@ -18,6 +18,12 @@ export interface ProjectClientInitInfo {
 export interface GenerateClientScriptOptions {
     /** Enable automation integration (default: true in dev mode) */
     enableAutomation?: boolean;
+    /**
+     * Slow ViewState that was baked into the pre-rendered jay-html.
+     * When provided, this is merged with fastViewState for the automation API
+     * so that AI/automation tools can see the complete page state.
+     */
+    slowViewState?: object;
 }
 
 export function generateClientScript(
@@ -31,7 +37,8 @@ export function generateClientScript(
     pluginInits: PluginClientInitInfo[] = [],
     options: GenerateClientScriptOptions = {},
 ) {
-    const { enableAutomation = true } = options;
+    const { enableAutomation = true, slowViewState } = options;
+    const hasSlowViewState = slowViewState && Object.keys(slowViewState).length > 0;
     const imports =
         parts.length > 0 ? parts.map((part) => part.clientImport).join('\n') + '\n' : '';
     const compositeParts =
@@ -88,13 +95,34 @@ ${parts.map((part) => '        ' + part.clientPart).join(',\n')}
         : '';
 
     // Automation integration
+    // When slow ViewState is baked into pre-rendered jay-html, we need to pass
+    // the full merged state to automation so AI tools can see all page data
     const automationImport = enableAutomation
-        ? `import { wrapWithAutomation, AUTOMATION_CONTEXT } from "@jay-framework/runtime-automation";
+        ? hasSlowViewState
+            ? `import { wrapWithAutomation, AUTOMATION_CONTEXT } from "@jay-framework/runtime-automation";
+      import { registerGlobalContext } from "@jay-framework/runtime";
+      import { deepMergeViewStates } from "@jay-framework/view-state-merge";`
+            : `import { wrapWithAutomation, AUTOMATION_CONTEXT } from "@jay-framework/runtime-automation";
       import { registerGlobalContext } from "@jay-framework/runtime";`
         : '';
 
+    const slowViewStateDecl =
+        enableAutomation && hasSlowViewState
+            ? `const slowViewState = ${JSON.stringify(slowViewState)};`
+            : '';
+
     const automationWrap = enableAutomation
-        ? `
+        ? hasSlowViewState
+            ? `
+      // Wrap with automation for dev tooling
+      // Deep merge slow+fast ViewState so automation can see full page state
+      const fullViewState = deepMergeViewStates(slowViewState, {...viewState, ...fastCarryForward}, trackByMap);
+      const wrapped = wrapWithAutomation(instance, { initialViewState: fullViewState, trackByMap });
+      registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
+      window.__jay = window.__jay || {};
+      window.__jay.automation = wrapped.automation;
+      target.appendChild(wrapped.element.dom);`
+            : `
       // Wrap with automation for dev tooling
       const wrapped = wrapWithAutomation(instance);
       registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
@@ -119,7 +147,7 @@ ${parts.map((part) => '        ' + part.clientPart).join(',\n')}
       ${pluginClientInitImports}
       ${projectInitImport}
       import { render } from '${jayHtmlPath}';
-      ${imports}
+      ${imports}${slowViewStateDecl}
       const viewState = ${JSON.stringify(defaultViewState)};
       const fastCarryForward = ${JSON.stringify(fastCarryForward)};
       const trackByMap = ${JSON.stringify(trackByMap)};

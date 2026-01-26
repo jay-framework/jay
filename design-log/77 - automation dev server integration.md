@@ -272,3 +272,158 @@ export const DevTools = makeJayComponent(render, DevToolsPanel, AUTOMATION_CONTE
 - `jay/packages/jay-stack/stack-server-runtime/lib/generate-client-script.ts`
 - `jay/packages/jay-stack/dev-server/lib/dev-server.ts`
 - `jay/packages/jay-stack/stack-client-runtime/lib/index.ts`
+
+---
+
+## Implementation Results
+
+### Phase 1-4: All Completed
+
+**Files Created/Modified:**
+
+1. **`runtime-automation/lib/automation-context.ts`** (new)
+
+   - Created `AUTOMATION_CONTEXT` using `createJayContext<AutomationAPI>()`
+
+2. **`runtime-automation/lib/automation-agent.ts`**
+
+   - Updated `AutomationAgent` constructor to accept optional `initialViewState`
+   - When provided, stores merged slow+fast ViewState for `getPageState()`
+   - Updates merged state on each `viewStateChange` event
+
+3. **`runtime-automation/lib/index.ts`**
+
+   - Added export for `AUTOMATION_CONTEXT`
+
+4. **`stack-server-runtime/lib/generate-client-script.ts`**
+
+   - Added `slowViewState` option to `GenerateClientScriptOptions`
+   - When `slowViewState` provided, generates code to merge with fast ViewState
+   - Passes merged state to `wrapWithAutomation(instance, fullViewState)`
+
+5. **`dev-server/lib/dev-server-options.ts`**
+
+   - Added `disableAutomation?: boolean` option
+
+6. **`dev-server/lib/dev-server.ts`**
+
+   - Updated `sendResponse` to accept optional `slowViewState` parameter
+   - Cached request handler passes `cachedEntry.slowViewState`
+   - Pre-render request handler passes `renderedSlowly.rendered`
+   - Direct request handler (no caching) doesn't pass slowViewState (full merge happens server-side)
+
+7. **`stack-client-runtime/package.json`**
+
+   - Added `@jay-framework/runtime-automation` dependency
+
+8. **`stack-client-runtime/lib/index.ts`**
+   - Re-exports `wrapWithAutomation`, `AUTOMATION_CONTEXT`, and related types
+
+### Slow ViewState Merge for Automation
+
+**Problem:** When slow rendering is enabled (Design Log #75), slow ViewState is baked into the pre-rendered jay-html and not sent to the client. Only fast ViewState is sent. But automation/AI tools need to see the complete page state.
+
+**Solution:** Pass slow ViewState separately to the generated client script. When automation is enabled, use `deepMergeViewStates` with `trackByMap` to properly merge arrays by their track-by keys:
+
+```typescript
+// Generated client code (when slowViewState provided)
+import { deepMergeViewStates } from '@jay-framework/view-state-merge';
+
+const slowViewState = {
+  products: [
+    { id: '1', name: 'Widget A' },
+    { id: '2', name: 'Widget B' },
+  ],
+};
+const viewState = {
+  products: [
+    { id: '1', price: 29.99 },
+    { id: '2', price: 19.99 },
+  ],
+};
+const trackByMap = { products: 'id' };
+// ...
+const fullViewState = deepMergeViewStates(
+  slowViewState,
+  { ...viewState, ...fastCarryForward },
+  trackByMap,
+);
+const wrapped = wrapWithAutomation(instance, fullViewState);
+```
+
+This ensures arrays are merged by their track-by key (e.g., `id`), not replaced entirely.
+
+**Data Flow:**
+
+```
+Dev Server Request with Slow Render Caching:
+┌──────────────────────────────────────────────────────────────┐
+│ 1. Cache hit: cachedEntry contains slowViewState             │
+│ 2. Run fast phase: produces fastViewState                    │
+│ 3. generateClientScript receives both:                       │
+│    - viewState = fastViewState (sent to component)           │
+│    - slowViewState = cachedEntry.slowViewState (for automation)
+│ 4. Generated script:                                         │
+│    - Component renders with fastViewState                    │
+│    - Automation API gets merged slow+fast ViewState          │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Tests
+
+- All 35 runtime-automation tests pass
+- All 66 stack-server-runtime tests pass
+- All 13 dev-server tests pass
+- Full `yarn confirm` passes
+
+### Verification
+
+```javascript
+// Browser console in dev mode with slow rendering
+const state = window.__jay.automation.getPageState();
+console.log(state.viewState);
+// Shows: { products: [{ id: "1", name: "Widget A", price: 29.99 }, { id: "2", name: "Widget B", price: 19.99 }] }
+// (deep merged by trackBy key - slow properties like 'name' merged with fast properties like 'price')
+```
+
+### Automation Agent Deep Merge with trackByMap
+
+**Change:** Updated `wrapWithAutomation` to accept an options object instead of just `initialViewState`:
+
+```typescript
+// Before
+wrapWithAutomation(instance, fullViewState);
+
+// After
+wrapWithAutomation(instance, { initialViewState: fullViewState, trackByMap });
+```
+
+**New interface:**
+
+```typescript
+interface AutomationAgentOptions {
+  initialViewState: object;
+  trackByMap: TrackByMap;
+}
+```
+
+**Automation agent now uses `deepMergeViewStates` in two places:**
+
+1. **In constructor** - Immediately merges `initialViewState` with `component.viewState` to capture any properties computed during hydration (e.g., `star1: false` that wasn't in the initial script but was computed during component initialization)
+
+2. **On viewStateChange** - Re-merges base state with updated `component.viewState` using `trackByMap`
+
+**Bug fixed:** Previously, properties computed during component hydration (between script generation and automation agent creation) were missing from `mergedViewState` until the next `viewStateChange` event. The constructor now does an initial merge to capture these.
+
+**Generated client code:**
+
+```typescript
+const fullViewState = deepMergeViewStates(
+  slowViewState,
+  { ...viewState, ...fastCarryForward },
+  trackByMap,
+);
+const wrapped = wrapWithAutomation(instance, { initialViewState: fullViewState, trackByMap });
+```
+
+**Tests added:** `view-state-merge` tests for falsy values (`false`, `null`, `0`, `''`) to verify they're correctly merged.

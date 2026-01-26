@@ -285,6 +285,82 @@ describe('deepMergeViewStates', () => {
         });
     });
 
+    describe('falsy values', () => {
+        it('should include false values from overlay when not in base', () => {
+            const base = {
+                rating: {
+                    rating: 4.5,
+                    totalReviews: 127,
+                },
+            };
+            const overlay = {
+                rating: {
+                    star1: false,
+                    star2: false,
+                    star3: false,
+                    star4: false,
+                    star5: false,
+                    userRating: '',
+                },
+            };
+            const trackByMap = {};
+
+            const result = deepMergeViewStates(base, overlay, trackByMap);
+
+            expect(result).toEqual({
+                rating: {
+                    rating: 4.5,
+                    totalReviews: 127,
+                    star1: false,
+                    star2: false,
+                    star3: false,
+                    star4: false,
+                    star5: false,
+                    userRating: '',
+                },
+            });
+        });
+
+        it('should include null values from overlay', () => {
+            const base = { name: 'Product' };
+            const overlay = { description: null };
+            const trackByMap = {};
+
+            const result = deepMergeViewStates(base, overlay, trackByMap);
+
+            expect(result).toEqual({
+                name: 'Product',
+                description: null,
+            });
+        });
+
+        it('should include 0 values from overlay', () => {
+            const base = { name: 'Product' };
+            const overlay = { count: 0 };
+            const trackByMap = {};
+
+            const result = deepMergeViewStates(base, overlay, trackByMap);
+
+            expect(result).toEqual({
+                name: 'Product',
+                count: 0,
+            });
+        });
+
+        it('should include empty string values from overlay', () => {
+            const base = { name: 'Product' };
+            const overlay = { description: '' };
+            const trackByMap = {};
+
+            const result = deepMergeViewStates(base, overlay, trackByMap);
+
+            expect(result).toEqual({
+                name: 'Product',
+                description: '',
+            });
+        });
+    });
+
     describe('edge cases', () => {
         it('should handle empty base object', () => {
             const base = {};
