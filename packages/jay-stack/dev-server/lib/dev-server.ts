@@ -300,6 +300,7 @@ async function handleCachedRequest(
         clientTrackByMap,
         projectInit,
         pluginsForPage,
+        options,
     );
 }
 
@@ -418,6 +419,7 @@ async function handlePreRenderRequest(
         clientTrackByMap,
         projectInit,
         pluginsForPage,
+        options,
     );
 }
 
@@ -512,6 +514,7 @@ async function handleDirectRequest(
         clientTrackByMap,
         projectInit,
         pluginsForPage,
+        options,
     );
 }
 
@@ -530,6 +533,7 @@ async function sendResponse(
     clientTrackByMap: Record<string, string> | undefined,
     projectInit: ProjectClientInitInfo | undefined,
     pluginsForPage: PluginClientInitInfo[],
+    options: DevServerOptions,
 ): Promise<void> {
     const pageHtml = generateClientScript(
         viewState,
@@ -540,6 +544,7 @@ async function sendResponse(
         getClientInitData(),
         projectInit,
         pluginsForPage,
+        { enableAutomation: !options.disableAutomation },
     );
 
     const compiledPageHtml = await vite.transformIndexHtml(!!url ? url : '/', pageHtml);

@@ -12,4 +12,10 @@ export interface DevServerOptions {
     buildFolder?: string;
     jayRollupConfig: JayRollupConfig;
     dontCacheSlowly: boolean;
+    /**
+     * Disable automation integration.
+     * When false (default), pages are wrapped with automation API for dev tooling.
+     * The automation API is available at `window.__jay.automation` and via `AUTOMATION_CONTEXT`.
+     */
+    disableAutomation?: boolean;
 }

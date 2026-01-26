@@ -137,9 +137,3 @@ export function wrapWithAutomation<T extends JayComponent<any, any, any>>(
     const agent = new AutomationAgent(component);
     return Object.assign(component, { automation: agent });
 }
-
-// Keep old names as aliases for backward compatibility
-/** @deprecated Use AutomationWrappedComponent instead */
-export type AIWrappedComponent<T> = AutomationWrappedComponent<T>;
-/** @deprecated Use wrapWithAutomation instead */
-export const wrapWithAIAgent = wrapWithAutomation;

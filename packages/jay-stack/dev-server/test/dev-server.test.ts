@@ -57,6 +57,8 @@ describe('dev server', () => {
 
         expect(scriptForMatching).toEqual(`
 import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
+import { wrapWithAutomation, AUTOMATION_CONTEXT } from "@jay-framework/runtime-automation";
+import { registerGlobalContext } from "@jay-framework/runtime";
 
 
 import { render } from "/page.jay-html.ts";
@@ -69,7 +71,13 @@ const target = document.getElementById('target');
 const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [], trackByMap)
 
 const instance = pageComp({...viewState, ...fastCarryForward})
-target.appendChild(instance.element.dom);
+
+// Wrap with automation for dev tooling
+const wrapped = wrapWithAutomation(instance);
+registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
+window.__jay = window.__jay || {};
+window.__jay.automation = wrapped.automation;
+target.appendChild(wrapped.element.dom);
 
 // source-map`);
     });
@@ -105,6 +113,8 @@ target.appendChild(instance.element.dom);
 
         expect(scriptForMatching).toEqual(`
 import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
+import { wrapWithAutomation, AUTOMATION_CONTEXT } from "@jay-framework/runtime-automation";
+import { registerGlobalContext } from "@jay-framework/runtime";
 
 
 import { render } from "/page.jay-html.ts";
@@ -120,7 +130,13 @@ const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, 
 ], trackByMap)
 
 const instance = pageComp({...viewState, ...fastCarryForward})
-target.appendChild(instance.element.dom);
+
+// Wrap with automation for dev tooling
+const wrapped = wrapWithAutomation(instance);
+registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
+window.__jay = window.__jay || {};
+window.__jay.automation = wrapped.automation;
+target.appendChild(wrapped.element.dom);
 
 // source-map`);
     });
@@ -156,6 +172,8 @@ target.appendChild(instance.element.dom);
 
         expect(scriptForMatching).toEqual(`
 import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
+import { wrapWithAutomation, AUTOMATION_CONTEXT } from "@jay-framework/runtime-automation";
+import { registerGlobalContext } from "@jay-framework/runtime";
 
 
 import { render } from "/page.jay-html.ts";
@@ -173,7 +191,13 @@ const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, 
 ], trackByMap)
 
 const instance = pageComp({...viewState, ...fastCarryForward})
-target.appendChild(instance.element.dom);
+
+// Wrap with automation for dev tooling
+const wrapped = wrapWithAutomation(instance);
+registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
+window.__jay = window.__jay || {};
+window.__jay.automation = wrapped.automation;
+target.appendChild(wrapped.element.dom);
 
 // source-map`);
     }, 5000000);
@@ -188,6 +212,11 @@ function clearScriptForTest(script: string) {
             /from "(\/@fs\/.*?stack-client-runtime.*?)"/g,
             'from "@jay-framework/stack-client-runtime"',
         )
+        .replace(
+            /from "(\/@fs\/.*?runtime-automation.*?)"/g,
+            'from "@jay-framework/runtime-automation"',
+        )
+        .replace(/from "(\/@fs\/.*?runtime\/dist.*?)"/g, 'from "@jay-framework/runtime"')
         .split('\n')
         .map((line) => line.trim())
         .join('\n');

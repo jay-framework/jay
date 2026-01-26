@@ -12,6 +12,14 @@ export interface ProjectClientInitInfo {
     initExport?: string;
 }
 
+/**
+ * Options for client script generation.
+ */
+export interface GenerateClientScriptOptions {
+    /** Enable automation integration (default: true in dev mode) */
+    enableAutomation?: boolean;
+}
+
 export function generateClientScript(
     defaultViewState: object,
     fastCarryForward: object,
@@ -21,7 +29,9 @@ export function generateClientScript(
     clientInitData: Record<string, Record<string, any>> = {},
     projectInit?: ProjectClientInitInfo,
     pluginInits: PluginClientInitInfo[] = [],
+    options: GenerateClientScriptOptions = {},
 ) {
+    const { enableAutomation = true } = options;
     const imports =
         parts.length > 0 ? parts.map((part) => part.clientImport).join('\n') + '\n' : '';
     const compositeParts =
@@ -77,6 +87,23 @@ ${parts.map((part) => '        ' + part.clientPart).join(',\n')}
 `
         : '';
 
+    // Automation integration
+    const automationImport = enableAutomation
+        ? `import { wrapWithAutomation, AUTOMATION_CONTEXT } from "@jay-framework/runtime-automation";
+      import { registerGlobalContext } from "@jay-framework/runtime";`
+        : '';
+
+    const automationWrap = enableAutomation
+        ? `
+      // Wrap with automation for dev tooling
+      const wrapped = wrapWithAutomation(instance);
+      registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
+      window.__jay = window.__jay || {};
+      window.__jay.automation = wrapped.automation;
+      target.appendChild(wrapped.element.dom);`
+        : `
+      target.appendChild(instance.element.dom);`;
+
     return `<!doctype html>
 <html lang="en">
   <head>
@@ -88,6 +115,7 @@ ${parts.map((part) => '        ' + part.clientPart).join(',\n')}
     <div id="target"></div>
     <script type="module">
       import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
+      ${automationImport}
       ${pluginClientInitImports}
       ${projectInitImport}
       import { render } from '${jayHtmlPath}';
@@ -100,7 +128,7 @@ ${clientInitExecution}
       const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, ${compositeParts}, trackByMap)
 
       const instance = pageComp({...viewState, ...fastCarryForward})
-      target.appendChild(instance.element.dom);
+${automationWrap}
     </script>
   </body>
 </html>`;
