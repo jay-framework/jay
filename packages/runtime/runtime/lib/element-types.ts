@@ -30,6 +30,9 @@ export interface JayEvent<EventType, ViewState> {
 export type JayEventHandler<EventType, ViewState, Returns> = (
     event: JayEvent<EventType, ViewState>,
 ) => Returns;
+/** Event type for ViewState change notifications */
+export const VIEW_STATE_CHANGE_EVENT = 'viewStateChange';
+
 export interface JayComponent<Props, ViewState, jayElement extends BaseJayElement<ViewState>> {
     element: jayElement;
     update: updateFunc<Props>;
@@ -37,6 +40,9 @@ export interface JayComponent<Props, ViewState, jayElement extends BaseJayElemen
     unmount: MountFunc;
     addEventListener: (type: string, handler: JayEventHandler<any, ViewState, void>) => void;
     removeEventListener: (type: string, handler: JayEventHandler<any, ViewState, void>) => void;
+
+    /** Current ViewState (read-only) */
+    readonly viewState: ViewState;
 }
 
 export type PropsFrom<Type> = Type extends JayComponent<infer Props, any, any> ? Props : null;
