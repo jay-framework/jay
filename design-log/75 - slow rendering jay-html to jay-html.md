@@ -1238,6 +1238,55 @@ Request → loadPageParts → runSlowlyForPage → renderFastChangingData → ge
 
 **Tests:** All existing dev-server tests pass (13 tests), all stack-server-runtime tests pass (66 tests)
 
+### Bug Fixes (Post Phase 5)
+
+#### Fix 1: Nested Path Refs in slowForEach (2026-01-27)
+
+**Problem:** When a `slowForEach` uses a nested path like `categoryList.categories`, the generated TypeScript had invalid property names:
+
+```typescript
+export interface PageElementRefs {
+  categoryList.categories: {  // Invalid - dots not allowed without quotes
+```
+
+**Root Cause:** In `jay-html-compiler.ts`, the `nestRefs` function was called with `[arrayName]` where `arrayName = 'categoryList.categories'` (the full dotted string as a single element). This created a `RefsTree.children` entry with a dotted key.
+
+**Fix:** Changed `nestRefs([arrayName], ...)` to `nestRefs(arrayName.split('.'), ...)` so the path is properly split into segments like `['categoryList', 'categories']`.
+
+**Files Modified:**
+- `compiler-jay-html/lib/jay-target/jay-html-compiler.ts` (line ~820)
+
+#### Fix 2: Negated Conditionals in Slow Render (2026-01-27)
+
+**Problem:** Slow conditionals with negation like `if="!imageUrl"` were not being evaluated during slow rendering. The `if` attribute remained in the output instead of being resolved.
+
+**Root Cause:** The `parseBinding` function only recognized simple property paths like `imageUrl`, but not negated expressions like `!imageUrl` (the `!` prefix failed the regex).
+
+**Fix:** Added `analyzeSimpleCondition()` function to `expression-compiler.ts` that returns both the property path and whether it's negated:
+
+```typescript
+export interface AnalyzedCondition {
+    path: string;       // The property path (without negation)
+    isNegated: boolean; // Whether the condition is negated
+}
+
+export function analyzeSimpleCondition(expr: string): AnalyzedCondition | null {
+    // Handles: "imageUrl", "product.name", "!imageUrl", "!product.isAvailable"
+    // Returns null for complex expressions (comparisons, logical operators)
+}
+```
+
+The slow-render transform now imports and uses this shared function, ensuring:
+1. No code duplication between parsing locations
+2. Consistent behavior as condition expressions are extended
+
+**Files Created/Modified:**
+- MODIFIED: `compiler-jay-html/lib/expressions/expression-compiler.ts` - Added `AnalyzedCondition` interface and `analyzeSimpleCondition()` function
+- MODIFIED: `compiler-jay-html/lib/slow-render/slow-render-transform.ts` - Import and use `analyzeSimpleCondition`
+- NEW: `compiler-jay-html/test/fixtures/slow-render/conditional-negated-in-foreach/` - Test fixture for negated conditionals inside forEach
+
+**Tests:** All 437 compiler-jay-html tests passing (including new negated conditional test).
+
 ### Phase 6-7: Production Build & Incremental Regeneration (FUTURE)
 
 Deferred to future implementation.

@@ -3,6 +3,7 @@ import Node from 'node-html-parser/dist/nodes/node';
 import path from 'path';
 import { Contract, ContractTag, RenderingPhase } from '../contract';
 import { WithValidations } from '@jay-framework/compiler-shared';
+import { analyzeSimpleCondition } from '../expressions/expression-compiler';
 
 /**
  * Input for slow render transformation
@@ -133,40 +134,6 @@ function parseBinding(text: string): string | null {
     return null;
 }
 
-/**
- * Result of parsing a conditional expression
- */
-interface ConditionalExpr {
-    /** The property path (without negation) */
-    path: string;
-    /** Whether the condition is negated (e.g., !imageUrl) */
-    isNegated: boolean;
-}
-
-/**
- * Parse a conditional expression like "showBanner" or "!imageUrl"
- * Returns the property path and whether it's negated, or null if not a simple condition
- */
-function parseConditionalExpr(expr: string): ConditionalExpr | null {
-    const trimmed = expr.trim();
-
-    // Check for negation
-    if (trimmed.startsWith('!')) {
-        const inner = trimmed.slice(1).trim();
-        // Check if it's a simple property path
-        if (/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(inner)) {
-            return { path: inner, isNegated: true };
-        }
-        return null;
-    }
-
-    // Check if it's a simple property path (no operators, function calls, etc.)
-    if (/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(trimmed)) {
-        return { path: trimmed, isNegated: false };
-    }
-
-    return null;
-}
 
 /**
  * Check if text contains any bindings
@@ -280,9 +247,9 @@ function transformElement(
     // Handle if directive (slow conditional)
     const ifAttr = element.getAttribute('if');
     if (ifAttr) {
-        const conditionalExpr = parseConditionalExpr(ifAttr);
-        if (conditionalExpr) {
-            const { path: binding, isNegated } = conditionalExpr;
+        const analyzedCondition = analyzeSimpleCondition(ifAttr);
+        if (analyzedCondition) {
+            const { path: binding, isNegated } = analyzedCondition;
             const fullPath = contextPath ? `${contextPath}.${binding}` : binding;
 
             if (isSlowPhase(fullPath, phaseMap)) {
