@@ -155,7 +155,7 @@ ${clientInitExecution}
       const target = document.getElementById('target');
       const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, ${compositeParts}, trackByMap)
 
-      const instance = pageComp({...viewState, ...fastCarryForward})
+      const instance = pageComp({/* placeholder for page props */})
 ${automationWrap}
     </script>
   </body>
