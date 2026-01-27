@@ -568,14 +568,15 @@ Implemented Option D by adding new rules to the PEG grammar (`expression-parser.
 
 ### Test Results
 
-All tests pass: **469 tests** (465 passed, 4 skipped)
+All tests pass: **472 tests** (468 passed, 4 skipped)
 
 New tests added:
-- 31 unit tests for `parseConditionForSlowRender` covering:
+- 34 unit tests for `parseConditionForSlowRender` covering:
   - Fully slow conditions (simple, negated, nested, comparisons, logical operators)
   - Mixed phase conditions (simplification rules)
   - Fully runtime conditions
   - Edge cases (zero, null, undefined, boolean literals, context paths)
+  - Unknown properties not in phase map (headless component fix)
 - 1 integration fixture test (`conditional-complex`) covering:
   - Slow AND/OR that resolve
   - Slow comparisons
@@ -609,3 +610,30 @@ The implementation follows Option D as designed - using the PEG parser with slow
 - `X || false` → `X`
 - `!true` → `false`
 - `!false` → `true`
+
+### Bug Fix: Unknown Properties Must Not Be Evaluated
+
+**Problem:** Properties not in the phase map (e.g., from headless components like `productSearch.hasResults`) were being evaluated as slow by default. This caused conditions like `if="!productSearch.hasResults"` to be incorrectly evaluated during slow rendering.
+
+**Root Cause:** The `isSlowPhase()` function returned `true` when a property was not found in the phase map:
+```javascript
+return !info || info.phase === 'slow';  // WRONG: defaults to slow if not found
+```
+
+**Fix:** Changed to only treat properties as slow if they are EXPLICITLY marked as slow in the phase map:
+```javascript
+return info && info.phase === 'slow';  // CORRECT: unknown = not slow
+```
+
+This ensures that:
+- Properties from headless components (not in page's phase map) are NOT evaluated
+- Only properties explicitly defined in the contract with `phase: slow` are evaluated
+- Properties with unknown phase are preserved as runtime conditions
+
+**Files Fixed:**
+- `lib/expressions/expression-parser.pegjs` - `isSlowPhase()` helper
+- `lib/slow-render/slow-render-transform.ts` - `isSlowPhase()` function
+
+**Tests Added:**
+- "should NOT evaluate properties not in phase map (e.g., headless component properties)"
+- "should NOT evaluate unknown properties even with data present"

@@ -1055,11 +1055,32 @@ describe('expression-compiler', () => {
     });
 
     describe('parseConditionForSlowRender', () => {
-        // Helper to create slow context where all properties are slow-phase
+        // Helper to extract all property paths from an object (for marking as slow)
+        function extractPaths(
+            obj: Record<string, unknown>,
+            prefix: string = '',
+        ): string[] {
+            const paths: string[] = [];
+            for (const key of Object.keys(obj)) {
+                const path = prefix ? `${prefix}.${key}` : key;
+                paths.push(path);
+                if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
+                    paths.push(...extractPaths(obj[key] as Record<string, unknown>, path));
+                }
+            }
+            return paths;
+        }
+
+        // Helper to create slow context where all properties in slowData are slow-phase
         function allSlowContext(slowData: Record<string, unknown>): SlowRenderContext {
+            const phaseMap = new Map<string, { phase: string }>();
+            // Mark all properties in slowData as slow
+            for (const path of extractPaths(slowData)) {
+                phaseMap.set(path, { phase: 'slow' });
+            }
             return {
                 slowData,
-                phaseMap: new Map(), // Empty map = all properties default to slow
+                phaseMap,
                 contextPath: '',
             };
         }
@@ -1305,9 +1326,10 @@ describe('expression-compiler', () => {
             });
 
             it('should handle undefined as falsy', () => {
+                // Property 'missing' must be explicitly marked as slow to be evaluated
                 const result = parseConditionForSlowRender(
                     'missing',
-                    allSlowContext({ other: 'value' }),
+                    mixedPhaseContext({}, ['missing'], []),
                 );
                 expect(result).toEqual({ type: 'resolved', value: false });
             });
@@ -1341,6 +1363,31 @@ describe('expression-compiler', () => {
                 };
                 const result = parseConditionForSlowRender('!imageUrl', ctx);
                 expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should NOT evaluate properties not in phase map (e.g., headless component properties)', () => {
+                // This tests the fix for the bug where productSearch.hasResults from a headless
+                // component was being evaluated even though it's not in the page's phase map
+                const ctx: SlowRenderContext = {
+                    slowData: { someSlowProp: true },
+                    phaseMap: new Map([['someSlowProp', { phase: 'slow' }]]),
+                    // productSearch.hasResults is NOT in the phase map
+                    contextPath: '',
+                };
+                const result = parseConditionForSlowRender('productSearch.hasResults', ctx);
+                // Should NOT be resolved - should return runtime code
+                expect(result.type).toEqual('runtime');
+            });
+
+            it('should NOT evaluate unknown properties even with data present', () => {
+                // Even if there's data for a property, if it's not in the phase map, don't evaluate
+                const ctx: SlowRenderContext = {
+                    slowData: { unknownProp: true },
+                    phaseMap: new Map(), // Empty phase map = nothing is marked as slow
+                    contextPath: '',
+                };
+                const result = parseConditionForSlowRender('unknownProp', ctx);
+                expect(result.type).toEqual('runtime');
             });
         });
     });

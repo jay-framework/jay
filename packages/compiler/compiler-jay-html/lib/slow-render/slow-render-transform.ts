@@ -90,11 +90,16 @@ function toCamelCase(str: string): string {
 
 /**
  * Check if a property path is in the slow phase
+ * 
+ * IMPORTANT: Only return true if the property is EXPLICITLY marked as slow in the phase map.
+ * If the property is not in the phase map (e.g., from a headless component), we don't know
+ * its phase and should NOT evaluate it at slow-render time.
  */
 function isSlowPhase(path: string, phaseMap: Map<string, PhaseInfo>): boolean {
     const info = phaseMap.get(path);
-    // Default to slow phase if not specified
-    return !info || info.phase === 'slow';
+    // Only treat as slow if explicitly marked as slow in the phase map
+    // Unknown properties (not in map) should NOT be evaluated
+    return info !== undefined && info.phase === 'slow';
 }
 
 /**
