@@ -817,7 +817,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                     childElement.recursiveRegions,
                 );
 
-                return nestRefs([arrayName], slowForEachFragment);
+                return nestRefs(arrayName.split('.'), slowForEachFragment);
             } else if (checkAsync(htmlElement).isAsync) {
                 const asyncDirective = checkAsync(htmlElement);
                 const asyncProperty = htmlElement.getAttribute(asyncDirective.directive);
