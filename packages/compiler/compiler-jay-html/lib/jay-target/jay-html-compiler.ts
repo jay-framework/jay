@@ -807,12 +807,19 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 const parentTypeName = variables.currentType.name;
                 const itemTypeName = slowForEachVariables.currentType.name;
 
+                // Generate accessor function similar to regular forEach
+                // This handles nested paths like productSearch.filters.categoryFilter.categories
+                const paramName = arrayAccessor.rootVar;
+                const getItemsFragment = arrayAccessor
+                    .render()
+                    .map((_) => `(${paramName}: ${parentTypeName}) => ${_}`);
+
                 // Wrap with slowForEachItem - element is wrapped in a function for context setup
                 // Include generic types to ensure proper TypeScript inference
                 const slowForEachFragment = new RenderFragment(
-                    `${indent.firstLine}slowForEachItem<${parentTypeName}, ${itemTypeName}>('${arrayName}', ${jayIndex}, '${jayTrackBy}',\n${indent.firstLine}() => ${childElement.rendered}\n${indent.firstLine})`,
-                    childElement.imports.plus(Import.slowForEachItem),
-                    childElement.validations,
+                    `${indent.firstLine}slowForEachItem<${parentTypeName}, ${itemTypeName}>(${getItemsFragment.rendered}, ${jayIndex}, '${jayTrackBy}',\n${indent.firstLine}() => ${childElement.rendered}\n${indent.firstLine})`,
+                    childElement.imports.plus(Import.slowForEachItem).plus(getItemsFragment.imports),
+                    [...getItemsFragment.validations, ...childElement.validations],
                     childElement.refs,
                     childElement.recursiveRegions,
                 );

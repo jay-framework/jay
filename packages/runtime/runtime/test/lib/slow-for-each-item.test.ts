@@ -26,10 +26,10 @@ describe('slowForEachItem', () => {
         const [refManager] = ReferencesManager.for({}, [], [], [], []);
         return ConstructContext.withRootContext(data, refManager, () =>
             de('ul', {}, [
-                slowForEachItem<ViewState, Product>('products', 0, 'p1', () =>
+                slowForEachItem<ViewState, Product>((vs) => vs.products, 0, 'p1', () =>
                     e('li', {}, ['Widget A - ', dt((item: Product) => `$${item?.price}`)]),
                 ),
-                slowForEachItem<ViewState, Product>('products', 1, 'p2', () =>
+                slowForEachItem<ViewState, Product>((vs) => vs.products, 1, 'p2', () =>
                     e('li', {}, ['Widget B - ', dt((item: Product) => `$${item?.price}`)]),
                 ),
             ]),
@@ -66,7 +66,7 @@ describe('slowForEachItem', () => {
                 const [refManager] = ReferencesManager.for({}, [], [], [], []);
                 return ConstructContext.withRootContext(data, refManager, () =>
                     de('ul', {}, [
-                        slowForEachItem<CartViewState, CartItem>('items', 0, 'c1', () =>
+                        slowForEachItem<CartViewState, CartItem>((vs) => vs.items, 0, 'c1', () =>
                             e('li', {}, [
                                 'Laptop - ',
                                 dt(
@@ -208,17 +208,17 @@ describe('slowForEachItem', () => {
             return ConstructContext.withRootContext(data, refManager, () =>
                 de('div', { class: 'catalog' }, [
                     // Outer slowForEachItem for categories
-                    slowForEachItem<CatalogViewState, Category>('categories', 0, 'cat1', () =>
+                    slowForEachItem<CatalogViewState, Category>((vs) => vs.categories, 0, 'cat1', () =>
                         de('section', { class: 'category' }, [
                             e('h2', {}, ['Electronics']),
                             // Nested slowForEachItem for products within category
-                            slowForEachItem<Category, Product>('products', 0, 'p1', () =>
+                            slowForEachItem<Category, Product>((cat) => cat.products, 0, 'p1', () =>
                                 e('div', { class: 'product' }, [
                                     'Laptop - ',
                                     dt((item: Product) => `$${item.price}`),
                                 ]),
                             ),
-                            slowForEachItem<Category, Product>('products', 1, 'p2', () =>
+                            slowForEachItem<Category, Product>((cat) => cat.products, 1, 'p2', () =>
                                 e('div', { class: 'product' }, [
                                     'Phone - ',
                                     dt((item: Product) => `$${item.price}`),
@@ -226,10 +226,10 @@ describe('slowForEachItem', () => {
                             ),
                         ]),
                     ),
-                    slowForEachItem<CatalogViewState, Category>('categories', 1, 'cat2', () =>
+                    slowForEachItem<CatalogViewState, Category>((vs) => vs.categories, 1, 'cat2', () =>
                         de('section', { class: 'category' }, [
                             e('h2', {}, ['Clothing']),
-                            slowForEachItem<Category, Product>('products', 0, 'p3', () =>
+                            slowForEachItem<Category, Product>((cat) => cat.products, 0, 'p3', () =>
                                 e('div', { class: 'product' }, [
                                     'T-Shirt - ',
                                     dt((item: Product) => `$${item.price}`),
@@ -339,7 +339,7 @@ describe('slowForEachItem', () => {
                 de('div', { class: 'products' }, [
                     // slowForEachItem wraps a pre-rendered product
                     slowForEachItem<TaggedProductsViewState, ProductWithTags>(
-                        'products',
+                        (vs) => vs.products,
                         0,
                         'prod1',
                         () =>

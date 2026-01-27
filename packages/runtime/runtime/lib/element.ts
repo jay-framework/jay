@@ -379,13 +379,13 @@ export function forEach<T, Item>(
  * specific array item, so child bindings like {price} work correctly
  * (they resolve to item.price, not viewState.price).
  *
- * @param arrayName - The property name of the array in the parent ViewState
+ * @param getItems - Function to get the array from the parent ViewState (handles nested paths)
  * @param index - The jayIndex value (position in the pre-rendered array)
  * @param trackByValue - The jayTrackBy value (identity for reconciliation)
  * @param elementCreator - Function that creates the pre-rendered element (called within item context)
  */
 export function slowForEachItem<ParentVS, ItemVS>(
-    arrayName: keyof ParentVS,
+    getItems: (parentData: ParentVS) => ItemVS[],
     index: number,
     trackByValue: string,
     elementCreator: () => BaseJayElement<ItemVS>,
@@ -396,7 +396,7 @@ export function slowForEachItem<ParentVS, ItemVS>(
 
     // Get the initial item from the array (may be undefined if array is missing or shorter than expected)
     const parentData = parentContext.currData as ParentVS;
-    const array = parentData[arrayName] as ItemVS[];
+    const array = getItems(parentData);
     const initialItem = array?.[index];
 
     // Create a child context for this item and construct the element within it
@@ -406,7 +406,7 @@ export function slowForEachItem<ParentVS, ItemVS>(
     // Wrap the element with context-aware update
     const originalUpdate = element.update;
     const update: updateFunc<ParentVS> = (newParentData: ParentVS) => {
-        const newArray = newParentData[arrayName] as ItemVS[];
+        const newArray = getItems(newParentData);
         const newItem = newArray?.[index];
 
         // Update with item data in the correct context

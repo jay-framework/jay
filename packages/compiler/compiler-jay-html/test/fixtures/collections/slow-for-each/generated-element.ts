@@ -48,7 +48,7 @@ export function render(options?: RenderElementOptions): SlowForEachElementPreRen
         ConstructContext.withRootContext(viewState, refManager, () =>
             de('ul', {}, [
                 slowForEachItem<SlowForEachViewState, ProductOfSlowForEachViewState>(
-                    'products',
+                    (vs: SlowForEachViewState) => vs.products,
                     0,
                     'p1',
                     () =>
@@ -58,7 +58,7 @@ export function render(options?: RenderElementOptions): SlowForEachElementPreRen
                         ]),
                 ),
                 slowForEachItem<SlowForEachViewState, ProductOfSlowForEachViewState>(
-                    'products',
+                    (vs: SlowForEachViewState) => vs.products,
                     1,
                     'p2',
                     () =>
