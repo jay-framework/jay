@@ -6,6 +6,124 @@
     let da = options.da;
     let dp = options.dp;
     let ba = options.ba;
+    
+    // Slow render context for partial evaluation
+    let slowContext = options.slowContext;
+    
+    // Helper: Check if a property path is slow-phase
+    function isSlowPhase(path) {
+        if (!slowContext) return false;
+        const fullPath = slowContext.contextPath ? `${slowContext.contextPath}.${path}` : path;
+        const info = slowContext.phaseMap.get(fullPath);
+        return !info || info.phase === 'slow';
+    }
+    
+    // Helper: Get value from nested object by path
+    function getSlowValue(path) {
+        if (!slowContext) return undefined;
+        const parts = path.split('.');
+        let current = slowContext.slowData;
+        for (const part of parts) {
+            if (current === null || current === undefined) return undefined;
+            if (typeof current !== 'object') return undefined;
+            current = current[part];
+        }
+        return current;
+    }
+    
+    // Helper: Check JavaScript truthiness
+    function isTruthy(val) {
+        return !!val;
+    }
+    
+    // Helper: Combine AND
+    function combineAnd(left, right) {
+        if (left.type === 'resolved' && right.type === 'resolved') {
+            return { type: 'resolved', value: isTruthy(left.value) && isTruthy(right.value) };
+        }
+        if (left.type === 'resolved') {
+            if (!isTruthy(left.value)) return { type: 'resolved', value: false };
+            return right;
+        }
+        if (right.type === 'resolved') {
+            if (!isTruthy(right.value)) return { type: 'resolved', value: false };
+            return left;
+        }
+        const combined = RenderFragment.merge(
+            left.fragment.map(_ => `(${_})`),
+            right.fragment.map(_ => `(${_})`),
+            ' && '
+        );
+        return { type: 'code', fragment: combined, expr: `(${left.expr}) && (${right.expr})` };
+    }
+    
+    // Helper: Combine OR
+    function combineOr(left, right) {
+        if (left.type === 'resolved' && right.type === 'resolved') {
+            return { type: 'resolved', value: isTruthy(left.value) || isTruthy(right.value) };
+        }
+        if (left.type === 'resolved') {
+            if (isTruthy(left.value)) return { type: 'resolved', value: true };
+            return right;
+        }
+        if (right.type === 'resolved') {
+            if (isTruthy(right.value)) return { type: 'resolved', value: true };
+            return left;
+        }
+        const combined = RenderFragment.merge(
+            left.fragment.map(_ => `(${_})`),
+            right.fragment.map(_ => `(${_})`),
+            ' || '
+        );
+        return { type: 'code', fragment: combined, expr: `(${left.expr}) || (${right.expr})` };
+    }
+    
+    // Helper: Apply NOT
+    function applyNot(operand) {
+        if (operand.type === 'resolved') {
+            return { type: 'resolved', value: !isTruthy(operand.value) };
+        }
+        return {
+            type: 'code',
+            fragment: operand.fragment.map(_ => `!${_}`),
+            expr: `!${operand.expr}`
+        };
+    }
+    
+    // Helper: Compare values
+    function compareValues(left, op, right) {
+        switch (op) {
+            case '==': case '===': return left === right;
+            case '!=': case '!==': return left !== right;
+            case '<': return left < right;
+            case '<=': return left <= right;
+            case '>': return left > right;
+            case '>=': return left >= right;
+            default: return false;
+        }
+    }
+    
+    // Helper: Apply comparison
+    function applyComparison(left, op, right) {
+        if (left.type === 'resolved' && right.type === 'resolved') {
+            return { type: 'resolved', value: compareValues(left.value, op, right.value) };
+        }
+        let jsOp = op;
+        if (op === '==') jsOp = '===';
+        if (op === '!=') jsOp = '!==';
+        
+        const leftCode = left.type === 'resolved' ? JSON.stringify(left.value) : left.fragment.rendered;
+        const rightCode = right.type === 'resolved' ? JSON.stringify(right.value) : right.fragment.rendered;
+        const leftExpr = left.type === 'resolved' ? JSON.stringify(left.value) : left.expr;
+        const rightExpr = right.type === 'resolved' ? JSON.stringify(right.value) : right.expr;
+        
+        const baseFragment = left.type === 'code' ? left.fragment : right.fragment;
+        return {
+            type: 'code',
+            fragment: new RenderFragment(`${leftCode} ${jsOp} ${rightCode}`, baseFragment.imports),
+            expr: `${leftExpr} ${jsOp} ${rightExpr}`
+        };
+    }
 }
 
 styleDeclarations
@@ -263,6 +381,78 @@ conditionFunc
   = cond:condition {
   return cond.map(_ => `${vars.currentVar} => ${_}`)
 }
+
+// =============================================================================
+// Slow Render Condition Parsing (partial evaluation with value inlining)
+// =============================================================================
+
+slowCondition
+  = slowLogicalOr
+
+slowLogicalOr
+  = head:slowLogicalAnd tail:(_ "||" _ slowLogicalAnd)* {
+    if (tail.length === 0) return head;
+    return tail.reduce((acc, curr) => combineOr(acc, curr[3]), head);
+  }
+
+slowLogicalAnd
+  = head:slowComparison tail:(_ "&&" _ slowComparison)* {
+    if (tail.length === 0) return head;
+    return tail.reduce((acc, curr) => combineAnd(acc, curr[3]), head);
+  }
+
+slowComparison
+  = left:slowUnary _ op:ComparisonOperator _ right:slowUnary {
+    return applyComparison(left, op, right);
+  }
+  / slowUnary
+
+slowUnary
+  = "!" _ operand:slowUnary { return applyNot(operand); }
+  / slowPrimary
+
+slowPrimary
+  = "(" _ cond:slowLogicalOr _ ")" { return cond; }
+  / slowNumericLiteral
+  / slowBooleanLiteral
+  / slowPropertyAccess
+
+slowNumericLiteral
+  = val:("-"? [0-9]+ ("." [0-9]+)?) {
+    return { type: 'resolved', value: parseFloat(text()) };
+  }
+
+slowBooleanLiteral
+  = "true" !IdentifierPart { return { type: 'resolved', value: true }; }
+  / "false" !IdentifierPart { return { type: 'resolved', value: false }; }
+
+slowPropertyAccess
+  = head:Identifier tail:(_ "." _ Identifier)* {
+    const path = [head, ...tail.map(t => t[3])].join('.');
+    
+    // Check if this property is slow-phase
+    if (isSlowPhase(path)) {
+      const value = getSlowValue(path);
+      return { type: 'resolved', value: value };
+    }
+    
+    // Fast/interactive phase - generate runtime code
+    if (vars) {
+      const accessor = vars.resolveAccessor(path.split('.'));
+      const fragment = accessor.render();
+      return { type: 'code', fragment: fragment, expr: path };
+    } else {
+      // Simple code generation without type info
+      const code = `vs.${path.split('.').join('?.')}`;
+      const fragment = new RenderFragment(code, none);
+      return { type: 'code', fragment: fragment, expr: path };
+    }
+  }
+
+ComparisonOperator
+  = "===" / "!==" / "==" / "!=" / "<=" / ">=" / "<" / ">"
+
+// =============================================================================
 
 condition
   = logicalOrCondition

@@ -3,7 +3,10 @@ import Node from 'node-html-parser/dist/nodes/node';
 import path from 'path';
 import { Contract, ContractTag, RenderingPhase } from '../contract';
 import { WithValidations } from '@jay-framework/compiler-shared';
-import { analyzeSimpleCondition } from '../expressions/expression-compiler';
+import {
+    parseConditionForSlowRender,
+    SlowRenderContext,
+} from '../expressions/expression-compiler';
 
 /**
  * Input for slow render transformation
@@ -247,25 +250,28 @@ function transformElement(
     // Handle if directive (slow conditional)
     const ifAttr = element.getAttribute('if');
     if (ifAttr) {
-        const analyzedCondition = analyzeSimpleCondition(ifAttr);
-        if (analyzedCondition) {
-            const { path: binding, isNegated } = analyzedCondition;
-            const fullPath = contextPath ? `${contextPath}.${binding}` : binding;
+        // Build slow render context for condition evaluation
+        const slowContext: SlowRenderContext = {
+            slowData: contextData,
+            phaseMap: phaseMap as Map<string, { phase: string; isArray?: boolean }>,
+            contextPath: contextPath,
+        };
 
-            if (isSlowPhase(fullPath, phaseMap)) {
-                const value = getValueByPath(contextData, binding);
+        const conditionResult = parseConditionForSlowRender(ifAttr, slowContext);
 
-                // Evaluate the condition (apply negation if needed)
-                const conditionResult = isNegated ? !value : !!value;
-
-                // If condition is false, remove the element
-                if (!conditionResult) {
-                    return [];
-                }
-
-                // If condition is true, remove the if attribute and keep the element
-                // Note: use lowercase because the parser normalizes attribute names
-                element.removeAttribute('if');
+        if (conditionResult.type === 'resolved') {
+            if (!conditionResult.value) {
+                // Condition is false - remove the element
+                return [];
+            }
+            // Condition is true - remove the if attribute and keep the element
+            element.removeAttribute('if');
+        } else {
+            // Mixed phase - update the if attribute with simplified expression
+            // For now, keep the original expression since we'd need to convert
+            // the RenderFragment back to a template expression
+            if (conditionResult.simplifiedExpr && conditionResult.simplifiedExpr !== ifAttr) {
+                element.setAttribute('if', conditionResult.simplifiedExpr);
             }
         }
     }

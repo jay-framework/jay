@@ -1,0 +1,22 @@
+name: ComplexConditionalContract
+tags:
+  - tag: in-stock
+    type: data
+    dataType: boolean
+    phase: slow
+  - tag: count
+    type: data
+    dataType: number
+    phase: slow
+  - tag: is-promoted
+    type: data
+    dataType: boolean
+    phase: slow
+  - tag: has-discount
+    type: data
+    dataType: boolean
+    phase: slow
+  - tag: price
+    type: data
+    dataType: number
+    phase: fast

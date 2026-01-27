@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Complex Conditionals</title>
+</head>
+<body>
+    <!-- Test 1: Slow AND that resolves to true (both true) -->
+    <div class="available-deal">Great deal!</div>
+
+    <!-- Test 2: Slow AND that resolves to false (first is false) -->
+    
+
+    <!-- Test 3: Slow OR that resolves to true (one is true) -->
+    <span class="badge">Has offer</span>
+
+    <!-- Test 4: Slow comparison that resolves to true -->
+    <span class="in-stock">In stock</span>
+
+    <!-- Test 5: Slow comparison that resolves to false -->
+    
+
+    <!-- Test 6: Mixed phase - slow is true, simplifies to fast check only -->
+    <div if="price > 0" class="purchasable">Buy now</div>
+
+    <!-- Test 7: Mixed phase - slow is false, short circuits to false -->
+    
+
+    <!-- Test 8: Mixed phase OR - slow is true, short circuits to true -->
+    <div class="good-value">Good value</div>
+
+    <!-- Test 9: Complex nested - (slow && slow) || slow -->
+    <div class="buyable">Buyable</div>
+</body>
+</html>

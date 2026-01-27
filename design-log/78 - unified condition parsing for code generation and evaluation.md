@@ -532,4 +532,80 @@ const result = parseConditionForSlowRender(expr, vars, { slowData, phaseMap, con
 
 ## Status
 
-**Draft** - Option D (Partial Evaluation with Slow Data Inlining) recommended. Awaiting approval before implementation.
+**Implemented** - Option D (Partial Evaluation with Slow Data Inlining)
+
+---
+
+## Implementation Results
+
+### Summary
+
+Implemented Option D by adding new rules to the PEG grammar (`expression-parser.pegjs`) that perform partial evaluation during parsing. The grammar now supports a `slowCondition` start rule that:
+
+1. Accepts `slowContext` via parser options
+2. Substitutes slow-phase values during parsing
+3. Simplifies expressions using logical short-circuit rules
+4. Returns either resolved values or minimal runtime code
+
+### Files Modified
+
+1. **`lib/expressions/expression-parser.pegjs`**
+   - Added helper functions in grammar header: `isSlowPhase`, `getSlowValue`, `isTruthy`, `combineAnd`, `combineOr`, `applyNot`, `compareValues`, `applyComparison`
+   - Added new grammar rules: `slowCondition`, `slowLogicalOr`, `slowLogicalAnd`, `slowComparison`, `slowUnary`, `slowPrimary`, `slowNumericLiteral`, `slowBooleanLiteral`, `slowPropertyAccess`
+   - Added `ComparisonOperator` rule
+
+2. **`lib/expressions/expression-compiler.ts`**
+   - Added `SlowRenderContext`, `ConditionResult`, `PartialValue` types
+   - Added `parseConditionForSlowRender()` that calls the PEG parser with `slowCondition` start rule
+   - Removed custom tokenizer/parser (now handled by PEG grammar)
+
+3. **`lib/slow-render/slow-render-transform.ts`**
+   - Replaced `analyzeSimpleCondition()` usage with `parseConditionForSlowRender()`
+   - Now supports all condition types (logical operators, comparisons)
+
+4. **`package.json`**
+   - Added `slowCondition` to allowed start rules in `build:pegjs` script
+
+### Test Results
+
+All tests pass: **469 tests** (465 passed, 4 skipped)
+
+New tests added:
+- 31 unit tests for `parseConditionForSlowRender` covering:
+  - Fully slow conditions (simple, negated, nested, comparisons, logical operators)
+  - Mixed phase conditions (simplification rules)
+  - Fully runtime conditions
+  - Edge cases (zero, null, undefined, boolean literals, context paths)
+- 1 integration fixture test (`conditional-complex`) covering:
+  - Slow AND/OR that resolve
+  - Slow comparisons
+  - Mixed phase simplification
+  - Short-circuit optimization
+
+### No Deviations from Design
+
+The implementation follows Option D as designed - using the PEG parser with slow context for partial evaluation.
+
+### Supported Expressions
+
+- Simple property access: `isActive`, `product.name`
+- Negation: `!imageUrl`, `!!value`
+- Comparisons: `count > 0`, `price <= 100`, `status == 5`, `count != 0`
+- Logical AND: `inStock && hasDiscount`
+- Logical OR: `isPromoted || hasDiscount`
+- Parentheses: `(a && b) || c`
+- Boolean literals: `true`, `false`
+- Numeric literals: `0`, `123`, `-5`
+
+### Simplification Rules Applied
+
+- `true && X` → `X`
+- `false && X` → `false`
+- `true || X` → `true`
+- `false || X` → `X`
+- `X && true` → `X`
+- `X && false` → `false`
+- `X || true` → `true`
+- `X || false` → `X`
+- `!true` → `false`
+- `!false` → `true`

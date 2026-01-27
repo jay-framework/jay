@@ -6,6 +6,7 @@ import {
     parseClassExpression,
     parseComponentPropExpression,
     parseCondition,
+    parseConditionForSlowRender,
     parseEnumValues,
     parseImportNames,
     parseIsEnum,
@@ -14,6 +15,7 @@ import {
     parseReactTextExpression,
     parseStyleDeclarations,
     parseTextExpression,
+    SlowRenderContext,
     Variables,
 } from '../../lib/expressions/expression-compiler';
 
@@ -1049,6 +1051,297 @@ describe('expression-compiler', () => {
             expect(result.declarations[3].valueFragment.rendered).toContain(
                 "url('/images/I2:2069;2:1758_FILL.png')",
             );
+        });
+    });
+
+    describe('parseConditionForSlowRender', () => {
+        // Helper to create slow context where all properties are slow-phase
+        function allSlowContext(slowData: Record<string, unknown>): SlowRenderContext {
+            return {
+                slowData,
+                phaseMap: new Map(), // Empty map = all properties default to slow
+                contextPath: '',
+            };
+        }
+
+        // Helper to create slow context with explicit phase map
+        function mixedPhaseContext(
+            slowData: Record<string, unknown>,
+            slowPaths: string[],
+            fastPaths: string[],
+        ): SlowRenderContext {
+            const phaseMap = new Map<string, { phase: string }>();
+            for (const path of slowPaths) {
+                phaseMap.set(path, { phase: 'slow' });
+            }
+            for (const path of fastPaths) {
+                phaseMap.set(path, { phase: 'fast' });
+            }
+            return {
+                slowData,
+                phaseMap,
+                contextPath: '',
+            };
+        }
+
+        describe('fully slow conditions', () => {
+            it('should resolve simple property to true when truthy', () => {
+                const result = parseConditionForSlowRender(
+                    'isActive',
+                    allSlowContext({ isActive: true }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve simple property to false when falsy', () => {
+                const result = parseConditionForSlowRender(
+                    'isActive',
+                    allSlowContext({ isActive: false }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: false });
+            });
+
+            it('should resolve empty string as falsy', () => {
+                const result = parseConditionForSlowRender(
+                    'imageUrl',
+                    allSlowContext({ imageUrl: '' }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: false });
+            });
+
+            it('should resolve non-empty string as truthy', () => {
+                const result = parseConditionForSlowRender(
+                    'imageUrl',
+                    allSlowContext({ imageUrl: 'http://example.com/img.jpg' }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve negation correctly', () => {
+                const result = parseConditionForSlowRender(
+                    '!imageUrl',
+                    allSlowContext({ imageUrl: '' }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve double negation correctly', () => {
+                const result = parseConditionForSlowRender(
+                    '!!imageUrl',
+                    allSlowContext({ imageUrl: 'http://example.com' }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve nested property access', () => {
+                const result = parseConditionForSlowRender(
+                    'product.isAvailable',
+                    allSlowContext({ product: { isAvailable: true } }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve numeric comparison greater than', () => {
+                const result = parseConditionForSlowRender(
+                    'count > 0',
+                    allSlowContext({ count: 5 }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve numeric comparison less than or equal', () => {
+                const result = parseConditionForSlowRender(
+                    'count <= 0',
+                    allSlowContext({ count: 0 }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve equality comparison', () => {
+                const result = parseConditionForSlowRender(
+                    'status == 5',
+                    allSlowContext({ status: 5 }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve false equality comparison', () => {
+                const result = parseConditionForSlowRender(
+                    'status == 5',
+                    allSlowContext({ status: 4 }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: false });
+            });
+
+            it('should resolve inequality comparison', () => {
+                const result = parseConditionForSlowRender(
+                    'status != 0',
+                    allSlowContext({ status: 5 }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve logical AND with both true', () => {
+                const result = parseConditionForSlowRender(
+                    'inStock && isAvailable',
+                    allSlowContext({ inStock: true, isAvailable: true }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve logical AND with one false', () => {
+                const result = parseConditionForSlowRender(
+                    'inStock && isAvailable',
+                    allSlowContext({ inStock: true, isAvailable: false }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: false });
+            });
+
+            it('should resolve logical OR with one true', () => {
+                const result = parseConditionForSlowRender(
+                    'isPromoted || hasDiscount',
+                    allSlowContext({ isPromoted: false, hasDiscount: true }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve logical OR with both false', () => {
+                const result = parseConditionForSlowRender(
+                    'isPromoted || hasDiscount',
+                    allSlowContext({ isPromoted: false, hasDiscount: false }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: false });
+            });
+
+            it('should resolve parenthesized expressions', () => {
+                const result = parseConditionForSlowRender(
+                    '(a && b) || c',
+                    allSlowContext({ a: true, b: false, c: true }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve complex expression', () => {
+                const result = parseConditionForSlowRender(
+                    '!imageUrl && count > 0',
+                    allSlowContext({ imageUrl: '', count: 5 }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+        });
+
+        describe('mixed phase conditions', () => {
+            it('should simplify true && X to X', () => {
+                const ctx = mixedPhaseContext({ inStock: true }, ['inStock'], ['price']);
+                const result = parseConditionForSlowRender('inStock && price > 0', ctx);
+                expect(result.type).toEqual('runtime');
+                if (result.type === 'runtime') {
+                    expect(result.simplifiedExpr).toEqual('price > 0');
+                }
+            });
+
+            it('should simplify false && X to false', () => {
+                const ctx = mixedPhaseContext({ inStock: false }, ['inStock'], ['price']);
+                const result = parseConditionForSlowRender('inStock && price > 0', ctx);
+                expect(result).toEqual({ type: 'resolved', value: false });
+            });
+
+            it('should simplify true || X to true', () => {
+                const ctx = mixedPhaseContext({ isPromoted: true }, ['isPromoted'], ['hasDiscount']);
+                const result = parseConditionForSlowRender('isPromoted || hasDiscount', ctx);
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should simplify false || X to X', () => {
+                const ctx = mixedPhaseContext({ isPromoted: false }, ['isPromoted'], ['hasDiscount']);
+                const result = parseConditionForSlowRender('isPromoted || hasDiscount', ctx);
+                expect(result.type).toEqual('runtime');
+                if (result.type === 'runtime') {
+                    expect(result.simplifiedExpr).toEqual('hasDiscount');
+                }
+            });
+
+            it('should handle X && true as X', () => {
+                const ctx = mixedPhaseContext({ inStock: true }, ['inStock'], ['price']);
+                const result = parseConditionForSlowRender('price > 0 && inStock', ctx);
+                expect(result.type).toEqual('runtime');
+                if (result.type === 'runtime') {
+                    expect(result.simplifiedExpr).toEqual('price > 0');
+                }
+            });
+
+            it('should handle X && false as false', () => {
+                const ctx = mixedPhaseContext({ inStock: false }, ['inStock'], ['price']);
+                const result = parseConditionForSlowRender('price > 0 && inStock', ctx);
+                expect(result).toEqual({ type: 'resolved', value: false });
+            });
+        });
+
+        describe('fully runtime conditions', () => {
+            it('should return runtime code for fast-phase properties', () => {
+                const ctx = mixedPhaseContext({}, [], ['isActive']);
+                const result = parseConditionForSlowRender('isActive', ctx);
+                expect(result.type).toEqual('runtime');
+                if (result.type === 'runtime') {
+                    expect(result.code.rendered).toContain('isActive');
+                }
+            });
+
+            it('should return runtime code for complex fast expressions', () => {
+                const ctx = mixedPhaseContext({}, [], ['count', 'limit']);
+                const result = parseConditionForSlowRender('count > limit', ctx);
+                expect(result.type).toEqual('runtime');
+                if (result.type === 'runtime') {
+                    expect(result.code.rendered).toContain('count');
+                    expect(result.code.rendered).toContain('limit');
+                }
+            });
+        });
+
+        describe('edge cases', () => {
+            it('should handle zero as falsy', () => {
+                const result = parseConditionForSlowRender('count', allSlowContext({ count: 0 }));
+                expect(result).toEqual({ type: 'resolved', value: false });
+            });
+
+            it('should handle undefined as falsy', () => {
+                const result = parseConditionForSlowRender(
+                    'missing',
+                    allSlowContext({ other: 'value' }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: false });
+            });
+
+            it('should handle null as falsy', () => {
+                const result = parseConditionForSlowRender('value', allSlowContext({ value: null }));
+                expect(result).toEqual({ type: 'resolved', value: false });
+            });
+
+            it('should handle boolean literals', () => {
+                const resultTrue = parseConditionForSlowRender('true', allSlowContext({}));
+                expect(resultTrue).toEqual({ type: 'resolved', value: true });
+
+                const resultFalse = parseConditionForSlowRender('false', allSlowContext({}));
+                expect(resultFalse).toEqual({ type: 'resolved', value: false });
+            });
+
+            it('should handle negative numbers in comparisons', () => {
+                const result = parseConditionForSlowRender(
+                    'count > -1',
+                    allSlowContext({ count: 0 }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should handle context path for nested properties', () => {
+                const ctx: SlowRenderContext = {
+                    slowData: { imageUrl: '' },
+                    phaseMap: new Map([['products.imageUrl', { phase: 'slow' }]]),
+                    contextPath: 'products',
+                };
+                const result = parseConditionForSlowRender('!imageUrl', ctx);
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
         });
     });
 });

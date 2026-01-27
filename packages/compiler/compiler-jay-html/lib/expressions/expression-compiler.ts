@@ -333,6 +333,7 @@ export function parseStyleDeclarations(styleString: string, vars: Variables): St
 
 /**
  * Analyzed condition expression for slow-render evaluation
+ * @deprecated Use parseConditionForSlowRender instead
  */
 export interface AnalyzedCondition {
     /** The property path (without negation) */
@@ -343,16 +344,7 @@ export interface AnalyzedCondition {
 
 /**
  * Analyze a simple condition expression for slow-render evaluation.
- *
- * Currently supports:
- * - Simple property access: "imageUrl", "product.name"
- * - Negated property access: "!imageUrl", "!product.isAvailable"
- *
- * Returns null for complex expressions (comparisons, logical operators, etc.)
- * that cannot be easily evaluated at slow-render time.
- *
- * This function is designed to be extended as we add support for more
- * condition types in slow rendering.
+ * @deprecated Use parseConditionForSlowRender instead - it supports all condition types
  */
 export function analyzeSimpleCondition(expr: string): AnalyzedCondition | null {
     const trimmed = expr.trim();
@@ -373,4 +365,99 @@ export function analyzeSimpleCondition(expr: string): AnalyzedCondition | null {
     }
 
     return null;
+}
+
+// =============================================================================
+// Slow Render Condition Parsing (Option D: Partial Evaluation)
+// Uses the PEG parser with 'slowCondition' start rule
+// =============================================================================
+
+/**
+ * Context for slow rendering - provides slow-phase data for partial evaluation
+ */
+export interface SlowRenderContext {
+    /** Slow-phase data values */
+    slowData: Record<string, unknown>;
+    /** Phase information for each property path */
+    phaseMap: Map<string, { phase: string; isArray?: boolean }>;
+    /** Current context path for nested properties (e.g., "products" when inside forEach) */
+    contextPath: string;
+}
+
+/**
+ * Result of parsing a condition for slow rendering
+ */
+export type ConditionResult =
+    | { type: 'resolved'; value: boolean }
+    | { type: 'runtime'; code: RenderFragment; simplifiedExpr?: string };
+
+/**
+ * Intermediate value during parsing - can be a resolved value or runtime code
+ */
+export type PartialValue =
+    | { type: 'resolved'; value: unknown }
+    | { type: 'code'; fragment: RenderFragment; expr: string };
+
+/**
+ * Convert a value to its JavaScript truthiness
+ */
+function isTruthy(value: unknown): boolean {
+    return !!value;
+}
+
+/**
+ * Parse a condition expression for slow rendering with partial evaluation.
+ *
+ * This function uses the PEG parser with the 'slowCondition' start rule,
+ * which substitutes slow-phase values and simplifies the expression.
+ *
+ * @param expr - The condition expression (e.g., "!imageUrl", "inStock && price > 0")
+ * @param slowContext - Context with slow data and phase information
+ * @param vars - Optional Variables for type-aware code generation
+ * @returns Either a resolved boolean or runtime code
+ *
+ * @example
+ * // Fully slow - resolves to boolean
+ * parseConditionForSlowRender("!imageUrl", { slowData: { imageUrl: "" }, ... })
+ * // Returns: { type: 'resolved', value: true }
+ *
+ * @example
+ * // Mixed phase - simplifies and returns runtime code
+ * parseConditionForSlowRender("inStock && price > 0", { slowData: { inStock: true }, ... })
+ * // Returns: { type: 'runtime', code: RenderFragment("vs.price > 0") }
+ */
+export function parseConditionForSlowRender(
+    expr: string,
+    slowContext: SlowRenderContext,
+    vars?: Variables,
+): ConditionResult {
+    try {
+        const result: PartialValue = parse(expr, {
+            vars,
+            RenderFragment,
+            none: Imports.none(),
+            slowContext,
+            startRule: 'slowCondition',
+        });
+
+        if (result.type === 'resolved') {
+            return { type: 'resolved', value: isTruthy(result.value) };
+        }
+
+        return {
+            type: 'runtime',
+            code: result.fragment,
+            simplifiedExpr: result.expr,
+        };
+    } catch (error) {
+        // If parsing fails, fall back to treating the whole expression as runtime
+        // This ensures we don't break on expressions we don't yet support
+        console.warn(
+            `parseConditionForSlowRender: Failed to parse "${expr}": ${(error as Error).message}`,
+        );
+        // Generate simple runtime code without type info
+        const code = `vs.${expr}`;
+        const fragment = new RenderFragment(code, Imports.none());
+        return { type: 'runtime', code: fragment, simplifiedExpr: expr };
+    }
 }

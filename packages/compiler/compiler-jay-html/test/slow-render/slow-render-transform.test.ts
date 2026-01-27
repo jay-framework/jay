@@ -96,6 +96,10 @@ describe('Slow Render Transform', () => {
         it('should handle negated slow conditionals inside forEach', async () => {
             await runSlowRenderTest('conditional-negated-in-foreach');
         });
+
+        it('should handle complex conditions with logical operators and comparisons', async () => {
+            await runSlowRenderTest('conditional-complex');
+        });
     });
 
     describe('forEach Array Unrolling', () => {
