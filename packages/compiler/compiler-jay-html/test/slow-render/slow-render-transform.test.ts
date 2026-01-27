@@ -92,6 +92,10 @@ describe('Slow Render Transform', () => {
         it('should preserve fast conditionals', async () => {
             await runSlowRenderTest('conditional-fast-preserved');
         });
+
+        it('should handle negated slow conditionals inside forEach', async () => {
+            await runSlowRenderTest('conditional-negated-in-foreach');
+        });
     });
 
     describe('forEach Array Unrolling', () => {

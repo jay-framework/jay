@@ -1,0 +1,7 @@
+{
+  "categories": [
+    { "id": "a", "name": "Category A", "imageUrl": "https://example.com/a.jpg" },
+    { "id": "b", "name": "Category B", "imageUrl": "" },
+    { "id": "c", "name": "Category C" }
+  ]
+}

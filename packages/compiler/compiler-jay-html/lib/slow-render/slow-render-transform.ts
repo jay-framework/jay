@@ -134,6 +134,41 @@ function parseBinding(text: string): string | null {
 }
 
 /**
+ * Result of parsing a conditional expression
+ */
+interface ConditionalExpr {
+    /** The property path (without negation) */
+    path: string;
+    /** Whether the condition is negated (e.g., !imageUrl) */
+    isNegated: boolean;
+}
+
+/**
+ * Parse a conditional expression like "showBanner" or "!imageUrl"
+ * Returns the property path and whether it's negated, or null if not a simple condition
+ */
+function parseConditionalExpr(expr: string): ConditionalExpr | null {
+    const trimmed = expr.trim();
+
+    // Check for negation
+    if (trimmed.startsWith('!')) {
+        const inner = trimmed.slice(1).trim();
+        // Check if it's a simple property path
+        if (/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(inner)) {
+            return { path: inner, isNegated: true };
+        }
+        return null;
+    }
+
+    // Check if it's a simple property path (no operators, function calls, etc.)
+    if (/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(trimmed)) {
+        return { path: trimmed, isNegated: false };
+    }
+
+    return null;
+}
+
+/**
  * Check if text contains any bindings
  */
 function hasBindings(text: string): boolean {
@@ -245,19 +280,23 @@ function transformElement(
     // Handle if directive (slow conditional)
     const ifAttr = element.getAttribute('if');
     if (ifAttr) {
-        const binding = parseBinding(`{${ifAttr}}`);
-        if (binding) {
+        const conditionalExpr = parseConditionalExpr(ifAttr);
+        if (conditionalExpr) {
+            const { path: binding, isNegated } = conditionalExpr;
             const fullPath = contextPath ? `${contextPath}.${binding}` : binding;
 
             if (isSlowPhase(fullPath, phaseMap)) {
                 const value = getValueByPath(contextData, binding);
 
-                // If false, remove the element
-                if (!value) {
+                // Evaluate the condition (apply negation if needed)
+                const conditionResult = isNegated ? !value : !!value;
+
+                // If condition is false, remove the element
+                if (!conditionResult) {
                     return [];
                 }
 
-                // If true, remove the if attribute and keep the element
+                // If condition is true, remove the if attribute and keep the element
                 // Note: use lowercase because the parser normalizes attribute names
                 element.removeAttribute('if');
             }
