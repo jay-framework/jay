@@ -818,7 +818,9 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 // Include generic types to ensure proper TypeScript inference
                 const slowForEachFragment = new RenderFragment(
                     `${indent.firstLine}slowForEachItem<${parentTypeName}, ${itemTypeName}>(${getItemsFragment.rendered}, ${jayIndex}, '${jayTrackBy}',\n${indent.firstLine}() => ${childElement.rendered}\n${indent.firstLine})`,
-                    childElement.imports.plus(Import.slowForEachItem).plus(getItemsFragment.imports),
+                    childElement.imports
+                        .plus(Import.slowForEachItem)
+                        .plus(getItemsFragment.imports),
                     [...getItemsFragment.validations, ...childElement.validations],
                     childElement.refs,
                     childElement.recursiveRegions,

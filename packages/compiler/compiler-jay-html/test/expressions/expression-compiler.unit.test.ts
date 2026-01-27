@@ -1056,10 +1056,7 @@ describe('expression-compiler', () => {
 
     describe('parseConditionForSlowRender', () => {
         // Helper to extract all property paths from an object (for marking as slow)
-        function extractPaths(
-            obj: Record<string, unknown>,
-            prefix: string = '',
-        ): string[] {
+        function extractPaths(obj: Record<string, unknown>, prefix: string = ''): string[] {
             const paths: string[] = [];
             for (const key of Object.keys(obj)) {
                 const path = prefix ? `${prefix}.${key}` : key;
@@ -1268,13 +1265,21 @@ describe('expression-compiler', () => {
             });
 
             it('should simplify true || X to true', () => {
-                const ctx = mixedPhaseContext({ isPromoted: true }, ['isPromoted'], ['hasDiscount']);
+                const ctx = mixedPhaseContext(
+                    { isPromoted: true },
+                    ['isPromoted'],
+                    ['hasDiscount'],
+                );
                 const result = parseConditionForSlowRender('isPromoted || hasDiscount', ctx);
                 expect(result).toEqual({ type: 'resolved', value: true });
             });
 
             it('should simplify false || X to X', () => {
-                const ctx = mixedPhaseContext({ isPromoted: false }, ['isPromoted'], ['hasDiscount']);
+                const ctx = mixedPhaseContext(
+                    { isPromoted: false },
+                    ['isPromoted'],
+                    ['hasDiscount'],
+                );
                 const result = parseConditionForSlowRender('isPromoted || hasDiscount', ctx);
                 expect(result.type).toEqual('runtime');
                 if (result.type === 'runtime') {
@@ -1335,7 +1340,10 @@ describe('expression-compiler', () => {
             });
 
             it('should handle null as falsy', () => {
-                const result = parseConditionForSlowRender('value', allSlowContext({ value: null }));
+                const result = parseConditionForSlowRender(
+                    'value',
+                    allSlowContext({ value: null }),
+                );
                 expect(result).toEqual({ type: 'resolved', value: false });
             });
 

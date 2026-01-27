@@ -3,10 +3,17 @@ import Node from 'node-html-parser/dist/nodes/node';
 import path from 'path';
 import { Contract, ContractTag, RenderingPhase } from '../contract';
 import { WithValidations } from '@jay-framework/compiler-shared';
-import {
-    parseConditionForSlowRender,
-    SlowRenderContext,
-} from '../expressions/expression-compiler';
+import { parseConditionForSlowRender, SlowRenderContext } from '../expressions/expression-compiler';
+
+/**
+ * Headless contract with its key (used for property path prefix)
+ */
+export interface HeadlessContractInfo {
+    /** The key attribute from the headless script tag */
+    key: string;
+    /** The parsed contract */
+    contract: Contract;
+}
 
 /**
  * Input for slow render transformation
@@ -16,8 +23,13 @@ export interface SlowRenderInput {
     jayHtmlContent: string;
     /** Slow phase view state data */
     slowViewState: Record<string, unknown>;
-    /** Contract metadata for phase detection */
+    /** Contract metadata for phase detection (page's main contract) */
     contract?: Contract;
+    /**
+     * Headless component contracts, keyed by their `key` attribute.
+     * These contracts provide phase info for properties like `productSearch.categoryName`.
+     */
+    headlessContracts?: HeadlessContractInfo[];
     /**
      * Source directory of the original jay-html file.
      * Used to resolve relative paths (contracts, CSS, components) to absolute paths
@@ -44,14 +56,14 @@ interface PhaseInfo {
 }
 
 /**
- * Build a map of property paths to their phase information from the contract
+ * Build a map of property paths to their phase information from contracts.
+ * Includes both the page's main contract and headless component contracts.
  */
-function buildPhaseMap(contract: Contract | undefined): Map<string, PhaseInfo> {
+function buildPhaseMap(
+    contract: Contract | undefined,
+    headlessContracts?: HeadlessContractInfo[],
+): Map<string, PhaseInfo> {
     const phaseMap = new Map<string, PhaseInfo>();
-
-    if (!contract) {
-        return phaseMap;
-    }
 
     function processTag(tag: ContractTag, path: string, parentPhase: RenderingPhase = 'slow') {
         const effectivePhase = tag.phase || parentPhase;
@@ -72,8 +84,21 @@ function buildPhaseMap(contract: Contract | undefined): Map<string, PhaseInfo> {
         }
     }
 
-    for (const tag of contract.tags) {
-        processTag(tag, '', 'slow');
+    // Process main contract
+    if (contract) {
+        for (const tag of contract.tags) {
+            processTag(tag, '', 'slow');
+        }
+    }
+
+    // Process headless contracts with their key as prefix
+    if (headlessContracts) {
+        for (const { key, contract: headlessContract } of headlessContracts) {
+            for (const tag of headlessContract.tags) {
+                // Use the headless key as the path prefix
+                processTag(tag, key, 'slow');
+            }
+        }
     }
 
     return phaseMap;
@@ -90,7 +115,7 @@ function toCamelCase(str: string): string {
 
 /**
  * Check if a property path is in the slow phase
- * 
+ *
  * IMPORTANT: Only return true if the property is EXPLICITLY marked as slow in the phase map.
  * If the property is not in the phase map (e.g., from a headless component), we don't know
  * its phase and should NOT evaluate it at slow-render time.
@@ -141,7 +166,6 @@ function parseBinding(text: string): string | null {
 
     return null;
 }
-
 
 /**
  * Check if text contains any bindings
@@ -425,8 +449,8 @@ export function slowRenderTransform(input: SlowRenderInput): WithValidations<Slo
             },
         });
 
-        // Build phase map from contract
-        const phaseMap = buildPhaseMap(input.contract);
+        // Build phase map from contract (includes headless contracts)
+        const phaseMap = buildPhaseMap(input.contract, input.headlessContracts);
 
         // Get the body element
         const body = root.querySelector('body');

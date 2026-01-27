@@ -17,4 +17,5 @@ export {
     hasSlowPhaseProperties,
     type SlowRenderInput,
     type SlowRenderOutput,
+    type HeadlessContractInfo,
 } from './slow-render/slow-render-transform';

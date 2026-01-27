@@ -1254,6 +1254,7 @@ export interface PageElementRefs {
 **Fix:** Changed `nestRefs([arrayName], ...)` to `nestRefs(arrayName.split('.'), ...)` so the path is properly split into segments like `['categoryList', 'categories']`.
 
 **Files Modified:**
+
 - `compiler-jay-html/lib/jay-target/jay-html-compiler.ts` (line ~820)
 
 #### Fix 2: Negated Conditionals in Slow Render (2026-01-27)
@@ -1266,26 +1267,93 @@ export interface PageElementRefs {
 
 ```typescript
 export interface AnalyzedCondition {
-    path: string;       // The property path (without negation)
-    isNegated: boolean; // Whether the condition is negated
+  path: string; // The property path (without negation)
+  isNegated: boolean; // Whether the condition is negated
 }
 
 export function analyzeSimpleCondition(expr: string): AnalyzedCondition | null {
-    // Handles: "imageUrl", "product.name", "!imageUrl", "!product.isAvailable"
-    // Returns null for complex expressions (comparisons, logical operators)
+  // Handles: "imageUrl", "product.name", "!imageUrl", "!product.isAvailable"
+  // Returns null for complex expressions (comparisons, logical operators)
 }
 ```
 
 The slow-render transform now imports and uses this shared function, ensuring:
+
 1. No code duplication between parsing locations
 2. Consistent behavior as condition expressions are extended
 
 **Files Created/Modified:**
+
 - MODIFIED: `compiler-jay-html/lib/expressions/expression-compiler.ts` - Added `AnalyzedCondition` interface and `analyzeSimpleCondition()` function
 - MODIFIED: `compiler-jay-html/lib/slow-render/slow-render-transform.ts` - Import and use `analyzeSimpleCondition`
 - NEW: `compiler-jay-html/test/fixtures/slow-render/conditional-negated-in-foreach/` - Test fixture for negated conditionals inside forEach
 
 **Tests:** All 437 compiler-jay-html tests passing (including new negated conditional test).
+
+#### Fix 3: `slowForEachItem` Accessor Function for Nested Paths (2026-01-27)
+
+**Problem:** For nested array paths like `productSearch.filters.categoryFilter.categories`, the runtime function `slowForEachItem` couldn't access the array because it only did:
+
+```typescript
+const array = parentData[arrayName]; // Only works for 'categories', not 'a.b.c'
+```
+
+**Root Cause:** The compiler passed the array path as a string literal (e.g., `'productSearch.filters.categoryFilter.categories'`) and the runtime tried to use it as a single property key.
+
+**Fix:** Changed `slowForEachItem` to accept an accessor function (like regular `forEach`):
+
+```typescript
+// Before
+slowForEachItem<ParentVS, ItemVS>(
+    arrayName: keyof ParentVS,  // String property name
+    ...
+)
+
+// After
+slowForEachItem<ParentVS, ItemVS>(
+    getItems: (parentData: ParentVS) => ItemVS[],  // Accessor function
+    ...
+)
+```
+
+The compiler now generates:
+
+```typescript
+slowForEachItem<ViewState, Product>(
+    (vs: ViewState) => vs.productSearch.filters.categoryFilter.categories,
+    0, 'cat1', () => ...
+)
+```
+
+**Files Modified:**
+
+- `runtime/runtime/lib/element.ts` - Changed function signature
+- `compiler-jay-html/lib/jay-target/jay-html-compiler.ts` - Generate accessor function
+- Test fixtures updated
+
+#### Fix 4: Headless Contract Loading for Text Bindings (2026-01-27)
+
+**Problem:** Text bindings from headless components (e.g., `{categoryName}` from `productSearch`) were not being resolved during slow rendering, even though `categoryName` was `phase: slow` in the headless contract.
+
+**Root Cause:** The phase map was only built from the page's main contract. Headless component contracts were not included, so their properties were treated as "unknown phase" and skipped during slow rendering.
+
+**Fix:** Extended the slow-render system to include headless contracts:
+
+1. **Extended `SlowRenderInput`** to accept `headlessContracts?: HeadlessContractInfo[]`
+2. **Updated `buildPhaseMap`** to include headless contract properties with their key prefix (e.g., `productSearch.categoryName`)
+3. **Updated `LoadedPageParts`** to include headless contracts from `parseJayFile`
+4. **Dev server reuse**: Instead of duplicating contract loading, the dev-server now gets headless contracts from `loadPageParts` (which already calls `parseJayFile` → `parseHeadlessImports`)
+
+**Files Modified:**
+
+- `compiler-jay-html/lib/slow-render/slow-render-transform.ts` - Added `HeadlessContractInfo`, updated `buildPhaseMap`
+- `compiler-jay-html/lib/index.ts` - Export `HeadlessContractInfo`
+- `stack-server-runtime/lib/load-page-parts.ts` - Added `headlessContracts` to `LoadedPageParts`
+- `dev-server/lib/dev-server.ts` - Pass headless contracts from `loadPageParts` to `preRenderJayHtml`
+
+**Key Learning:** Avoid duplicating logic. The compiler's `parseJayFile` already loads headless contracts via `parseHeadlessImports`. Rather than re-implementing this in the dev-server, we extended `LoadedPageParts` to expose the already-loaded contracts.
+
+**Tests:** Added 2 unit tests for headless contract support in `slow-render-transform.test.ts`.
 
 ### Phase 6-7: Production Build & Incremental Regeneration (FUTURE)
 

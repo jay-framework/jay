@@ -3,6 +3,7 @@
 ## Summary
 
 Unify condition expression parsing so the same parser handles both:
+
 1. **Code generation** - JavaScript code strings for the runtime (existing)
 2. **Compile-time evaluation** - Evaluating conditions against data during slow rendering (new)
 
@@ -13,6 +14,7 @@ Currently these are handled separately, leading to potential inconsistency and d
 ## Background
 
 The Jay compiler has a PEG-based expression parser (`expression-parser.pegjs`) that parses condition expressions like:
+
 - Simple property access: `imageUrl`, `product.name`
 - Negation: `!imageUrl`, `!product.isAvailable`
 - Comparisons: `count <= 0`, `status == pending`
@@ -33,18 +35,18 @@ For slow rendering (Design Log #75), we need to **evaluate conditions at compile
 
 ```typescript
 export function analyzeSimpleCondition(expr: string): AnalyzedCondition | null {
-    const trimmed = expr.trim();
-    if (trimmed.startsWith('!')) {
-        const inner = trimmed.slice(1).trim();
-        if (/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(inner)) {
-            return { path: inner, isNegated: true };
-        }
-        return null;
-    }
-    if (/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(trimmed)) {
-        return { path: trimmed, isNegated: false };
+  const trimmed = expr.trim();
+  if (trimmed.startsWith('!')) {
+    const inner = trimmed.slice(1).trim();
+    if (/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(inner)) {
+      return { path: inner, isNegated: true };
     }
     return null;
+  }
+  if (/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(trimmed)) {
+    return { path: trimmed, isNegated: false };
+  }
+  return null;
 }
 ```
 
@@ -67,6 +69,7 @@ As we add more expression features (comparisons, logical operators), maintaining
 ### Q1: What condition types need evaluation support?
 
 **A:** All condition types should be supported:
+
 - Simple property access: `isOnSale`
 - Negation: `!imageUrl`
 - Comparisons: `count > 0`, `price <= 100`, `status == active`
@@ -100,19 +103,20 @@ The result is a simplified runtime-only expression with slow values already reso
 ### Option A: Add AST Output to the PEG Parser
 
 Modify the grammar to return an intermediate AST that can be:
+
 1. Rendered to JavaScript code (for code generation)
 2. Evaluated against data (for slow rendering)
 
 ```typescript
 // New types
-type ConditionNode = 
+type ConditionNode =
   | { type: 'property'; path: string }
   | { type: 'negation'; operand: ConditionNode }
   | { type: 'comparison'; left: ConditionNode; op: string; right: ConditionNode | number }
   | { type: 'logical'; op: '&&' | '||'; left: ConditionNode; right: ConditionNode };
 
 interface ParsedCondition {
-  ast: ConditionNode;           // For evaluation
+  ast: ConditionNode; // For evaluation
   codeFragment: RenderFragment; // For code generation
 }
 
@@ -124,19 +128,21 @@ export function evaluateCondition(ast: ConditionNode, data: Record<string, unkno
     case 'negation':
       return !evaluateCondition(ast.operand, data);
     case 'comparison':
-      // ... handle comparisons
+    // ... handle comparisons
     case 'logical':
-      // ... handle && and ||
+    // ... handle && and ||
   }
 }
 ```
 
 **Pros:**
+
 - Single source of truth for parsing
 - Full feature support for evaluation
 - AST can be used for other analysis (e.g., extracting property paths)
 
 **Cons:**
+
 - Significant refactor to PEG grammar
 - Changes return types, affects all consumers
 - More complex implementation
@@ -180,11 +186,13 @@ export function parseEvaluableCondition(expr: string): ConditionNode | null {
 ```
 
 **Pros:**
+
 - Less invasive - existing code unchanged
 - Reuses accessor parsing from grammar
 - Clear separation of concerns
 
 **Cons:**
+
 - Two parallel rule sets in grammar
 - Must keep in sync with code generation rules
 
@@ -195,21 +203,23 @@ Modify existing grammar actions to return both code and evaluable data:
 ```pegjs
 booleanCondition
   = not:bang? head:accessor {
-    const ast = not 
+    const ast = not
       ? { type: 'negation', operand: { type: 'property', path: head.terms.join('.') } }
       : { type: 'property', path: head.terms.join('.') };
-    const code = not 
-      ? head.render().map(_ => `!${_}`) 
+    const code = not
+      ? head.render().map(_ => `!${_}`)
       : head.render();
     return { ast, code };
   }
 ```
 
 **Pros:**
+
 - Always in sync - single parsing, dual output
 - No separate rule sets
 
 **Cons:**
+
 - Changes return type of all condition rules
 - Breaking change requiring updates to all consumers
 - More complex grammar actions
@@ -217,6 +227,7 @@ booleanCondition
 ### Option D: Partial Evaluation with Slow Data Inlining (Recommended)
 
 Modify the parser to accept slow-phase data as an additional parameter. During parsing:
+
 1. Replace slow property references with their actual values
 2. Evaluate operators that can be resolved (comparisons, negation, logical)
 3. Simplify the expression (e.g., `true && X` → `X`)
@@ -228,7 +239,7 @@ export function parseConditionWithSlowData(
   expr: string,
   vars: Variables,
   slowData: Record<string, unknown>,
-  phaseMap: Map<string, PhaseInfo>
+  phaseMap: Map<string, PhaseInfo>,
 ): ConditionResult;
 
 interface ConditionResult {
@@ -240,20 +251,22 @@ interface ConditionResult {
 ```
 
 **Example 1: Fully slow expression**
+
 ```
 Input:  if="!imageUrl"
 Slow data: { imageUrl: "" }
 
 Parsing:
   1. imageUrl is slow-phase, value is ""
-  2. Replace: !"" 
+  2. Replace: !""
   3. Evaluate: !falsy → true
-  
+
 Result: { resolved: true }
 Action: Keep element, remove if attribute
 ```
 
 **Example 2: Mixed-phase expression**
+
 ```
 Input:  if="!imageUrl && price > 0"
 Slow data: { imageUrl: "http://..." }  (price is fast)
@@ -263,12 +276,13 @@ Parsing:
   2. Replace: !"http://..." && price > 0
   3. Evaluate !truthy → false
   4. Simplify: false && X → false
-  
+
 Result: { resolved: false }
 Action: Remove element entirely
 ```
 
 **Example 3: Mixed-phase, slow part is true**
+
 ```
 Input:  if="inStock && price > 0"
 Slow data: { inStock: true }  (price is fast)
@@ -277,12 +291,13 @@ Parsing:
   1. inStock is slow-phase, value is true
   2. Replace: true && price > 0
   3. Simplify: true && X → X
-  
+
 Result: { runtimeCode: RenderFragment("vs => vs.price > 0") }
 Action: Keep element, update if attribute to simplified expression
 ```
 
 **Example 4: Enum comparison**
+
 ```
 Input:  if="status == active"
 Slow data: { status: "active" }
@@ -291,7 +306,7 @@ Parsing:
   1. status is slow-phase, value is "active"
   2. Replace: "active" == Status.active
   3. Evaluate: true
-  
+
 Result: { resolved: true }
 Action: Keep element, remove if attribute
 ```
@@ -299,10 +314,12 @@ Action: Keep element, remove if attribute
 **Implementation approach:**
 
 The grammar actions would check if a property path is slow-phase:
+
 - If slow: substitute the value and continue evaluation
 - If fast/interactive: keep as runtime code fragment
 
 Logical operators would simplify:
+
 - `true && X` → `X`
 - `false && X` → `false`
 - `true || X` → `true`
@@ -311,6 +328,7 @@ Logical operators would simplify:
 - `!false` → `true`
 
 **Pros:**
+
 - Single parsing pass handles both code gen and evaluation
 - Supports ALL expression types (comparisons, logical, etc.)
 - Produces minimal runtime expressions
@@ -318,6 +336,7 @@ Logical operators would simplify:
 - Natural integration with existing parser
 
 **Cons:**
+
 - More complex grammar actions
 - Need to pass slow data and phase map through parser
 - Expression simplification logic needed
@@ -345,10 +364,10 @@ Add types to `expression-compiler.ts`:
 export interface SlowRenderContext {
   slowData: Record<string, unknown>;
   phaseMap: Map<string, PhaseInfo>;
-  contextPath: string;  // For nested paths like "products.0"
+  contextPath: string; // For nested paths like "products.0"
 }
 
-export type ConditionResult = 
+export type ConditionResult =
   | { type: 'resolved'; value: boolean }
   | { type: 'runtime'; code: RenderFragment };
 ```
@@ -361,21 +380,23 @@ Add new function that wraps the parser with slow context:
 export function parseConditionForSlowRender(
   expr: string,
   vars: Variables,
-  slowContext: SlowRenderContext
+  slowContext: SlowRenderContext,
 ): ConditionResult;
 ```
 
 ### Phase 3: Modify Grammar for Value Substitution
 
 Update grammar actions to:
+
 1. Check if accessor path is slow-phase via `slowContext.phaseMap`
 2. If slow, get value from `slowContext.slowData` and return as literal
 3. If fast/interactive, return runtime code fragment as before
 
 Add simplification for logical operators:
+
 - `true && X` → `X`
 - `false && X` → `false`
-- `true || X` → `true`  
+- `true || X` → `true`
 - `false || X` → `X`
 
 ### Phase 4: Update Slow Render Transform
@@ -385,15 +406,17 @@ Replace current condition handling in `slow-render-transform.ts`:
 ```typescript
 // Old approach
 const analyzedCondition = analyzeSimpleCondition(ifAttr);
-if (analyzedCondition) { /* simple evaluation */ }
+if (analyzedCondition) {
+  /* simple evaluation */
+}
 
 // New approach
 const result = parseConditionForSlowRender(ifAttr, vars, slowContext);
 if (result.type === 'resolved') {
   if (result.value) {
-    element.removeAttribute('if');  // Condition is true, keep element
+    element.removeAttribute('if'); // Condition is true, keep element
   } else {
-    return [];  // Condition is false, remove element
+    return []; // Condition is false, remove element
   }
 } else {
   // Update if attribute with simplified runtime expression
@@ -416,11 +439,11 @@ if (result.type === 'resolved') {
 ### Example 1: Fully Slow - Simple Negation
 
 ```typescript
-const expr = "!imageUrl";
-const slowData = { imageUrl: "" };
-const phaseMap = new Map([["imageUrl", { phase: "slow" }]]);
+const expr = '!imageUrl';
+const slowData = { imageUrl: '' };
+const phaseMap = new Map([['imageUrl', { phase: 'slow' }]]);
 
-const result = parseConditionForSlowRender(expr, vars, { slowData, phaseMap, contextPath: "" });
+const result = parseConditionForSlowRender(expr, vars, { slowData, phaseMap, contextPath: '' });
 // Returns: { type: 'resolved', value: true }
 
 // Action: Keep element, remove if attribute
@@ -429,25 +452,25 @@ const result = parseConditionForSlowRender(expr, vars, { slowData, phaseMap, con
 ### Example 2: Fully Slow - Comparison
 
 ```typescript
-const expr = "productCount > 0";
+const expr = 'productCount > 0';
 const slowData = { productCount: 5 };
-const phaseMap = new Map([["productCount", { phase: "slow" }]]);
+const phaseMap = new Map([['productCount', { phase: 'slow' }]]);
 
-const result = parseConditionForSlowRender(expr, vars, { slowData, phaseMap, contextPath: "" });
+const result = parseConditionForSlowRender(expr, vars, { slowData, phaseMap, contextPath: '' });
 // Returns: { type: 'resolved', value: true }
 ```
 
 ### Example 3: Mixed Phase - Slow True, Keep Runtime
 
 ```typescript
-const expr = "inStock && price > 0";
+const expr = 'inStock && price > 0';
 const slowData = { inStock: true };
 const phaseMap = new Map([
-  ["inStock", { phase: "slow" }],
-  ["price", { phase: "fast" }]
+  ['inStock', { phase: 'slow' }],
+  ['price', { phase: 'fast' }],
 ]);
 
-const result = parseConditionForSlowRender(expr, vars, { slowData, phaseMap, contextPath: "" });
+const result = parseConditionForSlowRender(expr, vars, { slowData, phaseMap, contextPath: '' });
 // Simplification: true && (price > 0) → (price > 0)
 // Returns: { type: 'runtime', code: RenderFragment("vs => vs.price > 0") }
 
@@ -457,14 +480,14 @@ const result = parseConditionForSlowRender(expr, vars, { slowData, phaseMap, con
 ### Example 4: Mixed Phase - Slow False, Short Circuit
 
 ```typescript
-const expr = "inStock && price > 0";
+const expr = 'inStock && price > 0';
 const slowData = { inStock: false };
 const phaseMap = new Map([
-  ["inStock", { phase: "slow" }],
-  ["price", { phase: "fast" }]
+  ['inStock', { phase: 'slow' }],
+  ['price', { phase: 'fast' }],
 ]);
 
-const result = parseConditionForSlowRender(expr, vars, { slowData, phaseMap, contextPath: "" });
+const result = parseConditionForSlowRender(expr, vars, { slowData, phaseMap, contextPath: '' });
 // Simplification: false && X → false
 // Returns: { type: 'resolved', value: false }
 
@@ -475,10 +498,10 @@ const result = parseConditionForSlowRender(expr, vars, { slowData, phaseMap, con
 
 ```typescript
 // Inside forEach="categories", evaluating a child element
-const expr = "!imageUrl";
-const slowData = { imageUrl: "http://example.com/img.jpg" };  // Current item's data
-const phaseMap = new Map([["categories.imageUrl", { phase: "slow" }]]);
-const contextPath = "categories";  // We're inside the categories array
+const expr = '!imageUrl';
+const slowData = { imageUrl: 'http://example.com/img.jpg' }; // Current item's data
+const phaseMap = new Map([['categories.imageUrl', { phase: 'slow' }]]);
+const contextPath = 'categories'; // We're inside the categories array
 
 const result = parseConditionForSlowRender(expr, vars, { slowData, phaseMap, contextPath });
 // Returns: { type: 'resolved', value: false }
@@ -489,14 +512,14 @@ const result = parseConditionForSlowRender(expr, vars, { slowData, phaseMap, con
 ### Example 6: Logical OR with Mixed Phases
 
 ```typescript
-const expr = "isPromoted || hasDiscount";
+const expr = 'isPromoted || hasDiscount';
 const slowData = { isPromoted: true };
 const phaseMap = new Map([
-  ["isPromoted", { phase: "slow" }],
-  ["hasDiscount", { phase: "fast" }]
+  ['isPromoted', { phase: 'slow' }],
+  ['hasDiscount', { phase: 'fast' }],
 ]);
 
-const result = parseConditionForSlowRender(expr, vars, { slowData, phaseMap, contextPath: "" });
+const result = parseConditionForSlowRender(expr, vars, { slowData, phaseMap, contextPath: '' });
 // Simplification: true || X → true
 // Returns: { type: 'resolved', value: true }
 
@@ -550,16 +573,19 @@ Implemented Option D by adding new rules to the PEG grammar (`expression-parser.
 ### Files Modified
 
 1. **`lib/expressions/expression-parser.pegjs`**
+
    - Added helper functions in grammar header: `isSlowPhase`, `getSlowValue`, `isTruthy`, `combineAnd`, `combineOr`, `applyNot`, `compareValues`, `applyComparison`
    - Added new grammar rules: `slowCondition`, `slowLogicalOr`, `slowLogicalAnd`, `slowComparison`, `slowUnary`, `slowPrimary`, `slowNumericLiteral`, `slowBooleanLiteral`, `slowPropertyAccess`
    - Added `ComparisonOperator` rule
 
 2. **`lib/expressions/expression-compiler.ts`**
+
    - Added `SlowRenderContext`, `ConditionResult`, `PartialValue` types
    - Added `parseConditionForSlowRender()` that calls the PEG parser with `slowCondition` start rule
    - Removed custom tokenizer/parser (now handled by PEG grammar)
 
 3. **`lib/slow-render/slow-render-transform.ts`**
+
    - Replaced `analyzeSimpleCondition()` usage with `parseConditionForSlowRender()`
    - Now supports all condition types (logical operators, comparisons)
 
@@ -571,6 +597,7 @@ Implemented Option D by adding new rules to the PEG grammar (`expression-parser.
 All tests pass: **472 tests** (468 passed, 4 skipped)
 
 New tests added:
+
 - 34 unit tests for `parseConditionForSlowRender` covering:
   - Fully slow conditions (simple, negated, nested, comparisons, logical operators)
   - Mixed phase conditions (simplification rules)
@@ -616,24 +643,55 @@ The implementation follows Option D as designed - using the PEG parser with slow
 **Problem:** Properties not in the phase map (e.g., from headless components like `productSearch.hasResults`) were being evaluated as slow by default. This caused conditions like `if="!productSearch.hasResults"` to be incorrectly evaluated during slow rendering.
 
 **Root Cause:** The `isSlowPhase()` function returned `true` when a property was not found in the phase map:
+
 ```javascript
-return !info || info.phase === 'slow';  // WRONG: defaults to slow if not found
+return !info || info.phase === 'slow'; // WRONG: defaults to slow if not found
 ```
 
 **Fix:** Changed to only treat properties as slow if they are EXPLICITLY marked as slow in the phase map:
+
 ```javascript
-return info && info.phase === 'slow';  // CORRECT: unknown = not slow
+return info && info.phase === 'slow'; // CORRECT: unknown = not slow
 ```
 
 This ensures that:
+
 - Properties from headless components (not in page's phase map) are NOT evaluated
 - Only properties explicitly defined in the contract with `phase: slow` are evaluated
 - Properties with unknown phase are preserved as runtime conditions
 
 **Files Fixed:**
+
 - `lib/expressions/expression-parser.pegjs` - `isSlowPhase()` helper
 - `lib/slow-render/slow-render-transform.ts` - `isSlowPhase()` function
 
 **Tests Added:**
+
 - "should NOT evaluate properties not in phase map (e.g., headless component properties)"
 - "should NOT evaluate unknown properties even with data present"
+
+### Headless Contract Integration (2026-01-27)
+
+**Problem:** Even with the `isSlowPhase` fix above, text bindings from headless components (like `{categoryName}` from `productSearch`) still weren't being resolved. The properties were correctly NOT evaluated when missing from the phase map, but they should have been IN the phase map.
+
+**Root Cause:** The phase map was only built from the page's main contract, not from headless component contracts.
+
+**Solution:** Extended the slow-render system to include headless contracts in the phase map:
+
+1. Added `HeadlessContractInfo` type with `key` and `contract`
+2. Extended `SlowRenderInput` to accept `headlessContracts?: HeadlessContractInfo[]`
+3. Updated `buildPhaseMap` to include headless contract properties with key prefix (e.g., `productSearch.filters.categoryFilter.categories.categoryName`)
+
+**Key Insight:** The `parseJayFile` function (in `jay-html-parser.ts`) already loads headless contracts via `parseHeadlessImports`. Rather than duplicating this logic, we:
+
+1. Extended `LoadedPageParts` (in `load-page-parts.ts`) to expose the contracts
+2. Had the dev-server pass them through to `slowRenderTransform`
+
+This ensures consistent contract loading and avoids code duplication.
+
+**Files Modified:**
+
+- `lib/slow-render/slow-render-transform.ts` - Added headless contract support
+- `lib/index.ts` - Export `HeadlessContractInfo`
+- `stack-server-runtime/lib/load-page-parts.ts` - Include headless contracts in result
+- `dev-server/lib/dev-server.ts` - Pass headless contracts to transform

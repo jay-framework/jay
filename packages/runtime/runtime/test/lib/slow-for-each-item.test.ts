@@ -26,11 +26,17 @@ describe('slowForEachItem', () => {
         const [refManager] = ReferencesManager.for({}, [], [], [], []);
         return ConstructContext.withRootContext(data, refManager, () =>
             de('ul', {}, [
-                slowForEachItem<ViewState, Product>((vs) => vs.products, 0, 'p1', () =>
-                    e('li', {}, ['Widget A - ', dt((item: Product) => `$${item?.price}`)]),
+                slowForEachItem<ViewState, Product>(
+                    (vs) => vs.products,
+                    0,
+                    'p1',
+                    () => e('li', {}, ['Widget A - ', dt((item: Product) => `$${item?.price}`)]),
                 ),
-                slowForEachItem<ViewState, Product>((vs) => vs.products, 1, 'p2', () =>
-                    e('li', {}, ['Widget B - ', dt((item: Product) => `$${item?.price}`)]),
+                slowForEachItem<ViewState, Product>(
+                    (vs) => vs.products,
+                    1,
+                    'p2',
+                    () => e('li', {}, ['Widget B - ', dt((item: Product) => `$${item?.price}`)]),
                 ),
             ]),
         );
@@ -66,14 +72,18 @@ describe('slowForEachItem', () => {
                 const [refManager] = ReferencesManager.for({}, [], [], [], []);
                 return ConstructContext.withRootContext(data, refManager, () =>
                     de('ul', {}, [
-                        slowForEachItem<CartViewState, CartItem>((vs) => vs.items, 0, 'c1', () =>
-                            e('li', {}, [
-                                'Laptop - ',
-                                dt(
-                                    (item: CartItem) =>
-                                        `${item.product.category}: Qty ${item.quantity}`,
-                                ),
-                            ]),
+                        slowForEachItem<CartViewState, CartItem>(
+                            (vs) => vs.items,
+                            0,
+                            'c1',
+                            () =>
+                                e('li', {}, [
+                                    'Laptop - ',
+                                    dt(
+                                        (item: CartItem) =>
+                                            `${item.product.category}: Qty ${item.quantity}`,
+                                    ),
+                                ]),
                         ),
                     ]),
                 );
@@ -208,34 +218,54 @@ describe('slowForEachItem', () => {
             return ConstructContext.withRootContext(data, refManager, () =>
                 de('div', { class: 'catalog' }, [
                     // Outer slowForEachItem for categories
-                    slowForEachItem<CatalogViewState, Category>((vs) => vs.categories, 0, 'cat1', () =>
-                        de('section', { class: 'category' }, [
-                            e('h2', {}, ['Electronics']),
-                            // Nested slowForEachItem for products within category
-                            slowForEachItem<Category, Product>((cat) => cat.products, 0, 'p1', () =>
-                                e('div', { class: 'product' }, [
-                                    'Laptop - ',
-                                    dt((item: Product) => `$${item.price}`),
-                                ]),
-                            ),
-                            slowForEachItem<Category, Product>((cat) => cat.products, 1, 'p2', () =>
-                                e('div', { class: 'product' }, [
-                                    'Phone - ',
-                                    dt((item: Product) => `$${item.price}`),
-                                ]),
-                            ),
-                        ]),
+                    slowForEachItem<CatalogViewState, Category>(
+                        (vs) => vs.categories,
+                        0,
+                        'cat1',
+                        () =>
+                            de('section', { class: 'category' }, [
+                                e('h2', {}, ['Electronics']),
+                                // Nested slowForEachItem for products within category
+                                slowForEachItem<Category, Product>(
+                                    (cat) => cat.products,
+                                    0,
+                                    'p1',
+                                    () =>
+                                        e('div', { class: 'product' }, [
+                                            'Laptop - ',
+                                            dt((item: Product) => `$${item.price}`),
+                                        ]),
+                                ),
+                                slowForEachItem<Category, Product>(
+                                    (cat) => cat.products,
+                                    1,
+                                    'p2',
+                                    () =>
+                                        e('div', { class: 'product' }, [
+                                            'Phone - ',
+                                            dt((item: Product) => `$${item.price}`),
+                                        ]),
+                                ),
+                            ]),
                     ),
-                    slowForEachItem<CatalogViewState, Category>((vs) => vs.categories, 1, 'cat2', () =>
-                        de('section', { class: 'category' }, [
-                            e('h2', {}, ['Clothing']),
-                            slowForEachItem<Category, Product>((cat) => cat.products, 0, 'p3', () =>
-                                e('div', { class: 'product' }, [
-                                    'T-Shirt - ',
-                                    dt((item: Product) => `$${item.price}`),
-                                ]),
-                            ),
-                        ]),
+                    slowForEachItem<CatalogViewState, Category>(
+                        (vs) => vs.categories,
+                        1,
+                        'cat2',
+                        () =>
+                            de('section', { class: 'category' }, [
+                                e('h2', {}, ['Clothing']),
+                                slowForEachItem<Category, Product>(
+                                    (cat) => cat.products,
+                                    0,
+                                    'p3',
+                                    () =>
+                                        e('div', { class: 'product' }, [
+                                            'T-Shirt - ',
+                                            dt((item: Product) => `$${item.price}`),
+                                        ]),
+                                ),
+                            ]),
                     ),
                 ]),
             );

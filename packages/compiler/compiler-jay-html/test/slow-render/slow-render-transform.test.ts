@@ -271,3 +271,118 @@ describe('Relative Path Resolution', () => {
         );
     });
 });
+
+describe('Headless Contract Support', () => {
+    it('should resolve bindings from headless contracts', () => {
+        // Simulate a headless component with its own contract
+        const headlessContract = checkValidationErrors(
+            parseContract(
+                `
+name: product-search
+tags:
+  - tag: category-name
+    type: data
+    dataType: string
+  - tag: is-searching
+    type: variant
+    dataType: boolean
+    phase: fast+interactive
+`,
+                'product-search.jay-contract',
+            ),
+        );
+
+        const input: SlowRenderInput = {
+            jayHtmlContent: `<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-headless" plugin="test-plugin" contract="product-search" key="productSearch"></script>
+</head>
+<body>
+    <div>
+        <span>{productSearch.categoryName}</span>
+        <span>{productSearch.isSearching}</span>
+    </div>
+</body>
+</html>`,
+            slowViewState: {
+                productSearch: {
+                    categoryName: 'Electronics',
+                    isSearching: false,
+                },
+            },
+            headlessContracts: [
+                {
+                    key: 'productSearch',
+                    contract: headlessContract,
+                },
+            ],
+        };
+
+        const result = slowRenderTransform(input);
+        expect(result.validations).toEqual([]);
+
+        // categoryName is slow (default) - should be resolved
+        expect(result.val!.preRenderedJayHtml).toContain('>Electronics</span>');
+
+        // isSearching is fast+interactive - should be preserved as binding
+        expect(result.val!.preRenderedJayHtml).toContain('{productSearch.isSearching}');
+    });
+
+    it('should resolve bindings in forEach from headless contracts', () => {
+        const headlessContract = checkValidationErrors(
+            parseContract(
+                `
+name: product-search
+tags:
+  - tag: categories
+    type: sub-contract
+    repeated: true
+    trackBy: id
+    tags:
+      - tag: id
+        type: data
+        dataType: string
+      - tag: name
+        type: data
+        dataType: string
+`,
+                'product-search.jay-contract',
+            ),
+        );
+
+        const input: SlowRenderInput = {
+            jayHtmlContent: `<!DOCTYPE html>
+<html>
+<head></head>
+<body>
+    <div forEach="productSearch.categories" trackBy="id">
+        <span>{name}</span>
+    </div>
+</body>
+</html>`,
+            slowViewState: {
+                productSearch: {
+                    categories: [
+                        { id: 'cat1', name: 'Electronics' },
+                        { id: 'cat2', name: 'Clothing' },
+                    ],
+                },
+            },
+            headlessContracts: [
+                {
+                    key: 'productSearch',
+                    contract: headlessContract,
+                },
+            ],
+        };
+
+        const result = slowRenderTransform(input);
+        expect(result.validations).toEqual([]);
+
+        // forEach should be unrolled and names should be resolved
+        expect(result.val!.preRenderedJayHtml).toContain('>Electronics</span>');
+        expect(result.val!.preRenderedJayHtml).toContain('>Clothing</span>');
+        expect(result.val!.preRenderedJayHtml).toContain('slowForEach="productSearch.categories"');
+    });
+});

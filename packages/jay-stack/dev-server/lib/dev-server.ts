@@ -32,7 +32,14 @@ import { DevServerOptions } from './dev-server-options';
 import { ServiceLifecycleManager } from './service-lifecycle';
 import { deepMergeViewStates } from '@jay-framework/view-state-merge';
 import { createActionRouter, actionBodyParser, ACTION_ENDPOINT_BASE } from './action-router';
-import { slowRenderTransform, parseContract } from '@jay-framework/compiler-jay-html';
+import {
+    slowRenderTransform,
+    parseContract,
+    HeadlessContractInfo,
+    Contract,
+} from '@jay-framework/compiler-jay-html';
+import { LoadedPageParts } from '@jay-framework/stack-server-runtime/dist';
+import { WithValidations } from '@jay-framework/compiler-shared';
 
 async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
     return await scanRoutes(pagesBaseFolder, {
@@ -251,7 +258,7 @@ async function handleCachedRequest(
     url: string,
 ): Promise<void> {
     // Load page parts with cached pre-rendered jay-html file
-    const pagePartsResult = await loadPageParts(
+    const pagePartsResult: WithValidations<LoadedPageParts> = await loadPageParts(
         vite,
         route,
         options.pagesRootFolder,
@@ -354,7 +361,12 @@ async function handlePreRenderRequest(
     }
 
     // Pre-render the jay-html with slow viewState
-    const preRenderedContent = await preRenderJayHtml(route, renderedSlowly.rendered);
+    // Headless contracts are already loaded by parseJayFile (via loadPageParts)
+    const preRenderedContent = await preRenderJayHtml(
+        route,
+        renderedSlowly.rendered,
+        initialPartsResult.val.headlessContracts,
+    );
 
     if (!preRenderedContent) {
         res.status(500).end('Failed to pre-render jay-html');
@@ -563,20 +575,22 @@ async function sendResponse(
 /**
  * Pre-render the jay-html with slow viewState.
  * Returns the pre-rendered jay-html content, or undefined if pre-rendering fails.
+ *
+ * @param route - The route containing the jay-html path
+ * @param slowViewState - The slow phase view state data
+ * @param headlessContracts - Headless contracts already loaded by parseJayFile (via loadPageParts)
  */
 async function preRenderJayHtml(
     route: JayRoute,
     slowViewState: object,
+    headlessContracts: HeadlessContractInfo[],
 ): Promise<string | undefined> {
     // Read the original jay-html
     const jayHtmlContent = await fs.readFile(route.jayHtmlPath, 'utf-8');
 
-    // Try to load and parse the contract for phase detection
-    // The contract can come from:
-    // 1. A .jay-contract file beside the jay-html
-    // 2. Headless components imported in the jay-html (handled by slowRenderTransform via the jay-html content)
+    // Try to load and parse the main contract for phase detection
     const contractPath = route.jayHtmlPath.replace('.jay-html', '.jay-contract');
-    let contract;
+    let contract: Contract | undefined;
 
     try {
         const contractContent = await fs.readFile(contractPath, 'utf-8');
@@ -593,7 +607,6 @@ async function preRenderJayHtml(
         }
     } catch (error) {
         // File doesn't exist - that's OK, continue without contract
-        // The jay-html may have headless components that provide phase info
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
             // Some other error (permissions, etc.) - log and fail
             console.error(`[SlowRender] Error reading contract ${contractPath}:`, error);
@@ -603,10 +616,12 @@ async function preRenderJayHtml(
 
     // Transform the jay-html
     // Pass sourceDir so relative paths (contracts, CSS, components) are resolved to absolute
+    // Headless contracts are passed from loadPageParts (already loaded by parseJayFile)
     const result = slowRenderTransform({
         jayHtmlContent,
         slowViewState: slowViewState as Record<string, unknown>,
         contract,
+        headlessContracts,
         sourceDir: path.dirname(route.jayHtmlPath),
     });
 

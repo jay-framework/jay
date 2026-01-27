@@ -3,7 +3,11 @@ import { JayRoute } from '@jay-framework/stack-route-scanner';
 import { WithValidations } from '@jay-framework/compiler-shared';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { parseJayFile, JAY_IMPORT_RESOLVER } from '@jay-framework/compiler-jay-html';
+import {
+    parseJayFile,
+    JAY_IMPORT_RESOLVER,
+    HeadlessContractInfo,
+} from '@jay-framework/compiler-jay-html';
 import { AnyJayStackComponentDefinition } from '@jay-framework/fullstack-component';
 import { JayRollupConfig } from '@jay-framework/rollup-plugin';
 import { createRequire } from 'module';
@@ -25,6 +29,8 @@ export interface LoadedPageParts {
     clientTrackByMap?: Record<string, string>;
     /** NPM package names used on this page (for filtering plugin inits) */
     usedPackages: Set<string>;
+    /** Headless contracts for slow rendering (already loaded by parseJayFile) */
+    headlessContracts: HeadlessContractInfo[];
 }
 
 export interface LoadPagePartsOptions {
@@ -118,11 +124,20 @@ export async function loadPageParts(
             };
             parts.push(part);
         }
+        // Extract headless contracts for slow rendering
+        const headlessContracts: HeadlessContractInfo[] = jayHtml.headlessImports
+            .filter((hi) => hi.contract !== undefined)
+            .map((hi) => ({
+                key: hi.key,
+                contract: hi.contract!,
+            }));
+
         return {
             parts,
             serverTrackByMap: jayHtml.serverTrackByMap,
             clientTrackByMap: jayHtml.clientTrackByMap,
             usedPackages,
+            headlessContracts,
         };
     });
 }

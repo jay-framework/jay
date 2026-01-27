@@ -70,7 +70,7 @@ const trackByMap = {};
 const target = document.getElementById('target');
 const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [], trackByMap)
 
-const instance = pageComp({...viewState, ...fastCarryForward})
+const instance = pageComp({/* placeholder for page props */})
 
 // Wrap with automation for dev tooling
 const wrapped = wrapWithAutomation(instance);
@@ -129,7 +129,7 @@ const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, 
 {comp: page.comp, contextMarkers: page.contexts || []}
 ], trackByMap)
 
-const instance = pageComp({...viewState, ...fastCarryForward})
+const instance = pageComp({/* placeholder for page props */})
 
 // Wrap with automation for dev tooling
 const wrapped = wrapWithAutomation(instance);
@@ -190,7 +190,7 @@ const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, 
 {comp: headless.comp, contextMarkers: headless.contexts || [], key: 'headless'}
 ], trackByMap)
 
-const instance = pageComp({...viewState, ...fastCarryForward})
+const instance = pageComp({/* placeholder for page props */})
 
 // Wrap with automation for dev tooling
 const wrapped = wrapWithAutomation(instance);

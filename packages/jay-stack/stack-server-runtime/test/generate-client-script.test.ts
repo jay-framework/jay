@@ -77,7 +77,7 @@ describe('generateClientScript', () => {
                           const target = document.getElementById('target');
                           const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [], trackByMap)
 
-                          const instance = pageComp({...viewState, ...fastCarryForward})
+                          const instance = pageComp({/* placeholder for page props */})
                           target.appendChild(instance.element.dom);
                         </script>
                       </body>
@@ -126,7 +126,7 @@ describe('generateClientScript', () => {
                           const target = document.getElementById('target');
                           const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [], trackByMap)
 
-                          const instance = pageComp({...viewState, ...fastCarryForward})
+                          const instance = pageComp({/* placeholder for page props */})
                           target.appendChild(instance.element.dom);
                         </script>
                       </body>
@@ -173,7 +173,7 @@ describe('generateClientScript', () => {
                           const target = document.getElementById('target');
                           const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [], trackByMap)
 
-                          const instance = pageComp({...viewState, ...fastCarryForward})
+                          const instance = pageComp({/* placeholder for page props */})
                           target.appendChild(instance.element.dom);
                         </script>
                       </body>
@@ -231,7 +231,7 @@ describe('generateClientScript', () => {
         { component: ProductCard, name: "product-card" }
         ], trackByMap)
 
-                          const instance = pageComp({...viewState, ...fastCarryForward})
+                          const instance = pageComp({/* placeholder for page props */})
                           target.appendChild(instance.element.dom);
                         </script>
                       </body>
@@ -293,7 +293,7 @@ import { CartButton } from "/src/components/cart-button";
         { component: CartButton, name: "cart-button" }
         ], trackByMap)
 
-                          const instance = pageComp({...viewState, ...fastCarryForward})
+                          const instance = pageComp({/* placeholder for page props */})
                           target.appendChild(instance.element.dom);
                         </script>
                       </body>
@@ -355,7 +355,7 @@ import { CartButton } from "/src/components/cart-button";
                           const target = document.getElementById('target');
                           const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [], trackByMap)
 
-                          const instance = pageComp({...viewState, ...fastCarryForward})
+                          const instance = pageComp({/* placeholder for page props */})
                           target.appendChild(instance.element.dom);
                         </script>
                       </body>
@@ -424,7 +424,7 @@ import { CartButton } from "/src/components/cart-button";
                           const target = document.getElementById('target');
                           const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [], trackByMap)
 
-                          const instance = pageComp({...viewState, ...fastCarryForward})
+                          const instance = pageComp({/* placeholder for page props */})
                           target.appendChild(instance.element.dom);
                         </script>
                       </body>
@@ -488,7 +488,7 @@ import { CartButton } from "/src/components/cart-button";
                           const target = document.getElementById('target');
                           const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [], trackByMap)
 
-                          const instance = pageComp({...viewState, ...fastCarryForward})
+                          const instance = pageComp({/* placeholder for page props */})
                           target.appendChild(instance.element.dom);
                         </script>
                       </body>
@@ -573,7 +573,7 @@ import { CartButton } from "/src/components/cart-button";
                             { component: ProductCard, name: "product-card" }
                           ], trackByMap)
 
-                          const instance = pageComp({...viewState, ...fastCarryForward})
+                          const instance = pageComp({/* placeholder for page props */})
                           target.appendChild(instance.element.dom);
                         </script>
                       </body>
