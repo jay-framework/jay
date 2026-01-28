@@ -1,0 +1,12 @@
+name: ProductPage
+tags:
+  - tag: productName
+    type: data
+    dataType: string
+  - tag: productType
+    type: variant
+    dataType: 'enum (PHYSICAL | DIGITAL)'
+  - tag: stockStatus
+    type: variant
+    dataType: 'enum (OUT_OF_STOCK | IN_STOCK)'
+    phase: fast+interactive

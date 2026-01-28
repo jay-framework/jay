@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head></head>
+<body>
+  <h1>{productName}</h1>
+  
+  <!-- Slow enum comparison - PHYSICAL = 0 matches value 0 -->
+  <div class="physical-badge" if="productType == PHYSICAL">
+    📦 Physical Product
+  </div>
+  
+  <!-- Slow enum comparison - DIGITAL = 1 does not match value 0 -->
+  <div class="digital-badge" if="productType == DIGITAL">
+    ⚡ Digital Product
+  </div>
+  
+  <!-- Fast enum comparison - should be preserved -->
+  <div class="in-stock" if="stockStatus == IN_STOCK">
+    In Stock
+  </div>
+</body>
+</html>
