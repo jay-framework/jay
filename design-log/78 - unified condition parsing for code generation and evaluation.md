@@ -695,3 +695,69 @@ This ensures consistent contract loading and avoids code duplication.
 - `lib/index.ts` - Export `HeadlessContractInfo`
 - `stack-server-runtime/lib/load-page-parts.ts` - Include headless contracts in result
 - `dev-server/lib/dev-server.ts` - Pass headless contracts to transform
+
+### Enum Comparison Support in Slow Render (2026-01-28)
+
+**Problem:** Enum comparisons like `productPage.productType == PHYSICAL` were being rendered to invalid expressions like `0 === PHYSICAL` during slow rendering. The left side was correctly resolved to its numeric enum value (0), but the right side (the enum identifier `PHYSICAL`) was not being resolved.
+
+**Root Cause:** The slow condition parser didn't understand enum types. When parsing `property == IDENTIFIER`:
+
+1. The left side property was resolved to its slow value (e.g., `0`)
+2. The right side identifier `PHYSICAL` was treated as a property access
+3. Since `PHYSICAL` wasn't in the phase map, it became runtime code `vs?.PHYSICAL`
+4. The comparison became `0 === vs?.PHYSICAL` which is invalid
+
+**Solution:** Extended the slow render system to understand enum types:
+
+1. **Extended `PhaseInfo`** to include `enumValues?: string[]` - the list of enum value names for enum-typed properties
+
+2. **Updated `buildPhaseMap`** to extract enum values from `JayEnumType` when processing contract tags:
+
+   ```typescript
+   if (tag.dataType && isEnumType(tag.dataType)) {
+     enumValues = tag.dataType.values;
+   }
+   ```
+
+3. **Added helper functions to PEG grammar:**
+
+   - `getPhaseInfo(path)` - Get full phase info including enum values
+   - `resolveEnumValue(enumValues, identifier)` - Resolve enum identifier to its index
+
+4. **Modified `slowPropertyAccess`** to track the property path in the return value so it can be used for enum lookup
+
+5. **Modified `slowComparison`** to recognize enum comparisons:
+   - When left side is resolved (slow value) AND has a property path
+   - AND right side is a simple identifier (code that's just an identifier)
+   - Check if the left property has enum values
+   - If so, resolve the right identifier to its enum index
+   - Then perform the comparison with both sides resolved
+
+**Key Design Decision:** Only resolve enum values when the LEFT side is a resolved slow value. For fast-phase enum comparisons, preserve the original expression (which gets converted to `property === EnumType.VALUE` by the regular compiler).
+
+**Files Modified:**
+
+- `lib/slow-render/slow-render-transform.ts` - Extended `PhaseInfo`, updated `buildPhaseMap`
+- `lib/expressions/expression-compiler.ts` - Extended `SlowRenderContext.phaseMap` type
+- `lib/expressions/expression-parser.pegjs` - Added enum handling in `slowComparison`
+
+**Tests Added:**
+
+- Fixture: `conditional-enum-comparison` - Tests slow enum comparisons that resolve to true/false, and fast enum comparisons that are preserved
+
+**Example:**
+
+```
+Input: if="productPage.productType == PHYSICAL"
+Slow data: { productType: 0 }  // 0 = PHYSICAL, 1 = DIGITAL
+Enum values: ["PHYSICAL", "DIGITAL"]
+
+Parsing:
+  1. Left side `productType` is slow phase → resolve to 0
+  2. Right side `PHYSICAL` is a simple identifier
+  3. Left has enum values → resolve `PHYSICAL` to index 0
+  4. Compare: 0 === 0 → true
+
+Result: { type: 'resolved', value: true }
+Action: Keep element, remove if attribute
+```

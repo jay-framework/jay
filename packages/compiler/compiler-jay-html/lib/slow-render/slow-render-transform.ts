@@ -2,7 +2,7 @@ import { HTMLElement, parse, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
 import path from 'path';
 import { Contract, ContractTag, RenderingPhase } from '../contract';
-import { WithValidations } from '@jay-framework/compiler-shared';
+import { isEnumType, WithValidations } from '@jay-framework/compiler-shared';
 import { parseConditionForSlowRender, SlowRenderContext } from '../expressions/expression-compiler';
 
 /**
@@ -53,6 +53,8 @@ interface PhaseInfo {
     phase: RenderingPhase;
     isArray: boolean;
     trackBy?: string;
+    /** For enum-typed properties, the list of enum value names (e.g., ["PHYSICAL", "DIGITAL"]) */
+    enumValues?: string[];
 }
 
 /**
@@ -70,10 +72,17 @@ function buildPhaseMap(
         const propertyName = toCamelCase(tag.tag);
         const currentPath = path ? `${path}.${propertyName}` : propertyName;
 
+        // Check if the tag has an enum dataType and extract enum values
+        let enumValues: string[] | undefined;
+        if (tag.dataType && isEnumType(tag.dataType)) {
+            enumValues = tag.dataType.values;
+        }
+
         phaseMap.set(currentPath, {
             phase: effectivePhase,
             isArray: tag.repeated || false,
             trackBy: tag.trackBy,
+            enumValues,
         });
 
         // Process nested tags

@@ -23,6 +23,13 @@
         return info && info.phase === 'slow';
     }
     
+    // Helper: Get phase info for a property path
+    function getPhaseInfo(path) {
+        if (!slowContext) return undefined;
+        const fullPath = slowContext.contextPath ? `${slowContext.contextPath}.${path}` : path;
+        return slowContext.phaseMap.get(fullPath);
+    }
+    
     // Helper: Get value from nested object by path
     function getSlowValue(path) {
         if (!slowContext) return undefined;
@@ -34,6 +41,14 @@
             current = current[part];
         }
         return current;
+    }
+    
+    // Helper: Resolve an enum identifier to its index value
+    // Returns the index if the identifier is a valid enum value, undefined otherwise
+    function resolveEnumValue(enumValues, identifier) {
+        if (!enumValues || !Array.isArray(enumValues)) return undefined;
+        const index = enumValues.indexOf(identifier);
+        return index >= 0 ? index : undefined;
     }
     
     // Helper: Check JavaScript truthiness
@@ -408,6 +423,19 @@ slowLogicalAnd
 
 slowComparison
   = left:slowUnary _ op:ComparisonOperator _ right:slowUnary {
+    // Check if this might be an enum comparison where left is a SLOW property
+    // Only resolve enum values when the left side was resolved to a slow value
+    // This ensures fast enum comparisons are preserved as runtime code
+    if (left.type === 'resolved' && left.propertyPath && right.type === 'code' && right.isSimpleIdentifier) {
+      const phaseInfo = getPhaseInfo(left.propertyPath);
+      if (phaseInfo && phaseInfo.enumValues) {
+        const enumIndex = resolveEnumValue(phaseInfo.enumValues, right.expr);
+        if (enumIndex !== undefined) {
+          // Successfully resolved as enum - replace right with resolved value
+          right = { type: 'resolved', value: enumIndex };
+        }
+      }
+    }
     return applyComparison(left, op, right);
   }
   / slowUnary
@@ -434,23 +462,26 @@ slowBooleanLiteral
 slowPropertyAccess
   = head:Identifier tail:(_ "." _ Identifier)* {
     const path = [head, ...tail.map(t => t[3])].join('.');
+    const isSimple = tail.length === 0; // Single identifier (no dots)
     
     // Check if this property is slow-phase
     if (isSlowPhase(path)) {
       const value = getSlowValue(path);
-      return { type: 'resolved', value: value };
+      // Include propertyPath so we can look up enum info in comparisons
+      return { type: 'resolved', value: value, propertyPath: path };
     }
     
     // Fast/interactive phase - generate runtime code
     if (vars) {
       const accessor = vars.resolveAccessor(path.split('.'));
       const fragment = accessor.render();
-      return { type: 'code', fragment: fragment, expr: path };
+      // Mark as simple identifier if it's a single identifier (for enum detection)
+      return { type: 'code', fragment: fragment, expr: path, propertyPath: path, isSimpleIdentifier: isSimple };
     } else {
       // Simple code generation without type info
       const code = `vs.${path.split('.').join('?.')}`;
       const fragment = new RenderFragment(code, none);
-      return { type: 'code', fragment: fragment, expr: path };
+      return { type: 'code', fragment: fragment, expr: path, propertyPath: path, isSimpleIdentifier: isSimple };
     }
   }
 

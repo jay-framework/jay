@@ -100,6 +100,10 @@ describe('Slow Render Transform', () => {
         it('should handle complex conditions with logical operators and comparisons', async () => {
             await runSlowRenderTest('conditional-complex');
         });
+
+        it('should resolve slow enum comparisons (e.g., productType == PHYSICAL)', async () => {
+            await runSlowRenderTest('conditional-enum-comparison');
+        });
     });
 
     describe('forEach Array Unrolling', () => {

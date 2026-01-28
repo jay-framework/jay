@@ -354,7 +354,7 @@ export interface SlowRenderContext {
     /** Slow-phase data values */
     slowData: Record<string, unknown>;
     /** Phase information for each property path */
-    phaseMap: Map<string, { phase: string; isArray?: boolean }>;
+    phaseMap: Map<string, { phase: string; isArray?: boolean; enumValues?: string[] }>;
     /** Current context path for nested properties (e.g., "products" when inside forEach) */
     contextPath: string;
 }
