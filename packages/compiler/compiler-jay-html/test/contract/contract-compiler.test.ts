@@ -742,7 +742,9 @@ describe('compile contract', () => {
                 item: TodoItemViewState;
             }
 
-            export type TodoSlowViewState = Pick<TodoViewState, 'item'>;
+            export type TodoSlowViewState = {
+                item: TodoViewState['item'];
+            };
         
         export type TodoFastViewState = {};
         
@@ -789,7 +791,9 @@ describe('compile contract', () => {
                 items: Array<TodoItemViewState>;
             }
 
-            export type TodoSlowViewState = Pick<TodoViewState, 'items'>;
+            export type TodoSlowViewState = {
+                items: Array<TodoViewState['items'][number]>;
+            };
         
         export type TodoFastViewState = {};
         
@@ -840,7 +844,10 @@ describe('compile contract', () => {
                 completedItems: Array<TodoItemViewState>;
             }
 
-            export type TodoSlowViewState = Pick<TodoViewState, 'activeItem' | 'completedItems'>;
+            export type TodoSlowViewState = {
+                activeItem: TodoViewState['activeItem'];
+                completedItems: Array<TodoViewState['completedItems'][number]>;
+            };
         
         export type TodoFastViewState = {};
         

@@ -36,7 +36,7 @@ export interface DataTypesViewState {
 export type DataTypesSlowViewState = Pick<DataTypesViewState, 's1' | 'n1' | 'b1' | 'p1'> & {
     o1: DataTypesViewState['o1'];
     a1: Array<DataTypesViewState['a1'][number]>;
-    po1: Promise<DataTypesViewState['po1']>;
+    po1: DataTypesViewState['po1'];
     pa1: Promise<Array<Awaited<DataTypesViewState['pa1']>[number]>>;
 };
 

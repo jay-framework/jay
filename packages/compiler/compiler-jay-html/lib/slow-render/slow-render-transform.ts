@@ -1,12 +1,16 @@
 import { HTMLElement, parse, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
 import path from 'path';
-import { Contract, ContractTag, RenderingPhase } from '../contract';
+import {
+    Contract,
+    ContractTag,
+    RenderingPhase,
+    loadLinkedContract,
+    getLinkedContractDir,
+} from '../contract';
 import { isEnumType, WithValidations } from '@jay-framework/compiler-shared';
 import { parseConditionForSlowRender, SlowRenderContext } from '../expressions/expression-compiler';
 import { JayImportResolver } from '../jay-target/jay-import-resolver';
-
-const JAY_CONTRACT_EXTENSION = '.jay-contract';
 
 /**
  * Headless contract with its key (used for property path prefix)
@@ -68,28 +72,6 @@ interface PhaseInfo {
 }
 
 /**
- * Load a linked contract using the import resolver
- * Returns the parsed contract or null if not found/failed
- */
-function loadLinkedContract(
-    linkPath: string,
-    baseContractDir: string,
-    importResolver: JayImportResolver,
-): Contract | null {
-    const linkWithExtension = linkPath.endsWith(JAY_CONTRACT_EXTENSION)
-        ? linkPath
-        : linkPath + JAY_CONTRACT_EXTENSION;
-
-    try {
-        const absolutePath = importResolver.resolveLink(baseContractDir, linkWithExtension);
-        const contractResult = importResolver.loadContract(absolutePath);
-        return contractResult.val ?? null;
-    } catch {
-        return null;
-    }
-}
-
-/**
  * Build a map of property paths to their phase information from contracts.
  * Includes both the page's main contract and headless component contracts.
  * Recursively resolves linked sub-contracts.
@@ -135,12 +117,10 @@ function buildPhaseMap(
         if (tag.link && contractDir && importResolver) {
             const linkedContract = loadLinkedContract(tag.link, contractDir, importResolver);
             if (linkedContract) {
-                // Resolve the linked contract's directory for nested links
-                const linkWithExtension = tag.link.endsWith(JAY_CONTRACT_EXTENSION)
-                    ? tag.link
-                    : tag.link + JAY_CONTRACT_EXTENSION;
-                const linkedContractDir = path.dirname(
-                    importResolver.resolveLink(contractDir, linkWithExtension),
+                const linkedContractDir = getLinkedContractDir(
+                    tag.link,
+                    contractDir,
+                    importResolver,
                 );
 
                 for (const childTag of linkedContract.tags) {

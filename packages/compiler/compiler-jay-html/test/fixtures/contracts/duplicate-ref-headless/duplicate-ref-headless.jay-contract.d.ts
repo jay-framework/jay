@@ -23,9 +23,7 @@ export interface DuplicateRefHeadlessViewState {
 }
 
 export type DuplicateRefHeadlessSlowViewState = {
-    filter2: {
-        categories: Array<DuplicateRefHeadlessViewState['filter2']['categories'][number]>;
-    };
+    filter2: DuplicateRefHeadlessViewState['filter2'];
 };
 
 export type DuplicateRefHeadlessFastViewState = {};
