@@ -701,7 +701,15 @@ async function parseHeadlessImports(
                         module,
                         names: [{ name, type: new JayComponentType(name, []) }],
                     };
-                    result.push({ key, refs, rootType: type, contractLinks, codeLink, contract });
+                    result.push({
+                        key,
+                        refs,
+                        rootType: type,
+                        contractLinks,
+                        codeLink,
+                        contract,
+                        contractPath: contractFile,
+                    });
                 });
             });
         } catch (e) {

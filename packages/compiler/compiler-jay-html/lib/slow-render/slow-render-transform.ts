@@ -4,6 +4,9 @@ import path from 'path';
 import { Contract, ContractTag, RenderingPhase } from '../contract';
 import { isEnumType, WithValidations } from '@jay-framework/compiler-shared';
 import { parseConditionForSlowRender, SlowRenderContext } from '../expressions/expression-compiler';
+import { JayImportResolver } from '../jay-target/jay-import-resolver';
+
+const JAY_CONTRACT_EXTENSION = '.jay-contract';
 
 /**
  * Headless contract with its key (used for property path prefix)
@@ -13,6 +16,8 @@ export interface HeadlessContractInfo {
     key: string;
     /** The parsed contract */
     contract: Contract;
+    /** Path to the contract file (used to resolve linked sub-contracts) */
+    contractPath?: string;
 }
 
 /**
@@ -36,6 +41,11 @@ export interface SlowRenderInput {
      * so the pre-rendered file can be placed in a different directory.
      */
     sourceDir?: string;
+    /**
+     * Import resolver for loading linked sub-contracts.
+     * If not provided, linked sub-contracts will not be resolved.
+     */
+    importResolver?: JayImportResolver;
 }
 
 /**
@@ -58,19 +68,48 @@ interface PhaseInfo {
 }
 
 /**
+ * Load a linked contract using the import resolver
+ * Returns the parsed contract or null if not found/failed
+ */
+function loadLinkedContract(
+    linkPath: string,
+    baseContractDir: string,
+    importResolver: JayImportResolver,
+): Contract | null {
+    const linkWithExtension = linkPath.endsWith(JAY_CONTRACT_EXTENSION)
+        ? linkPath
+        : linkPath + JAY_CONTRACT_EXTENSION;
+
+    try {
+        const absolutePath = importResolver.resolveLink(baseContractDir, linkWithExtension);
+        const contractResult = importResolver.loadContract(absolutePath);
+        return contractResult.val ?? null;
+    } catch {
+        return null;
+    }
+}
+
+/**
  * Build a map of property paths to their phase information from contracts.
  * Includes both the page's main contract and headless component contracts.
+ * Recursively resolves linked sub-contracts.
  */
 function buildPhaseMap(
     contract: Contract | undefined,
     headlessContracts?: HeadlessContractInfo[],
+    importResolver?: JayImportResolver,
 ): Map<string, PhaseInfo> {
     const phaseMap = new Map<string, PhaseInfo>();
 
-    function processTag(tag: ContractTag, path: string, parentPhase: RenderingPhase = 'slow') {
+    function processTag(
+        tag: ContractTag,
+        pathPrefix: string,
+        parentPhase: RenderingPhase = 'slow',
+        contractDir?: string,
+    ) {
         const effectivePhase = tag.phase || parentPhase;
         const propertyName = toCamelCase(tag.tag);
-        const currentPath = path ? `${path}.${propertyName}` : propertyName;
+        const currentPath = pathPrefix ? `${pathPrefix}.${propertyName}` : propertyName;
 
         // Check if the tag has an enum dataType and extract enum values
         let enumValues: string[] | undefined;
@@ -85,10 +124,28 @@ function buildPhaseMap(
             enumValues,
         });
 
-        // Process nested tags
+        // Process nested tags (inline sub-contract)
         if (tag.tags) {
             for (const childTag of tag.tags) {
-                processTag(childTag, currentPath, effectivePhase);
+                processTag(childTag, currentPath, effectivePhase, contractDir);
+            }
+        }
+
+        // Process linked sub-contract (requires import resolver)
+        if (tag.link && contractDir && importResolver) {
+            const linkedContract = loadLinkedContract(tag.link, contractDir, importResolver);
+            if (linkedContract) {
+                // Resolve the linked contract's directory for nested links
+                const linkWithExtension = tag.link.endsWith(JAY_CONTRACT_EXTENSION)
+                    ? tag.link
+                    : tag.link + JAY_CONTRACT_EXTENSION;
+                const linkedContractDir = path.dirname(
+                    importResolver.resolveLink(contractDir, linkWithExtension),
+                );
+
+                for (const childTag of linkedContract.tags) {
+                    processTag(childTag, currentPath, effectivePhase, linkedContractDir);
+                }
             }
         }
     }
@@ -102,10 +159,13 @@ function buildPhaseMap(
 
     // Process headless contracts with their key as prefix
     if (headlessContracts) {
-        for (const { key, contract: headlessContract } of headlessContracts) {
+        for (const { key, contract: headlessContract, contractPath } of headlessContracts) {
+            // Get the contract directory for resolving linked contracts
+            const contractDir = contractPath ? path.dirname(contractPath) : undefined;
+
             for (const tag of headlessContract.tags) {
                 // Use the headless key as the path prefix
-                processTag(tag, key, 'slow');
+                processTag(tag, key, 'slow', contractDir);
             }
         }
     }
@@ -459,7 +519,11 @@ export function slowRenderTransform(input: SlowRenderInput): WithValidations<Slo
         });
 
         // Build phase map from contract (includes headless contracts)
-        const phaseMap = buildPhaseMap(input.contract, input.headlessContracts);
+        const phaseMap = buildPhaseMap(
+            input.contract,
+            input.headlessContracts,
+            input.importResolver,
+        );
 
         // Get the body element
         const body = root.querySelector('body');

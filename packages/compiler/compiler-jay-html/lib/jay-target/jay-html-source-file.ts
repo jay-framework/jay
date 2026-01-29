@@ -16,6 +16,7 @@ export interface JayHeadlessImports {
     contractLinks: JayImportLink[];
     codeLink: JayImportLink;
     contract?: Contract; // The loaded contract for this headless component
+    contractPath?: string; // Absolute path to the contract file (for resolving linked sub-contracts)
 }
 
 export interface JayHtmlHeadLink {

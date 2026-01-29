@@ -130,6 +130,7 @@ export async function loadPageParts(
             .map((hi) => ({
                 key: hi.key,
                 contract: hi.contract!,
+                contractPath: hi.contractPath,
             }));
 
         return {

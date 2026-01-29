@@ -37,6 +37,7 @@ import {
     parseContract,
     HeadlessContractInfo,
     Contract,
+    JAY_IMPORT_RESOLVER,
 } from '@jay-framework/compiler-jay-html';
 import { LoadedPageParts } from '@jay-framework/stack-server-runtime/dist';
 import { WithValidations } from '@jay-framework/compiler-shared';
@@ -617,12 +618,14 @@ async function preRenderJayHtml(
     // Transform the jay-html
     // Pass sourceDir so relative paths (contracts, CSS, components) are resolved to absolute
     // Headless contracts are passed from loadPageParts (already loaded by parseJayFile)
+    // Import resolver is used to load linked sub-contracts
     const result = slowRenderTransform({
         jayHtmlContent,
         slowViewState: slowViewState as Record<string, unknown>,
         contract,
         headlessContracts,
         sourceDir: path.dirname(route.jayHtmlPath),
+        importResolver: JAY_IMPORT_RESOLVER,
     });
 
     if (result.val) {

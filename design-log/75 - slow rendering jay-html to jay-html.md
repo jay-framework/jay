@@ -1355,6 +1355,53 @@ slowForEachItem<ViewState, Product>(
 
 **Tests:** Added 2 unit tests for headless contract support in `slow-render-transform.test.ts`.
 
+#### Fix 5: Linked Sub-Contract Resolution for Slow Rendering (2026-01-28)
+
+**Problem:** Properties from linked sub-contracts (e.g., `products.thumbnail.url` where `products` has `link: ./product-card`) were not being resolved during slow rendering. The `thumbnail.url` expression remained unresolved in the output even though it's a slow property.
+
+**Root Cause:** The `buildPhaseMap` function only processed inline nested tags (`tag.tags`) but did not follow linked sub-contracts (`tag.link`). When a contract has a `link` property like `link: ./product-card`, the linked contract's properties were not added to the phase map.
+
+**Example:**
+
+```yaml
+# category-page.jay-contract
+- tag: products
+  type: sub-contract
+  repeated: true
+  trackBy: _id
+  link: ./product-card # Linked contract - tags NOT processed!
+```
+
+The `product-card.jay-contract` has `thumbnail.url` as a slow property, but since the link wasn't followed, `categoryPage.products.thumbnail.url` wasn't in the phase map and wasn't resolved.
+
+**Fix:** Extended the slow-render system to resolve linked contracts:
+
+1. **Extended `HeadlessContractInfo`** to include `contractPath?: string` - the absolute path to the contract file for resolving relative links
+
+2. **Extended `JayHeadlessImports`** to include `contractPath?: string` and populate it from `contractFile` in `parseHeadlessImports`
+
+3. **Extended `SlowRenderInput`** to accept `importResolver?: JayImportResolver` for resolving linked contracts
+
+4. **Updated `buildPhaseMap`** to recursively resolve linked contracts:
+
+   - Reuses existing `JayImportResolver.resolveLink()` and `loadContract()` methods
+   - Modified `processTag()` to follow `tag.link` references and process the linked contract's tags
+   - Properly resolves the linked contract's directory for nested links
+
+5. **Updated `loadPageParts`** to include `contractPath` when extracting headless contracts
+
+6. **Updated dev server** to pass `JAY_IMPORT_RESOLVER` when calling `slowRenderTransform`
+
+**Files Modified:**
+
+- `compiler-jay-html/lib/slow-render/slow-render-transform.ts` - Added linked contract resolution using import resolver
+- `compiler-jay-html/lib/jay-target/jay-html-source-file.ts` - Added `contractPath` to `JayHeadlessImports`
+- `compiler-jay-html/lib/jay-target/jay-html-parser.ts` - Include `contractPath` in result
+- `stack-server-runtime/lib/load-page-parts.ts` - Include `contractPath` in headless contracts
+- `dev-server/lib/dev-server.ts` - Pass `JAY_IMPORT_RESOLVER` to `slowRenderTransform`
+
+**Key Design Decision:** Reuse existing `JayImportResolver` interface for loading linked contracts rather than duplicating file I/O logic. This maintains a single source of truth for contract resolution.
+
 ### Phase 6-7: Production Build & Incremental Regeneration (FUTURE)
 
 Deferred to future implementation.
