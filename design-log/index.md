@@ -181,7 +181,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 42  | editor integration                          | Editor/IDE integration       |
 | 76  | AI Agent Integration                        | AI agent automation API      |
 | 77  | automation dev server integration           | Automation API for dev tools |
-| 80  | exposing dynamic contracts for agentic generation | CLI and dev server contract generation for AI agents |
+| 80  | materializing dynamic contracts for agentic generation | CLI and dev server contract materialization for AI agents |
 
 ---
 
@@ -221,7 +221,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ### "I'm working on AI agent integration"
 
-→ See #76 (AI Agent Integration), #77 (automation dev server), #80 (dynamic contracts for agents)
+→ See #76 (AI Agent Integration), #77 (automation dev server), #80 (contract materialization for agents)
 
 ---
 
