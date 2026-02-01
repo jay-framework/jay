@@ -151,12 +151,13 @@ jay_stack_version: "1.0.0"
 
 contracts:
   # Static contracts - reference existing files
-  - plugin: wix-stores
+  # plugin: the npm package name or local plugin name
+  - plugin: "@wix/stores"
     name: product-list
     type: static
     path: ./node_modules/@wix/stores/contracts/product-list.jay-contract
 
-  - plugin: wix-stores
+  - plugin: "@wix/stores"
     name: shopping-cart
     type: static
     path: ./node_modules/@wix/stores/contracts/cart.jay-contract
