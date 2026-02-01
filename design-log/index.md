@@ -79,6 +79,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 43  | Jay Package                                    | Jay package format                                            |
 | 60  | plugin system refinement and dynamic contracts | Plugin.yaml, contract resolution, dynamic contract generation |
 | 66  | transitive plugin dependency resolution        | Plugin dependency resolution                                  |
+| 80  | exposing dynamic contracts for agentic generation | CLI and dev server contract generation for AI agents      |
 
 ---
 
@@ -180,6 +181,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 42  | editor integration                          | Editor/IDE integration       |
 | 76  | AI Agent Integration                        | AI agent automation API      |
 | 77  | automation dev server integration           | Automation API for dev tools |
+| 80  | exposing dynamic contracts for agentic generation | CLI and dev server contract generation for AI agents |
 
 ---
 
@@ -216,6 +218,10 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 ### "I need to understand security model"
 
 → See #001 (3rd party problem), #12 (Secure Architecture), #17 (secure contexts)
+
+### "I'm working on AI agent integration"
+
+→ See #76 (AI Agent Integration), #77 (automation dev server), #80 (dynamic contracts for agents)
 
 ---
 
