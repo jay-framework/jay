@@ -805,6 +805,32 @@ Found 2 plugin(s)
    Dynamic: 0
 ```
 
+### Symbol Identity Fix (February 1, 2026)
+
+**Issue:** Services registered during plugin init were not found when generators accessed them via `getService()`.
+
+**Root Cause:** Vite's `ssrLoadModule()` creates different module instances than Node's native `import()`, even for packages marked as `external`. This caused `createJayService()` to create different Symbols:
+- Plugin init runs via Vite → registers with Symbol A
+- Generator imports the same service marker → gets Symbol B (different instance)
+- `getService(Symbol B)` fails because service was registered with Symbol A
+
+**Solution:** Use native `import()` for NPM packages instead of Vite's `ssrLoadModule()`:
+
+```typescript
+// plugin-init-discovery.ts
+if (plugin.isLocal && viteServer) {
+    // Local plugins may have TypeScript files - use Vite's SSR loader
+    pluginModule = await viteServer.ssrLoadModule(modulePath);
+} else {
+    // NPM plugins: use native import to ensure consistent Symbol identity
+    pluginModule = await import(modulePath);
+}
+```
+
+**Files Changed:**
+- `stack-server-runtime/lib/plugin-init-discovery.ts` - Use native import for NPM plugins
+- `stack-server-runtime/lib/contract-materializer.ts` - Use native import for export-based generators
+
 ---
 
 ## Related Design Logs

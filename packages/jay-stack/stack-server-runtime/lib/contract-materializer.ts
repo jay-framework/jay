@@ -138,16 +138,13 @@ async function executeDynamicGenerator(
         generator = generatorModule.generator || generatorModule.default;
     } else {
         // Generator is an export name - import from package's main bundle
+        // Always use native import for NPM packages to ensure consistent Symbol identity
+        // (Vite's ssrLoadModule creates different module instances even for externals)
         if (verbose) {
             console.log(`   Loading generator export: ${config.generator} from ${packageName}`);
         }
 
-        let pluginModule: Record<string, any>;
-        if (viteServer) {
-            pluginModule = await viteServer.ssrLoadModule(packageName);
-        } else {
-            pluginModule = await import(packageName);
-        }
+        const pluginModule = await import(packageName);
 
         generator = pluginModule[config.generator];
 
