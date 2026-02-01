@@ -39,7 +39,11 @@ import {
     Contract,
     JAY_IMPORT_RESOLVER,
 } from '@jay-framework/compiler-jay-html';
-import { LoadedPageParts } from '@jay-framework/stack-server-runtime/dist';
+import {
+    LoadedPageParts,
+    getServiceRegistry,
+    materializeContracts,
+} from '@jay-framework/stack-server-runtime';
 import { WithValidations } from '@jay-framework/compiler-shared';
 
 async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
@@ -641,6 +645,35 @@ async function preRenderJayHtml(
     return undefined;
 }
 
+/**
+ * Materializes dynamic contracts on dev server startup.
+ * This allows AI agents to discover available contracts for page generation.
+ */
+async function materializeDynamicContracts(
+    projectRootFolder: string,
+    buildFolder: string,
+): Promise<void> {
+    try {
+        const services = getServiceRegistry();
+        const result = await materializeContracts(
+            {
+                projectRoot: projectRootFolder,
+                outputDir: path.join(buildFolder, 'materialized-contracts'),
+                verbose: false,
+            },
+            services,
+        );
+
+        const dynamicCount = result.dynamicCount;
+        if (dynamicCount > 0) {
+            console.log(`[Contracts] Materialized ${dynamicCount} dynamic contract(s)`);
+        }
+    } catch (error: any) {
+        // Don't fail startup - just warn
+        console.warn('[Contracts] Failed to materialize dynamic contracts:', error.message);
+    }
+}
+
 export async function mkDevServer(options: DevServerOptions): Promise<DevServer> {
     const {
         publicBaseUrlPath,
@@ -673,6 +706,9 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
     // Set the Vite server and initialize services
     lifecycleManager.setViteServer(vite);
     await lifecycleManager.initialize();
+
+    // Materialize dynamic contracts for agent discovery
+    await materializeDynamicContracts(projectRootFolder, buildFolder!);
 
     // Set up hot reload for lib/init.ts
     setupServiceHotReload(vite, lifecycleManager);

@@ -32,7 +32,8 @@
     "@jay-framework/fullstack-component": "workspace:^",
     "@jay-framework/runtime": "workspace:^",
     "@jay-framework/stack-route-scanner": "workspace:^",
-    "@jay-framework/view-state-merge": "workspace:^"
+    "@jay-framework/view-state-merge": "workspace:^",
+    "yaml": "^2.3.4"
   },
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",

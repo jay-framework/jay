@@ -73,13 +73,13 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Plugin System
 
-| #   | Title                                          | Description                                                   |
-| --- | ---------------------------------------------- | ------------------------------------------------------------- |
-| 39  | Plugin package                                 | Plugin package requirements and structure                     |
-| 43  | Jay Package                                    | Jay package format                                            |
-| 60  | plugin system refinement and dynamic contracts | Plugin.yaml, contract resolution, dynamic contract generation |
-| 66  | transitive plugin dependency resolution        | Plugin dependency resolution                                  |
-| 80  | exposing dynamic contracts for agentic generation | CLI and dev server contract generation for AI agents      |
+| #   | Title                                             | Description                                                   |
+| --- | ------------------------------------------------- | ------------------------------------------------------------- |
+| 39  | Plugin package                                    | Plugin package requirements and structure                     |
+| 43  | Jay Package                                       | Jay package format                                            |
+| 60  | plugin system refinement and dynamic contracts    | Plugin.yaml, contract resolution, dynamic contract generation |
+| 66  | transitive plugin dependency resolution           | Plugin dependency resolution                                  |
+| 80  | exposing dynamic contracts for agentic generation | CLI and dev server contract generation for AI agents          |
 
 ---
 
@@ -173,14 +173,14 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Developer Experience & Tooling
 
-| #   | Title                                       | Description                  |
-| --- | ------------------------------------------- | ---------------------------- |
-| 26  | `jay start` - compiling sandbox application | Dev server startup           |
-| 33  | Jay 4 React                                 | React integration            |
-| 41  | package naming migration to @jay-framework  | Package naming convention    |
-| 42  | editor integration                          | Editor/IDE integration       |
-| 76  | AI Agent Integration                        | AI agent automation API      |
-| 77  | automation dev server integration           | Automation API for dev tools |
+| #   | Title                                                  | Description                                               |
+| --- | ------------------------------------------------------ | --------------------------------------------------------- |
+| 26  | `jay start` - compiling sandbox application            | Dev server startup                                        |
+| 33  | Jay 4 React                                            | React integration                                         |
+| 41  | package naming migration to @jay-framework             | Package naming convention                                 |
+| 42  | editor integration                                     | Editor/IDE integration                                    |
+| 76  | AI Agent Integration                                   | AI agent automation API                                   |
+| 77  | automation dev server integration                      | Automation API for dev tools                              |
 | 80  | materializing dynamic contracts for agentic generation | CLI and dev server contract materialization for AI agents |
 
 ---

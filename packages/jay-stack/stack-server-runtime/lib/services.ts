@@ -86,6 +86,14 @@ export function clearServiceRegistry(): void {
 }
 
 /**
+ * Returns the internal service registry map.
+ * Internal API used by contract materializer to pass services to dynamic generators.
+ */
+export function getServiceRegistry(): Map<symbol, any> {
+    return serviceRegistry;
+}
+
+/**
  * Resolves an array of service markers to their registered instances.
  * Used by the runtime to inject services into render functions.
  *

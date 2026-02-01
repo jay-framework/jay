@@ -1,8 +1,15 @@
 import { Command } from 'commander';
 import chalk from 'chalk';
+import YAML from 'yaml';
 import { validatePlugin, type ValidationResult } from '@jay-framework/plugin-validator';
 import { startDevServer } from './server';
 import { validateJayFiles, printJayValidationResult } from './validate';
+import {
+    materializeContracts,
+    listContracts,
+    type ContractsIndex,
+} from '@jay-framework/stack-server-runtime';
+import { createViteForCli } from '@jay-framework/dev-server';
 
 const program = new Command();
 
@@ -84,8 +91,150 @@ program
         }
     });
 
+// Contract materialization command
+program
+    .command('contracts')
+    .description('Materialize and list available contracts from all plugins')
+    .option('-o, --output <dir>', 'Output directory for materialized contracts')
+    .option('--yaml', 'Output contract index as YAML to stdout')
+    .option('--list', 'List contracts without writing files')
+    .option('--plugin <name>', 'Filter to specific plugin')
+    .option('--dynamic-only', 'Only process dynamic contracts')
+    .option('--force', 'Force re-materialization')
+    .option('-v, --verbose', 'Show detailed output')
+    .action(async (options) => {
+        const projectRoot = process.cwd();
+        let viteServer: Awaited<ReturnType<typeof createViteForCli>> | undefined;
+
+        try {
+            if (options.list) {
+                // Just list, don't write files
+                const index = await listContracts({
+                    projectRoot,
+                    dynamicOnly: options.dynamicOnly,
+                    pluginFilter: options.plugin,
+                });
+
+                if (options.yaml) {
+                    console.log(YAML.stringify(index));
+                } else {
+                    printContractList(index);
+                }
+                return;
+            }
+
+            // Create Vite server for TypeScript support
+            if (options.verbose) {
+                console.log('Starting Vite for TypeScript support...');
+            }
+            viteServer = await createViteForCli({ projectRoot });
+
+            // Initialize services (needed for dynamic generators)
+            const services = await initializeServicesForCli(projectRoot, viteServer);
+
+            // Materialize contracts
+            const result = await materializeContracts(
+                {
+                    projectRoot,
+                    outputDir: options.output,
+                    force: options.force,
+                    dynamicOnly: options.dynamicOnly,
+                    pluginFilter: options.plugin,
+                    verbose: options.verbose,
+                    viteServer,
+                },
+                services,
+            );
+
+            if (options.yaml) {
+                console.log(YAML.stringify(result.index));
+            } else {
+                console.log(
+                    chalk.green(`\n✅ Materialized ${result.index.contracts.length} contracts`),
+                );
+                console.log(`   Static: ${result.staticCount}`);
+                console.log(`   Dynamic: ${result.dynamicCount}`);
+                console.log(`   Output: ${result.outputDir}`);
+            }
+        } catch (error: any) {
+            console.error(chalk.red('❌ Failed to materialize contracts:'), error.message);
+            if (options.verbose) {
+                console.error(error.stack);
+            }
+            process.exit(1);
+        } finally {
+            // Clean up Vite server
+            if (viteServer) {
+                await viteServer.close();
+            }
+        }
+    });
+
 // Parse arguments
 program.parse(process.argv);
+
+/**
+ * Initializes services for CLI use (loads init.ts and runs callbacks)
+ *
+ * Uses the provided Vite server for TypeScript transpilation when loading
+ * init files and plugin modules.
+ */
+async function initializeServicesForCli(
+    projectRoot: string,
+    viteServer?: Awaited<ReturnType<typeof createViteForCli>>,
+): Promise<Map<symbol, unknown>> {
+    const path = await import('node:path');
+    const fs = await import('node:fs');
+
+    // Import service initialization functions
+    const {
+        runInitCallbacks,
+        getServiceRegistry,
+        discoverPluginsWithInit,
+        sortPluginsByDependencies,
+        executePluginServerInits,
+    } = await import('@jay-framework/stack-server-runtime');
+
+    try {
+        // Discover and initialize plugins
+        const discoveredPlugins = await discoverPluginsWithInit({
+            projectRoot,
+            verbose: false,
+        });
+        const pluginsWithInit = sortPluginsByDependencies(discoveredPlugins);
+
+        // Execute plugin server inits with Vite for TypeScript support
+        try {
+            await executePluginServerInits(pluginsWithInit, viteServer, false);
+        } catch (error: any) {
+            console.warn(chalk.yellow(`⚠️  Plugin initialization skipped: ${error.message}`));
+        }
+
+        // Load project init.ts/js if it exists
+        const initPathTs = path.join(projectRoot, 'src', 'init.ts');
+        const initPathJs = path.join(projectRoot, 'src', 'init.js');
+
+        let initModule: any;
+        if (fs.existsSync(initPathTs) && viteServer) {
+            // Use Vite for TypeScript transpilation
+            initModule = await viteServer.ssrLoadModule(initPathTs);
+        } else if (fs.existsSync(initPathJs)) {
+            initModule = await import(initPathJs);
+        }
+
+        if (initModule?.init?._serverInit) {
+            await initModule.init._serverInit();
+        }
+
+        // Run any additional init callbacks
+        await runInitCallbacks();
+    } catch (error: any) {
+        console.warn(chalk.yellow(`⚠️  Service initialization failed: ${error.message}`));
+        console.warn(chalk.gray('   Static contracts will still be listed.'));
+    }
+
+    return getServiceRegistry();
+}
 
 // If no command provided, show help
 if (!process.argv.slice(2).length) {
@@ -139,5 +288,33 @@ function printValidationResult(result: ValidationResult, verbose: boolean): void
             console.log();
         });
         console.log(chalk.red(`${result.errors.length} errors found.`));
+    }
+}
+
+/**
+ * Pretty prints contract list
+ */
+function printContractList(index: ContractsIndex): void {
+    console.log('\nAvailable Contracts:\n');
+
+    // Group contracts by plugin
+    const byPlugin = new Map<string, typeof index.contracts>();
+    for (const contract of index.contracts) {
+        const existing = byPlugin.get(contract.plugin) || [];
+        existing.push(contract);
+        byPlugin.set(contract.plugin, existing);
+    }
+
+    for (const [plugin, contracts] of byPlugin) {
+        console.log(chalk.bold(`📦 ${plugin}`));
+        for (const contract of contracts) {
+            const typeIcon = contract.type === 'static' ? '📄' : '⚡';
+            console.log(`   ${typeIcon} ${contract.name}`);
+        }
+        console.log();
+    }
+
+    if (index.contracts.length === 0) {
+        console.log(chalk.gray('No contracts found.'));
     }
 }

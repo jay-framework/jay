@@ -51,14 +51,15 @@ B) In the src folder: `src/.materialized-contracts/`
 
 **Considerations:**
 
-| Location | Pros | Cons |
-|----------|------|------|
-| `build/` | Already gitignored, consistent with `slow-render-cache/` and `jay-runtime/` | Must run materialization before agent can access |
-| `src/.materialized-contracts/` | Can optionally commit for read-only agent environments | Adds generated files to src/ |
+| Location                       | Pros                                                                        | Cons                                             |
+| ------------------------------ | --------------------------------------------------------------------------- | ------------------------------------------------ |
+| `build/`                       | Already gitignored, consistent with `slow-render-cache/` and `jay-runtime/` | Must run materialization before agent can access |
+| `src/.materialized-contracts/` | Can optionally commit for read-only agent environments                      | Adds generated files to src/                     |
 
 **Answer:** Option A - `build/materialized-contracts/`
 
 **Rationale:**
+
 - Consistent with existing build artifacts (`build/slow-render-cache/`, `build/jay-runtime/`)
 - Already gitignored by default
 - Agents running in dev environment can run `jay-stack contracts` to materialize
@@ -76,6 +77,7 @@ C) Index file pointing to static, materialized dynamic
 **Answer:** Option C - index file with references to static, materialized files for dynamic
 
 **Rationale:**
+
 - Agents get a single discovery point
 - No duplication of static contract files
 - Index provides metadata (plugin, type, path)
@@ -92,6 +94,7 @@ D) On-demand (lazy, when first requested)
 **Answer:** Option C - both dev server startup and CLI command
 
 **Rationale:**
+
 - Dev server: automatic, always up-to-date during development
 - CLI: useful for CI/CD, agent setup scripts, build pipelines
 - Flexibility for different workflows
@@ -107,6 +110,7 @@ C) TypeScript (`.d.ts` or `.ts`)
 **Answer:** Option A - YAML (`.jay-contract` format)
 
 **Rationale:**
+
 - Consistent with existing static contracts
 - Agents already know how to read `.jay-contract` files
 - Human-readable for debugging
@@ -116,7 +120,7 @@ C) TypeScript (`.d.ts` or `.ts`)
 
 **Problem:** Dynamic contracts depend on external systems (CMS, databases). They can become stale.
 
-**Answer:** 
+**Answer:**
 
 - Dev server: re-materialize on startup (no watching)
 - CLI: always re-materialize when invoked
@@ -146,18 +150,18 @@ build/materialized-contracts/
 
 ```yaml
 # build/materialized-contracts/contracts-index.yaml
-materialized_at: "2026-02-01T10:00:00.000Z"
-jay_stack_version: "1.0.0"
+materialized_at: '2026-02-01T10:00:00.000Z'
+jay_stack_version: '1.0.0'
 
 contracts:
   # Static contracts - reference existing files
   # plugin: the npm package name or local plugin name
-  - plugin: "@wix/stores"
+  - plugin: '@wix/stores'
     name: product-list
     type: static
     path: ./node_modules/@wix/stores/contracts/product-list.jay-contract
 
-  - plugin: "@wix/stores"
+  - plugin: '@wix/stores'
     name: shopping-cart
     type: static
     path: ./node_modules/@wix/stores/contracts/cart.jay-contract
@@ -200,10 +204,10 @@ jay-stack contracts --force
 async function startDevServer(options: DevServerOptions) {
   // 1. Load init.ts and services
   const services = await loadServices(options.projectRoot);
-  
+
   // 2. Materialize dynamic contracts (NEW)
   await materializeContracts({ projectRoot: options.projectRoot }, services);
-  
+
   // 3. Start file watcher
   // 4. Start HTTP server
   // ...
@@ -254,7 +258,7 @@ export interface ContractsIndex {
 
 export interface MaterializeContractsOptions {
   projectRoot: string;
-  outputDir?: string;       // defaults to build/materialized-contracts
+  outputDir?: string; // defaults to build/materialized-contracts
   force?: boolean;
   dynamicOnly?: boolean;
   pluginFilter?: string;
@@ -264,8 +268,8 @@ export async function materializeContracts(
   options: MaterializeContractsOptions,
   services: Record<string, unknown>,
 ): Promise<ContractsIndex> {
-  const { 
-    projectRoot, 
+  const {
+    projectRoot,
     outputDir = path.join(projectRoot, 'build', 'materialized-contracts'),
     dynamicOnly = false,
     pluginFilter,
@@ -331,11 +335,7 @@ export async function materializeContracts(
   };
 
   fs.mkdirSync(outputDir, { recursive: true });
-  fs.writeFileSync(
-    path.join(outputDir, 'contracts-index.yaml'),
-    YAML.stringify(index),
-    'utf-8',
-  );
+  fs.writeFileSync(path.join(outputDir, 'contracts-index.yaml'), YAML.stringify(index), 'utf-8');
 
   return index;
 }
@@ -347,9 +347,9 @@ async function executeDynamicGenerator(
   services: Record<string, unknown>,
 ): Promise<GeneratedContractYaml[]> {
   const generatorPath = resolveFromPlugin(
-    manifest, 
-    manifest.dynamic_contracts!.generator, 
-    projectRoot
+    manifest,
+    manifest.dynamic_contracts!.generator,
+    projectRoot,
   );
 
   // Import the generator module
@@ -358,7 +358,7 @@ async function executeDynamicGenerator(
 
   if (!generator || typeof generator.generate !== 'function') {
     throw new Error(
-      `Generator at ${generatorPath} must export a 'generator' with a 'generate' function`
+      `Generator at ${generatorPath} must export a 'generator' with a 'generate' function`,
     );
   }
 
@@ -368,7 +368,7 @@ async function executeDynamicGenerator(
     if (!service) {
       throw new Error(
         `Service "${marker.description}" required by ${pluginName} generator not found. ` +
-        `Ensure it's registered in init.ts`
+          `Ensure it's registered in init.ts`,
       );
     }
     return service;
@@ -426,20 +426,23 @@ export function registerContractsCommand(program: Command): void {
         }
 
         // Materialize contracts
-        const index = await materializeContracts({
-          projectRoot,
-          outputDir: options.output,
-          force: options.force,
-          dynamicOnly: options.dynamicOnly,
-          pluginFilter: options.plugin,
-        }, services);
+        const index = await materializeContracts(
+          {
+            projectRoot,
+            outputDir: options.output,
+            force: options.force,
+            dynamicOnly: options.dynamicOnly,
+            pluginFilter: options.plugin,
+          },
+          services,
+        );
 
         if (options.yaml) {
           console.log(YAML.stringify(index));
         } else {
           console.log(`✅ Materialized ${index.contracts.length} contracts`);
-          console.log(`   Static: ${index.contracts.filter(c => c.type === 'static').length}`);
-          console.log(`   Dynamic: ${index.contracts.filter(c => c.type === 'dynamic').length}`);
+          console.log(`   Static: ${index.contracts.filter((c) => c.type === 'static').length}`);
+          console.log(`   Dynamic: ${index.contracts.filter((c) => c.type === 'dynamic').length}`);
           console.log(`   Output: ${options.output || 'build/materialized-contracts/'}`);
         }
       } catch (error) {
@@ -451,9 +454,9 @@ export function registerContractsCommand(program: Command): void {
 
 function printContractList(index: ContractsIndex): void {
   console.log('\nAvailable Contracts:\n');
-  
-  const byPlugin = groupBy(index.contracts, c => c.plugin);
-  
+
+  const byPlugin = groupBy(index.contracts, (c) => c.plugin);
+
   for (const [plugin, contracts] of Object.entries(byPlugin)) {
     console.log(`📦 ${plugin}`);
     for (const contract of contracts) {
@@ -482,7 +485,7 @@ export async function startDevServer(options: DevServerOptions): Promise<void> {
   console.log('📋 Materializing contracts...');
   try {
     const index = await materializeContracts({ projectRoot }, services);
-    const dynamicCount = index.contracts.filter(c => c.type === 'dynamic').length;
+    const dynamicCount = index.contracts.filter((c) => c.type === 'dynamic').length;
     if (dynamicCount > 0) {
       console.log(`   ⚡ ${dynamicCount} dynamic contracts materialized`);
     }
@@ -529,16 +532,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: npm install
-      
+
       # Set up CMS credentials
       - run: echo "CMS_API_KEY=${{ secrets.CMS_API_KEY }}" >> .env
-      
+
       # Generate contracts for agent
       - run: npx jay-stack contracts
-      
+
       # Run agent to generate pages
       - run: ./scripts/run-page-agent.sh
-      
+
       # Build and deploy
       - run: npx jay-stack build
 ```
@@ -590,30 +593,32 @@ tags:
 <!-- Generated by agent using contract knowledge -->
 <!-- src/pages/blog/page.jay-html -->
 <html>
-<head>
-  <script type="application/jay-headless" 
-          plugin="my-cms" 
-          contract="cms/blog-posts-list" 
-          key="blog"></script>
-</head>
-<body>
-  <main class="blog-listing">
-    <h1>Our Blog</h1>
-    <p>Showing {blog.totalCount} posts</p>
-    
-    <div class="posts" forEach="blog.items" trackBy="_id">
-      <article class="post-card">
-        <h2>{title}</h2>
-        <div class="meta">
-          <img src="{author.avatar}" alt="{author.name}" />
-          <span>{author.name}</span>
-          <time>{publishedAt}</time>
-        </div>
-        <p>{content}</p>
-      </article>
-    </div>
-  </main>
-</body>
+  <head>
+    <script
+      type="application/jay-headless"
+      plugin="my-cms"
+      contract="cms/blog-posts-list"
+      key="blog"
+    ></script>
+  </head>
+  <body>
+    <main class="blog-listing">
+      <h1>Our Blog</h1>
+      <p>Showing {blog.totalCount} posts</p>
+
+      <div class="posts" forEach="blog.items" trackBy="_id">
+        <article class="post-card">
+          <h2>{title}</h2>
+          <div class="meta">
+            <img src="{author.avatar}" alt="{author.name}" />
+            <span>{author.name}</span>
+            <time>{publishedAt}</time>
+          </div>
+          <p>{content}</p>
+        </article>
+      </div>
+    </main>
+  </body>
 </html>
 ```
 
@@ -624,6 +629,7 @@ tags:
 **Package:** `@jay-framework/stack-cli`
 
 1. Create `lib/contract-materializer.ts` with:
+
    - `materializeContracts()` function
    - `executeDynamicGenerator()` helper
    - Index file writing (YAML format)
@@ -632,6 +638,7 @@ tags:
    - `loadServicesFromInit()` function (reuse existing init loading logic)
 
 **Tests:**
+
 - Generator execution with mock services
 - Contract file writing
 - Index file format (YAML)
@@ -645,6 +652,7 @@ tags:
 3. Add help text and examples
 
 **Tests:**
+
 - CLI argument parsing
 - Output formatting
 - Error handling
@@ -658,6 +666,7 @@ tags:
 3. Add console output for materialized contracts
 
 **Tests:**
+
 - Dev server starts with contract materialization
 - Graceful handling of generator errors
 - Static contracts work even if dynamic fails
@@ -716,6 +725,85 @@ tags:
 ### Q3: What happens if generator fails at dev server startup?
 
 **Answer:** Log warning, continue with static contracts. The page using the dynamic contract will fail at compile time with a clear error about missing contract.
+
+---
+
+## Implementation Results
+
+**Date:** February 1, 2026
+
+### What Was Built
+
+1. **Shared Plugin Scanner** (`stack-server-runtime/lib/plugin-scanner.ts`)
+
+   - Unified plugin scanning logic used by both init discovery and contract materialization
+   - Eliminates duplicate scanning code
+   - Supports local plugins (src/plugins/) and NPM packages
+
+2. **Contract Materializer** (`stack-server-runtime/lib/contract-materializer.ts`)
+
+   - Scans plugins using shared `scanPlugins()`
+   - Executes dynamic generators with service injection
+   - Writes `.jay-contract` files to `build/materialized-contracts/`
+   - Generates `contracts-index.yaml`
+
+3. **Vite Factory for CLI** (`dev-server/lib/vite-factory.ts`)
+
+   - Creates minimal Vite server for CLI tools
+   - Enables TypeScript transpilation for init.ts and generators
+   - Properly configured with Jay Stack compiler plugins
+
+4. **CLI Command** (`jay-stack contracts`)
+
+   - Full TypeScript support via Vite
+   - Service initialization with proper dependency ordering
+   - Options: `--list`, `--yaml`, `--verbose`, `--plugin`, `--dynamic-only`
+
+5. **Dev Server Integration**
+   - Automatic materialization on startup
+   - Uses service registry for dynamic generators
+
+### Architecture Improvements
+
+**Before:** CLI had limited TypeScript support; duplicate plugin scanning in multiple places
+
+**After:**
+
+- CLI uses same Vite infrastructure as dev-server for TypeScript
+- Shared `scanPlugins()` function eliminates duplication
+- Both `plugin-init-discovery.ts` and `contract-materializer.ts` use the same scanner
+
+### Files Changed
+
+- `stack-server-runtime/lib/plugin-scanner.ts` (NEW)
+- `stack-server-runtime/lib/contract-materializer.ts` (NEW)
+- `stack-server-runtime/lib/plugin-init-discovery.ts` (refactored to use shared scanner)
+- `stack-server-runtime/lib/services.ts` (added `getServiceRegistry()`)
+- `dev-server/lib/vite-factory.ts` (NEW)
+- `dev-server/lib/dev-server.ts` (integrated materialization)
+- `stack-cli/lib/cli.ts` (added `contracts` command)
+
+### Test Results
+
+```
+$ jay-stack contracts --verbose
+Starting Vite for TypeScript support...
+[product-rating] Initializing ratings service...
+[mood-tracker-plugin] Initializing server-side services...
+[Fake Shop] Initializing services...
+Scanning for plugins...
+Found 2 plugin(s)
+
+📦 Processing plugin: product-rating
+   📄 Static: product-rating
+
+📦 Processing plugin: mood-tracker-plugin
+   📄 Static: mood-tracker
+
+✅ Materialized 2 contracts
+   Static: 2
+   Dynamic: 0
+```
 
 ---
 

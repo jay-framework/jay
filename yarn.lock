@@ -4371,7 +4371,9 @@ __metadata:
     "@jay-framework/dev-environment": "workspace:^"
     "@jay-framework/dev-server": "workspace:^"
     "@jay-framework/editor-server": "workspace:^"
+    "@jay-framework/fullstack-component": "workspace:^"
     "@jay-framework/plugin-validator": "workspace:^"
+    "@jay-framework/stack-server-runtime": "workspace:^"
     "@types/express": "npm:^5.0.2"
     "@types/node": "npm:^22.15.21"
     chalk: "npm:^4.1.2"
@@ -4385,6 +4387,7 @@ __metadata:
     typescript: "npm:^5.3.3"
     vite: "npm:^5.0.11"
     vitest: "npm:^1.2.1"
+    yaml: "npm:^2.3.4"
   bin:
     jay-stack-cli: dist/index.js
   languageName: unknown
@@ -4611,6 +4614,7 @@ __metadata:
     typescript: "npm:^5.3.3"
     vite: "npm:^5.0.11"
     vitest: "npm:^1.2.1"
+    yaml: "npm:^2.3.4"
   languageName: unknown
   linkType: soft
 

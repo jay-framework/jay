@@ -27,12 +27,15 @@
     "@jay-framework/compiler-shared": "workspace:^",
     "@jay-framework/dev-server": "workspace:^",
     "@jay-framework/editor-server": "workspace:^",
+    "@jay-framework/fullstack-component": "workspace:^",
     "@jay-framework/plugin-validator": "workspace:^",
+    "@jay-framework/stack-server-runtime": "workspace:^",
     "chalk": "^4.1.2",
     "commander": "^14.0.0",
     "express": "^5.0.1",
     "glob": "^10.3.10",
-    "vite": "^5.0.11"
+    "vite": "^5.0.11",
+    "yaml": "^2.3.4"
   },
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",
