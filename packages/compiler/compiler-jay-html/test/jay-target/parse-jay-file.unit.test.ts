@@ -1252,7 +1252,10 @@ describe('compiler', () => {
                 loadPluginContract(pluginName: string, contractName: string, projectRoot: string) {
                     if (pluginName === 'test-counter' && contractName === 'counter') {
                         return new WithValidations(
-                            { contract: counterContract, contractPath: '/path/to/counter.jay-contract' },
+                            {
+                                contract: counterContract,
+                                contractPath: '/path/to/counter.jay-contract',
+                            },
                             [],
                         );
                     }
@@ -1354,7 +1357,10 @@ describe('compiler', () => {
                 loadPluginContract(pluginName: string, contractName: string, projectRoot: string) {
                     if (pluginName === 'test-counter' && contractName === 'counter') {
                         return new WithValidations(
-                            { contract: counterContract, contractPath: '/path/to/counter.jay-contract' },
+                            {
+                                contract: counterContract,
+                                contractPath: '/path/to/counter.jay-contract',
+                            },
                             [],
                         );
                     }
@@ -1476,13 +1482,19 @@ describe('compiler', () => {
                 loadPluginContract(pluginName: string, contractName: string, projectRoot: string) {
                     if (pluginName === 'test-counter' && contractName === 'counter') {
                         return new WithValidations(
-                            { contract: counterContract, contractPath: '/path/to/counter.jay-contract' },
+                            {
+                                contract: counterContract,
+                                contractPath: '/path/to/counter.jay-contract',
+                            },
                             [],
                         );
                     }
                     if (pluginName === 'test-timer' && contractName === 'timer') {
                         return new WithValidations(
-                            { contract: timerContract, contractPath: '/path/to/timer.jay-contract' },
+                            {
+                                contract: timerContract,
+                                contractPath: '/path/to/timer.jay-contract',
+                            },
                             [],
                         );
                     }

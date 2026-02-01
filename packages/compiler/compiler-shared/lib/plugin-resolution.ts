@@ -309,7 +309,8 @@ export function resolveNpmPlugin(
                             path.join(npmPluginPath, 'lib', contractSpec),
                             path.join(npmPluginPath, contractSpec),
                         ];
-                        contractPath = possiblePaths.find((p) => fs.existsSync(p)) || possiblePaths[0];
+                        contractPath =
+                            possiblePaths.find((p) => fs.existsSync(p)) || possiblePaths[0];
                     }
                 } catch {
                     contractPath = path.join(npmPluginPath, 'dist', contract.contract);

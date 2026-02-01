@@ -719,9 +719,7 @@ async function parseHeadlessImports(
                 });
             });
         } catch (e) {
-            validations.push(
-                `failed to parse linked contract - ${e.message}${e.stack}`,
-            );
+            validations.push(`failed to parse linked contract - ${e.message}${e.stack}`);
         }
     }
     return result;

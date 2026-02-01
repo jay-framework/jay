@@ -810,6 +810,7 @@ Found 2 plugin(s)
 **Issue:** Services registered during plugin init were not found when generators accessed them via `getService()`.
 
 **Root Cause:** Vite's `ssrLoadModule()` creates different module instances than Node's native `import()`, even for packages marked as `external`. This caused `createJayService()` to create different Symbols:
+
 - Plugin init runs via Vite → registers with Symbol A
 - Generator imports the same service marker → gets Symbol B (different instance)
 - `getService(Symbol B)` fails because service was registered with Symbol A
@@ -819,15 +820,16 @@ Found 2 plugin(s)
 ```typescript
 // plugin-init-discovery.ts
 if (plugin.isLocal && viteServer) {
-    // Local plugins may have TypeScript files - use Vite's SSR loader
-    pluginModule = await viteServer.ssrLoadModule(modulePath);
+  // Local plugins may have TypeScript files - use Vite's SSR loader
+  pluginModule = await viteServer.ssrLoadModule(modulePath);
 } else {
-    // NPM plugins: use native import to ensure consistent Symbol identity
-    pluginModule = await import(modulePath);
+  // NPM plugins: use native import to ensure consistent Symbol identity
+  pluginModule = await import(modulePath);
 }
 ```
 
 **Files Changed:**
+
 - `stack-server-runtime/lib/plugin-init-discovery.ts` - Use native import for NPM plugins
 - `stack-server-runtime/lib/contract-materializer.ts` - Use native import for export-based generators
 
@@ -837,7 +839,8 @@ if (plugin.isLocal && viteServer) {
 
 **Root Cause:** The plugin resolver (`compiler-shared`) and contract loader (`compiler-jay-html`) only checked for static `contracts` in plugin.yaml, ignoring `dynamic_contracts`.
 
-**Solution:** 
+**Solution:**
+
 1. Updated `resolvePluginComponent()` to check both static and dynamic contracts by prefix
 2. Added `loadPluginContract()` method to `JayImportResolver` that:
    - Tries static contract path first
@@ -845,6 +848,7 @@ if (plugin.isLocal && viteServer) {
 3. Updated `parseHeadlessImports()` to use new loader
 
 **Files Changed:**
+
 - `compiler-shared/lib/plugin-resolution.ts` - Added `findDynamicContract()`, updated both resolvers
 - `compiler-jay-html/lib/jay-target/jay-import-resolver.ts` - Added `loadPluginContract()`
 - `compiler-jay-html/lib/jay-target/jay-html-parser.ts` - Use `loadPluginContract()` for plugin contracts
@@ -854,11 +858,13 @@ if (plugin.isLocal && viteServer) {
 **Issue:** Vite server creation was duplicated between `dev-server.ts` and `vite-factory.ts` with different configs.
 
 **Solution:** Consolidated into single `createViteServer()` function in `vite-factory.ts`:
+
 - Both dev-server and CLI use the same function
 - Consistent SSR externalization config
 - `createViteForCli()` is now a convenience wrapper
 
 **Files Changed:**
+
 - `dev-server/lib/vite-factory.ts` - Added `createViteServer()`, refactored `createViteForCli()`
 - `dev-server/lib/dev-server.ts` - Use `createViteServer()` instead of inline config
 
