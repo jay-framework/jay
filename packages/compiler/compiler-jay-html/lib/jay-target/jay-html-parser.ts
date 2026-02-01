@@ -599,7 +599,6 @@ async function parseHeadlessImports(
 
         const absoluteComponentPath = resolveResult.val.componentPath;
         const name = resolveResult.val.componentName;
-        const contractPath = resolveResult.val.contractPath;
         const isNpmPackage = resolveResult.val.isNpmPackage;
         const packageName = resolveResult.val.packageName;
 
@@ -616,105 +615,112 @@ async function parseHeadlessImports(
             }
         }
 
-        // Contract path from plugin resolution is already absolute, don't resolve it again
-        const contractFile = contractPath;
-
         try {
-            const subContract = importResolver.loadContract(contractFile);
-            validations.push(...subContract.validations);
-            await subContract.mapAsync(async (contract) => {
-                const contractTypes = await contractToImportsViewStateAndRefs(
-                    contract,
-                    contractFile,
-                    importResolver,
+            // Load contract - resolver handles both static and dynamic (materialized) contracts
+            const contractResult = importResolver.loadPluginContract(
+                pluginAttr,
+                contractAttr,
+                projectRoot,
+            );
+            validations.push(...contractResult.validations);
+            if (!contractResult.val) {
+                continue;
+            }
+            const loadedContract = contractResult.val.contract;
+            const contractFile = contractResult.val.contractPath;
+
+            const contractTypes = await contractToImportsViewStateAndRefs(
+                loadedContract,
+                contractFile,
+                importResolver,
+            );
+
+            contractTypes.map(({ type, refs: subContractRefsTree, enumsToImport }) => {
+                const contractName = loadedContract.name;
+                const refsTypeName = `${pascalCase(contractName)}Refs`;
+                const repeatedRefsTypeName = `${pascalCase(contractName)}RepeatedRefs`;
+                const refs = mkRefsTree(
+                    subContractRefsTree.refs,
+                    subContractRefsTree.children,
+                    subContractRefsTree.repeated,
+                    refsTypeName,
+                    repeatedRefsTypeName,
                 );
-                contractTypes.map(({ type, refs: subContractRefsTree, enumsToImport }) => {
-                    const contractName = subContract.val.name;
-                    const refsTypeName = `${pascalCase(contractName)}Refs`;
-                    const repeatedRefsTypeName = `${pascalCase(contractName)}RepeatedRefs`;
-                    const refs = mkRefsTree(
-                        subContractRefsTree.refs,
-                        subContractRefsTree.children,
-                        subContractRefsTree.repeated,
-                        refsTypeName,
-                        repeatedRefsTypeName,
-                    );
 
-                    const enumsToImportRelativeToJayHtml: EnumToImport[] = enumsToImport.map(
-                        (enumsToImport) => ({
-                            type: enumsToImport.type,
-                            declaringModule: path.relative(filePath, enumsToImport.declaringModule),
-                        }),
-                    );
+                const enumsToImportRelativeToJayHtml: EnumToImport[] = enumsToImport.map(
+                    (enumsToImport) => ({
+                        type: enumsToImport.type,
+                        declaringModule: path.relative(filePath, enumsToImport.declaringModule),
+                    }),
+                );
 
-                    // Make contract path relative to the jay-html file for imports
-                    const relativeContractPath = path.relative(filePath, contractPath);
+                // Make contract path relative to the jay-html file for imports
+                const relativeContractPath = path.relative(filePath, contractFile);
 
-                    const enumsFromContract = enumsToImportRelativeToJayHtml
-                        .filter((_) => _.declaringModule === relativeContractPath)
-                        .map((_) => _.type);
+                const enumsFromContract = enumsToImportRelativeToJayHtml
+                    .filter((_) => _.declaringModule === relativeContractPath)
+                    .map((_) => _.type);
 
-                    // Collect all nested ViewState types from the contract
-                    // These are needed for forEach type annotations
-                    const nestedTypeNames = collectNestedTypeNames(type);
-                    // Filter to only include nested types (exclude the main ViewState which is already added)
-                    const nestedTypeImports = nestedTypeNames
-                        .filter((name) => name !== type.name)
-                        .map((name) => ({ name, type: JayUnknown }));
+                // Collect all nested ViewState types from the contract
+                // These are needed for forEach type annotations
+                const nestedTypeNames = collectNestedTypeNames(type);
+                // Filter to only include nested types (exclude the main ViewState which is already added)
+                const nestedTypeImports = nestedTypeNames
+                    .filter((name) => name !== type.name)
+                    .map((name) => ({ name, type: JayUnknown }));
 
-                    const contractLink: JayImportLink = {
-                        module: relativeContractPath,
-                        names: [
-                            { name: type.name, type },
-                            { name: refsTypeName, type: JayUnknown },
-                            ...nestedTypeImports,
-                            ...enumsFromContract.map((_) => ({ name: _.name, type: _ })),
-                        ],
-                    };
+                const contractLink: JayImportLink = {
+                    module: relativeContractPath,
+                    names: [
+                        { name: type.name, type },
+                        { name: refsTypeName, type: JayUnknown },
+                        ...nestedTypeImports,
+                        ...enumsFromContract.map((_) => ({ name: _.name, type: _ })),
+                    ],
+                };
 
-                    const enumsFromOtherContracts = enumsToImportRelativeToJayHtml.filter(
-                        (_) => _.declaringModule !== relativeContractPath,
-                    );
+                const enumsFromOtherContracts = enumsToImportRelativeToJayHtml.filter(
+                    (_) => _.declaringModule !== relativeContractPath,
+                );
 
-                    const enumImportLinks: JayImportLink[] = Object.entries(
-                        enumsFromOtherContracts.reduce(
-                            (acc, enumToImport) => {
-                                const module = enumToImport.declaringModule;
-                                if (!acc[module]) {
-                                    acc[module] = [];
-                                }
-                                acc[module].push(enumToImport);
-                                return acc;
-                            },
-                            {} as Record<string, EnumToImport[]>,
-                        ),
-                    ).map(([module, enums]) => ({
-                        module,
-                        names: enums.map((enumToImport) => ({
-                            name: enumToImport.type.name,
-                            type: enumToImport.type,
-                        })),
-                    }));
+                const enumImportLinks: JayImportLink[] = Object.entries(
+                    enumsFromOtherContracts.reduce(
+                        (acc, enumToImport) => {
+                            const module = enumToImport.declaringModule;
+                            if (!acc[module]) {
+                                acc[module] = [];
+                            }
+                            acc[module].push(enumToImport);
+                            return acc;
+                        },
+                        {} as Record<string, EnumToImport[]>,
+                    ),
+                ).map(([module, enums]) => ({
+                    module,
+                    names: enums.map((enumToImport) => ({
+                        name: enumToImport.type.name,
+                        type: enumToImport.type,
+                    })),
+                }));
 
-                    const contractLinks = [contractLink, ...enumImportLinks];
-                    const codeLink: JayImportLink = {
-                        module,
-                        names: [{ name, type: new JayComponentType(name, []) }],
-                    };
-                    result.push({
-                        key,
-                        refs,
-                        rootType: type,
-                        contractLinks,
-                        codeLink,
-                        contract,
-                        contractPath: contractFile,
-                    });
+                const contractLinks = [contractLink, ...enumImportLinks];
+                const codeLink: JayImportLink = {
+                    module,
+                    names: [{ name, type: new JayComponentType(name, []) }],
+                };
+                result.push({
+                    key,
+                    refs,
+                    rootType: type,
+                    contractLinks,
+                    codeLink,
+                    contract: loadedContract,
+                    contractPath: contractFile,
                 });
             });
         } catch (e) {
             validations.push(
-                `failed to parse linked contract ${contractPath} - ${e.message}${e.stack}`,
+                `failed to parse linked contract - ${e.message}${e.stack}`,
             );
         }
     }

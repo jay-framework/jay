@@ -92,6 +92,39 @@ export function loadPluginManifest(pluginDir: string): PluginManifest | null {
 }
 
 /**
+ * Finds a dynamic contract config that matches the given contract name.
+ * Dynamic contracts use a prefix format: "prefix/name" (e.g., "list/recipes-list")
+ *
+ * @param manifest - The plugin manifest
+ * @param contractName - The contract name to match (e.g., "list/recipes-list")
+ * @returns The matching DynamicContractConfig or null if not found
+ */
+function findDynamicContract(
+    manifest: PluginManifest,
+    contractName: string,
+): DynamicContractConfig | null {
+    if (!manifest.dynamic_contracts) {
+        return null;
+    }
+
+    // Extract prefix from contract name (e.g., "list" from "list/recipes-list")
+    const slashIndex = contractName.indexOf('/');
+    if (slashIndex === -1) {
+        return null; // Not a dynamic contract format
+    }
+
+    const prefix = contractName.substring(0, slashIndex);
+
+    // Normalize to array
+    const dynamicConfigs = Array.isArray(manifest.dynamic_contracts)
+        ? manifest.dynamic_contracts
+        : [manifest.dynamic_contracts];
+
+    // Find matching config by prefix
+    return dynamicConfigs.find((config) => config.prefix === prefix) || null;
+}
+
+/**
  * Resolves a plugin component from a local plugin directory (src/plugins/)
  *
  * @param projectRoot - Project root directory
@@ -125,33 +158,61 @@ export function resolveLocalPlugin(
         ]);
     }
 
-    if (!manifest.contracts || manifest.contracts.length === 0) {
-        return new WithValidations(null as any, [
-            `Local plugin "${pluginName}" has no contracts defined in plugin.yaml`,
-        ]);
-    }
-
-    const contract = manifest.contracts.find((c) => c.name === contractName);
-    if (!contract) {
-        const availableContracts = manifest.contracts.map((c) => c.name).join(', ');
-        return new WithValidations(null as any, [
-            `Contract "${contractName}" not found in local plugin "${pluginName}". Available contracts: ${availableContracts}`,
-        ]);
-    }
-
     // Component path comes from manifest.module (or defaults to index.js)
     const componentModule = manifest.module || 'index.js';
     const componentPath = path.join(localPluginPath, componentModule);
 
-    return new WithValidations(
-        {
-            contractPath: path.join(localPluginPath, contract.contract),
-            componentPath: componentPath,
-            componentName: contract.component, // This is the exported member name
-            isNpmPackage: false,
-        },
-        [],
-    );
+    // Try to find as static contract first
+    if (manifest.contracts && manifest.contracts.length > 0) {
+        const contract = manifest.contracts.find((c) => c.name === contractName);
+        if (contract) {
+            return new WithValidations(
+                {
+                    contractPath: path.join(localPluginPath, contract.contract),
+                    componentPath: componentPath,
+                    componentName: contract.component,
+                    isNpmPackage: false,
+                },
+                [],
+            );
+        }
+    }
+
+    // Try to find as dynamic contract (prefix/name format)
+    const dynamicConfig = findDynamicContract(manifest, contractName);
+    if (dynamicConfig) {
+        // For dynamic contracts, contractPath is not known at compile time
+        // We use a placeholder path that will be resolved at materialization time
+        return new WithValidations(
+            {
+                contractPath: '', // Dynamic contracts don't have a static path
+                componentPath: componentPath,
+                componentName: dynamicConfig.component,
+                isNpmPackage: false,
+            },
+            [],
+        );
+    }
+
+    // No matching contract found
+    if (!manifest.contracts && !manifest.dynamic_contracts) {
+        return new WithValidations(null as any, [
+            `Local plugin "${pluginName}" has no contracts or dynamic_contracts defined in plugin.yaml`,
+        ]);
+    }
+
+    const availableContracts = manifest.contracts?.map((c) => c.name) || [];
+    const dynamicPrefixes = manifest.dynamic_contracts
+        ? (Array.isArray(manifest.dynamic_contracts)
+              ? manifest.dynamic_contracts
+              : [manifest.dynamic_contracts]
+          ).map((c) => `${c.prefix}/*`)
+        : [];
+    const allAvailable = [...availableContracts, ...dynamicPrefixes].join(', ');
+
+    return new WithValidations(null as any, [
+        `Contract "${contractName}" not found in local plugin "${pluginName}". Available: ${allAvailable}`,
+    ]);
 }
 
 /**
@@ -196,88 +257,116 @@ export function resolveNpmPlugin(
         ]);
     }
 
-    if (!manifest.contracts || manifest.contracts.length === 0) {
-        return new WithValidations(null as any, [
-            `NPM package "${pluginName}" has no contracts defined in plugin.yaml`,
-        ]);
-    }
-
-    const contract = manifest.contracts.find((c) => c.name === contractName);
-    if (!contract) {
-        const availableContracts = manifest.contracts.map((c) => c.name).join(', ');
-        return new WithValidations(null as any, [
-            `Contract "${contractName}" not found in NPM package "${pluginName}". Available contracts: ${availableContracts}`,
-        ]);
-    }
-
     // For NPM packages, resolve through package.json exports
     const packageJsonPath = path.join(npmPluginPath, 'package.json');
-    let componentPath: string;
-    let contractPath: string;
 
-    if (fs.existsSync(packageJsonPath)) {
-        try {
-            const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-            const packageName = packageJson.name;
+    // Helper to get component path from package.json
+    const getComponentPath = (): string => {
+        if (fs.existsSync(packageJsonPath)) {
+            try {
+                const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+                const packageName = packageJson.name;
+                const moduleName = manifest.module || packageName;
 
-            // Resolve component module path
-            // For NPM packages, module field is optional - defaults to using package's main export
-            const moduleName = manifest.module || packageName;
-            if (
-                (moduleName === packageName || !manifest.module) &&
-                packageJson.exports &&
-                packageJson.exports['.']
-            ) {
-                // Use the main export from package.json
-                const mainExport = packageJson.exports['.'];
-                const mainPath =
-                    typeof mainExport === 'string'
-                        ? mainExport
-                        : mainExport.default || mainExport.import;
-                componentPath = path.join(npmPluginPath, mainPath);
-            } else {
-                // Fallback: assume dist/index.js
-                componentPath = path.join(npmPluginPath, 'dist/index.js');
+                if (
+                    (moduleName === packageName || !manifest.module) &&
+                    packageJson.exports &&
+                    packageJson.exports['.']
+                ) {
+                    const mainExport = packageJson.exports['.'];
+                    const mainPath =
+                        typeof mainExport === 'string'
+                            ? mainExport
+                            : mainExport.default || mainExport.import;
+                    return path.join(npmPluginPath, mainPath);
+                }
+            } catch {
+                // Fallback below
             }
-
-            // Resolve contract path from package.json exports
-            // contract format should be the export subpath (e.g., "mood-tracker.jay-contract")
-            const contractSpec = contract.contract;
-            const contractExportKey = './' + contractSpec;
-
-            if (packageJson.exports && packageJson.exports[contractExportKey]) {
-                const exportPath = packageJson.exports[contractExportKey];
-                contractPath = path.join(npmPluginPath, exportPath);
-            } else {
-                // Fallback: try common locations
-                const possiblePaths = [
-                    path.join(npmPluginPath, 'dist', contractSpec),
-                    path.join(npmPluginPath, 'lib', contractSpec),
-                    path.join(npmPluginPath, contractSpec),
-                ];
-                contractPath = possiblePaths.find((p) => fs.existsSync(p)) || possiblePaths[0];
-            }
-        } catch (error) {
-            // Fallback if package.json parsing fails
-            componentPath = path.join(npmPluginPath, 'dist/index.js');
-            contractPath = path.join(npmPluginPath, 'dist', contract.contract);
         }
-    } else {
-        // No package.json: use fallback paths
-        componentPath = path.join(npmPluginPath, 'dist/index.js');
-        contractPath = path.join(npmPluginPath, 'dist', contract.contract);
+        return path.join(npmPluginPath, 'dist/index.js');
+    };
+
+    // Try to find as static contract first
+    if (manifest.contracts && manifest.contracts.length > 0) {
+        const contract = manifest.contracts.find((c) => c.name === contractName);
+        if (contract) {
+            const componentPath = getComponentPath();
+            let contractPath: string;
+
+            if (fs.existsSync(packageJsonPath)) {
+                try {
+                    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+                    const contractSpec = contract.contract;
+                    const contractExportKey = './' + contractSpec;
+
+                    if (packageJson.exports && packageJson.exports[contractExportKey]) {
+                        const exportPath = packageJson.exports[contractExportKey];
+                        contractPath = path.join(npmPluginPath, exportPath);
+                    } else {
+                        const possiblePaths = [
+                            path.join(npmPluginPath, 'dist', contractSpec),
+                            path.join(npmPluginPath, 'lib', contractSpec),
+                            path.join(npmPluginPath, contractSpec),
+                        ];
+                        contractPath = possiblePaths.find((p) => fs.existsSync(p)) || possiblePaths[0];
+                    }
+                } catch {
+                    contractPath = path.join(npmPluginPath, 'dist', contract.contract);
+                }
+            } else {
+                contractPath = path.join(npmPluginPath, 'dist', contract.contract);
+            }
+
+            return new WithValidations(
+                {
+                    contractPath: contractPath,
+                    componentPath: componentPath,
+                    componentName: contract.component,
+                    isNpmPackage: true,
+                    packageName: pluginName,
+                },
+                [],
+            );
+        }
     }
 
-    return new WithValidations(
-        {
-            contractPath: contractPath,
-            componentPath: componentPath,
-            componentName: contract.component, // This is the exported member name
-            isNpmPackage: true,
-            packageName: pluginName,
-        },
-        [],
-    );
+    // Try to find as dynamic contract (prefix/name format)
+    const dynamicConfig = findDynamicContract(manifest, contractName);
+    if (dynamicConfig) {
+        const componentPath = getComponentPath();
+
+        return new WithValidations(
+            {
+                contractPath: '', // Dynamic contracts don't have a static path
+                componentPath: componentPath,
+                componentName: dynamicConfig.component,
+                isNpmPackage: true,
+                packageName: pluginName,
+            },
+            [],
+        );
+    }
+
+    // No matching contract found
+    if (!manifest.contracts && !manifest.dynamic_contracts) {
+        return new WithValidations(null as any, [
+            `NPM package "${pluginName}" has no contracts or dynamic_contracts defined in plugin.yaml`,
+        ]);
+    }
+
+    const availableContracts = manifest.contracts?.map((c) => c.name) || [];
+    const dynamicPrefixes = manifest.dynamic_contracts
+        ? (Array.isArray(manifest.dynamic_contracts)
+              ? manifest.dynamic_contracts
+              : [manifest.dynamic_contracts]
+          ).map((c) => `${c.prefix}/*`)
+        : [];
+    const allAvailable = [...availableContracts, ...dynamicPrefixes].join(', ');
+
+    return new WithValidations(null as any, [
+        `Contract "${contractName}" not found in NPM package "${pluginName}". Available: ${allAvailable}`,
+    ]);
 }
 
 /**

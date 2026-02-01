@@ -831,6 +831,24 @@ if (plugin.isLocal && viteServer) {
 - `stack-server-runtime/lib/plugin-init-discovery.ts` - Use native import for NPM plugins
 - `stack-server-runtime/lib/contract-materializer.ts` - Use native import for export-based generators
 
+### Validation Support for Dynamic Contracts (February 1, 2026)
+
+**Issue:** `jay-stack validate` failed for pages using dynamic contracts with error: "NPM package has no contracts defined in plugin.yaml"
+
+**Root Cause:** The plugin resolver (`compiler-shared`) and contract loader (`compiler-jay-html`) only checked for static `contracts` in plugin.yaml, ignoring `dynamic_contracts`.
+
+**Solution:** 
+1. Updated `resolvePluginComponent()` to check both static and dynamic contracts by prefix
+2. Added `loadPluginContract()` method to `JayImportResolver` that:
+   - Tries static contract path first
+   - Falls back to materialized location (`build/materialized-contracts/`)
+3. Updated `parseHeadlessImports()` to use new loader
+
+**Files Changed:**
+- `compiler-shared/lib/plugin-resolution.ts` - Added `findDynamicContract()`, updated both resolvers
+- `compiler-jay-html/lib/jay-target/jay-import-resolver.ts` - Added `loadPluginContract()`
+- `compiler-jay-html/lib/jay-target/jay-html-parser.ts` - Use `loadPluginContract()` for plugin contracts
+
 ---
 
 ## Related Design Logs
