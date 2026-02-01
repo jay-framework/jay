@@ -48,9 +48,19 @@ export async function createViteForCli(options: CreateViteForCliOptions): Promis
         root: projectRoot,
         // SSR configuration
         ssr: {
-            // Mark stack-server-runtime as external so Vite uses Node's require
-            // This ensures consistent module instances
-            external: ['@jay-framework/stack-server-runtime'],
+            // Mark jay-framework packages as external so Vite uses Node's require
+            // This ensures consistent module instances (same Symbols for service markers)
+            external: [
+                '@jay-framework/stack-server-runtime',
+                '@jay-framework/fullstack-component',
+                '@jay-framework/component',
+                '@jay-framework/runtime',
+                '@jay-framework/reactive',
+                '@jay-framework/serialization',
+                // Plugin packages are also externalized to ensure same Symbol instances
+                '@jay-framework/wix-data',
+                '@jay-framework/wix-server-client',
+            ],
         },
         // Suppress Vite's console output in CLI mode
         logLevel: 'warn',

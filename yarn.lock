@@ -4285,6 +4285,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "@jay-framework/editor-protocol@workspace:packages/jay-stack/editor-protocol"
   dependencies:
+    "@jay-framework/compiler-shared": "workspace:^"
     "@jay-framework/dev-environment": "workspace:^"
     "@jay-framework/jay-cli": "workspace:^"
     "@types/node": "npm:^22.15.21"

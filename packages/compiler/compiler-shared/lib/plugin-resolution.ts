@@ -23,6 +23,18 @@ const require = createRequire(import.meta.url);
 export type PluginInitConfig = string;
 
 /**
+ * Dynamic contract generator configuration.
+ */
+export interface DynamicContractConfig {
+    /** Path to the generator module (relative to plugin root) */
+    generator: string;
+    /** Path to the headless component (relative to plugin root) */
+    component: string;
+    /** Prefix for generated contract names (e.g., "cms" -> "cms/blog-posts") */
+    prefix: string;
+}
+
+/**
  * Plugin manifest structure from plugin.yaml
  */
 export interface PluginManifest {
@@ -35,11 +47,7 @@ export interface PluginManifest {
         component: string; // Exported member name from module (e.g., "moodTracker")
         description?: string;
     }>;
-    dynamic_contracts?: {
-        generator: string;
-        component: string;
-        prefix: string;
-    };
+    dynamic_contracts?: DynamicContractConfig | DynamicContractConfig[];
     /** Named exports from plugin backend bundle that are JayAction instances */
     actions?: string[];
     /** Plugin initialization configuration */

@@ -14,6 +14,7 @@ import type {
     GeneratedContractYaml,
     DynamicContractGenerator,
 } from '@jay-framework/fullstack-component';
+import type { DynamicContractConfig } from '@jay-framework/compiler-shared';
 import { createRequire } from 'module';
 import { scanPlugins, type ScannedPlugin } from './plugin-scanner';
 import type { ViteSSRLoader } from './action-discovery';
@@ -62,69 +63,106 @@ export interface MaterializeResult {
 // ============================================================================
 
 /**
- * Executes a dynamic contract generator with injected services
+ * Executes a single dynamic contract generator with injected services
  */
 async function executeDynamicGenerator(
     plugin: ScannedPlugin,
+    config: DynamicContractConfig,
     projectRoot: string,
     services: Map<symbol, unknown>,
     verbose: boolean,
     viteServer?: ViteSSRLoader,
 ): Promise<GeneratedContractYaml[]> {
-    const { manifest, pluginPath, name: pluginName, isLocal, packageName } = plugin;
-    const dynamicContracts = manifest.dynamic_contracts!;
+    const { pluginPath, name: pluginName, isLocal, packageName } = plugin;
 
-    // Resolve generator path
-    let generatorPath: string;
-    if (!isLocal) {
-        // For npm packages, use require.resolve
-        try {
-            generatorPath = require.resolve(`${packageName}/${dynamicContracts.generator}`, {
-                paths: [projectRoot],
-            });
-        } catch {
-            // Try relative to plugin directory
-            generatorPath = path.join(pluginPath, dynamicContracts.generator);
-        }
-    } else {
-        generatorPath = path.join(pluginPath, dynamicContracts.generator);
-    }
-
-    // Add .ts extension if needed (for local plugins)
-    if (!fs.existsSync(generatorPath)) {
-        const withTs = generatorPath + '.ts';
-        const withJs = generatorPath + '.js';
-        if (fs.existsSync(withTs)) {
-            generatorPath = withTs;
-        } else if (fs.existsSync(withJs)) {
-            generatorPath = withJs;
-        }
-    }
-
-    if (!fs.existsSync(generatorPath)) {
+    // Validate generator is specified
+    if (!config.generator) {
         throw new Error(
-            `Generator file not found for plugin "${pluginName}": ${dynamicContracts.generator}`,
+            `Plugin "${pluginName}" has dynamic_contracts entry but no generator specified`,
         );
     }
 
-    if (verbose) {
-        console.log(`   Loading generator: ${generatorPath}`);
-    }
+    // Determine if generator is a file path or an export name
+    // File paths start with './' or '/' or contain file extension
+    const isFilePath =
+        config.generator.startsWith('./') ||
+        config.generator.startsWith('/') ||
+        config.generator.includes('.ts') ||
+        config.generator.includes('.js');
 
-    // Import the generator module (use Vite if available for TypeScript support)
-    let generatorModule: Record<string, any>;
-    if (viteServer) {
-        generatorModule = await viteServer.ssrLoadModule(generatorPath);
+    let generator: DynamicContractGenerator;
+
+    if (isFilePath) {
+        // Generator is a file path - resolve and import the file
+        let generatorPath: string;
+        if (!isLocal) {
+            try {
+                generatorPath = require.resolve(`${packageName}/${config.generator}`, {
+                    paths: [projectRoot],
+                });
+            } catch {
+                generatorPath = path.join(pluginPath, config.generator);
+            }
+        } else {
+            generatorPath = path.join(pluginPath, config.generator);
+        }
+
+        // Add extension if needed
+        if (!fs.existsSync(generatorPath)) {
+            const withTs = generatorPath + '.ts';
+            const withJs = generatorPath + '.js';
+            if (fs.existsSync(withTs)) {
+                generatorPath = withTs;
+            } else if (fs.existsSync(withJs)) {
+                generatorPath = withJs;
+            }
+        }
+
+        if (!fs.existsSync(generatorPath)) {
+            throw new Error(
+                `Generator file not found for plugin "${pluginName}": ${config.generator}`,
+            );
+        }
+
+        if (verbose) {
+            console.log(`   Loading generator from file: ${generatorPath}`);
+        }
+
+        let generatorModule: Record<string, any>;
+        if (viteServer) {
+            generatorModule = await viteServer.ssrLoadModule(generatorPath);
+        } else {
+            generatorModule = await import(generatorPath);
+        }
+
+        generator = generatorModule.generator || generatorModule.default;
     } else {
-        generatorModule = await import(generatorPath);
-    }
+        // Generator is an export name - import from package's main bundle
+        if (verbose) {
+            console.log(`   Loading generator export: ${config.generator} from ${packageName}`);
+        }
 
-    const generator: DynamicContractGenerator =
-        generatorModule.generator || generatorModule.default;
+        let pluginModule: Record<string, any>;
+        if (viteServer) {
+            pluginModule = await viteServer.ssrLoadModule(packageName);
+        } else {
+            pluginModule = await import(packageName);
+        }
+
+        generator = pluginModule[config.generator];
+
+        if (!generator) {
+            throw new Error(
+                `Generator "${config.generator}" not exported from plugin "${pluginName}". ` +
+                    `Ensure it's exported from the package's index.ts`,
+            );
+        }
+    }
 
     if (!generator || typeof generator.generate !== 'function') {
         throw new Error(
-            `Generator at ${generatorPath} must export a 'generator' with a 'generate' function`,
+            `Generator "${config.generator}" for plugin "${pluginName}" must have a 'generate' function. ` +
+                `Use makeContractGenerator() to create valid generators.`,
         );
     }
 
@@ -287,56 +325,62 @@ export async function materializeContracts(
 
         // Materialize dynamic contracts
         if (manifest.dynamic_contracts) {
-            if (verbose) {
-                console.log(
-                    `   ⚡ Dynamic contracts (prefix: ${manifest.dynamic_contracts.prefix})`,
-                );
-            }
+            // Normalize to array
+            const dynamicConfigs = Array.isArray(manifest.dynamic_contracts)
+                ? manifest.dynamic_contracts
+                : [manifest.dynamic_contracts];
 
-            try {
-                const generatedContracts = await executeDynamicGenerator(
-                    plugin,
-                    projectRoot,
-                    services,
-                    verbose,
-                    viteServer,
-                );
+            // Create plugin output directory
+            const pluginOutputDir = path.join(outputDir, plugin.name.replace(/[@/]/g, '_'));
+            fs.mkdirSync(pluginOutputDir, { recursive: true });
 
-                // Create plugin output directory
-                const pluginOutputDir = path.join(outputDir, plugin.name.replace(/[@/]/g, '_'));
-                fs.mkdirSync(pluginOutputDir, { recursive: true });
-
-                const prefix = manifest.dynamic_contracts.prefix;
-
-                for (const generated of generatedContracts) {
-                    const fullName = `${prefix}/${toKebabCase(generated.name)}`;
-                    const fileName = `${prefix}-${toKebabCase(generated.name)}.jay-contract`;
-                    const filePath = path.join(pluginOutputDir, fileName);
-
-                    // Write the contract file
-                    fs.writeFileSync(filePath, generated.yaml, 'utf-8');
-
-                    // Make path relative to project root
-                    const relativePath = path.relative(projectRoot, filePath);
-
-                    contracts.push({
-                        plugin: plugin.name,
-                        name: fullName,
-                        type: 'dynamic',
-                        path: './' + relativePath,
-                    });
-                    dynamicCount++;
-
-                    if (verbose) {
-                        console.log(`   ⚡ Materialized: ${fullName}`);
-                    }
+            for (const config of dynamicConfigs) {
+                if (verbose) {
+                    console.log(`   ⚡ Dynamic contracts (prefix: ${config.prefix})`);
                 }
-            } catch (error) {
-                console.error(
-                    `   ❌ Failed to materialize dynamic contracts for ${plugin.name}:`,
-                    error,
-                );
-                // Continue with other plugins
+
+                try {
+                    const generatedContracts = await executeDynamicGenerator(
+                        plugin,
+                        config,
+                        projectRoot,
+                        services,
+                        verbose,
+                        viteServer,
+                    );
+
+                    const prefix = config.prefix;
+
+                    for (const generated of generatedContracts) {
+                        const fullName = `${prefix}/${toKebabCase(generated.name)}`;
+                        const fileName = `${prefix}-${toKebabCase(generated.name)}.jay-contract`;
+                        const filePath = path.join(pluginOutputDir, fileName);
+
+                        // Write the contract file
+                        fs.writeFileSync(filePath, generated.yaml, 'utf-8');
+
+                        // Make path relative to project root
+                        const relativePath = path.relative(projectRoot, filePath);
+
+                        contracts.push({
+                            plugin: plugin.name,
+                            name: fullName,
+                            type: 'dynamic',
+                            path: './' + relativePath,
+                        });
+                        dynamicCount++;
+
+                        if (verbose) {
+                            console.log(`   ⚡ Materialized: ${fullName}`);
+                        }
+                    }
+                } catch (error) {
+                    console.error(
+                        `   ❌ Failed to materialize dynamic contracts for ${plugin.name} (${config.prefix}):`,
+                        error,
+                    );
+                    // Continue with other generators
+                }
             }
         }
     }
@@ -407,12 +451,19 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
         // (they may require services that aren't available)
         // Just indicate that dynamic contracts exist
         if (manifest.dynamic_contracts) {
-            contracts.push({
-                plugin: plugin.name,
-                name: `${manifest.dynamic_contracts.prefix}/*`,
-                type: 'dynamic',
-                path: '(run materialization to generate)',
-            });
+            // Normalize to array
+            const dynamicConfigs = Array.isArray(manifest.dynamic_contracts)
+                ? manifest.dynamic_contracts
+                : [manifest.dynamic_contracts];
+
+            for (const config of dynamicConfigs) {
+                contracts.push({
+                    plugin: plugin.name,
+                    name: `${config.prefix}/*`,
+                    type: 'dynamic',
+                    path: '(run materialization to generate)',
+                });
+            }
         }
     }
 

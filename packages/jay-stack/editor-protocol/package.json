@@ -23,6 +23,9 @@
     "test": ":",
     "test:watch": ":"
   },
+  "dependencies": {
+    "@jay-framework/compiler-shared": "workspace:^"
+  },
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",
     "@jay-framework/jay-cli": "workspace:^",
