@@ -32,6 +32,11 @@ describe('compile contract', () => {
                 `Plugin resolution not supported in this test`,
             ]);
         },
+        loadPluginContract(pluginName: string, contractName: string, projectRoot: string) {
+            return new WithValidations(null as any, [
+                `Plugin contract loading not supported in this test`,
+            ]);
+        },
     };
     it('should compile counter contract', async () => {
         const contract = `
@@ -713,7 +718,10 @@ describe('compile contract', () => {
                 return path.relative(importingModule, link);
             },
             resolvePluginComponent() {
-                return null;
+                return null as any;
+            },
+            loadPluginContract() {
+                return null as any;
             },
         };
 

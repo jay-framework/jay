@@ -67,6 +67,11 @@ describe('compiler', () => {
             }
             return new WithValidations(null as any, [`Plugin "${pluginName}" not found in test`]);
         },
+        loadPluginContract(pluginName: string, contractName: string, projectRoot: string) {
+            return new WithValidations(null as any, [
+                `Plugin contract loading not supported in this test`,
+            ]);
+        },
     };
 
     function jayFileWith(jayYaml, body, scripts?) {
