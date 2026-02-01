@@ -1,72 +1,85 @@
 /**
  * Vite Factory
  *
- * Creates a minimal Vite server for CLI tools that need TypeScript support.
- * This allows CLI commands to load TypeScript files (like dynamic contract generators)
- * without requiring a full dev-server.
+ * Single source of truth for creating Vite servers.
+ * Used by both the dev-server and CLI commands.
  */
 
 import { createServer, ViteDevServer } from 'vite';
-import { jayStackCompiler } from '@jay-framework/compiler-jay-stack';
+import { jayStackCompiler, JayRollupConfig } from '@jay-framework/compiler-jay-stack';
 import path from 'node:path';
 
-export interface CreateViteForCliOptions {
+export interface CreateViteServerOptions {
     /** Project root directory */
     projectRoot: string;
-    /** Path to tsconfig.json (defaults to projectRoot/tsconfig.json) */
-    tsConfigFilePath?: string;
+    /** Root directory for pages (defaults to projectRoot) */
+    pagesRoot?: string;
+    /** Base URL path for public assets */
+    base?: string;
+    /** Jay Stack compiler config (optional, will use defaults if not provided) */
+    jayRollupConfig?: JayRollupConfig;
+    /** Log level (defaults to 'info' for dev-server, 'warn' for CLI) */
+    logLevel?: 'info' | 'warn' | 'error' | 'silent';
+    /** Whether to clear screen on rebuild */
+    clearScreen?: boolean;
+}
+
+/**
+ * Creates a Vite server configured for Jay Stack.
+ *
+ * This is the single source of truth for Vite configuration.
+ * Both dev-server and CLI use this function.
+ */
+export async function createViteServer(options: CreateViteServerOptions): Promise<ViteDevServer> {
+    const {
+        projectRoot,
+        pagesRoot = projectRoot,
+        base,
+        jayRollupConfig = { tsConfigFilePath: path.join(projectRoot, 'tsconfig.json') },
+        logLevel = 'info',
+        clearScreen = true,
+    } = options;
+
+    const vite = await createServer({
+        // Don't start HTTP server - we use middleware mode
+        server: { middlewareMode: true },
+        // Use Jay Stack compiler for .jay-html and other custom transforms
+        plugins: [...jayStackCompiler(jayRollupConfig)],
+        // Custom app type (no default middleware)
+        appType: 'custom',
+        // Base URL path
+        base,
+        // Root directory for module resolution
+        root: pagesRoot,
+        // SSR configuration
+        ssr: {
+            // Mark stack-server-runtime as external so Vite uses Node's require
+            // This ensures lib/init.ts and dev-server share the same module instance
+            external: ['@jay-framework/stack-server-runtime'],
+        },
+        // Logging
+        logLevel,
+        clearScreen,
+    });
+
+    return vite;
 }
 
 /**
  * Creates a minimal Vite server for CLI usage.
  *
- * This provides TypeScript transpilation via Vite's SSR loader,
- * allowing CLI commands to dynamically import .ts files.
- *
- * @example
- * ```ts
- * const vite = await createViteForCli({ projectRoot: process.cwd() });
- * try {
- *   const module = await vite.ssrLoadModule('/path/to/file.ts');
- *   // use module...
- * } finally {
- *   await vite.close();
- * }
- * ```
+ * This is a convenience wrapper around createViteServer with CLI-appropriate defaults.
  */
-export async function createViteForCli(options: CreateViteForCliOptions): Promise<ViteDevServer> {
+export async function createViteForCli(options: {
+    projectRoot: string;
+    tsConfigFilePath?: string;
+}): Promise<ViteDevServer> {
     const { projectRoot, tsConfigFilePath = path.join(projectRoot, 'tsconfig.json') } = options;
 
-    const vite = await createServer({
-        // Don't start HTTP server
-        server: { middlewareMode: true },
-        // Use Jay Stack compiler for .jay-html and other custom transforms
-        plugins: [...jayStackCompiler({ tsConfigFilePath })],
-        // Custom app type (no default middleware)
-        appType: 'custom',
-        // Root directory for module resolution
-        root: projectRoot,
-        // SSR configuration
-        ssr: {
-            // Mark jay-framework packages as external so Vite uses Node's require
-            // This ensures consistent module instances (same Symbols for service markers)
-            external: [
-                '@jay-framework/stack-server-runtime',
-                '@jay-framework/fullstack-component',
-                '@jay-framework/component',
-                '@jay-framework/runtime',
-                '@jay-framework/reactive',
-                '@jay-framework/serialization',
-                // Plugin packages are also externalized to ensure same Symbol instances
-                '@jay-framework/wix-data',
-                '@jay-framework/wix-server-client',
-            ],
-        },
-        // Suppress Vite's console output in CLI mode
+    return createViteServer({
+        projectRoot,
+        jayRollupConfig: { tsConfigFilePath },
         logLevel: 'warn',
-        // Don't clear screen
         clearScreen: false,
     });
-
-    return vite;
 }

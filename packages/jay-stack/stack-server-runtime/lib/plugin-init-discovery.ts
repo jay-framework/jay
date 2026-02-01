@@ -250,12 +250,11 @@ export async function executePluginServerInits(
 
             let pluginModule: Record<string, any>;
 
-            if (plugin.isLocal && viteServer) {
-                // Local plugins may have TypeScript files - use Vite's SSR loader
+            if (viteServer) {
+                // In dev mode, use Vite's SSR loader for TypeScript support and hot reload
                 pluginModule = await viteServer.ssrLoadModule(modulePath);
             } else {
-                // NPM plugins: use native import to ensure consistent Symbol identity
-                // (Vite's ssrLoadModule creates different module instances even for externals)
+                // Production: use native import
                 pluginModule = await import(modulePath);
             }
 

@@ -1,4 +1,5 @@
-import { Connect, createServer, ViteDevServer } from 'vite';
+import { Connect, ViteDevServer } from 'vite';
+import { createViteServer } from './vite-factory';
 import {
     JayRoute,
     JayRoutes,
@@ -690,17 +691,11 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
     // Set up graceful shutdown handlers
     setupGracefulShutdown(lifecycleManager);
 
-    const vite = await createServer({
-        server: { middlewareMode: true },
-        plugins: [...jayStackCompiler(jayRollupConfig)],
-        appType: 'custom',
+    const vite = await createViteServer({
+        projectRoot: projectRootFolder,
+        pagesRoot: pagesRootFolder,
         base: publicBaseUrlPath,
-        root: pagesRootFolder,
-        ssr: {
-            // Mark stack-server-runtime as external so Vite uses Node's require
-            // This ensures lib/init.ts and dev-server share the same module instance
-            external: ['@jay-framework/stack-server-runtime'],
-        },
+        jayRollupConfig,
     });
 
     // Set the Vite server and initialize services

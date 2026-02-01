@@ -849,6 +849,19 @@ if (plugin.isLocal && viteServer) {
 - `compiler-jay-html/lib/jay-target/jay-import-resolver.ts` - Added `loadPluginContract()`
 - `compiler-jay-html/lib/jay-target/jay-html-parser.ts` - Use `loadPluginContract()` for plugin contracts
 
+### Vite Factory Consolidation (February 1, 2026)
+
+**Issue:** Vite server creation was duplicated between `dev-server.ts` and `vite-factory.ts` with different configs.
+
+**Solution:** Consolidated into single `createViteServer()` function in `vite-factory.ts`:
+- Both dev-server and CLI use the same function
+- Consistent SSR externalization config
+- `createViteForCli()` is now a convenience wrapper
+
+**Files Changed:**
+- `dev-server/lib/vite-factory.ts` - Added `createViteServer()`, refactored `createViteForCli()`
+- `dev-server/lib/dev-server.ts` - Use `createViteServer()` instead of inline config
+
 ---
 
 ## Related Design Logs
