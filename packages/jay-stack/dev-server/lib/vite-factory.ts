@@ -55,10 +55,7 @@ export async function createViteServer(options: CreateViteServerOptions): Promis
         ssr: {
             // Mark jay-framework packages as external so Vite uses Node's require
             // This ensures all packages share the same module instances (Symbol identity)
-            external: [
-                '@jay-framework/stack-server-runtime',
-                '@jay-framework/fullstack-component',
-            ],
+            external: ['@jay-framework/stack-server-runtime', '@jay-framework/fullstack-component'],
         },
         // Logging
         logLevel,

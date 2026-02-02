@@ -1402,6 +1402,45 @@ The `product-card.jay-contract` has `thumbnail.url` as a slow property, but sinc
 
 **Key Design Decision:** Reuse existing `JayImportResolver` interface for loading linked contracts rather than duplicating file I/O logic. This maintains a single source of truth for contract resolution.
 
+#### Fix 6: Missing Slow-Phase Data Validation (2026-02-02)
+
+**Problem:** When a slow-phase binding referenced a field that was `undefined` or `null` in the data, the binding was kept as-is (e.g., `{title}` remained in output). This caused:
+
+1. Broken-looking output with raw binding syntax visible to users
+2. Silent failures - no indication that data was missing
+3. Confusion between missing values and valid falsy values (0, '', false)
+
+**Solution:**
+
+1. **Add validation errors** for missing slow-phase data - the build fails with descriptive error messages
+2. **Render "undefined"** as the output value - makes the issue visible in rendered HTML
+3. **Distinguish truly missing values** (undefined/null) from valid falsy values (0, '', false)
+
+**Behavior:**
+
+- `undefined` or `null` → validation error + render "undefined"
+- `0`, `''`, `false` → no error, render as "0", "", "false" respectively
+
+**Example validation error:**
+
+```
+Slow-phase binding {description} at path "description" has no value in slowViewState. Expected a value but got undefined.
+```
+
+**Files Modified:**
+
+- `compiler-jay-html/lib/slow-render/slow-render-transform.ts` - Updated `resolveTextBindings` to validate missing data
+- `compiler-jay-html/test/slow-render/slow-render-transform.test.ts` - Added 6 tests for missing data handling
+
+**Tests Added:**
+
+- `should fail validation and render "undefined" for undefined slow-phase field`
+- `should fail validation and render "undefined" for null slow-phase field`
+- `should fail validation and render "undefined" for missing nested sub-contract field`
+- `should fail validation and render "undefined" for missing fields in forEach items`
+- `should fail validation and render "undefined" for missing image sub-contract`
+- `should correctly render valid falsy values (0, empty string, false)`
+
 ### Phase 6-7: Production Build & Incremental Regeneration (FUTURE)
 
 Deferred to future implementation.

@@ -1258,8 +1258,7 @@ After implementing the metadata flow, the cms example still failed with "Service
    // Match either full npm name or short name
    const entry = index.contracts?.find(
      (c: { plugin: string; name: string }) =>
-       (c.plugin === pluginName || c.plugin === pluginDir) &&
-       c.name === contractName,
+       (c.plugin === pluginName || c.plugin === pluginDir) && c.name === contractName,
    );
    ```
 

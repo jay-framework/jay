@@ -39,10 +39,10 @@ jay-stack dev --test-mode --timeout 120  # Both options
 
 Test mode enables special endpoints for reliable server management:
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/_jay/health` | GET | Returns `{"status":"ready","port":3300,"editorPort":3301,"uptime":5.2}` |
-| `/_jay/shutdown` | POST | Gracefully shuts down the server, returns `{"status":"shutting_down"}` |
+| Endpoint         | Method | Description                                                             |
+| ---------------- | ------ | ----------------------------------------------------------------------- |
+| `/_jay/health`   | GET    | Returns `{"status":"ready","port":3300,"editorPort":3301,"uptime":5.2}` |
+| `/_jay/shutdown` | POST   | Gracefully shuts down the server, returns `{"status":"shutting_down"}`  |
 
 **Example smoke test workflow:**
 
@@ -256,10 +256,10 @@ The CLI is built using:
 
 ### Dev Command Options
 
-| Option              | Description                                              |
-| ------------------- | -------------------------------------------------------- |
-| `--test-mode`       | Enable test endpoints (`/_jay/health`, `/_jay/shutdown`) |
-| `--timeout <secs>`  | Auto-shutdown after N seconds (implies `--test-mode`)    |
+| Option             | Description                                              |
+| ------------------ | -------------------------------------------------------- |
+| `--test-mode`      | Enable test endpoints (`/_jay/health`, `/_jay/shutdown`) |
+| `--timeout <secs>` | Auto-shutdown after N seconds (implies `--test-mode`)    |
 
 ### Validate Command Options
 

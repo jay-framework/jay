@@ -106,7 +106,9 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
         if (options.testMode) {
             console.log(`🧪 Test Mode: enabled`);
             console.log(`   Health: http://localhost:${devServerPort}/_jay/health`);
-            console.log(`   Shutdown: curl -X POST http://localhost:${devServerPort}/_jay/shutdown`);
+            console.log(
+                `   Shutdown: curl -X POST http://localhost:${devServerPort}/_jay/shutdown`,
+            );
             if (options.timeout) {
                 console.log(`   Timeout: ${options.timeout}s`);
             }

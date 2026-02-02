@@ -232,14 +232,17 @@ function hasBindings(text: string): boolean {
  * @param contextData - The data object for the current context (could be root or array item)
  * @param phaseMap - Map of property paths to phase info
  * @param contextPath - The property path prefix for phase lookup
+ * @returns WithValidations containing resolved text and any validation errors
  */
 function resolveTextBindings(
     text: string,
     contextData: Record<string, unknown>,
     phaseMap: Map<string, PhaseInfo>,
     contextPath: string = '',
-): string {
-    return text.replace(/{([^}]+)}/g, (match, expr) => {
+): WithValidations<string> {
+    const validationErrors: string[] = [];
+
+    const resolved = text.replace(/{([^}]+)}/g, (match, expr) => {
         const trimmedExpr = expr.trim();
 
         // Check if it's a simple property path
@@ -249,26 +252,40 @@ function resolveTextBindings(
             if (isSlowPhase(fullPath, phaseMap)) {
                 // Get value from the current context data (not root)
                 const value = getValueByPath(contextData, trimmedExpr);
-                if (value !== undefined && value !== null) {
-                    return String(value);
+
+                // Check for truly missing values (undefined/null) vs valid falsy values (0, '', false)
+                if (value === undefined || value === null) {
+                    // Record validation error for missing slow-phase data
+                    validationErrors.push(
+                        `Slow-phase binding {${trimmedExpr}} at path "${fullPath}" has no value in slowViewState. ` +
+                            `Expected a value but got ${value === undefined ? 'undefined' : 'null'}.`,
+                    );
+                    // Render as "undefined" to make the issue visible in output
+                    return 'undefined';
                 }
+
+                // Valid value (including falsy values like 0, '', false)
+                return String(value);
             }
         }
 
         // Keep the binding as-is for non-slow or complex expressions
         return match;
     });
+
+    return new WithValidations(resolved, validationErrors);
 }
 
 /**
  * Transform a single element, resolving slow bindings
+ * @returns WithValidations containing transformed elements and any validation errors
  */
 function transformElement(
     element: HTMLElement,
     phaseMap: Map<string, PhaseInfo>,
-    contextPath: string = '',
+    contextPath: string,
     contextData: Record<string, unknown>,
-): HTMLElement[] {
+): WithValidations<HTMLElement[]> {
     // Handle forEach directive
     const forEachAttr = element.getAttribute('forEach');
     if (forEachAttr) {
@@ -281,14 +298,13 @@ function transformElement(
 
             if (Array.isArray(arrayValue)) {
                 const trackBy = element.getAttribute('trackBy') || 'id';
-                const results: HTMLElement[] = [];
 
-                arrayValue.forEach((item, index) => {
+                // Process each array item and collect results
+                const itemResults = arrayValue.map((item, index): WithValidations<HTMLElement> => {
                     // Clone the element
                     const cloned = element.clone() as HTMLElement;
 
                     // Remove forEach and trackBy, add slowForEach with jay* attributes
-                    // Note: removeAttribute is case-sensitive, so remove both cases
                     cloned.removeAttribute('forEach');
                     cloned.removeAttribute('foreach');
                     cloned.removeAttribute('trackBy');
@@ -303,26 +319,18 @@ function transformElement(
                             : String(index);
                     cloned.setAttribute('jayTrackBy', trackByValue);
 
-                    // Transform children with new context - item becomes the new contextData
-                    const newContextPath = fullPath;
+                    // Transform children with new context
                     const itemData = item as Record<string, unknown>;
-                    const transformedChildren = transformChildren(
-                        cloned,
-                        phaseMap,
-                        newContextPath,
-                        itemData,
+                    return transformChildren(cloned, phaseMap, fullPath, itemData).map(
+                        (children) => {
+                            cloned.innerHTML = '';
+                            children.forEach((child) => cloned.appendChild(child as any));
+                            return cloned;
+                        },
                     );
-
-                    // Replace children
-                    cloned.innerHTML = '';
-                    for (const child of transformedChildren) {
-                        cloned.appendChild(child as any);
-                    }
-
-                    results.push(cloned);
                 });
 
-                return results;
+                return WithValidations.all(itemResults);
             }
         }
     }
@@ -330,7 +338,6 @@ function transformElement(
     // Handle if directive (slow conditional)
     const ifAttr = element.getAttribute('if');
     if (ifAttr) {
-        // Build slow render context for condition evaluation
         const slowContext: SlowRenderContext = {
             slowData: contextData,
             phaseMap: phaseMap as Map<string, { phase: string; isArray?: boolean }>,
@@ -342,83 +349,87 @@ function transformElement(
         if (conditionResult.type === 'resolved') {
             if (!conditionResult.value) {
                 // Condition is false - remove the element
-                return [];
+                return WithValidations.pure([]);
             }
             // Condition is true - remove the if attribute and keep the element
             element.removeAttribute('if');
         } else {
             // Mixed phase - update the if attribute with simplified expression
-            // For now, keep the original expression since we'd need to convert
-            // the RenderFragment back to a template expression
             if (conditionResult.simplifiedExpr && conditionResult.simplifiedExpr !== ifAttr) {
                 element.setAttribute('if', conditionResult.simplifiedExpr);
             }
         }
     }
 
-    // Transform text content in child nodes (direct text, not nested elements)
-    // Note: we don't process text here because transformChildren handles it
+    // Transform attributes - collect all attribute resolution results
+    const attrResults = Object.keys(element.attributes)
+        .filter(
+            (attrName) =>
+                ![
+                    'foreach',
+                    'trackby',
+                    'slowforeach',
+                    'jayindex',
+                    'jaytrackby',
+                    'if',
+                    'ref',
+                ].includes(attrName.toLowerCase()),
+        )
+        .map((attrName) => {
+            const attrValue = element.getAttribute(attrName);
+            if (attrValue && hasBindings(attrValue)) {
+                return resolveTextBindings(attrValue, contextData, phaseMap, contextPath).map(
+                    (resolved) => {
+                        element.setAttribute(attrName, resolved);
+                        return null; // Side effect only
+                    },
+                );
+            }
+            return WithValidations.pure(null);
+        });
 
-    // Transform attributes
-    for (const attrName of Object.keys(element.attributes)) {
-        if (
-            ['foreach', 'trackby', 'slowforeach', 'jayindex', 'jaytrackby', 'if', 'ref'].includes(
-                attrName.toLowerCase(),
-            )
-        ) {
-            continue;
-        }
-
-        const attrValue = element.getAttribute(attrName);
-        if (attrValue && hasBindings(attrValue)) {
-            const resolved = resolveTextBindings(attrValue, contextData, phaseMap, contextPath);
-            element.setAttribute(attrName, resolved);
-        }
-    }
-
-    // Recursively transform children
-    const transformedChildren = transformChildren(element, phaseMap, contextPath, contextData);
-    element.innerHTML = '';
-    for (const child of transformedChildren) {
-        element.appendChild(child as any);
-    }
-
-    return [element];
+    // Merge attribute validations and transform children
+    return WithValidations.all(attrResults)
+        .flatMap(() => transformChildren(element, phaseMap, contextPath, contextData))
+        .map((children) => {
+            element.innerHTML = '';
+            children.forEach((child) => element.appendChild(child as any));
+            return [element];
+        });
 }
 
 /**
  * Transform all children of an element
+ * @returns WithValidations containing transformed nodes and any validation errors
  */
 function transformChildren(
     parent: HTMLElement,
     phaseMap: Map<string, PhaseInfo>,
-    contextPath: string = '',
+    contextPath: string,
     contextData: Record<string, unknown>,
-): Node[] {
-    const results: Node[] = [];
-
-    for (const child of parent.childNodes) {
+): WithValidations<Node[]> {
+    // Process each child and collect WithValidations results
+    const childResults = parent.childNodes.map((child): WithValidations<Node[]> => {
         if (child.nodeType === NodeType.ELEMENT_NODE) {
-            const transformed = transformElement(
-                child as HTMLElement,
-                phaseMap,
-                contextPath,
-                contextData,
-            );
-            results.push(...transformed);
+            return transformElement(child as HTMLElement, phaseMap, contextPath, contextData);
         } else if (child.nodeType === NodeType.TEXT_NODE) {
             const text = child.rawText;
             if (hasBindings(text)) {
-                const resolved = resolveTextBindings(text, contextData, phaseMap, contextPath);
-                (child as Node & { _rawText: string })._rawText = resolved;
+                return resolveTextBindings(text, contextData, phaseMap, contextPath).map(
+                    (resolved) => {
+                        (child as Node & { _rawText: string })._rawText = resolved;
+                        return [child as Node];
+                    },
+                );
             }
-            results.push(child as Node);
+            return WithValidations.pure([child as Node]);
         } else {
-            results.push(child as Node);
+            return WithValidations.pure([child as Node]);
         }
-    }
+    });
 
-    return results;
+    // Merge all results: flatten node arrays and collect all validations
+    return WithValidations.all(childResults).map((arrays) => arrays.flat());
 }
 
 /**
@@ -514,25 +525,21 @@ export function slowRenderTransform(input: SlowRenderInput): WithValidations<Slo
             return new WithValidations(undefined, validations);
         }
 
-        // Transform body children
-        const transformedChildren = transformChildren(body, phaseMap, '', input.slowViewState);
-        body.innerHTML = '';
-        for (const child of transformedChildren) {
-            body.appendChild(child as any);
-        }
+        // Transform body children and generate output
+        // Merge parsing validations with transform validations
+        return transformChildren(body, phaseMap, '', input.slowViewState)
+            .withValidationsFrom(new WithValidations(null, validations))
+            .map((children) => {
+                body.innerHTML = '';
+                children.forEach((child) => body.appendChild(child as any));
 
-        // Resolve relative paths if sourceDir is provided
-        // This allows the pre-rendered file to be placed in a different directory
-        if (input.sourceDir) {
-            resolveRelativePaths(root, input.sourceDir);
-        }
+                // Resolve relative paths if sourceDir is provided
+                if (input.sourceDir) {
+                    resolveRelativePaths(root, input.sourceDir);
+                }
 
-        // Generate output
-        const output: SlowRenderOutput = {
-            preRenderedJayHtml: root.toString(),
-        };
-
-        return new WithValidations(output, validations);
+                return { preRenderedJayHtml: root.toString() };
+            });
     } catch (error) {
         validations.push(`Slow render transform failed: ${error.message}`);
         return new WithValidations(undefined, validations);

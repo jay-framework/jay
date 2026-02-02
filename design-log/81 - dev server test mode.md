@@ -3,11 +3,13 @@
 ## Background
 
 When running smoke tests or integration tests against the dev server, we need reliable ways to:
+
 1. Know when the server is ready to accept requests
 2. Cleanly shut down the server after tests complete
 3. Optionally auto-terminate after a timeout (for CI safety)
 
 Currently, tests must:
+
 - Spawn the dev server as a child process
 - Parse stdout for "Jay Stack dev server started successfully"
 - Kill the process when done (via SIGTERM)
@@ -49,10 +51,10 @@ jay-stack-cli dev --test-mode --timeout 30
 
 ### Endpoints (only when --test-mode is enabled)
 
-| Endpoint | Method | Response | Purpose |
-|----------|--------|----------|---------|
-| `/_jay/health` | GET | `{"status":"ready","port":3300}` | Readiness check |
-| `/_jay/shutdown` | POST | `{"status":"shutting_down"}` | Graceful shutdown |
+| Endpoint         | Method | Response                         | Purpose           |
+| ---------------- | ------ | -------------------------------- | ----------------- |
+| `/_jay/health`   | GET    | `{"status":"ready","port":3300}` | Readiness check   |
+| `/_jay/shutdown` | POST   | `{"status":"shutting_down"}`     | Graceful shutdown |
 
 ### Startup Output Enhancement
 
@@ -74,8 +76,9 @@ jay-stack-cli dev --test-mode --json
 ```
 
 Outputs on ready:
+
 ```json
-{"event":"ready","devServer":"http://localhost:3300","editorServer":"http://localhost:3301"}
+{ "event": "ready", "devServer": "http://localhost:3300", "editorServer": "http://localhost:3301" }
 ```
 
 ## Implementation Plan
@@ -113,22 +116,22 @@ Outputs on ready:
 ```typescript
 // dev-server.ts
 if (options.testMode) {
-    app.get('/_jay/health', (req, res) => {
-        res.json({ status: 'ready', port: options.port });
-    });
-    
-    app.post('/_jay/shutdown', async (req, res) => {
-        res.json({ status: 'shutting_down' });
-        await gracefulShutdown();
-        process.exit(0);
-    });
+  app.get('/_jay/health', (req, res) => {
+    res.json({ status: 'ready', port: options.port });
+  });
+
+  app.post('/_jay/shutdown', async (req, res) => {
+    res.json({ status: 'shutting_down' });
+    await gracefulShutdown();
+    process.exit(0);
+  });
 }
 
 if (options.timeout) {
-    setTimeout(() => {
-        console.log(`[DevServer] Timeout (${options.timeout}s) reached, shutting down`);
-        gracefulShutdown().then(() => process.exit(0));
-    }, options.timeout * 1000);
+  setTimeout(() => {
+    console.log(`[DevServer] Timeout (${options.timeout}s) reached, shutting down`);
+    gracefulShutdown().then(() => process.exit(0));
+  }, options.timeout * 1000);
 }
 ```
 
@@ -138,42 +141,42 @@ if (options.timeout) {
 
 ```typescript
 describe('Smoke Tests', () => {
-    let serverUrl: string;
-    
-    beforeAll(async () => {
-        // Start with test mode and timeout
-        spawn('yarn', ['dev', '--test-mode', '--timeout', '120']);
-        
-        // Wait for health endpoint (polls until ready)
-        serverUrl = await waitForHealthy('http://localhost:3300/_jay/health', 30000);
-    });
-    
-    afterAll(async () => {
-        // Clean shutdown via endpoint
-        await fetch(`${serverUrl}/_jay/shutdown`, { method: 'POST' });
-    });
-    
-    it('should render products page', async () => {
-        const res = await fetch(`${serverUrl}/products/`);
-        expect(res.status).toBe(200);
-    });
+  let serverUrl: string;
+
+  beforeAll(async () => {
+    // Start with test mode and timeout
+    spawn('yarn', ['dev', '--test-mode', '--timeout', '120']);
+
+    // Wait for health endpoint (polls until ready)
+    serverUrl = await waitForHealthy('http://localhost:3300/_jay/health', 30000);
+  });
+
+  afterAll(async () => {
+    // Clean shutdown via endpoint
+    await fetch(`${serverUrl}/_jay/shutdown`, { method: 'POST' });
+  });
+
+  it('should render products page', async () => {
+    const res = await fetch(`${serverUrl}/products/`);
+    expect(res.status).toBe(200);
+  });
 });
 
 async function waitForHealthy(url: string, timeout: number): Promise<string> {
-    const start = Date.now();
-    while (Date.now() - start < timeout) {
-        try {
-            const res = await fetch(url);
-            if (res.ok) {
-                const { port } = await res.json();
-                return `http://localhost:${port}`;
-            }
-        } catch {
-            // Not ready yet
-        }
-        await new Promise(r => setTimeout(r, 500));
+  const start = Date.now();
+  while (Date.now() - start < timeout) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) {
+        const { port } = await res.json();
+        return `http://localhost:${port}`;
+      }
+    } catch {
+      // Not ready yet
     }
-    throw new Error(`Server not ready within ${timeout}ms`);
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error(`Server not ready within ${timeout}ms`);
 }
 ```
 
@@ -204,11 +207,11 @@ exit $TEST_EXIT
 
 ## Trade-offs
 
-| Approach | Pros | Cons |
-|----------|------|------|
-| **Test mode flag** | Explicit opt-in, no prod impact | Extra flag to remember |
-| **Always-on endpoints** | Simpler | Security concern in prod |
-| **Separate test command** | Clear separation | Code duplication |
+| Approach                  | Pros                            | Cons                     |
+| ------------------------- | ------------------------------- | ------------------------ |
+| **Test mode flag**        | Explicit opt-in, no prod impact | Extra flag to remember   |
+| **Always-on endpoints**   | Simpler                         | Security concern in prod |
+| **Separate test command** | Clear separation                | Code duplication         |
 
 **Decision**: Test mode flag - explicit and safe.
 
