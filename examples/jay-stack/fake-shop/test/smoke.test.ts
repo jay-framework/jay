@@ -4,6 +4,8 @@
  * These tests verify that the dev server starts correctly and pages render
  * without Symbol identity issues (services are properly registered and resolved).
  *
+ * Uses --test-mode for reliable health checks and clean shutdown.
+ *
  * Run with: yarn test:smoke
  */
 
@@ -17,17 +19,18 @@ const PROJECT_ROOT = path.resolve(__dirname, '..');
 const SERVER_STARTUP_TIMEOUT = 30000;
 // Timeout for individual page requests (ms)
 const REQUEST_TIMEOUT = 10000;
+// Poll interval for health check (ms)
+const HEALTH_POLL_INTERVAL = 500;
 
 describe('Fake Shop Smoke Tests', () => {
     let devServerProcess: ChildProcess | null = null;
-    let serverReady = false;
     let devServerUrl = '';
 
     /**
      * Start the dev server before all tests
      */
     beforeAll(async () => {
-        await startDevServer();
+        devServerUrl = await startDevServer();
     }, SERVER_STARTUP_TIMEOUT + 5000);
 
     /**
@@ -38,39 +41,38 @@ describe('Fake Shop Smoke Tests', () => {
     });
 
     /**
-     * Start the dev server and wait for it to be ready
+     * Start the dev server with --test-mode and wait for health endpoint
      */
-    async function startDevServer(): Promise<void> {
+    async function startDevServer(): Promise<string> {
         return new Promise((resolve, reject) => {
             const timeout = setTimeout(() => {
                 reject(new Error(`Dev server did not start within ${SERVER_STARTUP_TIMEOUT}ms`));
             }, SERVER_STARTUP_TIMEOUT);
 
-            devServerProcess = spawn('yarn', ['dev'], {
+            let detectedUrl = '';
+            let output = '';
+
+            // Start with --test-mode for health/shutdown endpoints
+            devServerProcess = spawn('yarn', ['dev', '--test-mode'], {
                 cwd: PROJECT_ROOT,
                 shell: true,
                 stdio: ['pipe', 'pipe', 'pipe'],
                 env: { ...process.env, FORCE_COLOR: '0' },
             });
 
-            let output = '';
-
             devServerProcess.stdout?.on('data', (data) => {
                 const text = data.toString();
                 output += text;
-                
-                // Parse the dev server URL from output (e.g., "📱 Dev Server: http://localhost:3010")
+
+                // Parse the dev server URL from output
                 const urlMatch = text.match(/Dev Server: (http:\/\/localhost:\d+)/);
                 if (urlMatch) {
-                    devServerUrl = urlMatch[1];
+                    detectedUrl = urlMatch[1];
                 }
-                
-                // Look for the success message
-                if (text.includes('Jay Stack dev server started successfully')) {
-                    clearTimeout(timeout);
-                    serverReady = true;
-                    // Give it a moment to fully initialize
-                    setTimeout(() => resolve(), 1000);
+
+                // Once we see the success message, start polling health endpoint
+                if (text.includes('Jay Stack dev server started successfully') && detectedUrl) {
+                    pollHealth(detectedUrl, timeout, resolve, reject);
                 }
             });
 
@@ -78,7 +80,7 @@ describe('Fake Shop Smoke Tests', () => {
                 const text = data.toString();
                 output += text;
                 // Check for service not found errors (Symbol identity issue)
-                if (text.includes("Service") && text.includes("not found")) {
+                if (text.includes('Service') && text.includes('not found')) {
                     clearTimeout(timeout);
                     reject(new Error(`Symbol identity issue detected:\n${text}`));
                 }
@@ -90,7 +92,7 @@ describe('Fake Shop Smoke Tests', () => {
             });
 
             devServerProcess.on('exit', (code) => {
-                if (!serverReady && code !== 0) {
+                if (!detectedUrl && code !== 0) {
                     clearTimeout(timeout);
                     reject(new Error(`Dev server exited with code ${code}\n${output}`));
                 }
@@ -99,13 +101,64 @@ describe('Fake Shop Smoke Tests', () => {
     }
 
     /**
-     * Stop the dev server
+     * Poll health endpoint until ready
+     */
+    async function pollHealth(
+        url: string,
+        timeout: NodeJS.Timeout,
+        resolve: (url: string) => void,
+        reject: (err: Error) => void,
+    ): Promise<void> {
+        const healthUrl = `${url}/_jay/health`;
+        const startTime = Date.now();
+
+        const poll = async () => {
+            try {
+                const response = await fetch(healthUrl);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status === 'ready') {
+                        clearTimeout(timeout);
+                        resolve(url);
+                        return;
+                    }
+                }
+            } catch {
+                // Not ready yet, continue polling
+            }
+
+            // Check if we've exceeded timeout
+            if (Date.now() - startTime > SERVER_STARTUP_TIMEOUT - 1000) {
+                clearTimeout(timeout);
+                reject(new Error('Health endpoint never became ready'));
+                return;
+            }
+
+            // Poll again after interval
+            setTimeout(poll, HEALTH_POLL_INTERVAL);
+        };
+
+        poll();
+    }
+
+    /**
+     * Stop the dev server via shutdown endpoint
      */
     async function stopDevServer(): Promise<void> {
+        if (devServerUrl) {
+            try {
+                await fetch(`${devServerUrl}/_jay/shutdown`, { method: 'POST' });
+                // Wait for graceful shutdown
+                await new Promise((resolve) => setTimeout(resolve, 500));
+            } catch {
+                // Server may have already stopped
+            }
+        }
+
+        // Fallback: kill process if still running
         if (devServerProcess) {
             devServerProcess.kill('SIGTERM');
-            // Wait a bit for cleanup
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            await new Promise((resolve) => setTimeout(resolve, 500));
             devServerProcess = null;
         }
     }
@@ -117,7 +170,7 @@ describe('Fake Shop Smoke Tests', () => {
         if (!devServerUrl) {
             throw new Error('Dev server URL not detected');
         }
-        
+
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
@@ -136,9 +189,17 @@ describe('Fake Shop Smoke Tests', () => {
     // Tests
     // =========================================================================
 
-    it('should start dev server without Symbol identity errors', () => {
+    it('should start dev server and respond to health check', async () => {
         // If we got here, the server started successfully
-        expect(serverReady).toBe(true);
+        expect(devServerUrl).toBeTruthy();
+
+        // Verify health endpoint works
+        const response = await fetch(`${devServerUrl}/_jay/health`);
+        expect(response.ok).toBe(true);
+
+        const health = await response.json();
+        expect(health.status).toBe('ready');
+        expect(health.port).toBeGreaterThan(0);
     });
 
     it('should render home page successfully', async () => {

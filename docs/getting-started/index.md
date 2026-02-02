@@ -28,6 +28,7 @@ Jay is an experimental framework that solves the design-to-code challenge by cre
 - **[Jay-HTML Format](../core/jay-html.md)** - Learn the extended HTML format
 - **[Contract Files](../core/contract-files.md)** - Create reusable component contracts
 - **[Component Development](../core/components.md)** - Build your first components
+- **[Testing](../core/testing.md)** - Smoke tests and CI integration
 - **[Examples](../examples/basic.md)** - See working code patterns
 
 ## Choose Your Path

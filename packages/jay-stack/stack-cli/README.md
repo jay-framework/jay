@@ -27,6 +27,57 @@ jay-stack dev ./my-project # Start dev server in specified directory
 
 This will start both the development server and editor server with default configuration.
 
+##### Test Mode
+
+For automated testing, CI pipelines, and smoke tests, use the `--test-mode` flag:
+
+```bash
+jay-stack dev --test-mode           # Enable test endpoints
+jay-stack dev --timeout 60          # Auto-shutdown after 60 seconds (implies --test-mode)
+jay-stack dev --test-mode --timeout 120  # Both options
+```
+
+Test mode enables special endpoints for reliable server management:
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/_jay/health` | GET | Returns `{"status":"ready","port":3300,"editorPort":3301,"uptime":5.2}` |
+| `/_jay/shutdown` | POST | Gracefully shuts down the server, returns `{"status":"shutting_down"}` |
+
+**Example smoke test workflow:**
+
+```bash
+# Start server with 2-minute timeout
+jay-stack dev --test-mode --timeout 120 &
+
+# Wait for health endpoint
+for i in {1..30}; do
+    if curl -s http://localhost:3300/_jay/health | grep -q "ready"; then
+        break
+    fi
+    sleep 1
+done
+
+# Run your tests
+curl -s http://localhost:3300/products/ | grep -q "<!doctype html"
+
+# Clean shutdown
+curl -X POST http://localhost:3300/_jay/shutdown
+```
+
+When test mode is enabled, the startup output includes the test endpoints:
+
+```
+🚀 Jay Stack dev server started successfully!
+📱 Dev Server: http://localhost:3300
+🎨 Editor Server: http://localhost:3301 (ID: init)
+📁 Pages directory: ./src/pages
+🧪 Test Mode: enabled
+   Health: http://localhost:3300/_jay/health
+   Shutdown: curl -X POST http://localhost:3300/_jay/shutdown
+   Timeout: 60s
+```
+
 #### `jay-stack validate [path]`
 
 Validate all `.jay-html` and `.jay-contract` files in the project without creating output files:
@@ -202,6 +253,13 @@ The CLI is built using:
 | `jay-stack dev [path]`             | Start the development server             |
 | `jay-stack validate [path]`        | Validate jay-html and jay-contract files |
 | `jay-stack validate-plugin [path]` | Validate a plugin package                |
+
+### Dev Command Options
+
+| Option              | Description                                              |
+| ------------------- | -------------------------------------------------------- |
+| `--test-mode`       | Enable test endpoints (`/_jay/health`, `/_jay/shutdown`) |
+| `--timeout <secs>`  | Auto-shutdown after N seconds (implies `--test-mode`)    |
 
 ### Validate Command Options
 

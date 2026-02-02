@@ -22,10 +22,17 @@ program
 program
     .command('dev [path]')
     .description('Start the Jay Stack development server')
+    .option('--test-mode', 'Enable test endpoints (/_jay/health, /_jay/shutdown)')
+    .option('--timeout <seconds>', 'Auto-shutdown after N seconds (implies --test-mode)', parseInt)
     .action(async (path, options) => {
         try {
+            // --timeout implies --test-mode
+            const testMode = options.testMode || options.timeout !== undefined;
+
             await startDevServer({
                 projectPath: path || process.cwd(),
+                testMode,
+                timeout: options.timeout,
             });
         } catch (error: any) {
             console.error(chalk.red('Error starting dev server:'), error.message);

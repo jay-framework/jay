@@ -10,6 +10,10 @@ import { generatePageDefinitionFiles } from './generate-page-definition-files';
 
 export interface StartDevServerOptions {
     projectPath?: string;
+    /** Enable test endpoints (/_jay/health, /_jay/shutdown) */
+    testMode?: boolean;
+    /** Auto-shutdown after N seconds */
+    timeout?: number;
 }
 
 export async function startDevServer(options: StartDevServerOptions = {}) {
@@ -98,8 +102,18 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
         if (fs.existsSync(publicPath)) {
             console.log(`📁 Public folder: ${resolvedConfig.devServer.publicFolder}`);
         }
+        // Test mode info
+        if (options.testMode) {
+            console.log(`🧪 Test Mode: enabled`);
+            console.log(`   Health: http://localhost:${devServerPort}/_jay/health`);
+            console.log(`   Shutdown: curl -X POST http://localhost:${devServerPort}/_jay/shutdown`);
+            if (options.timeout) {
+                console.log(`   Timeout: ${options.timeout}s`);
+            }
+        }
     });
 
+    // Shutdown function
     const shutdown = async () => {
         console.log('\n🛑 Shutting down servers...');
         await editorServer.stop();
@@ -107,6 +121,36 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
         await new Promise((resolve) => expressServer.close(resolve));
         process.exit(0);
     };
+
+    // Test mode endpoints (for smoke tests and CI)
+    if (options.testMode) {
+        // Health check endpoint
+        app.get('/_jay/health', (_req, res) => {
+            res.json({
+                status: 'ready',
+                port: devServerPort,
+                editorPort,
+                uptime: process.uptime(),
+            });
+        });
+
+        // Shutdown endpoint
+        app.post('/_jay/shutdown', async (_req, res) => {
+            res.json({ status: 'shutting_down' });
+            // Give response time to be sent
+            setTimeout(async () => {
+                await shutdown();
+            }, 100);
+        });
+
+        // Auto-shutdown timeout
+        if (options.timeout) {
+            setTimeout(async () => {
+                console.log(`\n⏰ Timeout (${options.timeout}s) reached, shutting down...`);
+                await shutdown();
+            }, options.timeout * 1000);
+        }
+    }
 
     // Handle graceful shutdown
     process.on('SIGTERM', shutdown);

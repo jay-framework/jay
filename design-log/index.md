@@ -182,6 +182,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 76  | AI Agent Integration                                   | AI agent automation API                                   |
 | 77  | automation dev server integration                      | Automation API for dev tools                              |
 | 80  | materializing dynamic contracts for agentic generation | CLI and dev server contract materialization for AI agents |
+| 81  | dev server test mode                                   | Health/shutdown endpoints and timeout for smoke testing   |
 
 ---
 
@@ -213,7 +214,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ### "I'm working on the dev server"
 
-→ See #26 (jay start), #74 (file watching), #77 (automation integration)
+→ See #26 (jay start), #74 (file watching), #77 (automation integration), #81 (test mode)
 
 ### "I need to understand security model"
 
