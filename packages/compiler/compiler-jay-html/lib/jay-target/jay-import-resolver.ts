@@ -107,9 +107,12 @@ export const JAY_IMPORT_RESOLVER: JayImportResolver = {
                 try {
                     const indexContent = fs.readFileSync(indexPath, 'utf-8');
                     const index = YAML.parse(indexContent);
+                    // Index stores short plugin name (e.g., "wix-data"), but pluginName might be
+                    // the full npm package name (e.g., "@jay-framework/wix-data")
                     const entry = index.contracts?.find(
                         (c: { plugin: string; name: string }) =>
-                            c.plugin === pluginName && c.name === contractName,
+                            (c.plugin === pluginName || c.plugin === pluginDir) &&
+                            c.name === contractName,
                     );
                     metadata = entry?.metadata;
                 } catch {

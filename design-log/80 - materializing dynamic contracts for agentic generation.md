@@ -1230,6 +1230,44 @@ export const collectionList = makeJayStackComponent<SomeContract, DynamicContrac
 - All generators (`list`, `item`, `card`, `table`) - Return `metadata: { collectionId }`
 - All components - Use `props.metadata.collectionId` with typed interface
 
+### Implementation Fix: Symbol Identity and Metadata Lookup (February 2026)
+
+**Problem:**
+After implementing the metadata flow, the cms example still failed with "Service 'Wix Data Service' not found" errors. Two issues discovered:
+
+1. **Symbol identity mismatch**: When Vite SSR loads components, `@jay-framework/fullstack-component` was being bundled separately, causing `createJayService` to create different Symbol instances.
+
+2. **Plugin name mismatch**: The `contracts-index.yaml` stored short plugin names (e.g., `wix-data`) but the lookup used full npm package names (e.g., `@jay-framework/wix-data`).
+
+**Fixes Applied:**
+
+1. **Vite SSR externals** (`dev-server/lib/vite-factory.ts`):
+
+   ```typescript
+   ssr: {
+     external: [
+       '@jay-framework/stack-server-runtime',
+       '@jay-framework/fullstack-component', // Added
+     ],
+   },
+   ```
+
+2. **Plugin name matching** (`compiler-jay-html/lib/jay-target/jay-import-resolver.ts`):
+
+   ```typescript
+   // Match either full npm name or short name
+   const entry = index.contracts?.find(
+     (c: { plugin: string; name: string }) =>
+       (c.plugin === pluginName || c.plugin === pluginDir) &&
+       c.name === contractName,
+   );
+   ```
+
+**Files Changed:**
+
+- `dev-server/lib/vite-factory.ts` - Add fullstack-component to externals
+- `compiler-jay-html/lib/jay-target/jay-import-resolver.ts` - Fix plugin name matching
+
 ---
 
 ## Related Design Logs

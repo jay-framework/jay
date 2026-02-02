@@ -53,9 +53,12 @@ export async function createViteServer(options: CreateViteServerOptions): Promis
         root: pagesRoot,
         // SSR configuration
         ssr: {
-            // Mark stack-server-runtime as external so Vite uses Node's require
-            // This ensures lib/init.ts and dev-server share the same module instance
-            external: ['@jay-framework/stack-server-runtime'],
+            // Mark jay-framework packages as external so Vite uses Node's require
+            // This ensures all packages share the same module instances (Symbol identity)
+            external: [
+                '@jay-framework/stack-server-runtime',
+                '@jay-framework/fullstack-component',
+            ],
         },
         // Logging
         logLevel,
