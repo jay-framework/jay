@@ -653,6 +653,7 @@ async function preRenderJayHtml(
 async function materializeDynamicContracts(
     projectRootFolder: string,
     buildFolder: string,
+    viteServer: ViteDevServer,
 ): Promise<void> {
     try {
         const services = getServiceRegistry();
@@ -661,6 +662,7 @@ async function materializeDynamicContracts(
                 projectRoot: projectRootFolder,
                 outputDir: path.join(buildFolder, 'materialized-contracts'),
                 verbose: false,
+                viteServer,
             },
             services,
         );
@@ -703,7 +705,7 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
     await lifecycleManager.initialize();
 
     // Materialize dynamic contracts for agent discovery
-    await materializeDynamicContracts(projectRootFolder, buildFolder!);
+    await materializeDynamicContracts(projectRootFolder, buildFolder!, vite);
 
     // Set up hot reload for lib/init.ts
     setupServiceHotReload(vite, lifecycleManager);
