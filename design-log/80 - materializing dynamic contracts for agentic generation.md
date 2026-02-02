@@ -870,6 +870,277 @@ if (plugin.isLocal && viteServer) {
 
 ---
 
+## Runtime Service Injection for Dynamic Contracts (February 2, 2026)
+
+### Problem
+
+When rendering a page that uses dynamic contract components (e.g., wix-data's `collection-list`), the runtime fails with:
+
+```
+Error: Service 'DynamicContract' not found. Did you register it in jay.init.ts?
+```
+
+**Root Cause:** Dynamic contract components use `DYNAMIC_CONTRACT_SERVICE` to receive metadata about which contract they're rendering:
+
+```typescript
+// In fullstack-component
+export interface DynamicContractMetadata {
+  contractName: string; // e.g., "list/recipes-list"
+  contractYaml: string; // Original YAML contract definition
+}
+
+export const DYNAMIC_CONTRACT_SERVICE =
+  createJayService<DynamicContractMetadata>('DynamicContract');
+
+// In wix-data component
+export const collectionList = makeJayStackComponent()
+  .withServices(WIX_DATA_SERVICE_MARKER, DYNAMIC_CONTRACT_SERVICE)
+  .withSlowlyRender(async (props, wixData, contractMeta) => {
+    // contractMeta.contractName tells us which collection to query
+    const collectionId = deriveCollectionId(contractMeta.contractName);
+    // ...
+  });
+```
+
+The problem is:
+
+1. The service registry is global
+2. `DYNAMIC_CONTRACT_SERVICE` needs different metadata per headless component
+3. Currently, nobody registers this service
+
+### Available Context
+
+The metadata needed is already available in `HeadlessContractInfo`:
+
+```typescript
+interface HeadlessContractInfo {
+  key: string; // e.g., "productSearch"
+  contract: Contract; // Parsed contract object
+  contractPath: string; // Path to contract file
+}
+```
+
+This is populated during `loadPageParts()` from the parsed jay-html:
+
+```html
+<script
+  type="application/jay-headless"
+  plugin="@jay-framework/wix-data"
+  contract="list/recipes-list"
+  key="recipesList"
+></script>
+```
+
+### Options
+
+#### Option A: Pass Contract Metadata via Props (Recommended)
+
+Similar to how `PageProps` provides URL/request context, create `DynamicContractProps` that passes contract metadata through the props object.
+
+```typescript
+// In fullstack-component types
+import type { Contract } from '@jay-framework/compiler-jay-html';
+
+export interface DynamicContractProps {
+  /** Contract name (e.g., "list/recipes-list") */
+  contractName: string;
+  /** Parsed contract object */
+  contract: Contract;
+}
+
+// Components declare they need dynamic contract props
+export const collectionList = makeJayStackComponent<DynamicContractProps>()
+  .withServices(WIX_DATA_SERVICE_MARKER)
+  .withSlowlyRender(async (props, wixData) => {
+    // props.contractName tells us which collection to query
+    const collectionId = deriveCollectionId(props.contractName);
+    // props.contract has full parsed contract if needed
+  });
+```
+
+The runtime merges `DynamicContractProps` into the props when rendering:
+
+```typescript
+// In slowly-changing-runner.ts
+for (const part of parts) {
+  const { compDefinition, key } = part;
+
+  // Find matching headless contract by key
+  const headlessContract = headlessContracts.find((hc) => hc.key === key);
+
+  // Build props with contract metadata if available
+  const partProps = {
+    ...pageProps,
+    ...pageParams,
+    ...(headlessContract && {
+      contractName: headlessContract.contract.name,
+      contract: headlessContract.contract,
+    }),
+  };
+
+  const services = resolveServices(compDefinition.services);
+  const result = await compDefinition.slowlyRender(partProps, ...services);
+}
+```
+
+**Pros:**
+
+- No global state mutation
+- Follows existing pattern (`PageProps`)
+- Type-safe - component declares what props it needs
+- No service registry complexity
+- Simple data flow
+- No disk I/O during render (contract already parsed)
+
+**Cons:**
+
+- Existing components using `DYNAMIC_CONTRACT_SERVICE` need migration
+- Props mixing (page props + contract props in same object)
+
+#### Option B: Per-Component Service Registration
+
+Register `DYNAMIC_CONTRACT_SERVICE` just before resolving services for each component.
+
+**Pros:**
+
+- Minimal changes to existing architecture
+
+**Cons:**
+
+- Service registration is mutable global state
+- If multiple parts run concurrently, could have race conditions
+
+#### Option C: Scoped Service Registry (per-request)
+
+Create a service scope for each page render that inherits from global but can override.
+
+**Pros:**
+
+- Clean abstraction
+- Allows per-request customization
+
+**Cons:**
+
+- More significant refactor
+- Need to pass scope through render pipeline
+
+### Questions and Answers
+
+**Q1: Should we deprecate `DYNAMIC_CONTRACT_SERVICE` in favor of props?**
+
+**Answer:** Yes. The service marker is unnecessary with the props-based approach. Components use props directly.
+
+**Q2: Should contract YAML be read from disk or use the parsed contract object?**
+
+**Answer:** Use the parsed `Contract` object. This:
+
+- Is already available (no disk I/O during render)
+- Is type-safe
+- Guarantees consistency with what the compiler parsed
+
+```typescript
+export interface DynamicContractProps {
+  contractName: string;
+  contract: Contract; // Parsed contract object, not YAML string
+}
+```
+
+**Q3: How to handle the generic type for `makeJayStackComponent<DynamicContractProps>()`?**
+
+Components that work with dynamic contracts declare this in their type parameter. This is already the pattern.
+
+### Recommendation
+
+**Option A** - Pass contract metadata via props. This:
+
+- Follows the existing `PageProps` pattern
+- Avoids global state mutation
+- Is simpler than service injection for per-component data
+- Makes the data flow explicit
+
+### Migration
+
+Components currently using `DYNAMIC_CONTRACT_SERVICE`:
+
+```typescript
+// Before (service-based)
+export const collectionList = makeJayStackComponent<SomeContract>()
+  .withServices(WIX_DATA_SERVICE_MARKER, DYNAMIC_CONTRACT_SERVICE)
+  .withSlowlyRender(async (props, wixData, contractMeta) => {
+    const collectionId = deriveCollectionId(contractMeta.contractName);
+  });
+
+// After (props-based)
+export const collectionList = makeJayStackComponent<SomeContract, DynamicContractProps>()
+  .withServices(WIX_DATA_SERVICE_MARKER)
+  .withSlowlyRender(async (props, wixData) => {
+    const collectionId = deriveCollectionId(props.contractName);
+    // props.contract available if full contract object needed
+  });
+```
+
+### Implementation Plan
+
+1. **Define `DynamicContractProps`** in `fullstack-component/lib/jay-stack-types.ts`
+2. **Deprecate `DYNAMIC_CONTRACT_SERVICE`** - add deprecation comment
+3. **Update render runners** (`slowly-changing-runner.ts`, `fast-changing-runner.ts`) to:
+   - Accept `headlessContracts` parameter
+   - Merge contract metadata into props for each part
+4. **Update `loadPageParts`** to include contract info in `DevServerPagePart`
+5. **Migrate wix-data components** to use props instead of service
+
+### Implementation Results (February 2, 2026)
+
+**What was implemented:**
+
+1. **`DynamicContractProps` interface** added to `fullstack-component`:
+
+   ```typescript
+   export interface DynamicContractProps {
+     contractName: string;
+     contract: unknown; // Contract type from compiler-jay-html
+   }
+   ```
+
+2. **`DYNAMIC_CONTRACT_SERVICE` deprecated** with migration guidance
+
+3. **`DevServerPagePart` extended** with `contractInfo`:
+
+   ```typescript
+   interface DevServerPagePart {
+     // ... existing fields
+     contractInfo?: {
+       contractName: string;
+       contract: Contract;
+     };
+   }
+   ```
+
+4. **Render runners updated** to:
+
+   - Register `DYNAMIC_CONTRACT_SERVICE` before resolving services (backward compatibility)
+   - Merge `contractName` and `contract` into props (new pattern)
+
+5. **Breaking change**: `DYNAMIC_CONTRACT_SERVICE` is deprecated. Components must use `props.contractName` and `props.contract` instead.
+
+**Files changed:**
+
+- `fullstack-component/lib/jay-stack-types.ts` - Added `DynamicContractProps`, deprecated service
+- `stack-server-runtime/lib/load-page-parts.ts` - Added `contractInfo` to `DevServerPagePart`
+- `stack-server-runtime/lib/slowly-changing-runner.ts` - Merge contract props, append to loadParams services
+- `stack-server-runtime/lib/fast-changing-runner.ts` - Merge contract props
+
+**Wix-data components migrated:**
+
+- `collection-list.ts` - Uses `props.contractName` instead of `DYNAMIC_CONTRACT_SERVICE`
+- `collection-item.ts` - Uses `props.contractName` instead of `DYNAMIC_CONTRACT_SERVICE`
+- `collection-card.ts` - Uses `props.contractName` instead of `DYNAMIC_CONTRACT_SERVICE`
+- `collection-table.ts` - Uses `props.contractName` instead of `DYNAMIC_CONTRACT_SERVICE`
+
+**Test results:** All 66 tests pass in stack-server-runtime. CMS example recipes route renders correctly.
+
+---
+
 ## Related Design Logs
 
 - **#60 - Plugin System Refinement**: Dynamic contract generator API

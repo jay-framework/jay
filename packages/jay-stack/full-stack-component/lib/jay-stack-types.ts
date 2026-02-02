@@ -36,29 +36,53 @@ export type ServiceMarkers<T extends any[]> = {
 };
 
 /**
- * Contract metadata passed to dynamic contract components.
- * Contains the contract name and original YAML definition.
- */
-export interface DynamicContractMetadata {
-    contractName: string; // e.g., "BlogPostsList" or "cms/blog-posts-list"
-    contractYaml: string; // Original YAML contract definition
-}
-
-/**
- * Built-in service for dynamic contract metadata.
- * Used by plugin system to pass contract metadata to shared components.
+ * Props passed to components that work with dynamic contracts.
+ * The runtime automatically populates these when a headless component
+ * is used with a dynamic contract.
  *
  * @example
  * ```typescript
- * export const cmsCollection = makeJayStackComponent<DynamicContract>()
- *   .withServices(DYNAMIC_CONTRACT_SERVICE)
- *   .withFastRender(async (props, metadata: DynamicContractMetadata) => {
- *     // metadata.contractName contains the full contract name (e.g., "BlogPostsList")
- *     const collectionName = deriveCollectionName(metadata.contractName);
- *     const items = await fetchCollection(collectionName);
- *     return partialRender({ items }, {});
+ * export const collectionList = makeJayStackComponent<MyContract, DynamicContractProps>()
+ *   .withServices(MY_DATA_SERVICE)
+ *   .withSlowlyRender(async (props, dataService) => {
+ *     const collectionId = deriveCollectionId(props.contractName);
+ *     // ...
  *   });
  * ```
+ */
+export interface DynamicContractProps {
+    /** Contract name (e.g., "RecipesList" or "list/recipes-list") */
+    contractName: string;
+    /**
+     * Parsed contract object. Type is `Contract` from compiler-jay-html.
+     * Use type assertion if you need to access contract structure:
+     * `(props.contract as Contract).tags`
+     */
+    contract: unknown;
+}
+
+/**
+ * @deprecated Use `DynamicContractProps` via props instead.
+ * Components should declare `DynamicContractProps` in their type parameter
+ * and access contract metadata via props.contractName and props.contract.
+ *
+ * @example
+ * ```typescript
+ * // Before (deprecated):
+ * makeJayStackComponent().withServices(DYNAMIC_CONTRACT_SERVICE)
+ *
+ * // After:
+ * makeJayStackComponent<MyContract, DynamicContractProps>()
+ * ```
+ */
+export interface DynamicContractMetadata {
+    contractName: string;
+    contractYaml: string;
+}
+
+/**
+ * @deprecated Use `DynamicContractProps` via props instead.
+ * See `DynamicContractMetadata` for migration guidance.
  */
 export const DYNAMIC_CONTRACT_SERVICE =
     createJayService<DynamicContractMetadata>('DynamicContract');

@@ -52,11 +52,18 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
         parts: Array<DevServerPagePart>,
     ): Promise<AnySlowlyRenderResult> {
         for (const part of parts) {
-            const { compDefinition } = part;
+            const { compDefinition, contractInfo } = part;
             if (compDefinition.loadParams) {
                 // Resolve services from registry
                 const services = resolveServices(compDefinition.services);
-                const compParams = compDefinition.loadParams(services);
+
+                // For dynamic contracts, append contract info to services
+                // Components expecting contract info should declare it as last service
+                const loadParamsArgs = contractInfo
+                    ? [...services, { contractName: contractInfo.contractName, contract: contractInfo.contract }]
+                    : services;
+
+                const compParams = compDefinition.loadParams(loadParamsArgs);
                 if (!(await findMatchingParams(pageParams, compParams))) return notFound();
             }
         }
@@ -64,12 +71,23 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
         let slowlyViewState = {};
         let carryForward = {};
         for (const part of parts) {
-            const { compDefinition, key } = part;
+            const { compDefinition, key, contractInfo } = part;
             if (compDefinition.slowlyRender) {
                 // Resolve services from registry
                 const services = resolveServices(compDefinition.services);
+
+                // Build props with contract info if available (for dynamic contracts)
+                const partProps = {
+                    ...pageProps,
+                    ...pageParams,
+                    ...(contractInfo && {
+                        contractName: contractInfo.contractName,
+                        contract: contractInfo.contract,
+                    }),
+                };
+
                 const slowlyRenderedPart = await compDefinition.slowlyRender(
-                    { ...pageProps, ...pageParams },
+                    partProps,
                     ...services,
                 );
                 if (slowlyRenderedPart.kind === 'PhaseOutput') {
