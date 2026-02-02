@@ -604,6 +604,56 @@ You import the child headless component and use its view state and refs in the J
 </html>
 ```
 
+### Using Plugin Headless Components
+
+You can use headless components from npm plugins. For dynamic contracts (generated at build time), use the `plugin` and `contract` attributes:
+
+```html
+<html>
+  <head>
+    <!-- Import a dynamic contract component from a plugin -->
+    <script
+      type="application/jay-headless"
+      plugin="@jay-framework/wix-data"
+      contract="list/recipes-list"
+      key="recipes"
+    ></script>
+  </head>
+  <body>
+    <div>
+      <h1>Recipes</h1>
+      <ul>
+        <li forEach="recipes.items" trackBy="_id">
+          <a ref="recipes.items.itemLink">{recipes.items.title}</a>
+        </li>
+      </ul>
+    </div>
+  </body>
+</html>
+```
+
+The plugin component receives metadata via `DynamicContractProps`:
+
+```typescript
+import { makeJayStackComponent, DynamicContractProps } from '@jay-framework/fullstack-component';
+
+interface WixDataMetadata {
+  collectionId: string;
+}
+
+export const collectionList = makeJayStackComponent<ListViewState>()
+  .withProps<PageProps & DynamicContractProps<WixDataMetadata>>()
+  .withServices(WIX_DATA_SERVICE)
+  .withSlowlyRender(async (props, wixData) => {
+    // Metadata from the generator is available via props.metadata
+    const { collectionId } = props.metadata!;
+    const items = await wixData.query(collectionId).find();
+    // ...
+  });
+```
+
+See [Building Jay Packages](./building-jay-packages.md#dynamic-contracts) for more on creating dynamic contract generators.
+
 ### Context and Communication
 
 Use context for component communication. Contexts are provided using `provideContext` or

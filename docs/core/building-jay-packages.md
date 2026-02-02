@@ -568,13 +568,15 @@ export const cmsContracts = makeContractGenerator()
     const collections = await cmsClient.getCollections();
 
     return collections.map((collection) => ({
-      name: `cms-${collection.name}`,
+      name: `${collection.name}List`,
       yaml: `
-name: ${collection.name}
+name: ${collection.name}List
 tags:
 ${collection.fields.map((f) => `  - tag: ${f.name}\n    type: data\n    dataType: ${f.type}`).join('\n')}
       `.trim(),
       description: `CMS collection: ${collection.name}`,
+      // Metadata is passed to the component via props.metadata
+      metadata: { collectionId: collection.name },
     }));
   });
 ```
@@ -585,13 +587,48 @@ ${collection.fields.map((f) => `  - tag: ${f.name}\n    type: data\n    dataType
 name: cms-plugin
 
 dynamic_contracts:
-  - prefix: cms-
-    generator: ./cms-contracts-generator
-    component: cmsCollection
-    description: Dynamically generated contracts from CMS schema
+  - prefix: list
+    generator: ./list-contract-generator
+    component: collectionList
+    description: Dynamically generated list contracts from CMS schema
 ```
 
-See Design Log #60 for full dynamic contract implementation.
+**Component receiving metadata:**
+
+Components using dynamic contracts receive metadata via `DynamicContractProps`:
+
+```typescript
+import { makeJayStackComponent, DynamicContractProps } from '@jay-framework/fullstack-component';
+
+// Define the metadata type from your generator
+interface CMSMetadata {
+  collectionId: string;
+}
+
+export const collectionList = makeJayStackComponent<MyViewState>()
+  .withProps<PageProps & DynamicContractProps<CMSMetadata>>()
+  .withServices(CMS_CLIENT)
+  .withSlowlyRender(async (props, cmsClient) => {
+    // Access typed metadata - no casting needed!
+    const { collectionId } = props.metadata!;
+    const items = await cmsClient.getItems(collectionId);
+    // ...
+  });
+```
+
+**Materializing contracts:**
+
+Dynamic contracts are materialized to `build/materialized-contracts/` during dev server startup or via CLI:
+
+```bash
+# Materialize all dynamic contracts
+jay-stack contracts
+
+# List contracts without writing files
+jay-stack contracts --list
+```
+
+See Design Log #60 and #80 for full dynamic contract implementation.
 
 ### TypeScript Configuration
 
