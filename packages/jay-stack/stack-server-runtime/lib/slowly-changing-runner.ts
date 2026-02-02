@@ -60,7 +60,13 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
                 // For dynamic contracts, append contract info to services
                 // Components expecting contract info should declare it as last service
                 const loadParamsArgs = contractInfo
-                    ? [...services, { contractName: contractInfo.contractName, contract: contractInfo.contract }]
+                    ? [
+                          ...services,
+                          {
+                              contractName: contractInfo.contractName,
+                              metadata: contractInfo.metadata,
+                          },
+                      ]
                     : services;
 
                 const compParams = compDefinition.loadParams(loadParamsArgs);
@@ -82,7 +88,7 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
                     ...pageParams,
                     ...(contractInfo && {
                         contractName: contractInfo.contractName,
-                        contract: contractInfo.contract,
+                        metadata: contractInfo.metadata,
                     }),
                 };
 

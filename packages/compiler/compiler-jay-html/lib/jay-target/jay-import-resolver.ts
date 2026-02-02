@@ -12,6 +12,7 @@ import {
 import fs from 'fs';
 import path from 'path';
 import { createRequire } from 'module';
+import YAML from 'yaml';
 
 const require = createRequire(import.meta.url);
 
@@ -32,13 +33,17 @@ export interface JayImportResolver {
      * For static contracts, loads from the plugin's contract file.
      * For dynamic contracts, loads from materialized location (build/materialized-contracts/).
      *
-     * Returns both the contract and the path it was loaded from.
+     * Returns the contract, path, and optional metadata (for dynamic contracts).
      */
     loadPluginContract(
         pluginName: string,
         contractName: string,
         projectRoot: string,
-    ): WithValidations<{ contract: Contract; contractPath: string }>;
+    ): WithValidations<{
+        contract: Contract;
+        contractPath: string;
+        metadata?: Record<string, unknown>;
+    }>;
 }
 
 export const JAY_IMPORT_RESOLVER: JayImportResolver = {
@@ -94,7 +99,29 @@ export const JAY_IMPORT_RESOLVER: JayImportResolver = {
         if (fs.existsSync(materializedPath)) {
             const content = fs.readFileSync(materializedPath).toString();
             const contractResult = parseContract(content, materializedPath);
-            return contractResult.map((contract) => ({ contract, contractPath: materializedPath }));
+
+            // Try to load metadata from contracts-index.yaml
+            let metadata: Record<string, unknown> | undefined;
+            const indexPath = path.join(materializedDir, 'contracts-index.yaml');
+            if (fs.existsSync(indexPath)) {
+                try {
+                    const indexContent = fs.readFileSync(indexPath, 'utf-8');
+                    const index = YAML.parse(indexContent);
+                    const entry = index.contracts?.find(
+                        (c: { plugin: string; name: string }) =>
+                            c.plugin === pluginName && c.name === contractName,
+                    );
+                    metadata = entry?.metadata;
+                } catch {
+                    // Ignore errors reading index - metadata is optional
+                }
+            }
+
+            return contractResult.map((contract) => ({
+                contract,
+                contractPath: materializedPath,
+                metadata,
+            }));
         }
 
         // Not found - return validation error

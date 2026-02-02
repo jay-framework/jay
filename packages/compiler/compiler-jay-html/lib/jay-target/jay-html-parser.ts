@@ -628,6 +628,7 @@ async function parseHeadlessImports(
             }
             const loadedContract = contractResult.val.contract;
             const contractFile = contractResult.val.contractPath;
+            const contractMetadata = contractResult.val.metadata;
 
             const contractTypes = await contractToImportsViewStateAndRefs(
                 loadedContract,
@@ -716,6 +717,7 @@ async function parseHeadlessImports(
                     codeLink,
                     contract: loadedContract,
                     contractPath: contractFile,
+                    metadata: contractMetadata,
                 });
             });
         } catch (e) {

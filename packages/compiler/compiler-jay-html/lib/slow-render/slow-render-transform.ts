@@ -22,6 +22,8 @@ export interface HeadlessContractInfo {
     contract: Contract;
     /** Path to the contract file (used to resolve linked sub-contracts) */
     contractPath?: string;
+    /** Optional metadata from the generator (for dynamic contracts) */
+    metadata?: Record<string, unknown>;
 }
 
 /**

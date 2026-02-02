@@ -1141,6 +1141,90 @@ export const collectionList = makeJayStackComponent<SomeContract, DynamicContrac
 
 ---
 
+### Implementation Update: Metadata Instead of Contract (February 2026)
+
+**Problem:** The initial implementation passed `contract: unknown` to components, which:
+1. Required complex type casting (`as unknown as Contract`)
+2. Created a dependency on compiler types at runtime
+3. Required hacky `deriveCollectionId()` functions to extract collection ID from contract names
+
+**Solution:** Replace `contract` with typed `metadata` from the generator.
+
+#### Changes Made
+
+1. **`GeneratedContractYaml` extended with metadata:**
+
+   ```typescript
+   export interface GeneratedContractYaml {
+     name: string;
+     yaml: string;
+     description?: string;
+     metadata?: Record<string, unknown>;  // NEW
+   }
+   ```
+
+2. **`DynamicContractProps` made generic:**
+
+   ```typescript
+   export interface DynamicContractProps<TMetadata = Record<string, unknown>> {
+     contractName: string;
+     metadata?: TMetadata;  // Changed from contract: unknown
+   }
+   ```
+
+3. **Deprecated exports removed:**
+   - `DYNAMIC_CONTRACT_SERVICE` - deleted
+   - `DynamicContractMetadata` - deleted
+
+4. **Metadata propagation through compiler:**
+   - `ContractIndexEntry` - added `metadata` field
+   - `contracts-index.yaml` - stores metadata per contract
+   - `loadPluginContract` - reads metadata from index
+   - `JayHeadlessImports` - carries metadata
+   - `HeadlessContractInfo` - includes metadata
+   - `DevServerPagePart.contractInfo` - passes metadata to runtime
+
+5. **Generators return metadata:**
+
+   ```typescript
+   return {
+     name: 'RecipesList',
+     yaml: buildContract(schema),
+     metadata: { collectionId: schema.collectionId },  // NEW
+   };
+   ```
+
+6. **Components use typed metadata:**
+
+   ```typescript
+   interface WixDataMetadata { collectionId: string }
+   
+   export const collectionList = makeJayStackComponent<any>()
+     .withProps<PageProps & DynamicContractProps<WixDataMetadata>>()
+     .withSlowlyRender(async (props, wixData) => {
+       const { collectionId } = props.metadata!;  // Typed correctly!
+     });
+   ```
+
+#### Files Changed
+
+**Jay Framework:**
+- `fullstack-component/lib/jay-stack-types.ts` - Generic `DynamicContractProps`, removed deprecated exports
+- `stack-server-runtime/lib/contract-materializer.ts` - Store metadata in index
+- `stack-server-runtime/lib/load-page-parts.ts` - Pass metadata instead of contract
+- `stack-server-runtime/lib/slowly-changing-runner.ts` - Pass metadata in props
+- `stack-server-runtime/lib/fast-changing-runner.ts` - Pass metadata in props
+- `compiler-jay-html/lib/jay-target/jay-import-resolver.ts` - Load metadata from index
+- `compiler-jay-html/lib/jay-target/jay-html-parser.ts` - Propagate metadata
+- `compiler-jay-html/lib/jay-target/jay-html-source-file.ts` - Add metadata to JayHeadlessImports
+- `compiler-jay-html/lib/slow-render/slow-render-transform.ts` - Add metadata to HeadlessContractInfo
+
+**Wix-data:**
+- All generators (`list`, `item`, `card`, `table`) - Return `metadata: { collectionId }`
+- All components - Use `props.metadata.collectionId` with typed interface
+
+---
+
 ## Related Design Logs
 
 - **#60 - Plugin System Refinement**: Dynamic contract generator API

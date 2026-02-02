@@ -40,52 +40,26 @@ export type ServiceMarkers<T extends any[]> = {
  * The runtime automatically populates these when a headless component
  * is used with a dynamic contract.
  *
+ * @typeParam TMetadata - The metadata type from the generator (defaults to Record<string, unknown>)
+ *
  * @example
  * ```typescript
- * export const collectionList = makeJayStackComponent<MyContract, DynamicContractProps>()
+ * interface MyMetadata { collectionId: string }
+ *
+ * export const collectionList = makeJayStackComponent<MyContract, DynamicContractProps<MyMetadata>>()
  *   .withServices(MY_DATA_SERVICE)
  *   .withSlowlyRender(async (props, dataService) => {
- *     const collectionId = deriveCollectionId(props.contractName);
+ *     const { collectionId } = props.metadata!; // Typed correctly
  *     // ...
  *   });
  * ```
  */
-export interface DynamicContractProps {
+export interface DynamicContractProps<TMetadata = Record<string, unknown>> {
     /** Contract name (e.g., "RecipesList" or "list/recipes-list") */
     contractName: string;
-    /**
-     * Parsed contract object. Type is `Contract` from compiler-jay-html.
-     * Use type assertion if you need to access contract structure:
-     * `(props.contract as Contract).tags`
-     */
-    contract: unknown;
+    /** Metadata from the generator */
+    metadata?: TMetadata;
 }
-
-/**
- * @deprecated Use `DynamicContractProps` via props instead.
- * Components should declare `DynamicContractProps` in their type parameter
- * and access contract metadata via props.contractName and props.contract.
- *
- * @example
- * ```typescript
- * // Before (deprecated):
- * makeJayStackComponent().withServices(DYNAMIC_CONTRACT_SERVICE)
- *
- * // After:
- * makeJayStackComponent<MyContract, DynamicContractProps>()
- * ```
- */
-export interface DynamicContractMetadata {
-    contractName: string;
-    contractYaml: string;
-}
-
-/**
- * @deprecated Use `DynamicContractProps` via props instead.
- * See `DynamicContractMetadata` for migration guidance.
- */
-export const DYNAMIC_CONTRACT_SERVICE =
-    createJayService<DynamicContractMetadata>('DynamicContract');
 
 // ============================================================================
 // Page Props and URL Params
@@ -229,11 +203,26 @@ export type AnyJayStackComponentDefinition = JayStackComponentDefinition<
  *
  * This avoids dependency on compiler types - generators output contract YAML,
  * which the compiler parses using its own type system.
+ *
+ * @example
+ * ```typescript
+ * return {
+ *   name: 'RecipesList',
+ *   yaml: buildContractYaml(schema),
+ *   description: 'List page for recipes',
+ *   metadata: { collectionId: 'Recipes' }, // Passed to component via props.metadata
+ * };
+ * ```
  */
 export interface GeneratedContractYaml {
-    name: string; // Contract name (PascalCase, e.g., "BlogPostsList")
-    yaml: string; // Contract definition in YAML format
-    description?: string; // Optional description
+    /** Contract name (PascalCase, e.g., "BlogPostsList") */
+    name: string;
+    /** Contract definition in YAML format */
+    yaml: string;
+    /** Optional description for the contract */
+    description?: string;
+    /** Optional metadata passed to component via DynamicContractProps.metadata */
+    metadata?: Record<string, unknown>;
 }
 
 /**

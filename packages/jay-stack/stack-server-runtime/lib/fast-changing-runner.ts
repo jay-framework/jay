@@ -24,7 +24,7 @@ export async function renderFastChangingData(
                 ...pageParams,
                 ...(contractInfo && {
                     contractName: contractInfo.contractName,
-                    contract: contractInfo.contract,
+                    metadata: contractInfo.metadata,
                 }),
             };
 

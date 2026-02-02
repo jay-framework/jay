@@ -30,6 +30,7 @@ export interface ContractIndexEntry {
     name: string;
     type: 'static' | 'dynamic';
     path: string;
+    metadata?: Record<string, unknown>;
 }
 
 export interface ContractsIndex {
@@ -367,6 +368,7 @@ export async function materializeContracts(
                             name: fullName,
                             type: 'dynamic',
                             path: './' + relativePath,
+                            metadata: generated.metadata,
                         });
                         dynamicCount++;
 

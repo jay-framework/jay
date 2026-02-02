@@ -7,7 +7,6 @@ import {
     parseJayFile,
     JAY_IMPORT_RESOLVER,
     HeadlessContractInfo,
-    Contract,
 } from '@jay-framework/compiler-jay-html';
 import { AnyJayStackComponentDefinition } from '@jay-framework/fullstack-component';
 import { JayRollupConfig } from '@jay-framework/rollup-plugin';
@@ -23,7 +22,7 @@ export interface DevServerPagePart {
     /** Contract metadata for dynamic contract components */
     contractInfo?: {
         contractName: string;
-        contract: Contract;
+        metadata?: Record<string, unknown>;
     };
 }
 
@@ -131,7 +130,7 @@ export async function loadPageParts(
                 contractInfo: headlessImport.contract
                     ? {
                           contractName: headlessImport.contract.name,
-                          contract: headlessImport.contract,
+                          metadata: headlessImport.metadata,
                       }
                     : undefined,
             };
