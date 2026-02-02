@@ -70,6 +70,11 @@ const reactRenamedAttributes = {
     for: 'htmlFor',
 };
 
+// Helper to escape single quotes in strings (used for text content)
+function textEscape(s: string): string {
+    return s.replace(/'/g, "\\'");
+}
+
 // Boolean attributes use condition-style parsing
 // The presence/absence is controlled by a condition expression
 const booleanAttributes = new Set([
@@ -132,10 +137,21 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
             let attributeExpression = parseReactPropertyExpression(attributes[attrName], variables);
             if (attributeExpression.rendered === "''")
                 renderedAttributes.push(attributeExpression.map((_) => `${reactAttributeName}`));
-            else
-                renderedAttributes.push(
-                    attributeExpression.map((_) => `${reactAttributeName}=${_}`),
-                );
+            else {
+                // For JSX, if the value contains single quotes, use expression syntax {value}
+                // instead of single-quoted attribute values which don't support escaping
+                const rawValue = attributes[attrName];
+                if (rawValue.includes("'") && attributeExpression.rendered.startsWith("'")) {
+                    // Static value with single quotes - use expression syntax with double quotes
+                    renderedAttributes.push(
+                        new RenderFragment(`${reactAttributeName}={"${rawValue}"}`),
+                    );
+                } else {
+                    renderedAttributes.push(
+                        attributeExpression.map((_) => `${reactAttributeName}=${_}`),
+                    );
+                }
+            }
         }
     });
 
@@ -240,9 +256,6 @@ function renderReactNode(
     let { variables, importedSymbols, importedSandboxedSymbols, indent, dynamicRef, importerMode } =
         renderContext;
 
-    function textEscape(s: string): string {
-        return s.replace(/'/g, "\\'");
-    }
     function renderTextNode(variables: Variables, text: string, indent: Indent): RenderFragment {
         return parseReactTextExpression(textEscape(text), variables).map(
             (_) => indent.firstLine + _,

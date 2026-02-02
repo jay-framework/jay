@@ -206,7 +206,8 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
                 renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
             }
         } else {
-            let attributeExpression = parseAttributeExpression(attributes[attrName], variables);
+            // Escape single quotes in attribute values so they can be safely wrapped in single quotes
+            let attributeExpression = parseAttributeExpression(textEscape(attributes[attrName]), variables);
             renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
         }
     });

@@ -28,6 +28,7 @@ data:
     <button disabled="bool1"></button>
     <button disabled="!bool1"></button>
     <button disabled></button>
+    <img src="/image.jpg" alt="Peat's Beast- PX finish- 54.1%">
 </div>
 </body>
 </html>

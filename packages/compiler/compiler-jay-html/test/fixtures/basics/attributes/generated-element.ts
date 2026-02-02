@@ -84,6 +84,7 @@ export function render(options?: RenderElementOptions): AttributesElementPreRend
                 e('button', { disabled: ba((vs) => vs.bool1) }, []),
                 e('button', { disabled: ba((vs) => !vs.bool1) }, []),
                 e('button', { disabled: '' }, []),
+                e('img', { src: '/image.jpg', alt: "Peat's Beast- PX finish- 54.1%" }, []),
             ]),
         ) as AttributesElement;
     return [refManager.getPublicAPI() as AttributesElementRefs, render];
