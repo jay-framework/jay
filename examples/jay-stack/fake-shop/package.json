@@ -15,7 +15,8 @@
     "build:client": "vite build --outDir dist/client",
     "build:server": "vite build --ssr src/entry-server.ts --outDir dist/server",
     "build:check-types": "tsc",
-    "test": ":",
+    "test": "npx vitest run",
+    "test:smoke": "npx vitest run test/smoke.test.ts",
     "preview": "cross-env NODE_ENV=production node server"
   },
   "dependencies": {
