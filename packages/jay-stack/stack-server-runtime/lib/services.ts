@@ -117,7 +117,7 @@ export function resolveServices(serviceMarkers: any[]): Array<any> {
 /**
  * Register the service resolver globally so that actions called from
  * server-side code (e.g., render phases) can automatically resolve services.
- * 
+ *
  * This enables direct action calls like `await queryItems({...})` to work
  * on the server without needing a separate runAction wrapper.
  */

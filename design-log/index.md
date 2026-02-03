@@ -65,10 +65,10 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Server Actions & Client-Server Communication
 
-| #   | Title                                           | Description                                                                |
-| --- | ----------------------------------------------- | -------------------------------------------------------------------------- |
-| 63  | jay-stack server actions                        | RPC-style server actions: `makeJayAction`, `makeJayQuery`, action registry |
-| 82  | automatic server-side action service injection  | Auto-inject services when actions called from server code                  |
+| #   | Title                                          | Description                                                                |
+| --- | ---------------------------------------------- | -------------------------------------------------------------------------- |
+| 63  | jay-stack server actions                       | RPC-style server actions: `makeJayAction`, `makeJayQuery`, action registry |
+| 82  | automatic server-side action service injection | Auto-inject services when actions called from server code                  |
 
 ---
 

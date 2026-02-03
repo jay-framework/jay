@@ -26,12 +26,15 @@ const result = await queryItems({ collectionId, limit: 20 });
 ## Questions and Answers
 
 1. **Q: Why can't fullstack-component import resolveServices from stack-server-runtime?**
+
    - A: Circular dependency. `stack-server-runtime` depends on `fullstack-component` for types.
 
 2. **Q: Can we detect at runtime if we're on server vs client?**
+
    - A: Yes, but the service resolver function still needs to be available somehow.
 
 3. **Q: Should we transform server-side action calls at build time?**
+
    - A: Could work, but adds complexity to the compiler and requires AST analysis of all call sites.
 
 4. **Q: What about using a global resolver?**
@@ -42,16 +45,18 @@ const result = await queryItems({ collectionId, limit: 20 });
 ### Mechanism
 
 1. **Define resolver interface** in `fullstack-component`:
+
 ```typescript
 // jay-action-builder.ts
 type ServiceResolver = (markers: any[]) => any[];
 
 declare global {
-    var __JAY_SERVICE_RESOLVER__: ServiceResolver | undefined;
+  var __JAY_SERVICE_RESOLVER__: ServiceResolver | undefined;
 }
 ```
 
 2. **Register resolver** in `stack-server-runtime` at startup:
+
 ```typescript
 // services.ts
 import { resolveServices } from './services';
@@ -60,13 +65,14 @@ globalThis.__JAY_SERVICE_RESOLVER__ = resolveServices;
 ```
 
 3. **Action callable uses resolver** if available:
+
 ```typescript
 // jay-action-builder.ts - updated callable
 (input: I): Promise<O> => {
-    const resolver = globalThis.__JAY_SERVICE_RESOLVER__;
-    const services = resolver ? resolver(serviceMarkers) : [];
-    return handler(input, ...(services as Services));
-}
+  const resolver = globalThis.__JAY_SERVICE_RESOLVER__;
+  const services = resolver ? resolver(serviceMarkers) : [];
+  return handler(input, ...(services as Services));
+};
 ```
 
 ### Flow Diagram
@@ -114,6 +120,7 @@ flowchart TB
 ### Phase 1: Core Changes
 
 1. **`fullstack-component/lib/jay-action-builder.ts`**
+
    - Add `ServiceResolver` type and global declaration
    - Update action callable to use global resolver if available
    - Keep service markers on the action object for resolver access
@@ -124,6 +131,7 @@ flowchart TB
 ### Phase 2: Remove runAction
 
 1. **`stack-server-runtime/lib/action-registry.ts`**
+
    - Remove `runAction` export
 
 2. **Fix packages using runAction:**
@@ -147,11 +155,11 @@ import { runAction } from '@jay-framework/stack-server-runtime';
 import { queryItems } from '../actions/data-actions';
 
 async function renderSlowlyChanging(props, wixData) {
-    // Must use runAction for service injection
-    const result = await runAction(queryItems, {
-        collectionId,
-        limit: PAGE_SIZE
-    });
+  // Must use runAction for service injection
+  const result = await runAction(queryItems, {
+    collectionId,
+    limit: PAGE_SIZE,
+  });
 }
 ```
 
@@ -162,10 +170,10 @@ async function renderSlowlyChanging(props, wixData) {
 import { queryItems } from '../actions/data-actions';
 
 async function renderSlowlyChanging(props, wixData) {
-    // Just works - services automatically injected on server
-    const result = await queryItems({
-        collectionId,
-        limit: PAGE_SIZE
-    });
+  // Just works - services automatically injected on server
+  const result = await queryItems({
+    collectionId,
+    limit: PAGE_SIZE,
+  });
 }
 ```

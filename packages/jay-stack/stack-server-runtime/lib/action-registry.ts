@@ -296,4 +296,3 @@ export async function executeAction<T = any>(
 export function getActionCacheHeaders(actionName: string): string | undefined {
     return actionRegistry.getCacheHeaders(actionName);
 }
-

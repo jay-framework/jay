@@ -201,9 +201,7 @@ class JayActionBuilderImpl<Services extends any[], DefaultMethod extends HttpMet
         const action = Object.assign(
             (input: I): Promise<O> => {
                 const resolver = globalThis.__JAY_SERVICE_RESOLVER__;
-                const resolvedServices = resolver 
-                    ? resolver(serviceMarkers as any[]) 
-                    : [];
+                const resolvedServices = resolver ? resolver(serviceMarkers as any[]) : [];
                 return handler(input, ...(resolvedServices as Services));
             },
             {
