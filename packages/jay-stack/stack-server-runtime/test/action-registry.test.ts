@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ActionRegistry, runAction } from '../lib/action-registry';
+import { ActionRegistry } from '../lib/action-registry';
 import { registerService, clearServiceRegistry } from '../lib/services';
 import {
     makeJayAction,
@@ -294,7 +294,7 @@ describe('ActionRegistry', () => {
     });
 });
 
-describe('runAction', () => {
+describe('direct action call with automatic service injection', () => {
     beforeEach(() => {
         clearServiceRegistry();
         // Register mock services
@@ -302,7 +302,7 @@ describe('runAction', () => {
         registerService(PRODUCTS_DATABASE_SERVICE, mockProductsDb);
     });
 
-    it('should execute action with service injection', async () => {
+    it('should execute action with service injection via global resolver', async () => {
         const action = makeJayAction('cart.addToCart')
             .withServices(CART_SERVICE)
             .withHandler(async (input: { productId: string; quantity: number }, cartService) => {
@@ -310,11 +310,8 @@ describe('runAction', () => {
                 return { cartItemCount: cart.items.length };
             });
 
-        // Direct call bypasses service injection
-        // const result = await action({ productId: 'prod-1', quantity: 3 }); // ❌ Would fail
-
-        // runAction properly injects services
-        const result = await runAction(action, { productId: 'prod-1', quantity: 3 });
+        // Direct call now works - global resolver injects services automatically
+        const result = await action({ productId: 'prod-1', quantity: 3 });
 
         expect(result).toEqual({ cartItemCount: 3 });
     });
@@ -332,7 +329,7 @@ describe('runAction', () => {
                 },
             );
 
-        const result = await runAction(action, { query: 'test', addFirst: true });
+        const result = await action({ query: 'test', addFirst: true });
 
         expect(result).toEqual({ found: 1 });
     });
@@ -342,7 +339,7 @@ describe('runAction', () => {
             async (input: { value: number }) => ({ doubled: input.value * 2 }),
         );
 
-        const result = await runAction(action, { value: 5 });
+        const result = await action({ value: 5 });
 
         expect(result).toEqual({ doubled: 10 });
     });
@@ -357,6 +354,6 @@ describe('runAction', () => {
                 return { ok: true };
             });
 
-        await expect(runAction(action, { quantity: 20 })).rejects.toThrow('Cannot exceed 10');
+        await expect(action({ quantity: 20 })).rejects.toThrow('Cannot exceed 10');
     });
 });

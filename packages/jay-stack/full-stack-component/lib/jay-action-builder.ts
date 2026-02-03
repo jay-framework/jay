@@ -1,6 +1,22 @@
 import { ServiceMarker, ServiceMarkers } from './jay-stack-types';
 
 // ============================================================================
+// Global Service Resolver
+// ============================================================================
+
+/**
+ * Service resolver function type.
+ * Registered by stack-server-runtime to enable automatic service injection
+ * when actions are called from server-side code.
+ */
+type ServiceResolver = (markers: any[]) => any[];
+
+declare global {
+    // eslint-disable-next-line no-var
+    var __JAY_SERVICE_RESOLVER__: ServiceResolver | undefined;
+}
+
+// ============================================================================
 // HTTP Method and Cache Types
 // ============================================================================
 
@@ -177,18 +193,24 @@ class JayActionBuilderImpl<Services extends any[], DefaultMethod extends HttpMet
         const actionName = this._actionName;
         const method = this._method;
         const cacheOptions = this._cacheOptions;
-        const services = this._services;
+        const serviceMarkers = this._services;
 
         // Create the action object with callable function and metadata
-        // Note: Direct calls bypass service injection - use executeAction() on server
-        // or the build-transformed client caller for proper execution
+        // On server: uses global resolver to inject services automatically
+        // On client: build transform replaces this with HTTP call
         const action = Object.assign(
-            (input: I): Promise<O> => handler(input, ...([] as unknown as Services)),
+            (input: I): Promise<O> => {
+                const resolver = globalThis.__JAY_SERVICE_RESOLVER__;
+                const resolvedServices = resolver 
+                    ? resolver(serviceMarkers as any[]) 
+                    : [];
+                return handler(input, ...(resolvedServices as Services));
+            },
             {
                 actionName,
                 method,
                 cacheOptions,
-                services,
+                services: serviceMarkers,
                 handler,
                 _brand: 'JayAction' as const,
             },
