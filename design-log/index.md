@@ -184,6 +184,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 77  | automation dev server integration                      | Automation API for dev tools                              |
 | 80  | materializing dynamic contracts for agentic generation | CLI and dev server contract materialization for AI agents |
 | 81  | dev server test mode                                   | Health/shutdown endpoints and timeout for smoke testing   |
+| 83  | dev server logging and timing                          | Clean output, verbose mode, timing for render phases      |
 
 ---
 
