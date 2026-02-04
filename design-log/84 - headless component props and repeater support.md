@@ -9,7 +9,12 @@
 Jay Stack supports headless components from plugins that provide data contracts for page rendering. Currently, headless components are imported once per page via `<script type="application/jay-headless">` tags:
 
 ```html
-<script type="application/jay-headless" plugin="wix-stores" contract="product-list" key="products"></script>
+<script
+  type="application/jay-headless"
+  plugin="wix-stores"
+  contract="product-list"
+  key="products"
+></script>
 ```
 
 The component renders once per page, with its data bound to the `key` attribute (e.g., `{products.items}`).
@@ -30,6 +35,7 @@ We need to support scenarios where the same headless component is used multiple 
 ### Example Scenarios
 
 **Scenario A: Multiple featured products**
+
 ```html
 <!-- Current: Cannot do this -->
 <div class="featured">
@@ -40,14 +46,16 @@ We need to support scenarios where the same headless component is used multiple 
 ```
 
 **Scenario B: Product grid with repeater**
+
 ```html
 <!-- Current: Cannot do this -->
 <div class="product-grid" forEach="products.items" trackBy="_id">
-  <product-card productId={_id} />
+  <product-card productId="{_id}" />
 </div>
 ```
 
 **Scenario C: Agent discovering available product IDs**
+
 - Agent needs to know valid `productId` values to generate meaningful pages
 - Plugin should expose discoverable data sources
 
@@ -58,29 +66,39 @@ We need to support scenarios where the same headless component is used multiple 
 **Options:**
 
 A) **Extended script tag with props attribute**
+
 ```html
-<script type="application/jay-headless" 
-  plugin="wix-stores" 
-  contract="product-card" 
+<script
+  type="application/jay-headless"
+  plugin="wix-stores"
+  contract="product-card"
   key="featured1"
-  props='{"productId": "prod-123"}'>
-</script>
+  props='{"productId": "prod-123"}'
+></script>
 ```
 
 B) **Web component style with custom element**
+
 ```html
 <wix-stores-product-card productId="prod-123" key="featured1" />
 ```
 
 C) **Named instances with inline props**
+
 ```html
-<script type="application/jay-headless" plugin="wix-stores" contract="product-card" key="featured"></script>
+<script
+  type="application/jay-headless"
+  plugin="wix-stores"
+  contract="product-card"
+  key="featured"
+></script>
 
 <!-- Later in template -->
 <jay-headless use="featured" productId="prod-123" />
 ```
 
 D) **Import once, instantiate with data binding**
+
 ```html
 <script type="application/jay-headless" plugin="wix-stores" contract="product-card"></script>
 
@@ -94,6 +112,7 @@ D) **Import once, instantiate with data binding**
 The template for the headless component is placed within the instance tag, separating import from usage (like ES modules).
 
 **Considerations:**
+
 - Option A keeps existing pattern but gets verbose
 - Option B is most web-like but requires component registration mechanism
 - Option C separates import from usage (like ES modules)
@@ -102,6 +121,7 @@ The template for the headless component is placed within the instance tag, separ
 #### Q1b: What element name should be used for component instances?
 
 Given import:
+
 ```html
 <script type="application/jay-headless" plugin="wix-stores" contract="product-card"></script>
 ```
@@ -109,23 +129,29 @@ Given import:
 **Options:**
 
 A) **Namespaced with `jay:` prefix**
+
 ```html
 <jay:product-card productId="prod-123" as="featured1" />
 ```
 
 B) **Plain element name (contract name)**
+
 ```html
 <product-card productId="prod-123" as="featured1" />
 ```
 
 C) **Namespaced with `contract:` prefix**
+
 ```html
 <contract:product-card productId="prod-123" as="featured1" />
 ```
 
-**Answer:** [TBD - need input on naming]
+**Answer:** Option A - Use `jay:` prefix for consistency.
+
+Headful components currently use plain element names (Option B style). We should migrate headful components to also use the `jay:` prefix for consistency. This is a breaking change requiring test updates, but creates a unified element syntax across the framework.
 
 **Considerations for agent usage:**
+
 - Option A (`jay:`): Clear framework namespace, greppable, 4 extra chars
 - Option B (plain): Simplest, but could conflict with HTML custom elements, no namespace isolation
 - Option C (`contract:`): Semantically accurate, self-documenting, 9 extra chars
@@ -135,20 +161,24 @@ C) **Namespaced with `contract:` prefix**
 **Options:**
 
 A) **Implicit context binding**: Component automatically receives repeater item as props
+
 ```html
 <div forEach="products.items" trackBy="_id">
-  <jay:product-card /> <!-- Receives current item as props -->
+  <jay:product-card />
+  <!-- Receives current item as props -->
 </div>
 ```
 
 B) **Explicit prop binding from repeater context**
+
 ```html
 <div forEach="products.items" trackBy="_id">
-  <jay:product-card productId={_id} name={name} price={price} />
+  <jay:product-card productId="{_id}" name="{name}" price="{price}" />
 </div>
 ```
 
 C) **Spread operator for all item props**
+
 ```html
 <div forEach="products.items" trackBy="_id">
   <jay:product-card {.} />
@@ -161,6 +191,7 @@ C) **Spread operator for all item props**
 - Option C: Spread operator `{.}` passes all properties of the current forEach item (note: we use `{.}` not `{...item}` since forEach items don't have explicit names)
 
 **Considerations:**
+
 - Option A: Magic/implicit - component may expect specific shape
 - Option B: Explicit and type-safe - verbose but clear
 - Option C: Convenient for matching shapes - less type safety
@@ -174,6 +205,7 @@ Currently: Component output bound to `key` (e.g., `{products.name}`)
 **Options:**
 
 A) **Each instance has unique key**
+
 ```html
 <jay:product-card productId="prod-123" as="featured1" />
 <jay:product-card productId="prod-456" as="featured2" />
@@ -183,6 +215,7 @@ A) **Each instance has unique key**
 ```
 
 B) **Component is self-contained (slot-based)**
+
 ```html
 <jay:product-card productId="prod-123">
   <template slot="name"><h1>{name}</h1></template>
@@ -191,6 +224,7 @@ B) **Component is self-contained (slot-based)**
 ```
 
 C) **Component provides render template**
+
 ```html
 <jay:product-card productId="prod-123">
   <h1>{name}</h1>
@@ -199,6 +233,7 @@ C) **Component provides render template**
 ```
 
 D) **Component has fixed rendering**
+
 - Component controls its own HTML
 - Props configure behavior, not layout
 
@@ -208,8 +243,10 @@ The headless component instance creates a **new data context** based on its View
 
 ```html
 <jay:product-card productId="prod-123">
-  <h1>{name}</h1>           <!-- resolved from component ViewState -->
-  <span class="price">{price}</span>  <!-- resolved from component ViewState -->
+  <h1>{name}</h1>
+  <!-- resolved from component ViewState -->
+  <span class="price">{price}</span>
+  <!-- resolved from component ViewState -->
 </jay:product-card>
 ```
 
@@ -230,7 +267,7 @@ props:
   - name: productId
     type: string
     required: true
-    description: "The ID of the product to display"
+    description: 'The ID of the product to display'
 
 # Data the component provides (output)
 tags:
@@ -251,6 +288,7 @@ tags:
 **Answer:** Yes, extend the contract format to include a `props` section.
 
 The example format above captures the key elements:
+
 - `name`: prop identifier
 - `type`: data type (string, number, boolean, enum, etc.)
 - `required`: whether the prop must be provided
@@ -264,6 +302,7 @@ The example format above captures the key elements:
 **Options:**
 
 A) **Plugin exposes data discovery endpoint**
+
 ```yaml
 # plugin.yaml
 contracts:
@@ -273,24 +312,26 @@ contracts:
 
 data_sources:
   - name: products
-    description: "Available products for product-card component"
-    endpoint: ./data/get-products.ts  # Returns list of valid productIds
+    description: 'Available products for product-card component'
+    endpoint: ./data/get-products.ts # Returns list of valid productIds
 ```
 
 B) **Contract declares related list source**
+
 ```yaml
 # product-card.jay-contract
 name: ProductCard
 props:
   - name: productId
     type: string
-    source: 
+    source:
       plugin: wix-stores
       contract: product-list
       path: items[*]._id
 ```
 
 C) **Separate discovery contract/command**
+
 ```bash
 # Agent runs this to discover available data
 jay-stack discover wix-stores/product-card/productId
@@ -298,6 +339,7 @@ jay-stack discover wix-stores/product-card/productId
 ```
 
 D) **Materialized data index (similar to contracts-index.yaml)**
+
 ```yaml
 # build/materialized-data/data-index.yaml
 data_sources:
@@ -307,9 +349,48 @@ data_sources:
     values_path: ./build/materialized-data/wix-stores/product-ids.json
 ```
 
-**Answer:** [TBD - need input]
+**Answer:** Leverage existing plugin actions.
+
+Plugins already define **actions** (e.g., "search products" in wix-stores) in `plugin.yaml`. These actions can be:
+
+1. Described with metadata for agent understanding
+2. Exposed via MCP server for agent invocation
+3. Callable via CLI command for scripted discovery
+
+This aligns with the existing plugin architecture - actions already exist, we just need to make them discoverable and invocable by agents.
+
+**Example:**
+
+```yaml
+# plugin.yaml
+actions:
+  - name: searchProducts
+    description: 'Search products by query, returns list of matching products with IDs'
+    input:
+      - name: query
+        type: string
+        description: 'Search query'
+      - name: limit
+        type: number
+        default: 10
+    output:
+      type: array
+      items:
+        properties:
+          _id: { type: string }
+          name: { type: string }
+          price: { type: number }
+```
+
+**Agent usage via MCP or CLI:**
+
+```bash
+jay-stack action wix-stores/searchProducts --query="blue shirt"
+# Returns: [{"_id": "prod-123", "name": "Blue Shirt", ...}, ...]
+```
 
 **Considerations:**
+
 - Option A: Plugin-defined, but requires API at build time
 - Option B: Declarative relationship - agent follows the source
 - Option C: CLI command for exploration - explicit but separate step
@@ -317,16 +398,67 @@ data_sources:
 
 ### Q6: Should props be validated at compile time or runtime?
 
-**Answer:** [TBD]
+**Answer:** Compile time.
 
-Options:
-- Compile time: Type check props against contract, error on invalid
-- Runtime: Flexible, warn on unknown props
-- Both: Compile time for static, runtime for dynamic
+Props are validated against the contract schema at compile time. This provides:
+
+- Early error detection before runtime
+- Type safety for static props
+- Better agent feedback when generating pages
 
 ## Design
 
-[TBD - Pending answers to questions above]
+### Key Insight: Headless + Inline Template = Headful Component
+
+The jay-runtime library already supports headful components with a similar pattern. A **headless component with an inline template** should be treated as a **headful component** during compilation.
+
+```html
+<jay:product-card productId="prod-123">
+  <article class="card">
+    <h1>{name}</h1>
+    <span class="price">{price}</span>
+    <button ref="addToCart">Add to Cart</button>
+  </article>
+</jay:product-card>
+```
+
+This compiles to a `makeJayComponent` call with the headless component's data providing the context.
+
+### Compilation by Phase
+
+**Slow Phase:**
+
+- Transform the inline template using the headless component's slow ViewState
+- Props are resolved and passed to the headless component's `slowlyRender`
+- Output: Static HTML with slow-phase data bindings resolved
+
+**Fast Phase:**
+
+- Headless component's `fastRender` produces fast ViewState
+- Create `carryForward` data to hand over to interactive phase
+- Output: HTML with fast-phase data bindings resolved
+
+**Interactive Phase:**
+
+- Compile the inline template into a `makeJayComponent` call
+- Two special contexts are injected:
+  1. `Signals<FastViewState>` - Reactive signals for the component's ViewState
+  2. `FastCarryForward` - Data carried from fast phase
+- Refs from the inline template (e.g., `ref="addToCart"`) are wired up
+- Event handlers and reactive updates work within the component's data context
+
+```typescript
+// Conceptual compilation output
+const ProductCardInstance = makeJayComponent({
+  // Injected from headless component
+  viewState: productCardViewStateSignals,
+  carryForward: productCardCarryForward,
+
+  // From inline template
+  template: compiledInlineTemplate,
+  refs: { addToCart: buttonRef },
+});
+```
 
 ### Proposed Contract Format with Props
 
@@ -339,13 +471,13 @@ props:
   - name: productId
     type: string
     required: true
-    description: "The product ID to display"
-    
+    description: 'The product ID to display'
+
   - name: showPrice
     type: boolean
     required: false
     default: true
-    description: "Whether to show price"
+    description: 'Whether to show price'
 
   - name: variant
     type: enum
@@ -368,40 +500,38 @@ tags:
 
 ```html
 <html>
-<head>
-  <!-- Import the component (makes it available) -->
-  <script type="application/jay-headless" 
-    plugin="wix-stores" 
-    contract="product-card">
-  </script>
-  
-  <!-- Import a list for the repeater -->
-  <script type="application/jay-headless" 
-    plugin="wix-stores" 
-    contract="product-list"
-    key="allProducts">
-  </script>
-</head>
-<body>
-  <!-- Static props - multiple instances -->
-  <section class="featured">
-    <jay:product-card productId="prod-hero" variant="featured" as="hero">
-      <h1 class="hero-title">{name}</h1>
-    </jay:product-card>
-  </section>
-  
-  <!-- Dynamic props from repeater -->
-  <section class="catalog">
-    <div class="grid" forEach="allProducts.items" trackBy="_id">
-      <jay:product-card productId={_id} variant="compact">
-        <article class="card">
-          <h2>{name}</h2>
-          <span class="price">{price}</span>
-        </article>
+  <head>
+    <!-- Import the component (makes it available) -->
+    <script type="application/jay-headless" plugin="wix-stores" contract="product-card"></script>
+
+    <!-- Import a list for the repeater -->
+    <script
+      type="application/jay-headless"
+      plugin="wix-stores"
+      contract="product-list"
+      key="allProducts"
+    ></script>
+  </head>
+  <body>
+    <!-- Static props - multiple instances -->
+    <section class="featured">
+      <jay:product-card productId="prod-hero" variant="featured" as="hero">
+        <h1 class="hero-title">{name}</h1>
       </jay:product-card>
-    </div>
-  </section>
-</body>
+    </section>
+
+    <!-- Dynamic props from repeater -->
+    <section class="catalog">
+      <div class="grid" forEach="allProducts.items" trackBy="_id">
+        <jay:product-card productId="{_id}" variant="compact">
+          <article class="card">
+            <h2>{name}</h2>
+            <span class="price">{price}</span>
+          </article>
+        </jay:product-card>
+      </div>
+    </section>
+  </body>
 </html>
 ```
 
@@ -410,7 +540,7 @@ tags:
 ```yaml
 # plugin.yaml
 name: wix-stores
-module: "@wix/stores"
+module: '@wix/stores'
 
 contracts:
   - name: product-card
@@ -420,7 +550,7 @@ contracts:
 # NEW: Data sources that agents can discover
 discoverable_data:
   - name: product-ids
-    description: "Available product IDs for product-card"
+    description: 'Available product IDs for product-card'
     generator: ./data/product-ids-generator.ts
     for_props:
       - contract: product-card
@@ -436,49 +566,54 @@ export const generator = makeDataGenerator()
   .withServices(PRODUCTS_SERVICE)
   .generateWith(async (productsService) => {
     const products = await productsService.getAllProducts();
-    return products.map(p => ({
+    return products.map((p) => ({
       value: p._id,
-      label: p.name,          // Human-readable label
-      preview: p.imageUrl,    // Optional preview for agent/IDE
+      label: p.name, // Human-readable label
+      preview: p.imageUrl, // Optional preview for agent/IDE
     }));
   });
 ```
 
 **Materialized output:**
+
 ```yaml
 # build/discoverable-data/wix-stores/product-ids.yaml
 generator: product-ids
 for_contract: product-card
 for_prop: productId
-generated_at: "2026-02-04T10:00:00Z"
+generated_at: '2026-02-04T10:00:00Z'
 values:
-  - value: "prod-123"
-    label: "Classic Blue T-Shirt"
-    preview: "https://..."
-  - value: "prod-456"
-    label: "Red Running Shoes"
-    preview: "https://..."
+  - value: 'prod-123'
+    label: 'Classic Blue T-Shirt'
+    preview: 'https://...'
+  - value: 'prod-456'
+    label: 'Red Running Shoes'
+    preview: 'https://...'
 ```
 
 ## Implementation Plan
 
 ### Phase 1: Contract Props Definition
+
 1. Extend `.jay-contract` format to support `props` section
 2. Update contract parser to extract props schema
 3. Generate TypeScript types for component props
 
 ### Phase 2: Component Instance Syntax
+
 1. Define `<jay:component-name>` element syntax
 2. Implement prop passing to component instances
 3. Support `as` attribute for data binding key
 4. Integrate with existing `forEach` binding
 
 ### Phase 3: Repeater Integration
+
 1. Allow headless components inside `forEach` blocks
 2. Bind props from repeater context
 3. Handle rendering phase coordination (slow/fast/interactive)
 
 ### Phase 4: Data Discovery for Agents
+
 1. Add `discoverable_data` to plugin.yaml schema
 2. Implement data generator execution
 3. Materialize to `build/discoverable-data/`
@@ -487,17 +622,20 @@ values:
 ## Trade-offs
 
 ### Advantages
+
 1. **Flexible widget usage** - Same component, different data
 2. **Repeater compatible** - Natural integration with `forEach`
 3. **Agent-friendly** - Discoverable prop values enable AI generation
 4. **Type-safe** - Props validated against contract schema
 
 ### Disadvantages
+
 1. **Complexity** - More concepts to learn (props, instances, discovery)
 2. **Multiple rendering** - Performance considerations for many instances
 3. **Contract changes** - Need to update existing contracts
 
 ### Alternatives Considered
+
 1. **No props, only page-level data** - Rejected: too limiting
 2. **React-style components** - Rejected: different mental model
 3. **No discovery, agent figures it out** - Rejected: poor DX
@@ -514,14 +652,17 @@ values:
 ## Open Questions
 
 1. How does caching work with parameterized components?
+
    - Each `(component, props)` tuple is a separate cache entry?
    - Props that affect slow-phase need cache key inclusion
 
 2. How do we handle props that change at different phases?
+
    - `productId` is slow (set at build/request time)
    - `quantity` might be interactive
 
 3. Should there be limits on instance count?
+
    - Performance implications of 100 product cards on a page
    - Lazy rendering / virtualization?
 
