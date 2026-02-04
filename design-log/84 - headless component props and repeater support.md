@@ -359,28 +359,64 @@ Plugins already define **actions** (e.g., "search products" in wix-stores) in `p
 
 This aligns with the existing plugin architecture - actions already exist, we just need to make them discoverable and invocable by agents.
 
-**Example:**
+#### Q5b: How should action descriptions be stored?
+
+**Answer:** Link to separate files, not inline.
+
+Action descriptions can be large (especially for agents). Storing them inline in `plugin.yaml` would bloat the file and consume agent context when reading plugin configuration.
 
 ```yaml
-# plugin.yaml
+# plugin.yaml - lightweight references
 actions:
   - name: searchProducts
-    description: 'Search products by query, returns list of matching products with IDs'
+    description: ./actions/search-products.md   # Link to detailed description
+    handler: ./actions/search-products.ts
     input:
       - name: query
         type: string
-        description: 'Search query'
       - name: limit
         type: number
         default: 10
-    output:
-      type: array
-      items:
-        properties:
-          _id: { type: string }
-          name: { type: string }
-          price: { type: number }
 ```
+
+```markdown
+# ./actions/search-products.md
+# Search Products Action
+
+Search for products by query string. Returns matching products with their IDs,
+names, and prices. Use this to discover valid `productId` values for the 
+`product-card` component.
+
+## Input
+- `query` (string, required): Search query text
+- `limit` (number, optional, default: 10): Maximum results to return
+
+## Output
+Array of product objects:
+- `_id`: Product identifier (use as `productId` prop)
+- `name`: Product display name  
+- `price`: Product price
+
+## Example
+jay-stack action wix-stores/searchProducts --query="blue shirt"
+```
+
+#### Q5c: What format standard should action descriptions follow?
+
+**Options:**
+
+A) **MCP Tool format** - Aligns with Model Context Protocol for AI agents
+B) **OpenAPI/JSON Schema** - Industry standard for API descriptions
+C) **Custom markdown format** - Simple, human-readable, agent-friendly
+D) **Combination** - Structured schema in YAML + markdown description file
+
+**Answer:** [TBD - need input]
+
+**Considerations:**
+- MCP: Native format for Cursor/Claude agents, but may evolve
+- OpenAPI: Well-established, tooling support, but verbose
+- Markdown: Simple for agents to read, easy to write
+- Combination: Best of both - schema for validation, markdown for context
 
 **Agent usage via MCP or CLI:**
 
@@ -453,12 +489,220 @@ const ProductCardInstance = makeJayComponent({
   // Injected from headless component
   viewState: productCardViewStateSignals,
   carryForward: productCardCarryForward,
-
+  
   // From inline template
   template: compiledInlineTemplate,
   refs: { addToCart: buttonRef },
 });
 ```
+
+### Detailed Compilation Example
+
+#### Source: page.jay-html
+
+```html
+<html>
+<head>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+  <script type="application/jay-headless" plugin="wix-stores" contract="product-card"></script>
+  <script type="application/jay-headless" plugin="wix-stores" contract="product-list" key="catalog"></script>
+</head>
+<body>
+  <h1>{pageTitle}</h1>
+  
+  <!-- Single headless component instance with static prop -->
+  <section class="hero">
+    <jay:product-card productId="prod-hero">
+      <article class="hero-card">
+        <h2>{name}</h2>
+        <p class="desc">{description}</p>
+        <span class="price">${price}</span>
+        <button ref="buyNow">Buy Now</button>
+      </article>
+    </jay:product-card>
+  </section>
+  
+  <!-- Headless components in a repeater -->
+  <section class="catalog">
+    <div class="grid" forEach="catalog.items" trackBy="_id">
+      <jay:product-card productId={_id}>
+        <article class="product-tile">
+          <img src={imageUrl} alt={name} />
+          <h3>{name}</h3>
+          <span class="price">${price}</span>
+          <button ref="addToCart">Add to Cart</button>
+        </article>
+      </jay:product-card>
+    </div>
+  </section>
+</body>
+</html>
+```
+
+#### Compiled Output: page.ts
+
+```typescript
+import { makeJayStackComponent, partialRender } from '@jay-framework/fullstack-component';
+import { makeJayComponent, createSignal } from '@jay-framework/runtime';
+import { productCard } from '@wix/stores';
+import { productList } from '@wix/stores';
+import type { PageContract } from './page.jay-contract';
+
+// Type for the hero product-card instance
+interface HeroProductCardViewState {
+  name: string;
+  description: string;
+  price: number;
+  imageUrl: string;
+}
+
+// Compiled interactive component for hero product-card inline template
+const HeroProductCardInteractive = makeJayComponent<
+  { viewState: Signals<HeroProductCardViewState>; carryForward: HeroCarryForward },
+  { buyNow: HTMLButtonElement }
+>((props, refs) => {
+  const { viewState } = props;
+  
+  refs.buyNow.onclick(() => {
+    // Interactive behavior here
+    console.log('Buy now:', viewState.name());
+  });
+  
+  return {
+    render: () => ({
+      // Reactive bindings from viewState signals
+      name: viewState.name(),
+      description: viewState.description(),
+      price: viewState.price(),
+    }),
+  };
+});
+
+// Compiled interactive component for catalog item inline template
+const CatalogItemInteractive = makeJayComponent<
+  { viewState: Signals<HeroProductCardViewState>; carryForward: CatalogCarryForward },
+  { addToCart: HTMLButtonElement }
+>((props, refs) => {
+  const { viewState, carryForward } = props;
+  
+  refs.addToCart.onclick(() => {
+    // Interactive behavior - could call server action
+    console.log('Add to cart:', carryForward.productId);
+  });
+  
+  return {
+    render: () => ({
+      name: viewState.name(),
+      price: viewState.price(),
+      imageUrl: viewState.imageUrl(),
+    }),
+  };
+});
+
+// Page component definition
+export const page = makeJayStackComponent<PageContract>()
+  .withProps<PageProps>()
+  .withServices(PRODUCTS_SERVICE)
+  .withSlowlyRender(async (props, productsService) => {
+    // 1. Render page-level slow data
+    const pageData = { pageTitle: 'Our Products' };
+    
+    // 2. Render hero product-card (static productId)
+    const heroProduct = await productCard.slowlyRender(
+      { productId: 'prod-hero' },
+      productsService
+    );
+    
+    // 3. Render catalog list
+    const catalogData = await productList.slowlyRender({}, productsService);
+    
+    // 4. Render each catalog item's product-card
+    const catalogItems = await Promise.all(
+      catalogData.items.map(item => 
+        productCard.slowlyRender({ productId: item._id }, productsService)
+      )
+    );
+    
+    return partialRender({
+      ...pageData,
+      _hero: heroProduct,           // Namespaced for hero instance
+      catalog: catalogData,
+      _catalogItems: catalogItems,  // Array of product-card ViewStates
+    }, {
+      heroProductId: 'prod-hero',
+      catalogItemIds: catalogData.items.map(i => i._id),
+    });
+  })
+  .withFastRender(async (props, carryForward, productsService) => {
+    // Fast phase for hero
+    const heroFast = await productCard.fastRender(
+      { productId: carryForward.heroProductId },
+      carryForward,
+      productsService
+    );
+    
+    // Fast phase for each catalog item
+    const catalogItemsFast = await Promise.all(
+      carryForward.catalogItemIds.map(id =>
+        productCard.fastRender({ productId: id }, carryForward, productsService)
+      )
+    );
+    
+    return partialRender({
+      _hero: heroFast,
+      _catalogItems: catalogItemsFast,
+    }, carryForward);
+  })
+  .withInteractive((props, refs, contexts) => {
+    // Hero product-card interactive instance
+    const heroInstance = HeroProductCardInteractive({
+      viewState: props._hero,  // Signals for hero ViewState
+      carryForward: contexts.carryForward,
+    }, refs.hero);
+    
+    // Catalog item interactive instances (one per item)
+    const catalogInstances = props._catalogItems.map((itemViewState, index) => 
+      CatalogItemInteractive({
+        viewState: itemViewState,
+        carryForward: { 
+          ...contexts.carryForward,
+          productId: contexts.carryForward.catalogItemIds[index],
+        },
+      }, refs.catalogItems[index])
+    );
+    
+    return {
+      render: () => ({
+        pageTitle: props.pageTitle(),
+        _hero: heroInstance.render(),
+        catalog: props.catalog(),
+        _catalogItems: catalogInstances.map(i => i.render()),
+      }),
+    };
+  });
+```
+
+#### Key Points from the Compilation
+
+1. **Import the headless component** - `productCard` from plugin provides `slowlyRender`, `fastRender`
+
+2. **Each instance gets its own namespace** - Hero uses `_hero`, catalog items use `_catalogItems[]`
+
+3. **Inline template compiles to `makeJayComponent`** - With ViewState signals and refs from template
+
+4. **Props resolution:**
+   - Static props (`productId="prod-hero"`) - resolved at compile time
+   - Dynamic props (`productId={_id}`) - resolved from parent context (repeater item)
+
+5. **Phase coordination:**
+   - Page's `slowlyRender` calls each headless component's `slowlyRender`
+   - Page's `fastRender` calls each headless component's `fastRender`
+   - Page's `withInteractive` instantiates compiled inline templates
+
+6. **Repeater handling:**
+   - `forEach` items collected in slow phase
+   - Each item's product-card rendered in parallel
+   - Interactive instances created for each item
 
 ### Proposed Contract Format with Props
 
