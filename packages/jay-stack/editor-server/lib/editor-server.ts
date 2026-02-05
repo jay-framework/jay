@@ -181,7 +181,9 @@ export class EditorServer implements DevServerProtocol {
             // Validate that WebSocket connection is from localhost
             const clientIP = socket.handshake.address;
             if (!this.isLocalhost(clientIP)) {
-                getLogger().warn(`Rejected WebSocket connection from non-localhost IP: ${clientIP}`);
+                getLogger().warn(
+                    `Rejected WebSocket connection from non-localhost IP: ${clientIP}`,
+                );
                 socket.disconnect(true);
                 return;
             }

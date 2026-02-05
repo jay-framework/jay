@@ -75,7 +75,9 @@ program
             }
         } catch (error: any) {
             if (options.json) {
-                getLogger().important(JSON.stringify({ valid: false, error: error.message }, null, 2));
+                getLogger().important(
+                    JSON.stringify({ valid: false, error: error.message }, null, 2),
+                );
             } else {
                 getLogger().error(chalk.red('Validation error:') + ' ' + error.message);
             }
@@ -178,7 +180,9 @@ program
                 getLogger().important(`   Output: ${result.outputDir}`);
             }
         } catch (error: any) {
-            getLogger().error(chalk.red('❌ Failed to materialize contracts:') + ' ' + error.message);
+            getLogger().error(
+                chalk.red('❌ Failed to materialize contracts:') + ' ' + error.message,
+            );
             if (options.verbose) {
                 getLogger().error(error.stack);
             }

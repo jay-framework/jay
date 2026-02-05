@@ -616,7 +616,9 @@ async function scanPlugins(projectRootPath: string): Promise<Plugin[]> {
                 }
             }
         } catch (error) {
-            getLogger().warn(`Failed to scan local plugins directory ${localPluginsPath}: ${error}`);
+            getLogger().warn(
+                `Failed to scan local plugins directory ${localPluginsPath}: ${error}`,
+            );
         }
     }
 

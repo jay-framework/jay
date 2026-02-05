@@ -301,10 +301,12 @@ GET /page
 Extended logger usage to compiler packages as specified in Phase 3:
 
 **compiler-jay-html:**
+
 - Added `@jay-framework/logger` dependency
 - `expression-compiler.ts` - `console.warn` → `getLogger().warn()`
 
 **compiler-jay-stack:**
+
 - Added `@jay-framework/logger` dependency
 - `index.ts` - `console.error/warn` → `getLogger().error/warn()`
 - `plugin-client-import-resolver.ts` - `console.log` → `getLogger().info()`
@@ -312,14 +314,17 @@ Extended logger usage to compiler packages as specified in Phase 3:
 - `import-chain-tracker.ts` - All `console.log/warn/error` → `getLogger().info/warn/error()`
 
 **rollup-plugin:**
+
 - Added `@jay-framework/logger` dependency
 - `runtime-compiler.ts` - `console.log` → `getLogger().info()`
 
 **compiler/cli (jay-cli):**
+
 - Added `@jay-framework/logger` dependency
 - `generate-files.ts` - `console.log` → `getLogger().important/info/error()`
 
 **stack-server-runtime:**
+
 - `contract-materializer.ts` - All verbose logs → `getLogger().info()`, errors → `getLogger().error()`
 - `plugin-init-discovery.ts` - `console.log/warn/error` → `getLogger().info/warn/error()`
 - `plugin-scanner.ts` - `console.log/warn` → `getLogger().info/warn()`

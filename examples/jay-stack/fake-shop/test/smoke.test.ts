@@ -74,7 +74,11 @@ describe('Fake Shop Smoke Tests', () => {
 
                 // Once we see the success message, start polling health endpoint
                 // Check accumulated output to handle line-by-line buffering (e.g., when run via wsrun)
-                if (!pollingStarted && output.includes('Jay Stack dev server started successfully') && detectedUrl) {
+                if (
+                    !pollingStarted &&
+                    output.includes('Jay Stack dev server started successfully') &&
+                    detectedUrl
+                ) {
                     pollingStarted = true;
                     pollHealth(detectedUrl, timeout, resolve, reject);
                 }
