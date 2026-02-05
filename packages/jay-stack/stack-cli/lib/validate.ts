@@ -14,6 +14,7 @@ import {
     generateElementFile,
     parseContract,
 } from '@jay-framework/compiler-jay-html';
+import { getLogger } from '@jay-framework/logger';
 import { loadConfig, getConfigWithDefaults } from './config';
 
 export interface ValidateOptions {
@@ -67,9 +68,9 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
     const contractFiles = await findContractFiles(scanDir);
 
     if (options.verbose) {
-        console.log(chalk.gray(`Scanning directory: ${scanDir}`));
-        console.log(chalk.gray(`Found ${jayHtmlFiles.length} .jay-html files`));
-        console.log(chalk.gray(`Found ${contractFiles.length} .jay-contract files\n`));
+        getLogger().info(chalk.gray(`Scanning directory: ${scanDir}`));
+        getLogger().info(chalk.gray(`Found ${jayHtmlFiles.length} .jay-html files`));
+        getLogger().info(chalk.gray(`Found ${contractFiles.length} .jay-contract files\n`));
     }
 
     // Validate .jay-contract files first (they may be referenced by jay-html)
@@ -89,10 +90,10 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                     });
                 }
                 if (options.verbose) {
-                    console.log(chalk.red(`❌ ${relativePath}`));
+                    getLogger().info(chalk.red(`❌ ${relativePath}`));
                 }
             } else if (options.verbose) {
-                console.log(chalk.green(`✓ ${relativePath}`));
+                getLogger().info(chalk.green(`✓ ${relativePath}`));
             }
         } catch (error: any) {
             errors.push({
@@ -101,7 +102,7 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                 stage: 'parse',
             });
             if (options.verbose) {
-                console.log(chalk.red(`❌ ${relativePath}`));
+                getLogger().info(chalk.red(`❌ ${relativePath}`));
             }
         }
     }
@@ -133,7 +134,7 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                     });
                 }
                 if (options.verbose) {
-                    console.log(chalk.red(`❌ ${relativePath}`));
+                    getLogger().info(chalk.red(`❌ ${relativePath}`));
                 }
                 continue; // Skip generation if parsing failed
             }
@@ -154,10 +155,10 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                     });
                 }
                 if (options.verbose) {
-                    console.log(chalk.red(`❌ ${relativePath}`));
+                    getLogger().info(chalk.red(`❌ ${relativePath}`));
                 }
             } else if (options.verbose) {
-                console.log(chalk.green(`✓ ${relativePath}`));
+                getLogger().info(chalk.green(`✓ ${relativePath}`));
             }
         } catch (error: any) {
             errors.push({
@@ -166,7 +167,7 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                 stage: 'parse',
             });
             if (options.verbose) {
-                console.log(chalk.red(`❌ ${relativePath}`));
+                getLogger().info(chalk.red(`❌ ${relativePath}`));
             }
         }
     }
@@ -181,32 +182,33 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
 }
 
 export function printJayValidationResult(result: ValidationResult, options: ValidateOptions): void {
+    const logger = getLogger();
     if (options.json) {
-        console.log(JSON.stringify(result, null, 2));
+        logger.important(JSON.stringify(result, null, 2));
         return;
     }
 
-    console.log('');
+    logger.important('');
 
     if (result.valid) {
-        console.log(chalk.green('✅ Jay Stack validation successful!\n'));
-        console.log(
+        logger.important(chalk.green('✅ Jay Stack validation successful!\n'));
+        logger.important(
             `Scanned ${result.jayHtmlFilesScanned} .jay-html files, ${result.contractFilesScanned} .jay-contract files`,
         );
-        console.log('No errors found.');
+        logger.important('No errors found.');
     } else {
-        console.log(chalk.red('❌ Jay Stack validation failed\n'));
-        console.log('Errors:');
+        logger.important(chalk.red('❌ Jay Stack validation failed\n'));
+        logger.important('Errors:');
 
         for (const error of result.errors) {
-            console.log(chalk.red(`  ❌ ${error.file}`));
-            console.log(chalk.gray(`     ${error.message}`));
-            console.log('');
+            logger.important(chalk.red(`  ❌ ${error.file}`));
+            logger.important(chalk.gray(`     ${error.message}`));
+            logger.important('');
         }
 
         const validFiles =
             result.jayHtmlFilesScanned + result.contractFilesScanned - result.errors.length;
-        console.log(
+        logger.important(
             chalk.red(`${result.errors.length} error(s) found, ${validFiles} file(s) valid.`),
         );
     }

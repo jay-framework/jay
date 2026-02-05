@@ -3,6 +3,7 @@ import fs from 'fs';
 import YAML from 'yaml';
 import { parse } from 'node-html-parser';
 import { createRequire } from 'module';
+import { getLogger } from '@jay-framework/logger';
 import type {
     PublishMessage,
     PublishComponent,
@@ -161,7 +162,7 @@ async function scanPageDirectories(
                 }
             }
         } catch (error) {
-            console.warn(`Failed to scan directory ${dirPath}:`, error);
+            getLogger().warn(`Failed to scan directory ${dirPath}: ${error}`);
         }
     }
 
@@ -176,9 +177,8 @@ async function parseContractFile(contractFilePath: string): Promise<ContractSche
         const parsedContract = parseContract(contractYaml, contractFilePath);
 
         if (parsedContract.validations.length > 0) {
-            console.warn(
-                `Contract validation errors in ${contractFilePath}:`,
-                parsedContract.validations,
+            getLogger().warn(
+                `Contract validation errors in ${contractFilePath}: ${parsedContract.validations.join(', ')}`,
             );
         }
 
@@ -195,7 +195,7 @@ async function parseContractFile(contractFilePath: string): Promise<ContractSche
             };
         }
     } catch (error) {
-        console.warn(`Failed to parse contract file ${contractFilePath}:`, error);
+        getLogger().warn(`Failed to parse contract file ${contractFilePath}: ${error}`);
     }
     return null;
 }
@@ -235,12 +235,12 @@ async function resolveLinkedTags(
 
                     resolvedTags.push(resolvedTag);
                 } else {
-                    console.warn(`Failed to load linked contract: ${tag.link} from ${baseDir}`);
+                    getLogger().warn(`Failed to load linked contract: ${tag.link} from ${baseDir}`);
                     // Fall back to including the link reference
                     resolvedTags.push(convertContractTagToProtocol(tag));
                 }
             } catch (error) {
-                console.warn(`Error resolving linked contract ${tag.link}:`, error);
+                getLogger().warn(`Error resolving linked contract ${tag.link}: ${error}`);
                 // Fall back to including the link reference
                 resolvedTags.push(convertContractTagToProtocol(tag));
             }
@@ -275,9 +275,8 @@ function resolveAppContractPath(
 
         return resolvedPath;
     } catch (error) {
-        console.warn(
-            `Failed to resolve contract: ${appModule}/${contractFileName}`,
-            error instanceof Error ? error.message : error,
+        getLogger().warn(
+            `Failed to resolve contract: ${appModule}/${contractFileName} - ${error instanceof Error ? error.message : error}`,
         );
         return null;
     }
@@ -383,12 +382,12 @@ async function scanInstalledAppContracts(
                         installedAppContracts[appName] = appContracts;
                     }
                 } catch (error) {
-                    console.warn(`Failed to parse app config ${appConfigPath}:`, error);
+                    getLogger().warn(`Failed to parse app config ${appConfigPath}: ${error}`);
                 }
             }
         }
     } catch (error) {
-        console.warn(`Failed to scan installed apps directory ${installedAppsPath}:`, error);
+        getLogger().warn(`Failed to scan installed apps directory ${installedAppsPath}: ${error}`);
     }
 
     return installedAppContracts;
@@ -517,7 +516,7 @@ async function scanProjectComponents(componentsBasePath: string): Promise<Projec
             }
         }
     } catch (error) {
-        console.warn(`Failed to scan components directory ${componentsBasePath}:`, error);
+        getLogger().warn(`Failed to scan components directory ${componentsBasePath}: ${error}`);
     }
 
     return components;
@@ -553,12 +552,12 @@ async function scanInstalledApps(configBasePath: string): Promise<InstalledApp[]
                         });
                     }
                 } catch (error) {
-                    console.warn(`Failed to parse app config ${appConfigPath}:`, error);
+                    getLogger().warn(`Failed to parse app config ${appConfigPath}: ${error}`);
                 }
             }
         }
     } catch (error) {
-        console.warn(`Failed to scan installed apps directory ${installedAppsPath}:`, error);
+        getLogger().warn(`Failed to scan installed apps directory ${installedAppsPath}: ${error}`);
     }
 
     return installedApps;
@@ -575,7 +574,7 @@ async function getProjectName(configBasePath: string): Promise<string> {
             return projectConfig.name || 'Unnamed Project';
         }
     } catch (error) {
-        console.warn(`Failed to read project config ${projectConfigPath}:`, error);
+        getLogger().warn(`Failed to read project config ${projectConfigPath}: ${error}`);
     }
 
     return 'Unnamed Project';
@@ -612,12 +611,12 @@ async function scanPlugins(projectRootPath: string): Promise<Plugin[]> {
                             },
                         });
                     } catch (error) {
-                        console.warn(`Failed to parse plugin.yaml for ${dir.name}:`, error);
+                        getLogger().warn(`Failed to parse plugin.yaml for ${dir.name}: ${error}`);
                     }
                 }
             }
         } catch (error) {
-            console.warn(`Failed to scan local plugins directory ${localPluginsPath}:`, error);
+            getLogger().warn(`Failed to scan local plugins directory ${localPluginsPath}: ${error}`);
         }
     }
 
@@ -683,16 +682,15 @@ async function scanPlugins(projectRootPath: string): Promise<Plugin[]> {
                                 },
                             });
                         } catch (error) {
-                            console.warn(
-                                `Failed to parse plugin.yaml for package ${pkgPath}:`,
-                                error,
+                            getLogger().warn(
+                                `Failed to parse plugin.yaml for package ${pkgPath}: ${error}`,
                             );
                         }
                     }
                 }
             }
         } catch (error) {
-            console.warn(`Failed to scan node_modules for plugins:`, error);
+            getLogger().warn(`Failed to scan node_modules for plugins: ${error}`);
         }
     }
 
@@ -741,7 +739,7 @@ async function scanProjectInfo(
                     contractSchema = parsedContract;
                 }
             } catch (error) {
-                console.warn(`Failed to parse contract file ${contractPath}:`, error);
+                getLogger().warn(`Failed to parse contract file ${contractPath}: ${error}`);
             }
         }
 
@@ -755,7 +753,7 @@ async function scanProjectInfo(
                     installedAppContracts,
                 );
             } catch (error) {
-                console.warn(`Failed to read page file ${pageFilePath}:`, error);
+                getLogger().warn(`Failed to read page file ${pageFilePath}: ${error}`);
             }
         }
         // Priority 2: page.conf.yaml
@@ -871,7 +869,7 @@ async function scanProjectInfo(
                     }
                 }
             } catch (error) {
-                console.warn(`Failed to parse page config ${pageConfigPath}:`, error);
+                getLogger().warn(`Failed to parse page config ${pageConfigPath}: ${error}`);
             }
         }
 
@@ -926,7 +924,7 @@ async function handlePagePublish(
         if (page.contract) {
             contractPath = path.join(dirname, `page${JAY_CONTRACT_EXTENSION}`);
             await fs.promises.writeFile(contractPath, page.contract, 'utf-8');
-            console.log(`📄 Published page contract: ${contractPath}`);
+            getLogger().info(`📄 Published page contract: ${contractPath}`);
         }
 
         const createdJayHtml: CreatedJayHtml = {
@@ -936,7 +934,7 @@ async function handlePagePublish(
             fullPath,
         };
 
-        console.log(`📝 Published page: ${fullPath}`);
+        getLogger().info(`📝 Published page: ${fullPath}`);
 
         return [
             {
@@ -947,7 +945,7 @@ async function handlePagePublish(
             createdJayHtml,
         ];
     } catch (error) {
-        console.error(`Failed to publish page ${page.route}:`, error);
+        getLogger().error(`Failed to publish page ${page.route}: ${error}`);
         return [
             {
                 success: false,
@@ -988,7 +986,7 @@ async function handleComponentPublish(
             fullPath,
         };
 
-        console.log(`🧩 Published component: ${fullPath}`);
+        getLogger().info(`🧩 Published component: ${fullPath}`);
 
         return [
             {
@@ -999,7 +997,7 @@ async function handleComponentPublish(
             createdJayHtml,
         ];
     } catch (error) {
-        console.error(`Failed to publish component ${component.name}:`, error);
+        getLogger().error(`Failed to publish component ${component.name}: ${error}`);
         return [
             {
                 success: false,
@@ -1051,7 +1049,7 @@ export function createEditorHandlers(
             );
             const definitionFile = generateElementDefinitionFile(parsedJayHtml);
             if (definitionFile.validations.length > 0)
-                console.log(
+                getLogger().warn(
                     `failed to generate .d.ts for ${fullPath} with validation errors: ${definitionFile.validations.join('\n')}`,
                 );
             else await fs.promises.writeFile(fullPath + '.d.ts', definitionFile.val, 'utf-8');
@@ -1078,7 +1076,7 @@ export function createEditorHandlers(
             // Save the image
             await fs.promises.writeFile(imagePath, Buffer.from(params.imageData, 'base64'));
 
-            console.log(`🖼️  Saved image: ${imagePath}`);
+            getLogger().info(`🖼️  Saved image: ${imagePath}`);
 
             return {
                 type: 'saveImage',
@@ -1086,7 +1084,7 @@ export function createEditorHandlers(
                 imageUrl: `/images/${filename}`,
             };
         } catch (error) {
-            console.error('Failed to save image:', error);
+            getLogger().error(`Failed to save image: ${error}`);
             return {
                 type: 'saveImage',
                 success: false,
@@ -1113,7 +1111,7 @@ export function createEditorHandlers(
                 imageUrl: exists ? `/images/${filename}` : undefined,
             };
         } catch (error) {
-            console.error('Failed to check image:', error);
+            getLogger().error(`Failed to check image: ${error}`);
             return {
                 type: 'hasImage',
                 success: false,
@@ -1140,11 +1138,11 @@ export function createEditorHandlers(
                 projectRootPath,
             );
 
-            console.log(`📋 Retrieved project info: ${info.name}`);
-            console.log(`   Pages: ${info.pages.length}`);
-            console.log(`   Components: ${info.components.length}`);
-            console.log(`   Installed Apps: ${info.installedApps.length}`);
-            console.log(`   App Contracts: ${Object.keys(info.installedAppContracts).length}`);
+            getLogger().info(`📋 Retrieved project info: ${info.name}`);
+            getLogger().info(`   Pages: ${info.pages.length}`);
+            getLogger().info(`   Components: ${info.components.length}`);
+            getLogger().info(`   Installed Apps: ${info.installedApps.length}`);
+            getLogger().info(`   App Contracts: ${Object.keys(info.installedAppContracts).length}`);
 
             return {
                 type: 'getProjectInfo',
@@ -1152,7 +1150,7 @@ export function createEditorHandlers(
                 info,
             };
         } catch (error) {
-            console.error('Failed to get project info:', error);
+            getLogger().error(`Failed to get project info: ${error}`);
             return {
                 type: 'getProjectInfo',
                 success: false,

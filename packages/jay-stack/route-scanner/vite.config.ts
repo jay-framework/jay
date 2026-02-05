@@ -12,7 +12,9 @@ export default defineConfig({
             fileName: 'index',
             formats: ['cjs'],
         },
-        rollupOptions: {},
+        rollupOptions: {
+            external: ['@jay-framework/logger'],
+        },
     },
     test: {
         globals: true,

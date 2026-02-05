@@ -21,6 +21,7 @@
   },
   "dependencies": {
     "@jay-framework/editor-protocol": "workspace:^",
+    "@jay-framework/logger": "workspace:^",
     "get-port": "^7.0.0",
     "socket.io": "^4.7.4",
     "uuid": "^9.0.1",

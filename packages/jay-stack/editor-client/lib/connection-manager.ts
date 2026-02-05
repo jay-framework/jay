@@ -1,5 +1,6 @@
 import { io, Socket } from 'socket.io-client';
 import { v4 as uuidv4 } from 'uuid';
+import { getLogger } from '@jay-framework/logger';
 import type {
     ConnectionState,
     ProtocolResponse,
@@ -151,7 +152,7 @@ export class ConnectionManager {
                 try {
                     callback(newState);
                 } catch (error) {
-                    console.error('Error in connection state callback:', error);
+                    getLogger().error(`Error in connection state callback: ${error}`);
                 }
             });
 
@@ -249,18 +250,18 @@ export class ConnectionManager {
             });
 
             this.socket.on('connect', () => {
-                console.log('Connected to editor server');
+                getLogger().info('Connected to editor server');
                 this.setupSocketHandlers();
                 resolve();
             });
 
             this.socket.on('connect_error', (error) => {
-                console.error('Connection error:', error);
+                getLogger().error(`Connection error: ${error}`);
                 reject(error);
             });
 
             this.socket.on('disconnect', () => {
-                console.log('Disconnected from editor server');
+                getLogger().info('Disconnected from editor server');
                 this.updateConnectionState('disconnected');
             });
         });
@@ -287,13 +288,13 @@ export class ConnectionManager {
             return;
         }
 
-        console.log('Attempting to reconnect...');
+        getLogger().info('Attempting to reconnect...');
 
         try {
             await this.connect();
-            console.log('Reconnected successfully');
+            getLogger().info('Reconnected successfully');
         } catch (error) {
-            console.error('Reconnection failed:', error);
+            getLogger().error(`Reconnection failed: ${error}`);
             // Schedule next reconnection attempt
             this.scheduleReconnect();
         }

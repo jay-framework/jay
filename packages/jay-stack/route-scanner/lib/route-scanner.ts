@@ -1,5 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { getLogger } from '@jay-framework/logger';
 
 export enum JayRouteParamType {
     single,
@@ -287,11 +288,10 @@ export async function scanRoutes(baseDir: string, options: ScanFilesOptions): Pr
 
     // Log inferred params for debugging (can be disabled in production)
     if (inferenceLog.length > 0) {
-        console.log('[route-scanner] Inferred params for static override routes:');
+        getLogger().info('[route-scanner] Inferred params for static override routes:');
         for (const entry of inferenceLog) {
-            console.log(
-                `  ${entry.staticRoute} → params from ${entry.dynamicRoute}:`,
-                entry.inferredParams,
+            getLogger().info(
+                `  ${entry.staticRoute} → params from ${entry.dynamicRoute}: ${JSON.stringify(entry.inferredParams)}`,
             );
         }
     }

@@ -10,7 +10,7 @@ import {
     type ContractsIndex,
 } from '@jay-framework/stack-server-runtime';
 import { createViteForCli } from '@jay-framework/dev-server';
-import { setDevLogger, createDevLogger, type LogLevel } from '@jay-framework/logger';
+import { setDevLogger, createDevLogger, getLogger, type LogLevel } from '@jay-framework/logger';
 
 const program = new Command();
 
@@ -49,7 +49,7 @@ program
                 logLevel,
             });
         } catch (error: any) {
-            console.error(chalk.red('Error starting dev server:'), error.message);
+            getLogger().error(chalk.red('Error starting dev server:') + ' ' + error.message);
             process.exit(1);
         }
     });
@@ -75,9 +75,9 @@ program
             }
         } catch (error: any) {
             if (options.json) {
-                console.log(JSON.stringify({ valid: false, error: error.message }, null, 2));
+                getLogger().important(JSON.stringify({ valid: false, error: error.message }, null, 2));
             } else {
-                console.error(chalk.red('Validation error:'), error.message);
+                getLogger().error(chalk.red('Validation error:') + ' ' + error.message);
             }
             process.exit(1);
         }
@@ -107,7 +107,7 @@ program
                 process.exit(1);
             }
         } catch (error: any) {
-            console.error(chalk.red('Validation error:'), error.message);
+            getLogger().error(chalk.red('Validation error:') + ' ' + error.message);
             process.exit(1);
         }
     });
@@ -137,7 +137,7 @@ program
                 });
 
                 if (options.yaml) {
-                    console.log(YAML.stringify(index));
+                    getLogger().important(YAML.stringify(index));
                 } else {
                     printContractList(index);
                 }
@@ -146,7 +146,7 @@ program
 
             // Create Vite server for TypeScript support
             if (options.verbose) {
-                console.log('Starting Vite for TypeScript support...');
+                getLogger().info('Starting Vite for TypeScript support...');
             }
             viteServer = await createViteForCli({ projectRoot });
 
@@ -168,19 +168,19 @@ program
             );
 
             if (options.yaml) {
-                console.log(YAML.stringify(result.index));
+                getLogger().important(YAML.stringify(result.index));
             } else {
-                console.log(
+                getLogger().important(
                     chalk.green(`\n✅ Materialized ${result.index.contracts.length} contracts`),
                 );
-                console.log(`   Static: ${result.staticCount}`);
-                console.log(`   Dynamic: ${result.dynamicCount}`);
-                console.log(`   Output: ${result.outputDir}`);
+                getLogger().important(`   Static: ${result.staticCount}`);
+                getLogger().important(`   Dynamic: ${result.dynamicCount}`);
+                getLogger().important(`   Output: ${result.outputDir}`);
             }
         } catch (error: any) {
-            console.error(chalk.red('❌ Failed to materialize contracts:'), error.message);
+            getLogger().error(chalk.red('❌ Failed to materialize contracts:') + ' ' + error.message);
             if (options.verbose) {
-                console.error(error.stack);
+                getLogger().error(error.stack);
             }
             process.exit(1);
         } finally {
@@ -228,7 +228,7 @@ async function initializeServicesForCli(
         try {
             await executePluginServerInits(pluginsWithInit, viteServer, false);
         } catch (error: any) {
-            console.warn(chalk.yellow(`⚠️  Plugin initialization skipped: ${error.message}`));
+            getLogger().warn(chalk.yellow(`⚠️  Plugin initialization skipped: ${error.message}`));
         }
 
         // Load project init.ts/js if it exists
@@ -250,8 +250,8 @@ async function initializeServicesForCli(
         // Run any additional init callbacks
         await runInitCallbacks();
     } catch (error: any) {
-        console.warn(chalk.yellow(`⚠️  Service initialization failed: ${error.message}`));
-        console.warn(chalk.gray('   Static contracts will still be listed.'));
+        getLogger().warn(chalk.yellow(`⚠️  Service initialization failed: ${error.message}`));
+        getLogger().warn(chalk.gray('   Static contracts will still be listed.'));
     }
 
     return getServiceRegistry();
@@ -266,49 +266,50 @@ if (!process.argv.slice(2).length) {
  * Pretty prints validation results
  */
 function printValidationResult(result: ValidationResult, verbose: boolean): void {
+    const logger = getLogger();
     if (result.valid && result.warnings.length === 0) {
-        console.log(chalk.green('✅ Plugin validation successful!\n'));
+        logger.important(chalk.green('✅ Plugin validation successful!\n'));
         if (verbose) {
-            console.log('Plugin:', result.pluginName);
-            console.log('  ✅ plugin.yaml valid');
-            console.log(`  ✅ ${result.contractsChecked} contracts validated`);
+            logger.important('Plugin: ' + result.pluginName);
+            logger.important('  ✅ plugin.yaml valid');
+            logger.important(`  ✅ ${result.contractsChecked} contracts validated`);
             if (result.typesGenerated) {
-                console.log(`  ✅ ${result.typesGenerated} type definitions generated`);
+                logger.important(`  ✅ ${result.typesGenerated} type definitions generated`);
             }
-            console.log(`  ✅ ${result.componentsChecked} components validated`);
+            logger.important(`  ✅ ${result.componentsChecked} components validated`);
             if (result.packageJsonChecked) {
-                console.log('  ✅ package.json valid');
+                logger.important('  ✅ package.json valid');
             }
-            console.log('\nNo errors found.');
+            logger.important('\nNo errors found.');
         }
     } else if (result.valid && result.warnings.length > 0) {
-        console.log(chalk.yellow('⚠️  Plugin validation passed with warnings\n'));
-        console.log('Warnings:');
+        logger.important(chalk.yellow('⚠️  Plugin validation passed with warnings\n'));
+        logger.important('Warnings:');
         result.warnings.forEach((warning) => {
-            console.log(chalk.yellow(`  ⚠️  ${warning.message}`));
+            logger.important(chalk.yellow(`  ⚠️  ${warning.message}`));
             if (warning.location) {
-                console.log(chalk.gray(`      Location: ${warning.location}`));
+                logger.important(chalk.gray(`      Location: ${warning.location}`));
             }
             if (warning.suggestion) {
-                console.log(chalk.gray(`      → ${warning.suggestion}`));
+                logger.important(chalk.gray(`      → ${warning.suggestion}`));
             }
-            console.log();
+            logger.important('');
         });
-        console.log(chalk.gray('Use --strict to treat warnings as errors.'));
+        logger.important(chalk.gray('Use --strict to treat warnings as errors.'));
     } else {
-        console.log(chalk.red('❌ Plugin validation failed\n'));
-        console.log('Errors:');
+        logger.important(chalk.red('❌ Plugin validation failed\n'));
+        logger.important('Errors:');
         result.errors.forEach((error) => {
-            console.log(chalk.red(`  ❌ ${error.message}`));
+            logger.important(chalk.red(`  ❌ ${error.message}`));
             if (error.location) {
-                console.log(chalk.gray(`      Location: ${error.location}`));
+                logger.important(chalk.gray(`      Location: ${error.location}`));
             }
             if (error.suggestion) {
-                console.log(chalk.gray(`      → ${error.suggestion}`));
+                logger.important(chalk.gray(`      → ${error.suggestion}`));
             }
-            console.log();
+            logger.important('');
         });
-        console.log(chalk.red(`${result.errors.length} errors found.`));
+        logger.important(chalk.red(`${result.errors.length} errors found.`));
     }
 }
 
@@ -316,7 +317,8 @@ function printValidationResult(result: ValidationResult, verbose: boolean): void
  * Pretty prints contract list
  */
 function printContractList(index: ContractsIndex): void {
-    console.log('\nAvailable Contracts:\n');
+    const logger = getLogger();
+    logger.important('\nAvailable Contracts:\n');
 
     // Group contracts by plugin
     const byPlugin = new Map<string, typeof index.contracts>();
@@ -327,15 +329,15 @@ function printContractList(index: ContractsIndex): void {
     }
 
     for (const [plugin, contracts] of byPlugin) {
-        console.log(chalk.bold(`📦 ${plugin}`));
+        logger.important(chalk.bold(`📦 ${plugin}`));
         for (const contract of contracts) {
             const typeIcon = contract.type === 'static' ? '📄' : '⚡';
-            console.log(`   ${typeIcon} ${contract.name}`);
+            logger.important(`   ${typeIcon} ${contract.name}`);
         }
-        console.log();
+        logger.important('');
     }
 
     if (index.contracts.length === 0) {
-        console.log(chalk.gray('No contracts found.'));
+        logger.important(chalk.gray('No contracts found.'));
     }
 }

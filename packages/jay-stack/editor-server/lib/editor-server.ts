@@ -1,6 +1,7 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { createServer } from 'http';
 import getPort from 'get-port';
+import { getLogger } from '@jay-framework/logger';
 import type {
     DevServerProtocol,
     ProtocolMessage,
@@ -76,7 +77,7 @@ export class EditorServer implements DevServerProtocol {
             res.setHeader('Access-Control-Allow-Credentials', 'true');
 
             if (!this.isLocalhost(clientIP)) {
-                console.warn(`Rejected connection from non-localhost IP: ${clientIP}`);
+                getLogger().warn(`Rejected connection from non-localhost IP: ${clientIP}`);
                 res.writeHead(403, { 'Content-Type': 'application/json' });
                 res.end(
                     JSON.stringify({
@@ -111,7 +112,7 @@ export class EditorServer implements DevServerProtocol {
         // Start server
         return new Promise((resolve, reject) => {
             this.httpServer!.listen(this.port, () => {
-                console.log(`Editor server started on port ${this.port}`);
+                getLogger().info(`Editor server started on port ${this.port}`);
                 resolve({ port: this.port!, editorId: this.editorId || 'init' });
             });
 
@@ -180,12 +181,12 @@ export class EditorServer implements DevServerProtocol {
             // Validate that WebSocket connection is from localhost
             const clientIP = socket.handshake.address;
             if (!this.isLocalhost(clientIP)) {
-                console.warn(`Rejected WebSocket connection from non-localhost IP: ${clientIP}`);
+                getLogger().warn(`Rejected WebSocket connection from non-localhost IP: ${clientIP}`);
                 socket.disconnect(true);
                 return;
             }
 
-            console.log(`Editor Socket connected: ${socket.id} from ${clientIP}`);
+            getLogger().info(`Editor Socket connected: ${socket.id} from ${clientIP}`);
 
             socket.on('protocol-message', async (message: ProtocolMessage) => {
                 try {
@@ -203,7 +204,7 @@ export class EditorServer implements DevServerProtocol {
             });
 
             socket.on('disconnect', () => {
-                console.log(`Editor Socket disconnected: ${socket.id}`);
+                getLogger().info(`Editor Socket disconnected: ${socket.id}`);
             });
         });
     }
