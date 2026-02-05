@@ -18,6 +18,7 @@ import type { DynamicContractConfig } from '@jay-framework/compiler-shared';
 import { createRequire } from 'module';
 import { scanPlugins, type ScannedPlugin } from './plugin-scanner';
 import type { ViteSSRLoader } from './action-discovery';
+import { getLogger } from '@jay-framework/logger';
 
 const require = createRequire(import.meta.url);
 
@@ -126,7 +127,7 @@ async function executeDynamicGenerator(
         }
 
         if (verbose) {
-            console.log(`   Loading generator from file: ${generatorPath}`);
+            getLogger().info(`   Loading generator from file: ${generatorPath}`);
         }
 
         let generatorModule: Record<string, any>;
@@ -140,7 +141,9 @@ async function executeDynamicGenerator(
     } else {
         // Generator is an export name - import from package's main bundle
         if (verbose) {
-            console.log(`   Loading generator export: ${config.generator} from ${packageName}`);
+            getLogger().info(
+                `   Loading generator export: ${config.generator} from ${packageName}`,
+            );
         }
 
         let pluginModule: Record<string, any>;
@@ -183,7 +186,7 @@ async function executeDynamicGenerator(
 
     // Execute generator
     if (verbose) {
-        console.log(`   Executing generator...`);
+        getLogger().info(`   Executing generator...`);
     }
 
     const result = await generator.generate(...resolvedServices);
@@ -276,7 +279,7 @@ export async function materializeContracts(
 
     // Scan for plugins using shared scanner
     if (verbose) {
-        console.log('Scanning for plugins...');
+        getLogger().info('Scanning for plugins...');
     }
     const plugins = await scanPlugins({
         projectRoot,
@@ -285,7 +288,7 @@ export async function materializeContracts(
     });
 
     if (verbose) {
-        console.log(`Found ${plugins.size} plugin(s)`);
+        getLogger().info(`Found ${plugins.size} plugin(s)`);
     }
 
     for (const [pluginKey, plugin] of plugins) {
@@ -293,7 +296,7 @@ export async function materializeContracts(
         if (pluginFilter && plugin.name !== pluginFilter && pluginKey !== pluginFilter) continue;
 
         if (verbose) {
-            console.log(`\n📦 Processing plugin: ${plugin.name}`);
+            getLogger().info(`\n📦 Processing plugin: ${plugin.name}`);
         }
 
         const { manifest } = plugin;
@@ -319,7 +322,7 @@ export async function materializeContracts(
                 staticCount++;
 
                 if (verbose) {
-                    console.log(`   📄 Static: ${contract.name}`);
+                    getLogger().info(`   📄 Static: ${contract.name}`);
                 }
             }
         }
@@ -337,7 +340,7 @@ export async function materializeContracts(
 
             for (const config of dynamicConfigs) {
                 if (verbose) {
-                    console.log(`   ⚡ Dynamic contracts (prefix: ${config.prefix})`);
+                    getLogger().info(`   ⚡ Dynamic contracts (prefix: ${config.prefix})`);
                 }
 
                 try {
@@ -373,13 +376,12 @@ export async function materializeContracts(
                         dynamicCount++;
 
                         if (verbose) {
-                            console.log(`   ⚡ Materialized: ${fullName}`);
+                            getLogger().info(`   ⚡ Materialized: ${fullName}`);
                         }
                     }
                 } catch (error) {
-                    console.error(
-                        `   ❌ Failed to materialize dynamic contracts for ${plugin.name} (${config.prefix}):`,
-                        error,
+                    getLogger().error(
+                        `   ❌ Failed to materialize dynamic contracts for ${plugin.name} (${config.prefix}): ${error}`,
                     );
                     // Continue with other generators
                 }
@@ -399,7 +401,7 @@ export async function materializeContracts(
     fs.writeFileSync(indexPath, YAML.stringify(index), 'utf-8');
 
     if (verbose) {
-        console.log(`\n✅ Contracts index written to: ${indexPath}`);
+        getLogger().info(`\n✅ Contracts index written to: ${indexPath}`);
     }
 
     return {

@@ -1,4 +1,5 @@
 import { JayRollupConfig } from '@jay-framework/rollup-plugin';
+import type { LogLevel } from '@jay-framework/logger';
 
 export interface DevServerOptions {
     publicBaseUrlPath?: string;
@@ -18,4 +19,9 @@ export interface DevServerOptions {
      * The automation API is available at `window.__jay.automation` and via `AUTOMATION_CONTEXT`.
      */
     disableAutomation?: boolean;
+    /**
+     * Log level for dev server output.
+     * Controls both Jay logging and Vite logging.
+     */
+    logLevel?: LogLevel;
 }

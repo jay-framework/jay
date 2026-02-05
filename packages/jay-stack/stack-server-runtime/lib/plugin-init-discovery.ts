@@ -14,6 +14,7 @@ import type { JayInit } from '@jay-framework/fullstack-component';
 import type { ViteSSRLoader } from './action-discovery';
 import { setClientInitData } from './services';
 import { scanPlugins, type ScannedPlugin } from './plugin-scanner';
+import { getLogger } from '@jay-framework/logger';
 
 /**
  * Information about a discovered plugin with init.
@@ -97,7 +98,7 @@ export async function discoverPluginsWithInit(
         });
 
         if (verbose) {
-            console.log(`[PluginInit] Found plugin with init: ${scanned.name}`);
+            getLogger().info(`[PluginInit] Found plugin with init: ${scanned.name}`);
         }
     }
 
@@ -187,7 +188,7 @@ export function sortPluginsByDependencies(plugins: PluginWithInit[]): PluginWith
     function visit(plugin: PluginWithInit) {
         if (visited.has(plugin.packageName)) return;
         if (visiting.has(plugin.packageName)) {
-            console.warn(`[PluginInit] Circular dependency detected for ${plugin.name}`);
+            getLogger().warn(`[PluginInit] Circular dependency detected for ${plugin.name}`);
             return;
         }
 
@@ -261,7 +262,7 @@ export async function executePluginServerInits(
             const jayInit = pluginModule[plugin.initExport] as JayInit<any> | undefined;
 
             if (!jayInit || jayInit.__brand !== 'JayInit') {
-                console.warn(
+                getLogger().warn(
                     `[PluginInit] Plugin "${plugin.name}" init module doesn't export a valid JayInit at "${plugin.initExport}"`,
                 );
                 continue;
@@ -270,7 +271,7 @@ export async function executePluginServerInits(
             // Execute server init if defined
             if (typeof jayInit._serverInit === 'function') {
                 if (verbose) {
-                    console.log(`[DevServer] Running server init: ${plugin.name}`);
+                    getLogger().info(`[DevServer] Running server init: ${plugin.name}`);
                 }
 
                 // Run server init and capture returned data
@@ -283,9 +284,8 @@ export async function executePluginServerInits(
                 }
             }
         } catch (error) {
-            console.error(
-                `[PluginInit] Failed to execute server init for "${plugin.name}":`,
-                error,
+            getLogger().error(
+                `[PluginInit] Failed to execute server init for "${plugin.name}": ${error}`,
             );
         }
     }

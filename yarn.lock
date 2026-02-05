@@ -4100,6 +4100,7 @@ __metadata:
     "@jay-framework/compiler-shared": "workspace:^"
     "@jay-framework/component": "workspace:^"
     "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/logger": "workspace:^"
     "@jay-framework/runtime": "workspace:^"
     "@jay-framework/secure": "workspace:^"
     "@testing-library/jest-dom": "npm:^6.2.0"
@@ -4133,6 +4134,7 @@ __metadata:
     "@jay-framework/compiler": "workspace:^"
     "@jay-framework/compiler-shared": "workspace:^"
     "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/logger": "workspace:^"
     "@jay-framework/typescript-bridge": "workspace:^"
     "@jay-framework/vite-plugin": "workspace:^"
     rimraf: "npm:^5.0.5"
@@ -4244,6 +4246,7 @@ __metadata:
     "@jay-framework/dev-environment": "workspace:^"
     "@jay-framework/fullstack-component": "workspace:^"
     "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/logger": "workspace:^"
     "@jay-framework/runtime": "workspace:^"
     "@jay-framework/stack-client-runtime": "workspace:^"
     "@jay-framework/stack-route-scanner": "workspace:^"
@@ -4346,6 +4349,7 @@ __metadata:
   dependencies:
     "@jay-framework/compiler": "workspace:^"
     "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/logger": "workspace:^"
     "@jay-framework/rollup-plugin": "workspace:^"
     "@types/node": "npm:^20.11.5"
     "@types/shelljs": "npm:^0.8.15"
@@ -4373,6 +4377,7 @@ __metadata:
     "@jay-framework/dev-server": "workspace:^"
     "@jay-framework/editor-server": "workspace:^"
     "@jay-framework/fullstack-component": "workspace:^"
+    "@jay-framework/logger": "workspace:^"
     "@jay-framework/plugin-validator": "workspace:^"
     "@jay-framework/stack-server-runtime": "workspace:^"
     "@types/express": "npm:^5.0.2"
@@ -4412,6 +4417,20 @@ __metadata:
 "@jay-framework/list-compare@workspace:^, @jay-framework/list-compare@workspace:packages/runtime/list-compare":
   version: 0.0.0-use.local
   resolution: "@jay-framework/list-compare@workspace:packages/runtime/list-compare"
+  dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@types/node": "npm:^20.11.5"
+    rimraf: "npm:^5.0.5"
+    tsup: "npm:^8.0.1"
+    typescript: "npm:^5.3.3"
+    vite: "npm:^5.0.11"
+    vitest: "npm:^1.2.1"
+  languageName: unknown
+  linkType: soft
+
+"@jay-framework/logger@workspace:^, @jay-framework/logger@workspace:packages/jay-stack/logger":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/logger@workspace:packages/jay-stack/logger"
   dependencies:
     "@jay-framework/dev-environment": "workspace:^"
     "@types/node": "npm:^20.11.5"
@@ -4463,6 +4482,7 @@ __metadata:
     "@jay-framework/compiler-jay-html": "workspace:^"
     "@jay-framework/component": "workspace:^"
     "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/logger": "workspace:^"
     "@jay-framework/runtime": "workspace:^"
     "@jay-framework/secure": "workspace:^"
     "@types/node": "npm:^20.11.5"
@@ -4602,6 +4622,7 @@ __metadata:
     "@jay-framework/dev-environment": "workspace:^"
     "@jay-framework/fullstack-component": "workspace:^"
     "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/logger": "workspace:^"
     "@jay-framework/runtime": "workspace:^"
     "@jay-framework/stack-client-runtime": "workspace:^"
     "@jay-framework/stack-route-scanner": "workspace:^"

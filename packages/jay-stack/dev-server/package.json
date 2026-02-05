@@ -26,6 +26,7 @@
     "@jay-framework/compiler-shared": "workspace:^",
     "@jay-framework/component": "workspace:^",
     "@jay-framework/fullstack-component": "workspace:^",
+    "@jay-framework/logger": "workspace:^",
     "@jay-framework/runtime": "workspace:^",
     "@jay-framework/stack-client-runtime": "workspace:^",
     "@jay-framework/stack-route-scanner": "workspace:^",

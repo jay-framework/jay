@@ -10,6 +10,7 @@ import {
     type ContractsIndex,
 } from '@jay-framework/stack-server-runtime';
 import { createViteForCli } from '@jay-framework/dev-server';
+import { setDevLogger, createDevLogger, type LogLevel } from '@jay-framework/logger';
 
 const program = new Command();
 
@@ -22,10 +23,22 @@ program
 program
     .command('dev [path]')
     .description('Start the Jay Stack development server')
+    .option('-v, --verbose', 'Enable verbose logging output')
+    .option('-q, --quiet', 'Suppress all non-error output')
     .option('--test-mode', 'Enable test endpoints (/_jay/health, /_jay/shutdown)')
     .option('--timeout <seconds>', 'Auto-shutdown after N seconds (implies --test-mode)', parseInt)
     .action(async (path, options) => {
         try {
+            // Determine log level from flags
+            const logLevel: LogLevel = options.quiet
+                ? 'silent'
+                : options.verbose
+                  ? 'verbose'
+                  : 'info';
+
+            // Set up dev logger with timing support before anything else
+            setDevLogger(createDevLogger(logLevel));
+
             // --timeout implies --test-mode
             const testMode = options.testMode || options.timeout !== undefined;
 
@@ -33,6 +46,7 @@ program
                 projectPath: path || process.cwd(),
                 testMode,
                 timeout: options.timeout,
+                logLevel,
             });
         } catch (error: any) {
             console.error(chalk.red('Error starting dev server:'), error.message);

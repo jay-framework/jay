@@ -16,6 +16,7 @@ export default defineConfig({
             external: [
                 '@jay-framework/compiler',
                 '@jay-framework/compiler-shared',
+                '@jay-framework/logger',
                 '@jay-framework/typescript-bridge',
                 '@jay-framework/vite-plugin',
                 'vite',

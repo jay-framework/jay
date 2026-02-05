@@ -1,4 +1,5 @@
 import { Plugin } from 'vite';
+import { getLogger } from '@jay-framework/logger';
 
 /**
  * Known server-only modules that should never appear in client builds.
@@ -140,7 +141,7 @@ export function createImportChainTracker(options: ImportChainTrackerOptions = {}
             detectedServerModules.clear();
 
             if (verbose) {
-                console.log('[import-chain-tracker] Build started, tracking imports...');
+                getLogger().info('[import-chain-tracker] Build started, tracking imports...');
             }
         },
 
@@ -160,7 +161,7 @@ export function createImportChainTracker(options: ImportChainTrackerOptions = {}
                 // We'll record the actual resolved ID in the load hook
                 // For now, just note this import happened
                 if (verbose) {
-                    console.log(
+                    getLogger().info(
                         `[import-chain-tracker] ${shortenPath(importer)} imports ${source}`,
                     );
                 }
@@ -189,13 +190,13 @@ export function createImportChainTracker(options: ImportChainTrackerOptions = {}
 
                 // Build and log the import chain
                 const chain = buildImportChain(id);
-                console.error(
+                getLogger().error(
                     `\n[import-chain-tracker] ⚠️  Server-only module detected in client build!`,
                 );
-                console.error(`Module: ${shortenPath(id)}`);
-                console.error(`Import chain:`);
-                console.error(formatChain(chain));
-                console.error('');
+                getLogger().error(`Module: ${shortenPath(id)}`);
+                getLogger().error(`Import chain:`);
+                getLogger().error(formatChain(chain));
+                getLogger().error('');
             }
 
             // Track import statements in this file
@@ -209,17 +210,19 @@ export function createImportChainTracker(options: ImportChainTrackerOptions = {}
                 if (isServerOnlyModule(importedModule)) {
                     if (!detectedServerModules.has(importedModule)) {
                         detectedServerModules.add(importedModule);
-                        console.error(
+                        getLogger().error(
                             `\n[import-chain-tracker] ⚠️  Server-only import detected in client build!`,
                         );
-                        console.error(`Module "${importedModule}" imported by: ${shortenPath(id)}`);
+                        getLogger().error(
+                            `Module "${importedModule}" imported by: ${shortenPath(id)}`,
+                        );
 
                         // Build chain from the importer
                         const chain = buildImportChain(id);
                         chain.push(importedModule);
-                        console.error(`Import chain:`);
-                        console.error(formatChain(chain));
-                        console.error('');
+                        getLogger().error(`Import chain:`);
+                        getLogger().error(formatChain(chain));
+                        getLogger().error('');
                     }
                 }
             }
@@ -229,20 +232,20 @@ export function createImportChainTracker(options: ImportChainTrackerOptions = {}
 
         buildEnd() {
             if (detectedServerModules.size > 0) {
-                console.warn(
+                getLogger().warn(
                     `\n[import-chain-tracker] ⚠️  ${detectedServerModules.size} server-only module(s) detected during transform:`,
                 );
                 for (const mod of detectedServerModules) {
-                    console.warn(`  - ${mod}`);
+                    getLogger().warn(`  - ${mod}`);
                 }
-                console.warn(
+                getLogger().warn(
                     '\nNote: These may be stripped by the code-split transform if only used in .withServer().',
                 );
-                console.warn(
+                getLogger().warn(
                     'If build fails with "not exported" errors, check the import chains above.\n',
                 );
             } else if (verbose) {
-                console.log(
+                getLogger().info(
                     '[import-chain-tracker] ✅ No server-only modules detected in client build',
                 );
             }

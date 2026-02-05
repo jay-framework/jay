@@ -29,6 +29,7 @@
   "dependencies": {
     "@jay-framework/compiler": "workspace:^",
     "@jay-framework/compiler-jay-html": "workspace:^",
+    "@jay-framework/logger": "workspace:^",
     "fast-glob": "^3.3.2",
     "typescript": "^5.3.3"
   },

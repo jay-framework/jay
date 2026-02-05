@@ -7,6 +7,7 @@ import {
     JAY_EXTENSION,
     TS_EXTENSION,
 } from '@jay-framework/compiler-shared';
+import { getLogger } from '@jay-framework/logger';
 import { LoadResult, ResolveIdResult, TransformResult } from 'rollup';
 import { SANDBOX_ROOT_PREFIX } from './sandbox';
 import { transformJayFile } from './transform';
@@ -50,7 +51,7 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
                     ),
                 );
 
-            console.log('[buildStart] Vite detected:', isVite);
+            getLogger().info('[buildStart] Vite detected: ' + isVite);
         },
         configureServer(_server: ViteDevServer) {
             server = _server;
@@ -117,7 +118,7 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
             return null;
         },
         watchChange(id: string, change: { event: 'create' | 'update' | 'delete' }): void {
-            console.log(`[watchChange] ${id} ${change.event}`);
+            getLogger().info(`[watchChange] ${id} ${change.event}`);
             jayContext.deleteCachedJayFile(id);
             if (server) {
                 const module = server.moduleGraph.getModuleById(id + TS_EXTENSION);

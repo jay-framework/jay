@@ -12,6 +12,7 @@ import {
     JayValidations,
     RenderFragment,
 } from '@jay-framework/compiler-shared';
+import { getLogger } from '@jay-framework/logger';
 import { parse } from './expression-parser.cjs';
 
 export class Accessor {
@@ -427,7 +428,7 @@ export function parseConditionForSlowRender(
     } catch (error) {
         // If parsing fails, fall back to treating the whole expression as runtime
         // This ensures we don't break on expressions we don't yet support
-        console.warn(
+        getLogger().warn(
             `parseConditionForSlowRender: Failed to parse "${expr}": ${(error as Error).message}`,
         );
         // Generate simple runtime code without type info

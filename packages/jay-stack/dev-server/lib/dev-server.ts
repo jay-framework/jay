@@ -46,6 +46,7 @@ import {
     materializeContracts,
 } from '@jay-framework/stack-server-runtime';
 import { WithValidations } from '@jay-framework/compiler-shared';
+import { getLogger, getDevLogger, type RequestTiming } from '@jay-framework/logger';
 
 async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
     return await scanRoutes(pagesBaseFolder, {
@@ -156,6 +157,9 @@ function mkRoute(
 ): DevServerRoute {
     const routePath = routeToExpressRoute(route);
     const handler = async (req: Request, res: Response) => {
+        // Start request timing
+        const timing = getDevLogger()?.startRequest(req.method, req.path);
+
         try {
             const url = req.originalUrl.replace(options.publicBaseUrlPath, '');
             // Merge Express params with inferred params from static override routes
@@ -181,7 +185,7 @@ function mkRoute(
                     await fs.access(cachedEntry.preRenderedPath);
                 } catch {
                     // Cached file was deleted, invalidate and rebuild
-                    console.log(
+                    getLogger().info(
                         `[SlowRender] Cached file missing, rebuilding: ${cachedEntry.preRenderedPath}`,
                     );
                     await slowRenderCache.invalidate(route.jayHtmlPath);
@@ -204,6 +208,7 @@ function mkRoute(
                     projectInit,
                     res,
                     url,
+                    timing,
                 );
             } else if (useSlowRenderCache) {
                 // Cache miss with caching enabled: pre-render and cache
@@ -220,6 +225,7 @@ function mkRoute(
                     projectInit,
                     res,
                     url,
+                    timing,
                 );
             } else {
                 // Caching disabled: run slow render on each request, full viewState to client
@@ -235,12 +241,14 @@ function mkRoute(
                     projectInit,
                     res,
                     url,
+                    timing,
                 );
             }
         } catch (e) {
             vite?.ssrFixStacktrace(e);
-            console.log(e.stack);
+            getLogger().error(e.stack);
             res.status(500).end(e.stack);
+            timing?.end();
         }
     };
     return { path: routePath, handler, fsRoute: route };
@@ -262,8 +270,10 @@ async function handleCachedRequest(
     projectInit: ProjectClientInitInfo | undefined,
     res: Response,
     url: string,
+    timing?: RequestTiming,
 ): Promise<void> {
     // Load page parts with cached pre-rendered jay-html file
+    const loadStart = Date.now();
     const pagePartsResult: WithValidations<LoadedPageParts> = await loadPageParts(
         vite,
         route,
@@ -272,10 +282,12 @@ async function handleCachedRequest(
         options.jayRollupConfig,
         { preRenderedPath: cachedEntry.preRenderedPath },
     );
+    timing?.recordViteSsr(Date.now() - loadStart);
 
     if (!pagePartsResult.val) {
-        console.log(pagePartsResult.validations.join('\n'));
+        getLogger().info(pagePartsResult.validations.join('\n'));
         res.status(500).end(pagePartsResult.validations.join('\n'));
+        timing?.end();
         return;
     }
 
@@ -288,15 +300,18 @@ async function handleCachedRequest(
     );
 
     // Run fast phase with cached carryForward
+    const fastStart = Date.now();
     const renderedFast = await renderFastChangingData(
         pageParams,
         pageProps,
         cachedEntry.carryForward,
         pageParts,
     );
+    timing?.recordFastRender(Date.now() - fastStart);
 
     if (renderedFast.kind !== 'PhaseOutput') {
         handleOtherResponseCodes(res, renderedFast);
+        timing?.end();
         return;
     }
 
@@ -316,6 +331,7 @@ async function handleCachedRequest(
         pluginsForPage,
         options,
         cachedEntry.slowViewState,
+        timing,
     );
 }
 
@@ -336,8 +352,10 @@ async function handlePreRenderRequest(
     projectInit: ProjectClientInitInfo | undefined,
     res: Response,
     url: string,
+    timing?: RequestTiming,
 ): Promise<void> {
     // First, load page parts with original jay-html to get component definitions
+    const loadStart = Date.now();
     const initialPartsResult = await loadPageParts(
         vite,
         route,
@@ -345,37 +363,45 @@ async function handlePreRenderRequest(
         options.projectRootFolder,
         options.jayRollupConfig,
     );
+    timing?.recordViteSsr(Date.now() - loadStart);
 
     if (!initialPartsResult.val) {
-        console.log(initialPartsResult.validations.join('\n'));
+        getLogger().info(initialPartsResult.validations.join('\n'));
         res.status(500).end(initialPartsResult.validations.join('\n'));
+        timing?.end();
         return;
     }
 
     // Run slow phase to get slowViewState and carryForward
+    const slowStart = Date.now();
     const renderedSlowly = await slowlyPhase.runSlowlyForPage(
         pageParams,
         pageProps,
         initialPartsResult.val.parts,
     );
+    timing?.recordSlowRender(Date.now() - slowStart);
 
     if (renderedSlowly.kind !== 'PhaseOutput') {
         if (renderedSlowly.kind === 'ClientError') {
             handleOtherResponseCodes(res, renderedSlowly);
         }
+        timing?.end();
         return;
     }
 
     // Pre-render the jay-html with slow viewState
     // Headless contracts are already loaded by parseJayFile (via loadPageParts)
+    const paramsStart = Date.now();
     const preRenderedContent = await preRenderJayHtml(
         route,
         renderedSlowly.rendered,
         initialPartsResult.val.headlessContracts,
     );
+    timing?.recordParams(Date.now() - paramsStart);
 
     if (!preRenderedContent) {
         res.status(500).end('Failed to pre-render jay-html');
+        timing?.end();
         return;
     }
 
@@ -387,9 +413,9 @@ async function handlePreRenderRequest(
         renderedSlowly.rendered,
         renderedSlowly.carryForward,
     );
-    console.log(`[SlowRender] Cached pre-rendered jay-html at ${preRenderedPath}`);
+    getLogger().info(`[SlowRender] Cached pre-rendered jay-html at ${preRenderedPath}`);
 
-    // Load page parts with pre-rendered jay-html file
+    // Load page parts with pre-rendered jay-html file (no timing - already counted)
     const pagePartsResult = await loadPageParts(
         vite,
         route,
@@ -400,8 +426,9 @@ async function handlePreRenderRequest(
     );
 
     if (!pagePartsResult.val) {
-        console.log(pagePartsResult.validations.join('\n'));
+        getLogger().info(pagePartsResult.validations.join('\n'));
         res.status(500).end(pagePartsResult.validations.join('\n'));
+        timing?.end();
         return;
     }
 
@@ -414,15 +441,18 @@ async function handlePreRenderRequest(
     );
 
     // Run fast phase
+    const fastStart = Date.now();
     const renderedFast = await renderFastChangingData(
         pageParams,
         pageProps,
         renderedSlowly.carryForward,
         pageParts,
     );
+    timing?.recordFastRender(Date.now() - fastStart);
 
     if (renderedFast.kind !== 'PhaseOutput') {
         handleOtherResponseCodes(res, renderedFast);
+        timing?.end();
         return;
     }
 
@@ -442,6 +472,7 @@ async function handlePreRenderRequest(
         pluginsForPage,
         options,
         renderedSlowly.rendered,
+        timing,
     );
 }
 
@@ -461,7 +492,9 @@ async function handleDirectRequest(
     projectInit: ProjectClientInitInfo | undefined,
     res: Response,
     url: string,
+    timing?: RequestTiming,
 ): Promise<void> {
+    const loadStart = Date.now();
     const pagePartsResult = await loadPageParts(
         vite,
         route,
@@ -469,10 +502,12 @@ async function handleDirectRequest(
         options.projectRootFolder,
         options.jayRollupConfig,
     );
+    timing?.recordViteSsr(Date.now() - loadStart);
 
     if (!pagePartsResult.val) {
-        console.log(pagePartsResult.validations.join('\n'));
+        getLogger().info(pagePartsResult.validations.join('\n'));
         res.status(500).end(pagePartsResult.validations.join('\n'));
+        timing?.end();
         return;
     }
 
@@ -490,25 +525,31 @@ async function handleDirectRequest(
     );
 
     // Run slow phase
+    const slowStart = Date.now();
     const renderedSlowly = await slowlyPhase.runSlowlyForPage(pageParams, pageProps, pageParts);
+    timing?.recordSlowRender(Date.now() - slowStart);
 
     if (renderedSlowly.kind !== 'PhaseOutput') {
         if (renderedSlowly.kind === 'ClientError') {
             handleOtherResponseCodes(res, renderedSlowly);
         }
+        timing?.end();
         return;
     }
 
     // Run fast phase
+    const fastStart = Date.now();
     const renderedFast = await renderFastChangingData(
         pageParams,
         pageProps,
         renderedSlowly.carryForward,
         pageParts,
     );
+    timing?.recordFastRender(Date.now() - fastStart);
 
     if (renderedFast.kind !== 'PhaseOutput') {
         handleOtherResponseCodes(res, renderedFast);
+        timing?.end();
         return;
     }
 
@@ -537,6 +578,8 @@ async function handleDirectRequest(
         projectInit,
         pluginsForPage,
         options,
+        undefined,
+        timing,
     );
 }
 
@@ -544,6 +587,7 @@ async function handleDirectRequest(
  * Send the final HTML response to the client.
  * @param jayHtmlPath - Path to the jay-html file (pre-rendered or original)
  * @param slowViewState - Optional slow ViewState (for automation when slow rendering is used)
+ * @param timing - Optional request timing to record vite-client time
  */
 async function sendResponse(
     vite: ViteDevServer,
@@ -558,6 +602,7 @@ async function sendResponse(
     pluginsForPage: PluginClientInitInfo[],
     options: DevServerOptions,
     slowViewState?: object,
+    timing?: RequestTiming,
 ): Promise<void> {
     const pageHtml = generateClientScript(
         viewState,
@@ -574,8 +619,12 @@ async function sendResponse(
         },
     );
 
+    const viteStart = Date.now();
     const compiledPageHtml = await vite.transformIndexHtml(!!url ? url : '/', pageHtml);
+    timing?.recordViteClient(Date.now() - viteStart);
+
     res.status(200).set({ 'Content-Type': 'text/html' }).send(compiledPageHtml);
+    timing?.end();
 }
 
 /**
@@ -605,9 +654,8 @@ async function preRenderJayHtml(
         if (parseResult.val) {
             contract = parseResult.val;
         } else if (parseResult.validations.length > 0) {
-            console.error(
-                `[SlowRender] Contract parse error for ${contractPath}:`,
-                parseResult.validations,
+            getLogger().error(
+                `[SlowRender] Contract parse error for ${contractPath}: ${parseResult.validations.join(', ')}`,
             );
             return undefined;
         }
@@ -615,7 +663,7 @@ async function preRenderJayHtml(
         // File doesn't exist - that's OK, continue without contract
         if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
             // Some other error (permissions, etc.) - log and fail
-            console.error(`[SlowRender] Error reading contract ${contractPath}:`, error);
+            getLogger().error(`[SlowRender] Error reading contract ${contractPath}: ${error}`);
             return undefined;
         }
     }
@@ -638,9 +686,8 @@ async function preRenderJayHtml(
     }
 
     if (result.validations.length > 0) {
-        console.error(
-            `[SlowRender] Transform failed for ${route.jayHtmlPath}:`,
-            result.validations,
+        getLogger().error(
+            `[SlowRender] Transform failed for ${route.jayHtmlPath}: ${result.validations.join(', ')}`,
         );
     }
     return undefined;
@@ -669,11 +716,11 @@ async function materializeDynamicContracts(
 
         const dynamicCount = result.dynamicCount;
         if (dynamicCount > 0) {
-            console.log(`[Contracts] Materialized ${dynamicCount} dynamic contract(s)`);
+            getLogger().info(`[Contracts] Materialized ${dynamicCount} dynamic contract(s)`);
         }
     } catch (error: any) {
         // Don't fail startup - just warn
-        console.warn('[Contracts] Failed to materialize dynamic contracts:', error.message);
+        getLogger().warn(`[Contracts] Failed to materialize dynamic contracts: ${error.message}`);
     }
 }
 
@@ -687,6 +734,10 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
         dontCacheSlowly,
     } = defaults(options);
 
+    // Map Jay log level to Vite log level
+    const viteLogLevel: 'info' | 'warn' | 'error' | 'silent' =
+        options.logLevel === 'silent' ? 'silent' : options.logLevel === 'verbose' ? 'info' : 'warn';
+
     // Initialize service lifecycle manager
     const lifecycleManager = new ServiceLifecycleManager(projectRootFolder);
 
@@ -698,6 +749,7 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
         pagesRoot: pagesRootFolder,
         base: publicBaseUrlPath,
         jayRollupConfig,
+        logLevel: viteLogLevel,
     });
 
     // Set the Vite server and initialize services
@@ -755,7 +807,7 @@ export async function mkDevServer(options: DevServerOptions): Promise<DevServer>
  */
 function setupGracefulShutdown(lifecycleManager: ServiceLifecycleManager): void {
     const shutdown = async (signal: string) => {
-        console.log(`\n${signal} received, shutting down gracefully...`);
+        getLogger().important(`\n${signal} received, shutting down gracefully...`);
         await lifecycleManager.shutdown();
         process.exit(0);
     };
@@ -781,7 +833,7 @@ function setupServiceHotReload(
 
     vite.watcher.on('change', async (changedPath) => {
         if (changedPath === initFilePath) {
-            console.log('[Services] lib/init.ts changed, reloading services...');
+            getLogger().info('[Services] lib/init.ts changed, reloading services...');
             try {
                 await lifecycleManager.reload();
                 // Trigger browser reload
@@ -790,7 +842,7 @@ function setupServiceHotReload(
                     path: '*',
                 });
             } catch (error) {
-                console.error('[Services] Failed to reload services:', error);
+                getLogger().error(`[Services] Failed to reload services: ${error}`);
             }
         }
     });
@@ -807,7 +859,7 @@ function setupActionRouter(vite: ViteDevServer): void {
     // Add action router
     vite.middlewares.use(ACTION_ENDPOINT_BASE, createActionRouter());
 
-    console.log(`[Actions] Action router mounted at ${ACTION_ENDPOINT_BASE}`);
+    getLogger().info(`[Actions] Action router mounted at ${ACTION_ENDPOINT_BASE}`);
 }
 
 /**
@@ -830,7 +882,7 @@ function setupSlowRenderCacheInvalidation(
         // Invalidate cache for jay-html file changes
         if (changedPath.endsWith('.jay-html')) {
             cache.invalidate(changedPath).then(() => {
-                console.log(`[SlowRender] Cache invalidated for ${changedPath}`);
+                getLogger().info(`[SlowRender] Cache invalidated for ${changedPath}`);
             });
             return;
         }
@@ -841,7 +893,9 @@ function setupSlowRenderCacheInvalidation(
             const dir = path.dirname(changedPath);
             const jayHtmlPath = path.join(dir, 'page.jay-html');
             cache.invalidate(jayHtmlPath).then(() => {
-                console.log(`[SlowRender] Cache invalidated for ${jayHtmlPath} (page.ts changed)`);
+                getLogger().info(
+                    `[SlowRender] Cache invalidated for ${jayHtmlPath} (page.ts changed)`,
+                );
             });
             return;
         }
@@ -851,7 +905,9 @@ function setupSlowRenderCacheInvalidation(
             // The jay-html has the same name as the contract
             const jayHtmlPath = changedPath.replace('.jay-contract', '.jay-html');
             cache.invalidate(jayHtmlPath).then(() => {
-                console.log(`[SlowRender] Cache invalidated for ${jayHtmlPath} (contract changed)`);
+                getLogger().info(
+                    `[SlowRender] Cache invalidated for ${jayHtmlPath} (contract changed)`,
+                );
             });
             return;
         }

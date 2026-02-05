@@ -37,6 +37,7 @@
     "@jay-framework/compiler-analyze-exported-types": "workspace:^",
     "@jay-framework/compiler-shared": "workspace:^",
     "@jay-framework/component": "workspace:^",
+    "@jay-framework/logger": "workspace:^",
     "@jay-framework/runtime": "workspace:^",
     "@jay-framework/secure": "workspace:^",
     "@types/js-yaml": "^4.0.9",

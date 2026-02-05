@@ -20,6 +20,7 @@
 import type { Plugin } from 'vite';
 import * as path from 'node:path';
 import { createRequire } from 'node:module';
+import { getLogger } from '@jay-framework/logger';
 
 const require = createRequire(import.meta.url);
 
@@ -182,7 +183,7 @@ export function transformImports(options: TransformImportsOptions): TransformImp
         const newSource = `${packageName}/client`;
 
         if (verbose) {
-            console.log(
+            getLogger().info(
                 `[plugin-client-import] Rewriting import ${source} -> ${newSource} (in ${path.basename(filePath)})`,
             );
         }
@@ -201,7 +202,7 @@ export function transformImports(options: TransformImportsOptions): TransformImp
         const newSource = `${packageName}/client`;
 
         if (verbose) {
-            console.log(
+            getLogger().info(
                 `[plugin-client-import] Rewriting export ${source} -> ${newSource} (in ${path.basename(filePath)})`,
             );
         }

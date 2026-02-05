@@ -28,6 +28,7 @@
     "@jay-framework/dev-server": "workspace:^",
     "@jay-framework/editor-server": "workspace:^",
     "@jay-framework/fullstack-component": "workspace:^",
+    "@jay-framework/logger": "workspace:^",
     "@jay-framework/plugin-validator": "workspace:^",
     "@jay-framework/stack-server-runtime": "workspace:^",
     "chalk": "^4.1.2",

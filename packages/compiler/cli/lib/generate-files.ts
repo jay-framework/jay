@@ -15,6 +15,7 @@ import {
     JayHtmlSourceFile,
     parseJayFile,
 } from '@jay-framework/compiler-jay-html';
+import { getLogger } from '@jay-framework/logger';
 
 function checkFileExists(filepath): Promise<Boolean> {
     return new Promise((resolve, reject) => {
@@ -38,9 +39,9 @@ export async function generateFiles(
     projectRoot?: string,
 ) {
     const resolvedProjectRoot = projectRoot || process.cwd();
-    console.log(chalk.whiteBright('Jay generating files for ', dir));
+    getLogger().important(chalk.whiteBright('Jay generating files for ', dir));
     let jayFiles = await findAllJayFiles(dir);
-    console.log(dir, jayFiles);
+    getLogger().info(`${dir} ${JSON.stringify(jayFiles)}`);
     let generationFailed = false;
     for (const jayFile of jayFiles) {
         const content = await fsp.readFile(jayFile, 'utf-8');
@@ -63,15 +64,15 @@ export async function generateFiles(
         );
         const generateFileName = jayFile + outputExtension;
         if (generatedFile.validations.length > 0) {
-            console.log(
+            getLogger().error(
                 `${chalk.red('failed to generate')} ${chalk.yellow(jayFile)} → ${chalk.yellow(
                     generateFileName,
                 )}`,
             );
-            generatedFile.validations.forEach((_) => console.log(chalk.red(_)));
+            generatedFile.validations.forEach((_) => getLogger().error(chalk.red(_)));
             generationFailed = true;
         } else {
-            console.log(
+            getLogger().important(
                 `${chalk.green('generated')} ${chalk.yellow(jayFile)} → ${chalk.yellow(
                     generateFileName,
                 )}`,

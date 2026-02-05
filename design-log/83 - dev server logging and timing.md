@@ -3,6 +3,7 @@
 ## Background
 
 The jay-stack-cli `dev` command outputs verbose logging during transformations, making it hard to see important information. Developers need:
+
 1. Clean output by default (keep startup messages)
 2. Verbose mode for debugging
 3. Performance timing for key operations
@@ -10,6 +11,7 @@ The jay-stack-cli `dev` command outputs verbose logging during transformations, 
 ## Problem
 
 Current dev server output includes many transformation logs that clutter the console. There's no way to:
+
 - Suppress verbose logging while keeping important startup info
 - Enable detailed logging when needed
 - See timing metrics for SSR, load params, slow/fast rendering, and Vite compilation
@@ -30,6 +32,7 @@ Add flags to `dev` command in `stack-cli/lib/cli.ts`:
 Create a new package `@jay-framework/logger` that all compiler/runtime packages can depend on.
 
 **Package structure:**
+
 ```
 packages/jay-stack/logger/
 ├── lib/
@@ -86,7 +89,7 @@ import { setLogger } from '@jay-framework/logger';
 function createCliLogger(level: LogLevel): JayLogger {
   const isQuiet = level === 'silent';
   const isVerbose = level === 'verbose';
-  
+
   return {
     important: isQuiet ? () => {} : (msg) => console.log(msg),
     info: isVerbose ? (msg) => console.log(msg) : () => {},
@@ -110,17 +113,18 @@ Use `process.stdout.write` with `\r` to update in place during the request, then
 
 ### 4. Timing Measurement Points
 
-| Operation | Location | What it measures |
-|-----------|----------|------------------|
-| **vite-ssr** | `load-page-parts.ts` lines 67, 105 | `vite.ssrLoadModule()` - server-side module compilation |
-| **params** | `load-page-parts.ts` lines 81 | `parseJayFile()` + manifest loading |
-| **slow** | `dev-server.ts` lines 356, 493 | `slowlyPhase.runSlowlyForPage()` |
-| **fast** | `dev-server.ts` lines 291, 417, 503 | `renderFastChangingData()` |
-| **vite-client** | `dev-server.ts` line 577 | `vite.transformIndexHtml()` - client-side transform |
+| Operation       | Location                            | What it measures                                        |
+| --------------- | ----------------------------------- | ------------------------------------------------------- |
+| **vite-ssr**    | `load-page-parts.ts` lines 67, 105  | `vite.ssrLoadModule()` - server-side module compilation |
+| **params**      | `load-page-parts.ts` lines 81       | `parseJayFile()` + manifest loading                     |
+| **slow**        | `dev-server.ts` lines 356, 493      | `slowlyPhase.runSlowlyForPage()`                        |
+| **fast**        | `dev-server.ts` lines 291, 417, 503 | `renderFastChangingData()`                              |
+| **vite-client** | `dev-server.ts` line 577            | `vite.transformIndexHtml()` - client-side transform     |
 
 ### 5. What to Keep in Default Mode
 
 **Keep as `important()` - shown in default mode (startup messages in `server.ts`):**
+
 ```
 ⚠️  Public folder not found: ./public
 🚀 Jay Stack dev server started successfully!
@@ -130,6 +134,7 @@ Use `process.stdout.write` with `\r` to update in place during the request, then
 ```
 
 **Move to `info()` - shown only in verbose mode:**
+
 - `[SlowRender] Cached pre-rendered jay-html at ...`
 - `[SlowRender] Cache invalidated for ...`
 - `[Services] lib/init.ts changed, reloading services...`
@@ -140,7 +145,7 @@ Use `process.stdout.write` with `\r` to update in place during the request, then
 ### 6. Vite Log Level Mapping
 
 | Jay LogLevel | Vite logLevel |
-|--------------|---------------|
+| ------------ | ------------- |
 | silent       | silent        |
 | info         | warn          |
 | verbose      | info          |
@@ -148,6 +153,7 @@ Use `process.stdout.write` with `\r` to update in place during the request, then
 ## Implementation Plan
 
 ### Phase 1: Logger Package
+
 1. Create new package `packages/jay-stack/logger/`
 2. Implement `JayLogger` interface with `important`, `info`, `warn`, `error`
 3. Implement default console-based logger
@@ -155,6 +161,7 @@ Use `process.stdout.write` with `\r` to update in place during the request, then
 5. Add to workspace dependencies
 
 ### Phase 2: CLI Integration
+
 1. Update `stack-cli/lib/cli.ts` to accept `--verbose` and `--quiet` flags for `dev` command
 2. Update `compiler/cli` to accept `--verbose` and `--quiet` flags
 3. Create level-aware logger factory (can be shared or duplicated - simple code)
@@ -164,6 +171,7 @@ Use `process.stdout.write` with `\r` to update in place during the request, then
 ### Phase 3: Replace Console Calls
 
 **jay-stack packages:**
+
 - `dev-server` - dev-server.ts, service-lifecycle.ts
 - `stack-server-runtime` - action-discovery.ts, plugin-init-discovery.ts, plugin-scanner.ts, contract-materializer.ts
 - `stack-cli` - cli.ts, server.ts, validate.ts, editor-handlers.ts, config.ts
@@ -171,12 +179,14 @@ Use `process.stdout.write` with `\r` to update in place during the request, then
 - `editor-server` - editor-server.ts
 
 **compiler packages:**
+
 - `compiler-jay-html` - expression-compiler.ts
 - `compiler-jay-stack` - index.ts, plugin-client-import-resolver.ts, transform-action-imports.ts, import-chain-tracker.ts
 - `compiler/cli` - generate-files.ts
 - `rollup-plugin` - various files
 
 For each:
+
 1. Add `@jay-framework/logger` dependency
 2. Replace `console.log` with `getLogger().info()`
 3. Replace `console.error` with `getLogger().error()`
@@ -184,6 +194,7 @@ For each:
 5. Keep test files as-is (they can use console directly)
 
 ### Phase 4: Add Timing
+
 1. Add `RequestTimingLogger` interface to logger package
 2. Extend `JayLogger` with optional `timing` property
 3. Implement timing display with TTY detection in CLI logger
@@ -192,6 +203,7 @@ For each:
 6. Add timing calls around each measured operation
 
 ### Phase 5: Wire Vite Logging
+
 1. Map log level to Vite's `logLevel` option
 2. Pass through `viteFactory.ts`
 
@@ -258,3 +270,79 @@ GET /page
 2. ~~**Q: Should we time SSR module loads separately?**~~
    ~~A: Include in "load params" for simplicity. Can break out later if needed.~~
    A: Yes, separate SSR timing is useful for understanding Vite compilation overhead.
+
+---
+
+## Implementation Results
+
+### Phase 1-3 Complete (Feb 4, 2026)
+
+**Created:**
+
+- `packages/jay-stack/logger/` - New logger package with:
+  - `JayLogger` interface: `important()`, `info()`, `warn()`, `error()`
+  - `getLogger()`, `setLogger()`, `resetLogger()`, `createLogger(level)`
+  - `JayDevLogger` interface with `RequestTiming` for future timing support
+
+**Modified:**
+
+- `stack-cli/lib/cli.ts` - Added `-v, --verbose` and `-q, --quiet` flags to `dev` command
+- `stack-cli/lib/server.ts` - Startup messages use `log.important()`, imports logger
+- `dev-server/lib/dev-server.ts` - All console calls replaced with logger
+- `dev-server/lib/service-lifecycle.ts` - All console calls replaced with logger
+- `dev-server/package.json` - Added `@jay-framework/logger` dependency
+- `stack-cli/package.json` - Added `@jay-framework/logger` dependency
+- `stack-server-runtime/package.json` - Added `@jay-framework/logger` dependency
+
+**Tests:** All 13 dev-server tests pass, all 39 stack-cli tests pass.
+
+### Compiler Package Updates (Feb 4, 2026)
+
+Extended logger usage to compiler packages as specified in Phase 3:
+
+**compiler-jay-html:**
+- Added `@jay-framework/logger` dependency
+- `expression-compiler.ts` - `console.warn` → `getLogger().warn()`
+
+**compiler-jay-stack:**
+- Added `@jay-framework/logger` dependency
+- `index.ts` - `console.error/warn` → `getLogger().error/warn()`
+- `plugin-client-import-resolver.ts` - `console.log` → `getLogger().info()`
+- `transform-action-imports.ts` - `console.warn` → `getLogger().warn()`
+- `import-chain-tracker.ts` - All `console.log/warn/error` → `getLogger().info/warn/error()`
+
+**rollup-plugin:**
+- Added `@jay-framework/logger` dependency
+- `runtime-compiler.ts` - `console.log` → `getLogger().info()`
+
+**compiler/cli (jay-cli):**
+- Added `@jay-framework/logger` dependency
+- `generate-files.ts` - `console.log` → `getLogger().important/info/error()`
+
+**stack-server-runtime:**
+- `contract-materializer.ts` - All verbose logs → `getLogger().info()`, errors → `getLogger().error()`
+- `plugin-init-discovery.ts` - `console.log/warn/error` → `getLogger().info/warn/error()`
+- `plugin-scanner.ts` - `console.log/warn` → `getLogger().info/warn()`
+- `action-discovery.ts` - All `console.log/warn/error` → `getLogger().info/warn/error()`
+- `generate-client-script.ts` - Kept `console.log` (browser-side logs in generated code)
+
+### Phase 4-5 Complete (Feb 4, 2026)
+
+**Phase 4: Timing Instrumentation**
+
+- Added `createDevLogger(level)` factory to logger package that creates a logger with `startRequest(method, path)` for timing
+- `RequestTiming` interface with `recordViteSsr`, `recordParams`, `recordSlowRender`, `recordFastRender`, `recordViteClient`, `end`
+- Timing display: `GET /page [vite-ssr: 23ms | params: 22ms | slow: 123ms | fast: 12ms | vite-client: 89ms] 269ms`
+- Uses `\r` for in-place updates on TTY, falls back to single line on non-TTY
+- Updated `dev-server.ts` request handlers to use timing:
+  - `mkRoute()` starts timing with `getDevLogger()?.startRequest()`
+  - Timing passed through to `handleCachedRequest`, `handlePreRenderRequest`, `handleDirectRequest`, `sendResponse`
+  - Each handler records timing for its phases
+
+**Phase 5: Vite Log Level**
+
+- Added `logLevel?: LogLevel` to `DevServerOptions`
+- `mkDevServer()` maps Jay log level to Vite: silent→silent, info→warn, verbose→info
+- `stack-cli/lib/server.ts` passes `logLevel` to `mkDevServer()`
+
+**Tests:** All 13 dev-server tests pass, all 39 stack-cli tests pass.

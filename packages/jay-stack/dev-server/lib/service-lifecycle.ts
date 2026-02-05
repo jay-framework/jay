@@ -24,6 +24,7 @@ import * as path from 'node:path';
 import * as fs from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import type { ViteDevServer } from 'vite';
+import { getLogger } from '@jay-framework/logger';
 
 export class ServiceLifecycleManager {
     /** Path to project's lib/init.ts (makeJayInit pattern) */
@@ -69,8 +70,10 @@ export class ServiceLifecycleManager {
      * 4. Auto-discovering and registering actions
      */
     async initialize(): Promise<void> {
+        const log = getLogger();
+
         if (this.isInitialized) {
-            console.warn('[Services] Already initialized, skipping...');
+            log.warn('[Services] Already initialized, skipping...');
             return;
         }
 
@@ -84,7 +87,7 @@ export class ServiceLifecycleManager {
         this.pluginsWithInit = sortPluginsByDependencies(discoveredPlugins);
 
         if (this.pluginsWithInit.length > 0) {
-            console.log(
+            log.info(
                 `[Services] Found ${this.pluginsWithInit.length} plugin(s) with init: ${this.pluginsWithInit.map((p) => p.name).join(', ')}`,
             );
         }
@@ -94,7 +97,7 @@ export class ServiceLifecycleManager {
 
         // Step 3: Load project init (last, so it can depend on plugin services)
         if (this.projectInitFilePath) {
-            console.log('[DevServer] Loading project init: src/init.ts');
+            log.info('[DevServer] Loading project init: src/init.ts');
 
             try {
                 if (this.viteServer) {
@@ -102,7 +105,7 @@ export class ServiceLifecycleManager {
 
                     // Execute the _serverInit function from makeJayInit
                     if (module.init?._serverInit) {
-                        console.log('[DevServer] Running server init: project');
+                        log.info('[DevServer] Running server init: project');
                         const { setClientInitData } = await import(
                             '@jay-framework/stack-server-runtime'
                         );
@@ -117,16 +120,16 @@ export class ServiceLifecycleManager {
                     await import(fileUrl);
                 }
             } catch (error) {
-                console.error('[Services] Failed to load project init:', error);
+                log.error(`[Services] Failed to load project init: ${error}`);
                 throw error;
             }
         } else {
-            console.log('[Services] No init.ts found, skipping project initialization');
+            log.info('[Services] No init.ts found, skipping project initialization');
         }
 
         // Step 4: Execute all registered init callbacks (from onInit calls)
         await runInitCallbacks();
-        console.log('[Services] Initialization complete');
+        log.info('[Services] Initialization complete');
 
         // Step 5: Auto-discover and register actions from src/actions/
         await this.discoverActions();
@@ -138,6 +141,7 @@ export class ServiceLifecycleManager {
      * Auto-discovers and registers actions from project and plugins.
      */
     private async discoverActions(): Promise<void> {
+        const log = getLogger();
         let totalActions = 0;
 
         // Discover project actions from src/actions/
@@ -152,7 +156,7 @@ export class ServiceLifecycleManager {
 
             totalActions += result.actionCount;
         } catch (error) {
-            console.error('[Actions] Failed to auto-discover project actions:', error);
+            log.error(`[Actions] Failed to auto-discover project actions: ${error}`);
         }
 
         // Discover plugin actions from src/plugins/
@@ -166,11 +170,11 @@ export class ServiceLifecycleManager {
 
             totalActions += pluginActions.length;
         } catch (error) {
-            console.error('[Actions] Failed to auto-discover plugin actions:', error);
+            log.error(`[Actions] Failed to auto-discover plugin actions: ${error}`);
         }
 
         if (totalActions > 0) {
-            console.log(`[Actions] Auto-registered ${totalActions} action(s) total`);
+            log.info(`[Actions] Auto-registered ${totalActions} action(s) total`);
         }
     }
 
@@ -178,11 +182,13 @@ export class ServiceLifecycleManager {
      * Shuts down services gracefully with timeout
      */
     async shutdown(timeoutMs: number = 5000): Promise<void> {
+        const log = getLogger();
+
         if (!this.isInitialized) {
             return;
         }
 
-        console.log('[Services] Shutting down...');
+        log.info('[Services] Shutting down...');
 
         try {
             await Promise.race([
@@ -192,12 +198,12 @@ export class ServiceLifecycleManager {
                 ),
             ]);
 
-            console.log('[Services] Shutdown complete');
+            log.info('[Services] Shutdown complete');
         } catch (error) {
             if (error.message === 'Shutdown timeout') {
-                console.warn('[Services] Shutdown timed out after', timeoutMs, 'ms');
+                log.warn(`[Services] Shutdown timed out after ${timeoutMs}ms`);
             } else {
-                console.error('[Services] Shutdown error:', error);
+                log.error(`[Services] Shutdown error: ${error}`);
             }
         } finally {
             this.isInitialized = false;
@@ -208,7 +214,8 @@ export class ServiceLifecycleManager {
      * Hot reload: shutdown, clear caches, re-import, and re-initialize
      */
     async reload(): Promise<void> {
-        console.log('[Services] Reloading services...');
+        const log = getLogger();
+        log.info('[Services] Reloading services...');
 
         // Step 1: Graceful shutdown
         await this.shutdown();
@@ -234,7 +241,7 @@ export class ServiceLifecycleManager {
         this.isInitialized = false;
         await this.initialize();
 
-        console.log('[Services] Reload complete');
+        log.info('[Services] Reload complete');
     }
 
     /**

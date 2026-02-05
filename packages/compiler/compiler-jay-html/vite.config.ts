@@ -17,6 +17,7 @@ export default defineConfig({
         rollupOptions: {
             external: [
                 '@jay-framework/component',
+                '@jay-framework/logger',
                 '@jay-framework/runtime',
                 '@jay-framework/secure',
                 '@jay-framework/compiler-shared',

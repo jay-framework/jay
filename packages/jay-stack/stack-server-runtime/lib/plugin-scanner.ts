@@ -9,6 +9,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { createRequire } from 'node:module';
 import { loadPluginManifest, type PluginManifest } from '@jay-framework/compiler-shared';
+import { getLogger } from '@jay-framework/logger';
 
 const require = createRequire(import.meta.url);
 
@@ -94,12 +95,12 @@ export async function scanPlugins(options: PluginScanOptions): Promise<Map<strin
                 visitedPackages.add(pluginPath);
 
                 if (verbose) {
-                    console.log(`[PluginScanner] Found local plugin: ${pluginName}`);
+                    getLogger().info(`[PluginScanner] Found local plugin: ${pluginName}`);
                 }
             }
         } catch (error) {
             if (verbose) {
-                console.warn(`[PluginScanner] Failed to scan local plugins: ${error}`);
+                getLogger().warn(`[PluginScanner] Failed to scan local plugins: ${error}`);
             }
         }
     }
@@ -154,7 +155,7 @@ export async function scanPlugins(options: PluginScanOptions): Promise<Map<strin
                 });
 
                 if (verbose) {
-                    console.log(`[PluginScanner] Found NPM plugin: ${depName}`);
+                    getLogger().info(`[PluginScanner] Found NPM plugin: ${depName}`);
                 }
 
                 // Add transitive dependencies to queue if enabled
@@ -168,7 +169,7 @@ export async function scanPlugins(options: PluginScanOptions): Promise<Map<strin
             }
         } catch (error) {
             if (verbose) {
-                console.warn(`[PluginScanner] Failed to scan NPM plugins: ${error}`);
+                getLogger().warn(`[PluginScanner] Failed to scan NPM plugins: ${error}`);
             }
         }
     }
