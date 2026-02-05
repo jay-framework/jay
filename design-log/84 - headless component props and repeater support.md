@@ -666,8 +666,11 @@ import {
   ConstructContext,
   HTMLElementProxy,
   RenderElementOptions,
+  childComp,
+  forEach,
 } from '@jay-framework/runtime';
 import { makeJayComponent, Props, createSignal } from '@jay-framework/component';
+import { productCard } from '@wix/stores';  // Headless component from plugin
 
 // ============================================================
 // TYPES FROM PRODUCT-CARD CONTRACT (ViewState provided by plugin)
@@ -753,13 +756,11 @@ function catalogItemRender(options?: RenderElementOptions) {
   return [refManager.getPublicAPI() as CatalogItemRefs, render] as const;
 }
 
-// For forEach: same render, use plugin's interactive constructor
-export function createCatalogItem(productId: string) {
-  return makeJayComponent(
-    catalogItemRender,  // Reused render function
-    productCard.interactiveConstructor,  // From plugin
-  );
-}
+// For forEach: Component defined ONCE, reused for all items via childComp
+export const CatalogItem = makeJayComponent(
+  catalogItemRender,  // Same render function for all items
+  productCard.interactiveConstructor,  // From plugin
+);
 
 // ============================================================
 // slowForEach: SEPARATE TEMPLATE PER ITEM
@@ -811,27 +812,58 @@ export const slowForEachCatalogItems = [
 // PAGE-LEVEL TEMPLATE
 // ============================================================
 
+// Item type within the page's catalog (before component hydration)
+interface CatalogItemViewState {
+  _id: string;
+  // Other fields passed through from slow render...
+}
+
 interface PageViewState {
   pageTitle: string;
+  catalog: {
+    items: CatalogItemViewState[];
+  };
 }
 
 interface PageRefs {
-  // Page-level refs if any
+  heroProductCard: /* component ref */;
+  catalogItems: /* collection ref */;
 }
 
 function pageRender(options?: RenderElementOptions) {
-  const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+  const [refManager, [refHeroProductCard, refCatalogItems]] = ReferencesManager.for(
+    options, 
+    [], 
+    [], 
+    ['heroProductCard'],  // Single component ref
+    ['catalogItems'],     // Collection ref for forEach
+  );
   
   const render = (viewState: PageViewState) =>
     ConstructContext.withRootContext(viewState, refManager, () =>
       e('div', {}, [
         e('h1', {}, [dt((vs) => vs.pageTitle)]),
         e('section', { class: 'hero' }, [
-          // Hero product card placeholder - filled by page.ts
+          // Static headless component - rendered via childComp
+          childComp(
+            HeroProductCard,
+            (vs: PageViewState) => ({ /* props mapped from page viewState */ }),
+            refHeroProductCard(),
+          ),
         ]),
         e('section', { class: 'catalog' }, [
           e('div', { class: 'grid' }, [
-            // Catalog items placeholder - filled by page.ts forEach
+            // forEach items - same component, different data per item
+            forEach(
+              (vs: PageViewState) => vs.catalog.items,
+              (itemVs: CatalogItemViewState) => 
+                childComp(
+                  CatalogItem,  // Same component for all items
+                  (vs: CatalogItemViewState) => ({ productId: vs._id }),
+                  refCatalogItems(),
+                ),
+              '_id',  // trackBy key
+            ),
           ]),
         ]),
       ]),
@@ -851,7 +883,7 @@ import { Props } from '@jay-framework/component';
 import { 
   render as pageRender, 
   HeroProductCard, 
-  createCatalogItem 
+  CatalogItem,
 } from './page.jay-html';
 import { productCard, productList } from '@wix/stores';
 import type { PageContract, PageRefs, PageSlowViewState, PageFastViewState } from './page.jay-contract';
@@ -963,10 +995,10 @@ export const page = makeJayStackComponent<PageContract>()
 
 - Template structure is **identical** for all items
 - Only data bindings differ between items
-- **Extract template once, reuse for all items**
+- **Define component once, render via `childComp` in forEach**
 
 ```typescript
-// forEach: Single compiled render function, reused for all items
+// forEach: Single compiled render function
 function catalogItemRender(options?: RenderElementOptions) {
   // Compiled ONCE
   const [refManager, refs] = ReferencesManager.for(options, ['addToCart'], [], [], []);
@@ -974,13 +1006,23 @@ function catalogItemRender(options?: RenderElementOptions) {
   return [refManager.getPublicAPI(), render] as const;
 }
 
-// Create component instances - all share the same render function
-viewState.catalog.items.forEach(item => {
-  const component = makeJayComponent(
-    catalogItemRender,  // SAME render function
-    productCard.interactiveConstructor,  // From plugin
-  );
-});
+// Component defined ONCE - makeJayComponent creates the prototype, not instance
+export const CatalogItem = makeJayComponent(
+  catalogItemRender,
+  productCard.interactiveConstructor,  // From plugin
+);
+
+// In page template: forEach uses childComp to render each item
+forEach(
+  (vs: PageViewState) => vs.catalog.items,
+  (itemVs: CatalogItemViewState) => 
+    childComp(
+      CatalogItem,  // Same component definition for all items
+      (vs) => ({ productId: vs._id }),  // Props from item viewState
+      refCatalogItems(),
+    ),
+  '_id',  // trackBy key
+);
 ```
 
 #### `slowForEach` (slow phase)
