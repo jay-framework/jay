@@ -8,7 +8,7 @@ data:
   </head>
   <body>
     <div>
-      <TodoComponent props={todoProps}></TodoComponent>
+      <jay:TodoComponent props={todoProps}></jay:TodoComponent>
     </div>
   </body>
 </html>

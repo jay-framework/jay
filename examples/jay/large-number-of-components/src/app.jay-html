@@ -7,7 +7,7 @@
   </head>
   <body>
     <div>
-      <Host ref="a"></Host>
+      <jay:Host ref="a"></jay:Host>
     </div>
   </body>
 </html>

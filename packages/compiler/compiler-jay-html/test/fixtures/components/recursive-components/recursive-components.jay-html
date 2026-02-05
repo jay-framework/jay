@@ -8,13 +8,13 @@ data: Node
 <body>
 <div>
     <div>{name}</div>
-    <TreeNode props="{firstChild}"/>
+    <jay:TreeNode props="{firstChild}"/>
     <ul>
         <li forEach="children" trackBy="id">
-            <TreeNode name="{name}" id="{id}" children="{children}" ref="counter1"/>
+            <jay:TreeNode name="{name}" id="{id}" children="{children}" ref="counter1"/>
         </li>
         <li forEach="children" trackBy="id">
-            <TreeNode props="{.}" ref="counterTwo"/>
+            <jay:TreeNode props="{.}" ref="counterTwo"/>
         </li>
     </ul>
 </div>

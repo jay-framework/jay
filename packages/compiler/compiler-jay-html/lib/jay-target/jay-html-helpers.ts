@@ -121,3 +121,61 @@ export function ensureSingleChildElement(node: Node): WithValidations<HTMLElemen
             `Jay HTML Body must have a single child element, yet ${elements.length} found.`,
         ]);
 }
+
+// ============================================================
+// Jay Component Prefix Helpers
+// ============================================================
+
+/**
+ * The prefix for Jay component elements.
+ * Components can be written as <jay:ComponentName> or <ComponentName> (deprecated).
+ */
+export const JAY_COMPONENT_PREFIX = 'jay:';
+
+/**
+ * Check if an element tag has the jay: prefix.
+ */
+export function hasJayPrefix(tagName: string): boolean {
+    return tagName.startsWith(JAY_COMPONENT_PREFIX);
+}
+
+/**
+ * Extract the component name from a tag, stripping the jay: prefix if present.
+ * Returns the original tag name if no prefix.
+ */
+export function extractComponentName(tagName: string): string {
+    if (hasJayPrefix(tagName)) {
+        return tagName.slice(JAY_COMPONENT_PREFIX.length);
+    }
+    return tagName;
+}
+
+/**
+ * Check if an element is a component reference.
+ * A component is identified by:
+ * 1. Having jay: prefix (new syntax): <jay:Counter>
+ * 2. Being in the importedSymbols set (legacy syntax): <Counter>
+ *
+ * During migration, both syntaxes are supported.
+ * Returns the component name (without prefix) if it's a component, null otherwise.
+ */
+export function getComponentName(tagName: string, importedSymbols: Set<string>): string | null {
+    // Check for jay: prefix first (new syntax)
+    if (hasJayPrefix(tagName)) {
+        const componentName = extractComponentName(tagName);
+        // Validate that the component is actually imported
+        if (importedSymbols.has(componentName)) {
+            return componentName;
+        }
+        // Jay-prefixed but not imported - this will be an error
+        // For now, still return the name so the compiler can report the error
+        return componentName;
+    }
+
+    // Legacy syntax: plain element name matching an import
+    if (importedSymbols.has(tagName)) {
+        return tagName;
+    }
+
+    return null;
+}

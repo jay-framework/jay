@@ -131,11 +131,14 @@ export function tagToNamespace(
     if (tag.match(/\w:\w/)) {
         const prefix = tag.split(':')[0];
         const suffix = tag.split(':')[1];
-        const namespace = namespaces.find((_) => _.prefix === prefix).namespace;
-        if (namespace) {
+        const namespaceEntry = namespaces.find((_) => _.prefix === prefix);
+        // Only process if this is a known namespace prefix (not jay: component prefix)
+        if (namespaceEntry?.namespace) {
+            const namespace = namespaceEntry.namespace;
             if (namespace === SVG) return { tag: suffix, ...(dynamic ? dsvg : svg) };
             else if (namespace === MathML) return { tag: suffix, ...(dynamic ? dml : ml) };
         }
+        // If prefix is not a known namespace, treat the whole tag as-is (shouldn't reach here for components)
     }
     if (SVG_TAGS.has(tag)) return { tag, ...(dynamic ? dsvg : svg) };
     else if (MATH_ML_TAGS.has(tag)) return { tag, ...(dynamic ? dml : ml) };

@@ -14,7 +14,7 @@
     <div class="pillar">
       <h2 class="pillar-title">{title}</h2>
       <div class="task-list">
-        <Task forEach="taskData" trackBy="taskId" pillarId="{pillarId}" taskId="{taskId}" ref="tasks" />
+        <jay:Task forEach="taskData" trackBy="taskId" pillarId="{pillarId}" taskId="{taskId}" ref="tasks" />
       </div>
     </div>
   </body>

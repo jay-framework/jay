@@ -57,6 +57,8 @@ import {
     isRecurse,
     isRecurseWithData,
     isWithData,
+    getComponentName,
+    extractComponentName,
 } from './jay-html-helpers';
 import { generateTypes } from './jay-html-compile-types';
 import { Indent } from './indent';
@@ -324,6 +326,7 @@ function renderChildCompProps(element: HTMLElement, { variables }: RenderContext
 function renderChildCompRef(
     element: HTMLElement,
     { dynamicRef, variables, refNameGenerator, importedRefNameToRef }: RenderContext,
+    componentName: string,
 ): RenderFragment {
     if (importedRefNameToRef.has(element.attributes.ref)) {
         const importedRef = importedRefNameToRef.get(element.attributes.ref);
@@ -369,7 +372,7 @@ function renderChildCompRef(
                 dynamicRef,
                 !element.attributes.ref,
                 variables.currentType,
-                new JayComponentType(element.rawTagName, []),
+                new JayComponentType(componentName, []),
             ),
         ],
         {},
@@ -425,8 +428,10 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
     }
 
     function renderHtmlElement(htmlElement: HTMLElement, newContext: RenderContext) {
-        if (importedSymbols.has(htmlElement.rawTagName))
-            return renderNestedComponent(htmlElement, newContext);
+        // Check for component (jay:ComponentName or legacy ComponentName syntax)
+        const componentName = getComponentName(htmlElement.rawTagName, importedSymbols);
+        if (componentName !== null)
+            return renderNestedComponent(htmlElement, newContext, componentName);
 
         // Check if this element defines a recursive region
         let contextForChildren = newContext;
@@ -571,17 +576,15 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
     function renderNestedComponent(
         htmlElement: HTMLElement,
         newContext: RenderContext,
+        componentName: string,
     ): RenderFragment {
         let propsGetterAndRefs = renderChildCompProps(htmlElement, newContext);
-        let renderedRef = renderChildCompRef(htmlElement, newContext);
+        let renderedRef = renderChildCompRef(htmlElement, newContext, componentName);
         if (renderedRef.rendered !== '') renderedRef = renderedRef.map((_) => ', ' + _);
         let getProps = `(${newContext.variables.currentVar}: ${newContext.variables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
-        if (
-            importedSandboxedSymbols.has(htmlElement.rawTagName) ||
-            importerMode === RuntimeMode.MainSandbox
-        )
+        if (importedSandboxedSymbols.has(componentName) || importerMode === RuntimeMode.MainSandbox)
             return new RenderFragment(
-                `${newContext.indent.firstLine}secureChildComp(${htmlElement.rawTagName}, ${getProps}${renderedRef.rendered})`,
+                `${newContext.indent.firstLine}secureChildComp(${componentName}, ${getProps}${renderedRef.rendered})`,
                 Imports.for(Import.secureChildComp)
                     .plus(propsGetterAndRefs.imports)
                     .plus(renderedRef.imports),
@@ -590,7 +593,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             );
         else
             return new RenderFragment(
-                `${newContext.indent.firstLine}childComp(${htmlElement.rawTagName}, ${getProps}${renderedRef.rendered})`,
+                `${newContext.indent.firstLine}childComp(${componentName}, ${getProps}${renderedRef.rendered})`,
                 Imports.for(Import.childComp)
                     .plus(propsGetterAndRefs.imports)
                     .plus(renderedRef.imports),
@@ -1098,13 +1101,14 @@ function renderElementBridgeNode(node: Node, context: RenderContext): RenderFrag
     function renderNestedComponent(
         htmlElement: HTMLElement,
         newContext: RenderContext,
+        componentName: string,
     ): RenderFragment {
         let propsGetterAndRefs = renderChildCompProps(htmlElement, newContext);
-        let renderedRef = renderChildCompRef(htmlElement, newContext);
+        let renderedRef = renderChildCompRef(htmlElement, newContext, componentName);
         if (renderedRef.rendered !== '') renderedRef = renderedRef.map((_) => ', ' + _);
         let getProps = `(${newContext.variables.currentVar}: ${newContext.variables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
         return new RenderFragment(
-            `${newContext.indent.firstLine}childComp(${htmlElement.rawTagName}, ${getProps}${renderedRef.rendered})`,
+            `${newContext.indent.firstLine}childComp(${componentName}, ${getProps}${renderedRef.rendered})`,
             Imports.for(Import.sandboxChildComp)
                 .plus(propsGetterAndRefs.imports)
                 .plus(renderedRef.imports),
@@ -1173,8 +1177,14 @@ ${indent.firstLine}])`,
                           (prev, current) => RenderFragment.merge(prev, current, ',\n'),
                           RenderFragment.empty(),
                       );
-        if (importedSymbols.has(htmlElement.rawTagName)) {
-            return renderNestedComponent(htmlElement, { ...newContext, indent: childIndent });
+        // Check for component (jay:ComponentName or legacy ComponentName syntax)
+        const componentName = getComponentName(htmlElement.rawTagName, importedSymbols);
+        if (componentName !== null) {
+            return renderNestedComponent(
+                htmlElement,
+                { ...newContext, indent: childIndent },
+                componentName,
+            );
         } else {
             const renderedRef = renderElementRef(htmlElement, context);
             if (renderedRef.rendered !== '') {
