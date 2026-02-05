@@ -713,25 +713,11 @@ function heroProductCardRender(options?: RenderElementOptions) {
   return [refManager.getPublicAPI() as HeroProductCardRefs, render] as const;
 }
 
-// Inline template's interactive constructor (handles refs from THIS template)
-function HeroProductCardConstructor(
-  props: Props<{}>,
-  refs: HeroProductCardRefs,
-) {
-  // Wire up refs defined in inline template
-  refs.buyNow.onclick(() => {
-    console.log('Buy now clicked');
-  });
-  
-  return {
-    render: () => ({}),
-  };
-}
-
-// Combined: makeJayComponent(render, Constructor) - same pattern as counter.ts
+// Use the plugin's interactive constructor directly - no need to inline it
+// productCard.withInteractive provides the constructor
 export const HeroProductCard = makeJayComponent(
   heroProductCardRender,
-  HeroProductCardConstructor,
+  productCard.interactiveConstructor,  // From plugin's makeJayStackComponent
 );
 
 // ============================================================
@@ -743,7 +729,8 @@ interface CatalogItemRefs {
   addToCart: HTMLElementProxy<ProductCardViewState, HTMLButtonElement>;
 }
 
-// Compiled render function - extracted ONCE, reused for all forEach items
+// forEach: Compiled render function - extracted ONCE, reused for all items
+// This works because forEach items have IDENTICAL template structure
 function catalogItemRender(options?: RenderElementOptions) {
   const [refManager, [refAddToCart]] = ReferencesManager.for(
     options,
@@ -766,29 +753,59 @@ function catalogItemRender(options?: RenderElementOptions) {
   return [refManager.getPublicAPI() as CatalogItemRefs, render] as const;
 }
 
-// Factory: creates constructor with productId in closure
-function createCatalogItemConstructor(productId: string) {
-  return function CatalogItemConstructor(
-    props: Props<{}>,
-    refs: CatalogItemRefs,
-  ) {
-    refs.addToCart.onclick(() => {
-      console.log('Add to cart:', productId);
-    });
-    
-    return {
-      render: () => ({}),
-    };
-  };
-}
-
-// For forEach: same render function, different constructor per item
+// For forEach: same render, use plugin's interactive constructor
 export function createCatalogItem(productId: string) {
   return makeJayComponent(
     catalogItemRender,  // Reused render function
-    createCatalogItemConstructor(productId),  // Unique constructor with productId
+    productCard.interactiveConstructor,  // From plugin
   );
 }
+
+// ============================================================
+// slowForEach: SEPARATE TEMPLATE PER ITEM
+// Each item may have different template structure due to conditionals
+// ============================================================
+
+// slowForEach items are compiled individually - cannot reuse templates
+// Example: item 0 might have `if={hasVariants}` resolve to true,
+// item 1 might have it resolve to false - different HTML!
+
+// Generated at slow-render time for item[0]
+function catalogItemRender_0(options?: RenderElementOptions) {
+  // This item HAS variants (conditional resolved to true)
+  const [refManager, [refAddToCart]] = ReferencesManager.for(options, ['addToCart'], [], [], []);
+  const render = (viewState: ProductCardViewState) =>
+    ConstructContext.withRootContext(viewState, refManager, () =>
+      e('article', { class: 'product-tile' }, [
+        e('h3', {}, [dt((vs) => vs.name)]),
+        e('div', { class: 'variants' }, [/* variant options */]),  // EXISTS
+        e('button', {}, ['Add to Cart'], refAddToCart()),
+      ]),
+    );
+  return [refManager.getPublicAPI(), render] as const;
+}
+
+// Generated at slow-render time for item[1]
+function catalogItemRender_1(options?: RenderElementOptions) {
+  // This item does NOT have variants (conditional resolved to false)
+  const [refManager, [refAddToCart]] = ReferencesManager.for(options, ['addToCart'], [], [], []);
+  const render = (viewState: ProductCardViewState) =>
+    ConstructContext.withRootContext(viewState, refManager, () =>
+      e('article', { class: 'product-tile' }, [
+        e('h3', {}, [dt((vs) => vs.name)]),
+        // NO variants div - different structure!
+        e('button', {}, ['Add to Cart'], refAddToCart()),
+      ]),
+    );
+  return [refManager.getPublicAPI(), render] as const;
+}
+
+// slowForEach: each item gets its own compiled template + component instance
+export const slowForEachCatalogItems = [
+  makeJayComponent(catalogItemRender_0, productCard.interactiveConstructor),
+  makeJayComponent(catalogItemRender_1, productCard.interactiveConstructor),
+  // ... one per slow-rendered item
+];
 
 // ============================================================
 // PAGE-LEVEL TEMPLATE
@@ -946,40 +963,40 @@ export const page = makeJayStackComponent<PageContract>()
 
 - Template structure is **identical** for all items
 - Only data bindings differ between items
-- **Can extract and reuse the template** - compile once, instantiate many
+- **Extract template once, reuse for all items**
 
 ```typescript
-// forEach: Single compiled template, reused for all items
-const catalogItemTemplate = compileTemplate(`
-  <article class="product-tile">
-    <h3>{name}</h3>
-    <span class="price">{price}</span>
-  </article>
-`);
+// forEach: Single compiled render function, reused for all items
+function catalogItemRender(options?: RenderElementOptions) {
+  // Compiled ONCE
+  const [refManager, refs] = ReferencesManager.for(options, ['addToCart'], [], [], []);
+  const render = (viewState) => e('article', {}, [/* ... */]);
+  return [refManager.getPublicAPI(), render] as const;
+}
 
-// Reuse same template for each item
-viewState.catalog.items.forEach((item) => {
-  catalogItemTemplate.render(item); // Same template, different data
+// Create component instances - all share the same render function
+viewState.catalog.items.forEach(item => {
+  const component = makeJayComponent(
+    catalogItemRender,  // SAME render function
+    productCard.interactiveConstructor,  // From plugin
+  );
 });
 ```
 
 #### `slowForEach` (slow phase)
 
 - Each item may produce **different template structure**
-- Conditionals, visibility, nested loops can resolve differently per item
-- **Cannot extract and reuse** - each item may have unique HTML
+- Conditionals, visibility, nested loops resolve per-item at slow time
+- **Each item gets its own compiled template**
 
 ```html
-<!-- slowForEach: conditionals may differ per item -->
+<!-- slowForEach: conditionals resolve differently per item -->
 <div slowForEach="products" trackBy="_id">
-  <jay:product-card productId="{_id}">
+  <jay:product-card productId={_id}>
     <h3>{name}</h3>
-    <span class="price" if="{hasPrice}">{price}</span>
-    <!-- may or may not exist -->
-    <span class="badge" if="{isNew}">NEW</span>
-    <!-- may or may not exist -->
-    <div if="{hasVariants}" forEach="variants">
-      <!-- nested loop varies -->
+    <span class="price" if={hasPrice}>{price}</span>      <!-- may/may not exist -->
+    <span class="badge" if={isNew}>NEW</span>              <!-- may/may not exist -->
+    <div if={hasVariants} forEach="variants">              <!-- nested structure varies -->
       <span>{variantName}</span>
     </div>
   </jay:product-card>
@@ -987,30 +1004,42 @@ viewState.catalog.items.forEach((item) => {
 ```
 
 ```typescript
-// slowForEach: Each item compiled separately
-const renderedItems = await Promise.all(
-  viewState.products.map(async (item) => {
-    // Each item gets its own template instance
-    // because conditionals resolve differently
-    const itemViewState = await productCard.slowlyRender({ productId: item._id });
+// slowForEach: Separate compiled template per item
+// Item 0: has variants, has badge
+function catalogItemRender_0(options) {
+  return (viewState) => e('article', {}, [
+    e('h3', {}, [name]),
+    e('span', { class: 'badge' }, ['NEW']),  // Exists for this item
+    e('div', { class: 'variants' }, [/* ... */]),  // Exists for this item
+  ]);
+}
 
-    // Template compiled with this specific item's resolved conditionals
-    return compileSlowTemplate(itemViewState, inlineTemplate);
-  }),
-);
+// Item 1: no variants, no badge
+function catalogItemRender_1(options) {
+  return (viewState) => e('article', {}, [
+    e('h3', {}, [name]),
+    // No badge, no variants - different structure!
+  ]);
+}
+
+// Each item is a separate component with its own template
+const slowForEachItems = [
+  makeJayComponent(catalogItemRender_0, productCard.interactiveConstructor),
+  makeJayComponent(catalogItemRender_1, productCard.interactiveConstructor),
+];
 ```
 
 #### Compilation Strategy Summary
 
-| Repeater Type | Template Extraction    | Why                              |
-| ------------- | ---------------------- | -------------------------------- |
-| `forEach`     | ✅ Extract once, reuse | Same structure, different data   |
-| `slowForEach` | ❌ Compile per item    | Conditionals may differ per item |
+| Repeater Type | Template Extraction            | Why                              |
+| ------------- | ------------------------------ | -------------------------------- |
+| `forEach`     | ✅ One render function, reused | Same structure, different data   |
+| `slowForEach` | ❌ Separate render per item    | Conditionals resolve differently |
 
-This affects both:
-
-- **Bundle size**: `forEach` produces smaller output (one template)
-- **Performance**: `forEach` is faster (template parsed once)
+**Implications:**
+- **Bundle size**: `forEach` = one template; `slowForEach` = N templates
+- **Build time**: `forEach` compiles once; `slowForEach` compiles per item
+- **Interactive logic**: Both use plugin's `interactiveConstructor` from `makeJayStackComponent`
 
 ### Proposed Contract Format with Props
 
