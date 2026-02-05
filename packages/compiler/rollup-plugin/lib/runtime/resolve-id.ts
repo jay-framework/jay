@@ -14,6 +14,7 @@ import {
     TS_EXTENSION,
     TSX_EXTENSION,
 } from '@jay-framework/compiler-shared';
+import { getLogger } from '@jay-framework/logger';
 import { stripTSExtension } from './load';
 
 const JAY_HTML_CSS = '.css';
@@ -42,7 +43,7 @@ export async function resolveJayHtml(
     if (source.endsWith(TS_EXTENSION) || source.endsWith(TSX_EXTENSION)) {
         // Already resolved - return as-is with metadata so load hook works
         const originId = sourceBasePath.replace(TS_EXTENSION, '').replace(TSX_EXTENSION, '');
-        console.info(`[resolveId] already resolved ${source}, originId: ${originId}`);
+        getLogger().info(`[resolveId] already resolved ${source}, originId: ${originId}`);
         return {
             id: source,
             meta: appendJayMetadata(context, source, {
@@ -91,7 +92,7 @@ export async function resolveJayHtml(
             ? `${baseWithQuery}${extension}`.slice(root.length)
             : `${baseWithQuery}${extension}`;
 
-    console.info(`[resolveId] resolved ${id} as ${format}`);
+    getLogger().info(`[resolveId] resolved ${id} as ${format}`);
     return { id, meta: appendJayMetadata(context, id, { format, originId }) };
 }
 
@@ -111,7 +112,7 @@ export async function resolveJayContract(
     if (source.endsWith(TS_EXTENSION) || source.endsWith(TSX_EXTENSION)) {
         // Already resolved - return as-is with metadata so load hook works
         const originId = sourceBasePath.replace(TS_EXTENSION, '').replace(TSX_EXTENSION, '');
-        console.info(`[resolveId] already resolved contract ${source}, originId: ${originId}`);
+        getLogger().info(`[resolveId] already resolved contract ${source}, originId: ${originId}`);
         return {
             id: source,
             meta: appendJayMetadata(context, source, {
@@ -143,7 +144,7 @@ export async function resolveJayContract(
             ? `${baseWithQuery}${TS_EXTENSION}`.slice(root.length)
             : `${baseWithQuery}${TS_EXTENSION}`;
 
-    console.info(
+    getLogger().info(
         `[resolveId] contract  - id: ${id}, originId: ${originId}, ssr: ${context['ssr']}`,
     );
     return {
@@ -174,7 +175,7 @@ export async function resolveJayModeFile(
     const format = resolvedJayMeta.format || SourceFileFormat.TypeScript;
     const originId = resolvedJayMeta.originId || resolved.id;
     const id = getResolvedId(resolved, mode, originId);
-    console.info(`[resolveId] resolved ${id} as ${format}`);
+    getLogger().info(`[resolveId] resolved ${id} as ${format}`);
     return { id, meta: appendJayMetadata(context, id, { format, originId }, resolvedJayMeta) };
 }
 
@@ -193,7 +194,7 @@ export async function removeSandboxPrefixForWorkerRoot(
 
     const id = `${resolved.id}${JAY_QUERY_WORKER_TRUSTED_TS}`;
     const originId = id.split('?')[0];
-    console.info(`[resolveId] resolved sandbox root ${id}`);
+    getLogger().info(`[resolveId] resolved sandbox root ${id}`);
     return {
         id,
         meta: appendJayMetadata(context, id, {
