@@ -16,7 +16,7 @@ import path from 'path';
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 
 // Timeout for dev server to start (ms)
-const SERVER_STARTUP_TIMEOUT = 30000;
+const SERVER_STARTUP_TIMEOUT = 60000;
 // Timeout for individual page requests (ms)
 const REQUEST_TIMEOUT = 10000;
 // Poll interval for health check (ms)
@@ -60,18 +60,22 @@ describe('Fake Shop Smoke Tests', () => {
                 env: { ...process.env, FORCE_COLOR: '0' },
             });
 
+            let pollingStarted = false;
+
             devServerProcess.stdout?.on('data', (data) => {
                 const text = data.toString();
                 output += text;
 
-                // Parse the dev server URL from output
-                const urlMatch = text.match(/Dev Server: (http:\/\/localhost:\d+)/);
+                // Parse the dev server URL from output (check accumulated output, not just current chunk)
+                const urlMatch = output.match(/Dev Server: (http:\/\/localhost:\d+)/);
                 if (urlMatch) {
                     detectedUrl = urlMatch[1];
                 }
 
                 // Once we see the success message, start polling health endpoint
-                if (text.includes('Jay Stack dev server started successfully') && detectedUrl) {
+                // Check accumulated output to handle line-by-line buffering (e.g., when run via wsrun)
+                if (!pollingStarted && output.includes('Jay Stack dev server started successfully') && detectedUrl) {
+                    pollingStarted = true;
                     pollHealth(detectedUrl, timeout, resolve, reject);
                 }
             });
