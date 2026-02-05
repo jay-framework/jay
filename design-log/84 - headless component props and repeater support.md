@@ -102,14 +102,23 @@ D) **Import once, instantiate with data binding**
 ```html
 <script type="application/jay-headless" plugin="wix-stores" contract="product-card"></script>
 
-<!-- Use with props -->
-<jay:product-card productId="prod-123" as="featured1" />
-<jay:product-card productId="prod-456" as="featured2" />
+<!-- Use with props and inline template -->
+<jay:product-card productId="prod-123">
+  <h1>{name}</h1>
+  <span class="price">{price}</span>
+</jay:product-card>
+
+<jay:product-card productId="prod-456">
+  <article class="compact">{name} - ${price}</article>
+</jay:product-card>
 ```
 
 **Answer:** Option D - Import once, instantiate with data binding.
 
-The template for the headless component is placed within the instance tag, separating import from usage (like ES modules).
+The inline template for the headless component is placed within the instance tag. Each instance:
+- Gets its own props (e.g., `productId`)
+- Creates a local data context (bindings resolve against component's ViewState)
+- Can have different inline templates (different presentation for same data)
 
 **Considerations:**
 
@@ -131,19 +140,25 @@ Given import:
 A) **Namespaced with `jay:` prefix**
 
 ```html
-<jay:product-card productId="prod-123" as="featured1" />
+<jay:product-card productId="prod-123">
+  <h1>{name}</h1>
+</jay:product-card>
 ```
 
 B) **Plain element name (contract name)**
 
 ```html
-<product-card productId="prod-123" as="featured1" />
+<product-card productId="prod-123">
+  <h1>{name}</h1>
+</product-card>
 ```
 
 C) **Namespaced with `contract:` prefix**
 
 ```html
-<contract:product-card productId="prod-123" as="featured1" />
+<contract:product-card productId="prod-123">
+  <h1>{name}</h1>
+</contract:product-card>
 ```
 
 **Answer:** Option A - Use `jay:` prefix for consistency.
@@ -155,6 +170,82 @@ Headful components currently use plain element names (Option B style). We should
 - Option A (`jay:`): Clear framework namespace, greppable, 4 extra chars
 - Option B (plain): Simplest, but could conflict with HTML custom elements, no namespace isolation
 - Option C (`contract:`): Semantically accurate, self-documenting, 9 extra chars
+
+#### Prerequisite: Migrate Headful Components to `jay:` Prefix
+
+Before implementing headless component instances, we should migrate existing headful components to use the `jay:` prefix. This:
+1. Creates unified syntax for all Jay components (headful and headless)
+2. Simplifies compiler implementation (one pattern for component detection)
+3. Avoids potential conflicts with HTML custom elements
+
+**Migration scope:**
+- Update compiler to recognize `<jay:component-name>` for headful components
+- Update all existing templates and tests
+- Deprecate (then remove) plain element name support
+
+### Two Ways to Use Headless Components
+
+After this design, headless components can be used in **two distinct ways**:
+
+#### 1. Top-Level Import with `key` Attribute
+
+```html
+<script
+  type="application/jay-headless"
+  plugin="wix-stores"
+  contract="product-list"
+  key="catalog"
+></script>
+
+<!-- Data bound via key name -->
+<h1>{catalog.title}</h1>
+<div forEach="catalog.items">...</div>
+```
+
+- **Single instance** per page for this contract
+- Data accessed via `{key.property}` bindings
+- No inline template - component doesn't render visible UI
+- Used for **data providers** (lists, configurations, page-level data)
+
+#### 2. Component Instances with `jay:` Element
+
+```html
+<script type="application/jay-headless" plugin="wix-stores" contract="product-card"></script>
+
+<!-- Multiple instances with inline templates -->
+<jay:product-card productId="prod-123">
+  <h1>{name}</h1>  <!-- Resolved from component ViewState -->
+</jay:product-card>
+
+<jay:product-card productId="prod-456">
+  <h1>{name}</h1>  <!-- Different instance, different data -->
+</jay:product-card>
+```
+
+- **Multiple instances** allowed (different props)
+- Each instance creates a **new data context** (ViewState)
+- **Inline template** defines the presentation
+- Props passed to configure each instance
+- Used for **reusable widgets** (cards, tiles, interactive elements)
+
+**Both can coexist:**
+```html
+<head>
+  <!-- Data provider (top-level with key) -->
+  <script type="application/jay-headless" plugin="wix-stores" contract="product-list" key="allProducts"></script>
+  <!-- Widget (imported, used as instances) -->
+  <script type="application/jay-headless" plugin="wix-stores" contract="product-card"></script>
+</head>
+<body>
+  <!-- Use list data to drive forEach -->
+  <div forEach="allProducts.items" trackBy="_id">
+    <!-- Use product-card as widget for each item -->
+    <jay:product-card productId="{_id}">
+      <article>{name} - ${price}</article>
+    </jay:product-card>
+  </div>
+</body>
+```
 
 ### Q2: How do headless components work inside `forEach`?
 
@@ -253,6 +344,23 @@ The headless component instance creates a **new data context** based on its View
 - `{name}` and `{price}` resolve against the `product-card` component's ViewState
 - `productId="prod-123"` is a static prop passed to the component
 - `productId={someValue}` would resolve `someValue` from the **parent** ViewState before passing to component
+
+#### Note on `as` Attribute
+
+With Option C (local data context), the `as` attribute is **not needed**. Earlier examples showed:
+```html
+<jay:product-card productId="prod-123" as="featured1" />
+<h1>{featured1.name}</h1>  <!-- This pattern is NOT used -->
+```
+
+With inline templates and local data context, this becomes:
+```html
+<jay:product-card productId="prod-123">
+  <h1>{name}</h1>  <!-- Data accessed inside component scope -->
+</jay:product-card>
+```
+
+Refs are handled by the compiler: `childComp` requires a ref parameter, and the compiler auto-generates refs for all component instances. No explicit `as` attribute needed.
 
 ### Q4: What props should a product-card headless component accept?
 
@@ -1048,20 +1156,32 @@ forEach(
 ```typescript
 // slowForEach: Separate compiled template per item
 // Item 0: has variants, has badge
-function catalogItemRender_0(options) {
-  return (viewState) => e('article', {}, [
-    e('h3', {}, [name]),
-    e('span', { class: 'badge' }, ['NEW']),  // Exists for this item
-    e('div', { class: 'variants' }, [/* ... */]),  // Exists for this item
-  ]);
+function catalogItemRender_0(options?: RenderElementOptions) {
+  const [refManager, [refAddToCart]] = ReferencesManager.for(options, ['addToCart'], [], [], []);
+  const render = (viewState: ProductCardViewState) =>
+    ConstructContext.withRootContext(viewState, refManager, () =>
+      e('article', {}, [
+        e('h3', {}, [dt((vs) => vs.name)]),
+        e('span', { class: 'badge' }, ['NEW']),  // Exists for this item
+        e('div', { class: 'variants' }, [/* ... */]),  // Exists for this item
+        e('button', {}, ['Add to Cart'], refAddToCart()),
+      ]),
+    );
+  return [refManager.getPublicAPI(), render] as const;
 }
 
-// Item 1: no variants, no badge
-function catalogItemRender_1(options) {
-  return (viewState) => e('article', {}, [
-    e('h3', {}, [name]),
-    // No badge, no variants - different structure!
-  ]);
+// Item 1: no variants, no badge - different structure!
+function catalogItemRender_1(options?: RenderElementOptions) {
+  const [refManager, [refAddToCart]] = ReferencesManager.for(options, ['addToCart'], [], [], []);
+  const render = (viewState: ProductCardViewState) =>
+    ConstructContext.withRootContext(viewState, refManager, () =>
+      e('article', {}, [
+        e('h3', {}, [dt((vs) => vs.name)]),
+        // NO badge, NO variants - different structure!
+        e('button', {}, ['Add to Cart'], refAddToCart()),
+      ]),
+    );
+  return [refManager.getPublicAPI(), render] as const;
 }
 
 // Each item is a separate component with its own template
@@ -1138,7 +1258,7 @@ tags:
   <body>
     <!-- Static props - multiple instances -->
     <section class="featured">
-      <jay:product-card productId="prod-hero" variant="featured" as="hero">
+      <jay:product-card productId="prod-hero" variant="featured">
         <h1 class="hero-title">{name}</h1>
       </jay:product-card>
     </section>
@@ -1216,6 +1336,16 @@ values:
 
 ## Implementation Plan
 
+### Phase 0: Migrate Headful Components to `jay:` Prefix (Prerequisite)
+
+1. Update compiler to recognize `<jay:component-name>` for existing headful components
+2. Migrate all existing templates from `<counter>` to `<jay:counter>` style
+3. Update all test fixtures and snapshots
+4. Deprecate plain element name support (warning phase)
+5. Remove plain element name support (cleanup phase)
+
+This creates a unified syntax foundation before adding headless component instances.
+
 ### Phase 1: Contract Props Definition
 
 1. Extend `.jay-contract` format to support `props` section
@@ -1224,9 +1354,9 @@ values:
 
 ### Phase 2: Component Instance Syntax
 
-1. Define `<jay:component-name>` element syntax
+1. Implement `<jay:component-name>` element syntax for headless components
 2. Implement prop passing to component instances
-3. Support `as` attribute for data binding key
+3. Parse inline template content within component tags
 4. Integrate with existing `forEach` binding
 
 ### Phase 3: Repeater Integration
@@ -1265,12 +1395,20 @@ values:
 
 ## Verification Criteria
 
-1. [ ] Can render same headless component multiple times with different props
-2. [ ] Can use headless component inside `forEach` with bound props
-3. [ ] Props are validated at compile time against contract schema
-4. [ ] Agents can discover valid prop values via materialized data files
-5. [ ] Static and dynamic props both work correctly
-6. [ ] Rendering phases (slow/fast/interactive) work with instances
+**Phase 0: jay: prefix migration**
+1. [ ] Headful components compile with `<jay:component-name>` syntax
+2. [ ] All existing tests updated and passing with new syntax
+3. [ ] Deprecation warning for old plain element names
+
+**Headless component props and instances**
+4. [ ] Can render same headless component multiple times with different props
+5. [ ] Can use headless component inside `forEach` with bound props
+6. [ ] Props are validated at compile time against contract schema
+7. [ ] Agents can discover valid prop values via actions/CLI
+8. [ ] Static and dynamic props both work correctly
+9. [ ] Rendering phases (slow/fast/interactive) work with instances
+10. [ ] `slowForEach` generates separate template per item
+11. [ ] `forEach` reuses single template for all items
 
 ## Open Questions
 

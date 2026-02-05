@@ -57,9 +57,10 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 54  | render result monads                              | Result type patterns for rendering |
 | 55  | full stack component parameter flow refinement    | Props and parameter flow           |
 | 56  | deep merge view states with track-by              | Array merging with track-by keys   |
-| 58  | jay-stack headless component resolution           | Headless component resolution      |
-| 62  | relocate deep merge for stack-client-runtime      | Client runtime deep merge          |
-| 72  | skip client script for non-interactive components | Optimization for static components |
+| 58  | jay-stack headless component resolution           | Headless component resolution                         |
+| 62  | relocate deep merge for stack-client-runtime      | Client runtime deep merge                             |
+| 72  | skip client script for non-interactive components | Optimization for static components                    |
+| 84  | headless component props and repeater support     | Props, multiple instances, forEach, jay: prefix       |
 
 ---
 
@@ -204,7 +205,11 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ### "I'm building or modifying a plugin"
 
-→ See #39 (Plugin package), #60 (plugin system refinement), #66 (plugin dependencies)
+→ See #39 (Plugin package), #60 (plugin system refinement), #66 (plugin dependencies), #84 (headless component props)
+
+### "I'm working with headless components"
+
+→ See #50 (headless configuration), #58 (headless resolution), #84 (props, multiple instances, jay: prefix)
 
 ### "I'm working on the compiler"
 
