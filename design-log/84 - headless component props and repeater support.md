@@ -1424,7 +1424,15 @@ This creates a unified syntax foundation before adding headless component instan
 2. [x] All existing tests updated and passing with new syntax
 3. [ ] Deprecation warning for old plain element names (deferred - both syntaxes supported)
 
-**Headless component props and instances** 4. [ ] Can render same headless component multiple times with different props 5. [ ] Can use headless component inside `forEach` with bound props 6. [ ] Props are validated at compile time against contract schema 7. [ ] Agents can discover valid prop values via actions/CLI 8. [ ] Static and dynamic props both work correctly 9. [ ] Rendering phases (slow/fast/interactive) work with instances 10. [ ] `slowForEach` generates separate template per item 11. [ ] `forEach` reuses single template for all items
+**Headless component props and instances** 
+4. [ ] Can render same headless component multiple times with different props 
+5. [ ] Can use headless component inside `forEach` with bound props 
+6. [ ] Props are validated at compile time against contract schema 
+7. [ ] Agents can discover valid prop values via actions/CLI 
+8. [ ] Static and dynamic props both work correctly 
+9. [ ] Rendering phases (slow/fast/interactive) work with instances 
+10. [ ] `slowForEach` generates separate template per item 
+11. [ ] `forEach` reuses single template for all items
 
 ## Open Questions
 
