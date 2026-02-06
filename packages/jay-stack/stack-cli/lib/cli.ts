@@ -114,11 +114,91 @@ program
         }
     });
 
-// Contract materialization command
+/** Shared action for contract materialization (used by both contracts and agent-kit) */
+async function runMaterialize(
+    projectRoot: string,
+    options: {
+        output?: string;
+        yaml?: boolean;
+        list?: boolean;
+        plugin?: string;
+        dynamicOnly?: boolean;
+        force?: boolean;
+        verbose?: boolean;
+    },
+    /** Relative path from project root, e.g. 'agent-kit/materialized-contracts' or 'build/materialized-contracts' */
+    defaultOutputRelative: string,
+) {
+    const path = await import('node:path');
+    const outputDir = options.output ?? path.join(projectRoot, defaultOutputRelative);
+    let viteServer: Awaited<ReturnType<typeof createViteForCli>> | undefined;
+
+    try {
+        if (options.list) {
+            const index = await listContracts({
+                projectRoot,
+                dynamicOnly: options.dynamicOnly,
+                pluginFilter: options.plugin,
+            });
+
+            if (options.yaml) {
+                getLogger().important(YAML.stringify(index));
+            } else {
+                printContractList(index);
+            }
+            return;
+        }
+
+        if (options.verbose) {
+            getLogger().info('Starting Vite for TypeScript support...');
+        }
+        viteServer = await createViteForCli({ projectRoot });
+
+        const services = await initializeServicesForCli(projectRoot, viteServer);
+
+        const result = await materializeContracts(
+            {
+                projectRoot,
+                outputDir,
+                force: options.force,
+                dynamicOnly: options.dynamicOnly,
+                pluginFilter: options.plugin,
+                verbose: options.verbose,
+                viteServer,
+            },
+            services,
+        );
+
+        if (options.yaml) {
+            getLogger().important(YAML.stringify(result.index));
+        } else {
+            getLogger().important(
+                chalk.green(`\n✅ Materialized ${result.index.contracts.length} contracts`),
+            );
+            getLogger().important(`   Static: ${result.staticCount}`);
+            getLogger().important(`   Dynamic: ${result.dynamicCount}`);
+            getLogger().important(`   Output: ${result.outputDir}`);
+        }
+    } catch (error: any) {
+        getLogger().error(
+            chalk.red('❌ Failed to materialize contracts:') + ' ' + error.message,
+        );
+        if (options.verbose) {
+            getLogger().error(error.stack);
+        }
+        process.exit(1);
+    } finally {
+        if (viteServer) {
+            await viteServer.close();
+        }
+    }
+}
+
+// Agent kit command (Design Log #85): prepare agent-kit folder with materialized contracts + plugins index
 program
-    .command('contracts')
-    .description('Materialize and list available contracts from all plugins')
-    .option('-o, --output <dir>', 'Output directory for materialized contracts')
+    .command('agent-kit')
+    .description('Prepare the agent kit: materialize contracts and write plugins index to agent-kit/materialized-contracts/')
+    .option('-o, --output <dir>', 'Output directory (default: agent-kit/materialized-contracts)')
     .option('--yaml', 'Output contract index as YAML to stdout')
     .option('--list', 'List contracts without writing files')
     .option('--plugin <name>', 'Filter to specific plugin')
@@ -127,72 +207,23 @@ program
     .option('-v, --verbose', 'Show detailed output')
     .action(async (options) => {
         const projectRoot = process.cwd();
-        let viteServer: Awaited<ReturnType<typeof createViteForCli>> | undefined;
+        await runMaterialize(projectRoot, options, 'agent-kit/materialized-contracts');
+    });
 
-        try {
-            if (options.list) {
-                // Just list, don't write files
-                const index = await listContracts({
-                    projectRoot,
-                    dynamicOnly: options.dynamicOnly,
-                    pluginFilter: options.plugin,
-                });
-
-                if (options.yaml) {
-                    getLogger().important(YAML.stringify(index));
-                } else {
-                    printContractList(index);
-                }
-                return;
-            }
-
-            // Create Vite server for TypeScript support
-            if (options.verbose) {
-                getLogger().info('Starting Vite for TypeScript support...');
-            }
-            viteServer = await createViteForCli({ projectRoot });
-
-            // Initialize services (needed for dynamic generators)
-            const services = await initializeServicesForCli(projectRoot, viteServer);
-
-            // Materialize contracts
-            const result = await materializeContracts(
-                {
-                    projectRoot,
-                    outputDir: options.output,
-                    force: options.force,
-                    dynamicOnly: options.dynamicOnly,
-                    pluginFilter: options.plugin,
-                    verbose: options.verbose,
-                    viteServer,
-                },
-                services,
-            );
-
-            if (options.yaml) {
-                getLogger().important(YAML.stringify(result.index));
-            } else {
-                getLogger().important(
-                    chalk.green(`\n✅ Materialized ${result.index.contracts.length} contracts`),
-                );
-                getLogger().important(`   Static: ${result.staticCount}`);
-                getLogger().important(`   Dynamic: ${result.dynamicCount}`);
-                getLogger().important(`   Output: ${result.outputDir}`);
-            }
-        } catch (error: any) {
-            getLogger().error(
-                chalk.red('❌ Failed to materialize contracts:') + ' ' + error.message,
-            );
-            if (options.verbose) {
-                getLogger().error(error.stack);
-            }
-            process.exit(1);
-        } finally {
-            // Clean up Vite server
-            if (viteServer) {
-                await viteServer.close();
-            }
-        }
+// Contract materialization command (legacy: defaults to build/materialized-contracts)
+program
+    .command('contracts')
+    .description('Materialize and list available contracts from all plugins')
+    .option('-o, --output <dir>', 'Output directory for materialized contracts (default: build/materialized-contracts)')
+    .option('--yaml', 'Output contract index as YAML to stdout')
+    .option('--list', 'List contracts without writing files')
+    .option('--plugin <name>', 'Filter to specific plugin')
+    .option('--dynamic-only', 'Only process dynamic contracts')
+    .option('--force', 'Force re-materialization')
+    .option('-v, --verbose', 'Show detailed output')
+    .action(async (options) => {
+        const projectRoot = process.cwd();
+        await runMaterialize(projectRoot, options, 'build/materialized-contracts');
     });
 
 // Parse arguments

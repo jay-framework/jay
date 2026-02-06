@@ -310,3 +310,27 @@ Agent produces page with one headless script (product-card) and three `<jay:prod
 - **Content format**: **Minimal** — which components (plugin/contract) and how to use them. No repetition of contract shape, phases, or other metadata (all in kit).
 - **Params in the contract** (Q5, Phase 1): Specify **params** in the contract (like props), e.g. `params: { slug: string }` in `.jay-contract`; generate `export interface ProductPageParams extends UrlParams { slug: string }` from the contract. Agent kit then exposes params in materialized contracts; component code (e.g. `product-page.ts`) uses the generated type. Reference: wix-stores `product-page.jay-contract` and `product-page.ts`.
 - **Agent kit folder**: `agent-kit/` with INSTRUCTIONS.md, materialized-contracts (contracts-index, plugins-index, contract files including params), optional plugin refs, and **content/** as minimal spec so a coding agent can create jay-html consistently.
+
+---
+
+## Implementation Results
+
+### Phase 1 (partial): Agent kit command and plugins index
+
+**Done:**
+
+1. **Plugins index** — `contract-materializer.ts` now writes `plugins-index.yaml` alongside `contracts-index.yaml`. Format: `{ materialized_at, jay_stack_version, plugins: [{ name, path, contracts: [{ name, type, path }] }] }`. Path is relative to project root.
+2. **`jay-stack agent-kit` command** — New CLI command; default output is `agent-kit/materialized-contracts`. Same options as `contracts` (--output, --list, --yaml, --plugin, --dynamic-only, --force, --verbose). `contracts` command kept for backward compat (default `build/materialized-contracts`).
+3. **Path fix** — Default output is passed as relative path (`agent-kit/materialized-contracts` or `build/materialized-contracts`); CLI joins with `projectRoot` so path is correct.
+
+**Files changed:**
+
+- `stack-server-runtime/lib/contract-materializer.ts`: Added `PluginsIndexEntry`, `PluginsIndex`; during materialization collect per-plugin (path + contracts) and write `plugins-index.yaml`.
+- `stack-cli/lib/cli.ts`: Extracted `runMaterialize(projectRoot, options, defaultOutputRelative)`; added `agent-kit` command (default `agent-kit/materialized-contracts`); `contracts` command uses `runMaterialize` with default `build/materialized-contracts`.
+
+**Not yet done (Phase 1):**
+
+- Params in the contract (Q5): contract format + codegen for `ProductPageParams extends UrlParams { ... }` — deferred.
+- INSTRUCTIONS.md template in agent-kit — deferred.
+
+**Verification:** `jay-stack agent-kit` creates `agent-kit/materialized-contracts/contracts-index.yaml` and `plugins-index.yaml`. With zero plugins, both files have empty arrays. Rebuild `stack-server-runtime` after changing contract-materializer so CLI picks up the new code.
