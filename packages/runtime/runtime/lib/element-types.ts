@@ -81,6 +81,7 @@ export type JayContract<
     SlowViewState extends object = never,
     FastViewState extends object = never,
     InteractiveViewState extends object = never,
+    Props extends object = {},
 > = {
     readonly [_jayContractBrand]: {
         viewState: ViewState;
@@ -88,19 +89,23 @@ export type JayContract<
         slowViewState: SlowViewState;
         fastViewState: FastViewState;
         interactiveViewState: InteractiveViewState;
+        props: Props;
     };
 };
 export type ExtractViewState<A> =
-    A extends JayContract<infer ViewState, any, any, any, any> ? ViewState : never;
-export type ExtractRefs<A> = A extends JayContract<any, infer Refs, any, any, any> ? Refs : never;
+    A extends JayContract<infer ViewState, any, any, any, any, any> ? ViewState : never;
+export type ExtractRefs<A> =
+    A extends JayContract<any, infer Refs, any, any, any, any> ? Refs : never;
 export type ExtractSlowViewState<A> =
-    A extends JayContract<any, any, infer SlowViewState, any, any> ? SlowViewState : never;
+    A extends JayContract<any, any, infer SlowViewState, any, any, any> ? SlowViewState : never;
 export type ExtractFastViewState<A> =
-    A extends JayContract<any, any, any, infer FastViewState, any> ? FastViewState : never;
+    A extends JayContract<any, any, any, infer FastViewState, any, any> ? FastViewState : never;
 export type ExtractInteractiveViewState<A> =
-    A extends JayContract<any, any, any, any, infer InteractiveViewState>
+    A extends JayContract<any, any, any, any, infer InteractiveViewState, any>
         ? InteractiveViewState
         : never;
+export type ExtractProps<A> =
+    A extends JayContract<any, any, any, any, any, infer Props> ? Props : never;
 
 export enum LogType {
     ASYNC_ERROR,

@@ -24,7 +24,16 @@ export interface ContractTag {
     phase?: RenderingPhase;
 }
 
+export interface ContractProp {
+    name: string;
+    dataType: JayType;
+    required?: boolean;
+    description?: Array<string>;
+    default?: string;
+}
+
 export interface Contract {
     name: string;
     tags: Array<ContractTag>;
+    props?: Array<ContractProp>;
 }

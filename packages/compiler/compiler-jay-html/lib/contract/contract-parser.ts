@@ -7,7 +7,7 @@ import {
     JayRecursiveType,
     JayArrayType,
 } from '@jay-framework/compiler-shared';
-import { Contract, ContractTag, ContractTagType, RenderingPhase } from './contract';
+import { Contract, ContractProp, ContractTag, ContractTagType, RenderingPhase } from './contract';
 import yaml from 'js-yaml';
 import { parseIsEnum, parseEnumValues } from '../';
 import { pascalCase } from 'change-case';
@@ -28,9 +28,18 @@ interface ParsedYamlTag {
     phase?: string;
 }
 
+interface ParsedYamlProp {
+    name: string;
+    type?: string;
+    required?: boolean;
+    description?: string | string[];
+    default?: string;
+}
+
 interface ParsedYaml {
     name: string;
     tags: Array<ParsedYamlTag>;
+    props?: Array<ParsedYamlProp>;
 }
 
 /**
@@ -306,6 +315,36 @@ function parseTag(tag: ParsedYamlTag): WithValidations<ContractTag> {
     }
 }
 
+function parseProp(prop: ParsedYamlProp): WithValidations<ContractProp> {
+    const validations: string[] = [];
+
+    if (!prop.name) {
+        validations.push('Prop must have a name');
+        return new WithValidations(undefined, validations);
+    }
+
+    // Default type to 'string' if not specified
+    const typeString = prop.type || 'string';
+    const dataType = parseDataType(prop.name, typeString);
+
+    if (!dataType) {
+        validations.push(`Prop [${prop.name}] has an invalid type [${typeString}]`);
+        return new WithValidations(undefined, validations);
+    }
+
+    const description = parseDescription(prop.description);
+
+    const contractProp: ContractProp = {
+        name: prop.name,
+        dataType,
+        ...(prop.required && { required: prop.required }),
+        ...(description && { description }),
+        ...(prop.default !== undefined && { default: prop.default }),
+    };
+
+    return new WithValidations<ContractProp>(contractProp, validations);
+}
+
 export function parseContract(contractYaml: string, fileName: string): WithValidations<Contract> {
     try {
         const parsedYaml = yaml.load(contractYaml) as ParsedYaml;
@@ -338,9 +377,30 @@ export function parseContract(contractYaml: string, fileName: string): WithValid
             tagNames.add(tag.tag);
         });
 
+        // Parse props if present
+        let parsedProps: ContractProp[] | undefined;
+        let propValidations: string[] = [];
+        if (parsedYaml.props && Array.isArray(parsedYaml.props)) {
+            const propResults = parsedYaml.props.map((prop) => parseProp(prop));
+            propValidations = propResults.flatMap((pr) => pr.validations);
+            parsedProps = propResults
+                .map((pr) => pr.val)
+                .filter((prop): prop is ContractProp => !!prop);
+
+            // Check for duplicate prop names
+            const propNames = new Set<string>();
+            parsedProps.forEach((prop) => {
+                if (propNames.has(prop.name)) {
+                    propValidations.push(`Duplicate prop name [${prop.name}]`);
+                }
+                propNames.add(prop.name);
+            });
+        }
+
         const contract: Contract = {
             name: parsedYaml.name,
             tags: parsedTags,
+            ...(parsedProps && parsedProps.length > 0 && { props: parsedProps }),
         };
 
         // Validate phase constraints
@@ -349,6 +409,7 @@ export function parseContract(contractYaml: string, fileName: string): WithValid
         return new WithValidations<Contract>(contract, [
             ...tagValidations,
             ...validations,
+            ...propValidations,
             ...phaseValidations,
         ]);
     } catch (e) {

@@ -421,18 +421,19 @@ The example format above captures the key elements:
 ### Q4b: How should load params be exposed in contracts?
 
 **Background:** Components using `withLoadParams` have URL parameters (e.g., `slug`, `id`) that:
+
 - Drive static site generation (SSG)
 - Are merged into props before rendering
 - Have discoverable valid values (via the `loadParams` generator)
 
 **Props vs Load Params:**
 
-| Aspect    | Props (`withProps`)     | Load Params (`withLoadParams`)   |
-|-----------|-------------------------|----------------------------------|
-| Source    | Template/parent         | URL path segments                |
-| Purpose   | Component configuration | URL routing + SSG                |
-| Discovery | Via plugin actions      | Via loadParams generator         |
-| Example   | `productId`, `variant`  | `slug`, `categoryId`             |
+| Aspect    | Props (`withProps`)     | Load Params (`withLoadParams`) |
+| --------- | ----------------------- | ------------------------------ |
+| Source    | Template/parent         | URL path segments              |
+| Purpose   | Component configuration | URL routing + SSG              |
+| Discovery | Via plugin actions      | Via loadParams generator       |
+| Example   | `productId`, `variant`  | `slug`, `categoryId`           |
 
 **Connection via plugin.yaml:**
 
@@ -443,7 +444,7 @@ The plugin.yaml already links contracts to their components (which may have `wit
 contracts:
   - name: product-page
     contract: product-page.jay-contract
-    component: productPage  # This component has withLoadParams
+    component: productPage # This component has withLoadParams
     description: Product page with URL slug param
 ```
 
@@ -466,11 +467,13 @@ jay-stack params wix-stores/product-page
 ```
 
 **How it works:**
+
 1. CLI finds the component referenced by the contract in plugin.yaml
 2. Runs the component's `loadParams` generator function
 3. Collects and returns all yielded param combinations
 
 **Runtime behavior:**
+
 - Load params are validated against the generator before slow render
 - If params don't match any generated values, returns 404
 - Valid params are merged into props: `{ ...baseProps, ...loadParams }`
@@ -762,10 +765,10 @@ async function renderSlowlyChanging(props: PageProps) {
   // The returned viewState transforms the inline template
   // The returned carryForward is tracked for fast phase
   const heroResult = await productCard.slowlyRender({ productId: 'prod-hero' });
-  
+
   // For forEach items
   const catalogResults = await Promise.all(
-    featuredIds.map(id => productCard.slowlyRender({ productId: id }))
+    featuredIds.map((id) => productCard.slowlyRender({ productId: id })),
   );
 
   return {
@@ -777,7 +780,7 @@ async function renderSlowlyChanging(props: PageProps) {
     // Track component carryForwards to pass in fast phase
     carryForward: {
       heroCarryForward: heroResult.carryForward,
-      catalogCarryForwards: catalogResults.map(r => r.carryForward),
+      catalogCarryForwards: catalogResults.map((r) => r.carryForward),
     },
   };
 }
@@ -810,20 +813,17 @@ async function renderSlowlyChanging(props: PageProps) {
 **page.ts fastRender implementation:**
 
 ```typescript
-async function renderFastChanging(
-  props: PageProps,
-  carryForward: PageCarryForward,
-) {
+async function renderFastChanging(props: PageProps, carryForward: PageCarryForward) {
   // Call nested component's fast render with its carryForward from slow phase
   const heroFast = await productCard.fastRender(
     { productId: 'prod-hero' },
-    carryForward.heroCarryForward,  // Pass component's own carryForward
+    carryForward.heroCarryForward, // Pass component's own carryForward
   );
 
   const catalogFast = await Promise.all(
     carryForward.catalogCarryForwards.map((cf, i) =>
-      productCard.fastRender({ productId: featuredIds[i] }, cf)
-    )
+      productCard.fastRender({ productId: featuredIds[i] }, cf),
+    ),
   );
 
   return {
@@ -841,6 +841,7 @@ async function renderFastChanging(
 1. **ViewStates are isolated** - Each component (page and nested) has its own ViewState space. Child ViewState is NOT merged into parent.
 
 2. **Props flow down** - Props for nested components are resolved from:
+
    - Static values in template: `productId="prod-123"`
    - Dynamic bindings: `productId={someValue}` resolved from page viewState
    - ForEach context: `productId={_id}` resolved from item
@@ -1587,12 +1588,14 @@ This creates a unified syntax foundation before adding headless component instan
 ### Phase 4: Nested Component Phase Orchestration (Server)
 
 1. **Slow phase orchestration:**
+
    - Page's `slowlyRender` calls each nested component's `slowlyRender`
    - Props resolved from template (static or bound)
    - Component's slow ViewState transforms inline template
    - Component's carryForward stored for fast phase
 
 2. **Fast phase orchestration:**
+
    - Page's `fastRender` calls each nested component's `fastRender`
    - Pass component's carryForward from slow phase
    - Component's fast ViewState transforms inline template bindings
@@ -1605,6 +1608,7 @@ This creates a unified syntax foundation before adding headless component instan
 ### Phase 4b: Interactive Phase (Client)
 
 1. **Compilation (from Phases 2 & 3):**
+
    - Compile inline templates to render functions
    - Generate `makeJayComponent` calls combining:
      - Inline template render function
@@ -1654,25 +1658,11 @@ This creates a unified syntax foundation before adding headless component instan
 2. [x] All existing tests updated and passing with new syntax
 3. [ ] Deprecation warning for old plain element names (deferred - both syntaxes supported)
 
-**Headless component props and instances**
-4. [ ] Can render same headless component multiple times with different props
-5. [ ] Can use headless component inside `forEach` with bound props
-6. [ ] Props are validated at compile time against contract schema
-7. [ ] Agents can discover valid prop values via actions/CLI
-8. [ ] Static and dynamic props both work correctly
-9. [ ] Rendering phases (slow/fast/interactive) work with instances
-10. [ ] `slowForEach` generates separate template per item
-11. [ ] `forEach` reuses single template for all items
+**Headless component props and instances** 4. [ ] Can render same headless component multiple times with different props 5. [ ] Can use headless component inside `forEach` with bound props 6. [ ] Props are validated at compile time against contract schema 7. [ ] Agents can discover valid prop values via actions/CLI 8. [ ] Static and dynamic props both work correctly 9. [ ] Rendering phases (slow/fast/interactive) work with instances 10. [ ] `slowForEach` generates separate template per item 11. [ ] `forEach` reuses single template for all items
 
-**Load params discovery**
-12. [ ] `jay-stack params <plugin>/<contract>` CLI command works
-13. [ ] CLI runs loadParams generator and returns valid combinations
-14. [ ] Agents can discover valid URL params for SSG
+**Load params discovery** 12. [ ] `jay-stack params <plugin>/<contract>` CLI command works 13. [ ] CLI runs loadParams generator and returns valid combinations 14. [ ] Agents can discover valid URL params for SSG
 
-**Nested component rendering**
-15. [ ] ViewStates are isolated per component (not merged)
-16. [ ] CarryForward tracked per component instance across phases
-17. [ ] Inline templates transformed with component's ViewState
+**Nested component rendering** 15. [ ] ViewStates are isolated per component (not merged) 16. [ ] CarryForward tracked per component instance across phases 17. [ ] Inline templates transformed with component's ViewState
 
 ## Open Questions (Answered)
 
@@ -1683,6 +1673,7 @@ This creates a unified syntax foundation before adding headless component instan
 2. **How do we handle props that change at different phases?**
 
    **Answer:**
+
    - **Slow props** are rendered as hardcoded values in slow phase (baked into HTML)
    - **Fast/interactive props** are rendered as prop bindings that support dynamic changes
    - See runtime and compiler jay-html tests for examples of this pattern
@@ -1758,4 +1749,92 @@ packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts
 packages/compiler/compiler-jay-html/lib/jay-target/tag-to-namespace.ts
 packages/compiler/compiler-jay-html/lib/react-target/jay-html-compiler-react.ts
 + 37 .jay-html test fixtures
+```
+
+---
+
+### Phase 1: Contract Props Definition - Implementation Results
+
+**Date:** February 4, 2026
+
+Successfully extended the contract format to support a `props` section.
+
+#### Changes Made
+
+**1. Contract type (`contract.ts`):**
+
+- Added `ContractProp` interface: `{ name, dataType, required?, description?, default? }`
+- Extended `Contract` interface with optional `props: Array<ContractProp>`
+
+**2. Contract parser (`contract-parser.ts`):**
+
+- Added `ParsedYamlProp` interface for YAML parsing
+- Added `parseProp()` function supporting: string, number, boolean, date, enum types
+- Updated `parseContract()` to parse `props` section, validate duplicates
+- Props default to `type: string` when type is omitted
+
+**3. Contract compiler (`contract-compiler.ts`):**
+
+- Added `generatePropsInterface()` function
+- Generates `export interface XxxProps { ... }` with required/optional markers
+- Supports enum props (generates enum types)
+- Contracts WITH props get 6th `JayContract` type parameter
+- Contracts WITHOUT props remain 5-parameter (backward compatible)
+
+**4. Runtime type (`element-types.ts`):**
+
+- Extended `JayContract` with 6th generic param: `Props extends object = {}`
+- Added `ExtractProps<A>` helper type
+- Updated all `Extract*` helpers to account for 6th parameter
+- Default `{}` ensures backward compatibility
+
+#### YAML Format
+
+```yaml
+name: ProductCard
+props:
+  - name: productId
+    type: string
+    required: true
+    description: The ID of the product to display
+  - name: variant
+    type: string
+tags:
+  - tag: name
+    ...
+```
+
+#### Generated Output (with props)
+
+```typescript
+export interface ProductCardProps {
+  productId: string;
+  variant?: string;
+}
+
+export type ProductCardContract = JayContract<
+  ProductCardViewState,
+  ProductCardRefs,
+  ProductCardSlowViewState,
+  ProductCardFastViewState,
+  ProductCardInteractiveViewState,
+  ProductCardProps
+>;
+```
+
+#### Verification
+
+- **490/490 tests pass** in compiler-jay-html (36 parser + 26 compiler + rest)
+- **252/252 tests pass** in compiler package
+- **190/190 tests pass** in runtime package
+
+#### Files Modified
+
+```
+packages/compiler/compiler-jay-html/lib/contract/contract.ts
+packages/compiler/compiler-jay-html/lib/contract/contract-parser.ts
+packages/compiler/compiler-jay-html/lib/contract/contract-compiler.ts
+packages/runtime/runtime/lib/element-types.ts
+packages/compiler/compiler-jay-html/test/contract/contract-parser.test.ts
+packages/compiler/compiler-jay-html/test/contract/contract-compiler.test.ts
 ```
