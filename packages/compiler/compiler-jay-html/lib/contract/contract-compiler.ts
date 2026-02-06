@@ -9,7 +9,8 @@ import {
     RefsTree,
     WithValidations,
 } from '@jay-framework/compiler-shared';
-import { Contract, ContractProp } from './contract';
+import { JAY_FULLSTACK_COMPONENTS } from '@jay-framework/compiler-shared';
+import { Contract, ContractParam, ContractProp } from './contract';
 import { generateTypes, JayImportResolver, renderRefsType } from '../';
 import { pascalCase, camelCase } from 'change-case';
 import {
@@ -95,6 +96,20 @@ function generatePropsInterface(
     return { propsInterface, propsEnums };
 }
 
+/** Generate Params interface (Design Log #85: URL/load params; always string). */
+function generateParamsInterface(
+    contractName: string,
+    params: ContractParam[],
+): { paramsImport: string; paramsInterface: string } {
+    const paramsTypeName = `${contractName}Params`;
+    const paramLines = params.map(
+        (param) => `  ${camelCase(param.name)}: string;`,
+    );
+    const paramsImport = `import { UrlParams } from '${JAY_FULLSTACK_COMPONENTS}';`;
+    const paramsInterface = `export interface ${paramsTypeName} extends UrlParams {\n${paramLines.join('\n')}\n}`;
+    return { paramsImport, paramsInterface };
+}
+
 function renderImports(imports: Imports, importedLinks: JayContractImportLink[]) {
     const renderedImports = imports.render(ImportsFor.definition);
 
@@ -162,6 +177,18 @@ export async function compileContract(
                 renderedProps = propsEnums ? `${propsEnums}\n\n${propsInterface}` : propsInterface;
             }
 
+            // Generate params interface if contract has params (Design Log #85: URL/load params)
+            const hasParams = contract.params && contract.params.length > 0;
+            const paramsTypeName = `${contractName}Params`;
+            let renderedParams = '';
+            if (hasParams) {
+                const { paramsImport, paramsInterface } = generateParamsInterface(
+                    contractName,
+                    contract.params,
+                );
+                renderedParams = `${paramsImport}\n\n${paramsInterface}`;
+            }
+
             // Generate contract type - include Props if contract has props
             const contractTypeParams = hasProps
                 ? `${viewStateTypeName}, ${refsTypeName}, ${slowViewStateTypeName}, ${fastViewStateTypeName}, ${interactiveViewStateTypeName}, ${propsTypeName}`
@@ -174,6 +201,7 @@ export async function compileContract(
                 phaseViewStateTypes,
                 renderedRefs,
                 ...(renderedProps ? [renderedProps] : []),
+                ...(renderedParams ? [renderedParams] : []),
                 contractType,
             ];
             return sections.join('\n\n');

@@ -7,7 +7,7 @@ import {
     JayRecursiveType,
     JayArrayType,
 } from '@jay-framework/compiler-shared';
-import { Contract, ContractProp, ContractTag, ContractTagType, RenderingPhase } from './contract';
+import { Contract, ContractParam, ContractProp, ContractTag, ContractTagType, RenderingPhase } from './contract';
 import yaml from 'js-yaml';
 import { parseIsEnum, parseEnumValues } from '../';
 import { pascalCase } from 'change-case';
@@ -40,6 +40,8 @@ interface ParsedYaml {
     name: string;
     tags: Array<ParsedYamlTag>;
     props?: Array<ParsedYamlProp>;
+    /** URL/load params: object of param name -> type string (e.g. { slug: string }). Design Log #85. */
+    params?: Record<string, string>;
 }
 
 /**
@@ -397,10 +399,18 @@ export function parseContract(contractYaml: string, fileName: string): WithValid
             });
         }
 
+        // Parse params if present (Design Log #85: URL/load params; always string in generated type)
+        let parsedParams: ContractParam[] | undefined;
+        if (parsedYaml.params && typeof parsedYaml.params === 'object' && !Array.isArray(parsedYaml.params)) {
+            parsedParams = Object.keys(parsedYaml.params).map((name) => ({ name }));
+            if (parsedParams.length === 0) parsedParams = undefined;
+        }
+
         const contract: Contract = {
             name: parsedYaml.name,
             tags: parsedTags,
             ...(parsedProps && parsedProps.length > 0 && { props: parsedProps }),
+            ...(parsedParams && parsedParams.length > 0 && { params: parsedParams }),
         };
 
         // Validate phase constraints

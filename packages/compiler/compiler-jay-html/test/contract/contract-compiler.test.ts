@@ -1521,4 +1521,88 @@ export interface ProductListUnwrappedRepeatedRefs {}
             );
         });
     });
+
+    describe('contract params (Design Log #85)', () => {
+        it('should compile contract with params (URL/load params, always string)', async () => {
+            const contract = `
+            name: product-page
+            params:
+              slug: string
+            tags:
+              - tag: _id
+                type: data
+                dataType: string
+              - tag: productName
+                type: data
+                dataType: string
+            `;
+
+            const parsedContract = parseContract(contract, 'contract.jay-contract');
+            const result = await compileContract(parsedContract, './contract', noHopResolver);
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+            import { JayContract } from '@jay-framework/runtime';
+
+            export interface ProductPageViewState {
+                _id: string;
+                productName: string;
+            }
+
+            export type ProductPageSlowViewState = Pick<ProductPageViewState, '_id' | 'productName'>;
+
+            export type ProductPageFastViewState = {};
+
+            export type ProductPageInteractiveViewState = {};
+
+            export interface ProductPageRefs {}
+
+            export interface ProductPageRepeatedRefs {}
+
+            import { UrlParams } from '@jay-framework/fullstack-component';
+
+            export interface ProductPageParams extends UrlParams {
+                slug: string;
+            }
+
+            export type ProductPageContract = JayContract<ProductPageViewState, ProductPageRefs, ProductPageSlowViewState, ProductPageFastViewState, ProductPageInteractiveViewState>`),
+            );
+        });
+
+        it('should compile contract without params (backward compatible)', async () => {
+            const contract = `
+            name: counter
+            tags:
+              - tag: count
+                type: data
+                dataType: number
+            `;
+
+            const parsedContract = parseContract(contract, 'contract.jay-contract');
+            const result = await compileContract(parsedContract, './contract', noHopResolver);
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+            import { JayContract } from '@jay-framework/runtime';
+
+            export interface CounterViewState {
+                count: number;
+            }
+
+            export type CounterSlowViewState = Pick<CounterViewState, 'count'>;
+
+            export type CounterFastViewState = {};
+
+            export type CounterInteractiveViewState = {};
+
+            export interface CounterRefs {}
+
+            export interface CounterRepeatedRefs {}
+
+            export type CounterContract = JayContract<CounterViewState, CounterRefs, CounterSlowViewState, CounterFastViewState, CounterInteractiveViewState>`),
+            );
+        });
+    });
 });

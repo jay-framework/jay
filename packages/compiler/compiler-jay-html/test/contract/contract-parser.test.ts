@@ -1107,4 +1107,53 @@ tags:
             ]);
         });
     });
+
+    describe('params parsing (Design Log #85)', () => {
+        it('should parse contract with params (URL/load params)', () => {
+            const contract = `
+            name: product-page
+            params:
+              slug: string
+            tags:
+              - tag: _id
+                type: data
+                dataType: string
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.params).toEqual([{ name: 'slug' }]);
+        });
+
+        it('should parse contract with multiple params', () => {
+            const contract = `
+            name: product-page
+            params:
+              slug: string
+              id: string
+            tags:
+              - tag: title
+                type: data
+                dataType: string
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.params).toEqual([{ name: 'slug' }, { name: 'id' }]);
+        });
+
+        it('should parse contract without params (backward compatible)', () => {
+            const contract = `
+            name: counter
+            tags:
+              - tag: count
+                type: data
+                dataType: number
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.params).toBeUndefined();
+        });
+    });
 });

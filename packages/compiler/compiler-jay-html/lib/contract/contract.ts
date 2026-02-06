@@ -32,8 +32,15 @@ export interface ContractProp {
     default?: string;
 }
 
+/** URL/load params for a page (e.g. [slug]). Always string in generated type (UrlParams = Record<string, string>). Design Log #85. */
+export interface ContractParam {
+    name: string;
+}
+
 export interface Contract {
     name: string;
     tags: Array<ContractTag>;
     props?: Array<ContractProp>;
+    /** URL/load params (e.g. slug for [slug] route). Generates Params extends UrlParams. */
+    params?: Array<ContractParam>;
 }

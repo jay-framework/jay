@@ -102,13 +102,13 @@ The contract file (`product-page.jay-contract`) currently has only `tags` (ViewS
 ```yaml
 name: product-page
 params:
-  slug: string
+  slug: string   # type is ignored; URL params are always string (UrlParams = Record<string, string>)
 tags:
   - {tag: _id, type: data, dataType: string}
   # ...
 ```
 
-**Generated (e.g. from contract compiler):**
+**Generated (e.g. from contract compiler):** Params are always `string` in the generated type.
 
 ```typescript
 export interface ProductPageParams extends UrlParams {
@@ -328,9 +328,17 @@ Agent produces page with one headless script (product-card) and three `<jay:prod
 - `stack-server-runtime/lib/contract-materializer.ts`: Added `PluginsIndexEntry`, `PluginsIndex`; during materialization collect per-plugin (path + contracts) and write `plugins-index.yaml`.
 - `stack-cli/lib/cli.ts`: Extracted `runMaterialize(projectRoot, options, defaultOutputRelative)`; added `agent-kit` command (default `agent-kit/materialized-contracts`); `contracts` command uses `runMaterialize` with default `build/materialized-contracts`.
 
+**Params in the contract (Q5) — implemented:**
+
+- **Params are always string**: URL/load params are always strings (`UrlParams = Record<string, string>`). Contract format accepts `params: { slug: string }` (type values ignored); generated interface always uses `string` for each param.
+- **Contract format**: Optional `params` as object of param name → type (e.g. `params: { slug: string }`). Parsed into `ContractParam[]` with `name` only (no dataType).
+- **Types**: `ContractParam { name: string }` and `Contract.params?: ContractParam[]` in `contract.ts`.
+- **Parser**: `contract-parser.ts` parses `params` from YAML (object form); uses keys only (no type validation).
+- **Codegen**: `contract-compiler.ts` generates `import { UrlParams } from '@jay-framework/fullstack-component';` and `export interface <Name>Params extends UrlParams { <prop>: string; ... }` when contract has params.
+- **Tests**: Parser tests for params (single, multiple, absent); compiler tests use `expect(await prettify(result.val)).toBe(await prettify(...))` with full expected output (no toContain).
+
 **Not yet done (Phase 1):**
 
-- Params in the contract (Q5): contract format + codegen for `ProductPageParams extends UrlParams { ... }` — deferred.
 - INSTRUCTIONS.md template in agent-kit — deferred.
 
 **Verification:** `jay-stack agent-kit` creates `agent-kit/materialized-contracts/contracts-index.yaml` and `plugins-index.yaml`. With zero plugins, both files have empty arrays. Rebuild `stack-server-runtime` after changing contract-materializer so CLI picks up the new code.
