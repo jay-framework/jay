@@ -1674,25 +1674,26 @@ This creates a unified syntax foundation before adding headless component instan
 16. [ ] CarryForward tracked per component instance across phases
 17. [ ] Inline templates transformed with component's ViewState
 
-## Open Questions
+## Open Questions (Answered)
 
-1. How does caching work with parameterized components?
+1. **How does caching work with parameterized components?**
 
-   - Each `(component, props)` tuple is a separate cache entry?
-   - Props that affect slow-phase need cache key inclusion
+   **Answer:** Caching is done at the page level. Nested component slow rendering is included in the page cache. The page is cached as a whole, with all nested component renders included.
 
-2. How do we handle props that change at different phases?
+2. **How do we handle props that change at different phases?**
 
-   - `productId` is slow (set at build/request time)
-   - `quantity` might be interactive
+   **Answer:**
+   - **Slow props** are rendered as hardcoded values in slow phase (baked into HTML)
+   - **Fast/interactive props** are rendered as prop bindings that support dynamic changes
+   - See runtime and compiler jay-html tests for examples of this pattern
 
-3. Should there be limits on instance count?
+3. **Should there be limits on instance count?**
 
-   - Performance implications of 100 product cards on a page
-   - Lazy rendering / virtualization?
+   **Answer:** No limits needed at this point. Optimizations can be considered later. In general, having 100 instances of pre-rendered templates is more efficient compared to one dynamic template (pre-rendered = less runtime work).
 
-4. How does this interact with linked contracts (#79)?
-   - Component with sub-contracts as props?
+4. **How does this interact with linked contracts (#79)?**
+
+   **Answer:** Props are data values, not contracts. They can be represented as contracts, but in this context we consider the contract as representing data types. Props don't reference other contracts as dependencies.
 
 ---
 
