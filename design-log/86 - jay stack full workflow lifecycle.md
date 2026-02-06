@@ -239,18 +239,15 @@ jay-stack refresh --all
 
 ### Q1: Should `jay-stack setup` be interactive or headless?
 
-Both. Default is headless (reads config, generates files). With `--interactive` flag, prompts for configuration values. Agent always uses headless mode.
+**Answer:** Headless. Reads config, generates files. No interactive prompts.
 
 ### Q2: Should `jay-stack agent-kit` subsume `jay-stack contracts`?
 
-Likely yes for v2. For now, `contracts` exists and works; `agent-kit` extends it with plugins-index and defaults output to `agent-kit/`. Could keep `contracts` as an alias or low-level command.
+**Answer:** Handled by Design Log #85. No additional action here.
 
 ### Q3: Where does `jay-stack setup` write plugin config?
 
-Plugin decides. Reasonable defaults:
-- Plugin-specific config: `src/plugins/<name>/` or project root config files
-- Reference data for agents: `agent-kit/references/`
-- Generated schemas: wherever the plugin convention specifies
+**Answer:** Plugin decides where to write. No framework-level convention for now.
 
 ### Q4: Should `jay-stack refresh` invalidate cache selectively?
 
