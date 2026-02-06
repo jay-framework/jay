@@ -337,8 +337,10 @@ Agent produces page with one headless script (product-card) and three `<jay:prod
 - **Codegen**: `contract-compiler.ts` generates `import { UrlParams } from '@jay-framework/fullstack-component';` and `export interface <Name>Params extends UrlParams { <prop>: string; ... }` when contract has params.
 - **Tests**: Parser tests for params (single, multiple, absent); compiler tests use `expect(await prettify(result.val)).toBe(await prettify(...))` with full expected output (no toContain).
 
-**Not yet done (Phase 1):**
+**INSTRUCTIONS.md template (Phase 1):**
 
-- INSTRUCTIONS.md template in agent-kit — deferred.
+- When `jay-stack agent-kit` runs (and not with `--list`), after materializing contracts we call **ensureAgentKitInstructions(projectRoot)**.
+- If `agent-kit/INSTRUCTIONS.md` does not exist, we create `agent-kit/` and write a default **INSTRUCTIONS.md** (Design Log #85 Example 1): rendering phases, headless components, discovery (contracts-index, plugins-index, params, actions), page layout. We do not overwrite an existing INSTRUCTIONS.md.
+- **stack-cli/lib/cli.ts**: Added `AGENT_KIT_INSTRUCTIONS_TEMPLATE` constant and `ensureAgentKitInstructions(projectRoot)`; agent-kit command action calls it after `runMaterialize` when `!options.list`.
 
 **Verification:** `jay-stack agent-kit` creates `agent-kit/materialized-contracts/contracts-index.yaml` and `plugins-index.yaml`. With zero plugins, both files have empty arrays. Rebuild `stack-server-runtime` after changing contract-materializer so CLI picks up the new code.

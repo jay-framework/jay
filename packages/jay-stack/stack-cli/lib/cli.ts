@@ -114,6 +114,46 @@ program
         }
     });
 
+/** Default INSTRUCTIONS.md for agent-kit (Design Log #85). Written when missing. */
+const AGENT_KIT_INSTRUCTIONS_TEMPLATE = `# Generating Jay-HTML Pages
+
+## Rendering phases
+
+- **Slow**: Build-time (SSG). Data and route params from loadParams.
+- **Fast**: Per-request (SSR). Data from fast render.
+- **Interactive**: Client. Mutable state.
+
+Contracts list phase per tag. Only use tags in the phase where they are available.
+
+## Headless components
+
+1. Page-level: add \`<script type="application/jay-headless" plugin="..." contract="..." key="...">\` in head.
+2. Nested / multiple instances: use \`<jay:contract-name>\` with props and optional inline template.
+3. Discover contracts and plugins: read materialized-contracts/contracts-index.yaml and materialized-contracts/plugins-index.yaml (run \`jay-stack agent-kit\` first).
+4. Discover params: \`jay-stack params <plugin>/<contract>\`.
+5. Discover prop values: \`jay-stack action <plugin>/<action>\` or plugin actions in references/.
+
+## Page layout
+
+- One directory per route under src/pages/.
+- Each page dir: page.jay-html (required for view), optional page.jay-contract, optional page.conf.yaml (used when jay-html is missing; see Design Log #50).
+`;
+
+/** Writes agent-kit/INSTRUCTIONS.md if it does not exist (Design Log #85). */
+async function ensureAgentKitInstructions(projectRoot: string): Promise<void> {
+    const path = await import('node:path');
+    const fs = await import('node:fs/promises');
+    const instructionsPath = path.join(projectRoot, 'agent-kit', 'INSTRUCTIONS.md');
+    try {
+        await fs.access(instructionsPath);
+        // File exists, do not overwrite
+    } catch {
+        await fs.mkdir(path.join(projectRoot, 'agent-kit'), { recursive: true });
+        await fs.writeFile(instructionsPath, AGENT_KIT_INSTRUCTIONS_TEMPLATE, 'utf-8');
+        getLogger().info(chalk.gray(`   Created agent-kit/INSTRUCTIONS.md`));
+    }
+}
+
 /** Shared action for contract materialization (used by both contracts and agent-kit) */
 async function runMaterialize(
     projectRoot: string,
@@ -208,6 +248,9 @@ program
     .action(async (options) => {
         const projectRoot = process.cwd();
         await runMaterialize(projectRoot, options, 'agent-kit/materialized-contracts');
+        if (!options.list) {
+            await ensureAgentKitInstructions(projectRoot);
+        }
     });
 
 // Contract materialization command (legacy: defaults to build/materialized-contracts)
