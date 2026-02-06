@@ -1582,9 +1582,43 @@ This creates a unified syntax foundation before adding headless component instan
 
 1. Allow headless components inside `forEach` blocks
 2. Bind props from repeater context
-3. Handle rendering phase coordination (slow/fast/interactive)
+3. Generate component instances per forEach item
 
-### Phase 4: Data Discovery for Agents
+### Phase 4: Nested Component Phase Orchestration (Server)
+
+1. **Slow phase orchestration:**
+   - Page's `slowlyRender` calls each nested component's `slowlyRender`
+   - Props resolved from template (static or bound)
+   - Component's slow ViewState transforms inline template
+   - Component's carryForward stored for fast phase
+
+2. **Fast phase orchestration:**
+   - Page's `fastRender` calls each nested component's `fastRender`
+   - Pass component's carryForward from slow phase
+   - Component's fast ViewState transforms inline template bindings
+
+3. **CarryForward tracking:**
+   - Page carryForward includes nested component carryForwards
+   - Each component instance identified by props/position
+   - ForEach items tracked by trackBy key
+
+### Phase 4b: Interactive Phase (Client)
+
+1. **Compilation (from Phases 2 & 3):**
+   - Compile inline templates to render functions
+   - Generate `makeJayComponent` calls combining:
+     - Inline template render function
+     - Plugin's `interactiveConstructor`
+   - Wire up refs from inline template
+   - Handle forEach item component generation
+
+2. **Client script generation:**
+   - Generate client-side hydration code
+   - Include component instances with their compiled templates
+   - Wire up plugin's interactive logic
+   - Connect signals and reactive bindings
+
+### Phase 5: Data Discovery for Agents
 
 1. Add `discoverable_data` to plugin.yaml schema
 2. Implement data generator execution

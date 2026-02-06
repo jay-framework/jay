@@ -61,6 +61,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 62  | relocate deep merge for stack-client-runtime      | Client runtime deep merge                       |
 | 72  | skip client script for non-interactive components | Optimization for static components              |
 | 84  | headless component props and repeater support     | Props, multiple instances, forEach, jay: prefix |
+| 85  | rendering phases and agent kit for agentic generation | Phases + contract/action discovery; agent-kit folder, markdown content → jay-html |
 
 ---
 
@@ -186,6 +187,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 80  | materializing dynamic contracts for agentic generation | CLI and dev server contract materialization for AI agents |
 | 81  | dev server test mode                                   | Health/shutdown endpoints and timeout for smoke testing   |
 | 83  | dev server logging and timing                          | Clean output, verbose mode, timing for render phases      |
+| 85  | rendering phases and agent kit for agentic generation | Agent-kit folder: instructions, contracts, markdown content with headless annotations |
 
 ---
 
@@ -229,7 +231,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ### "I'm working on AI agent integration"
 
-→ See #76 (AI Agent Integration), #77 (automation dev server), #80 (contract materialization for agents)
+→ See #76 (AI Agent Integration), #77 (automation dev server), #80 (contract materialization for agents), #85 (agent kit and rendering phases)
 
 ---
 
