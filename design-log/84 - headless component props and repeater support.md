@@ -434,48 +434,44 @@ The example format above captures the key elements:
 | Discovery | Via plugin actions      | Via loadParams generator         |
 | Example   | `productId`, `variant`  | `slug`, `categoryId`             |
 
-**Proposed contract extension for load params:**
+**Connection via plugin.yaml:**
+
+The plugin.yaml already links contracts to their components (which may have `withLoadParams`):
 
 ```yaml
-# product-page.jay-contract
-name: ProductPage
-
-# URL parameters the component expects (from route)
-loadParams:
-  - name: slug
-    type: string
-    required: true
-    description: 'Product slug from URL path'
-    # Reference to the generator that yields valid values
-    valuesFrom:
-      action: listProductSlugs  # Plugin action that returns valid slugs
-
-# Component props (from template/parent)
-props:
-  - name: showReviews
-    type: boolean
-    default: true
+# plugin.yaml
+contracts:
+  - name: product-page
+    contract: product-page.jay-contract
+    component: productPage  # This component has withLoadParams
+    description: Product page with URL slug param
 ```
+
+No need to duplicate load params schema in the contract file - the connection is already established.
 
 **Agent discovery for load params:**
 
-Agents can discover valid load param values by:
-1. Reading the contract's `loadParams[].valuesFrom.action` reference
-2. Invoking that action via CLI or MCP:
+Load params are generator functions, not actions. Agents discover valid values via dedicated CLI command:
 
 ```bash
-# Discover valid slug values for product-page
-jay-stack action wix-stores/listProductSlugs
+# Discover valid load param values for a contract
+jay-stack params wix-stores/product-page
 
-# Returns:
+# Returns all valid param combinations:
 [
-  { "slug": "ceramic-vase", "label": "Ceramic Vase" },
-  { "slug": "wooden-bowl", "label": "Wooden Bowl" }
+  { "slug": "ceramic-vase" },
+  { "slug": "wooden-bowl" },
+  { "slug": "glass-pitcher" }
 ]
 ```
 
+**How it works:**
+1. CLI finds the component referenced by the contract in plugin.yaml
+2. Runs the component's `loadParams` generator function
+3. Collects and returns all yielded param combinations
+
 **Runtime behavior:**
-- Load params are validated against the `loadParams` generator before slow render
+- Load params are validated against the generator before slow render
 - If params don't match any generated values, returns 404
 - Valid params are merged into props: `{ ...baseProps, ...loadParams }`
 
@@ -739,36 +735,49 @@ When a page contains nested headless component instances (`<jay:product-card>`),
 │  │ For each <jay:product-card productId="...">:              │  │
 │  │   ┌─────────────────────────────────────────────────────┐ │  │
 │  │   │ productCard.slowlyRender({ productId })             │ │  │
-│  │   │ → Returns: { viewState: { name, description }, ... }│ │  │
+│  │   │ → Returns: { viewState, carryForward }              │ │  │
+│  │   │ → ViewState used to transform inline template       │ │  │
+│  │   │ → CarryForward stored for fast phase                │ │  │
 │  │   └─────────────────────────────────────────────────────┘ │  │
 │  │                                                           │  │
 │  │ 3. Transform inline template with component's slow VS    │  │
-│  │ 4. Merge child viewStates into page viewState             │  │
-│  │ 5. Return composed page viewState + carryForward          │  │
+│  │ 4. Track component carryForward for fast phase           │  │
+│  │ 5. Return page viewState + page carryForward             │  │
 │  └───────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+**Key: ViewStates are isolated**
+
+Each component (page and nested components) has its own isolated ViewState. The child component's ViewState is used to transform its inline template, NOT merged into the page ViewState.
 
 **page.ts slowlyRender implementation:**
 
 ```typescript
 async function renderSlowlyChanging(props: PageProps) {
-  // Get slow data from nested headless components
-  const heroCard = await productCard.slowlyRender({ productId: 'prod-hero' });
-  const catalogItems = await Promise.all(
+  // Page's own slow render logic
+  const pageData = await fetchPageMetadata();
+
+  // Call nested component's slow render
+  // The returned viewState transforms the inline template
+  // The returned carryForward is tracked for fast phase
+  const heroResult = await productCard.slowlyRender({ productId: 'prod-hero' });
+  
+  // For forEach items
+  const catalogResults = await Promise.all(
     featuredIds.map(id => productCard.slowlyRender({ productId: id }))
   );
 
   return {
+    // Page's own viewState (NOT including child viewStates)
     viewState: {
       pageTitle: 'Our Products',
-      // Nested component viewStates become part of page viewState
-      hero: heroCard.viewState,
-      catalog: catalogItems.map(c => c.viewState),
+      // Page-level data only
     },
+    // Track component carryForwards to pass in fast phase
     carryForward: {
-      heroProductId: 'prod-hero',
-      catalogProductIds: featuredIds,
+      heroCarryForward: heroResult.carryForward,
+      catalogCarryForwards: catalogResults.map(r => r.carryForward),
     },
   };
 }
@@ -780,19 +789,20 @@ async function renderSlowlyChanging(props: PageProps) {
 ┌─────────────────────────────────────────────────────────────────┐
 │  Page fastRender(props, carryForward)                           │
 │  ┌───────────────────────────────────────────────────────────┐  │
-│  │ 1. Receive carryForward from slow phase                   │  │
+│  │ 1. Receive page carryForward from slow phase              │  │
 │  │                                                           │  │
-│  │ For each nested component (using carryForward data):      │  │
+│  │ For each nested component:                                │  │
 │  │   ┌─────────────────────────────────────────────────────┐ │  │
 │  │   │ productCard.fastRender(                             │ │  │
 │  │   │   { productId },                                    │ │  │
-│  │   │   componentCarryForward                             │ │  │
+│  │   │   componentCarryForward  // from slow phase         │ │  │
 │  │   │ )                                                   │ │  │
-│  │   │ → Returns: { viewState: { price, inStock }, ... }   │ │  │
+│  │   │ → Returns: { viewState, carryForward }              │ │  │
+│  │   │ → ViewState transforms inline template bindings     │ │  │
 │  │   └─────────────────────────────────────────────────────┘ │  │
 │  │                                                           │  │
-│  │ 2. Merge child fast viewStates into page fast viewState   │  │
-│  │ 3. Return composed fast viewState + carryForward          │  │
+│  │ 2. Transform component templates with fast viewState     │  │
+│  │ 3. Return page fast viewState + carryForward              │  │
 │  └───────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -804,22 +814,22 @@ async function renderFastChanging(
   props: PageProps,
   carryForward: PageCarryForward,
 ) {
-  // Get fast data from nested headless components
+  // Call nested component's fast render with its carryForward from slow phase
   const heroFast = await productCard.fastRender(
-    { productId: carryForward.heroProductId },
-    { productId: carryForward.heroProductId }, // component's carryForward
+    { productId: 'prod-hero' },
+    carryForward.heroCarryForward,  // Pass component's own carryForward
   );
 
   const catalogFast = await Promise.all(
-    carryForward.catalogProductIds.map(id =>
-      productCard.fastRender({ productId: id }, { productId: id })
+    carryForward.catalogCarryForwards.map((cf, i) =>
+      productCard.fastRender({ productId: featuredIds[i] }, cf)
     )
   );
 
   return {
+    // Page's own fast viewState (NOT including child viewStates)
     viewState: {
-      hero: { ...heroFast.viewState },
-      catalog: catalogFast.map(c => c.viewState),
+      // Page-level fast data only
     },
     carryForward,
   };
@@ -828,16 +838,16 @@ async function renderFastChanging(
 
 #### Key Points
 
-1. **Page orchestrates child components** - The page's slow/fast render functions explicitly call each nested component's corresponding phase
+1. **ViewStates are isolated** - Each component (page and nested) has its own ViewState space. Child ViewState is NOT merged into parent.
 
 2. **Props flow down** - Props for nested components are resolved from:
    - Static values in template: `productId="prod-123"`
    - Dynamic bindings: `productId={someValue}` resolved from page viewState
    - ForEach context: `productId={_id}` resolved from item
 
-3. **ViewState flows up** - Child component viewStates become part of the page's viewState structure
+3. **CarryForward links phases** - Component carryForward from slow phase must be passed to the same component instance in fast phase
 
-4. **CarryForward links phases** - IDs/keys stored in carryForward enable fast phase to call correct child components
+4. **Template transformation is per-component** - Each component's inline template is transformed using that component's ViewState
 
 5. **Parallel execution** - Independent child components can render in parallel via `Promise.all`
 
@@ -1548,20 +1558,18 @@ values:
 
 This creates a unified syntax foundation before adding headless component instances.
 
-### Phase 1: Contract Props and Load Params Definition
+### Phase 1: Contract Props Definition
 
 1. Extend `.jay-contract` format to support `props` section
-2. Extend `.jay-contract` format to support `loadParams` section
-3. Update contract parser to extract props and loadParams schemas
-4. Generate TypeScript types for component props and params
-5. Add `valuesFrom` reference to link params to discovery actions
+2. Update contract parser to extract props schema
+3. Generate TypeScript types for component props
 
 ### Phase 1b: Load Params Discovery for Agents
 
-1. Add `loadParams` exposure in materialized contracts
-2. Link load params to their discovery actions
-3. Agent can invoke action to get valid param values
-4. Support for SSG-aware page generation
+1. Add `jay-stack params <plugin>/<contract>` CLI command
+2. CLI runs the component's `loadParams` generator
+3. Returns all valid param combinations as JSON
+4. Agent can use this for SSG-aware page generation
 
 ### Phase 2: Component Instance Syntax
 
@@ -1623,10 +1631,14 @@ This creates a unified syntax foundation before adding headless component instan
 11. [ ] `forEach` reuses single template for all items
 
 **Load params discovery**
-12. [ ] Contracts with `loadParams` expose param schema
-13. [ ] `valuesFrom` links params to discovery actions
-14. [ ] Agents can invoke actions to get valid load param values
-15. [ ] Nested component orchestration works in slow/fast phases
+12. [ ] `jay-stack params <plugin>/<contract>` CLI command works
+13. [ ] CLI runs loadParams generator and returns valid combinations
+14. [ ] Agents can discover valid URL params for SSG
+
+**Nested component rendering**
+15. [ ] ViewStates are isolated per component (not merged)
+16. [ ] CarryForward tracked per component instance across phases
+17. [ ] Inline templates transformed with component's ViewState
 
 ## Open Questions
 
