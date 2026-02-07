@@ -29,6 +29,7 @@ export const TEST_IMPORT_RESOLVER: JayImportResolver = {
                 dir: 'duplicate-ref-headless',
                 file: 'duplicate-ref-headless',
             },
+            'test-product-card:product-card': { dir: 'product-card', file: 'product-card' },
         };
 
         const key = `${pluginName}:${contractName}`;
@@ -111,6 +112,23 @@ export const TEST_IMPORT_RESOLVER: JayImportResolver = {
                         'contracts/duplicate-ref-headless/duplicate-ref-headless',
                     ),
                     componentName: 'duplicateRefHeadless',
+                    isNpmPackage: false,
+                },
+                [],
+            );
+        }
+        if (pluginName === 'test-product-card' && contractName === 'product-card') {
+            return new WithValidations(
+                {
+                    contractPath: path.resolve(
+                        projectRoot,
+                        'contracts/product-card/product-card.jay-contract',
+                    ),
+                    componentPath: path.resolve(
+                        projectRoot,
+                        'contracts/product-card/product-card',
+                    ),
+                    componentName: 'productCard',
                     isNpmPackage: false,
                 },
                 [],

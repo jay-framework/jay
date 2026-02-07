@@ -48,21 +48,21 @@ export type PageWithHeadlessInstanceContract = JayContract<
 >;
 
 // Inline template for headless component: product-card #0
-type _HeadlessProductCart0Element = JayElement<
+type _HeadlessProductCard0Element = JayElement<
     ProductCardInteractiveViewState,
     ProductCardRefs
 >;
-type _HeadlessProductCart0ElementRender = RenderElement<
+type _HeadlessProductCard0ElementRender = RenderElement<
     ProductCardInteractiveViewState,
     ProductCardRefs,
-    _HeadlessProductCart0Element
+    _HeadlessProductCard0Element
 >;
-type _HeadlessProductCart0ElementPreRender = [
+type _HeadlessProductCard0ElementPreRender = [
     ProductCardRefs,
-    _HeadlessProductCart0ElementRender,
+    _HeadlessProductCard0ElementRender,
 ];
 
-function _headlessProductCard0Render(options?: RenderElementOptions): _HeadlessProductCart0ElementPreRender {
+function _headlessProductCard0Render(options?: RenderElementOptions): _HeadlessProductCard0ElementPreRender {
     const [refManager, [refAddToCart]] = ReferencesManager.for(options, ['add to cart'], [], [], []);
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, undefined, () =>
@@ -71,7 +71,7 @@ function _headlessProductCard0Render(options?: RenderElementOptions): _HeadlessP
                 e('span', { class: 'price' }, [dt((vs) => vs.price)]),
                 e('button', {}, ['Add to Cart'], refAddToCart()),
             ]),
-        ) as _HeadlessProductCart0Element;
+        ) as _HeadlessProductCard0Element;
     return [refManager.getPublicAPI() as ProductCardRefs, render];
 }
 

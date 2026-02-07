@@ -364,6 +364,20 @@ describe('generate jay-html element', () => {
             );
         });
 
+        it('generate element file with headless component instance (inline template)', async () => {
+            const folder = 'contracts/page-with-headless-instance';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(
+                await prettify(
+                    await readFixtureFileRaw(
+                        folder,
+                        'page-with-headless-instance.jay-html.ts',
+                    ),
+                ),
+            );
+        });
+
         it('generate element file with linked contract with sub-contracts', async () => {
             const folder = 'contracts/page-using-named-counter';
             const elementFile = await readFileAndGenerateElementFile(folder);
