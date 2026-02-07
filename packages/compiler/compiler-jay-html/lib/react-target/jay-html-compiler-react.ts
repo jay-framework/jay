@@ -349,9 +349,9 @@ ${indent.curr}return (${childElement.rendered})})}`,
 
     function renderHtmlElement(htmlElement, newContext: RenderContext) {
         // Check for component (jay:ComponentName or legacy ComponentName syntax)
-        const componentName = getComponentName(htmlElement.rawTagName, importedSymbols);
-        if (componentName !== null)
-            return renderNestedComponent(htmlElement, newContext, componentName);
+        const componentMatch = getComponentName(htmlElement.rawTagName, importedSymbols);
+        if (componentMatch !== null)
+            return renderNestedComponent(htmlElement, newContext, componentMatch.name);
 
         let childNodes =
             node.childNodes.length > 1

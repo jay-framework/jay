@@ -1549,28 +1549,27 @@ values:
 
 ## Implementation Plan
 
-### Phase 0: Migrate Headful Components to `jay:` Prefix (Prerequisite)
+### Phase 0: Migrate Headful Components to `jay:` Prefix (Prerequisite) ✅
 
-1. Update compiler to recognize `<jay:component-name>` for existing headful components
-2. Migrate all existing templates from `<counter>` to `<jay:counter>` style
-3. Update all test fixtures and snapshots
-4. Deprecate plain element name support (warning phase)
-5. Remove plain element name support (cleanup phase)
+1. ✅ Update compiler to recognize `<jay:component-name>` for existing headful components
+2. ✅ Migrate all existing templates from `<counter>` to `<jay:counter>` style
+3. ✅ Update all test fixtures and snapshots
+4. Deprecate plain element name support (warning phase) - deferred, both syntaxes work
+5. Remove plain element name support (cleanup phase) - deferred
 
-This creates a unified syntax foundation before adding headless component instances.
+### Phase 1: Contract Props Definition ✅
 
-### Phase 1: Contract Props Definition
+1. ✅ Extend `.jay-contract` format to support `props` section
+2. ✅ Update contract parser to extract props schema
+3. ✅ Generate TypeScript types for component props (including `ExtractProps<A>`)
 
-1. Extend `.jay-contract` format to support `props` section
-2. Update contract parser to extract props schema
-3. Generate TypeScript types for component props
+### Phase 1b: Contract Params + Agent Kit ✅ (via Design Log #85)
 
-### Phase 1b: Load Params Discovery for Agents
-
-1. Add `jay-stack params <plugin>/<contract>` CLI command
-2. CLI runs the component's `loadParams` generator
-3. Returns all valid param combinations as JSON
-4. Agent can use this for SSG-aware page generation
+1. ✅ Contract params format: `params: { slug: string }` → `export interface XxxParams extends UrlParams { ... }`
+2. ✅ `jay-stack agent-kit` CLI command (materializes contracts to `agent-kit/materialized-contracts/`)
+3. ✅ Plugins-index.yaml generation
+4. ✅ INSTRUCTIONS.md template auto-creation
+5. `jay-stack params <plugin>/<contract>` CLI to run loadParams generator - deferred
 
 ### Phase 2: Component Instance Syntax
 
@@ -1658,11 +1657,11 @@ This creates a unified syntax foundation before adding headless component instan
 2. [x] All existing tests updated and passing with new syntax
 3. [ ] Deprecation warning for old plain element names (deferred - both syntaxes supported)
 
-**Headless component props and instances** 4. [ ] Can render same headless component multiple times with different props 5. [ ] Can use headless component inside `forEach` with bound props 6. [ ] Props are validated at compile time against contract schema 7. [ ] Agents can discover valid prop values via actions/CLI 8. [ ] Static and dynamic props both work correctly 9. [ ] Rendering phases (slow/fast/interactive) work with instances 10. [ ] `slowForEach` generates separate template per item 11. [ ] `forEach` reuses single template for all items
+**Headless component props and instances** 4. [ ] Can render same headless component multiple times with different props (Phase 2 syntax done; runtime orchestration Phase 4) 5. [ ] Can use headless component inside `forEach` with bound props (Phase 3) 6. [ ] Props are validated at compile time against contract schema 7. [ ] Agents can discover valid prop values via actions/CLI 8. [x] Static props work correctly (Phase 2 - `productId="prod-hero"`) 9. [ ] Dynamic props work correctly (`productId={someValue}`) 10. [ ] Rendering phases (slow/fast/interactive) work with instances (Phase 4) 11. [ ] `slowForEach` generates separate template per item (Phase 3) 12. [ ] `forEach` reuses single template for all items (Phase 3)
 
 **Load params discovery** 12. [ ] `jay-stack params <plugin>/<contract>` CLI command works 13. [ ] CLI runs loadParams generator and returns valid combinations 14. [ ] Agents can discover valid URL params for SSG
 
-**Nested component rendering** 15. [ ] ViewStates are isolated per component (not merged) 16. [ ] CarryForward tracked per component instance across phases 17. [ ] Inline templates transformed with component's ViewState
+**Nested component rendering** 15. [x] ViewStates are isolated per component (not merged) — Phase 2 compilation uses component's ViewState 16. [ ] CarryForward tracked per component instance across phases (Phase 4) 17. [x] Inline templates transformed with component's ViewState — Phase 2 compilation confirmed
 
 ## Open Questions (Answered)
 
@@ -1837,4 +1836,137 @@ packages/compiler/compiler-jay-html/lib/contract/contract-compiler.ts
 packages/runtime/runtime/lib/element-types.ts
 packages/compiler/compiler-jay-html/test/contract/contract-parser.test.ts
 packages/compiler/compiler-jay-html/test/contract/contract-compiler.test.ts
+```
+
+---
+
+### Phase 2: Component Instance Syntax — Implementation Results
+
+**Date:** February 4, 2026
+
+Successfully implemented `<jay:contract-name>` syntax for headless component instances with inline templates.
+
+#### What Works
+
+A page can now use headless component instances like:
+
+```html
+<jay:product-card productId="prod-hero">
+    <article class="hero-card">
+        <h2>{name}</h2>
+        <span class="price">{price}</span>
+        <button ref="addToCart">Add to Cart</button>
+    </article>
+</jay:product-card>
+```
+
+The compiler:
+1. **Detects** `<jay:contract-name>` matching headless import contract names
+2. **Compiles inline children** against the component's ViewState (not the page's)
+3. **Generates a render function** + `makeJayComponent` call at module level
+4. **Generates `childComp`** in the page render function with props from the page ViewState
+
+#### Changes Made
+
+**1. `JayHeadlessImports` (`jay-html-source-file.ts`):**
+- `key` is now optional (no key = instance-only headless component)
+- Added `contractName: string` field (stores the contract attribute value from the script tag)
+
+**2. Parser (`jay-html-parser.ts`):**
+- `key` attribute no longer required in `<script type="application/jay-headless">`
+- Stores `contractName` in headless imports
+- Filters page-level behavior (ViewState merging, trackBy extraction) to key-bearing imports only
+
+**3. Component detection (`jay-html-helpers.ts`):**
+- `getComponentName` returns `ComponentMatch { name, kind }` instead of `string | null`
+- Three kinds: `'headful'`, `'headless-instance'`, `'unknown'`
+- Accepts optional `headlessContractNames` set for matching `jay:xxx` against known contracts
+
+**4. `RenderContext` (`jay-html-compiler.ts`):**
+- Added `headlessContractNames: Set<string>`
+- Added `headlessImports: JayHeadlessImports[]`
+- Added `headlessInstanceDefs: HeadlessInstanceDefinition[]` (accumulator)
+- Added `headlessInstanceCounter: { count: number }` (shared counter for unique naming)
+
+**5. `renderHeadlessInstance` (`jay-html-compiler.ts`):**
+- Finds matching headless import by `contractName`
+- Creates `Variables` with component's ViewState type
+- Compiles inline children using `renderNode` with the component's context
+- Generates `_headlessProductCard0Render` function and `_HeadlessProductCard0` component symbol
+- Pushes definition to `headlessInstanceDefs` accumulator
+- Returns `childComp(_HeadlessProductCard0, propsMapper)` fragment
+
+**6. Module-level code emission (`renderFunctionImplementation`):**
+- Accumulated `headlessInstanceDefs` are emitted before the page render function
+- Imports from inline templates are merged into the file's imports
+
+**7. Import registry (`compiler-shared/imports.ts`):**
+- Added `Import.makeJayComponent` from `@jay-framework/component`
+
+**8. Dev server (`load-page-parts.ts`):**
+- Instance-only headless imports (no key) are skipped when creating page parts
+- Page-level headless imports continue to work as before
+
+#### Compiled Output Example
+
+Source: `<jay:product-card productId="prod-hero">` with inline template
+
+```typescript
+// Module-level: inline template compiled against ProductCardViewState
+function _headlessProductCard0Render(options) {
+    const render = (viewState) =>
+        ConstructContext.withRootContext(viewState, undefined, () =>
+            e('article', { class: 'hero-card' }, [
+                e('h2', {}, [dt((vs) => vs.name)]),
+                e('span', { class: 'price' }, [dt((vs) => vs.price)]),
+                e('button', {}, ['Add to Cart'], refAddToCart()),
+            ]),
+        );
+    return [undefined, render];
+}
+
+const _HeadlessProductCard0 = makeJayComponent(
+    _headlessProductCard0Render,
+    productCard.interactiveConstructor,
+);
+
+// In page render function:
+childComp(_HeadlessProductCard0, (vs: PageViewState) => ({
+    productId: 'prod-hero',
+}))
+```
+
+#### Design Note: Coordinates for Phase Matching
+
+CarryForward tracking across phases (slow→fast, fast→interactive) can use **element coordinates** — the same mechanism the secure package uses to match ViewState from the secure context to elements. Coordinates identify each component instance by its position in the tree, avoiding the need for explicit tracking maps. This applies to:
+- Slow→fast: match each nested component's carryForward by coordinate
+- Fast→interactive: match carryForward to client-side component instances by coordinate
+
+#### Known Limitations (to address in later phases)
+
+1. **Render function not fully typed** — Parameters use `any`/untyped `options` and `viewState`; should use `RenderElementOptions` and `ProductCardViewState`
+2. **Refs inside inline template** — The `ref="addToCart"` is compiled but not wired to a proper ReferencesManager; needs proper ref extraction and typing
+3. **No nested headless instances** — Headless instances inside headless instances are disabled for now
+4. **Sandbox mode** — Headless instances silently produce empty output in sandbox mode
+
+#### Verification
+
+- **496/500 tests pass** (4 skipped are pre-existing)
+- **1 new test** for headless instance compilation with fixture comparison
+- All existing headless component tests unchanged
+
+#### Files Modified
+
+```
+packages/compiler/compiler-shared/lib/imports.ts
+packages/compiler/compiler-jay-html/lib/jay-target/jay-html-source-file.ts
+packages/compiler/compiler-jay-html/lib/jay-target/jay-html-parser.ts
+packages/compiler/compiler-jay-html/lib/jay-target/jay-html-helpers.ts
+packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts
+packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compile-refs.ts
+packages/compiler/compiler-jay-html/lib/react-target/jay-html-compiler-react.ts
+packages/jay-stack/stack-server-runtime/lib/load-page-parts.ts
+packages/compiler/compiler-jay-html/test/test-utils/test-resolver.ts
+packages/compiler/compiler-jay-html/test/jay-target/generate-element.test.ts
++ test fixtures: product-card contract, page-with-headless-instance
 ```

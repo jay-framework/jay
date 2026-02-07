@@ -150,31 +150,50 @@ export function extractComponentName(tagName: string): string {
     return tagName;
 }
 
+export type ComponentKind = 'headful' | 'headless-instance' | 'unknown';
+
+export interface ComponentMatch {
+    name: string;
+    kind: ComponentKind;
+}
+
 /**
  * Check if an element is a component reference.
  * A component is identified by:
- * 1. Having jay: prefix (new syntax): <jay:Counter>
+ * 1. Having jay: prefix (new syntax): <jay:Counter> or <jay:product-card>
  * 2. Being in the importedSymbols set (legacy syntax): <Counter>
  *
- * During migration, both syntaxes are supported.
- * Returns the component name (without prefix) if it's a component, null otherwise.
+ * For jay: prefixed elements:
+ * - If the name matches an imported symbol → headful component
+ * - If the name matches a headless import contract name → headless instance
+ * - Otherwise → unknown (will be an error)
+ *
+ * Returns the component match info if it's a component, null otherwise.
  */
-export function getComponentName(tagName: string, importedSymbols: Set<string>): string | null {
+export function getComponentName(
+    tagName: string,
+    importedSymbols: Set<string>,
+    headlessContractNames?: Set<string>,
+): ComponentMatch | null {
     // Check for jay: prefix first (new syntax)
     if (hasJayPrefix(tagName)) {
         const componentName = extractComponentName(tagName);
-        // Validate that the component is actually imported
+        // Check headful first (imported symbols)
         if (importedSymbols.has(componentName)) {
-            return componentName;
+            return { name: componentName, kind: 'headful' };
         }
-        // Jay-prefixed but not imported - this will be an error
+        // Check headless instance (matches a headless import's contract name)
+        if (headlessContractNames?.has(componentName)) {
+            return { name: componentName, kind: 'headless-instance' };
+        }
+        // Jay-prefixed but not matched - this will be an error
         // For now, still return the name so the compiler can report the error
-        return componentName;
+        return { name: componentName, kind: 'unknown' };
     }
 
     // Legacy syntax: plain element name matching an import
     if (importedSymbols.has(tagName)) {
-        return tagName;
+        return { name: tagName, kind: 'headful' };
     }
 
     return null;

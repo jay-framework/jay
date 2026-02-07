@@ -38,6 +38,7 @@ import {
     Variables,
 } from '../expressions/expression-compiler';
 import { camelCase } from '../case-utils';
+import { pascalCase } from 'change-case';
 
 import {
     JayHeadlessImports,
@@ -79,6 +80,24 @@ interface RecursiveRegionInfo {
     isInsideGuard: boolean; // true if inside forEach or conditional
 }
 
+/**
+ * Represents a compiled headless component instance with inline template.
+ * The render function and makeJayComponent call are emitted at module level,
+ * and the page render function uses childComp to place it.
+ */
+interface HeadlessInstanceDefinition {
+    /** Symbol name for the component (e.g., "_HeadlessProductCard0") */
+    componentSymbol: string;
+    /** Render function name (e.g., "_headlessProductCard0Render") */
+    renderFnName: string;
+    /** The compiled render function body as a string */
+    renderFnCode: string;
+    /** The plugin component import name (e.g., "productCard") */
+    pluginComponentName: string;
+    /** Additional imports needed for the inline template */
+    imports: Imports;
+}
+
 interface RenderContext {
     variables: Variables;
     importedSymbols: Set<string>;
@@ -92,6 +111,10 @@ interface RenderContext {
     recursiveRegions: RecursiveRegionInfo[]; // Stack of recursive regions we're currently inside
     isInsideGuard: boolean; // Are we currently inside a forEach or conditional?
     usedComponentImports: Set<string>; // Tracks which component/contract types are actually used
+    headlessContractNames: Set<string>; // Contract names from headless imports (for <jay:contract-name> detection)
+    headlessImports: JayHeadlessImports[]; // Full headless imports (for headless instance compilation)
+    headlessInstanceDefs: HeadlessInstanceDefinition[]; // Accumulator for inline template definitions
+    headlessInstanceCounter: { count: number }; // Shared counter for unique naming
 }
 
 function renderFunctionDeclaration(preRenderType: string): string {
@@ -429,9 +452,17 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
 
     function renderHtmlElement(htmlElement: HTMLElement, newContext: RenderContext) {
         // Check for component (jay:ComponentName or legacy ComponentName syntax)
-        const componentName = getComponentName(htmlElement.rawTagName, importedSymbols);
-        if (componentName !== null)
-            return renderNestedComponent(htmlElement, newContext, componentName);
+        const componentMatch = getComponentName(
+            htmlElement.rawTagName,
+            newContext.importedSymbols,
+            newContext.headlessContractNames,
+        );
+        if (componentMatch !== null) {
+            if (componentMatch.kind === 'headless-instance') {
+                return renderHeadlessInstance(htmlElement, newContext, componentMatch.name);
+            }
+            return renderNestedComponent(htmlElement, newContext, componentMatch.name);
+        }
 
         // Check if this element defines a recursive region
         let contextForChildren = newContext;
@@ -600,6 +631,177 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 propsGetterAndRefs.validations,
                 renderedRef.refs,
             );
+    }
+
+    /**
+     * Render a headless component instance with inline template.
+     *
+     * <jay:product-card productId="prod-hero">
+     *   <article class="hero-card">
+     *     <h2>{name}</h2>
+     *   </article>
+     * </jay:product-card>
+     *
+     * Compiles the inline template children against the component's ViewState,
+     * generates a render function + makeJayComponent definition (accumulated in context),
+     * and returns a childComp() call for the page render function.
+     */
+    function renderHeadlessInstance(
+        htmlElement: HTMLElement,
+        newContext: RenderContext,
+        contractName: string,
+    ): RenderFragment {
+        // Find the matching headless import
+        const headlessImport = newContext.headlessImports.find(
+            (h) => h.contractName === contractName,
+        );
+        if (!headlessImport) {
+            return new RenderFragment(
+                '',
+                Imports.none(),
+                [`No headless import found for contract "${contractName}"`],
+                mkRefsTree([], {}),
+            );
+        }
+
+        // Generate unique names for this instance
+        const idx = newContext.headlessInstanceCounter.count++;
+        const pascal = pascalCase(contractName);
+        const componentSymbol = `_Headless${pascal}${idx}`;
+        const renderFnName = `_headless${pascal}${idx}Render`;
+        const pluginComponentName = headlessImport.codeLink.names[0].name;
+
+        // Type names for the inline component
+        const interactiveViewStateType = `${pascal}InteractiveViewState`;
+        const refsTypeName = `${pascal}Refs`;
+        const elementType = `_Headless${pascal}${idx}Element`;
+        const renderType = `_Headless${pascal}${idx}ElementRender`;
+        const preRenderType = `_Headless${pascal}${idx}ElementPreRender`;
+
+        // Track that InteractiveViewState is used (so it gets imported)
+        newContext.usedComponentImports.add(interactiveViewStateType);
+
+        // Add InteractiveViewState to the contract link's names if not already present
+        // (needed so the import filtering keeps it)
+        for (const link of headlessImport.contractLinks) {
+            if (!link.names.some((n) => n.name === interactiveViewStateType)) {
+                link.names.push({ name: interactiveViewStateType, type: JayUnknown });
+            }
+        }
+
+        // Compile inline template children against the component's ViewState
+        const componentVariables = new Variables(headlessImport.rootType);
+        const childIndent = new Indent('            ');
+
+        const childNodes = htmlElement.childNodes.filter(
+            (_) => _.nodeType !== NodeType.TEXT_NODE || _.innerText.trim() !== '',
+        );
+
+        let inlineBody: RenderFragment;
+        if (childNodes.length === 0) {
+            inlineBody = new RenderFragment(
+                '',
+                Imports.none(),
+                [`Headless component instance <jay:${contractName}> must have inline template content`],
+                mkRefsTree([], {}),
+            );
+        } else {
+            // Build importedRefNameToRef from the contract's refs tree
+            // This maps template ref attribute names (camelCase) to contract Ref objects
+            // We use originalName as the ref field so ReferencesManager.for() uses the
+            // original tag name (e.g., 'add to cart') rather than the camelCased version
+            const instanceRefMap = new Map<string, Ref>();
+            const collectContractRefs = (refsTree: RefsTree) => {
+                for (const ref of refsTree.refs) {
+                    // Create a ref with originalName as the ref field for ReferencesManager
+                    const refWithOriginalName = mkRef(
+                        ref.originalName, // Use original tag name for ReferencesManager
+                        ref.originalName,
+                        ref.constName,
+                        ref.repeated,
+                        ref.autoRef,
+                        ref.viewStateType,
+                        ref.elementType,
+                    );
+                    // Map camelCase(tagName) -> Ref, so ref="addToCart" matches tag "add to cart"
+                    instanceRefMap.set(camelCase(ref.originalName), refWithOriginalName);
+                }
+                for (const child of Object.values(refsTree.children)) {
+                    collectContractRefs(child);
+                }
+            };
+            collectContractRefs(headlessImport.refs);
+
+            // Compile each child against the component's ViewState
+            const childContext: RenderContext = {
+                ...newContext,
+                variables: componentVariables,
+                indent: childIndent,
+                importedRefNameToRef: instanceRefMap,
+                recursiveRegions: [],
+                isInsideGuard: false,
+                // Don't detect nested headless instances inside headless instances (for now)
+                headlessContractNames: new Set(),
+            };
+
+            inlineBody = childNodes
+                .map((_) => renderNode(_, childContext))
+                .reduce(
+                    (prev, current) => RenderFragment.merge(prev, current, ',\n'),
+                    RenderFragment.empty(),
+                );
+        }
+
+        // Generate ReferencesManager from inline template refs
+        const { renderedRefsManager, refsManagerImport } = renderReferenceManager(
+            inlineBody.refs,
+            ReferenceManagerTarget.element,
+        );
+
+        // Generate type aliases and render function code
+        const renderFnCode = `
+// Inline template for headless component: ${contractName} #${idx}
+type ${elementType} = JayElement<${interactiveViewStateType}, ${refsTypeName}>;
+type ${renderType} = RenderElement<${interactiveViewStateType}, ${refsTypeName}, ${elementType}>;
+type ${preRenderType} = [${refsTypeName}, ${renderType}];
+
+function ${renderFnName}(options?: RenderElementOptions): ${preRenderType} {
+    ${renderedRefsManager}
+    const render = (viewState) =>
+        ConstructContext.withRootContext(viewState, undefined, () =>
+${inlineBody.rendered}
+        ) as ${elementType};
+    return [refManager.getPublicAPI() as ${refsTypeName}, render];
+}
+
+const ${componentSymbol} = makeJayComponent(
+    ${renderFnName},
+    ${pluginComponentName}.interactiveConstructor,
+);`;
+
+        // Accumulate the definition
+        newContext.headlessInstanceDefs.push({
+            componentSymbol,
+            renderFnName,
+            renderFnCode,
+            pluginComponentName,
+            imports: inlineBody.imports.plus(refsManagerImport),
+        });
+
+        // Generate props getter (from parent ViewState to component props)
+        let propsGetterAndRefs = renderChildCompProps(htmlElement, newContext);
+        let getProps = `(${newContext.variables.currentVar}: ${newContext.variables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
+
+        // Return childComp call for the page render function
+        return new RenderFragment(
+            `${newContext.indent.firstLine}childComp(${componentSymbol}, ${getProps})`,
+            Imports.for(Import.childComp)
+                .plus(propsGetterAndRefs.imports)
+                .plus(Import.ConstructContext)
+                .plus(Import.makeJayComponent),
+            [...propsGetterAndRefs.validations, ...inlineBody.validations],
+            mkRefsTree([], {}), // TODO: proper refs for headless instances
+        );
     }
 
     switch (node.nodeType) {
@@ -909,9 +1111,12 @@ function processImportedHeadless(headlessImports: JayHeadlessImports[]): Map<str
             processTreeNode(`${key}.${key2}`, childTree);
         });
     }
-    headlessImports.forEach(({ key, refs }) => {
-        processTreeNode(key, refs);
-    });
+    // Only page-level headless imports (with key) contribute to the page's ref map
+    headlessImports
+        .filter(({ key }) => key)
+        .forEach(({ key, refs }) => {
+            processTreeNode(key!, refs);
+        });
     return result;
 }
 
@@ -979,9 +1184,13 @@ function renderFunctionImplementation(
     const { importedSymbols, importedSandboxedSymbols } =
         processImportedComponents(importStatements);
     const importedRefNameToRef = processImportedHeadless(headlessImports);
+    // Build set of headless contract names for detecting <jay:contract-name> instances
+    const headlessContractNames = new Set(headlessImports.map((h) => h.contractName));
     const rootElement = ensureSingleChildElement(rootBodyElement);
     let renderedRoot: RenderFragment;
     const usedComponentImports = new Set<string>(); // Track used component types
+    const headlessInstanceDefs: HeadlessInstanceDefinition[] = [];
+    const headlessInstanceCounter = { count: 0 };
     if (rootElement.val) {
         // Check if the root element is a directive that needs wrapping
         const needsWrapper =
@@ -1006,6 +1215,10 @@ function renderFunctionImplementation(
             recursiveRegions: [], // Initialize empty recursive regions stack
             isInsideGuard: false, // Not inside any guard initially
             usedComponentImports, // Track which component types are used
+            headlessContractNames, // For detecting <jay:contract-name> instances
+            headlessImports, // Full headless imports for instance compilation
+            headlessInstanceDefs, // Accumulator for inline template definitions
+            headlessInstanceCounter, // Counter for unique naming
         });
 
         if (needsWrapper) {
@@ -1075,7 +1288,17 @@ ${Indent.forceIndent(code, 4)},
     const recursiveFunctions = generateRecursiveFunctions(renderedRoot.recursiveRegions);
     const recursiveFunctionsSection = recursiveFunctions ? `\n${recursiveFunctions}\n\n` : '';
 
-    const body = `export function render(options?: RenderElementOptions): ${preRenderType} {
+    // Generate headless component instance definitions (if any)
+    const headlessDefsCode = headlessInstanceDefs.length > 0
+        ? headlessInstanceDefs.map((def) => def.renderFnCode).join('\n') + '\n\n'
+        : '';
+
+    // Merge imports from headless instance definitions
+    for (const def of headlessInstanceDefs) {
+        imports = imports.plus(def.imports);
+    }
+
+    const body = `${headlessDefsCode}export function render(options?: RenderElementOptions): ${preRenderType} {
 ${renderedRefsManager}    
 ${headLinksInjection}${recursiveFunctionsSection}    const render = (viewState: ${viewStateType}) => ConstructContext.withRootContext(
         viewState, refManager,
@@ -1178,8 +1401,17 @@ ${indent.firstLine}])`,
                           RenderFragment.empty(),
                       );
         // Check for component (jay:ComponentName or legacy ComponentName syntax)
-        const componentName = getComponentName(htmlElement.rawTagName, importedSymbols);
-        if (componentName !== null) {
+        const componentMatch = getComponentName(
+            htmlElement.rawTagName,
+            newContext.importedSymbols,
+            newContext.headlessContractNames,
+        );
+        if (componentMatch !== null) {
+            const componentName = componentMatch.name;
+            if (componentMatch.kind === 'headless-instance') {
+                // Headless component instances are not supported in sandbox mode
+                return new RenderFragment('', mkRefsTree([], {}));
+            }
             return renderNestedComponent(
                 htmlElement,
                 { ...newContext, indent: childIndent },
@@ -1248,6 +1480,7 @@ function renderBridge(
     let variables = new Variables(types);
     let { importedSymbols, importedSandboxedSymbols } = processImportedComponents(importStatements);
     const importedRefNameToRef = processImportedHeadless(headlessImports);
+    const headlessContractNames = new Set(headlessImports.map((h) => h.contractName));
     let renderedBridge = renderElementBridgeNode(rootBodyElement, {
         variables,
         importedSymbols,
@@ -1261,6 +1494,10 @@ function renderBridge(
         recursiveRegions: [], // Initialize empty recursive regions stack
         isInsideGuard: false, // Not inside any guard initially
         usedComponentImports: new Set<string>(), // Not used for bridge
+        headlessContractNames,
+        headlessImports,
+        headlessInstanceDefs: [], // Not used for bridge
+        headlessInstanceCounter: { count: 0 },
     });
     renderedBridge = optimizeRefs(renderedBridge, headlessImports);
 
@@ -1295,6 +1532,7 @@ function renderSandboxRoot(
     let variables = new Variables(types);
     let { importedSymbols, importedSandboxedSymbols } = processImportedComponents(importStatements);
     const importedRefNameToRef = processImportedHeadless(headlessImports);
+    const headlessContractNames = new Set(headlessImports.map((h) => h.contractName));
     let renderedBridge = renderElementBridgeNode(rootBodyElement, {
         variables,
         importedSymbols,
@@ -1308,6 +1546,10 @@ function renderSandboxRoot(
         recursiveRegions: [], // Initialize empty recursive regions stack
         isInsideGuard: false, // Not inside any guard initially
         usedComponentImports: new Set<string>(), // Not used for sandbox
+        headlessContractNames,
+        headlessImports,
+        headlessInstanceDefs: [], // Not used for sandbox
+        headlessInstanceCounter: { count: 0 },
     });
     let refsPart =
         renderedBridge.rendered.length > 0
@@ -1336,7 +1578,9 @@ function generatePhaseSpecificTypes(jayFile: JayHtmlSourceFile): string {
     const baseName = jayFile.baseElementName;
     // Get the actual ViewState type name from the JayType (might be imported, like "Node")
     const actualViewStateTypeName = jayFile.types.name;
-    const hasHeadlessComponents = jayFile.headlessImports && jayFile.headlessImports.length > 0;
+    // Page-level headless components (with key) affect the ViewState
+    const pageLevelHeadless = jayFile.headlessImports?.filter((h) => h.key) ?? [];
+    const hasHeadlessComponents = pageLevelHeadless.length > 0;
 
     // If we have a contract reference, generate phase types from contract
     if (jayFile.contract) {
@@ -1347,7 +1591,11 @@ function generatePhaseSpecificTypes(jayFile: JayHtmlSourceFile): string {
 
         // If we have headless components, we need to extend the Interactive phase to include them
         if (hasHeadlessComponents) {
-            const headlessProps = jayFile.headlessImports.map((h) => `'${h.key}'`).join(' | ');
+            // Only page-level headless imports (with key) extend the interactive ViewState
+            const headlessProps = jayFile.headlessImports
+                .filter((h) => h.key)
+                .map((h) => `'${h.key}'`)
+                .join(' | ');
             const interactiveTypeName = `${baseName}InteractiveViewState`;
 
             // Replace the Interactive phase type to include headless components

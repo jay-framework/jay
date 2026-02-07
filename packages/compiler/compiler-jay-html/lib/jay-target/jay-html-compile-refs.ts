@@ -164,7 +164,8 @@ function markAutoOnImportedRefs(
     deDuplicated: RefsTree,
     headlessImports: JayHeadlessImports[],
 ): RefsTree {
-    const importKeys = headlessImports.map((_) => _.key);
+    // Only page-level headless imports (with key) are in the page's ref namespace
+    const importKeys = headlessImports.filter((_) => _.key).map((_) => _.key!);
     const mappedRefs = deDuplicated.refs.map((ref) => {
         // Only mark as autoRef if the ref is from a headless contract path
         // AND it's not already explicitly non-autoRef (explicitly used in template)
@@ -365,8 +366,10 @@ export function optimizeRefs(
 
     // For each headless import, use its refs structure but update constNames
     // from matching template refs
+    // Only page-level headless imports (with key) are merged into the page's ref tree
+    const pageLevelHeadless = headlessImports.filter((_) => _.key);
     const importedRefsUpdated = Object.fromEntries(
-        headlessImports.map((_) => {
+        pageLevelHeadless.map((_) => {
             // First mark all import refs as autoRef
             const markedAuto = markAllRefsAsAutoRef(_.refs);
             // Then update constNames for refs that were used in template
@@ -374,9 +377,9 @@ export function optimizeRefs(
             const updated = updateImportRefsWithTemplateConstNames(
                 markedAuto,
                 templateRefsByOriginalName,
-                [_.key],
+                [_.key!],
             );
-            return [_.key, updated];
+            return [_.key!, updated];
         }),
     );
 
@@ -385,7 +388,7 @@ export function optimizeRefs(
     const mergedChildren: Record<string, RefsTree> = {};
 
     // First, add all children from template that are NOT headless imports
-    const importKeys = new Set(headlessImports.map((_) => _.key));
+    const importKeys = new Set(pageLevelHeadless.map((_) => _.key!));
     for (const [key, child] of Object.entries(markedAutoOnImported.children)) {
         if (!importKeys.has(key)) {
             mergedChildren[key] = child;

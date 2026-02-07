@@ -120,27 +120,31 @@ export async function loadPageParts(
                 usedPackages.add(packageName);
             }
 
-            const key = headlessImport.key;
-            const part: DevServerPagePart = {
-                key,
-                compDefinition,
-                clientImport: `import {${name}} from '${clientModuleImport}'`,
-                clientPart: `{comp: ${name}.comp, contextMarkers: ${name}.contexts || [], key: '${headlessImport.key}'}`,
-                // Include contract info for dynamic contract components
-                contractInfo: headlessImport.contract
-                    ? {
-                          contractName: headlessImport.contract.name,
-                          metadata: headlessImport.metadata,
-                      }
-                    : undefined,
-            };
-            parts.push(part);
+            // Only page-level headless imports (with key) create page parts
+            // Instance-only imports (no key) are handled by the compiled template
+            if (headlessImport.key) {
+                const key = headlessImport.key;
+                const part: DevServerPagePart = {
+                    key,
+                    compDefinition,
+                    clientImport: `import {${name}} from '${clientModuleImport}'`,
+                    clientPart: `{comp: ${name}.comp, contextMarkers: ${name}.contexts || [], key: '${key}'}`,
+                    // Include contract info for dynamic contract components
+                    contractInfo: headlessImport.contract
+                        ? {
+                              contractName: headlessImport.contract.name,
+                              metadata: headlessImport.metadata,
+                          }
+                        : undefined,
+                };
+                parts.push(part);
+            }
         }
         // Extract headless contracts for slow rendering
         const headlessContracts: HeadlessContractInfo[] = jayHtml.headlessImports
-            .filter((hi) => hi.contract !== undefined)
+            .filter((hi) => hi.contract !== undefined && hi.key !== undefined)
             .map((hi) => ({
-                key: hi.key,
+                key: hi.key!,
                 contract: hi.contract!,
                 contractPath: hi.contractPath,
             }));
