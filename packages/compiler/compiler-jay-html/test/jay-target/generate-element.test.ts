@@ -378,6 +378,20 @@ describe('generate jay-html element', () => {
             );
         });
 
+        it('generate element file with headless component instance inside forEach', async () => {
+            const folder = 'contracts/page-with-headless-in-foreach';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(
+                await prettify(
+                    await readFixtureFileRaw(
+                        folder,
+                        'page-with-headless-in-foreach.jay-html.ts',
+                    ),
+                ),
+            );
+        });
+
         it('generate element file with linked contract with sub-contracts', async () => {
             const folder = 'contracts/page-using-named-counter';
             const elementFile = await readFileAndGenerateElementFile(folder);

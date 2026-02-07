@@ -1571,18 +1571,18 @@ values:
 4. ✅ INSTRUCTIONS.md template auto-creation
 5. `jay-stack params <plugin>/<contract>` CLI to run loadParams generator - deferred
 
-### Phase 2: Component Instance Syntax
+### Phase 2: Component Instance Syntax ✅
 
-1. Implement `<jay:component-name>` element syntax for headless components
-2. Implement prop passing to component instances
-3. Parse inline template content within component tags
-4. Integrate with existing `forEach` binding
+1. ✅ Implement `<jay:component-name>` element syntax for headless components
+2. ✅ Implement prop passing to component instances
+3. ✅ Parse inline template content within component tags
+4. ✅ Integrate with existing `forEach` binding
 
-### Phase 3: Repeater Integration
+### Phase 3: Repeater Integration ✅
 
-1. Allow headless components inside `forEach` blocks
-2. Bind props from repeater context
-3. Generate component instances per forEach item
+1. ✅ Allow headless components inside `forEach` blocks
+2. ✅ Bind props from repeater context
+3. ✅ Generate component instances per forEach item
 
 ### Phase 4: Nested Component Phase Orchestration (Server)
 
@@ -1657,7 +1657,7 @@ values:
 2. [x] All existing tests updated and passing with new syntax
 3. [ ] Deprecation warning for old plain element names (deferred - both syntaxes supported)
 
-**Headless component props and instances** 4. [ ] Can render same headless component multiple times with different props (Phase 2 syntax done; runtime orchestration Phase 4) 5. [ ] Can use headless component inside `forEach` with bound props (Phase 3) 6. [ ] Props are validated at compile time against contract schema 7. [ ] Agents can discover valid prop values via actions/CLI 8. [x] Static props work correctly (Phase 2 - `productId="prod-hero"`) 9. [ ] Dynamic props work correctly (`productId={someValue}`) 10. [ ] Rendering phases (slow/fast/interactive) work with instances (Phase 4) 11. [ ] `slowForEach` generates separate template per item (Phase 3) 12. [ ] `forEach` reuses single template for all items (Phase 3)
+**Headless component props and instances** 4. [ ] Can render same headless component multiple times with different props (Phase 2 syntax done; runtime orchestration Phase 4) 5. [x] Can use headless component inside `forEach` with bound props (Phase 3) 6. [ ] Props are validated at compile time against contract schema 7. [ ] Agents can discover valid prop values via actions/CLI 8. [x] Static props work correctly (Phase 2 - `productId="prod-hero"`) 9. [x] Dynamic props work correctly (`productId={_id}` from forEach context — Phase 3) 10. [ ] Rendering phases (slow/fast/interactive) work with instances (Phase 4) 11. [ ] `slowForEach` generates separate template per item (future) 12. [x] `forEach` reuses single template for all items (Phase 3 — component defined once at module level)
 
 **Load params discovery** 12. [ ] `jay-stack params <plugin>/<contract>` CLI command works 13. [ ] CLI runs loadParams generator and returns valid combinations 14. [ ] Agents can discover valid URL params for SSG
 
@@ -1944,8 +1944,8 @@ CarryForward tracking across phases (slow→fast, fast→interactive) can use **
 
 #### Known Limitations (to address in later phases)
 
-1. **Render function not fully typed** — Parameters use `any`/untyped `options` and `viewState`; should use `RenderElementOptions` and `ProductCardViewState`
-2. **Refs inside inline template** — The `ref="addToCart"` is compiled but not wired to a proper ReferencesManager; needs proper ref extraction and typing
+1. ~~**Render function not fully typed**~~ — **Resolved**: Render function now has proper type aliases, `RenderElementOptions` parameter, return type, and `as` casts
+2. ~~**Refs inside inline template**~~ — **Resolved**: Refs are now wired to a proper `ReferencesManager` with contract tag names and typed return
 3. **No nested headless instances** — Headless instances inside headless instances are disabled for now
 4. **Sandbox mode** — Headless instances silently produce empty output in sandbox mode
 
@@ -1969,4 +1969,62 @@ packages/jay-stack/stack-server-runtime/lib/load-page-parts.ts
 packages/compiler/compiler-jay-html/test/test-utils/test-resolver.ts
 packages/compiler/compiler-jay-html/test/jay-target/generate-element.test.ts
 + test fixtures: product-card contract, page-with-headless-instance
+```
+
+---
+
+### Phase 2 Follow-up: Inline Template Typing and Refs
+
+**Date:** February 4, 2026
+
+Addressed Phase 2's known limitations #1 and #2.
+
+#### Changes Made
+
+**`renderHeadlessInstance` (`jay-html-compiler.ts`):**
+- Generates type aliases: `_HeadlessProductCard0Element`, `_HeadlessProductCard0ElementRender`, `_HeadlessProductCard0ElementPreRender` using `ProductCardInteractiveViewState` and `ProductCardRefs`
+- Generates proper `ReferencesManager.for()` from inline template refs using `renderReferenceManager()`
+- Builds `importedRefNameToRef` from contract's refs tree so template `ref="addToCart"` maps to contract tag name `'add to cart'`
+- Uses `originalName` for ref field so `ReferencesManager.for()` uses original tag names
+- Typed render function with `options?: RenderElementOptions` parameter, return type, `as` casts, and `refManager.getPublicAPI() as ProductCardRefs`
+- `InteractiveViewState` dynamically added to contract link names and `usedComponentImports` only when headless instances exist
+
+#### Verification
+
+- **498/502 tests pass** (4 skipped are pre-existing)
+
+---
+
+### Phase 3: Repeater Integration — Implementation Results
+
+**Date:** February 4, 2026
+
+Phase 3 required no new compiler changes — the Phase 2 implementation already handled `forEach` integration correctly.
+
+#### Why It Works
+
+The `renderHeadlessInstance` function:
+1. **Component definition at module level** — `_HeadlessProductCard0` is defined once, reused for all forEach items
+2. **`childComp` placed in current position** — When inside a `forEach`, the `childComp` call naturally appears inside the `forEach` callback
+3. **Props resolved from current context** — `renderChildCompProps` uses `context.variables`, which inside a `forEach` points to the forEach item's ViewState, so `productId="{_id}"` correctly resolves `_id` from the item
+
+#### Test Added
+
+New fixture: `page-with-headless-in-foreach` — a page with `<jay:product-card productId="{_id}">` inside a `forEach="products" trackBy="_id"` block.
+
+Compiled output confirms:
+- Module-level component definition (one `makeJayComponent` call, not per item)
+- `childComp` inside `forEach` callback
+- Props bound from forEach item: `(vs1: ProductOfPageWithHeadlessInForeachViewState) => ({ productId: vs1._id })`
+
+#### Verification
+
+- **498/502 tests pass** (4 skipped are pre-existing)
+- 2 new tests: headless instance + headless instance inside forEach
+
+#### Files Added
+
+```
+test/fixtures/contracts/page-with-headless-in-foreach/page-with-headless-in-foreach.jay-html
+test/fixtures/contracts/page-with-headless-in-foreach/page-with-headless-in-foreach.jay-html.ts
 ```
