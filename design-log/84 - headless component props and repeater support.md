@@ -1657,7 +1657,7 @@ values:
 2. [x] All existing tests updated and passing with new syntax
 3. [ ] Deprecation warning for old plain element names (deferred - both syntaxes supported)
 
-**Headless component props and instances** 4. [ ] Can render same headless component multiple times with different props (Phase 2 syntax done; runtime orchestration Phase 4) 5. [x] Can use headless component inside `forEach` with bound props (Phase 3) 6. [ ] Props are validated at compile time against contract schema 7. [ ] Agents can discover valid prop values via actions/CLI 8. [x] Static props work correctly (Phase 2 - `productId="prod-hero"`) 9. [x] Dynamic props work correctly (`productId={_id}` from forEach context — Phase 3) 10. [ ] Rendering phases (slow/fast/interactive) work with instances (Phase 4) 11. [ ] `slowForEach` generates separate template per item (future) 12. [x] `forEach` reuses single template for all items (Phase 3 — component defined once at module level)
+**Headless component props and instances** 4. [ ] Can render same headless component multiple times with different props (Phase 2 syntax done; runtime orchestration Phase 4) 5. [x] Can use headless component inside `forEach` with bound props (Phase 3) 6. [ ] Props are validated at compile time against contract schema 7. [ ] Agents can discover valid prop values via actions/CLI 8. [x] Static props work correctly (Phase 2 - `productId="prod-hero"`) 9. [x] Dynamic props work correctly (`productId={_id}` from forEach context — Phase 3) 10. [ ] Rendering phases (slow/fast/interactive) work with instances (Phase 4) 11. [x] `slowForEach` generates separate template per item (Phase 3 — each item gets its own `_HeadlessProductCard{N}` component) 12. [x] `forEach` reuses single template for all items (Phase 3 — component defined once at module level)
 
 **Load params discovery** 12. [ ] `jay-stack params <plugin>/<contract>` CLI command works 13. [ ] CLI runs loadParams generator and returns valid combinations 14. [ ] Agents can discover valid URL params for SSG
 
@@ -2022,9 +2022,16 @@ Compiled output confirms:
 - **498/502 tests pass** (4 skipped are pre-existing)
 - 2 new tests: headless instance + headless instance inside forEach
 
+**`slowForEach` test added:** `page-with-headless-in-slow-foreach` — two pre-unrolled items with different inline templates (hero card with button ref vs compact card without). Confirms:
+- Each item gets its own module-level component (`_HeadlessProductCard0`, `_HeadlessProductCard1`)
+- Different refs per item (item 0 has `refAddToCart`, item 1 has none)
+- Each wrapped in `slowForEachItem` with correct index and trackBy key
+
 #### Files Added
 
 ```
 test/fixtures/contracts/page-with-headless-in-foreach/page-with-headless-in-foreach.jay-html
 test/fixtures/contracts/page-with-headless-in-foreach/page-with-headless-in-foreach.jay-html.ts
+test/fixtures/contracts/page-with-headless-in-slow-foreach/page-with-headless-in-slow-foreach.jay-html
+test/fixtures/contracts/page-with-headless-in-slow-foreach/page-with-headless-in-slow-foreach.jay-html.ts
 ```
