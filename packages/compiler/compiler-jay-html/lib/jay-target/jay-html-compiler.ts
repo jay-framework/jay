@@ -691,7 +691,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
 
         // Compile inline template children against the component's ViewState
         const componentVariables = new Variables(headlessImport.rootType);
-        const childIndent = new Indent('            ');
+        const childIndent = newContext.indent.child(false)
 
         const childNodes = htmlElement.childNodes.filter(
             (_) => _.nodeType !== NodeType.TEXT_NODE || _.innerText.trim() !== '',
@@ -1410,7 +1410,7 @@ ${indent.firstLine}])`,
             const componentName = componentMatch.name;
             if (componentMatch.kind === 'headless-instance') {
                 // Headless component instances are not supported in sandbox mode
-                return new RenderFragment('', mkRefsTree([], {}));
+                return new RenderFragment('', Imports.none(), [], mkRefsTree([], {}));
             }
             return renderNestedComponent(
                 htmlElement,
