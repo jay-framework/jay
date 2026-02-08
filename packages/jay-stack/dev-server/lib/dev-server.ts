@@ -39,11 +39,17 @@ import {
     HeadlessContractInfo,
     Contract,
     JAY_IMPORT_RESOLVER,
+    discoverHeadlessInstances,
+    resolveHeadlessInstances,
 } from '@jay-framework/compiler-jay-html';
 import {
     LoadedPageParts,
     getServiceRegistry,
     materializeContracts,
+    resolveServices,
+    slowRenderInstances,
+    type HeadlessInstanceComponent,
+    type InstancePhaseData,
 } from '@jay-framework/stack-server-runtime';
 import { WithValidations } from '@jay-framework/compiler-shared';
 import { getLogger, getDevLogger, type RequestTiming } from '@jay-framework/logger';
@@ -299,7 +305,7 @@ async function handleCachedRequest(
         usedPackages,
     );
 
-    // Run fast phase with cached carryForward
+    // Run fast phase for key-based parts
     const fastStart = Date.now();
     const renderedFast = await renderFastChangingData(
         pageParams,
@@ -315,6 +321,30 @@ async function handleCachedRequest(
         return;
     }
 
+    // Run fast phase for headless instances (if any)
+    let fastViewState = renderedFast.rendered;
+    let fastCarryForward = renderedFast.carryForward;
+
+    const instancePhaseData = (cachedEntry.carryForward as any)?.__instances as
+        | InstancePhaseData
+        | undefined;
+    if (instancePhaseData && pagePartsResult.val.headlessInstanceComponents.length > 0) {
+        const instanceFastResult = await renderFastChangingDataForInstances(
+            instancePhaseData,
+            pagePartsResult.val.headlessInstanceComponents,
+        );
+        if (instanceFastResult) {
+            fastViewState = {
+                ...fastViewState,
+                __headlessInstances: instanceFastResult.viewStates,
+            };
+            fastCarryForward = {
+                ...fastCarryForward,
+                __headlessInstances: instanceFastResult.carryForwards,
+            };
+        }
+    }
+
     // Only fast+interactive viewState (slow is baked into jay-html)
     // Use the pre-rendered file path so Vite compiles it
     // Pass slowViewState so automation can show full merged state
@@ -324,8 +354,8 @@ async function handleCachedRequest(
         url,
         cachedEntry.preRenderedPath,
         pageParts,
-        renderedFast.rendered,
-        renderedFast.carryForward,
+        fastViewState,
+        fastCarryForward,
         clientTrackByMap,
         projectInit,
         pluginsForPage,
@@ -389,29 +419,35 @@ async function handlePreRenderRequest(
         return;
     }
 
-    // Pre-render the jay-html with slow viewState
-    // Headless contracts are already loaded by parseJayFile (via loadPageParts)
+    // Pre-render the jay-html with slow viewState (two-pass pipeline)
+    // Pass 1: page-level bindings, Pass 2: headless instance bindings
     const paramsStart = Date.now();
-    const preRenderedContent = await preRenderJayHtml(
+    const preRenderResult = await preRenderJayHtml(
         route,
         renderedSlowly.rendered,
         initialPartsResult.val.headlessContracts,
+        initialPartsResult.val.headlessInstanceComponents,
     );
     timing?.recordParams(Date.now() - paramsStart);
 
-    if (!preRenderedContent) {
+    if (!preRenderResult) {
         res.status(500).end('Failed to pre-render jay-html');
         timing?.end();
         return;
     }
 
+    // Merge instance phase data into page carryForward so fast phase can access it
+    const carryForward = preRenderResult.instancePhaseData
+        ? { ...renderedSlowly.carryForward, __instances: preRenderResult.instancePhaseData }
+        : renderedSlowly.carryForward;
+
     // Cache the result (writes to disk and returns the path)
     const preRenderedPath = await slowRenderCache.set(
         route.jayHtmlPath,
         pageParams,
-        preRenderedContent,
+        preRenderResult.preRenderedJayHtml,
         renderedSlowly.rendered,
-        renderedSlowly.carryForward,
+        carryForward,
     );
     getLogger().info(`[SlowRender] Cached pre-rendered jay-html at ${preRenderedPath}`);
 
@@ -440,12 +476,12 @@ async function handlePreRenderRequest(
         usedPackages,
     );
 
-    // Run fast phase
+    // Run fast phase for key-based parts
     const fastStart = Date.now();
     const renderedFast = await renderFastChangingData(
         pageParams,
         pageProps,
-        renderedSlowly.carryForward,
+        carryForward,
         pageParts,
     );
     timing?.recordFastRender(Date.now() - fastStart);
@@ -454,6 +490,30 @@ async function handlePreRenderRequest(
         handleOtherResponseCodes(res, renderedFast);
         timing?.end();
         return;
+    }
+
+    // Run fast phase for headless instances (if any)
+    let fastViewState = renderedFast.rendered;
+    let fastCarryForward = renderedFast.carryForward;
+
+    const instancePhaseData = (carryForward as any)?.__instances as
+        | InstancePhaseData
+        | undefined;
+    if (instancePhaseData && pagePartsResult.val.headlessInstanceComponents.length > 0) {
+        const instanceFastResult = await renderFastChangingDataForInstances(
+            instancePhaseData,
+            pagePartsResult.val.headlessInstanceComponents,
+        );
+        if (instanceFastResult) {
+            fastViewState = {
+                ...fastViewState,
+                __headlessInstances: instanceFastResult.viewStates,
+            };
+            fastCarryForward = {
+                ...fastCarryForward,
+                __headlessInstances: instanceFastResult.carryForwards,
+            };
+        }
     }
 
     // Only fast+interactive viewState (slow is baked into jay-html)
@@ -465,8 +525,8 @@ async function handlePreRenderRequest(
         url,
         preRenderedPath,
         pageParts,
-        renderedFast.rendered,
-        renderedFast.carryForward,
+        fastViewState,
+        fastCarryForward,
         clientTrackByMap,
         projectInit,
         pluginsForPage,
@@ -537,7 +597,40 @@ async function handleDirectRequest(
         return;
     }
 
-    // Run fast phase
+    // Run slow+fast phases for headless instances (if any)
+    let instanceViewStates: Record<string, object> | undefined;
+    const headlessInstanceComponents = pagePartsResult.val.headlessInstanceComponents ?? [];
+
+    if (headlessInstanceComponents.length > 0) {
+        // Read the jay-html to discover instances with static props
+        const jayHtmlContent = await fs.readFile(route.jayHtmlPath, 'utf-8');
+        const discovered = discoverHeadlessInstances(jayHtmlContent);
+
+        if (discovered.length > 0) {
+            const slowResult = await slowRenderInstances(discovered, headlessInstanceComponents);
+
+            if (slowResult) {
+                // Start with slow ViewStates
+                instanceViewStates = { ...slowResult.slowViewStates };
+
+                // Run fast phase and merge into slow for a complete ViewState per instance
+                const instanceFastResult = await renderFastChangingDataForInstances(
+                    slowResult.instancePhaseData,
+                    headlessInstanceComponents,
+                );
+                if (instanceFastResult) {
+                    for (const [coordKey, fastVS] of Object.entries(instanceFastResult.viewStates)) {
+                        instanceViewStates[coordKey] = {
+                            ...(instanceViewStates[coordKey] || {}),
+                            ...fastVS,
+                        };
+                    }
+                }
+            }
+        }
+    }
+
+    // Run fast phase for key-based parts
     const fastStart = Date.now();
     const renderedFast = await renderFastChangingData(
         pageParams,
@@ -563,6 +656,14 @@ async function handleDirectRequest(
         );
     } else {
         viewState = { ...renderedSlowly.rendered, ...renderedFast.rendered };
+    }
+
+    // Add headless instance viewStates if any
+    if (instanceViewStates && Object.keys(instanceViewStates).length > 0) {
+        viewState = {
+            ...viewState,
+            __headlessInstances: instanceViewStates,
+        };
     }
 
     // Use original jay-html path (no pre-rendering)
@@ -628,18 +729,35 @@ async function sendResponse(
 }
 
 /**
+ * Result of pre-rendering jay-html, including instance carryForward data.
+ */
+interface PreRenderResult {
+    /** The fully pre-rendered jay-html content */
+    preRenderedJayHtml: string;
+    /** Instance data for the fast phase (discovery info + carryForwards) */
+    instancePhaseData?: InstancePhaseData;
+}
+
+// InstancePhaseData is now imported from stack-server-runtime
+
+/**
  * Pre-render the jay-html with slow viewState.
- * Returns the pre-rendered jay-html content, or undefined if pre-rendering fails.
+ *
+ * Uses a two-pass pipeline:
+ * - Pass 1: Resolve page-level slow bindings, unroll slow forEach
+ * - Pass 2: Discover headless instances, call slowlyRender for each, resolve instance bindings
  *
  * @param route - The route containing the jay-html path
  * @param slowViewState - The slow phase view state data
- * @param headlessContracts - Headless contracts already loaded by parseJayFile (via loadPageParts)
+ * @param headlessContracts - Key-based headless contracts (from loadPageParts)
+ * @param headlessInstanceComponents - Instance-only headless components (from loadPageParts)
  */
 async function preRenderJayHtml(
     route: JayRoute,
     slowViewState: object,
     headlessContracts: HeadlessContractInfo[],
-): Promise<string | undefined> {
+    headlessInstanceComponents: HeadlessInstanceComponent[],
+): Promise<PreRenderResult | undefined> {
     // Read the original jay-html
     const jayHtmlContent = await fs.readFile(route.jayHtmlPath, 'utf-8');
 
@@ -668,10 +786,7 @@ async function preRenderJayHtml(
         }
     }
 
-    // Transform the jay-html
-    // Pass sourceDir so relative paths (contracts, CSS, components) are resolved to absolute
-    // Headless contracts are passed from loadPageParts (already loaded by parseJayFile)
-    // Import resolver is used to load linked sub-contracts
+    // ── Pass 1: Resolve page-level slow bindings ──
     const result = slowRenderTransform({
         jayHtmlContent,
         slowViewState: slowViewState as Record<string, unknown>,
@@ -681,16 +796,102 @@ async function preRenderJayHtml(
         importResolver: JAY_IMPORT_RESOLVER,
     });
 
-    if (result.val) {
-        return result.val.preRenderedJayHtml;
+    if (!result.val) {
+        if (result.validations.length > 0) {
+            getLogger().error(
+                `[SlowRender] Transform failed for ${route.jayHtmlPath}: ${result.validations.join(', ')}`,
+            );
+        }
+        return undefined;
     }
 
-    if (result.validations.length > 0) {
-        getLogger().error(
-            `[SlowRender] Transform failed for ${route.jayHtmlPath}: ${result.validations.join(', ')}`,
-        );
+    let preRenderedJayHtml = result.val.preRenderedJayHtml;
+    let instancePhaseData: InstancePhaseData | undefined;
+
+    // ── Pass 2: Resolve headless instance bindings ──
+    if (headlessInstanceComponents.length > 0) {
+        const discovered = discoverHeadlessInstances(preRenderedJayHtml);
+
+        if (discovered.length > 0) {
+            const slowResult = await slowRenderInstances(discovered, headlessInstanceComponents);
+
+            if (slowResult) {
+                instancePhaseData = slowResult.instancePhaseData;
+
+                // Apply instance data to resolve bindings in inline templates
+                const pass2Result = resolveHeadlessInstances(
+                    preRenderedJayHtml,
+                    slowResult.resolvedData,
+                    JAY_IMPORT_RESOLVER,
+                );
+
+                if (pass2Result.val) {
+                    preRenderedJayHtml = pass2Result.val;
+                }
+
+                if (pass2Result.validations.length > 0) {
+                    getLogger().error(
+                        `[SlowRender] Instance resolution warnings for ${route.jayHtmlPath}: ${pass2Result.validations.join(', ')}`,
+                    );
+                }
+            }
+        }
     }
-    return undefined;
+
+    return { preRenderedJayHtml, instancePhaseData };
+}
+
+/**
+ * Run fast render phase for headless component instances.
+ *
+ * For each discovered instance, calls the component's fastRender with
+ * the instance props and its slow-phase carryForward.
+ *
+ * @returns Instance fast ViewStates and carryForwards, or undefined if no instances have fastRender
+ */
+async function renderFastChangingDataForInstances(
+    instancePhaseData: InstancePhaseData,
+    headlessInstanceComponents: HeadlessInstanceComponent[],
+): Promise<{ viewStates: Record<string, object>; carryForwards: Record<string, object> } | undefined> {
+    // Build a lookup from contract name to component info
+    const componentByContractName = new Map<string, HeadlessInstanceComponent>();
+    for (const comp of headlessInstanceComponents) {
+        componentByContractName.set(comp.contractName, comp);
+    }
+
+    const viewStates: Record<string, object> = {};
+    const carryForwards: Record<string, object> = {};
+    let hasResults = false;
+
+    for (const instance of instancePhaseData.discovered) {
+        const coordKey = instance.coordinate.join('/');
+        const comp = componentByContractName.get(instance.contractName);
+
+        if (!comp || !comp.compDefinition.fastRender) {
+            continue;
+        }
+
+        // Get the instance's slow-phase carryForward
+        const instanceCarryForward = instancePhaseData.carryForwards[coordKey] || {};
+
+        // Resolve services for this component
+        const services = resolveServices(comp.compDefinition.services);
+
+        // Call the component's fastRender with instance props and carryForward
+        const fastResult = await comp.compDefinition.fastRender(
+            instance.props,
+            instanceCarryForward,
+            ...services,
+        );
+
+        if (fastResult.kind === 'PhaseOutput') {
+            viewStates[coordKey] = fastResult.rendered;
+            carryForwards[coordKey] = fastResult.carryForward;
+            hasResults = true;
+        }
+    }
+
+    return hasResults ? { viewStates, carryForwards } : undefined;
 }
 
 /**

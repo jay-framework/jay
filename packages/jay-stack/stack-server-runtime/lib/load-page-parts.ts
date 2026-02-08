@@ -7,6 +7,7 @@ import {
     parseJayFile,
     JAY_IMPORT_RESOLVER,
     HeadlessContractInfo,
+    Contract,
 } from '@jay-framework/compiler-jay-html';
 import { AnyJayStackComponentDefinition } from '@jay-framework/fullstack-component';
 import { JayRollupConfig } from '@jay-framework/rollup-plugin';
@@ -26,6 +27,19 @@ export interface DevServerPagePart {
     };
 }
 
+/**
+ * Instance-only headless component (no key attribute).
+ * Used for server-side phase orchestration of `<jay:xxx>` instances.
+ */
+export interface HeadlessInstanceComponent {
+    /** Contract name from the script tag (e.g., "product-card") */
+    contractName: string;
+    /** Component definition for calling slowlyRender/fastRender */
+    compDefinition: AnyJayStackComponentDefinition;
+    /** Parsed contract (for phase detection in slow render Pass 2) */
+    contract: Contract;
+}
+
 export interface LoadedPageParts {
     parts: DevServerPagePart[];
     /** TrackBy map for server-side merge (slow → fast) */
@@ -36,6 +50,8 @@ export interface LoadedPageParts {
     usedPackages: Set<string>;
     /** Headless contracts for slow rendering (already loaded by parseJayFile) */
     headlessContracts: HeadlessContractInfo[];
+    /** Instance-only headless components (no key) for server-side phase orchestration */
+    headlessInstanceComponents: HeadlessInstanceComponent[];
 }
 
 export interface LoadPagePartsOptions {
@@ -91,6 +107,7 @@ export async function loadPageParts(
 
     return jayHtmlWithValidations.mapAsync(async (jayHtml) => {
         const usedPackages = new Set<string>();
+        const headlessInstanceComponents: HeadlessInstanceComponent[] = [];
 
         for await (const headlessImport of jayHtml.headlessImports) {
             const module = headlessImport.codeLink.module;
@@ -139,6 +156,15 @@ export async function loadPageParts(
                 };
                 parts.push(part);
             }
+
+            // Track instance-only headless components (no key) for server-side phase orchestration
+            if (!headlessImport.key && headlessImport.contract) {
+                headlessInstanceComponents.push({
+                    contractName: headlessImport.contractName,
+                    compDefinition,
+                    contract: headlessImport.contract,
+                });
+            }
         }
         // Extract headless contracts for slow rendering
         const headlessContracts: HeadlessContractInfo[] = jayHtml.headlessImports
@@ -155,6 +181,7 @@ export async function loadPageParts(
             clientTrackByMap: jayHtml.clientTrackByMap,
             usedPackages,
             headlessContracts,
+            headlessInstanceComponents,
         };
     });
 }

@@ -1657,7 +1657,7 @@ values:
 2. [x] All existing tests updated and passing with new syntax
 3. [ ] Deprecation warning for old plain element names (deferred - both syntaxes supported)
 
-**Headless component props and instances** 4. [ ] Can render same headless component multiple times with different props (Phase 2 syntax done; runtime orchestration Phase 4) 5. [x] Can use headless component inside `forEach` with bound props (Phase 3) 6. [ ] Props are validated at compile time against contract schema 7. [ ] Agents can discover valid prop values via actions/CLI 8. [x] Static props work correctly (Phase 2 - `productId="prod-hero"`) 9. [x] Dynamic props work correctly (`productId={_id}` from forEach context — Phase 3) 10. [ ] Rendering phases (slow/fast/interactive) work with instances (Phase 4) 11. [x] `slowForEach` generates separate template per item (Phase 3 — each item gets its own `_HeadlessProductCard{N}` component) 12. [x] `forEach` reuses single template for all items (Phase 3 — component defined once at module level)
+**Headless component props and instances** 4. [ ] Can render same headless component multiple times with different props (Phase 2 syntax done; runtime orchestration Phase 4) 5. [x] Can use headless component inside `forEach` with bound props (Phase 3) 6. [ ] Props are validated at compile time against contract schema 7. [ ] Agents can discover valid prop values via actions/CLI 8. [x] Static props work correctly (Phase 2 - `productId="prod-hero"`) 9. [x] Dynamic props work correctly (`productId={_id}` from forEach context — Phase 3) 10. [~] Rendering phases (slow/fast/interactive) work with instances (Phase 4 — slow phase done, fast/interactive pending) 11. [x] `slowForEach` generates separate template per item (Phase 3 — each item gets its own `_HeadlessProductCard{N}` component) 12. [x] `forEach` reuses single template for all items (Phase 3 — component defined once at module level)
 
 **Load params discovery** 12. [ ] `jay-stack params <plugin>/<contract>` CLI command works 13. [ ] CLI runs loadParams generator and returns valid combinations 14. [ ] Agents can discover valid URL params for SSG
 
@@ -2035,3 +2035,180 @@ test/fixtures/contracts/page-with-headless-in-foreach/page-with-headless-in-fore
 test/fixtures/contracts/page-with-headless-in-slow-foreach/page-with-headless-in-slow-foreach.jay-html
 test/fixtures/contracts/page-with-headless-in-slow-foreach/page-with-headless-in-slow-foreach.jay-html.ts
 ```
+
+---
+
+### Phase 4: Slow Phase Orchestration for Headless Instances — Implementation Results
+
+**Date:** February 4, 2026
+
+Implemented server-side slow render orchestration for `<jay:xxx>` headless component instances using a **two-pass pipeline**.
+
+#### Design: Two-Pass Slow Render Pipeline
+
+The challenge: `<jay:product-card>` instances may have dynamic props (from `forEach` or page bindings) that need resolving before calling `slowlyRender`. Also, `slowlyRender` is async but the slow render transform is synchronous.
+
+**Solution — Two-pass approach:**
+
+```
+Pass 1: slowRenderTransform()
+  → Resolves page-level slow bindings
+  → Unrolls slow forEach (dynamic props become concrete)
+  → Preserves <jay:xxx> elements and their inline template bindings
+
+↓ Between passes (async, in dev server):
+
+discoverHeadlessInstances(pass1Output)
+  → Finds <jay:xxx> elements with concrete props
+  → Skips instances inside preserved forEach (fast phase)
+  → Skips instances with unresolved prop bindings
+
+For each discovered instance:
+  → component.slowlyRender(props) → { viewState, carryForward }
+
+↓
+
+Pass 2: resolveHeadlessInstances(pass1Output, instanceData)
+  → Resolves slow bindings inside inline templates using component ViewState
+  → Preserves fast/interactive bindings
+  → Preserves <jay:xxx> element structure
+```
+
+#### New Functions
+
+**`discoverHeadlessInstances(jayHtml)`** — Finds `<jay:xxx>` elements after Pass 1:
+- Extracts contract name from tag (e.g., `jay:product-card` → `product-card`)
+- Extracts props from attributes (camelCased, string values)
+- Skips instances inside preserved `forEach` (fast phase — props still dynamic)
+- Skips instances with unresolved bindings in props
+
+**`resolveHeadlessInstances(jayHtml, instanceData)`** — Applies instance ViewState (Pass 2):
+- Matches instance data to elements in document order
+- Builds per-instance phase map from component contract
+- Calls existing `transformChildren` to resolve slow bindings
+- Preserves fast/interactive bindings
+
+#### Dev Server Changes
+
+**`load-page-parts.ts`:**
+- New `HeadlessInstanceComponent` interface: `{ contractName, compDefinition, contract }`
+- `LoadedPageParts` now includes `headlessInstanceComponents` for instance-only imports (no key)
+- These are populated alongside key-based parts during headless import processing
+
+**`dev-server.ts` (`preRenderJayHtml`):**
+- Now returns `PreRenderResult` with `preRenderedJayHtml` and `instanceCarryForwards`
+- After Pass 1, calls `discoverHeadlessInstances` to find instances
+- For each discovered instance, calls `slowlyRender(props, ...services)` via component definition
+- Runs Pass 2 with `resolveHeadlessInstances` to resolve instance bindings
+- Instance carryForwards stored under `__instances` key in page carryForward
+
+#### Bug Found: `getAttribute` returns `undefined` not `null`
+
+In `node-html-parser`, `getAttribute('forEach')` returns `undefined` (not `null`) when the attribute doesn't exist. Using `!== null` incorrectly treated ALL elements as having a `forEach` attribute. Fixed by using `!= null` (loose equality) which matches both `null` and `undefined`.
+
+#### Tests Added
+
+12 new tests in `slow-render-transform.test.ts`:
+
+**`discoverHeadlessInstances` (5 tests):**
+- Discover instances with static props
+- Skip instances inside preserved forEach
+- Skip instances with unresolved prop bindings
+- Discover instances after slow forEach unrolling
+- CamelCase prop names
+
+**`resolveHeadlessInstances` (7 tests):**
+- Resolve slow bindings inside headless instances
+- Preserve fast/interactive bindings
+- Resolve multiple instances in document order
+- Resolve instances after slow forEach unrolling
+- Skip instances inside preserved forEach
+- Full two-pass pipeline: page bindings + instance bindings
+- Full two-pass pipeline with slow forEach unrolling
+
+#### Verification
+
+- **511/515 compiler tests pass** (4 skipped pre-existing)
+- **66/66 server runtime tests pass**
+- 12 new tests cover discovery, resolution, and end-to-end pipeline
+
+#### Remaining for Phase 4 (slow phase)
+
+- [x] ~~Fast phase orchestration for instances~~ — Done (see below)
+- [ ] Client-side instance ViewState delivery (fast→interactive) — Phase 4b
+- [ ] End-to-end dev server test with a real headless component plugin
+
+#### Files Modified
+
+```
+packages/compiler/compiler-jay-html/lib/slow-render/slow-render-transform.ts (new functions)
+packages/compiler/compiler-jay-html/lib/index.ts (new exports)
+packages/compiler/compiler-jay-html/test/slow-render/slow-render-transform.test.ts (12 new tests)
+packages/jay-stack/stack-server-runtime/lib/load-page-parts.ts (HeadlessInstanceComponent, new field)
+packages/jay-stack/stack-server-runtime/lib/index.ts (new exports)
+packages/jay-stack/dev-server/lib/dev-server.ts (two-pass pipeline in preRenderJayHtml)
+```
+
+---
+
+### Phase 4 (continued): Fast Phase Orchestration for Headless Instances
+
+**Date:** February 4, 2026
+
+Added server-side fast render orchestration for `<jay:xxx>` headless component instances.
+
+#### Design: Instance Phase Data Flow
+
+The slow phase stores discovery info alongside carryForwards so the fast phase knows what instances exist:
+
+```typescript
+interface InstancePhaseData {
+    discovered: Array<{ contractName: string; props: Record<string, string> }>;
+    carryForwards: Record<string, object>;  // keyed by "contractName:index"
+}
+```
+
+Stored in `carryForward.__instances` — persisted to cache so both pre-render and cached flows can use it.
+
+#### Fast Render Flow
+
+```
+carryForward.__instances (from slow phase / cache)
+  ↓
+renderFastChangingDataForInstances()
+  → For each discovered instance:
+    → Find component definition by contractName
+    → Call fastRender(props, instanceCarryForward, ...services)
+  → Returns: { viewStates, carryForwards }
+  ↓
+fastViewState.__headlessInstances = instance fast ViewStates
+fastCarryForward.__headlessInstances = instance fast carryForwards
+  ↓
+Embedded in HTML via generateClientScript()
+```
+
+Both `handlePreRenderRequest` and `handleCachedRequest` follow the same pattern:
+1. Run `renderFastChangingData` for key-based parts (existing)
+2. Extract `__instances` from carryForward
+3. Call `renderFastChangingDataForInstances` for each discovered instance
+4. Merge instance fast ViewStates into `fastViewState.__headlessInstances`
+
+#### Changes
+
+**`dev-server.ts`:**
+- `PreRenderResult` now uses `InstancePhaseData` (discovery info + carryForwards)
+- New `renderFastChangingDataForInstances()` function
+- Both `handlePreRenderRequest` and `handleCachedRequest` run instance fast render
+- Instance fast ViewStates embedded in `fastViewState.__headlessInstances`
+- Instance fast carryForwards stored in `fastCarryForward.__headlessInstances` (for Phase 4b)
+
+#### Verification
+
+- **66/66 server runtime tests pass**
+- No regression in existing behavior
+
+#### Remaining for Phase 4b (Client-Side Interactive)
+
+- [ ] `makeCompositeJayComponent` extracts `__headlessInstances` from ViewState
+- [ ] `childComp` or `makeJayComponent` receives instance fast ViewState via context
+- [ ] Coordinate-based matching of instances to their ViewState on the client
