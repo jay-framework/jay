@@ -4,11 +4,13 @@ import {
     makeJayComponent,
     materializeViewState,
     Props,
+    COMPONENT_CONTEXT,
 } from '@jay-framework/component';
-import { JayElement, PreRenderElement } from '@jay-framework/runtime';
+import { JayElement, PreRenderElement, useContext } from '@jay-framework/runtime';
 import { CompositePart } from './composite-part';
 import { Signals } from '@jay-framework/fullstack-component';
 import { deepMergeViewStates, TrackByMap } from '@jay-framework/view-state-merge';
+import { HEADLESS_INSTANCES, HeadlessInstancesData } from './headless-instance-context';
 
 function makeSignals<T extends object>(obj: T): Signals<T> {
     return Object.keys(obj).reduce((signals, key) => {
@@ -39,7 +41,24 @@ export function makeCompositeJayComponent<
     // Both params are always provided when fast rendering exists (even if empty objects)
     const hasFastRendering = defaultViewState !== null && defaultViewState !== undefined;
 
+    // Extract headless instance data from ViewState/carryForward (keyed by coordinate)
+    // These are removed from the main data so they don't pollute key-based part lookups
+    const headlessInstanceViewStates = (defaultViewState as any)?.__headlessInstances;
+    const headlessInstanceCarryForwards = (fastCarryForward as any)?.__headlessInstances;
+    if (headlessInstanceViewStates) delete (defaultViewState as any).__headlessInstances;
+    if (headlessInstanceCarryForwards) delete (fastCarryForward as any).__headlessInstances;
+
     const comp = (props: Props<any>, refs, ...contexts): CompCore => {
+        // Provide headless instance data as a context for makeHeadlessInstanceComponent
+        if (headlessInstanceViewStates || headlessInstanceCarryForwards) {
+            const componentContext = useContext(COMPONENT_CONTEXT);
+            const instancesData: HeadlessInstancesData = {
+                viewStates: headlessInstanceViewStates || {},
+                carryForwards: headlessInstanceCarryForwards || {},
+            };
+            componentContext.provideContexts.push([HEADLESS_INSTANCES, instancesData]);
+        }
+
         const instances: Array<[string, JayComponentCore<any, any>]> = interactiveParts.map(
             (part) => {
                 const partRefs = part.key ? refs[part.key] : refs;

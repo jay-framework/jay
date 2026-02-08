@@ -1657,7 +1657,7 @@ values:
 2. [x] All existing tests updated and passing with new syntax
 3. [ ] Deprecation warning for old plain element names (deferred - both syntaxes supported)
 
-**Headless component props and instances** 4. [ ] Can render same headless component multiple times with different props (Phase 2 syntax done; runtime orchestration Phase 4) 5. [x] Can use headless component inside `forEach` with bound props (Phase 3) 6. [ ] Props are validated at compile time against contract schema 7. [ ] Agents can discover valid prop values via actions/CLI 8. [x] Static props work correctly (Phase 2 - `productId="prod-hero"`) 9. [x] Dynamic props work correctly (`productId={_id}` from forEach context — Phase 3) 10. [~] Rendering phases (slow/fast/interactive) work with instances (Phase 4 — slow phase done, fast/interactive pending) 11. [x] `slowForEach` generates separate template per item (Phase 3 — each item gets its own `_HeadlessProductCard{N}` component) 12. [x] `forEach` reuses single template for all items (Phase 3 — component defined once at module level)
+**Headless component props and instances** 4. [ ] Can render same headless component multiple times with different props (Phase 2 syntax done; runtime orchestration Phase 4) 5. [x] Can use headless component inside `forEach` with bound props (Phase 3) 6. [ ] Props are validated at compile time against contract schema 7. [ ] Agents can discover valid prop values via actions/CLI 8. [x] Static props work correctly (Phase 2 - `productId="prod-hero"`) 9. [x] Dynamic props work correctly (`productId={_id}` from forEach context — Phase 3) 10. [x] Rendering phases (slow/fast/interactive) work with instances (Phase 4 — slow/fast server done, client wiring Phase 4b done) 11. [x] `slowForEach` generates separate template per item (Phase 3 — each item gets its own `_HeadlessProductCard{N}` component) 12. [x] `forEach` reuses single template for all items (Phase 3 — component defined once at module level)
 
 **Load params discovery** 12. [ ] `jay-stack params <plugin>/<contract>` CLI command works 13. [ ] CLI runs loadParams generator and returns valid combinations 14. [ ] Agents can discover valid URL params for SSG
 
@@ -2209,6 +2209,92 @@ Both `handlePreRenderRequest` and `handleCachedRequest` follow the same pattern:
 
 #### Remaining for Phase 4b (Client-Side Interactive)
 
-- [ ] `makeCompositeJayComponent` extracts `__headlessInstances` from ViewState
-- [ ] `childComp` or `makeJayComponent` receives instance fast ViewState via context
-- [ ] Coordinate-based matching of instances to their ViewState on the client
+- [x] `makeCompositeJayComponent` extracts `__headlessInstances` from ViewState
+- [x] `childComp` or `makeJayComponent` receives instance fast ViewState via context
+- [x] Coordinate-based matching of instances to their ViewState on the client
+
+### Phase 4b: Client-Side Interactive — Implementation Results
+
+**Date:** February 4, 2026
+
+#### Architecture
+
+The client-side delivery of server-produced ViewState to headless component instances uses the runtime context system:
+
+```
+makeCompositeJayComponent
+  ├─ Extracts __headlessInstances from ViewState/carryForward
+  ├─ Registers HEADLESS_INSTANCES context (Map<coordKey, data>)
+  └─ During render, childComp creates headless instance components
+       └─ makeHeadlessInstanceComponent resolves HEADLESS_INSTANCES context
+            └─ Looks up this instance's data by coordinate key
+                 └─ Creates signals from fast ViewState
+                      └─ Injects (signalVS, carryForward) into plugin's interactive constructor
+```
+
+#### New Files
+
+**`stack-client-runtime/lib/headless-instance-context.ts`:**
+- `HEADLESS_INSTANCES` context marker — registered by `makeCompositeJayComponent`, consumed during instance construction
+- `HeadlessInstancesData` interface — `{ viewStates: Record<string, object>, carryForwards: Record<string, object> }` keyed by coordinate
+- `makeHeadlessInstanceComponent(preRender, interactiveConstructor, coordinateKey, pluginContexts?)` — wraps the plugin's interactive constructor to inject instance-specific fast ViewState and carryForward from the context. Uses `HEADLESS_INSTANCES` as the first context marker before any plugin-defined markers.
+
+#### Modified Files
+
+**`stack-client-runtime/lib/composite-component.ts`:**
+- Extracts `defaultViewState.__headlessInstances` and `fastCarryForward.__headlessInstances` 
+- Deletes them from the main data to avoid polluting key-based part lookups
+- Pushes `[HEADLESS_INSTANCES, data]` to `componentContext.provideContexts` in the `comp` callback
+- This makes instance data available during rendering via the context stack
+
+**`compiler-shared/lib/constants.ts` + `imports.ts`:**
+- Added `JAY_STACK_CLIENT_RUNTIME` constant
+- Added `Import.makeHeadlessInstanceComponent` import definition
+
+**`compiler-jay-html/lib/jay-target/jay-html-compiler.ts`:**
+- `renderHeadlessInstance()` now computes coordinate key via `buildInstanceCoordinateKey()`
+- Generates `makeHeadlessInstanceComponent(render, plugin.comp, coordinateKey, plugin.contexts)` instead of `makeJayComponent(render, plugin.interactiveConstructor)`
+- Uses `plugin.comp` (the raw constructor) instead of `plugin.interactiveConstructor` since the wrapping is now done by `makeHeadlessInstanceComponent`
+
+**`compiler-jay-html/lib/slow-render/slow-render-transform.ts`:**
+- Exported `buildCoordinatePrefix()`, `localIndexAmongSiblings()` for reuse
+- Added `buildInstanceCoordinateKey(element, contractName)` convenience function
+
+#### Compiled Output Change
+
+Before:
+```typescript
+import { makeJayComponent } from '@jay-framework/component';
+const _HeadlessProductCard0 = makeJayComponent(
+    _headlessProductCard0Render,
+    productCard.interactiveConstructor,
+);
+```
+
+After:
+```typescript
+import { makeHeadlessInstanceComponent } from '@jay-framework/stack-client-runtime';
+const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
+    _headlessProductCard0Render,
+    productCard.comp,
+    'product-card:0',
+    productCard.contexts,
+);
+```
+
+For slowForEach instances, coordinate includes ancestor trackBy IDs:
+```typescript
+const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
+    _headlessProductCard0Render, productCard.comp, 'p1/product-card:0', productCard.contexts,
+);
+const _HeadlessProductCard1 = makeHeadlessInstanceComponent(
+    _headlessProductCard1Render, productCard.comp, 'p2/product-card:0', productCard.contexts,
+);
+```
+
+#### Verification
+
+- compiler-jay-html: 511 passed, 4 skipped
+- dev-server: 13 passed
+- stack-server-runtime: 66 passed
+- stack-client-runtime: typechecks cleanly

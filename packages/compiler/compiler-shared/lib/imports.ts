@@ -4,6 +4,7 @@ import {
     JAY_FULLSTACK_COMPONENTS,
     JAY_RUNTIME,
     JAY_SECURE,
+    JAY_STACK_CLIENT_RUNTIME,
 } from './constants';
 
 export enum ImportsFor {
@@ -285,6 +286,11 @@ export const Import = {
     makeJayComponent: importStatementFragment(
         JAY_COMPONENT,
         'makeJayComponent',
+        ImportsFor.implementation,
+    ),
+    makeHeadlessInstanceComponent: importStatementFragment(
+        JAY_STACK_CLIENT_RUNTIME,
+        'makeHeadlessInstanceComponent',
         ImportsFor.implementation,
     ),
 };

@@ -9,7 +9,7 @@ import {
     RenderElementOptions,
     JayContract,
 } from '@jay-framework/runtime';
-import { makeJayComponent } from '@jay-framework/component';
+import { makeHeadlessInstanceComponent } from '@jay-framework/stack-client-runtime';
 import {
     ProductCardViewState,
     ProductCardRefs,
@@ -75,9 +75,11 @@ function _headlessProductCard0Render(options?: RenderElementOptions): _HeadlessP
     return [refManager.getPublicAPI() as ProductCardRefs, render];
 }
 
-const _HeadlessProductCard0 = makeJayComponent(
+const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0Render,
-    productCard.interactiveConstructor,
+    productCard.comp,
+    'product-card:0',
+    productCard.contexts,
 );
 
 export function render(options?: RenderElementOptions): PageWithHeadlessInstanceElementPreRender {

@@ -1,0 +1,104 @@
+/**
+ * Client-side context and helpers for headless component instances.
+ *
+ * Provides the mechanism to deliver server-produced fast ViewState and carryForward
+ * to headless component instances on the client.
+ *
+ * Flow:
+ * 1. makeCompositeJayComponent extracts __headlessInstances from ViewState/carryForward
+ * 2. Registers HEADLESS_INSTANCES context during component construction
+ * 3. makeHeadlessInstanceComponent creates instance components that resolve their data
+ *    from this context by coordinate key
+ */
+
+import {
+    createJayContext,
+    useContext,
+    ContextMarker,
+    PreRenderElement,
+    JayElement,
+} from '@jay-framework/runtime';
+import {
+    ComponentConstructor,
+    JayComponentCore,
+    makeJayComponent,
+    createSignal,
+    type ContextMarkers,
+} from '@jay-framework/component';
+import { Signals } from '@jay-framework/fullstack-component';
+
+/**
+ * Data structure for headless instance ViewStates and carryForwards.
+ * Keyed by coordinate path (e.g., "product-card:0", "p1/product-card:0").
+ */
+export interface HeadlessInstancesData {
+    viewStates: Record<string, object>;
+    carryForwards: Record<string, object>;
+}
+
+/**
+ * Context marker for headless instance data.
+ * Provided by makeCompositeJayComponent, consumed by makeHeadlessInstanceComponent.
+ */
+export const HEADLESS_INSTANCES: ContextMarker<HeadlessInstancesData> =
+    createJayContext<HeadlessInstancesData>();
+
+function makeSignals<T extends object>(obj: T): Signals<T> {
+    return Object.keys(obj).reduce((signals, key) => {
+        signals[key] = createSignal(obj[key]);
+        return signals;
+    }, {}) as Signals<T>;
+}
+
+/**
+ * Create a headless instance component that receives its fast ViewState from the
+ * HEADLESS_INSTANCES context, matched by coordinate key.
+ *
+ * This replaces makeJayComponent for headless instances. It wraps the plugin's
+ * interactive constructor to inject the instance's fast ViewState signals and
+ * carryForward before any plugin-defined context markers.
+ *
+ * @param preRender - The inline template's render function
+ * @param interactiveConstructor - The plugin's interactive constructor
+ * @param coordinateKey - The coordinate key for this instance (e.g., "product-card:0")
+ * @param pluginContexts - Additional context markers from the plugin (if any)
+ */
+export function makeHeadlessInstanceComponent<
+    PropsT extends object,
+    ViewState extends object,
+    Refs extends object,
+    JayElementT extends JayElement<ViewState, Refs>,
+    CompCore extends JayComponentCore<PropsT, ViewState>,
+>(
+    preRender: PreRenderElement<ViewState, Refs, JayElementT>,
+    interactiveConstructor: ComponentConstructor<PropsT, Refs, ViewState, any, CompCore>,
+    coordinateKey: string,
+    pluginContexts: ContextMarkers<any> = [] as any,
+) {
+    // Wrap the interactive constructor to inject instance data from context
+    const wrappedConstructor: ComponentConstructor<PropsT, Refs, ViewState, any, CompCore> = (
+        props,
+        refs,
+        instanceData: HeadlessInstancesData,
+        ...pluginResolvedContexts: any[]
+    ) => {
+        // Look up this instance's fast ViewState and carryForward by coordinate
+        const fastVS = instanceData?.viewStates?.[coordinateKey];
+        const cf = instanceData?.carryForwards?.[coordinateKey] || {};
+
+        // Create signals from fast ViewState (like makeCompositeJayComponent does for key-based parts)
+        const signalVS = fastVS ? makeSignals(fastVS) : undefined;
+
+        // Call the original constructor with fast data injected before plugin contexts
+        return interactiveConstructor(props, refs, signalVS, cf, ...pluginResolvedContexts);
+    };
+
+    // HEADLESS_INSTANCES is the first context marker (resolved to instance data map),
+    // followed by any plugin-defined markers
+    return (makeJayComponent as any)(
+        preRender,
+        wrappedConstructor,
+        HEADLESS_INSTANCES,
+        ...pluginContexts,
+    );
+}

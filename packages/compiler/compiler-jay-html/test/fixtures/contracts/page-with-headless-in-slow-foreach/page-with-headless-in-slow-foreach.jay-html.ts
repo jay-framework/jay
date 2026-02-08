@@ -11,7 +11,7 @@ import {
     RenderElementOptions,
     JayContract,
 } from '@jay-framework/runtime';
-import { makeJayComponent } from '@jay-framework/component';
+import { makeHeadlessInstanceComponent } from '@jay-framework/stack-client-runtime';
 import {
     ProductCardViewState,
     ProductCardRefs,
@@ -85,9 +85,11 @@ function _headlessProductCard0Render(
     return [refManager.getPublicAPI() as ProductCardRefs, render];
 }
 
-const _HeadlessProductCard0 = makeJayComponent(
+const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0Render,
-    productCard.interactiveConstructor,
+    productCard.comp,
+    'p1/product-card:0',
+    productCard.contexts,
 );
 
 // Inline template for headless component: product-card #1
@@ -113,9 +115,11 @@ function _headlessProductCard1Render(
     return [refManager.getPublicAPI() as ProductCardRefs, render];
 }
 
-const _HeadlessProductCard1 = makeJayComponent(
+const _HeadlessProductCard1 = makeHeadlessInstanceComponent(
     _headlessProductCard1Render,
-    productCard.interactiveConstructor,
+    productCard.comp,
+    'p2/product-card:0',
+    productCard.contexts,
 );
 
 export function render(

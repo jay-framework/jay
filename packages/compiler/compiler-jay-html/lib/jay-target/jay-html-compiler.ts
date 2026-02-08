@@ -73,6 +73,7 @@ import {
 } from './jay-html-compile-refs';
 import { processImportedComponents, renderImports } from './jay-html-compile-imports';
 import { tagToNamespace } from './tag-to-namespace';
+import { localIndexAmongSiblings } from '../slow-render/slow-render-transform';
 
 interface RecursiveRegionInfo {
     refName: string;
@@ -115,6 +116,7 @@ interface RenderContext {
     headlessImports: JayHeadlessImports[]; // Full headless imports (for headless instance compilation)
     headlessInstanceDefs: HeadlessInstanceDefinition[]; // Accumulator for inline template definitions
     headlessInstanceCounter: { count: number }; // Shared counter for unique naming
+    coordinatePrefix: string[]; // Accumulated jayTrackBy values from ancestor slowForEach elements
 }
 
 function renderFunctionDeclaration(preRenderType: string): string {
@@ -758,6 +760,10 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             ReferenceManagerTarget.element,
         );
 
+        // Build coordinate key from context prefix + local index among same-contract siblings
+        const localIndex = localIndexAmongSiblings(htmlElement);
+        const coordinateKey = [...newContext.coordinatePrefix, `${contractName}:${localIndex}`].join('/');
+
         // Generate type aliases and render function code
         const renderFnCode = `
 // Inline template for headless component: ${contractName} #${idx}
@@ -774,9 +780,11 @@ ${inlineBody.rendered}
     return [refManager.getPublicAPI() as ${refsTypeName}, render];
 }
 
-const ${componentSymbol} = makeJayComponent(
+const ${componentSymbol} = makeHeadlessInstanceComponent(
     ${renderFnName},
-    ${pluginComponentName}.interactiveConstructor,
+    ${pluginComponentName}.comp,
+    '${coordinateKey}',
+    ${pluginComponentName}.contexts,
 );`;
 
         // Accumulate the definition
@@ -798,7 +806,7 @@ const ${componentSymbol} = makeJayComponent(
             Imports.for(Import.childComp)
                 .plus(propsGetterAndRefs.imports)
                 .plus(Import.ConstructContext)
-                .plus(Import.makeJayComponent),
+                .plus(Import.makeHeadlessInstanceComponent),
             [...propsGetterAndRefs.validations, ...inlineBody.validations],
             mkRefsTree([], {}), // TODO: proper refs for headless instances
         );
@@ -1007,6 +1015,7 @@ const ${componentSymbol} = makeJayComponent(
                     indent: indent.child().noFirstLineBreak().withLastLineBreak(),
                     dynamicRef: true,
                     isInsideGuard: true, // Mark that we're inside a guard
+                    coordinatePrefix: [...context.coordinatePrefix, jayTrackBy],
                 };
 
                 // Render the element (without the slowForEach directive attributes)
@@ -1219,6 +1228,7 @@ function renderFunctionImplementation(
             headlessImports, // Full headless imports for instance compilation
             headlessInstanceDefs, // Accumulator for inline template definitions
             headlessInstanceCounter, // Counter for unique naming
+            coordinatePrefix: [], // Root has empty coordinate prefix
         });
 
         if (needsWrapper) {
@@ -1498,6 +1508,7 @@ function renderBridge(
         headlessImports,
         headlessInstanceDefs: [], // Not used for bridge
         headlessInstanceCounter: { count: 0 },
+        coordinatePrefix: [],
     });
     renderedBridge = optimizeRefs(renderedBridge, headlessImports);
 
@@ -1550,6 +1561,7 @@ function renderSandboxRoot(
         headlessImports,
         headlessInstanceDefs: [], // Not used for sandbox
         headlessInstanceCounter: { count: 0 },
+        coordinatePrefix: [],
     });
     let refsPart =
         renderedBridge.rendered.length > 0

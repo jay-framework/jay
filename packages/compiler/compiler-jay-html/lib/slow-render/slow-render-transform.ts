@@ -590,7 +590,7 @@ export interface HeadlessInstanceResolvedData {
  * Build the coordinate prefix from ancestor slowForEach jayTrackBy values.
  * Walks up the DOM tree collecting trackBy IDs.
  */
-function buildCoordinatePrefix(element: HTMLElement): string[] {
+export function buildCoordinatePrefix(element: HTMLElement): string[] {
     const parts: string[] = [];
     let current = element.parentNode as HTMLElement | null;
 
@@ -609,7 +609,7 @@ function buildCoordinatePrefix(element: HTMLElement): string[] {
  * Count how many same-contract siblings appear before this element.
  * Used to build the "contractName:localIndex" part of a coordinate.
  */
-function localIndexAmongSiblings(element: HTMLElement): number {
+export function localIndexAmongSiblings(element: HTMLElement): number {
     const tag = element.tagName?.toLowerCase();
     const parent = element.parentNode;
     if (!parent) return 0;
@@ -625,6 +625,16 @@ function localIndexAmongSiblings(element: HTMLElement): number {
         }
     }
     return index;
+}
+
+/**
+ * Build the full coordinate key string for a <jay:xxx> element.
+ * Format: "jayTrackBy1/jayTrackBy2/.../contractName:localIndex"
+ */
+export function buildInstanceCoordinateKey(element: HTMLElement, contractName: string): string {
+    const prefix = buildCoordinatePrefix(element);
+    const localIndex = localIndexAmongSiblings(element);
+    return [...prefix, `${contractName}:${localIndex}`].join('/');
 }
 
 export function discoverHeadlessInstances(
