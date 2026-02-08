@@ -403,15 +403,16 @@ async function handlePreRenderRequest(
     }
 
     // Run slow phase to get slowViewState and carryForward
+    // Includes key-based parts slow render + pre-render pipeline (instance slow render)
     const slowStart = Date.now();
     const renderedSlowly = await slowlyPhase.runSlowlyForPage(
         pageParams,
         pageProps,
         initialPartsResult.val.parts,
     );
-    timing?.recordSlowRender(Date.now() - slowStart);
 
     if (renderedSlowly.kind !== 'PhaseOutput') {
+        timing?.recordSlowRender(Date.now() - slowStart);
         if (renderedSlowly.kind === 'ClientError') {
             handleOtherResponseCodes(res, renderedSlowly);
         }
@@ -421,14 +422,13 @@ async function handlePreRenderRequest(
 
     // Pre-render the jay-html with slow viewState (two-pass pipeline)
     // Pass 1: page-level bindings, Pass 2: headless instance bindings
-    const paramsStart = Date.now();
     const preRenderResult = await preRenderJayHtml(
         route,
         renderedSlowly.rendered,
         initialPartsResult.val.headlessContracts,
         initialPartsResult.val.headlessInstanceComponents,
     );
-    timing?.recordParams(Date.now() - paramsStart);
+    timing?.recordSlowRender(Date.now() - slowStart);
 
     if (!preRenderResult) {
         res.status(500).end('Failed to pre-render jay-html');
@@ -584,12 +584,12 @@ async function handleDirectRequest(
         usedPackages,
     );
 
-    // Run slow phase
+    // Run slow phase (key-based parts + headless instance slow rendering)
     const slowStart = Date.now();
     const renderedSlowly = await slowlyPhase.runSlowlyForPage(pageParams, pageProps, pageParts);
-    timing?.recordSlowRender(Date.now() - slowStart);
 
     if (renderedSlowly.kind !== 'PhaseOutput') {
+        timing?.recordSlowRender(Date.now() - slowStart);
         if (renderedSlowly.kind === 'ClientError') {
             handleOtherResponseCodes(res, renderedSlowly);
         }
@@ -597,40 +597,26 @@ async function handleDirectRequest(
         return;
     }
 
-    // Run slow+fast phases for headless instances (if any)
+    // Run slow phase for headless instances
     let instanceViewStates: Record<string, object> | undefined;
+    let instancePhaseDataForFast: InstancePhaseData | undefined;
     const headlessInstanceComponents = pagePartsResult.val.headlessInstanceComponents ?? [];
 
     if (headlessInstanceComponents.length > 0) {
-        // Read the jay-html to discover instances with static props
         const jayHtmlContent = await fs.readFile(route.jayHtmlPath, 'utf-8');
         const discovered = discoverHeadlessInstances(jayHtmlContent);
 
         if (discovered.length > 0) {
             const slowResult = await slowRenderInstances(discovered, headlessInstanceComponents);
-
             if (slowResult) {
-                // Start with slow ViewStates
                 instanceViewStates = { ...slowResult.slowViewStates };
-
-                // Run fast phase and merge into slow for a complete ViewState per instance
-                const instanceFastResult = await renderFastChangingDataForInstances(
-                    slowResult.instancePhaseData,
-                    headlessInstanceComponents,
-                );
-                if (instanceFastResult) {
-                    for (const [coordKey, fastVS] of Object.entries(instanceFastResult.viewStates)) {
-                        instanceViewStates[coordKey] = {
-                            ...(instanceViewStates[coordKey] || {}),
-                            ...fastVS,
-                        };
-                    }
-                }
+                instancePhaseDataForFast = slowResult.instancePhaseData;
             }
         }
     }
+    timing?.recordSlowRender(Date.now() - slowStart);
 
-    // Run fast phase for key-based parts
+    // Run fast phase (key-based parts + headless instance fast rendering)
     const fastStart = Date.now();
     const renderedFast = await renderFastChangingData(
         pageParams,
@@ -638,6 +624,22 @@ async function handleDirectRequest(
         renderedSlowly.carryForward,
         pageParts,
     );
+
+    // Run fast phase for headless instances
+    if (instancePhaseDataForFast && instanceViewStates) {
+        const instanceFastResult = await renderFastChangingDataForInstances(
+            instancePhaseDataForFast,
+            headlessInstanceComponents,
+        );
+        if (instanceFastResult) {
+            for (const [coordKey, fastVS] of Object.entries(instanceFastResult.viewStates)) {
+                instanceViewStates[coordKey] = {
+                    ...(instanceViewStates[coordKey] || {}),
+                    ...fastVS,
+                };
+            }
+        }
+    }
     timing?.recordFastRender(Date.now() - fastStart);
 
     if (renderedFast.kind !== 'PhaseOutput') {
