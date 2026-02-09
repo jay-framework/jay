@@ -11,6 +11,9 @@ import {
 } from '@jay-framework/stack-server-runtime';
 import { createViteForCli } from '@jay-framework/dev-server';
 import { setDevLogger, createDevLogger, getLogger, type LogLevel } from '@jay-framework/logger';
+import { initializeServicesForCli } from './cli-services';
+import { runAction } from './run-action';
+import { runParams } from './run-params';
 
 const program = new Command();
 
@@ -253,87 +256,29 @@ program
         }
     });
 
-// Contract materialization command (legacy: defaults to build/materialized-contracts)
+// Action execution command (Design Log #84/#85/#86): run a plugin action from CLI for agent discovery
 program
-    .command('contracts')
-    .description('Materialize and list available contracts from all plugins')
-    .option('-o, --output <dir>', 'Output directory for materialized contracts (default: build/materialized-contracts)')
-    .option('--yaml', 'Output contract index as YAML to stdout')
-    .option('--list', 'List contracts without writing files')
-    .option('--plugin <name>', 'Filter to specific plugin')
-    .option('--dynamic-only', 'Only process dynamic contracts')
-    .option('--force', 'Force re-materialization')
+    .command('action <plugin/action>')
+    .description('Run a plugin action (e.g., jay-stack action wix-stores/searchProducts --input \'{"query":""}\')')
+    .option('--input <json>', 'JSON input for the action (default: {})')
+    .option('--yaml', 'Output result as YAML instead of JSON')
     .option('-v, --verbose', 'Show detailed output')
-    .action(async (options) => {
-        const projectRoot = process.cwd();
-        await runMaterialize(projectRoot, options, 'build/materialized-contracts');
+    .action(async (actionRef: string, options) => {
+        await runAction(actionRef, options, process.cwd(), initializeServicesForCli);
+    });
+
+// Params discovery command (Design Log #84/#86): discover load param values for a contract
+program
+    .command('params <plugin/contract>')
+    .description('Discover load param values for a contract (e.g., jay-stack params wix-stores/product-page)')
+    .option('--yaml', 'Output result as YAML instead of JSON')
+    .option('-v, --verbose', 'Show detailed output')
+    .action(async (contractRef: string, options) => {
+        await runParams(contractRef, options, process.cwd(), initializeServicesForCli);
     });
 
 // Parse arguments
 program.parse(process.argv);
-
-/**
- * Initializes services for CLI use (loads init.ts and runs callbacks)
- *
- * Uses the provided Vite server for TypeScript transpilation when loading
- * init files and plugin modules.
- */
-async function initializeServicesForCli(
-    projectRoot: string,
-    viteServer?: Awaited<ReturnType<typeof createViteForCli>>,
-): Promise<Map<symbol, unknown>> {
-    const path = await import('node:path');
-    const fs = await import('node:fs');
-
-    // Import service initialization functions
-    const {
-        runInitCallbacks,
-        getServiceRegistry,
-        discoverPluginsWithInit,
-        sortPluginsByDependencies,
-        executePluginServerInits,
-    } = await import('@jay-framework/stack-server-runtime');
-
-    try {
-        // Discover and initialize plugins
-        const discoveredPlugins = await discoverPluginsWithInit({
-            projectRoot,
-            verbose: false,
-        });
-        const pluginsWithInit = sortPluginsByDependencies(discoveredPlugins);
-
-        // Execute plugin server inits with Vite for TypeScript support
-        try {
-            await executePluginServerInits(pluginsWithInit, viteServer, false);
-        } catch (error: any) {
-            getLogger().warn(chalk.yellow(`⚠️  Plugin initialization skipped: ${error.message}`));
-        }
-
-        // Load project init.ts/js if it exists
-        const initPathTs = path.join(projectRoot, 'src', 'init.ts');
-        const initPathJs = path.join(projectRoot, 'src', 'init.js');
-
-        let initModule: any;
-        if (fs.existsSync(initPathTs) && viteServer) {
-            // Use Vite for TypeScript transpilation
-            initModule = await viteServer.ssrLoadModule(initPathTs);
-        } else if (fs.existsSync(initPathJs)) {
-            initModule = await import(initPathJs);
-        }
-
-        if (initModule?.init?._serverInit) {
-            await initModule.init._serverInit();
-        }
-
-        // Run any additional init callbacks
-        await runInitCallbacks();
-    } catch (error: any) {
-        getLogger().warn(chalk.yellow(`⚠️  Service initialization failed: ${error.message}`));
-        getLogger().warn(chalk.gray('   Static contracts will still be listed.'));
-    }
-
-    return getServiceRegistry();
-}
 
 // If no command provided, show help
 if (!process.argv.slice(2).length) {

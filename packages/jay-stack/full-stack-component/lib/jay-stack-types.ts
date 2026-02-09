@@ -248,3 +248,4 @@ export interface DynamicContractGenerator<Services extends any[] = any[]> {
  */
 export type ServiceInstances<Markers extends ServiceMarkers<any[]>> =
     Markers extends ServiceMarkers<infer Services> ? Services : never;
+

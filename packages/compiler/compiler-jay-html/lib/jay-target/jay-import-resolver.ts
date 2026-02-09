@@ -130,7 +130,7 @@ export const JAY_IMPORT_RESOLVER: JayImportResolver = {
         // Not found - return validation error
         return new WithValidations(null as any, [
             `Contract "${contractName}" not found for plugin "${pluginName}". ` +
-                `For dynamic contracts, run 'jay-stack contracts' to materialize them first.`,
+                `For dynamic contracts, run 'jay-stack agent-kit' to materialize them first.`,
         ]);
     },
 };

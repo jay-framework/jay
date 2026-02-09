@@ -1621,12 +1621,15 @@ values:
    - Wire up plugin's interactive logic
    - Connect signals and reactive bindings
 
-### Phase 5: Data Discovery for Agents
+### Phase 5: Data Discovery for Agents ✅
 
-1. Add `discoverable_data` to plugin.yaml schema
-2. Implement data generator execution
-3. Materialize to `build/discoverable-data/`
-4. Add CLI command: `jay-stack discover`
+**Revised** to align with Design Logs #85 and #86 — agents discover data via existing CLI commands, not a separate discovery mechanism:
+
+1. ✅ `jay-stack action <plugin>/<action>` — CLI command to run plugin actions (agents use this to discover prop values, e.g., `jay-stack action product-widget/listProducts`)
+2. ✅ `jay-stack params <plugin>/<contract>` — CLI command to discover load param values (runs `loadParams` generator)
+3. ✅ Plugins expose discovery via `actions` in plugin.yaml (existing infrastructure, no new schema)
+
+**Removed (inconsistent with #85/#86):** `discoverable_data` in plugin.yaml, `makeDataGenerator`, `jay-stack discover` command, `discoverData()` in stack-server-runtime. These were replaced by the action-based approach above.
 
 ## Trade-offs
 
@@ -1657,11 +1660,11 @@ values:
 2. [x] All existing tests updated and passing with new syntax
 3. [ ] Deprecation warning for old plain element names (deferred - both syntaxes supported)
 
-**Headless component props and instances** 4. [ ] Can render same headless component multiple times with different props (Phase 2 syntax done; runtime orchestration Phase 4) 5. [x] Can use headless component inside `forEach` with bound props (Phase 3) 6. [ ] Props are validated at compile time against contract schema 7. [ ] Agents can discover valid prop values via actions/CLI 8. [x] Static props work correctly (Phase 2 - `productId="prod-hero"`) 9. [x] Dynamic props work correctly (`productId={_id}` from forEach context — Phase 3) 10. [x] Rendering phases (slow/fast/interactive) work with instances (Phase 4 — slow/fast server done, client wiring Phase 4b done) 11. [x] `slowForEach` generates separate template per item (Phase 3 — each item gets its own `_HeadlessProductCard{N}` component) 12. [x] `forEach` reuses single template for all items (Phase 3 — component defined once at module level)
+**Headless component props and instances** 4. [x] Can render same headless component multiple times with different props (Phase 2 syntax + Phase 4 runtime + fake-shop demo) 5. [x] Can use headless component inside `forEach` with bound props (Phase 3) 6. [ ] Props are validated at compile time against contract schema (not implemented — needs compiler changes) 7. [x] Agents can discover valid prop values via actions/CLI (Phase 5 — `jay-stack action <plugin>/<action>` + `jay-stack params <plugin>/<contract>`) 8. [x] Static props work correctly (Phase 2 - `productId="prod-hero"`) 9. [x] Dynamic props work correctly (`productId={_id}` from forEach context — Phase 3) 10. [x] Rendering phases (slow/fast/interactive) work with instances (Phase 4 — slow/fast server done, client wiring Phase 4b done) 11. [x] `slowForEach` generates separate template per item (Phase 3 — each item gets its own `_HeadlessProductCard{N}` component) 12. [x] `forEach` reuses single template for all items (Phase 3 — component defined once at module level)
 
 **Load params discovery** 12. [ ] `jay-stack params <plugin>/<contract>` CLI command works 13. [ ] CLI runs loadParams generator and returns valid combinations 14. [ ] Agents can discover valid URL params for SSG
 
-**Nested component rendering** 15. [x] ViewStates are isolated per component (not merged) — Phase 2 compilation uses component's ViewState 16. [ ] CarryForward tracked per component instance across phases (Phase 4) 17. [x] Inline templates transformed with component's ViewState — Phase 2 compilation confirmed
+**Nested component rendering** 15. [x] ViewStates are isolated per component (not merged) — Phase 2 compilation uses component's ViewState 16. [x] CarryForward tracked per component instance across phases (Phase 4 — server passes per-instance carryForward via InstancePhaseData, client delivers via makeHeadlessInstanceComponent) 17. [x] Inline templates transformed with component's ViewState — Phase 2 compilation confirmed
 
 ## Open Questions (Answered)
 
@@ -2135,8 +2138,8 @@ In `node-html-parser`, `getAttribute('forEach')` returns `undefined` (not `null`
 #### Remaining for Phase 4 (slow phase)
 
 - [x] ~~Fast phase orchestration for instances~~ — Done (see below)
-- [ ] Client-side instance ViewState delivery (fast→interactive) — Phase 4b
-- [ ] End-to-end dev server test with a real headless component plugin
+- [x] Client-side instance ViewState delivery (fast→interactive) — Phase 4b done
+- [~] End-to-end dev server test with a real headless component plugin — fake-shop example added as demo (not a formal automated test)
 
 #### Files Modified
 
@@ -2298,3 +2301,78 @@ const _HeadlessProductCard1 = makeHeadlessInstanceComponent(
 - dev-server: 13 passed
 - stack-server-runtime: 66 passed
 - stack-client-runtime: typechecks cleanly
+
+### Phase 5: Data Discovery for Agents — Implementation Results
+
+**Date:** February 4, 2026
+
+**Revised:** Aligned with Design Logs #85 and #86. Discovery uses existing action + params CLI commands, not a separate mechanism.
+
+#### Architecture
+
+Agents discover data through two CLI commands that leverage existing infrastructure:
+
+```
+jay-stack action <plugin>/<action>     → runs plugin action, returns JSON/YAML
+    └─ Uses: action registry, service injection, plugin.yaml actions[]
+
+jay-stack params <plugin>/<contract>   → runs loadParams generator, returns param combinations
+    └─ Uses: plugin resolution, component loadParams, service injection
+```
+
+Discovery flow (per Design Log #85):
+1. Agent reads `agent-kit/INSTRUCTIONS.md`
+2. Runs `jay-stack agent-kit` to materialize contracts
+3. Runs `jay-stack params <plugin>/<contract>` for load param values
+4. Runs `jay-stack action <plugin>/<action>` for prop values
+
+#### Modified Files
+
+**`stack-cli/lib/cli.ts`:**
+- Added `jay-stack action <plugin>/<action>` command — initializes services, discovers + registers actions, executes the specified action, outputs JSON or YAML
+- Added `jay-stack params <plugin>/<contract>` command — resolves plugin component, runs loadParams generator, outputs param combinations
+
+#### Removed (inconsistent with #85/#86)
+
+- ~~`discoverable_data` in plugin.yaml~~ → agents use `actions` instead
+- ~~`makeDataGenerator` builder API~~ → plugins use `makeJayQuery`/`makeJayAction` for data actions
+- ~~`jay-stack discover` command~~ → replaced by `jay-stack action`
+- ~~`discoverData()` in stack-server-runtime~~ → not needed
+- ~~`DiscoverableDataValue` / `DataGenerator` types~~ → not needed
+
+#### Example: Plugin with action-based discovery
+
+```yaml
+# plugin.yaml
+name: product-widget
+module: ./product-widget
+contracts:
+  - name: product-widget
+    contract: ./product-widget.jay-contract
+    component: productWidget
+    description: Product widget card
+actions:
+  - listProducts    # Agent calls: jay-stack action product-widget/listProducts
+```
+
+```typescript
+// product-widget.ts
+export const listProducts = makeJayQuery('productWidget.listProducts')
+    .withCaching({ maxAge: 300 })
+    .withServices(PRODUCTS_DATABASE_SERVICE)
+    .withHandler(async (input: {}, productsDb) => {
+        const products = await productsDb.getProducts();
+        return products.map(p => ({
+            productId: p.id, name: p.name, price: p.price,
+        }));
+    });
+```
+
+#### Verification
+
+- compiler-shared: builds cleanly (DiscoverableDataConfig removed)
+- full-stack-component: typechecks cleanly (data generator types removed)
+- stack-server-runtime: 66 passed (data-discovery.ts removed)
+- stack-cli: typechecks cleanly (action + params commands added)
+- compiler-jay-html: 511 passed, 4 skipped
+- dev-server: 13 passed
