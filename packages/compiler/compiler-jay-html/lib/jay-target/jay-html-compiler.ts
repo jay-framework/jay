@@ -774,7 +774,7 @@ type ${preRenderType} = [${refsTypeName}, ${renderType}];
 function ${renderFnName}(options?: RenderElementOptions): ${preRenderType} {
     ${renderedRefsManager}
     const render = (viewState) =>
-        ConstructContext.withRootContext(viewState, undefined, () =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
 ${inlineBody.rendered}
         ) as ${elementType};
     return [refManager.getPublicAPI() as ${refsTypeName}, render];

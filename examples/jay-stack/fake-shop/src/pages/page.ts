@@ -23,7 +23,8 @@ async function renderSlowlyChanging(props: PageProps, productsDb: ProductsDataba
 }
 
 async function renderFastChanging(
-    props: PageProps & HomePageCarryForward,
+    props: PageProps,
+    carryForward: HomePageCarryForward,
     productsDb: ProductsDatabaseService,
 ) {
     const Pipeline = RenderPipeline.for<PageFastViewState, HomePageCarryForward>();

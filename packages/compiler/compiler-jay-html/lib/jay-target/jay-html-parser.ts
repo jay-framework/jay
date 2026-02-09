@@ -924,7 +924,7 @@ export async function parseJayFile(
     );
     const imports: JayImportLink[] = [
         ...headfullImports,
-        ...headlessImports.flatMap((_) => _.contractLinks),
+        ...headlessImports.flatMap((_) => [..._.contractLinks, _.codeLink]),
     ];
 
     const cssResult = await extractCss(root, filePath);

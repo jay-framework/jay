@@ -75,13 +75,18 @@ export function makeHeadlessInstanceComponent<
     coordinateKey: string,
     pluginContexts: ContextMarkers<any> = [] as any,
 ) {
-    // Wrap the interactive constructor to inject instance data from context
+    // Wrap the interactive constructor to read instance data from the provided context
+    // HEADLESS_INSTANCES is provided by makeCompositeJayComponent via provideContexts,
+    // so we access it directly with useContext rather than passing it as a contextMarker
+    // (context markers require reactive pairing, which plain data doesn't support)
     const wrappedConstructor: ComponentConstructor<PropsT, Refs, ViewState, any, CompCore> = (
         props,
         refs,
-        instanceData: HeadlessInstancesData,
         ...pluginResolvedContexts: any[]
     ) => {
+        // Read instance data from the context stack (provided by composite component)
+        const instanceData = useContext(HEADLESS_INSTANCES);
+
         // Look up this instance's fast ViewState and carryForward by coordinate
         const fastVS = instanceData?.viewStates?.[coordinateKey];
         const cf = instanceData?.carryForwards?.[coordinateKey] || {};
@@ -93,12 +98,10 @@ export function makeHeadlessInstanceComponent<
         return interactiveConstructor(props, refs, signalVS, cf, ...pluginResolvedContexts);
     };
 
-    // HEADLESS_INSTANCES is the first context marker (resolved to instance data map),
-    // followed by any plugin-defined markers
+    // Only pass plugin context markers — HEADLESS_INSTANCES is accessed via useContext directly
     return (makeJayComponent as any)(
         preRender,
         wrappedConstructor,
-        HEADLESS_INSTANCES,
         ...pluginContexts,
     );
 }

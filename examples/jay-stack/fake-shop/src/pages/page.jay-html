@@ -63,7 +63,7 @@
       <!-- slowForEach: each product gets its own pre-rendered widget at build time -->
       <div class="section">
         <h2>Featured Products (slowForEach)</h2>
-        <div slowForEach="featuredProducts" jayTrackBy="_id">
+        <div forEach="featuredProducts" trackBy="_id">
           <div class="product-card">
             <jay:product-widget productId="{_id}">
               <h3>{name}</h3>

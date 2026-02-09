@@ -2376,3 +2376,40 @@ export const listProducts = makeJayQuery('productWidget.listProducts')
 - stack-cli: typechecks cleanly (action + params commands added)
 - compiler-jay-html: 511 passed, 4 skipped
 - dev-server: 13 passed
+
+### Integration Testing — Fake-Shop End-to-End
+
+Ran the fake-shop example end-to-end with `jay-stack dev --test-mode` and discovered + fixed several issues:
+
+#### Bug Fixes
+
+1. **Missing `codeLink` import in compiled output** — Parser only added `contractLinks` (type imports) to `jayFile.imports`, not the `codeLink` (runtime component import). Headless instance code referenced `productWidget.comp` and `productWidget.contexts` but `productWidget` was never imported.
+   - **Fix**: `jay-html-parser.ts` — changed `headlessImports.flatMap((_) => _.contractLinks)` to `headlessImports.flatMap((_) => [..._.contractLinks, _.codeLink])`
+
+2. **`refManager` passed as `undefined` in inline templates** — Compiler template for headless instance render functions hardcoded `undefined` as the second arg to `ConstructContext.withRootContext` instead of `refManager`.
+   - **Fix**: `jay-html-compiler.ts` — changed `withRootContext(viewState, undefined, ...)` to `withRootContext(viewState, refManager, ...)`
+
+3. **`HEADLESS_INSTANCES` context caused WeakSet crash** — `makeHeadlessInstanceComponent` passed `HEADLESS_INSTANCES` as a `contextMarker` to `makeJayComponent`. The runtime's `enablePairing()` tried to add the plain data object to a `WeakSet<Reactive>`, but it has no reactive symbol.
+   - **Fix**: `headless-instance-context.ts` — Instead of passing `HEADLESS_INSTANCES` as a contextMarker, the wrapped constructor reads it directly via `useContext(HEADLESS_INSTANCES)`. The parent (composite component) provides it via `provideContexts`, which already has a null-check for reactive symbols.
+
+4. **`slowForEach` not recognized by slow render transform** — Template used `slowForEach="featuredProducts"` directly, but `slowRenderTransform` only recognizes `forEach` and auto-detects slow-phase arrays from the contract. `slowForEach` is an output attribute of the transform, not an input.
+   - **Fix**: `page.jay-html` — changed `slowForEach="featuredProducts" jayTrackBy="_id"` to `forEach="featuredProducts" trackBy="_id"`
+
+5. **Fast render signature mismatch** — `page.ts` and `product-widget.ts` fast render functions had wrong argument order. Runtime calls `fastRender(props, carryForward, ...services)` but the functions declared `(props: Props & CarryForward, ...services)`.
+   - **Fix**: `page.ts` and `product-widget.ts` — added explicit `carryForward` parameter between `props` and services
+
+#### Dev Server Enhancement
+
+- **Client script saved to build folder** — `sendResponse` in `dev-server.ts` now writes the generated client HTML to `build/client-scripts/<pageName>.html` for easier debugging of the compiled output.
+
+#### Current Rendering State
+
+- Mood Tracker (key-based headless): renders correctly with interactive buttons
+- Static product widgets: render with slow data (coordinate collision — both get `product-widget:0` — known issue with `localIndexAmongSiblings`)
+- slowForEach products: correctly expanded — "Gaming Laptop", "Smartphone Pro", "Wireless Headphones"
+- forEach products: renders 10 items (fast-phase `allProducts` array), headings show "undefined" because `{name}` bindings in the inline template resolve against the page's `allProducts` items (which only have `_id`)
+
+#### Known Remaining Issues
+
+- Coordinate collision for sibling instances not in the same parent element — `localIndexAmongSiblings` returns 0 for both when each `<jay:product-widget>` is wrapped in its own `<div class="product-card">`
+- forEach headless instances show "undefined" for slow-phase fields — the inline template's `{name}`/`{price}` bindings resolve against the forEach item context (which only has `_id`), not the headless component's ViewState

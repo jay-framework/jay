@@ -52,16 +52,17 @@ export const productWidget = makeJayStackComponent<ProductWidgetContract>()
     )
     .withFastRender(
         async (
-            props: ProductWidgetProps & WidgetCarryForward,
+            props: ProductWidgetProps,
+            carryForward: WidgetCarryForward,
             productsDb: ProductsDatabaseService,
             inventoryService: InventoryService,
         ) => {
             const Pipeline = RenderPipeline.for<ProductWidgetFastViewState, WidgetCarryForward>();
-            const inStock = await inventoryService.isInStock(props.productId);
+            const inStock = await inventoryService.isInStock(carryForward.productId);
 
             return Pipeline.ok({}).toPhaseOutput(() => ({
                 viewState: { inStock },
-                carryForward: { productId: props.productId },
+                carryForward,
             }));
         },
     )
