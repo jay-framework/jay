@@ -110,6 +110,7 @@ interface RenderContext {
     importedRefNameToRef: Map<string, Ref>;
     recursiveRegions: RecursiveRegionInfo[]; // Stack of recursive regions we're currently inside
     isInsideGuard: boolean; // Are we currently inside a forEach or conditional?
+    insideFastForEach: boolean; // Are we inside a fast-phase (client-side) forEach?
     usedComponentImports: Set<string>; // Tracks which component/contract types are actually used
     headlessContractNames: Set<string>; // Contract names from headless imports (for <jay:contract-name> detection)
     headlessImports: JayHeadlessImports[]; // Full headless imports (for headless instance compilation)
@@ -653,6 +654,23 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
         newContext: RenderContext,
         contractName: string,
     ): RenderFragment {
+        // Headless instances inside fast-phase forEach are not supported:
+        // their slow/fast data must be rendered server-side, but fast forEach
+        // items are only known at request time. Use slowForEach instead.
+        if (newContext.insideFastForEach) {
+            return new RenderFragment(
+                '',
+                Imports.none(),
+                [
+                    `<jay:${contractName}> cannot be used inside a fast-phase forEach. ` +
+                        `Headless component instances require server-side rendering which is not available ` +
+                        `for dynamically-iterated arrays. Change the array's phase to "slow" in the contract ` +
+                        `to use slowForEach, or use a key-based headless component instead.`,
+                ],
+                mkRefsTree([], {}),
+            );
+        }
+
         // Find the matching headless import
         const headlessImport = newContext.headlessImports.find(
             (h) => h.contractName === contractName,
@@ -742,6 +760,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 importedRefNameToRef: instanceRefMap,
                 recursiveRegions: [],
                 isInsideGuard: false,
+                insideFastForEach: false,
                 // Don't detect nested headless instances inside headless instances (for now)
                 headlessContractNames: new Set(),
             };
@@ -988,6 +1007,7 @@ const ${componentSymbol} = makeHeadlessInstanceComponent(
                     indent: indent.child().noFirstLineBreak().withLastLineBreak(),
                     dynamicRef: true,
                     isInsideGuard: true, // Mark that we're inside a guard
+                    insideFastForEach: true, // Fast-phase forEach — headless instances not supported
                 };
 
                 let childElement = renderHtmlElement(htmlElement, newContext);
@@ -1237,6 +1257,7 @@ function renderFunctionImplementation(
             importedRefNameToRef,
             recursiveRegions: [], // Initialize empty recursive regions stack
             isInsideGuard: false, // Not inside any guard initially
+            insideFastForEach: false, // Not inside any fast forEach initially
             usedComponentImports, // Track which component types are used
             headlessContractNames, // For detecting <jay:contract-name> instances
             headlessImports, // Full headless imports for instance compilation
@@ -1518,6 +1539,7 @@ function renderBridge(
         importedRefNameToRef,
         recursiveRegions: [], // Initialize empty recursive regions stack
         isInsideGuard: false, // Not inside any guard initially
+        insideFastForEach: false,
         usedComponentImports: new Set<string>(), // Not used for bridge
         headlessContractNames,
         headlessImports,
@@ -1572,6 +1594,7 @@ function renderSandboxRoot(
         importedRefNameToRef,
         recursiveRegions: [], // Initialize empty recursive regions stack
         isInsideGuard: false, // Not inside any guard initially
+        insideFastForEach: false,
         usedComponentImports: new Set<string>(), // Not used for sandbox
         headlessContractNames,
         headlessImports,

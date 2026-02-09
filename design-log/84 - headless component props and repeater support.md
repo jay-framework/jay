@@ -2404,14 +2404,14 @@ Ran the fake-shop example end-to-end with `jay-stack dev --test-mode` and discov
 
 #### Current Rendering State
 
-- Mood Tracker (key-based headless): renders correctly with interactive buttons
-- Static product widgets: render with slow data (coordinate collision — both get `product-widget:0` — known issue with `localIndexAmongSiblings`)
-- slowForEach products: correctly expanded — "Gaming Laptop", "Smartphone Pro", "Wireless Headphones"
-- forEach products: renders 10 items (fast-phase `allProducts` array), headings show "undefined" because `{name}` bindings in the inline template resolve against the page's `allProducts` items (which only have `_id`)
+- Mood Tracker (key-based headless): renders correctly with interactive buttons ✓
+- Static product widgets: render with correct slow data and unique coordinates ✓
+- slowForEach products: correctly expanded — "Gaming Laptop", "Smartphone Pro", "Wireless Headphones" ✓
+- forEach products: renders product IDs (headless instances disallowed in fast forEach — compiler error)
 
 #### Known Remaining Issues
 
-- forEach headless instances show "undefined" for slow-phase fields — the inline template's `{name}`/`{price}` bindings resolve against the forEach item context (which only has `_id`), not the headless component's ViewState
+- ~~forEach headless instances show "undefined" for slow-phase fields~~ — **Fixed**: now a compiler error (see "Undefined Values Fix" section below)
 
 ### Coordinate Collision Fix & Ref Support
 
@@ -2445,3 +2445,34 @@ Replaced `localIndexAmongSiblings` with a DFS-order scope counter per `(coordina
 - `jay-html-parser.ts` — only include `codeLink` for contracts used as `<jay:xxx>` instances
 - `dev-server.ts` — updated call sites for new discovery return type
 - Test fixtures — updated for new imports, ref in `childComp`, `refManager` in inline templates
+
+### Undefined Values Fix
+
+#### Mood Tracker Data Tags
+
+**Problem:** `{mt.happy}`, `{mt.sad}`, `{mt.neutral}` rendered as "undefined" in the browser.
+
+**Root cause:** `buildPhaseMap` defaulted tags without explicit `phase` to the parent's phase (`'slow'`). The mood tracker's `happy`/`sad`/`neutral` tags have `type: [data, interactive]` but no `phase` annotation — they were incorrectly treated as slow-phase, causing `resolveTextBindings` to resolve them from the empty slow ViewState.
+
+**Fix:** In `buildPhaseMap`'s `processTag`, when a tag has no explicit `phase` and its `type` includes `ContractTagType.interactive`, the effective phase defaults to `'fast+interactive'` instead of inheriting the parent's phase. This matches how the contract `.d.ts` generator already classifies these tags (they appear in `FastViewState`, not `SlowViewState`).
+
+- `slow-render-transform.ts` — `processTag` and `checkTag` both updated
+
+#### Headless Instances in Fast-Phase forEach
+
+**Problem:** `<jay:product-widget>` inside `forEach="allProducts"` (phase: fast) showed "undefined" for all slow-phase bindings (`{name}`, `{price}`, `{sku}`).
+
+**Root cause:** Fast-phase forEach items are only known at request time. Headless instances inside them have unresolved prop bindings (e.g., `productId="{_id}"`), so:
+1. `discoverHeadlessInstances` correctly skips them (unresolved bindings)
+2. No `__headlessInstances` data is produced for these items
+3. The compiled code uses a static `coordinateKey` shared by all forEach iterations
+4. The inline template bindings resolve to `undefined`
+
+**Decision:** For now, **disallow headless instances inside fast-phase forEach** as a compiler error. The coordinate system would need dynamic (runtime) coordinates, and the server pipeline would need to render instances after the fast phase completes.
+
+**Future approach:** Have the component provide a client-side equivalent of the slow phase — essentially an automatic action triggered from the client when forEach items are rendered. This avoids the need for server-side rendering of dynamic instances.
+
+**Fix:**
+- `jay-html-compiler.ts` — added `insideFastForEach: boolean` to `RenderContext`; `renderHeadlessInstance` emits validation error when `insideFastForEach` is true
+- `generate-element.test.ts` — updated `page-with-headless-in-foreach` test to expect the validation error
+- `fake-shop/page.jay-html` — removed `<jay:product-widget>` from fast forEach section

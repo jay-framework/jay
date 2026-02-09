@@ -77,22 +77,6 @@
         </div>
       </div>
 
-      <!-- forEach: single widget template reused for all products at request time -->
-      <div class="section">
-        <h2>All Products (forEach)</h2>
-        <div forEach="allProducts" trackBy="_id">
-          <div class="product-card">
-            <jay:product-widget productId="{_id}">
-              <h3>{name}</h3>
-              <div>Price: ${price}</div>
-              <div>SKU: {sku}</div>
-              <span if="inStock">In Stock</span>
-              <span if="!inStock">Out of Stock</span>
-              <button ref="addToCart">Add to Cart</button>
-            </jay:product-widget>
-          </div>
-        </div>
-      </div>
     </div>
   </body>
 </html>

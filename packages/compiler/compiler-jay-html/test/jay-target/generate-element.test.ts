@@ -378,18 +378,15 @@ describe('generate jay-html element', () => {
             );
         });
 
-        it('generate element file with headless component instance inside forEach', async () => {
+        it('generate element file with headless component instance inside forEach produces validation error', async () => {
             const folder = 'contracts/page-with-headless-in-foreach';
             const elementFile = await readFileAndGenerateElementFile(folder);
-            expect(elementFile.validations).toEqual([]);
-            expect(await prettify(elementFile.val)).toEqual(
-                await prettify(
-                    await readFixtureFileRaw(
-                        folder,
-                        'page-with-headless-in-foreach.jay-html.ts',
-                    ),
-                ),
-            );
+            expect(elementFile.validations).toEqual([
+                '<jay:product-card> cannot be used inside a fast-phase forEach. ' +
+                    'Headless component instances require server-side rendering which is not available ' +
+                    'for dynamically-iterated arrays. Change the array\'s phase to "slow" in the contract ' +
+                    'to use slowForEach, or use a key-based headless component instead.',
+            ]);
         });
 
         it('generate element file with headless component instance inside slowForEach', async () => {
