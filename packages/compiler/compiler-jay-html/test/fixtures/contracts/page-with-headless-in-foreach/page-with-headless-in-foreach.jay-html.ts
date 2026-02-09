@@ -17,6 +17,7 @@ import {
     ProductCardRefs,
     ProductCardInteractiveViewState,
 } from '../product-card/product-card.jay-contract';
+import { productCard } from '../product-card/product-card';
 
 export interface ProductOfPageWithHeadlessInForeachViewState {
     _id: string;
@@ -74,7 +75,7 @@ function _headlessProductCard0Render(
         [],
     );
     const render = (viewState) =>
-        ConstructContext.withRootContext(viewState, undefined, () =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
             e('article', { class: 'product-tile' }, [
                 e('h2', {}, [dt((vs) => vs.name)]),
                 e('span', { class: 'price' }, [dt((vs) => vs.price)]),
@@ -92,7 +93,10 @@ const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
 );
 
 export function render(options?: RenderElementOptions): PageWithHeadlessInForeachElementPreRender {
-    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [productsRefManager, [refAR1]] = ReferencesManager.for(options, [], [], [], ['aR1']);
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
+        products: productsRefManager,
+    });
     const render = (viewState: PageWithHeadlessInForeachViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             de('div', {}, [
@@ -106,6 +110,7 @@ export function render(options?: RenderElementOptions): PageWithHeadlessInForeac
                                 (vs1: ProductOfPageWithHeadlessInForeachViewState) => ({
                                     productId: vs1._id,
                                 }),
+                                refAR1(),
                             ),
                         ]);
                     },

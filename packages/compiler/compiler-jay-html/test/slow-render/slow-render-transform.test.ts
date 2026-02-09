@@ -846,7 +846,7 @@ tags:
 </body>
 </html>`;
 
-            const instances = discoverHeadlessInstances(jayHtml);
+            const { instances } = discoverHeadlessInstances(jayHtml);
 
             expect(instances).toEqual([
                 {
@@ -878,7 +878,7 @@ tags:
 </body>
 </html>`;
 
-            const instances = discoverHeadlessInstances(jayHtml);
+            const { instances } = discoverHeadlessInstances(jayHtml);
 
             // Only the static instance should be discovered (not the one inside forEach)
             expect(instances).toEqual([
@@ -904,7 +904,7 @@ tags:
 </body>
 </html>`;
 
-            const instances = discoverHeadlessInstances(jayHtml);
+            const { instances } = discoverHeadlessInstances(jayHtml);
 
             // Only the first instance (second has unresolved binding)
             expect(instances).toEqual([
@@ -935,7 +935,7 @@ tags:
 </body>
 </html>`;
 
-            const instances = discoverHeadlessInstances(jayHtml);
+            const { instances } = discoverHeadlessInstances(jayHtml);
 
             // Coordinates include the parent slowForEach jayTrackBy
             expect(instances).toEqual([
@@ -963,7 +963,7 @@ tags:
 </body>
 </html>`;
 
-            const instances = discoverHeadlessInstances(jayHtml);
+            const { instances } = discoverHeadlessInstances(jayHtml);
 
             expect(instances).toEqual([
                 {
@@ -976,6 +976,16 @@ tags:
     });
 
     describe('resolveHeadlessInstances', () => {
+        // Helper: run discovery first to embed ref attributes, then resolve
+        function discoverAndResolve(
+            jayHtml: string,
+            instanceData: Parameters<typeof resolveHeadlessInstances>[1],
+            importResolver?: Parameters<typeof resolveHeadlessInstances>[2],
+        ) {
+            const { preRenderedJayHtml } = discoverHeadlessInstances(jayHtml);
+            return resolveHeadlessInstances(preRenderedJayHtml, instanceData, importResolver);
+        }
+
         it('should resolve slow bindings inside headless instances', () => {
             const jayHtml = `<!DOCTYPE html>
 <html>
@@ -990,7 +1000,7 @@ tags:
 </body>
 </html>`;
 
-            const result = resolveHeadlessInstances(jayHtml, [
+            const result = discoverAndResolve(jayHtml, [
                 {
                     coordinate: ['product-card:0'],
                     contract: productCardContract,
@@ -1005,7 +1015,7 @@ tags:
     <script type="application/jay-headless" plugin="wix-stores" contract="product-card"></script>
 </head>
 <body>
-    <jay:product-card productId="prod-123">
+    <jay:product-card productId="prod-123" ref="0">
         <h2>Widget A</h2>
         <span class="price">$29.99</span>
     </jay:product-card>
@@ -1025,7 +1035,7 @@ tags:
 </body>
 </html>`;
 
-            const result = resolveHeadlessInstances(jayHtml, [
+            const result = discoverAndResolve(jayHtml, [
                 {
                     coordinate: ['product-card:0'],
                     contract: productCardContract,
@@ -1038,7 +1048,7 @@ tags:
 <html>
 <head></head>
 <body>
-    <jay:product-card productId="prod-123">
+    <jay:product-card productId="prod-123" ref="0">
         <h2>Widget A</h2>
         <span class="stock">{stockCount}</span>
     </jay:product-card>
@@ -1060,7 +1070,7 @@ tags:
 </body>
 </html>`;
 
-            const result = resolveHeadlessInstances(jayHtml, [
+            const result = discoverAndResolve(jayHtml, [
                 {
                     coordinate: ['product-card:0'],
                     contract: productCardContract,
@@ -1078,10 +1088,10 @@ tags:
 <html>
 <head></head>
 <body>
-    <jay:product-card productId="prod-123">
+    <jay:product-card productId="prod-123" ref="0">
         <h2>Widget A</h2>
     </jay:product-card>
-    <jay:product-card productId="prod-456">
+    <jay:product-card productId="prod-456" ref="1">
         <h2>Widget B</h2>
     </jay:product-card>
 </body>
@@ -1109,7 +1119,7 @@ tags:
 </body>
 </html>`;
 
-            const result = resolveHeadlessInstances(jayHtml, [
+            const result = discoverAndResolve(jayHtml, [
                 {
                     coordinate: ['p1', 'product-card:0'],
                     contract: productCardContract,
@@ -1128,13 +1138,13 @@ tags:
 <head></head>
 <body>
     <div slowForEach="products" jayIndex="0" jayTrackBy="p1">
-        <jay:product-card productId="prod-123">
+        <jay:product-card productId="prod-123" ref="0">
             <h2>Widget A</h2>
             <span>$29.99</span>
         </jay:product-card>
     </div>
     <div slowForEach="products" jayIndex="1" jayTrackBy="p2">
-        <jay:product-card productId="prod-456">
+        <jay:product-card productId="prod-456" ref="0">
             <h2>Widget B</h2>
             <span>$49.99</span>
         </jay:product-card>
@@ -1159,7 +1169,7 @@ tags:
 </body>
 </html>`;
 
-            const result = resolveHeadlessInstances(jayHtml, [
+            const result = discoverAndResolve(jayHtml, [
                 {
                     coordinate: ['product-card:0'],
                     contract: productCardContract,
@@ -1172,7 +1182,7 @@ tags:
 <html>
 <head></head>
 <body>
-    <jay:product-card productId="prod-static">
+    <jay:product-card productId="prod-static" ref="0">
         <h2>Static Widget</h2>
     </jay:product-card>
     <div forEach="products" trackBy="_id">
@@ -1227,8 +1237,9 @@ tags:
             expect(pass1.validations).toEqual([]);
             const pass1Html = pass1.val!.preRenderedJayHtml;
 
-            // Discover instances
-            const instances = discoverHeadlessInstances(pass1Html);
+            // Discover instances (also embeds ref attributes)
+            const { instances, preRenderedJayHtml: discoveredHtml } =
+                discoverHeadlessInstances(pass1Html);
             expect(instances).toEqual([
                 {
                     contractName: 'product-card',
@@ -1238,7 +1249,7 @@ tags:
             ]);
 
             // Pass 2: resolve instance bindings using discovered coordinate
-            const pass2 = resolveHeadlessInstances(pass1Html, [
+            const pass2 = resolveHeadlessInstances(discoveredHtml, [
                 {
                     coordinate: instances[0].coordinate,
                     contract: productCardContract,
@@ -1255,7 +1266,7 @@ tags:
 </head>
 <body>
     <h1>Our Products</h1>
-    <jay:product-card productId="prod-123">
+    <jay:product-card productId="prod-123" ref="0">
         <article>
             <h2>Ceramic Vase</h2>
             <span class="price">$34.99</span>
@@ -1316,7 +1327,8 @@ tags:
             const pass1Html = pass1.val!.preRenderedJayHtml;
 
             // Discover instances — coordinates include jayTrackBy from forEach
-            const instances = discoverHeadlessInstances(pass1Html);
+            const { instances, preRenderedJayHtml: discoveredHtml } =
+                discoverHeadlessInstances(pass1Html);
             expect(instances).toEqual([
                 {
                     contractName: 'product-card',
@@ -1331,7 +1343,7 @@ tags:
             ]);
 
             // Pass 2: resolve instance bindings using discovered coordinates
-            const pass2 = resolveHeadlessInstances(pass1Html, [
+            const pass2 = resolveHeadlessInstances(discoveredHtml, [
                 {
                     coordinate: instances[0].coordinate,
                     contract: productCardContract,

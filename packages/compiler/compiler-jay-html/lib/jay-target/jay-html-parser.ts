@@ -922,9 +922,21 @@ export async function parseJayFile(
         filePath,
         linkedContractResolver,
     );
+    // Collect contract names that are used as <jay:xxx> instances in the template.
+    // Only these need the codeLink import (for makeHeadlessInstanceComponent).
+    // Key-based headless components without instances don't need it.
+    const usedAsInstance = new Set(
+        root
+            .querySelectorAll('*')
+            .filter((_) => _.tagName?.toLowerCase().startsWith('jay:'))
+            .map((_) => _.tagName.toLowerCase().substring(4)),
+    );
     const imports: JayImportLink[] = [
         ...headfullImports,
-        ...headlessImports.flatMap((_) => [..._.contractLinks, _.codeLink]),
+        ...headlessImports.flatMap((_) => [
+            ..._.contractLinks,
+            ...(usedAsInstance.has(_.contractName) ? [_.codeLink] : []),
+        ]),
     ];
 
     const cssResult = await extractCss(root, filePath);

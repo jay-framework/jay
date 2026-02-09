@@ -73,7 +73,6 @@ import {
 } from './jay-html-compile-refs';
 import { processImportedComponents, renderImports } from './jay-html-compile-imports';
 import { tagToNamespace } from './tag-to-namespace';
-import { localIndexAmongSiblings } from '../slow-render/slow-render-transform';
 
 interface RecursiveRegionInfo {
     refName: string;
@@ -117,6 +116,7 @@ interface RenderContext {
     headlessInstanceDefs: HeadlessInstanceDefinition[]; // Accumulator for inline template definitions
     headlessInstanceCounter: { count: number }; // Shared counter for unique naming
     coordinatePrefix: string[]; // Accumulated jayTrackBy values from ancestor slowForEach elements
+    coordinateCounters: Map<string, number>; // Scope-level counter per prefix+contractName for unique coordinates
 }
 
 function renderFunctionDeclaration(preRenderType: string): string {
@@ -760,9 +760,18 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             ReferenceManagerTarget.element,
         );
 
-        // Build coordinate key from context prefix + local index among same-contract siblings
-        const localIndex = localIndexAmongSiblings(htmlElement);
-        const coordinateKey = [...newContext.coordinatePrefix, `${contractName}:${localIndex}`].join('/');
+        // Build coordinate key: use explicit ref if present, otherwise auto-generate with scope counter
+        const explicitRef = htmlElement.attributes.ref;
+        let coordinateRef: string;
+        if (explicitRef) {
+            coordinateRef = explicitRef;
+        } else {
+            const counterKey = [...newContext.coordinatePrefix, contractName].join('/');
+            const localIndex = newContext.coordinateCounters.get(counterKey) ?? 0;
+            newContext.coordinateCounters.set(counterKey, localIndex + 1);
+            coordinateRef = String(localIndex);
+        }
+        const coordinateKey = [...newContext.coordinatePrefix, `${contractName}:${coordinateRef}`].join('/');
 
         // Generate type aliases and render function code
         const renderFnCode = `
@@ -800,15 +809,20 @@ const ${componentSymbol} = makeHeadlessInstanceComponent(
         let propsGetterAndRefs = renderChildCompProps(htmlElement, newContext);
         let getProps = `(${newContext.variables.currentVar}: ${newContext.variables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
 
+        // Generate ref for the headless instance (same as headful components)
+        let renderedRef = renderChildCompRef(htmlElement, newContext, componentSymbol);
+        if (renderedRef.rendered !== '') renderedRef = renderedRef.map((_) => ', ' + _);
+
         // Return childComp call for the page render function
         return new RenderFragment(
-            `${newContext.indent.firstLine}childComp(${componentSymbol}, ${getProps})`,
+            `${newContext.indent.firstLine}childComp(${componentSymbol}, ${getProps}${renderedRef.rendered})`,
             Imports.for(Import.childComp)
                 .plus(propsGetterAndRefs.imports)
+                .plus(renderedRef.imports)
                 .plus(Import.ConstructContext)
                 .plus(Import.makeHeadlessInstanceComponent),
-            [...propsGetterAndRefs.validations, ...inlineBody.validations],
-            mkRefsTree([], {}), // TODO: proper refs for headless instances
+            [...propsGetterAndRefs.validations, ...inlineBody.validations, ...renderedRef.validations],
+            renderedRef.refs,
         );
     }
 
@@ -1229,6 +1243,7 @@ function renderFunctionImplementation(
             headlessInstanceDefs, // Accumulator for inline template definitions
             headlessInstanceCounter, // Counter for unique naming
             coordinatePrefix: [], // Root has empty coordinate prefix
+            coordinateCounters: new Map(), // Scope-level counter for unique coordinates
         });
 
         if (needsWrapper) {
@@ -1509,6 +1524,7 @@ function renderBridge(
         headlessInstanceDefs: [], // Not used for bridge
         headlessInstanceCounter: { count: 0 },
         coordinatePrefix: [],
+        coordinateCounters: new Map(),
     });
     renderedBridge = optimizeRefs(renderedBridge, headlessImports);
 
@@ -1562,6 +1578,7 @@ function renderSandboxRoot(
         headlessInstanceDefs: [], // Not used for sandbox
         headlessInstanceCounter: { count: 0 },
         coordinatePrefix: [],
+        coordinateCounters: new Map(),
     });
     let refsPart =
         renderedBridge.rendered.length > 0

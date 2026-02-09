@@ -629,17 +629,41 @@ export function localIndexAmongSiblings(element: HTMLElement): number {
 
 /**
  * Build the full coordinate key string for a <jay:xxx> element.
- * Format: "jayTrackBy1/jayTrackBy2/.../contractName:localIndex"
+ * Format: "jayTrackBy1/jayTrackBy2/.../contractName:ref"
+ *
+ * Uses the element's `ref` attribute if present. If the element has no ref,
+ * a coordinateCounters map must be provided to auto-assign an index.
  */
-export function buildInstanceCoordinateKey(element: HTMLElement, contractName: string): string {
+export function buildInstanceCoordinateKey(
+    element: HTMLElement,
+    contractName: string,
+    coordinateCounters?: Map<string, number>,
+): string {
     const prefix = buildCoordinatePrefix(element);
-    const localIndex = localIndexAmongSiblings(element);
-    return [...prefix, `${contractName}:${localIndex}`].join('/');
+    let ref = element.getAttribute?.('ref');
+    if (!ref) {
+        if (coordinateCounters) {
+            const counterKey = [...prefix, contractName].join('/');
+            const localIndex = coordinateCounters.get(counterKey) ?? 0;
+            coordinateCounters.set(counterKey, localIndex + 1);
+            ref = String(localIndex);
+        } else {
+            // Fallback for backward compat: use sibling counting
+            ref = String(localIndexAmongSiblings(element));
+        }
+    }
+    return [...prefix, `${contractName}:${ref}`].join('/');
+}
+
+export interface HeadlessInstanceDiscoveryResult {
+    instances: DiscoveredHeadlessInstance[];
+    /** HTML with auto-generated ref attributes embedded on <jay:xxx> elements */
+    preRenderedJayHtml: string;
 }
 
 export function discoverHeadlessInstances(
     preRenderedJayHtml: string,
-): DiscoveredHeadlessInstance[] {
+): HeadlessInstanceDiscoveryResult {
     const root = parse(preRenderedJayHtml, {
         comment: true,
         blockTextElements: {
@@ -649,6 +673,7 @@ export function discoverHeadlessInstances(
     });
 
     const instances: DiscoveredHeadlessInstance[] = [];
+    const coordinateCounters = new Map<string, number>();
 
     function walk(element: HTMLElement, insidePreservedForEach: boolean) {
         const tagName = element.tagName?.toLowerCase();
@@ -674,10 +699,22 @@ export function discoverHeadlessInstances(
 
                 if (!hasUnresolvedProps) {
                     const prefix = buildCoordinatePrefix(element);
-                    const localIndex = localIndexAmongSiblings(element);
+
+                    // Use explicit ref or auto-generate one
+                    let ref = element.getAttribute('ref');
+                    if (!ref) {
+                        // Auto-generate ref using scope-level counter
+                        const counterKey = [...prefix, contractName].join('/');
+                        const localIndex = coordinateCounters.get(counterKey) ?? 0;
+                        coordinateCounters.set(counterKey, localIndex + 1);
+                        ref = String(localIndex);
+                        // Embed the auto-ref in the HTML for downstream consumers
+                        element.setAttribute('ref', ref);
+                    }
+
                     const coordinate = [
                         ...prefix,
-                        `${contractName}:${localIndex}`,
+                        `${contractName}:${ref}`,
                     ];
 
                     instances.push({
@@ -706,7 +743,7 @@ export function discoverHeadlessInstances(
         walk(body, false);
     }
 
-    return instances;
+    return { instances, preRenderedJayHtml: root.toString() };
 }
 
 /**
@@ -763,11 +800,17 @@ export function resolveHeadlessInstances(
             );
 
             if (!hasUnresolvedProps) {
-                // Build the same coordinate as discovery to match resolved data
+                // Read coordinate from the ref attribute (embedded by discoverHeadlessInstances)
                 const contractName = tagName.substring(4);
                 const prefix = buildCoordinatePrefix(element);
-                const localIndex = localIndexAmongSiblings(element);
-                const coord = [...prefix, `${contractName}:${localIndex}`];
+                const ref = element.getAttribute('ref');
+                if (!ref) {
+                    allValidations.push(
+                        `<jay:${contractName}> missing ref attribute — run discoverHeadlessInstances first`,
+                    );
+                    return;
+                }
+                const coord = [...prefix, `${contractName}:${ref}`];
                 const data = dataByCoordinate.get(coordinateKey(coord));
 
                 if (data) {

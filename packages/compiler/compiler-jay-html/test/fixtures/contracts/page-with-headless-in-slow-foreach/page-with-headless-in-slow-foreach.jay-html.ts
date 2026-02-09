@@ -17,6 +17,7 @@ import {
     ProductCardRefs,
     ProductCardInteractiveViewState,
 } from '../product-card/product-card.jay-contract';
+import { productCard } from '../product-card/product-card';
 
 export interface ProductOfPageWithHeadlessInSlowForeachViewState {
     _id: string;
@@ -75,7 +76,7 @@ function _headlessProductCard0Render(
         [],
     );
     const render = (viewState) =>
-        ConstructContext.withRootContext(viewState, undefined, () =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
             e('article', { class: 'hero-card' }, [
                 e('h2', {}, ['Product A']),
                 e('span', { class: 'price' }, [dt((vs) => vs.price)]),
@@ -106,7 +107,7 @@ function _headlessProductCard1Render(
 ): _HeadlessProductCard1ElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState) =>
-        ConstructContext.withRootContext(viewState, undefined, () =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
             e('article', { class: 'compact-card' }, [
                 e('h3', {}, ['Product B']),
                 e('span', { class: 'price' }, [dt((vs) => vs.price)]),
@@ -125,7 +126,16 @@ const _HeadlessProductCard1 = makeHeadlessInstanceComponent(
 export function render(
     options?: RenderElementOptions,
 ): PageWithHeadlessInSlowForeachElementPreRender {
-    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [productsRefManager, [refAR1, refAR2]] = ReferencesManager.for(
+        options,
+        [],
+        [],
+        [],
+        ['aR1', 'aR2'],
+    );
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
+        products: productsRefManager,
+    });
     const render = (viewState: PageWithHeadlessInSlowForeachViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
@@ -145,6 +155,7 @@ export function render(
                                     (vs1: ProductOfPageWithHeadlessInSlowForeachViewState) => ({
                                         productId: 'prod-123',
                                     }),
+                                    refAR1(),
                                 ),
                             ]),
                     ),
@@ -162,6 +173,7 @@ export function render(
                                     (vs1: ProductOfPageWithHeadlessInSlowForeachViewState) => ({
                                         productId: 'prod-456',
                                     }),
+                                    refAR2(),
                                 ),
                             ]),
                     ),

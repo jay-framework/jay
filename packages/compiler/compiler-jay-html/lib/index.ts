@@ -22,5 +22,6 @@ export {
     type HeadlessContractInfo,
     type DiscoveredHeadlessInstance,
     type HeadlessInstanceResolvedData,
+    type HeadlessInstanceDiscoveryResult,
     buildInstanceCoordinateKey,
 } from './slow-render/slow-render-transform';

@@ -604,10 +604,13 @@ async function handleDirectRequest(
 
     if (headlessInstanceComponents.length > 0) {
         const jayHtmlContent = await fs.readFile(route.jayHtmlPath, 'utf-8');
-        const discovered = discoverHeadlessInstances(jayHtmlContent);
+        const discoveryResult = discoverHeadlessInstances(jayHtmlContent);
 
-        if (discovered.length > 0) {
-            const slowResult = await slowRenderInstances(discovered, headlessInstanceComponents);
+        if (discoveryResult.instances.length > 0) {
+            const slowResult = await slowRenderInstances(
+                discoveryResult.instances,
+                headlessInstanceComponents,
+            );
             if (slowResult) {
                 instanceViewStates = { ...slowResult.slowViewStates };
                 instancePhaseDataForFast = slowResult.instancePhaseData;
@@ -820,15 +823,21 @@ async function preRenderJayHtml(
 
     // ── Pass 2: Resolve headless instance bindings ──
     if (headlessInstanceComponents.length > 0) {
-        const discovered = discoverHeadlessInstances(preRenderedJayHtml);
+        const discoveryResult = discoverHeadlessInstances(preRenderedJayHtml);
+        // Use the HTML with embedded ref attributes for downstream consumers
+        preRenderedJayHtml = discoveryResult.preRenderedJayHtml;
 
-        if (discovered.length > 0) {
-            const slowResult = await slowRenderInstances(discovered, headlessInstanceComponents);
+        if (discoveryResult.instances.length > 0) {
+            const slowResult = await slowRenderInstances(
+                discoveryResult.instances,
+                headlessInstanceComponents,
+            );
 
             if (slowResult) {
                 instancePhaseData = slowResult.instancePhaseData;
 
                 // Apply instance data to resolve bindings in inline templates
+                // Uses the ref-annotated HTML so resolveHeadlessInstances can read refs
                 const pass2Result = resolveHeadlessInstances(
                     preRenderedJayHtml,
                     slowResult.resolvedData,

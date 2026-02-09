@@ -15,6 +15,7 @@ import {
     ProductCardRefs,
     ProductCardInteractiveViewState
 } from '../product-card/product-card.jay-contract';
+import { productCard } from '../product-card/product-card';
 
 export interface PageWithHeadlessInstanceViewState {
     pageTitle: string;
@@ -65,7 +66,7 @@ type _HeadlessProductCard0ElementPreRender = [
 function _headlessProductCard0Render(options?: RenderElementOptions): _HeadlessProductCard0ElementPreRender {
     const [refManager, [refAddToCart]] = ReferencesManager.for(options, ['add to cart'], [], [], []);
     const render = (viewState) =>
-        ConstructContext.withRootContext(viewState, undefined, () =>
+        ConstructContext.withRootContext(viewState, refManager, () =>
             e('article', { class: 'hero-card' }, [
                 e('h2', {}, [dt((vs) => vs.name)]),
                 e('span', { class: 'price' }, [dt((vs) => vs.price)]),
@@ -83,14 +84,12 @@ const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
 );
 
 export function render(options?: RenderElementOptions): PageWithHeadlessInstanceElementPreRender {
-    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [refManager, [refAR1]] = ReferencesManager.for(options, [], [], ['aR1'], []);
     const render = (viewState: PageWithHeadlessInstanceViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
                 e('h1', {}, [dt((vs) => vs.pageTitle)]),
-                childComp(_HeadlessProductCard0, (vs: PageWithHeadlessInstanceViewState) => ({
-                    productId: 'prod-hero',
-                })),
+                childComp(_HeadlessProductCard0, (vs: PageWithHeadlessInstanceViewState) => ({productId: 'prod-hero'}), refAR1()),
             ]),
         ) as PageWithHeadlessInstanceElement;
     return [refManager.getPublicAPI() as PageWithHeadlessInstanceElementRefs, render];
