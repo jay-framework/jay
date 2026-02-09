@@ -6,13 +6,13 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Core Concepts & Architecture
 
-| #   | Title                            | Description                                                         |
-| --- | -------------------------------- | ------------------------------------------------------------------- |
-| 00  | inspirations                     | Initial inspirations for the Jay project                            |
-| 01  | what is Jay                      | Project overview: design-to-code, 3rd party UI inclusions, security |
-| 27  | guiding principles of Jay        | Core principles guiding the framework                               |
-| 34  | jay stack                        | Full-stack framework design: rendering phases, component API        |
-| 68  | jay stack conceptual model       | Conceptual model and architecture overview                          |
+| #   | Title                             | Description                                                         |
+| --- | --------------------------------- | ------------------------------------------------------------------- |
+| 00  | inspirations                      | Initial inspirations for the Jay project                            |
+| 01  | what is Jay                       | Project overview: design-to-code, 3rd party UI inclusions, security |
+| 27  | guiding principles of Jay         | Core principles guiding the framework                               |
+| 34  | jay stack                         | Full-stack framework design: rendering phases, component API        |
+| 68  | jay stack conceptual model        | Conceptual model and architecture overview                          |
 | 86  | jay stack full workflow lifecycle | Full lifecycle: setup → agent-kit → dev → render → refresh          |
 
 ---

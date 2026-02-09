@@ -290,7 +290,10 @@ export async function materializeContracts(
     /** Per-plugin data for plugins-index.yaml (Design Log #85) */
     const pluginsIndexMap = new Map<
         string,
-        { path: string; contracts: Array<{ name: string; type: 'static' | 'dynamic'; path: string }> }
+        {
+            path: string;
+            contracts: Array<{ name: string; type: 'static' | 'dynamic'; path: string }>;
+        }
     >();
     let staticCount = 0;
     let dynamicCount = 0;

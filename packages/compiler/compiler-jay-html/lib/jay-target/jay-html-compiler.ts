@@ -711,7 +711,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
 
         // Compile inline template children against the component's ViewState
         const componentVariables = new Variables(headlessImport.rootType);
-        const childIndent = newContext.indent.child(false)
+        const childIndent = newContext.indent.child(false);
 
         const childNodes = htmlElement.childNodes.filter(
             (_) => _.nodeType !== NodeType.TEXT_NODE || _.innerText.trim() !== '',
@@ -722,7 +722,9 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             inlineBody = new RenderFragment(
                 '',
                 Imports.none(),
-                [`Headless component instance <jay:${contractName}> must have inline template content`],
+                [
+                    `Headless component instance <jay:${contractName}> must have inline template content`,
+                ],
                 mkRefsTree([], {}),
             );
         } else {
@@ -790,7 +792,10 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             newContext.coordinateCounters.set(counterKey, localIndex + 1);
             coordinateRef = String(localIndex);
         }
-        const coordinateKey = [...newContext.coordinatePrefix, `${contractName}:${coordinateRef}`].join('/');
+        const coordinateKey = [
+            ...newContext.coordinatePrefix,
+            `${contractName}:${coordinateRef}`,
+        ].join('/');
 
         // Generate type aliases and render function code
         const renderFnCode = `
@@ -840,7 +845,11 @@ const ${componentSymbol} = makeHeadlessInstanceComponent(
                 .plus(renderedRef.imports)
                 .plus(Import.ConstructContext)
                 .plus(Import.makeHeadlessInstanceComponent),
-            [...propsGetterAndRefs.validations, ...inlineBody.validations, ...renderedRef.validations],
+            [
+                ...propsGetterAndRefs.validations,
+                ...inlineBody.validations,
+                ...renderedRef.validations,
+            ],
             renderedRef.refs,
         );
     }
@@ -1335,9 +1344,10 @@ ${Indent.forceIndent(code, 4)},
     const recursiveFunctionsSection = recursiveFunctions ? `\n${recursiveFunctions}\n\n` : '';
 
     // Generate headless component instance definitions (if any)
-    const headlessDefsCode = headlessInstanceDefs.length > 0
-        ? headlessInstanceDefs.map((def) => def.renderFnCode).join('\n') + '\n\n'
-        : '';
+    const headlessDefsCode =
+        headlessInstanceDefs.length > 0
+            ? headlessInstanceDefs.map((def) => def.renderFnCode).join('\n') + '\n\n'
+            : '';
 
     // Merge imports from headless instance definitions
     for (const def of headlessInstanceDefs) {

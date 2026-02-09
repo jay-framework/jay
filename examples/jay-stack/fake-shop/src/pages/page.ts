@@ -5,7 +5,12 @@ import {
     RenderPipeline,
     Signals,
 } from '@jay-framework/fullstack-component';
-import { PageElementRefs, PageContract, PageSlowViewState, PageFastViewState } from './page.jay-html';
+import {
+    PageElementRefs,
+    PageContract,
+    PageSlowViewState,
+    PageFastViewState,
+} from './page.jay-html';
 import { Props } from '@jay-framework/component';
 import { PRODUCTS_DATABASE_SERVICE, ProductsDatabaseService } from '../products-database';
 
@@ -16,10 +21,7 @@ async function renderSlowlyChanging(props: PageProps, productsDb: ProductsDataba
     const products = await productsDb.getProducts();
     const featured = products.slice(0, 3).map((p) => ({ _id: p.id }));
 
-    return phaseOutput<PageSlowViewState, HomePageCarryForward>(
-        { featuredProducts: featured },
-        {},
-    );
+    return phaseOutput<PageSlowViewState, HomePageCarryForward>({ featuredProducts: featured }, {});
 }
 
 async function renderFastChanging(

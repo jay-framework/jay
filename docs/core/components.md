@@ -551,7 +551,7 @@ Child components are used via the Jay-HTML template by importing headfull compon
   <body>
     <div>
       <!-- Use the child component in the template -->
-      <TodoItem todo="{todo}" forEach="todos" trackBy="id" />
+      <jay:TodoItem todo="{todo}" forEach="todos" trackBy="id" />
     </div>
   </body>
 </html>
@@ -603,6 +603,122 @@ You import the child headless component and use its view state and refs in the J
   </body>
 </html>
 ```
+
+### Instance-Based Headless Components (Inline Templates)
+
+Instance-based headless components use `<jay:contract-name>` tags to create multiple independent instances, each with its own props and inline template. Unlike key-based components (where data merges into the parent's ViewState), instance-based components manage their own ViewState independently.
+
+This pattern is useful for components that are rendered multiple times with different data — e.g., product cards, list items, or widgets.
+
+#### Defining the Component
+
+The component uses `makeJayStackComponent` with `props` and a `slowlyRender` and/or `fastRender` function:
+
+```typescript
+import { makeJayStackComponent, phaseOutput } from '@jay-framework/fullstack-component';
+import { ProductWidgetContract, ProductWidgetSlowViewState } from './product-widget.jay-contract';
+
+export interface ProductWidgetProps {
+  productId: string;
+}
+
+export const productWidget = makeJayStackComponent<ProductWidgetContract>()
+  .withProps<ProductWidgetProps>()
+  .withServices(PRODUCTS_DATABASE_SERVICE)
+  .withSlowlyRender(async (props, productsDb) => {
+    const product = await productsDb.getProduct(props.productId);
+    return phaseOutput<ProductWidgetSlowViewState, { productId: string }>(
+      { name: product.name, price: product.price, sku: product.sku },
+      { productId: product.id },
+    );
+  })
+  .withFastRender(async (props, carryForward, productsDb, inventoryService) => {
+    const inStock = await inventoryService.isInStock(carryForward.productId);
+    return Pipeline.ok({}).toPhaseOutput(() => ({
+      viewState: { inStock },
+      carryForward,
+    }));
+  })
+  .withInteractive((props, refs, fastViewState, carryForward) => {
+    refs.addToCart.onclick(() => {
+      console.log(`Adding ${carryForward.productId} to cart`);
+    });
+    return { render: () => ({ inStock: fastViewState.inStock[0] }) };
+  });
+```
+
+#### Using Instances in Jay-HTML
+
+Import the component without a `key`, then use `<jay:contract-name>` tags:
+
+```html
+<html>
+  <head>
+    <script
+      type="application/jay-headless"
+      plugin="product-widget"
+      contract="product-widget"
+    ></script>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
+  </head>
+  <body>
+    <!-- Static instances with fixed props -->
+    <jay:product-widget productId="1">
+      <h3>{name}</h3>
+      <div>Price: ${price}</div>
+      <button ref="addToCart">Add to Cart</button>
+    </jay:product-widget>
+
+    <!-- Instances inside slowForEach (one per array item) -->
+    <div forEach="featuredProducts" trackBy="_id">
+      <jay:product-widget productId="{_id}">
+        <h3>{name}</h3>
+        <div>Price: ${price}</div>
+        <button ref="addToCart">Add to Cart</button>
+      </jay:product-widget>
+    </div>
+  </body>
+</html>
+```
+
+**Key points:**
+- Props are passed as attributes on the `<jay:xxx>` tag
+- The inline template bindings (`{name}`, `{price}`) resolve against the **headless component's ViewState**, not the page's
+- Each instance runs its own slow/fast/interactive pipeline independently
+- Instances inside `forEach` must use a slow-phase array (the array's `phase` must be `slow` in the contract)
+
+#### Contract for Instance Components
+
+The component's contract defines which fields are available in each phase:
+
+```yaml
+name: ProductWidget
+props:
+  - name: productId
+    type: string
+    required: true
+tags:
+  - tag: name
+    type: data
+    dataType: string
+    phase: slow
+
+  - tag: price
+    type: data
+    dataType: number
+    phase: slow
+
+  - tag: in-stock
+    type: variant
+    dataType: boolean
+    phase: fast+interactive
+
+  - tag: add-to-cart
+    type: interactive
+    elementType: HTMLButtonElement
+```
+
+Tags with `phase: slow` are resolved at build time (or request time for slowForEach). Tags with `phase: fast+interactive` are resolved at request time. Interactive-only tags (buttons, inputs) don't need an explicit phase — they default to `fast+interactive`.
 
 ### Using Plugin Headless Components
 
@@ -700,7 +816,7 @@ Then use the Profile component in your Jay-HTML:
   </head>
   <body>
     <div>
-      <Profile user="{user}" />
+      <jay:Profile user="{user}" />
     </div>
   </body>
 </html>

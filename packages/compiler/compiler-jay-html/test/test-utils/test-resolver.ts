@@ -124,10 +124,7 @@ export const TEST_IMPORT_RESOLVER: JayImportResolver = {
                         projectRoot,
                         'contracts/product-card/product-card.jay-contract',
                     ),
-                    componentPath: path.resolve(
-                        projectRoot,
-                        'contracts/product-card/product-card',
-                    ),
+                    componentPath: path.resolve(projectRoot, 'contracts/product-card/product-card'),
                     componentName: 'productCard',
                     isNpmPackage: false,
                 },

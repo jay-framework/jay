@@ -13,7 +13,7 @@ import { makeHeadlessInstanceComponent } from '@jay-framework/stack-client-runti
 import {
     ProductCardViewState,
     ProductCardRefs,
-    ProductCardInteractiveViewState
+    ProductCardInteractiveViewState,
 } from '../product-card/product-card.jay-contract';
 // @ts-ignore
 import { productCard } from '../product-card/product-card';
@@ -50,22 +50,24 @@ export type PageWithHeadlessInstanceContract = JayContract<
 >;
 
 // Inline template for headless component: product-card #0
-type _HeadlessProductCard0Element = JayElement<
-    ProductCardInteractiveViewState,
-    ProductCardRefs
->;
+type _HeadlessProductCard0Element = JayElement<ProductCardInteractiveViewState, ProductCardRefs>;
 type _HeadlessProductCard0ElementRender = RenderElement<
     ProductCardInteractiveViewState,
     ProductCardRefs,
     _HeadlessProductCard0Element
 >;
-type _HeadlessProductCard0ElementPreRender = [
-    ProductCardRefs,
-    _HeadlessProductCard0ElementRender,
-];
+type _HeadlessProductCard0ElementPreRender = [ProductCardRefs, _HeadlessProductCard0ElementRender];
 
-function _headlessProductCard0Render(options?: RenderElementOptions): _HeadlessProductCard0ElementPreRender {
-    const [refManager, [refAddToCart]] = ReferencesManager.for(options, ['add to cart'], [], [], []);
+function _headlessProductCard0Render(
+    options?: RenderElementOptions,
+): _HeadlessProductCard0ElementPreRender {
+    const [refManager, [refAddToCart]] = ReferencesManager.for(
+        options,
+        ['add to cart'],
+        [],
+        [],
+        [],
+    );
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('article', { class: 'hero-card' }, [
@@ -90,7 +92,11 @@ export function render(options?: RenderElementOptions): PageWithHeadlessInstance
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
                 e('h1', {}, [dt((vs) => vs.pageTitle)]),
-                childComp(_HeadlessProductCard0, (vs: PageWithHeadlessInstanceViewState) => ({productId: 'prod-hero'}), refAR1()),
+                childComp(
+                    _HeadlessProductCard0,
+                    (vs: PageWithHeadlessInstanceViewState) => ({ productId: 'prod-hero' }),
+                    refAR1(),
+                ),
             ]),
         ) as PageWithHeadlessInstanceElement;
     return [refManager.getPublicAPI() as PageWithHeadlessInstanceElementRefs, render];

@@ -223,9 +223,7 @@ async function runMaterialize(
             getLogger().important(`   Output: ${result.outputDir}`);
         }
     } catch (error: any) {
-        getLogger().error(
-            chalk.red('❌ Failed to materialize contracts:') + ' ' + error.message,
-        );
+        getLogger().error(chalk.red('❌ Failed to materialize contracts:') + ' ' + error.message);
         if (options.verbose) {
             getLogger().error(error.stack);
         }
@@ -240,7 +238,9 @@ async function runMaterialize(
 // Agent kit command (Design Log #85): prepare agent-kit folder with materialized contracts + plugins index
 program
     .command('agent-kit')
-    .description('Prepare the agent kit: materialize contracts and write plugins index to agent-kit/materialized-contracts/')
+    .description(
+        'Prepare the agent kit: materialize contracts and write plugins index to agent-kit/materialized-contracts/',
+    )
     .option('-o, --output <dir>', 'Output directory (default: agent-kit/materialized-contracts)')
     .option('--yaml', 'Output contract index as YAML to stdout')
     .option('--list', 'List contracts without writing files')
@@ -259,7 +259,9 @@ program
 // Action execution command (Design Log #84/#85/#86): run a plugin action from CLI for agent discovery
 program
     .command('action <plugin/action>')
-    .description('Run a plugin action (e.g., jay-stack action wix-stores/searchProducts --input \'{"query":""}\')')
+    .description(
+        'Run a plugin action (e.g., jay-stack action wix-stores/searchProducts --input \'{"query":""}\')',
+    )
     .option('--input <json>', 'JSON input for the action (default: {})')
     .option('--yaml', 'Output result as YAML instead of JSON')
     .option('-v, --verbose', 'Show detailed output')
@@ -270,7 +272,9 @@ program
 // Params discovery command (Design Log #84/#86): discover load param values for a contract
 program
     .command('params <plugin/contract>')
-    .description('Discover load param values for a contract (e.g., jay-stack params wix-stores/product-page)')
+    .description(
+        'Discover load param values for a contract (e.g., jay-stack params wix-stores/product-page)',
+    )
     .option('--yaml', 'Output result as YAML instead of JSON')
     .option('-v, --verbose', 'Show detailed output')
     .action(async (contractRef: string, options) => {

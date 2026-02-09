@@ -12,14 +12,8 @@ import {
     ProductWidgetFastViewState,
 } from './product-widget.jay-contract';
 import { createSignal, Props } from '@jay-framework/component';
-import {
-    PRODUCTS_DATABASE_SERVICE,
-    ProductsDatabaseService,
-} from '../../products-database';
-import {
-    INVENTORY_SERVICE,
-    InventoryService,
-} from '../../inventory-service';
+import { PRODUCTS_DATABASE_SERVICE, ProductsDatabaseService } from '../../products-database';
+import { INVENTORY_SERVICE, InventoryService } from '../../inventory-service';
 
 export interface ProductWidgetProps {
     productId: string;
@@ -32,24 +26,22 @@ interface WidgetCarryForward {
 export const productWidget = makeJayStackComponent<ProductWidgetContract>()
     .withProps<ProductWidgetProps>()
     .withServices(PRODUCTS_DATABASE_SERVICE, INVENTORY_SERVICE)
-    .withSlowlyRender(
-        async (props: ProductWidgetProps, productsDb: ProductsDatabaseService) => {
-            const products = await productsDb.getProducts();
-            const product = products.find((p) => p.id === props.productId);
+    .withSlowlyRender(async (props: ProductWidgetProps, productsDb: ProductsDatabaseService) => {
+        const products = await productsDb.getProducts();
+        const product = products.find((p) => p.id === props.productId);
 
-            if (!product) {
-                return phaseOutput<ProductWidgetSlowViewState, WidgetCarryForward>(
-                    { name: 'Unknown Product', price: 0, sku: 'N/A' },
-                    { productId: props.productId },
-                );
-            }
-
+        if (!product) {
             return phaseOutput<ProductWidgetSlowViewState, WidgetCarryForward>(
-                { name: product.name, price: product.price, sku: product.sku },
-                { productId: product.id },
+                { name: 'Unknown Product', price: 0, sku: 'N/A' },
+                { productId: props.productId },
             );
-        },
-    )
+        }
+
+        return phaseOutput<ProductWidgetSlowViewState, WidgetCarryForward>(
+            { name: product.name, price: product.price, sku: product.sku },
+            { productId: product.id },
+        );
+    })
     .withFastRender(
         async (
             props: ProductWidgetProps,

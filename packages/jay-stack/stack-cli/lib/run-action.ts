@@ -47,11 +47,8 @@ export async function runAction(
         await initializeServices(projectRoot, viteServer);
 
         // Discover and register actions
-        const {
-            discoverAndRegisterActions,
-            discoverAllPluginActions,
-            ActionRegistry,
-        } = await import('@jay-framework/stack-server-runtime');
+        const { discoverAndRegisterActions, discoverAllPluginActions, ActionRegistry } =
+            await import('@jay-framework/stack-server-runtime');
 
         const registry = new ActionRegistry();
 

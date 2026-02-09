@@ -1009,7 +1009,8 @@ tags:
             ]);
 
             expect(result.validations).toEqual([]);
-            expect(prettifyHtml(result.val!)).toEqual(prettifyHtml(`<!DOCTYPE html>
+            expect(prettifyHtml(result.val!)).toEqual(
+                prettifyHtml(`<!DOCTYPE html>
 <html>
 <head>
     <script type="application/jay-headless" plugin="wix-stores" contract="product-card"></script>
@@ -1020,7 +1021,8 @@ tags:
         <span class="price">$29.99</span>
     </jay:product-card>
 </body>
-</html>`));
+</html>`),
+            );
         });
 
         it('should preserve fast/interactive bindings inside headless instances', () => {
@@ -1044,7 +1046,8 @@ tags:
             ]);
 
             expect(result.validations).toEqual([]);
-            expect(prettifyHtml(result.val!)).toEqual(prettifyHtml(`<!DOCTYPE html>
+            expect(prettifyHtml(result.val!)).toEqual(
+                prettifyHtml(`<!DOCTYPE html>
 <html>
 <head></head>
 <body>
@@ -1053,7 +1056,8 @@ tags:
         <span class="stock">{stockCount}</span>
     </jay:product-card>
 </body>
-</html>`));
+</html>`),
+            );
         });
 
         it('should resolve multiple instances by coordinate', () => {
@@ -1084,7 +1088,8 @@ tags:
             ]);
 
             expect(result.validations).toEqual([]);
-            expect(prettifyHtml(result.val!)).toEqual(prettifyHtml(`<!DOCTYPE html>
+            expect(prettifyHtml(result.val!)).toEqual(
+                prettifyHtml(`<!DOCTYPE html>
 <html>
 <head></head>
 <body>
@@ -1095,7 +1100,8 @@ tags:
         <h2>Widget B</h2>
     </jay:product-card>
 </body>
-</html>`));
+</html>`),
+            );
         });
 
         it('should resolve instances after slow forEach unrolling using trackBy coordinates', () => {
@@ -1133,7 +1139,8 @@ tags:
             ]);
 
             expect(result.validations).toEqual([]);
-            expect(prettifyHtml(result.val!)).toEqual(prettifyHtml(`<!DOCTYPE html>
+            expect(prettifyHtml(result.val!)).toEqual(
+                prettifyHtml(`<!DOCTYPE html>
 <html>
 <head></head>
 <body>
@@ -1150,7 +1157,8 @@ tags:
         </jay:product-card>
     </div>
 </body>
-</html>`));
+</html>`),
+            );
         });
 
         it('should skip instances inside preserved forEach', () => {
@@ -1178,7 +1186,8 @@ tags:
             ]);
 
             expect(result.validations).toEqual([]);
-            expect(prettifyHtml(result.val!)).toEqual(prettifyHtml(`<!DOCTYPE html>
+            expect(prettifyHtml(result.val!)).toEqual(
+                prettifyHtml(`<!DOCTYPE html>
 <html>
 <head></head>
 <body>
@@ -1191,7 +1200,8 @@ tags:
         </jay:product-card>
     </div>
 </body>
-</html>`));
+</html>`),
+            );
         });
 
         it('full two-pass pipeline: page bindings + instance bindings', () => {
@@ -1258,7 +1268,8 @@ tags:
             ]);
 
             expect(pass2.validations).toEqual([]);
-            expect(prettifyHtml(pass2.val!)).toEqual(prettifyHtml(`<!DOCTYPE html>
+            expect(prettifyHtml(pass2.val!)).toEqual(
+                prettifyHtml(`<!DOCTYPE html>
 <html>
 <head>
     <script type="application/jay-headless" plugin="wix-stores" contract="product-card"></script>
@@ -1274,7 +1285,8 @@ tags:
         </article>
     </jay:product-card>
 </body>
-</html>`));
+</html>`),
+            );
         });
 
         it('full two-pass pipeline with slow forEach unrolling', () => {
@@ -1313,10 +1325,7 @@ tags:
 </body>
 </html>`,
                 slowViewState: {
-                    products: [
-                        { _id: 'prod-123' },
-                        { _id: 'prod-456' },
-                    ],
+                    products: [{ _id: 'prod-123' }, { _id: 'prod-456' }],
                 },
                 contract: pageContract,
             };

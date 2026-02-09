@@ -51,9 +51,7 @@ export async function runParams(
 
         if (resolution.validations.length > 0 || !resolution.val) {
             getLogger().error(
-                chalk.red(
-                    `❌ Could not resolve plugin "${pluginName}" contract "${contractName}"`,
-                ),
+                chalk.red(`❌ Could not resolve plugin "${pluginName}" contract "${contractName}"`),
             );
             for (const msg of resolution.validations) {
                 getLogger().error(`   ${msg}`);

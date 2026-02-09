@@ -71,10 +71,7 @@ export async function slowRenderInstances(
         }
 
         const services = resolveServices(comp.compDefinition.services);
-        const slowResult = await comp.compDefinition.slowlyRender(
-            instance.props,
-            ...services,
-        );
+        const slowResult = await comp.compDefinition.slowlyRender(instance.props, ...services);
 
         if (slowResult.kind === 'PhaseOutput') {
             const coordKey = instance.coordinate.join('/');

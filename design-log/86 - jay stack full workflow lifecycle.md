@@ -49,6 +49,7 @@ Jay Stack has multiple stages from project setup to runtime. Several pieces exis
 **What happens:** Developer creates a new project, installs plugins.
 
 **Existing:**
+
 - `npm init` / project scaffold
 - `npm install` plugins (e.g., `@wix/stores`, `@wix/data`)
 
@@ -61,6 +62,7 @@ Jay Stack has multiple stages from project setup to runtime. Several pieces exis
 **What happens:** Plugins are configured. Some plugins (like wix-data) need initial configuration and can generate reference files, default configs, or seed data after basic setup.
 
 **Example:** After installing `@wix/data`, the developer runs a setup command. The plugin:
+
 - Creates default collection schemas
 - Generates reference config files
 - Seeds initial data (if applicable)
@@ -84,6 +86,7 @@ jay-stack setup wix-data --force
 ```
 
 **What `jay-stack setup` does:**
+
 1. Scans installed plugins for a `setup` export or `setup` entry in `plugin.yaml`
 2. Runs each plugin's setup function
 3. Plugin setup can:
@@ -98,10 +101,10 @@ jay-stack setup wix-data --force
 # plugin.yaml
 name: wix-data
 setup:
-  handler: ./setup.js        # Setup function entry point
+  handler: ./setup.js # Setup function entry point
   description: Configure CMS collections and seed data
   creates:
-    - src/data/collections/   # Files/dirs this setup creates
+    - src/data/collections/ # Files/dirs this setup creates
 ```
 
 **When to run:** After install, before agent-kit. Not automatic - developer explicitly runs it.
@@ -111,10 +114,12 @@ setup:
 **What happens:** Prepare everything an agent needs to generate pages.
 
 **Existing:**
+
 - `jay-stack contracts` - materializes contracts to disk
 - Design Log #85 defines `agent-kit/` folder structure
 
 **Proposed:** Rename/extend to `jay-stack agent-kit` (as in #85):
+
 1. Materialize dynamic contracts → `agent-kit/materialized-contracts/`
 2. Generate contracts-index.yaml and plugins-index.yaml
 3. Ensure INSTRUCTIONS.md is present
@@ -133,16 +138,19 @@ jay-stack action <action>    # Run plugin action for data discovery
 **What happens:** Agent or developer creates/edits pages, components, contracts.
 
 **Agent workflow:**
+
 1. Read `agent-kit/INSTRUCTIONS.md`
 2. Read contracts-index, plugins-index
 3. Read content files from `agent-kit/content/`
 4. Generate `src/pages/**/page.jay-html`, `page.jay-contract`, `page.conf.yaml`
 
 **Human workflow:**
+
 - Write jay-html templates, TypeScript components
 - Use `jay-stack validate` to check files
 
 **Existing CLI:**
+
 - `jay-stack validate` - validates .jay-html and .jay-contract files
 - `jay-stack validate-plugin` - validates plugin packages
 
@@ -151,10 +159,12 @@ jay-stack action <action>    # Run plugin action for data discovery
 **What happens:** Static site generation. All slow-phase data is resolved, templates are rendered with slow ViewState, carry-forward data is stored.
 
 **Existing:**
+
 - Dev server runs slow rendering on startup
 - Build (not yet fully implemented) would do the same
 
 **What runs:**
+
 1. For each page: resolve slow props (static values, load params)
 2. Call component's `slowlyRender(props)` → slow ViewState + carryForward
 3. Transform jay-html template with slow ViewState
@@ -162,6 +172,7 @@ jay-stack action <action>    # Run plugin action for data discovery
 5. Cache results (page-level caching, includes nested component slow renders)
 
 **CLI:**
+
 - `jay-stack dev` - dev server (includes slow render)
 - `jay-stack build` (future) - production build
 
@@ -170,6 +181,7 @@ jay-stack action <action>    # Run plugin action for data discovery
 **What happens:** Per-request rendering. Session-aware, dynamic data injected.
 
 **What runs:**
+
 1. Receive HTTP request
 2. For each page: call component's `fastRender(carryForward)` → fast ViewState
 3. Merge fast ViewState into pre-rendered HTML
@@ -183,6 +195,7 @@ jay-stack action <action>    # Run plugin action for data discovery
 **What happens:** Browser hydrates, signals activate, interactive elements wire up.
 
 **What runs:**
+
 1. Client runtime initializes
 2. `makeJayComponent` attaches to DOM elements
 3. Signals created from interactive ViewState
@@ -213,6 +226,7 @@ jay-stack refresh --all
 ```
 
 **What it does:**
+
 1. Identify affected routes (by path or by contract dependency)
 2. Re-run slow render for those routes only
 3. Update cached slow-render output
@@ -222,18 +236,18 @@ jay-stack refresh --all
 
 ## Summary: CLI Commands by Phase
 
-| Phase | Command | Status | Description |
-|-------|---------|--------|-------------|
-| 2. Plugin Setup | `jay-stack setup [plugin]` | **New** | Run plugin post-install setup |
-| 3. Agent Kit | `jay-stack agent-kit` | Proposed (#85) | Materialize contracts + kit |
-| 3. Agent Kit | `jay-stack contracts` | **Exists** | Materialize contracts |
-| 3. Agent Kit | `jay-stack params <contract>` | Proposed (#84) | Discover load param values |
-| 3. Agent Kit | `jay-stack action <action>` | Proposed (#84) | Run plugin action |
-| 4. Development | `jay-stack validate` | **Exists** | Validate project files |
-| 4. Development | `jay-stack validate-plugin` | **Exists** | Validate plugin package |
-| 5. Slow Render | `jay-stack dev` | **Exists** | Dev server (slow + fast + interactive) |
-| 5. Slow Render | `jay-stack build` | Future | Production build |
-| 8. Slow Refresh | `jay-stack refresh [route]` | Future | Re-render slow phase for route |
+| Phase           | Command                       | Status         | Description                            |
+| --------------- | ----------------------------- | -------------- | -------------------------------------- |
+| 2. Plugin Setup | `jay-stack setup [plugin]`    | **New**        | Run plugin post-install setup          |
+| 3. Agent Kit    | `jay-stack agent-kit`         | Proposed (#85) | Materialize contracts + kit            |
+| 3. Agent Kit    | `jay-stack contracts`         | **Exists**     | Materialize contracts                  |
+| 3. Agent Kit    | `jay-stack params <contract>` | Proposed (#84) | Discover load param values             |
+| 3. Agent Kit    | `jay-stack action <action>`   | Proposed (#84) | Run plugin action                      |
+| 4. Development  | `jay-stack validate`          | **Exists**     | Validate project files                 |
+| 4. Development  | `jay-stack validate-plugin`   | **Exists**     | Validate plugin package                |
+| 5. Slow Render  | `jay-stack dev`               | **Exists**     | Dev server (slow + fast + interactive) |
+| 5. Slow Render  | `jay-stack build`             | Future         | Production build                       |
+| 8. Slow Refresh | `jay-stack refresh [route]`   | Future         | Re-render slow phase for route         |
 
 ## Questions
 
@@ -252,6 +266,7 @@ jay-stack refresh --all
 ### Q4: Should `jay-stack refresh` invalidate cache selectively?
 
 Yes. The slow-render cache is page-level. Refresh should:
+
 1. Identify which cache entries are affected
 2. Re-render only those
 3. This requires tracking which contracts/data sources each page depends on

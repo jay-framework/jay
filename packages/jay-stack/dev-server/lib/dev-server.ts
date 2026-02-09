@@ -496,9 +496,7 @@ async function handlePreRenderRequest(
     let fastViewState = renderedFast.rendered;
     let fastCarryForward = renderedFast.carryForward;
 
-    const instancePhaseData = (carryForward as any)?.__instances as
-        | InstancePhaseData
-        | undefined;
+    const instancePhaseData = (carryForward as any)?.__instances as InstancePhaseData | undefined;
     if (instancePhaseData && pagePartsResult.val.headlessInstanceComponents.length > 0) {
         const instanceFastResult = await renderFastChangingDataForInstances(
             instancePhaseData,
@@ -727,7 +725,7 @@ async function sendResponse(
 
     // Save generated client script to build folder for debugging
     if (options.buildFolder) {
-        const pageName = (!url || url === '/') ? 'index' : url.replace(/^\//, '').replace(/\//g, '-');
+        const pageName = !url || url === '/' ? 'index' : url.replace(/^\//, '').replace(/\//g, '-');
         const clientScriptDir = path.join(options.buildFolder, 'client-scripts');
         await fs.mkdir(clientScriptDir, { recursive: true });
         await fs.writeFile(path.join(clientScriptDir, `${pageName}.html`), pageHtml, 'utf-8');
@@ -871,7 +869,9 @@ async function preRenderJayHtml(
 async function renderFastChangingDataForInstances(
     instancePhaseData: InstancePhaseData,
     headlessInstanceComponents: HeadlessInstanceComponent[],
-): Promise<{ viewStates: Record<string, object>; carryForwards: Record<string, object> } | undefined> {
+): Promise<
+    { viewStates: Record<string, object>; carryForwards: Record<string, object> } | undefined
+> {
     // Build a lookup from contract name to component info
     const componentByContractName = new Map<string, HeadlessInstanceComponent>();
     for (const comp of headlessInstanceComponents) {

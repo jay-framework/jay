@@ -89,7 +89,7 @@ C) **Block directives in markdown** — e.g. `::: wix-stores/product-card produc
 
 ```typescript
 export interface ProductPageParams extends UrlParams {
-    slug: string;
+  slug: string;
 }
 ```
 
@@ -102,9 +102,9 @@ The contract file (`product-page.jay-contract`) currently has only `tags` (ViewS
 ```yaml
 name: product-page
 params:
-  slug: string   # type is ignored; URL params are always string (UrlParams = Record<string, string>)
+  slug: string # type is ignored; URL params are always string (UrlParams = Record<string, string>)
 tags:
-  - {tag: _id, type: data, dataType: string}
+  - { tag: _id, type: data, dataType: string }
   # ...
 ```
 
@@ -112,7 +112,7 @@ tags:
 
 ```typescript
 export interface ProductPageParams extends UrlParams {
-    slug: string;
+  slug: string;
 }
 ```
 

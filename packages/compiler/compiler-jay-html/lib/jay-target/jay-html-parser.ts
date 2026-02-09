@@ -362,10 +362,7 @@ async function parseTypes(
         const headlessImportedTypes = Object.fromEntries(
             headlessImports
                 .filter((_) => _.key)
-                .map((_) => [
-                    _.key,
-                    new JayImportedType(_.rootType.name, _.rootType, true),
-                ]),
+                .map((_) => [_.key, new JayImportedType(_.rootType.name, _.rootType, true)]),
         );
 
         if (resolvedType instanceof JayObjectType) {

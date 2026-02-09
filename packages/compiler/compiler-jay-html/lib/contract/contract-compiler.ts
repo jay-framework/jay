@@ -102,9 +102,7 @@ function generateParamsInterface(
     params: ContractParam[],
 ): { paramsImport: string; paramsInterface: string } {
     const paramsTypeName = `${contractName}Params`;
-    const paramLines = params.map(
-        (param) => `  ${camelCase(param.name)}: string;`,
-    );
+    const paramLines = params.map((param) => `  ${camelCase(param.name)}: string;`);
     const paramsImport = `import { UrlParams } from '${JAY_FULLSTACK_COMPONENTS}';`;
     const paramsInterface = `export interface ${paramsTypeName} extends UrlParams {\n${paramLines.join('\n')}\n}`;
     return { paramsImport, paramsInterface };

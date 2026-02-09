@@ -7,7 +7,14 @@ import {
     JayRecursiveType,
     JayArrayType,
 } from '@jay-framework/compiler-shared';
-import { Contract, ContractParam, ContractProp, ContractTag, ContractTagType, RenderingPhase } from './contract';
+import {
+    Contract,
+    ContractParam,
+    ContractProp,
+    ContractTag,
+    ContractTagType,
+    RenderingPhase,
+} from './contract';
 import yaml from 'js-yaml';
 import { parseIsEnum, parseEnumValues } from '../';
 import { pascalCase } from 'change-case';
@@ -401,7 +408,11 @@ export function parseContract(contractYaml: string, fileName: string): WithValid
 
         // Parse params if present (Design Log #85: URL/load params; always string in generated type)
         let parsedParams: ContractParam[] | undefined;
-        if (parsedYaml.params && typeof parsedYaml.params === 'object' && !Array.isArray(parsedYaml.params)) {
+        if (
+            parsedYaml.params &&
+            typeof parsedYaml.params === 'object' &&
+            !Array.isArray(parsedYaml.params)
+        ) {
             parsedParams = Object.keys(parsedYaml.params).map((name) => ({ name }));
             if (parsedParams.length === 0) parsedParams = undefined;
         }

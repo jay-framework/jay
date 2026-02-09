@@ -713,10 +713,7 @@ export function discoverHeadlessInstances(
                         element.setAttribute('ref', ref);
                     }
 
-                    const coordinate = [
-                        ...prefix,
-                        `${contractName}:${ref}`,
-                    ];
+                    const coordinate = [...prefix, `${contractName}:${ref}`];
 
                     instances.push({
                         contractName,
@@ -787,10 +784,7 @@ export function resolveHeadlessInstances(
 
     const allValidations: string[] = [];
 
-    function walkAndResolve(
-        element: HTMLElement,
-        insidePreservedForEach: boolean,
-    ): void {
+    function walkAndResolve(element: HTMLElement, insidePreservedForEach: boolean): void {
         const tagName = element.tagName?.toLowerCase();
         const hasForEach = element.getAttribute('forEach') != null;
 
@@ -835,19 +829,14 @@ export function resolveHeadlessInstances(
         // Recurse into children
         for (const child of element.childNodes) {
             if (child.nodeType === NodeType.ELEMENT_NODE) {
-                walkAndResolve(
-                    child as HTMLElement,
-                    insidePreservedForEach || hasForEach,
-                );
+                walkAndResolve(child as HTMLElement, insidePreservedForEach || hasForEach);
             }
         }
     }
 
     const body = root.querySelector('body');
     if (!body) {
-        return new WithValidations(preRenderedJayHtml, [
-            'jay-html must have a body element',
-        ]);
+        return new WithValidations(preRenderedJayHtml, ['jay-html must have a body element']);
     }
 
     walkAndResolve(body, false);

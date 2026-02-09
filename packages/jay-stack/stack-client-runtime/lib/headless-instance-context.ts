@@ -99,9 +99,5 @@ export function makeHeadlessInstanceComponent<
     };
 
     // Only pass plugin context markers — HEADLESS_INSTANCES is accessed via useContext directly
-    return (makeJayComponent as any)(
-        preRender,
-        wrappedConstructor,
-        ...pluginContexts,
-    );
+    return (makeJayComponent as any)(preRender, wrappedConstructor, ...pluginContexts);
 }
