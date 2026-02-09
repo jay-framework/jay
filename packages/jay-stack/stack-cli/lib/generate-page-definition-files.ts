@@ -6,6 +6,7 @@ import {
     JAY_IMPORT_RESOLVER,
     parseJayFile,
 } from '@jay-framework/compiler-jay-html';
+import { getLogger } from '@jay-framework/logger';
 
 export async function generatePageDefinitionFiles(
     routes: DevServerRoute[],
@@ -58,17 +59,17 @@ export async function generatePageDefinitionFiles(
             const definitionFile = generateElementDefinitionFile(parsedJayHtml);
 
             if (definitionFile.validations.length > 0) {
-                console.log(
+                getLogger().warn(
                     `failed to generate .d.ts for ${jayHtmlPath} with validation errors: ${definitionFile.validations.join('\n')}`,
                 );
             } else {
                 // Save the definition file as page.jay-html.d.ts
                 const definitionFilePath = jayHtmlPath + '.d.ts';
                 await fs.promises.writeFile(definitionFilePath, definitionFile.val, 'utf-8');
-                console.log(`📦 Generated definition file: ${definitionFilePath}`);
+                getLogger().info(`📦 Generated definition file: ${definitionFilePath}`);
             }
         } catch (error) {
-            console.error(`Failed to generate definition file for ${jayHtmlPath}:`, error);
+            getLogger().error(`Failed to generate definition file for ${jayHtmlPath}: ${error}`);
         }
     }
 }

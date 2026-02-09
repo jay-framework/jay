@@ -36,10 +36,22 @@ function createPluginInitInfo(
 
 describe('generateClientScript', () => {
     const baseJayHtmlPath = '/src/pages/index.jay-html';
+    // Disable automation for these tests to focus on core functionality
+    const noAutomation = { enableAutomation: false };
 
     describe('basic HTML structure', () => {
         it('should generate valid HTML with no parts', () => {
-            const html = generateClientScript({}, {}, [], baseJayHtmlPath);
+            const html = generateClientScript(
+                {},
+                {},
+                [],
+                baseJayHtmlPath,
+                {},
+                {},
+                undefined,
+                [],
+                noAutomation,
+            );
 
             expect(formatHtml(html)).toEqual(
                 formatHtml(`
@@ -65,7 +77,7 @@ describe('generateClientScript', () => {
                           const target = document.getElementById('target');
                           const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [], trackByMap)
 
-                          const instance = pageComp({...viewState, ...fastCarryForward})
+                          const instance = pageComp({/* placeholder for page props */})
                           target.appendChild(instance.element.dom);
                         </script>
                       </body>
@@ -78,7 +90,17 @@ describe('generateClientScript', () => {
             const viewState = { count: 5, name: 'test' };
             const fastCarryForward = { timestamp: 12345 };
 
-            const html = generateClientScript(viewState, fastCarryForward, [], baseJayHtmlPath);
+            const html = generateClientScript(
+                viewState,
+                fastCarryForward,
+                [],
+                baseJayHtmlPath,
+                {},
+                {},
+                undefined,
+                [],
+                noAutomation,
+            );
 
             expect(formatHtml(html)).toEqual(
                 formatHtml(`
@@ -104,7 +126,7 @@ describe('generateClientScript', () => {
                           const target = document.getElementById('target');
                           const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [], trackByMap)
 
-                          const instance = pageComp({...viewState, ...fastCarryForward})
+                          const instance = pageComp({/* placeholder for page props */})
                           target.appendChild(instance.element.dom);
                         </script>
                       </body>
@@ -115,7 +137,17 @@ describe('generateClientScript', () => {
 
         it('should include trackByMap when provided', () => {
             const trackByMap = { items: 'id' };
-            const html = generateClientScript({}, {}, [], baseJayHtmlPath, trackByMap);
+            const html = generateClientScript(
+                {},
+                {},
+                [],
+                baseJayHtmlPath,
+                trackByMap,
+                {},
+                undefined,
+                [],
+                noAutomation,
+            );
 
             expect(formatHtml(html)).toEqual(
                 formatHtml(`
@@ -141,7 +173,7 @@ describe('generateClientScript', () => {
                           const target = document.getElementById('target');
                           const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [], trackByMap)
 
-                          const instance = pageComp({...viewState, ...fastCarryForward})
+                          const instance = pageComp({/* placeholder for page props */})
                           target.appendChild(instance.element.dom);
                         </script>
                       </body>
@@ -160,7 +192,17 @@ describe('generateClientScript', () => {
                 ),
             ];
 
-            const html = generateClientScript({}, {}, parts, baseJayHtmlPath);
+            const html = generateClientScript(
+                {},
+                {},
+                parts,
+                baseJayHtmlPath,
+                {},
+                {},
+                undefined,
+                [],
+                noAutomation,
+            );
 
             expect(formatHtml(html)).toEqual(
                 formatHtml(`
@@ -189,7 +231,7 @@ describe('generateClientScript', () => {
         { component: ProductCard, name: "product-card" }
         ], trackByMap)
 
-                          const instance = pageComp({...viewState, ...fastCarryForward})
+                          const instance = pageComp({/* placeholder for page props */})
                           target.appendChild(instance.element.dom);
                         </script>
                       </body>
@@ -210,7 +252,17 @@ describe('generateClientScript', () => {
                 ),
             ];
 
-            const html = generateClientScript({}, {}, parts, baseJayHtmlPath);
+            const html = generateClientScript(
+                {},
+                {},
+                parts,
+                baseJayHtmlPath,
+                {},
+                {},
+                undefined,
+                [],
+                noAutomation,
+            );
 
             expect(formatHtml(html)).toEqual(
                 formatHtml(`
@@ -241,7 +293,7 @@ import { CartButton } from "/src/components/cart-button";
         { component: CartButton, name: "cart-button" }
         ], trackByMap)
 
-                          const instance = pageComp({...viewState, ...fastCarryForward})
+                          const instance = pageComp({/* placeholder for page props */})
                           target.appendChild(instance.element.dom);
                         </script>
                       </body>
@@ -267,6 +319,7 @@ import { CartButton } from "/src/components/cart-button";
                 clientInitData,
                 undefined,
                 plugins,
+                noAutomation,
             );
 
             expect(formatHtml(html)).toEqual(
@@ -302,7 +355,7 @@ import { CartButton } from "/src/components/cart-button";
                           const target = document.getElementById('target');
                           const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [], trackByMap)
 
-                          const instance = pageComp({...viewState, ...fastCarryForward})
+                          const instance = pageComp({/* placeholder for page props */})
                           target.appendChild(instance.element.dom);
                         </script>
                       </body>
@@ -330,6 +383,7 @@ import { CartButton } from "/src/components/cart-button";
                 clientInitData,
                 undefined,
                 plugins,
+                noAutomation,
             );
 
             expect(formatHtml(html)).toEqual(
@@ -370,7 +424,7 @@ import { CartButton } from "/src/components/cart-button";
                           const target = document.getElementById('target');
                           const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [], trackByMap)
 
-                          const instance = pageComp({...viewState, ...fastCarryForward})
+                          const instance = pageComp({/* placeholder for page props */})
                           target.appendChild(instance.element.dom);
                         </script>
                       </body>
@@ -396,6 +450,8 @@ import { CartButton } from "/src/components/cart-button";
                 {},
                 clientInitData,
                 projectInit,
+                [],
+                noAutomation,
             );
 
             expect(formatHtml(html)).toEqual(
@@ -432,7 +488,7 @@ import { CartButton } from "/src/components/cart-button";
                           const target = document.getElementById('target');
                           const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [], trackByMap)
 
-                          const instance = pageComp({...viewState, ...fastCarryForward})
+                          const instance = pageComp({/* placeholder for page props */})
                           target.appendChild(instance.element.dom);
                         </script>
                       </body>
@@ -474,6 +530,7 @@ import { CartButton } from "/src/components/cart-button";
                 clientInitData,
                 projectInit,
                 plugins,
+                noAutomation,
             );
 
             expect(formatHtml(html)).toEqual(
@@ -516,7 +573,7 @@ import { CartButton } from "/src/components/cart-button";
                             { component: ProductCard, name: "product-card" }
                           ], trackByMap)
 
-                          const instance = pageComp({...viewState, ...fastCarryForward})
+                          const instance = pageComp({/* placeholder for page props */})
                           target.appendChild(instance.element.dom);
                         </script>
                       </body>

@@ -40,6 +40,7 @@ export function reactRender({
             <button disabled={vs.bool1} />
             <button disabled={!vs.bool1} />
             <button disabled />
+            <img src="/image.jpg" alt={"Peat's Beast- PX finish- 54.1%"} />
         </div>
     );
 }

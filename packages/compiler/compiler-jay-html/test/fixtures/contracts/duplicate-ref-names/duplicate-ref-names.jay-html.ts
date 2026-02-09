@@ -60,16 +60,8 @@ export interface DuplicateRefNamesElementRefs {
 }
 
 export type DuplicateRefNamesSlowViewState = Pick<DuplicateRefNamesViewState, 'title'> & {
-    options: Array<
-        Pick<DuplicateRefNamesViewState['options'][number], 'id' | 'name'> & {
-            items: Array<DuplicateRefNamesViewState['options'][number]['items'][number]>;
-        }
-    >;
-    modifiers: Array<
-        Pick<DuplicateRefNamesViewState['modifiers'][number], 'id' | 'name'> & {
-            items: Array<DuplicateRefNamesViewState['modifiers'][number]['items'][number]>;
-        }
-    >;
+    options: Array<DuplicateRefNamesViewState['options'][number]>;
+    modifiers: Array<DuplicateRefNamesViewState['modifiers'][number]>;
 };
 
 export type DuplicateRefNamesFastViewState = {};

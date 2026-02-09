@@ -1,0 +1,37 @@
+{
+  "name": "@jay-framework/runtime-automation",
+  "version": "0.11.0",
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "Automation API for Jay components - enables programmatic state inspection and interaction triggering",
+  "main": "./dist/index.js",
+  "files": [
+    "dist",
+    "readme.md"
+  ],
+  "scripts": {
+    "build": "npm run build:js && npm run build:types",
+    "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
+    "build:js": "vite build",
+    "build:types": "tsup lib/index.ts --dts-only --format esm",
+    "build:check-types": "tsc",
+    "clean": "rimraf dist",
+    "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@jay-framework/runtime": "workspace:^",
+    "@jay-framework/view-state-merge": "workspace:^"
+  },
+  "devDependencies": {
+    "@jay-framework/component": "workspace:^",
+    "@jay-framework/dev-environment": "workspace:^",
+    "@types/node": "^20.11.5",
+    "rimraf": "^5.0.5",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11",
+    "vitest": "^1.2.1"
+  }
+}

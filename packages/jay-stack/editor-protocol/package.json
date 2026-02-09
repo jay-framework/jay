@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/editor-protocol",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "type": "module",
   "license": "Apache-2.0",
   "main": "dist/index.js",
@@ -22,6 +22,9 @@
     "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
     "test": ":",
     "test:watch": ":"
+  },
+  "dependencies": {
+    "@jay-framework/compiler-shared": "workspace:^"
   },
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",

@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/stack-server-runtime",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "license": "Apache-2.0",
   "main": "dist/index.js",
   "types": "dist/index.d.mts",
@@ -30,9 +30,11 @@
     "@jay-framework/compiler-shared": "workspace:^",
     "@jay-framework/component": "workspace:^",
     "@jay-framework/fullstack-component": "workspace:^",
+    "@jay-framework/logger": "workspace:^",
     "@jay-framework/runtime": "workspace:^",
     "@jay-framework/stack-route-scanner": "workspace:^",
-    "@jay-framework/view-state-merge": "workspace:^"
+    "@jay-framework/view-state-merge": "workspace:^",
+    "yaml": "^2.3.4"
   },
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",

@@ -69,11 +69,46 @@ function inlineStyleToReact(inlineStyle: string): string {
 const reactRenamedAttributes = {
     for: 'htmlFor',
 };
+
+// Helper to escape single quotes in strings (used for text content)
+function textEscape(s: string): string {
+    return s.replace(/'/g, "\\'");
+}
+
+// Boolean attributes use condition-style parsing
+// The presence/absence is controlled by a condition expression
+const booleanAttributes = new Set([
+    'disabled',
+    'selected',
+    'readonly',
+    'required',
+    'hidden',
+    'autofocus',
+    'multiple',
+    'open',
+    'novalidate',
+    'formnovalidate',
+    // Media attributes
+    'autoplay',
+    'controls',
+    'loop',
+    'muted',
+    'playsinline',
+    // Other
+    'reversed',
+    'ismap',
+    'defer',
+    'async',
+    'default',
+    'inert',
+]);
+
 function renderAttributes(element: HTMLElement, { variables }: RenderContext): RenderFragment {
     let attributes = element.attributes;
     let renderedAttributes = [];
     Object.keys(attributes).forEach((attrName) => {
         const reactAttributeName = reactRenamedAttributes[attrName] || attrName;
+        const attrCanonical = attrName.toLowerCase();
         if (attrName === `trackBy`)
             renderedAttributes.push(
                 new RenderFragment(`key={${variables.currentVar}.${attributes[attrName]}}`),
@@ -86,14 +121,37 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
         else if (attrName === 'class') {
             let classExpression = parseReactClassExpression(attributes[attrName], variables);
             renderedAttributes.push(classExpression.map((_) => `className=${_}`));
+        } else if (booleanAttributes.has(attrCanonical)) {
+            const attrValue = attributes[attrName];
+            // Empty boolean attribute (e.g., <button disabled></button>)
+            if (attrValue === '') {
+                renderedAttributes.push(new RenderFragment(`${reactAttributeName}`));
+            } else {
+                // Use condition-style parsing for boolean attributes
+                let conditionExpression = parseReactCondition(attrValue, variables);
+                renderedAttributes.push(
+                    conditionExpression.map((_) => `${reactAttributeName}={${_}}`),
+                );
+            }
         } else {
             let attributeExpression = parseReactPropertyExpression(attributes[attrName], variables);
             if (attributeExpression.rendered === "''")
                 renderedAttributes.push(attributeExpression.map((_) => `${reactAttributeName}`));
-            else
-                renderedAttributes.push(
-                    attributeExpression.map((_) => `${reactAttributeName}=${_}`),
-                );
+            else {
+                // For JSX, if the value contains single quotes, use expression syntax {value}
+                // instead of single-quoted attribute values which don't support escaping
+                const rawValue = attributes[attrName];
+                if (rawValue.includes("'") && attributeExpression.rendered.startsWith("'")) {
+                    // Static value with single quotes - use expression syntax with double quotes
+                    renderedAttributes.push(
+                        new RenderFragment(`${reactAttributeName}={"${rawValue}"}`),
+                    );
+                } else {
+                    renderedAttributes.push(
+                        attributeExpression.map((_) => `${reactAttributeName}=${_}`),
+                    );
+                }
+            }
         }
     });
 
@@ -198,9 +256,6 @@ function renderReactNode(
     let { variables, importedSymbols, importedSandboxedSymbols, indent, dynamicRef, importerMode } =
         renderContext;
 
-    function textEscape(s: string): string {
-        return s.replace(/'/g, "\\'");
-    }
     function renderTextNode(variables: Variables, text: string, indent: Indent): RenderFragment {
         return parseReactTextExpression(textEscape(text), variables).map(
             (_) => indent.firstLine + _,

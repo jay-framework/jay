@@ -3,6 +3,7 @@ import {
     Imports,
     ImportsFor,
     isArrayType,
+    isEnumType,
     isPromiseType,
     JayComponentType,
     JayErrorType,
@@ -51,6 +52,8 @@ import {
     ensureSingleChildElement,
     isConditional,
     isForEach,
+    isSlowForEach,
+    getSlowForEachInfo,
     isRecurse,
     isRecurseWithData,
     isWithData,
@@ -86,6 +89,7 @@ interface RenderContext {
     importedRefNameToRef: Map<string, Ref>;
     recursiveRegions: RecursiveRegionInfo[]; // Stack of recursive regions we're currently inside
     isInsideGuard: boolean; // Are we currently inside a forEach or conditional?
+    usedComponentImports: Set<string>; // Tracks which component/contract types are actually used
 }
 
 function renderFunctionDeclaration(preRenderType: string): string {
@@ -102,10 +106,36 @@ function renderTextNode(variables: Variables, text: string, indent: Indent): Ren
 
 const PROPERTY = 1,
     BOOLEAN_ATTRIBUTE = 3;
-const propertyMapping = {
+const propertyMapping: Record<string, { type: number }> = {
+    // DOM properties (use template-style parsing with dp())
     value: { type: PROPERTY },
     checked: { type: PROPERTY },
+
+    // Boolean attributes (use condition-style parsing with ba())
+    // The presence/absence of these attributes is controlled by a condition expression
     disabled: { type: BOOLEAN_ATTRIBUTE },
+    selected: { type: BOOLEAN_ATTRIBUTE },
+    readonly: { type: BOOLEAN_ATTRIBUTE },
+    required: { type: BOOLEAN_ATTRIBUTE },
+    hidden: { type: BOOLEAN_ATTRIBUTE },
+    autofocus: { type: BOOLEAN_ATTRIBUTE },
+    multiple: { type: BOOLEAN_ATTRIBUTE },
+    open: { type: BOOLEAN_ATTRIBUTE },
+    novalidate: { type: BOOLEAN_ATTRIBUTE },
+    formnovalidate: { type: BOOLEAN_ATTRIBUTE },
+    // Media attributes
+    autoplay: { type: BOOLEAN_ATTRIBUTE },
+    controls: { type: BOOLEAN_ATTRIBUTE },
+    loop: { type: BOOLEAN_ATTRIBUTE },
+    muted: { type: BOOLEAN_ATTRIBUTE },
+    playsinline: { type: BOOLEAN_ATTRIBUTE },
+    // Other
+    reversed: { type: BOOLEAN_ATTRIBUTE },
+    ismap: { type: BOOLEAN_ATTRIBUTE },
+    defer: { type: BOOLEAN_ATTRIBUTE },
+    async: { type: BOOLEAN_ATTRIBUTE },
+    default: { type: BOOLEAN_ATTRIBUTE },
+    inert: { type: BOOLEAN_ATTRIBUTE },
 };
 const attributesRequiresQuotes = /[- ]/;
 
@@ -150,6 +180,9 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
             attrCanonical === 'foreach' ||
             attrCanonical === 'trackby' ||
             attrCanonical === 'ref' ||
+            attrCanonical === 'slowforeach' ||
+            attrCanonical === 'jayindex' ||
+            attrCanonical === 'jaytrackby' ||
             attrCanonical === AsyncDirectiveTypes.loading.directive ||
             attrCanonical === AsyncDirectiveTypes.resolved.directive ||
             attrCanonical === AsyncDirectiveTypes.rejected.directive
@@ -164,13 +197,20 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
             let attributeExpression = parsePropertyExpression(attributes[attrName], variables);
             renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
         } else if (propertyMapping[attrCanonical]?.type === BOOLEAN_ATTRIBUTE) {
-            let attributeExpression = parseBooleanAttributeExpression(
-                attributes[attrName],
+            const attrValue = attributes[attrName];
+            // Empty boolean attribute (e.g., <button disabled></button>) renders as empty string
+            if (attrValue === '') {
+                renderedAttributes.push(new RenderFragment(`${attrKey}: ''`, Imports.none()));
+            } else {
+                let attributeExpression = parseBooleanAttributeExpression(attrValue, variables);
+                renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
+            }
+        } else {
+            // Escape single quotes in attribute values so they can be safely wrapped in single quotes
+            let attributeExpression = parseAttributeExpression(
+                textEscape(attributes[attrName]),
                 variables,
             );
-            renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
-        } else {
-            let attributeExpression = parseAttributeExpression(attributes[attrName], variables);
             renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
         }
     });
@@ -189,11 +229,42 @@ function renderElementRef(
 ): RenderFragment {
     if (element.attributes.ref) {
         if (importedRefNameToRef.has(element.attributes.ref)) {
-            const ref = importedRefNameToRef.get(element.attributes.ref);
-            // Register the imported ref's constName so later refs with the same name
-            // get a different suffix
-            refNameGenerator.registerUsedConstName(ref.constName, variables);
-            return new RenderFragment(`${ref.constName}()`);
+            const importedRef = importedRefNameToRef.get(element.attributes.ref);
+            // Generate a unique constName for this imported ref using the ref name generator
+            // This ensures that refs with the same base name (e.g., "removeButton" in different
+            // branches like lineItems.removeButton and coupon.removeButton) get unique variable names
+            const uniqueConstName = refNameGenerator.newConstantName(importedRef.ref, variables);
+            // Create a new ref with the unique constName so the declaration matches the usage
+            // Set autoRef to false since this ref is explicitly used in the template
+            // Use the full ref path from the template attribute as originalName for matching
+            const refWithUniqueConstName = mkRef(
+                importedRef.ref,
+                element.attributes.ref, // Full path from template, e.g., "filters.filter2.categories.isSelected"
+                uniqueConstName,
+                importedRef.repeated,
+                false, // Not autoRef - it's explicitly used in template
+                importedRef.viewStateType,
+                importedRef.elementType,
+            );
+            // Nest the ref based on its path (e.g., "cartPage.lineItems.removeButton" -> nested under cartPage.lineItems)
+            const refPath = element.attributes.ref.split('.');
+            // Remove the last element (the ref name itself) to get the nesting path
+            const nestingPath = refPath.slice(0, -1);
+            const nestedRefs = nestRefs(
+                nestingPath,
+                new RenderFragment(
+                    '',
+                    Imports.none(),
+                    [],
+                    mkRefsTree([refWithUniqueConstName], {}),
+                ),
+            );
+            return new RenderFragment(
+                `${uniqueConstName}()`,
+                nestedRefs.imports,
+                nestedRefs.validations,
+                nestedRefs.refs,
+            );
         }
         let originalName = element.attributes.ref;
         let refName = camelCase(originalName);
@@ -255,11 +326,36 @@ function renderChildCompRef(
     { dynamicRef, variables, refNameGenerator, importedRefNameToRef }: RenderContext,
 ): RenderFragment {
     if (importedRefNameToRef.has(element.attributes.ref)) {
-        const ref = importedRefNameToRef.get(element.attributes.ref);
-        // Register the imported ref's constName so later refs with the same name
-        // get a different suffix
-        refNameGenerator.registerUsedConstName(ref.constName, variables);
-        return new RenderFragment(`${ref.constName}()`, Imports.none(), [], mkRefsTree([ref], {}));
+        const importedRef = importedRefNameToRef.get(element.attributes.ref);
+        // Generate a unique constName for this imported ref using the ref name generator
+        // This ensures that refs with the same base name get unique variable names
+        const uniqueConstName = refNameGenerator.newConstantName(importedRef.ref, variables);
+        // Create a new ref with the unique constName so the declaration matches the usage
+        // Set autoRef to false since this ref is explicitly used in the template
+        // Use the full ref path from the template attribute as originalName for matching
+        const refWithUniqueConstName = mkRef(
+            importedRef.ref,
+            element.attributes.ref, // Full path from template, e.g., "filters.filter2.categories.isSelected"
+            uniqueConstName,
+            importedRef.repeated,
+            false, // Not autoRef - it's explicitly used in template
+            importedRef.viewStateType,
+            importedRef.elementType,
+        );
+        // Nest the ref based on its path (e.g., "cartPage.lineItems.removeButton" -> nested under cartPage.lineItems)
+        const refPath = element.attributes.ref.split('.');
+        // Remove the last element (the ref name itself) to get the nesting path
+        const nestingPath = refPath.slice(0, -1);
+        const nestedRefs = nestRefs(
+            nestingPath,
+            new RenderFragment('', Imports.none(), [], mkRefsTree([refWithUniqueConstName], {})),
+        );
+        return new RenderFragment(
+            `${uniqueConstName}()`,
+            nestedRefs.imports,
+            nestedRefs.validations,
+            nestedRefs.refs,
+        );
     }
     let originalName = element.attributes.ref || refNameGenerator.newAutoRefNameGenerator();
     let refName = camelCase(originalName);
@@ -364,6 +460,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
                 (_) =>
                     isConditional(_) ||
                     isForEach(_) ||
+                    isSlowForEach(_) ||
                     isRecurseWithData(_) ||
                     isWithData(_) ||
                     checkAsync(_).isAsync,
@@ -654,6 +751,10 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                     .render()
                     .map((_) => `(${paramName}: ${paramType}) => ${_}`);
                 let forEachVariables = variables.childVariableFor(forEachAccessor);
+
+                // Track the forEach iteration type as a used component import
+                context.usedComponentImports.add(forEachVariables.currentType.name);
+
                 let newContext = {
                     ...context,
                     variables: forEachVariables,
@@ -667,6 +768,69 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                     forEachAccessPath,
                     renderForEach(forEachFragment, forEachVariables, trackBy, childElement),
                 );
+            } else if (isSlowForEach(htmlElement)) {
+                // Handle pre-rendered slow array items
+                const slowForEachInfo = getSlowForEachInfo(htmlElement);
+                if (!slowForEachInfo) {
+                    return new RenderFragment('', Imports.none(), [
+                        `slowForEach element is missing required attributes (slowForEach, jayIndex, jayTrackBy)`,
+                    ]);
+                }
+
+                const { arrayName, jayIndex, jayTrackBy } = slowForEachInfo;
+
+                // Parse the array accessor to get type info
+                const arrayAccessor = parseAccessor(arrayName, variables);
+                if (arrayAccessor.resolvedType === JayUnknown)
+                    return new RenderFragment('', Imports.none(), [
+                        `slowForEach directive - failed to resolve array type [slowForEach=${arrayName}]`,
+                    ]);
+                if (!isArrayType(arrayAccessor.resolvedType))
+                    return new RenderFragment('', Imports.none(), [
+                        `slowForEach directive - resolved type is not an array [slowForEach=${arrayName}]`,
+                    ]);
+
+                // Get the item type for the child context
+                let slowForEachVariables = variables.childVariableFor(arrayAccessor);
+
+                // Track the iteration type as a used component import
+                context.usedComponentImports.add(slowForEachVariables.currentType.name);
+
+                let newContext = {
+                    ...context,
+                    variables: slowForEachVariables,
+                    indent: indent.child().noFirstLineBreak().withLastLineBreak(),
+                    dynamicRef: true,
+                    isInsideGuard: true, // Mark that we're inside a guard
+                };
+
+                // Render the element (without the slowForEach directive attributes)
+                let childElement = renderHtmlElement(htmlElement, newContext);
+
+                // Get type names for generic parameters
+                const parentTypeName = variables.currentType.name;
+                const itemTypeName = slowForEachVariables.currentType.name;
+
+                // Generate accessor function similar to regular forEach
+                // This handles nested paths like productSearch.filters.categoryFilter.categories
+                const paramName = arrayAccessor.rootVar;
+                const getItemsFragment = arrayAccessor
+                    .render()
+                    .map((_) => `(${paramName}: ${parentTypeName}) => ${_}`);
+
+                // Wrap with slowForEachItem - element is wrapped in a function for context setup
+                // Include generic types to ensure proper TypeScript inference
+                const slowForEachFragment = new RenderFragment(
+                    `${indent.firstLine}slowForEachItem<${parentTypeName}, ${itemTypeName}>(${getItemsFragment.rendered}, ${jayIndex}, '${jayTrackBy}',\n${indent.firstLine}() => ${childElement.rendered}\n${indent.firstLine})`,
+                    childElement.imports
+                        .plus(Import.slowForEachItem)
+                        .plus(getItemsFragment.imports),
+                    [...getItemsFragment.validations, ...childElement.validations],
+                    childElement.refs,
+                    childElement.recursiveRegions,
+                );
+
+                return nestRefs(arrayName.split('.'), slowForEachFragment);
             } else if (checkAsync(htmlElement).isAsync) {
                 const asyncDirective = checkAsync(htmlElement);
                 const asyncProperty = htmlElement.getAttribute(asyncDirective.directive);
@@ -806,6 +970,7 @@ function renderFunctionImplementation(
     preRenderType: string;
     refsType: string;
     renderedImplementation: RenderFragment;
+    usedComponentImports: Set<string>;
 } {
     const variables = new Variables(types);
     const { importedSymbols, importedSandboxedSymbols } =
@@ -813,6 +978,7 @@ function renderFunctionImplementation(
     const importedRefNameToRef = processImportedHeadless(headlessImports);
     const rootElement = ensureSingleChildElement(rootBodyElement);
     let renderedRoot: RenderFragment;
+    const usedComponentImports = new Set<string>(); // Track used component types
     if (rootElement.val) {
         // Check if the root element is a directive that needs wrapping
         const needsWrapper =
@@ -836,6 +1002,7 @@ function renderFunctionImplementation(
             importedRefNameToRef,
             recursiveRegions: [], // Initialize empty recursive regions stack
             isInsideGuard: false, // Not inside any guard initially
+            usedComponentImports, // Track which component types are used
         });
 
         if (needsWrapper) {
@@ -921,6 +1088,7 @@ ${headLinksInjection}${recursiveFunctionsSection}    const render = (viewState: 
         preRenderType,
         refsType,
         renderedImplementation: new RenderFragment(body, imports, renderedRoot.validations),
+        usedComponentImports, // Track which component types were used
     };
 }
 
@@ -1082,6 +1250,7 @@ function renderBridge(
         importedRefNameToRef,
         recursiveRegions: [], // Initialize empty recursive regions stack
         isInsideGuard: false, // Not inside any guard initially
+        usedComponentImports: new Set<string>(), // Not used for bridge
     });
     renderedBridge = optimizeRefs(renderedBridge, headlessImports);
 
@@ -1128,6 +1297,7 @@ function renderSandboxRoot(
         importedRefNameToRef,
         recursiveRegions: [], // Initialize empty recursive regions stack
         isInsideGuard: false, // Not inside any guard initially
+        usedComponentImports: new Set<string>(), // Not used for sandbox
     });
     let refsPart =
         renderedBridge.rendered.length > 0
@@ -1259,16 +1429,17 @@ export function generateElementFile(
     importerMode: MainRuntimeModes,
 ): WithValidations<string> {
     const types = generateTypes(jayFile.types);
-    let { renderedRefs, renderedElement, renderedImplementation } = renderFunctionImplementation(
-        jayFile.types,
-        jayFile.body,
-        jayFile.imports,
-        jayFile.baseElementName,
-        jayFile.namespaces,
-        jayFile.headlessImports,
-        importerMode,
-        jayFile.headLinks,
-    );
+    let { renderedRefs, renderedElement, renderedImplementation, usedComponentImports } =
+        renderFunctionImplementation(
+            jayFile.types,
+            jayFile.body,
+            jayFile.imports,
+            jayFile.baseElementName,
+            jayFile.namespaces,
+            jayFile.headlessImports,
+            importerMode,
+            jayFile.headLinks,
+        );
     const cssImport = generateCssImport(jayFile);
     const phaseTypes = generatePhaseSpecificTypes(jayFile);
 
@@ -1293,11 +1464,51 @@ export function generateElementFile(
         });
     }
 
+    // Build the set of used component type names from headless imports
+    // Start with types tracked during rendering (forEach iteration types)
+    const usedHeadlessTypeNames = new Set(usedComponentImports);
+
+    // Add types that are used in the generated type definitions
+    // These come from headless imports and are used in ViewState/Refs interfaces
+    const headlessModules = new Set<string>();
+    for (const headless of jayFile.headlessImports) {
+        // The main ViewState and Refs types are always used when a headless import exists
+        usedHeadlessTypeNames.add(headless.rootType.name);
+        for (const link of headless.contractLinks) {
+            headlessModules.add(link.module);
+            for (const name of link.names) {
+                // Add the Refs types and enum types (they're always needed)
+                if (name.name.endsWith('Refs') || isEnumType(name.type)) {
+                    usedHeadlessTypeNames.add(name.name);
+                }
+            }
+        }
+    }
+
+    // Filter imports: only filter headless contract imports (to remove unused nested types)
+    // Keep all regular component imports unchanged
+    const filteredImports = jayFile.imports
+        .map((importLink) => {
+            // Only filter imports from headless contracts
+            if (!headlessModules.has(importLink.module)) {
+                return importLink; // Keep non-headless imports unchanged
+            }
+            // Filter to only include used names
+            const filteredNames = importLink.names.filter((name) =>
+                usedHeadlessTypeNames.has(name.as || name.name),
+            );
+            if (filteredNames.length === 0) {
+                return null;
+            }
+            return { ...importLink, names: filteredNames };
+        })
+        .filter((imp): imp is JayImportLink => imp !== null);
+
     const renderedFile = [
         renderImports(
             renderedImplementation.imports.plus(Import.element).plus(Import.jayElement),
             ImportsFor.implementation,
-            jayFile.imports,
+            filteredImports,
             importerMode,
         ),
         cssImport,

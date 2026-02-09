@@ -12,6 +12,7 @@ import {
     JayValidations,
     RenderFragment,
 } from '@jay-framework/compiler-shared';
+import { getLogger } from '@jay-framework/logger';
 import { parse } from './expression-parser.cjs';
 
 export class Accessor {
@@ -107,7 +108,106 @@ export class Variables {
     }
 }
 
-function doParse(expression: string, startRule, vars?: Variables) {
+/**
+ * Provides context-specific help for parsing errors based on the expression type
+ */
+function getExpressionHelp(startRule: string): string {
+    switch (startRule) {
+        case 'booleanAttribute':
+            return `
+  Boolean attributes use condition-style syntax (no curly braces).
+  Examples:
+    ✓ disabled="isDisabled"
+    ✓ disabled="!isValid"
+    ✓ disabled="status == pending"  (enum comparison)
+    ✓ disabled="count <= 0"         (numeric comparison)
+    ✓ disabled="count == 5"         (equality with number)
+    ✓ disabled="a >= b.value"       (field-to-field comparison)
+    ✓ disabled="isLoading || !isValid"
+    ✓ disabled (bare attribute for always-present)
+    ✗ disabled="{isDisabled}" (no curly braces)`;
+
+        case 'dynamicAttribute':
+        case 'dynamicProperty':
+            return `
+  Dynamic attributes/properties use template-style syntax with curly braces.
+  Examples:
+    ✓ value="{inputValue}"
+    ✓ href="/users/{userId}"
+    ✓ data-count="{items.length}"
+    ✓ title="Hello {name}!"`;
+
+        case 'classExpression':
+        case 'reactClassExpression':
+            return `
+  Class expressions support static classes and conditional classes.
+  Examples:
+    ✓ class="button primary"
+    ✓ class="{isActive ? active}"
+    ✓ class="{isActive ? active : inactive}"
+    ✓ class="button {isPrimary ? primary : secondary}"
+    ✓ class="{status == active ? active-class}"
+    ✓ class="{count > 0 ? has-items}"`;
+
+        case 'conditionFunc':
+        case 'condition':
+            return `
+  Conditions support boolean properties, negation, comparisons, and logical operators.
+  Examples:
+    ✓ if="isVisible"
+    ✓ if="!isHidden"
+    ✓ if="status == active"         (enum comparison)
+    ✓ if="count > 0"                (numeric comparison)
+    ✓ if="count == 5"               (equality with number)
+    ✓ if="page <= 1"                (<=, >=, <, > supported)
+    ✓ if="current >= other.value"   (field-to-field comparison)
+    ✓ if="isEnabled && status != disabled"
+    ✓ if="hasItems || count > 0"`;
+
+        case 'dynamicText':
+        case 'reactDynamicText':
+            return `
+  Dynamic text uses curly braces for interpolation.
+  Examples:
+    ✓ {title}
+    ✓ Hello, {user.name}!
+    ✓ Count: {items.length}`;
+
+        case 'accessor':
+            return `
+  Accessors reference view state properties.
+  Examples:
+    ✓ propertyName
+    ✓ nested.property
+    ✓ . (self-reference)`;
+
+        case 'importNames':
+            return `
+  Import names are comma-separated identifiers with optional renaming.
+  Examples:
+    ✓ MyComponent
+    ✓ Component1, Component2
+    ✓ Original as Renamed`;
+
+        case 'enum':
+            return `
+  Enum values are defined with pipe-separated identifiers.
+  Examples:
+    ✓ enum(active | inactive | pending)`;
+
+        case 'styleDeclarations':
+            return `
+  Style declarations use CSS syntax with optional dynamic bindings.
+  Examples:
+    ✓ style="color: red; padding: 10px"
+    ✓ style="background: {bgColor}; width: {size}px"`;
+
+        default:
+            return '';
+    }
+}
+
+function doParse(expression: string, startRule: string, vars?: Variables) {
     try {
         return parse(expression, {
             vars,
@@ -120,7 +220,11 @@ function doParse(expression: string, startRule, vars?: Variables) {
             startRule,
         });
     } catch (e) {
-        throw new Error(`failed to parse expression [${expression}]. ${e.message}`);
+        const help = getExpressionHelp(startRule);
+        const contextInfo = help ? `\n\nExpected format for ${startRule}:${help}` : '';
+        throw new Error(`Failed to parse expression [${expression}].
+
+Parse error: ${e.message}${contextInfo}`);
     }
 }
 
@@ -226,4 +330,110 @@ export interface StyleDeclarations {
 
 export function parseStyleDeclarations(styleString: string, vars: Variables): StyleDeclarations {
     return doParse(styleString, 'styleDeclarations', vars);
+}
+
+/**
+ * Analyzed condition expression for slow-render evaluation
+ * @deprecated Use parseConditionForSlowRender instead
+ */
+export interface AnalyzedCondition {
+    /** The property path (without negation) */
+    path: string;
+    /** Whether the condition is negated (e.g., !imageUrl) */
+    isNegated: boolean;
+}
+
+// =============================================================================
+// Slow Render Condition Parsing (Option D: Partial Evaluation)
+// Uses the PEG parser with 'slowCondition' start rule
+// =============================================================================
+
+/**
+ * Context for slow rendering - provides slow-phase data for partial evaluation
+ */
+export interface SlowRenderContext {
+    /** Slow-phase data values */
+    slowData: Record<string, unknown>;
+    /** Phase information for each property path */
+    phaseMap: Map<string, { phase: string; isArray?: boolean; enumValues?: string[] }>;
+    /** Current context path for nested properties (e.g., "products" when inside forEach) */
+    contextPath: string;
+}
+
+/**
+ * Result of parsing a condition for slow rendering
+ */
+export type ConditionResult =
+    | { type: 'resolved'; value: boolean }
+    | { type: 'runtime'; code: RenderFragment; simplifiedExpr?: string };
+
+/**
+ * Intermediate value during parsing - can be a resolved value or runtime code
+ */
+export type PartialValue =
+    | { type: 'resolved'; value: unknown }
+    | { type: 'code'; fragment: RenderFragment; expr: string };
+
+/**
+ * Convert a value to its JavaScript truthiness
+ */
+function isTruthy(value: unknown): boolean {
+    return !!value;
+}
+
+/**
+ * Parse a condition expression for slow rendering with partial evaluation.
+ *
+ * This function uses the PEG parser with the 'slowCondition' start rule,
+ * which substitutes slow-phase values and simplifies the expression.
+ *
+ * @param expr - The condition expression (e.g., "!imageUrl", "inStock && price > 0")
+ * @param slowContext - Context with slow data and phase information
+ * @param vars - Optional Variables for type-aware code generation
+ * @returns Either a resolved boolean or runtime code
+ *
+ * @example
+ * // Fully slow - resolves to boolean
+ * parseConditionForSlowRender("!imageUrl", { slowData: { imageUrl: "" }, ... })
+ * // Returns: { type: 'resolved', value: true }
+ *
+ * @example
+ * // Mixed phase - simplifies and returns runtime code
+ * parseConditionForSlowRender("inStock && price > 0", { slowData: { inStock: true }, ... })
+ * // Returns: { type: 'runtime', code: RenderFragment("vs.price > 0") }
+ */
+export function parseConditionForSlowRender(
+    expr: string,
+    slowContext: SlowRenderContext,
+    vars?: Variables,
+): ConditionResult {
+    try {
+        const result: PartialValue = parse(expr, {
+            vars,
+            RenderFragment,
+            none: Imports.none(),
+            slowContext,
+            startRule: 'slowCondition',
+        });
+
+        if (result.type === 'resolved') {
+            return { type: 'resolved', value: isTruthy(result.value) };
+        }
+
+        return {
+            type: 'runtime',
+            code: result.fragment,
+            simplifiedExpr: result.expr,
+        };
+    } catch (error) {
+        // If parsing fails, fall back to treating the whole expression as runtime
+        // This ensures we don't break on expressions we don't yet support
+        getLogger().warn(
+            `parseConditionForSlowRender: Failed to parse "${expr}": ${(error as Error).message}`,
+        );
+        // Generate simple runtime code without type info
+        const code = `vs.${expr}`;
+        const fragment = new RenderFragment(code, Imports.none());
+        return { type: 'runtime', code: fragment, simplifiedExpr: expr };
+    }
 }

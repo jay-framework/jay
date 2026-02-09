@@ -8,6 +8,7 @@ import {
     PreRenderElement,
     RenderElement,
     MountFunc,
+    VIEW_STATE_CHANGE_EVENT,
 } from '@jay-framework/runtime';
 import { Getter, mkReactive, Reactive } from '@jay-framework/reactive';
 import { JSONPatch } from '@jay-framework/json-patch';
@@ -162,9 +163,15 @@ export function makeJayComponent<
                     reactive.enablePairing(context[CONTEXT_REACTIVE_SYMBOL_CONTEXT]),
             );
 
+            // Track current ViewState
+            let currentViewState: ViewState;
+            let viewStateChangeListener: Function | undefined;
+
             componentContext.reactive.createReaction(() => {
                 let viewStateValueOrGetters = renderViewState();
                 let viewState = materializeViewState(viewStateValueOrGetters);
+                currentViewState = viewState;
+
                 if (!element)
                     element = renderWithContexts(
                         componentContext.provideContexts,
@@ -172,21 +179,29 @@ export function makeJayComponent<
                         viewState,
                     );
                 else element.update(viewState);
+
+                // Notify viewStateChange listener (uses JayEvent format for consistency)
+                viewStateChangeListener?.({ event: viewState, viewState, coordinate: [] });
             });
             const [mount, unmount] = mkMounts(componentContext, element);
             let update = (updateProps) => {
                 propsProxy.update(updateProps);
             };
 
-            let events = {};
-            let component = {
+            // Event handlers - viewStateChange is built-in, others come from component API
+            let events: Record<string, (handler: Function | undefined) => void> = {
+                [VIEW_STATE_CHANGE_EVENT]: (handler) => {
+                    viewStateChangeListener = handler;
+                },
+            };
+            let component: any = {
                 element,
                 update,
                 mount,
                 unmount,
                 addEventListener: (eventType: string, handler: Function) =>
-                    events[eventType](handler),
-                removeEventListener: (eventType: string) => events[eventType](undefined),
+                    events[eventType]?.(handler),
+                removeEventListener: (eventType: string) => events[eventType]?.(undefined),
             };
 
             // todo validate not overriding main JayComponent APIs
@@ -205,6 +220,13 @@ export function makeJayComponent<
                     component[key] = api[key];
                 }
             }
+
+            // Expose ViewState getter
+            Object.defineProperty(component, 'viewState', {
+                get: () => currentViewState,
+                enumerable: false,
+                configurable: true,
+            });
 
             return (componentInstance = component as unknown as ConcreteJayComponent<
                 PropsT,

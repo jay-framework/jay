@@ -67,6 +67,11 @@ describe('compiler', () => {
             }
             return new WithValidations(null as any, [`Plugin "${pluginName}" not found in test`]);
         },
+        loadPluginContract(pluginName: string, contractName: string, projectRoot: string) {
+            return new WithValidations(null as any, [
+                `Plugin contract loading not supported in this test`,
+            ]);
+        },
         resolvePluginManifest(pluginName: string, projectRoot: string) {
             return new WithValidations(null as any, [
                 `Plugin manifest resolution not supported in this test`,
@@ -885,7 +890,7 @@ describe('compiler', () => {
 
             expect(jayFile.validations.length).toEqual(1);
             expect(jayFile.validations[0]).toMatch(
-                "failed to parse import names for module module - failed to parse expression [undefined]. Cannot read properties of undefined (reading 'charAt')",
+                'failed to parse import names for module module - Failed to parse expression [undefined]',
             );
         });
 
@@ -907,7 +912,7 @@ describe('compiler', () => {
 
             expect(jayFile.validations.length).toEqual(1);
             expect(jayFile.validations[0]).toMatch(
-                'failed to parse import names for module module - failed to parse expression []. Expected identifier but end of input found.',
+                'failed to parse import names for module module - Failed to parse expression []',
             );
         });
 
@@ -1249,6 +1254,18 @@ describe('compiler', () => {
                     }
                     throw new Error('Unexpected contract path');
                 },
+                loadPluginContract(pluginName: string, contractName: string, projectRoot: string) {
+                    if (pluginName === 'test-counter' && contractName === 'counter') {
+                        return new WithValidations(
+                            {
+                                contract: counterContract,
+                                contractPath: '/path/to/counter.jay-contract',
+                            },
+                            [],
+                        );
+                    }
+                    return new WithValidations(null as any, [`Plugin not found`]);
+                },
                 resolveLink(importingModule: string, link: string): string {
                     return '/path/to/counter.jay-contract';
                 },
@@ -1341,6 +1358,18 @@ describe('compiler', () => {
                         return new WithValidations(counterContract, []);
                     }
                     throw new Error('Unexpected contract path');
+                },
+                loadPluginContract(pluginName: string, contractName: string, projectRoot: string) {
+                    if (pluginName === 'test-counter' && contractName === 'counter') {
+                        return new WithValidations(
+                            {
+                                contract: counterContract,
+                                contractPath: '/path/to/counter.jay-contract',
+                            },
+                            [],
+                        );
+                    }
+                    return new WithValidations(null as any, [`Plugin not found`]);
                 },
                 resolveLink(importingModule: string, link: string): string {
                     if (link.includes('page')) return '/path/to/page.jay-contract';
@@ -1454,6 +1483,27 @@ describe('compiler', () => {
                         return new WithValidations(timerContract, []);
                     }
                     throw new Error('Unexpected contract path');
+                },
+                loadPluginContract(pluginName: string, contractName: string, projectRoot: string) {
+                    if (pluginName === 'test-counter' && contractName === 'counter') {
+                        return new WithValidations(
+                            {
+                                contract: counterContract,
+                                contractPath: '/path/to/counter.jay-contract',
+                            },
+                            [],
+                        );
+                    }
+                    if (pluginName === 'test-timer' && contractName === 'timer') {
+                        return new WithValidations(
+                            {
+                                contract: timerContract,
+                                contractPath: '/path/to/timer.jay-contract',
+                            },
+                            [],
+                        );
+                    }
+                    return new WithValidations(null as any, [`Plugin not found`]);
                 },
                 resolveLink(importingModule: string, link: string): string {
                     if (link.includes('page')) return '/path/to/page.jay-contract';

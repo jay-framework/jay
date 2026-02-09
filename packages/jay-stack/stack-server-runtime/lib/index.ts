@@ -6,3 +6,6 @@ export * from './services';
 export * from './action-registry';
 export * from './action-discovery';
 export * from './plugin-init-discovery';
+export * from './slow-render-cache';
+export * from './contract-materializer';
+export * from './plugin-scanner';

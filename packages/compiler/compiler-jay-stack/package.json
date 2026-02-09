@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/compiler-jay-stack",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "type": "module",
   "license": "Apache-2.0",
   "main": "dist/index.js",
@@ -29,6 +29,7 @@
   "dependencies": {
     "@jay-framework/compiler": "workspace:^",
     "@jay-framework/compiler-shared": "workspace:^",
+    "@jay-framework/logger": "workspace:^",
     "@jay-framework/typescript-bridge": "workspace:^",
     "@jay-framework/vite-plugin": "workspace:^",
     "typescript": "^5.3.3",

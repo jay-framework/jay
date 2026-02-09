@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import YAML from 'yaml';
+import { getLogger } from '@jay-framework/logger';
 
 export interface JayConfig {
     devServer?: {
@@ -52,7 +53,7 @@ export function loadConfig(): JayConfig {
             },
         };
     } catch (error) {
-        console.warn('Failed to parse .jay YAML config file, using defaults:', error);
+        getLogger().warn(`Failed to parse .jay YAML config file, using defaults: ${error}`);
         return DEFAULT_CONFIG;
     }
 }
@@ -99,6 +100,6 @@ export function updateConfig(updates: Partial<JayConfig>): void {
         const yamlContent = YAML.stringify(updatedConfig, { indent: 2 });
         fs.writeFileSync(configPath, yamlContent);
     } catch (error) {
-        console.warn('Failed to update .jay config file:', error);
+        getLogger().warn(`Failed to update .jay config file: ${error}`);
     }
 }

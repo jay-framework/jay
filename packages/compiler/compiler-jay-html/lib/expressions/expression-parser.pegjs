@@ -6,6 +6,144 @@
     let da = options.da;
     let dp = options.dp;
     let ba = options.ba;
+    
+    // Slow render context for partial evaluation
+    let slowContext = options.slowContext;
+    
+    // Helper: Check if a property path is slow-phase
+    // IMPORTANT: Only return true if the property is EXPLICITLY marked as slow in the phase map.
+    // If the property is not in the phase map (e.g., from a headless component), we don't know
+    // its phase and should NOT evaluate it at slow-render time.
+    function isSlowPhase(path) {
+        if (!slowContext) return false;
+        const fullPath = slowContext.contextPath ? `${slowContext.contextPath}.${path}` : path;
+        const info = slowContext.phaseMap.get(fullPath);
+        // Only treat as slow if explicitly marked as slow in the phase map
+        // Unknown properties (not in map) should NOT be evaluated
+        return info && info.phase === 'slow';
+    }
+    
+    // Helper: Get phase info for a property path
+    function getPhaseInfo(path) {
+        if (!slowContext) return undefined;
+        const fullPath = slowContext.contextPath ? `${slowContext.contextPath}.${path}` : path;
+        return slowContext.phaseMap.get(fullPath);
+    }
+    
+    // Helper: Get value from nested object by path
+    function getSlowValue(path) {
+        if (!slowContext) return undefined;
+        const parts = path.split('.');
+        let current = slowContext.slowData;
+        for (const part of parts) {
+            if (current === null || current === undefined) return undefined;
+            if (typeof current !== 'object') return undefined;
+            current = current[part];
+        }
+        return current;
+    }
+    
+    // Helper: Resolve an enum identifier to its index value
+    // Returns the index if the identifier is a valid enum value, undefined otherwise
+    function resolveEnumValue(enumValues, identifier) {
+        if (!enumValues || !Array.isArray(enumValues)) return undefined;
+        const index = enumValues.indexOf(identifier);
+        return index >= 0 ? index : undefined;
+    }
+    
+    // Helper: Check JavaScript truthiness
+    function isTruthy(val) {
+        return !!val;
+    }
+    
+    // Helper: Combine AND
+    function combineAnd(left, right) {
+        if (left.type === 'resolved' && right.type === 'resolved') {
+            return { type: 'resolved', value: isTruthy(left.value) && isTruthy(right.value) };
+        }
+        if (left.type === 'resolved') {
+            if (!isTruthy(left.value)) return { type: 'resolved', value: false };
+            return right;
+        }
+        if (right.type === 'resolved') {
+            if (!isTruthy(right.value)) return { type: 'resolved', value: false };
+            return left;
+        }
+        const combined = RenderFragment.merge(
+            left.fragment.map(_ => `(${_})`),
+            right.fragment.map(_ => `(${_})`),
+            ' && '
+        );
+        return { type: 'code', fragment: combined, expr: `(${left.expr}) && (${right.expr})` };
+    }
+    
+    // Helper: Combine OR
+    function combineOr(left, right) {
+        if (left.type === 'resolved' && right.type === 'resolved') {
+            return { type: 'resolved', value: isTruthy(left.value) || isTruthy(right.value) };
+        }
+        if (left.type === 'resolved') {
+            if (isTruthy(left.value)) return { type: 'resolved', value: true };
+            return right;
+        }
+        if (right.type === 'resolved') {
+            if (isTruthy(right.value)) return { type: 'resolved', value: true };
+            return left;
+        }
+        const combined = RenderFragment.merge(
+            left.fragment.map(_ => `(${_})`),
+            right.fragment.map(_ => `(${_})`),
+            ' || '
+        );
+        return { type: 'code', fragment: combined, expr: `(${left.expr}) || (${right.expr})` };
+    }
+    
+    // Helper: Apply NOT
+    function applyNot(operand) {
+        if (operand.type === 'resolved') {
+            return { type: 'resolved', value: !isTruthy(operand.value) };
+        }
+        return {
+            type: 'code',
+            fragment: operand.fragment.map(_ => `!${_}`),
+            expr: `!${operand.expr}`
+        };
+    }
+    
+    // Helper: Compare values
+    function compareValues(left, op, right) {
+        switch (op) {
+            case '==': case '===': return left === right;
+            case '!=': case '!==': return left !== right;
+            case '<': return left < right;
+            case '<=': return left <= right;
+            case '>': return left > right;
+            case '>=': return left >= right;
+            default: return false;
+        }
+    }
+    
+    // Helper: Apply comparison
+    function applyComparison(left, op, right) {
+        if (left.type === 'resolved' && right.type === 'resolved') {
+            return { type: 'resolved', value: compareValues(left.value, op, right.value) };
+        }
+        let jsOp = op;
+        if (op === '==') jsOp = '===';
+        if (op === '!=') jsOp = '!==';
+        
+        const leftCode = left.type === 'resolved' ? JSON.stringify(left.value) : left.fragment.rendered;
+        const rightCode = right.type === 'resolved' ? JSON.stringify(right.value) : right.fragment.rendered;
+        const leftExpr = left.type === 'resolved' ? JSON.stringify(left.value) : left.expr;
+        const rightExpr = right.type === 'resolved' ? JSON.stringify(right.value) : right.expr;
+        
+        const baseFragment = left.type === 'code' ? left.fragment : right.fragment;
+        return {
+            type: 'code',
+            fragment: new RenderFragment(`${leftCode} ${jsOp} ${rightCode}`, baseFragment.imports),
+            expr: `${leftExpr} ${jsOp} ${rightExpr}`
+        };
+    }
 }
 
 styleDeclarations
@@ -157,11 +295,8 @@ enum
 }
 
 booleanAttribute
-  = template:template {
-  let [renderFragment, isDynamic] = template;
-  return isDynamic ?
-      renderFragment.map(_ => `ba(${vars.currentVar} => ${_})`).plusImport(ba):
-      renderFragment;
+  = cond:condition {
+  return cond.map(_ => `ba(${vars.currentVar} => ${_})`).plusImport(ba)
 }
 
 dynamicAttribute
@@ -267,6 +402,94 @@ conditionFunc
   return cond.map(_ => `${vars.currentVar} => ${_}`)
 }
 
+// =============================================================================
+// Slow Render Condition Parsing (partial evaluation with value inlining)
+// =============================================================================
+
+slowCondition
+  = slowLogicalOr
+
+slowLogicalOr
+  = head:slowLogicalAnd tail:(_ "||" _ slowLogicalAnd)* {
+    if (tail.length === 0) return head;
+    return tail.reduce((acc, curr) => combineOr(acc, curr[3]), head);
+  }
+
+slowLogicalAnd
+  = head:slowComparison tail:(_ "&&" _ slowComparison)* {
+    if (tail.length === 0) return head;
+    return tail.reduce((acc, curr) => combineAnd(acc, curr[3]), head);
+  }
+
+slowComparison
+  = left:slowUnary _ op:ComparisonOperator _ right:slowUnary {
+    // Check if this might be an enum comparison where left is a SLOW property
+    // Only resolve enum values when the left side was resolved to a slow value
+    // This ensures fast enum comparisons are preserved as runtime code
+    if (left.type === 'resolved' && left.propertyPath && right.type === 'code' && right.isSimpleIdentifier) {
+      const phaseInfo = getPhaseInfo(left.propertyPath);
+      if (phaseInfo && phaseInfo.enumValues) {
+        const enumIndex = resolveEnumValue(phaseInfo.enumValues, right.expr);
+        if (enumIndex !== undefined) {
+          // Successfully resolved as enum - replace right with resolved value
+          right = { type: 'resolved', value: enumIndex };
+        }
+      }
+    }
+    return applyComparison(left, op, right);
+  }
+  / slowUnary
+
+slowUnary
+  = "!" _ operand:slowUnary { return applyNot(operand); }
+  / slowPrimary
+
+slowPrimary
+  = "(" _ cond:slowLogicalOr _ ")" { return cond; }
+  / slowNumericLiteral
+  / slowBooleanLiteral
+  / slowPropertyAccess
+
+slowNumericLiteral
+  = val:("-"? [0-9]+ ("." [0-9]+)?) {
+    return { type: 'resolved', value: parseFloat(text()) };
+  }
+
+slowBooleanLiteral
+  = "true" !IdentifierPart { return { type: 'resolved', value: true }; }
+  / "false" !IdentifierPart { return { type: 'resolved', value: false }; }
+
+slowPropertyAccess
+  = head:Identifier tail:(_ "." _ Identifier)* {
+    const path = [head, ...tail.map(t => t[3])].join('.');
+    const isSimple = tail.length === 0; // Single identifier (no dots)
+    
+    // Check if this property is slow-phase
+    if (isSlowPhase(path)) {
+      const value = getSlowValue(path);
+      // Include propertyPath so we can look up enum info in comparisons
+      return { type: 'resolved', value: value, propertyPath: path };
+    }
+    
+    // Fast/interactive phase - generate runtime code
+    if (vars) {
+      const accessor = vars.resolveAccessor(path.split('.'));
+      const fragment = accessor.render();
+      // Mark as simple identifier if it's a single identifier (for enum detection)
+      return { type: 'code', fragment: fragment, expr: path, propertyPath: path, isSimpleIdentifier: isSimple };
+    } else {
+      // Simple code generation without type info
+      const code = `vs.${path.split('.').join('?.')}`;
+      const fragment = new RenderFragment(code, none);
+      return { type: 'code', fragment: fragment, expr: path, propertyPath: path, isSimpleIdentifier: isSimple };
+    }
+  }
+
+ComparisonOperator
+  = "===" / "!==" / "==" / "!=" / "<=" / ">=" / "<" / ">"
+
+// =============================================================================
+
 condition
   = logicalOrCondition
 
@@ -298,6 +521,8 @@ logicalAndCondition
 
 primaryCondition
   = "(" _ cond:condition _ ")" { return cond; }
+  / orderingCondition
+  / equalityComparisonCondition
   / enumCondition
   / booleanCondition
 
@@ -307,6 +532,39 @@ booleanCondition
       head.render().map(_ => `!${_}`):
       head.render()
   }
+
+// Ordering comparisons can use any accessor (no ambiguity with enums)
+orderingCondition
+  = head:accessor _ oper:OrderingOperator _ val:orderingValue {
+    return head.render().map(_ => `${_} ${oper} ${val}`)
+  }
+
+orderingValue
+  = numericValue
+  / acc:accessor { return acc.render().rendered; }
+
+// Equality comparisons with numbers or dotted paths (single identifiers go to enumCondition)
+equalityComparisonCondition
+  = head:accessor _ oper:EqualityOperator _ val:equalityComparisonValue {
+    // Normalize == to === and != to !== for JavaScript output
+    if (oper === '==') oper = '===';
+    if (oper === '!=') oper = '!==';
+    return head.render().map(_ => `${_} ${oper} ${val}`)
+  }
+
+equalityComparisonValue
+  = numericValue
+  / acc:dottedAccessor { return acc.render().rendered; }
+
+// Accessor with at least one dot - distinguishes field paths from enum values
+dottedAccessor
+  = head:Identifier tail:(_ "." _ Identifier)+ {
+    let terms = [head, ...tail.map(_ => _[3])];
+    return vars.resolveAccessor(terms);
+  }
+
+numericValue
+  = "-"? [0-9]+ ("." [0-9]+)? { return text(); }
 
 enumCondition
   = head:accessor _ oper:EqualityOperator _ val:Identifier {
@@ -348,6 +606,12 @@ EqualityOperator
   / "!=="
   / "=="
   / "!="
+
+OrderingOperator
+  = "<="
+  / ">="
+  / "<"
+  / ">"
 
 // copied from https://github.com/pegjs/pegjs/blob/master/examples/javascript.pegjs#L123
 Identifier

@@ -14,8 +14,10 @@ import {
     parseContract,
     parseJayFile,
 } from '@jay-framework/compiler-jay-html';
+import { getLogger } from '@jay-framework/logger';
 import path from 'node:path';
 import { JayPluginContext } from './jay-plugin-context';
+import { watchChangesFor } from './watch';
 
 export function stripTSExtension(id: string) {
     // First get the base path without query parameters
@@ -25,7 +27,7 @@ export function stripTSExtension(id: string) {
 }
 
 export async function loadJayFile(context: PluginContext, id: string): Promise<LoadResult> {
-    console.info(`[load] start ${id}`);
+    getLogger().info(`[load] start ${id}`);
     const metadata = getJayMetadata(context, id);
     let originId = metadata.originId;
     if (!Boolean(originId)) {
@@ -33,12 +35,12 @@ export async function loadJayFile(context: PluginContext, id: string): Promise<L
     }
 
     const code = checkCodeErrors(await readFileAsString(originId));
-    console.info(`[load] end ${id}, code length: ${code.length}`);
+    getLogger().info(`[load] end ${id}, code length: ${code.length}`);
     return { code };
 }
 
 export async function loadContractFile(context: PluginContext, id: string): Promise<LoadResult> {
-    console.info(`[load] start ${id}`);
+    getLogger().info(`[load] start ${id}`);
     let { originId } = getJayMetadata(context, id);
     if (!Boolean(originId)) originId = stripTSExtension(id);
 
@@ -55,7 +57,7 @@ export async function loadContractFile(context: PluginContext, id: string): Prom
         throw new Error(`Failed to compile contract ${id}: ${JSON.stringify(tsCode.validations)}`);
     }
 
-    console.info(`[load] end ${id}`);
+    getLogger().info(`[load] end ${id}`);
     return { code: tsCode.val };
 }
 
@@ -66,7 +68,7 @@ export async function loadCssFile(
     isVite: boolean,
 ): Promise<LoadResult> {
     if (isVite) {
-        console.info(`[load] start ${id}`);
+        getLogger().info(`[load] start ${id}`);
         const { originId } = getJayMetadata(context, id);
         const code = checkCodeErrors(await readFileAsString(originId));
         const fileName = path.basename(originId);
@@ -81,10 +83,18 @@ export async function loadCssFile(
             JAY_IMPORT_RESOLVER,
             jayContext.projectRoot,
         );
-        console.info(`[load] end ${id}`);
-        return { code: jayHtml.val.css };
+
+        // Watch linked CSS files so changes trigger recompilation
+        if (jayHtml.val?.linkedCssFiles) {
+            for (const cssFile of jayHtml.val.linkedCssFiles) {
+                watchChangesFor(context, cssFile);
+            }
+        }
+
+        getLogger().info(`[load] end ${id}`);
+        return { code: jayHtml.val?.css };
     } else {
-        console.info(`[load] rollup environment - css not supported - ignoring css ${id}`);
+        getLogger().info(`[load] rollup environment - css not supported - ignoring css ${id}`);
         return { code: '' };
     }
 }

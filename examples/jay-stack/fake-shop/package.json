@@ -6,6 +6,8 @@
   "license": "Apache-2.0",
   "scripts": {
     "dev": "jay-stack-cli dev",
+    "contracts": "jay-stack-cli contracts",
+    "contracts:list": "jay-stack-cli contracts --list",
     "clean": "rimraf dist && rimraf build && rimraf -g 'src/**/*.d.ts'",
     "definitions": "jay-cli definitions src",
     "build": "npm run definitions & echo 'build not implemented yet'",
@@ -13,7 +15,8 @@
     "build:client": "vite build --outDir dist/client",
     "build:server": "vite build --ssr src/entry-server.ts --outDir dist/server",
     "build:check-types": "tsc",
-    "test": ":",
+    "test": "npx vitest run",
+    "test:smoke": "npx vitest run test/smoke.test.ts",
     "preview": "cross-env NODE_ENV=production node server"
   },
   "dependencies": {

@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data" contract="./test.jay-contract"></script>
+</head>
+<body>
+    <ul>
+        <li slowForEach="products" jayIndex="0" jayTrackBy="p1">
+            <span>Widget A</span>
+            <span>{price}</span>
+        </li><li slowForEach="products" jayIndex="1" jayTrackBy="p2">
+            <span>Widget B</span>
+            <span>{price}</span>
+        </li>
+    </ul>
+</body>
+</html>

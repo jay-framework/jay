@@ -32,6 +32,11 @@ describe('compile contract', () => {
                 `Plugin resolution not supported in this test`,
             ]);
         },
+        loadPluginContract(pluginName: string, contractName: string, projectRoot: string) {
+            return new WithValidations(null as any, [
+                `Plugin contract loading not supported in this test`,
+            ]);
+        },
         resolvePluginManifest(pluginName: string, projectRoot: string) {
             return new WithValidations(null as any, [
                 `Plugin manifest resolution not supported in this test`,
@@ -718,7 +723,10 @@ describe('compile contract', () => {
                 return path.relative(importingModule, link);
             },
             resolvePluginComponent() {
-                return null;
+                return null as any;
+            },
+            loadPluginContract() {
+                return null as any;
             },
             resolvePluginManifest(pluginName: string, projectRoot: string) {
                 return new WithValidations(null as any, [
@@ -752,7 +760,9 @@ describe('compile contract', () => {
                 item: TodoItemViewState;
             }
 
-            export type TodoSlowViewState = Pick<TodoViewState, 'item'>;
+            export type TodoSlowViewState = {
+                item: TodoViewState['item'];
+            };
         
         export type TodoFastViewState = {};
         
@@ -799,7 +809,9 @@ describe('compile contract', () => {
                 items: Array<TodoItemViewState>;
             }
 
-            export type TodoSlowViewState = Pick<TodoViewState, 'items'>;
+            export type TodoSlowViewState = {
+                items: Array<TodoViewState['items'][number]>;
+            };
         
         export type TodoFastViewState = {};
         
@@ -850,7 +862,10 @@ describe('compile contract', () => {
                 completedItems: Array<TodoItemViewState>;
             }
 
-            export type TodoSlowViewState = Pick<TodoViewState, 'activeItem' | 'completedItems'>;
+            export type TodoSlowViewState = {
+                activeItem: TodoViewState['activeItem'];
+                completedItems: Array<TodoViewState['completedItems'][number]>;
+            };
         
         export type TodoFastViewState = {};
         

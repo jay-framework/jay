@@ -11,6 +11,7 @@ import { createRequire } from 'node:module';
 import { ActionRegistry, actionRegistry } from './action-registry';
 import { isJayAction } from '@jay-framework/fullstack-component';
 import { loadPluginManifest, PluginManifest } from '@jay-framework/compiler-shared';
+import { getLogger } from '@jay-framework/logger';
 
 const require = createRequire(import.meta.url);
 
@@ -90,7 +91,7 @@ export async function discoverAndRegisterActions(
     // Check if actions directory exists
     if (!fs.existsSync(actionsPath)) {
         if (verbose) {
-            console.log(`[Actions] No actions directory found at ${actionsPath}`);
+            getLogger().info(`[Actions] No actions directory found at ${actionsPath}`);
         }
         return result;
     }
@@ -99,7 +100,7 @@ export async function discoverAndRegisterActions(
     const actionFiles = await findActionFiles(actionsPath);
 
     if (verbose) {
-        console.log(`[Actions] Found ${actionFiles.length} action file(s)`);
+        getLogger().info(`[Actions] Found ${actionFiles.length} action file(s)`);
     }
 
     // Import and register each action file
@@ -125,12 +126,14 @@ export async function discoverAndRegisterActions(
                     result.actionCount++;
 
                     if (verbose) {
-                        console.log(`[Actions] Registered: ${(exportValue as any).actionName}`);
+                        getLogger().info(
+                            `[Actions] Registered: ${(exportValue as any).actionName}`,
+                        );
                     }
                 }
             }
         } catch (error) {
-            console.error(`[Actions] Failed to import ${filePath}:`, error);
+            getLogger().error(`[Actions] Failed to import ${filePath}: ${error}`);
         }
     }
 
@@ -261,9 +264,8 @@ async function discoverNpmPluginActions(
                 }
 
                 if (verbose) {
-                    console.log(
-                        `[Actions] NPM plugin "${packageName}" declares actions:`,
-                        pluginConfig.actions,
+                    getLogger().info(
+                        `[Actions] NPM plugin "${packageName}" declares actions: ${JSON.stringify(pluginConfig.actions)}`,
                     );
                 }
 
@@ -282,7 +284,7 @@ async function discoverNpmPluginActions(
             }
         }
     } catch (error) {
-        console.error('[Actions] Failed to read project package.json:', error);
+        getLogger().error(`[Actions] Failed to read project package.json: ${error}`);
     }
 
     return allActions;
@@ -334,18 +336,18 @@ async function registerNpmPluginActions(
                 registeredActions.push((actionExport as any).actionName);
 
                 if (verbose) {
-                    console.log(
+                    getLogger().info(
                         `[Actions] Registered NPM plugin action: ${(actionExport as any).actionName}`,
                     );
                 }
             } else {
-                console.warn(
+                getLogger().warn(
                     `[Actions] NPM plugin "${packageName}" declares action "${actionName}" but it's not exported or not a JayAction`,
                 );
             }
         }
     } catch (importError) {
-        console.error(`[Actions] Failed to import NPM plugin "${packageName}":`, importError);
+        getLogger().error(`[Actions] Failed to import NPM plugin "${packageName}": ${importError}`);
     }
 
     return registeredActions;
@@ -385,7 +387,9 @@ export async function discoverPluginActions(
     const pluginName = pluginConfig.name || path.basename(pluginPath);
 
     if (verbose) {
-        console.log(`[Actions] Plugin "${pluginName}" declares actions:`, pluginConfig.actions);
+        getLogger().info(
+            `[Actions] Plugin "${pluginName}" declares actions: ${JSON.stringify(pluginConfig.actions)}`,
+        );
     }
 
     // Determine the module path to import
@@ -403,7 +407,7 @@ export async function discoverPluginActions(
         } else if (fs.existsSync(jsPath)) {
             modulePath = jsPath;
         } else {
-            console.warn(`[Actions] Plugin "${pluginName}" module not found at ${modulePath}`);
+            getLogger().warn(`[Actions] Plugin "${pluginName}" module not found at ${modulePath}`);
             return [];
         }
     }
@@ -428,18 +432,20 @@ export async function discoverPluginActions(
                 registeredActions.push((actionExport as any).actionName);
 
                 if (verbose) {
-                    console.log(
+                    getLogger().info(
                         `[Actions] Registered plugin action: ${(actionExport as any).actionName}`,
                     );
                 }
             } else {
-                console.warn(
+                getLogger().warn(
                     `[Actions] Plugin "${pluginName}" declares action "${actionName}" but it's not exported or not a JayAction`,
                 );
             }
         }
     } catch (importError) {
-        console.error(`[Actions] Failed to import plugin module at ${modulePath}:`, importError);
+        getLogger().error(
+            `[Actions] Failed to import plugin module at ${modulePath}: ${importError}`,
+        );
     }
 
     return registeredActions;

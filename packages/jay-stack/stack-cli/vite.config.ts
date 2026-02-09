@@ -18,6 +18,7 @@ export default defineConfig({
                 /^node:/,
                 '@jay-framework/component',
                 '@jay-framework/json-patch',
+                '@jay-framework/logger',
                 '@jay-framework/reactive',
                 '@jay-framework/runtime',
                 '@jay-framework/fullstack-component',

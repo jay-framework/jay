@@ -9,6 +9,7 @@ import {
 } from './transform-action-imports';
 import { createImportChainTracker, ImportChainTrackerOptions } from './import-chain-tracker';
 import { createPluginClientImportResolver } from './plugin-client-import-resolver';
+import { getLogger } from '@jay-framework/logger';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -137,7 +138,7 @@ export function jayStackCompiler(options: JayStackCompilerOptions = {}): Plugin[
                     return transformJayStackBuilder(code, id, environment);
                 } catch (error) {
                     // Log error but don't fail build - let other plugins handle it
-                    console.error(`[jay-stack:code-split] Error transforming ${id}:`, error);
+                    getLogger().error(`[jay-stack:code-split] Error transforming ${id}: ${error}`);
                     return null;
                 }
             },
@@ -228,7 +229,9 @@ export function jayStackCompiler(options: JayStackCompilerOptions = {}): Plugin[
                     try {
                         code = await fs.promises.readFile(actualPath, 'utf-8');
                     } catch (err) {
-                        console.error(`[action-transform] Could not read ${actualPath}:`, err);
+                        getLogger().error(
+                            `[action-transform] Could not read ${actualPath}: ${err}`,
+                        );
                         return null;
                     }
 
@@ -238,7 +241,7 @@ export function jayStackCompiler(options: JayStackCompilerOptions = {}): Plugin[
                     if (actions.length === 0) {
                         // No actions found - return empty module or original?
                         // Return null to let other plugins handle it
-                        console.warn(`[action-transform] No actions found in ${actualPath}`);
+                        getLogger().warn(`[action-transform] No actions found in ${actualPath}`);
                         return null;
                     }
 

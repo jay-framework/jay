@@ -604,6 +604,56 @@ You import the child headless component and use its view state and refs in the J
 </html>
 ```
 
+### Using Plugin Headless Components
+
+You can use headless components from npm plugins. For dynamic contracts (generated at build time), use the `plugin` and `contract` attributes:
+
+```html
+<html>
+  <head>
+    <!-- Import a dynamic contract component from a plugin -->
+    <script
+      type="application/jay-headless"
+      plugin="@jay-framework/wix-data"
+      contract="list/recipes-list"
+      key="recipes"
+    ></script>
+  </head>
+  <body>
+    <div>
+      <h1>Recipes</h1>
+      <ul>
+        <li forEach="recipes.items" trackBy="_id">
+          <a ref="recipes.items.itemLink">{recipes.items.title}</a>
+        </li>
+      </ul>
+    </div>
+  </body>
+</html>
+```
+
+The plugin component receives metadata via `DynamicContractProps`:
+
+```typescript
+import { makeJayStackComponent, DynamicContractProps } from '@jay-framework/fullstack-component';
+
+interface WixDataMetadata {
+  collectionId: string;
+}
+
+export const collectionList = makeJayStackComponent<ListViewState>()
+  .withProps<PageProps & DynamicContractProps<WixDataMetadata>>()
+  .withServices(WIX_DATA_SERVICE)
+  .withSlowlyRender(async (props, wixData) => {
+    // Metadata from the generator is available via props.metadata
+    const { collectionId } = props.metadata!;
+    const items = await wixData.query(collectionId).find();
+    // ...
+  });
+```
+
+See [Building Jay Packages](./building-jay-packages.md#dynamic-contracts) for more on creating dynamic contract generators.
+
 ### Context and Communication
 
 Use context for component communication. Contexts are provided using `provideContext` or
@@ -686,6 +736,56 @@ function AppConstructor(props, refs) {
 **`provideContext`** provides a static context value that doesn't trigger updates when the context changes. This is useful for dependency injection and values that don't change often.
 
 **`provideReactiveContext`** provides a reactive context that automatically updates child components when the context's reactive dependencies change. This is useful for values that change frequently and should trigger re-renders.
+
+### Global Reactive Contexts
+
+For app-wide contexts that need to be available to all components without a parent provider, use `registerReactiveGlobalContext` in your initialization:
+
+```typescript
+import { createJayContext } from '@jay-framework/runtime';
+import { createSignal, registerReactiveGlobalContext } from '@jay-framework/component';
+import { makeJayInit } from '@jay-framework/fullstack-component';
+
+// Define the context
+interface AppConfigContext {
+  theme: () => 'light' | 'dark';
+  toggleTheme: () => void;
+}
+export const APP_CONFIG_CTX = createJayContext<AppConfigContext>();
+
+// Register in init
+export const init = makeJayInit().withClient(() => {
+  registerReactiveGlobalContext(APP_CONFIG_CTX, () => {
+    const [theme, setTheme] = createSignal<'light' | 'dark'>('light');
+    return {
+      theme,
+      toggleTheme: () => setTheme((t) => (t === 'light' ? 'dark' : 'light')),
+    };
+  });
+});
+```
+
+Components can then access this context anywhere in the app:
+
+```typescript
+function MyComponent(props, refs) {
+  const appConfig = useContext(APP_CONFIG_CTX);
+
+  refs.themeToggle.onclick(() => appConfig.toggleTheme());
+
+  return {
+    render: () => ({ theme: appConfig.theme() }),
+  };
+}
+```
+
+**When to use each:**
+
+| Context Type                    | Use Case                                     |
+| ------------------------------- | -------------------------------------------- |
+| `provideContext`                | Static values, dependency injection          |
+| `provideReactiveContext`        | Reactive values scoped to component subtree  |
+| `registerReactiveGlobalContext` | Reactive values available app-wide (in init) |
 
 ## Component Lifecycle
 

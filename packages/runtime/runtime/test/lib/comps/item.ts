@@ -40,12 +40,14 @@ export interface ItemComponent<ParentVS> extends JayComponent<ItemProps, ItemVS,
 export function Item<ParentVS>(props: ItemProps): ItemComponent<ParentVS> {
     let done = false;
     let text = props.text;
-    let jayElement = renderItem({ text, done, dataId: props.dataId });
+    let viewState = { text, done, dataId: props.dataId };
+    let jayElement = renderItem(viewState);
     let onremove = mkComponentEventHandler<string, ParentVS>();
 
     jayElement.refs.done.onclick(() => {
         done = !done;
-        jayElement.update({ text, done, dataId: props.dataId });
+        viewState = { text, done, dataId: props.dataId };
+        jayElement.update(viewState);
     });
 
     jayElement.refs.remove.onclick(() => {
@@ -56,7 +58,8 @@ export function Item<ParentVS>(props: ItemProps): ItemComponent<ParentVS> {
         element: jayElement,
         update: (props) => {
             text = props.text;
-            jayElement.update({ text, done, dataId: props.dataId });
+            viewState = { text, done, dataId: props.dataId };
+            jayElement.update(viewState);
         },
         mount: () => jayElement.mount(),
         unmount: () => jayElement.unmount(),
@@ -75,6 +78,9 @@ export function Item<ParentVS>(props: ItemProps): ItemComponent<ParentVS> {
             options?: EventListenerOptions | boolean,
         ) => {
             if (type === 'remove') onremove(undefined);
+        },
+        get viewState() {
+            return viewState;
         },
     };
 

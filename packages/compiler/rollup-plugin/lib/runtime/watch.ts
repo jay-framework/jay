@@ -1,7 +1,8 @@
 import { PluginContext } from 'rollup';
+import { getLogger } from '@jay-framework/logger';
 
 export function watchChangesFor(context: PluginContext, sourcePath: string) {
     if (context.getWatchFiles().includes(sourcePath)) return;
     context.addWatchFile(sourcePath);
-    console.info(`[watch] add ${sourcePath}`);
+    getLogger().info(`[watch] add ${sourcePath}`);
 }

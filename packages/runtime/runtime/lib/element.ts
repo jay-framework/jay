@@ -366,6 +366,66 @@ export function forEach<T, Item>(
     return { getItems, elemCreator, trackBy: matchBy };
 }
 
+/**
+ * Runtime support for pre-rendered slow arrays (slowForEach in jay-html).
+ *
+ * This function is used when a forEach loop has been pre-rendered at slow phase.
+ * The array items are statically embedded in the jay-html, but we still need to:
+ * 1. Set up the correct data context for each item (so bindings work)
+ * 2. Enable fast/interactive updates within each item
+ * 3. Support event handling with the correct item coordinates
+ *
+ * The key insight is that slowForEachItem switches the data context to the
+ * specific array item, so child bindings like {price} work correctly
+ * (they resolve to item.price, not viewState.price).
+ *
+ * @param getItems - Function to get the array from the parent ViewState (handles nested paths)
+ * @param index - The jayIndex value (position in the pre-rendered array)
+ * @param trackByValue - The jayTrackBy value (identity for reconciliation)
+ * @param elementCreator - Function that creates the pre-rendered element (called within item context)
+ */
+export function slowForEachItem<ParentVS, ItemVS>(
+    getItems: (parentData: ParentVS) => ItemVS[],
+    index: number,
+    trackByValue: string,
+    elementCreator: () => BaseJayElement<ItemVS>,
+): BaseJayElement<ParentVS> {
+    // Get the parent construction context
+    const parentContext = currentConstructionContext();
+    const savedContext = saveContext();
+
+    // Get the initial item from the array (may be undefined if array is missing or shorter than expected)
+    const parentData = parentContext.currData as ParentVS;
+    const array = getItems(parentData);
+    const initialItem = array?.[index];
+
+    // Create a child context for this item and construct the element within it
+    const childContext = parentContext.forItem(initialItem, trackByValue);
+    const element = withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, elementCreator);
+
+    // Wrap the element with context-aware update
+    const originalUpdate = element.update;
+    const update: updateFunc<ParentVS> = (newParentData: ParentVS) => {
+        const newArray = getItems(newParentData);
+        const newItem = newArray?.[index];
+
+        // Update with item data in the correct context
+        const updateChildContext = parentContext.forItem(newItem, trackByValue);
+        restoreContext(savedContext, () =>
+            withContext(CONSTRUCTION_CONTEXT_MARKER, updateChildContext, () => {
+                originalUpdate(newItem);
+            }),
+        );
+    };
+
+    return {
+        dom: element.dom,
+        update,
+        mount: element.mount,
+        unmount: element.unmount,
+    };
+}
+
 export interface ForEach<ViewState, Item> {
     getItems: (T) => Array<Item>;
     elemCreator: (Item, String) => BaseJayElement<Item>;

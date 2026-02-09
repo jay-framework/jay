@@ -16,6 +16,8 @@ export interface JayHeadlessImports {
     contractLinks: JayImportLink[];
     codeLink: JayImportLink;
     contract?: Contract; // The loaded contract for this headless component
+    contractPath?: string; // Absolute path to the contract file (for resolving linked sub-contracts)
+    metadata?: Record<string, unknown>; // Optional metadata from dynamic contract generator
 }
 
 export interface JayHtmlHeadLink {
@@ -33,6 +35,11 @@ export interface JayHtmlSourceFile extends CompilerSourceFile {
     headlessImports: JayHeadlessImports[];
     headLinks: JayHtmlHeadLink[];
     css?: string;
+    /**
+     * Absolute paths to linked CSS files referenced via <link rel="stylesheet">.
+     * Used by the dev server to watch these files for changes.
+     */
+    linkedCssFiles?: string[];
     filename?: string;
     contract?: Contract; // The parsed contract if using contract reference
     contractRef?: string; // Path to contract file if using contract reference

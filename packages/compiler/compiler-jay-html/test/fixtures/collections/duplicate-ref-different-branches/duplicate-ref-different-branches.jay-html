@@ -1,0 +1,26 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    items:
+    -  name: string
+       id: string
+    showGlobalDelete: boolean
+    </script>
+</head>
+<body>
+<div>
+    <h1>{title}</h1>
+    <div>
+        <div forEach="items" trackBy="id">
+            <span ref="name">{name}</span>
+            <button ref="deleteButton">Delete Item</button>
+        </div>
+    </div>
+    <div if="showGlobalDelete">
+        <button ref="deleteButton">Delete All</button>
+    </div>
+</div>
+</body>
+</html>

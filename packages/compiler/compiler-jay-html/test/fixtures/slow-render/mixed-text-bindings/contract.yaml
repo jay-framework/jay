@@ -1,0 +1,10 @@
+name: Test
+tags:
+  - tag: name
+    type: data
+    dataType: string
+    phase: slow
+  - tag: price
+    type: data
+    dataType: number
+    phase: fast

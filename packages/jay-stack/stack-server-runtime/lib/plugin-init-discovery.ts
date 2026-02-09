@@ -10,13 +10,11 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { createRequire } from 'node:module';
-import { loadPluginManifest } from '@jay-framework/compiler-shared';
 import type { JayInit } from '@jay-framework/fullstack-component';
 import type { ViteSSRLoader } from './action-discovery';
 import { setClientInitData } from './services';
-
-const require = createRequire(import.meta.url);
+import { scanPlugins, type ScannedPlugin } from './plugin-scanner';
+import { getLogger } from '@jay-framework/logger';
 
 /**
  * Information about a discovered plugin with init.
@@ -69,117 +67,38 @@ export async function discoverPluginsWithInit(
     options: PluginInitDiscoveryOptions,
 ): Promise<PluginWithInit[]> {
     const { projectRoot, verbose = false } = options;
+
+    // Use shared plugin scanner with transitive discovery enabled
+    const scannedPlugins = await scanPlugins({
+        projectRoot,
+        verbose,
+        includeDevDeps: false, // Only runtime dependencies
+        discoverTransitive: true, // Need transitive for dependency ordering
+    });
+
     const plugins: PluginWithInit[] = [];
-    const visitedPackages = new Set<string>();
 
-    // 1. Scan local plugins in src/plugins/
-    const localPluginsPath = path.join(projectRoot, 'src/plugins');
-    if (fs.existsSync(localPluginsPath)) {
-        try {
-            const entries = fs.readdirSync(localPluginsPath, { withFileTypes: true });
+    for (const [key, scanned] of scannedPlugins) {
+        // Determine init module and export
+        const initConfig = resolvePluginInit(
+            scanned.pluginPath,
+            scanned.manifest.init,
+            scanned.isLocal,
+        );
+        if (!initConfig) continue;
 
-            for (const entry of entries) {
-                if (!entry.isDirectory()) continue;
+        plugins.push({
+            name: scanned.name,
+            pluginPath: scanned.pluginPath,
+            packageName: scanned.packageName,
+            isLocal: scanned.isLocal,
+            initModule: initConfig.module,
+            initExport: initConfig.export,
+            dependencies: scanned.dependencies,
+        });
 
-                const pluginPath = path.join(localPluginsPath, entry.name);
-                const manifest = loadPluginManifest(pluginPath);
-
-                if (!manifest) continue;
-
-                // Determine init module and export
-                const initConfig = resolvePluginInit(pluginPath, manifest.init, true);
-                if (!initConfig) continue;
-
-                const dependencies = await getPackageDependencies(pluginPath);
-
-                plugins.push({
-                    name: manifest.name || entry.name,
-                    pluginPath,
-                    packageName: pluginPath, // For local, use path
-                    isLocal: true,
-                    initModule: initConfig.module,
-                    initExport: initConfig.export,
-                    dependencies,
-                });
-
-                visitedPackages.add(pluginPath);
-
-                if (verbose) {
-                    console.log(
-                        `[PluginInit] Found local plugin with init: ${manifest.name || entry.name}`,
-                    );
-                }
-            }
-        } catch (error) {
-            console.warn(`[PluginInit] Failed to scan local plugins: ${error}`);
-        }
-    }
-
-    // 2. Scan NPM plugins - start with project's package.json dependencies
-    //    then recursively check transitive plugin dependencies
-    const projectPackageJsonPath = path.join(projectRoot, 'package.json');
-    if (fs.existsSync(projectPackageJsonPath)) {
-        try {
-            const projectPackageJson = JSON.parse(fs.readFileSync(projectPackageJsonPath, 'utf-8'));
-            // Only check runtime dependencies, not devDependencies
-            // devDependencies are build tools, not runtime plugins
-            const initialDeps = Object.keys(projectPackageJson.dependencies || {});
-
-            // Queue-based traversal for transitive dependencies
-            const packagesToCheck = [...initialDeps];
-
-            while (packagesToCheck.length > 0) {
-                const depName = packagesToCheck.shift()!;
-
-                // Skip if already visited
-                if (visitedPackages.has(depName)) continue;
-                visitedPackages.add(depName);
-
-                // Try to resolve plugin.yaml from the package
-                let pluginYamlPath: string;
-                try {
-                    pluginYamlPath = require.resolve(`${depName}/plugin.yaml`, {
-                        paths: [projectRoot],
-                    });
-                } catch {
-                    // Not a Jay plugin, skip
-                    continue;
-                }
-
-                const pluginPath = path.dirname(pluginYamlPath);
-                const manifest = loadPluginManifest(pluginPath);
-
-                if (!manifest) continue;
-
-                // Determine init module and export
-                const initConfig = resolvePluginInit(pluginPath, manifest.init, false);
-                if (!initConfig) continue;
-
-                const dependencies = await getPackageDependencies(pluginPath);
-
-                plugins.push({
-                    name: manifest.name || depName,
-                    pluginPath,
-                    packageName: depName,
-                    isLocal: false,
-                    initModule: initConfig.module,
-                    initExport: initConfig.export,
-                    dependencies,
-                });
-
-                if (verbose) {
-                    console.log(`[PluginInit] Found NPM plugin with init: ${depName}`);
-                }
-
-                // Add this plugin's dependencies to the queue for transitive discovery
-                for (const transitiveDep of dependencies) {
-                    if (!visitedPackages.has(transitiveDep)) {
-                        packagesToCheck.push(transitiveDep);
-                    }
-                }
-            }
-        } catch (error) {
-            console.warn(`[PluginInit] Failed to scan NPM plugins: ${error}`);
+        if (verbose) {
+            getLogger().info(`[PluginInit] Found plugin with init: ${scanned.name}`);
         }
     }
 
@@ -257,23 +176,6 @@ function resolvePluginInit(
 }
 
 /**
- * Gets dependencies from a package's package.json.
- */
-async function getPackageDependencies(pluginPath: string): Promise<string[]> {
-    const packageJsonPath = path.join(pluginPath, 'package.json');
-    if (!fs.existsSync(packageJsonPath)) {
-        return [];
-    }
-
-    try {
-        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-        return Object.keys(packageJson.dependencies || {});
-    } catch {
-        return [];
-    }
-}
-
-/**
  * Sorts plugins by their dependencies (topological sort).
  * Plugins with no dependencies come first, then plugins that depend on them, etc.
  */
@@ -286,7 +188,7 @@ export function sortPluginsByDependencies(plugins: PluginWithInit[]): PluginWith
     function visit(plugin: PluginWithInit) {
         if (visited.has(plugin.packageName)) return;
         if (visiting.has(plugin.packageName)) {
-            console.warn(`[PluginInit] Circular dependency detected for ${plugin.name}`);
+            getLogger().warn(`[PluginInit] Circular dependency detected for ${plugin.name}`);
             return;
         }
 
@@ -350,7 +252,7 @@ export async function executePluginServerInits(
             let pluginModule: Record<string, any>;
 
             if (viteServer) {
-                // In dev mode, use Vite's SSR loader for TypeScript support
+                // In dev mode, use Vite's SSR loader for TypeScript support and hot reload
                 pluginModule = await viteServer.ssrLoadModule(modulePath);
             } else {
                 // Production: use native import
@@ -360,7 +262,7 @@ export async function executePluginServerInits(
             const jayInit = pluginModule[plugin.initExport] as JayInit<any> | undefined;
 
             if (!jayInit || jayInit.__brand !== 'JayInit') {
-                console.warn(
+                getLogger().warn(
                     `[PluginInit] Plugin "${plugin.name}" init module doesn't export a valid JayInit at "${plugin.initExport}"`,
                 );
                 continue;
@@ -369,7 +271,7 @@ export async function executePluginServerInits(
             // Execute server init if defined
             if (typeof jayInit._serverInit === 'function') {
                 if (verbose) {
-                    console.log(`[DevServer] Running server init: ${plugin.name}`);
+                    getLogger().info(`[DevServer] Running server init: ${plugin.name}`);
                 }
 
                 // Run server init and capture returned data
@@ -382,9 +284,8 @@ export async function executePluginServerInits(
                 }
             }
         } catch (error) {
-            console.error(
-                `[PluginInit] Failed to execute server init for "${plugin.name}":`,
-                error,
+            getLogger().error(
+                `[PluginInit] Failed to execute server init for "${plugin.name}": ${error}`,
             );
         }
     }

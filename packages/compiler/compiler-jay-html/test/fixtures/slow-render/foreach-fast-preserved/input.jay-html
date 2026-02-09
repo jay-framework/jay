@@ -1,0 +1,11 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data" contract="./test.jay-contract"></script>
+</head>
+<body>
+    <ul>
+        <li forEach="items" trackBy="id">{name}</li>
+    </ul>
+</body>
+</html>

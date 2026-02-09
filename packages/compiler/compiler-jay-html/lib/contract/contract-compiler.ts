@@ -89,9 +89,15 @@ export async function compileContract(
             const fullViewStateTypes = generateTypes(type);
 
             // Generate phase-specific ViewState types using Pick utilities
+            ``; // Pass import resolver to resolve linked contracts with mixed phases
             const contractName = pascalCase(contract.name);
             const viewStateTypeName = `${contractName}ViewState`;
-            const phaseViewStateTypes = generateAllPhaseViewStateTypes(contract, viewStateTypeName);
+            const phaseViewStateTypes = generateAllPhaseViewStateTypes(
+                contract,
+                viewStateTypeName,
+                jayImportResolver,
+                contractFilePath,
+            );
 
             // Generate refs interface
             let { imports, renderedRefs } = generateRefsInterface(contract, refs);

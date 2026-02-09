@@ -1411,3 +1411,53 @@ All phases of server actions are now implemented:
 8. ✅ NPM Plugin Actions (package dependencies)
 9. ✅ Plugin Client Build (with resolveId + load pattern)
 10. ✅ Vite SSR Loading (for TypeScript in dev mode)
+11. ✅ Backend Action Execution (runAction helper)
+
+---
+
+### Backend Action Execution Fix
+
+**Problem:** When calling an action directly from backend code (e.g., render phases), services are not injected. The action callable passes an empty array as services:
+
+```typescript
+// jay-action-builder.ts line 186
+(input: I): Promise<O> => handler(input, ...([] as unknown as Services)),
+```
+
+This is by design for client-side code (transformed to HTTP calls), but breaks when backend code calls actions directly:
+
+```typescript
+// In renderFastChanging
+const result = await searchProducts({ query: '' }); // ❌ Services not injected
+```
+
+**Solution:** Added `runAction(action, input)` helper to `@jay-framework/stack-server-runtime`:
+
+```typescript
+import { runAction } from '@jay-framework/stack-server-runtime';
+import { searchProducts } from '../actions/stores-actions';
+
+// In renderFastChanging
+const result = await runAction(searchProducts, { query: '' }); // ✅ Services injected
+```
+
+**Implementation:**
+
+```typescript
+// action-registry.ts
+export async function runAction<I, O>(
+  action: JayAction<I, O> & JayActionDefinition<I, O, any[]>,
+  input: I,
+): Promise<O> {
+  const services = resolveServices(action.services);
+  return action.handler(input, ...services);
+}
+```
+
+**Why not modify the action callable?**
+
+- `fullstack-component` can't import from `stack-server-runtime` (circular dependency)
+- Explicit `runAction` makes it clear services are being resolved
+- Matches the pattern mentioned in the original comment on line 183-184
+
+**Tests:** 4 new tests added (66 total passing)

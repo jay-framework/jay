@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data" contract="./test.jay-contract"></script>
+</head>
+<body>
+    <h1>{title}</h1>
+    <span>{price}</span>
+</body>
+</html>

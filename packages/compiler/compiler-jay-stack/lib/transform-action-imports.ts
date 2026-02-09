@@ -18,6 +18,7 @@
 
 import type * as ts from 'typescript';
 import tsBridge from '@jay-framework/typescript-bridge';
+import { getLogger } from '@jay-framework/logger';
 
 /**
  * Metadata for a discovered action.
@@ -310,7 +311,7 @@ export async function transformActionImports(
         // Resolve the action module
         const resolved = await resolveActionModule(imp.source, id);
         if (!resolved) {
-            console.warn(`[action-transform] Could not resolve action module: ${imp.source}`);
+            getLogger().warn(`[action-transform] Could not resolve action module: ${imp.source}`);
             continue;
         }
 
@@ -330,7 +331,7 @@ export async function transformActionImports(
             } else {
                 // Not an action - might be ActionError or other export
                 // Keep the original import for non-action exports
-                console.warn(
+                getLogger().warn(
                     `[action-transform] Export '${importName}' from ${imp.source} is not a recognized action`,
                 );
             }

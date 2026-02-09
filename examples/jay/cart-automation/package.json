@@ -1,0 +1,30 @@
+{
+  "name": "example-jay-cart-automation",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Shopping cart example with console automation API",
+  "private": true,
+  "license": "Apache-2.0",
+  "scripts": {
+    "definitions": "jay-cli definitions ./lib",
+    "dev": "npm run definitions && vite --open",
+    "build:js": "vite build --base ./",
+    "build": "npm run definitions && npm run build:js",
+    "test": "echo 'No tests'",
+    "confirm": "npm run clean && npm run build",
+    "clean": "rimraf dist && rimraf build && (rimraf -g lib/**/*.d.ts || :)"
+  },
+  "dependencies": {
+    "@jay-framework/component": "workspace:^",
+    "@jay-framework/runtime": "workspace:^",
+    "@jay-framework/runtime-automation": "workspace:^"
+  },
+  "devDependencies": {
+    "@jay-framework/dev-environment": "workspace:^",
+    "@jay-framework/jay-cli": "workspace:^",
+    "@jay-framework/vite-plugin": "workspace:^",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11"
+  }
+}

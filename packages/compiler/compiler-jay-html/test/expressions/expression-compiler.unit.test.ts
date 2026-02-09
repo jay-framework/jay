@@ -6,6 +6,7 @@ import {
     parseClassExpression,
     parseComponentPropExpression,
     parseCondition,
+    parseConditionForSlowRender,
     parseEnumValues,
     parseImportNames,
     parseIsEnum,
@@ -14,6 +15,7 @@ import {
     parseReactTextExpression,
     parseStyleDeclarations,
     parseTextExpression,
+    SlowRenderContext,
     Variables,
 } from '../../lib/expressions/expression-compiler';
 
@@ -71,6 +73,10 @@ describe('expression-compiler', () => {
                 member: JayString,
                 member2: JayBoolean,
                 anEnum: new JayEnumType('AnEnum', ['one', 'two', 'three']),
+                count: JayNumber,
+                nested: new JayObjectType('nested', {
+                    page: JayNumber,
+                }),
             }),
         );
 
@@ -154,6 +160,97 @@ describe('expression-compiler', () => {
             expect(actual.rendered).toEqual(
                 'vs => ((vs.member) || (vs.member2)) && (vs.anEnum === AnEnum.one)',
             );
+        });
+
+        it('less than comparison with number', () => {
+            const actual = parseCondition('count < 10', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count < 10');
+        });
+
+        it('less than or equal comparison with number', () => {
+            const actual = parseCondition('count <= 1', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count <= 1');
+        });
+
+        it('greater than comparison with number', () => {
+            const actual = parseCondition('count > 0', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count > 0');
+        });
+
+        it('greater than or equal comparison with number', () => {
+            const actual = parseCondition('count >= 5', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count >= 5');
+        });
+
+        it('nested property comparison with number', () => {
+            const actual = parseCondition('nested.page <= 1', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.nested?.page <= 1');
+        });
+
+        it('comparison with negative number', () => {
+            const actual = parseCondition('count > -5', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count > -5');
+        });
+
+        it('comparison with decimal number', () => {
+            const actual = parseCondition('count <= 3.14', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count <= 3.14');
+        });
+
+        it('comparison combined with boolean condition using AND', () => {
+            const actual = parseCondition('count > 0 && member2', defaultVars);
+            expect(actual.rendered).toEqual('vs => (vs.count > 0) && (vs.member2)');
+        });
+
+        it('comparison combined with enum condition using OR', () => {
+            const actual = parseCondition('count <= 1 || anEnum == one', defaultVars);
+            expect(actual.rendered).toEqual('vs => (vs.count <= 1) || (vs.anEnum === AnEnum.one)');
+        });
+
+        it('comparison between two fields', () => {
+            const actual = parseCondition('count >= nested.page', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count >= vs.nested?.page');
+        });
+
+        it('comparison between nested fields', () => {
+            const actual = parseCondition('nested.page <= count', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.nested?.page <= vs.count');
+        });
+
+        it('field comparison combined with boolean using AND', () => {
+            const actual = parseCondition('count > nested.page && member2', defaultVars);
+            expect(actual.rendered).toEqual('vs => (vs.count > vs.nested?.page) && (vs.member2)');
+        });
+
+        it('equality comparison with number using ==', () => {
+            const actual = parseCondition('count == 0', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count === 0');
+        });
+
+        it('equality comparison with number using ===', () => {
+            const actual = parseCondition('count === 5', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count === 5');
+        });
+
+        it('inequality comparison with number using !=', () => {
+            const actual = parseCondition('count != 0', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count !== 0');
+        });
+
+        it('inequality comparison with number using !==', () => {
+            const actual = parseCondition('count !== 10', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count !== 10');
+        });
+
+        it('equality comparison between dotted fields using ==', () => {
+            const actual = parseCondition('count == nested.page', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.count === vs.nested?.page');
+        });
+
+        it('enum comparison still works with single identifier', () => {
+            // Single identifier on right side should be treated as enum value
+            const actual = parseCondition('anEnum == one', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.anEnum === AnEnum.one');
         });
 
         it('basic condition with member not in type should report a problem', () => {
@@ -320,44 +417,95 @@ describe('expression-compiler', () => {
     describe('parseBooleanAttributeExpression', () => {
         let defaultVars = new Variables(
             new JayObjectType('data', {
-                string1: JayString,
-                string3: JayString,
+                isEnabled: JayBoolean,
+                isVisible: JayBoolean,
+                nested: new JayObjectType('nested', {
+                    isActive: JayBoolean,
+                    status: new JayEnumType('Status', ['pending', 'active', 'completed']),
+                }),
+                currentSort: new JayEnumType('CurrentSort', ['newest', 'oldest', 'priceAsc']),
             }),
         );
 
-        it('constant string expression', () => {
-            const actual = parseBooleanAttributeExpression('some constant string', defaultVars);
-            expect(actual.rendered).toEqual("'some constant string'");
-            expect(actual.imports.has(Import.booleanAttribute)).toBeFalsy();
-        });
-
-        it('constant number expression', () => {
-            const actual = parseBooleanAttributeExpression('123123', defaultVars);
-            expect(actual.rendered).toEqual("'123123'");
-            expect(actual.imports.has(Import.booleanAttribute)).toBeFalsy();
-        });
-
-        it('single accessor', () => {
-            const actual = parseBooleanAttributeExpression('{string1}', defaultVars);
-            expect(actual.rendered).toEqual('ba(vs => vs.string1)');
+        it('simple boolean condition', () => {
+            const actual = parseBooleanAttributeExpression('isEnabled', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => vs.isEnabled)');
             expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
         });
 
-        it('single accessor in text', () => {
-            const actual = parseBooleanAttributeExpression('some {string1} thing', defaultVars);
-            expect(actual.rendered).toEqual('ba(vs => `some ${vs.string1} thing`)');
+        it('negated boolean condition', () => {
+            const actual = parseBooleanAttributeExpression('!isEnabled', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => !vs.isEnabled)');
             expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
         });
 
-        it('single accessor with text before', () => {
-            const actual = parseBooleanAttributeExpression('some {string1}', defaultVars);
-            expect(actual.rendered).toEqual('ba(vs => `some ${vs.string1}`)');
+        it('nested boolean condition', () => {
+            const actual = parseBooleanAttributeExpression('nested.isActive', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => vs.nested?.isActive)');
             expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
         });
 
-        it('single accessor with text after', () => {
-            const actual = parseBooleanAttributeExpression('{string1} thing', defaultVars);
-            expect(actual.rendered).toEqual('ba(vs => `${vs.string1} thing`)');
+        it('enum comparison with ==', () => {
+            const actual = parseBooleanAttributeExpression('currentSort == newest', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => vs.currentSort === CurrentSort.newest)');
+            expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
+        });
+
+        it('enum comparison with ===', () => {
+            const actual = parseBooleanAttributeExpression('currentSort === newest', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => vs.currentSort === CurrentSort.newest)');
+            expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
+        });
+
+        it('enum not equal with !=', () => {
+            const actual = parseBooleanAttributeExpression('currentSort != newest', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => vs.currentSort !== CurrentSort.newest)');
+            expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
+        });
+
+        it('nested enum comparison', () => {
+            const actual = parseBooleanAttributeExpression('nested.status == active', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => vs.nested?.status === Status.active)');
+            expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
+        });
+
+        it('logical AND with two booleans', () => {
+            const actual = parseBooleanAttributeExpression('isEnabled && isVisible', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => (vs.isEnabled) && (vs.isVisible))');
+            expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
+        });
+
+        it('logical OR with two booleans', () => {
+            const actual = parseBooleanAttributeExpression('isEnabled || isVisible', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => (vs.isEnabled) || (vs.isVisible))');
+            expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
+        });
+
+        it('logical AND with negation', () => {
+            const actual = parseBooleanAttributeExpression('isEnabled && !isVisible', defaultVars);
+            expect(actual.rendered).toEqual('ba(vs => (vs.isEnabled) && (!vs.isVisible))');
+            expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
+        });
+
+        it('boolean AND enum comparison', () => {
+            const actual = parseBooleanAttributeExpression(
+                'isEnabled && currentSort == newest',
+                defaultVars,
+            );
+            expect(actual.rendered).toEqual(
+                'ba(vs => (vs.isEnabled) && (vs.currentSort === CurrentSort.newest))',
+            );
+            expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
+        });
+
+        it('complex condition with nested and enum', () => {
+            const actual = parseBooleanAttributeExpression(
+                'nested.isActive && nested.status == active',
+                defaultVars,
+            );
+            expect(actual.rendered).toEqual(
+                'ba(vs => (vs.nested?.isActive) && (vs.nested?.status === Status.active))',
+            );
             expect(actual.imports.has(Import.booleanAttribute)).toBeTruthy();
         });
     });
@@ -547,7 +695,7 @@ describe('expression-compiler', () => {
         it('fail and report broken expression', () => {
             expect(() => {
                 parseTextExpression('some broken { expression', defaultVars);
-            }).toThrow('failed to parse expression [some broken { expression]. ');
+            }).toThrow(/Failed to parse expression \[some broken \{ expression\]/);
         });
     });
 
@@ -654,7 +802,7 @@ describe('expression-compiler', () => {
         it('fail and report broken expression', () => {
             expect(() => {
                 parseReactTextExpression('some broken { expression', defaultVars);
-            }).toThrow('failed to parse expression [some broken { expression]. ');
+            }).toThrow(/Failed to parse expression \[some broken \{ expression\]/);
         });
     });
 
@@ -757,9 +905,7 @@ describe('expression-compiler', () => {
         it('invalid import names', () => {
             expect(() => {
                 parseImportNames('name1 name2');
-            }).toThrow(
-                'failed to parse expression [name1 name2]. Expected "," or "as" but "n" found.',
-            );
+            }).toThrow('Failed to parse expression [name1 name2]');
         });
     });
 
@@ -782,9 +928,7 @@ describe('expression-compiler', () => {
         it('parses invalid enum', () => {
             expect(() => {
                 parseEnumValues('enum(not an enum');
-            }).toThrow(
-                'failed to parse expression [enum(not an enum]. Expected ")" or "|" but "a" found.',
-            );
+            }).toThrow('Failed to parse expression [enum(not an enum]');
         });
     });
 
@@ -907,6 +1051,352 @@ describe('expression-compiler', () => {
             expect(result.declarations[3].valueFragment.rendered).toContain(
                 "url('/images/I2:2069;2:1758_FILL.png')",
             );
+        });
+    });
+
+    describe('parseConditionForSlowRender', () => {
+        // Helper to extract all property paths from an object (for marking as slow)
+        function extractPaths(obj: Record<string, unknown>, prefix: string = ''): string[] {
+            const paths: string[] = [];
+            for (const key of Object.keys(obj)) {
+                const path = prefix ? `${prefix}.${key}` : key;
+                paths.push(path);
+                if (obj[key] && typeof obj[key] === 'object' && !Array.isArray(obj[key])) {
+                    paths.push(...extractPaths(obj[key] as Record<string, unknown>, path));
+                }
+            }
+            return paths;
+        }
+
+        // Helper to create slow context where all properties in slowData are slow-phase
+        function allSlowContext(slowData: Record<string, unknown>): SlowRenderContext {
+            const phaseMap = new Map<string, { phase: string }>();
+            // Mark all properties in slowData as slow
+            for (const path of extractPaths(slowData)) {
+                phaseMap.set(path, { phase: 'slow' });
+            }
+            return {
+                slowData,
+                phaseMap,
+                contextPath: '',
+            };
+        }
+
+        // Helper to create slow context with explicit phase map
+        function mixedPhaseContext(
+            slowData: Record<string, unknown>,
+            slowPaths: string[],
+            fastPaths: string[],
+        ): SlowRenderContext {
+            const phaseMap = new Map<string, { phase: string }>();
+            for (const path of slowPaths) {
+                phaseMap.set(path, { phase: 'slow' });
+            }
+            for (const path of fastPaths) {
+                phaseMap.set(path, { phase: 'fast' });
+            }
+            return {
+                slowData,
+                phaseMap,
+                contextPath: '',
+            };
+        }
+
+        describe('fully slow conditions', () => {
+            it('should resolve simple property to true when truthy', () => {
+                const result = parseConditionForSlowRender(
+                    'isActive',
+                    allSlowContext({ isActive: true }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve simple property to false when falsy', () => {
+                const result = parseConditionForSlowRender(
+                    'isActive',
+                    allSlowContext({ isActive: false }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: false });
+            });
+
+            it('should resolve empty string as falsy', () => {
+                const result = parseConditionForSlowRender(
+                    'imageUrl',
+                    allSlowContext({ imageUrl: '' }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: false });
+            });
+
+            it('should resolve non-empty string as truthy', () => {
+                const result = parseConditionForSlowRender(
+                    'imageUrl',
+                    allSlowContext({ imageUrl: 'http://example.com/img.jpg' }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve negation correctly', () => {
+                const result = parseConditionForSlowRender(
+                    '!imageUrl',
+                    allSlowContext({ imageUrl: '' }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve double negation correctly', () => {
+                const result = parseConditionForSlowRender(
+                    '!!imageUrl',
+                    allSlowContext({ imageUrl: 'http://example.com' }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve nested property access', () => {
+                const result = parseConditionForSlowRender(
+                    'product.isAvailable',
+                    allSlowContext({ product: { isAvailable: true } }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve numeric comparison greater than', () => {
+                const result = parseConditionForSlowRender(
+                    'count > 0',
+                    allSlowContext({ count: 5 }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve numeric comparison less than or equal', () => {
+                const result = parseConditionForSlowRender(
+                    'count <= 0',
+                    allSlowContext({ count: 0 }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve equality comparison', () => {
+                const result = parseConditionForSlowRender(
+                    'status == 5',
+                    allSlowContext({ status: 5 }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve false equality comparison', () => {
+                const result = parseConditionForSlowRender(
+                    'status == 5',
+                    allSlowContext({ status: 4 }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: false });
+            });
+
+            it('should resolve inequality comparison', () => {
+                const result = parseConditionForSlowRender(
+                    'status != 0',
+                    allSlowContext({ status: 5 }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve logical AND with both true', () => {
+                const result = parseConditionForSlowRender(
+                    'inStock && isAvailable',
+                    allSlowContext({ inStock: true, isAvailable: true }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve logical AND with one false', () => {
+                const result = parseConditionForSlowRender(
+                    'inStock && isAvailable',
+                    allSlowContext({ inStock: true, isAvailable: false }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: false });
+            });
+
+            it('should resolve logical OR with one true', () => {
+                const result = parseConditionForSlowRender(
+                    'isPromoted || hasDiscount',
+                    allSlowContext({ isPromoted: false, hasDiscount: true }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve logical OR with both false', () => {
+                const result = parseConditionForSlowRender(
+                    'isPromoted || hasDiscount',
+                    allSlowContext({ isPromoted: false, hasDiscount: false }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: false });
+            });
+
+            it('should resolve parenthesized expressions', () => {
+                const result = parseConditionForSlowRender(
+                    '(a && b) || c',
+                    allSlowContext({ a: true, b: false, c: true }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should resolve complex expression', () => {
+                const result = parseConditionForSlowRender(
+                    '!imageUrl && count > 0',
+                    allSlowContext({ imageUrl: '', count: 5 }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+        });
+
+        describe('mixed phase conditions', () => {
+            it('should simplify true && X to X', () => {
+                const ctx = mixedPhaseContext({ inStock: true }, ['inStock'], ['price']);
+                const result = parseConditionForSlowRender('inStock && price > 0', ctx);
+                expect(result.type).toEqual('runtime');
+                if (result.type === 'runtime') {
+                    expect(result.simplifiedExpr).toEqual('price > 0');
+                }
+            });
+
+            it('should simplify false && X to false', () => {
+                const ctx = mixedPhaseContext({ inStock: false }, ['inStock'], ['price']);
+                const result = parseConditionForSlowRender('inStock && price > 0', ctx);
+                expect(result).toEqual({ type: 'resolved', value: false });
+            });
+
+            it('should simplify true || X to true', () => {
+                const ctx = mixedPhaseContext(
+                    { isPromoted: true },
+                    ['isPromoted'],
+                    ['hasDiscount'],
+                );
+                const result = parseConditionForSlowRender('isPromoted || hasDiscount', ctx);
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should simplify false || X to X', () => {
+                const ctx = mixedPhaseContext(
+                    { isPromoted: false },
+                    ['isPromoted'],
+                    ['hasDiscount'],
+                );
+                const result = parseConditionForSlowRender('isPromoted || hasDiscount', ctx);
+                expect(result.type).toEqual('runtime');
+                if (result.type === 'runtime') {
+                    expect(result.simplifiedExpr).toEqual('hasDiscount');
+                }
+            });
+
+            it('should handle X && true as X', () => {
+                const ctx = mixedPhaseContext({ inStock: true }, ['inStock'], ['price']);
+                const result = parseConditionForSlowRender('price > 0 && inStock', ctx);
+                expect(result.type).toEqual('runtime');
+                if (result.type === 'runtime') {
+                    expect(result.simplifiedExpr).toEqual('price > 0');
+                }
+            });
+
+            it('should handle X && false as false', () => {
+                const ctx = mixedPhaseContext({ inStock: false }, ['inStock'], ['price']);
+                const result = parseConditionForSlowRender('price > 0 && inStock', ctx);
+                expect(result).toEqual({ type: 'resolved', value: false });
+            });
+        });
+
+        describe('fully runtime conditions', () => {
+            it('should return runtime code for fast-phase properties', () => {
+                const ctx = mixedPhaseContext({}, [], ['isActive']);
+                const result = parseConditionForSlowRender('isActive', ctx);
+                expect(result.type).toEqual('runtime');
+                if (result.type === 'runtime') {
+                    expect(result.code.rendered).toContain('isActive');
+                }
+            });
+
+            it('should return runtime code for complex fast expressions', () => {
+                const ctx = mixedPhaseContext({}, [], ['count', 'limit']);
+                const result = parseConditionForSlowRender('count > limit', ctx);
+                expect(result.type).toEqual('runtime');
+                if (result.type === 'runtime') {
+                    expect(result.code.rendered).toContain('count');
+                    expect(result.code.rendered).toContain('limit');
+                }
+            });
+        });
+
+        describe('edge cases', () => {
+            it('should handle zero as falsy', () => {
+                const result = parseConditionForSlowRender('count', allSlowContext({ count: 0 }));
+                expect(result).toEqual({ type: 'resolved', value: false });
+            });
+
+            it('should handle undefined as falsy', () => {
+                // Property 'missing' must be explicitly marked as slow to be evaluated
+                const result = parseConditionForSlowRender(
+                    'missing',
+                    mixedPhaseContext({}, ['missing'], []),
+                );
+                expect(result).toEqual({ type: 'resolved', value: false });
+            });
+
+            it('should handle null as falsy', () => {
+                const result = parseConditionForSlowRender(
+                    'value',
+                    allSlowContext({ value: null }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: false });
+            });
+
+            it('should handle boolean literals', () => {
+                const resultTrue = parseConditionForSlowRender('true', allSlowContext({}));
+                expect(resultTrue).toEqual({ type: 'resolved', value: true });
+
+                const resultFalse = parseConditionForSlowRender('false', allSlowContext({}));
+                expect(resultFalse).toEqual({ type: 'resolved', value: false });
+            });
+
+            it('should handle negative numbers in comparisons', () => {
+                const result = parseConditionForSlowRender(
+                    'count > -1',
+                    allSlowContext({ count: 0 }),
+                );
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should handle context path for nested properties', () => {
+                const ctx: SlowRenderContext = {
+                    slowData: { imageUrl: '' },
+                    phaseMap: new Map([['products.imageUrl', { phase: 'slow' }]]),
+                    contextPath: 'products',
+                };
+                const result = parseConditionForSlowRender('!imageUrl', ctx);
+                expect(result).toEqual({ type: 'resolved', value: true });
+            });
+
+            it('should NOT evaluate properties not in phase map (e.g., headless component properties)', () => {
+                // This tests the fix for the bug where productSearch.hasResults from a headless
+                // component was being evaluated even though it's not in the page's phase map
+                const ctx: SlowRenderContext = {
+                    slowData: { someSlowProp: true },
+                    phaseMap: new Map([['someSlowProp', { phase: 'slow' }]]),
+                    // productSearch.hasResults is NOT in the phase map
+                    contextPath: '',
+                };
+                const result = parseConditionForSlowRender('productSearch.hasResults', ctx);
+                // Should NOT be resolved - should return runtime code
+                expect(result.type).toEqual('runtime');
+            });
+
+            it('should NOT evaluate unknown properties even with data present', () => {
+                // Even if there's data for a property, if it's not in the phase map, don't evaluate
+                const ctx: SlowRenderContext = {
+                    slowData: { unknownProp: true },
+                    phaseMap: new Map(), // Empty phase map = nothing is marked as slow
+                    contextPath: '',
+                };
+                const result = parseConditionForSlowRender('unknownProp', ctx);
+                expect(result.type).toEqual('runtime');
+            });
         });
     });
 });

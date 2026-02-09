@@ -245,29 +245,37 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
 
     // Check dynamic_contracts if present
     if (manifest.dynamic_contracts) {
-        if (!manifest.dynamic_contracts.component) {
-            result.errors.push({
-                type: 'schema',
-                message: 'dynamic_contracts is missing "component" field',
-                location: 'plugin.yaml',
-                suggestion: 'Specify path to shared component for dynamic contracts',
-            });
-        }
-        if (!manifest.dynamic_contracts.generator) {
-            result.errors.push({
-                type: 'schema',
-                message: 'dynamic_contracts is missing "generator" field',
-                location: 'plugin.yaml',
-                suggestion: 'Specify path to generator file',
-            });
-        }
-        if (!manifest.dynamic_contracts.prefix) {
-            result.errors.push({
-                type: 'schema',
-                message: 'dynamic_contracts is missing "prefix" field',
-                location: 'plugin.yaml',
-                suggestion: 'Specify prefix for dynamic contract names (e.g., "cms")',
-            });
+        // Normalize to array
+        const dynamicConfigs = Array.isArray(manifest.dynamic_contracts)
+            ? manifest.dynamic_contracts
+            : [manifest.dynamic_contracts];
+
+        for (const config of dynamicConfigs) {
+            const prefix = config.prefix || '(unknown)';
+            if (!config.component) {
+                result.errors.push({
+                    type: 'schema',
+                    message: `dynamic_contracts[${prefix}] is missing "component" field`,
+                    location: 'plugin.yaml',
+                    suggestion: 'Specify path to shared component for dynamic contracts',
+                });
+            }
+            if (!config.generator) {
+                result.errors.push({
+                    type: 'schema',
+                    message: `dynamic_contracts[${prefix}] is missing "generator" field`,
+                    location: 'plugin.yaml',
+                    suggestion: 'Specify path to generator file or export name',
+                });
+            }
+            if (!config.prefix) {
+                result.errors.push({
+                    type: 'schema',
+                    message: 'dynamic_contracts entry is missing "prefix" field',
+                    location: 'plugin.yaml',
+                    suggestion: 'Specify prefix for dynamic contract names (e.g., "cms")',
+                });
+            }
         }
     }
 
@@ -539,49 +547,76 @@ async function validateDynamicContracts(
     const { dynamic_contracts } = context.manifest;
     if (!dynamic_contracts) return;
 
-    // Check generator file exists
-    if (dynamic_contracts.generator) {
-        const generatorPath = path.join(context.pluginPath, dynamic_contracts.generator);
-        const possibleExtensions = ['.ts', '.js', '/index.ts', '/index.js'];
+    // Normalize to array
+    const dynamicConfigs = Array.isArray(dynamic_contracts)
+        ? dynamic_contracts
+        : [dynamic_contracts];
 
-        let found = false;
-        for (const ext of possibleExtensions) {
-            if (fs.existsSync(generatorPath + ext)) {
-                found = true;
-                break;
+    for (const config of dynamicConfigs) {
+        const prefix = config.prefix || '(unknown)';
+
+        // Check generator - can be file path or export name
+        if (config.generator) {
+            // If it looks like a file path (starts with ./ or contains extension)
+            const isFilePath =
+                config.generator.startsWith('./') ||
+                config.generator.startsWith('/') ||
+                config.generator.includes('.ts') ||
+                config.generator.includes('.js');
+
+            if (isFilePath) {
+                const generatorPath = path.join(context.pluginPath, config.generator);
+                const possibleExtensions = ['', '.ts', '.js', '/index.ts', '/index.js'];
+
+                let found = false;
+                for (const ext of possibleExtensions) {
+                    if (fs.existsSync(generatorPath + ext)) {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found && !context.isNpmPackage) {
+                    result.errors.push({
+                        type: 'file-missing',
+                        message: `Generator file not found for ${prefix}: ${config.generator}`,
+                        location: 'plugin.yaml dynamic_contracts',
+                        suggestion: `Create generator file at ${generatorPath}.ts`,
+                    });
+                }
             }
+            // If it's an export name, we can't easily validate it exists
         }
 
-        if (!found && !context.isNpmPackage) {
-            result.errors.push({
-                type: 'file-missing',
-                message: `Generator file not found: ${dynamic_contracts.generator}`,
-                location: 'plugin.yaml dynamic_contracts',
-                suggestion: `Create generator file at ${generatorPath}.ts`,
-            });
-        }
-    }
+        // Check component - can be file path or export name
+        if (config.component) {
+            const isFilePath =
+                config.component.startsWith('./') ||
+                config.component.startsWith('/') ||
+                config.component.includes('.ts') ||
+                config.component.includes('.js');
 
-    // Check component file exists
-    if (dynamic_contracts.component) {
-        const componentPath = path.join(context.pluginPath, dynamic_contracts.component);
-        const possibleExtensions = ['.ts', '.js', '/index.ts', '/index.js'];
+            if (isFilePath) {
+                const componentPath = path.join(context.pluginPath, config.component);
+                const possibleExtensions = ['', '.ts', '.js', '/index.ts', '/index.js'];
 
-        let found = false;
-        for (const ext of possibleExtensions) {
-            if (fs.existsSync(componentPath + ext)) {
-                found = true;
-                break;
+                let found = false;
+                for (const ext of possibleExtensions) {
+                    if (fs.existsSync(componentPath + ext)) {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found && !context.isNpmPackage) {
+                    result.errors.push({
+                        type: 'file-missing',
+                        message: `Dynamic contracts component not found for ${prefix}: ${config.component}`,
+                        location: 'plugin.yaml dynamic_contracts',
+                        suggestion: `Create component file at ${componentPath}.ts`,
+                    });
+                }
             }
-        }
-
-        if (!found && !context.isNpmPackage) {
-            result.errors.push({
-                type: 'file-missing',
-                message: `Dynamic contracts component not found: ${dynamic_contracts.component}`,
-                location: 'plugin.yaml dynamic_contracts',
-                suggestion: `Create component file at ${componentPath}.ts`,
-            });
         }
     }
 }

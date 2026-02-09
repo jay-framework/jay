@@ -1,5 +1,5 @@
 import { GetterMark, mkReactive, Reactive, SetterMark } from '@jay-framework/reactive';
-import { withContext } from '@jay-framework/runtime';
+import { ContextMarker, registerGlobalContext, withContext } from '@jay-framework/runtime';
 import { CONTEXT_CREATION_CONTEXT } from './component-contexts';
 
 export const CONTEXT_REACTIVE_SYMBOL_CONTEXT = Symbol('context-reactive');
@@ -36,4 +36,37 @@ export function createReactiveContext<T extends object>(mkContext: () => T): T {
         mkContext,
     );
     return newContextProxy(reactive, context);
+}
+
+/**
+ * Creates a reactive context and registers it globally.
+ * Use this in `withClient` initialization to create reactive global contexts.
+ *
+ * @param marker - The context marker created with createJayContext()
+ * @param mkContext - Factory function that creates the context (can use createSignal, etc.)
+ * @returns The created context (for immediate use in init)
+ *
+ * @example
+ * ```typescript
+ * export const init = makeJayInit()
+ *   .withClient(async () => {
+ *     const ctx = registerReactiveGlobalContext(MY_CONTEXT, () => {
+ *       const [count, setCount] = createSignal(0);
+ *       return {
+ *         count,
+ *         increment: () => setCount(n => n + 1),
+ *         async init() { await loadData(); },
+ *       };
+ *     });
+ *     await ctx.init();
+ *   });
+ * ```
+ */
+export function registerReactiveGlobalContext<T extends object>(
+    marker: ContextMarker<T>,
+    mkContext: () => T,
+): T {
+    const context = createReactiveContext(mkContext);
+    registerGlobalContext(marker, context);
+    return context;
 }

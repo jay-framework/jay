@@ -3,7 +3,11 @@ import { JayRoute } from '@jay-framework/stack-route-scanner';
 import { WithValidations } from '@jay-framework/compiler-shared';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { parseJayFile, JAY_IMPORT_RESOLVER } from '@jay-framework/compiler-jay-html';
+import {
+    parseJayFile,
+    JAY_IMPORT_RESOLVER,
+    HeadlessContractInfo,
+} from '@jay-framework/compiler-jay-html';
 import { AnyJayStackComponentDefinition } from '@jay-framework/fullstack-component';
 import { JayRollupConfig } from '@jay-framework/rollup-plugin';
 import { createRequire } from 'module';
@@ -15,6 +19,11 @@ export interface DevServerPagePart {
     key?: string;
     clientImport: string;
     clientPart: string;
+    /** Contract metadata for dynamic contract components */
+    contractInfo?: {
+        contractName: string;
+        metadata?: Record<string, unknown>;
+    };
 }
 
 export interface LoadedPageParts {
@@ -25,6 +34,17 @@ export interface LoadedPageParts {
     clientTrackByMap?: Record<string, string>;
     /** NPM package names used on this page (for filtering plugin inits) */
     usedPackages: Set<string>;
+    /** Headless contracts for slow rendering (already loaded by parseJayFile) */
+    headlessContracts: HeadlessContractInfo[];
+}
+
+export interface LoadPagePartsOptions {
+    /**
+     * Path to pre-rendered jay-html file to use instead of the original.
+     * When provided, this file (with slow-phase bindings resolved) is read.
+     * Import resolution still uses the original jay-html's directory.
+     */
+    preRenderedPath?: string;
 }
 
 export async function loadPageParts(
@@ -33,6 +53,7 @@ export async function loadPageParts(
     pagesBase: string,
     projectBase: string,
     jayRollupConfig: JayRollupConfig,
+    options?: LoadPagePartsOptions,
 ): Promise<WithValidations<LoadedPageParts>> {
     const exists = await fs
         .access(route.compPath, fs.constants.F_OK)
@@ -46,13 +67,15 @@ export async function loadPageParts(
         const pageComponent = (await vite.ssrLoadModule(route.compPath)).page;
         parts.push({
             compDefinition: pageComponent,
-            // Client import uses client-only code (server code stripped)
             clientImport: `import {page} from '${route.compPath}'`,
-            clientPart: `{comp: page.comp, contextMarkers: []}`,
+            clientPart: `{comp: page.comp, contextMarkers: page.contexts || []}`,
         });
     }
 
-    const jayHtmlSource = (await fs.readFile(route.jayHtmlPath)).toString();
+    // Use pre-rendered jay-html file if provided, otherwise read from original
+    const jayHtmlFilePath = options?.preRenderedPath ?? route.jayHtmlPath;
+    const jayHtmlSource = (await fs.readFile(jayHtmlFilePath)).toString();
+    // Import resolution uses the original jay-html's directory (not the cache dir)
     const fileName = path.basename(route.jayHtmlPath);
     const dirName = path.dirname(route.jayHtmlPath);
     const jayHtmlWithValidations = await parseJayFile(
@@ -102,15 +125,32 @@ export async function loadPageParts(
                 key,
                 compDefinition,
                 clientImport: `import {${name}} from '${clientModuleImport}'`,
-                clientPart: `{comp: ${name}.comp, contextMarkers: [], key: '${headlessImport.key}'}`,
+                clientPart: `{comp: ${name}.comp, contextMarkers: ${name}.contexts || [], key: '${headlessImport.key}'}`,
+                // Include contract info for dynamic contract components
+                contractInfo: headlessImport.contract
+                    ? {
+                          contractName: headlessImport.contract.name,
+                          metadata: headlessImport.metadata,
+                      }
+                    : undefined,
             };
             parts.push(part);
         }
+        // Extract headless contracts for slow rendering
+        const headlessContracts: HeadlessContractInfo[] = jayHtml.headlessImports
+            .filter((hi) => hi.contract !== undefined)
+            .map((hi) => ({
+                key: hi.key,
+                contract: hi.contract!,
+                contractPath: hi.contractPath,
+            }));
+
         return {
             parts,
             serverTrackByMap: jayHtml.serverTrackByMap,
             clientTrackByMap: jayHtml.clientTrackByMap,
             usedPackages,
+            headlessContracts,
         };
     });
 }

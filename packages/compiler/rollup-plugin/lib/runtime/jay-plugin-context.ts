@@ -11,6 +11,7 @@ import {
 import { CompiledPattern } from '@jay-framework/compiler';
 import fs from 'fs';
 import { CompilerSourceFile } from '@jay-framework/compiler-shared';
+import { getLogger } from '@jay-framework/logger';
 
 export class JayPluginContext {
     readonly projectRoot: string;
@@ -40,7 +41,7 @@ export class JayPluginContext {
     }
 
     cacheJayFile(id: string, jayFile: CompilerSourceFile): CompilerSourceFile {
-        console.info('[cache] set', id);
+        getLogger().info(`[cache] set ${id}`);
         this.jayFileCache.set(id, jayFile);
         return jayFile;
     }
@@ -48,7 +49,7 @@ export class JayPluginContext {
     getCachedJayFile(id: string): CompilerSourceFile {
         const jayFile = this.jayFileCache.get(id);
         if (Boolean(jayFile)) {
-            console.info('[cache] hit', id);
+            getLogger().info(`[cache] hit ${id}`);
         }
         return jayFile;
     }

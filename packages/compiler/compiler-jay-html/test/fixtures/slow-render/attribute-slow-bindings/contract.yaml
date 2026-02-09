@@ -1,0 +1,10 @@
+name: Test
+tags:
+  - tag: imageUrl
+    type: data
+    dataType: string
+    phase: slow
+  - tag: altText
+    type: data
+    dataType: string
+    phase: slow

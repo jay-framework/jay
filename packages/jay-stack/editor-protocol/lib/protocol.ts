@@ -123,7 +123,24 @@ export interface ProjectComponent {
     contractPath?: string;
 }
 
-// Simplified plugin interface focused on editor needs
+// Plugin types - re-exported from compiler-shared for single source of truth
+import type {
+    PluginManifest as PluginManifestBase,
+    DynamicContractConfig,
+} from '@jay-framework/compiler-shared';
+
+// Re-export with explicit interface to avoid tsup/rollup issues
+export interface PluginManifest extends PluginManifestBase {}
+export interface DynamicContractDef extends DynamicContractConfig {}
+
+// Static contract definition (subset of PluginManifest.contracts entry)
+export interface StaticContractDef {
+    name: string; // Contract name (kebab-case)
+    contract: string; // Path to contract file
+    component: string; // Exported member name from the module (e.g., "moodTracker")
+    description?: string; // Optional description
+}
+
 export interface Plugin {
     name: string; // Plugin name (kebab-case) for the plugin attribute
     contracts: Contract[]; // Array of available contracts

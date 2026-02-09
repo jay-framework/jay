@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data" contract="./test.jay-contract"></script>
+</head>
+<body>
+    <ul>
+        <li slowForEach="categories" jayIndex="0" jayTrackBy="a">
+            <span>Category A</span>
+            <img src="https://example.com/a.jpg">
+            
+        </li><li slowForEach="categories" jayIndex="1" jayTrackBy="b">
+            <span>Category B</span>
+            
+            <span class="placeholder">No image</span>
+        </li><li slowForEach="categories" jayIndex="2" jayTrackBy="c">
+            <span>Category C</span>
+            
+            <span class="placeholder">No image</span>
+        </li>
+    </ul>
+</body>
+</html>

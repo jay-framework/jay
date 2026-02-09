@@ -11,15 +11,25 @@ export async function renderFastChangingData(
     let fastViewState = {};
     let fastCarryForward = {};
     for (const part of parts) {
-        const { compDefinition, key } = part;
+        const { compDefinition, key, contractInfo } = part;
         if (compDefinition.fastRender) {
             const partSlowlyCarryForward = key ? carryForward[key] : carryForward;
 
             // Resolve services from registry
             const services = resolveServices(compDefinition.services);
 
+            // Build props with contract info if available (for dynamic contracts)
+            const partProps = {
+                ...pageProps,
+                ...pageParams,
+                ...(contractInfo && {
+                    contractName: contractInfo.contractName,
+                    metadata: contractInfo.metadata,
+                }),
+            };
+
             const fastRenderedPart = await compDefinition.fastRender(
-                { ...pageProps, ...pageParams },
+                partProps,
                 partSlowlyCarryForward,
                 ...services,
             );

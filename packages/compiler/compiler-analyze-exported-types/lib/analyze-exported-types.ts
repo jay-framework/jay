@@ -120,6 +120,7 @@ const JayComponentProperties = {
     unmount: true,
     addEventListener: true,
     removeEventListener: true,
+    viewState: true,
 };
 
 function loadTSCompilerOptions(options: ResolveTsConfigOptions = {}) {

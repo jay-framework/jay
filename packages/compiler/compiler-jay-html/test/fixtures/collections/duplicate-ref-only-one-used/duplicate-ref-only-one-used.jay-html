@@ -1,0 +1,23 @@
+<html>
+<head>
+    <script type="application/jay-headless" 
+            plugin="test-duplicate-ref"
+            contract="duplicate-ref-headless"
+            key="filters"></script>
+    <script type="application/jay-data">
+data:
+    title: string
+    </script>
+</head>
+<body>
+<div>
+    <h1>{title}</h1>
+    <!-- Note: filters.filter1.ranges.isSelected is NOT used in this template -->
+    <!-- Only filters.filter2.categories.isSelected is used -->
+    <div forEach="filters.filter2.categories" trackBy="id">
+        <span>{name}</span>
+        <input type="checkbox" ref="filters.filter2.categories.isSelected" />
+    </div>
+</div>
+</body>
+</html>

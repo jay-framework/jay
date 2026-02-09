@@ -17,6 +17,7 @@ export default defineConfig({
                 '@jay-framework/compiler',
                 '@jay-framework/compiler-shared',
                 '@jay-framework/compiler-jay-html',
+                '@jay-framework/logger',
                 'jay-compiler-contract',
                 'typescript',
             ],

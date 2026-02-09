@@ -3,6 +3,7 @@ import { PluginContext } from 'rollup';
 import { getBasePath, JAY_DTS_EXTENSION, JAY_EXTENSION } from '@jay-framework/compiler-shared';
 import { mkdir, readFile } from 'node:fs/promises';
 import { writeFile } from 'fs/promises';
+import { getLogger } from '@jay-framework/logger';
 import { JayPluginContext } from '../runtime/jay-plugin-context';
 
 export function getFileContext(
@@ -43,6 +44,6 @@ export async function writeGeneratedFile(
     const filePath = path.resolve(jayContext.outputDir, relativePath, path.basename(id));
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, code, { encoding: 'utf8', flag: 'w' });
-    console.info(['[transform] written', filePath].join(' '));
+    getLogger().info(['[transform] written', filePath].join(' '));
     return filePath;
 }

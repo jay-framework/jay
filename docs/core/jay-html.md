@@ -555,6 +555,76 @@ Use `{expression}` to display data:
 </div>
 ```
 
+### Boolean Attributes
+
+Boolean HTML attributes like `disabled`, `hidden`, `required`, etc. use **condition-style syntax**. The attribute's presence is controlled by a condition expression—no curly braces needed.
+
+#### Syntax
+
+```html
+<!-- Condition-style: attribute present when condition is true -->
+<button disabled="isDisabled">Cannot Click</button>
+<input required="isFieldRequired" />
+<div hidden="!isVisible">Hidden content</div>
+```
+
+#### Supported Boolean Attributes
+
+Jay-HTML recognizes these HTML boolean attributes for condition-style parsing:
+
+| Category   | Attributes                                                                                  |
+| ---------- | ------------------------------------------------------------------------------------------- |
+| Form       | `disabled`, `readonly`, `required`, `autofocus`, `multiple`, `novalidate`, `formnovalidate` |
+| Selection  | `selected`                                                                                  |
+| Visibility | `hidden`, `open`, `inert`                                                                   |
+| Media      | `autoplay`, `controls`, `loop`, `muted`, `playsinline`                                      |
+| Other      | `reversed`, `ismap`, `defer`, `async`, `default`                                            |
+
+#### Condition Expressions
+
+Boolean attributes support the full condition expression syntax:
+
+```html
+<!-- Simple boolean property -->
+<button disabled="isLoading">Submit</button>
+
+<!-- Negation -->
+<button disabled="!isValid">Submit</button>
+
+<!-- Enum comparison -->
+<option selected="status == active">Active</option>
+
+<!-- Numeric comparison (<=, >=, <, >, ==, !=) -->
+<button disabled="currentPage <= 1">Previous</button>
+<button disabled="count == 0">No items</button>
+
+<!-- Field-to-field comparison (use dotted paths for equality) -->
+<button disabled="currentPage >= pagination.totalPages">Next</button>
+<button disabled="selected == options.default">Reset</button>
+
+<!-- Nested property -->
+<input readonly="form.isLocked" />
+
+<!-- Logical operators -->
+<button disabled="!isValid || isProcessing">Submit</button>
+<input required="isRequired && !hasDefault" />
+
+<!-- Combined conditions -->
+<button disabled="count <= 0 || isLoading">Checkout</button>
+```
+
+#### Static vs Dynamic
+
+| Syntax                      | Behavior                         |
+| --------------------------- | -------------------------------- |
+| `disabled` (bare attribute) | Always present (static)          |
+| `disabled="condition"`      | Dynamic, controlled by condition |
+| Omit attribute              | Never present                    |
+
+There's no need for `disabled="true"` or `disabled="false"` - use the bare attribute for always-present, or omit it entirely for never-present.
+
+**Note:** `checked` and `value` are **not** boolean attributes - they're DOM properties that use template-style syntax with curly braces: `checked="{isChecked}"`, `value="{inputValue}"`.
+
 ### Class Binding
 
 Jay-HTML supports dynamic class binding with conditional expressions:
@@ -613,10 +683,21 @@ Use `if="condition"` for conditional elements:
     <button>Admin Action</button>
   </div>
 
-  <!-- Multiple conditions -->
+  <!-- Enum comparison -->
   <div if="status == active">Active</div>
   <div if="status == inactive">Inactive</div>
   <div if="status == pending">Pending</div>
+
+  <!-- Numeric comparison (<=, >=, <, >, ==, !=) -->
+  <span if="count > 0">You have {count} items</span>
+  <span if="count == 0">Your cart is empty</span>
+
+  <!-- Field-to-field comparison -->
+  <span if="available >= required">In stock</span>
+  <span if="current == settings.default">Using default</span>
+
+  <!-- Combined conditions -->
+  <button if="currentPage > 1 && !isLoading">Previous</button>
 </div>
 ```
 

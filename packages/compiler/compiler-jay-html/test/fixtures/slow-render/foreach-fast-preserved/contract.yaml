@@ -1,0 +1,15 @@
+name: Test
+tags:
+  - tag: items
+    type: sub-contract
+    repeated: true
+    trackBy: id
+    phase: fast
+    tags:
+      - tag: id
+        type: data
+        dataType: string
+      - tag: name
+        type: data
+        dataType: string
+        phase: fast

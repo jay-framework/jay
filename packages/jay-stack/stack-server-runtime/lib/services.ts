@@ -86,6 +86,14 @@ export function clearServiceRegistry(): void {
 }
 
 /**
+ * Returns the internal service registry map.
+ * Internal API used by contract materializer to pass services to dynamic generators.
+ */
+export function getServiceRegistry(): Map<symbol, any> {
+    return serviceRegistry;
+}
+
+/**
  * Resolves an array of service markers to their registered instances.
  * Used by the runtime to inject services into render functions.
  *
@@ -101,6 +109,19 @@ export function clearServiceRegistry(): void {
 export function resolveServices(serviceMarkers: any[]): Array<any> {
     return serviceMarkers.map((marker) => getService(marker));
 }
+
+// ============================================================================
+// Global Service Resolver Registration
+// ============================================================================
+
+/**
+ * Register the service resolver globally so that actions called from
+ * server-side code (e.g., render phases) can automatically resolve services.
+ *
+ * This enables direct action calls like `await queryItems({...})` to work
+ * on the server without needing a separate runAction wrapper.
+ */
+globalThis.__JAY_SERVICE_RESOLVER__ = resolveServices;
 
 // ============================================================================
 // Lifecycle Hooks

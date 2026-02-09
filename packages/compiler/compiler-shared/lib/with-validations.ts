@@ -46,6 +46,31 @@ export class WithValidations<Value> {
             ...other.validations,
         ]);
     }
+
+    /**
+     * Append validations from another WithValidations without changing the value.
+     * Useful for collecting validations from side-effect operations.
+     */
+    withValidationsFrom<T>(other: WithValidations<T>): WithValidations<Value> {
+        return new WithValidations(this.val, [...this.validations, ...other.validations]);
+    }
+
+    /**
+     * Merge an array of WithValidations into a single WithValidations containing an array of values.
+     * All validations are collected.
+     */
+    static all<T>(items: WithValidations<T>[]): WithValidations<T[]> {
+        const values = items.map((item) => item.val).filter((v): v is T => v !== undefined);
+        const validations = items.flatMap((item) => item.validations);
+        return new WithValidations(values, validations);
+    }
+
+    /**
+     * Create a WithValidations with no validations (pure value).
+     */
+    static pure<T>(value: T): WithValidations<T> {
+        return new WithValidations(value, []);
+    }
 }
 
 export function checkValidationErrors<T>(withValidations: WithValidations<T>): T {

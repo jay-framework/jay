@@ -1,0 +1,10 @@
+name: Test
+tags:
+  - tag: imageUrl
+    type: data
+    dataType: string
+    phase: slow
+  - tag: className
+    type: data
+    dataType: string
+    phase: fast+interactive

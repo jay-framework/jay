@@ -166,10 +166,13 @@ function markAutoOnImportedRefs(
 ): RefsTree {
     const importKeys = headlessImports.map((_) => _.key);
     const mappedRefs = deDuplicated.refs.map((ref) => {
+        // Only mark as autoRef if the ref is from a headless contract path
+        // AND it's not already explicitly non-autoRef (explicitly used in template)
         const isRefOfImportedHeadlessContract = !!importKeys.find((key) =>
             ref.originalName.startsWith(`${key}.`),
         );
-        if (isRefOfImportedHeadlessContract)
+        // If already explicitly non-autoRef, don't override it
+        if (isRefOfImportedHeadlessContract && ref.autoRef !== false)
             return mkRef(
                 ref.ref,
                 ref.originalName,
@@ -193,6 +196,115 @@ function markAutoOnImportedRefs(
         deDuplicated.repeated,
         deDuplicated?.imported?.refsTypeName,
         deDuplicated?.imported?.repeatedRefsTypeName,
+    );
+}
+
+/**
+ * Mark all refs in a RefsTree as autoRef.
+ * This is used for refs from headless imports that weren't explicitly used in the template.
+ */
+function markAllRefsAsAutoRef(refsTree: RefsTree): RefsTree {
+    const mappedRefs = refsTree.refs.map((ref) =>
+        mkRef(
+            ref.ref,
+            ref.originalName,
+            ref.constName,
+            ref.repeated,
+            true, // autoRef = true
+            ref.viewStateType,
+            ref.elementType,
+        ),
+    );
+    const mappedChildren = Object.fromEntries(
+        Object.entries(refsTree.children).map(([key, value]) => [key, markAllRefsAsAutoRef(value)]),
+    );
+    return mkRefsTree(
+        mappedRefs,
+        mappedChildren,
+        refsTree.repeated,
+        refsTree?.imported?.refsTypeName,
+        refsTree?.imported?.repeatedRefsTypeName,
+    );
+}
+
+/**
+ * Collect all template refs into a map keyed by their originalName.
+ * The originalName is the full ref path from the template (e.g., "filters.filter2.categories.isSelected").
+ * This is used to find refs that were actually used in the template.
+ */
+function collectTemplateRefsByOriginalName(tree: RefsTree): Map<string, Ref> {
+    const result = new Map<string, Ref>();
+
+    // Add refs at this level
+    for (const ref of tree.refs) {
+        if (!ref.autoRef) {
+            // Only collect non-autoRef refs (actually used in template)
+            // Key by originalName which is the full path from the ref attribute
+            result.set(ref.originalName, ref);
+        }
+    }
+
+    // Recurse into children
+    for (const childTree of Object.values(tree.children)) {
+        const childRefs = collectTemplateRefsByOriginalName(childTree);
+        for (const [key, ref] of childRefs) {
+            result.set(key, ref);
+        }
+    }
+
+    return result;
+}
+
+/**
+ * Update refs in an import tree with constNames from matching template refs.
+ * This preserves the import's structure but uses template's constNames for used refs.
+ * Matches refs by their full path (e.g., "filters.filter2.categories.isSelected").
+ */
+function updateImportRefsWithTemplateConstNames(
+    importTree: RefsTree,
+    templateRefsByOriginalName: Map<string, Ref>,
+    path: string[] = [],
+): RefsTree {
+    // Update refs at this level
+    const updatedRefs = importTree.refs.map((ref) => {
+        // Construct the full path for this ref (e.g., "filters.filter2.categories.isSelected")
+        const fullPath = [...path, ref.ref].join('.');
+
+        // Look up by the full path - this matches the template's ref originalName
+        const templateRef = templateRefsByOriginalName.get(fullPath);
+
+        if (templateRef) {
+            // Found a matching template ref - use its constName and mark as non-autoRef
+            return mkRef(
+                ref.ref,
+                ref.originalName,
+                templateRef.constName,
+                ref.repeated,
+                false, // Not autoRef since it's used in template
+                ref.viewStateType,
+                ref.elementType,
+            );
+        }
+        return ref; // Keep as-is (autoRef)
+    });
+
+    // Recurse into children
+    const updatedChildren = Object.fromEntries(
+        Object.entries(importTree.children).map(([childKey, childTree]) => [
+            childKey,
+            updateImportRefsWithTemplateConstNames(childTree, templateRefsByOriginalName, [
+                ...path,
+                childKey,
+            ]),
+        ]),
+    );
+
+    return mkRefsTree(
+        updatedRefs,
+        updatedChildren,
+        importTree.repeated,
+        importTree?.imported?.refsTypeName,
+        importTree?.imported?.repeatedRefsTypeName,
     );
 }
 
@@ -246,10 +358,48 @@ export function optimizeRefs(
 
     const deDuplicated = deDuplicateRefsTree(refs);
     const markedAutoOnImported = markAutoOnImportedRefs(deDuplicated, headlessImports);
-    const importedRefs = Object.fromEntries(headlessImports.map((_) => [_.key, _.refs]));
+
+    // Collect all template refs by their originalName (full path from ref attribute)
+    // These are refs that were actually used in the template (non-autoRef)
+    const templateRefsByOriginalName = collectTemplateRefsByOriginalName(markedAutoOnImported);
+
+    // For each headless import, use its refs structure but update constNames
+    // from matching template refs
+    const importedRefsUpdated = Object.fromEntries(
+        headlessImports.map((_) => {
+            // First mark all import refs as autoRef
+            const markedAuto = markAllRefsAsAutoRef(_.refs);
+            // Then update constNames for refs that were used in template
+            // Start path with the import key (e.g., "filters") to match the template ref paths
+            const updated = updateImportRefsWithTemplateConstNames(
+                markedAuto,
+                templateRefsByOriginalName,
+                [_.key],
+            );
+            return [_.key, updated];
+        }),
+    );
+
+    // Merge: use import's structure (canonical), which now has correct constNames
+    // For non-import children from template, keep them as-is
+    const mergedChildren: Record<string, RefsTree> = {};
+
+    // First, add all children from template that are NOT headless imports
+    const importKeys = new Set(headlessImports.map((_) => _.key));
+    for (const [key, child] of Object.entries(markedAutoOnImported.children)) {
+        if (!importKeys.has(key)) {
+            mergedChildren[key] = child;
+        }
+    }
+
+    // Then add all import refs (which now have updated constNames)
+    for (const [key, child] of Object.entries(importedRefsUpdated)) {
+        mergedChildren[key] = child;
+    }
+
     const combined = mkRefsTree(
         markedAutoOnImported.refs,
-        { ...markedAutoOnImported.children, ...importedRefs },
+        mergedChildren,
         markedAutoOnImported.repeated,
     );
     return new RenderFragment(rendered, imports, validations, combined, recursiveRegions);
@@ -292,6 +442,22 @@ export function renderReferenceManager(
     // Track used ref const names to avoid duplicates across different branches
     const usedRefConstNames = new Set<string>();
 
+    // IMPORTANT: First, collect all constNames from non-autoRef refs.
+    // These refs are actually used in the render code, so their constNames
+    // MUST be preserved exactly as-is to match the render code.
+    const collectReservedConstNames = (refsTree: RefsTree): void => {
+        for (const ref of refsTree.refs) {
+            if (!ref.autoRef) {
+                // This ref is used in render code - reserve its constName
+                usedRefConstNames.add(ref.constName);
+            }
+        }
+        for (const child of Object.values(refsTree.children)) {
+            collectReservedConstNames(child);
+        }
+    };
+    collectReservedConstNames(refs);
+
     const getUniqueRefManagerName = (baseName: string): string => {
         const baseCamelCase = camelCase(`${baseName}RefManager`);
 
@@ -311,7 +477,15 @@ export function renderReferenceManager(
         return uniqueName;
     };
 
-    const getUniqueRefConstName = (constName: string): string => {
+    const getUniqueRefConstName = (ref: Ref): string => {
+        const constName = ref.constName;
+
+        // Non-autoRef refs are used in render code - must keep their original constName
+        if (!ref.autoRef) {
+            return constName;
+        }
+
+        // AutoRef refs (from unused imports) can be renamed to avoid conflicts
         if (!usedRefConstNames.has(constName)) {
             usedRefConstNames.add(constName);
             return constName;
@@ -348,10 +522,10 @@ export function renderReferenceManager(
             .join(', ');
         // Use unique const names to avoid duplicate variable declarations across branches
         const refVariables = [
-            ...elemRefs.map((ref) => getUniqueRefConstName(ref.constName)),
-            ...elemCollectionRefs.map((ref) => getUniqueRefConstName(ref.constName)),
-            ...compRefs.map((ref) => getUniqueRefConstName(ref.constName)),
-            ...compCollectionRefs.map((ref) => getUniqueRefConstName(ref.constName)),
+            ...elemRefs.map((ref) => getUniqueRefConstName(ref)),
+            ...elemCollectionRefs.map((ref) => getUniqueRefConstName(ref)),
+            ...compRefs.map((ref) => getUniqueRefConstName(ref)),
+            ...compCollectionRefs.map((ref) => getUniqueRefConstName(ref)),
         ].join(', ');
 
         const childRenderedRefManagers: string[] = [];

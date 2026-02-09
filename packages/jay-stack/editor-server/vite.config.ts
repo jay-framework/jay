@@ -16,6 +16,7 @@ export default defineConfig({
             external: [
                 /^node:/,
                 '@jay-framework/editor-protocol',
+                '@jay-framework/logger',
                 'socket.io',
                 'get-port',
                 'yaml',

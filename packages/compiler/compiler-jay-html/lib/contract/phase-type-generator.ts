@@ -1,5 +1,7 @@
 import { Contract, ContractTag, ContractTagType, RenderingPhase } from './contract';
 import { filterTagsByPhase, getEffectivePhase } from './contract-phase-validator';
+import { loadLinkedContract, getLinkedContractDir } from './linked-contract-resolver';
+import { JayImportResolver } from '../jay-target/jay-import-resolver';
 import { pascalCase } from 'change-case';
 import { camelCase } from '../case-utils';
 
@@ -36,6 +38,14 @@ interface AsyncInfo {
 }
 
 /**
+ * Context for resolving linked contracts during phase extraction
+ */
+interface LinkedContractContext {
+    importResolver: JayImportResolver;
+    contractDir: string;
+}
+
+/**
  * Extract property paths for a specific phase from contract tags
  * Returns property paths, arrays info, and async (Promise) info
  */
@@ -45,6 +55,7 @@ function extractPropertyPathsAndArrays(
     parentPath: string[] = [],
     parentPhase?: RenderingPhase,
     parentTrackBy?: string, // trackBy field from parent repeated sub-contract
+    linkedContext?: LinkedContractContext, // Context for resolving linked contracts
 ): { paths: PropertyPath[]; arrays: ArrayInfo[]; asyncProps: AsyncInfo[] } {
     const paths: PropertyPath[] = [];
     const arrays: ArrayInfo[] = [];
@@ -62,43 +73,98 @@ function extractPropertyPathsAndArrays(
         const isArray = tag.repeated || false;
         const isAsync = tag.async || false;
 
-        // Check if this tag has nested tags (sub-contract)
-        if (tag.type.includes(ContractTagType.subContract) && tag.tags) {
-            // For repeated sub-contracts, pass trackBy to children
-            const trackByForChildren = isArray ? tag.trackBy : undefined;
+        // Check if this tag is a sub-contract (inline tags or linked)
+        if (tag.type.includes(ContractTagType.subContract)) {
+            // Check if it's a recursive reference (e.g., "$/" or "$/data")
+            const isRecursiveLink = tag.link?.startsWith('$/');
 
-            // Recursively process nested tags
-            const result = extractPropertyPathsAndArrays(
-                tag.tags,
-                targetPhase,
-                currentPath,
-                effectivePhase,
-                trackByForChildren,
-            );
+            if (isRecursiveLink) {
+                // Recursive reference - include the property if it belongs to this phase
+                // but don't try to process child properties (they're the same type)
+                if (shouldIncludeInPhase(effectivePhase, targetPhase)) {
+                    paths.push({
+                        path: parentPath,
+                        propertyName,
+                    });
 
-            // For repeated sub-contracts, skip if only the trackBy field is present
-            // (no point having an array with only identity fields)
-            const hasOnlyTrackBy =
-                isArray &&
-                trackByForChildren &&
-                result.paths.length === 1 &&
-                result.paths[0].propertyName === camelCase(trackByForChildren);
+                    // Record if it's an array
+                    if (isArray) {
+                        arrays.push({ path: currentPath.join('.') });
+                    }
 
-            // Only include this object/array if it has properties in this phase
-            // and it's not an array with only the trackBy field
-            if (result.paths.length > 0 && !hasOnlyTrackBy) {
-                paths.push(...result.paths);
-                arrays.push(...result.arrays);
-                asyncProps.push(...result.asyncProps);
+                    // Record if it's async
+                    if (isAsync) {
+                        asyncProps.push({ path: currentPath.join('.') });
+                    }
+                }
+            } else {
+                // Get child tags - either inline or from linked contract
+                let childTags: ContractTag[] = [];
+                let childLinkedContext = linkedContext;
 
-                // If this is an array, record it
-                if (isArray) {
-                    arrays.push({ path: currentPath.join('.') });
+                if (tag.tags) {
+                    // Inline nested tags
+                    childTags = tag.tags;
+                } else if (tag.link && linkedContext) {
+                    // External linked contract - resolve and use its tags
+                    const linkedContract = loadLinkedContract(
+                        tag.link,
+                        linkedContext.contractDir,
+                        linkedContext.importResolver,
+                    );
+                    if (linkedContract) {
+                        childTags = linkedContract.tags;
+                        // Update context for nested links
+                        childLinkedContext = {
+                            importResolver: linkedContext.importResolver,
+                            contractDir: getLinkedContractDir(
+                                tag.link,
+                                linkedContext.contractDir,
+                                linkedContext.importResolver,
+                            ),
+                        };
+                    }
                 }
 
-                // If this is async, record it
-                if (isAsync) {
-                    asyncProps.push({ path: currentPath.join('.') });
+                if (childTags.length > 0) {
+                    // For repeated sub-contracts, pass trackBy to children
+                    const trackByForChildren = isArray ? tag.trackBy : undefined;
+
+                    // Recursively process nested tags
+                    const result = extractPropertyPathsAndArrays(
+                        childTags,
+                        targetPhase,
+                        currentPath,
+                        effectivePhase,
+                        trackByForChildren,
+                        childLinkedContext,
+                    );
+
+                    // For repeated sub-contracts, skip if only the trackBy field is present
+                    // (no point having an array with only identity fields)
+                    const hasOnlyTrackBy =
+                        isArray &&
+                        trackByForChildren &&
+                        result.paths.length === 1 &&
+                        result.paths[0].propertyName === camelCase(trackByForChildren);
+
+                    // Only include this object/array if it has properties in this phase
+                    // and it's not an array with only the trackBy field
+                    if (result.paths.length > 0 && !hasOnlyTrackBy) {
+                        paths.push(...result.paths);
+                        arrays.push(...result.arrays);
+                        asyncProps.push(...result.asyncProps);
+
+                        // If this is an array, record it
+                        if (isArray) {
+                            arrays.push({ path: currentPath.join('.') });
+                        }
+
+                        // If this is async, record it
+                        if (isAsync) {
+                            asyncProps.push({ path: currentPath.join('.') });
+                        }
+                    }
                 }
             }
         } else {
@@ -137,11 +203,13 @@ function groupPathsByParent(paths: PropertyPath[]): Map<string, string[]> {
 
 /**
  * Count total properties in a contract object/array
+ * Follows linked contracts via import resolver if provided
  */
 function countTotalProperties(
     tags: ContractTag[],
     targetPath: string[],
     currentPath: string[] = [],
+    linkedContext?: LinkedContractContext,
 ): number {
     let count = 0;
 
@@ -157,8 +225,24 @@ function countTotalProperties(
         const targetKey = targetPath.join('.');
 
         // If this is the target path, count its direct children
-        if (pathKey === targetKey && tag.type.includes(ContractTagType.subContract) && tag.tags) {
-            for (const childTag of tag.tags) {
+        if (pathKey === targetKey && tag.type.includes(ContractTagType.subContract)) {
+            // Get child tags - either inline or from linked contract
+            let childTags: ContractTag[] = [];
+
+            if (tag.tags) {
+                childTags = tag.tags;
+            } else if (tag.link && linkedContext && !tag.link.startsWith('$/')) {
+                const linkedContract = loadLinkedContract(
+                    tag.link,
+                    linkedContext.contractDir,
+                    linkedContext.importResolver,
+                );
+                if (linkedContract) {
+                    childTags = linkedContract.tags;
+                }
+            }
+
+            for (const childTag of childTags) {
                 if (childTag.type.includes(ContractTagType.interactive) && !childTag.dataType) {
                     continue;
                 }
@@ -168,10 +252,41 @@ function countTotalProperties(
         }
 
         // Continue searching if we haven't reached the target yet
-        if (tag.type.includes(ContractTagType.subContract) && tag.tags) {
-            const result = countTotalProperties(tag.tags, targetPath, newPath);
-            if (result > 0) {
-                return result;
+        if (tag.type.includes(ContractTagType.subContract)) {
+            let childTags: ContractTag[] = [];
+            let childLinkedContext = linkedContext;
+
+            if (tag.tags) {
+                childTags = tag.tags;
+            } else if (tag.link && linkedContext && !tag.link.startsWith('$/')) {
+                const linkedContract = loadLinkedContract(
+                    tag.link,
+                    linkedContext.contractDir,
+                    linkedContext.importResolver,
+                );
+                if (linkedContract) {
+                    childTags = linkedContract.tags;
+                    childLinkedContext = {
+                        importResolver: linkedContext.importResolver,
+                        contractDir: getLinkedContractDir(
+                            tag.link,
+                            linkedContext.contractDir,
+                            linkedContext.importResolver,
+                        ),
+                    };
+                }
+            }
+
+            if (childTags.length > 0) {
+                const result = countTotalProperties(
+                    childTags,
+                    targetPath,
+                    newPath,
+                    childLinkedContext,
+                );
+                if (result > 0) {
+                    return result;
+                }
             }
         }
     }
@@ -222,6 +337,56 @@ function buildPathAccess(
 }
 
 /**
+ * Check if all properties at a given path (and recursively all nested properties) are fully included
+ */
+function isFullyIncluded(
+    pathGroups: Map<string, string[]>,
+    contractTags: ContractTag[],
+    currentPath: string[],
+    linkedContext?: LinkedContractContext,
+): boolean {
+    const currentKey = currentPath.join('.');
+    const properties = pathGroups.get(currentKey) || [];
+
+    // Count total properties at this level
+    const totalProps = countTotalProperties(contractTags, currentPath, [], linkedContext);
+    if (totalProps === 0) {
+        return false;
+    }
+
+    // Find all child paths (nested properties)
+    const childPropertyNames = new Set<string>();
+    const prefix = currentKey ? currentKey + '.' : '';
+    for (const key of pathGroups.keys()) {
+        if (key.startsWith(prefix) && key !== currentKey) {
+            const remainingPath = key.slice(prefix.length);
+            const firstSegment = remainingPath.split('.')[0];
+            if (firstSegment) {
+                childPropertyNames.add(firstSegment);
+            }
+        }
+    }
+
+    // Direct (leaf) properties
+    const directProps = properties.filter((p) => !childPropertyNames.has(p));
+
+    // Check if all properties are accounted for
+    if (directProps.length + childPropertyNames.size !== totalProps) {
+        return false;
+    }
+
+    // Recursively check all nested children
+    for (const childName of childPropertyNames) {
+        const childPath = [...currentPath, childName];
+        if (!isFullyIncluded(pathGroups, contractTags, childPath, linkedContext)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
  * Build nested Pick type expression
  */
 function buildPickExpression(
@@ -231,6 +396,7 @@ function buildPickExpression(
     asyncProps: Set<string>,
     contractTags: ContractTag[],
     currentPath: string[] = [],
+    linkedContext?: LinkedContractContext,
 ): string {
     const currentKey = currentPath.join('.');
     const properties = pathGroups.get(currentKey) || [];
@@ -268,59 +434,58 @@ function buildPickExpression(
         const isArray = arrays.has(childPathKey);
         const isAsync = asyncProps.has(childPathKey);
 
-        // Check if we're picking ALL properties of this nested object
-        const childProperties = pathGroups.get(childPathKey) || [];
-        const totalProperties = countTotalProperties(contractTags, childPath);
-        const isPickingAllProperties =
-            totalProperties > 0 && childProperties.length === totalProperties;
-
-        // Recursively build child expression
-        const childExpression = buildPickExpression(
-            baseTypeName,
+        // Check if this nested object (and all its descendants) are fully included
+        const isChildFullyIncluded = isFullyIncluded(
             pathGroups,
-            arrays,
-            asyncProps,
             contractTags,
             childPath,
+            linkedContext,
         );
 
-        if (childExpression) {
+        // Build path access for this child
+        const originalPathAccess = buildPathAccess(baseTypeName, childPath, arrays, asyncProps);
+
+        if (isChildFullyIncluded) {
+            // All properties (recursively) are included - use direct type reference
             let fullExpression: string;
-            // Build path access with [number] for parent arrays, but NOT including [number] for this property itself
-            // (that will be handled below based on isArray)
-            const originalPathAccess = buildPathAccess(baseTypeName, childPath, arrays, asyncProps);
+            const directTypeRef = originalPathAccess;
 
-            // If we're picking all properties of a leaf object (no further nesting), just use the type reference
-            if (
-                isPickingAllProperties &&
-                childExpression ===
-                    `Pick<${originalPathAccess}, ${childProperties.map((p) => `'${p}'`).join(' | ')}>`
-            ) {
-                // Use direct type reference instead of Pick
-                const directTypeRef = originalPathAccess;
-
-                // Handle async properties (Promises)
-                if (isAsync) {
-                    if (isArray) {
-                        // For async arrays: Unwrap Promise, access array element, wrap back
-                        // originalPathAccess is already without [number] for async arrays
-                        fullExpression = `Promise<Array<Awaited<${directTypeRef}>[number]>>`;
-                    } else {
-                        fullExpression = `Promise<${directTypeRef}>`;
-                    }
-                } else if (isArray) {
-                    fullExpression = `Array<${directTypeRef}>`;
+            // Handle async properties (Promises)
+            if (isAsync) {
+                if (isArray) {
+                    fullExpression = `Promise<Array<Awaited<${directTypeRef}>[number]>>`;
                 } else {
+                    // For non-array Promise, the type is already Promise<T>, just reference it
                     fullExpression = directTypeRef;
                 }
+            } else if (isArray) {
+                fullExpression = `Array<${directTypeRef}>`;
             } else {
-                // Use Pick expression as before
+                fullExpression = directTypeRef;
+            }
+
+            nestedProperties.push(`    ${childName}: ${fullExpression};`);
+        } else {
+            // Not all properties included - need to build Pick expression
+            // Recursively build child expression
+            const childExpression = buildPickExpression(
+                baseTypeName,
+                pathGroups,
+                arrays,
+                asyncProps,
+                contractTags,
+                childPath,
+                linkedContext,
+            );
+
+            if (childExpression) {
+                let fullExpression: string;
+
                 // Handle async properties (Promises)
                 if (isAsync) {
                     // For Promise properties, unwrap with Awaited first, then apply [number] for arrays
                     if (isArray) {
                         // Promise<Array<...>> - unwrap Promise, then access array element
-                        // originalPathAccess is already without [number] for async arrays, so we add it after Awaited
                         const unwrappedArrayAccess = `Awaited<${originalPathAccess}>[number]`;
                         const unwrappedExpression = childExpression.replace(
                             originalPathAccess,
@@ -338,15 +503,14 @@ function buildPickExpression(
                     }
                 } else if (isArray) {
                     // For arrays (non-Promise), wrap with Array<>
-                    // The path already has [number] from buildPathAccess, so just wrap in Array<>
                     fullExpression = `Array<${childExpression}>`;
                 } else {
                     // Regular nested object
                     fullExpression = childExpression;
                 }
-            }
 
-            nestedProperties.push(`    ${childName}: ${fullExpression};`);
+                nestedProperties.push(`    ${childName}: ${fullExpression};`);
+            }
         }
     }
 
@@ -367,17 +531,43 @@ function buildPickExpression(
 
 /**
  * Generate phase-specific ViewState type using Pick utilities
+ *
+ * @param contract - The contract to generate types for
+ * @param phase - The rendering phase to generate types for
+ * @param baseTypeName - The base ViewState type name to Pick from
+ * @param importResolver - Optional import resolver for resolving linked contracts
+ * @param contractPath - Optional path to the contract file (for resolving relative links)
  */
 export function generatePhaseViewStateType(
     contract: Contract,
     phase: RenderingPhase,
     baseTypeName: string,
+    importResolver?: JayImportResolver,
+    contractPath?: string,
 ): string {
     const phaseName = phase === 'fast+interactive' ? 'Interactive' : pascalCase(phase);
     const typeName = `${pascalCase(contract.name)}${phaseName}ViewState`;
 
+    // Create linked contract context if resolver is available
+    const linkedContext: LinkedContractContext | undefined =
+        importResolver && contractPath
+            ? {
+                  importResolver,
+                  contractDir: contractPath.includes('/')
+                      ? contractPath.substring(0, contractPath.lastIndexOf('/'))
+                      : '.',
+              }
+            : undefined;
+
     // Extract property paths, array info, and async info for this phase
-    const { paths, arrays, asyncProps } = extractPropertyPathsAndArrays(contract.tags, phase);
+    const { paths, arrays, asyncProps } = extractPropertyPathsAndArrays(
+        contract.tags,
+        phase,
+        [],
+        undefined,
+        undefined,
+        linkedContext,
+    );
 
     // If no properties, return empty type
     if (paths.length === 0) {
@@ -398,6 +588,8 @@ export function generatePhaseViewStateType(
         arraySet,
         asyncSet,
         contract.tags,
+        [],
+        linkedContext,
     );
 
     return `export type ${typeName} = ${pickExpression};`;
@@ -405,11 +597,39 @@ export function generatePhaseViewStateType(
 
 /**
  * Generate all three phase-specific ViewState types
+ *
+ * @param contract - The contract to generate types for
+ * @param baseTypeName - The base ViewState type name to Pick from
+ * @param importResolver - Optional import resolver for resolving linked contracts
+ * @param contractPath - Optional path to the contract file (for resolving relative links)
  */
-export function generateAllPhaseViewStateTypes(contract: Contract, baseTypeName: string): string {
-    const slowType = generatePhaseViewStateType(contract, 'slow', baseTypeName);
-    const fastType = generatePhaseViewStateType(contract, 'fast', baseTypeName);
-    const interactiveType = generatePhaseViewStateType(contract, 'fast+interactive', baseTypeName);
+export function generateAllPhaseViewStateTypes(
+    contract: Contract,
+    baseTypeName: string,
+    importResolver?: JayImportResolver,
+    contractPath?: string,
+): string {
+    const slowType = generatePhaseViewStateType(
+        contract,
+        'slow',
+        baseTypeName,
+        importResolver,
+        contractPath,
+    );
+    const fastType = generatePhaseViewStateType(
+        contract,
+        'fast',
+        baseTypeName,
+        importResolver,
+        contractPath,
+    );
+    const interactiveType = generatePhaseViewStateType(
+        contract,
+        'fast+interactive',
+        baseTypeName,
+        importResolver,
+        contractPath,
+    );
 
     return [slowType, fastType, interactiveType].join('\n\n');
 }

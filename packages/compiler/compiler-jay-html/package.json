@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/compiler-jay-html",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "description": "",
   "license": "Apache-2.0",
   "main": "dist/index.js",
@@ -23,7 +23,7 @@
   "scripts": {
     "build": "npm run build:pegjs && npm run build:js && npm run build:types",
     "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
-    "build:pegjs": "pegjs --allowed-start-rules dynamicAttribute,booleanAttribute,dynamicText,dynamicProperty,conditionFunc,accessor,Identifier,classExpression,dynamicComponentProp,importNames,enum,is_enum,reactDynamicText,reactDynamicProperty,reactClassExpression,condition,styleDeclarations  -o lib/expressions/expression-parser.cjs lib/expressions/expression-parser.pegjs",
+    "build:pegjs": "pegjs --allowed-start-rules dynamicAttribute,booleanAttribute,dynamicText,dynamicProperty,conditionFunc,accessor,Identifier,classExpression,dynamicComponentProp,importNames,enum,is_enum,reactDynamicText,reactDynamicProperty,reactClassExpression,condition,styleDeclarations,slowCondition  -o lib/expressions/expression-parser.cjs lib/expressions/expression-parser.pegjs",
     "build:js": "vite build",
     "build:types": "tsup lib/index.ts --dts-only --format cjs",
     "build:check-types": "tsc",
@@ -37,6 +37,7 @@
     "@jay-framework/compiler-analyze-exported-types": "workspace:^",
     "@jay-framework/compiler-shared": "workspace:^",
     "@jay-framework/component": "workspace:^",
+    "@jay-framework/logger": "workspace:^",
     "@jay-framework/runtime": "workspace:^",
     "@jay-framework/secure": "workspace:^",
     "@types/js-yaml": "^4.0.9",
