@@ -2411,5 +2411,37 @@ Ran the fake-shop example end-to-end with `jay-stack dev --test-mode` and discov
 
 #### Known Remaining Issues
 
-- Coordinate collision for sibling instances not in the same parent element — `localIndexAmongSiblings` returns 0 for both when each `<jay:product-widget>` is wrapped in its own `<div class="product-card">`
 - forEach headless instances show "undefined" for slow-phase fields — the inline template's `{name}`/`{price}` bindings resolve against the forEach item context (which only has `_id`), not the headless component's ViewState
+
+### Coordinate Collision Fix & Ref Support
+
+#### Problem
+
+`localIndexAmongSiblings` counted same-tag siblings within the immediate parent element. When `<jay:product-widget>` instances were each wrapped in their own `<div class="product-card">`, both got coordinate `product-widget:0` — the second overwrote the first in `__headlessInstances`.
+
+#### Fix: Scope-level counter + ref as coordinate
+
+Replaced `localIndexAmongSiblings` with a DFS-order scope counter per `(coordinatePrefix, contractName)`. Both compiler and slow-render use the same algorithm, producing matching coordinates.
+
+**Ref embedding approach:**
+1. `discoverHeadlessInstances` auto-generates a `ref` attribute for `<jay:xxx>` elements without one (using scope counter), embeds it in the HTML, and returns both instances + modified HTML
+2. `resolveHeadlessInstances` reads the `ref` attribute directly — no counter needed since refs are already embedded
+3. User-specified `ref="myWidget"` is preserved as-is
+4. Return type changed: `DiscoveredHeadlessInstance[]` → `HeadlessInstanceDiscoveryResult { instances, preRenderedJayHtml }`
+
+**Compiler ref support for headless instances:**
+- `childComp` calls for headless instances now include an auto-generated ref (same as headful components)
+- Fixes the `TODO: proper refs for headless instances`
+- Coordinate key uses explicit `ref` or auto-generated index: `prefix/contractName:ref`
+
+**codeLink import fix:**
+- Parser now only emits `codeLink` import for headless contracts that have `<jay:xxx>` tags in the template
+- Key-based headless components (e.g., `counter`, `namedCounter`) no longer get unused imports
+
+#### Files Changed
+
+- `slow-render-transform.ts` — `discoverHeadlessInstances` returns `HeadlessInstanceDiscoveryResult`, embeds refs; `resolveHeadlessInstances` reads refs; `buildInstanceCoordinateKey` updated
+- `jay-html-compiler.ts` — scope counter in `RenderContext`, ref-aware coordinate, `renderChildCompRef` for headless `childComp`
+- `jay-html-parser.ts` — only include `codeLink` for contracts used as `<jay:xxx>` instances
+- `dev-server.ts` — updated call sites for new discovery return type
+- Test fixtures — updated for new imports, ref in `childComp`, `refManager` in inline templates
