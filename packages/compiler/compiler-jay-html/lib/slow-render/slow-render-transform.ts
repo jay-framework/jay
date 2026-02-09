@@ -4,6 +4,7 @@ import path from 'path';
 import {
     Contract,
     ContractTag,
+    ContractTagType,
     RenderingPhase,
     loadLinkedContract,
     getLinkedContractDir,
@@ -92,7 +93,11 @@ function buildPhaseMap(
         parentPhase: RenderingPhase = 'slow',
         contractDir?: string,
     ) {
-        const effectivePhase = tag.phase || parentPhase;
+        // Tags with interactive type default to fast+interactive phase (they need
+        // data available by fast render and are updated during interactive phase)
+        const effectivePhase =
+            tag.phase ||
+            (tag.type.includes(ContractTagType.interactive) ? 'fast+interactive' : parentPhase);
         const propertyName = toCamelCase(tag.tag);
         const currentPath = pathPrefix ? `${pathPrefix}.${propertyName}` : propertyName;
 
@@ -862,7 +867,9 @@ export function hasSlowPhaseProperties(contract: Contract | undefined): boolean 
     }
 
     function checkTag(tag: ContractTag, parentPhase: RenderingPhase = 'slow'): boolean {
-        const effectivePhase = tag.phase || parentPhase;
+        const effectivePhase =
+            tag.phase ||
+            (tag.type.includes(ContractTagType.interactive) ? 'fast+interactive' : parentPhase);
 
         if (effectivePhase === 'slow') {
             return true;
