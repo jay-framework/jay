@@ -30,7 +30,12 @@ import {
 import Node from 'node-html-parser/dist/nodes/node';
 import { camelCase } from '../case-utils';
 import parse from 'style-to-object';
-import { ensureSingleChildElement, isConditional, isForEach } from '../jay-target/jay-html-helpers';
+import {
+    ensureSingleChildElement,
+    isConditional,
+    isForEach,
+    getComponentName,
+} from '../jay-target/jay-html-helpers';
 import { generateTypes } from '../jay-target/jay-html-compile-types';
 import { Indent } from '../jay-target/indent';
 import {
@@ -223,6 +228,7 @@ function renderChildCompProps(element: HTMLElement, { variables }: RenderContext
 function renderChildCompRef(
     element: HTMLElement,
     { dynamicRef, variables, nextAutoRefName }: RenderContext,
+    componentName: string,
 ): RenderFragment {
     let originalName = element.attributes.ref || nextAutoRefName.newAutoRefNameGenerator();
     let refName = camelCase(originalName);
@@ -235,7 +241,7 @@ function renderChildCompRef(
             dynamicRef,
             !element.attributes.ref,
             variables.currentType,
-            new JayComponentType(element.rawTagName, []),
+            new JayComponentType(componentName, []),
         ),
     ];
     if (!refs[0].autoRef)
@@ -315,19 +321,24 @@ ${indent.curr}return (${childElement.rendered})})}`,
     function renderNestedComponent(
         htmlElement: HTMLElement,
         newContext: RenderContext,
+        componentName: string,
     ): RenderFragment {
         let props = renderChildCompProps(htmlElement, {
             ...renderContext,
             dynamicRef,
             variables: newContext.variables,
         });
-        let refs = renderChildCompRef(htmlElement, {
-            ...renderContext,
-            dynamicRef,
-            variables: newContext.variables,
-        });
-        const reactChildComp = 'React' + htmlElement.rawTagName;
-        outReactChildComps.set(htmlElement.rawTagName, reactChildComp);
+        let refs = renderChildCompRef(
+            htmlElement,
+            {
+                ...renderContext,
+                dynamicRef,
+                variables: newContext.variables,
+            },
+            componentName,
+        );
+        const reactChildComp = 'React' + componentName;
+        outReactChildComps.set(componentName, reactChildComp);
         return new RenderFragment(
             `${newContext.indent.firstLine}<${reactChildComp} ${props.rendered} ${refs.rendered}/>`,
             Imports.none().plus(props.imports).plus(refs.imports),
@@ -337,8 +348,10 @@ ${indent.curr}return (${childElement.rendered})})}`,
     }
 
     function renderHtmlElement(htmlElement, newContext: RenderContext) {
-        if (importedSymbols.has(htmlElement.rawTagName))
-            return renderNestedComponent(htmlElement, newContext);
+        // Check for component (jay:ComponentName or legacy ComponentName syntax)
+        const componentMatch = getComponentName(htmlElement.rawTagName, importedSymbols);
+        if (componentMatch !== null)
+            return renderNestedComponent(htmlElement, newContext, componentMatch.name);
 
         let childNodes =
             node.childNodes.length > 1

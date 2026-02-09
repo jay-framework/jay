@@ -1,0 +1,18 @@
+name: ProductCard
+props:
+  - name: productId
+    type: string
+    required: true
+    description: The ID of the product to display
+tags:
+  - tag: name
+    type: data
+    dataType: string
+    phase: slow
+  - tag: price
+    type: data
+    dataType: number
+    phase: fast+interactive
+  - tag: add to cart
+    type: interactive
+    elementType: HTMLButtonElement

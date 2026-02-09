@@ -364,6 +364,42 @@ describe('generate jay-html element', () => {
             );
         });
 
+        it('generate element file with headless component instance (inline template)', async () => {
+            const folder = 'contracts/page-with-headless-instance';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(
+                await prettify(
+                    await readFixtureFileRaw(folder, 'page-with-headless-instance.jay-html.ts'),
+                ),
+            );
+        });
+
+        it('generate element file with headless component instance inside forEach produces validation error', async () => {
+            const folder = 'contracts/page-with-headless-in-foreach';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([
+                '<jay:product-card> cannot be used inside a fast-phase forEach. ' +
+                    'Headless component instances require server-side rendering which is not available ' +
+                    'for dynamically-iterated arrays. Change the array\'s phase to "slow" in the contract ' +
+                    'to use slowForEach, or use a key-based headless component instead.',
+            ]);
+        });
+
+        it('generate element file with headless component instance inside slowForEach', async () => {
+            const folder = 'contracts/page-with-headless-in-slow-foreach';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(
+                await prettify(
+                    await readFixtureFileRaw(
+                        folder,
+                        'page-with-headless-in-slow-foreach.jay-html.ts',
+                    ),
+                ),
+            );
+        });
+
         it('generate element file with linked contract with sub-contracts', async () => {
             const folder = 'contracts/page-using-named-counter';
             const elementFile = await readFileAndGenerateElementFile(folder);

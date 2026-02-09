@@ -151,7 +151,19 @@ Jay-HTML files can import other components using special script tags.
 - `names="Item"` - Name of the component `const` to import, created using `makeJayComponent`
 - `names="Item as AnotherName"` - Allows to rename the imported name to `AnotherName`
 
+Instances are then created in the template body using `<jay:name>`:
+
+```html
+<jay:Item prop1="value" prop2="{dynamicValue}" />
+```
+
 ### Importing Headless Components
+
+Headless components can be used in two ways: **key-based** (data merged into parent ViewState under a key) and **instance-based** (rendered with an inline template via `<jay:xxx>` tags).
+
+#### Key-Based Headless Import
+
+When `key` is specified, the component's ViewState and Refs are nested under that key in the parent's ViewState:
 
 ```html
 <script
@@ -170,6 +182,72 @@ Jay-HTML files can import other components using special script tags.
 - `src` - Path to the component implementation
 - `name` - Name of the component `const` to import, created using `makeJayStackComponent`
 - `key` - Attribute name under which the imported component's data and Refs are nested
+
+You can then use `{key.field}` bindings and `ref="key.refName"` in the template body.
+
+#### Instance-Based Headless Import (Inline Templates)
+
+When `key` is omitted, the component is used via `<jay:contract-name>` tags in the template body. Each tag creates an instance with its own props and inline template:
+
+```html
+<script type="application/jay-headless" plugin="product-widget" contract="product-widget"></script>
+```
+
+**Attributes** (no `key`):
+
+- `type="application/jay-headless"` - Identifies this as a headless component import
+- `plugin` - Plugin package name (for npm plugins)
+- `contract` - Contract name to use
+- `src` - Path to the component implementation (for local components)
+
+Instances are then created in the template body using `<jay:contract-name>`:
+
+```html
+<jay:product-widget productId="1">
+  <h3>{name}</h3>
+  <div>Price: ${price}</div>
+  <span if="inStock">In Stock</span>
+  <button ref="addToCart">Add to Cart</button>
+</jay:product-widget>
+```
+
+Each `<jay:xxx>` tag:
+
+- Passes **props** via attributes (e.g., `productId="1"`)
+- Contains an **inline template** where bindings (`{name}`, `{price}`) resolve against the headless component's ViewState, not the page's ViewState
+- Supports `ref` attributes for interactive elements from the headless component's contract
+- Can include `if` directives based on the component's ViewState
+
+**Multiple instances** with different props:
+
+```html
+<jay:product-widget productId="1">
+  <h3>{name}</h3>
+  <div>${price}</div>
+</jay:product-widget>
+
+<jay:product-widget productId="3">
+  <h3>{name}</h3>
+  <div>${price}</div>
+</jay:product-widget>
+```
+
+Each instance is independently rendered with its own server-side data.
+
+**Instances inside slowForEach** (slow-phase arrays):
+
+```html
+<div forEach="featuredProducts" trackBy="_id">
+  <jay:product-widget productId="{_id}">
+    <h3>{name}</h3>
+    <div>${price}</div>
+  </jay:product-widget>
+</div>
+```
+
+Props can use bindings from the forEach item context. Each unrolled item creates a separate headless instance with its own server-rendered data.
+
+> **Note:** Headless instances inside fast-phase `forEach` are not currently supported. The array must have `phase: slow` in the contract so that instances can be server-rendered. See [Contract Files](./contract-files.md) for phase annotations.
 
 ## Head Links
 

@@ -20,7 +20,7 @@
     </div>
     <div>Total count: {total}</div>
     <br>
-    <Counter forEach="counters" trackBy="key" initialValue="{count}" counterClass="{counterClass}" ref="counter"/>
+    <jay:Counter forEach="counters" trackBy="key" initialValue="{count}" counterClass="{counterClass}" ref="counter"/>
 </div>
 </body>
 </html>

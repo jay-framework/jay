@@ -16,7 +16,7 @@ data:
     </div>
     <ul if="open">
         <li forEach="node.children" trackBy="id">
-            <TreeNode props={.}/>
+            <jay:TreeNode props={.}/>
         </li>
     </ul>
 </div>

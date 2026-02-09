@@ -1,8 +1,27 @@
 name: Page
-tags: []
-# Currently empty - homepage only uses headless mood tracker component
-# In a real e-commerce site, this could include:
-# - Featured products (slow phase)
-# - Promotional banners (slow phase)
-# - User-specific recommendations (fast phase)
-# - Interactive search/filters (interactive phase)
+tags:
+  # Featured products for slowForEach - each gets its own pre-rendered widget
+  - tag: featuredProducts
+    type: sub-contract
+    repeated: true
+    phase: slow
+    trackBy: _id
+    description: Featured products rendered at build time (one widget per product)
+    tags:
+      - tag: _id
+        type: data
+        dataType: string
+        description: Product ID
+
+  # All products for forEach - single template reused per item at request time
+  - tag: allProducts
+    type: sub-contract
+    repeated: true
+    phase: fast
+    trackBy: _id
+    description: All products rendered at request time (dynamic list)
+    tags:
+      - tag: _id
+        type: data
+        dataType: string
+        description: Product ID

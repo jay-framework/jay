@@ -116,6 +116,7 @@ D) **Import once, instantiate with data binding**
 **Answer:** Option D - Import once, instantiate with data binding.
 
 The inline template for the headless component is placed within the instance tag. Each instance:
+
 - Gets its own props (e.g., `productId`)
 - Creates a local data context (bindings resolve against component's ViewState)
 - Can have different inline templates (different presentation for same data)
@@ -174,11 +175,13 @@ Headful components currently use plain element names (Option B style). We should
 #### Prerequisite: Migrate Headful Components to `jay:` Prefix
 
 Before implementing headless component instances, we should migrate existing headful components to use the `jay:` prefix. This:
+
 1. Creates unified syntax for all Jay components (headful and headless)
 2. Simplifies compiler implementation (one pattern for component detection)
 3. Avoids potential conflicts with HTML custom elements
 
 **Migration scope:**
+
 - Update compiler to recognize `<jay:component-name>` for headful components
 - Update all existing templates and tests
 - Deprecate (then remove) plain element name support
@@ -214,11 +217,13 @@ After this design, headless components can be used in **two distinct ways**:
 
 <!-- Multiple instances with inline templates -->
 <jay:product-card productId="prod-123">
-  <h1>{name}</h1>  <!-- Resolved from component ViewState -->
+  <h1>{name}</h1>
+  <!-- Resolved from component ViewState -->
 </jay:product-card>
 
 <jay:product-card productId="prod-456">
-  <h1>{name}</h1>  <!-- Different instance, different data -->
+  <h1>{name}</h1>
+  <!-- Different instance, different data -->
 </jay:product-card>
 ```
 
@@ -229,10 +234,16 @@ After this design, headless components can be used in **two distinct ways**:
 - Used for **reusable widgets** (cards, tiles, interactive elements)
 
 **Both can coexist:**
+
 ```html
 <head>
   <!-- Data provider (top-level with key) -->
-  <script type="application/jay-headless" plugin="wix-stores" contract="product-list" key="allProducts"></script>
+  <script
+    type="application/jay-headless"
+    plugin="wix-stores"
+    contract="product-list"
+    key="allProducts"
+  ></script>
   <!-- Widget (imported, used as instances) -->
   <script type="application/jay-headless" plugin="wix-stores" contract="product-card"></script>
 </head>
@@ -348,15 +359,19 @@ The headless component instance creates a **new data context** based on its View
 #### Note on `as` Attribute
 
 With Option C (local data context), the `as` attribute is **not needed**. Earlier examples showed:
+
 ```html
 <jay:product-card productId="prod-123" as="featured1" />
-<h1>{featured1.name}</h1>  <!-- This pattern is NOT used -->
+<h1>{featured1.name}</h1>
+<!-- This pattern is NOT used -->
 ```
 
 With inline templates and local data context, this becomes:
+
 ```html
 <jay:product-card productId="prod-123">
-  <h1>{name}</h1>  <!-- Data accessed inside component scope -->
+  <h1>{name}</h1>
+  <!-- Data accessed inside component scope -->
 </jay:product-card>
 ```
 
@@ -402,6 +417,66 @@ The example format above captures the key elements:
 - `required`: whether the prop must be provided
 - `description`: human-readable description for agents/documentation
 - `default`: optional default value
+
+### Q4b: How should load params be exposed in contracts?
+
+**Background:** Components using `withLoadParams` have URL parameters (e.g., `slug`, `id`) that:
+
+- Drive static site generation (SSG)
+- Are merged into props before rendering
+- Have discoverable valid values (via the `loadParams` generator)
+
+**Props vs Load Params:**
+
+| Aspect    | Props (`withProps`)     | Load Params (`withLoadParams`) |
+| --------- | ----------------------- | ------------------------------ |
+| Source    | Template/parent         | URL path segments              |
+| Purpose   | Component configuration | URL routing + SSG              |
+| Discovery | Via plugin actions      | Via loadParams generator       |
+| Example   | `productId`, `variant`  | `slug`, `categoryId`           |
+
+**Connection via plugin.yaml:**
+
+The plugin.yaml already links contracts to their components (which may have `withLoadParams`):
+
+```yaml
+# plugin.yaml
+contracts:
+  - name: product-page
+    contract: product-page.jay-contract
+    component: productPage # This component has withLoadParams
+    description: Product page with URL slug param
+```
+
+No need to duplicate load params schema in the contract file - the connection is already established.
+
+**Agent discovery for load params:**
+
+Load params are generator functions, not actions. Agents discover valid values via dedicated CLI command:
+
+```bash
+# Discover valid load param values for a contract
+jay-stack params wix-stores/product-page
+
+# Returns all valid param combinations:
+[
+  { "slug": "ceramic-vase" },
+  { "slug": "wooden-bowl" },
+  { "slug": "glass-pitcher" }
+]
+```
+
+**How it works:**
+
+1. CLI finds the component referenced by the contract in plugin.yaml
+2. Runs the component's `loadParams` generator function
+3. Collects and returns all yielded param combinations
+
+**Runtime behavior:**
+
+- Load params are validated against the generator before slow render
+- If params don't match any generated values, returns 404
+- Valid params are merged into props: `{ ...baseProps, ...loadParams }`
 
 ### Q5: How can agents discover valid prop values?
 
@@ -559,6 +634,7 @@ jay-stack action wix-stores/searchProducts --query="blue shirt" --limit=5
 ```
 
 **Parameter passing:**
+
 - Required params: `--query="value"` (error if missing)
 - Optional params with defaults: `--limit=10` (uses default if omitted)
 - Boolean flags: `--includeOutOfStock` or `--includeOutOfStock=false`
@@ -645,6 +721,136 @@ const ProductCardInstance = makeJayComponent({
   refs: { addToCart: buttonRef },
 });
 ```
+
+### Nested Headless Component Rendering
+
+When a page contains nested headless component instances (`<jay:product-card>`), the page's rendering phases must orchestrate the child component's phases.
+
+#### Slow Rendering Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Page slowlyRender()                                            │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ 1. Resolve page props and load params                     │  │
+│  │ 2. Call page's slowlyRender function                      │  │
+│  │                                                           │  │
+│  │ For each <jay:product-card productId="...">:              │  │
+│  │   ┌─────────────────────────────────────────────────────┐ │  │
+│  │   │ productCard.slowlyRender({ productId })             │ │  │
+│  │   │ → Returns: { viewState, carryForward }              │ │  │
+│  │   │ → ViewState used to transform inline template       │ │  │
+│  │   │ → CarryForward stored for fast phase                │ │  │
+│  │   └─────────────────────────────────────────────────────┘ │  │
+│  │                                                           │  │
+│  │ 3. Transform inline template with component's slow VS    │  │
+│  │ 4. Track component carryForward for fast phase           │  │
+│  │ 5. Return page viewState + page carryForward             │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key: ViewStates are isolated**
+
+Each component (page and nested components) has its own isolated ViewState. The child component's ViewState is used to transform its inline template, NOT merged into the page ViewState.
+
+**page.ts slowlyRender implementation:**
+
+```typescript
+async function renderSlowlyChanging(props: PageProps) {
+  // Page's own slow render logic
+  const pageData = await fetchPageMetadata();
+
+  // Call nested component's slow render
+  // The returned viewState transforms the inline template
+  // The returned carryForward is tracked for fast phase
+  const heroResult = await productCard.slowlyRender({ productId: 'prod-hero' });
+
+  // For forEach items
+  const catalogResults = await Promise.all(
+    featuredIds.map((id) => productCard.slowlyRender({ productId: id })),
+  );
+
+  return {
+    // Page's own viewState (NOT including child viewStates)
+    viewState: {
+      pageTitle: 'Our Products',
+      // Page-level data only
+    },
+    // Track component carryForwards to pass in fast phase
+    carryForward: {
+      heroCarryForward: heroResult.carryForward,
+      catalogCarryForwards: catalogResults.map((r) => r.carryForward),
+    },
+  };
+}
+```
+
+#### Fast Rendering Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Page fastRender(props, carryForward)                           │
+│  ┌───────────────────────────────────────────────────────────┐  │
+│  │ 1. Receive page carryForward from slow phase              │  │
+│  │                                                           │  │
+│  │ For each nested component:                                │  │
+│  │   ┌─────────────────────────────────────────────────────┐ │  │
+│  │   │ productCard.fastRender(                             │ │  │
+│  │   │   { productId },                                    │ │  │
+│  │   │   componentCarryForward  // from slow phase         │ │  │
+│  │   │ )                                                   │ │  │
+│  │   │ → Returns: { viewState, carryForward }              │ │  │
+│  │   │ → ViewState transforms inline template bindings     │ │  │
+│  │   └─────────────────────────────────────────────────────┘ │  │
+│  │                                                           │  │
+│  │ 2. Transform component templates with fast viewState     │  │
+│  │ 3. Return page fast viewState + carryForward              │  │
+│  └───────────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**page.ts fastRender implementation:**
+
+```typescript
+async function renderFastChanging(props: PageProps, carryForward: PageCarryForward) {
+  // Call nested component's fast render with its carryForward from slow phase
+  const heroFast = await productCard.fastRender(
+    { productId: 'prod-hero' },
+    carryForward.heroCarryForward, // Pass component's own carryForward
+  );
+
+  const catalogFast = await Promise.all(
+    carryForward.catalogCarryForwards.map((cf, i) =>
+      productCard.fastRender({ productId: featuredIds[i] }, cf),
+    ),
+  );
+
+  return {
+    // Page's own fast viewState (NOT including child viewStates)
+    viewState: {
+      // Page-level fast data only
+    },
+    carryForward,
+  };
+}
+```
+
+#### Key Points
+
+1. **ViewStates are isolated** - Each component (page and nested) has its own ViewState space. Child ViewState is NOT merged into parent.
+
+2. **Props flow down** - Props for nested components are resolved from:
+
+   - Static values in template: `productId="prod-123"`
+   - Dynamic bindings: `productId={someValue}` resolved from page viewState
+   - ForEach context: `productId={_id}` resolved from item
+
+3. **CarryForward links phases** - Component carryForward from slow phase must be passed to the same component instance in fast phase
+
+4. **Template transformation is per-component** - Each component's inline template is transformed using that component's ViewState
+
+5. **Parallel execution** - Independent child components can render in parallel via `Promise.all`
 
 ### Detailed Compilation Example
 
@@ -810,7 +1016,7 @@ function heroProductCardRender(options?: RenderElementOptions) {
     [],
     [],
   );
-  
+
   const render = (viewState: ProductCardViewState) =>
     ConstructContext.withRootContext(viewState, refManager, () =>
       e('article', { class: 'hero-card' }, [
@@ -820,7 +1026,7 @@ function heroProductCardRender(options?: RenderElementOptions) {
         e('button', {}, ['Buy Now'], refBuyNow()),
       ]),
     );
-  
+
   return [refManager.getPublicAPI() as HeroProductCardRefs, render] as const;
 }
 
@@ -850,7 +1056,7 @@ function catalogItemRender(options?: RenderElementOptions) {
     [],
     [],
   );
-  
+
   const render = (viewState: ProductCardViewState) =>
     ConstructContext.withRootContext(viewState, refManager, () =>
       e('article', { class: 'product-tile' }, [
@@ -860,7 +1066,7 @@ function catalogItemRender(options?: RenderElementOptions) {
         e('button', {}, ['Add to Cart'], refAddToCart()),
       ]),
     );
-  
+
   return [refManager.getPublicAPI() as CatalogItemRefs, render] as const;
 }
 
@@ -940,13 +1146,13 @@ interface PageRefs {
 
 function pageRender(options?: RenderElementOptions) {
   const [refManager, [refHeroProductCard, refCatalogItems]] = ReferencesManager.for(
-    options, 
-    [], 
-    [], 
+    options,
+    [],
+    [],
     ['heroProductCard'],  // Single component ref
     ['catalogItems'],     // Collection ref for forEach
   );
-  
+
   const render = (viewState: PageViewState) =>
     ConstructContext.withRootContext(viewState, refManager, () =>
       e('div', {}, [
@@ -964,7 +1170,7 @@ function pageRender(options?: RenderElementOptions) {
             // forEach items - same component, different data per item
             forEach(
               (vs: PageViewState) => vs.catalog.items,
-              (itemVs: CatalogItemViewState) => 
+              (itemVs: CatalogItemViewState) =>
                 childComp(
                   CatalogItem,  // Same component for all items
                   (vs: CatalogItemViewState) => ({ productId: vs._id }),
@@ -976,7 +1182,7 @@ function pageRender(options?: RenderElementOptions) {
         ]),
       ]),
     );
-  
+
   return [refManager.getPublicAPI() as PageRefs, render] as const;
 }
 
@@ -988,13 +1194,14 @@ export { pageRender as render };
 ```typescript
 import { makeJayStackComponent, PageProps, Signals } from '@jay-framework/fullstack-component';
 import { Props } from '@jay-framework/component';
-import { 
-  render as pageRender, 
-  HeroProductCard, 
-  CatalogItem,
-} from './page.jay-html';
+import { render as pageRender, HeroProductCard, CatalogItem } from './page.jay-html';
 import { productCard, productList } from '@wix/stores';
-import type { PageContract, PageRefs, PageSlowViewState, PageFastViewState } from './page.jay-contract';
+import type {
+  PageContract,
+  PageRefs,
+  PageSlowViewState,
+  PageFastViewState,
+} from './page.jay-contract';
 
 interface PageCarryForward {
   heroProductId: string;
@@ -1005,7 +1212,7 @@ async function renderSlowlyChanging(props: PageProps) {
   // 1. Get data from headless components
   const heroData = await productCard.slowlyRender({ productId: 'prod-hero' });
   const catalogData = await productList.slowlyRender({});
-  
+
   return {
     viewState: {
       pageTitle: 'Our Products',
@@ -1016,32 +1223,29 @@ async function renderSlowlyChanging(props: PageProps) {
     },
     carryForward: {
       heroProductId: 'prod-hero',
-      catalogItemIds: catalogData.viewState.items.map(i => i._id),
+      catalogItemIds: catalogData.viewState.items.map((i) => i._id),
     },
   };
 }
 
-async function renderFastChanging(
-  props: PageProps,
-  carryForward: PageCarryForward,
-) {
+async function renderFastChanging(props: PageProps, carryForward: PageCarryForward) {
   // Fast data for hero
   const heroFast = await productCard.fastRender(
     { productId: carryForward.heroProductId },
     { productId: carryForward.heroProductId },
   );
-  
+
   // Fast data for each catalog item
   const catalogItemsFast = await Promise.all(
-    carryForward.catalogItemIds.map(id =>
-      productCard.fastRender({ productId: id }, { productId: id })
-    )
+    carryForward.catalogItemIds.map((id) =>
+      productCard.fastRender({ productId: id }, { productId: id }),
+    ),
   );
-  
+
   return {
     viewState: {
       heroProduct: heroFast.viewState,
-      catalogItems: catalogItemsFast.map(f => f.viewState),
+      catalogItems: catalogItemsFast.map((f) => f.viewState),
     },
     carryForward,
   };
@@ -1055,10 +1259,10 @@ function PageConstructor(
 ) {
   // HeroProductCard is already makeJayComponent(heroProductCardRender, HeroProductCardConstructor)
   // It receives ViewState from productCard's phases via the render props
-  
+
   // For catalog: createCatalogItem(productId) creates component per item
   // Each uses the same catalogItemRender (template reuse for forEach)
-  
+
   return {
     render: () => ({}),
   };
@@ -1110,26 +1314,29 @@ export const page = makeJayStackComponent<PageContract>()
 function catalogItemRender(options?: RenderElementOptions) {
   // Compiled ONCE
   const [refManager, refs] = ReferencesManager.for(options, ['addToCart'], [], [], []);
-  const render = (viewState) => e('article', {}, [/* ... */]);
+  const render = (viewState) =>
+    e('article', {}, [
+      /* ... */
+    ]);
   return [refManager.getPublicAPI(), render] as const;
 }
 
 // Component defined ONCE - makeJayComponent creates the prototype, not instance
 export const CatalogItem = makeJayComponent(
   catalogItemRender,
-  productCard.interactiveConstructor,  // From plugin
+  productCard.interactiveConstructor, // From plugin
 );
 
 // In page template: forEach uses childComp to render each item
 forEach(
   (vs: PageViewState) => vs.catalog.items,
-  (itemVs: CatalogItemViewState) => 
+  (itemVs: CatalogItemViewState) =>
     childComp(
-      CatalogItem,  // Same component definition for all items
-      (vs) => ({ productId: vs._id }),  // Props from item viewState
+      CatalogItem, // Same component definition for all items
+      (vs) => ({ productId: vs._id }), // Props from item viewState
       refCatalogItems(),
     ),
-  '_id',  // trackBy key
+  '_id', // trackBy key
 );
 ```
 
@@ -1142,11 +1349,14 @@ forEach(
 ```html
 <!-- slowForEach: conditionals resolve differently per item -->
 <div slowForEach="products" trackBy="_id">
-  <jay:product-card productId={_id}>
+  <jay:product-card productId="{_id}">
     <h3>{name}</h3>
-    <span class="price" if={hasPrice}>{price}</span>      <!-- may/may not exist -->
-    <span class="badge" if={isNew}>NEW</span>              <!-- may/may not exist -->
-    <div if={hasVariants} forEach="variants">              <!-- nested structure varies -->
+    <span class="price" if="{hasPrice}">{price}</span>
+    <!-- may/may not exist -->
+    <span class="badge" if="{isNew}">NEW</span>
+    <!-- may/may not exist -->
+    <div if="{hasVariants}" forEach="variants">
+      <!-- nested structure varies -->
       <span>{variantName}</span>
     </div>
   </jay:product-card>
@@ -1162,8 +1372,10 @@ function catalogItemRender_0(options?: RenderElementOptions) {
     ConstructContext.withRootContext(viewState, refManager, () =>
       e('article', {}, [
         e('h3', {}, [dt((vs) => vs.name)]),
-        e('span', { class: 'badge' }, ['NEW']),  // Exists for this item
-        e('div', { class: 'variants' }, [/* ... */]),  // Exists for this item
+        e('span', { class: 'badge' }, ['NEW']), // Exists for this item
+        e('div', { class: 'variants' }, [
+          /* ... */
+        ]), // Exists for this item
         e('button', {}, ['Add to Cart'], refAddToCart()),
       ]),
     );
@@ -1199,6 +1411,7 @@ const slowForEachItems = [
 | `slowForEach` | ❌ Separate render per item    | Conditionals resolve differently |
 
 **Implications:**
+
 - **Bundle size**: `forEach` = one template; `slowForEach` = N templates
 - **Build time**: `forEach` compiles once; `slowForEach` compiles per item
 - **Interactive logic**: Both use plugin's `interactiveConstructor` from `makeJayStackComponent`
@@ -1336,41 +1549,87 @@ values:
 
 ## Implementation Plan
 
-### Phase 0: Migrate Headful Components to `jay:` Prefix (Prerequisite)
+### Phase 0: Migrate Headful Components to `jay:` Prefix (Prerequisite) ✅
 
-1. Update compiler to recognize `<jay:component-name>` for existing headful components
-2. Migrate all existing templates from `<counter>` to `<jay:counter>` style
-3. Update all test fixtures and snapshots
-4. Deprecate plain element name support (warning phase)
-5. Remove plain element name support (cleanup phase)
+1. ✅ Update compiler to recognize `<jay:component-name>` for existing headful components
+2. ✅ Migrate all existing templates from `<counter>` to `<jay:counter>` style
+3. ✅ Update all test fixtures and snapshots
+4. Deprecate plain element name support (warning phase) - deferred, both syntaxes work
+5. Remove plain element name support (cleanup phase) - deferred
 
-This creates a unified syntax foundation before adding headless component instances.
+### Phase 1: Contract Props Definition ✅
 
-### Phase 1: Contract Props Definition
+1. ✅ Extend `.jay-contract` format to support `props` section
+2. ✅ Update contract parser to extract props schema
+3. ✅ Generate TypeScript types for component props (including `ExtractProps<A>`)
 
-1. Extend `.jay-contract` format to support `props` section
-2. Update contract parser to extract props schema
-3. Generate TypeScript types for component props
+### Phase 1b: Contract Params + Agent Kit ✅ (via Design Log #85)
 
-### Phase 2: Component Instance Syntax
+1. ✅ Contract params format: `params: { slug: string }` → `export interface XxxParams extends UrlParams { ... }`
+2. ✅ `jay-stack agent-kit` CLI command (materializes contracts to `agent-kit/materialized-contracts/`)
+3. ✅ Plugins-index.yaml generation
+4. ✅ INSTRUCTIONS.md template auto-creation
+5. `jay-stack params <plugin>/<contract>` CLI to run loadParams generator - deferred
 
-1. Implement `<jay:component-name>` element syntax for headless components
-2. Implement prop passing to component instances
-3. Parse inline template content within component tags
-4. Integrate with existing `forEach` binding
+### Phase 2: Component Instance Syntax ✅
 
-### Phase 3: Repeater Integration
+1. ✅ Implement `<jay:component-name>` element syntax for headless components
+2. ✅ Implement prop passing to component instances
+3. ✅ Parse inline template content within component tags
+4. ✅ Integrate with existing `forEach` binding
 
-1. Allow headless components inside `forEach` blocks
-2. Bind props from repeater context
-3. Handle rendering phase coordination (slow/fast/interactive)
+### Phase 3: Repeater Integration ✅
 
-### Phase 4: Data Discovery for Agents
+1. ✅ Allow headless components inside `forEach` blocks
+2. ✅ Bind props from repeater context
+3. ✅ Generate component instances per forEach item
 
-1. Add `discoverable_data` to plugin.yaml schema
-2. Implement data generator execution
-3. Materialize to `build/discoverable-data/`
-4. Add CLI command: `jay-stack discover`
+### Phase 4: Nested Component Phase Orchestration (Server)
+
+1. **Slow phase orchestration:**
+
+   - Page's `slowlyRender` calls each nested component's `slowlyRender`
+   - Props resolved from template (static or bound)
+   - Component's slow ViewState transforms inline template
+   - Component's carryForward stored for fast phase
+
+2. **Fast phase orchestration:**
+
+   - Page's `fastRender` calls each nested component's `fastRender`
+   - Pass component's carryForward from slow phase
+   - Component's fast ViewState transforms inline template bindings
+
+3. **CarryForward tracking:**
+   - Page carryForward includes nested component carryForwards
+   - Each component instance identified by props/position
+   - ForEach items tracked by trackBy key
+
+### Phase 4b: Interactive Phase (Client)
+
+1. **Compilation (from Phases 2 & 3):**
+
+   - Compile inline templates to render functions
+   - Generate `makeJayComponent` calls combining:
+     - Inline template render function
+     - Plugin's `interactiveConstructor`
+   - Wire up refs from inline template
+   - Handle forEach item component generation
+
+2. **Client script generation:**
+   - Generate client-side hydration code
+   - Include component instances with their compiled templates
+   - Wire up plugin's interactive logic
+   - Connect signals and reactive bindings
+
+### Phase 5: Data Discovery for Agents ✅
+
+**Revised** to align with Design Logs #85 and #86 — agents discover data via existing CLI commands, not a separate discovery mechanism:
+
+1. ✅ `jay-stack action <plugin>/<action>` — CLI command to run plugin actions (agents use this to discover prop values, e.g., `jay-stack action product-widget/listProducts`)
+2. ✅ `jay-stack params <plugin>/<contract>` — CLI command to discover load param values (runs `loadParams` generator)
+3. ✅ Plugins expose discovery via `actions` in plugin.yaml (existing infrastructure, no new schema)
+
+**Removed (inconsistent with #85/#86):** `discoverable_data` in plugin.yaml, `makeDataGenerator`, `jay-stack discover` command, `discoverData()` in stack-server-runtime. These were replaced by the action-based approach above.
 
 ## Trade-offs
 
@@ -1396,36 +1655,873 @@ This creates a unified syntax foundation before adding headless component instan
 ## Verification Criteria
 
 **Phase 0: jay: prefix migration**
-1. [ ] Headful components compile with `<jay:component-name>` syntax
-2. [ ] All existing tests updated and passing with new syntax
-3. [ ] Deprecation warning for old plain element names
 
-**Headless component props and instances**
-4. [ ] Can render same headless component multiple times with different props
-5. [ ] Can use headless component inside `forEach` with bound props
-6. [ ] Props are validated at compile time against contract schema
-7. [ ] Agents can discover valid prop values via actions/CLI
-8. [ ] Static and dynamic props both work correctly
-9. [ ] Rendering phases (slow/fast/interactive) work with instances
-10. [ ] `slowForEach` generates separate template per item
-11. [ ] `forEach` reuses single template for all items
+1. [x] Headful components compile with `<jay:component-name>` syntax
+2. [x] All existing tests updated and passing with new syntax
+3. [ ] Deprecation warning for old plain element names (deferred - both syntaxes supported)
 
-## Open Questions
+**Headless component props and instances** 4. [x] Can render same headless component multiple times with different props (Phase 2 syntax + Phase 4 runtime + fake-shop demo) 5. [x] Can use headless component inside `forEach` with bound props (Phase 3) 6. [ ] Props are validated at compile time against contract schema (not implemented — needs compiler changes) 7. [x] Agents can discover valid prop values via actions/CLI (Phase 5 — `jay-stack action <plugin>/<action>` + `jay-stack params <plugin>/<contract>`) 8. [x] Static props work correctly (Phase 2 - `productId="prod-hero"`) 9. [x] Dynamic props work correctly (`productId={_id}` from forEach context — Phase 3) 10. [x] Rendering phases (slow/fast/interactive) work with instances (Phase 4 — slow/fast server done, client wiring Phase 4b done) 11. [x] `slowForEach` generates separate template per item (Phase 3 — each item gets its own `_HeadlessProductCard{N}` component) 12. [x] `forEach` reuses single template for all items (Phase 3 — component defined once at module level)
 
-1. How does caching work with parameterized components?
+**Load params discovery** 12. [ ] `jay-stack params <plugin>/<contract>` CLI command works 13. [ ] CLI runs loadParams generator and returns valid combinations 14. [ ] Agents can discover valid URL params for SSG
 
-   - Each `(component, props)` tuple is a separate cache entry?
-   - Props that affect slow-phase need cache key inclusion
+**Nested component rendering** 15. [x] ViewStates are isolated per component (not merged) — Phase 2 compilation uses component's ViewState 16. [x] CarryForward tracked per component instance across phases (Phase 4 — server passes per-instance carryForward via InstancePhaseData, client delivers via makeHeadlessInstanceComponent) 17. [x] Inline templates transformed with component's ViewState — Phase 2 compilation confirmed
 
-2. How do we handle props that change at different phases?
+## Open Questions (Answered)
 
-   - `productId` is slow (set at build/request time)
-   - `quantity` might be interactive
+1. **How does caching work with parameterized components?**
 
-3. Should there be limits on instance count?
+   **Answer:** Caching is done at the page level. Nested component slow rendering is included in the page cache. The page is cached as a whole, with all nested component renders included.
 
-   - Performance implications of 100 product cards on a page
-   - Lazy rendering / virtualization?
+2. **How do we handle props that change at different phases?**
 
-4. How does this interact with linked contracts (#79)?
-   - Component with sub-contracts as props?
+   **Answer:**
+
+   - **Slow props** are rendered as hardcoded values in slow phase (baked into HTML)
+   - **Fast/interactive props** are rendered as prop bindings that support dynamic changes
+   - See runtime and compiler jay-html tests for examples of this pattern
+
+3. **Should there be limits on instance count?**
+
+   **Answer:** No limits needed at this point. Optimizations can be considered later. In general, having 100 instances of pre-rendered templates is more efficient compared to one dynamic template (pre-rendered = less runtime work).
+
+4. **How does this interact with linked contracts (#79)?**
+
+   **Answer:** Props are data values, not contracts. They can be represented as contracts, but in this context we consider the contract as representing data types. Props don't reference other contracts as dependencies.
+
+---
+
+## Implementation Results
+
+### Phase 0: jay: prefix migration (Completed)
+
+**Date:** February 4, 2026
+
+Successfully migrated headful components to use `jay:` prefix syntax.
+
+#### Changes Made
+
+**Compiler changes:**
+
+1. Added helper functions in `jay-html-helpers.ts`:
+
+   - `JAY_COMPONENT_PREFIX = 'jay:'`
+   - `hasJayPrefix(tagName)` - checks for prefix
+   - `extractComponentName(tagName)` - strips prefix
+   - `getComponentName(tagName, importedSymbols)` - detects components (both new and legacy syntax)
+
+2. Updated `jay-html-compiler.ts`:
+
+   - Modified `renderHtmlElement` to use `getComponentName` for component detection
+   - Updated `renderNestedComponent` to accept `componentName` parameter
+   - Updated `renderChildCompRef` to accept `componentName` for correct type generation
+   - Updated sandbox/bridge code paths similarly
+
+3. Updated `jay-html-compiler-react.ts`:
+
+   - Same pattern as main compiler
+
+4. Updated `tag-to-namespace.ts`:
+   - Fixed crash when colon-separated tag is not a known namespace (like `jay:` prefix)
+
+**Test fixture updates:**
+
+- Updated 37+ `.jay-html` files across compiler tests and examples
+- All component usages changed from `<Counter>` to `<jay:Counter>` style
+
+#### Verification
+
+- **478/478 tests pass** in compiler-jay-html
+- **252/252 tests pass** in compiler package
+- All workspace tests pass
+
+#### Backward Compatibility
+
+Both syntaxes are currently supported:
+
+- New: `<jay:Counter initialValue={count}/>`
+- Legacy: `<Counter initialValue={count}/>` (deprecated)
+
+Legacy syntax still works to allow gradual migration of external projects.
+
+#### Files Modified
+
+```
+packages/compiler/compiler-jay-html/lib/jay-target/jay-html-helpers.ts
+packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts
+packages/compiler/compiler-jay-html/lib/jay-target/tag-to-namespace.ts
+packages/compiler/compiler-jay-html/lib/react-target/jay-html-compiler-react.ts
++ 37 .jay-html test fixtures
+```
+
+---
+
+### Phase 1: Contract Props Definition - Implementation Results
+
+**Date:** February 4, 2026
+
+Successfully extended the contract format to support a `props` section.
+
+#### Changes Made
+
+**1. Contract type (`contract.ts`):**
+
+- Added `ContractProp` interface: `{ name, dataType, required?, description?, default? }`
+- Extended `Contract` interface with optional `props: Array<ContractProp>`
+
+**2. Contract parser (`contract-parser.ts`):**
+
+- Added `ParsedYamlProp` interface for YAML parsing
+- Added `parseProp()` function supporting: string, number, boolean, date, enum types
+- Updated `parseContract()` to parse `props` section, validate duplicates
+- Props default to `type: string` when type is omitted
+
+**3. Contract compiler (`contract-compiler.ts`):**
+
+- Added `generatePropsInterface()` function
+- Generates `export interface XxxProps { ... }` with required/optional markers
+- Supports enum props (generates enum types)
+- Contracts WITH props get 6th `JayContract` type parameter
+- Contracts WITHOUT props remain 5-parameter (backward compatible)
+
+**4. Runtime type (`element-types.ts`):**
+
+- Extended `JayContract` with 6th generic param: `Props extends object = {}`
+- Added `ExtractProps<A>` helper type
+- Updated all `Extract*` helpers to account for 6th parameter
+- Default `{}` ensures backward compatibility
+
+#### YAML Format
+
+```yaml
+name: ProductCard
+props:
+  - name: productId
+    type: string
+    required: true
+    description: The ID of the product to display
+  - name: variant
+    type: string
+tags:
+  - tag: name
+    ...
+```
+
+#### Generated Output (with props)
+
+```typescript
+export interface ProductCardProps {
+  productId: string;
+  variant?: string;
+}
+
+export type ProductCardContract = JayContract<
+  ProductCardViewState,
+  ProductCardRefs,
+  ProductCardSlowViewState,
+  ProductCardFastViewState,
+  ProductCardInteractiveViewState,
+  ProductCardProps
+>;
+```
+
+#### Verification
+
+- **490/490 tests pass** in compiler-jay-html (36 parser + 26 compiler + rest)
+- **252/252 tests pass** in compiler package
+- **190/190 tests pass** in runtime package
+
+#### Files Modified
+
+```
+packages/compiler/compiler-jay-html/lib/contract/contract.ts
+packages/compiler/compiler-jay-html/lib/contract/contract-parser.ts
+packages/compiler/compiler-jay-html/lib/contract/contract-compiler.ts
+packages/runtime/runtime/lib/element-types.ts
+packages/compiler/compiler-jay-html/test/contract/contract-parser.test.ts
+packages/compiler/compiler-jay-html/test/contract/contract-compiler.test.ts
+```
+
+---
+
+### Phase 2: Component Instance Syntax — Implementation Results
+
+**Date:** February 4, 2026
+
+Successfully implemented `<jay:contract-name>` syntax for headless component instances with inline templates.
+
+#### What Works
+
+A page can now use headless component instances like:
+
+```html
+<jay:product-card productId="prod-hero">
+  <article class="hero-card">
+    <h2>{name}</h2>
+    <span class="price">{price}</span>
+    <button ref="addToCart">Add to Cart</button>
+  </article>
+</jay:product-card>
+```
+
+The compiler:
+
+1. **Detects** `<jay:contract-name>` matching headless import contract names
+2. **Compiles inline children** against the component's ViewState (not the page's)
+3. **Generates a render function** + `makeJayComponent` call at module level
+4. **Generates `childComp`** in the page render function with props from the page ViewState
+
+#### Changes Made
+
+**1. `JayHeadlessImports` (`jay-html-source-file.ts`):**
+
+- `key` is now optional (no key = instance-only headless component)
+- Added `contractName: string` field (stores the contract attribute value from the script tag)
+
+**2. Parser (`jay-html-parser.ts`):**
+
+- `key` attribute no longer required in `<script type="application/jay-headless">`
+- Stores `contractName` in headless imports
+- Filters page-level behavior (ViewState merging, trackBy extraction) to key-bearing imports only
+
+**3. Component detection (`jay-html-helpers.ts`):**
+
+- `getComponentName` returns `ComponentMatch { name, kind }` instead of `string | null`
+- Three kinds: `'headful'`, `'headless-instance'`, `'unknown'`
+- Accepts optional `headlessContractNames` set for matching `jay:xxx` against known contracts
+
+**4. `RenderContext` (`jay-html-compiler.ts`):**
+
+- Added `headlessContractNames: Set<string>`
+- Added `headlessImports: JayHeadlessImports[]`
+- Added `headlessInstanceDefs: HeadlessInstanceDefinition[]` (accumulator)
+- Added `headlessInstanceCounter: { count: number }` (shared counter for unique naming)
+
+**5. `renderHeadlessInstance` (`jay-html-compiler.ts`):**
+
+- Finds matching headless import by `contractName`
+- Creates `Variables` with component's ViewState type
+- Compiles inline children using `renderNode` with the component's context
+- Generates `_headlessProductCard0Render` function and `_HeadlessProductCard0` component symbol
+- Pushes definition to `headlessInstanceDefs` accumulator
+- Returns `childComp(_HeadlessProductCard0, propsMapper)` fragment
+
+**6. Module-level code emission (`renderFunctionImplementation`):**
+
+- Accumulated `headlessInstanceDefs` are emitted before the page render function
+- Imports from inline templates are merged into the file's imports
+
+**7. Import registry (`compiler-shared/imports.ts`):**
+
+- Added `Import.makeJayComponent` from `@jay-framework/component`
+
+**8. Dev server (`load-page-parts.ts`):**
+
+- Instance-only headless imports (no key) are skipped when creating page parts
+- Page-level headless imports continue to work as before
+
+#### Compiled Output Example
+
+Source: `<jay:product-card productId="prod-hero">` with inline template
+
+```typescript
+// Module-level: inline template compiled against ProductCardViewState
+function _headlessProductCard0Render(options) {
+  const render = (viewState) =>
+    ConstructContext.withRootContext(viewState, undefined, () =>
+      e('article', { class: 'hero-card' }, [
+        e('h2', {}, [dt((vs) => vs.name)]),
+        e('span', { class: 'price' }, [dt((vs) => vs.price)]),
+        e('button', {}, ['Add to Cart'], refAddToCart()),
+      ]),
+    );
+  return [undefined, render];
+}
+
+const _HeadlessProductCard0 = makeJayComponent(
+  _headlessProductCard0Render,
+  productCard.interactiveConstructor,
+);
+
+// In page render function:
+childComp(_HeadlessProductCard0, (vs: PageViewState) => ({
+  productId: 'prod-hero',
+}));
+```
+
+#### Design Note: Coordinates for Phase Matching
+
+CarryForward tracking across phases (slow→fast, fast→interactive) can use **element coordinates** — the same mechanism the secure package uses to match ViewState from the secure context to elements. Coordinates identify each component instance by its position in the tree, avoiding the need for explicit tracking maps. This applies to:
+
+- Slow→fast: match each nested component's carryForward by coordinate
+- Fast→interactive: match carryForward to client-side component instances by coordinate
+
+#### Known Limitations (to address in later phases)
+
+1. ~~**Render function not fully typed**~~ — **Resolved**: Render function now has proper type aliases, `RenderElementOptions` parameter, return type, and `as` casts
+2. ~~**Refs inside inline template**~~ — **Resolved**: Refs are now wired to a proper `ReferencesManager` with contract tag names and typed return
+3. **No nested headless instances** — Headless instances inside headless instances are disabled for now
+4. **Sandbox mode** — Headless instances silently produce empty output in sandbox mode
+
+#### Verification
+
+- **496/500 tests pass** (4 skipped are pre-existing)
+- **1 new test** for headless instance compilation with fixture comparison
+- All existing headless component tests unchanged
+
+#### Files Modified
+
+```
+packages/compiler/compiler-shared/lib/imports.ts
+packages/compiler/compiler-jay-html/lib/jay-target/jay-html-source-file.ts
+packages/compiler/compiler-jay-html/lib/jay-target/jay-html-parser.ts
+packages/compiler/compiler-jay-html/lib/jay-target/jay-html-helpers.ts
+packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts
+packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compile-refs.ts
+packages/compiler/compiler-jay-html/lib/react-target/jay-html-compiler-react.ts
+packages/jay-stack/stack-server-runtime/lib/load-page-parts.ts
+packages/compiler/compiler-jay-html/test/test-utils/test-resolver.ts
+packages/compiler/compiler-jay-html/test/jay-target/generate-element.test.ts
++ test fixtures: product-card contract, page-with-headless-instance
+```
+
+---
+
+### Phase 2 Follow-up: Inline Template Typing and Refs
+
+**Date:** February 4, 2026
+
+Addressed Phase 2's known limitations #1 and #2.
+
+#### Changes Made
+
+**`renderHeadlessInstance` (`jay-html-compiler.ts`):**
+
+- Generates type aliases: `_HeadlessProductCard0Element`, `_HeadlessProductCard0ElementRender`, `_HeadlessProductCard0ElementPreRender` using `ProductCardInteractiveViewState` and `ProductCardRefs`
+- Generates proper `ReferencesManager.for()` from inline template refs using `renderReferenceManager()`
+- Builds `importedRefNameToRef` from contract's refs tree so template `ref="addToCart"` maps to contract tag name `'add to cart'`
+- Uses `originalName` for ref field so `ReferencesManager.for()` uses original tag names
+- Typed render function with `options?: RenderElementOptions` parameter, return type, `as` casts, and `refManager.getPublicAPI() as ProductCardRefs`
+- `InteractiveViewState` dynamically added to contract link names and `usedComponentImports` only when headless instances exist
+
+#### Verification
+
+- **498/502 tests pass** (4 skipped are pre-existing)
+
+---
+
+### Phase 3: Repeater Integration — Implementation Results
+
+**Date:** February 4, 2026
+
+Phase 3 required no new compiler changes — the Phase 2 implementation already handled `forEach` integration correctly.
+
+#### Why It Works
+
+The `renderHeadlessInstance` function:
+
+1. **Component definition at module level** — `_HeadlessProductCard0` is defined once, reused for all forEach items
+2. **`childComp` placed in current position** — When inside a `forEach`, the `childComp` call naturally appears inside the `forEach` callback
+3. **Props resolved from current context** — `renderChildCompProps` uses `context.variables`, which inside a `forEach` points to the forEach item's ViewState, so `productId="{_id}"` correctly resolves `_id` from the item
+
+#### Test Added
+
+New fixture: `page-with-headless-in-foreach` — a page with `<jay:product-card productId="{_id}">` inside a `forEach="products" trackBy="_id"` block.
+
+Compiled output confirms:
+
+- Module-level component definition (one `makeJayComponent` call, not per item)
+- `childComp` inside `forEach` callback
+- Props bound from forEach item: `(vs1: ProductOfPageWithHeadlessInForeachViewState) => ({ productId: vs1._id })`
+
+#### Verification
+
+- **498/502 tests pass** (4 skipped are pre-existing)
+- 2 new tests: headless instance + headless instance inside forEach
+
+**`slowForEach` test added:** `page-with-headless-in-slow-foreach` — two pre-unrolled items with different inline templates (hero card with button ref vs compact card without). Confirms:
+
+- Each item gets its own module-level component (`_HeadlessProductCard0`, `_HeadlessProductCard1`)
+- Different refs per item (item 0 has `refAddToCart`, item 1 has none)
+- Each wrapped in `slowForEachItem` with correct index and trackBy key
+
+#### Files Added
+
+```
+test/fixtures/contracts/page-with-headless-in-foreach/page-with-headless-in-foreach.jay-html
+test/fixtures/contracts/page-with-headless-in-foreach/page-with-headless-in-foreach.jay-html.ts
+test/fixtures/contracts/page-with-headless-in-slow-foreach/page-with-headless-in-slow-foreach.jay-html
+test/fixtures/contracts/page-with-headless-in-slow-foreach/page-with-headless-in-slow-foreach.jay-html.ts
+```
+
+---
+
+### Phase 4: Slow Phase Orchestration for Headless Instances — Implementation Results
+
+**Date:** February 4, 2026
+
+Implemented server-side slow render orchestration for `<jay:xxx>` headless component instances using a **two-pass pipeline**.
+
+#### Design: Two-Pass Slow Render Pipeline
+
+The challenge: `<jay:product-card>` instances may have dynamic props (from `forEach` or page bindings) that need resolving before calling `slowlyRender`. Also, `slowlyRender` is async but the slow render transform is synchronous.
+
+**Solution — Two-pass approach:**
+
+```
+Pass 1: slowRenderTransform()
+  → Resolves page-level slow bindings
+  → Unrolls slow forEach (dynamic props become concrete)
+  → Preserves <jay:xxx> elements and their inline template bindings
+
+↓ Between passes (async, in dev server):
+
+discoverHeadlessInstances(pass1Output)
+  → Finds <jay:xxx> elements with concrete props
+  → Skips instances inside preserved forEach (fast phase)
+  → Skips instances with unresolved prop bindings
+
+For each discovered instance:
+  → component.slowlyRender(props) → { viewState, carryForward }
+
+↓
+
+Pass 2: resolveHeadlessInstances(pass1Output, instanceData)
+  → Resolves slow bindings inside inline templates using component ViewState
+  → Preserves fast/interactive bindings
+  → Preserves <jay:xxx> element structure
+```
+
+#### New Functions
+
+**`discoverHeadlessInstances(jayHtml)`** — Finds `<jay:xxx>` elements after Pass 1:
+
+- Extracts contract name from tag (e.g., `jay:product-card` → `product-card`)
+- Extracts props from attributes (camelCased, string values)
+- Skips instances inside preserved `forEach` (fast phase — props still dynamic)
+- Skips instances with unresolved bindings in props
+
+**`resolveHeadlessInstances(jayHtml, instanceData)`** — Applies instance ViewState (Pass 2):
+
+- Matches instance data to elements in document order
+- Builds per-instance phase map from component contract
+- Calls existing `transformChildren` to resolve slow bindings
+- Preserves fast/interactive bindings
+
+#### Dev Server Changes
+
+**`load-page-parts.ts`:**
+
+- New `HeadlessInstanceComponent` interface: `{ contractName, compDefinition, contract }`
+- `LoadedPageParts` now includes `headlessInstanceComponents` for instance-only imports (no key)
+- These are populated alongside key-based parts during headless import processing
+
+**`dev-server.ts` (`preRenderJayHtml`):**
+
+- Now returns `PreRenderResult` with `preRenderedJayHtml` and `instanceCarryForwards`
+- After Pass 1, calls `discoverHeadlessInstances` to find instances
+- For each discovered instance, calls `slowlyRender(props, ...services)` via component definition
+- Runs Pass 2 with `resolveHeadlessInstances` to resolve instance bindings
+- Instance carryForwards stored under `__instances` key in page carryForward
+
+#### Bug Found: `getAttribute` returns `undefined` not `null`
+
+In `node-html-parser`, `getAttribute('forEach')` returns `undefined` (not `null`) when the attribute doesn't exist. Using `!== null` incorrectly treated ALL elements as having a `forEach` attribute. Fixed by using `!= null` (loose equality) which matches both `null` and `undefined`.
+
+#### Tests Added
+
+12 new tests in `slow-render-transform.test.ts`:
+
+**`discoverHeadlessInstances` (5 tests):**
+
+- Discover instances with static props
+- Skip instances inside preserved forEach
+- Skip instances with unresolved prop bindings
+- Discover instances after slow forEach unrolling
+- CamelCase prop names
+
+**`resolveHeadlessInstances` (7 tests):**
+
+- Resolve slow bindings inside headless instances
+- Preserve fast/interactive bindings
+- Resolve multiple instances in document order
+- Resolve instances after slow forEach unrolling
+- Skip instances inside preserved forEach
+- Full two-pass pipeline: page bindings + instance bindings
+- Full two-pass pipeline with slow forEach unrolling
+
+#### Verification
+
+- **511/515 compiler tests pass** (4 skipped pre-existing)
+- **66/66 server runtime tests pass**
+- 12 new tests cover discovery, resolution, and end-to-end pipeline
+
+#### Remaining for Phase 4 (slow phase)
+
+- [x] ~~Fast phase orchestration for instances~~ — Done (see below)
+- [x] Client-side instance ViewState delivery (fast→interactive) — Phase 4b done
+- [~] End-to-end dev server test with a real headless component plugin — fake-shop example added as demo (not a formal automated test)
+
+#### Files Modified
+
+```
+packages/compiler/compiler-jay-html/lib/slow-render/slow-render-transform.ts (new functions)
+packages/compiler/compiler-jay-html/lib/index.ts (new exports)
+packages/compiler/compiler-jay-html/test/slow-render/slow-render-transform.test.ts (12 new tests)
+packages/jay-stack/stack-server-runtime/lib/load-page-parts.ts (HeadlessInstanceComponent, new field)
+packages/jay-stack/stack-server-runtime/lib/index.ts (new exports)
+packages/jay-stack/dev-server/lib/dev-server.ts (two-pass pipeline in preRenderJayHtml)
+```
+
+---
+
+### Phase 4 (continued): Fast Phase Orchestration for Headless Instances
+
+**Date:** February 4, 2026
+
+Added server-side fast render orchestration for `<jay:xxx>` headless component instances.
+
+#### Design: Instance Phase Data Flow
+
+The slow phase stores discovery info alongside carryForwards so the fast phase knows what instances exist:
+
+```typescript
+interface InstancePhaseData {
+  discovered: Array<{ contractName: string; props: Record<string, string> }>;
+  carryForwards: Record<string, object>; // keyed by "contractName:index"
+}
+```
+
+Stored in `carryForward.__instances` — persisted to cache so both pre-render and cached flows can use it.
+
+#### Fast Render Flow
+
+```
+carryForward.__instances (from slow phase / cache)
+  ↓
+renderFastChangingDataForInstances()
+  → For each discovered instance:
+    → Find component definition by contractName
+    → Call fastRender(props, instanceCarryForward, ...services)
+  → Returns: { viewStates, carryForwards }
+  ↓
+fastViewState.__headlessInstances = instance fast ViewStates
+fastCarryForward.__headlessInstances = instance fast carryForwards
+  ↓
+Embedded in HTML via generateClientScript()
+```
+
+Both `handlePreRenderRequest` and `handleCachedRequest` follow the same pattern:
+
+1. Run `renderFastChangingData` for key-based parts (existing)
+2. Extract `__instances` from carryForward
+3. Call `renderFastChangingDataForInstances` for each discovered instance
+4. Merge instance fast ViewStates into `fastViewState.__headlessInstances`
+
+#### Changes
+
+**`dev-server.ts`:**
+
+- `PreRenderResult` now uses `InstancePhaseData` (discovery info + carryForwards)
+- New `renderFastChangingDataForInstances()` function
+- Both `handlePreRenderRequest` and `handleCachedRequest` run instance fast render
+- Instance fast ViewStates embedded in `fastViewState.__headlessInstances`
+- Instance fast carryForwards stored in `fastCarryForward.__headlessInstances` (for Phase 4b)
+
+#### Verification
+
+- **66/66 server runtime tests pass**
+- No regression in existing behavior
+
+#### Remaining for Phase 4b (Client-Side Interactive)
+
+- [x] `makeCompositeJayComponent` extracts `__headlessInstances` from ViewState
+- [x] `childComp` or `makeJayComponent` receives instance fast ViewState via context
+- [x] Coordinate-based matching of instances to their ViewState on the client
+
+### Phase 4b: Client-Side Interactive — Implementation Results
+
+**Date:** February 4, 2026
+
+#### Architecture
+
+The client-side delivery of server-produced ViewState to headless component instances uses the runtime context system:
+
+```
+makeCompositeJayComponent
+  ├─ Extracts __headlessInstances from ViewState/carryForward
+  ├─ Registers HEADLESS_INSTANCES context (Map<coordKey, data>)
+  └─ During render, childComp creates headless instance components
+       └─ makeHeadlessInstanceComponent resolves HEADLESS_INSTANCES context
+            └─ Looks up this instance's data by coordinate key
+                 └─ Creates signals from fast ViewState
+                      └─ Injects (signalVS, carryForward) into plugin's interactive constructor
+```
+
+#### New Files
+
+**`stack-client-runtime/lib/headless-instance-context.ts`:**
+
+- `HEADLESS_INSTANCES` context marker — registered by `makeCompositeJayComponent`, consumed during instance construction
+- `HeadlessInstancesData` interface — `{ viewStates: Record<string, object>, carryForwards: Record<string, object> }` keyed by coordinate
+- `makeHeadlessInstanceComponent(preRender, interactiveConstructor, coordinateKey, pluginContexts?)` — wraps the plugin's interactive constructor to inject instance-specific fast ViewState and carryForward from the context. Uses `HEADLESS_INSTANCES` as the first context marker before any plugin-defined markers.
+
+#### Modified Files
+
+**`stack-client-runtime/lib/composite-component.ts`:**
+
+- Extracts `defaultViewState.__headlessInstances` and `fastCarryForward.__headlessInstances`
+- Deletes them from the main data to avoid polluting key-based part lookups
+- Pushes `[HEADLESS_INSTANCES, data]` to `componentContext.provideContexts` in the `comp` callback
+- This makes instance data available during rendering via the context stack
+
+**`compiler-shared/lib/constants.ts` + `imports.ts`:**
+
+- Added `JAY_STACK_CLIENT_RUNTIME` constant
+- Added `Import.makeHeadlessInstanceComponent` import definition
+
+**`compiler-jay-html/lib/jay-target/jay-html-compiler.ts`:**
+
+- `renderHeadlessInstance()` now computes coordinate key via `buildInstanceCoordinateKey()`
+- Generates `makeHeadlessInstanceComponent(render, plugin.comp, coordinateKey, plugin.contexts)` instead of `makeJayComponent(render, plugin.interactiveConstructor)`
+- Uses `plugin.comp` (the raw constructor) instead of `plugin.interactiveConstructor` since the wrapping is now done by `makeHeadlessInstanceComponent`
+
+**`compiler-jay-html/lib/slow-render/slow-render-transform.ts`:**
+
+- Exported `buildCoordinatePrefix()`, `localIndexAmongSiblings()` for reuse
+- Added `buildInstanceCoordinateKey(element, contractName)` convenience function
+
+#### Compiled Output Change
+
+Before:
+
+```typescript
+import { makeJayComponent } from '@jay-framework/component';
+const _HeadlessProductCard0 = makeJayComponent(
+  _headlessProductCard0Render,
+  productCard.interactiveConstructor,
+);
+```
+
+After:
+
+```typescript
+import { makeHeadlessInstanceComponent } from '@jay-framework/stack-client-runtime';
+const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
+  _headlessProductCard0Render,
+  productCard.comp,
+  'product-card:0',
+  productCard.contexts,
+);
+```
+
+For slowForEach instances, coordinate includes ancestor trackBy IDs:
+
+```typescript
+const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
+  _headlessProductCard0Render,
+  productCard.comp,
+  'p1/product-card:0',
+  productCard.contexts,
+);
+const _HeadlessProductCard1 = makeHeadlessInstanceComponent(
+  _headlessProductCard1Render,
+  productCard.comp,
+  'p2/product-card:0',
+  productCard.contexts,
+);
+```
+
+#### Verification
+
+- compiler-jay-html: 511 passed, 4 skipped
+- dev-server: 13 passed
+- stack-server-runtime: 66 passed
+- stack-client-runtime: typechecks cleanly
+
+### Phase 5: Data Discovery for Agents — Implementation Results
+
+**Date:** February 4, 2026
+
+**Revised:** Aligned with Design Logs #85 and #86. Discovery uses existing action + params CLI commands, not a separate mechanism.
+
+#### Architecture
+
+Agents discover data through two CLI commands that leverage existing infrastructure:
+
+```
+jay-stack action <plugin>/<action>     → runs plugin action, returns JSON/YAML
+    └─ Uses: action registry, service injection, plugin.yaml actions[]
+
+jay-stack params <plugin>/<contract>   → runs loadParams generator, returns param combinations
+    └─ Uses: plugin resolution, component loadParams, service injection
+```
+
+Discovery flow (per Design Log #85):
+
+1. Agent reads `agent-kit/INSTRUCTIONS.md`
+2. Runs `jay-stack agent-kit` to materialize contracts
+3. Runs `jay-stack params <plugin>/<contract>` for load param values
+4. Runs `jay-stack action <plugin>/<action>` for prop values
+
+#### Modified Files
+
+**`stack-cli/lib/cli.ts`:**
+
+- Added `jay-stack action <plugin>/<action>` command — initializes services, discovers + registers actions, executes the specified action, outputs JSON or YAML
+- Added `jay-stack params <plugin>/<contract>` command — resolves plugin component, runs loadParams generator, outputs param combinations
+
+#### Removed (inconsistent with #85/#86)
+
+- ~~`discoverable_data` in plugin.yaml~~ → agents use `actions` instead
+- ~~`makeDataGenerator` builder API~~ → plugins use `makeJayQuery`/`makeJayAction` for data actions
+- ~~`jay-stack discover` command~~ → replaced by `jay-stack action`
+- ~~`discoverData()` in stack-server-runtime~~ → not needed
+- ~~`DiscoverableDataValue` / `DataGenerator` types~~ → not needed
+
+#### Example: Plugin with action-based discovery
+
+```yaml
+# plugin.yaml
+name: product-widget
+module: ./product-widget
+contracts:
+  - name: product-widget
+    contract: ./product-widget.jay-contract
+    component: productWidget
+    description: Product widget card
+actions:
+  - listProducts # Agent calls: jay-stack action product-widget/listProducts
+```
+
+```typescript
+// product-widget.ts
+export const listProducts = makeJayQuery('productWidget.listProducts')
+  .withCaching({ maxAge: 300 })
+  .withServices(PRODUCTS_DATABASE_SERVICE)
+  .withHandler(async (input: {}, productsDb) => {
+    const products = await productsDb.getProducts();
+    return products.map((p) => ({
+      productId: p.id,
+      name: p.name,
+      price: p.price,
+    }));
+  });
+```
+
+#### Verification
+
+- compiler-shared: builds cleanly (DiscoverableDataConfig removed)
+- full-stack-component: typechecks cleanly (data generator types removed)
+- stack-server-runtime: 66 passed (data-discovery.ts removed)
+- stack-cli: typechecks cleanly (action + params commands added)
+- compiler-jay-html: 511 passed, 4 skipped
+- dev-server: 13 passed
+
+### Integration Testing — Fake-Shop End-to-End
+
+Ran the fake-shop example end-to-end with `jay-stack dev --test-mode` and discovered + fixed several issues:
+
+#### Bug Fixes
+
+1. **Missing `codeLink` import in compiled output** — Parser only added `contractLinks` (type imports) to `jayFile.imports`, not the `codeLink` (runtime component import). Headless instance code referenced `productWidget.comp` and `productWidget.contexts` but `productWidget` was never imported.
+
+   - **Fix**: `jay-html-parser.ts` — changed `headlessImports.flatMap((_) => _.contractLinks)` to `headlessImports.flatMap((_) => [..._.contractLinks, _.codeLink])`
+
+2. **`refManager` passed as `undefined` in inline templates** — Compiler template for headless instance render functions hardcoded `undefined` as the second arg to `ConstructContext.withRootContext` instead of `refManager`.
+
+   - **Fix**: `jay-html-compiler.ts` — changed `withRootContext(viewState, undefined, ...)` to `withRootContext(viewState, refManager, ...)`
+
+3. **`HEADLESS_INSTANCES` context caused WeakSet crash** — `makeHeadlessInstanceComponent` passed `HEADLESS_INSTANCES` as a `contextMarker` to `makeJayComponent`. The runtime's `enablePairing()` tried to add the plain data object to a `WeakSet<Reactive>`, but it has no reactive symbol.
+
+   - **Fix**: `headless-instance-context.ts` — Instead of passing `HEADLESS_INSTANCES` as a contextMarker, the wrapped constructor reads it directly via `useContext(HEADLESS_INSTANCES)`. The parent (composite component) provides it via `provideContexts`, which already has a null-check for reactive symbols.
+
+4. **`slowForEach` not recognized by slow render transform** — Template used `slowForEach="featuredProducts"` directly, but `slowRenderTransform` only recognizes `forEach` and auto-detects slow-phase arrays from the contract. `slowForEach` is an output attribute of the transform, not an input.
+
+   - **Fix**: `page.jay-html` — changed `slowForEach="featuredProducts" jayTrackBy="_id"` to `forEach="featuredProducts" trackBy="_id"`
+
+5. **Fast render signature mismatch** — `page.ts` and `product-widget.ts` fast render functions had wrong argument order. Runtime calls `fastRender(props, carryForward, ...services)` but the functions declared `(props: Props & CarryForward, ...services)`.
+   - **Fix**: `page.ts` and `product-widget.ts` — added explicit `carryForward` parameter between `props` and services
+
+#### Dev Server Enhancement
+
+- **Client script saved to build folder** — `sendResponse` in `dev-server.ts` now writes the generated client HTML to `build/client-scripts/<pageName>.html` for easier debugging of the compiled output.
+
+#### Current Rendering State
+
+- Mood Tracker (key-based headless): renders correctly with interactive buttons ✓
+- Static product widgets: render with correct slow data and unique coordinates ✓
+- slowForEach products: correctly expanded — "Gaming Laptop", "Smartphone Pro", "Wireless Headphones" ✓
+- forEach products: renders product IDs (headless instances disallowed in fast forEach — compiler error)
+
+#### Known Remaining Issues
+
+- ~~forEach headless instances show "undefined" for slow-phase fields~~ — **Fixed**: now a compiler error (see "Undefined Values Fix" section below)
+
+### Coordinate Collision Fix & Ref Support
+
+#### Problem
+
+`localIndexAmongSiblings` counted same-tag siblings within the immediate parent element. When `<jay:product-widget>` instances were each wrapped in their own `<div class="product-card">`, both got coordinate `product-widget:0` — the second overwrote the first in `__headlessInstances`.
+
+#### Fix: Scope-level counter + ref as coordinate
+
+Replaced `localIndexAmongSiblings` with a DFS-order scope counter per `(coordinatePrefix, contractName)`. Both compiler and slow-render use the same algorithm, producing matching coordinates.
+
+**Ref embedding approach:**
+
+1. `discoverHeadlessInstances` auto-generates a `ref` attribute for `<jay:xxx>` elements without one (using scope counter), embeds it in the HTML, and returns both instances + modified HTML
+2. `resolveHeadlessInstances` reads the `ref` attribute directly — no counter needed since refs are already embedded
+3. User-specified `ref="myWidget"` is preserved as-is
+4. Return type changed: `DiscoveredHeadlessInstance[]` → `HeadlessInstanceDiscoveryResult { instances, preRenderedJayHtml }`
+
+**Compiler ref support for headless instances:**
+
+- `childComp` calls for headless instances now include an auto-generated ref (same as headful components)
+- Fixes the `TODO: proper refs for headless instances`
+- Coordinate key uses explicit `ref` or auto-generated index: `prefix/contractName:ref`
+
+**codeLink import fix:**
+
+- Parser now only emits `codeLink` import for headless contracts that have `<jay:xxx>` tags in the template
+- Key-based headless components (e.g., `counter`, `namedCounter`) no longer get unused imports
+
+#### Files Changed
+
+- `slow-render-transform.ts` — `discoverHeadlessInstances` returns `HeadlessInstanceDiscoveryResult`, embeds refs; `resolveHeadlessInstances` reads refs; `buildInstanceCoordinateKey` updated
+- `jay-html-compiler.ts` — scope counter in `RenderContext`, ref-aware coordinate, `renderChildCompRef` for headless `childComp`
+- `jay-html-parser.ts` — only include `codeLink` for contracts used as `<jay:xxx>` instances
+- `dev-server.ts` — updated call sites for new discovery return type
+- Test fixtures — updated for new imports, ref in `childComp`, `refManager` in inline templates
+
+### Undefined Values Fix
+
+#### Mood Tracker Data Tags
+
+**Problem:** `{mt.happy}`, `{mt.sad}`, `{mt.neutral}` rendered as "undefined" in the browser.
+
+**Root cause:** `buildPhaseMap` defaulted tags without explicit `phase` to the parent's phase (`'slow'`). The mood tracker's `happy`/`sad`/`neutral` tags have `type: [data, interactive]` but no `phase` annotation — they were incorrectly treated as slow-phase, causing `resolveTextBindings` to resolve them from the empty slow ViewState.
+
+**Fix:** In `buildPhaseMap`'s `processTag`, when a tag has no explicit `phase` and its `type` includes `ContractTagType.interactive`, the effective phase defaults to `'fast+interactive'` instead of inheriting the parent's phase. This matches how the contract `.d.ts` generator already classifies these tags (they appear in `FastViewState`, not `SlowViewState`).
+
+- `slow-render-transform.ts` — `processTag` and `checkTag` both updated
+
+#### Headless Instances in Fast-Phase forEach
+
+**Problem:** `<jay:product-widget>` inside `forEach="allProducts"` (phase: fast) showed "undefined" for all slow-phase bindings (`{name}`, `{price}`, `{sku}`).
+
+**Root cause:** Fast-phase forEach items are only known at request time. Headless instances inside them have unresolved prop bindings (e.g., `productId="{_id}"`), so:
+
+1. `discoverHeadlessInstances` correctly skips them (unresolved bindings)
+2. No `__headlessInstances` data is produced for these items
+3. The compiled code uses a static `coordinateKey` shared by all forEach iterations
+4. The inline template bindings resolve to `undefined`
+
+**Decision:** For now, **disallow headless instances inside fast-phase forEach** as a compiler error. The coordinate system would need dynamic (runtime) coordinates, and the server pipeline would need to render instances after the fast phase completes.
+
+**Future approach:** Have the component provide a client-side equivalent of the slow phase — essentially an automatic action triggered from the client when forEach items are rendered. This avoids the need for server-side rendering of dynamic instances.
+
+**Fix:**
+
+- `jay-html-compiler.ts` — added `insideFastForEach: boolean` to `RenderContext`; `renderHeadlessInstance` emits validation error when `insideFastForEach` is true
+- `generate-element.test.ts` — updated `page-with-headless-in-foreach` test to expect the validation error
+- `fake-shop/page.jay-html` — removed `<jay:product-widget>` from fast forEach section

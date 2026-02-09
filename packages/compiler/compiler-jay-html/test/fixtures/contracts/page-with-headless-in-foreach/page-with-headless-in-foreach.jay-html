@@ -1,0 +1,27 @@
+<html>
+<head>
+    <script type="application/jay-headless"
+            plugin="test-product-card"
+            contract="product-card"></script>
+    <script type="application/jay-data">
+data:
+    pageTitle: string
+    products:
+        - _id: string
+    </script>
+</head>
+<body>
+<div>
+    <h1>{pageTitle}</h1>
+    <div class="grid" forEach="products" trackBy="_id">
+        <jay:product-card productId="{_id}">
+            <article class="product-tile">
+                <h2>{name}</h2>
+                <span class="price">{price}</span>
+                <button ref="addToCart">Add to Cart</button>
+            </article>
+        </jay:product-card>
+    </div>
+</div>
+</body>
+</html>

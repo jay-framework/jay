@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
     slowRenderTransform,
     hasSlowPhaseProperties,
+    discoverHeadlessInstances,
+    resolveHeadlessInstances,
     SlowRenderInput,
-} from '../../lib/slow-render/slow-render-transform';
-import { parseContract } from '../../lib/contract/contract-parser';
-import { Contract } from '../../lib/contract';
+} from '../../lib';
+import { parseContract } from '../../lib';
+import { Contract } from '../../lib';
 import { checkValidationErrors, prettifyHtml } from '@jay-framework/compiler-shared';
 import { promises } from 'node:fs';
 import path from 'path';
@@ -798,5 +800,582 @@ tags:
         expect(html).not.toContain('{count}');
         expect(html).not.toContain('{label}');
         expect(html).not.toContain('{isActive}');
+    });
+});
+
+describe('Headless Instance Discovery and Resolution (Two-Pass Pipeline)', () => {
+    const productCardContract = checkValidationErrors(
+        parseContract(
+            `
+name: product-card
+tags:
+  - tag: name
+    type: data
+    dataType: string
+  - tag: price
+    type: data
+    dataType: string
+  - tag: stock-count
+    type: data
+    dataType: number
+    phase: fast+interactive
+  - tag: add to cart
+    type: interactive
+    elementType: HTMLButtonElement
+`,
+            'product-card.jay-contract',
+        ),
+    );
+
+    describe('discoverHeadlessInstances', () => {
+        it('should discover instances with static props and correct coordinates', () => {
+            const jayHtml = `<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-headless" plugin="wix-stores" contract="product-card"></script>
+</head>
+<body>
+    <jay:product-card productId="prod-123">
+        <h2>{name}</h2>
+        <span>{price}</span>
+    </jay:product-card>
+    <jay:product-card productId="prod-456">
+        <h2>{name}</h2>
+        <span>{price}</span>
+    </jay:product-card>
+</body>
+</html>`;
+
+            const { instances } = discoverHeadlessInstances(jayHtml);
+
+            expect(instances).toEqual([
+                {
+                    contractName: 'product-card',
+                    props: { productId: 'prod-123' },
+                    coordinate: ['product-card:0'],
+                },
+                {
+                    contractName: 'product-card',
+                    props: { productId: 'prod-456' },
+                    coordinate: ['product-card:1'],
+                },
+            ]);
+        });
+
+        it('should skip instances inside preserved forEach (fast phase)', () => {
+            const jayHtml = `<!DOCTYPE html>
+<html>
+<head></head>
+<body>
+    <jay:product-card productId="prod-static">
+        <h2>{name}</h2>
+    </jay:product-card>
+    <div forEach="products" trackBy="_id">
+        <jay:product-card productId="{_id}">
+            <h2>{name}</h2>
+        </jay:product-card>
+    </div>
+</body>
+</html>`;
+
+            const { instances } = discoverHeadlessInstances(jayHtml);
+
+            // Only the static instance should be discovered (not the one inside forEach)
+            expect(instances).toEqual([
+                {
+                    contractName: 'product-card',
+                    props: { productId: 'prod-static' },
+                    coordinate: ['product-card:0'],
+                },
+            ]);
+        });
+
+        it('should skip instances with unresolved prop bindings', () => {
+            const jayHtml = `<!DOCTYPE html>
+<html>
+<head></head>
+<body>
+    <jay:product-card productId="prod-123">
+        <h2>{name}</h2>
+    </jay:product-card>
+    <jay:product-card productId="{dynamicId}">
+        <h2>{name}</h2>
+    </jay:product-card>
+</body>
+</html>`;
+
+            const { instances } = discoverHeadlessInstances(jayHtml);
+
+            // Only the first instance (second has unresolved binding)
+            expect(instances).toEqual([
+                {
+                    contractName: 'product-card',
+                    props: { productId: 'prod-123' },
+                    coordinate: ['product-card:0'],
+                },
+            ]);
+        });
+
+        it('should discover instances after slow forEach unrolling with trackBy coordinates', () => {
+            // Simulate Pass 1 output: forEach was unrolled into slowForEach items
+            const jayHtml = `<!DOCTYPE html>
+<html>
+<head></head>
+<body>
+    <div slowForEach="products" jayIndex="0" jayTrackBy="p1">
+        <jay:product-card productId="prod-123">
+            <h2>{name}</h2>
+        </jay:product-card>
+    </div>
+    <div slowForEach="products" jayIndex="1" jayTrackBy="p2">
+        <jay:product-card productId="prod-456">
+            <h2>{name}</h2>
+        </jay:product-card>
+    </div>
+</body>
+</html>`;
+
+            const { instances } = discoverHeadlessInstances(jayHtml);
+
+            // Coordinates include the parent slowForEach jayTrackBy
+            expect(instances).toEqual([
+                {
+                    contractName: 'product-card',
+                    props: { productId: 'prod-123' },
+                    coordinate: ['p1', 'product-card:0'],
+                },
+                {
+                    contractName: 'product-card',
+                    props: { productId: 'prod-456' },
+                    coordinate: ['p2', 'product-card:0'],
+                },
+            ]);
+        });
+
+        it('should camelCase prop names', () => {
+            const jayHtml = `<!DOCTYPE html>
+<html>
+<head></head>
+<body>
+    <jay:product-card product-id="prod-123" category-name="electronics">
+        <h2>{name}</h2>
+    </jay:product-card>
+</body>
+</html>`;
+
+            const { instances } = discoverHeadlessInstances(jayHtml);
+
+            expect(instances).toEqual([
+                {
+                    contractName: 'product-card',
+                    props: { productId: 'prod-123', categoryName: 'electronics' },
+                    coordinate: ['product-card:0'],
+                },
+            ]);
+        });
+    });
+
+    describe('resolveHeadlessInstances', () => {
+        // Helper: run discovery first to embed ref attributes, then resolve
+        function discoverAndResolve(
+            jayHtml: string,
+            instanceData: Parameters<typeof resolveHeadlessInstances>[1],
+            importResolver?: Parameters<typeof resolveHeadlessInstances>[2],
+        ) {
+            const { preRenderedJayHtml } = discoverHeadlessInstances(jayHtml);
+            return resolveHeadlessInstances(preRenderedJayHtml, instanceData, importResolver);
+        }
+
+        it('should resolve slow bindings inside headless instances', () => {
+            const jayHtml = `<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-headless" plugin="wix-stores" contract="product-card"></script>
+</head>
+<body>
+    <jay:product-card productId="prod-123">
+        <h2>{name}</h2>
+        <span class="price">{price}</span>
+    </jay:product-card>
+</body>
+</html>`;
+
+            const result = discoverAndResolve(jayHtml, [
+                {
+                    coordinate: ['product-card:0'],
+                    contract: productCardContract,
+                    slowViewState: { name: 'Widget A', price: '$29.99' },
+                },
+            ]);
+
+            expect(result.validations).toEqual([]);
+            expect(prettifyHtml(result.val!)).toEqual(
+                prettifyHtml(`<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-headless" plugin="wix-stores" contract="product-card"></script>
+</head>
+<body>
+    <jay:product-card productId="prod-123" ref="0">
+        <h2>Widget A</h2>
+        <span class="price">$29.99</span>
+    </jay:product-card>
+</body>
+</html>`),
+            );
+        });
+
+        it('should preserve fast/interactive bindings inside headless instances', () => {
+            const jayHtml = `<!DOCTYPE html>
+<html>
+<head></head>
+<body>
+    <jay:product-card productId="prod-123">
+        <h2>{name}</h2>
+        <span class="stock">{stockCount}</span>
+    </jay:product-card>
+</body>
+</html>`;
+
+            const result = discoverAndResolve(jayHtml, [
+                {
+                    coordinate: ['product-card:0'],
+                    contract: productCardContract,
+                    slowViewState: { name: 'Widget A' },
+                },
+            ]);
+
+            expect(result.validations).toEqual([]);
+            expect(prettifyHtml(result.val!)).toEqual(
+                prettifyHtml(`<!DOCTYPE html>
+<html>
+<head></head>
+<body>
+    <jay:product-card productId="prod-123" ref="0">
+        <h2>Widget A</h2>
+        <span class="stock">{stockCount}</span>
+    </jay:product-card>
+</body>
+</html>`),
+            );
+        });
+
+        it('should resolve multiple instances by coordinate', () => {
+            const jayHtml = `<!DOCTYPE html>
+<html>
+<head></head>
+<body>
+    <jay:product-card productId="prod-123">
+        <h2>{name}</h2>
+    </jay:product-card>
+    <jay:product-card productId="prod-456">
+        <h2>{name}</h2>
+    </jay:product-card>
+</body>
+</html>`;
+
+            const result = discoverAndResolve(jayHtml, [
+                {
+                    coordinate: ['product-card:0'],
+                    contract: productCardContract,
+                    slowViewState: { name: 'Widget A' },
+                },
+                {
+                    coordinate: ['product-card:1'],
+                    contract: productCardContract,
+                    slowViewState: { name: 'Widget B' },
+                },
+            ]);
+
+            expect(result.validations).toEqual([]);
+            expect(prettifyHtml(result.val!)).toEqual(
+                prettifyHtml(`<!DOCTYPE html>
+<html>
+<head></head>
+<body>
+    <jay:product-card productId="prod-123" ref="0">
+        <h2>Widget A</h2>
+    </jay:product-card>
+    <jay:product-card productId="prod-456" ref="1">
+        <h2>Widget B</h2>
+    </jay:product-card>
+</body>
+</html>`),
+            );
+        });
+
+        it('should resolve instances after slow forEach unrolling using trackBy coordinates', () => {
+            // Simulate Pass 1 output: forEach was unrolled
+            const jayHtml = `<!DOCTYPE html>
+<html>
+<head></head>
+<body>
+    <div slowForEach="products" jayIndex="0" jayTrackBy="p1">
+        <jay:product-card productId="prod-123">
+            <h2>{name}</h2>
+            <span>{price}</span>
+        </jay:product-card>
+    </div>
+    <div slowForEach="products" jayIndex="1" jayTrackBy="p2">
+        <jay:product-card productId="prod-456">
+            <h2>{name}</h2>
+            <span>{price}</span>
+        </jay:product-card>
+    </div>
+</body>
+</html>`;
+
+            const result = discoverAndResolve(jayHtml, [
+                {
+                    coordinate: ['p1', 'product-card:0'],
+                    contract: productCardContract,
+                    slowViewState: { name: 'Widget A', price: '$29.99' },
+                },
+                {
+                    coordinate: ['p2', 'product-card:0'],
+                    contract: productCardContract,
+                    slowViewState: { name: 'Widget B', price: '$49.99' },
+                },
+            ]);
+
+            expect(result.validations).toEqual([]);
+            expect(prettifyHtml(result.val!)).toEqual(
+                prettifyHtml(`<!DOCTYPE html>
+<html>
+<head></head>
+<body>
+    <div slowForEach="products" jayIndex="0" jayTrackBy="p1">
+        <jay:product-card productId="prod-123" ref="0">
+            <h2>Widget A</h2>
+            <span>$29.99</span>
+        </jay:product-card>
+    </div>
+    <div slowForEach="products" jayIndex="1" jayTrackBy="p2">
+        <jay:product-card productId="prod-456" ref="0">
+            <h2>Widget B</h2>
+            <span>$49.99</span>
+        </jay:product-card>
+    </div>
+</body>
+</html>`),
+            );
+        });
+
+        it('should skip instances inside preserved forEach', () => {
+            const jayHtml = `<!DOCTYPE html>
+<html>
+<head></head>
+<body>
+    <jay:product-card productId="prod-static">
+        <h2>{name}</h2>
+    </jay:product-card>
+    <div forEach="products" trackBy="_id">
+        <jay:product-card productId="{_id}">
+            <h2>{name}</h2>
+        </jay:product-card>
+    </div>
+</body>
+</html>`;
+
+            const result = discoverAndResolve(jayHtml, [
+                {
+                    coordinate: ['product-card:0'],
+                    contract: productCardContract,
+                    slowViewState: { name: 'Static Widget' },
+                },
+            ]);
+
+            expect(result.validations).toEqual([]);
+            expect(prettifyHtml(result.val!)).toEqual(
+                prettifyHtml(`<!DOCTYPE html>
+<html>
+<head></head>
+<body>
+    <jay:product-card productId="prod-static" ref="0">
+        <h2>Static Widget</h2>
+    </jay:product-card>
+    <div forEach="products" trackBy="_id">
+        <jay:product-card productId="{_id}">
+            <h2>{name}</h2>
+        </jay:product-card>
+    </div>
+</body>
+</html>`),
+            );
+        });
+
+        it('full two-pass pipeline: page bindings + instance bindings', () => {
+            // Step 1: Page has a slow title + a headless instance
+            const pageContract = checkValidationErrors(
+                parseContract(
+                    `
+name: MyPage
+tags:
+  - tag: page-title
+    type: data
+    dataType: string
+    phase: slow
+`,
+                    'page.jay-contract',
+                ),
+            );
+
+            const input: SlowRenderInput = {
+                jayHtmlContent: `<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-headless" plugin="wix-stores" contract="product-card"></script>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+    <h1>{pageTitle}</h1>
+    <jay:product-card productId="prod-123">
+        <article>
+            <h2>{name}</h2>
+            <span class="price">{price}</span>
+            <span class="stock">{stockCount}</span>
+        </article>
+    </jay:product-card>
+</body>
+</html>`,
+                slowViewState: { pageTitle: 'Our Products' },
+                contract: pageContract,
+            };
+
+            // Pass 1: resolve page bindings
+            const pass1 = slowRenderTransform(input);
+            expect(pass1.validations).toEqual([]);
+            const pass1Html = pass1.val!.preRenderedJayHtml;
+
+            // Discover instances (also embeds ref attributes)
+            const { instances, preRenderedJayHtml: discoveredHtml } =
+                discoverHeadlessInstances(pass1Html);
+            expect(instances).toEqual([
+                {
+                    contractName: 'product-card',
+                    props: { productId: 'prod-123' },
+                    coordinate: ['product-card:0'],
+                },
+            ]);
+
+            // Pass 2: resolve instance bindings using discovered coordinate
+            const pass2 = resolveHeadlessInstances(discoveredHtml, [
+                {
+                    coordinate: instances[0].coordinate,
+                    contract: productCardContract,
+                    slowViewState: { name: 'Ceramic Vase', price: '$34.99' },
+                },
+            ]);
+
+            expect(pass2.validations).toEqual([]);
+            expect(prettifyHtml(pass2.val!)).toEqual(
+                prettifyHtml(`<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-headless" plugin="wix-stores" contract="product-card"></script>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+    <h1>Our Products</h1>
+    <jay:product-card productId="prod-123" ref="0">
+        <article>
+            <h2>Ceramic Vase</h2>
+            <span class="price">$34.99</span>
+            <span class="stock">{stockCount}</span>
+        </article>
+    </jay:product-card>
+</body>
+</html>`),
+            );
+        });
+
+        it('full two-pass pipeline with slow forEach unrolling', () => {
+            // Page has a slow products array with product-card instances inside
+            const pageContract = checkValidationErrors(
+                parseContract(
+                    `
+name: CatalogPage
+tags:
+  - tag: products
+    type: sub-contract
+    repeated: true
+    trackBy: _id
+    tags:
+      - tag: _id
+        type: data
+        dataType: string
+`,
+                    'catalog.jay-contract',
+                ),
+            );
+
+            const input: SlowRenderInput = {
+                jayHtmlContent: `<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-headless" plugin="wix-stores" contract="product-card"></script>
+</head>
+<body>
+    <div class="grid" forEach="products" trackBy="_id">
+        <jay:product-card productId="{_id}">
+            <h2>{name}</h2>
+            <span>{price}</span>
+        </jay:product-card>
+    </div>
+</body>
+</html>`,
+                slowViewState: {
+                    products: [{ _id: 'prod-123' }, { _id: 'prod-456' }],
+                },
+                contract: pageContract,
+            };
+
+            // Pass 1: resolve page bindings and unroll forEach
+            const pass1 = slowRenderTransform(input);
+            expect(pass1.validations).toEqual([]);
+            const pass1Html = pass1.val!.preRenderedJayHtml;
+
+            // Discover instances — coordinates include jayTrackBy from forEach
+            const { instances, preRenderedJayHtml: discoveredHtml } =
+                discoverHeadlessInstances(pass1Html);
+            expect(instances).toEqual([
+                {
+                    contractName: 'product-card',
+                    props: { productId: 'prod-123' },
+                    coordinate: ['prod-123', 'product-card:0'],
+                },
+                {
+                    contractName: 'product-card',
+                    props: { productId: 'prod-456' },
+                    coordinate: ['prod-456', 'product-card:0'],
+                },
+            ]);
+
+            // Pass 2: resolve instance bindings using discovered coordinates
+            const pass2 = resolveHeadlessInstances(discoveredHtml, [
+                {
+                    coordinate: instances[0].coordinate,
+                    contract: productCardContract,
+                    slowViewState: { name: 'Ceramic Vase', price: '$34.99' },
+                },
+                {
+                    coordinate: instances[1].coordinate,
+                    contract: productCardContract,
+                    slowViewState: { name: 'Glass Bowl', price: '$19.99' },
+                },
+            ]);
+
+            expect(pass2.validations).toEqual([]);
+            const finalHtml = prettifyHtml(pass2.val!);
+
+            // Both instances resolved with correct data
+            expect(finalHtml).toContain('Ceramic Vase');
+            expect(finalHtml).toContain('$34.99');
+            expect(finalHtml).toContain('Glass Bowl');
+            expect(finalHtml).toContain('$19.99');
+            // No unresolved component bindings
+            expect(finalHtml).not.toContain('{name}');
+            expect(finalHtml).not.toContain('{price}');
+        });
     });
 });

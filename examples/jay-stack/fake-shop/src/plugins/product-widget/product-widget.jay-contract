@@ -1,0 +1,35 @@
+name: ProductWidget
+props:
+  - name: productId
+    type: string
+    required: true
+    description: The ID of the product to display
+tags:
+  - tag: name
+    type: data
+    dataType: string
+    phase: slow
+    description: Product name
+
+  - tag: price
+    type: data
+    dataType: number
+    phase: slow
+    description: Product price
+
+  - tag: sku
+    type: data
+    dataType: string
+    phase: slow
+    description: Product SKU
+
+  - tag: inStock
+    type: variant
+    dataType: boolean
+    phase: fast+interactive
+    description: Whether the product is currently in stock
+
+  - tag: addToCart
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Add to cart button

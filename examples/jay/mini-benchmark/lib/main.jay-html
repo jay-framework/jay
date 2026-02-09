@@ -30,11 +30,11 @@
       <div class="progress">{progress}</div>
       <button ref="run">run</button>
       <div class="stage">
-        <Basic ref="basic" if="selectedExample === basic" cycles="{cycles}" />
-        <Collections ref="collections" if="selectedExample === collections" cycles="{cycles}" />
-        <Composite ref="composite" if="selectedExample === composite" cycles="{cycles}" />
-        <Conditions ref="conditions" if="selectedExample === conditions" cycles="{cycles}" />
-        <TableHost ref="table" if="selectedExample === table" cycles="{cycles}" />
+        <jay:Basic ref="basic" if="selectedExample === basic" cycles="{cycles}" />
+        <jay:Collections ref="collections" if="selectedExample === collections" cycles="{cycles}" />
+        <jay:Composite ref="composite" if="selectedExample === composite" cycles="{cycles}" />
+        <jay:Conditions ref="conditions" if="selectedExample === conditions" cycles="{cycles}" />
+        <jay:TableHost ref="table" if="selectedExample === table" cycles="{cycles}" />
       </div>
     </div>
   </body>

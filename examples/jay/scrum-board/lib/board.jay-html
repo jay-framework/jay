@@ -12,7 +12,7 @@
   <body>
     <div class="scrum-board">
       <h1 class="board-title">{title}</h1>
-      <Pillar ref="pillars" forEach="boardPillars" trackBy="id" props="{pillarData}" />
+      <jay:Pillar ref="pillars" forEach="boardPillars" trackBy="id" props="{pillarData}" />
     </div>
   </body>
 </html>

@@ -2,6 +2,7 @@ node_modules
 dist
 dist-secure
 build
+agent-kit
 *.iml
 /packages/compiler/compiler/lib/expressions/expression-parser.js
 examples/**/*.d.ts

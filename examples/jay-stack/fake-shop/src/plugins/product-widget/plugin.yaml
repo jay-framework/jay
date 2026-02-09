@@ -1,0 +1,12 @@
+name: product-widget
+module: ./product-widget
+contracts:
+  - name: product-widget
+    contract: ./product-widget.jay-contract
+    component: productWidget
+    description: Product widget card showing name, price, and stock status
+
+# Actions that agents can call to discover valid prop values
+# Usage: jay-stack action product-widget/listProducts
+actions:
+  - listProducts

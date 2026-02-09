@@ -7,7 +7,7 @@
   </head>
   <body>
     <div>
-      <Board title="My Scrum Board" ref="a"></Board>
+      <jay:Board title="My Scrum Board" ref="a"></jay:Board>
     </div>
   </body>
 </html>

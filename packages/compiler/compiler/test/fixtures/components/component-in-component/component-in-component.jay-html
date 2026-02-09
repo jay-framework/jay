@@ -12,11 +12,11 @@ data:
 </head>
 <body>
 <div>
-    <Counter ref="counter1" initialValue={count1} />
-    <Counter ref="counter-two" initialValue="{count2}" />
-    <Counter initialValue="{count3}"/>
-    <Counter initialValue="{count4.count}"/>
-    <Counter initialValue="25"/>
+    <jay:Counter ref="counter1" initialValue={count1} />
+    <jay:Counter ref="counter-two" initialValue="{count2}" />
+    <jay:Counter initialValue="{count3}"/>
+    <jay:Counter initialValue="{count4.count}"/>
+    <jay:Counter initialValue="25"/>
 </div>
 </body>
 </html>

@@ -11,6 +11,10 @@ import {
 } from '@jay-framework/stack-server-runtime';
 import { createViteForCli } from '@jay-framework/dev-server';
 import { setDevLogger, createDevLogger, getLogger, type LogLevel } from '@jay-framework/logger';
+import { initializeServicesForCli } from './cli-services';
+import { runAction } from './run-action';
+import { runParams } from './run-params';
+import { runSetup } from './run-setup';
 
 const program = new Command();
 
@@ -114,152 +118,240 @@ program
         }
     });
 
-// Contract materialization command
+/**
+ * Copies agent-kit documentation files from the template folder.
+ * Does not overwrite existing files so users can customize.
+ * Use --force to regenerate all docs.
+ * Template folder: stack-cli/agent-kit-template/ (Design Log #85).
+ */
+async function ensureAgentKitDocs(projectRoot: string, force?: boolean): Promise<void> {
+    const path = await import('node:path');
+    const fs = await import('node:fs/promises');
+    const { fileURLToPath } = await import('node:url');
+
+    const agentKitDir = path.join(projectRoot, 'agent-kit');
+    await fs.mkdir(agentKitDir, { recursive: true });
+
+    // Resolve template folder: ../agent-kit-template/ relative to dist/index.js (or lib/ in dev)
+    const thisDir = path.dirname(fileURLToPath(import.meta.url));
+    const templateDir = path.resolve(thisDir, '..', 'agent-kit-template');
+
+    let files: string[];
+    try {
+        files = (await fs.readdir(templateDir)).filter((f) => f.endsWith('.md'));
+    } catch {
+        getLogger().warn(chalk.yellow('   Agent-kit template folder not found: ' + templateDir));
+        return;
+    }
+
+    for (const filename of files) {
+        const destPath = path.join(agentKitDir, filename);
+        if (!force) {
+            try {
+                await fs.access(destPath);
+                continue; // File exists, don't overwrite
+            } catch {
+                // File doesn't exist, copy it
+            }
+        }
+        await fs.copyFile(path.join(templateDir, filename), destPath);
+        getLogger().info(chalk.gray(`   Created agent-kit/${filename}`));
+    }
+}
+
+/**
+ * Discovers and runs plugin reference generators (Design Log #87).
+ * Called by agent-kit after materializing contracts. Services are already initialized
+ * by runMaterialize, so references handlers can use them directly.
+ */
+async function generatePluginReferences(
+    projectRoot: string,
+    options: { plugin?: string; force?: boolean; verbose?: boolean },
+): Promise<void> {
+    const { discoverPluginsWithReferences, executePluginReferences } = await import(
+        '@jay-framework/stack-server-runtime'
+    );
+
+    const plugins = await discoverPluginsWithReferences({
+        projectRoot,
+        verbose: options.verbose,
+        pluginFilter: options.plugin,
+    });
+
+    if (plugins.length === 0) return;
+
+    const logger = getLogger();
+    logger.important('');
+    logger.important(chalk.bold('📚 Generating plugin references...'));
+
+    for (const plugin of plugins) {
+        try {
+            const result = await executePluginReferences(plugin, {
+                projectRoot,
+                force: options.force ?? false,
+                verbose: options.verbose,
+            });
+
+            if (result.referencesCreated.length > 0) {
+                logger.important(chalk.green(`   ✅ ${plugin.name}:`));
+                for (const ref of result.referencesCreated) {
+                    logger.important(chalk.gray(`      ${ref}`));
+                }
+                if (result.message) {
+                    logger.important(chalk.gray(`      ${result.message}`));
+                }
+            }
+        } catch (error: any) {
+            logger.warn(
+                chalk.yellow(`   ⚠️  ${plugin.name}: references skipped — ${error.message}`),
+            );
+        }
+    }
+}
+
+/** Shared action for contract materialization (used by both contracts and agent-kit) */
+async function runMaterialize(
+    projectRoot: string,
+    options: {
+        output?: string;
+        yaml?: boolean;
+        list?: boolean;
+        plugin?: string;
+        dynamicOnly?: boolean;
+        force?: boolean;
+        verbose?: boolean;
+    },
+    /** Relative path from project root, e.g. 'agent-kit/materialized-contracts' or 'build/materialized-contracts' */
+    defaultOutputRelative: string,
+) {
+    const path = await import('node:path');
+    const outputDir = options.output ?? path.join(projectRoot, defaultOutputRelative);
+    let viteServer: Awaited<ReturnType<typeof createViteForCli>> | undefined;
+
+    try {
+        if (options.list) {
+            const index = await listContracts({
+                projectRoot,
+                dynamicOnly: options.dynamicOnly,
+                pluginFilter: options.plugin,
+            });
+
+            if (options.yaml) {
+                getLogger().important(YAML.stringify(index));
+            } else {
+                printContractList(index);
+            }
+            return;
+        }
+
+        if (options.verbose) {
+            getLogger().info('Starting Vite for TypeScript support...');
+        }
+        viteServer = await createViteForCli({ projectRoot });
+
+        const services = await initializeServicesForCli(projectRoot, viteServer);
+
+        const result = await materializeContracts(
+            {
+                projectRoot,
+                outputDir,
+                force: options.force,
+                dynamicOnly: options.dynamicOnly,
+                pluginFilter: options.plugin,
+                verbose: options.verbose,
+                viteServer,
+            },
+            services,
+        );
+
+        if (options.yaml) {
+            getLogger().important(YAML.stringify(result.index));
+        } else {
+            getLogger().important(
+                chalk.green(`\n✅ Materialized ${result.index.contracts.length} contracts`),
+            );
+            getLogger().important(`   Static: ${result.staticCount}`);
+            getLogger().important(`   Dynamic: ${result.dynamicCount}`);
+            getLogger().important(`   Output: ${result.outputDir}`);
+        }
+    } catch (error: any) {
+        getLogger().error(chalk.red('❌ Failed to materialize contracts:') + ' ' + error.message);
+        if (options.verbose) {
+            getLogger().error(error.stack);
+        }
+        process.exit(1);
+    } finally {
+        if (viteServer) {
+            await viteServer.close();
+        }
+    }
+}
+
+// Plugin setup command (Design Log #87): create config, validate services, generate references
 program
-    .command('contracts')
-    .description('Materialize and list available contracts from all plugins')
-    .option('-o, --output <dir>', 'Output directory for materialized contracts')
+    .command('setup [plugin]')
+    .description(
+        'Run plugin setup: create config templates, validate credentials, generate reference data',
+    )
+    .option('--force', 'Force re-run (overwrite config templates and regenerate references)')
+    .option('-v, --verbose', 'Show detailed output')
+    .action(async (plugin: string | undefined, options) => {
+        await runSetup(plugin, options, process.cwd(), initializeServicesForCli);
+    });
+
+// Agent kit command (Design Log #85/#87): prepare agent-kit folder with contracts, docs, and references
+program
+    .command('agent-kit')
+    .description(
+        'Prepare the agent kit: materialize contracts, generate references, and write docs to agent-kit/',
+    )
+    .option('-o, --output <dir>', 'Output directory (default: agent-kit/materialized-contracts)')
     .option('--yaml', 'Output contract index as YAML to stdout')
     .option('--list', 'List contracts without writing files')
     .option('--plugin <name>', 'Filter to specific plugin')
     .option('--dynamic-only', 'Only process dynamic contracts')
     .option('--force', 'Force re-materialization')
+    .option('--no-references', 'Skip reference data generation')
     .option('-v, --verbose', 'Show detailed output')
     .action(async (options) => {
         const projectRoot = process.cwd();
-        let viteServer: Awaited<ReturnType<typeof createViteForCli>> | undefined;
-
-        try {
-            if (options.list) {
-                // Just list, don't write files
-                const index = await listContracts({
-                    projectRoot,
-                    dynamicOnly: options.dynamicOnly,
-                    pluginFilter: options.plugin,
-                });
-
-                if (options.yaml) {
-                    getLogger().important(YAML.stringify(index));
-                } else {
-                    printContractList(index);
-                }
-                return;
-            }
-
-            // Create Vite server for TypeScript support
-            if (options.verbose) {
-                getLogger().info('Starting Vite for TypeScript support...');
-            }
-            viteServer = await createViteForCli({ projectRoot });
-
-            // Initialize services (needed for dynamic generators)
-            const services = await initializeServicesForCli(projectRoot, viteServer);
-
-            // Materialize contracts
-            const result = await materializeContracts(
-                {
-                    projectRoot,
-                    outputDir: options.output,
-                    force: options.force,
-                    dynamicOnly: options.dynamicOnly,
-                    pluginFilter: options.plugin,
-                    verbose: options.verbose,
-                    viteServer,
-                },
-                services,
-            );
-
-            if (options.yaml) {
-                getLogger().important(YAML.stringify(result.index));
-            } else {
-                getLogger().important(
-                    chalk.green(`\n✅ Materialized ${result.index.contracts.length} contracts`),
-                );
-                getLogger().important(`   Static: ${result.staticCount}`);
-                getLogger().important(`   Dynamic: ${result.dynamicCount}`);
-                getLogger().important(`   Output: ${result.outputDir}`);
-            }
-        } catch (error: any) {
-            getLogger().error(
-                chalk.red('❌ Failed to materialize contracts:') + ' ' + error.message,
-            );
-            if (options.verbose) {
-                getLogger().error(error.stack);
-            }
-            process.exit(1);
-        } finally {
-            // Clean up Vite server
-            if (viteServer) {
-                await viteServer.close();
+        await runMaterialize(projectRoot, options, 'agent-kit/materialized-contracts');
+        if (!options.list) {
+            await ensureAgentKitDocs(projectRoot, options.force);
+            // Generate plugin reference data (Design Log #87)
+            if (options.references !== false) {
+                await generatePluginReferences(projectRoot, options);
             }
         }
     });
 
+// Action execution command (Design Log #84/#85/#86): run a plugin action from CLI for agent discovery
+program
+    .command('action <plugin/action>')
+    .description(
+        'Run a plugin action (e.g., jay-stack action wix-stores/searchProducts --input \'{"query":""}\')',
+    )
+    .option('--input <json>', 'JSON input for the action (default: {})')
+    .option('--yaml', 'Output result as YAML instead of JSON')
+    .option('-v, --verbose', 'Show detailed output')
+    .action(async (actionRef: string, options) => {
+        await runAction(actionRef, options, process.cwd(), initializeServicesForCli);
+    });
+
+// Params discovery command (Design Log #84/#86): discover load param values for a contract
+program
+    .command('params <plugin/contract>')
+    .description(
+        'Discover load param values for a contract (e.g., jay-stack params wix-stores/product-page)',
+    )
+    .option('--yaml', 'Output result as YAML instead of JSON')
+    .option('-v, --verbose', 'Show detailed output')
+    .action(async (contractRef: string, options) => {
+        await runParams(contractRef, options, process.cwd(), initializeServicesForCli);
+    });
+
 // Parse arguments
 program.parse(process.argv);
-
-/**
- * Initializes services for CLI use (loads init.ts and runs callbacks)
- *
- * Uses the provided Vite server for TypeScript transpilation when loading
- * init files and plugin modules.
- */
-async function initializeServicesForCli(
-    projectRoot: string,
-    viteServer?: Awaited<ReturnType<typeof createViteForCli>>,
-): Promise<Map<symbol, unknown>> {
-    const path = await import('node:path');
-    const fs = await import('node:fs');
-
-    // Import service initialization functions
-    const {
-        runInitCallbacks,
-        getServiceRegistry,
-        discoverPluginsWithInit,
-        sortPluginsByDependencies,
-        executePluginServerInits,
-    } = await import('@jay-framework/stack-server-runtime');
-
-    try {
-        // Discover and initialize plugins
-        const discoveredPlugins = await discoverPluginsWithInit({
-            projectRoot,
-            verbose: false,
-        });
-        const pluginsWithInit = sortPluginsByDependencies(discoveredPlugins);
-
-        // Execute plugin server inits with Vite for TypeScript support
-        try {
-            await executePluginServerInits(pluginsWithInit, viteServer, false);
-        } catch (error: any) {
-            getLogger().warn(chalk.yellow(`⚠️  Plugin initialization skipped: ${error.message}`));
-        }
-
-        // Load project init.ts/js if it exists
-        const initPathTs = path.join(projectRoot, 'src', 'init.ts');
-        const initPathJs = path.join(projectRoot, 'src', 'init.js');
-
-        let initModule: any;
-        if (fs.existsSync(initPathTs) && viteServer) {
-            // Use Vite for TypeScript transpilation
-            initModule = await viteServer.ssrLoadModule(initPathTs);
-        } else if (fs.existsSync(initPathJs)) {
-            initModule = await import(initPathJs);
-        }
-
-        if (initModule?.init?._serverInit) {
-            await initModule.init._serverInit();
-        }
-
-        // Run any additional init callbacks
-        await runInitCallbacks();
-    } catch (error: any) {
-        getLogger().warn(chalk.yellow(`⚠️  Service initialization failed: ${error.message}`));
-        getLogger().warn(chalk.gray('   Static contracts will still be listed.'));
-    }
-
-    return getServiceRegistry();
-}
 
 // If no command provided, show help
 if (!process.argv.slice(2).length) {
