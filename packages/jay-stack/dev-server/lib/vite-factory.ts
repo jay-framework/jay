@@ -57,6 +57,11 @@ export async function createViteServer(options: CreateViteServerOptions): Promis
             // This ensures all packages share the same module instances (Symbol identity)
             external: ['@jay-framework/stack-server-runtime', '@jay-framework/fullstack-component'],
         },
+        // Disable automatic entry point discovery for pre-bundling —
+        // we run in middleware mode with no HTML files, so Vite can't auto-detect entries
+        optimizeDeps: {
+            entries: [],
+        },
         // Logging
         logLevel,
         clearScreen,
@@ -69,6 +74,8 @@ export async function createViteServer(options: CreateViteServerOptions): Promis
  * Creates a minimal Vite server for CLI usage.
  *
  * This is a convenience wrapper around createViteServer with CLI-appropriate defaults.
+ * Disables dependency optimization and ignores the build/ folder to avoid errors
+ * from stale build artifacts (e.g., build/client-scripts/ referencing build/slow-render-cache/).
  */
 export async function createViteForCli(options: {
     projectRoot: string;
@@ -76,10 +83,28 @@ export async function createViteForCli(options: {
 }): Promise<ViteDevServer> {
     const { projectRoot, tsConfigFilePath = path.join(projectRoot, 'tsconfig.json') } = options;
 
-    return createViteServer({
-        projectRoot,
-        jayRollupConfig: { tsConfigFilePath },
+    const vite = await createServer({
+        server: {
+            middlewareMode: true,
+            watch: {
+                ignored: ['**/build/**'],
+            },
+        },
+        plugins: [
+            ...jayStackCompiler({ tsConfigFilePath }),
+        ],
+        appType: 'custom',
+        root: projectRoot,
+        ssr: {
+            external: ['@jay-framework/stack-server-runtime', '@jay-framework/fullstack-component'],
+        },
+        // Disable dependency optimization — CLI only uses SSR, no browser bundles
+        optimizeDeps: {
+            entries: [],
+        },
         logLevel: 'warn',
         clearScreen: false,
     });
+
+    return vite;
 }
