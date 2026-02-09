@@ -4,10 +4,10 @@ import path from 'path';
 import {
     Contract,
     ContractTag,
-    ContractTagType,
     RenderingPhase,
     loadLinkedContract,
     getLinkedContractDir,
+    getEffectivePhase,
 } from '../contract';
 import { isEnumType, WithValidations } from '@jay-framework/compiler-shared';
 import { parseConditionForSlowRender, SlowRenderContext } from '../expressions/expression-compiler';
@@ -93,11 +93,7 @@ function buildPhaseMap(
         parentPhase: RenderingPhase = 'slow',
         contractDir?: string,
     ) {
-        // Tags with interactive type default to fast+interactive phase (they need
-        // data available by fast render and are updated during interactive phase)
-        const effectivePhase =
-            tag.phase ||
-            (tag.type.includes(ContractTagType.interactive) ? 'fast+interactive' : parentPhase);
+        const effectivePhase = getEffectivePhase(tag, parentPhase);
         const propertyName = toCamelCase(tag.tag);
         const currentPath = pathPrefix ? `${pathPrefix}.${propertyName}` : propertyName;
 
@@ -867,9 +863,7 @@ export function hasSlowPhaseProperties(contract: Contract | undefined): boolean 
     }
 
     function checkTag(tag: ContractTag, parentPhase: RenderingPhase = 'slow'): boolean {
-        const effectivePhase =
-            tag.phase ||
-            (tag.type.includes(ContractTagType.interactive) ? 'fast+interactive' : parentPhase);
+        const effectivePhase = getEffectivePhase(tag, parentPhase);
 
         if (effectivePhase === 'slow') {
             return true;
