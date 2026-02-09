@@ -15,6 +15,7 @@ import {
     ProductCardRefs,
     ProductCardInteractiveViewState
 } from '../product-card/product-card.jay-contract';
+// @ts-ignore
 import { productCard } from '../product-card/product-card';
 
 export interface PageWithHeadlessInstanceViewState {
