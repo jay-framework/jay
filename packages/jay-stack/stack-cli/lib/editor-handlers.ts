@@ -265,8 +265,7 @@ function loadAndExpandContract(contractFilePath: string): Contract | null {
 
         if (loadResult.validations.length > 0) {
             getLogger().warn(
-                `Contract validation errors in ${contractFilePath}:`,
-                loadResult.validations,
+                `Contract validation errors in ${contractFilePath}: ${JSON.stringify(loadResult.validations)}`,
             );
         }
 
@@ -437,7 +436,7 @@ async function scanLocalPluginNames(projectRoot: string): Promise<string[]> {
             }
         }
     } catch (error) {
-        getLogger().warn(`Failed to scan local plugins directory ${localPluginsDir}:`, error);
+        getLogger().warn(`Failed to scan local plugins directory ${localPluginsDir}: ${error}`);
     }
 
     return plugins;
@@ -500,7 +499,7 @@ async function findPluginNamesFromPackageJson(projectRootPath: string): Promise<
             }
         }
     } catch (error) {
-        getLogger().error('Error finding plugins from package.json:', error);
+        getLogger().error(`Error finding plugins from package.json: ${error}`);
     }
 
     return pluginNames;
@@ -575,7 +574,7 @@ async function scanPlugins(projectRootPath: string): Promise<Plugin[]> {
         // Combine and deduplicate plugin names
         const allPluginNames = [...new Set([...localPluginNames, ...dependencyPluginNames])];
 
-        getLogger().log(`Found ${allPluginNames.length} plugins: ${allPluginNames.join(', ')}`);
+        getLogger().info(`Found ${allPluginNames.length} plugins: ${allPluginNames.join(', ')}`);
 
         // For now, return basic plugin structure with names
         // This can be expanded later to load full plugin manifests and contracts
@@ -1015,10 +1014,10 @@ export function createEditorHandlers(
                 projectRoot,
             );
 
-            getLogger().log(`📋 Retrieved project info: ${info.name}`);
-            getLogger().log(`   Pages: ${info.pages.length}`);
-            getLogger().log(`   Components: ${info.components.length}`);
-            getLogger().log(`   plugins: ${info.plugins.length}`);
+            getLogger().info(`📋 Retrieved project info: ${info.name}`);
+            getLogger().info(`   Pages: ${info.pages.length}`);
+            getLogger().info(`   Components: ${info.components.length}`);
+            getLogger().info(`   plugins: ${info.plugins.length}`);
 
             return {
                 type: 'getProjectInfo',
@@ -1064,11 +1063,11 @@ export function createEditorHandlers(
                 'utf-8',
             );
 
-            getLogger().log(`📦 Exported ${vendorId} document to: ${vendorFilePath}`);
+            getLogger().info(`📦 Exported ${vendorId} document to: ${vendorFilePath}`);
 
             // Check if a vendor exists for this vendor ID
             if (hasVendor(vendorId)) {
-                getLogger().log(`🔄 Converting ${vendorId} document to Jay HTML...`);
+                getLogger().info(`🔄 Converting ${vendorId} document to Jay HTML...`);
                 const vendor = getVendor(vendorId)!;
 
                 try {
@@ -1098,7 +1097,7 @@ export function createEditorHandlers(
                     const jayHtmlPath = path.join(dirname, 'page.jay-html');
                     await fs.promises.writeFile(jayHtmlPath, fullJayHtml, 'utf-8');
 
-                    getLogger().log(`✅ Successfully converted to Jay HTML: ${jayHtmlPath}`);
+                    getLogger().info(`✅ Successfully converted to Jay HTML: ${jayHtmlPath}`);
 
                     return {
                         type: 'export',
@@ -1119,7 +1118,7 @@ export function createEditorHandlers(
                     };
                 }
             } else {
-                getLogger().log(`ℹ️  No vendor found for '${vendorId}'. Skipping conversion.`);
+                getLogger().info(`ℹ️  No vendor found for '${vendorId}'. Skipping conversion.`);
             }
 
             return {
@@ -1162,7 +1161,7 @@ export function createEditorHandlers(
             const fileContent = await fs.promises.readFile(vendorFilePath, 'utf-8');
             const vendorDoc = JSON.parse(fileContent) as TVendorDoc;
 
-            getLogger().log(`📥 Imported ${vendorId} document from: ${vendorFilePath}`);
+            getLogger().info(`📥 Imported ${vendorId} document from: ${vendorFilePath}`);
 
             return {
                 type: 'import',
