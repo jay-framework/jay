@@ -24,11 +24,11 @@ src/pages/
 
 ## Dynamic Routes
 
-| Syntax | Meaning | Example |
-|--------|---------|---------|
-| `[param]` | Required parameter | `[slug]` → `/products/:slug` |
-| `[[param]]` | Optional parameter | `[[slug]]` → `/blog` or `/blog/my-post` |
-| `[...param]` | Catch-all | `[...path]` → matches any sub-path |
+| Syntax       | Meaning            | Example                                 |
+| ------------ | ------------------ | --------------------------------------- |
+| `[param]`    | Required parameter | `[slug]` → `/products/:slug`            |
+| `[[param]]`  | Optional parameter | `[[slug]]` → `/blog` or `/blog/my-post` |
+| `[...param]` | Catch-all          | `[...path]` → matches any sub-path      |
 
 ## Route Priority
 
@@ -51,9 +51,9 @@ src/pages/products/
 
 Each page directory can contain:
 
-| File | Purpose |
-|------|---------|
-| `page.jay-html` | Template (required for rendering) |
+| File                | Purpose                             |
+| ------------------- | ----------------------------------- |
+| `page.jay-html`     | Template (required for rendering)   |
 | `page.jay-contract` | Page-level data contract (optional) |
 
 ### page.jay-contract

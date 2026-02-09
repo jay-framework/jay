@@ -6,21 +6,23 @@ A `.jay-html` file is standard HTML with jay-specific extensions.
 
 ```html
 <html>
-<head>
-  <!-- Page contract (optional — defines page-level data) -->
-  <script type="application/jay-data" contract="./page.jay-contract"></script>
+  <head>
+    <!-- Page contract (optional — defines page-level data) -->
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
 
-  <!-- Headless component imports -->
-  <script type="application/jay-headless" plugin="..." contract="..." key="..."></script>
+    <!-- Headless component imports -->
+    <script type="application/jay-headless" plugin="..." contract="..." key="..."></script>
 
-  <!-- Styles -->
-  <style>/* inline CSS */</style>
-  <link rel="stylesheet" href="../../styles/theme.css" />
-</head>
-<body>
-  <!-- Template with data bindings -->
-  <h1>{title}</h1>
-</body>
+    <!-- Styles -->
+    <style>
+      /* inline CSS */
+    </style>
+    <link rel="stylesheet" href="../../styles/theme.css" />
+  </head>
+  <body>
+    <!-- Template with data bindings -->
+    <h1>{title}</h1>
+  </body>
 </html>
 ```
 
@@ -29,10 +31,14 @@ A `.jay-html` file is standard HTML with jay-specific extensions.
 Use `{expression}` to bind contract data:
 
 ```html
-<h1>{productName}</h1>                       <!-- simple -->
-<span>{product.price}</span>                 <!-- nested via key -->
-<div style="color: {textColor}">{msg}</div>  <!-- in attributes -->
-<a href="/products/{slug}">{name}</a>        <!-- interpolated in attr values -->
+<h1>{productName}</h1>
+<!-- simple -->
+<span>{product.price}</span>
+<!-- nested via key -->
+<div style="color: {textColor}">{msg}</div>
+<!-- in attributes -->
+<a href="/products/{slug}">{name}</a>
+<!-- interpolated in attr values -->
 ```
 
 ## Conditional Rendering
@@ -47,6 +53,7 @@ Use the `if` attribute:
 ```
 
 Rules:
+
 - Boolean: `if="tagName"` / `if="!tagName"`
 - Enum variant: `if="tagName===value"` / `if="tagName!==value"` (no quotes around value)
 - Negation: `!` prefix
@@ -87,10 +94,13 @@ Map elements to contract `interactive` tags using `ref`:
 <button ref="addToCart">Add to Cart</button>
 <input value="{quantity}" ref="quantityInput" />
 <a ref="productLink" href="/products/{slug}">{name}</a>
-<select ref="sizeSelector">...</select>
+<select ref="sizeSelector">
+  ...
+</select>
 ```
 
 Match the element type to the contract's `elementType`:
+
 - `HTMLButtonElement` → `<button>`
 - `HTMLInputElement` → `<input>`
 - `HTMLAnchorElement` → `<a>`
@@ -99,8 +109,7 @@ Match the element type to the contract's `elementType`:
 **Key-based headless refs** — prefix with the key:
 
 ```html
-<button ref="rating.submitButton">Submit</button>
-<button ref="mt.happy">+1 Happy</button>
+<button ref="rating.submitButton">Submit</button> <button ref="mt.happy">+1 Happy</button>
 ```
 
 **Refs inside forEach** — use the tag path from the contract:
@@ -123,10 +132,12 @@ Declare in `<head>` with a `key` attribute:
 
 ```html
 <head>
-  <script type="application/jay-headless"
-          plugin="wix-stores"
-          contract="product-page"
-          key="productPage"></script>
+  <script
+    type="application/jay-headless"
+    plugin="wix-stores"
+    contract="product-page"
+    key="productPage"
+  ></script>
 </head>
 ```
 
@@ -154,9 +165,11 @@ Declare in `<head>` **without** a `key`:
 
 ```html
 <head>
-  <script type="application/jay-headless"
-          plugin="product-widget"
-          contract="product-widget"></script>
+  <script
+    type="application/jay-headless"
+    plugin="product-widget"
+    contract="product-widget"
+  ></script>
 </head>
 ```
 
@@ -207,8 +220,14 @@ Tags from the page contract are bound directly (no key prefix).
 ```html
 <head>
   <style>
-    .product-card { border: 1px solid #ccc; padding: 16px; }
-    .price { font-weight: bold; color: #2d7d2d; }
+    .product-card {
+      border: 1px solid #ccc;
+      padding: 16px;
+    }
+    .price {
+      font-weight: bold;
+      color: #2d7d2d;
+    }
   </style>
 </head>
 ```
@@ -231,52 +250,63 @@ A homepage with key-based and instance-based headless components:
 
 ```html
 <html>
-<head>
-  <script type="application/jay-headless"
-          plugin="mood-tracker"
-          contract="mood-tracker"
-          key="mt"></script>
-  <script type="application/jay-headless"
-          plugin="product-widget"
-          contract="product-widget"></script>
-  <script type="application/jay-data" contract="./page.jay-contract"></script>
-  <style>
-    .section { margin: 20px 0; padding: 10px; }
-    .product-card { border: 1px solid #ccc; padding: 10px; display: inline-block; }
-  </style>
-</head>
-<body>
-  <h1>Homepage</h1>
+  <head>
+    <script
+      type="application/jay-headless"
+      plugin="mood-tracker"
+      contract="mood-tracker"
+      key="mt"
+    ></script>
+    <script
+      type="application/jay-headless"
+      plugin="product-widget"
+      contract="product-widget"
+    ></script>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
+    <style>
+      .section {
+        margin: 20px 0;
+        padding: 10px;
+      }
+      .product-card {
+        border: 1px solid #ccc;
+        padding: 10px;
+        display: inline-block;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Homepage</h1>
 
-  <!-- Key-based: mood tracker -->
-  <div class="section">
-    <div>Happy: {mt.happy} <button ref="mt.happy">more</button></div>
-    <span if="mt.currentMood === happy">:)</span>
-    <span if="mt.currentMood === sad">:(</span>
-  </div>
+    <!-- Key-based: mood tracker -->
+    <div class="section">
+      <div>Happy: {mt.happy} <button ref="mt.happy">more</button></div>
+      <span if="mt.currentMood === happy">:)</span>
+      <span if="mt.currentMood === sad">:(</span>
+    </div>
 
-  <!-- Instance-based: static product widgets -->
-  <div class="section">
-    <jay:product-widget productId="1">
-      <h3>{name}</h3>
-      <div>${price}</div>
-      <span if="inStock">In Stock</span>
-      <button ref="addToCart">Add</button>
-    </jay:product-widget>
-  </div>
+    <!-- Instance-based: static product widgets -->
+    <div class="section">
+      <jay:product-widget productId="1">
+        <h3>{name}</h3>
+        <div>${price}</div>
+        <span if="inStock">In Stock</span>
+        <button ref="addToCart">Add</button>
+      </jay:product-widget>
+    </div>
 
-  <!-- Instance-based: dynamic from forEach -->
-  <div class="section">
-    <div forEach="featuredProducts" trackBy="_id">
-      <div class="product-card">
-        <jay:product-widget productId="{_id}">
-          <h3>{name}</h3>
-          <div>${price}</div>
-          <button ref="addToCart">Add</button>
-        </jay:product-widget>
+    <!-- Instance-based: dynamic from forEach -->
+    <div class="section">
+      <div forEach="featuredProducts" trackBy="_id">
+        <div class="product-card">
+          <jay:product-widget productId="{_id}">
+            <h3>{name}</h3>
+            <div>${price}</div>
+            <button ref="addToCart">Add</button>
+          </jay:product-widget>
+        </div>
       </div>
     </div>
-  </div>
-</body>
+  </body>
 </html>
 ```

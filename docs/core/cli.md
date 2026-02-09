@@ -18,12 +18,12 @@ Start the Jay Stack development server.
 jay-stack dev [path]
 ```
 
-| Option | Description |
-|--------|-------------|
-| `-v, --verbose` | Enable verbose logging output |
-| `-q, --quiet` | Suppress all non-error output |
-| `--test-mode` | Enable test endpoints (`/_jay/health`, `/_jay/shutdown`) |
-| `--timeout <seconds>` | Auto-shutdown after N seconds (implies `--test-mode`) |
+| Option                | Description                                              |
+| --------------------- | -------------------------------------------------------- |
+| `-v, --verbose`       | Enable verbose logging output                            |
+| `-q, --quiet`         | Suppress all non-error output                            |
+| `--test-mode`         | Enable test endpoints (`/_jay/health`, `/_jay/shutdown`) |
+| `--timeout <seconds>` | Auto-shutdown after N seconds (implies `--test-mode`)    |
 
 The dev server compiles Jay-HTML, runs the three-phase render pipeline (slow/fast/interactive), and serves the result with hot module replacement via Vite.
 
@@ -47,10 +47,10 @@ Validate all `.jay-html` and `.jay-contract` files in a project.
 jay-stack validate [path]
 ```
 
-| Option | Description |
-|--------|-------------|
+| Option          | Description                     |
+| --------------- | ------------------------------- |
 | `-v, --verbose` | Show per-file validation status |
-| `--json` | Output results as JSON |
+| `--json`        | Output results as JSON          |
 
 Exits with code 1 if validation fails. Useful for CI pipelines.
 
@@ -62,12 +62,12 @@ Validate a Jay Stack plugin package.
 jay-stack validate-plugin [path]
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--local` | Validate local plugins in `src/plugins/` |
-| `-v, --verbose` | Show detailed validation output |
-| `--strict` | Treat warnings as errors (for CI) |
-| `--generate-types` | Generate `.d.ts` files for contracts |
+| Option             | Description                              |
+| ------------------ | ---------------------------------------- |
+| `--local`          | Validate local plugins in `src/plugins/` |
+| `-v, --verbose`    | Show detailed validation output          |
+| `--strict`         | Treat warnings as errors (for CI)        |
+| `--generate-types` | Generate `.d.ts` files for contracts     |
 
 See [Building Jay Packages](./building-jay-packages.md) for plugin development.
 
@@ -79,15 +79,15 @@ Materialize contracts and prepare the agent kit for AI-assisted development.
 jay-stack agent-kit
 ```
 
-| Option | Description |
-|--------|-------------|
+| Option               | Description                                                    |
+| -------------------- | -------------------------------------------------------------- |
 | `-o, --output <dir>` | Output directory (default: `agent-kit/materialized-contracts`) |
-| `--yaml` | Output contract index as YAML to stdout |
-| `--list` | List contracts without writing files |
-| `--plugin <name>` | Filter to a specific plugin |
-| `--dynamic-only` | Only process dynamic contracts |
-| `--force` | Force re-materialization |
-| `-v, --verbose` | Show detailed output |
+| `--yaml`             | Output contract index as YAML to stdout                        |
+| `--list`             | List contracts without writing files                           |
+| `--plugin <name>`    | Filter to a specific plugin                                    |
+| `--dynamic-only`     | Only process dynamic contracts                                 |
+| `--force`            | Force re-materialization                                       |
+| `-v, --verbose`      | Show detailed output                                           |
 
 Creates `agent-kit/INSTRUCTIONS.md` if it doesn't exist. This provides AI agents with the contract information needed to work with your project.
 
@@ -99,11 +99,11 @@ Run a plugin action from the command line. Used for agent discovery of valid pro
 jay-stack action <plugin/action> [options]
 ```
 
-| Option | Description |
-|--------|-------------|
+| Option           | Description                               |
+| ---------------- | ----------------------------------------- |
 | `--input <json>` | JSON input for the action (default: `{}`) |
-| `--yaml` | Output result as YAML instead of JSON |
-| `-v, --verbose` | Show detailed output |
+| `--yaml`         | Output result as YAML instead of JSON     |
+| `-v, --verbose`  | Show detailed output                      |
 
 **Example:**
 
@@ -119,10 +119,10 @@ Discover load param values for a contract. Useful for finding valid page paramet
 jay-stack params <plugin/contract> [options]
 ```
 
-| Option | Description |
-|--------|-------------|
-| `--yaml` | Output result as YAML instead of JSON |
-| `-v, --verbose` | Show detailed output |
+| Option          | Description                           |
+| --------------- | ------------------------------------- |
+| `--yaml`        | Output result as YAML instead of JSON |
+| `-v, --verbose` | Show detailed output                  |
 
 **Example:**
 
@@ -148,8 +148,8 @@ Generate TypeScript definition files (`.d.ts`) for `.jay-html` and `.jay-contrac
 jay-cli definitions <source>
 ```
 
-| Argument | Description |
-|----------|-------------|
+| Argument   | Description                                                     |
+| ---------- | --------------------------------------------------------------- |
 | `<source>` | Source folder to scan for `.jay-html` and `.jay-contract` files |
 
 This is typically run as part of a build script:
@@ -170,11 +170,11 @@ Generate runtime code files (`.ts`) for `.jay-html` files. Normally the Vite plu
 jay-cli runtime <source> [destination] [compilationTarget]
 ```
 
-| Argument | Description |
-|----------|-------------|
-| `<source>` | Source folder to scan for `.jay-html` files |
-| `[destination]` | Output folder (default: alongside source files) |
-| `[compilationTarget]` | Target runtime: `jay` (default) or `react` |
+| Argument              | Description                                     |
+| --------------------- | ----------------------------------------------- |
+| `<source>`            | Source folder to scan for `.jay-html` files     |
+| `[destination]`       | Output folder (default: alongside source files) |
+| `[compilationTarget]` | Target runtime: `jay` (default) or `react`      |
 
 ---
 

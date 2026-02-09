@@ -682,6 +682,7 @@ Import the component without a `key`, then use `<jay:contract-name>` tags:
 ```
 
 **Key points:**
+
 - Props are passed as attributes on the `<jay:xxx>` tag
 - The inline template bindings (`{name}`, `{price}`) resolve against the **headless component's ViewState**, not the page's
 - Each instance runs its own slow/fast/interactive pipeline independently

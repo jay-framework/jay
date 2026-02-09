@@ -90,9 +90,7 @@ export async function createViteForCli(options: {
                 ignored: ['**/build/**'],
             },
         },
-        plugins: [
-            ...jayStackCompiler({ tsConfigFilePath }),
-        ],
+        plugins: [...jayStackCompiler({ tsConfigFilePath })],
         appType: 'custom',
         root: projectRoot,
         ssr: {

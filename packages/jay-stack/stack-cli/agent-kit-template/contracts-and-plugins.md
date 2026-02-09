@@ -5,8 +5,8 @@
 After running `jay-stack agent-kit`, read `materialized-contracts/plugins-index.yaml`:
 
 ```yaml
-materialized_at: "2026-02-09T..."
-jay_stack_version: "1.0.0"
+materialized_at: '2026-02-09T...'
+jay_stack_version: '1.0.0'
 plugins:
   - name: wix-stores
     path: ./node_modules/@wix/stores
@@ -20,6 +20,7 @@ plugins:
 ```
 
 Fields:
+
 - `name` — plugin name (use in `plugin="..."` attributes in jay-html)
 - `path` — path to plugin root (relative to project root)
 - `contracts[].name` — contract name (use in `contract="..."` attributes)
@@ -60,6 +61,7 @@ actions:
 ```
 
 Key fields:
+
 - `contracts[].name` — use in `contract="..."` in jay-html
 - `contracts[].description` — what the component does (helps you decide which to use)
 - `actions[]` — action names you can run with `jay-stack action <plugin>/<action>`
@@ -70,23 +72,23 @@ Contracts define the data shape (ViewState), interaction points (Refs), and rend
 
 ### Tag Types
 
-| Type | Purpose | Jay-HTML Usage |
-|------|---------|---------------|
-| `data` | Read-only data value | `{tagName}` binding |
-| `variant` | Enum or boolean for conditions | `if="tagName===value"` |
-| `interactive` | Element ref for user interaction | `ref="tagName"` |
-| `[data, interactive]` | Both data and interactive | `{tagName}` + `ref="tagName"` |
-| `sub-contract` | Nested object | `{parent.child}` |
-| `sub-contract` + `repeated: true` | Array for loops | `forEach="tagName" trackBy="..."` |
+| Type                              | Purpose                          | Jay-HTML Usage                    |
+| --------------------------------- | -------------------------------- | --------------------------------- |
+| `data`                            | Read-only data value             | `{tagName}` binding               |
+| `variant`                         | Enum or boolean for conditions   | `if="tagName===value"`            |
+| `interactive`                     | Element ref for user interaction | `ref="tagName"`                   |
+| `[data, interactive]`             | Both data and interactive        | `{tagName}` + `ref="tagName"`     |
+| `sub-contract`                    | Nested object                    | `{parent.child}`                  |
+| `sub-contract` + `repeated: true` | Array for loops                  | `forEach="tagName" trackBy="..."` |
 
 ### Phases
 
-| Phase | When | Example |
-|-------|------|---------|
-| `slow` | Build time (SSG) | Product name, description, static content |
-| `fast` | Request time (SSR) | Live pricing, stock status |
-| `fast+interactive` | Request + client updates | Price that updates on variant selection |
-| *(no phase)* | All phases | Available everywhere |
+| Phase              | When                     | Example                                   |
+| ------------------ | ------------------------ | ----------------------------------------- |
+| `slow`             | Build time (SSG)         | Product name, description, static content |
+| `fast`             | Request time (SSR)       | Live pricing, stock status                |
+| `fast+interactive` | Request + client updates | Price that updates on variant selection   |
+| _(no phase)_       | All phases               | Available everywhere                      |
 
 ### Props
 
@@ -121,7 +123,7 @@ A sub-contract can reference another contract file:
 - tag: mediaGallery
   type: sub-contract
   phase: fast+interactive
-  link: ./media-gallery    # refers to media-gallery.jay-contract in same directory
+  link: ./media-gallery # refers to media-gallery.jay-contract in same directory
 ```
 
 Read the linked file to see the nested tags.
@@ -214,14 +216,14 @@ tags:
 
 ### Quick mapping
 
-| Contract Tag | Jay-HTML |
-|-------------|----------|
-| `{tag: title, type: data}` | `<h1>{title}</h1>` |
-| `{tag: active, type: variant, dataType: boolean}` | `<span if="active">Active</span>` |
-| `{tag: status, type: variant, dataType: "enum (A \| B)"}` | `<div if="status===A">...</div>` |
-| `{tag: btn, type: interactive, elementType: HTMLButtonElement}` | `<button ref="btn">Click</button>` |
-| `{tag: link, type: interactive, elementType: HTMLAnchorElement}` | `<a ref="link">Go</a>` |
-| `{tag: input, type: interactive, elementType: HTMLInputElement}` | `<input ref="input" value="{val}" />` |
-| `{tag: sel, type: interactive, elementType: HTMLSelectElement}` | `<select ref="sel">...</select>` |
-| `{tag: items, type: sub-contract, repeated: true, trackBy: id}` | `<div forEach="items" trackBy="id">...</div>` |
-| `{tag: detail, type: sub-contract}` | `{detail.fieldName}` |
+| Contract Tag                                                     | Jay-HTML                                      |
+| ---------------------------------------------------------------- | --------------------------------------------- |
+| `{tag: title, type: data}`                                       | `<h1>{title}</h1>`                            |
+| `{tag: active, type: variant, dataType: boolean}`                | `<span if="active">Active</span>`             |
+| `{tag: status, type: variant, dataType: "enum (A \| B)"}`        | `<div if="status===A">...</div>`              |
+| `{tag: btn, type: interactive, elementType: HTMLButtonElement}`  | `<button ref="btn">Click</button>`            |
+| `{tag: link, type: interactive, elementType: HTMLAnchorElement}` | `<a ref="link">Go</a>`                        |
+| `{tag: input, type: interactive, elementType: HTMLInputElement}` | `<input ref="input" value="{val}" />`         |
+| `{tag: sel, type: interactive, elementType: HTMLSelectElement}`  | `<select ref="sel">...</select>`              |
+| `{tag: items, type: sub-contract, repeated: true, trackBy: id}`  | `<div forEach="items" trackBy="id">...</div>` |
+| `{tag: detail, type: sub-contract}`                              | `{detail.fieldName}`                          |

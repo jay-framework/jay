@@ -154,7 +154,7 @@ Jay-HTML files can import other components using special script tags.
 Instances are then created in the template body using `<jay:name>`:
 
 ```html
-<jay:Item prop1="value" prop2="{dynamicValue}"/>
+<jay:Item prop1="value" prop2="{dynamicValue}" />
 ```
 
 ### Importing Headless Components
@@ -190,11 +190,7 @@ You can then use `{key.field}` bindings and `ref="key.refName"` in the template 
 When `key` is omitted, the component is used via `<jay:contract-name>` tags in the template body. Each tag creates an instance with its own props and inline template:
 
 ```html
-<script
-  type="application/jay-headless"
-  plugin="product-widget"
-  contract="product-widget"
-></script>
+<script type="application/jay-headless" plugin="product-widget" contract="product-widget"></script>
 ```
 
 **Attributes** (no `key`):
@@ -216,6 +212,7 @@ Instances are then created in the template body using `<jay:contract-name>`:
 ```
 
 Each `<jay:xxx>` tag:
+
 - Passes **props** via attributes (e.g., `productId="1"`)
 - Contains an **inline template** where bindings (`{name}`, `{price}`) resolve against the headless component's ViewState, not the page's ViewState
 - Supports `ref` attributes for interactive elements from the headless component's contract

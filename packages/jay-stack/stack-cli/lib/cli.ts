@@ -14,6 +14,7 @@ import { setDevLogger, createDevLogger, getLogger, type LogLevel } from '@jay-fr
 import { initializeServicesForCli } from './cli-services';
 import { runAction } from './run-action';
 import { runParams } from './run-params';
+import { runSetup } from './run-setup';
 
 const program = new Command();
 
@@ -139,9 +140,7 @@ async function ensureAgentKitDocs(projectRoot: string, force?: boolean): Promise
     try {
         files = (await fs.readdir(templateDir)).filter((f) => f.endsWith('.md'));
     } catch {
-        getLogger().warn(
-            chalk.yellow('   Agent-kit template folder not found: ' + templateDir),
-        );
+        getLogger().warn(chalk.yellow('   Agent-kit template folder not found: ' + templateDir));
         return;
     }
 
@@ -157,6 +156,56 @@ async function ensureAgentKitDocs(projectRoot: string, force?: boolean): Promise
         }
         await fs.copyFile(path.join(templateDir, filename), destPath);
         getLogger().info(chalk.gray(`   Created agent-kit/${filename}`));
+    }
+}
+
+/**
+ * Discovers and runs plugin reference generators (Design Log #87).
+ * Called by agent-kit after materializing contracts. Services are already initialized
+ * by runMaterialize, so references handlers can use them directly.
+ */
+async function generatePluginReferences(
+    projectRoot: string,
+    options: { plugin?: string; force?: boolean; verbose?: boolean },
+): Promise<void> {
+    const { discoverPluginsWithReferences, executePluginReferences } = await import(
+        '@jay-framework/stack-server-runtime'
+    );
+
+    const plugins = await discoverPluginsWithReferences({
+        projectRoot,
+        verbose: options.verbose,
+        pluginFilter: options.plugin,
+    });
+
+    if (plugins.length === 0) return;
+
+    const logger = getLogger();
+    logger.important('');
+    logger.important(chalk.bold('📚 Generating plugin references...'));
+
+    for (const plugin of plugins) {
+        try {
+            const result = await executePluginReferences(plugin, {
+                projectRoot,
+                force: options.force ?? false,
+                verbose: options.verbose,
+            });
+
+            if (result.referencesCreated.length > 0) {
+                logger.important(chalk.green(`   ✅ ${plugin.name}:`));
+                for (const ref of result.referencesCreated) {
+                    logger.important(chalk.gray(`      ${ref}`));
+                }
+                if (result.message) {
+                    logger.important(chalk.gray(`      ${result.message}`));
+                }
+            }
+        } catch (error: any) {
+            logger.warn(
+                chalk.yellow(`   ⚠️  ${plugin.name}: references skipped — ${error.message}`),
+            );
+        }
     }
 }
 
@@ -238,11 +287,23 @@ async function runMaterialize(
     }
 }
 
-// Agent kit command (Design Log #85): prepare agent-kit folder with materialized contracts + plugins index
+// Plugin setup command (Design Log #87): create config, validate services, generate references
+program
+    .command('setup [plugin]')
+    .description(
+        'Run plugin setup: create config templates, validate credentials, generate reference data',
+    )
+    .option('--force', 'Force re-run (overwrite config templates and regenerate references)')
+    .option('-v, --verbose', 'Show detailed output')
+    .action(async (plugin: string | undefined, options) => {
+        await runSetup(plugin, options, process.cwd(), initializeServicesForCli);
+    });
+
+// Agent kit command (Design Log #85/#87): prepare agent-kit folder with contracts, docs, and references
 program
     .command('agent-kit')
     .description(
-        'Prepare the agent kit: materialize contracts and write plugins index to agent-kit/materialized-contracts/',
+        'Prepare the agent kit: materialize contracts, generate references, and write docs to agent-kit/',
     )
     .option('-o, --output <dir>', 'Output directory (default: agent-kit/materialized-contracts)')
     .option('--yaml', 'Output contract index as YAML to stdout')
@@ -250,12 +311,17 @@ program
     .option('--plugin <name>', 'Filter to specific plugin')
     .option('--dynamic-only', 'Only process dynamic contracts')
     .option('--force', 'Force re-materialization')
+    .option('--no-references', 'Skip reference data generation')
     .option('-v, --verbose', 'Show detailed output')
     .action(async (options) => {
         const projectRoot = process.cwd();
         await runMaterialize(projectRoot, options, 'agent-kit/materialized-contracts');
         if (!options.list) {
             await ensureAgentKitDocs(projectRoot, options.force);
+            // Generate plugin reference data (Design Log #87)
+            if (options.references !== false) {
+                await generatePluginReferences(projectRoot, options);
+            }
         }
     });
 
