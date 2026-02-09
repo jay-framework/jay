@@ -233,6 +233,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 ### "I'm working on AI agent integration"
 
 → See #76 (AI Agent Integration), #77 (automation dev server), #80 (contract materialization for agents), #85 (agent kit and rendering phases)
+→ Agent kit skills: `.cursor/skills/jay-agent-kit/` (main), `jay-html-authoring/`, `jay-cli-commands/`, `jay-contracts-and-plugins/`, `jay-dev-server-test/`
 
 ### "I need to understand the full workflow lifecycle"
 

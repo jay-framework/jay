@@ -7,6 +7,7 @@
   "bin": "dist/index.js",
   "files": [
     "dist",
+    "agent-kit-template",
     "readme.md"
   ],
   "scripts": {

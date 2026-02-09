@@ -344,3 +344,47 @@ Agent produces page with one headless script (product-card) and three `<jay:prod
 - **stack-cli/lib/cli.ts**: Added `AGENT_KIT_INSTRUCTIONS_TEMPLATE` constant and `ensureAgentKitInstructions(projectRoot)`; agent-kit command action calls it after `runMaterialize` when `!options.list`.
 
 **Verification:** `jay-stack agent-kit` creates `agent-kit/materialized-contracts/contracts-index.yaml` and `plugins-index.yaml`. With zero plugins, both files have empty arrays. Rebuild `stack-server-runtime` after changing contract-materializer so CLI picks up the new code.
+
+### Phase 1 (continued): Cursor skills (IDE-specific)
+
+Created Cursor skills in `.cursor/skills/` for IDE-native discovery. These mirror the agent-kit docs but are auto-discovered by the Cursor IDE agent.
+
+**Skills:** `jay-agent-kit`, `jay-html-authoring`, `jay-cli-commands`, `jay-contracts-and-plugins`, `jay-dev-server-test` (pre-existing).
+
+### Phase 1 (continued): Agent kit as generated docs folder
+
+**Done:**
+
+The `jay-stack agent-kit` command now generates a **self-contained `agent-kit/` folder** with comprehensive documentation that any AI agent can use to build a jay-stack website.
+
+**Generated files:**
+
+```
+agent-kit/
+├── INSTRUCTIONS.md              # Main entry point: overview, workflow, references
+├── jay-html-syntax.md           # Jay-HTML template syntax + headless patterns
+├── routing.md                   # Directory-based routing
+├── contracts-and-plugins.md     # Reading contracts, plugin.yaml, indexes
+├── cli-commands.md              # CLI commands: validate, params, action, dev
+├── materialized-contracts/      # Generated contracts + indexes
+│   ├── contracts-index.yaml
+│   ├── plugins-index.yaml
+│   └── <plugin>/...
+```
+
+**Implementation:**
+
+- **`stack-cli/agent-kit-template/`** — Folder with actual `.md` files shipped with the package. Contains: `INSTRUCTIONS.md`, `jay-html-syntax.md`, `routing.md`, `contracts-and-plugins.md`, `cli-commands.md`.
+- **`stack-cli/lib/cli.ts`** — `ensureAgentKitDocs(projectRoot, force?)` resolves the template folder via `import.meta.url` (`../agent-kit-template/` relative to `dist/index.js` or `lib/` in dev), reads all `.md` files, and copies them to `agent-kit/`. Skips existing files unless `--force`.
+- **`stack-cli/package.json`** — Added `agent-kit-template` to `files` array for publishing.
+- Deleted the old `agent-kit-templates.ts` string constants approach — real files are simpler to edit and review.
+
+**Documentation coverage:**
+
+1. **INSTRUCTIONS.md** — What jay-stack is, rendering phases table, full workflow (discover → read contracts → create pages → validate → test), quick start example, links to all reference docs.
+2. **jay-html-syntax.md** — File structure, data binding `{expr}`, conditionals `if`, loops `forEach`/`trackBy`, refs, headless patterns (key-based + instance-based with `jay:` prefix), page-level contracts, styling, complete example.
+3. **routing.md** — `src/pages/` structure, static/dynamic routes (`[param]`, `[[param]]`, `[...param]`), route priority, page files (`page.jay-html`, `page.jay-contract`, `page.conf.yaml`), load params.
+4. **contracts-and-plugins.md** — plugins-index.yaml format, contracts-index.yaml format, plugin.yaml structure, .jay-contract format (tag types, phases, props, params, linked sub-contracts), step-by-step contract-to-jay-html mapping table.
+5. **cli-commands.md** — `jay-stack agent-kit`, `validate`, `params`, `action`, `dev` with examples and output formats.
+
+**Type-check:** `tsc --noEmit` passes.
