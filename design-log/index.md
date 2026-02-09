@@ -14,6 +14,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 34  | jay stack                         | Full-stack framework design: rendering phases, component API        |
 | 68  | jay stack conceptual model        | Conceptual model and architecture overview                          |
 | 86  | jay stack full workflow lifecycle | Full lifecycle: setup → agent-kit → dev → render → refresh          |
+| 87  | jay-stack setup command           | Plugin config templating, credential validation, reference generation |
 
 ---
 
@@ -84,6 +85,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 60  | plugin system refinement and dynamic contracts    | Plugin.yaml, contract resolution, dynamic contract generation |
 | 66  | transitive plugin dependency resolution           | Plugin dependency resolution                                  |
 | 80  | exposing dynamic contracts for agentic generation | CLI and dev server contract generation for AI agents          |
+| 87  | jay-stack setup command                           | Plugin config templating, credential validation, references   |
 
 ---
 
