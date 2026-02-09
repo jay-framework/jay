@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/runtime-automation",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "type": "module",
   "license": "Apache-2.0",
   "description": "Automation API for Jay components - enables programmatic state inspection and interaction triggering",
