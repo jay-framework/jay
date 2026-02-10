@@ -74,6 +74,10 @@ describe('Slow Render Transform', () => {
         it('should preserve fast bindings in attributes', async () => {
             await runSlowRenderTest('attribute-fast-preserved');
         });
+
+        it('should resolve empty string attribute values (not skip them as falsy)', async () => {
+            await runSlowRenderTest('attribute-empty-string');
+        });
     });
 
     describe('Style Binding Resolution', () => {
@@ -115,6 +119,10 @@ describe('Slow Render Transform', () => {
 
         it('should handle mixed-phase arrays (slow array with fast properties)', async () => {
             await runSlowRenderTest('foreach-mixed-phase');
+        });
+
+        it('should resolve empty string attributes in forEach items', async () => {
+            await runSlowRenderTest('foreach-empty-string-attr');
         });
 
         it('should preserve fast arrays', async () => {

@@ -10,12 +10,13 @@ export class WithValidations<Value> {
     }
 
     map<R>(func: (v: Value) => R): WithValidations<R> {
-        if (this.val) return new WithValidations<R>(func(this.val), this.validations);
+        if (this.val !== undefined)
+            return new WithValidations<R>(func(this.val), this.validations);
         else return new WithValidations<R>(undefined, this.validations);
     }
 
     async mapAsync<R>(func: (v: Value) => Promise<R>): Promise<WithValidations<R>> {
-        if (this.val) {
+        if (this.val !== undefined) {
             const result = await func(this.val);
             return new WithValidations<R>(result, this.validations);
         } else {
@@ -24,7 +25,7 @@ export class WithValidations<Value> {
     }
 
     flatMap<R>(func: (v: Value) => WithValidations<R>): WithValidations<R> {
-        if (this.val) {
+        if (this.val !== undefined) {
             let that = func(this.val);
             return new WithValidations<R>(that.val, [...this.validations, ...that.validations]);
         } else return new WithValidations<R>(undefined, this.validations);
@@ -33,7 +34,7 @@ export class WithValidations<Value> {
     async flatMapAsync<R>(
         func: (v: Value) => Promise<WithValidations<R>>,
     ): Promise<WithValidations<R>> {
-        if (this.val) {
+        if (this.val !== undefined) {
             const result = await func(this.val);
             return new WithValidations<R>(result.val, [...this.validations, ...result.validations]);
         } else {
