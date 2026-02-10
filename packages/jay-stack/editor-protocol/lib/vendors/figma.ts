@@ -100,10 +100,10 @@ export type FigmaVendorDocument = {
     strokeBottomWeight?: number;
     strokeLeftWeight?: number;
     strokeRightWeight?: number;
-    dashPattern?: number[];
-    layoutMode?: 'NONE' | 'HORIZONTAL' | 'VERTICAL';
+    dashPattern?: readonly number[] | number[];
+    layoutMode?: 'NONE' | 'HORIZONTAL' | 'VERTICAL' | 'GRID';
     primaryAxisAlignItems?: 'MIN' | 'CENTER' | 'MAX' | 'SPACE_BETWEEN';
-    counterAxisAlignItems?: 'MIN' | 'CENTER' | 'MAX';
+    counterAxisAlignItems?: 'MIN' | 'CENTER' | 'MAX' | 'BASELINE';
     itemSpacing?: number;
     paddingLeft?: number;
     paddingRight?: number;
