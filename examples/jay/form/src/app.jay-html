@@ -7,7 +7,7 @@
   </head>
   <body>
     <div>
-      <Form ref="a"></Form>
+      <jay:Form ref="a"></jay:Form>
     </div>
   </body>
 </html>

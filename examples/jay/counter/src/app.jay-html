@@ -7,7 +7,7 @@
   </head>
   <body>
     <div>
-      <Counter initialValue="12" ref="a"></Counter>
+      <jay:Counter initialValue="12" ref="a"></jay:Counter>
     </div>
   </body>
 </html>

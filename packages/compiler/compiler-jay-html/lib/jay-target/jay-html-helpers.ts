@@ -121,3 +121,80 @@ export function ensureSingleChildElement(node: Node): WithValidations<HTMLElemen
             `Jay HTML Body must have a single child element, yet ${elements.length} found.`,
         ]);
 }
+
+// ============================================================
+// Jay Component Prefix Helpers
+// ============================================================
+
+/**
+ * The prefix for Jay component elements.
+ * Components can be written as <jay:ComponentName> or <ComponentName> (deprecated).
+ */
+export const JAY_COMPONENT_PREFIX = 'jay:';
+
+/**
+ * Check if an element tag has the jay: prefix.
+ */
+export function hasJayPrefix(tagName: string): boolean {
+    return tagName.startsWith(JAY_COMPONENT_PREFIX);
+}
+
+/**
+ * Extract the component name from a tag, stripping the jay: prefix if present.
+ * Returns the original tag name if no prefix.
+ */
+export function extractComponentName(tagName: string): string {
+    if (hasJayPrefix(tagName)) {
+        return tagName.slice(JAY_COMPONENT_PREFIX.length);
+    }
+    return tagName;
+}
+
+export type ComponentKind = 'headful' | 'headless-instance' | 'unknown';
+
+export interface ComponentMatch {
+    name: string;
+    kind: ComponentKind;
+}
+
+/**
+ * Check if an element is a component reference.
+ * A component is identified by:
+ * 1. Having jay: prefix (new syntax): <jay:Counter> or <jay:product-card>
+ * 2. Being in the importedSymbols set (legacy syntax): <Counter>
+ *
+ * For jay: prefixed elements:
+ * - If the name matches an imported symbol → headful component
+ * - If the name matches a headless import contract name → headless instance
+ * - Otherwise → unknown (will be an error)
+ *
+ * Returns the component match info if it's a component, null otherwise.
+ */
+export function getComponentName(
+    tagName: string,
+    importedSymbols: Set<string>,
+    headlessContractNames?: Set<string>,
+): ComponentMatch | null {
+    // Check for jay: prefix first (new syntax)
+    if (hasJayPrefix(tagName)) {
+        const componentName = extractComponentName(tagName);
+        // Check headful first (imported symbols)
+        if (importedSymbols.has(componentName)) {
+            return { name: componentName, kind: 'headful' };
+        }
+        // Check headless instance (matches a headless import's contract name)
+        if (headlessContractNames?.has(componentName)) {
+            return { name: componentName, kind: 'headless-instance' };
+        }
+        // Jay-prefixed but not matched - this will be an error
+        // For now, still return the name so the compiler can report the error
+        return { name: componentName, kind: 'unknown' };
+    }
+
+    // Legacy syntax: plain element name matching an import
+    if (importedSymbols.has(tagName)) {
+        return { name: tagName, kind: 'headful' };
+    }
+
+    return null;
+}

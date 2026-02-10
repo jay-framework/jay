@@ -1,12 +1,13 @@
 {
   "name": "@jay-framework/jay-stack-cli",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "license": "Apache-2.0",
   "type": "module",
   "main": "dist/index.js",
   "bin": "dist/index.js",
   "files": [
     "dist",
+    "agent-kit-template",
     "readme.md"
   ],
   "scripts": {

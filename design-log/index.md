@@ -6,13 +6,15 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Core Concepts & Architecture
 
-| #   | Title                      | Description                                                         |
-| --- | -------------------------- | ------------------------------------------------------------------- |
-| 00  | inspirations               | Initial inspirations for the Jay project                            |
-| 01  | what is Jay                | Project overview: design-to-code, 3rd party UI inclusions, security |
-| 27  | guiding principles of Jay  | Core principles guiding the framework                               |
-| 34  | jay stack                  | Full-stack framework design: rendering phases, component API        |
-| 68  | jay stack conceptual model | Conceptual model and architecture overview                          |
+| #   | Title                             | Description                                                           |
+| --- | --------------------------------- | --------------------------------------------------------------------- |
+| 00  | inspirations                      | Initial inspirations for the Jay project                              |
+| 01  | what is Jay                       | Project overview: design-to-code, 3rd party UI inclusions, security   |
+| 27  | guiding principles of Jay         | Core principles guiding the framework                                 |
+| 34  | jay stack                         | Full-stack framework design: rendering phases, component API          |
+| 68  | jay stack conceptual model        | Conceptual model and architecture overview                            |
+| 86  | jay stack full workflow lifecycle | Full lifecycle: setup → agent-kit → dev → render → refresh            |
+| 87  | jay-stack setup command           | Plugin config templating, credential validation, reference generation |
 
 ---
 
@@ -48,19 +50,20 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Full-Stack Components & Rendering
 
-| #   | Title                                             | Description                        |
-| --- | ------------------------------------------------- | ---------------------------------- |
-| 36  | Partial Rendering                                 | Partial/incremental rendering      |
-| 37  | Composite Component                               | Composite component patterns       |
-| 49  | full stack component rendering manifest           | Manifest for full-stack rendering  |
-| 52  | jay-stack client-server code splitting            | Client/server code splitting       |
-| 54  | render result monads                              | Result type patterns for rendering |
-| 55  | full stack component parameter flow refinement    | Props and parameter flow           |
-| 56  | deep merge view states with track-by              | Array merging with track-by keys   |
-| 58  | jay-stack headless component resolution           | Headless component resolution                         |
-| 62  | relocate deep merge for stack-client-runtime      | Client runtime deep merge                             |
-| 72  | skip client script for non-interactive components | Optimization for static components                    |
-| 84  | headless component props and repeater support     | Props, multiple instances, forEach, jay: prefix       |
+| #   | Title                                                 | Description                                                                       |
+| --- | ----------------------------------------------------- | --------------------------------------------------------------------------------- |
+| 36  | Partial Rendering                                     | Partial/incremental rendering                                                     |
+| 37  | Composite Component                                   | Composite component patterns                                                      |
+| 49  | full stack component rendering manifest               | Manifest for full-stack rendering                                                 |
+| 52  | jay-stack client-server code splitting                | Client/server code splitting                                                      |
+| 54  | render result monads                                  | Result type patterns for rendering                                                |
+| 55  | full stack component parameter flow refinement        | Props and parameter flow                                                          |
+| 56  | deep merge view states with track-by                  | Array merging with track-by keys                                                  |
+| 58  | jay-stack headless component resolution               | Headless component resolution                                                     |
+| 62  | relocate deep merge for stack-client-runtime          | Client runtime deep merge                                                         |
+| 72  | skip client script for non-interactive components     | Optimization for static components                                                |
+| 84  | headless component props and repeater support         | Props, multiple instances, forEach, jay: prefix                                   |
+| 85  | rendering phases and agent kit for agentic generation | Phases + contract/action discovery; agent-kit folder, markdown content → jay-html |
 
 ---
 
@@ -82,6 +85,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 60  | plugin system refinement and dynamic contracts    | Plugin.yaml, contract resolution, dynamic contract generation |
 | 66  | transitive plugin dependency resolution           | Plugin dependency resolution                                  |
 | 80  | exposing dynamic contracts for agentic generation | CLI and dev server contract generation for AI agents          |
+| 87  | jay-stack setup command                           | Plugin config templating, credential validation, references   |
 
 ---
 
@@ -175,17 +179,18 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Developer Experience & Tooling
 
-| #   | Title                                                  | Description                                               |
-| --- | ------------------------------------------------------ | --------------------------------------------------------- |
-| 26  | `jay start` - compiling sandbox application            | Dev server startup                                        |
-| 33  | Jay 4 React                                            | React integration                                         |
-| 41  | package naming migration to @jay-framework             | Package naming convention                                 |
-| 42  | editor integration                                     | Editor/IDE integration                                    |
-| 76  | AI Agent Integration                                   | AI agent automation API                                   |
-| 77  | automation dev server integration                      | Automation API for dev tools                              |
-| 80  | materializing dynamic contracts for agentic generation | CLI and dev server contract materialization for AI agents |
-| 81  | dev server test mode                                   | Health/shutdown endpoints and timeout for smoke testing   |
-| 83  | dev server logging and timing                          | Clean output, verbose mode, timing for render phases      |
+| #   | Title                                                  | Description                                                                           |
+| --- | ------------------------------------------------------ | ------------------------------------------------------------------------------------- |
+| 26  | `jay start` - compiling sandbox application            | Dev server startup                                                                    |
+| 33  | Jay 4 React                                            | React integration                                                                     |
+| 41  | package naming migration to @jay-framework             | Package naming convention                                                             |
+| 42  | editor integration                                     | Editor/IDE integration                                                                |
+| 76  | AI Agent Integration                                   | AI agent automation API                                                               |
+| 77  | automation dev server integration                      | Automation API for dev tools                                                          |
+| 80  | materializing dynamic contracts for agentic generation | CLI and dev server contract materialization for AI agents                             |
+| 81  | dev server test mode                                   | Health/shutdown endpoints and timeout for smoke testing                               |
+| 83  | dev server logging and timing                          | Clean output, verbose mode, timing for render phases                                  |
+| 85  | rendering phases and agent kit for agentic generation  | Agent-kit folder: instructions, contracts, markdown content with headless annotations |
 
 ---
 
@@ -229,7 +234,12 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ### "I'm working on AI agent integration"
 
-→ See #76 (AI Agent Integration), #77 (automation dev server), #80 (contract materialization for agents)
+→ See #76 (AI Agent Integration), #77 (automation dev server), #80 (contract materialization for agents), #85 (agent kit and rendering phases)
+→ Agent kit skills: `.cursor/skills/jay-agent-kit/` (main), `jay-html-authoring/`, `jay-cli-commands/`, `jay-contracts-and-plugins/`, `jay-dev-server-test/`
+
+### "I need to understand the full workflow lifecycle"
+
+→ See #86 (full workflow lifecycle: setup → agent-kit → coding → slow → fast → interactive → refresh)
 
 ---
 

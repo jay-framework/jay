@@ -29,7 +29,7 @@ data:
             <input id="toggle-all" class="toggle-all" type="checkbox" ref="toggleAll" checked={noActiveItems}>
             <label for="toggle-all"></label>
             <ul class="todo-list">
-                <Item title="{title}" isCompleted={isCompleted} forEach="shownTodos" trackBy="id" ref="items"/>
+                <jay:Item title="{title}" isCompleted={isCompleted} forEach="shownTodos" trackBy="id" ref="items"/>
             </ul>
         </section>
         <footer class="footer" if="hasItems">

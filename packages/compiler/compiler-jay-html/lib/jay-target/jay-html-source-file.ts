@@ -10,7 +10,8 @@ export interface JayHtmlNamespace {
 }
 
 export interface JayHeadlessImports {
-    key: string;
+    key?: string; // Optional: page-level data binding key. If absent, component is used only via <jay:contract-name> instances
+    contractName: string; // The contract attribute value from the headless script tag (e.g., "product-card")
     refs: RefsTree;
     rootType: JayType;
     contractLinks: JayImportLink[];

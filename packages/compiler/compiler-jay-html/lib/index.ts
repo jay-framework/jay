@@ -15,7 +15,13 @@ export { JAY_IMPORT_RESOLVER } from './jay-target/jay-import-resolver';
 export {
     slowRenderTransform,
     hasSlowPhaseProperties,
+    discoverHeadlessInstances,
+    resolveHeadlessInstances,
     type SlowRenderInput,
     type SlowRenderOutput,
     type HeadlessContractInfo,
+    type DiscoveredHeadlessInstance,
+    type HeadlessInstanceResolvedData,
+    type HeadlessInstanceDiscoveryResult,
+    buildInstanceCoordinateKey,
 } from './slow-render/slow-render-transform';

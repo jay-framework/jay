@@ -58,6 +58,11 @@ describe('contract definitions', () => {
             const folder = 'contracts/duplicate-ref-headless';
             await testContractDefinitionFile(folder);
         });
+
+        it('for contract with props', async () => {
+            const folder = 'contracts/product-card';
+            await testContractDefinitionFile(folder);
+        });
     });
 
     describe('generate jay-html definition linked to contract', () => {

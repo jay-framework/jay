@@ -1,28 +1,82 @@
 <html>
   <head>
+    <!-- Key-based headless component: mood tracker -->
     <script type="application/jay-headless"
             plugin="example-jay-mood-tracker-plugin"
             contract="mood-tracker"
             key="mt"
     ></script>
+    <!-- Instance-based headless component: product widget (no key = uses props) -->
+    <script type="application/jay-headless"
+            plugin="product-widget"
+            contract="product-widget"
+    ></script>
     <style>
       .main {background-color: lightsteelblue; border: 1px solid #3498db}
+      .product-card {border: 1px solid #ccc; padding: 10px; margin: 5px; display: inline-block}
+      .section {margin: 20px 0; padding: 10px; border: 1px solid #ddd}
     </style>
     <script type="application/jay-data" contract="./page.jay-contract"></script>
   </head>
   <body>
     <div class="main">
       <h1>homepage</h1>
-      <div>
+
+      <!-- Mood Tracker (key-based headless component) -->
+      <div class="section">
+        <h2>Mood Tracker</h2>
         <div>Happy: {mt.happy} <button ref="mt.happy">more happy</button></div>
         <div>sad: {mt.sad} <button ref="mt.sad">more sad</button></div>
         <div>neutral: {mt.neutral} <button ref="mt.neutral">more neutral</button></div>
+        <div style="font-size: 20px">
+          <span if="mt.currentMood === happy">:)</span>
+          <span if="mt.currentMood === sad">:(</span>
+          <span if="mt.currentMood === neutral">/)</span>
+        </div>
       </div>
-      <div style="font-size: 20px">
-        <span if="mt.currentMood === happy">:)</span>
-        <span if="mt.currentMood === sad">:(</span>
-        <span if="mt.currentMood === neutral">/)</span>
+
+      <!-- Static product widgets (two instances with different props) -->
+      <div class="section">
+        <h2>Featured Products (static props)</h2>
+        <div class="product-card">
+          <jay:product-widget productId="1">
+            <h3>{name}</h3>
+            <div>Price: ${price}</div>
+            <div>SKU: {sku}</div>
+            <span if="inStock">In Stock</span>
+            <span if="!inStock">Out of Stock</span>
+            <button ref="addToCart">Add to Cart</button>
+          </jay:product-widget>
+        </div>
+        <div class="product-card">
+          <jay:product-widget productId="3">
+            <h3>{name}</h3>
+            <div>Price: ${price}</div>
+            <div>SKU: {sku}</div>
+            <span if="inStock">In Stock</span>
+            <span if="!inStock">Out of Stock</span>
+            <button ref="addToCart">Add to Cart</button>
+          </jay:product-widget>
+        </div>
       </div>
+
+      <!-- slowForEach: each product gets its own pre-rendered widget at build time -->
+      <div class="section">
+        <h2>Featured Products (slowForEach)</h2>
+        <div forEach="featuredProducts" trackBy="_id">
+          <div class="product-card">
+            <jay:product-widget productId="{_id}">
+              <h3>{name}</h3>
+              <div>Price: ${price}</div>
+              <div>SKU: {sku}</div>
+              <span if="inStock">In Stock</span>
+              <span if="!inStock">Out of Stock</span>
+              <button ref="addToCart">Add to Cart</button>
+            </jay:product-widget>
+          </div>
+        </div>
+      </div>
+
     </div>
   </body>
 </html>

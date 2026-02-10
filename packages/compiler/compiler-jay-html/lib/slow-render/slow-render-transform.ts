@@ -7,10 +7,12 @@ import {
     RenderingPhase,
     loadLinkedContract,
     getLinkedContractDir,
+    getEffectivePhase,
 } from '../contract';
 import { isEnumType, WithValidations } from '@jay-framework/compiler-shared';
 import { parseConditionForSlowRender, SlowRenderContext } from '../expressions/expression-compiler';
 import { JayImportResolver } from '../jay-target/jay-import-resolver';
+import { Coordinate } from '@jay-framework/runtime';
 
 /**
  * Headless contract with its key (used for property path prefix)
@@ -91,7 +93,7 @@ function buildPhaseMap(
         parentPhase: RenderingPhase = 'slow',
         contractDir?: string,
     ) {
-        const effectivePhase = tag.phase || parentPhase;
+        const effectivePhase = getEffectivePhase(tag, parentPhase);
         const propertyName = toCamelCase(tag.tag);
         const currentPath = pathPrefix ? `${pathPrefix}.${propertyName}` : propertyName;
 
@@ -547,6 +549,301 @@ export function slowRenderTransform(input: SlowRenderInput): WithValidations<Slo
 }
 
 /**
+ * Discovered headless component instance in pre-rendered jay-html.
+ * Found after Pass 1 (page bindings resolved, slow forEach unrolled).
+ */
+export interface DiscoveredHeadlessInstance {
+    /** Contract name from tag name (e.g., "product-card" from <jay:product-card>) */
+    contractName: string;
+    /** Props extracted from element attributes (camelCased keys, string values) */
+    props: Record<string, string>;
+    /**
+     * Coordinate that uniquely identifies this instance in the page tree.
+     * Built from ancestor slowForEach jayTrackBy values + "contractName:localIndex".
+     */
+    coordinate: Coordinate;
+}
+
+/**
+ * Resolved data for a headless component instance.
+ * Provided by the dev server after calling slowlyRender for each discovered instance.
+ */
+export interface HeadlessInstanceResolvedData {
+    /** Coordinate matching the discovered instance */
+    coordinate: Coordinate;
+    /** The component's contract (for phase detection) */
+    contract: Contract;
+    /** Slow phase ViewState data for this instance */
+    slowViewState: Record<string, unknown>;
+}
+
+/**
+ * Discover headless component instances in pre-rendered jay-html.
+ *
+ * Call this after slowRenderTransform() (Pass 1) to find `<jay:xxx>` instances
+ * that need their own slowlyRender call.
+ *
+ * Skips instances that:
+ * - Are inside a preserved forEach (fast phase — props are still dynamic)
+ * - Have unresolved bindings in their props (can't call slowlyRender without concrete values)
+ */
+/**
+ * Build the coordinate prefix from ancestor slowForEach jayTrackBy values.
+ * Walks up the DOM tree collecting trackBy IDs.
+ */
+export function buildCoordinatePrefix(element: HTMLElement): string[] {
+    const parts: string[] = [];
+    let current = element.parentNode as HTMLElement | null;
+
+    while (current) {
+        const jayTrackBy = current.getAttribute?.('jayTrackBy');
+        if (jayTrackBy != null) {
+            parts.unshift(jayTrackBy);
+        }
+        current = current.parentNode as HTMLElement | null;
+    }
+
+    return parts;
+}
+
+/**
+ * Count how many same-contract siblings appear before this element.
+ * Used to build the "contractName:localIndex" part of a coordinate.
+ */
+export function localIndexAmongSiblings(element: HTMLElement): number {
+    const tag = element.tagName?.toLowerCase();
+    const parent = element.parentNode;
+    if (!parent) return 0;
+
+    let index = 0;
+    for (const sibling of parent.childNodes) {
+        if (sibling === element) break;
+        if (
+            sibling.nodeType === NodeType.ELEMENT_NODE &&
+            (sibling as HTMLElement).tagName?.toLowerCase() === tag
+        ) {
+            index++;
+        }
+    }
+    return index;
+}
+
+/**
+ * Build the full coordinate key string for a <jay:xxx> element.
+ * Format: "jayTrackBy1/jayTrackBy2/.../contractName:ref"
+ *
+ * Uses the element's `ref` attribute if present. If the element has no ref,
+ * a coordinateCounters map must be provided to auto-assign an index.
+ */
+export function buildInstanceCoordinateKey(
+    element: HTMLElement,
+    contractName: string,
+    coordinateCounters?: Map<string, number>,
+): string {
+    const prefix = buildCoordinatePrefix(element);
+    let ref = element.getAttribute?.('ref');
+    if (!ref) {
+        if (coordinateCounters) {
+            const counterKey = [...prefix, contractName].join('/');
+            const localIndex = coordinateCounters.get(counterKey) ?? 0;
+            coordinateCounters.set(counterKey, localIndex + 1);
+            ref = String(localIndex);
+        } else {
+            // Fallback for backward compat: use sibling counting
+            ref = String(localIndexAmongSiblings(element));
+        }
+    }
+    return [...prefix, `${contractName}:${ref}`].join('/');
+}
+
+export interface HeadlessInstanceDiscoveryResult {
+    instances: DiscoveredHeadlessInstance[];
+    /** HTML with auto-generated ref attributes embedded on <jay:xxx> elements */
+    preRenderedJayHtml: string;
+}
+
+export function discoverHeadlessInstances(
+    preRenderedJayHtml: string,
+): HeadlessInstanceDiscoveryResult {
+    const root = parse(preRenderedJayHtml, {
+        comment: true,
+        blockTextElements: {
+            script: true,
+            style: true,
+        },
+    });
+
+    const instances: DiscoveredHeadlessInstance[] = [];
+    const coordinateCounters = new Map<string, number>();
+
+    function walk(element: HTMLElement, insidePreservedForEach: boolean) {
+        const tagName = element.tagName?.toLowerCase();
+
+        // Check if this element has a preserved forEach (fast phase — not unrolled by Pass 1)
+        const hasForEach = element.getAttribute('forEach') != null;
+
+        if (tagName?.startsWith('jay:')) {
+            if (!insidePreservedForEach) {
+                const contractName = tagName.substring(4);
+
+                // Extract props from attributes (skip ref and jay-specific attributes)
+                const props: Record<string, string> = {};
+                for (const [key, value] of Object.entries(element.attributes)) {
+                    const lowerKey = key.toLowerCase();
+                    if (lowerKey !== 'ref' && !lowerKey.startsWith('jay')) {
+                        props[toCamelCase(key)] = value;
+                    }
+                }
+
+                // Skip instances with unresolved prop bindings (dynamic props)
+                const hasUnresolvedProps = Object.values(props).some((v) => hasBindings(v));
+
+                if (!hasUnresolvedProps) {
+                    const prefix = buildCoordinatePrefix(element);
+
+                    // Use explicit ref or auto-generate one
+                    let ref = element.getAttribute('ref');
+                    if (!ref) {
+                        // Auto-generate ref using scope-level counter
+                        const counterKey = [...prefix, contractName].join('/');
+                        const localIndex = coordinateCounters.get(counterKey) ?? 0;
+                        coordinateCounters.set(counterKey, localIndex + 1);
+                        ref = String(localIndex);
+                        // Embed the auto-ref in the HTML for downstream consumers
+                        element.setAttribute('ref', ref);
+                    }
+
+                    const coordinate = [...prefix, `${contractName}:${ref}`];
+
+                    instances.push({
+                        contractName,
+                        props,
+                        coordinate,
+                    });
+                }
+            }
+
+            // Don't recurse into jay:xxx children for discovery
+            // (children are the inline template, not nested instances)
+            return;
+        }
+
+        // Recurse into children
+        for (const child of element.childNodes) {
+            if (child.nodeType === NodeType.ELEMENT_NODE) {
+                walk(child as HTMLElement, insidePreservedForEach || hasForEach);
+            }
+        }
+    }
+
+    const body = root.querySelector('body');
+    if (body) {
+        walk(body, false);
+    }
+
+    return { instances, preRenderedJayHtml: root.toString() };
+}
+
+/**
+ * Resolve headless component instance bindings in pre-rendered jay-html.
+ *
+ * This is Pass 2 of the slow render pipeline:
+ * - Pass 1: slowRenderTransform() — resolves page bindings, unrolls slow forEach
+ * - Between passes: dev server calls slowlyRender for each discovered instance
+ * - Pass 2: resolveHeadlessInstances() — resolves instance bindings using component ViewState
+ *
+ * @param preRenderedJayHtml - Output of Pass 1 (slowRenderTransform)
+ * @param instanceData - Resolved data for each instance (in discovery order)
+ * @param importResolver - Optional import resolver for linked sub-contracts
+ */
+/**
+ * Serialize a coordinate to a string key for Map lookup.
+ */
+function coordinateKey(coord: Coordinate): string {
+    return coord.join('/');
+}
+
+export function resolveHeadlessInstances(
+    preRenderedJayHtml: string,
+    instanceData: HeadlessInstanceResolvedData[],
+    importResolver?: JayImportResolver,
+): WithValidations<string> {
+    const root = parse(preRenderedJayHtml, {
+        comment: true,
+        blockTextElements: {
+            script: true,
+            style: true,
+        },
+    });
+
+    // Build a lookup map by coordinate for O(1) matching
+    const dataByCoordinate = new Map<string, HeadlessInstanceResolvedData>();
+    for (const data of instanceData) {
+        dataByCoordinate.set(coordinateKey(data.coordinate), data);
+    }
+
+    const allValidations: string[] = [];
+
+    function walkAndResolve(element: HTMLElement, insidePreservedForEach: boolean): void {
+        const tagName = element.tagName?.toLowerCase();
+        const hasForEach = element.getAttribute('forEach') != null;
+
+        if (tagName?.startsWith('jay:') && !insidePreservedForEach) {
+            // Check for unresolved prop bindings (same skip logic as discovery)
+            const hasUnresolvedProps = Object.values(element.attributes).some(
+                (v) => typeof v === 'string' && hasBindings(v),
+            );
+
+            if (!hasUnresolvedProps) {
+                // Read coordinate from the ref attribute (embedded by discoverHeadlessInstances)
+                const contractName = tagName.substring(4);
+                const prefix = buildCoordinatePrefix(element);
+                const ref = element.getAttribute('ref');
+                if (!ref) {
+                    allValidations.push(
+                        `<jay:${contractName}> missing ref attribute — run discoverHeadlessInstances first`,
+                    );
+                    return;
+                }
+                const coord = [...prefix, `${contractName}:${ref}`];
+                const data = dataByCoordinate.get(coordinateKey(coord));
+
+                if (data) {
+                    // Build phase map from the component's contract
+                    const phaseMap = buildPhaseMap(data.contract, undefined, importResolver);
+
+                    // Transform children with the component's slow ViewState
+                    const result = transformChildren(element, phaseMap, '', data.slowViewState);
+                    allValidations.push(...result.validations);
+                    if (result.val) {
+                        element.innerHTML = '';
+                        result.val.forEach((child) => element.appendChild(child as any));
+                    }
+                }
+            }
+
+            // Don't recurse into jay:xxx children (already handled above or skipped)
+            return;
+        }
+
+        // Recurse into children
+        for (const child of element.childNodes) {
+            if (child.nodeType === NodeType.ELEMENT_NODE) {
+                walkAndResolve(child as HTMLElement, insidePreservedForEach || hasForEach);
+            }
+        }
+    }
+
+    const body = root.querySelector('body');
+    if (!body) {
+        return new WithValidations(preRenderedJayHtml, ['jay-html must have a body element']);
+    }
+
+    walkAndResolve(body, false);
+    return new WithValidations(root.toString(), allValidations);
+}
+
+/**
  * Check if a jay-html file has any slow-phase properties that can be pre-rendered
  */
 export function hasSlowPhaseProperties(contract: Contract | undefined): boolean {
@@ -555,7 +852,7 @@ export function hasSlowPhaseProperties(contract: Contract | undefined): boolean 
     }
 
     function checkTag(tag: ContractTag, parentPhase: RenderingPhase = 'slow'): boolean {
-        const effectivePhase = tag.phase || parentPhase;
+        const effectivePhase = getEffectivePhase(tag, parentPhase);
 
         if (effectivePhase === 'slow') {
             return true;

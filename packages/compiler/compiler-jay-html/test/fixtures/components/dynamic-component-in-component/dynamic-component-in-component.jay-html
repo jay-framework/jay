@@ -12,8 +12,8 @@ data:
 </head>
 <body>
 <div>
-    <Counter forEach="nestedCounters" trackBy="id" ref="counter1" initialValue={counter} />
-    <Counter if="condition" ref="counter2" initialValue="{count1}" />
+    <jay:Counter forEach="nestedCounters" trackBy="id" ref="counter1" initialValue={counter} />
+    <jay:Counter if="condition" ref="counter2" initialValue="{count1}" />
 </div>
 </body>
 </html>

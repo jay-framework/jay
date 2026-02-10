@@ -40,6 +40,19 @@ export interface ContractsIndex {
     contracts: ContractIndexEntry[];
 }
 
+/** Entry for plugins-index.yaml (Design Log #85) */
+export interface PluginsIndexEntry {
+    name: string;
+    path: string;
+    contracts: Array<{ name: string; type: 'static' | 'dynamic'; path: string }>;
+}
+
+export interface PluginsIndex {
+    materialized_at: string;
+    jay_stack_version: string;
+    plugins: PluginsIndexEntry[];
+}
+
 export interface MaterializeContractsOptions {
     projectRoot: string;
     outputDir?: string; // defaults to build/materialized-contracts
@@ -274,6 +287,14 @@ export async function materializeContracts(
     } = options;
 
     const contracts: ContractIndexEntry[] = [];
+    /** Per-plugin data for plugins-index.yaml (Design Log #85) */
+    const pluginsIndexMap = new Map<
+        string,
+        {
+            path: string;
+            contracts: Array<{ name: string; type: 'static' | 'dynamic'; path: string }>;
+        }
+    >();
     let staticCount = 0;
     let dynamicCount = 0;
 
@@ -312,14 +333,28 @@ export async function materializeContracts(
 
                 // Make path relative to project root for portability
                 const relativePath = path.relative(projectRoot, contractPath);
-
-                contracts.push({
+                const entry: ContractIndexEntry = {
                     plugin: plugin.name,
                     name: contract.name,
                     type: 'static',
                     path: './' + relativePath,
-                });
+                };
+                contracts.push(entry);
                 staticCount++;
+
+                // Collect for plugins index
+                const pluginRelPath = path.relative(projectRoot, plugin.pluginPath);
+                if (!pluginsIndexMap.has(plugin.name)) {
+                    pluginsIndexMap.set(plugin.name, {
+                        path: './' + pluginRelPath.replace(/\\/g, '/'),
+                        contracts: [],
+                    });
+                }
+                pluginsIndexMap.get(plugin.name)!.contracts.push({
+                    name: contract.name,
+                    type: 'static',
+                    path: './' + relativePath,
+                });
 
                 if (verbose) {
                     getLogger().info(`   📄 Static: ${contract.name}`);
@@ -366,14 +401,29 @@ export async function materializeContracts(
                         // Make path relative to project root
                         const relativePath = path.relative(projectRoot, filePath);
 
-                        contracts.push({
+                        const dynEntry: ContractIndexEntry = {
                             plugin: plugin.name,
                             name: fullName,
                             type: 'dynamic',
                             path: './' + relativePath,
                             metadata: generated.metadata,
-                        });
+                        };
+                        contracts.push(dynEntry);
                         dynamicCount++;
+
+                        // Collect for plugins index
+                        const pluginRelPath = path.relative(projectRoot, plugin.pluginPath);
+                        if (!pluginsIndexMap.has(plugin.name)) {
+                            pluginsIndexMap.set(plugin.name, {
+                                path: './' + pluginRelPath.replace(/\\/g, '/'),
+                                contracts: [],
+                            });
+                        }
+                        pluginsIndexMap.get(plugin.name)!.contracts.push({
+                            name: fullName,
+                            type: 'dynamic',
+                            path: './' + relativePath,
+                        });
 
                         if (verbose) {
                             getLogger().info(`   ⚡ Materialized: ${fullName}`);
@@ -400,8 +450,22 @@ export async function materializeContracts(
     const indexPath = path.join(outputDir, 'contracts-index.yaml');
     fs.writeFileSync(indexPath, YAML.stringify(index), 'utf-8');
 
+    // Write plugins-index.yaml (Design Log #85 - agent kit)
+    const pluginsIndex: PluginsIndex = {
+        materialized_at: index.materialized_at,
+        jay_stack_version: index.jay_stack_version,
+        plugins: Array.from(pluginsIndexMap.entries()).map(([name, data]) => ({
+            name,
+            path: data.path,
+            contracts: data.contracts,
+        })),
+    };
+    const pluginsIndexPath = path.join(outputDir, 'plugins-index.yaml');
+    fs.writeFileSync(pluginsIndexPath, YAML.stringify(pluginsIndex), 'utf-8');
+
     if (verbose) {
         getLogger().info(`\n✅ Contracts index written to: ${indexPath}`);
+        getLogger().info(`✅ Plugins index written to: ${pluginsIndexPath}`);
     }
 
     return {

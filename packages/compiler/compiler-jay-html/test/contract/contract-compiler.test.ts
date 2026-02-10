@@ -1345,4 +1345,274 @@ export interface ProductListUnwrappedRepeatedRefs {}
             );
         });
     });
+
+    describe('contract props', () => {
+        it('should compile contract with props', async () => {
+            const contract = `
+            name: ProductCard
+            props:
+              - name: productId
+                type: string
+                required: true
+                description: The product to display
+              - name: variant
+                type: string
+            tags:
+              - tag: name
+                type: data
+                dataType: string
+              - tag: price
+                type: data
+                dataType: number
+                phase: fast
+            `;
+
+            const parsedContract = parseContract(contract, 'contract.jay-contract');
+            const result = await compileContract(parsedContract, './contract', noHopResolver);
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+            import { JayContract } from '@jay-framework/runtime';
+
+            export interface ProductCardViewState {
+                name: string;
+                price: number;
+            }
+
+            export type ProductCardSlowViewState = Pick<ProductCardViewState, 'name'>;
+
+            export type ProductCardFastViewState = Pick<ProductCardViewState, 'price'>;
+
+            export type ProductCardInteractiveViewState = {};
+
+            export interface ProductCardRefs {}
+
+            export interface ProductCardRepeatedRefs {}
+
+            export interface ProductCardProps {
+                productId: string;
+                variant?: string;
+            }
+
+            export type ProductCardContract = JayContract<ProductCardViewState, ProductCardRefs, ProductCardSlowViewState, ProductCardFastViewState, ProductCardInteractiveViewState, ProductCardProps>`),
+            );
+        });
+
+        it('should compile contract with enum prop', async () => {
+            const contract = `
+            name: ProductCard
+            props:
+              - name: productId
+                type: string
+                required: true
+              - name: displayMode
+                type: enum (compact | full | grid)
+                required: true
+            tags:
+              - tag: name
+                type: data
+                dataType: string
+            `;
+
+            const parsedContract = parseContract(contract, 'contract.jay-contract');
+            const result = await compileContract(parsedContract, './contract', noHopResolver);
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+            import { JayContract } from '@jay-framework/runtime';
+
+            export interface ProductCardViewState {
+                name: string;
+            }
+
+            export type ProductCardSlowViewState = Pick<ProductCardViewState, 'name'>;
+
+            export type ProductCardFastViewState = {};
+
+            export type ProductCardInteractiveViewState = {};
+
+            export interface ProductCardRefs {}
+
+            export interface ProductCardRepeatedRefs {}
+
+            export enum DisplayMode {
+                compact,
+                full,
+                grid
+            }
+
+            export interface ProductCardProps {
+                productId: string;
+                displayMode: DisplayMode;
+            }
+
+            export type ProductCardContract = JayContract<ProductCardViewState, ProductCardRefs, ProductCardSlowViewState, ProductCardFastViewState, ProductCardInteractiveViewState, ProductCardProps>`),
+            );
+        });
+
+        it('should compile contract without props (backward compatible)', async () => {
+            const contract = `
+            name: counter
+            tags:
+              - tag: count
+                type: data
+                dataType: number
+                phase: fast+interactive
+              - tag: add
+                type: interactive
+                elementType: HTMLButtonElement
+              - tag: subtract
+                type: interactive
+                elementType: HTMLButtonElement
+            `;
+
+            const parsedContract = parseContract(contract, 'contract.jay-contract');
+            const result = await compileContract(parsedContract, './contract', noHopResolver);
+
+            expect(result.validations).toEqual([]);
+            // Should NOT include Props type parameter when no props
+            expect(result.val).not.toContain('Props');
+            expect(result.val).toContain(
+                'JayContract<CounterViewState, CounterRefs, CounterSlowViewState, CounterFastViewState, CounterInteractiveViewState>',
+            );
+        });
+
+        it('should compile contract with all prop types', async () => {
+            const contract = `
+            name: Widget
+            props:
+              - name: label
+                type: string
+                required: true
+              - name: count
+                type: number
+              - name: visible
+                type: boolean
+              - name: createdAt
+                type: date
+            tags:
+              - tag: text
+                type: data
+                dataType: string
+            `;
+
+            const parsedContract = parseContract(contract, 'contract.jay-contract');
+            const result = await compileContract(parsedContract, './contract', noHopResolver);
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+            import { JayContract } from '@jay-framework/runtime';
+
+            export interface WidgetViewState {
+                text: string;
+            }
+
+            export type WidgetSlowViewState = Pick<WidgetViewState, 'text'>;
+
+            export type WidgetFastViewState = {};
+
+            export type WidgetInteractiveViewState = {};
+
+            export interface WidgetRefs {}
+
+            export interface WidgetRepeatedRefs {}
+
+            export interface WidgetProps {
+                label: string;
+                count?: number;
+                visible?: boolean;
+                createdAt?: Date;
+            }
+
+            export type WidgetContract = JayContract<WidgetViewState, WidgetRefs, WidgetSlowViewState, WidgetFastViewState, WidgetInteractiveViewState, WidgetProps>`),
+            );
+        });
+    });
+
+    describe('contract params (Design Log #85)', () => {
+        it('should compile contract with params (URL/load params, always string)', async () => {
+            const contract = `
+            name: product-page
+            params:
+              slug: string
+            tags:
+              - tag: _id
+                type: data
+                dataType: string
+              - tag: productName
+                type: data
+                dataType: string
+            `;
+
+            const parsedContract = parseContract(contract, 'contract.jay-contract');
+            const result = await compileContract(parsedContract, './contract', noHopResolver);
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+            import { JayContract } from '@jay-framework/runtime';
+
+            export interface ProductPageViewState {
+                _id: string;
+                productName: string;
+            }
+
+            export type ProductPageSlowViewState = Pick<ProductPageViewState, '_id' | 'productName'>;
+
+            export type ProductPageFastViewState = {};
+
+            export type ProductPageInteractiveViewState = {};
+
+            export interface ProductPageRefs {}
+
+            export interface ProductPageRepeatedRefs {}
+
+            import { UrlParams } from '@jay-framework/fullstack-component';
+
+            export interface ProductPageParams extends UrlParams {
+                slug: string;
+            }
+
+            export type ProductPageContract = JayContract<ProductPageViewState, ProductPageRefs, ProductPageSlowViewState, ProductPageFastViewState, ProductPageInteractiveViewState>`),
+            );
+        });
+
+        it('should compile contract without params (backward compatible)', async () => {
+            const contract = `
+            name: counter
+            tags:
+              - tag: count
+                type: data
+                dataType: number
+            `;
+
+            const parsedContract = parseContract(contract, 'contract.jay-contract');
+            const result = await compileContract(parsedContract, './contract', noHopResolver);
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+            import { JayContract } from '@jay-framework/runtime';
+
+            export interface CounterViewState {
+                count: number;
+            }
+
+            export type CounterSlowViewState = Pick<CounterViewState, 'count'>;
+
+            export type CounterFastViewState = {};
+
+            export type CounterInteractiveViewState = {};
+
+            export interface CounterRefs {}
+
+            export interface CounterRepeatedRefs {}
+
+            export type CounterContract = JayContract<CounterViewState, CounterRefs, CounterSlowViewState, CounterFastViewState, CounterInteractiveViewState>`),
+            );
+        });
+    });
 });

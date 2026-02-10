@@ -1,4 +1,4 @@
-import { parseContract, ContractTagType } from '../../lib';
+import { parseContract, ContractTagType, ContractProp } from '../../lib';
 import {
     JAY_CONTRACT_EXTENSION,
     JayBoolean,
@@ -931,6 +931,229 @@ tags:
                     link: '$/',
                 },
             ]);
+        });
+    });
+
+    describe('props parsing', () => {
+        it('should parse contract with props', () => {
+            const contract = `
+            name: ProductCard
+            props:
+              - name: productId
+                type: string
+                required: true
+                description: The ID of the product to display
+            tags:
+              - tag: name
+                type: data
+                dataType: string
+              - tag: price
+                type: data
+                dataType: number
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.props).toEqual([
+                {
+                    name: 'productId',
+                    dataType: JayString,
+                    required: true,
+                    description: ['The ID of the product to display'],
+                },
+            ]);
+            expect(result.val.tags.length).toBe(2);
+        });
+
+        it('should parse contract with multiple props of different types', () => {
+            const contract = `
+            name: ProductCard
+            props:
+              - name: productId
+                type: string
+                required: true
+              - name: quantity
+                type: number
+              - name: showPrice
+                type: boolean
+            tags:
+              - tag: name
+                type: data
+                dataType: string
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.props).toEqual([
+                { name: 'productId', dataType: JayString, required: true },
+                { name: 'quantity', dataType: JayNumber },
+                { name: 'showPrice', dataType: JayBoolean },
+            ]);
+        });
+
+        it('should default prop type to string if not specified', () => {
+            const contract = `
+            name: SimpleWidget
+            props:
+              - name: label
+            tags:
+              - tag: text
+                type: data
+                dataType: string
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.props).toEqual([{ name: 'label', dataType: JayString }]);
+        });
+
+        it('should parse props with enum type', () => {
+            const contract = `
+            name: ProductCard
+            props:
+              - name: variant
+                type: enum (compact | full | minimal)
+                required: true
+            tags:
+              - tag: name
+                type: data
+                dataType: string
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.props).toEqual([
+                {
+                    name: 'variant',
+                    dataType: new JayEnumType('Variant', ['compact', 'full', 'minimal']),
+                    required: true,
+                },
+            ]);
+        });
+
+        it('should parse props with default value', () => {
+            const contract = `
+            name: ProductCard
+            props:
+              - name: currency
+                type: string
+                default: USD
+            tags:
+              - tag: price
+                type: data
+                dataType: number
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.props).toEqual([
+                { name: 'currency', dataType: JayString, default: 'USD' },
+            ]);
+        });
+
+        it('should report validation error for duplicate prop names', () => {
+            const contract = `
+            name: ProductCard
+            props:
+              - name: productId
+                type: string
+              - name: productId
+                type: number
+            tags:
+              - tag: name
+                type: data
+                dataType: string
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toContain('Duplicate prop name [productId]');
+        });
+
+        it('should parse contract without props (backward compatible)', () => {
+            const contract = `
+            name: counter
+            tags:
+              - tag: count
+                type: data
+                dataType: number
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.props).toBeUndefined();
+        });
+
+        it('should parse props with array description', () => {
+            const contract = `
+            name: ProductCard
+            props:
+              - name: productId
+                type: string
+                required: true
+                description:
+                  - The product identifier
+                  - Must be a valid product ID from the catalog
+            tags:
+              - tag: name
+                type: data
+                dataType: string
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.props[0].description).toEqual([
+                'The product identifier',
+                'Must be a valid product ID from the catalog',
+            ]);
+        });
+    });
+
+    describe('params parsing (Design Log #85)', () => {
+        it('should parse contract with params (URL/load params)', () => {
+            const contract = `
+            name: product-page
+            params:
+              slug: string
+            tags:
+              - tag: _id
+                type: data
+                dataType: string
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.params).toEqual([{ name: 'slug' }]);
+        });
+
+        it('should parse contract with multiple params', () => {
+            const contract = `
+            name: product-page
+            params:
+              slug: string
+              id: string
+            tags:
+              - tag: title
+                type: data
+                dataType: string
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.params).toEqual([{ name: 'slug' }, { name: 'id' }]);
+        });
+
+        it('should parse contract without params (backward compatible)', () => {
+            const contract = `
+            name: counter
+            tags:
+              - tag: count
+                type: data
+                dataType: number
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.params).toBeUndefined();
         });
     });
 });

@@ -37,6 +37,7 @@ Jay enables you to:
 - [Page Configuration](./jay-stack-page-configuration.md) - Configuring pages and headless dependencies
 - [Component Development](./core/components.md) - Building Jay components with reactive state
 - [Jay Stack Components](./core/jay-stack.md) - Full-stack components with server-side rendering
+- [CLI Reference](./core/cli.md) - `jay-stack` and `jay-cli` command-line tools
 - [Testing](./core/testing.md) - Smoke tests, CI integration, and test mode
 
 ### Design Tool Integration
