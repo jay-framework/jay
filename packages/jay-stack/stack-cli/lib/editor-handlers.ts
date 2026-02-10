@@ -1,8 +1,6 @@
 import path from 'path';
 import fs from 'fs';
 import YAML from 'yaml';
-import { parse } from 'node-html-parser';
-import { createRequire } from 'module';
 import { getLogger } from '@jay-framework/logger';
 import type {
     PublishMessage,
@@ -313,7 +311,7 @@ async function extractHeadlessComponentsFromJayHtml(
 
         if (parsedJayHtml.validations.length > 0) {
             getLogger().warn(
-                `Jay-HTML parsing warnings for ${pageFilePath}:${parsedJayHtml.validations.join(', ')}`
+                `Jay-HTML parsing warnings for ${pageFilePath}:${parsedJayHtml.validations.join(', ')}`,
             );
         }
 
@@ -582,13 +580,13 @@ async function scanPlugins(projectRootPath: string): Promise<Plugin[]> {
             const manifest = resolvePluginManifest(projectRootPath, pluginName);
             if (manifest.validations.length > 0) {
                 getLogger().warn(
-                    `Failed to resolve plugin manifest for ${pluginName}:${manifest.validations.join(', ')}`
+                    `Failed to resolve plugin manifest for ${pluginName}:${manifest.validations.join(', ')}`,
                 );
                 continue;
             }
             if (!manifest.val) {
                 getLogger().warn(
-                    `Failed to resolve plugin manifest for ${pluginName}:${manifest.validations.join(', ')}`
+                    `Failed to resolve plugin manifest for ${pluginName}:${manifest.validations.join(', ')}`,
                 );
                 continue;
             }
@@ -603,13 +601,13 @@ async function scanPlugins(projectRootPath: string): Promise<Plugin[]> {
                     );
                     if (resolveResult.validations.length > 0) {
                         getLogger().warn(
-                            `Failed to resolve plugin component for ${pluginName}:${contract.name}:${resolveResult.validations.join(', ')}`
+                            `Failed to resolve plugin component for ${pluginName}:${contract.name}:${resolveResult.validations.join(', ')}`,
                         );
                         return null;
                     }
                     if (!resolveResult.val) {
                         getLogger().warn(
-                            `Failed to resolve plugin component for ${pluginName}:${contract.name}:${resolveResult.validations.join(', ')}`
+                            `Failed to resolve plugin component for ${pluginName}:${contract.name}:${resolveResult.validations.join(', ')}`,
                         );
                         return null;
                     }
@@ -698,7 +696,7 @@ async function loadProjectPage(pageContext: PageContext, plugins: Plugin[]): Pro
                         });
                     } else {
                         getLogger().warn(
-                            `Invalid component definition in ${pageConfigPath}: Only plugin/contract syntax is supported for headless components. Found:${JSON.stringify(comp)}`
+                            `Invalid component definition in ${pageConfigPath}: Only plugin/contract syntax is supported for headless components. Found:${JSON.stringify(comp)}`,
                         );
                     }
                 }
