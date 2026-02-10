@@ -1,3 +1,25 @@
+// Protocol-specific contract types optimized for external consumers
+// These mirror compiler types but use simple, serializable representations
+
+export interface ContractTag {
+    tag: string; // tag ID
+    type: string | string[]; // tag type(s) - simplified from enum to strings
+    dataType?: string; // string representation of JayType (e.g. "string", "enum (active | inactive)")
+    elementType?: string; // string representation of element types
+    required?: boolean;
+    repeated?: boolean;
+    tags?: ContractTag[]; // for sub-contracts
+    link?: string; // for linked sub-contracts
+    trackBy?: string; // for repeated sub-contracts
+    async?: boolean;
+    phase?: string; // rendering phase as string
+}
+
+export interface Contract {
+    name: string;
+    tags: ContractTag[];
+}
+
 // Base message type with discriminator and generic response type
 export interface BaseMessage<TResponse extends BaseResponse = BaseResponse> {
     type: string;
@@ -44,6 +66,19 @@ export interface GetProjectInfoMessage extends BaseMessage<GetProjectInfoRespons
     type: 'getProjectInfo';
 }
 
+export interface ExportMessage<TVendorDoc> extends BaseMessage<ExportResponse> {
+    type: 'export';
+    vendorId: string;
+    pageUrl: string;
+    vendorDoc: TVendorDoc;
+}
+
+export interface ImportMessage<TVendorDoc> extends BaseMessage<ImportResponse<TVendorDoc>> {
+    type: 'import';
+    vendorId: string;
+    pageUrl: string;
+}
+
 // Response types with discriminators
 export interface PublishResponse extends BaseResponse {
     type: 'publish';
@@ -74,7 +109,7 @@ export interface ProjectPage {
     name: string;
     url: string;
     filePath: string;
-    contractSchema?: ContractSchema; // Page's own contract if it has a .jay-contract file
+    contract?: Contract; // Page's own contract if it has a .jay-contract file
     usedComponents: {
         appName: string;
         componentName: string;
@@ -88,58 +123,10 @@ export interface ProjectComponent {
     contractPath?: string;
 }
 
-// Plugin types - re-exported from compiler-shared for single source of truth
-import type {
-    PluginManifest as PluginManifestBase,
-    DynamicContractConfig,
-} from '@jay-framework/compiler-shared';
-
-// Re-export with explicit interface to avoid tsup/rollup issues
-export interface PluginManifest extends PluginManifestBase {}
-export interface DynamicContractDef extends DynamicContractConfig {}
-
-// Static contract definition (subset of PluginManifest.contracts entry)
-export interface StaticContractDef {
-    name: string; // Contract name (kebab-case)
-    contract: string; // Path to contract file
-    component: string; // Exported member name from the module (e.g., "moodTracker")
-    description?: string; // Optional description
-}
-
+// Simplified plugin interface focused on editor needs
 export interface Plugin {
-    manifest: PluginManifest;
-    location: {
-        type: 'local' | 'npm';
-        path?: string; // For local plugins (src/plugins/my-plugin)
-        module?: string; // For npm plugins (@wix/stores)
-    };
-}
-
-// Legacy type for backward compatibility
-export interface InstalledApp {
-    name: string;
-    module: string;
-    pages: {
-        name: string;
-        headless_components: {
-            name: string;
-            key: string;
-            contract: string;
-            slugs?: string[];
-        }[];
-    }[];
-    components: {
-        name: string;
-        headless_components: {
-            name: string;
-            key: string;
-            contract: string;
-        }[];
-    }[];
-    config_map?: {
-        display_name: string;
-        key: string;
-    }[];
+    name: string; // Plugin name (kebab-case) for the plugin attribute
+    contracts: Contract[]; // Array of available contracts
 }
 
 export interface ProjectInfo {
@@ -147,11 +134,7 @@ export interface ProjectInfo {
     localPath: string;
     pages: ProjectPage[];
     components: ProjectComponent[];
-    plugins: Plugin[]; // New plugin system
-    installedApps: InstalledApp[]; // Legacy - for backward compatibility
-    installedAppContracts: {
-        [appName: string]: InstalledAppContracts;
-    };
+    plugins: Plugin[];
 }
 
 export interface GetProjectInfoResponse extends BaseResponse {
@@ -159,56 +142,46 @@ export interface GetProjectInfoResponse extends BaseResponse {
     info: ProjectInfo;
 }
 
-export interface ContractTag {
-    tag: string; // tag ID
-    type: string | string[]; // tag type(s)
-    dataType?: string;
-    elementType?: string;
-    required?: boolean;
-    repeated?: boolean;
-    tags?: ContractTag[]; // for sub-contracts
-    link?: string; // for linked sub-contracts
+export interface ExportResponse extends BaseResponse {
+    type: 'export';
+    vendorSourcePath?: string;
+    jayHtmlPath?: string;
+    contractPath?: string;
+    warnings?: string[];
 }
 
-export interface ContractSchema {
-    name: string;
-    tags: ContractTag[];
-}
-
-export interface InstalledAppContracts {
-    appName: string;
-    module: string;
-    pages: Array<{
-        pageName: string;
-        contractSchema: ContractSchema;
-    }>;
-    components: Array<{
-        componentName: string;
-        contractSchema: ContractSchema;
-    }>;
+export interface ImportResponse<TVendorDoc> extends BaseResponse {
+    type: 'import';
+    vendorDoc?: TVendorDoc;
 }
 
 // Union types for all messages and responses
-export type EditorProtocolMessageTypes =
+export type EditorProtocolMessageTypes<TVendorDoc> =
     | PublishMessage
     | SaveImageMessage
     | HasImageMessage
-    | GetProjectInfoMessage;
-export type EditorProtocolResponseTypes =
+    | GetProjectInfoMessage
+    | ExportMessage<TVendorDoc>
+    | ImportMessage<TVendorDoc>;
+
+export type EditorProtocolResponseTypes<TVendorDoc> =
     | PublishResponse
     | SaveImageResponse
     | HasImageResponse
-    | GetProjectInfoResponse;
+    | GetProjectInfoResponse
+    | ExportResponse
+    | ImportResponse<TVendorDoc>;
 
-export interface ProtocolMessage {
+export interface ProtocolMessage<TVendorDoc> {
     id: string;
     timestamp: number;
-    payload: EditorProtocolMessageTypes;
+    payload: EditorProtocolMessageTypes<TVendorDoc>;
 }
-export interface ProtocolResponse {
+
+export interface ProtocolResponse<TVendorDoc> {
     id: string;
     timestamp: number;
-    payload: EditorProtocolResponseTypes;
+    payload: EditorProtocolResponseTypes<TVendorDoc>;
 }
 
 // Editor side interface for communicating with dev server
@@ -224,6 +197,12 @@ export interface EditorProtocol {
 
     // Get comprehensive project information including configuration and contracts
     getProjectInfo(params: GetProjectInfoMessage): Promise<GetProjectInfoResponse>;
+
+    // Export design from vendor (e.g., Figma) to Jay
+    export<TVendorDoc>(params: ExportMessage<TVendorDoc>): Promise<ExportResponse>;
+
+    // Import design from Jay back to vendor
+    import<TVendorDoc>(params: ImportMessage<TVendorDoc>): Promise<ImportResponse<TVendorDoc>>;
 }
 
 // Dev server side interface for handling editor requests
@@ -239,4 +218,10 @@ export interface DevServerProtocol {
 
     // Handle project info requests
     onGetProjectInfo(callback: EditorProtocol['getProjectInfo']): void;
+
+    // Handle vendor export requests
+    onExport(callback: EditorProtocol['export']): void;
+
+    // Handle vendor import requests
+    onImport(callback: EditorProtocol['import']): void;
 }

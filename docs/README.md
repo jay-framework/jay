@@ -40,6 +40,12 @@ Jay enables you to:
 - [CLI Reference](./core/cli.md) - `jay-stack` and `jay-cli` command-line tools
 - [Testing](./core/testing.md) - Smoke tests, CI integration, and test mode
 
+### Design Tool Integration
+
+- [Editor Protocol](./jay-stack-editor-protocol.md) - Connect design tools (Figma, Wix, etc.) to Jay
+- [Project Info API](./jay-stack-project-info-api.md) - Query project structure and contracts
+- [Export/Import API](./jay-stack-editor-protocol.md) - Save and restore vendor-specific designs
+
 ### Advanced Topics
 
 - [State Management](./advanced/state-management.md) - Advanced reactive patterns
@@ -88,7 +94,8 @@ Jay enables you to:
 
 Jay uses contracts to define the interface between design tools and components. This enables:
 
-- **Design tool integration** - Connect Figma, Sketch, or other design tools
+- **Design tool integration** - Connect Figma, Wix, or other design tools via the Editor Protocol
+- **Bidirectional sync** - Export designs to Jay and import them back to your design tool
 - **Component reusability** - Use the same component with different designs
 - **Type safety** - Automatic TypeScript generation from contracts
 

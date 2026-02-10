@@ -5,12 +5,15 @@ import type {
     SaveImageMessage,
     HasImageMessage,
     GetProjectInfoMessage,
+    ExportMessage,
+    ImportMessage,
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
     GetProjectInfoResponse,
+    ExportResponse,
+    ImportResponse,
     ProjectInfo,
-    InstalledAppContracts,
     EditorProtocolMessageTypes,
     EditorProtocolResponseTypes,
 } from './protocol';
@@ -45,6 +48,30 @@ export function createHasImageMessage(imageId: string): HasImageMessage {
 export function createGetProjectInfoMessage(): GetProjectInfoMessage {
     return {
         type: 'getProjectInfo',
+    };
+}
+
+export function createExportMessage<TVendorDoc>(
+    vendorId: string,
+    pageUrl: string,
+    vendorDoc: TVendorDoc,
+): ExportMessage<TVendorDoc> {
+    return {
+        type: 'export',
+        vendorId,
+        pageUrl,
+        vendorDoc,
+    };
+}
+
+export function createImportMessage<TVendorDoc>(
+    vendorId: string,
+    pageUrl: string,
+): ImportMessage<TVendorDoc> {
+    return {
+        type: 'import',
+        vendorId,
+        pageUrl,
     };
 }
 
@@ -92,6 +119,38 @@ export function createGetProjectInfoResponse(
     };
 }
 
+export function createExportResponse(
+    success: boolean,
+    vendorSourcePath?: string,
+    jayHtmlPath?: string,
+    contractPath?: string,
+    warnings?: string[],
+    error?: string,
+): ExportResponse {
+    return {
+        type: 'export',
+        success,
+        vendorSourcePath,
+        jayHtmlPath,
+        contractPath,
+        warnings,
+        error,
+    };
+}
+
+export function createImportResponse<TVendorDoc>(
+    success: boolean,
+    vendorDoc?: TVendorDoc,
+    error?: string,
+): ImportResponse<TVendorDoc> {
+    return {
+        type: 'import',
+        success,
+        vendorDoc,
+        error,
+    };
+}
+
 // Simple ID generator using timestamp + random number
 let messageIdCounter = 0;
 function generateMessageId(): string {
@@ -101,7 +160,9 @@ function generateMessageId(): string {
 }
 
 // Protocol wrapper constructors
-export function createProtocolMessage(payload: EditorProtocolMessageTypes): ProtocolMessage {
+export function createProtocolMessage<TVendorDoc>(
+    payload: EditorProtocolMessageTypes<TVendorDoc>,
+): ProtocolMessage<TVendorDoc> {
     return {
         id: generateMessageId(),
         timestamp: Date.now(),
@@ -109,10 +170,10 @@ export function createProtocolMessage(payload: EditorProtocolMessageTypes): Prot
     };
 }
 
-export function createProtocolResponse(
+export function createProtocolResponse<TVendorDoc>(
     id: string,
-    payload: EditorProtocolResponseTypes,
-): ProtocolResponse {
+    payload: EditorProtocolResponseTypes<TVendorDoc>,
+): ProtocolResponse<TVendorDoc> {
     return {
         id,
         timestamp: Date.now(),

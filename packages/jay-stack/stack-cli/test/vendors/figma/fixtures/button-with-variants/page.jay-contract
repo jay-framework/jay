@@ -1,0 +1,9 @@
+name: page
+tags:
+  - tag: buttonVariant
+    type: variant
+    dataType: string
+    
+  - tag: isDisabled
+    type: variant
+    dataType: boolean

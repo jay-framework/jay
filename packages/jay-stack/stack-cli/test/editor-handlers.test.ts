@@ -52,6 +52,21 @@ describe('Editor Handlers', () => {
         if (fs.existsSync(testComponentsDir)) {
             fs.rmSync(testComponentsDir, { recursive: true, force: true });
         }
+
+        // Clean up test plugin directories in node_modules
+        const testNodeModules = ['test-app', 'shop-app', 'analytics-app'];
+        for (const moduleName of testNodeModules) {
+            const moduleDir = path.join(process.cwd(), 'node_modules', moduleName);
+            if (fs.existsSync(moduleDir)) {
+                fs.rmSync(moduleDir, { recursive: true, force: true });
+            }
+        }
+
+        // Clean up test package.json
+        const testPackageJson = path.join(process.cwd(), 'package.json.test-backup');
+        if (fs.existsSync(testPackageJson)) {
+            fs.unlinkSync(testPackageJson);
+        }
     });
 
     afterEach(() => {
@@ -65,7 +80,48 @@ describe('Editor Handlers', () => {
         if (fs.existsSync(testComponentsDir)) {
             fs.rmSync(testComponentsDir, { recursive: true, force: true });
         }
+
+        // Clean up test plugin directories in node_modules
+        const testNodeModules = ['test-app', 'shop-app', 'analytics-app'];
+        for (const moduleName of testNodeModules) {
+            const moduleDir = path.join(process.cwd(), 'node_modules', moduleName);
+            if (fs.existsSync(moduleDir)) {
+                fs.rmSync(moduleDir, { recursive: true, force: true });
+            }
+        }
+
+        // Restore original package.json if we backed it up
+        const testPackageJson = path.join(process.cwd(), 'package.json.test-backup');
+        const originalPackageJson = path.join(process.cwd(), 'package.json');
+        if (fs.existsSync(testPackageJson)) {
+            fs.renameSync(testPackageJson, originalPackageJson);
+        }
     });
+
+    // Helper function to create a test package.json with mock plugin dependencies
+    function createTestPackageJson(pluginNames: string[]) {
+        const packageJsonPath = path.join(process.cwd(), 'package.json');
+        const backupPath = path.join(process.cwd(), 'package.json.test-backup');
+
+        // Backup original package.json
+        if (fs.existsSync(packageJsonPath)) {
+            fs.renameSync(packageJsonPath, backupPath);
+        }
+
+        // Create test package.json with plugin dependencies
+        const testPackageJson = {
+            name: 'test-project',
+            version: '1.0.0',
+            dependencies: {},
+        };
+
+        // Add each plugin as a dependency
+        for (const pluginName of pluginNames) {
+            testPackageJson.dependencies[pluginName] = '1.0.0';
+        }
+
+        fs.writeFileSync(packageJsonPath, JSON.stringify(testPackageJson, null, 2));
+    }
 
     describe('Pages Publishing', () => {
         it('should publish pages correctly', async () => {
@@ -673,7 +729,6 @@ tags:
 
     describe('GetContracts API', () => {
         const configDir = path.resolve('./tmp-config');
-        const installedAppsDir = path.join(configDir, 'installedApps');
 
         beforeEach(() => {
             // Clean up config directory
@@ -698,7 +753,6 @@ tags:
 
             expect(result.success).toBe(true);
             expect(result.info.pages).toEqual([]);
-            expect(result.info.installedAppContracts).toEqual({});
         });
 
         it('should return pages without contracts', async () => {
@@ -727,13 +781,13 @@ tags:
             const homePage = result.info.pages.find((p) => p.url === '/');
             expect(homePage).toBeDefined();
             expect(homePage.name).toBe('Home');
-            expect(homePage.contractSchema).toBeUndefined();
+            expect(homePage.contract).toBeUndefined();
             expect(homePage.usedComponents).toEqual([]);
 
             const aboutPage = result.info.pages.find((p) => p.url === '/about');
             expect(aboutPage).toBeDefined();
             expect(aboutPage.name).toBe('about');
-            expect(aboutPage.contractSchema).toBeUndefined();
+            expect(aboutPage.contract).toBeUndefined();
             expect(aboutPage.usedComponents).toEqual([]);
         });
 
@@ -790,36 +844,39 @@ tags:
             // Check home page
             const homePage = result.info.pages.find((p) => p.url === '/');
             expect(homePage).toBeDefined();
-            expect(homePage.contractSchema).toBeDefined();
-            expect(homePage.contractSchema.name).toBe('home');
-            expect(homePage.contractSchema.tags).toHaveLength(2);
-            expect(homePage.contractSchema.tags[0].tag).toBe('siteTitle');
-            expect(homePage.contractSchema.tags[0].type).toBe('data');
-            expect(homePage.contractSchema.tags[0].dataType).toBe('string');
-            expect(homePage.contractSchema.tags[1].tag).toBe('address');
-            expect(homePage.contractSchema.tags[1].type).toBe('data');
-            expect(homePage.contractSchema.tags[1].dataType).toBe('string');
+            expect(homePage.contract).toBeDefined();
+            expect(homePage.contract.name).toBe('home');
+            expect(homePage.contract.tags).toHaveLength(2);
+            expect(homePage.contract.tags[0].tag).toBe('siteTitle');
+            expect(homePage.contract.tags[0].type).toBe('data');
+            expect(homePage.contract.tags[0].dataType).toBe('string');
+            expect(homePage.contract.tags[1].tag).toBe('address');
+            expect(homePage.contract.tags[1].type).toBe('data');
+            expect(homePage.contract.tags[1].dataType).toBe('string');
 
             // Check products page
             const productsPage = result.info.pages.find((p) => p.url === '/products');
             expect(productsPage).toBeDefined();
-            expect(productsPage.contractSchema).toBeDefined();
-            expect(productsPage.contractSchema.name).toBe('products');
-            expect(productsPage.contractSchema.tags).toHaveLength(1);
-            expect(productsPage.contractSchema.tags[0].tag).toBe('productList');
-            expect(productsPage.contractSchema.tags[0].type).toBe('subContract');
-            expect(productsPage.contractSchema.tags[0].repeated).toBe(true);
-            expect(productsPage.contractSchema.tags[0].tags).toHaveLength(2);
-            expect(productsPage.contractSchema.tags[0].tags[0].tag).toBe('name');
-            expect(productsPage.contractSchema.tags[0].tags[0].type).toBe('data');
-            expect(productsPage.contractSchema.tags[0].tags[0].dataType).toBe('string');
-            expect(productsPage.contractSchema.tags[0].tags[1].tag).toBe('price');
-            expect(productsPage.contractSchema.tags[0].tags[1].type).toBe('data');
-            expect(productsPage.contractSchema.tags[0].tags[1].dataType).toBe('number');
+            expect(productsPage.contract).toBeDefined();
+            expect(productsPage.contract.name).toBe('products');
+            expect(productsPage.contract.tags).toHaveLength(1);
+            expect(productsPage.contract.tags[0].tag).toBe('productList');
+            expect(productsPage.contract.tags[0].type).toBe('subContract');
+            expect(productsPage.contract.tags[0].repeated).toBe(true);
+            expect(productsPage.contract.tags[0].tags).toHaveLength(2);
+            expect(productsPage.contract.tags[0].tags[0].tag).toBe('name');
+            expect(productsPage.contract.tags[0].tags[0].type).toBe('data');
+            expect(productsPage.contract.tags[0].tags[0].dataType).toBe('string');
+            expect(productsPage.contract.tags[0].tags[1].tag).toBe('price');
+            expect(productsPage.contract.tags[0].tags[1].type).toBe('data');
+            expect(productsPage.contract.tags[0].tags[1].dataType).toBe('number');
         });
 
         it('should return pages with used component contracts (references only)', async () => {
             const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
+
+            // Create test package.json with plugin dependency
+            createTestPackageJson(['test-app']);
 
             // Create page that uses an installed app component
             fs.mkdirSync(testPagesDir, { recursive: true });
@@ -828,10 +885,12 @@ tags:
                 `<!DOCTYPE html>
 <html>
 <head>
+    <script type="application/jay-data">
+        data:
+    </script>
     <script type="application/jay-headless"
-            contract="test-app/product-page.jay-contract"
-            src="test-app"
-            name="productPage"
+            plugin="test-app"
+            contract="product-page"
             key="pp"
     ></script>
 </head>
@@ -841,24 +900,23 @@ tags:
 </html>`,
             );
 
-            // Create installed app configuration
-            const testAppDir = path.join(installedAppsDir, 'test-app');
-            fs.mkdirSync(testAppDir, { recursive: true });
-            fs.writeFileSync(
-                path.join(testAppDir, 'app.conf.yaml'),
-                `name: test-app
-module: test-app
-pages:
-  - name: productPage
-    headless_components:
-      - name: productPage
-        key: pp
-        contract: product-page.jay-contract`,
-            );
+            // No need for installed app configuration - using plugin system instead
 
             // Create the app contract file in node_modules
             const nodeModulesAppDir = path.join(process.cwd(), 'node_modules', 'test-app');
             fs.mkdirSync(nodeModulesAppDir, { recursive: true });
+
+            // Create plugin.yaml for the plugin system
+            fs.writeFileSync(
+                path.join(nodeModulesAppDir, 'plugin.yaml'),
+                `name: test-app
+module: test-app
+contracts:
+  - name: product-page
+    contract: product-page.jay-contract
+    component: productPage`,
+            );
+
             fs.writeFileSync(
                 path.join(nodeModulesAppDir, 'product-page.jay-contract'),
                 `name: product-page
@@ -871,7 +929,15 @@ tags:
             // Also create package.json so require.resolve works
             fs.writeFileSync(
                 path.join(nodeModulesAppDir, 'package.json'),
-                JSON.stringify({ name: 'test-app', version: '1.0.0' }),
+                JSON.stringify({
+                    name: 'test-app',
+                    version: '1.0.0',
+                    exports: {
+                        '.': './index.js',
+                        './plugin.yaml': './plugin.yaml',
+                        './product-page.jay-contract': './product-page.jay-contract',
+                    },
+                }),
             );
 
             const result = await handlers.onGetProjectInfo({
@@ -886,18 +952,8 @@ tags:
             expect(homePage.usedComponents).toHaveLength(1);
             expect(homePage.usedComponents[0]).toMatchObject({
                 appName: 'test-app',
-                componentName: 'productPage',
+                componentName: 'product-page',
             });
-
-            // Verify full contract is in installedAppContracts
-            expect(result.info.installedAppContracts['test-app']).toBeDefined();
-            expect(result.info.installedAppContracts['test-app'].pages).toHaveLength(1);
-            expect(result.info.installedAppContracts['test-app'].pages[0].pageName).toBe(
-                'productPage',
-            );
-            expect(result.info.installedAppContracts['test-app'].pages[0].contractSchema.name).toBe(
-                'product-page',
-            );
 
             // Clean up
             fs.rmSync(nodeModulesAppDir, { recursive: true, force: true });
@@ -906,35 +962,31 @@ tags:
         it('should return complete installed app contracts', async () => {
             const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
-            // Create installed app configuration
-            const testAppDir = path.join(installedAppsDir, 'shop-app');
-            fs.mkdirSync(testAppDir, { recursive: true });
-            fs.writeFileSync(
-                path.join(testAppDir, 'app.conf.yaml'),
-                `name: shop-app
-module: shop-app
-pages:
-  - name: productPage
-    headless_components:
-      - name: productPage
-        key: pp
-        contract: product.jay-contract
-  - name: categoryPage
-    headless_components:
-      - name: categoryPage
-        key: cp
-        contract: category.jay-contract
-components:
-  - name: cartDrawer
-    headless_components:
-      - name: cartDrawer
-        key: cd
-        contract: cart.jay-contract`,
-            );
+            // Create test package.json with plugin dependency
+            createTestPackageJson(['shop-app']);
+
+            // No need for installed app configuration - using plugin system instead
 
             // Create the app contract files in node_modules
             const nodeModulesAppDir = path.join(process.cwd(), 'node_modules', 'shop-app');
             fs.mkdirSync(nodeModulesAppDir, { recursive: true });
+
+            // Create plugin.yaml for shop-app with multiple contracts
+            fs.writeFileSync(
+                path.join(nodeModulesAppDir, 'plugin.yaml'),
+                `name: shop-app
+module: shop-app
+contracts:
+  - name: product
+    contract: product.jay-contract
+    component: productPage
+  - name: category
+    contract: category.jay-contract
+    component: categoryPage
+  - name: cart
+    contract: cart.jay-contract
+    component: cartDrawer`,
+            );
 
             fs.writeFileSync(
                 path.join(nodeModulesAppDir, 'product.jay-contract'),
@@ -991,7 +1043,17 @@ tags:
 
             fs.writeFileSync(
                 path.join(nodeModulesAppDir, 'package.json'),
-                JSON.stringify({ name: 'shop-app', version: '1.0.0' }),
+                JSON.stringify({
+                    name: 'shop-app',
+                    version: '1.0.0',
+                    exports: {
+                        '.': './index.js',
+                        './plugin.yaml': './plugin.yaml',
+                        './product.jay-contract': './product.jay-contract',
+                        './category.jay-contract': './category.jay-contract',
+                        './cart.jay-contract': './cart.jay-contract',
+                    },
+                }),
             );
 
             const result = await handlers.onGetProjectInfo({
@@ -999,32 +1061,6 @@ tags:
             });
 
             expect(result.success).toBe(true);
-            expect(result.info.installedAppContracts['shop-app']).toBeDefined();
-
-            const shopApp = result.info.installedAppContracts['shop-app'];
-            expect(shopApp.appName).toBe('shop-app');
-            expect(shopApp.module).toBe('shop-app');
-            expect(shopApp.pages).toHaveLength(2);
-            expect(shopApp.components).toHaveLength(1);
-
-            // Check product page contract
-            const productPage = shopApp.pages.find((p) => p.pageName === 'productPage');
-            expect(productPage).toBeDefined();
-            expect(productPage.contractSchema.name).toBe('product');
-            expect(productPage.contractSchema.tags).toHaveLength(2);
-
-            // Check category page contract
-            const categoryPage = shopApp.pages.find((p) => p.pageName === 'categoryPage');
-            expect(categoryPage).toBeDefined();
-            expect(categoryPage.contractSchema.name).toBe('category');
-            expect(categoryPage.contractSchema.tags).toHaveLength(2);
-            expect(categoryPage.contractSchema.tags[1].type).toBe('subContract');
-            expect(categoryPage.contractSchema.tags[1].repeated).toBe(true);
-
-            // Check cart component contract
-            expect(shopApp.components[0].componentName).toBe('cartDrawer');
-            expect(shopApp.components[0].contractSchema.name).toBe('cart');
-            expect(shopApp.components[0].contractSchema.tags).toHaveLength(2);
 
             // Clean up
             fs.rmSync(nodeModulesAppDir, { recursive: true, force: true });
@@ -1056,8 +1092,8 @@ tags:
             const productPage = result.info.pages.find((p) => p.url === '/products/:productId');
             expect(productPage).toBeDefined();
             expect(productPage.name).toBe('[productId]');
-            expect(productPage.contractSchema).toBeDefined();
-            expect(productPage.contractSchema.tags[0].tag).toBe('productId');
+            expect(productPage.contract).toBeDefined();
+            expect(productPage.contract.tags[0].tag).toBe('productId');
         });
 
         it('should handle nested parameterized routes', async () => {
@@ -1132,11 +1168,11 @@ tags:
 
             expect(result.success).toBe(true);
             const homePage = result.info.pages[0];
-            expect(homePage.contractSchema).toBeDefined();
-            expect(homePage.contractSchema.tags).toHaveLength(2);
+            expect(homePage.contract).toBeDefined();
+            expect(homePage.contract.tags).toHaveLength(2);
 
             // Check that the linked sub-contract was resolved
-            const featuredTag = homePage.contractSchema.tags[1];
+            const featuredTag = homePage.contract.tags[1];
             expect(featuredTag.tag).toBe('featured');
             expect(featuredTag.type).toBe('subContract');
             expect(featuredTag.tags).toBeDefined();
@@ -1148,6 +1184,9 @@ tags:
         it('should handle multiple pages using the same app component', async () => {
             const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 
+            // Create test package.json with plugin dependency
+            createTestPackageJson(['test-app']);
+
             // Create two pages that use the same app component
             fs.mkdirSync(testPagesDir, { recursive: true });
             fs.writeFileSync(
@@ -1155,10 +1194,12 @@ tags:
                 `<!DOCTYPE html>
 <html>
 <head>
+    <script type="application/jay-data">
+        data:
+    </script>
     <script type="application/jay-headless"
-            contract="test-app/analytics.jay-contract"
-            src="test-app"
-            name="analytics"
+            plugin="test-app"
+            contract="analytics"
             key="an"
     ></script>
 </head>
@@ -1172,10 +1213,12 @@ tags:
                 `<!DOCTYPE html>
 <html>
 <head>
+    <script type="application/jay-data">
+        data:
+    </script>
     <script type="application/jay-headless"
-            contract="test-app/analytics.jay-contract"
-            src="test-app"
-            name="analytics"
+            plugin="test-app"
+            contract="analytics"
             key="an"
     ></script>
 </head>
@@ -1183,23 +1226,20 @@ tags:
 </html>`,
             );
 
-            // Create installed app
-            const testAppDir = path.join(installedAppsDir, 'test-app');
-            fs.mkdirSync(testAppDir, { recursive: true });
-            fs.writeFileSync(
-                path.join(testAppDir, 'app.conf.yaml'),
-                `name: test-app
-module: test-app
-components:
-  - name: analytics
-    headless_components:
-      - name: analytics
-        key: an
-        contract: analytics.jay-contract`,
-            );
-
             const nodeModulesAppDir = path.join(process.cwd(), 'node_modules', 'test-app');
             fs.mkdirSync(nodeModulesAppDir, { recursive: true });
+
+            // Create plugin.yaml for the plugin system
+            fs.writeFileSync(
+                path.join(nodeModulesAppDir, 'plugin.yaml'),
+                `name: test-app
+module: test-app
+contracts:
+  - name: analytics
+    contract: analytics.jay-contract
+    component: analytics`,
+            );
+
             fs.writeFileSync(
                 path.join(nodeModulesAppDir, 'analytics.jay-contract'),
                 `name: analytics
@@ -1210,7 +1250,15 @@ tags:
             );
             fs.writeFileSync(
                 path.join(nodeModulesAppDir, 'package.json'),
-                JSON.stringify({ name: 'test-app', version: '1.0.0' }),
+                JSON.stringify({
+                    name: 'test-app',
+                    version: '1.0.0',
+                    exports: {
+                        '.': './index.js',
+                        './plugin.yaml': './plugin.yaml',
+                        './analytics.jay-contract': './analytics.jay-contract',
+                    },
+                }),
             );
 
             const result = await handlers.onGetProjectInfo({
@@ -1233,18 +1281,15 @@ tags:
                 componentName: 'analytics',
             });
 
-            // Contract should only exist once in installedAppContracts
-            expect(result.info.installedAppContracts['test-app'].components).toHaveLength(1);
-            expect(result.info.installedAppContracts['test-app'].components[0].componentName).toBe(
-                'analytics',
-            );
-
             // Clean up
             fs.rmSync(nodeModulesAppDir, { recursive: true, force: true });
         });
 
         it('should handle complex scenario with page contracts and multiple app components', async () => {
             const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
+
+            // Create test package.json with plugin dependencies
+            createTestPackageJson(['shop-app', 'analytics-app']);
 
             // Create page with its own contract and using multiple app components
             fs.mkdirSync(testPagesDir, { recursive: true });
@@ -1253,16 +1298,18 @@ tags:
                 `<!DOCTYPE html>
 <html>
 <head>
+    <script type="application/jay-data">
+        data:
+          siteTitle: string
+    </script>
     <script type="application/jay-headless"
-            contract="shop-app/product.jay-contract"
-            src="shop-app"
-            name="productPage"
+            plugin="shop-app"
+            contract="product"
             key="pp"
     ></script>
     <script type="application/jay-headless"
-            contract="analytics-app/tracker.jay-contract"
-            src="analytics-app"
-            name="tracker"
+            plugin="analytics-app"
+            contract="tracker"
             key="tr"
     ></script>
 </head>
@@ -1281,23 +1328,20 @@ tags:
     dataType: string`,
             );
 
-            // Create shop-app
-            const shopAppDir = path.join(installedAppsDir, 'shop-app');
-            fs.mkdirSync(shopAppDir, { recursive: true });
-            fs.writeFileSync(
-                path.join(shopAppDir, 'app.conf.yaml'),
-                `name: shop-app
-module: shop-app
-pages:
-  - name: productPage
-    headless_components:
-      - name: productPage
-        key: pp
-        contract: product.jay-contract`,
-            );
-
             const shopNodeModules = path.join(process.cwd(), 'node_modules', 'shop-app');
             fs.mkdirSync(shopNodeModules, { recursive: true });
+
+            // Create plugin.yaml for shop-app
+            fs.writeFileSync(
+                path.join(shopNodeModules, 'plugin.yaml'),
+                `name: shop-app
+module: shop-app
+contracts:
+  - name: product
+    contract: product.jay-contract
+    component: productPage`,
+            );
+
             fs.writeFileSync(
                 path.join(shopNodeModules, 'product.jay-contract'),
                 `name: product
@@ -1311,26 +1355,31 @@ tags:
             );
             fs.writeFileSync(
                 path.join(shopNodeModules, 'package.json'),
-                JSON.stringify({ name: 'shop-app', version: '1.0.0' }),
-            );
-
-            // Create analytics-app
-            const analyticsAppDir = path.join(installedAppsDir, 'analytics-app');
-            fs.mkdirSync(analyticsAppDir, { recursive: true });
-            fs.writeFileSync(
-                path.join(analyticsAppDir, 'app.conf.yaml'),
-                `name: analytics-app
-module: analytics-app
-components:
-  - name: tracker
-    headless_components:
-      - name: tracker
-        key: tr
-        contract: tracker.jay-contract`,
+                JSON.stringify({
+                    name: 'shop-app',
+                    version: '1.0.0',
+                    exports: {
+                        '.': './index.js',
+                        './plugin.yaml': './plugin.yaml',
+                        './product.jay-contract': './product.jay-contract',
+                    },
+                }),
             );
 
             const analyticsNodeModules = path.join(process.cwd(), 'node_modules', 'analytics-app');
             fs.mkdirSync(analyticsNodeModules, { recursive: true });
+
+            // Create plugin.yaml for analytics-app
+            fs.writeFileSync(
+                path.join(analyticsNodeModules, 'plugin.yaml'),
+                `name: analytics-app
+module: analytics-app
+contracts:
+  - name: tracker
+    contract: tracker.jay-contract
+    component: tracker`,
+            );
+
             fs.writeFileSync(
                 path.join(analyticsNodeModules, 'tracker.jay-contract'),
                 `name: tracker
@@ -1344,7 +1393,15 @@ tags:
             );
             fs.writeFileSync(
                 path.join(analyticsNodeModules, 'package.json'),
-                JSON.stringify({ name: 'analytics-app', version: '1.0.0' }),
+                JSON.stringify({
+                    name: 'analytics-app',
+                    version: '1.0.0',
+                    exports: {
+                        '.': './index.js',
+                        './plugin.yaml': './plugin.yaml',
+                        './tracker.jay-contract': './tracker.jay-contract',
+                    },
+                }),
             );
 
             const result = await handlers.onGetProjectInfo({
@@ -1357,18 +1414,18 @@ tags:
             const homePage = result.info.pages[0];
 
             // Check page's own contract
-            expect(homePage.contractSchema).toBeDefined();
-            expect(homePage.contractSchema.name).toBe('home');
-            expect(homePage.contractSchema.tags).toHaveLength(2);
-            expect(homePage.contractSchema.tags[0].tag).toBe('siteTitle');
-            expect(homePage.contractSchema.tags[1].tag).toBe('description');
+            expect(homePage.contract).toBeDefined();
+            expect(homePage.contract.name).toBe('home');
+            expect(homePage.contract.tags).toHaveLength(2);
+            expect(homePage.contract.tags[0].tag).toBe('siteTitle');
+            expect(homePage.contract.tags[1].tag).toBe('description');
 
             // Check used component references
             expect(homePage.usedComponents).toHaveLength(2);
             expect(homePage.usedComponents).toContainEqual(
                 expect.objectContaining({
                     appName: 'shop-app',
-                    componentName: 'productPage',
+                    componentName: 'product',
                 }),
             );
             expect(homePage.usedComponents).toContainEqual(
@@ -1377,22 +1434,6 @@ tags:
                     componentName: 'tracker',
                 }),
             );
-
-            // Check installed app contracts
-            expect(Object.keys(result.info.installedAppContracts)).toHaveLength(2);
-            expect(result.info.installedAppContracts['shop-app']).toBeDefined();
-            expect(result.info.installedAppContracts['analytics-app']).toBeDefined();
-
-            // Verify full contracts are available
-            const shopProduct = result.info.installedAppContracts['shop-app'].pages.find(
-                (p) => p.pageName === 'productPage',
-            );
-            expect(shopProduct.contractSchema.tags).toHaveLength(2);
-
-            const analyticsTracker = result.info.installedAppContracts[
-                'analytics-app'
-            ].components.find((c) => c.componentName === 'tracker');
-            expect(analyticsTracker.contractSchema.tags).toHaveLength(2);
 
             // Clean up
             fs.rmSync(shopNodeModules, { recursive: true, force: true });

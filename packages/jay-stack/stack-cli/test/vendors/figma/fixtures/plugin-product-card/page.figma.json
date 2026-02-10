@@ -1,0 +1,149 @@
+{
+  "id": "section-1",
+  "name": "Product Card Page",
+  "type": "SECTION",
+  "visible": true,
+  "locked": false,
+  "parentId": "page-1",
+  "parentType": "PAGE",
+  "x": 0,
+  "y": 0,
+  "width": 1440,
+  "height": 900,
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/products/:id"
+  },
+  "fills": [],
+  "children": [
+    {
+      "id": "frame-1",
+      "name": "Product Card",
+      "type": "FRAME",
+      "visible": true,
+      "locked": false,
+      "parentId": "section-1",
+      "parentType": "SECTION",
+      "x": 100,
+      "y": 100,
+      "width": 300,
+      "height": 400,
+      "layoutMode": "VERTICAL",
+      "primaryAxisAlignItems": "MIN",
+      "counterAxisAlignItems": "MIN",
+      "itemSpacing": 16,
+      "paddingLeft": 20,
+      "paddingRight": 20,
+      "paddingTop": 20,
+      "paddingBottom": 20,
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          }
+        }
+      ],
+      "strokes": [],
+      "cornerRadius": 8,
+      "children": [
+        {
+          "id": "product-image",
+          "name": "image",
+          "type": "RECTANGLE",
+          "visible": true,
+          "locked": false,
+          "parentId": "frame-1",
+          "parentType": "FRAME",
+          "x": 0,
+          "y": 0,
+          "width": 260,
+          "height": 200,
+          "pluginData": {
+            "semanticHtml": "img",
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/products/:id\",\"pluginName\":\"test-product\",\"componentName\":\"product-card\"},\"jayPageSectionId\":\"section-1\",\"tagPath\":[\"/products/:id|test-product.product-card\",\"image\"],\"attribute\":\"src\"}]"
+          },
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0.9,
+                "g": 0.9,
+                "b": 0.9
+              }
+            }
+          ],
+          "cornerRadius": 4
+        },
+        {
+          "id": "product-name",
+          "name": "name",
+          "type": "TEXT",
+          "characters": "Product Name",
+          "visible": true,
+          "locked": false,
+          "parentId": "frame-1",
+          "parentType": "FRAME",
+          "x": 0,
+          "y": 216,
+          "width": 260,
+          "height": 30,
+          "fontName": {
+            "family": "Inter",
+            "style": "Bold"
+          },
+          "fontSize": 24,
+          "fontWeight": 700,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0,
+                "g": 0,
+                "b": 0
+              }
+            }
+          ],
+          "pluginData": {
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/products/:id\",\"pluginName\":\"test-product\",\"componentName\":\"product-card\"},\"jayPageSectionId\":\"section-1\",\"tagPath\":[\"/products/:id|test-product.product-card\",\"name\"],\"binding\":\"dynamic-content\"}]"
+          }
+        },
+        {
+          "id": "product-price",
+          "name": "price",
+          "type": "TEXT",
+          "characters": "$99.99",
+          "visible": true,
+          "locked": false,
+          "parentId": "frame-1",
+          "parentType": "FRAME",
+          "x": 0,
+          "y": 262,
+          "width": 260,
+          "height": 24,
+          "fontName": {
+            "family": "Inter",
+            "style": "Regular"
+          },
+          "fontSize": 18,
+          "fontWeight": 400,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0.3,
+                "g": 0.3,
+                "b": 0.3
+              }
+            }
+          ],
+          "pluginData": {
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/products/:id\",\"pluginName\":\"test-product\",\"componentName\":\"product-card\"},\"jayPageSectionId\":\"section-1\",\"tagPath\":[\"/products/:id|test-product.product-card\",\"price\"],\"binding\":\"dynamic-content\"}]"
+          }
+        }
+      ]
+    }
+  ]
+}

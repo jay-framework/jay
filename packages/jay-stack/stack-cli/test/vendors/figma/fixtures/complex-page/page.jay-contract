@@ -1,0 +1,33 @@
+name: page
+tags:
+  - tag: product
+    type: sub-contract
+    tags:
+      - tag: image
+        type: data
+        dataType: string
+        
+      - tag: name
+        type: data
+        dataType: string
+        
+      - tag: price
+        type: data
+        dataType: string
+        
+      - tag: reviews
+        type: sub-contract
+        repeated: true
+        trackBy: id
+        tags:
+          - tag: id
+            type: data
+            dataType: string
+            
+          - tag: author
+            type: data
+            dataType: string
+            
+          - tag: comment
+            type: data
+            dataType: string

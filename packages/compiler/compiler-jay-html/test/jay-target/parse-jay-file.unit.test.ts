@@ -72,6 +72,11 @@ describe('compiler', () => {
                 `Plugin contract loading not supported in this test`,
             ]);
         },
+        resolvePluginManifest(pluginName: string, projectRoot: string) {
+            return new WithValidations(null as any, [
+                `Plugin manifest resolution not supported in this test`,
+            ]);
+        },
     };
 
     function jayFileWith(jayYaml, body, scripts?) {

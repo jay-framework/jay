@@ -1,0 +1,149 @@
+{
+  "id": "section-1",
+  "name": "Complex Page",
+  "type": "SECTION",
+  "x": 0,
+  "y": 0,
+  "width": 1440,
+  "height": 900,
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/products/:id"
+  },
+  "children": [
+    {
+      "id": "page-frame",
+      "name": "Product Page",
+      "type": "FRAME",
+      "x": 0,
+      "y": 0,
+      "width": 1200,
+      "height": 800,
+      "layoutMode": "VERTICAL",
+      "children": [
+        {
+          "id": "hero-image",
+          "name": "Hero Image",
+          "type": "FRAME",
+          "x": 0,
+          "y": 0,
+          "width": 1200,
+          "height": 400,
+          "fills": [
+            {
+              "type": "IMAGE",
+              "imageHash": "abc123",
+              "scaleMode": "FILL"
+            }
+          ],
+          "pluginData": {
+            "jay-layer-bindings": "[{\"tagPath\":[\"product\",\"image\"],\"attribute\":\"src\",\"pageContractPath\":{\"pageUrl\":\"/products/:id\"}}]"
+          }
+        },
+        {
+          "id": "product-title",
+          "name": "Product Title",
+          "type": "TEXT",
+          "characters": "Product Name",
+          "x": 0,
+          "y": 420,
+          "width": 1000,
+          "height": 60,
+          "fontName": {
+            "family": "Roboto",
+            "style": "Bold"
+          },
+          "fontSize": 48,
+          "fontWeight": 700,
+          "pluginData": {
+            "jay-layer-bindings": "[{\"tagPath\":[\"product\",\"name\"],\"pageContractPath\":{\"pageUrl\":\"/products/:id\"}}]"
+          }
+        },
+        {
+          "id": "product-price",
+          "name": "Price",
+          "type": "TEXT",
+          "characters": "$99.99",
+          "x": 0,
+          "y": 490,
+          "width": 200,
+          "height": 40,
+          "fontName": {
+            "family": "Roboto",
+            "style": "Medium"
+          },
+          "fontSize": 32,
+          "fontWeight": 500,
+          "pluginData": {
+            "jay-layer-bindings": "[{\"tagPath\":[\"product\",\"price\"],\"pageContractPath\":{\"pageUrl\":\"/products/:id\"}}]"
+          }
+        },
+        {
+          "id": "reviews-repeater",
+          "name": "Reviews",
+          "type": "FRAME",
+          "x": 0,
+          "y": 550,
+          "width": 1200,
+          "height": 200,
+          "layoutMode": "VERTICAL",
+          "pluginData": {
+            "jay-layer-bindings": "[{\"tagPath\":[\"product\",\"reviews\"],\"pageContractPath\":{\"pageUrl\":\"/products/:id\"}}]"
+          },
+          "children": [
+            {
+              "id": "review-card",
+              "name": "Review",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 1200,
+              "height": 80,
+              "layoutMode": "VERTICAL",
+              "children": [
+                {
+                  "id": "reviewer-name",
+                  "name": "Name",
+                  "type": "TEXT",
+                  "characters": "John Doe",
+                  "x": 0,
+                  "y": 0,
+                  "width": 300,
+                  "height": 24,
+                  "fontName": {
+                    "family": "Roboto",
+                    "style": "SemiBold"
+                  },
+                  "fontSize": 18,
+                  "fontWeight": 600,
+                  "pluginData": {
+                    "jay-layer-bindings": "[{\"tagPath\":[\"product\",\"reviews\",\"author\"],\"pageContractPath\":{\"pageUrl\":\"/products/:id\"}}]"
+                  }
+                },
+                {
+                  "id": "review-text",
+                  "name": "Comment",
+                  "type": "TEXT",
+                  "characters": "Great product!",
+                  "x": 0,
+                  "y": 30,
+                  "width": 1000,
+                  "height": 40,
+                  "fontName": {
+                    "family": "Roboto",
+                    "style": "Regular"
+                  },
+                  "fontSize": 14,
+                  "fontWeight": 400,
+                  "pluginData": {
+                    "jay-layer-bindings": "[{\"tagPath\":[\"product\",\"reviews\",\"comment\"],\"pageContractPath\":{\"pageUrl\":\"/products/:id\"}}]"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

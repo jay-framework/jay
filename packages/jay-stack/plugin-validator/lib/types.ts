@@ -1,4 +1,4 @@
-import type { PluginManifest } from '@jay-framework/editor-protocol';
+import type { PluginManifest } from '@jay-framework/compiler-shared';
 
 export interface ValidatePluginOptions {
     pluginPath?: string;

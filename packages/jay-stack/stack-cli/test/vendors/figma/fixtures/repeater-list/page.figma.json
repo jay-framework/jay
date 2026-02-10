@@ -1,0 +1,92 @@
+{
+  "id": "section-1",
+  "name": "Repeater List Page",
+  "type": "SECTION",
+  "x": 0,
+  "y": 0,
+  "width": 1440,
+  "height": 900,
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/"
+  },
+  "children": [
+    {
+      "id": "frame-1",
+      "name": "Content",
+      "type": "FRAME",
+      "x": 0,
+      "y": 0,
+      "width": 600,
+      "height": 800,
+      "layoutMode": "VERTICAL",
+      "children": [
+        {
+          "id": "repeater-frame",
+          "name": "Items Repeater",
+          "type": "FRAME",
+          "x": 0,
+          "y": 0,
+          "width": 600,
+          "height": 600,
+          "layoutMode": "VERTICAL",
+          "pluginData": {
+            "jay-layer-bindings": "[{\"tagPath\":[\"items\"],\"pageContractPath\":{\"pageUrl\":\"/\"}}]"
+          },
+          "children": [
+            {
+              "id": "item-template",
+              "name": "Item",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 600,
+              "height": 80,
+              "layoutMode": "HORIZONTAL",
+              "children": [
+                {
+                  "id": "item-title",
+                  "name": "Title",
+                  "type": "TEXT",
+                  "characters": "Item Title",
+                  "x": 0,
+                  "y": 0,
+                  "width": 400,
+                  "height": 30,
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "SemiBold"
+                  },
+                  "fontSize": 20,
+                  "fontWeight": 600,
+                  "pluginData": {
+                    "jay-layer-bindings": "[{\"tagPath\":[\"items\",\"title\"],\"pageContractPath\":{\"pageUrl\":\"/\"}}]"
+                  }
+                },
+                {
+                  "id": "item-description",
+                  "name": "Description",
+                  "type": "TEXT",
+                  "characters": "Item description text",
+                  "x": 0,
+                  "y": 35,
+                  "width": 400,
+                  "height": 40,
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Regular"
+                  },
+                  "fontSize": 14,
+                  "fontWeight": 400,
+                  "pluginData": {
+                    "jay-layer-bindings": "[{\"tagPath\":[\"items\",\"description\"],\"pageContractPath\":{\"pageUrl\":\"/\"}}]"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

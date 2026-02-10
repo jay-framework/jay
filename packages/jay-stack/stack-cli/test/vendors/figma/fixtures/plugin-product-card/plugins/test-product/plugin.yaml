@@ -1,0 +1,5 @@
+name: test-product
+contracts:
+  - name: product-card
+    contract: ./product-card.jay-contract
+    component: productCard

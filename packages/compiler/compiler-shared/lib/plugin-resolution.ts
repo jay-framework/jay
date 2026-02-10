@@ -6,6 +6,8 @@ import { createRequire } from 'module';
 
 const require = createRequire(import.meta.url);
 
+export const LOCAL_PLUGIN_PATH = 'src/plugins';
+
 /**
  * Plugin initialization configuration.
  *
@@ -108,7 +110,7 @@ export function loadPluginManifest(pluginDir: string): PluginManifest | null {
  * @param contractName - The contract name to match (e.g., "list/recipes-list")
  * @returns The matching DynamicContractConfig or null if not found
  */
-function findDynamicContract(
+export function findDynamicContract(
     manifest: PluginManifest,
     contractName: string,
 ): DynamicContractConfig | null {
@@ -134,19 +136,17 @@ function findDynamicContract(
 }
 
 /**
- * Resolves a plugin component from a local plugin directory (src/plugins/)
+ * Resolves a plugin manifest from a local plugin directory (src/plugins/)
  *
  * @param projectRoot - Project root directory
  * @param pluginName - Name of the plugin
- * @param contractName - Name of the contract to resolve
- * @returns Resolution result with validation messages
+ * @returns Resolution result with validation messages, or null if not found locally
  */
-export function resolveLocalPlugin(
+function resolveLocalPluginManifest(
     projectRoot: string,
     pluginName: string,
-    contractName: string,
-): WithValidations<PluginComponentResolution> | null {
-    const localPluginPath = path.join(projectRoot, 'src/plugins', pluginName);
+): WithValidations<PluginManifest> | null {
+    const localPluginPath = path.join(projectRoot, LOCAL_PLUGIN_PATH, pluginName);
     const pluginYamlPath = path.join(localPluginPath, 'plugin.yaml');
 
     if (!fs.existsSync(localPluginPath)) {
@@ -167,8 +167,41 @@ export function resolveLocalPlugin(
         ]);
     }
 
+    if (!manifest.contracts && !manifest.dynamic_contracts) {
+        return new WithValidations(null as any, [
+            `Local plugin "${pluginName}" has no contracts or dynamic_contracts defined in plugin.yaml`,
+        ]);
+    }
+
+    return new WithValidations(manifest, []);
+}
+
+/**
+ * Resolves a plugin component from a local plugin directory (src/plugins/)
+ *
+ * @param projectRoot - Project root directory
+ * @param pluginName - Name of the plugin
+ * @param contractName - Name of the contract to resolve
+ * @returns Resolution result with validation messages
+ */
+function resolveLocalPlugin(
+    projectRoot: string,
+    pluginName: string,
+    contractName: string,
+): WithValidations<PluginComponentResolution> | null {
+    const manifestWithValidations = resolveLocalPluginManifest(projectRoot, pluginName);
+    if (!manifestWithValidations) {
+        return null;
+    }
+
+    if (!manifestWithValidations.val || manifestWithValidations.validations.length > 0)
+        return new WithValidations(null, manifestWithValidations.validations);
+
+    const manifest = manifestWithValidations.val;
+
     // Component path comes from manifest.module (or defaults to index.js)
     const componentModule = manifest.module || 'index.js';
+    const localPluginPath = path.join(projectRoot, LOCAL_PLUGIN_PATH, pluginName);
     const componentPath = path.join(localPluginPath, componentModule);
 
     // Try to find as static contract first
@@ -204,12 +237,6 @@ export function resolveLocalPlugin(
     }
 
     // No matching contract found
-    if (!manifest.contracts && !manifest.dynamic_contracts) {
-        return new WithValidations(null as any, [
-            `Local plugin "${pluginName}" has no contracts or dynamic_contracts defined in plugin.yaml`,
-        ]);
-    }
-
     const availableContracts = manifest.contracts?.map((c) => c.name) || [];
     const dynamicPrefixes = manifest.dynamic_contracts
         ? (Array.isArray(manifest.dynamic_contracts)
@@ -225,18 +252,16 @@ export function resolveLocalPlugin(
 }
 
 /**
- * Resolves a plugin component from an NPM package (node_modules/)
+ * Resolves a plugin manifest from an NPM package (node_modules/)
  *
  * @param projectRoot - Project root directory
  * @param pluginName - Name of the NPM package
- * @param contractName - Name of the contract to resolve
- * @returns Resolution result with validation messages
+ * @returns Resolution result with validation messages, or null if not found
  */
-export function resolveNpmPlugin(
+function resolveNpmPluginManifest(
     projectRoot: string,
     pluginName: string,
-    contractName: string,
-): WithValidations<PluginComponentResolution> | null {
+): WithValidations<PluginManifest> | null {
     // Use Node's require.resolve to find plugin.yaml directly
     let pluginYamlPath: string;
     try {
@@ -266,7 +291,43 @@ export function resolveNpmPlugin(
         ]);
     }
 
+    if (!manifest.contracts && !manifest.dynamic_contracts) {
+        return new WithValidations(null as any, [
+            `NPM package "${pluginName}" has no contracts or dynamic_contracts defined in plugin.yaml`,
+        ]);
+    }
+
+    return new WithValidations(manifest, []);
+}
+
+/**
+ * Resolves a plugin component from an NPM package (node_modules/)
+ *
+ * @param projectRoot - Project root directory
+ * @param pluginName - Name of the NPM package
+ * @param contractName - Name of the contract to resolve
+ * @returns Resolution result with validation messages
+ */
+function resolveNpmPlugin(
+    projectRoot: string,
+    pluginName: string,
+    contractName: string,
+): WithValidations<PluginComponentResolution> | null {
+    const manifestWithValidations = resolveNpmPluginManifest(projectRoot, pluginName);
+    if (!manifestWithValidations) {
+        return null;
+    }
+
+    if (!manifestWithValidations.val || manifestWithValidations.validations.length > 0)
+        return new WithValidations(null, manifestWithValidations.validations);
+
+    const manifest = manifestWithValidations.val;
+
     // For NPM packages, resolve through package.json exports
+    const pluginYamlPath: string = require.resolve(`${pluginName}/plugin.yaml`, {
+        paths: [projectRoot],
+    });
+    const npmPluginPath = path.dirname(pluginYamlPath);
     const packageJsonPath = path.join(npmPluginPath, 'package.json');
 
     // Helper to get component path from package.json
@@ -359,12 +420,6 @@ export function resolveNpmPlugin(
     }
 
     // No matching contract found
-    if (!manifest.contracts && !manifest.dynamic_contracts) {
-        return new WithValidations(null as any, [
-            `NPM package "${pluginName}" has no contracts or dynamic_contracts defined in plugin.yaml`,
-        ]);
-    }
-
     const availableContracts = manifest.contracts?.map((c) => c.name) || [];
     const dynamicPrefixes = manifest.dynamic_contracts
         ? (Array.isArray(manifest.dynamic_contracts)
@@ -394,17 +449,79 @@ export function resolvePluginComponent(
 ): WithValidations<PluginComponentResolution> {
     // Try local plugins first
     const localResult = resolveLocalPlugin(projectRoot, pluginName, contractName);
-    if (localResult !== null) {
-        return localResult; // Found locally (success or error)
+    if (localResult && localResult.val !== null && localResult.validations.length === 0) {
+        return localResult; // Found locally successfully
     }
 
     // Try NPM packages
     const npmResult = resolveNpmPlugin(projectRoot, pluginName, contractName);
-    if (npmResult !== null) {
-        return npmResult; // Found in NPM (success or error)
+    if (npmResult && npmResult.val !== null && npmResult.validations.length === 0) {
+        return npmResult; // Found in NPM successfully
+    }
+
+    // If local plugin exists but has errors, return those (prefer local over NPM)
+    // localResult is non-null when the directory exists but has issues
+    if (localResult && localResult.validations.length > 0) {
+        return localResult;
+    }
+
+    // If NPM plugin exists but has errors, return those
+    // However, only if local didn't exist at all (localResult is null)
+    if (npmResult && npmResult.validations.length > 0 && localResult === null) {
+        const npmError = npmResult.validations[0];
+        const isGenericPackageNotFound =
+            (npmError.startsWith('NPM package') && npmError.includes('not found')) ||
+            (npmError.startsWith('Plugin') && npmError.includes('not found'));
+        if (!isGenericPackageNotFound) {
+            return npmResult;
+        }
     }
 
     // Not found anywhere
+    return new WithValidations(null as any, [
+        `Plugin "${pluginName}" not found. ` +
+            `Searched in src/plugins/${pluginName}/ and node_modules/${pluginName}/. ` +
+            `Ensure the plugin is installed or exists in your project.`,
+    ]);
+}
+
+/**
+ * Resolves a plugin manifest from a local plugin or NPM package
+ *
+ * @param projectRoot - Project root directory
+ * @param pluginName - Name of the plugin
+ * @returns Resolution result with validation messages
+ */
+export function resolvePluginManifest(
+    projectRoot: string,
+    pluginName: string,
+): WithValidations<PluginManifest> {
+    const localResult = resolveLocalPluginManifest(projectRoot, pluginName);
+    if (localResult && localResult.val !== null && localResult.validations.length === 0) {
+        return localResult;
+    }
+    const npmResult = resolveNpmPluginManifest(projectRoot, pluginName);
+    if (npmResult && npmResult.val !== null && npmResult.validations.length === 0) {
+        return npmResult;
+    }
+
+    // If local plugin exists but has errors, return those (prefer local over NPM)
+    if (localResult && localResult.validations.length > 0) {
+        return localResult;
+    }
+
+    // If NPM plugin exists but has errors, return those
+    if (npmResult && npmResult.validations.length > 0 && localResult === null) {
+        const npmError = npmResult.validations[0];
+        const isGenericPackageNotFound =
+            (npmError.startsWith('NPM package') && npmError.includes('not found')) ||
+            (npmError.startsWith('Plugin') && npmError.includes('not found'));
+        if (!isGenericPackageNotFound) {
+            return npmResult;
+        }
+    }
+
+    // Neither found - return a "not found" error
     return new WithValidations(null as any, [
         `Plugin "${pluginName}" not found. ` +
             `Searched in src/plugins/${pluginName}/ and node_modules/${pluginName}/. ` +

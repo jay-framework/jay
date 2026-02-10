@@ -2,6 +2,7 @@
 export * from './server';
 export * from './config';
 export * from './editor-handlers';
+export * from './vendors';
 
 // Re-export contract materializer from stack-server-runtime for convenience
 export {

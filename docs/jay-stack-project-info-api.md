@@ -7,8 +7,7 @@ The `getProjectInfo` endpoint retrieves comprehensive project information in a s
 - Project metadata (name, path)
 - All pages with their contracts and used components
 - All components in the project
-- All installed applications
-- Complete contract schemas for all installed applications
+- All plugins with their contract schemas
 
 ## Request
 
@@ -49,13 +48,8 @@ interface ProjectInfo {
   // Components in the project
   components: ProjectComponent[];
 
-  // Installed applications (basic info)
-  installedApps: InstalledApp[];
-
-  // Full contract schemas from installed applications
-  installedAppContracts: {
-    [appName: string]: InstalledAppContracts;
-  };
+  // Plugins with their contracts
+  plugins: Plugin[];
 }
 ```
 
@@ -73,21 +67,13 @@ interface ProjectPage {
   filePath: string; // Path to page.jay-html
 
   // Contract info
-  contractSchema?: ContractSchema; // Page's own contract from .jay-contract file
+  contract?: Contract; // Page's own contract from .jay-contract file
 
-  // Used components
+  // Used components (references to plugin contracts)
   usedComponents: {
-    // Parsed from jay-html or page.conf.yaml
-    contract: string;
-    src: string;
-    name: string;
-    key: string;
-  }[];
-
-  // Used component contract references
-  usedComponentContracts: {
-    appName: string; // Which app provides this component
-    componentName: string; // Component name to look up in installedAppContracts
+    appName: string; // Plugin name
+    componentName: string; // Contract name within the plugin
+    key: string; // Component instance key
   }[];
 }
 ```
@@ -101,46 +87,12 @@ interface ProjectComponent {
   contractPath?: string;
 }
 
-interface InstalledApp {
-  name: string;
-  module: string;
-  pages: Array<{
-    name: string;
-    headless_components: Array<{
-      name: string;
-      key: string;
-      contract: string;
-      slugs?: string[];
-    }>;
-  }>;
-  components: Array<{
-    name: string;
-    headless_components: Array<{
-      name: string;
-      key: string;
-      contract: string;
-    }>;
-  }>;
-  config_map?: Array<{
-    display_name: string;
-    key: string;
-  }>;
+interface Plugin {
+  name: string; // Plugin name (kebab-case) for the plugin attribute
+  contracts: Contract[]; // Array of available contracts
 }
 
-interface InstalledAppContracts {
-  appName: string;
-  module: string;
-  pages: Array<{
-    pageName: string;
-    contractSchema: ContractSchema;
-  }>;
-  components: Array<{
-    componentName: string;
-    contractSchema: ContractSchema;
-  }>;
-}
-
-interface ContractSchema {
+interface Contract {
   name: string;
   tags: ContractTag[];
 }
@@ -174,7 +126,7 @@ interface ContractTag {
         filePath: '/Users/dev/my-project/src/pages/page.jay-html',
 
         // Page's own contract
-        contractSchema: {
+        contract: {
           name: 'home',
           tags: [
             { tag: 'siteTitle', type: 'data', dataType: 'string' },
@@ -182,21 +134,12 @@ interface ContractTag {
           ]
         },
 
-        // Used components from jay-html
+        // Used components reference plugin contracts
         usedComponents: [
           {
-            contract: './contracts/product.jay-contract',
-            src: 'wix-jay-headless-store',
-            name: 'productPage',
+            appName: 'wix-stores',
+            componentName: 'product-page',
             key: 'product'
-          }
-        ],
-
-        // References to installed app contracts
-        usedComponentContracts: [
-          {
-            appName: 'wix-jay-headless-store',
-            componentName: 'productPage'
           }
         ]
       }
@@ -210,36 +153,21 @@ interface ContractTag {
       }
     ],
 
-    installedApps: [
+    plugins: [
       {
-        name: 'wix-jay-headless-store',
-        module: 'wix-jay-headless-store',
-        pages: [...],
-        components: [...],
-        config_map: [...]
-      }
-    ],
-
-    installedAppContracts: {
-      'wix-jay-headless-store': {
-        appName: 'wix-jay-headless-store',
-        module: 'wix-jay-headless-store',
-        pages: [
+        name: 'wix-stores',
+        contracts: [
           {
-            pageName: 'productPage',
-            contractSchema: {
-              name: 'product-page',
-              tags: [
-                { tag: 'title', type: 'data', dataType: 'string' },
-                { tag: 'price', type: 'data', dataType: 'number' },
-                // ... all other tags
-              ]
-            }
+            name: 'product-page',
+            tags: [
+              { tag: 'title', type: 'data', dataType: 'string' },
+              { tag: 'price', type: 'data', dataType: 'number' },
+              { tag: 'addToCartButton', type: 'interactive' }
+            ]
           }
-        ],
-        components: [...]
+        ]
       }
-    }
+    ]
   }
 }
 ```
@@ -258,7 +186,7 @@ if (response.success) {
   console.log(`Location: ${info.localPath}`);
   console.log(`Pages: ${info.pages.length}`);
   console.log(`Components: ${info.components.length}`);
-  console.log(`Installed Apps: ${info.installedApps.length}`);
+  console.log(`Plugins: ${info.plugins.length}`);
 }
 ```
 
@@ -272,27 +200,28 @@ if (homePage) {
   console.log(`\nPage: ${homePage.name} (${homePage.url})`);
 
   // Show page's own contract
-  if (homePage.contractSchema) {
+  if (homePage.contract) {
     console.log('\nPage Contract:');
-    homePage.contractSchema.tags.forEach((tag) => {
+    homePage.contract.tags.forEach((tag) => {
       console.log(`  - ${tag.tag}: ${tag.type}`);
     });
   }
 
   // Show used component contracts
-  homePage.usedComponentContracts.forEach((ref) => {
-    const app = response.info.installedAppContracts[ref.appName];
+  homePage.usedComponents.forEach((ref) => {
+    // Find the plugin
+    const plugin = response.info.plugins.find((p) => p.name === ref.appName);
 
-    // Find the contract (could be in pages or components)
-    const contract =
-      app.pages.find((p) => p.pageName === ref.componentName) ||
-      app.components.find((c) => c.componentName === ref.componentName);
+    if (plugin) {
+      // Find the contract within the plugin
+      const contract = plugin.contracts.find((c) => c.name === ref.componentName);
 
-    if (contract) {
-      console.log(`\nComponent: ${ref.appName}.${ref.componentName}`);
-      contract.contractSchema.tags.forEach((tag) => {
-        console.log(`  - ${tag.tag}: ${tag.type}`);
-      });
+      if (contract) {
+        console.log(`\nComponent: ${ref.appName}.${ref.componentName}`);
+        contract.tags.forEach((tag) => {
+          console.log(`  - ${tag.tag}: ${tag.type}`);
+        });
+      }
     }
   });
 }
@@ -301,28 +230,22 @@ if (homePage) {
 ### Example 3: Build Complete Tag List for a Page
 
 ```typescript
-function getAllPageTags(
-  page: ProjectPage,
-  installedAppContracts: { [appName: string]: InstalledAppContracts },
-): ContractTag[] {
+function getAllPageTags(page: ProjectPage, plugins: Plugin[]): ContractTag[] {
   const allTags: ContractTag[] = [];
 
   // 1. Add page's own tags
-  if (page.contractSchema) {
-    allTags.push(...page.contractSchema.tags);
+  if (page.contract) {
+    allTags.push(...page.contract.tags);
   }
 
   // 2. Add tags from used components
-  page.usedComponentContracts.forEach((ref) => {
-    const app = installedAppContracts[ref.appName];
-    if (!app) return;
+  page.usedComponents.forEach((ref) => {
+    const plugin = plugins.find((p) => p.name === ref.appName);
+    if (!plugin) return;
 
-    const contract =
-      app.pages.find((p) => p.pageName === ref.componentName) ||
-      app.components.find((c) => c.componentName === ref.componentName);
-
+    const contract = plugin.contracts.find((c) => c.name === ref.componentName);
     if (contract) {
-      allTags.push(...contract.contractSchema.tags);
+      allTags.push(...contract.tags);
     }
   });
 
@@ -332,27 +255,44 @@ function getAllPageTags(
 // Usage
 const response = await client.getProjectInfo({ type: 'getProjectInfo' });
 const homePage = response.info.pages.find((p) => p.url === '/');
-const allTags = getAllPageTags(homePage, response.info.installedAppContracts);
+const allTags = getAllPageTags(homePage, response.info.plugins);
 ```
 
-### Example 4: List All Available Apps and Their Contracts
+### Example 4: Use Plugin System
 
 ```typescript
 const response = await client.getProjectInfo({ type: 'getProjectInfo' });
 
-Object.values(response.info.installedAppContracts).forEach((app) => {
-  console.log(`\nApp: ${app.appName} (${app.module})`);
+// Display all plugins and their contracts
+response.info.plugins.forEach((plugin) => {
+  console.log(`\nPlugin: ${plugin.name}`);
+  console.log(`  Contracts: ${plugin.contracts.length}`);
 
-  console.log(`  Pages: ${app.pages.length}`);
-  app.pages.forEach((page) => {
-    console.log(`    - ${page.pageName}: ${page.contractSchema.tags.length} tags`);
-  });
-
-  console.log(`  Components: ${app.components.length}`);
-  app.components.forEach((comp) => {
-    console.log(`    - ${comp.componentName}: ${comp.contractSchema.tags.length} tags`);
+  plugin.contracts.forEach((contract) => {
+    console.log(`    - ${contract.name}: ${contract.tags.length} tags`);
+    contract.tags.forEach((tag) => {
+      console.log(`      • ${tag.tag}: ${tag.type}${tag.dataType ? ` (${tag.dataType})` : ''}`);
+    });
   });
 });
+
+// Find a specific plugin contract
+function findPluginContract(
+  plugins: Plugin[],
+  pluginName: string,
+  contractName: string,
+): Contract | null {
+  const plugin = plugins.find((p) => p.name === pluginName);
+  if (!plugin) return null;
+
+  return plugin.contracts.find((c) => c.name === contractName) || null;
+}
+
+// Usage
+const productContract = findPluginContract(response.info.plugins, 'wix-stores', 'product-page');
+if (productContract) {
+  console.log(`Found contract: ${productContract.name} with ${productContract.tags.length} tags`);
+}
 ```
 
 ## Page Detection & Configuration
@@ -364,7 +304,7 @@ The API detects pages by scanning the `src/pages` directory. A directory is cons
 - `page.conf.yaml`
 
 **Used Components Resolution:**
-The list of `usedComponentContracts` is derived with the following priority:
+The list of `usedComponents` is derived with the following priority:
 
 1. **`page.jay-html`**: If present, `<script type="application/jay-headless">` tags are parsed.
 2. **`page.conf.yaml`**: If `jay-html` is missing, this file is checked for a `used_components` list.
@@ -419,10 +359,7 @@ scanProjectInfo()
   ├─ Scan basic info in parallel
   │   ├─ getProjectName()
   │   ├─ scanProjectComponents()
-  │   └─ scanInstalledApps()
-  │
-  ├─ Scan installed app contracts
-  │   └─ scanInstalledAppContracts()
+  │   └─ scanPlugins()
   │
   └─ Scan pages (single pass with all info)
       └─ scanPageDirectories()
@@ -435,7 +372,7 @@ scanProjectInfo()
 **Key optimizations:**
 
 - Pages directory scanned **once** (not multiple times)
-- Parallel scanning where possible (project name, components, apps)
+- Parallel scanning where possible (project name, components, plugins)
 - Shared `scanPageDirectories` function ensures consistency
 - Contract resolution happens in a single pass
 
@@ -444,9 +381,9 @@ scanProjectInfo()
 - **Always returns complete data structures** (even if empty)
 - **Linked sub-contracts are always resolved** before response
 - **No manual link resolution needed** on the client side
-- **All sub-contracts are fully expanded** in `installedAppContracts`
+- **All sub-contracts are fully expanded** in plugin contracts
 - **Page contracts include the page's own .jay-contract file** (if it exists)
-- **usedComponentContracts are references only** - look up full schema in `installedAppContracts`
+- **usedComponents are references** - look up full schema in `plugins`
 
 ## Error Handling
 
@@ -460,8 +397,7 @@ if (!response.success) {
   // - localPath: process.cwd()
   // - pages: []
   // - components: []
-  // - installedApps: []
-  // - installedAppContracts: {}
+  // - plugins: []
 }
 ```
 
@@ -499,36 +435,33 @@ if (response.success) {
   console.log(`📁 Location: ${info.localPath}`);
   console.log(`📄 Pages: ${info.pages.length}`);
   console.log(`🧩 Components: ${info.components.length}`);
-  console.log(`⚙️  Installed Apps: ${info.installedApps.length}`);
+  console.log(`🔌 Plugins: ${info.plugins.length}`);
 
   // Display each page with its contracts
   info.pages.forEach((page) => {
     console.log(`\n\nPage: ${page.name} (${page.url})`);
 
-    if (page.contractSchema) {
+    if (page.contract) {
       console.log('  Own Contract:');
-      page.contractSchema.tags.forEach((tag) => {
+      page.contract.tags.forEach((tag) => {
         console.log(`    - ${tag.tag}: ${tag.type}${tag.dataType ? ` (${tag.dataType})` : ''}`);
       });
     }
 
-    if (page.usedComponentContracts.length > 0) {
+    if (page.usedComponents.length > 0) {
       console.log('  Uses Components:');
-      page.usedComponentContracts.forEach((ref) => {
+      page.usedComponents.forEach((ref) => {
         console.log(`    - ${ref.appName}.${ref.componentName}`);
       });
     }
   });
 
-  // List all available contracts
-  console.log('\n\n📋 Available Contracts:');
-  Object.values(info.installedAppContracts).forEach((app) => {
-    console.log(`\n  ${app.appName}:`);
-    app.pages.forEach((p) => {
-      console.log(`    📄 ${p.pageName}`);
-    });
-    app.components.forEach((c) => {
-      console.log(`    🧩 ${c.componentName}`);
+  // List all available contracts from plugins
+  console.log('\n\n📋 Plugin Contracts:');
+  info.plugins.forEach((plugin) => {
+    console.log(`\n  🔌 ${plugin.name}:`);
+    plugin.contracts.forEach((contract) => {
+      console.log(`    📋 ${contract.name} (${contract.tags.length} tags)`);
     });
   });
 } else {
@@ -540,25 +473,31 @@ if (response.success) {
 
 ### For Design Tools
 
-**Create a helper function to resolve component references:**
+**Use the Plugin system for headless script generation:**
 
 ```typescript
-function lookupComponentContract(
-  ref: { appName: string; componentName: string },
-  installedAppContracts: { [appName: string]: InstalledAppContracts },
-): ContractSchema | null {
-  const app = installedAppContracts[ref.appName];
-  if (!app) return null;
+function findPluginContract(
+  plugins: Plugin[],
+  pluginName: string,
+  contractName: string,
+): Contract | null {
+  const plugin = plugins.find((p) => p.name === pluginName);
+  if (!plugin) return null;
 
-  // Check pages
-  const pageContract = app.pages.find((p) => p.pageName === ref.componentName);
-  if (pageContract) return pageContract.contractSchema;
+  return plugin.contracts.find((c) => c.name === contractName) || null;
+}
 
-  // Check components
-  const componentContract = app.components.find((c) => c.componentName === ref.componentName);
-  if (componentContract) return componentContract.contractSchema;
-
-  return null;
+// Generate headless script tag attributes
+function generateHeadlessScriptAttributes(
+  pluginName: string,
+  contractName: string,
+  key: string,
+): { plugin: string; contract: string; key: string } {
+  return {
+    plugin: pluginName,
+    contract: contractName,
+    key: key,
+  };
 }
 ```
 
@@ -570,15 +509,18 @@ const page = response.info.pages.find((p) => p.url === targetUrl);
 
 if (page) {
   // Display page-level tags
-  if (page.contractSchema) {
-    displayContract(page.contractSchema);
+  if (page.contract) {
+    displayContract(page.contract);
   }
 
   // Display used component tags
-  page.usedComponentContracts.forEach((ref) => {
-    const contract = lookupComponentContract(ref, response.info.installedAppContracts);
-    if (contract) {
-      displayContract(contract);
+  page.usedComponents.forEach((ref) => {
+    const plugin = response.info.plugins.find((p) => p.name === ref.appName);
+    if (plugin) {
+      const contract = plugin.contracts.find((c) => c.name === ref.componentName);
+      if (contract) {
+        displayContract(contract);
+      }
     }
   });
 }
@@ -592,7 +534,7 @@ Single API call retrieves all information:
 getProjectInfo
   ├─ Scan pages directory → 100ms (once!)
   ├─ Scan components → 20ms
-  ├─ Scan installed apps → 30ms (once!)
+  ├─ Scan plugins → 30ms (once!)
   ├─ Parse contracts → 80ms
   └─ Network overhead → 50ms
 

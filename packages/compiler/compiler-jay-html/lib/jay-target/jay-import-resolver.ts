@@ -8,6 +8,8 @@ import {
     WithValidations,
     resolvePluginComponent as resolvePlugin,
     PluginComponentResolution,
+    resolvePluginManifest,
+    PluginManifest,
 } from '@jay-framework/compiler-shared';
 import fs from 'fs';
 import path from 'path';
@@ -44,6 +46,7 @@ export interface JayImportResolver {
         contractPath: string;
         metadata?: Record<string, unknown>;
     }>;
+    resolvePluginManifest(pluginName: string, projectRoot: string): WithValidations<PluginManifest>;
 }
 
 export const JAY_IMPORT_RESOLVER: JayImportResolver = {
@@ -132,5 +135,11 @@ export const JAY_IMPORT_RESOLVER: JayImportResolver = {
             `Contract "${contractName}" not found for plugin "${pluginName}". ` +
                 `For dynamic contracts, run 'jay-stack agent-kit' to materialize them first.`,
         ]);
+    },
+    resolvePluginManifest(
+        pluginName: string,
+        projectRoot: string,
+    ): WithValidations<PluginManifest> {
+        return resolvePluginManifest(projectRoot, pluginName);
     },
 };
