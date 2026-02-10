@@ -86,6 +86,8 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 66  | transitive plugin dependency resolution           | Plugin dependency resolution                                  |
 | 80  | exposing dynamic contracts for agentic generation | CLI and dev server contract generation for AI agents          |
 | 87  | jay-stack setup command                           | Plugin config templating, credential validation, references   |
+| 88  | PR 158 review guide                               | Review guide for export_import branch (Figma vendor + plugin resolution) |
+| 89  | PR 158 merge concerns                             | Merge conflicts, duplicate work, and decisions for PR #158 into main |
 
 ---
 
