@@ -15,7 +15,7 @@ PR #158 (`export_import` branch) introduces the Figma vendor integration and enh
 
 ---
 
-## Concern 1: Plugin/Contract Model Divergence (HIGH)
+## Concern 1: Plugin/Contract Model Divergence — RESOLVED
 
 **Files:** `editor-protocol/lib/protocol.ts`, `editor-handlers.ts`, `plugin-resolution.ts`
 
@@ -30,23 +30,17 @@ PR #158 (`export_import` branch) introduces the Figma vendor integration and enh
 | `PluginManifest` in protocol | Re-exported from compiler-shared | **Removed** from protocol |
 | `ProjectPage.contractSchema` | Present | Renamed to `ProjectPage.contract` |
 
-### Risk
+### Decision: Take the PR's approach
 
-- PR removes `InstalledApp` and `InstalledAppContracts`. Main's `extractHeadlessComponents()` still depends on these.
-- Main re-exports `PluginManifest` from compiler-shared into the protocol. PR removes this coupling.
-- The two Plugin shapes are incompatible — consumers expecting manifest/location will break with name/contracts.
+Verified that `InstalledApp`, `InstalledAppContracts`, `contractSchema`, and the full `Plugin` type are **only consumed by `editor-handlers.ts`** and the protocol layer itself (definition, constructors, types re-export). No other packages depend on them.
 
-### Decision needed
-
-> **Q1:** Do we keep InstalledApp as deprecated-but-present, or fully remove it and migrate all consumers?
->
-> **Q2:** Which Plugin shape do we use in the protocol? The PR's simplified version is cleaner but loses manifest detail that main's consumers may need.
->
-> **Q3:** Do we rename `contractSchema` → `contract` as the PR proposes?
+- **Q1:** Remove `InstalledApp` fully (PR's approach)
+- **Q2:** Use PR's simplified `Plugin { name, contracts }` 
+- **Q3:** Rename `contractSchema` → `contract` (PR's approach)
 
 ---
 
-## Concern 2: Plugin Resolution Architecture (HIGH)
+## Concern 2: Plugin Resolution Architecture — RESOLVED
 
 **File:** `compiler-shared/lib/plugin-resolution.ts`
 
@@ -58,23 +52,37 @@ PR #158 (`export_import` branch) introduces the Figma vendor integration and enh
 | `dynamic_contracts` type | `DynamicContractConfig \| DynamicContractConfig[]` with exported interface | Keeps original inline type |
 | New APIs | `findDynamicContract()` | `resolvePluginManifest()`, `resolveLocalPluginManifest()`, `resolveNpmPluginManifest()` |
 | `LOCAL_PLUGIN_PATH` | Not exported | Exported as constant |
-| `slugs` field | Not present | Added to contract definitions |
-| `setup` field | Added (Design Log #87) | Not present |
+| `slugs` field on PluginManifest | Not present | Added to contract definitions in plugin.yaml |
+| `params` field on Contract | Added (Design Log #85) | Not present |
+| `setup` field on PluginManifest | Added (Design Log #87) | Not present |
 | Error handling | Improved messages with dynamic contract prefixes (e.g. `list/*`) | Structured `WithValidations<T>` responses |
 
-### Risk
+### Decision
 
-- Main's dynamic contract support (`findDynamicContract`, `DynamicContractConfig[]`) is entirely absent from the PR.
-- PR's manifest-only resolution (`resolvePluginManifest`) is absent from main.
-- Both branches changed error handling — PR uses structured validation objects, main uses improved error messages.
+**Resolution structure:** Take the PR's approach for `resolveLocalPlugin`/`resolveNpmPlugin` refactoring. Verify no logic fixes from main are lost in the plugin.yaml loading path.
 
-### Decision needed
+**APIs:** Keep both sets of new APIs:
+- PR: `resolvePluginManifest()`, `resolveLocalPluginManifest()`, `resolveNpmPluginManifest()`
+- Main: `findDynamicContract()`
 
-> **Q4:** Merge strategy: adopt PR's manifest helpers + port main's dynamic contract logic into the refactored structure? This is significant integration work.
+**Preserve from main:**
+- `DynamicContractConfig` interface and `DynamicContractConfig | DynamicContractConfig[]` type on manifest
+- `setup` field on PluginManifest (Design Log #87)
+- Dynamic contract resolution logic (port into PR's refactored helpers)
+
+**Preserve from PR:**
+- `LOCAL_PLUGIN_PATH` exported constant
+- Manifest-only resolution helpers
+
+**Drop from PR:**
+- `slugs` field on PluginManifest contracts — main uses `params` on the Contract file itself (Design Log #85), which is the chosen approach. Params live in the `.jay-contract` file, not in `plugin.yaml`.
+- Remove `slugs` validation from `validate-plugin.ts` as well.
+
+**Error handling:** Both branches already use `WithValidations<T>`, so merging error handling is straightforward — combine main's improved error messages (with dynamic contract prefixes) with PR's structured validation responses.
 
 ---
 
-## Concern 3: Headless Components vs Vendor System (HIGH)
+## Concern 3: Headless Components vs Vendor System — RESOLVED
 
 **Files:** `jay-html-builder.ts`, `binding-analysis.ts`, `protocol.ts`
 
@@ -99,17 +107,18 @@ The PR's vendor system assumes **all headless components have a `key`**:
 | `binding-analysis.ts` lines 172-178 | Builds `fullPath` as `[key, ...tagPath]` — produces `"undefined.name"` for instance-only |
 | `protocol.ts` `usedComponents[].key` | Typed as `string` (required), should be `string \| undefined` |
 
-### Risk
+### Decision: Known limitation — filter out, don't break
 
-- Figma export cannot generate instance-only headless component imports
-- Binding analysis produces invalid paths (`"undefined.name"`) for instance-only components
-- Protocol type mismatch silently loses type safety
+This is **not a technical bug to fix now**. The PR does not handle nested (instance-only) headless components because:
+- We don't yet know how this support should look on the design-tool side of the editor protocol (e.g., how Figma represents a `<jay:product-card>` instance with props)
+- The product-level design for headless components in design tools needs to come first
 
-### Decision needed
+**For the merge:**
+- The vendor system should **filter out** or **ignore** instance-only headless components (without `key`) rather than producing invalid output like `"undefined.name"`
+- Make `usedComponents[].key` optional (`string | undefined`) in the protocol types for correctness
+- Document as a known missing feature: "Vendor export does not yet support instance-only headless components (`<jay:xxx>` without `key`). Requires design for how design tools represent headless component instances and props."
 
-> **Q5:** Fix the vendor system before merge to handle optional `key`? Or document as known limitation and address post-merge?
->
-> **Q6:** The vendor system also does not support headless component **props** (Design Log #84). Is this acceptable scope for v1?
+**Not blocking merge.** Key-based headless components (the pre-Design Log #84 model) remain fully supported.
 
 ---
 
@@ -134,7 +143,7 @@ Straightforward but tedious: after merging PR's structural changes, replace all 
 
 ---
 
-## Concern 5: editor-handlers.ts Structural Rewrite (MEDIUM)
+## Concern 5: editor-handlers.ts Structural Rewrite — RESOLVED
 
 **File:** `stack-cli/lib/editor-handlers.ts`
 
@@ -155,15 +164,11 @@ Main changed only logging (~25 call sites). PR rewrote major sections:
 | New: `pageUrlToDirectoryPath` | N/A | URL → filesystem path conversion |
 | New: `convertContractToProtocol` | N/A | Compiler contract → protocol contract |
 
-### Risk
+### Decision: Take the PR's approach
 
-- The PR's version uses `parseJayFile` for headless extraction, which is more correct than main's HTML parsing approach.
-- But the PR doesn't have main's `loadPluginContract` or dynamic contract support.
-- Merge conflicts will be extensive since both branches touch nearly every function.
-
-### Resolution
-
-Use PR's structural rewrites as the base, then port main's logging and dynamic contract support. This is the highest-effort merge task.
+The PR's structural rewrites are the base. The PR's `parseJayFile`-based headless extraction is more correct than main's HTML parsing. What still needs porting from main into the PR's code:
+- Replace all `console.*` with `getLogger().*`
+- Port dynamic contract support into the rewritten `scanPlugins`
 
 ---
 
@@ -183,7 +188,7 @@ Include both stubs in the merged mock objects. Low effort, no decisions needed.
 
 ---
 
-## Concern 7: Documentation Overlap (LOW)
+## Concern 7: Documentation Overlap — RESOLVED
 
 **Files:** `jay-html.md`, `building-jay-packages.md`, `README.md`
 
@@ -193,36 +198,51 @@ Include both stubs in the merged mock objects. Low effort, no decisions needed.
 - `building-jay-packages.md`: Main documents dynamic contract materialization. PR documents slugs and URL parameters.
 - `README.md`: Main adds CLI/testing links. PR adds design tool integration links.
 
-### Resolution
+### Decision
 
-Merge both sets of documentation. The headless import section in `jay-html.md` needs manual reconciliation to cover both key-based, instance-based, and vendor-exported headless imports.
+- Reconcile all docs — merge both sets of documentation.
+- `jay-html.md` headless section: merge to cover key-based, instance-based, and vendor-exported headless imports.
+- `building-jay-packages.md`: PR's `slugs` documentation must be replaced with main's `params` approach (params live in the `.jay-contract` file, not `plugin.yaml`). Update examples accordingly.
+- `README.md`: merge both sets of links (different sections, low conflict).
 
 ---
 
-## Concern 8: Build/Config Changes (LOW)
+## Concern 8: Build/Config Changes — RESOLVED
 
 **Files:** `.gitignore`, `route-scanner/package.json`, `route-scanner/vite.config.ts`
 
-- `.gitignore`: Main adds `agent-kit`, PR changes `.yarn/install-state.gz` → `.yarn/`. Both are independent.
+- `.gitignore`: Main adds `agent-kit`, PR changes `.yarn/install-state.gz` → `.yarn/`. Both are independent — keep both.
 - `route-scanner`: PR changes output from CJS to ESM (`dist/index.js` → `dist/index.mjs`, `formats: ['es']`). Main has no changes here.
 
-### Decision needed
+### Decision
 
-> **Q7:** Is the route-scanner CJS→ESM change tested? Does it break any consumer that `require()`s it?
+Accept the ESM change. Verify the dev server works after the switch (route-scanner is used during route scanning at dev time). If the dev server starts and routes resolve correctly, the change is safe.
 
 ---
 
 ## Summary: Decision Matrix
 
-| # | Question | Options | Recommendation |
-|---|----------|---------|----------------|
-| Q1 | Keep or remove InstalledApp? | (a) Keep deprecated (b) Remove fully | **(b)** PR's `parseJayFile` approach is more correct; remove InstalledApp and migrate |
-| Q2 | Protocol Plugin shape? | (a) Main's full manifest (b) PR's simplified | **(b)** with optional `manifest?: PluginManifest` for consumers that need it |
-| Q3 | Rename contractSchema → contract? | (a) Yes (b) No | **(a)** Cleaner name, PR already does it |
-| Q4 | Plugin resolution merge strategy? | Manual integration | Adopt PR's manifest helpers, port main's dynamic contract logic into them |
-| Q5 | Fix vendor for optional key? | (a) Before merge (b) Post-merge | **(b)** Document as limitation; vendor v1 targets key-based headless only |
-| Q6 | Vendor props support? | (a) Before merge (b) Post-merge | **(b)** Acceptable v1 scope limitation |
-| Q7 | Route-scanner ESM change? | Verify consumers | Test before merge |
+| # | Question | Options | Decision |
+|---|----------|---------|----------|
+| Q1 | Keep or remove InstalledApp? | (a) Keep deprecated (b) Remove fully | **DECIDED: (b)** Remove fully. Only used by editor-handlers (+ protocol definition). PR's `parseJayFile` approach is more correct. |
+| Q2 | Protocol Plugin shape? | (a) Main's full manifest (b) PR's simplified | **DECIDED: (b)** PR's `{ name, contracts }`. editor-handlers is the sole consumer of the protocol Plugin type. |
+| Q3 | Rename contractSchema → contract? | (a) Yes (b) No | **DECIDED: (a)** Only used in editor-handlers + protocol + test. PR's rename is clean. |
+| Q4 | Plugin resolution merge strategy? | Manual integration | **DECIDED:** PR's refactored structure + main's dynamic contracts + both API sets. Drop PR's `slugs` (use main's `params` in contract file). |
+| Q5 | Fix vendor for optional key? | (a) Before merge (b) Post-merge | **DECIDED:** Filter out instance-only headless (no `key`) in vendor code. Make `usedComponents[].key` optional. Document as known limitation pending design-tool UX design. |
+| Q6 | Vendor props support? | (a) Before merge (b) Post-merge | **DECIDED:** Not in scope. We need product-level design for how design tools represent headless instances + props before implementing. |
+| Q7 | Route-scanner ESM change? | Verify consumers | **DECIDED:** Accept ESM. Verify dev server works with the change. |
+
+### Guiding principle
+
+> **For editor-handlers.ts and anything only consumed by it, the PR's approach wins.**
+>
+> Verified scope: `InstalledApp`, `InstalledAppContracts`, `contractSchema`, `scanInstalledApps`, `scanInstalledAppContracts`, `extractHeadlessComponents`, `resolveLinkedTags`, `parseContractFile` — all exclusively used within editor-handlers.ts and its protocol definitions. No other packages depend on them. The PR's replacements (`extractHeadlessComponentsFromJayHtml`, `loadAndExpandContract`, `expandContractTags`, simplified `Plugin`/`Contract`, `onExport`/`onImport`) are adopted directly.
+>
+> What still needs porting from main into the PR's structure:
+> - `getLogger()` logging (replace `console.*`)
+> - Dynamic contract support in `scanPlugins` / plugin resolution
+> - Dev server test mode in `server.ts`
+> - Agent kit support
 
 ---
 
