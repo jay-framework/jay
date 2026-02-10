@@ -195,7 +195,9 @@ async function generatePluginReferences(
         const pluginInitError = initErrors.get(plugin.name);
         if (pluginInitError) {
             logger.warn(
-                chalk.yellow(`   ⚠️  ${plugin.name}: references skipped — init failed: ${pluginInitError.message}`),
+                chalk.yellow(
+                    `   ⚠️  ${plugin.name}: references skipped — init failed: ${pluginInitError.message}`,
+                ),
             );
             continue;
         }
@@ -280,7 +282,10 @@ async function runMaterialize(
         }
         viteServer = await createViteForCli({ projectRoot });
 
-        const { services, initErrors: errors } = await initializeServicesForCli(projectRoot, viteServer);
+        const { services, initErrors: errors } = await initializeServicesForCli(
+            projectRoot,
+            viteServer,
+        );
         initErrors = errors;
 
         const result = await materializeContracts(
@@ -355,7 +360,10 @@ program
         // Keep Vite alive — references handlers need the same module context
         // (service markers are Symbols; different module loads = different Symbols)
         const { initErrors, viteServer } = await runMaterialize(
-            projectRoot, options, 'agent-kit/materialized-contracts', /* keepViteAlive */ true,
+            projectRoot,
+            options,
+            'agent-kit/materialized-contracts',
+            /* keepViteAlive */ true,
         );
         try {
             if (!options.list) {

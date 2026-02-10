@@ -35,7 +35,7 @@ describe('WithValidations', () => {
 
         it('should call func for null (falsy but valid)', () => {
             const wv = new WithValidations<string | null>(null);
-            const result = wv.map((v) => v === null ? 'was null' : v);
+            const result = wv.map((v) => (v === null ? 'was null' : v));
             expect(result.val).toBe('was null');
         });
 

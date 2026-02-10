@@ -10,8 +10,7 @@ export class WithValidations<Value> {
     }
 
     map<R>(func: (v: Value) => R): WithValidations<R> {
-        if (this.val !== undefined)
-            return new WithValidations<R>(func(this.val), this.validations);
+        if (this.val !== undefined) return new WithValidations<R>(func(this.val), this.validations);
         else return new WithValidations<R>(undefined, this.validations);
     }
 
