@@ -161,12 +161,17 @@ async function ensureAgentKitDocs(projectRoot: string, force?: boolean): Promise
 
 /**
  * Discovers and runs plugin reference generators (Design Log #87).
- * Called by agent-kit after materializing contracts. Services are already initialized
- * by runMaterialize, so references handlers can use them directly.
+ * Called by agent-kit after materializing contracts.
+ *
+ * Must receive the same Vite server used during materialization — service markers
+ * are Symbols, so loading a plugin module via a different mechanism (e.g. native
+ * import() vs Vite SSR) creates different Symbols and breaks service lookup.
  */
 async function generatePluginReferences(
     projectRoot: string,
     options: { plugin?: string; force?: boolean; verbose?: boolean },
+    initErrors: Map<string, Error>,
+    viteServer?: Awaited<ReturnType<typeof createViteForCli>>,
 ): Promise<void> {
     const { discoverPluginsWithReferences, executePluginReferences } = await import(
         '@jay-framework/stack-server-runtime'
@@ -185,10 +190,21 @@ async function generatePluginReferences(
     logger.important(chalk.bold('📚 Generating plugin references...'));
 
     for (const plugin of plugins) {
+        // If this plugin had an init error, report it directly instead of
+        // running the handler (which would fail with a generic "service not available" message)
+        const pluginInitError = initErrors.get(plugin.name);
+        if (pluginInitError) {
+            logger.warn(
+                chalk.yellow(`   ⚠️  ${plugin.name}: references skipped — init failed: ${pluginInitError.message}`),
+            );
+            continue;
+        }
+
         try {
             const result = await executePluginReferences(plugin, {
                 projectRoot,
                 force: options.force ?? false,
+                viteServer,
                 verbose: options.verbose,
             });
 
@@ -209,7 +225,19 @@ async function generatePluginReferences(
     }
 }
 
-/** Shared action for contract materialization (used by both contracts and agent-kit) */
+interface RunMaterializeResult {
+    initErrors: Map<string, Error>;
+    viteServer?: Awaited<ReturnType<typeof createViteForCli>>;
+}
+
+/**
+ * Shared action for contract materialization (used by both contracts and agent-kit).
+ *
+ * When `keepViteAlive` is true, the Vite server is returned to the caller instead
+ * of being closed. This is needed for agent-kit where the same Vite/module context
+ * must be shared with references handlers (service markers are Symbols — loading a
+ * plugin module twice creates different Symbols and breaks service lookup).
+ */
 async function runMaterialize(
     projectRoot: string,
     options: {
@@ -223,10 +251,13 @@ async function runMaterialize(
     },
     /** Relative path from project root, e.g. 'agent-kit/materialized-contracts' or 'build/materialized-contracts' */
     defaultOutputRelative: string,
-) {
+    /** If true, keep the Vite server alive and return it (caller must close) */
+    keepViteAlive = false,
+): Promise<RunMaterializeResult> {
     const path = await import('node:path');
     const outputDir = options.output ?? path.join(projectRoot, defaultOutputRelative);
     let viteServer: Awaited<ReturnType<typeof createViteForCli>> | undefined;
+    let initErrors = new Map<string, Error>();
 
     try {
         if (options.list) {
@@ -241,7 +272,7 @@ async function runMaterialize(
             } else {
                 printContractList(index);
             }
-            return;
+            return { initErrors };
         }
 
         if (options.verbose) {
@@ -249,7 +280,8 @@ async function runMaterialize(
         }
         viteServer = await createViteForCli({ projectRoot });
 
-        const services = await initializeServicesForCli(projectRoot, viteServer);
+        const { services, initErrors: errors } = await initializeServicesForCli(projectRoot, viteServer);
+        initErrors = errors;
 
         const result = await materializeContracts(
             {
@@ -274,6 +306,8 @@ async function runMaterialize(
             getLogger().important(`   Dynamic: ${result.dynamicCount}`);
             getLogger().important(`   Output: ${result.outputDir}`);
         }
+
+        return { initErrors, viteServer: keepViteAlive ? viteServer : undefined };
     } catch (error: any) {
         getLogger().error(chalk.red('❌ Failed to materialize contracts:') + ' ' + error.message);
         if (options.verbose) {
@@ -281,10 +315,13 @@ async function runMaterialize(
         }
         process.exit(1);
     } finally {
-        if (viteServer) {
+        // Only close Vite if caller doesn't need it
+        if (viteServer && !keepViteAlive) {
             await viteServer.close();
         }
     }
+
+    return { initErrors };
 }
 
 // Plugin setup command (Design Log #87): create config, validate services, generate references
@@ -315,12 +352,22 @@ program
     .option('-v, --verbose', 'Show detailed output')
     .action(async (options) => {
         const projectRoot = process.cwd();
-        await runMaterialize(projectRoot, options, 'agent-kit/materialized-contracts');
-        if (!options.list) {
-            await ensureAgentKitDocs(projectRoot, options.force);
-            // Generate plugin reference data (Design Log #87)
-            if (options.references !== false) {
-                await generatePluginReferences(projectRoot, options);
+        // Keep Vite alive — references handlers need the same module context
+        // (service markers are Symbols; different module loads = different Symbols)
+        const { initErrors, viteServer } = await runMaterialize(
+            projectRoot, options, 'agent-kit/materialized-contracts', /* keepViteAlive */ true,
+        );
+        try {
+            if (!options.list) {
+                await ensureAgentKitDocs(projectRoot, options.force);
+                // Generate plugin reference data (Design Log #87)
+                if (options.references !== false) {
+                    await generatePluginReferences(projectRoot, options, initErrors, viteServer);
+                }
+            }
+        } finally {
+            if (viteServer) {
+                await viteServer.close();
             }
         }
     });

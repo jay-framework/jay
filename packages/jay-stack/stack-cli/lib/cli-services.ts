@@ -8,6 +8,12 @@ import chalk from 'chalk';
 import { createViteForCli } from '@jay-framework/dev-server';
 import { getLogger } from '@jay-framework/logger';
 
+export interface InitServicesResult {
+    services: Map<symbol, unknown>;
+    /** Per-plugin init errors (plugin name → error) */
+    initErrors: Map<string, Error>;
+}
+
 export type InitializeServicesForCli = typeof initializeServicesForCli;
 
 /**
@@ -15,11 +21,14 @@ export type InitializeServicesForCli = typeof initializeServicesForCli;
  *
  * Uses the provided Vite server for TypeScript transpilation when loading
  * init files and plugin modules.
+ *
+ * Returns both the service registry and any per-plugin init errors,
+ * so callers (e.g. references handlers) can report the actual root cause.
  */
 export async function initializeServicesForCli(
     projectRoot: string,
     viteServer?: Awaited<ReturnType<typeof createViteForCli>>,
-): Promise<Map<symbol, unknown>> {
+): Promise<InitServicesResult> {
     const path = await import('node:path');
     const fs = await import('node:fs');
 
@@ -31,6 +40,8 @@ export async function initializeServicesForCli(
         executePluginServerInits,
     } = await import('@jay-framework/stack-server-runtime');
 
+    let initErrors = new Map<string, Error>();
+
     try {
         // Discover and initialize plugins
         const discoveredPlugins = await discoverPluginsWithInit({
@@ -41,7 +52,7 @@ export async function initializeServicesForCli(
 
         // Execute plugin server inits with Vite for TypeScript support
         try {
-            await executePluginServerInits(pluginsWithInit, viteServer, false);
+            initErrors = await executePluginServerInits(pluginsWithInit, viteServer, false);
         } catch (error: any) {
             getLogger().warn(chalk.yellow(`⚠️  Plugin initialization skipped: ${error.message}`));
         }
@@ -67,5 +78,5 @@ export async function initializeServicesForCli(
         getLogger().warn(chalk.gray('   Static contracts will still be listed.'));
     }
 
-    return getServiceRegistry();
+    return { services: getServiceRegistry(), initErrors };
 }
