@@ -22,13 +22,13 @@ export type LogLevel = 'silent' | 'info' | 'verbose';
  */
 export interface JayLogger {
     /** Log important messages - shown in default mode (startup, major events) */
-    important: (msg: string) => void;
+    important: (msg: string, ...args: unknown[]) => void;
     /** Log info messages - shown only in verbose mode */
-    info: (msg: string) => void;
+    info: (msg: string, ...args: unknown[]) => void;
     /** Log warnings - shown unless silent */
-    warn: (msg: string) => void;
+    warn: (msg: string, ...args: unknown[]) => void;
     /** Log errors - always shown */
-    error: (msg: string) => void;
+    error: (msg: string, ...args: unknown[]) => void;
 }
 
 /**
@@ -66,10 +66,10 @@ export interface JayDevLogger extends JayLogger {
  * All log levels enabled - CLIs replace this with level-aware versions.
  */
 const defaultLogger: JayLogger = {
-    important: (msg) => console.log(msg),
-    info: (msg) => console.log(msg),
-    warn: (msg) => console.warn(msg),
-    error: (msg) => console.error(msg),
+    important: (msg, ...args) => console.log(msg, ...args),
+    info: (msg, ...args) => console.log(msg, ...args),
+    warn: (msg, ...args) => console.warn(msg, ...args),
+    error: (msg, ...args) => console.error(msg, ...args),
 };
 
 let currentLogger: JayLogger = defaultLogger;
@@ -146,10 +146,10 @@ export function createLogger(level: LogLevel): JayLogger {
     const isVerbose = level === 'verbose';
 
     return {
-        important: isSilent ? () => {} : (msg) => console.log(msg),
-        info: isVerbose ? (msg) => console.log(msg) : () => {},
-        warn: isSilent ? () => {} : (msg) => console.warn(msg),
-        error: (msg) => console.error(msg),
+        important: isSilent ? () => {} : (msg, ...args) => console.log(msg, ...args),
+        info: isVerbose ? (msg, ...args) => console.log(msg, ...args) : () => {},
+        warn: isSilent ? () => {} : (msg, ...args) => console.warn(msg, ...args),
+        error: (msg, ...args) => console.error(msg, ...args),
     };
 }
 
