@@ -54,7 +54,7 @@ describe('Plugin Resolution - Local Plugins', () => {
             const result = resolvePluginManifest(projectRoot, 'plugin-with-no-contracts');
 
             expect(result.validations).toHaveLength(1);
-            expect(result.validations[0]).toContain('has no contracts defined');
+            expect(result.validations[0]).toContain('has no contracts or dynamic_contracts defined');
             expect(result.val).toBeNull();
         });
 
@@ -137,7 +137,7 @@ describe('Plugin Resolution - Local Plugins', () => {
             );
 
             expect(result.validations).toHaveLength(1);
-            expect(result.validations[0]).toContain('has no contracts defined');
+            expect(result.validations[0]).toContain('has no contracts or dynamic_contracts defined');
             expect(result.val).toBeNull();
         });
 
@@ -150,7 +150,7 @@ describe('Plugin Resolution - Local Plugins', () => {
 
             expect(result.validations).toHaveLength(1);
             expect(result.validations[0]).toContain('Contract "non-existent-contract" not found');
-            expect(result.validations[0]).toContain('Available contracts: counter, timer');
+            expect(result.validations[0]).toContain('Available: counter, timer');
             expect(result.val).toBeNull();
         });
 
@@ -235,7 +235,7 @@ describe('Plugin Resolution - NPM Packages', () => {
             const result = resolvePluginManifest(projectRoot, '@test-scope/npm-no-contracts');
 
             expect(result.validations).toHaveLength(1);
-            expect(result.validations[0]).toContain('has no contracts defined');
+            expect(result.validations[0]).toContain('has no contracts or dynamic_contracts defined');
             expect(result.validations[0]).toContain('NPM package');
             expect(result.val).toBeNull();
         });
@@ -288,7 +288,7 @@ describe('Plugin Resolution - NPM Packages', () => {
             expect(result.validations[0]).toContain('Contract "non-existent-contract" not found');
             expect(result.validations[0]).toContain('NPM package');
             expect(result.validations[0]).toContain(
-                'Available contracts: mood-tracker, weather-widget',
+                'Available: mood-tracker, weather-widget',
             );
             expect(result.val).toBeNull();
         });
