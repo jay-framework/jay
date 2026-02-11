@@ -64,6 +64,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 72  | skip client script for non-interactive components     | Optimization for static components                                                |
 | 84  | headless component props and repeater support         | Props, multiple instances, forEach, jay: prefix                                   |
 | 85  | rendering phases and agent kit for agentic generation | Phases + contract/action discovery; agent-kit folder, markdown content → jay-html |
+| 90  | headless instances in interactive forEach             | Allow fast/interactive-only headless components inside forEach (no slow phase)     |
 
 ---
 
@@ -216,7 +217,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ### "I'm working with headless components"
 
-→ See #50 (headless configuration), #58 (headless resolution), #84 (props, multiple instances, jay: prefix)
+→ See #50 (headless configuration), #58 (headless resolution), #84 (props, multiple instances, jay: prefix), #90 (forEach instances without slow phase)
 
 ### "I'm working on the compiler"
 
