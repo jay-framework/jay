@@ -10954,6 +10954,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"example-jay-cart-webmcp@workspace:examples/jay/cart-webmcp":
+  version: 0.0.0-use.local
+  resolution: "example-jay-cart-webmcp@workspace:examples/jay/cart-webmcp"
+  dependencies:
+    "@jay-framework/component": "workspace:^"
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/jay-cli": "workspace:^"
+    "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/runtime-automation": "workspace:^"
+    "@jay-framework/vite-plugin": "workspace:^"
+    rimraf: "npm:^5.0.5"
+    typescript: "npm:^5.3.3"
+    vite: "npm:^5.0.11"
+  languageName: unknown
+  linkType: soft
+
 "example-jay-counter-raw@workspace:examples/jay-low-level-apis/counter-raw":
   version: 0.0.0-use.local
   resolution: "example-jay-counter-raw@workspace:examples/jay-low-level-apis/counter-raw"
