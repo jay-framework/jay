@@ -87,22 +87,26 @@ For each forEach item:
 
 Static instances have fixed coordinates (e.g., `product-card:0`). ForEach instances need **per-item coordinates** since the number of items varies at request time.
 
-**Answer:** Use the forEach `trackBy` value directly in the coordinate array, matching the existing runtime coordinate system. The runtime already represents coordinates as arrays of path segments:
+**Answer:** Use the existing `Coordinate` system from the runtime/secure packages. `Coordinate = string[]` is already defined in `element-types.ts`. The secure package builds coordinates by accumulating `dataIds` — each `sandboxForEach` level pushes `item[matchBy]` onto the array, and the final segment is the ref/component name:
+
+```typescript
+// secure/lib/sandbox/sandbox-refs.ts
+coordinate: (refName: string) => [...dataIds, refName]
+
+// secure/lib/sandbox/sandbox-element.ts — forEach extends dataIds:
+dataIds: [...dataIds, item[matchBy]]
+```
+
+Headless instances inside forEach follow the same pattern:
 
 ```
 Static:  ["product-card"]
 ForEach: ["prod-123", "product-card"]
          ["prod-456", "product-card"]
+Nested:  ["electronics", "item-42", "product-card"]
 ```
 
-This is the same format the runtime package already uses for element coordinates. No new format is needed — just prepend the trackBy value of each forEach item.
-
-For the `__headlessInstances` ViewState keying, the coordinate array is joined to a string key:
-
-```
-"prod-123/product-card"
-"prod-456/product-card"
-```
+For `__headlessInstances` ViewState keying, coordinates are joined with `coordinate.toString()` (the existing convention in the secure package, which uses `Map<string, ...>` keyed by `coordinate.toString()`).
 
 ### Q5: Does the client-side `makeHeadlessInstanceComponent` need changes?
 
@@ -161,6 +165,19 @@ This component fetches pricing data at request time (fast phase) and has interac
 In practice, a purely interactive headless component inside forEach is unlikely to be useful since it can't provide any server-rendered data to its inline template. The primary use case for this design is fast-phase components (Q7).
 
 ## Design
+
+### Reference: Secure Package Coordinate System
+
+The `secure` package already implements coordinate-based ViewState routing for element bridges. This is the pattern to follow:
+
+- **Type:** `Coordinate = string[]` (`runtime/lib/element-types.ts`)
+- **Building:** `SandboxCreationContext.dataIds` accumulates forEach trackBy values; final coordinate is `[...dataIds, refName]` (`secure/lib/sandbox/sandbox-refs.ts`)
+- **forEach extension:** `sandboxForEach` pushes `item[matchBy]` onto `dataIds` for each level (`secure/lib/sandbox/sandbox-element.ts`)
+- **Storage:** `Map<string, RefImpl>` keyed by `coordinate.toString()` (`secure/lib/sandbox/sandbox-refs.ts`)
+- **Lookup:** `items.get(coordinate.toString())` returns the ViewState for a specific element (`secure/lib/sandbox/sandbox-refs.ts`)
+- **Nested:** Each forEach level adds one segment, so nested forEach produces `[outerTrackBy, innerTrackBy, refName]`
+
+The headless instance coordinate system should use the same `Coordinate` type and the same `toString()` keying convention.
 
 ### Architecture Change
 
@@ -367,7 +384,14 @@ The runtime's `forEach` mechanism needs to expose the current item's trackBy val
 2. Expose forEach trackBy key in runtime context
 3. Wire up: forEach item → trackBy key → coordinate factory → ViewState lookup
 
-### Phase 5: Tests
+### Phase 5: Fake-shop example
+
+1. Add a new headless component to the fake-shop plugin **without a slow phase** (fast + interactive only, e.g., a `price-badge` or `stock-status` widget)
+2. Add a contract for the new component (only fast-phase data tags, props for `productId`)
+3. Use `<jay:new-component>` inside an interactive `forEach` on the fake-shop products page
+4. Verify end-to-end: server fast-renders per item, client hydrates with correct ViewState per forEach item
+
+### Phase 6: Tests
 
 1. Compiler test: `<jay:xxx>` inside forEach compiles without error, generates dynamic coordinate
 2. Slow-render test: forEach instances discovered with prop bindings
