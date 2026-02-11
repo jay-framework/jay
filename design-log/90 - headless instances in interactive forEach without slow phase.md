@@ -68,7 +68,7 @@ Currently, the fast phase for instances (`renderFastChangingDataForInstances`) r
 
 **Answer:** These instances need a **different rendering path**. Since forEach items are resolved during fast rendering:
 
-1. The page's `fastRender()` returns the forEach array (e.g., `allProducts.items`)  
+1. The page's `fastRender()` returns the forEach array (e.g., `allProducts.items`)
 2. For each item, the props are known (e.g., `productId = item._id`)
 3. We can call the nested component's `fastRender(props, {}, ...services)` with empty carryForward (no slow phase → no carryForward)
 
@@ -91,10 +91,10 @@ Static instances have fixed coordinates (e.g., `product-card:0`). ForEach instan
 
 ```typescript
 // secure/lib/sandbox/sandbox-refs.ts
-coordinate: (refName: string) => [...dataIds, refName]
+coordinate: (refName: string) => [...dataIds, refName];
 
 // secure/lib/sandbox/sandbox-element.ts — forEach extends dataIds:
-dataIds: [...dataIds, item[matchBy]]
+dataIds: [...dataIds, item[matchBy]];
 ```
 
 Headless instances inside forEach follow the same pattern:
@@ -113,7 +113,8 @@ For `__headlessInstances` ViewState keying, coordinates are joined with `coordin
 **Answer:** Yes. Currently it accepts a static `coordinateKey: string`. For forEach instances, it needs a **coordinate factory** that receives the trackBy value and returns the coordinate. The runtime's forEach mechanism already has access to the trackBy key for each item.
 
 Two options:
-- A) Overload: `coordinateKey: string | ((trackByKey: string) => string)` 
+
+- A) Overload: `coordinateKey: string | ((trackByKey: string) => string)`
 - B) Always use factory, static instances just ignore the argument
 
 **Answer:** Option A — keeps the common (static) case simple while supporting the dynamic case.
@@ -121,6 +122,7 @@ Two options:
 ### Q6: What about nested forEach with headless instances?
 
 Example:
+
 ```html
 <div forEach="categories" trackBy="id">
   <div forEach="items" trackBy="_id">
@@ -202,7 +204,7 @@ sequenceDiagram
     participant Client
 
     Compiler->>Compiler: Generate dynamic coordinate factory<br/>for <jay:xxx> inside forEach
-    
+
     SlowPhase->>SlowPhase: discoverHeadlessInstances()<br/>→ finds forEachInstances
     SlowPhase->>SlowPhase: Check: component.slowlyRender?<br/>→ ERROR if yes<br/>→ OK if no
     SlowPhase->>SlowPhase: Record forEach instance metadata<br/>in __instances.forEachInstances
@@ -223,21 +225,21 @@ sequenceDiagram
 
 ```typescript
 export interface ForEachHeadlessInstance {
-    contractName: string;
-    /** The forEach attribute path (e.g., "allProducts.items") */
-    forEachPath: string;
-    /** TrackBy key for the forEach */
-    trackBy: string;
-    /** Prop bindings referencing forEach item fields (e.g., { productId: "{_id}" }) */
-    propBindings: Record<string, string>;
-    /** Coordinate suffix after trackBy values, e.g., ["product-widget"] */
-    coordinateSuffix: string[];
+  contractName: string;
+  /** The forEach attribute path (e.g., "allProducts.items") */
+  forEachPath: string;
+  /** TrackBy key for the forEach */
+  trackBy: string;
+  /** Prop bindings referencing forEach item fields (e.g., { productId: "{_id}" }) */
+  propBindings: Record<string, string>;
+  /** Coordinate suffix after trackBy values, e.g., ["product-widget"] */
+  coordinateSuffix: string[];
 }
 
 export interface HeadlessInstanceDiscoveryResult {
-    instances: DiscoveredHeadlessInstance[];
-    forEachInstances: ForEachHeadlessInstance[];
-    preRenderedJayHtml: string;
+  instances: DiscoveredHeadlessInstance[];
+  forEachInstances: ForEachHeadlessInstance[];
+  preRenderedJayHtml: string;
 }
 ```
 
@@ -247,14 +249,14 @@ In `slowRenderInstances` (or a new validation function), after discovering `forE
 
 ```typescript
 for (const forEachInstance of forEachInstances) {
-    const comp = componentByContractName.get(forEachInstance.contractName);
-    if (comp?.compDefinition.slowlyRender) {
-        validations.push(
-            `<jay:${forEachInstance.contractName}> inside forEach requires server-side slow rendering ` +
-            `which is not available for dynamically-iterated arrays. ` +
-            `Either remove the slow phase from the component or use slowForEach instead.`
-        );
-    }
+  const comp = componentByContractName.get(forEachInstance.contractName);
+  if (comp?.compDefinition.slowlyRender) {
+    validations.push(
+      `<jay:${forEachInstance.contractName}> inside forEach requires server-side slow rendering ` +
+        `which is not available for dynamically-iterated arrays. ` +
+        `Either remove the slow phase from the component or use slowForEach instead.`,
+    );
+  }
 }
 ```
 
@@ -264,44 +266,44 @@ New function: `renderFastChangingDataForForEachInstances`
 
 ```typescript
 async function renderFastChangingDataForForEachInstances(
-    forEachInstances: ForEachHeadlessInstance[],
-    headlessInstanceComponents: HeadlessInstanceComponent[],
-    fastViewState: object, // page's fast ViewState (contains forEach arrays)
+  forEachInstances: ForEachHeadlessInstance[],
+  headlessInstanceComponents: HeadlessInstanceComponent[],
+  fastViewState: object, // page's fast ViewState (contains forEach arrays)
 ): Promise<Record<string, object> | undefined> {
-    const viewStates: Record<string, object> = {};
-    
-    for (const instance of forEachInstances) {
-        const comp = componentByContractName.get(instance.contractName);
-        if (!comp) continue;
-        
-        // Resolve the forEach array from the page's fast ViewState
-        const items = resolvePathValue(fastViewState, instance.forEachPath) as any[];
-        if (!Array.isArray(items)) continue;
-        
-        for (const item of items) {
-            const trackByValue = item[instance.trackBy];
-            
-            // Resolve props from item data
-            const props = resolvePropsFromBindings(instance.propBindings, item);
-            
-            if (comp.compDefinition.fastRender) {
-                const services = resolveServices(comp.compDefinition.services);
-                const fastResult = await comp.compDefinition.fastRender(
-                    props, 
-                    {}, // empty carryForward (no slow phase)
-                    ...services
-                );
-                
-                if (fastResult.kind === 'PhaseOutput') {
-                    // Coordinate: [trackByValue, ...suffix] → "trackByValue/contract"
-                    const coord = [trackByValue, ...instance.coordinateSuffix].join('/');
-                    viewStates[coord] = fastResult.rendered;
-                }
-            }
+  const viewStates: Record<string, object> = {};
+
+  for (const instance of forEachInstances) {
+    const comp = componentByContractName.get(instance.contractName);
+    if (!comp) continue;
+
+    // Resolve the forEach array from the page's fast ViewState
+    const items = resolvePathValue(fastViewState, instance.forEachPath) as any[];
+    if (!Array.isArray(items)) continue;
+
+    for (const item of items) {
+      const trackByValue = item[instance.trackBy];
+
+      // Resolve props from item data
+      const props = resolvePropsFromBindings(instance.propBindings, item);
+
+      if (comp.compDefinition.fastRender) {
+        const services = resolveServices(comp.compDefinition.services);
+        const fastResult = await comp.compDefinition.fastRender(
+          props,
+          {}, // empty carryForward (no slow phase)
+          ...services,
+        );
+
+        if (fastResult.kind === 'PhaseOutput') {
+          // Coordinate: [trackByValue, ...suffix] → "trackByValue/contract"
+          const coord = [trackByValue, ...instance.coordinateSuffix].join('/');
+          viewStates[coord] = fastResult.rendered;
         }
+      }
     }
-    
-    return Object.keys(viewStates).length > 0 ? viewStates : undefined;
+  }
+
+  return Object.keys(viewStates).length > 0 ? viewStates : undefined;
 }
 ```
 
@@ -320,14 +322,20 @@ When `insideFastForEach` is true, instead of a static coordinate string:
 makeHeadlessInstanceComponent(render, comp, 'product-widget:0', contexts);
 
 // Dynamic (new, inside forEach — uses trackBy value as coordinate prefix):
-makeHeadlessInstanceComponent(render, comp, 
-    (trackByKey) => `${trackByKey}/product-widget`, 
-    contexts);
+makeHeadlessInstanceComponent(
+  render,
+  comp,
+  (trackByKey) => `${trackByKey}/product-widget`,
+  contexts,
+);
 
 // Nested forEach — each level adds its trackBy value:
-makeHeadlessInstanceComponent(render, comp, 
-    (trackByKey) => `${trackByKey}/product-card`, // trackByKey already includes outer levels
-    contexts);
+makeHeadlessInstanceComponent(
+  render,
+  comp,
+  (trackByKey) => `${trackByKey}/product-card`, // trackByKey already includes outer levels
+  contexts,
+);
 ```
 
 ### Client-Side Changes
@@ -336,17 +344,18 @@ makeHeadlessInstanceComponent(render, comp,
 
 ```typescript
 export function makeHeadlessInstanceComponent(
-    preRender: Function,
-    interactiveConstructor: Function,
-    coordinateKey: string | ((trackByKey: string) => string),
-    pluginContexts?: ContextMarkers<any>,
+  preRender: Function,
+  interactiveConstructor: Function,
+  coordinateKey: string | ((trackByKey: string) => string),
+  pluginContexts?: ContextMarkers<any>,
 ): JayComponentConstructor {
-    // ...
-    // When coordinateKey is a function, resolve it from the forEach item's trackBy
-    const resolvedKey = typeof coordinateKey === 'function'
-        ? coordinateKey(currentTrackByKey()) // from forEach runtime context
-        : coordinateKey;
-    // ...
+  // ...
+  // When coordinateKey is a function, resolve it from the forEach item's trackBy
+  const resolvedKey =
+    typeof coordinateKey === 'function'
+      ? coordinateKey(currentTrackByKey()) // from forEach runtime context
+      : coordinateKey;
+  // ...
 }
 ```
 
@@ -440,8 +449,10 @@ Coordinate for an item: `["electronics", "item-42", "price-widget"]` → key `"e
 ```html
 <div forEach="productIds" trackBy="id">
   <jay:product-card productId="{id}">
-    <h2>{name}</h2>  <!-- slow-phase data -->
-    <span>{price}</span>  <!-- fast-phase data -->
+    <h2>{name}</h2>
+    <!-- slow-phase data -->
+    <span>{price}</span>
+    <!-- fast-phase data -->
   </jay:product-card>
 </div>
 ```
@@ -479,13 +490,58 @@ Use slowForEach instead, or remove the slow phase from the component.
 
 ## Verification Criteria
 
-1. [ ] `<jay:xxx>` inside `forEach` compiles successfully (no compiler error)
-2. [ ] Compiled output uses dynamic coordinate factory (trackBy-based) for forEach instances
-3. [ ] Server discovers forEach instances during slow phase
-4. [ ] Server emits error if forEach instance's component has `slowlyRender`
-5. [ ] Server renders fast phase for forEach instances (per item, empty carryForward)
-6. [ ] Client resolves dynamic coordinates from trackBy keys
-7. [ ] ViewState correctly delivered to each forEach item's headless instance
-8. [ ] Interactive phase works for forEach instances (signals, refs, events)
-9. [ ] Existing static instances and slowForEach instances unaffected
-10. [ ] Nested forEach with headless instances produces correct multi-segment coordinates
+1. [x] `<jay:xxx>` inside `forEach` compiles successfully (no compiler error)
+2. [x] Compiled output uses dynamic coordinate factory (trackBy-based) for forEach instances
+3. [x] Server discovers forEach instances during slow phase
+4. [x] Server emits error if forEach instance's component has `slowlyRender`
+5. [x] Server renders fast phase for forEach instances (per item, empty carryForward)
+6. [x] Client resolves dynamic coordinates from trackBy keys
+7. [ ] ViewState correctly delivered to each forEach item's headless instance (needs E2E verification)
+8. [ ] Interactive phase works for forEach instances (signals, refs, events) (needs E2E verification)
+9. [x] Existing static instances and slowForEach instances unaffected
+10. [x] Nested forEach with headless instances produces correct multi-segment coordinates
+
+## Implementation Results
+
+### Files Modified
+
+**Compiler:**
+
+- `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts` — Removed `insideFastForEach` compile-time error in `renderHeadlessInstance`; when inside forEach, generates `(dataIds) => [...dataIds, 'contractName:ref'].toString()` factory instead of static string
+- `packages/compiler/compiler-jay-html/lib/slow-render/slow-render-transform.ts` — Updated `discoverHeadlessInstances` to return both `instances` (static) and `forEachInstances` (inside preserved forEach); added `ForEachHeadlessInstance` interface
+- `packages/compiler/compiler-jay-html/lib/index.ts` — Exported `ForEachHeadlessInstance` type
+
+**Server:**
+
+- `packages/jay-stack/stack-server-runtime/lib/instance-slow-render.ts` — Added `validateForEachInstances()` function; added `forEachInstances` field to `InstancePhaseData`; re-exported `ForEachHeadlessInstance`
+- `packages/jay-stack/dev-server/lib/dev-server.ts` — Integrated forEach instance validation in all three request handlers (direct, pre-render, cached); added `renderFastChangingDataForForEachInstances()` for per-item fast rendering; added helper functions `resolvePathValue()` and `resolveBinding()`
+
+**Client:**
+
+- `packages/runtime/runtime/lib/context.ts` — Added `dataIds` getter on `ConstructContext` to expose coordinate base
+- `packages/jay-stack/stack-client-runtime/lib/headless-instance-context.ts` — Updated `makeHeadlessInstanceComponent` to accept `string | ((dataIds: string[]) => string)` for coordinate key; resolves dynamic coordinates using `currentConstructionContext().dataIds`
+
+**Example:**
+
+- `examples/jay-stack/fake-shop/src/plugins/stock-status/` — New fast-only headless component (`stock-status`) with contract, component, plugin.yaml, and `.d.ts`
+- `examples/jay-stack/fake-shop/src/pages/page.jay-html` — Added `<jay:stock-status>` inside interactive `forEach="allProducts"` section
+
+**Tests:**
+
+- `packages/compiler/compiler-jay-html/test/jay-target/generate-element.test.ts` — Updated forEach test from expecting validation error to expecting successful compilation
+- `packages/compiler/compiler-jay-html/test/fixtures/contracts/page-with-headless-in-foreach/page-with-headless-in-foreach.jay-html.ts` — Updated fixture to use dynamic coordinate factory
+- `packages/compiler/compiler-jay-html/test/slow-render/slow-render-transform.test.ts` — Updated forEach discovery test to verify both `instances` and `forEachInstances`; added nested forEach discovery test
+- `packages/jay-stack/stack-server-runtime/test/validate-foreach-instances.test.ts` — New test file with 5 tests for `validateForEachInstances`
+
+### Test Results
+
+- compiler-jay-html: 514 passed, 4 skipped (518 total)
+- stack-server-runtime: 71 passed (71 total)
+- stack-client-runtime: 19 passed (19 total)
+- fake-shop: 6 passed (6 total)
+
+### Deviations from Design
+
+1. **Coordinate format**: Design proposed `[trackByValue, contractName]` but implementation uses `[trackByValue, contractName:ref]` — keeping the `:ref` suffix for consistency with static instance coordinates and to disambiguate multiple instances of the same contract inside one forEach
+2. **Factory receives `dataIds` not `trackByKey`**: The coordinate factory `(dataIds: string[]) => string` receives the full coordinate base (all accumulated trackBy values from ancestor forEach loops), not just the immediate trackBy value. This naturally supports nested forEach without additional logic
+3. **`ConstructContext.dataIds` getter added**: Instead of a separate runtime context for forEach trackBy values, we reused the existing `ConstructContext.coordinateBase` which already accumulates trackBy values via `forItem()`. The new `dataIds` getter exposes this cleanly

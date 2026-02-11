@@ -21,6 +21,7 @@ export {
     type SlowRenderOutput,
     type HeadlessContractInfo,
     type DiscoveredHeadlessInstance,
+    type ForEachHeadlessInstance,
     type HeadlessInstanceResolvedData,
     type HeadlessInstanceDiscoveryResult,
     buildInstanceCoordinateKey,

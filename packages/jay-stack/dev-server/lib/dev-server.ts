@@ -48,8 +48,10 @@ import {
     materializeContracts,
     resolveServices,
     slowRenderInstances,
+    validateForEachInstances,
     type HeadlessInstanceComponent,
     type InstancePhaseData,
+    type ForEachHeadlessInstance,
 } from '@jay-framework/stack-server-runtime';
 import { WithValidations } from '@jay-framework/compiler-shared';
 import { getLogger, getDevLogger, type RequestTiming } from '@jay-framework/logger';
@@ -328,10 +330,11 @@ async function handleCachedRequest(
     const instancePhaseData = (cachedEntry.carryForward as any)?.__instances as
         | InstancePhaseData
         | undefined;
-    if (instancePhaseData && pagePartsResult.val.headlessInstanceComponents.length > 0) {
+    const headlessComps = pagePartsResult.val.headlessInstanceComponents;
+    if (instancePhaseData && headlessComps.length > 0) {
         const instanceFastResult = await renderFastChangingDataForInstances(
             instancePhaseData,
-            pagePartsResult.val.headlessInstanceComponents,
+            headlessComps,
         );
         if (instanceFastResult) {
             fastViewState = {
@@ -342,6 +345,22 @@ async function handleCachedRequest(
                 ...fastCarryForward,
                 __headlessInstances: instanceFastResult.carryForwards,
             };
+        }
+
+        // Run fast phase for forEach instances (per-item rendering)
+        if (instancePhaseData.forEachInstances && instancePhaseData.forEachInstances.length > 0) {
+            const forEachResult = await renderFastChangingDataForForEachInstances(
+                instancePhaseData.forEachInstances,
+                headlessComps,
+                fastViewState,
+            );
+            if (forEachResult) {
+                const existingHeadless = (fastViewState as any).__headlessInstances || {};
+                fastViewState = {
+                    ...fastViewState,
+                    __headlessInstances: { ...existingHeadless, ...forEachResult },
+                };
+            }
         }
     }
 
@@ -437,8 +456,21 @@ async function handlePreRenderRequest(
     }
 
     // Merge instance phase data into page carryForward so fast phase can access it
-    const carryForward = preRenderResult.instancePhaseData
-        ? { ...renderedSlowly.carryForward, __instances: preRenderResult.instancePhaseData }
+    let instancePhaseDataForCache = preRenderResult.instancePhaseData;
+    if (instancePhaseDataForCache && preRenderResult.forEachInstances) {
+        instancePhaseDataForCache = {
+            ...instancePhaseDataForCache,
+            forEachInstances: preRenderResult.forEachInstances,
+        };
+    } else if (preRenderResult.forEachInstances) {
+        instancePhaseDataForCache = {
+            discovered: [],
+            carryForwards: {},
+            forEachInstances: preRenderResult.forEachInstances,
+        };
+    }
+    const carryForward = instancePhaseDataForCache
+        ? { ...renderedSlowly.carryForward, __instances: instancePhaseDataForCache }
         : renderedSlowly.carryForward;
 
     // Cache the result (writes to disk and returns the path)
@@ -497,10 +529,11 @@ async function handlePreRenderRequest(
     let fastCarryForward = renderedFast.carryForward;
 
     const instancePhaseData = (carryForward as any)?.__instances as InstancePhaseData | undefined;
-    if (instancePhaseData && pagePartsResult.val.headlessInstanceComponents.length > 0) {
+    const headlessComps = pagePartsResult.val.headlessInstanceComponents;
+    if (instancePhaseData && headlessComps.length > 0) {
         const instanceFastResult = await renderFastChangingDataForInstances(
             instancePhaseData,
-            pagePartsResult.val.headlessInstanceComponents,
+            headlessComps,
         );
         if (instanceFastResult) {
             fastViewState = {
@@ -511,6 +544,22 @@ async function handlePreRenderRequest(
                 ...fastCarryForward,
                 __headlessInstances: instanceFastResult.carryForwards,
             };
+        }
+
+        // Run fast phase for forEach instances (per-item rendering)
+        if (instancePhaseData.forEachInstances && instancePhaseData.forEachInstances.length > 0) {
+            const forEachResult = await renderFastChangingDataForForEachInstances(
+                instancePhaseData.forEachInstances,
+                headlessComps,
+                fastViewState,
+            );
+            if (forEachResult) {
+                const existingHeadless = (fastViewState as any).__headlessInstances || {};
+                fastViewState = {
+                    ...fastViewState,
+                    __headlessInstances: { ...existingHeadless, ...forEachResult },
+                };
+            }
         }
     }
 
@@ -598,11 +647,29 @@ async function handleDirectRequest(
     // Run slow phase for headless instances
     let instanceViewStates: Record<string, object> | undefined;
     let instancePhaseDataForFast: InstancePhaseData | undefined;
+    let forEachInstancesForFast: ForEachHeadlessInstance[] | undefined;
     const headlessInstanceComponents = pagePartsResult.val.headlessInstanceComponents ?? [];
 
     if (headlessInstanceComponents.length > 0) {
         const jayHtmlContent = await fs.readFile(route.jayHtmlPath, 'utf-8');
         const discoveryResult = discoverHeadlessInstances(jayHtmlContent);
+
+        // Validate: forEach instances must not have slow phases
+        if (discoveryResult.forEachInstances.length > 0) {
+            const validationErrors = validateForEachInstances(
+                discoveryResult.forEachInstances,
+                headlessInstanceComponents,
+            );
+            if (validationErrors.length > 0) {
+                getLogger().error(
+                    `[SlowRender] ForEach instance validation failed: ${validationErrors.join(', ')}`,
+                );
+                res.status(500).end(validationErrors.join('\n'));
+                timing?.end();
+                return;
+            }
+            forEachInstancesForFast = discoveryResult.forEachInstances;
+        }
 
         if (discoveryResult.instances.length > 0) {
             const slowResult = await slowRenderInstances(
@@ -626,7 +693,7 @@ async function handleDirectRequest(
         pageParts,
     );
 
-    // Run fast phase for headless instances
+    // Run fast phase for static headless instances
     if (instancePhaseDataForFast && instanceViewStates) {
         const instanceFastResult = await renderFastChangingDataForInstances(
             instancePhaseDataForFast,
@@ -638,6 +705,21 @@ async function handleDirectRequest(
                     ...(instanceViewStates[coordKey] || {}),
                     ...fastVS,
                 };
+            }
+        }
+    }
+
+    // Run fast phase for forEach headless instances (per-item rendering)
+    if (forEachInstancesForFast && renderedFast.kind === 'PhaseOutput') {
+        const forEachResult = await renderFastChangingDataForForEachInstances(
+            forEachInstancesForFast,
+            headlessInstanceComponents,
+            { ...renderedSlowly.rendered, ...renderedFast.rendered },
+        );
+        if (forEachResult) {
+            if (!instanceViewStates) instanceViewStates = {};
+            for (const [coordKey, fastVS] of Object.entries(forEachResult)) {
+                instanceViewStates[coordKey] = fastVS;
             }
         }
     }
@@ -747,6 +829,8 @@ interface PreRenderResult {
     preRenderedJayHtml: string;
     /** Instance data for the fast phase (discovery info + carryForwards) */
     instancePhaseData?: InstancePhaseData;
+    /** ForEach instances that need per-item fast rendering */
+    forEachInstances?: ForEachHeadlessInstance[];
 }
 
 // InstancePhaseData is now imported from stack-server-runtime
@@ -820,10 +904,27 @@ async function preRenderJayHtml(
     let instancePhaseData: InstancePhaseData | undefined;
 
     // ── Pass 2: Resolve headless instance bindings ──
+    let forEachInstances: ForEachHeadlessInstance[] | undefined;
+
     if (headlessInstanceComponents.length > 0) {
         const discoveryResult = discoverHeadlessInstances(preRenderedJayHtml);
         // Use the HTML with embedded ref attributes for downstream consumers
         preRenderedJayHtml = discoveryResult.preRenderedJayHtml;
+
+        // Validate: forEach instances must not have slow phases
+        if (discoveryResult.forEachInstances.length > 0) {
+            const validationErrors = validateForEachInstances(
+                discoveryResult.forEachInstances,
+                headlessInstanceComponents,
+            );
+            if (validationErrors.length > 0) {
+                getLogger().error(
+                    `[SlowRender] ForEach instance validation failed: ${validationErrors.join(', ')}`,
+                );
+                return undefined;
+            }
+            forEachInstances = discoveryResult.forEachInstances;
+        }
 
         if (discoveryResult.instances.length > 0) {
             const slowResult = await slowRenderInstances(
@@ -855,7 +956,7 @@ async function preRenderJayHtml(
         }
     }
 
-    return { preRenderedJayHtml, instancePhaseData };
+    return { preRenderedJayHtml, instancePhaseData, forEachInstances };
 }
 
 /**
@@ -911,6 +1012,84 @@ async function renderFastChangingDataForInstances(
     }
 
     return hasResults ? { viewStates, carryForwards } : undefined;
+}
+
+/**
+ * Run fast render phase for headless instances inside forEach blocks.
+ *
+ * These instances have no slow phase. For each forEach item, resolve props
+ * from the item data and call the component's fastRender.
+ *
+ * Uses Coordinate convention: [trackByValue, ...suffix] joined with comma
+ * (matching Array.toString() used by the runtime Coordinate type).
+ */
+async function renderFastChangingDataForForEachInstances(
+    forEachInstances: ForEachHeadlessInstance[],
+    headlessInstanceComponents: HeadlessInstanceComponent[],
+    mergedViewState: object,
+): Promise<Record<string, object> | undefined> {
+    const componentByContractName = new Map<string, HeadlessInstanceComponent>();
+    for (const comp of headlessInstanceComponents) {
+        componentByContractName.set(comp.contractName, comp);
+    }
+
+    const viewStates: Record<string, object> = {};
+    let hasResults = false;
+
+    for (const instance of forEachInstances) {
+        const comp = componentByContractName.get(instance.contractName);
+        if (!comp) continue;
+
+        // Resolve the forEach array from the merged (slow + fast) viewState
+        const items = resolvePathValue(mergedViewState, instance.forEachPath);
+        if (!Array.isArray(items)) continue;
+
+        for (const item of items) {
+            const trackByValue = String(item[instance.trackBy]);
+
+            // Resolve props from item data using prop bindings
+            const props: Record<string, string> = {};
+            for (const [propName, binding] of Object.entries(instance.propBindings)) {
+                // Resolve bindings like "{_id}" → item._id
+                props[propName] = resolveBinding(String(binding), item);
+            }
+
+            if (comp.compDefinition.fastRender) {
+                const services = resolveServices(comp.compDefinition.services);
+                // No slow phase → fastRender signature is (props, ...services)
+                // carryForward is only injected when withSlowlyRender is used
+                const fastResult = await comp.compDefinition.fastRender(props, ...services);
+
+                if (fastResult.kind === 'PhaseOutput') {
+                    // Coordinate: [trackByValue, coordinateSuffix] → "trackByValue,coordinateSuffix"
+                    const coord = [trackByValue, instance.coordinateSuffix].toString();
+                    viewStates[coord] = fastResult.rendered;
+                    hasResults = true;
+                }
+            }
+        }
+    }
+
+    return hasResults ? viewStates : undefined;
+}
+
+/**
+ * Resolve a dot-path value from an object (e.g., "allProducts.items" → obj.allProducts.items).
+ */
+function resolvePathValue(obj: any, path: string): any {
+    return path.split('.').reduce((current, segment) => current?.[segment], obj);
+}
+
+/**
+ * Resolve a binding expression against a forEach item.
+ * Handles "{fieldName}" → item.fieldName, or literal strings.
+ */
+function resolveBinding(binding: string, item: any): string {
+    const match = binding.match(/^\{(.+)\}$/);
+    if (match) {
+        return String(item[match[1]] ?? '');
+    }
+    return binding;
 }
 
 /**

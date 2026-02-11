@@ -1,0 +1,7 @@
+name: stock-status
+module: ./stock-status
+contracts:
+  - name: stock-status
+    contract: ./stock-status.jay-contract
+    component: stockStatus
+    description: Stock status badge showing availability (fast-only, no slow phase)

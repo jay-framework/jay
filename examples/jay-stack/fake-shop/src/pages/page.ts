@@ -31,7 +31,7 @@ async function renderFastChanging(
 ) {
     const Pipeline = RenderPipeline.for<PageFastViewState, HomePageCarryForward>();
     const products = await productsDb.getProducts();
-    const allProducts = products.map((p) => ({ _id: p.id }));
+    const allProducts = products.map((p) => ({ _id: p.id, name: p.name }));
 
     return Pipeline.ok({}).toPhaseOutput(() => ({
         viewState: { allProducts },

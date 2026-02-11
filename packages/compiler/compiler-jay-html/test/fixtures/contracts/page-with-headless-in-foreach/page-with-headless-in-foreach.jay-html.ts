@@ -89,7 +89,7 @@ function _headlessProductCard0Render(
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0Render,
     productCard.comp,
-    'product-card:0',
+    (dataIds) => [...dataIds, 'product-card:0'].toString(),
     productCard.contexts,
 );
 

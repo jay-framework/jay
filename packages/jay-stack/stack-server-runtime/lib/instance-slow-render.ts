@@ -6,7 +6,11 @@
  * the results for downstream consumers (pre-render pipeline, direct mode, fast phase).
  */
 
-import type { DiscoveredHeadlessInstance } from '@jay-framework/compiler-jay-html';
+import type {
+    DiscoveredHeadlessInstance,
+    ForEachHeadlessInstance,
+} from '@jay-framework/compiler-jay-html';
+export type { ForEachHeadlessInstance } from '@jay-framework/compiler-jay-html';
 import type { HeadlessInstanceComponent } from './load-page-parts';
 import type { Coordinate } from '@jay-framework/runtime';
 import type { Contract } from '@jay-framework/compiler-jay-html';
@@ -26,6 +30,8 @@ export interface InstancePhaseData {
     }>;
     /** CarryForward per instance (keyed by coordinate path, e.g. "p1/product-card:0") */
     carryForwards: Record<string, object>;
+    /** ForEach instances that need fast-phase per-item rendering */
+    forEachInstances?: ForEachHeadlessInstance[];
 }
 
 /**
@@ -102,4 +108,36 @@ export async function slowRenderInstances(
         slowViewStates,
         instancePhaseData: { discovered: discoveredForFast, carryForwards },
     };
+}
+
+/**
+ * Validate that forEach headless instances do not have a slow phase.
+ *
+ * Components with slowlyRender cannot be used inside forEach because
+ * forEach items are only known at request time, after slow rendering completes.
+ *
+ * @returns Array of validation error messages (empty if all valid)
+ */
+export function validateForEachInstances(
+    forEachInstances: ForEachHeadlessInstance[],
+    headlessInstanceComponents: HeadlessInstanceComponent[],
+): string[] {
+    const componentByContractName = new Map<string, HeadlessInstanceComponent>();
+    for (const comp of headlessInstanceComponents) {
+        componentByContractName.set(comp.contractName, comp);
+    }
+
+    const validations: string[] = [];
+    for (const instance of forEachInstances) {
+        const comp = componentByContractName.get(instance.contractName);
+        if (comp?.compDefinition.slowlyRender) {
+            validations.push(
+                `<jay:${instance.contractName}> inside forEach has a slow rendering phase. ` +
+                    `Headless components with slow phases cannot be used inside forEach because ` +
+                    `forEach items are only known at request time, after slow rendering completes. ` +
+                    `Use slowForEach instead, or remove the slow phase from the component.`,
+            );
+        }
+    }
+    return validations;
 }

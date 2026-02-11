@@ -25,3 +25,7 @@ tags:
         type: data
         dataType: string
         description: Product ID
+      - tag: name
+        type: data
+        dataType: string
+        description: Product name

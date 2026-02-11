@@ -64,7 +64,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 72  | skip client script for non-interactive components     | Optimization for static components                                                |
 | 84  | headless component props and repeater support         | Props, multiple instances, forEach, jay: prefix                                   |
 | 85  | rendering phases and agent kit for agentic generation | Phases + contract/action discovery; agent-kit folder, markdown content → jay-html |
-| 90  | headless instances in interactive forEach             | Allow fast/interactive-only headless components inside forEach (no slow phase)     |
+| 90  | headless instances in interactive forEach             | Allow fast/interactive-only headless components inside forEach (no slow phase)    |
 
 ---
 
@@ -194,6 +194,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 81  | dev server test mode                                   | Health/shutdown endpoints and timeout for smoke testing                               |
 | 83  | dev server logging and timing                          | Clean output, verbose mode, timing for render phases                                  |
 | 85  | rendering phases and agent kit for agentic generation  | Agent-kit folder: instructions, contracts, markdown content with headless annotations |
+| 91  | WebMCP plugin for jay-stack                            | Generic WebMCP support: automation→tools/resources/prompts, plugin packaging          |
 
 ---
 
@@ -237,7 +238,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ### "I'm working on AI agent integration"
 
-→ See #76 (AI Agent Integration), #77 (automation dev server), #80 (contract materialization for agents), #85 (agent kit and rendering phases)
+→ See #76 (AI Agent Integration), #77 (automation dev server), #80 (contract materialization for agents), #85 (agent kit and rendering phases), #91 (WebMCP plugin)
 → Agent kit skills: `.cursor/skills/jay-agent-kit/` (main), `jay-html-authoring/`, `jay-cli-commands/`, `jay-contracts-and-plugins/`, `jay-dev-server-test/`
 
 ### "I need to understand the full workflow lifecycle"

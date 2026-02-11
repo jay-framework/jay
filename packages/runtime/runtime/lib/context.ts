@@ -164,6 +164,11 @@ export class ConstructContext<ViewState> {
         return this.data;
     }
 
+    /** The accumulated coordinate base (trackBy values from ancestor forEach loops) */
+    get dataIds(): Coordinate {
+        return this.coordinateBase;
+    }
+
     coordinate = (refName: string): Coordinate => {
         return [...this.coordinateBase, refName];
     };

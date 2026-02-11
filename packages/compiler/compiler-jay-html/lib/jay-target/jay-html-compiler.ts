@@ -654,23 +654,6 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
         newContext: RenderContext,
         contractName: string,
     ): RenderFragment {
-        // Headless instances inside fast-phase forEach are not supported:
-        // their slow/fast data must be rendered server-side, but fast forEach
-        // items are only known at request time. Use slowForEach instead.
-        if (newContext.insideFastForEach) {
-            return new RenderFragment(
-                '',
-                Imports.none(),
-                [
-                    `<jay:${contractName}> cannot be used inside a fast-phase forEach. ` +
-                        `Headless component instances require server-side rendering which is not available ` +
-                        `for dynamically-iterated arrays. Change the array's phase to "slow" in the contract ` +
-                        `to use slowForEach, or use a key-based headless component instead.`,
-                ],
-                mkRefsTree([], {}),
-            );
-        }
-
         // Find the matching headless import
         const headlessImport = newContext.headlessImports.find(
             (h) => h.contractName === contractName,
@@ -792,10 +775,13 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             newContext.coordinateCounters.set(counterKey, localIndex + 1);
             coordinateRef = String(localIndex);
         }
-        const coordinateKey = [
-            ...newContext.coordinatePrefix,
-            `${contractName}:${coordinateRef}`,
-        ].join('/');
+
+        // For static instances: string key. For forEach instances: factory function.
+        const isInsideForEach = newContext.insideFastForEach;
+        const coordinateSuffix = `${contractName}:${coordinateRef}`;
+        const coordinateKey = isInsideForEach
+            ? undefined // will use factory
+            : [...newContext.coordinatePrefix, coordinateSuffix].join('/');
 
         // Generate type aliases and render function code
         const renderFnCode = `
@@ -816,7 +802,7 @@ ${inlineBody.rendered}
 const ${componentSymbol} = makeHeadlessInstanceComponent(
     ${renderFnName},
     ${pluginComponentName}.comp,
-    '${coordinateKey}',
+    ${isInsideForEach ? `(dataIds) => [...dataIds, '${coordinateSuffix}'].toString()` : `'${coordinateKey}'`},
     ${pluginComponentName}.contexts,
 );`;
 

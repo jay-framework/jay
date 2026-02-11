@@ -147,7 +147,10 @@ window.onload = function () {
                 componentInstance.setItems([...currentItems, newItem]);
             }
 
-            return jsonResult(`Added "${itemName}" ($${itemPrice}) x${itemQuantity} to cart.`, getCartState(automation));
+            return jsonResult(
+                `Added "${itemName}" ($${itemPrice}) x${itemQuantity} to cart.`,
+                getCartState(automation),
+            );
         },
     });
 
@@ -157,7 +160,10 @@ window.onload = function () {
         inputSchema: {
             type: 'object',
             properties: {
-                itemId: { type: 'string', description: 'The unique ID of the item to remove (e.g. "item-1")' },
+                itemId: {
+                    type: 'string',
+                    description: 'The unique ID of the item to remove (e.g. "item-1")',
+                },
             },
             required: ['itemId'],
         },
@@ -167,7 +173,9 @@ window.onload = function () {
             const item = items.find((i) => i.id === id);
 
             if (!item) {
-                return textResult(`Error: Item "${id}" not found. Available IDs: ${items.map((i) => i.id).join(', ')}`);
+                return textResult(
+                    `Error: Item "${id}" not found. Available IDs: ${items.map((i) => i.id).join(', ')}`,
+                );
             }
 
             automation.triggerEvent('click', [id, 'removeBtn']);
@@ -181,8 +189,15 @@ window.onload = function () {
         inputSchema: {
             type: 'object',
             properties: {
-                itemId: { type: 'string', description: 'The unique ID of the item (e.g. "item-1")' },
-                action: { type: 'string', description: 'Whether to increase or decrease the quantity', enum: ['increase', 'decrease'] },
+                itemId: {
+                    type: 'string',
+                    description: 'The unique ID of the item (e.g. "item-1")',
+                },
+                action: {
+                    type: 'string',
+                    description: 'Whether to increase or decrease the quantity',
+                    enum: ['increase', 'decrease'],
+                },
             },
             required: ['itemId', 'action'],
         },
@@ -193,21 +208,28 @@ window.onload = function () {
             const item = items.find((i) => i.id === id);
 
             if (!item) {
-                return textResult(`Error: Item "${id}" not found. Available IDs: ${items.map((i) => i.id).join(', ')}`);
+                return textResult(
+                    `Error: Item "${id}" not found. Available IDs: ${items.map((i) => i.id).join(', ')}`,
+                );
             }
 
             if (act === 'increase') {
                 automation.triggerEvent('click', [id, 'increaseBtn']);
             } else if (act === 'decrease') {
                 if (item.quantity <= 1) {
-                    return textResult(`Cannot decrease: "${item.name}" already has quantity 1. Use remove-item to remove it.`);
+                    return textResult(
+                        `Cannot decrease: "${item.name}" already has quantity 1. Use remove-item to remove it.`,
+                    );
                 }
                 automation.triggerEvent('click', [id, 'decreaseBtn']);
             } else {
                 return textResult(`Error: Invalid action "${act}". Use "increase" or "decrease".`);
             }
 
-            return jsonResult(`${act === 'increase' ? 'Increased' : 'Decreased'} quantity of "${item.name}".`, getCartState(automation));
+            return jsonResult(
+                `${act === 'increase' ? 'Increased' : 'Decreased'} quantity of "${item.name}".`,
+                getCartState(automation),
+            );
         },
     });
 

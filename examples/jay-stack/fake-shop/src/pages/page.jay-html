@@ -11,6 +11,11 @@
             plugin="product-widget"
             contract="product-widget"
     ></script>
+    <!-- Fast-only headless component: stock status (no slow phase) -->
+    <script type="application/jay-headless"
+            plugin="stock-status"
+            contract="stock-status"
+    ></script>
     <style>
       .main {background-color: lightsteelblue; border: 1px solid #3498db}
       .product-card {border: 1px solid #ccc; padding: 10px; margin: 5px; display: inline-block}
@@ -73,6 +78,24 @@
               <span if="!inStock">Out of Stock</span>
               <button ref="addToCart">Add to Cart</button>
             </jay:product-widget>
+          </div>
+        </div>
+      </div>
+
+      <!-- forEach with fast-only headless component (Design Log #90) -->
+      <div class="section">
+        <h2>All Products - Stock Status (interactive forEach)</h2>
+        <div forEach="allProducts" trackBy="_id">
+          <div class="product-card">
+            <strong>{name}</strong>
+            <jay:stock-status productId="{_id}">
+              <div>
+                <span>Units: {units}</span>
+                <span if="inStock" style="color: green"> ✓ In Stock</span>
+                <span if="!inStock" style="color: red"> ✗ Out of Stock</span>
+                <button ref="refreshButton">↻</button>
+              </div>
+            </jay:stock-status>
           </div>
         </div>
       </div>

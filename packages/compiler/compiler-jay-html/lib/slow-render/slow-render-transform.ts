@@ -656,8 +656,27 @@ export function buildInstanceCoordinateKey(
     return [...prefix, `${contractName}:${ref}`].join('/');
 }
 
+/**
+ * A headless instance found inside a preserved forEach (fast phase).
+ * These instances have unresolved prop bindings and need per-item rendering
+ * at fast phase time. They are only allowed if the component has no slow phase.
+ */
+export interface ForEachHeadlessInstance {
+    contractName: string;
+    /** The forEach attribute path on the ancestor element (e.g., "allProducts.items") */
+    forEachPath: string;
+    /** TrackBy key for the forEach (e.g., "_id") */
+    trackBy: string;
+    /** Prop bindings referencing forEach item fields (e.g., { productId: "{_id}" }) */
+    propBindings: Record<string, string>;
+    /** Coordinate suffix after trackBy values (e.g., "product-card:0") */
+    coordinateSuffix: string;
+}
+
 export interface HeadlessInstanceDiscoveryResult {
     instances: DiscoveredHeadlessInstance[];
+    /** Headless instances inside preserved forEach elements (need server-time validation) */
+    forEachInstances: ForEachHeadlessInstance[];
     /** HTML with auto-generated ref attributes embedded on <jay:xxx> elements */
     preRenderedJayHtml: string;
 }
@@ -674,28 +693,40 @@ export function discoverHeadlessInstances(
     });
 
     const instances: DiscoveredHeadlessInstance[] = [];
+    const forEachInstances: ForEachHeadlessInstance[] = [];
     const coordinateCounters = new Map<string, number>();
 
-    function walk(element: HTMLElement, insidePreservedForEach: boolean) {
+    interface ForEachContext {
+        forEachPath: string;
+        trackBy: string;
+    }
+
+    function walk(
+        element: HTMLElement,
+        insidePreservedForEach: boolean,
+        forEachContexts: ForEachContext[],
+    ) {
         const tagName = element.tagName?.toLowerCase();
 
         // Check if this element has a preserved forEach (fast phase — not unrolled by Pass 1)
-        const hasForEach = element.getAttribute('forEach') != null;
+        const forEachAttr = element.getAttribute('forEach');
+        const hasForEach = forEachAttr != null;
+        const trackByAttr = element.getAttribute('trackBy');
 
         if (tagName?.startsWith('jay:')) {
-            if (!insidePreservedForEach) {
-                const contractName = tagName.substring(4);
+            const contractName = tagName.substring(4);
 
-                // Extract props from attributes (skip ref and jay-specific attributes)
-                const props: Record<string, string> = {};
-                for (const [key, value] of Object.entries(element.attributes)) {
-                    const lowerKey = key.toLowerCase();
-                    if (lowerKey !== 'ref' && !lowerKey.startsWith('jay')) {
-                        props[toCamelCase(key)] = value;
-                    }
+            // Extract props from attributes (skip ref and jay-specific attributes)
+            const props: Record<string, string> = {};
+            for (const [key, value] of Object.entries(element.attributes)) {
+                const lowerKey = key.toLowerCase();
+                if (lowerKey !== 'ref' && !lowerKey.startsWith('jay')) {
+                    props[toCamelCase(key)] = value;
                 }
+            }
 
-                // Skip instances with unresolved prop bindings (dynamic props)
+            if (!insidePreservedForEach) {
+                // Static instance (outside forEach) — existing behavior
                 const hasUnresolvedProps = Object.values(props).some((v) => hasBindings(v));
 
                 if (!hasUnresolvedProps) {
@@ -704,12 +735,10 @@ export function discoverHeadlessInstances(
                     // Use explicit ref or auto-generate one
                     let ref = element.getAttribute('ref');
                     if (!ref) {
-                        // Auto-generate ref using scope-level counter
                         const counterKey = [...prefix, contractName].join('/');
                         const localIndex = coordinateCounters.get(counterKey) ?? 0;
                         coordinateCounters.set(counterKey, localIndex + 1);
                         ref = String(localIndex);
-                        // Embed the auto-ref in the HTML for downstream consumers
                         element.setAttribute('ref', ref);
                     }
 
@@ -721,27 +750,58 @@ export function discoverHeadlessInstances(
                         coordinate,
                     });
                 }
+            } else {
+                // Instance inside preserved forEach — collect for server-time validation
+                // Use the innermost forEach context for path/trackBy
+                const innerForEach = forEachContexts[forEachContexts.length - 1];
+                if (innerForEach) {
+                    // Auto-generate ref for coordinate suffix
+                    let ref = element.getAttribute('ref');
+                    if (!ref) {
+                        const counterKey = ['forEach', contractName].join('/');
+                        const localIndex = coordinateCounters.get(counterKey) ?? 0;
+                        coordinateCounters.set(counterKey, localIndex + 1);
+                        ref = String(localIndex);
+                    }
+
+                    forEachInstances.push({
+                        contractName,
+                        forEachPath: innerForEach.forEachPath,
+                        trackBy: innerForEach.trackBy,
+                        propBindings: props,
+                        coordinateSuffix: `${contractName}:${ref}`,
+                    });
+                }
             }
 
             // Don't recurse into jay:xxx children for discovery
-            // (children are the inline template, not nested instances)
             return;
         }
+
+        // Build updated forEach context stack
+        const updatedForEachContexts =
+            hasForEach && forEachAttr && trackByAttr
+                ? [...forEachContexts, { forEachPath: forEachAttr, trackBy: trackByAttr }]
+                : forEachContexts;
 
         // Recurse into children
         for (const child of element.childNodes) {
             if (child.nodeType === NodeType.ELEMENT_NODE) {
-                walk(child as HTMLElement, insidePreservedForEach || hasForEach);
+                walk(
+                    child as HTMLElement,
+                    insidePreservedForEach || hasForEach,
+                    updatedForEachContexts,
+                );
             }
         }
     }
 
     const body = root.querySelector('body');
     if (body) {
-        walk(body, false);
+        walk(body, false, []);
     }
 
-    return { instances, preRenderedJayHtml: root.toString() };
+    return { instances, forEachInstances, preRenderedJayHtml: root.toString() };
 }
 
 /**
