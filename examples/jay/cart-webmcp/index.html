@@ -5,38 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cart + WebMCP Example</title>
     <script type="module" src="./lib/index.ts"></script>
-  </head>
-  <body>
-    <div id="target">Loading...</div>
-    <div
-      style="
+    <style>
+      #webmcp-status {
         margin-top: 20px;
         padding: 16px;
-        background: #ede7f6;
         border-radius: 8px;
         max-width: 600px;
         margin-left: auto;
         margin-right: auto;
-      "
-    >
-      <p style="color: #4527a0; font-weight: bold">WebMCP Demo</p>
-      <p style="color: #666; font-size: 14px; margin-top: 8px">
-        This cart exposes its functionality as
-        <a href="https://github.com/webmachinelearning/webmcp" target="_blank" style="color: #7c4dff">WebMCP</a>
-        tools via <code style="background: #eee; padding: 2px 6px; border-radius: 3px">navigator.modelContext</code>.
-      </p>
-      <p style="color: #666; font-size: 14px; margin-top: 8px">
-        Open the browser console (F12) and type
-        <code style="background: #eee; padding: 2px 6px; border-radius: 3px">webmcp.help()</code> to explore,
-        or try:
-      </p>
-      <pre style="background: #f5f5f5; padding: 12px; border-radius: 4px; margin-top: 8px; font-size: 13px; color: #333; overflow-x: auto"><code>webmcp.tools()                                        // list tools
-webmcp.call("get-cart-state")                          // read state
-webmcp.call("add-item", { name: "Monitor", price: 299 })  // add item
-webmcp.call("update-quantity", { itemId: "item-1", action: "increase" })
-webmcp.call("remove-item", { itemId: "item-2" })
-webmcp.call("clear-cart")
-webmcp.listTools()                                     // MCP-compatible JSON</code></pre>
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+      .status-supported {
+        background: #e8f5e9;
+        border: 1px solid #a5d6a7;
+        color: #2e7d32;
+      }
+      .status-supported a { color: #1b5e20; }
+      .status-unsupported {
+        background: #fbe9e7;
+        border: 1px solid #ef9a9a;
+        color: #c62828;
+      }
+      .status-unsupported a { color: #b71c1c; }
+      #webmcp-status p { margin: 4px 0; }
+      #webmcp-status p:first-child { margin-bottom: 8px; }
+    </style>
+  </head>
+  <body>
+    <div id="target">Loading...</div>
+    <div id="webmcp-status">
+      <p>Checking for WebMCP support...</p>
     </div>
   </body>
 </html>
