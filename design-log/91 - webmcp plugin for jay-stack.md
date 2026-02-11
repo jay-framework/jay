@@ -114,23 +114,9 @@ From this, we can derive:
 
 ### Q3: What about exposing server actions as tools?
 
-**Answer:** Server actions should be discoverable and callable as WebMCP tools.
+**Answer:** Deferred. Start without action-as-tools.
 
-**Challenge:** Currently there's no client-side API to list available actions with their schemas.
-
-**Solution:** The dev server (or plugin server init) should provide action metadata via `clientInitData`:
-
-```typescript
-// Server init collects action metadata
-const actions = actionRegistry.getAll();
-// → [{ name: 'cart.addToCart', method: 'POST', inputSchema: {...}, description: '...' }]
-
-setClientInitData('webmcp', { actions: actionMetadata });
-```
-
-**New capability needed:** Action metadata (name, method, inputSchema, description) must be discoverable from the action registry. Currently actions just have a name and handler — they'd need optional schema metadata for good WebMCP tool descriptions.
-
-**Alternatively:** Start without action-as-tools. The generic `trigger-interaction` tools already cover UI-driven actions. Server action tools can be added incrementally.
+The generic `trigger-interaction` and semantic tools already cover all UI-driven interactions, which is how users invoke actions (clicking buttons wired to action handlers). Exposing server actions directly as WebMCP tools would require action metadata (inputSchema, description) that doesn't exist yet — can be added incrementally later.
 
 ### Q4: How does the plugin get access to AutomationAPI?
 
@@ -285,17 +271,15 @@ registerResource({
   },
 });
 
-// groupInteractions imported from @jay-framework/runtime-automation
 registerResource({
   uri: 'state://interactions',
   name: 'Available Interactions',
   description: 'Interactive elements on the page, grouped by ref name',
   mimeType: 'application/json',
   async read() {
-    const { interactions } = automation.getPageState();
-    const grouped = groupInteractions(interactions);
+    const { interactions } = automation.getPageState();  // already grouped
     return {
-      contents: [{ uri: 'state://interactions', text: JSON.stringify(grouped, null, 2), mimeType: 'application/json' }],
+      contents: [{ uri: 'state://interactions', text: JSON.stringify(interactions, null, 2), mimeType: 'application/json' }],
     };
   },
 });
@@ -364,11 +348,44 @@ init:
   handler: ./init
 ```
 
-### New Capabilities Needed from Jay-Stack
+### Changes to `@jay-framework/runtime-automation` (breaking)
 
-**Minimal.** One addition to `@jay-framework/runtime-automation`, no changes to jay-stack core:
+**Change `PageState.interactions` to return grouped interactions by default.** The current flat per-coordinate list is an implementation detail that no consumer wants directly — every consumer (WebMCP, test tools, console debugging) needs to group by refName first.
 
-- **`groupInteractions()` utility** in `runtime-automation` — groups raw interactions by refName, collapsing forEach items. This is not WebMCP-specific; any automation consumer (test tools, accessibility, console debugging) needs the same grouping. See [groupInteractions implementation](#groupinteractions-implementation) below.
+**Before (current):**
+```typescript
+interface PageState {
+    viewState: object;
+    interactions: Interaction[];   // flat: one entry per coordinate (N items × M refs)
+    customEvents: Array<{ name: string }>;
+}
+```
+
+**After:**
+```typescript
+interface PageState {
+    viewState: object;
+    interactions: GroupedInteraction[];  // grouped: one entry per unique refName
+    customEvents: Array<{ name: string }>;
+}
+
+interface GroupedInteraction {
+    ref: string;               // "removeBtn"
+    type: string;              // "Button", "TextInput", etc.
+    events: string[];          // ["click"]
+    description?: string;      // from contract
+    inForEach?: true;
+    items?: Array<{ id: string; label: string }>;
+}
+```
+
+The existing per-coordinate APIs remain unchanged:
+- `getInteraction(coordinate)` → still returns a single `Interaction` (with `element`, `coordinate`, etc.)
+- `triggerEvent(eventType, coordinate)` → unchanged
+
+**Only `getPageState().interactions` changes shape.** The `Interaction` type still exists for `getInteraction()` return values.
+
+**Breaking change impact:** Only one consumer to update — `examples/jay/cart-automation/`.
 
 Everything else uses existing capabilities:
 
@@ -430,11 +447,10 @@ export function setupWebMCP(automation: AutomationAPI): () => void {
     };
 }
 
-/** Quick fingerprint of interaction structure (not values) to detect changes */
+/** Quick fingerprint of interaction structure to detect changes */
 function interactionKey(automation: AutomationAPI): string {
     return automation.getPageState().interactions
-        .map(i => i.coordinate.join('/'))
-        .sort()
+        .map(g => g.inForEach ? `${g.ref}:${g.items!.map(i => i.id).join(',')}` : g.ref)
         .join('|');
 }
 ```
@@ -462,83 +478,87 @@ export const init = makeJayInit().withClient(() => {
 
 ### Semantic Tool Generation
 
+`getPageState().interactions` already returns `GroupedInteraction[]` — semantic tools iterate directly.
+
 ```typescript
 // semantic-tools.ts
 function registerSemanticTools(mc: ModelContextContainer, automation: AutomationAPI) {
-  const { interactions } = automation.getPageState();
-  const registrations = [];
+    const { interactions } = automation.getPageState();  // already GroupedInteraction[]
+    const registrations = [];
 
-  // Group interactions by refName
-  const byRef = groupBy(interactions, (i) => i.refName);
+    for (const group of interactions) {
+        const isInput = group.type === 'TextInput' || group.type === 'TextArea' || group.type === 'NumberInput';
+        const isSelect = group.type === 'Select';
 
-  for (const [refName, items] of Object.entries(byRef)) {
-    const sample = items[0];
-    const isForEach = items.length > 1 || sample.coordinate.length > 1;
-    const isInput =
-      sample.elementType === 'HTMLInputElement' || sample.elementType === 'HTMLTextAreaElement';
-    const isSelect = sample.elementType === 'HTMLSelectElement';
+        const toolName = isInput || isSelect
+            ? `fill-${toKebab(group.ref)}`
+            : `click-${toKebab(group.ref)}`;
 
-    const toolName = isInput || isSelect ? `fill-${toKebab(refName)}` : `click-${toKebab(refName)}`;
+        const description = group.description
+            || `${isInput ? 'Fill' : 'Click'} ${toHumanReadable(group.ref)}${group.inForEach ? ' for a specific item' : ''}`;
 
-    const description =
-      sample.description ||
-      `${isInput ? 'Fill' : 'Click'} ${toHumanReadable(refName)}${isForEach ? ' for a specific item' : ''}`;
+        const properties: Record<string, any> = {};
+        const required: string[] = [];
 
-    const properties: Record<string, any> = {};
-    const required: string[] = [];
+        if (group.inForEach && group.items) {
+            const itemIds = group.items.map(i => i.id);
+            properties.itemId = {
+                type: 'string',
+                description: 'Item identifier',
+                enum: itemIds,
+            };
+            required.push('itemId');
+        }
 
-    if (isForEach) {
-      const itemIds = items.map((i) => i.coordinate[0]);
-      properties.itemId = {
-        type: 'string',
-        description: `Item identifier. Available: ${itemIds.join(', ')}`,
-        enum: itemIds,
-      };
-      required.push('itemId');
+        if (isInput || isSelect) {
+            properties.value = { type: 'string', description: 'Value to set' };
+            required.push('value');
+        }
+
+        registrations.push(mc.registerTool({
+            name: toolName,
+            description,
+            inputSchema: { type: 'object', properties, required },
+            execute: (params) => {
+                const coord = group.inForEach
+                    ? [params.itemId as string, group.ref]
+                    : [group.ref];
+
+                if (isInput || isSelect) {
+                    const interaction = automation.getInteraction(coord);
+                    if (!interaction) return errorResult(`Element not found: ${coord.join('/')}`);
+                    (interaction.element as HTMLInputElement).value = params.value as string;
+                    automation.triggerEvent(isSelect ? 'change' : 'input', coord);
+                } else {
+                    automation.triggerEvent('click', coord);
+                }
+
+                return jsonResult('Done', automation.getPageState().viewState);
+            },
+        }));
     }
 
-    if (isInput || isSelect) {
-      properties.value = {
-        type: 'string',
-        description: `Value to set`,
-      };
-      required.push('value');
-    }
-
-    registrations.push(
-      mc.registerTool({
-        name: toolName,
-        description,
-        inputSchema: { type: 'object', properties, required },
-        execute: (params) => {
-          const coord = isForEach ? [params.itemId as string, refName] : [refName];
-
-          if (isInput || isSelect) {
-            const interaction = automation.getInteraction(coord);
-            if (!interaction) return errorResult(`Element not found: ${coord.join('/')}`);
-            (interaction.element as HTMLInputElement).value = params.value as string;
-            automation.triggerEvent(isSelect ? 'change' : 'input', coord);
-          } else {
-            automation.triggerEvent('click', coord);
-          }
-
-          return jsonResult('Done', automation.getPageState().viewState);
-        },
-        annotations: {
-          readOnlyHint: false,
-          idempotentHint: false,
-        },
-      }),
-    );
-  }
-
-  return registrations;
+    return registrations;
 }
 ```
 
 ---
 
 ## Implementation Plan
+
+### Phase 0: Grouped interactions in runtime-automation (breaking change)
+
+Change `PageState.interactions` from flat `Interaction[]` to `GroupedInteraction[]`.
+
+**Files:**
+- `packages/runtime/runtime-automation/lib/types.ts` — add `GroupedInteraction`, change `PageState.interactions` type
+- `packages/runtime/runtime-automation/lib/group-interactions.ts` (new) — grouping logic
+- `packages/runtime/runtime-automation/lib/automation-agent.ts` — call grouping in `getPageState()`
+- `packages/runtime/runtime-automation/lib/index.ts` — export `GroupedInteraction`
+- `packages/runtime/runtime-automation/test/` — update existing tests, add grouping tests
+- `examples/jay/cart-automation/` — update to use new `GroupedInteraction` shape
+
+**Tests:** single refs, forEach refs, nested forEach, various element types, guessLabel heuristic.
 
 ### Phase 1: WebMCP plugin package (core)
 
@@ -550,13 +570,13 @@ function registerSemanticTools(mc: ModelContextContainer, automation: Automation
 
 ### Phase 2: Resources and prompts
 
-1. Implement `state://viewstate` and `state://interactions` resources (grouped format)
+1. Implement `state://viewstate` and `state://interactions` resources (using `groupInteractions`)
 2. Implement `page-guide` prompt
 3. Tests
 
 ### Phase 3: Semantic tool generation
 
-1. Implement `semantic-tools.ts` — analyze interactions, generate tools
+1. Implement `semantic-tools.ts` — generate tools from `groupInteractions` output
 2. Handle dynamic updates (onStateChange → re-register only when interactions change)
 3. Tests with various page shapes (single refs, forEach, nested, inputs)
 
@@ -618,9 +638,9 @@ With ViewState:
 }
 ```
 
-#### Raw interactions from AutomationAPI (what exists today)
+#### Raw interactions (internal, before grouping)
 
-`automation.getPageState().interactions` returns **15 entries** (5 refs × 3 forEach items, plus 3 non-forEach refs):
+Internally, the interaction collector produces a flat list — **12 entries** (3 forEach refs × 3 items + 3 static refs):
 
 ```json
 [
@@ -639,11 +659,11 @@ With ViewState:
 ]
 ```
 
-That's 12 entries. With 100 items it would be 302 entries — mostly repetitive.
+That's 12 entries. With 100 items it would be 302 — mostly repetitive.
 
-#### Grouped interactions (for the `state://interactions` resource)
+#### What `getPageState().interactions` returns (after grouping)
 
-The plugin groups by `refName`, collapses forEach items into an `items` array:
+`AutomationAPI` groups by `refName` internally, collapsing forEach items into an `items` array:
 
 ```json
 [
@@ -698,13 +718,13 @@ The plugin groups by `refName`, collapses forEach items into an `items` array:
 ]
 ```
 
-**6 entries** instead of 12 (or 6 instead of 302 with 100 items). The `items` array is shared across all forEach refs.
+**6 entries** instead of 12 (or 6 instead of 302 with 100 items). Stable count regardless of forEach item count.
 
-The `label` field is derived from `itemContext` — using the first string-valued field (heuristic) or configurable. It gives the AI human-readable context for each item ID.
+The `label` field is derived from `itemContext` — using the first string-valued field as a heuristic (`name` > `title` > `label` > first string). Gives consumers human-readable context for each item ID.
 
-#### `groupInteractions` implementation
+#### Grouping implementation (inside `automation-agent.ts`)
 
-Lives in `@jay-framework/runtime-automation` — not WebMCP-specific. Any automation consumer (test tools, accessibility checkers, console debugging) benefits from the same grouping.
+The grouping happens inside `getPageState()` — the internal flat interaction list is collected as before, then grouped before returning.
 
 ```typescript
 // packages/runtime/runtime-automation/lib/group-interactions.ts
@@ -718,9 +738,9 @@ export interface GroupedInteraction {
     items?: Array<{ id: string; label: string }>;
 }
 
-export function groupInteractions(interactions: Interaction[]): GroupedInteraction[] {
+export function groupInteractions(rawInteractions: Interaction[]): GroupedInteraction[] {
     const byRef = new Map<string, Interaction[]>();
-    for (const i of interactions) {
+    for (const i of rawInteractions) {
         const group = byRef.get(i.refName) || [];
         group.push(i);
         byRef.set(i.refName, group);
@@ -749,7 +769,7 @@ export function groupInteractions(interactions: Interaction[]): GroupedInteracti
 function friendlyType(elementType: string): string {
     switch (elementType) {
         case 'HTMLButtonElement': return 'Button';
-        case 'HTMLInputElement': return 'TextInput';    // could inspect type attr
+        case 'HTMLInputElement': return 'TextInput';
         case 'HTMLTextAreaElement': return 'TextArea';
         case 'HTMLSelectElement': return 'Select';
         default: return elementType.replace('HTML', '').replace('Element', '');
@@ -758,7 +778,6 @@ function friendlyType(elementType: string): string {
 
 function guessLabel(ctx?: object): string {
     if (!ctx) return '';
-    // Use 'name', 'title', 'label', or first string field as label
     for (const key of ['name', 'title', 'label']) {
         if (key in ctx && typeof (ctx as any)[key] === 'string') return (ctx as any)[key];
     }
@@ -767,14 +786,11 @@ function guessLabel(ctx?: object): string {
 }
 ```
 
-**Usage from any consumer:**
+**Usage — just call `getPageState()`, interactions are already grouped:**
 
 ```typescript
-import { groupInteractions } from '@jay-framework/runtime-automation';
-
 const { interactions } = automation.getPageState();
-const grouped = groupInteractions(interactions);
-// 6 entries instead of 302
+// → GroupedInteraction[] — 6 entries, not 302
 ```
 
 #### Resulting WebMCP tools (what the AI agent sees)
@@ -888,32 +904,11 @@ Tools are auto-generated from the page's interactions. Semantic tools have meani
 9. No errors when `navigator.modelContext` is absent (graceful degradation)
 10. Works alongside manually registered tools (additive, not exclusive)
 
-## Open Questions
+## Resolved Questions
 
-### Q1: Should semantic tools expose forEach item context in descriptions?
-
-For example, instead of `click-remove-btn (itemId: "item-1" | "item-2")`, should it say:
-`click-remove-btn (itemId: "item-1" [Wireless Mouse, $29.99] | "item-2" [USB-C Hub, $49.99])`?
-
-This makes tools more useful but descriptions get long. Could be a config option.
-
-### Q2: Should the plugin support custom tool definitions alongside auto-generated ones?
-
-A page might want to add app-specific tools (like `clear-cart` that removes all items). Options:
-
-- **Ignore:** generic `trigger-interaction` covers any action
-- **Page-level config:** export a `webmcpTools` from `page.ts`
-- **Plugin hooks:** allow plugins to extend the tool set
-
-### Q3: Tool count management for complex pages
-
-A page with 20 refs across 10 forEach items could generate 200+ semantic tools. WebMCP recommends <50 per page.
-
-Options:
-
-- Only generate semantic tools for non-forEach refs; forEach refs use generic `trigger-interaction`
-- Limit semantic tools to a configurable number
-- Use tool annotations to prioritize
+- **Q1 (item context in descriptions):** No. Keep descriptions short — don't inline full item data. The AI can call `get-page-state` or read the `state://viewstate` resource to see item details. Tool `itemId` enums list IDs only.
+- **Q2 (custom tool definitions):** Not needed for now. Generic + semantic tools cover the use cases.
+- **Q3 (tool count):** Solved by grouping — one semantic tool per unique refName, not per forEach item. A page with 20 refs = 20 semantic + 4 generic = 24 tools, well within the <50 recommendation.
 
 ---
 
