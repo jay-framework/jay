@@ -1,0 +1,145 @@
+import { describe, it, expect, vi } from 'vitest';
+import {
+    makeGetPageStateTool,
+    makeListInteractionsTool,
+    makeTriggerInteractionTool,
+    makeFillInputTool,
+} from '../lib/generic-tools';
+import { createMockAutomation, cartInteractions } from './helpers';
+
+const MOCK_AGENT = { requestUserInteraction: vi.fn() };
+
+describe('Generic Tools', () => {
+    describe('get-page-state', () => {
+        it('should return current viewState', () => {
+            const automation = createMockAutomation({
+                viewState: { items: [{ id: 'item-1' }], total: 29.99 },
+            });
+            const tool = makeGetPageStateTool(automation);
+
+            const result = tool.execute({}, MOCK_AGENT);
+
+            expect(result.content[0].text).toContain('"total": 29.99');
+            expect(result.content[0].text).toContain('"item-1"');
+        });
+
+        it('should have correct name and description', () => {
+            const automation = createMockAutomation();
+            const tool = makeGetPageStateTool(automation);
+
+            expect(tool.name).toBe('get-page-state');
+            expect(tool.description).toContain('page state');
+        });
+    });
+
+    describe('list-interactions', () => {
+        it('should return grouped interactions', () => {
+            const interactions = cartInteractions();
+            const automation = createMockAutomation({ interactions });
+            const tool = makeListInteractionsTool(automation);
+
+            const result = tool.execute({}, MOCK_AGENT);
+            const text = result.content[0].text!;
+
+            expect(text).toContain('"ref": "removeBtn"');
+            expect(text).toContain('"inForEach": true');
+            expect(text).toContain('"nameInput"');
+        });
+    });
+
+    describe('trigger-interaction', () => {
+        it('should trigger click on a simple coordinate', () => {
+            const automation = createMockAutomation({
+                viewState: { count: 1 },
+                interactions: [{ ref: 'addBtn', type: 'Button', events: ['click'] }],
+            });
+            const tool = makeTriggerInteractionTool(automation);
+
+            const result = tool.execute({ coordinate: 'addBtn' }, MOCK_AGENT);
+
+            expect(automation.triggerEvent).toHaveBeenCalledWith('click', ['addBtn']);
+            expect(result.isError).toBeUndefined();
+        });
+
+        it('should trigger click on a forEach coordinate', () => {
+            const automation = createMockAutomation({
+                interactions: cartInteractions(),
+            });
+            const tool = makeTriggerInteractionTool(automation);
+
+            tool.execute({ coordinate: 'item-1/removeBtn' }, MOCK_AGENT);
+
+            expect(automation.triggerEvent).toHaveBeenCalledWith('click', ['item-1', 'removeBtn']);
+        });
+
+        it('should support custom event type', () => {
+            const automation = createMockAutomation();
+            const tool = makeTriggerInteractionTool(automation);
+
+            tool.execute({ coordinate: 'myInput', event: 'input' }, MOCK_AGENT);
+
+            expect(automation.triggerEvent).toHaveBeenCalledWith('input', ['myInput']);
+        });
+
+        it('should return error when element not found', () => {
+            const automation = createMockAutomation();
+            (automation.triggerEvent as any).mockImplementation(() => {
+                throw new Error('No element found at coordinate: bad/coord');
+            });
+            const tool = makeTriggerInteractionTool(automation);
+
+            const result = tool.execute({ coordinate: 'bad/coord' }, MOCK_AGENT);
+
+            expect(result.isError).toBe(true);
+            expect(result.content[0].text).toContain('No element found');
+        });
+    });
+
+    describe('fill-input', () => {
+        it('should set value and trigger input event', () => {
+            const mockElement = document.createElement('input');
+            const automation = createMockAutomation();
+            (automation.getInteraction as any).mockReturnValue({
+                refName: 'nameInput',
+                coordinate: ['nameInput'],
+                element: mockElement,
+                elementType: 'HTMLInputElement',
+                supportedEvents: ['input', 'change'],
+            });
+            const tool = makeFillInputTool(automation);
+
+            const result = tool.execute({ coordinate: 'nameInput', value: 'Test' }, MOCK_AGENT);
+
+            expect(mockElement.value).toBe('Test');
+            expect(automation.triggerEvent).toHaveBeenCalledWith('input', ['nameInput']);
+            expect(result.isError).toBeUndefined();
+        });
+
+        it('should trigger change event for select elements', () => {
+            const mockElement = document.createElement('select');
+            const automation = createMockAutomation();
+            (automation.getInteraction as any).mockReturnValue({
+                refName: 'sizeSelect',
+                coordinate: ['sizeSelect'],
+                element: mockElement,
+                elementType: 'HTMLSelectElement',
+                supportedEvents: ['change'],
+            });
+            const tool = makeFillInputTool(automation);
+
+            tool.execute({ coordinate: 'sizeSelect', value: 'large' }, MOCK_AGENT);
+
+            expect(automation.triggerEvent).toHaveBeenCalledWith('change', ['sizeSelect']);
+        });
+
+        it('should return error for unknown coordinate', () => {
+            const automation = createMockAutomation();
+            (automation.getInteraction as any).mockReturnValue(undefined);
+            const tool = makeFillInputTool(automation);
+
+            const result = tool.execute({ coordinate: 'unknown', value: 'x' }, MOCK_AGENT);
+
+            expect(result.isError).toBe(true);
+        });
+    });
+});

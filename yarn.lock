@@ -4687,6 +4687,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@jay-framework/webmcp-plugin@workspace:^, @jay-framework/webmcp-plugin@workspace:packages/jay-stack/webmcp-plugin":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/webmcp-plugin@workspace:packages/jay-stack/webmcp-plugin"
+  dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@jay-framework/fullstack-component": "workspace:^"
+    "@jay-framework/runtime-automation": "workspace:^"
+    "@types/node": "npm:^20.11.5"
+    rimraf: "npm:^5.0.5"
+    tsup: "npm:^8.0.1"
+    typescript: "npm:^5.3.3"
+    vite: "npm:^5.0.11"
+    vitest: "npm:^1.2.1"
+  languageName: unknown
+  linkType: soft
+
 "@jest/console@npm:^27.5.1":
   version: 27.5.1
   resolution: "@jest/console@npm:27.5.1"
@@ -11027,6 +11043,7 @@ __metadata:
     "@jay-framework/runtime": "workspace:^"
     "@jay-framework/stack-client-runtime": "workspace:^"
     "@jay-framework/stack-server-runtime": "workspace:^"
+    "@jay-framework/webmcp-plugin": "workspace:^"
     "@types/express": "npm:^5.0.0"
     "@types/node": "npm:^22.10.0"
     compression: "npm:^1.7.5"

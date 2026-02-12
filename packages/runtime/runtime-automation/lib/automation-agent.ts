@@ -1,7 +1,8 @@
 import type { JayComponent } from '@jay-framework/runtime';
 import { deepMergeViewStates, type TrackByMap } from '@jay-framework/view-state-merge';
 import { collectInteractions } from './interaction-collector';
-import type { AutomationAPI, PageState, Interaction, Coordinate } from './types';
+import { groupInteractions } from './group-interactions';
+import type { AutomationAPI, PageState, GroupedInteraction, Interaction, Coordinate } from './types';
 
 /** Event type for ViewState change notifications (matches runtime export) */
 const VIEW_STATE_CHANGE = 'viewStateChange';
@@ -21,7 +22,8 @@ export interface AutomationAgentOptions {
  */
 class AutomationAgent implements AutomationAPI {
     private stateListeners = new Set<(state: PageState) => void>();
-    private cachedInteractions: Interaction[] | null = null;
+    private cachedRawInteractions: Interaction[] | null = null;
+    private cachedGroupedInteractions: GroupedInteraction[] | null = null;
     private viewStateHandler: (() => void) | null = null;
     /**
      * When slow rendering is used, this holds the merged slow+fast ViewState.
@@ -54,7 +56,8 @@ class AutomationAgent implements AutomationAPI {
     private subscribeToUpdates(): void {
         // Use addEventListener with 'viewStateChange' event
         this.viewStateHandler = () => {
-            this.cachedInteractions = null; // Invalidate cache
+            this.cachedRawInteractions = null; // Invalidate cache
+            this.cachedGroupedInteractions = null;
             // Update merged state if we're tracking slow ViewState
             if (this.initialSlowViewState && this.trackByMap) {
                 this.mergedViewState = deepMergeViewStates(
@@ -74,14 +77,21 @@ class AutomationAgent implements AutomationAPI {
         this.stateListeners.forEach((callback) => callback(state));
     }
 
+    private getRawInteractions(): Interaction[] {
+        if (!this.cachedRawInteractions) {
+            this.cachedRawInteractions = collectInteractions(this.component.element?.refs);
+        }
+        return this.cachedRawInteractions;
+    }
+
     getPageState(): PageState {
-        if (!this.cachedInteractions) {
-            this.cachedInteractions = collectInteractions(this.component.element?.refs);
+        if (!this.cachedGroupedInteractions) {
+            this.cachedGroupedInteractions = groupInteractions(this.getRawInteractions());
         }
         return {
             // Use merged state if available (slow+fast), otherwise component's viewState
             viewState: this.mergedViewState || this.component.viewState,
-            interactions: this.cachedInteractions,
+            interactions: this.cachedGroupedInteractions,
             customEvents: this.getCustomEvents(),
         };
     }
@@ -100,8 +110,8 @@ class AutomationAgent implements AutomationAPI {
     }
 
     getInteraction(coordinate: Coordinate): Interaction | undefined {
-        const state = this.getPageState();
-        return state.interactions.find(
+        const rawInteractions = this.getRawInteractions();
+        return rawInteractions.find(
             (i) =>
                 i.coordinate.length === coordinate.length &&
                 i.coordinate.every((c, idx) => c === coordinate[idx]),
@@ -153,7 +163,8 @@ class AutomationAgent implements AutomationAPI {
             this.viewStateHandler = null;
         }
         this.stateListeners.clear();
-        this.cachedInteractions = null;
+        this.cachedRawInteractions = null;
+        this.cachedGroupedInteractions = null;
     }
 }
 

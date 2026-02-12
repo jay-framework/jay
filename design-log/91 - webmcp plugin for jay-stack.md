@@ -912,6 +912,116 @@ Tools are auto-generated from the page's interactions. Semantic tools have meani
 
 ---
 
+## Implementation Results
+
+### Phase 0: Grouped Interactions (Breaking Change)
+
+**All 50 tests pass** across 3 test files.
+
+#### Files changed
+
+| File | Change |
+|------|--------|
+| `runtime-automation/lib/types.ts` | Added `GroupedInteraction` interface; changed `PageState.interactions` type |
+| `runtime-automation/lib/group-interactions.ts` | **New** — `groupInteractions()`, `friendlyType()`, `relevantEvents()`, `guessLabel()` |
+| `runtime-automation/lib/automation-agent.ts` | Internal: separate raw + grouped caches; `getPageState()` returns grouped; `getInteraction()` uses raw |
+| `runtime-automation/lib/index.ts` | Export `GroupedInteraction`, `groupInteractions` |
+| `runtime-automation/test/group-interactions.test.ts` | **New** — 15 tests for grouping logic |
+| `runtime-automation/test/automation-agent.test.ts` | Updated to check `GroupedInteraction` shape |
+| `runtime-automation/test/integration.test.ts` | Updated forEach and nested ref tests for grouped shape |
+| `examples/jay/cart-automation/lib/index.ts` | Updated `interactions()` helper for grouped shape |
+| `examples/jay/cart-webmcp/lib/index.ts` | Updated `get-interactions` tool for grouped shape |
+| `stack-client-runtime/lib/index.ts` | Added `GroupedInteraction` re-export |
+
+#### Deviations from design
+
+- `relevantEvents()` was added to filter noisy events (e.g., buttons only show `["click"]`, not `["click", "focus", "blur"]`). Design mentioned this in the type but didn't specify filtering logic.
+- `guessLabel()` checks `text` field in addition to `name`, `title`, `label` — design only listed 3 fields.
+
+### Phase 1–3: WebMCP Plugin
+
+**All 38 tests pass** across 6 test files.
+
+#### New package: `packages/jay-stack/webmcp-plugin/`
+
+```
+webmcp-plugin/
+├── plugin.yaml
+├── package.json
+├── tsconfig.json
+├── vite.config.ts
+├── lib/
+│   ├── index.ts              # Exports init + setupWebMCP + types
+│   ├── init.ts               # makeJayInit().withClient() with queueMicrotask
+│   ├── webmcp-bridge.ts      # setupWebMCP() — main entry, registers everything
+│   ├── generic-tools.ts      # 4 generic tools
+│   ├── semantic-tools.ts     # Auto-generated tools from interactions
+│   ├── resources.ts          # 2 resources (viewstate, interactions)
+│   ├── prompts.ts            # 1 prompt (page-guide)
+│   ├── webmcp-types.ts       # WebMCP API type declarations
+│   └── util.ts               # Helpers (kebab, coordinate parsing, result builders)
+└── test/
+    ├── helpers.ts             # Mock automation + mock modelContext factories
+    ├── generic-tools.test.ts  # 10 tests
+    ├── semantic-tools.test.ts # 12 tests
+    ├── bridge.test.ts         # 6 tests
+    ├── resources.test.ts      # 2 tests
+    ├── prompts.test.ts        # 2 tests
+    └── util.test.ts           # 6 tests
+```
+
+#### What gets registered (for a cart page)
+
+- **4 generic tools:** `get-page-state`, `list-interactions`, `trigger-interaction`, `fill-input`
+- **6 semantic tools:** `click-decrease-btn`, `click-increase-btn`, `click-remove-btn`, `fill-name-input`, `fill-price-input`, `click-add-btn`
+- **2 resources:** `state://viewstate`, `state://interactions`
+- **1 prompt:** `page-guide`
+
+#### Deviations from design
+
+- **Phases 1–3 implemented together** — resources, prompts, and semantic tools were simple enough to build in one pass.
+- **Phase 4 (example app) deferred** — the existing `cart-webmcp` example was updated for the new grouped shape; a separate `webmcp-shop` example can be added later.
+- **`webmcp-types.ts` extended** with `Registration` return type (with `unregister()`) and `ResourceDescriptor`/`PromptDescriptor` types — design mentioned these but didn't fully define them.
+- **`plugin.yaml` is minimal** (just `name: webmcp`) — the plugin uses auto-discovery of `lib/init.ts`.
+
+### Phase 4: Example Integration
+
+Added `@jay-framework/webmcp-plugin` as a dependency to `examples/jay-stack/fake-shop/package.json`. That's it — the plugin auto-discovers via package.json, and every page in the fake-shop now exposes WebMCP tools, resources, and prompts with zero additional code.
+
+This is the full diff for adding WebMCP to any jay-stack project:
+
+```diff
++ "@jay-framework/webmcp-plugin": "workspace:^",
+```
+
+### Post-implementation: Disabled element filtering
+
+Disabled elements (`<button disabled>`, `<input disabled>`, elements inside `<fieldset disabled>`) are now excluded from the interaction collector entirely. This was not in the original design but is a natural fit — disabled elements can't be interacted with, so they shouldn't appear as available interactions.
+
+**Files changed:**
+
+| File | Change |
+|------|--------|
+| `runtime-automation/lib/interaction-collector.ts` | Added `isDisabled()` check; skip disabled elements during collection |
+| `runtime-automation/test/automation-agent.test.ts` | 5 new tests: disabled buttons, inputs, forEach partial disable, all-disabled, enable/disable toggle |
+
+**Behavior:**
+- Disabled elements are excluded from `getPageState().interactions` (grouped)
+- Disabled elements are not found by `getInteraction(coordinate)`
+- Semantic WebMCP tools won't include disabled items in `itemId` enums
+- When an element's disabled state changes and a `viewStateChange` fires, the cache invalidates and the next `getPageState()` reflects the new state
+- Checks both `element.disabled` property and ancestor `<fieldset disabled>`
+
+### Test Summary
+
+| Package | Files | Tests | Status |
+|---------|-------|-------|--------|
+| `runtime-automation` | 3 | 55 | All pass |
+| `webmcp-plugin` | 6 | 38 | All pass |
+| **Total** | **9** | **93** | **All pass** |
+
+---
+
 ## Related Design Logs
 
 - **#76** — AI Agent Integration (AutomationAPI design)

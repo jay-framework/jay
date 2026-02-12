@@ -1,5 +1,5 @@
 // Types (new names)
-export type { AutomationAPI, Interaction, PageState, Coordinate } from './types';
+export type { AutomationAPI, Interaction, GroupedInteraction, PageState, Coordinate } from './types';
 
 // Types (deprecated aliases for backward compatibility)
 export type { AIAgentAPI, AIInteraction, AIPageState } from './types';
@@ -16,3 +16,4 @@ export { AUTOMATION_CONTEXT } from './automation-context';
 
 // Utilities (for advanced use cases)
 export { collectInteractions } from './interaction-collector';
+export { groupInteractions } from './group-interactions';

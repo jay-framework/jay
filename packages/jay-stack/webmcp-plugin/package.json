@@ -1,0 +1,42 @@
+{
+  "name": "@jay-framework/webmcp-plugin",
+  "version": "0.12.0",
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "WebMCP plugin for jay-stack — automatically exposes page interactions as WebMCP tools, resources, and prompts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./client": "./dist/index.client.js",
+    "./plugin.yaml": "./plugin.yaml"
+  },
+  "files": [
+    "dist",
+    "plugin.yaml"
+  ],
+  "scripts": {
+    "build": "npm run build:js && npm run build:types",
+    "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
+    "build:js": "vite build",
+    "build:types": "tsup lib/index.ts --dts-only --format esm",
+    "build:check-types": "tsc",
+    "clean": "rimraf dist",
+    "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@jay-framework/fullstack-component": "workspace:^",
+    "@jay-framework/runtime-automation": "workspace:^"
+  },
+  "devDependencies": {
+    "@jay-framework/dev-environment": "workspace:^",
+    "@types/node": "^20.11.5",
+    "rimraf": "^5.0.5",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11",
+    "vitest": "^1.2.1"
+  }
+}

@@ -41,7 +41,7 @@ window.onload = function () {
     wrapped.automation.onStateChange((state) => {
         console.log('%c[State Changed]', 'color: #4CAF50; font-weight: bold');
         console.log('ViewState:', state.viewState);
-        console.log('Interactions:', state.interactions.length, 'available');
+        console.log('Interactions:', state.interactions.length, 'groups available');
     });
 
     // Create console API
@@ -62,13 +62,17 @@ window.onload = function () {
             return (state.viewState as any).items;
         },
 
-        // List all interactions
+        // List all interactions (grouped)
         interactions: () => {
             const state = wrapped.automation.getPageState();
             console.log('%cAvailable Interactions:', 'color: #2196F3; font-weight: bold');
-            state.interactions.forEach((i) => {
-                const context = i.itemContext ? ` (${(i.itemContext as CartItem).name})` : '';
-                console.log(`  ${i.refName}: [${i.coordinate.join(', ')}]${context}`);
+            state.interactions.forEach((group) => {
+                if (group.inForEach && group.items) {
+                    const itemList = group.items.map((i) => `${i.id} (${i.label})`).join(', ');
+                    console.log(`  ${group.ref} [${group.type}] forEach: ${itemList}`);
+                } else {
+                    console.log(`  ${group.ref} [${group.type}] events: ${group.events.join(', ')}`);
+                }
             });
         },
 

@@ -6,7 +6,8 @@
 export type Coordinate = string[];
 
 /**
- * Represents an interactive element on the page.
+ * Represents a single interactive element on the page (raw, per-coordinate).
+ * Used internally and returned by getInteraction().
  */
 export interface Interaction {
     /** Ref name from jay-html */
@@ -32,14 +33,38 @@ export interface Interaction {
 }
 
 /**
+ * Interactions grouped by refName.
+ * forEach refs are collapsed into a single entry with an `items` array.
+ */
+export interface GroupedInteraction {
+    /** Ref name from jay-html */
+    ref: string;
+
+    /** Friendly element type: "Button", "TextInput", "NumberInput", "Select", etc. */
+    type: string;
+
+    /** Events this element can handle (e.g., ["click"]) */
+    events: string[];
+
+    /** Human-readable description (from contract if available) */
+    description?: string;
+
+    /** True when this ref appears inside a forEach */
+    inForEach?: true;
+
+    /** forEach items with their trackBy ID and a human-readable label */
+    items?: Array<{ id: string; label: string }>;
+}
+
+/**
  * Current page state exposed for automation.
  */
 export interface PageState {
     /** Current ViewState of the component (includes headless component data under their keys) */
     viewState: object;
 
-    /** All available interactions with their DOM elements */
-    interactions: Interaction[];
+    /** Available interactions grouped by ref name */
+    interactions: GroupedInteraction[];
 
     /** Custom events the component can emit */
     customEvents: Array<{ name: string }>;
@@ -49,7 +74,7 @@ export interface PageState {
  * Automation API attached to wrapped components.
  */
 export interface AutomationAPI {
-    /** Get current page state and available interactions */
+    /** Get current page state and available interactions (grouped by ref) */
     getPageState(): PageState;
 
     /** Trigger an event on an element by coordinate */
@@ -58,7 +83,7 @@ export interface AutomationAPI {
     /** Subscribe to ViewState changes - called on every ViewState update */
     onStateChange(callback: (state: PageState) => void): () => void;
 
-    /** Get a specific interaction by coordinate */
+    /** Get a specific interaction by coordinate (returns raw Interaction with DOM element) */
     getInteraction(coordinate: Coordinate): Interaction | undefined;
 
     /** Get list of custom events the component emits */

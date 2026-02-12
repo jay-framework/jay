@@ -100,12 +100,11 @@ window.onload = function () {
         },
         execute: () => {
             const state = automation.getPageState();
-            const interactions = state.interactions.map((i) => ({
-                refName: i.refName,
-                coordinate: i.coordinate,
-                itemContext: i.itemContext
-                    ? { name: (i.itemContext as CartItem).name, id: (i.itemContext as CartItem).id }
-                    : null,
+            const interactions = state.interactions.map((group) => ({
+                ref: group.ref,
+                type: group.type,
+                events: group.events,
+                ...(group.inForEach ? { inForEach: true, items: group.items } : {}),
             }));
             return jsonResult('Available interactions:', interactions);
         },

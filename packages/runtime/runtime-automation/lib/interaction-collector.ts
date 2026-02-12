@@ -29,7 +29,7 @@ function collectInteractionsRecursive(refs: any, interactions: Interaction[]): v
         if (refImpl.elements && refImpl.elements instanceof Set) {
             // Iterate through all elements in the ref
             for (const elem of refImpl.elements) {
-                if (elem.element) {
+                if (elem.element && !isDisabled(elem.element)) {
                     interactions.push({
                         refName,
                         coordinate: elem.coordinate || [refName],
@@ -66,6 +66,19 @@ function isNestedRefsObject(obj: any): boolean {
 
     // It's a plain object - likely nested refs
     return true;
+}
+
+/**
+ * Check if an element is disabled — either via its own `disabled` property
+ * or via a parent `<fieldset disabled>`.
+ */
+function isDisabled(element: HTMLElement): boolean {
+    if ('disabled' in element && (element as HTMLButtonElement).disabled) {
+        return true;
+    }
+    // Check for ancestor <fieldset disabled>
+    const fieldset = element.closest?.('fieldset:disabled');
+    return !!fieldset;
 }
 
 function getElementType(element: HTMLElement): string {
