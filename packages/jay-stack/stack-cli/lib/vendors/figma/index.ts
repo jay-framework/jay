@@ -1,3 +1,5 @@
+import { getLogger } from '@jay-framework/logger';
+import type { JayHtmlSourceFile } from '@jay-framework/compiler-jay-html';
 import { Vendor, VendorConversionResult } from '../types';
 import type { FigmaVendorDocument, ProjectPage, Plugin } from '@jay-framework/editor-protocol';
 import {
@@ -19,6 +21,7 @@ import { convertVectorToHtml } from './converters/vector';
 import { convertVariantNode } from './converters/variants';
 import { convertRepeaterNode } from './converters/repeater';
 import { convertGroupNode } from './converters/group';
+import { convertJayHtmlToFigmaDoc } from './converters/from-jay-html';
 import type { ConversionContext, BindingAnalysis } from './types';
 import { getBindingsData, analyzeBindings, validateBindings } from './binding-analysis';
 
@@ -340,5 +343,22 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
             // No contract data for now - Figma vendor doesn't generate contracts yet
             contractData: undefined,
         };
+    },
+
+    async convertFromJayHtml(
+        parsedJayHtml: JayHtmlSourceFile,
+        pageUrl: string,
+        _projectPage: ProjectPage,
+        _plugins: Plugin[],
+    ): Promise<FigmaVendorDocument> {
+        getLogger().info(`🔄 Converting jay-html to Figma document for page: ${pageUrl}`);
+
+        const figmaDoc = convertJayHtmlToFigmaDoc(parsedJayHtml, pageUrl);
+
+        getLogger().info(
+            `✅ Created Figma document: ${figmaDoc.name} (${figmaDoc.type}) with ${figmaDoc.children?.length ?? 0} children`,
+        );
+
+        return figmaDoc;
     },
 };

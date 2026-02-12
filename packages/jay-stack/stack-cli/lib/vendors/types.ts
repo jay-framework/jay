@@ -6,6 +6,7 @@
  */
 
 import { Plugin, ProjectPage } from '@jay-framework/editor-protocol';
+import type { JayHtmlSourceFile } from '@jay-framework/compiler-jay-html';
 
 /**
  * Result of vendor conversion containing body HTML, fonts, and contract data
@@ -56,4 +57,26 @@ export interface Vendor<TVendorDoc = any> {
         projectPage: ProjectPage,
         plugins: Plugin[],
     ): Promise<VendorConversionResult>;
+
+    /**
+     * Convert a parsed jay-html source file to vendor document format (reverse conversion).
+     * Optional - vendors that support import from jay-html implement this.
+     *
+     * This is called when a page has a jay-html file but no vendor JSON file,
+     * enabling import into the design tool from jay-html source.
+     * The jay-html is pre-parsed by the compiler's parseJayFile, giving the vendor
+     * access to the full parsed body DOM, resolved headless imports, contracts, and CSS.
+     *
+     * @param parsedJayHtml - The compiler-parsed jay-html source file
+     * @param pageUrl - The page URL/route (e.g., '/home', '/products')
+     * @param projectPage - The project page info with contracts and used components
+     * @param plugins - Available plugins with their contracts
+     * @returns The vendor document that can be sent to the design tool plugin
+     */
+    convertFromJayHtml?(
+        parsedJayHtml: JayHtmlSourceFile,
+        pageUrl: string,
+        projectPage: ProjectPage,
+        plugins: Plugin[],
+    ): Promise<TVendorDoc>;
 }

@@ -31,7 +31,6 @@ import {
     generateElementDefinitionFile,
     JAY_IMPORT_RESOLVER,
     parseJayFile,
-    parseContract,
     ContractTag,
     ContractTagType,
 } from '@jay-framework/compiler-jay-html';
@@ -1153,25 +1152,102 @@ export function createEditorHandlers(
             const vendorFilename = `page.${vendorId}.json`;
             const vendorFilePath = path.join(dirname, vendorFilename);
 
-            // Check if the file exists
-            if (!fs.existsSync(vendorFilePath)) {
+            // Priority 1: Read existing vendor JSON file
+            if (fs.existsSync(vendorFilePath)) {
+                const fileContent = await fs.promises.readFile(vendorFilePath, 'utf-8');
+                const vendorDoc = JSON.parse(fileContent) as TVendorDoc;
+
+                getLogger().info(`📥 Imported ${vendorId} document from: ${vendorFilePath}`);
+
                 return {
                     type: 'import',
-                    success: false,
-                    error: `No ${vendorId} document found at ${pageUrl}. File not found: ${vendorFilePath}`,
+                    success: true,
+                    vendorDoc,
                 };
             }
 
-            // Read and parse the vendor document
-            const fileContent = await fs.promises.readFile(vendorFilePath, 'utf-8');
-            const vendorDoc = JSON.parse(fileContent) as TVendorDoc;
+            // Priority 2: Convert from jay-html if vendor supports it
+            const jayHtmlPath = path.join(dirname, PAGE_FILENAME);
+            if (fs.existsSync(jayHtmlPath) && hasVendor(vendorId)) {
+                const vendor = getVendor(vendorId)!;
 
-            getLogger().info(`📥 Imported ${vendorId} document from: ${vendorFilePath}`);
+                if (!vendor.convertFromJayHtml) {
+                    return {
+                        type: 'import',
+                        success: false,
+                        error: `No ${vendorId} document found at ${pageUrl} and vendor '${vendorId}' does not support conversion from jay-html.`,
+                    };
+                }
 
+                getLogger().info(
+                    `🔄 No ${vendorId} document found. Converting from jay-html: ${jayHtmlPath}`,
+                );
+
+                const jayHtmlContent = await fs.promises.readFile(jayHtmlPath, 'utf-8');
+
+                // Parse jay-html using the compiler to get the full parsed structure
+                const parsedResult = await parseJayFile(
+                    jayHtmlContent,
+                    PAGE_FILENAME,
+                    dirname,
+                    { relativePath: tsConfigPath },
+                    JAY_IMPORT_RESOLVER,
+                    projectRoot,
+                );
+
+                if (!parsedResult.val) {
+                    return {
+                        type: 'import',
+                        success: false,
+                        error: `Failed to parse jay-html at ${jayHtmlPath}: ${parsedResult.validations.join(', ')}`,
+                    };
+                }
+
+                if (parsedResult.validations.length > 0) {
+                    getLogger().warn(
+                        `Jay-HTML parsing warnings for ${jayHtmlPath}:`,
+                        parsedResult.validations,
+                    );
+                }
+
+                // Load page contracts for the conversion
+                const { projectPage, plugins } = await loadPageContracts(
+                    dirname,
+                    pageUrl,
+                    projectRoot,
+                );
+
+                const vendorDoc = (await vendor.convertFromJayHtml(
+                    parsedResult.val,
+                    pageUrl,
+                    projectPage,
+                    plugins,
+                )) as TVendorDoc;
+
+                // Save the generated vendor doc for future imports
+                await fs.promises.mkdir(dirname, { recursive: true });
+                await fs.promises.writeFile(
+                    vendorFilePath,
+                    JSON.stringify(vendorDoc, null, 2),
+                    'utf-8',
+                );
+
+                getLogger().info(
+                    `✅ Converted jay-html to ${vendorId} document and saved: ${vendorFilePath}`,
+                );
+
+                return {
+                    type: 'import',
+                    success: true,
+                    vendorDoc,
+                };
+            }
+
+            // Neither vendor doc nor jay-html found
             return {
                 type: 'import',
-                success: true,
-                vendorDoc,
+                success: false,
+                error: `No ${vendorId} document or jay-html found at ${pageUrl}. Looked for: ${vendorFilePath} and ${jayHtmlPath}`,
             };
         } catch (error) {
             getLogger().error('Failed to import vendor document:', error);
