@@ -67,12 +67,9 @@ window.onload = function () {
             const state = wrapped.automation.getPageState();
             console.log('%cAvailable Interactions:', 'color: #2196F3; font-weight: bold');
             state.interactions.forEach((group) => {
-                if (group.inForEach && group.items) {
-                    const itemList = group.items.map((i) => `${i.id} (${i.label})`).join(', ');
-                    console.log(`  ${group.ref} [${group.type}] forEach: ${itemList}`);
-                } else {
-                    console.log(`  ${group.ref} [${group.type}] events: ${group.events.join(', ')}`);
-                }
+                const coords = group.items.map((i) => i.coordinate.join('/')).join(', ');
+                const elementType = group.items[0]?.element.constructor.name ?? 'unknown';
+                console.log(`  ${group.refName} [${elementType}] coordinates: ${coords}`);
             });
         },
 

@@ -76,7 +76,7 @@ describe('AI Agent Integration Tests', () => {
 
         const Counter = makeJayComponent(renderCounterElement, CounterComponent);
 
-        it('should expose viewState through AI API', () => {
+        it('should expose viewState through automation API', () => {
             const instance = Counter({ initialCount: 5 });
             const wrapped = wrapWithAutomation(instance);
 
@@ -85,34 +85,32 @@ describe('AI Agent Integration Tests', () => {
             expect(state.viewState).toEqual({ count: 5, label: 'Counter' });
         });
 
-        it('should expose refs as grouped interactions', () => {
+        it('should expose refs as grouped Interactions', () => {
             const instance = Counter({ initialCount: 0 });
             const wrapped = wrapWithAutomation(instance);
 
             const state = wrapped.automation.getPageState();
 
             expect(state.interactions.length).toBe(3);
-            expect(state.interactions.map((i) => i.ref).sort()).toEqual([
-                'countDisplay',
-                'decrementBtn',
-                'incrementBtn',
-            ]);
-            // All are non-forEach, so no inForEach/items
-            state.interactions.forEach((i) => {
-                expect(i.inForEach).toBeUndefined();
-                expect(i.items).toBeUndefined();
+            const refNames = state.interactions.map((i) => i.refName).sort();
+            expect(refNames).toEqual(['countDisplay', 'decrementBtn', 'incrementBtn']);
+            // Each group has exactly one item (non-forEach)
+            state.interactions.forEach((group) => {
+                expect(group.items).toHaveLength(1);
+                expect(group.items[0].coordinate).toHaveLength(1);
+                expect(group.items[0].element).toBeInstanceOf(HTMLElement);
             });
         });
 
-        it('should find interaction by coordinate', () => {
+        it('should find InteractionInstance by coordinate', () => {
             const instance = Counter({ initialCount: 0 });
             const wrapped = wrapWithAutomation(instance);
 
-            const interaction = wrapped.automation.getInteraction(['incrementBtn']);
+            const instance_ = wrapped.automation.getInteraction(['incrementBtn']);
 
-            expect(interaction).toBeDefined();
-            expect(interaction!.refName).toBe('incrementBtn');
-            expect(interaction!.element).toBeInstanceOf(HTMLButtonElement);
+            expect(instance_).toBeDefined();
+            expect(instance_!.coordinate).toEqual(['incrementBtn']);
+            expect(instance_!.element).toBeInstanceOf(HTMLButtonElement);
         });
 
         it('should notify on state change after interaction', () => {
@@ -122,8 +120,8 @@ describe('AI Agent Integration Tests', () => {
             const callback = vi.fn();
             wrapped.automation.onStateChange(callback);
 
-            const interaction = wrapped.automation.getInteraction(['incrementBtn']);
-            interaction.element.click();
+            const inst = wrapped.automation.getInteraction(['incrementBtn']);
+            inst!.element.click();
 
             expect(callback).toHaveBeenCalledTimes(1);
             expect(callback.mock.calls[0][0].viewState.count).toBe(6);
@@ -278,39 +276,35 @@ describe('AI Agent Integration Tests', () => {
             );
         });
 
-        it('should expose collection refs as grouped interaction with items', () => {
+        it('should group forEach items under a single Interaction', () => {
             const instance = TodoList({ initialItems });
             const wrapped = wrapWithAutomation(instance);
 
             const state = wrapped.automation.getPageState();
 
-            // Should have 1 grouped interaction for removeBtn
-            const removeGroup = state.interactions.find((i) => i.ref === 'removeBtn');
-            expect(removeGroup).toBeDefined();
-            expect(removeGroup!.inForEach).toBe(true);
-            expect(removeGroup!.items).toHaveLength(3);
+            // Should have 1 Interaction group for removeBtn with 3 items
+            expect(state.interactions).toHaveLength(1);
+            expect(state.interactions[0].refName).toBe('removeBtn');
+            expect(state.interactions[0].items).toHaveLength(3);
 
-            // Items should have IDs from trackBy
-            const itemIds = removeGroup!.items!.map((i) => i.id);
-            expect(itemIds).toContain('1');
-            expect(itemIds).toContain('2');
-            expect(itemIds).toContain('3');
+            const coords = state.interactions[0].items.map((i) => i.coordinate);
+            expect(coords).toContainEqual(['1', 'removeBtn']);
+            expect(coords).toContainEqual(['2', 'removeBtn']);
+            expect(coords).toContainEqual(['3', 'removeBtn']);
         });
 
-        it('should include labels from itemContext', () => {
+        it('should include full coordinate path [trackBy, refName] on each instance', () => {
             const instance = TodoList({ initialItems });
             const wrapped = wrapWithAutomation(instance);
 
             const state = wrapped.automation.getPageState();
-            const removeGroup = state.interactions.find((i) => i.ref === 'removeBtn')!;
-
-            // guessLabel should pick 'text' field (after checking name/title/label first)
-            const item2 = removeGroup.items!.find((i) => i.id === '2');
+            const item2 = state.interactions[0].items.find((i) => i.coordinate[0] === '2');
             expect(item2).toBeDefined();
-            expect(item2!.label).toBe('Second item');
+            expect(item2!.coordinate).toEqual(['2', 'removeBtn']);
+            expect(item2!.element).toBeInstanceOf(HTMLButtonElement);
         });
 
-        it('should update grouped interactions after items change', () => {
+        it('should update grouped items after items change', () => {
             const instance = TodoList({ initialItems });
             const wrapped = wrapWithAutomation(instance);
 
@@ -318,13 +312,13 @@ describe('AI Agent Integration Tests', () => {
             instance.setItems([initialItems[0], initialItems[2]]);
 
             const state = wrapped.automation.getPageState();
-            const removeGroup = state.interactions.find((i) => i.ref === 'removeBtn');
 
-            // Should now have 2 items
-            expect(removeGroup!.items).toHaveLength(2);
+            // Should still be 1 group, but with 2 items
+            expect(state.interactions).toHaveLength(1);
+            expect(state.interactions[0].items).toHaveLength(2);
 
-            // Item 2 should no longer be present
-            const item2Exists = removeGroup!.items!.some((i) => i.id === '2');
+            // Item 2's coordinate should no longer be present
+            const item2Exists = state.interactions[0].items.some((i) => i.coordinate[0] === '2');
             expect(item2Exists).toBe(false);
         });
     });
@@ -445,42 +439,41 @@ describe('AI Agent Integration Tests', () => {
 
             const state = wrapped.automation.getPageState();
 
-            // Should have: headerBtn + checkoutBtn + removeBtn (grouped) = 3 groups
+            // Should have 3 groups: headerBtn, checkoutBtn, removeBtn (with 2 items)
             expect(state.interactions.length).toBe(3);
 
-            // Check that all ref names are present
-            const refNames = state.interactions.map((i) => i.ref);
-            expect(refNames).toContain('headerBtn');
-            expect(refNames).toContain('checkoutBtn');
-            expect(refNames).toContain('removeBtn');
+            const refNames = state.interactions.map((i) => i.refName).sort();
+            expect(refNames).toEqual(['checkoutBtn', 'headerBtn', 'removeBtn']);
+
+            const removeGroup = state.interactions.find((i) => i.refName === 'removeBtn')!;
+            expect(removeGroup.items).toHaveLength(2);
         });
 
-        it('should find raw interactions from nested refs by coordinate', () => {
+        it('should find InteractionInstance from nested refs by coordinate', () => {
             const instance = Page({ title: 'Shop', cartItems: initialCartItems });
             const wrapped = wrapWithAutomation(instance);
 
             // Find checkout button (nested in cart) via getInteraction
-            const checkoutInteraction = wrapped.automation.getInteraction(['checkoutBtn']);
-            expect(checkoutInteraction).toBeDefined();
-            expect(checkoutInteraction!.refName).toBe('checkoutBtn');
+            const checkoutInstance = wrapped.automation.getInteraction(['checkoutBtn']);
+            expect(checkoutInstance).toBeDefined();
+            expect(checkoutInstance!.coordinate).toEqual(['checkoutBtn']);
+            expect(checkoutInstance!.element).toBeInstanceOf(HTMLButtonElement);
         });
 
-        it('should include items for nested collection refs', () => {
+        it('should include full coordinates for nested collection refs', () => {
             const instance = Page({ title: 'Shop', cartItems: initialCartItems });
             const wrapped = wrapWithAutomation(instance);
 
             const state = wrapped.automation.getPageState();
-            const removeGroup = state.interactions.find((i) => i.ref === 'removeBtn')!;
+            const removeGroup = state.interactions.find((i) => i.refName === 'removeBtn')!;
 
-            expect(removeGroup.inForEach).toBe(true);
             expect(removeGroup.items).toHaveLength(2);
-
-            const itemIds = removeGroup.items!.map((i) => i.id);
-            expect(itemIds).toContain('prod-1');
-            expect(itemIds).toContain('prod-2');
+            const coords = removeGroup.items.map((i) => i.coordinate);
+            expect(coords).toContainEqual(expect.arrayContaining(['prod-1']));
+            expect(coords).toContainEqual(expect.arrayContaining(['prod-2']));
         });
 
-        it('should update nested grouped interactions after state change', () => {
+        it('should update grouped items after nested state change', () => {
             const instance = Page({ title: 'Shop', cartItems: initialCartItems });
             const wrapped = wrapWithAutomation(instance);
 
@@ -488,13 +481,13 @@ describe('AI Agent Integration Tests', () => {
             instance.setItems([initialCartItems[0]]);
 
             const state = wrapped.automation.getPageState();
-            const removeGroup = state.interactions.find((i) => i.ref === 'removeBtn')!;
+            const removeGroup = state.interactions.find((i) => i.refName === 'removeBtn')!;
 
             // Should now have 1 item
             expect(removeGroup.items).toHaveLength(1);
 
-            // prod-2 should no longer be in items
-            const prod2Exists = removeGroup.items!.some((i) => i.id === 'prod-2');
+            // prod-2's coordinate should no longer be present
+            const prod2Exists = removeGroup.items.some((i) => i.coordinate[0] === 'prod-2');
             expect(prod2Exists).toBe(false);
         });
 
@@ -505,7 +498,7 @@ describe('AI Agent Integration Tests', () => {
             const callback = vi.fn();
             wrapped.automation.onStateChange(callback);
 
-            // Use getInteraction to find the remove button for prod-1 (raw coordinate)
+            // Use getInteraction to find the remove button for prod-1
             const prod1RemoveBtn = wrapped.automation.getInteraction(['prod-1', 'removeBtn']);
             expect(prod1RemoveBtn).toBeDefined();
 

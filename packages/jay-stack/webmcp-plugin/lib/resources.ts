@@ -26,7 +26,7 @@ export function makeViewStateResource(automation: AutomationAPI): ResourceDescri
 }
 
 /**
- * state://interactions — Available interactions grouped by ref name.
+ * state://interactions — Available interactions, serialized with string coordinates.
  */
 export function makeInteractionsResource(automation: AutomationAPI): ResourceDescriptor {
     return {
@@ -36,11 +36,20 @@ export function makeInteractionsResource(automation: AutomationAPI): ResourceDes
         mimeType: 'application/json',
         read() {
             const { interactions } = automation.getPageState();
+            const serialized = interactions.map((group) => ({
+                refName: group.refName,
+                ...(group.description ? { description: group.description } : {}),
+                items: group.items.map((i) => ({
+                    coordinate: i.coordinate.join('/'),
+                    elementType: i.element.constructor.name,
+                    events: i.events,
+                })),
+            }));
             return {
                 contents: [
                     {
                         uri: 'state://interactions',
-                        text: JSON.stringify(interactions, null, 2),
+                        text: JSON.stringify(serialized, null, 2),
                         mimeType: 'application/json',
                     },
                 ],

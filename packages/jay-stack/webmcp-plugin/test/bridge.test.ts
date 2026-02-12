@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { setupWebMCP } from '../lib/webmcp-bridge';
+import { setupWebMCP } from '../lib';
 import { createMockAutomation, createMockModelContext, cartInteractions } from './helpers';
-import type { ModelContextContainer } from '../lib/webmcp-types';
+import type { ModelContextContainer } from '../lib';
+import type { Interaction } from '@jay-framework/runtime-automation';
 
 describe('WebMCP Bridge', () => {
     let originalModelContext: ModelContextContainer | undefined;
@@ -28,7 +29,10 @@ describe('WebMCP Bridge', () => {
         const mc = createMockModelContext();
         (navigator as any).modelContext = mc;
         const automation = createMockAutomation({
-            interactions: [{ ref: 'btn', type: 'Button', events: ['click'] }],
+            interactions: [{
+                refName: 'btn',
+                items: [{ coordinate: ['btn'], element: document.createElement('button'), events: ['click'] }],
+            }],
         });
 
         setupWebMCP(automation);
@@ -69,7 +73,10 @@ describe('WebMCP Bridge', () => {
         const mc = createMockModelContext();
         (navigator as any).modelContext = mc;
         const automation = createMockAutomation({
-            interactions: [{ ref: 'btn', type: 'Button', events: ['click'] }],
+            interactions: [{
+                refName: 'btn',
+                items: [{ coordinate: ['btn'], element: document.createElement('button'), events: ['click'] }],
+            }],
         });
 
         const cleanup = setupWebMCP(automation);
@@ -85,32 +92,36 @@ describe('WebMCP Bridge', () => {
         const mc = createMockModelContext();
         (navigator as any).modelContext = mc;
 
-        // Start with 2 items
-        const interactions = [
-            {
-                ref: 'removeBtn',
-                type: 'Button' as const,
-                events: ['click'],
-                inForEach: true as const,
-                items: [
-                    { id: 'item-1', label: 'Mouse' },
-                    { id: 'item-2', label: 'Hub' },
-                ],
-            },
-        ];
+        // Start with 2 forEach items
+        const interactions: Interaction[] = [{
+            refName: 'removeBtn',
+            items: [
+                { coordinate: ['item-1', 'removeBtn'], element: document.createElement('button'), events: ['click'] },
+                { coordinate: ['item-2', 'removeBtn'], element: document.createElement('button'), events: ['click'] },
+            ],
+        }];
         const automation = createMockAutomation({ interactions });
 
         setupWebMCP(automation);
 
         const tool1 = mc._tools.get('click-remove-btn')!;
-        expect(tool1.inputSchema.properties.itemId.enum).toEqual(['item-1', 'item-2']);
+        expect(tool1.inputSchema.properties.coordinate.enum).toEqual([
+            'item-1/removeBtn',
+            'item-2/removeBtn',
+        ]);
 
         // Simulate adding item-3
-        interactions[0].items!.push({ id: 'item-3', label: 'Keyboard' });
+        interactions[0].items.push(
+            { coordinate: ['item-3', 'removeBtn'], element: document.createElement('button'), events: ['click'] },
+        );
         (automation as any)._notifyStateChange();
 
         const tool2 = mc._tools.get('click-remove-btn')!;
-        expect(tool2.inputSchema.properties.itemId.enum).toEqual(['item-1', 'item-2', 'item-3']);
+        expect(tool2.inputSchema.properties.coordinate.enum).toEqual([
+            'item-1/removeBtn',
+            'item-2/removeBtn',
+            'item-3/removeBtn',
+        ]);
     });
 
     it('should not regenerate semantic tools when only viewState changes', () => {
@@ -118,7 +129,10 @@ describe('WebMCP Bridge', () => {
         (navigator as any).modelContext = mc;
 
         const automation = createMockAutomation({
-            interactions: [{ ref: 'btn', type: 'Button', events: ['click'] }],
+            interactions: [{
+                refName: 'btn',
+                items: [{ coordinate: ['btn'], element: document.createElement('button'), events: ['click'] }],
+            }],
         });
 
         setupWebMCP(automation);

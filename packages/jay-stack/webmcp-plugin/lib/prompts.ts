@@ -12,14 +12,13 @@ export function makePageGuidePrompt(automation: AutomationAPI): PromptDescriptor
         get() {
             const { viewState, interactions } = automation.getPageState();
 
-            const interactionSummary = interactions
-                .map((g) => {
-                    const desc = g.description || g.ref;
-                    if (g.inForEach && g.items) {
-                        const itemList = g.items.map((i) => `${i.id} (${i.label})`).join(', ');
-                        return `- ${desc} [${g.type}] — forEach with items: ${itemList}`;
-                    }
-                    return `- ${desc} [${g.type}] — events: ${g.events.join(', ')}`;
+            const interactionLines = interactions
+                .map((group) => {
+                    const elementType = group.items[0]?.element.constructor.name ?? 'unknown';
+                    const events = group.items[0]?.events.join(', ') ?? '';
+                    const coords = group.items.map((i) => `"${i.coordinate.join('/')}"`).join(', ');
+                    const desc = group.description || group.refName;
+                    return `- ${desc} [${elementType}] coordinates: ${coords} events: ${events}`;
                 })
                 .join('\n');
 
@@ -34,11 +33,11 @@ export function makePageGuidePrompt(automation: AutomationAPI): PromptDescriptor
                                 JSON.stringify(viewState, null, 2),
                                 '',
                                 'Available interactions:',
-                                interactionSummary,
+                                interactionLines,
                                 '',
-                                'Use the provided tools to read state and interact with the page.',
-                                'For forEach interactions, provide the itemId parameter.',
-                                'Use get-page-state to refresh the current state after making changes.',
+                                'Coordinates identify interactive elements. Multi-segment coordinates (e.g. "item-1/removeBtn") target elements inside lists.',
+                                'The first segments match item IDs in the ViewState arrays above.',
+                                'Use the provided tools to read state and trigger interactions.',
                             ].join('\n'),
                         },
                     },

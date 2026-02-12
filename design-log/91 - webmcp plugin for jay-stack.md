@@ -994,6 +994,33 @@ This is the full diff for adding WebMCP to any jay-stack project:
 + "@jay-framework/webmcp-plugin": "workspace:^",
 ```
 
+### Post-implementation: Simplifications
+
+Based on review feedback, several simplifications were made:
+
+1. **Removed `GroupedInteraction` re-export from `stack-client-runtime`** — unnecessary dependency. Consumers that need it import from `runtime-automation` directly.
+
+2. **Removed `guessLabel` and `friendlyType`** — agents understand raw DOM types (`HTMLButtonElement`) and don't need translated names. Labels were heuristic and unreliable.
+
+3. **`items` now uses full `coordinate` arrays** instead of a single `id` string — supports nested forEach (multi-segment coordinates like `['parent', 'child', 'refName']`), and the coordinate is exactly what's needed to trigger the interaction.
+
+4. **`elementType` kept raw** — `"HTMLButtonElement"` instead of `"Button"`. Agents parse DOM types fine, and it's lossless.
+
+**Updated `GroupedInteraction` type:**
+
+```typescript
+interface GroupedInteraction {
+    ref: string;                              // "removeBtn"
+    elementType: string;                      // "HTMLButtonElement"
+    events: string[];                         // ["click"]
+    description?: string;                     // from contract
+    inForEach?: true;
+    items?: Array<{ coordinate: Coordinate }>; // full coordinate path
+}
+```
+
+**Semantic tools** now use `coordinate` (as `/`-joined string enum) instead of `itemId` for forEach params.
+
 ### Post-implementation: Disabled element filtering
 
 Disabled elements (`<button disabled>`, `<input disabled>`, elements inside `<fieldset disabled>`) are now excluded from the interaction collector entirely. This was not in the original design but is a natural fit — disabled elements can't be interacted with, so they shouldn't appear as available interactions.
@@ -1012,13 +1039,55 @@ Disabled elements (`<button disabled>`, `<input disabled>`, elements inside `<fi
 - When an element's disabled state changes and a `viewStateChange` fires, the cache invalidates and the next `getPageState()` reflects the new state
 - Checks both `element.disabled` property and ancestor `<fieldset disabled>`
 
+### Post-implementation: Clean grouped Interaction with InteractionInstance
+
+Redesigned the automation API types. Replaced the complex `GroupedInteraction` shape (with `ref`, `inForEach`, `items`, `elementType`) and the flat `InteractionInfo` approach with a clean two-level structure that keeps DOM elements in the automation layer and lets the WebMCP layer do only minimal serialization.
+
+**Automation API types:**
+```typescript
+interface InteractionInstance {
+    coordinate: Coordinate;   // ["item-1", "removeBtn"]
+    element: HTMLElement;      // actual DOM element
+    events: string[];          // filtered: ["click"]
+}
+
+interface Interaction {
+    refName: string;           // "removeBtn"
+    items: InteractionInstance[];
+    description?: string;
+}
+```
+
+**Internal collector type** (`CollectedInteraction`) holds `refName`, `coordinate`, `element`, `supportedEvents`, `description`. The `groupInteractions()` function groups by `refName` and filters events per element type (using `instanceof` checks on the DOM element).
+
+**WebMCP serialization is minimal — just two transforms:**
+- `element` → `element.constructor.name` (e.g., `"HTMLButtonElement"`)
+- `coordinate: string[]` → `coordinate.join('/')` (e.g., `"item-1/removeBtn"`)
+
+**`getInteraction(coordinate)` returns `InteractionInstance | undefined`** — searches through grouped items. Has the DOM element directly for value setting/reading.
+
+**`get-page-state` tool description** explains how coordinate segments map to ViewState array item IDs (trackBy keys), connecting data with actions.
+
+**Files changed:**
+
+| File | Change |
+|------|--------|
+| `runtime-automation/lib/types.ts` | New `InteractionInstance`, `Interaction` (grouped), `CollectedInteraction` (internal) |
+| `runtime-automation/lib/group-interactions.ts` | Groups `CollectedInteraction[]` → `Interaction[]`, filters events |
+| `runtime-automation/lib/interaction-collector.ts` | Produces `CollectedInteraction[]` |
+| `runtime-automation/lib/automation-agent.ts` | Caches grouped `Interaction[]`; `getInteraction` returns `InteractionInstance` |
+| `webmcp-plugin/lib/generic-tools.ts` | Serializes `element→elementType`, `coordinate[]→string` |
+| `webmcp-plugin/lib/semantic-tools.ts` | Iterates `Interaction[]` groups directly |
+| `webmcp-plugin/lib/resources.ts` | Same serialization |
+| `webmcp-plugin/lib/prompts.ts` | Same serialization |
+
 ### Test Summary
 
 | Package | Files | Tests | Status |
 |---------|-------|-------|--------|
-| `runtime-automation` | 3 | 55 | All pass |
-| `webmcp-plugin` | 6 | 38 | All pass |
-| **Total** | **9** | **93** | **All pass** |
+| `runtime-automation` | 3 | 50 | All pass |
+| `webmcp-plugin` | 6 | 41 | All pass |
+| **Total** | **9** | **91** | **All pass** |
 
 ---
 

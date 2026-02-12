@@ -1,12 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { groupInteractions } from '../lib/group-interactions';
-import type { Interaction } from '../lib/types';
+import { groupInteractions } from '../lib';
+import type { CollectedInteraction } from '../lib/types';
 
-function makeInteraction(overrides: Partial<Interaction> & { refName: string }): Interaction {
+function makeRaw(overrides: Partial<CollectedInteraction> & { refName: string }): CollectedInteraction {
     return {
         coordinate: [overrides.refName],
         element: document.createElement('button'),
-        elementType: 'HTMLButtonElement',
         supportedEvents: ['click', 'focus', 'blur'],
         ...overrides,
     };
@@ -17,250 +16,118 @@ describe('groupInteractions', () => {
         expect(groupInteractions([])).toEqual([]);
     });
 
-    it('should group a single non-forEach ref', () => {
-        const interactions = [makeInteraction({ refName: 'submitBtn' })];
-
-        const grouped = groupInteractions(interactions);
-
-        expect(grouped).toHaveLength(1);
-        expect(grouped[0]).toEqual({
-            ref: 'submitBtn',
-            type: 'Button',
-            events: ['click'],
-            description: undefined,
-        });
-        expect(grouped[0].inForEach).toBeUndefined();
-        expect(grouped[0].items).toBeUndefined();
-    });
-
-    it('should group multiple non-forEach refs', () => {
-        const interactions = [
-            makeInteraction({ refName: 'saveBtn' }),
-            makeInteraction({ refName: 'cancelBtn' }),
+    it('should group by refName', () => {
+        const raw = [
+            makeRaw({ refName: 'submitBtn' }),
+            makeRaw({ refName: 'cancelBtn' }),
         ];
 
-        const grouped = groupInteractions(interactions);
+        const grouped = groupInteractions(raw);
 
         expect(grouped).toHaveLength(2);
-        expect(grouped[0].ref).toBe('saveBtn');
-        expect(grouped[1].ref).toBe('cancelBtn');
+        expect(grouped[0].refName).toBe('submitBtn');
+        expect(grouped[0].items).toHaveLength(1);
+        expect(grouped[1].refName).toBe('cancelBtn');
+        expect(grouped[1].items).toHaveLength(1);
     });
 
-    it('should group forEach refs into a single entry with items', () => {
-        const interactions = [
-            makeInteraction({
-                refName: 'removeBtn',
-                coordinate: ['item-1', 'removeBtn'],
-                itemContext: { id: 'item-1', name: 'Widget' },
-            }),
-            makeInteraction({
-                refName: 'removeBtn',
-                coordinate: ['item-2', 'removeBtn'],
-                itemContext: { id: 'item-2', name: 'Gadget' },
-            }),
-            makeInteraction({
-                refName: 'removeBtn',
-                coordinate: ['item-3', 'removeBtn'],
-                itemContext: { id: 'item-3', name: 'Gizmo' },
-            }),
+    it('should collapse forEach items under a single Interaction', () => {
+        const raw = [
+            makeRaw({ refName: 'removeBtn', coordinate: ['item-1', 'removeBtn'] }),
+            makeRaw({ refName: 'removeBtn', coordinate: ['item-2', 'removeBtn'] }),
         ];
 
-        const grouped = groupInteractions(interactions);
+        const grouped = groupInteractions(raw);
 
         expect(grouped).toHaveLength(1);
-        expect(grouped[0].ref).toBe('removeBtn');
-        expect(grouped[0].inForEach).toBe(true);
-        expect(grouped[0].items).toEqual([
-            { id: 'item-1', label: 'Widget' },
-            { id: 'item-2', label: 'Gadget' },
-            { id: 'item-3', label: 'Gizmo' },
-        ]);
+        expect(grouped[0].refName).toBe('removeBtn');
+        expect(grouped[0].items).toHaveLength(2);
+        expect(grouped[0].items[0].coordinate).toEqual(['item-1', 'removeBtn']);
+        expect(grouped[0].items[1].coordinate).toEqual(['item-2', 'removeBtn']);
     });
 
-    it('should detect single-item forEach by coordinate length', () => {
-        // Even with just one item, coordinate length > 1 means it's in a forEach
-        const interactions = [
-            makeInteraction({
-                refName: 'editBtn',
-                coordinate: ['only-item', 'editBtn'],
-                itemContext: { id: 'only-item', name: 'Lonely' },
-            }),
-        ];
+    it('should preserve DOM element on each instance', () => {
+        const btn = document.createElement('button');
+        const raw = [makeRaw({ refName: 'btn', element: btn })];
 
-        const grouped = groupInteractions(interactions);
+        const grouped = groupInteractions(raw);
 
-        expect(grouped).toHaveLength(1);
-        expect(grouped[0].inForEach).toBe(true);
-        expect(grouped[0].items).toEqual([{ id: 'only-item', label: 'Lonely' }]);
+        expect(grouped[0].items[0].element).toBe(btn);
     });
 
-    it('should mix forEach and non-forEach refs', () => {
-        const interactions = [
-            makeInteraction({
-                refName: 'removeBtn',
-                coordinate: ['item-1', 'removeBtn'],
-                itemContext: { id: 'item-1', name: 'A' },
-            }),
-            makeInteraction({
-                refName: 'removeBtn',
-                coordinate: ['item-2', 'removeBtn'],
-                itemContext: { id: 'item-2', name: 'B' },
-            }),
-            makeInteraction({ refName: 'addBtn', coordinate: ['addBtn'] }),
-        ];
-
-        const grouped = groupInteractions(interactions);
-
-        expect(grouped).toHaveLength(2);
-
-        const removeGroup = grouped.find((g) => g.ref === 'removeBtn')!;
-        expect(removeGroup.inForEach).toBe(true);
-        expect(removeGroup.items).toHaveLength(2);
-
-        const addGroup = grouped.find((g) => g.ref === 'addBtn')!;
-        expect(addGroup.inForEach).toBeUndefined();
-        expect(addGroup.items).toBeUndefined();
-    });
-
-    it('should map element types to friendly names', () => {
-        const interactions = [
-            makeInteraction({ refName: 'btn', elementType: 'HTMLButtonElement' }),
-            makeInteraction({
-                refName: 'input',
-                elementType: 'HTMLInputElement',
-                supportedEvents: ['click', 'input', 'change', 'focus', 'blur'],
-            }),
-            makeInteraction({
-                refName: 'textarea',
-                elementType: 'HTMLTextAreaElement',
-                supportedEvents: ['click', 'input', 'change', 'focus', 'blur'],
-            }),
-            makeInteraction({
-                refName: 'select',
-                elementType: 'HTMLSelectElement',
-                supportedEvents: ['click', 'change', 'focus', 'blur'],
-            }),
-            makeInteraction({ refName: 'link', elementType: 'HTMLAnchorElement', supportedEvents: ['click'] }),
-            makeInteraction({ refName: 'display', elementType: 'HTMLSpanElement', supportedEvents: ['click', 'focus', 'blur'] }),
-        ];
-
-        const grouped = groupInteractions(interactions);
-
-        expect(grouped.find((g) => g.ref === 'btn')!.type).toBe('Button');
-        expect(grouped.find((g) => g.ref === 'input')!.type).toBe('TextInput');
-        expect(grouped.find((g) => g.ref === 'textarea')!.type).toBe('TextArea');
-        expect(grouped.find((g) => g.ref === 'select')!.type).toBe('Select');
-        expect(grouped.find((g) => g.ref === 'link')!.type).toBe('Link');
-        expect(grouped.find((g) => g.ref === 'display')!.type).toBe('Span');
-    });
-
-    it('should filter to relevant events per element type', () => {
-        const interactions = [
-            makeInteraction({
+    it('should filter button events to just click', () => {
+        const raw = [
+            makeRaw({
                 refName: 'btn',
-                elementType: 'HTMLButtonElement',
+                element: document.createElement('button'),
                 supportedEvents: ['click', 'focus', 'blur'],
             }),
-            makeInteraction({
-                refName: 'input',
-                elementType: 'HTMLInputElement',
+        ];
+
+        const grouped = groupInteractions(raw);
+
+        expect(grouped[0].items[0].events).toEqual(['click']);
+    });
+
+    it('should filter input events to input and change', () => {
+        const raw = [
+            makeRaw({
+                refName: 'nameInput',
+                element: document.createElement('input'),
                 supportedEvents: ['click', 'focus', 'blur', 'input', 'change'],
             }),
-            makeInteraction({
-                refName: 'select',
-                elementType: 'HTMLSelectElement',
+        ];
+
+        const grouped = groupInteractions(raw);
+
+        expect(grouped[0].items[0].events).toEqual(['input', 'change']);
+    });
+
+    it('should filter select events to input and change', () => {
+        const raw = [
+            makeRaw({
+                refName: 'sizeSelect',
+                element: document.createElement('select'),
                 supportedEvents: ['click', 'focus', 'blur', 'change'],
             }),
         ];
 
-        const grouped = groupInteractions(interactions);
+        const grouped = groupInteractions(raw);
 
-        expect(grouped.find((g) => g.ref === 'btn')!.events).toEqual(['click']);
-        expect(grouped.find((g) => g.ref === 'input')!.events).toEqual(['input', 'change']);
-        expect(grouped.find((g) => g.ref === 'select')!.events).toEqual(['change']);
+        expect(grouped[0].items[0].events).toEqual(['change']);
     });
 
-    it('should preserve description from contract', () => {
-        const interactions = [
-            makeInteraction({ refName: 'addToCart', description: 'Add the product to cart' }),
+    it('should filter anchor events to just click', () => {
+        const raw = [
+            makeRaw({
+                refName: 'link',
+                element: document.createElement('a'),
+                supportedEvents: ['click'],
+            }),
         ];
 
-        const grouped = groupInteractions(interactions);
+        const grouped = groupInteractions(raw);
 
-        expect(grouped[0].description).toBe('Add the product to cart');
+        expect(grouped[0].items[0].events).toEqual(['click']);
     });
 
-    describe('guessLabel', () => {
-        it('should use name field', () => {
-            const interactions = [
-                makeInteraction({
-                    refName: 'btn',
-                    coordinate: ['x', 'btn'],
-                    itemContext: { id: 'x', name: 'My Name', title: 'My Title' },
-                }),
-            ];
-            const grouped = groupInteractions(interactions);
-            expect(grouped[0].items![0].label).toBe('My Name');
-        });
+    it('should preserve description from first item', () => {
+        const raw = [
+            makeRaw({ refName: 'addToCart', description: 'Add product to cart' }),
+        ];
 
-        it('should fall back to title field', () => {
-            const interactions = [
-                makeInteraction({
-                    refName: 'btn',
-                    coordinate: ['x', 'btn'],
-                    itemContext: { id: 'x', title: 'My Title' },
-                }),
-            ];
-            const grouped = groupInteractions(interactions);
-            expect(grouped[0].items![0].label).toBe('My Title');
-        });
+        const grouped = groupInteractions(raw);
 
-        it('should fall back to label field', () => {
-            const interactions = [
-                makeInteraction({
-                    refName: 'btn',
-                    coordinate: ['x', 'btn'],
-                    itemContext: { id: 'x', label: 'My Label' },
-                }),
-            ];
-            const grouped = groupInteractions(interactions);
-            expect(grouped[0].items![0].label).toBe('My Label');
-        });
+        expect(grouped[0].description).toBe('Add product to cart');
+    });
 
-        it('should fall back to text field', () => {
-            const interactions = [
-                makeInteraction({
-                    refName: 'btn',
-                    coordinate: ['x', 'btn'],
-                    itemContext: { id: 'x', text: 'My Text' },
-                }),
-            ];
-            const grouped = groupInteractions(interactions);
-            expect(grouped[0].items![0].label).toBe('My Text');
-        });
+    it('should handle multi-segment coordinates for nested forEach', () => {
+        const raw = [
+            makeRaw({ refName: 'editBtn', coordinate: ['parent-1', 'child-a', 'editBtn'] }),
+        ];
 
-        it('should fall back to first string value', () => {
-            const interactions = [
-                makeInteraction({
-                    refName: 'btn',
-                    coordinate: ['x', 'btn'],
-                    itemContext: { id: 'x', count: 5, description: 'fallback string' },
-                }),
-            ];
-            const grouped = groupInteractions(interactions);
-            // 'id' is the first string value
-            expect(grouped[0].items![0].label).toBe('x');
-        });
+        const grouped = groupInteractions(raw);
 
-        it('should return empty string for no context', () => {
-            const interactions = [
-                makeInteraction({
-                    refName: 'btn',
-                    coordinate: ['x', 'btn'],
-                }),
-            ];
-            const grouped = groupInteractions(interactions);
-            expect(grouped[0].items![0].label).toBe('');
-        });
+        expect(grouped[0].items[0].coordinate).toEqual(['parent-1', 'child-a', 'editBtn']);
     });
 });

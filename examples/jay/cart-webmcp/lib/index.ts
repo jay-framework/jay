@@ -101,10 +101,12 @@ window.onload = function () {
         execute: () => {
             const state = automation.getPageState();
             const interactions = state.interactions.map((group) => ({
-                ref: group.ref,
-                type: group.type,
-                events: group.events,
-                ...(group.inForEach ? { inForEach: true, items: group.items } : {}),
+                refName: group.refName,
+                items: group.items.map((i) => ({
+                    coordinate: i.coordinate.join('/'),
+                    elementType: i.element.constructor.name,
+                    events: i.events,
+                })),
             }));
             return jsonResult('Available interactions:', interactions);
         },

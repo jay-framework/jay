@@ -6,6 +6,7 @@ import {
     makeFillInputTool,
 } from '../lib/generic-tools';
 import { createMockAutomation, cartInteractions } from './helpers';
+import type { Interaction } from '@jay-framework/runtime-automation';
 
 const MOCK_AGENT = { requestUserInteraction: vi.fn() };
 
@@ -30,10 +31,18 @@ describe('Generic Tools', () => {
             expect(tool.name).toBe('get-page-state');
             expect(tool.description).toContain('page state');
         });
+
+        it('should explain how coordinates map to ViewState arrays', () => {
+            const automation = createMockAutomation();
+            const tool = makeGetPageStateTool(automation);
+
+            expect(tool.description).toContain('trackBy');
+            expect(tool.description).toContain('coordinate');
+        });
     });
 
     describe('list-interactions', () => {
-        it('should return grouped interactions', () => {
+        it('should return grouped interactions with string coordinates and elementType', () => {
             const interactions = cartInteractions();
             const automation = createMockAutomation({ interactions });
             const tool = makeListInteractionsTool(automation);
@@ -41,9 +50,21 @@ describe('Generic Tools', () => {
             const result = tool.execute({}, MOCK_AGENT);
             const text = result.content[0].text!;
 
-            expect(text).toContain('"ref": "removeBtn"');
-            expect(text).toContain('"inForEach": true');
-            expect(text).toContain('"nameInput"');
+            // Should contain grouped structure with serialized fields
+            expect(text).toContain('"refName": "removeBtn"');
+            expect(text).toContain('"item-1/removeBtn"');
+            expect(text).toContain('"elementType": "HTMLButtonElement"');
+            expect(text).toContain('"addBtn"');
+            // Should NOT contain raw DOM element references
+            expect(text).not.toContain('[object HTML');
+        });
+
+        it('should explain coordinate format in description', () => {
+            const automation = createMockAutomation();
+            const tool = makeListInteractionsTool(automation);
+
+            expect(tool.description).toContain('coordinate');
+            expect(tool.description).toContain('Multi-segment');
         });
     });
 
@@ -51,7 +72,7 @@ describe('Generic Tools', () => {
         it('should trigger click on a simple coordinate', () => {
             const automation = createMockAutomation({
                 viewState: { count: 1 },
-                interactions: [{ ref: 'addBtn', type: 'Button', events: ['click'] }],
+                interactions: cartInteractions(),
             });
             const tool = makeTriggerInteractionTool(automation);
 
@@ -98,14 +119,10 @@ describe('Generic Tools', () => {
     describe('fill-input', () => {
         it('should set value and trigger input event', () => {
             const mockElement = document.createElement('input');
-            const automation = createMockAutomation();
-            (automation.getInteraction as any).mockReturnValue({
-                refName: 'nameInput',
-                coordinate: ['nameInput'],
-                element: mockElement,
-                elementType: 'HTMLInputElement',
-                supportedEvents: ['input', 'change'],
-            });
+            const interactions: Interaction[] = [
+                { refName: 'nameInput', items: [{ coordinate: ['nameInput'], element: mockElement, events: ['input', 'change'] }] },
+            ];
+            const automation = createMockAutomation({ interactions });
             const tool = makeFillInputTool(automation);
 
             const result = tool.execute({ coordinate: 'nameInput', value: 'Test' }, MOCK_AGENT);
@@ -117,14 +134,10 @@ describe('Generic Tools', () => {
 
         it('should trigger change event for select elements', () => {
             const mockElement = document.createElement('select');
-            const automation = createMockAutomation();
-            (automation.getInteraction as any).mockReturnValue({
-                refName: 'sizeSelect',
-                coordinate: ['sizeSelect'],
-                element: mockElement,
-                elementType: 'HTMLSelectElement',
-                supportedEvents: ['change'],
-            });
+            const interactions: Interaction[] = [
+                { refName: 'sizeSelect', items: [{ coordinate: ['sizeSelect'], element: mockElement, events: ['change'] }] },
+            ];
+            const automation = createMockAutomation({ interactions });
             const tool = makeFillInputTool(automation);
 
             tool.execute({ coordinate: 'sizeSelect', value: 'large' }, MOCK_AGENT);

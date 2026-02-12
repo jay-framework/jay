@@ -10,7 +10,6 @@ export {
     type AutomationAPI,
     type AutomationWrappedComponent,
     type Interaction,
-    type GroupedInteraction,
     type PageState,
     type Coordinate,
 } from '@jay-framework/runtime-automation';

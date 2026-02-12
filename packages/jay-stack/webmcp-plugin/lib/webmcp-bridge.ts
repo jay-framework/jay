@@ -71,7 +71,7 @@ function interactionKey(automation: AutomationAPI): string {
     return automation
         .getPageState()
         .interactions.map((g) =>
-            g.inForEach ? `${g.ref}:${g.items!.map((i) => i.id).join(',')}` : g.ref,
+            `${g.refName}:${g.items.map((i) => i.coordinate.join('/')).join(',')}`,
         )
         .join('|');
 }

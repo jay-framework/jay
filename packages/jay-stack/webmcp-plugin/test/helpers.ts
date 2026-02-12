@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import type { AutomationAPI, PageState, Interaction, GroupedInteraction } from '@jay-framework/runtime-automation';
+import type { AutomationAPI, PageState, Interaction, InteractionInstance } from '@jay-framework/runtime-automation';
 import type { ModelContextContainer, Registration, ToolDescriptor, ResourceDescriptor, PromptDescriptor } from '../lib/webmcp-types';
 
 /**
@@ -7,7 +7,7 @@ import type { ModelContextContainer, Registration, ToolDescriptor, ResourceDescr
  */
 export function createMockAutomation(overrides: Partial<{
     viewState: object;
-    interactions: GroupedInteraction[];
+    interactions: Interaction[];
     customEvents: Array<{ name: string }>;
 }>= {}): AutomationAPI {
     const {
@@ -29,15 +29,19 @@ export function createMockAutomation(overrides: Partial<{
             stateListeners.add(cb);
             return () => stateListeners.delete(cb);
         }),
-        getInteraction: vi.fn((coordinate: string[]) => {
-            // Return a mock Interaction with a mock element
-            return {
-                refName: coordinate[coordinate.length - 1],
-                coordinate,
-                element: document.createElement('input'),
-                elementType: 'HTMLInputElement',
-                supportedEvents: ['click', 'input', 'change'],
-            } satisfies Interaction;
+        getInteraction: vi.fn((coordinate: string[]): InteractionInstance | undefined => {
+            // Search through groups to find matching instance
+            for (const group of interactions) {
+                for (const item of group.items) {
+                    if (
+                        item.coordinate.length === coordinate.length &&
+                        item.coordinate.every((c, i) => c === coordinate[i])
+                    ) {
+                        return item;
+                    }
+                }
+            }
+            return undefined;
         }),
         getCustomEvents: vi.fn(() => customEvents),
         onComponentEvent: vi.fn(() => () => {}),
@@ -92,55 +96,54 @@ export function createMockModelContext(): ModelContextContainer & {
     };
 }
 
+/** Helper: create an InteractionInstance with a real DOM element */
+function instance(coordinate: string[], tag: string = 'button'): InteractionInstance {
+    const el = document.createElement(tag);
+    const events = tag === 'button' || tag === 'a' ? ['click']
+        : tag === 'select' ? ['change']
+        : tag === 'input' || tag === 'textarea' ? ['input', 'change']
+        : ['click'];
+    return { coordinate, element: el, events };
+}
+
 /**
  * Sample grouped interactions for the cart example.
+ * Each Interaction group has real DOM elements.
  */
-export function cartInteractions(): GroupedInteraction[] {
+export function cartInteractions(): Interaction[] {
     return [
         {
-            ref: 'decreaseBtn',
-            type: 'Button',
-            events: ['click'],
-            inForEach: true,
+            refName: 'decreaseBtn',
             items: [
-                { id: 'item-1', label: 'Wireless Mouse' },
-                { id: 'item-2', label: 'USB-C Hub' },
+                instance(['item-1', 'decreaseBtn']),
+                instance(['item-2', 'decreaseBtn']),
             ],
         },
         {
-            ref: 'increaseBtn',
-            type: 'Button',
-            events: ['click'],
-            inForEach: true,
+            refName: 'increaseBtn',
             items: [
-                { id: 'item-1', label: 'Wireless Mouse' },
-                { id: 'item-2', label: 'USB-C Hub' },
+                instance(['item-1', 'increaseBtn']),
+                instance(['item-2', 'increaseBtn']),
             ],
         },
         {
-            ref: 'removeBtn',
-            type: 'Button',
-            events: ['click'],
-            inForEach: true,
+            refName: 'removeBtn',
             items: [
-                { id: 'item-1', label: 'Wireless Mouse' },
-                { id: 'item-2', label: 'USB-C Hub' },
+                instance(['item-1', 'removeBtn']),
+                instance(['item-2', 'removeBtn']),
             ],
         },
         {
-            ref: 'nameInput',
-            type: 'TextInput',
-            events: ['input', 'change'],
+            refName: 'nameInput',
+            items: [instance(['nameInput'], 'input')],
         },
         {
-            ref: 'priceInput',
-            type: 'TextInput',
-            events: ['input', 'change'],
+            refName: 'priceInput',
+            items: [instance(['priceInput'], 'input')],
         },
         {
-            ref: 'addBtn',
-            type: 'Button',
-            events: ['click'],
+            refName: 'addBtn',
+            items: [instance(['addBtn'])],
         },
     ];
 }

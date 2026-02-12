@@ -67,7 +67,7 @@ function createMockComponent(initialViewState: object = { count: 0 }) {
 
 describe('runtime-automation', () => {
     describe('wrapWithAutomation', () => {
-        it('should add ai property to component', () => {
+        it('should add automation property to component', () => {
             const component = createMockComponent();
             const wrapped = wrapWithAutomation(component);
 
@@ -106,41 +106,42 @@ describe('runtime-automation', () => {
             expect(state.viewState).toEqual({ count: 42, name: 'test' });
         });
 
-        it('should return grouped interactions from refs', () => {
+        it('should return grouped Interactions from refs', () => {
             const component = createMockComponent();
             const wrapped = wrapWithAutomation(component);
 
             const state = wrapped.automation.getPageState();
 
             expect(state.interactions.length).toBe(2);
-            expect(state.interactions[0].ref).toBe('incrementBtn');
-            expect(state.interactions[0].type).toBe('Button');
-            expect(state.interactions[0].events).toEqual(['click']);
-            expect(state.interactions[1].ref).toBe('decrementBtn');
-            // Non-forEach refs should not have inForEach or items
-            expect(state.interactions[0].inForEach).toBeUndefined();
-            expect(state.interactions[0].items).toBeUndefined();
+            expect(state.interactions[0].refName).toBe('incrementBtn');
+            expect(state.interactions[0].items).toHaveLength(1);
+            expect(state.interactions[0].items[0].coordinate).toEqual(['incrementBtn']);
+            expect(state.interactions[0].items[0].element).toBeInstanceOf(HTMLButtonElement);
+            expect(state.interactions[0].items[0].events).toEqual(['click']);
+            expect(state.interactions[1].refName).toBe('decrementBtn');
         });
     });
 
     describe('AutomationAPI.getInteraction', () => {
-        it('should find interaction by coordinate', () => {
+        it('should find InteractionInstance by coordinate', () => {
             const component = createMockComponent();
             const wrapped = wrapWithAutomation(component);
 
-            const interaction = wrapped.automation.getInteraction(['incrementBtn']);
+            const instance = wrapped.automation.getInteraction(['incrementBtn']);
 
-            expect(interaction).toBeDefined();
-            expect(interaction!.refName).toBe('incrementBtn');
+            expect(instance).toBeDefined();
+            expect(instance!.coordinate).toEqual(['incrementBtn']);
+            expect(instance!.element).toBeInstanceOf(HTMLButtonElement);
+            expect(instance!.events).toEqual(['click']);
         });
 
         it('should return undefined for unknown coordinate', () => {
             const component = createMockComponent();
             const wrapped = wrapWithAutomation(component);
 
-            const interaction = wrapped.automation.getInteraction(['unknownRef']);
+            const instance = wrapped.automation.getInteraction(['unknownRef']);
 
-            expect(interaction).toBeUndefined();
+            expect(instance).toBeUndefined();
         });
     });
 
@@ -149,9 +150,9 @@ describe('runtime-automation', () => {
             const component = createMockComponent();
             const wrapped = wrapWithAutomation(component);
 
-            const interaction = wrapped.automation.getInteraction(['incrementBtn']);
+            const instance = wrapped.automation.getInteraction(['incrementBtn']);
             const clickHandler = vi.fn();
-            interaction!.element.addEventListener('click', clickHandler);
+            instance!.element.addEventListener('click', clickHandler);
 
             wrapped.automation.triggerEvent('click', ['incrementBtn']);
 
@@ -314,7 +315,7 @@ describe('runtime-automation', () => {
             const state = wrapped.automation.getPageState();
 
             expect(state.interactions.length).toBe(1);
-            expect(state.interactions[0].ref).toBe('submitBtn');
+            expect(state.interactions[0].refName).toBe('submitBtn');
         });
 
         it('should exclude disabled inputs from interactions', () => {
@@ -345,7 +346,7 @@ describe('runtime-automation', () => {
             const state = wrapped.automation.getPageState();
 
             expect(state.interactions.length).toBe(1);
-            expect(state.interactions[0].ref).toBe('nameInput');
+            expect(state.interactions[0].refName).toBe('nameInput');
         });
 
         it('should exclude disabled forEach items but keep enabled ones', () => {
@@ -374,14 +375,14 @@ describe('runtime-automation', () => {
             const wrapped = wrapWithAutomation(component);
             const state = wrapped.automation.getPageState();
 
-            // Should have 1 grouped interaction with only 1 item
+            // Should have 1 group with 1 item (only the enabled one)
             expect(state.interactions.length).toBe(1);
-            expect(state.interactions[0].ref).toBe('removeBtn');
+            expect(state.interactions[0].refName).toBe('removeBtn');
             expect(state.interactions[0].items).toHaveLength(1);
-            expect(state.interactions[0].items![0].id).toBe('item-1');
+            expect(state.interactions[0].items[0].coordinate).toEqual(['item-1', 'removeBtn']);
         });
 
-        it('should exclude all interactions when all instances are disabled', () => {
+        it('should exclude entire group when all instances are disabled', () => {
             const disabledBtn1 = document.createElement('button');
             disabledBtn1.disabled = true;
             const disabledBtn2 = document.createElement('button');

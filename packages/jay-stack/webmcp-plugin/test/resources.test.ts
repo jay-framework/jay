@@ -22,7 +22,7 @@ describe('Resources', () => {
     });
 
     describe('state://interactions', () => {
-        it('should return grouped interactions as JSON', () => {
+        it('should return grouped interactions with serialized fields', () => {
             const interactions = cartInteractions();
             const automation = createMockAutomation({ interactions });
             const resource = makeInteractionsResource(automation);
@@ -31,10 +31,22 @@ describe('Resources', () => {
 
             expect(resource.uri).toBe('state://interactions');
             const parsed = JSON.parse(result.contents[0].text!);
-            expect(parsed).toHaveLength(6);
-            expect(parsed[0].ref).toBe('decreaseBtn');
-            expect(parsed[0].inForEach).toBe(true);
+            expect(parsed).toHaveLength(6); // 6 groups
+
+            // Check grouped structure with serialized fields
+            expect(parsed[0].refName).toBe('decreaseBtn');
             expect(parsed[0].items).toHaveLength(2);
+            expect(parsed[0].items[0].coordinate).toBe('item-1/decreaseBtn');
+            expect(parsed[0].items[0].elementType).toBe('HTMLButtonElement');
+            expect(parsed[0].items[0].events).toEqual(['click']);
+
+            // Should NOT contain raw DOM elements
+            expect(parsed[0].items[0].element).toBeUndefined();
+
+            // Simple element
+            const addBtn = parsed.find((g: any) => g.refName === 'addBtn');
+            expect(addBtn).toBeDefined();
+            expect(addBtn.items[0].coordinate).toBe('addBtn');
         });
     });
 });

@@ -1,10 +1,16 @@
-import type { AutomationAPI, GroupedInteraction } from '@jay-framework/runtime-automation';
+import type { AutomationAPI, Interaction } from '@jay-framework/runtime-automation';
 import type { ModelContextContainer, Registration, ToolDescriptor } from './webmcp-types';
 import { toKebab, toHumanReadable, jsonResult, errorResult } from './util';
 
+const FILLABLE_TYPES = new Set([
+    'HTMLInputElement',
+    'HTMLTextAreaElement',
+    'HTMLSelectElement',
+]);
+
 /**
  * Register semantic tools derived from the current page interactions.
- * One tool per unique refName — forEach items become enum values on itemId param.
+ * One tool per Interaction group (i.e., per unique refName).
  *
  * @returns Array of registrations (to unregister when interactions change)
  */
@@ -26,34 +32,38 @@ export function registerSemanticTools(
 }
 
 /**
- * Build a semantic tool for a single GroupedInteraction.
+ * Build a semantic tool for an Interaction group.
  */
 function makeSemanticTool(
-    group: GroupedInteraction,
+    group: Interaction,
     automation: AutomationAPI,
 ): ToolDescriptor | null {
-    const isInput =
-        group.type === 'TextInput' || group.type === 'TextArea' || group.type === 'NumberInput';
-    const isSelect = group.type === 'Select';
-    const isFillable = isInput || isSelect;
+    const sample = group.items[0];
+    if (!sample) return null;
+
+    const elementType = sample.element.constructor.name;
+    const isFillable = FILLABLE_TYPES.has(elementType);
+    const isSelect = elementType === 'HTMLSelectElement';
+    const isForEach = group.items.length > 1 || sample.coordinate.length > 1;
 
     const prefix = isFillable ? 'fill' : 'click';
-    const toolName = `${prefix}-${toKebab(group.ref)}`;
+    const toolName = `${prefix}-${toKebab(group.refName)}`;
 
     const description =
         group.description ||
-        `${isFillable ? 'Fill' : 'Click'} ${toHumanReadable(group.ref)}${group.inForEach ? ' for a specific item' : ''}`;
+        `${isFillable ? 'Fill' : 'Click'} ${toHumanReadable(group.refName)}${isForEach ? ' for a specific item' : ''}`;
 
     const properties: Record<string, { type: string; description?: string; enum?: string[] }> = {};
     const required: string[] = [];
 
-    if (group.inForEach && group.items) {
-        properties.itemId = {
+    if (isForEach) {
+        const coordStrings = group.items.map((i) => i.coordinate.join('/'));
+        properties.coordinate = {
             type: 'string',
-            description: `Item identifier. Available: ${group.items.map((i) => `${i.id} (${i.label})`).join(', ')}`,
-            enum: group.items.map((i) => i.id),
+            description: 'Item coordinate',
+            enum: coordStrings,
         };
-        required.push('itemId');
+        required.push('coordinate');
     }
 
     if (isFillable) {
@@ -66,17 +76,15 @@ function makeSemanticTool(
         description,
         inputSchema: { type: 'object', properties, required },
         execute: (params) => {
-            const coord = group.inForEach
-                ? [params.itemId as string, group.ref]
-                : [group.ref];
+            const coord = isForEach
+                ? (params.coordinate as string).split('/')
+                : [group.refName];
 
             try {
                 if (isFillable) {
-                    const interaction = automation.getInteraction(coord);
-                    if (!interaction) {
-                        return errorResult(`Element not found: ${coord.join('/')}`);
-                    }
-                    (interaction.element as HTMLInputElement).value = params.value as string;
+                    const instance = automation.getInteraction(coord);
+                    if (!instance) return errorResult(`Element not found: ${coord.join('/')}`);
+                    (instance.element as HTMLInputElement).value = params.value as string;
                     automation.triggerEvent(isSelect ? 'change' : 'input', coord);
                 } else {
                     automation.triggerEvent('click', coord);
