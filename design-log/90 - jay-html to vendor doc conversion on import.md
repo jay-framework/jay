@@ -105,3 +105,83 @@ CSS inline styles are reverse-mapped to Figma properties:
 **Save on conversion**: After converting, we save the vendor doc to avoid re-converting on subsequent imports. This means the first import after jay-html creation is slower but subsequent ones are instant.
 
 **Compiler dependency in vendor interface**: The `Vendor` interface now imports `JayHtmlSourceFile` from the compiler package. This is acceptable since the vendor types are internal to `stack-cli` which already depends on `compiler-jay-html`.
+
+## Testing
+
+### Approach
+
+End-to-end fixture-based tests that exercise the real system — no mocks for parsing or import resolution.
+Each test reads a valid `input.jay-html`, parses it through the real `parseJayFile` + `JAY_IMPORT_RESOLVER`
+(same code path as the production import flow in `editor-handlers.ts`), runs `convertJayHtmlToFigmaDoc`,
+and compares the result against an `expected.figma.json` snapshot.
+
+### Test Location
+
+```
+packages/jay-stack/stack-cli/test/vendors/figma/
+├── from-jay-html.test.ts                      # Test runner (auto-discovers fixtures)
+└── from-jay-html-fixtures/
+    ├── hello-world/                            # Minimal: static text, flex layout
+    │   ├── input.jay-html
+    │   └── expected.figma.json
+    ├── wix-store-product-page/                 # Real-world: complex page with many elements
+    │   ├── input.jay-html
+    │   └── expected.figma.json
+    └── <new-fixture>/                          # Add more here
+        ├── input.jay-html
+        ├── expected.figma.json
+        └── meta.json                           # (optional)
+```
+
+### How to Run
+
+```bash
+# From packages/jay-stack/stack-cli/
+npx vitest run test/vendors/figma/from-jay-html.test.ts
+
+# Watch mode (re-runs on file changes)
+npx vitest test/vendors/figma/from-jay-html.test.ts
+```
+
+### How to Add a New Fixture
+
+1. Create a new folder under `from-jay-html-fixtures/` (name = test case name)
+2. Add `input.jay-html` — must be a **valid jay-html file** with:
+   - `<html>`, `<head>`, `<body>` structure
+   - `<script type="application/jay-data">` with data declaration
+   - Body content with the HTML to convert
+3. Add `expected.figma.json` — the expected `FigmaVendorDocument` output
+   - Tip: run the test once without it, copy `actual-output.figma.json` after verifying correctness
+4. Optionally add `meta.json` for test-specific parameters:
+   ```json
+   { "pageUrl": "/products/:slug" }
+   ```
+5. For fixtures with headless/headfull imports, add real plugin files under the fixture
+   directory (it acts as `projectRoot` for the resolver)
+
+On mismatch, the test writes `actual-output.figma.json` to the fixture folder for easy diff/debugging.
+
+### What Gets Tested (End-to-End)
+
+The test exercises the full pipeline that runs in production:
+
+1. **Compiler parsing** (`parseJayFile`) — validates the jay-html structure, extracts data declarations, resolves imports
+2. **Import resolution** (`JAY_IMPORT_RESOLVER`) — resolves links, loads contracts, resolves plugins
+3. **DOM → Figma conversion** (`convertJayHtmlToFigmaDoc`) — style mapping, element conversion, Jay attribute extraction
+
+### Test Cases to Cover
+
+Each fixture targets a specific aspect of the conversion. Examples:
+
+| Fixture | Tests |
+|---------|-------|
+| `hello-world` | Basic: static text in a flex column, font styles, color |
+| `wix-store-product-page` | Real-world: complex layout, many nested elements, bindings |
+| *(future)* text-styles | Font family, weight, size, alignment, decoration, line-height |
+| *(future)* layout-modes | Flex row/column, justify, align, gap, padding |
+| *(future)* bindings | `{expression}` in text, `forEach`, `if`, `ref` attributes |
+| *(future)* images | `<img>` elements with src, alt, bound src |
+| *(future)* nested-sections | `<section>` with `data-page-url`, headless pluginData |
+| *(future)* border-radius | Uniform and per-corner radius |
+| *(future)* overflow-scroll | `overflow: hidden/auto/scroll` → clipsContent/overflowDirection |
+| *(future)* headless-imports | Jay-html with `<script type="application/jay-headless">` — real plugin resolution |
