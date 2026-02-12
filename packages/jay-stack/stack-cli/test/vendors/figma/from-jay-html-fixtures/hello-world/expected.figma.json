@@ -1,0 +1,70 @@
+{
+  "id": "jay-import:3",
+  "name": "Jay Page: Page",
+  "type": "SECTION",
+  "x": 0,
+  "y": 0,
+  "width": 1440,
+  "height": 900,
+  "children": [
+    {
+      "id": "jay-import:2",
+      "name": "Content",
+      "type": "FRAME",
+      "x": 0,
+      "y": 0,
+      "width": 1440,
+      "height": 900,
+      "layoutMode": "VERTICAL",
+      "primaryAxisAlignItems": "MIN",
+      "counterAxisAlignItems": "MIN",
+      "children": [
+        {
+          "id": "jay-import:1",
+          "name": "div",
+          "type": "FRAME",
+          "x": 0,
+          "y": 0,
+          "width": 800,
+          "height": 400,
+          "layoutMode": "VERTICAL",
+          "primaryAxisAlignItems": "MIN",
+          "counterAxisAlignItems": "MIN",
+          "children": [
+            {
+              "id": "jay-import:0",
+              "name": "Hello World",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Hello World",
+              "fontSize": 32,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": { "r": 0, "g": 0, "b": 0 }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            }
+          ]
+        }
+      ],
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": { "r": 1, "g": 1, "b": 1 }
+        }
+      ]
+    }
+  ],
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/"
+  }
+}
