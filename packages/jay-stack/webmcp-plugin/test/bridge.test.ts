@@ -25,7 +25,7 @@ describe('WebMCP Bridge', () => {
         cleanup(); // should not throw
     });
 
-    it('should register generic tools, resources, and prompts', () => {
+    it('should register generic and semantic tools', () => {
         const mc = createMockModelContext();
         (navigator as any).modelContext = mc;
         const automation = createMockAutomation({
@@ -43,13 +43,6 @@ describe('WebMCP Bridge', () => {
         expect(mc._tools.has('trigger-interaction')).toBe(true);
         expect(mc._tools.has('fill-input')).toBe(true);
         expect(mc._tools.has('click-btn')).toBe(true);
-
-        // 2 resources
-        expect(mc._resources.has('state://viewstate')).toBe(true);
-        expect(mc._resources.has('state://interactions')).toBe(true);
-
-        // 1 prompt
-        expect(mc._prompts.has('page-guide')).toBe(true);
     });
 
     it('should register semantic tools from cart interactions', () => {
@@ -69,7 +62,7 @@ describe('WebMCP Bridge', () => {
         expect(mc._tools.has('click-add-btn')).toBe(true);
     });
 
-    it('should cleanup all registrations', () => {
+    it('should cleanup all tools via unregisterTool', () => {
         const mc = createMockModelContext();
         (navigator as any).modelContext = mc;
         const automation = createMockAutomation({
@@ -84,8 +77,6 @@ describe('WebMCP Bridge', () => {
 
         cleanup();
         expect(mc._tools.size).toBe(0);
-        expect(mc._resources.size).toBe(0);
-        expect(mc._prompts.size).toBe(0);
     });
 
     it('should regenerate semantic tools when interactions change', () => {

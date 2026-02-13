@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { registerSemanticTools } from '../lib/semantic-tools';
-import { createMockAutomation, createMockModelContext, cartInteractions } from './helpers';
+import { buildSemanticTools } from '../lib/semantic-tools';
+import { createMockAutomation, cartInteractions } from './helpers';
 import type { Interaction, InteractionInstance } from '@jay-framework/runtime-automation';
 
 /** Helper to create a quick Interaction group */
@@ -19,49 +19,43 @@ function group(refName: string, tag: string, coordOrCoords: string | string[][])
 }
 
 describe('Semantic Tools', () => {
-    it('should register one tool per Interaction group', () => {
-        const interactions = cartInteractions();
-        const automation = createMockAutomation({ interactions });
-        const mc = createMockModelContext();
+    it('should build one tool per Interaction group', () => {
+        const automation = createMockAutomation({ interactions: cartInteractions() });
 
-        const regs = registerSemanticTools(mc, automation);
+        const tools = buildSemanticTools(automation);
 
         // 3 forEach button groups + 2 input groups + 1 button group = 6
-        expect(regs.length).toBe(6);
-        expect(mc._tools.size).toBe(6);
+        expect(tools.length).toBe(6);
     });
 
     it('should name button tools with click- prefix', () => {
         const automation = createMockAutomation({
             interactions: [group('addBtn', 'button', 'addBtn')],
         });
-        const mc = createMockModelContext();
 
-        registerSemanticTools(mc, automation);
+        const tools = buildSemanticTools(automation);
 
-        expect(mc._tools.has('click-add-btn')).toBe(true);
+        expect(tools[0].name).toBe('click-add-btn');
     });
 
     it('should name input tools with fill- prefix', () => {
         const automation = createMockAutomation({
             interactions: [group('nameInput', 'input', 'nameInput')],
         });
-        const mc = createMockModelContext();
 
-        registerSemanticTools(mc, automation);
+        const tools = buildSemanticTools(automation);
 
-        expect(mc._tools.has('fill-name-input')).toBe(true);
+        expect(tools[0].name).toBe('fill-name-input');
     });
 
     it('should add coordinate enum for forEach interactions (multiple items)', () => {
         const automation = createMockAutomation({
             interactions: [group('removeBtn', 'button', [['item-1', 'removeBtn'], ['item-2', 'removeBtn']])],
         });
-        const mc = createMockModelContext();
 
-        registerSemanticTools(mc, automation);
+        const tools = buildSemanticTools(automation);
 
-        const tool = mc._tools.get('click-remove-btn')!;
+        const tool = tools[0];
         expect(tool.inputSchema.properties.coordinate).toBeDefined();
         expect(tool.inputSchema.properties.coordinate.enum).toEqual([
             'item-1/removeBtn',
@@ -74,11 +68,10 @@ describe('Semantic Tools', () => {
         const automation = createMockAutomation({
             interactions: [group('editBtn', 'button', [['item-1', 'editBtn']])],
         });
-        const mc = createMockModelContext();
 
-        registerSemanticTools(mc, automation);
+        const tools = buildSemanticTools(automation);
 
-        const tool = mc._tools.get('click-edit-btn')!;
+        const tool = tools[0];
         expect(tool.inputSchema.properties.coordinate).toBeDefined();
         expect(tool.inputSchema.properties.coordinate.enum).toEqual(['item-1/editBtn']);
     });
@@ -87,11 +80,10 @@ describe('Semantic Tools', () => {
         const automation = createMockAutomation({
             interactions: [group('nameInput', 'input', 'nameInput')],
         });
-        const mc = createMockModelContext();
 
-        registerSemanticTools(mc, automation);
+        const tools = buildSemanticTools(automation);
 
-        const tool = mc._tools.get('fill-name-input')!;
+        const tool = tools[0];
         expect(tool.inputSchema.properties.value).toBeDefined();
         expect(tool.inputSchema.required).toContain('value');
     });
@@ -100,11 +92,10 @@ describe('Semantic Tools', () => {
         const automation = createMockAutomation({
             interactions: [group('submitBtn', 'button', 'submitBtn')],
         });
-        const mc = createMockModelContext();
 
-        registerSemanticTools(mc, automation);
+        const tools = buildSemanticTools(automation);
 
-        const tool = mc._tools.get('click-submit-btn')!;
+        const tool = tools[0];
         expect(tool.inputSchema.properties).toEqual({});
         expect(tool.inputSchema.required).toEqual([]);
     });
@@ -116,12 +107,10 @@ describe('Semantic Tools', () => {
                 description: 'Add the product to cart',
             }],
         });
-        const mc = createMockModelContext();
 
-        registerSemanticTools(mc, automation);
+        const tools = buildSemanticTools(automation);
 
-        const tool = mc._tools.get('click-add-to-cart')!;
-        expect(tool.description).toBe('Add the product to cart');
+        expect(tools[0].description).toBe('Add the product to cart');
     });
 
     describe('tool execution', () => {
@@ -129,11 +118,9 @@ describe('Semantic Tools', () => {
             const automation = createMockAutomation({
                 interactions: [group('addBtn', 'button', 'addBtn')],
             });
-            const mc = createMockModelContext();
-            registerSemanticTools(mc, automation);
 
-            const tool = mc._tools.get('click-add-btn')!;
-            tool.execute({}, { requestUserInteraction: vi.fn() });
+            const tools = buildSemanticTools(automation);
+            tools[0].execute({}, { requestUserInteraction: vi.fn() });
 
             expect(automation.triggerEvent).toHaveBeenCalledWith('click', ['addBtn']);
         });
@@ -142,11 +129,9 @@ describe('Semantic Tools', () => {
             const automation = createMockAutomation({
                 interactions: [group('removeBtn', 'button', [['item-1', 'removeBtn']])],
             });
-            const mc = createMockModelContext();
-            registerSemanticTools(mc, automation);
 
-            const tool = mc._tools.get('click-remove-btn')!;
-            tool.execute({ coordinate: 'item-1/removeBtn' }, { requestUserInteraction: vi.fn() });
+            const tools = buildSemanticTools(automation);
+            tools[0].execute({ coordinate: 'item-1/removeBtn' }, { requestUserInteraction: vi.fn() });
 
             expect(automation.triggerEvent).toHaveBeenCalledWith('click', ['item-1', 'removeBtn']);
         });
@@ -158,11 +143,9 @@ describe('Semantic Tools', () => {
                 items: [{ coordinate: ['nameInput'], element: mockElement, events: ['input', 'change'] }],
             }];
             const automation = createMockAutomation({ interactions });
-            const mc = createMockModelContext();
-            registerSemanticTools(mc, automation);
 
-            const tool = mc._tools.get('fill-name-input')!;
-            tool.execute({ value: 'Laptop' }, { requestUserInteraction: vi.fn() });
+            const tools = buildSemanticTools(automation);
+            tools[0].execute({ value: 'Laptop' }, { requestUserInteraction: vi.fn() });
 
             expect(mockElement.value).toBe('Laptop');
             expect(automation.triggerEvent).toHaveBeenCalledWith('input', ['nameInput']);
@@ -176,24 +159,11 @@ describe('Semantic Tools', () => {
                 group('searchQueryInput', 'input', 'searchQueryInput'),
             ],
         });
-        const mc = createMockModelContext();
 
-        registerSemanticTools(mc, automation);
+        const tools = buildSemanticTools(automation);
+        const names = tools.map((t) => t.name);
 
-        expect(mc._tools.has('click-add-to-cart-btn')).toBe(true);
-        expect(mc._tools.has('fill-search-query-input')).toBe(true);
-    });
-
-    it('registrations can be unregistered', () => {
-        const automation = createMockAutomation({
-            interactions: [group('btn', 'button', 'btn')],
-        });
-        const mc = createMockModelContext();
-
-        const regs = registerSemanticTools(mc, automation);
-        expect(mc._tools.size).toBe(1);
-
-        regs.forEach((r) => r.unregister());
-        expect(mc._tools.size).toBe(0);
+        expect(names).toContain('click-add-to-cart-btn');
+        expect(names).toContain('fill-search-query-input');
     });
 });

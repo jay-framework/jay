@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 import type { AutomationAPI, PageState, Interaction, InteractionInstance } from '@jay-framework/runtime-automation';
-import type { ModelContextContainer, Registration, ToolDescriptor, ResourceDescriptor, PromptDescriptor } from '../lib/webmcp-types';
+import type { ModelContextContainer, ToolDescriptor } from '../lib/webmcp-types';
 
 /**
  * Create a mock AutomationAPI for testing.
@@ -58,40 +58,27 @@ export function createMockAutomation(overrides: Partial<{
 }
 
 /**
- * Create a mock ModelContextContainer for testing.
+ * Create a mock ModelContextContainer that matches the real Chrome API.
  */
 export function createMockModelContext(): ModelContextContainer & {
     _tools: Map<string, ToolDescriptor>;
-    _resources: Map<string, ResourceDescriptor>;
-    _prompts: Map<string, PromptDescriptor>;
 } {
     const tools = new Map<string, ToolDescriptor>();
-    const resources = new Map<string, ResourceDescriptor>();
-    const prompts = new Map<string, PromptDescriptor>();
-
-    function makeRegistration(map: Map<string, any>, key: string): Registration {
-        return {
-            unregister: vi.fn(() => map.delete(key)),
-        };
-    }
 
     return {
         _tools: tools,
-        _resources: resources,
-        _prompts: prompts,
-        provideContext: vi.fn(),
+        clearContext: vi.fn(() => tools.clear()),
+        provideContext: vi.fn(({ tools: toolList }: { tools: ToolDescriptor[] }) => {
+            tools.clear();
+            for (const tool of toolList) {
+                tools.set(tool.name, tool);
+            }
+        }),
         registerTool: vi.fn((tool: ToolDescriptor) => {
             tools.set(tool.name, tool);
-            return makeRegistration(tools, tool.name);
         }),
-        unregisterTool: vi.fn((name: string) => tools.delete(name)),
-        registerResource: vi.fn((resource: ResourceDescriptor) => {
-            resources.set(resource.uri, resource);
-            return makeRegistration(resources, resource.uri);
-        }),
-        registerPrompt: vi.fn((prompt: PromptDescriptor) => {
-            prompts.set(prompt.name, prompt);
-            return makeRegistration(prompts, prompt.name);
+        unregisterTool: vi.fn((name: string) => {
+            tools.delete(name);
         }),
     };
 }

@@ -9,8 +9,5 @@ export type {
     ToolDescriptor,
     ToolResult,
     ToolInputSchema,
-    ResourceDescriptor,
-    PromptDescriptor,
     ModelContextContainer,
-    Registration,
 } from './webmcp-types';

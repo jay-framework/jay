@@ -1,5 +1,5 @@
 import type { AutomationAPI, Interaction } from '@jay-framework/runtime-automation';
-import type { ModelContextContainer, Registration, ToolDescriptor } from './webmcp-types';
+import type { ToolDescriptor } from './webmcp-types';
 import { toKebab, toHumanReadable, jsonResult, errorResult } from './util';
 
 const FILLABLE_TYPES = new Set([
@@ -9,26 +9,23 @@ const FILLABLE_TYPES = new Set([
 ]);
 
 /**
- * Register semantic tools derived from the current page interactions.
+ * Build semantic tools derived from the current page interactions.
  * One tool per Interaction group (i.e., per unique refName).
  *
- * @returns Array of registrations (to unregister when interactions change)
+ * @returns Array of tool descriptors
  */
-export function registerSemanticTools(
-    mc: ModelContextContainer,
-    automation: AutomationAPI,
-): Registration[] {
+export function buildSemanticTools(automation: AutomationAPI): ToolDescriptor[] {
     const { interactions } = automation.getPageState();
-    const registrations: Registration[] = [];
+    const tools: ToolDescriptor[] = [];
 
     for (const group of interactions) {
         const tool = makeSemanticTool(group, automation);
         if (tool) {
-            registrations.push(mc.registerTool(tool));
+            tools.push(tool);
         }
     }
 
-    return registrations;
+    return tools;
 }
 
 /**

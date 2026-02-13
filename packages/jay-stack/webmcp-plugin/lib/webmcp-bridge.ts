@@ -1,15 +1,15 @@
 import type { AutomationAPI } from '@jay-framework/runtime-automation';
-import type { Registration } from './webmcp-types';
 import './webmcp-types'; // side-effect: augments Navigator
 
 import { makeGetPageStateTool, makeListInteractionsTool, makeTriggerInteractionTool, makeFillInputTool } from './generic-tools';
-import { makeViewStateResource, makeInteractionsResource } from './resources';
-import { makePageGuidePrompt } from './prompts';
-import { registerSemanticTools } from './semantic-tools';
+import { buildSemanticTools } from './semantic-tools';
+
+/** Names of the generic tools (stable set) */
+const GENERIC_TOOL_NAMES = ['get-page-state', 'list-interactions', 'trigger-interaction', 'fill-input'];
 
 /**
- * Main entry point. Registers all WebMCP tools, resources, and prompts
- * derived from the given AutomationAPI instance.
+ * Main entry point. Registers all WebMCP tools derived from the given
+ * AutomationAPI instance.
  *
  * @returns Cleanup function that unregisters everything.
  */
@@ -20,47 +20,51 @@ export function setupWebMCP(automation: AutomationAPI): () => void {
     }
 
     const mc = navigator.modelContext;
-    const registrations: Registration[] = [];
 
     // ── Generic tools (stable set, always registered) ───────────────────
-    registrations.push(mc.registerTool(makeGetPageStateTool(automation)));
-    registrations.push(mc.registerTool(makeListInteractionsTool(automation)));
-    registrations.push(mc.registerTool(makeTriggerInteractionTool(automation)));
-    registrations.push(mc.registerTool(makeFillInputTool(automation)));
-
-    // ── Resources ───────────────────────────────────────────────────────
-    registrations.push(mc.registerResource(makeViewStateResource(automation)));
-    registrations.push(mc.registerResource(makeInteractionsResource(automation)));
-
-    // ── Prompt ──────────────────────────────────────────────────────────
-    registrations.push(mc.registerPrompt(makePageGuidePrompt(automation)));
+    mc.registerTool(makeGetPageStateTool(automation));
+    mc.registerTool(makeListInteractionsTool(automation));
+    mc.registerTool(makeTriggerInteractionTool(automation));
+    mc.registerTool(makeFillInputTool(automation));
 
     // ── Semantic tools (regenerated when interactions change) ────────────
-    let semanticRegs = registerSemanticTools(mc, automation);
+    let semanticToolNames = registerSemanticTools(mc, automation);
     let lastKey = interactionKey(automation);
 
     const unsubscribe = automation.onStateChange(() => {
         const newKey = interactionKey(automation);
         if (newKey !== lastKey) {
             // Interactions structure changed — regenerate semantic tools
-            semanticRegs.forEach((r) => r.unregister());
-            semanticRegs = registerSemanticTools(mc, automation);
+            semanticToolNames.forEach((name) => mc.unregisterTool(name));
+            semanticToolNames = registerSemanticTools(mc, automation);
             lastKey = newKey;
         }
     });
 
-    const genericCount = 4;
-    const semanticCount = semanticRegs.length;
     console.log(
-        `[WebMCP] Registered ${genericCount + semanticCount} tools (${genericCount} generic + ${semanticCount} semantic), 2 resources, 1 prompt`,
+        `[WebMCP] Registered ${GENERIC_TOOL_NAMES.length + semanticToolNames.length} tools (${GENERIC_TOOL_NAMES.length} generic + ${semanticToolNames.length} semantic)`,
     );
 
     // ── Cleanup ─────────────────────────────────────────────────────────
     return () => {
         unsubscribe();
-        registrations.forEach((r) => r.unregister());
-        semanticRegs.forEach((r) => r.unregister());
+        GENERIC_TOOL_NAMES.forEach((name) => mc.unregisterTool(name));
+        semanticToolNames.forEach((name) => mc.unregisterTool(name));
     };
+}
+
+/**
+ * Register semantic tools and return their names (for later unregistration).
+ */
+function registerSemanticTools(
+    mc: Pick<Navigator['modelContext'] & object, 'registerTool'>,
+    automation: AutomationAPI,
+): string[] {
+    const tools = buildSemanticTools(automation);
+    for (const tool of tools) {
+        mc.registerTool(tool);
+    }
+    return tools.map((t) => t.name);
 }
 
 /**
