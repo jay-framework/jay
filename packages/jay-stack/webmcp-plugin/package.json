@@ -16,9 +16,10 @@
     "plugin.yaml"
   ],
   "scripts": {
-    "build": "npm run build:js && npm run build:types",
-    "build:watch": "npm run build:js -- --watch & npm run build:types -- --watch",
-    "build:js": "vite build",
+    "build": "npm run build:client && npm run build:server && npm run build:types",
+    "build:watch": "npm run build:client -- --watch & npm run build:server -- --watch & npm run build:types -- --watch",
+    "build:client": "vite build",
+    "build:server": "vite build --ssr",
     "build:types": "tsup lib/index.ts --dts-only --format esm",
     "build:check-types": "tsc",
     "clean": "rimraf dist",
@@ -31,6 +32,7 @@
     "@jay-framework/runtime-automation": "workspace:^"
   },
   "devDependencies": {
+    "@jay-framework/compiler-jay-stack": "workspace:^",
     "@jay-framework/dev-environment": "workspace:^",
     "@types/node": "^20.11.5",
     "rimraf": "^5.0.5",

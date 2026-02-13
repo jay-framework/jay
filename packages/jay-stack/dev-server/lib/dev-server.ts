@@ -128,9 +128,14 @@ function filterPluginsForPage(
         pluginsByPackage.set(plugin.packageName, plugin);
     }
 
-    // Expand usedPackages to include transitive plugin dependencies
+    // Start with usedPackages + global plugins (always loaded)
     const expandedPackages = new Set<string>(usedPackages);
-    const toProcess = [...usedPackages];
+    for (const plugin of allPluginsWithInit) {
+        if (plugin.global) {
+            expandedPackages.add(plugin.packageName);
+        }
+    }
+    const toProcess = [...expandedPackages];
 
     while (toProcess.length > 0) {
         const packageName = toProcess.pop()!;

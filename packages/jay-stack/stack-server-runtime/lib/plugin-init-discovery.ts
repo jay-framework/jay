@@ -42,6 +42,8 @@ export interface PluginWithInit {
     initExport: string;
     /** Dependencies from package.json (for ordering) */
     dependencies: string[];
+    /** When true, plugin is loaded on every page regardless of usage in jay-html */
+    global: boolean;
 }
 
 /**
@@ -95,6 +97,7 @@ export async function discoverPluginsWithInit(
             initModule: initConfig.module,
             initExport: initConfig.export,
             dependencies: scanned.dependencies,
+            global: scanned.manifest.global === true,
         });
 
         if (verbose) {

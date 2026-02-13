@@ -43,6 +43,9 @@ export interface PluginManifest {
     name: string;
     version?: string;
     module?: string; // Optional: For local plugins, relative path to module (e.g., "dist/index.js"). For NPM packages, omit to use main export.
+    /** When true, this plugin is loaded on every page regardless of usage in jay-html.
+     *  Useful for global tools like WebMCP, analytics, or dev tools. */
+    global?: boolean;
     contracts?: Array<{
         name: string;
         contract: string; // For NPM: export subpath (e.g., "contract.jay-contract"). For local: relative path.
