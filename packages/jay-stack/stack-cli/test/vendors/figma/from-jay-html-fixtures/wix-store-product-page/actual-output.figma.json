@@ -135,12 +135,12 @@
                               "width": 100,
                               "height": 20,
                               "characters": "FashionHub",
+                              "fontWeight": 800,
                               "fontName": {
                                 "family": "Inter",
-                                "style": "Regular"
+                                "style": "Extra Bold"
                               },
                               "fontSize": 25.008909225463867,
-                              "fontWeight": 800,
                               "textAlignHorizontal": "LEFT",
                               "lineHeight": {
                                 "unit": "AUTO"
@@ -200,12 +200,12 @@
                                   "width": 100,
                                   "height": 20,
                                   "characters": "Category",
+                                  "fontWeight": 500,
                                   "fontName": {
                                     "family": "Inter",
-                                    "style": "Regular"
+                                    "style": "Medium"
                                   },
                                   "fontSize": 12.199470520019531,
-                                  "fontWeight": 500,
                                   "textAlignHorizontal": "LEFT",
                                   "lineHeight": {
                                     "unit": "AUTO"
@@ -247,12 +247,12 @@
                                   "width": 100,
                                   "height": 20,
                                   "characters": "Brand",
+                                  "fontWeight": 500,
                                   "fontName": {
                                     "family": "Inter",
-                                    "style": "Regular"
+                                    "style": "Medium"
                                   },
                                   "fontSize": 12.199470520019531,
-                                  "fontWeight": 500,
                                   "textAlignHorizontal": "LEFT",
                                   "lineHeight": {
                                     "unit": "AUTO"
@@ -294,12 +294,12 @@
                                   "width": 100,
                                   "height": 20,
                                   "characters": "Contact",
+                                  "fontWeight": 500,
                                   "fontName": {
                                     "family": "Inter",
-                                    "style": "Regular"
+                                    "style": "Medium"
                                   },
                                   "fontSize": 12.199470520019531,
-                                  "fontWeight": 500,
                                   "textAlignHorizontal": "LEFT",
                                   "lineHeight": {
                                     "unit": "AUTO"
@@ -341,12 +341,12 @@
                                   "width": 100,
                                   "height": 20,
                                   "characters": "FAQ’s",
+                                  "fontWeight": 500,
                                   "fontName": {
                                     "family": "Inter",
-                                    "style": "Regular"
+                                    "style": "Medium"
                                   },
                                   "fontSize": 12.199470520019531,
-                                  "fontWeight": 500,
                                   "textAlignHorizontal": "LEFT",
                                   "lineHeight": {
                                     "unit": "AUTO"
@@ -807,12 +807,12 @@
                                       "width": 100,
                                       "height": 20,
                                       "characters": "Good Morning!",
+                                      "fontWeight": 500,
                                       "fontName": {
                                         "family": "Inter",
-                                        "style": "Regular"
+                                        "style": "Medium"
                                       },
                                       "fontSize": 9.149602890014648,
-                                      "fontWeight": 500,
                                       "textAlignHorizontal": "LEFT",
                                       "lineHeight": {
                                         "unit": "AUTO"
@@ -854,12 +854,12 @@
                                       "width": 100,
                                       "height": 20,
                                       "characters": "Scarlet Johnson",
+                                      "fontWeight": 600,
                                       "fontName": {
                                         "family": "Inter",
-                                        "style": "Regular"
+                                        "style": "Semi Bold"
                                       },
                                       "fontSize": 12.199470520019531,
-                                      "fontWeight": 600,
                                       "textAlignHorizontal": "LEFT",
                                       "lineHeight": {
                                         "unit": "AUTO"
@@ -1722,12 +1722,12 @@
                                   "width": 100,
                                   "height": 20,
                                   "characters": "Home",
+                                  "fontWeight": 400,
                                   "fontName": {
                                     "family": "Inter",
                                     "style": "Regular"
                                   },
                                   "fontSize": 10.67453670501709,
-                                  "fontWeight": 400,
                                   "textAlignHorizontal": "LEFT",
                                   "lineHeight": {
                                     "unit": "AUTO"
@@ -1831,12 +1831,12 @@
                                   "width": 100,
                                   "height": 20,
                                   "characters": "Decoration",
+                                  "fontWeight": 400,
                                   "fontName": {
                                     "family": "Inter",
                                     "style": "Regular"
                                   },
                                   "fontSize": 10.67453670501709,
-                                  "fontWeight": 400,
                                   "textAlignHorizontal": "LEFT",
                                   "lineHeight": {
                                     "unit": "AUTO"
@@ -1940,12 +1940,12 @@
                                   "width": 100,
                                   "height": 20,
                                   "characters": "Furniture",
+                                  "fontWeight": 400,
                                   "fontName": {
                                     "family": "Inter",
                                     "style": "Regular"
                                   },
                                   "fontSize": 10.67453670501709,
-                                  "fontWeight": 400,
                                   "textAlignHorizontal": "LEFT",
                                   "lineHeight": {
                                     "unit": "AUTO"
@@ -2049,12 +2049,12 @@
                                   "width": 100,
                                   "height": 20,
                                   "characters": "Storage",
+                                  "fontWeight": 400,
                                   "fontName": {
                                     "family": "Inter",
                                     "style": "Regular"
                                   },
                                   "fontSize": 10.67453670501709,
-                                  "fontWeight": 400,
                                   "textAlignHorizontal": "LEFT",
                                   "lineHeight": {
                                     "unit": "AUTO"
@@ -2158,12 +2158,12 @@
                                   "width": 100,
                                   "height": 20,
                                   "characters": "Sideboard",
+                                  "fontWeight": 600,
                                   "fontName": {
                                     "family": "Inter",
-                                    "style": "Regular"
+                                    "style": "Semi Bold"
                                   },
                                   "fontSize": 10.67453670501709,
-                                  "fontWeight": 600,
                                   "textAlignHorizontal": "LEFT",
                                   "lineHeight": {
                                     "unit": "AUTO"
@@ -2247,12 +2247,12 @@
                                       "width": 100,
                                       "height": 20,
                                       "characters": "{productPage.productName}",
+                                      "fontWeight": 600,
                                       "fontName": {
                                         "family": "Inter",
-                                        "style": "Regular"
+                                        "style": "Semi Bold"
                                       },
                                       "fontSize": 21.34907341003418,
-                                      "fontWeight": 600,
                                       "textAlignHorizontal": "LEFT",
                                       "lineHeight": {
                                         "unit": "AUTO"
@@ -2294,12 +2294,12 @@
                                       "width": 100,
                                       "height": 20,
                                       "characters": "Teixeira Design Studio",
+                                      "fontWeight": 400,
                                       "fontName": {
                                         "family": "Inter",
                                         "style": "Regular"
                                       },
                                       "fontSize": 12.199470520019531,
-                                      "fontWeight": 400,
                                       "textAlignHorizontal": "LEFT",
                                       "lineHeight": {
                                         "unit": "AUTO"
@@ -2448,12 +2448,12 @@
                                           "width": 100,
                                           "height": 20,
                                           "characters": "109",
+                                          "fontWeight": 600,
                                           "fontName": {
                                             "family": "Inter",
-                                            "style": "Regular"
+                                            "style": "Semi Bold"
                                           },
                                           "fontSize": 12.199470520019531,
-                                          "fontWeight": 600,
                                           "textAlignHorizontal": "LEFT",
                                           "lineHeight": {
                                             "unit": "AUTO"
@@ -2788,12 +2788,12 @@
                                       "width": 100,
                                       "height": 20,
                                       "characters": "{productPage.price}",
+                                      "fontWeight": 700,
                                       "fontName": {
                                         "family": "Inter",
-                                        "style": "Regular"
+                                        "style": "Bold"
                                       },
                                       "fontSize": 25.923873901367188,
-                                      "fontWeight": 700,
                                       "textAlignHorizontal": "LEFT",
                                       "lineHeight": {
                                         "unit": "AUTO"
@@ -2835,12 +2835,12 @@
                                       "width": 100,
                                       "height": 20,
                                       "characters": "{productPage.strikethroughPrice}",
+                                      "fontWeight": 400,
                                       "fontName": {
                                         "family": "Inter",
                                         "style": "Regular"
                                       },
                                       "fontSize": 16.011804580688477,
-                                      "fontWeight": 400,
                                       "textAlignHorizontal": "LEFT",
                                       "lineHeight": {
                                         "unit": "AUTO"
@@ -3008,12 +3008,12 @@
                                               "width": 100,
                                               "height": 20,
                                               "characters": "4.8",
+                                              "fontWeight": 600,
                                               "fontName": {
                                                 "family": "Inter",
-                                                "style": "Regular"
+                                                "style": "Semi Bold"
                                               },
                                               "fontSize": 10.67453670501709,
-                                              "fontWeight": 600,
                                               "textAlignHorizontal": "LEFT",
                                               "lineHeight": {
                                                 "unit": "AUTO"
@@ -3144,12 +3144,12 @@
                                               "width": 100,
                                               "height": 20,
                                               "characters": "67 Reviews",
+                                              "fontWeight": 600,
                                               "fontName": {
                                                 "family": "Inter",
-                                                "style": "Regular"
+                                                "style": "Semi Bold"
                                               },
                                               "fontSize": 10.67453670501709,
-                                              "fontWeight": 600,
                                               "textAlignHorizontal": "LEFT",
                                               "lineHeight": {
                                                 "unit": "AUTO"
@@ -3203,12 +3203,12 @@
                                       "width": 100,
                                       "height": 20,
                                       "characters": "93% of buyers have recommended this.",
+                                      "fontWeight": 400,
                                       "fontName": {
                                         "family": "sans-serif",
                                         "style": "Regular"
                                       },
                                       "fontSize": 10.67453670501709,
-                                      "fontWeight": 400,
                                       "textAlignHorizontal": "LEFT",
                                       "lineHeight": {
                                         "unit": "AUTO"
@@ -3384,12 +3384,12 @@
                                                   "width": 100,
                                                   "height": 20,
                                                   "characters": "{name}",
+                                                  "fontWeight": 500,
                                                   "fontName": {
                                                     "family": "Inter",
-                                                    "style": "Regular"
+                                                    "style": "Medium"
                                                   },
                                                   "fontSize": 12.199470520019531,
-                                                  "fontWeight": 500,
                                                   "textAlignHorizontal": "LEFT",
                                                   "lineHeight": {
                                                     "unit": "AUTO"
@@ -3714,12 +3714,12 @@
                                                   "width": 100,
                                                   "height": 20,
                                                   "characters": "{name}",
+                                                  "fontWeight": 500,
                                                   "fontName": {
                                                     "family": "Inter",
-                                                    "style": "Regular"
+                                                    "style": "Medium"
                                                   },
                                                   "fontSize": 12.199470520019531,
-                                                  "fontWeight": 500,
                                                   "textAlignHorizontal": "LEFT",
                                                   "lineHeight": {
                                                     "unit": "AUTO"
@@ -3879,12 +3879,12 @@
                                                                           "width": 100,
                                                                           "height": 20,
                                                                           "characters": "{name}",
+                                                                          "fontWeight": 500,
                                                                           "fontName": {
                                                                             "family": "Inter",
-                                                                            "style": "Regular"
+                                                                            "style": "Medium"
                                                                           },
                                                                           "fontSize": 10.67453670501709,
-                                                                          "fontWeight": 500,
                                                                           "textAlignHorizontal": "LEFT",
                                                                           "lineHeight": {
                                                                             "unit": "AUTO"
@@ -3986,12 +3986,12 @@
                                                                           "width": 100,
                                                                           "height": 20,
                                                                           "characters": "{name}",
+                                                                          "fontWeight": 500,
                                                                           "fontName": {
                                                                             "family": "Inter",
-                                                                            "style": "Regular"
+                                                                            "style": "Medium"
                                                                           },
                                                                           "fontSize": 10.67453670501709,
-                                                                          "fontWeight": 500,
                                                                           "textAlignHorizontal": "LEFT",
                                                                           "lineHeight": {
                                                                             "unit": "AUTO"
@@ -4205,12 +4205,12 @@
                                       "width": 100,
                                       "height": 20,
                                       "characters": "-",
+                                      "fontWeight": 700,
                                       "fontName": {
                                         "family": "Inter",
-                                        "style": "Regular"
+                                        "style": "Bold"
                                       },
                                       "fontSize": 13.724401473999023,
-                                      "fontWeight": 700,
                                       "textAlignHorizontal": "LEFT",
                                       "lineHeight": {
                                         "unit": "AUTO"
@@ -4252,12 +4252,12 @@
                                       "width": 100,
                                       "height": 20,
                                       "characters": "{productPage.quantity.quantity}",
+                                      "fontWeight": 700,
                                       "fontName": {
                                         "family": "Inter",
-                                        "style": "Regular"
+                                        "style": "Bold"
                                       },
                                       "fontSize": 16.77427101135254,
-                                      "fontWeight": 700,
                                       "textAlignHorizontal": "LEFT",
                                       "lineHeight": {
                                         "unit": "AUTO"
@@ -4299,12 +4299,12 @@
                                       "width": 100,
                                       "height": 20,
                                       "characters": "+",
+                                      "fontWeight": 700,
                                       "fontName": {
                                         "family": "Inter",
-                                        "style": "Regular"
+                                        "style": "Bold"
                                       },
                                       "fontSize": 13.724401473999023,
-                                      "fontWeight": 700,
                                       "textAlignHorizontal": "LEFT",
                                       "lineHeight": {
                                         "unit": "AUTO"
@@ -4400,12 +4400,12 @@
                                           "width": 100,
                                           "height": 20,
                                           "characters": "Buy Now",
+                                          "fontWeight": 700,
                                           "fontName": {
                                             "family": "Inter",
-                                            "style": "Regular"
+                                            "style": "Bold"
                                           },
                                           "fontSize": 20,
-                                          "fontWeight": 700,
                                           "textAlignHorizontal": "LEFT",
                                           "lineHeight": {
                                             "unit": "AUTO"
@@ -4561,12 +4561,12 @@
                                           "width": 100,
                                           "height": 20,
                                           "characters": "Add To Cart",
+                                          "fontWeight": 600,
                                           "fontName": {
                                             "family": "Inter",
-                                            "style": "Regular"
+                                            "style": "Semi Bold"
                                           },
                                           "fontSize": 12.199470520019531,
-                                          "fontWeight": 600,
                                           "textAlignHorizontal": "LEFT",
                                           "lineHeight": {
                                             "unit": "AUTO"
@@ -4745,12 +4745,12 @@
                                           "width": 100,
                                           "height": 20,
                                           "characters": "Free Delivery",
+                                          "fontWeight": 700,
                                           "fontName": {
                                             "family": "Inter",
-                                            "style": "Regular"
+                                            "style": "Bold"
                                           },
                                           "fontSize": 12.961936950683594,
-                                          "fontWeight": 700,
                                           "textAlignHorizontal": "LEFT",
                                           "lineHeight": {
                                             "unit": "AUTO"
@@ -4791,12 +4791,12 @@
                                           "width": 100,
                                           "height": 20,
                                           "characters": "Enter your Postal code for Delivery Availability",
+                                          "fontWeight": 400,
                                           "fontName": {
                                             "family": "Inter",
                                             "style": "Regular"
                                           },
                                           "fontSize": 10.67453670501709,
-                                          "fontWeight": 400,
                                           "textAlignHorizontal": "LEFT",
                                           "lineHeight": {
                                             "unit": "AUTO"
@@ -5000,12 +5000,12 @@
                                           "width": 100,
                                           "height": 20,
                                           "characters": "Return Delivery",
+                                          "fontWeight": 700,
                                           "fontName": {
                                             "family": "Inter",
-                                            "style": "Regular"
+                                            "style": "Bold"
                                           },
                                           "fontSize": 12.961936950683594,
-                                          "fontWeight": 700,
                                           "textAlignHorizontal": "LEFT",
                                           "lineHeight": {
                                             "unit": "AUTO"
@@ -5046,12 +5046,12 @@
                                           "width": 100,
                                           "height": 20,
                                           "characters": "Free 30 days Delivery Return. Details",
+                                          "fontWeight": 400,
                                           "fontName": {
                                             "family": "Inter",
                                             "style": "Regular"
                                           },
                                           "fontSize": 10.67453670501709,
-                                          "fontWeight": 400,
                                           "textAlignHorizontal": "LEFT",
                                           "lineHeight": {
                                             "unit": "AUTO"

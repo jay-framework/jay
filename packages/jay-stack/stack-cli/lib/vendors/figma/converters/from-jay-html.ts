@@ -561,25 +561,49 @@ interface FigmaTextProps {
     textCase?: 'ORIGINAL' | 'UPPER' | 'LOWER' | 'TITLE';
 }
 
+const FIGMA_WEIGHT_TO_STYLE: Record<number, string> = {
+    100: 'Thin',
+    200: 'Extra Light',
+    300: 'Light',
+    400: 'Regular',
+    500: 'Medium',
+    600: 'Semi Bold',
+    700: 'Bold',
+    800: 'Extra Bold',
+    900: 'Black',
+};
+
+function fontWeightAndStyleToFigmaStyle(weight: number | undefined, isItalic: boolean): string {
+    const base = (weight !== undefined && FIGMA_WEIGHT_TO_STYLE[weight]) || 'Regular';
+    if (!isItalic) return base;
+    if (base === 'Regular') return 'Italic';
+    return `${base} Italic`;
+}
+
 function stylesToTextProps(styles: Map<string, string>): FigmaTextProps {
     const props: FigmaTextProps = {};
+
+    // Font weight (parse early — needed for fontName.style)
+    const fontWeight = styles.get('font-weight');
+    let weightValue: number | undefined;
+    if (fontWeight !== undefined) {
+        const w = parseInt(fontWeight);
+        if (!isNaN(w)) {
+            weightValue = w;
+            props.fontWeight = w;
+        }
+    }
 
     // Font
     const fontFamily = styles.get('font-family');
     if (fontFamily) {
         const family = fontFamily.replace(/["']/g, '').split(',')[0].trim();
-        const fontStyle = styles.get('font-style') === 'italic' ? 'Italic' : 'Regular';
-        props.fontName = { family, style: fontStyle };
+        const isItalic = styles.get('font-style') === 'italic';
+        props.fontName = { family, style: fontWeightAndStyleToFigmaStyle(weightValue, isItalic) };
     }
 
     const fontSize = parsePx(styles.get('font-size'));
     if (fontSize !== undefined) props.fontSize = fontSize;
-
-    const fontWeight = styles.get('font-weight');
-    if (fontWeight !== undefined) {
-        const w = parseInt(fontWeight);
-        if (!isNaN(w)) props.fontWeight = w;
-    }
 
     const textAlign = styles.get('text-align');
     if (textAlign === 'center') props.textAlignHorizontal = 'CENTER';
