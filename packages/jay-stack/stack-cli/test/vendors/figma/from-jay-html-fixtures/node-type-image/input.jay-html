@@ -1,0 +1,13 @@
+<html>
+<head>
+  <script type="application/jay-data">
+    data:
+  </script>
+</head>
+<body>
+<div style="width: 600px; height: 400px; display: flex; flex-direction: column; gap: 20px;">
+  <img data-figma-id="200:1" src="/images/200:1_FILL.png" alt="Product hero" style="width: 400px; height: 300px; border-radius: 8px;" />
+  <img data-figma-id="200:2" src="{product.imageUrl}" alt="Dynamic image" style="width: 100px; height: 100px;" />
+</div>
+</body>
+</html>

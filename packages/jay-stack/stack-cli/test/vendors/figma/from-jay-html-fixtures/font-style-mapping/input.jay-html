@@ -1,0 +1,22 @@
+<html>
+<head>
+  <script type="application/jay-data">
+    data:
+  </script>
+</head>
+<body>
+<div style="width: 600px; display: flex; flex-direction: column; gap: 5px;">
+  <p style="font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 100; color: rgb(0, 0, 0);">Thin 100</p>
+  <p style="font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 200; color: rgb(0, 0, 0);">Extra Light 200</p>
+  <p style="font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 300; color: rgb(0, 0, 0);">Light 300</p>
+  <p style="font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 400; color: rgb(0, 0, 0);">Regular 400</p>
+  <p style="font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 500; color: rgb(0, 0, 0);">Medium 500</p>
+  <p style="font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 600; color: rgb(0, 0, 0);">Semi Bold 600</p>
+  <p style="font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; color: rgb(0, 0, 0);">Bold 700</p>
+  <p style="font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 800; color: rgb(0, 0, 0);">Extra Bold 800</p>
+  <p style="font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 900; color: rgb(0, 0, 0);">Black 900</p>
+  <p style="font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 700; font-style: italic; color: rgb(0, 0, 0);">Bold Italic</p>
+  <p style="font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 800; font-style: italic; color: rgb(0, 0, 0);">Extra Bold Italic</p>
+</div>
+</body>
+</html>

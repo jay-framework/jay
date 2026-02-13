@@ -1,0 +1,16 @@
+<html>
+<head>
+  <script type="application/jay-data">
+    data:
+  </script>
+</head>
+<body>
+<div style="width: 600px; display: flex; flex-direction: column;">
+  <div data-figma-id="400:1" data-name="Header Section" style="width: 600px; height: 60px;"></div>
+  <div data-figma-id="400:2" aria-label="Navigation Menu" style="width: 600px; height: 40px;"></div>
+  <div data-figma-id="400:3" data-figma-type="frame" style="width: 600px; height: 100px;"></div>
+  <div data-figma-id="400:4" data-figma-type="group" style="width: 600px; height: 50px;"></div>
+  <nav style="width: 600px; height: 30px;"></nav>
+</div>
+</body>
+</html>

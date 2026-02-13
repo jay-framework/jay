@@ -1,0 +1,275 @@
+{
+  "id": "jay-import:9",
+  "name": "Jay Page: Page",
+  "type": "SECTION",
+  "x": 0,
+  "y": 0,
+  "width": 1440,
+  "height": 900,
+  "children": [
+    {
+      "id": "jay-import:8",
+      "name": "Content",
+      "type": "FRAME",
+      "x": 0,
+      "y": 0,
+      "width": 1440,
+      "height": 900,
+      "layoutMode": "VERTICAL",
+      "primaryAxisAlignItems": "MIN",
+      "counterAxisAlignItems": "MIN",
+      "children": [
+        {
+          "id": "jay-import:7",
+          "name": "div",
+          "type": "FRAME",
+          "x": 0,
+          "y": 0,
+          "width": 600,
+          "layoutMode": "VERTICAL",
+          "primaryAxisAlignItems": "MIN",
+          "counterAxisAlignItems": "MIN",
+          "itemSpacing": 10,
+          "children": [
+            {
+              "id": "jay-import:0",
+              "name": "Bold Heading",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Bold Heading",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 24,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.050980392156862744,
+                    "g": 0.2,
+                    "b": 0.33725490196078434
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            },
+            {
+              "id": "jay-import:1",
+              "name": "Body text with spacing",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Body text with spacing",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 14,
+              "fontWeight": 400,
+              "textAlignHorizontal": "CENTER",
+              "letterSpacing": {
+                "value": 0.5,
+                "unit": "PIXELS"
+              },
+              "lineHeight": {
+                "value": 20,
+                "unit": "PIXELS"
+              },
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.44313725490196076,
+                    "g": 0.44313725490196076,
+                    "b": 0.44313725490196076
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            },
+            {
+              "id": "jay-import:2",
+              "name": "Underlined link",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Underlined link",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 16,
+              "fontWeight": 500,
+              "textDecoration": "UNDERLINE",
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.11372549019607843,
+                    "g": 0.21176470588235294,
+                    "b": 0.30196078431372547
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            },
+            {
+              "id": "jay-import:3",
+              "name": "Strikethrough price",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Strikethrough price",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 16,
+              "fontWeight": 400,
+              "textDecoration": "STRIKETHROUGH",
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0,
+                    "g": 0,
+                    "b": 0
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            },
+            {
+              "id": "jay-import:4",
+              "name": "Uppercase label",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Uppercase label",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 12,
+              "fontWeight": 400,
+              "textCase": "UPPER",
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0,
+                    "g": 0,
+                    "b": 0
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            },
+            {
+              "id": "jay-import:5",
+              "name": "Normal line height",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Normal line height",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 14,
+              "fontWeight": 400,
+              "lineHeight": {
+                "unit": "AUTO"
+              },
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0,
+                    "g": 0,
+                    "b": 0
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            },
+            {
+              "id": "jay-import:6",
+              "name": "Percent line height",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Percent line height",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 14,
+              "fontWeight": 400,
+              "lineHeight": {
+                "value": 150,
+                "unit": "PERCENT"
+              },
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0,
+                    "g": 0,
+                    "b": 0
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            }
+          ]
+        }
+      ],
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          }
+        }
+      ]
+    }
+  ],
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/"
+  }
+}

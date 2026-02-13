@@ -1,0 +1,132 @@
+{
+  "id": "jay-import:6",
+  "name": "Jay Page: Page",
+  "type": "SECTION",
+  "x": 0,
+  "y": 0,
+  "width": 1440,
+  "height": 900,
+  "children": [
+    {
+      "id": "jay-import:5",
+      "name": "Content",
+      "type": "FRAME",
+      "x": 0,
+      "y": 0,
+      "width": 1440,
+      "height": 900,
+      "layoutMode": "VERTICAL",
+      "primaryAxisAlignItems": "MIN",
+      "counterAxisAlignItems": "MIN",
+      "children": [
+        {
+          "id": "jay-import:4",
+          "name": "div",
+          "type": "FRAME",
+          "x": 0,
+          "y": 0,
+          "width": 600,
+          "height": 400,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0.050980392156862744,
+                "g": 0.2,
+                "b": 0.33725490196078434
+              },
+              "opacity": 1
+            }
+          ],
+          "layoutMode": "VERTICAL",
+          "primaryAxisAlignItems": "MIN",
+          "counterAxisAlignItems": "MIN",
+          "children": [
+            {
+              "id": "jay-import:0",
+              "name": "div",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 200,
+              "height": 100,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 1,
+                    "g": 1,
+                    "b": 1
+                  },
+                  "opacity": 0.3
+                }
+              ]
+            },
+            {
+              "id": "jay-import:1",
+              "name": "div",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 200,
+              "height": 100
+            },
+            {
+              "id": "jay-import:2",
+              "name": "div",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 200,
+              "height": 100,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.9294117647058824,
+                    "g": 0.9294117647058824,
+                    "b": 0.9294117647058824
+                  }
+                }
+              ]
+            },
+            {
+              "id": "jay-import:3",
+              "name": "div",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 200,
+              "height": 100,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0,
+                    "g": 0.5019607843137255,
+                    "b": 1
+                  },
+                  "opacity": 0.5
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          }
+        }
+      ]
+    }
+  ],
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/"
+  }
+}

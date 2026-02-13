@@ -1,0 +1,372 @@
+{
+  "id": "jay-import:13",
+  "name": "Jay Page: Page",
+  "type": "SECTION",
+  "x": 0,
+  "y": 0,
+  "width": 1440,
+  "height": 900,
+  "children": [
+    {
+      "id": "jay-import:12",
+      "name": "Content",
+      "type": "FRAME",
+      "x": 0,
+      "y": 0,
+      "width": 1440,
+      "height": 900,
+      "layoutMode": "VERTICAL",
+      "primaryAxisAlignItems": "MIN",
+      "counterAxisAlignItems": "MIN",
+      "children": [
+        {
+          "id": "jay-import:11",
+          "name": "div",
+          "type": "FRAME",
+          "x": 0,
+          "y": 0,
+          "width": 600,
+          "layoutMode": "VERTICAL",
+          "primaryAxisAlignItems": "MIN",
+          "counterAxisAlignItems": "MIN",
+          "itemSpacing": 5,
+          "children": [
+            {
+              "id": "jay-import:0",
+              "name": "Thin 100",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Thin 100",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 14,
+              "fontWeight": 100,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0,
+                    "g": 0,
+                    "b": 0
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            },
+            {
+              "id": "jay-import:1",
+              "name": "Extra Light 200",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Extra Light 200",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 14,
+              "fontWeight": 200,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0,
+                    "g": 0,
+                    "b": 0
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            },
+            {
+              "id": "jay-import:2",
+              "name": "Light 300",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Light 300",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 14,
+              "fontWeight": 300,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0,
+                    "g": 0,
+                    "b": 0
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            },
+            {
+              "id": "jay-import:3",
+              "name": "Regular 400",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Regular 400",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 14,
+              "fontWeight": 400,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0,
+                    "g": 0,
+                    "b": 0
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            },
+            {
+              "id": "jay-import:4",
+              "name": "Medium 500",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Medium 500",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 14,
+              "fontWeight": 500,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0,
+                    "g": 0,
+                    "b": 0
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            },
+            {
+              "id": "jay-import:5",
+              "name": "Semi Bold 600",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Semi Bold 600",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 14,
+              "fontWeight": 600,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0,
+                    "g": 0,
+                    "b": 0
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            },
+            {
+              "id": "jay-import:6",
+              "name": "Bold 700",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Bold 700",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 14,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0,
+                    "g": 0,
+                    "b": 0
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            },
+            {
+              "id": "jay-import:7",
+              "name": "Extra Bold 800",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Extra Bold 800",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 14,
+              "fontWeight": 800,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0,
+                    "g": 0,
+                    "b": 0
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            },
+            {
+              "id": "jay-import:8",
+              "name": "Black 900",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Black 900",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 14,
+              "fontWeight": 900,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0,
+                    "g": 0,
+                    "b": 0
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            },
+            {
+              "id": "jay-import:9",
+              "name": "Bold Italic",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Bold Italic",
+              "fontName": {
+                "family": "Inter",
+                "style": "Italic"
+              },
+              "fontSize": 14,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0,
+                    "g": 0,
+                    "b": 0
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            },
+            {
+              "id": "jay-import:10",
+              "name": "Extra Bold Italic",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Extra Bold Italic",
+              "fontName": {
+                "family": "Inter",
+                "style": "Italic"
+              },
+              "fontSize": 14,
+              "fontWeight": 800,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0,
+                    "g": 0,
+                    "b": 0
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            }
+          ]
+        }
+      ],
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          }
+        }
+      ]
+    }
+  ],
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/"
+  }
+}

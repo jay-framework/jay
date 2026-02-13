@@ -1,0 +1,18 @@
+<html>
+<head>
+  <script type="application/jay-data">
+    data:
+  </script>
+</head>
+<body>
+<div style="width: 600px; display: flex; flex-direction: column; gap: 10px;">
+  <div data-figma-id="300:1" data-figma-type="frame" style="width: 200px; height: 30px; font-family: 'Inter', sans-serif; font-size: 25px; font-weight: 800; color: #0d3356; display: flex; flex-direction: column; justify-content: flex-start;">
+    <div style="font-family: 'Inter', sans-serif; font-size: 25px; font-weight: 800; color: #0d3356;">FashionHub</div>
+  </div>
+  <div data-figma-id="300:2" data-figma-type="frame" style="width: 300px; height: 20px; font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 400; color: rgb(113, 113, 113); display: flex; flex-direction: column; justify-content: center;">
+    <div style="font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 400; color: rgb(113, 113, 113);">Simple description text</div>
+  </div>
+  <p style="font-size: 16px; font-weight: 500; color: rgb(0, 0, 0);">Direct text element</p>
+</div>
+</body>
+</html>

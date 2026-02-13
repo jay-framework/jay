@@ -1,0 +1,114 @@
+{
+  "id": "jay-import:3",
+  "name": "Jay Page: Page",
+  "type": "SECTION",
+  "x": 0,
+  "y": 0,
+  "width": 1440,
+  "height": 900,
+  "children": [
+    {
+      "id": "jay-import:2",
+      "name": "Content",
+      "type": "FRAME",
+      "x": 0,
+      "y": 0,
+      "width": 1440,
+      "height": 900,
+      "layoutMode": "VERTICAL",
+      "primaryAxisAlignItems": "MIN",
+      "counterAxisAlignItems": "MIN",
+      "children": [
+        {
+          "id": "jay-import:1",
+          "name": "div",
+          "type": "FRAME",
+          "x": 0,
+          "y": 0,
+          "width": 600,
+          "layoutMode": "VERTICAL",
+          "primaryAxisAlignItems": "MIN",
+          "counterAxisAlignItems": "MIN",
+          "children": [
+            {
+              "id": "400:1",
+              "name": "Header Section",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 600,
+              "height": 60,
+              "pluginData": {
+                "originalFigmaId": "400:1"
+              }
+            },
+            {
+              "id": "400:2",
+              "name": "Navigation Menu",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 600,
+              "height": 40,
+              "pluginData": {
+                "originalFigmaId": "400:2"
+              }
+            },
+            {
+              "id": "400:3",
+              "name": "frame",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 600,
+              "height": 100,
+              "pluginData": {
+                "originalFigmaId": "400:3",
+                "originalFigmaType": "frame"
+              }
+            },
+            {
+              "id": "400:4",
+              "name": "group",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 600,
+              "height": 50,
+              "pluginData": {
+                "originalFigmaId": "400:4",
+                "originalFigmaType": "group"
+              }
+            },
+            {
+              "id": "jay-import:0",
+              "name": "nav",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 600,
+              "height": 30,
+              "pluginData": {
+                "semanticHtml": "nav"
+              }
+            }
+          ]
+        }
+      ],
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          }
+        }
+      ]
+    }
+  ],
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/"
+  }
+}

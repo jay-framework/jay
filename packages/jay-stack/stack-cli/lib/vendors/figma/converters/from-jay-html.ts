@@ -114,6 +114,9 @@ function parseColorToFill(
  *   background-image: linear-gradient(rgba(R, G, B, A), rgba(R, G, B, A));
  * where both stops are the same color (representing a solid fill).
  * Supports multiple comma-separated gradients (layered fills).
+ *
+ * Note: Can't use simple regex like /linear-gradient\(([^)]+)\)/ because the content
+ * contains nested parentheses from rgba(...). Uses balanced-paren extraction instead.
  */
 function parseBackgroundImageToFills(
     bgImage: string,
@@ -122,16 +125,33 @@ function parseBackgroundImageToFills(
 
     const fills: Array<{ type: 'SOLID'; color: { r: number; g: number; b: number }; opacity?: number }> = [];
 
-    // Match all linear-gradient(...) entries
-    const gradientPattern = /linear-gradient\(([^)]+)\)/g;
-    let match: RegExpExecArray | null;
-    while ((match = gradientPattern.exec(bgImage)) !== null) {
-        const gradientContent = match[1];
-        // Extract the first rgba/rgb color from the gradient (our export uses identical stops)
-        const colorFill = parseColorToFill(gradientContent);
-        if (colorFill) {
-            fills.push(colorFill);
+    // Find each linear-gradient(...) by matching balanced parentheses
+    const prefix = 'linear-gradient(';
+    let searchFrom = 0;
+    while (true) {
+        const start = bgImage.indexOf(prefix, searchFrom);
+        if (start === -1) break;
+
+        // Find the matching closing paren, accounting for nested parens from rgba()
+        const contentStart = start + prefix.length;
+        let depth = 1;
+        let i = contentStart;
+        while (i < bgImage.length && depth > 0) {
+            if (bgImage[i] === '(') depth++;
+            else if (bgImage[i] === ')') depth--;
+            i++;
         }
+
+        if (depth === 0) {
+            const gradientContent = bgImage.substring(contentStart, i - 1);
+            // Extract the first rgba/rgb color from the gradient (our export uses identical stops)
+            const colorFill = parseColorToFill(gradientContent);
+            if (colorFill) {
+                fills.push(colorFill);
+            }
+        }
+
+        searchFrom = i;
     }
 
     return fills;

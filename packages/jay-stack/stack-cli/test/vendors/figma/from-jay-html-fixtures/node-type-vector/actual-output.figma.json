@@ -1,0 +1,128 @@
+{
+  "id": "jay-import:6",
+  "name": "Jay Page: Page",
+  "type": "SECTION",
+  "x": 0,
+  "y": 0,
+  "width": 1440,
+  "height": 900,
+  "children": [
+    {
+      "id": "jay-import:5",
+      "name": "Content",
+      "type": "FRAME",
+      "x": 0,
+      "y": 0,
+      "width": 1440,
+      "height": 900,
+      "layoutMode": "VERTICAL",
+      "primaryAxisAlignItems": "MIN",
+      "counterAxisAlignItems": "MIN",
+      "children": [
+        {
+          "id": "jay-import:4",
+          "name": "div",
+          "type": "FRAME",
+          "x": 0,
+          "y": 0,
+          "width": 400,
+          "height": 200,
+          "layoutMode": "HORIZONTAL",
+          "primaryAxisAlignItems": "MIN",
+          "counterAxisAlignItems": "MIN",
+          "itemSpacing": 20,
+          "children": [
+            {
+              "id": "100:1",
+              "name": "vector",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 24,
+              "height": 24,
+              "children": [
+                {
+                  "id": "jay-import:1",
+                  "name": "svg",
+                  "type": "FRAME",
+                  "x": 0,
+                  "y": 0,
+                  "children": [
+                    {
+                      "id": "jay-import:0",
+                      "name": "path",
+                      "type": "FRAME",
+                      "x": 0,
+                      "y": 0,
+                      "pluginData": {
+                        "semanticHtml": "path"
+                      }
+                    }
+                  ],
+                  "pluginData": {
+                    "semanticHtml": "svg"
+                  }
+                }
+              ],
+              "pluginData": {
+                "originalFigmaId": "100:1",
+                "originalFigmaType": "vector"
+              }
+            },
+            {
+              "id": "100:2",
+              "name": "vector",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 16,
+              "height": 16,
+              "children": [
+                {
+                  "id": "jay-import:3",
+                  "name": "svg",
+                  "type": "FRAME",
+                  "x": 0,
+                  "y": 0,
+                  "children": [
+                    {
+                      "id": "jay-import:2",
+                      "name": "circle",
+                      "type": "FRAME",
+                      "x": 0,
+                      "y": 0,
+                      "pluginData": {
+                        "semanticHtml": "circle"
+                      }
+                    }
+                  ],
+                  "pluginData": {
+                    "semanticHtml": "svg"
+                  }
+                }
+              ],
+              "pluginData": {
+                "originalFigmaId": "100:2",
+                "originalFigmaType": "vector"
+              }
+            }
+          ]
+        }
+      ],
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          }
+        }
+      ]
+    }
+  ],
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/"
+  }
+}

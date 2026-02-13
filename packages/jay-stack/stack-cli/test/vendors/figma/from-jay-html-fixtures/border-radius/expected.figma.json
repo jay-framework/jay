@@ -1,0 +1,97 @@
+{
+  "id": "jay-import:6",
+  "name": "Jay Page: Page",
+  "type": "SECTION",
+  "x": 0,
+  "y": 0,
+  "width": 1440,
+  "height": 900,
+  "children": [
+    {
+      "id": "jay-import:5",
+      "name": "Content",
+      "type": "FRAME",
+      "x": 0,
+      "y": 0,
+      "width": 1440,
+      "height": 900,
+      "layoutMode": "VERTICAL",
+      "primaryAxisAlignItems": "MIN",
+      "counterAxisAlignItems": "MIN",
+      "children": [
+        {
+          "id": "jay-import:4",
+          "name": "div",
+          "type": "FRAME",
+          "x": 0,
+          "y": 0,
+          "width": 600,
+          "height": 400,
+          "layoutMode": "VERTICAL",
+          "primaryAxisAlignItems": "MIN",
+          "counterAxisAlignItems": "MIN",
+          "itemSpacing": 10,
+          "children": [
+            {
+              "id": "jay-import:0",
+              "name": "div",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 200,
+              "height": 100,
+              "cornerRadius": 8
+            },
+            {
+              "id": "jay-import:1",
+              "name": "div",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 200,
+              "height": 100,
+              "cornerRadius": 0
+            },
+            {
+              "id": "jay-import:2",
+              "name": "div",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 100,
+              "cornerRadius": 50
+            },
+            {
+              "id": "jay-import:3",
+              "name": "div",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 200,
+              "height": 100,
+              "topLeftRadius": 10,
+              "topRightRadius": 20,
+              "bottomLeftRadius": 5,
+              "bottomRightRadius": 15
+            }
+          ]
+        }
+      ],
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          }
+        }
+      ]
+    }
+  ],
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/"
+  }
+}

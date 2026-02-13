@@ -1,0 +1,15 @@
+<html>
+<head>
+  <script type="application/jay-data">
+    data:
+  </script>
+</head>
+<body>
+<div style="width: 600px; height: 400px; display: flex; flex-direction: column; background-image: linear-gradient(rgba(13, 51, 86, 1), rgba(13, 51, 86, 1)); background-size: 100% 100%; background-position: center; background-repeat: no-repeat;">
+  <div style="width: 200px; height: 100px; background-image: linear-gradient(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.3)); background-size: 100% 100%; background-position: center; background-repeat: no-repeat;"></div>
+  <div style="width: 200px; height: 100px; background: transparent;"></div>
+  <div style="width: 200px; height: 100px; background-color: rgb(237, 237, 237);"></div>
+  <div style="width: 200px; height: 100px; background-color: rgba(0, 128, 255, 0.5);"></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,86 @@
+{
+  "id": "jay-import:4",
+  "name": "Jay Page: Page",
+  "type": "SECTION",
+  "x": 0,
+  "y": 0,
+  "width": 1440,
+  "height": 900,
+  "children": [
+    {
+      "id": "jay-import:3",
+      "name": "Content",
+      "type": "FRAME",
+      "x": 0,
+      "y": 0,
+      "width": 1440,
+      "height": 900,
+      "layoutMode": "VERTICAL",
+      "primaryAxisAlignItems": "MIN",
+      "counterAxisAlignItems": "MIN",
+      "children": [
+        {
+          "id": "jay-import:2",
+          "name": "div",
+          "type": "FRAME",
+          "x": 0,
+          "y": 0,
+          "width": 600,
+          "height": 400,
+          "layoutMode": "VERTICAL",
+          "primaryAxisAlignItems": "MIN",
+          "counterAxisAlignItems": "MIN",
+          "itemSpacing": 20,
+          "children": [
+            {
+              "id": "jay-import:0",
+              "name": "Product hero",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 400,
+              "height": 300,
+              "fills": [],
+              "cornerRadius": 8,
+              "clipsContent": true,
+              "pluginData": {
+                "originalFigmaId": "200:1",
+                "semanticHtml": "img",
+                "staticImageUrl": "/images/200:1_FILL.png"
+              }
+            },
+            {
+              "id": "jay-import:1",
+              "name": "Dynamic image",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 100,
+              "fills": [],
+              "clipsContent": true,
+              "pluginData": {
+                "originalFigmaId": "200:2",
+                "semanticHtml": "img"
+              }
+            }
+          ]
+        }
+      ],
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          }
+        }
+      ]
+    }
+  ],
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/"
+  }
+}

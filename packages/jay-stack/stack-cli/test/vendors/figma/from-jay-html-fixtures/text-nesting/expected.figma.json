@@ -1,0 +1,138 @@
+{
+  "id": "jay-import:4",
+  "name": "Jay Page: Page",
+  "type": "SECTION",
+  "x": 0,
+  "y": 0,
+  "width": 1440,
+  "height": 900,
+  "children": [
+    {
+      "id": "jay-import:3",
+      "name": "Content",
+      "type": "FRAME",
+      "x": 0,
+      "y": 0,
+      "width": 1440,
+      "height": 900,
+      "layoutMode": "VERTICAL",
+      "primaryAxisAlignItems": "MIN",
+      "counterAxisAlignItems": "MIN",
+      "children": [
+        {
+          "id": "jay-import:2",
+          "name": "div",
+          "type": "FRAME",
+          "x": 0,
+          "y": 0,
+          "width": 600,
+          "layoutMode": "VERTICAL",
+          "primaryAxisAlignItems": "MIN",
+          "counterAxisAlignItems": "MIN",
+          "itemSpacing": 10,
+          "children": [
+            {
+              "id": "300:1",
+              "name": "FashionHub",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 200,
+              "height": 30,
+              "characters": "FashionHub",
+              "fontName": {
+                "family": "Inter",
+                "style": "Extra Bold"
+              },
+              "fontSize": 25,
+              "fontWeight": 800,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.050980392156862744,
+                    "g": 0.2,
+                    "b": 0.33725490196078434
+                  }
+                }
+              ],
+              "pluginData": {
+                "originalFigmaId": "300:1",
+                "originalFigmaType": "frame"
+              }
+            },
+            {
+              "id": "300:2",
+              "name": "Simple description text",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 300,
+              "height": 20,
+              "characters": "Simple description text",
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              },
+              "fontSize": 14,
+              "fontWeight": 400,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.44313725490196076,
+                    "g": 0.44313725490196076,
+                    "b": 0.44313725490196076
+                  }
+                }
+              ],
+              "pluginData": {
+                "originalFigmaId": "300:2",
+                "originalFigmaType": "frame"
+              }
+            },
+            {
+              "id": "jay-import:0",
+              "name": "Direct text element",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Direct text element",
+              "fontSize": 16,
+              "fontWeight": 500,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0,
+                    "g": 0,
+                    "b": 0
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            }
+          ]
+        }
+      ],
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          }
+        }
+      ]
+    }
+  ],
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/"
+  }
+}

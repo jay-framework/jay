@@ -1,0 +1,18 @@
+<html>
+<head>
+  <script type="application/jay-data">
+    data:
+  </script>
+</head>
+<body>
+<div style="width: 600px; display: flex; flex-direction: column; gap: 10px;">
+  <p style="font-family: 'Inter', sans-serif; font-size: 24px; font-weight: 700; color: #0d3356;">Bold Heading</p>
+  <p style="font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 400; color: rgb(113, 113, 113); text-align: center; line-height: 20px; letter-spacing: 0.5px;">Body text with spacing</p>
+  <p style="font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 500; color: #1d364d; text-decoration: underline;">Underlined link</p>
+  <p style="font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 400; color: rgb(0, 0, 0); text-decoration: line-through;">Strikethrough price</p>
+  <p style="font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 400; color: rgb(0, 0, 0); text-transform: uppercase;">Uppercase label</p>
+  <p style="font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 400; color: rgb(0, 0, 0); line-height: normal;">Normal line height</p>
+  <p style="font-family: 'Inter', sans-serif; font-size: 14px; font-weight: 400; color: rgb(0, 0, 0); line-height: 150%;">Percent line height</p>
+</div>
+</body>
+</html>
