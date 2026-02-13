@@ -168,6 +168,30 @@ This is a placement decision made by the plugin when it puts the section on the 
 be derived from jay-html and is irrelevant to the conversion. Inner node `x`/`y` values ARE compared
 since they represent position within the parent frame and affect layout.
 
+### Open Issue: Property Comparison Strategy for Lossy Conversion
+
+**Status: Needs design decision — see Design Log #91.**
+
+The `expected.figma.json` in roundtrip test fixtures (like `wix-store-product-page`) is the
+**original Figma export** — the source of truth for what the page should look like. The converter
+output will never be 1:1 with this because some properties are Figma-specific and can't be
+derived from HTML. But the goal is to be **as close as possible**.
+
+The core question: how should the test compare the converter output against the original
+Figma export, given that some properties are acceptable losses?
+
+Three categories of properties were identified:
+
+1. **Convertible** — derivable from CSS, the converter SHOULD produce them (layout, dimensions,
+   colors, fonts, padding, radius, etc.). Mismatches here mean the converter needs fixing.
+2. **Figma-only** — cannot be derived from HTML, acceptable losses (`parentId`, `parentType`,
+   `locked`, `visible`, `blendMode`, `boundVariables`, `effects`, component variant definitions,
+   vector paths, etc.)
+3. **Future improvements** — could potentially be derived but aren't yet (gradients, individual
+   stroke weights, text auto-resize, etc.)
+
+See Design Log #91 for the full design of the comparison strategy.
+
 ### What Gets Tested (End-to-End)
 
 The test exercises the full pipeline that runs in production:
@@ -192,3 +216,160 @@ Each fixture targets a specific aspect of the conversion. Examples:
 | *(future)* border-radius | Uniform and per-corner radius |
 | *(future)* overflow-scroll | `overflow: hidden/auto/scroll` → clipsContent/overflowDirection |
 | *(future)* headless-imports | Jay-html with `<script type="application/jay-headless">` — real plugin resolution |
+
+---
+
+## Ongoing: Style Conversion Research (2026-02-13)
+
+### Problem: Forward ↔ Reverse CSS Pattern Mismatch
+
+The forward conversion (Figma→jay-html in `utils.ts`) produces CSS patterns that the reverse converter
+(`from-jay-html.ts`) does not handle. This means styles are lost in the roundtrip even when they
+are perfectly representable.
+
+#### Critical mismatch: Background fills
+
+**Forward export produces:**
+```css
+background-image: linear-gradient(rgba(255, 255, 255, 1), rgba(255, 255, 255, 1));
+background-size: 100% 100%;
+background-position: center;
+background-repeat: no-repeat;
+```
+
+**Reverse converter looks for:**
+```typescript
+const bgColor = styles.get('background-color') || styles.get('background');
+```
+
+Result: **every background color is lost** because the forward export uses `background-image` with
+`linear-gradient()`, not `background-color`.
+
+#### Other mismatches between forward export and reverse converter
+
+| Forward export CSS | Reverse converter handling | Status |
+|-|-|-|
+| `background-image: linear-gradient(rgba(...))` | Only checks `background-color`/`background` | **BROKEN** |
+| `background: transparent` | Tries to parse as color, fails | **BROKEN** |
+| `border-color: rgb(...)` + `border-width` + `border-style` (separate props) | Only handles shorthand `border: 1px solid #000` | **PARTIAL** |
+| `flex-grow: 1` | Not mapped | **MISSING** |
+| `align-self: stretch/center/...` | Not mapped | **MISSING** |
+| `width: fit-content` / `height: fit-content` | Not mapped | **MISSING** |
+| `box-shadow: ...` | Not mapped | **MISSING** |
+| `filter: blur(...)` | Not mapped | **MISSING** |
+| `backdrop-filter: blur(...)` | Not mapped | **MISSING** |
+| `transform: rotate(Ndeg)` | Not mapped | **MISSING** |
+| `min-width/max-width/min-height/max-height` | Not mapped | **MISSING** |
+
+### Approaches Considered
+
+#### Approach A: Fix converter for our own export patterns (SELECTED)
+
+Since we control the forward conversion, we know exactly what CSS patterns it produces. Fix the
+reverse converter to handle those exact patterns.
+
+**Pros:** No new dependencies, fast, deterministic, handles the roundtrip case perfectly.
+**Cons:** Only works for CSS produced by our own exporter. Hand-written or AI-generated jay-html
+might use different CSS patterns.
+
+#### Approach B: Render in headless browser (Puppeteer/Playwright)
+
+Render jay-html in a browser, use `getComputedStyle()` + `getBoundingClientRect()` to get resolved
+styles and layout.
+
+**Pros:** Handles any CSS (classes, `<style>` blocks, inheritance, shorthand).
+**Cons:** Heavy dependency, slow, loses layout "intent" (e.g. `flex-grow: 1` becomes computed `width: 347px`,
+losing the info that it should be `FILL` in Figma).
+
+#### Approach C: Hybrid (future enhancement)
+
+Parse inline styles directly (Approach A) for known patterns, optionally use browser for:
+- Resolving dimensions for auto-sized elements
+- Handling jay-html not generated by our export (AI-generated, hand-written)
+- Inheriting font/color from parent elements
+
+### Decision: Approach A first, Approach C later
+
+1. **Phase 1 (now)**: Fix the reverse converter to correctly parse all CSS patterns our forward export produces
+2. **Phase 2 (future)**: Add optional browser rendering for non-roundtrip jay-html
+
+Key insight: the browser computed styles approach loses layout "intent":
+
+| CSS (intent) | Computed style | Figma property needed |
+|-|-|-|
+| `flex-grow: 1` | `width: 347px` | `layoutSizingHorizontal: 'FILL'` |
+| `width: fit-content` | `width: 200px` | `layoutSizingHorizontal: 'HUG'` |
+| `width: 100%` | `width: 800px` | `layoutSizingHorizontal: 'FILL'` |
+
+For layout properties we need the **declared** CSS value, not the **computed** value.
+
+---
+
+## Implementation Results: Approach A — Forward Export Pattern Handling (2026-02-13)
+
+### What was done
+
+Updated `from-jay-html.ts` to handle all CSS patterns that our forward export (`utils.ts`) produces.
+The converter now correctly parses styles that were previously lost in the roundtrip.
+
+### Changes to `from-jay-html.ts`
+
+#### New parsing functions added
+
+| Function | Purpose |
+|-|-|
+| `parseBackgroundImageToFills()` | Parses `background-image: linear-gradient(rgba(...), rgba(...))` → solid fills |
+| `parseBoxShadowToEffects()` | Parses `box-shadow` → `DROP_SHADOW` / `INNER_SHADOW` effects |
+| `parseBlurFromFilter()` | Parses `filter: blur(Npx)` → `LAYER_BLUR` effects |
+| `splitOutsideParens()` | Splits CSS values on commas outside parentheses (for multi-shadow parsing) |
+| `parseRotationFromTransform()` | Parses `transform: rotate(Ndeg)` → `rotation` |
+
+#### Updated `stylesToFigmaProps()` — new CSS → Figma mappings
+
+| CSS pattern | Figma property | Status |
+|-|-|-|
+| `background-image: linear-gradient(rgba(...))` | `fills` | **FIXED** (was broken) |
+| `background: transparent` | no fills (leave undefined) | **FIXED** (was broken) |
+| `border-color` + `border-width` + `border-style` (separate) | `strokes` + `strokeWeight` | **FIXED** (was partial) |
+| Multi-value `border-width: T R B L` | `strokeWeight` (max) | **NEW** |
+| `width: fit-content` / `height: fit-content` | `layoutSizingHorizontal/Vertical: 'HUG'` | **NEW** |
+| `flex-grow: 1` + `width: 0` | `layoutSizingHorizontal: 'FILL'` | **NEW** |
+| `align-self: stretch/center/...` | `layoutAlign` | **NEW** |
+| `box-shadow: ...` | `effects` (DROP_SHADOW / INNER_SHADOW) | **NEW** |
+| `filter: blur(Npx)` | `effects` (LAYER_BLUR) | **NEW** |
+| `backdrop-filter: blur(Npx)` | `effects` (BACKGROUND_BLUR) | **NEW** |
+| `transform: rotate(Ndeg)` | `rotation` | **NEW** |
+| `min-width/max-width/min-height/max-height` | `minWidth/maxWidth/minHeight/maxHeight` | **NEW** |
+| `flex-wrap: wrap` | `layoutWrap: 'WRAP'` | **NEW** |
+
+#### Updated node converters
+
+All node converters (`convertFrameElement`, `convertTextElement`, `convertImageElement`) now pass
+through the new properties: `rotation`, `effects`, `layoutAlign`, `layoutWrap`, `minWidth`,
+`maxWidth`, `minHeight`, `maxHeight`.
+
+### Test results
+
+- `hello-world` fixture: **PASSES** (2/2 tests)
+- `wix-store-product-page` fixture: **FAILS** — but this is the pre-existing comparison strategy
+  issue (Design Log #91). The converter output now contains 41 fill entries (previously 0 for
+  backgrounds), 103 layout sizing properties, and effects/blur data. The failure is due to
+  structural differences (COMPONENT_SET nodes, bindingData, IDs) not style conversion.
+
+### What's still not handled
+
+These remain as future work:
+
+| CSS | Figma | Reason |
+|-|-|-|
+| CSS classes / `<style>` block | Various | No CSS cascade resolution (would need Approach B/C) |
+| Inherited styles (color, font) on child text | `fills`, `fontName` | No CSS inheritance resolution |
+| `rem`, `em`, `vh`, `vw` units | Various | Only `px` and `%` parsed |
+| `calc()` expressions | Various | Would need CSS expression evaluator |
+| `hsl()`/`hsla()` colors | fills/strokes | Only `rgb()`/`rgba()`/hex supported |
+| Named colors (`red`, `blue`) | fills/strokes | Only numeric colors supported |
+
+### Next steps
+
+1. Implement the comparison strategy (Design Log #91) to validate roundtrip accuracy
+2. Consider Approach C (hybrid browser rendering) for non-roundtrip jay-html

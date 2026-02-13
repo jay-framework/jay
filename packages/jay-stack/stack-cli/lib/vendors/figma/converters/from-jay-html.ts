@@ -108,6 +108,143 @@ function parseColorToFill(
     return undefined;
 }
 
+/**
+ * Parses background fills from CSS background-image property.
+ * Handles the pattern our forward export produces:
+ *   background-image: linear-gradient(rgba(R, G, B, A), rgba(R, G, B, A));
+ * where both stops are the same color (representing a solid fill).
+ * Supports multiple comma-separated gradients (layered fills).
+ */
+function parseBackgroundImageToFills(
+    bgImage: string,
+): Array<{ type: 'SOLID'; color: { r: number; g: number; b: number }; opacity?: number }> {
+    if (!bgImage) return [];
+
+    const fills: Array<{ type: 'SOLID'; color: { r: number; g: number; b: number }; opacity?: number }> = [];
+
+    // Match all linear-gradient(...) entries
+    const gradientPattern = /linear-gradient\(([^)]+)\)/g;
+    let match: RegExpExecArray | null;
+    while ((match = gradientPattern.exec(bgImage)) !== null) {
+        const gradientContent = match[1];
+        // Extract the first rgba/rgb color from the gradient (our export uses identical stops)
+        const colorFill = parseColorToFill(gradientContent);
+        if (colorFill) {
+            fills.push(colorFill);
+        }
+    }
+
+    return fills;
+}
+
+/**
+ * Parses a CSS box-shadow value into Figma effects.
+ * Supports the pattern our forward export produces:
+ *   box-shadow: Xpx Ypx Rpx Spx rgba(R, G, B, A), ...;
+ * where inset keyword maps to INNER_SHADOW, otherwise DROP_SHADOW.
+ */
+function parseBoxShadowToEffects(
+    boxShadow: string,
+): Array<{
+    type: 'DROP_SHADOW' | 'INNER_SHADOW';
+    color: { r: number; g: number; b: number; a: number };
+    offset: { x: number; y: number };
+    radius: number;
+    spread?: number;
+    visible: boolean;
+}> {
+    if (!boxShadow || boxShadow === 'none') return [];
+
+    const effects: Array<{
+        type: 'DROP_SHADOW' | 'INNER_SHADOW';
+        color: { r: number; g: number; b: number; a: number };
+        offset: { x: number; y: number };
+        radius: number;
+        spread?: number;
+        visible: boolean;
+    }> = [];
+
+    // Split on commas that are NOT inside parentheses (to avoid splitting rgba(r,g,b,a))
+    const shadows = splitOutsideParens(boxShadow);
+
+    for (const shadow of shadows) {
+        const trimmed = shadow.trim();
+        if (!trimmed) continue;
+
+        const isInset = trimmed.startsWith('inset');
+        const valuePart = isInset ? trimmed.replace(/^inset\s*/, '') : trimmed;
+
+        // Extract px values and color
+        const pxValues: number[] = [];
+        const pxPattern = /(-?[\d.]+)px/g;
+        let pxMatch: RegExpExecArray | null;
+        while ((pxMatch = pxPattern.exec(valuePart)) !== null) {
+            pxValues.push(parseFloat(pxMatch[1]));
+        }
+
+        const colorMatch = valuePart.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/);
+        if (pxValues.length >= 3 && colorMatch) {
+            const [offsetX, offsetY, blur, spread] = pxValues;
+            effects.push({
+                type: isInset ? 'INNER_SHADOW' : 'DROP_SHADOW',
+                color: {
+                    r: parseInt(colorMatch[1]) / 255,
+                    g: parseInt(colorMatch[2]) / 255,
+                    b: parseInt(colorMatch[3]) / 255,
+                    a: colorMatch[4] !== undefined ? parseFloat(colorMatch[4]) : 1,
+                },
+                offset: { x: offsetX, y: offsetY },
+                radius: blur,
+                spread: spread !== undefined ? spread : undefined,
+                visible: true,
+            });
+        }
+    }
+
+    return effects;
+}
+
+/**
+ * Parses CSS filter/backdrop-filter for blur values.
+ * Pattern: filter: blur(Npx);
+ */
+function parseBlurFromFilter(filterStr: string): number | undefined {
+    if (!filterStr) return undefined;
+    const match = filterStr.match(/blur\(\s*([\d.]+)px\s*\)/);
+    return match ? parseFloat(match[1]) : undefined;
+}
+
+/**
+ * Splits a CSS value string on commas that are not inside parentheses.
+ * E.g., "0px 1px 2px rgba(0,0,0,0.5), inset 1px 1px 0px rgba(0,0,0,1)"
+ * → ["0px 1px 2px rgba(0,0,0,0.5)", " inset 1px 1px 0px rgba(0,0,0,1)"]
+ */
+function splitOutsideParens(str: string): string[] {
+    const results: string[] = [];
+    let depth = 0;
+    let start = 0;
+    for (let i = 0; i < str.length; i++) {
+        if (str[i] === '(') depth++;
+        else if (str[i] === ')') depth--;
+        else if (str[i] === ',' && depth === 0) {
+            results.push(str.substring(start, i));
+            start = i + 1;
+        }
+    }
+    results.push(str.substring(start));
+    return results;
+}
+
+/**
+ * Parses CSS transform for rotation.
+ * Pattern: transform: rotate(Ndeg);
+ */
+function parseRotationFromTransform(transformStr: string): number | undefined {
+    if (!transformStr) return undefined;
+    const match = transformStr.match(/rotate\(\s*(-?[\d.]+)deg\s*\)/);
+    return match ? parseFloat(match[1]) : undefined;
+}
+
 // ─── Style to Figma Property Mapping ─────────────────────────────────────────
 
 interface FigmaLayoutProps {
@@ -136,6 +273,14 @@ interface FigmaLayoutProps {
     overflowDirection?: 'NONE' | 'HORIZONTAL' | 'VERTICAL' | 'BOTH';
     layoutSizingHorizontal?: 'FIXED' | 'HUG' | 'FILL';
     layoutSizingVertical?: 'FIXED' | 'HUG' | 'FILL';
+    rotation?: number;
+    effects?: any[];
+    minWidth?: number;
+    maxWidth?: number;
+    minHeight?: number;
+    maxHeight?: number;
+    layoutAlign?: 'MIN' | 'CENTER' | 'MAX' | 'STRETCH';
+    layoutWrap?: 'NO_WRAP' | 'WRAP';
 }
 
 /**
@@ -206,16 +351,27 @@ function stylesToFigmaProps(styles: Map<string, string>): FigmaLayoutProps {
     if (bottomLeft !== undefined) props.bottomLeftRadius = bottomLeft;
     if (bottomRight !== undefined) props.bottomRightRadius = bottomRight;
 
-    // Background color → fills
+    // Background fills — multiple sources, in priority order:
+    // 1. background-image: linear-gradient(rgba(...), rgba(...)) — our forward export pattern for solid fills
+    // 2. background-color: rgb(...) or background: rgb(...) — standard CSS
+    // 3. background: transparent — no fills
+    const bgImage = styles.get('background-image');
     const bgColor = styles.get('background-color') || styles.get('background');
-    if (bgColor) {
+    if (bgImage) {
+        const fills = parseBackgroundImageToFills(bgImage);
+        if (fills.length > 0) {
+            props.fills = fills;
+        }
+    } else if (bgColor && bgColor !== 'transparent') {
         const fill = parseColorToFill(bgColor);
         if (fill) {
             props.fills = [fill];
         }
     }
+    // "background: transparent" or "background: none" → no fills (leave undefined)
 
     // Border → strokes
+    // Handle both shorthand and separate properties (our forward export uses separate props)
     const border = styles.get('border');
     if (border) {
         const borderParts = border.match(/^([\d.]+)px\s+\w+\s+(.*)/);
@@ -227,13 +383,27 @@ function stylesToFigmaProps(styles: Map<string, string>): FigmaLayoutProps {
             }
         }
     }
+    // Separate border properties (forward export pattern: border-color + border-width + border-style)
     const borderColor = styles.get('border-color');
     if (borderColor && !props.strokes) {
         const strokeFill = parseColorToFill(borderColor);
         if (strokeFill) props.strokes = [strokeFill];
     }
-    const borderWidth = parsePx(styles.get('border-width'));
-    if (borderWidth !== undefined) props.strokeWeight = borderWidth;
+    const borderWidth = styles.get('border-width');
+    if (borderWidth !== undefined) {
+        // Handle multi-value border-width: "top right bottom left"
+        const parts = borderWidth.trim().split(/\s+/);
+        if (parts.length === 1) {
+            const w = parsePx(parts[0]);
+            if (w !== undefined) props.strokeWeight = w;
+        } else if (parts.length === 4) {
+            // Per-side stroke weights — use the max as the uniform weight
+            // (Figma deserializer only uses strokeWeight for uniform borders)
+            const weights = parts.map((p) => parsePx(p) ?? 0);
+            const maxWeight = Math.max(...weights);
+            if (maxWeight > 0) props.strokeWeight = maxWeight;
+        }
+    }
 
     // Opacity
     const opacity = styles.get('opacity');
@@ -255,20 +425,104 @@ function stylesToFigmaProps(styles: Map<string, string>): FigmaLayoutProps {
             props.overflowDirection === 'BOTH' || overflowY === 'auto' || overflowY === 'scroll'
                 ? 'BOTH'
                 : 'HORIZONTAL';
+        props.clipsContent = true;
     }
     if (overflowY === 'auto' || overflowY === 'scroll') {
         props.overflowDirection =
             props.overflowDirection === 'BOTH' || overflowX === 'auto' || overflowX === 'scroll'
                 ? 'BOTH'
                 : 'VERTICAL';
+        props.clipsContent = true;
     }
 
-    // Width/height sizing
-    if (styles.get('width') === '100%') {
+    // Width/height sizing — handle FILL, HUG, and explicit px
+    const widthStr = styles.get('width');
+    const heightStr = styles.get('height');
+    if (widthStr === '100%') {
         props.layoutSizingHorizontal = 'FILL';
+    } else if (widthStr === 'fit-content') {
+        props.layoutSizingHorizontal = 'HUG';
     }
-    if (styles.get('height') === '100%') {
+    if (heightStr === '100%') {
         props.layoutSizingVertical = 'FILL';
+    } else if (heightStr === 'fit-content') {
+        props.layoutSizingVertical = 'HUG';
+    }
+
+    // flex-grow → FILL sizing (forward export uses flex-grow: 1 for FILL in the primary axis)
+    const flexGrow = styles.get('flex-grow');
+    if (flexGrow && parseFloat(flexGrow) > 0) {
+        // flex-grow in a horizontal parent means FILL horizontally, in vertical means FILL vertically
+        // We can't know the parent axis here, so set both as candidates — the parent context
+        // will be handled by the caller if needed. For now, flex-grow implies FILL.
+        // The forward export sets flex-grow: 1 alongside width: 0 or height: 0 for the grow axis.
+        const widthVal = styles.get('width');
+        const heightVal = styles.get('height');
+        if (widthVal === '0' || widthVal === '0px') {
+            props.layoutSizingHorizontal = 'FILL';
+        }
+        if (heightVal === '0' || heightVal === '0px') {
+            props.layoutSizingVertical = 'FILL';
+        }
+        // If neither dimension is 0, flex-grow still implies FILL in the primary axis
+        if (!props.layoutSizingHorizontal && !props.layoutSizingVertical) {
+            props.layoutSizingHorizontal = 'FILL';
+        }
+    }
+
+    // align-self → layoutAlign
+    const alignSelf = styles.get('align-self');
+    if (alignSelf === 'flex-start') props.layoutAlign = 'MIN';
+    else if (alignSelf === 'center') props.layoutAlign = 'CENTER';
+    else if (alignSelf === 'flex-end') props.layoutAlign = 'MAX';
+    else if (alignSelf === 'stretch') props.layoutAlign = 'STRETCH';
+
+    // Min/max dimensions
+    const minWidth = parsePx(styles.get('min-width'));
+    if (minWidth !== undefined) props.minWidth = minWidth;
+    const maxWidth = parsePx(styles.get('max-width'));
+    if (maxWidth !== undefined) props.maxWidth = maxWidth;
+    const minHeight = parsePx(styles.get('min-height'));
+    if (minHeight !== undefined) props.minHeight = minHeight;
+    const maxHeight = parsePx(styles.get('max-height'));
+    if (maxHeight !== undefined) props.maxHeight = maxHeight;
+
+    // Rotation from transform
+    const transform = styles.get('transform');
+    if (transform) {
+        const rotation = parseRotationFromTransform(transform);
+        if (rotation !== undefined) props.rotation = rotation;
+    }
+
+    // Effects from box-shadow, filter, backdrop-filter
+    const effects: any[] = [];
+    const boxShadow = styles.get('box-shadow');
+    if (boxShadow) {
+        const shadowEffects = parseBoxShadowToEffects(boxShadow);
+        effects.push(...shadowEffects);
+    }
+    const filter = styles.get('filter');
+    if (filter) {
+        const blurRadius = parseBlurFromFilter(filter);
+        if (blurRadius !== undefined) {
+            effects.push({ type: 'LAYER_BLUR', radius: blurRadius, visible: true });
+        }
+    }
+    const backdropFilter = styles.get('backdrop-filter') || styles.get('-webkit-backdrop-filter');
+    if (backdropFilter) {
+        const blurRadius = parseBlurFromFilter(backdropFilter);
+        if (blurRadius !== undefined) {
+            effects.push({ type: 'BACKGROUND_BLUR', radius: blurRadius, visible: true });
+        }
+    }
+    if (effects.length > 0) {
+        props.effects = effects;
+    }
+
+    // flex-wrap → layoutWrap
+    const flexWrap = styles.get('flex-wrap');
+    if (flexWrap === 'wrap') {
+        props.layoutWrap = 'WRAP';
     }
 
     return props;
@@ -522,6 +776,10 @@ function convertTextElement(element: HTMLElement): FigmaVendorDocument {
         ...textProps,
         fills: textFill ? [textFill] : undefined,
         opacity: layoutProps.opacity,
+        rotation: layoutProps.rotation,
+        effects: layoutProps.effects,
+        layoutSizingHorizontal: layoutProps.layoutSizingHorizontal,
+        layoutSizingVertical: layoutProps.layoutSizingVertical,
         pluginData,
     };
 }
@@ -552,7 +810,12 @@ function convertImageElement(element: HTMLElement): FigmaVendorDocument {
         height: layoutProps.height ?? 100,
         fills: layoutProps.fills || [],
         cornerRadius: layoutProps.cornerRadius,
+        opacity: layoutProps.opacity,
+        rotation: layoutProps.rotation,
+        effects: layoutProps.effects,
         clipsContent: true,
+        layoutSizingHorizontal: layoutProps.layoutSizingHorizontal,
+        layoutSizingVertical: layoutProps.layoutSizingVertical,
         pluginData,
     };
 }
@@ -693,6 +956,14 @@ function convertFrameElement(element: HTMLElement): FigmaVendorDocument {
         overflowDirection: layoutProps.overflowDirection,
         layoutSizingHorizontal: layoutProps.layoutSizingHorizontal,
         layoutSizingVertical: layoutProps.layoutSizingVertical,
+        layoutAlign: layoutProps.layoutAlign,
+        layoutWrap: layoutProps.layoutWrap,
+        rotation: layoutProps.rotation,
+        effects: layoutProps.effects,
+        minWidth: layoutProps.minWidth,
+        maxWidth: layoutProps.maxWidth,
+        minHeight: layoutProps.minHeight,
+        maxHeight: layoutProps.maxHeight,
         children: children.length > 0 ? children : undefined,
         pluginData: pluginData && Object.keys(pluginData).length > 0 ? pluginData : undefined,
     };
