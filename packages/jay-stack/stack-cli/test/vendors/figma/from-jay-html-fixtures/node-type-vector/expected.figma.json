@@ -1,5 +1,5 @@
 {
-  "id": "jay-import:4",
+  "id": "jay-import:2",
   "name": "Jay Page: Page",
   "type": "SECTION",
   "x": 0,
@@ -8,7 +8,7 @@
   "height": 900,
   "children": [
     {
-      "id": "jay-import:3",
+      "id": "jay-import:1",
       "name": "Content",
       "type": "FRAME",
       "x": 0,
@@ -20,7 +20,7 @@
       "counterAxisAlignItems": "MIN",
       "children": [
         {
-          "id": "jay-import:2",
+          "id": "jay-import:0",
           "name": "div",
           "type": "FRAME",
           "x": 0,
@@ -40,7 +40,7 @@
               "y": 0,
               "width": 24,
               "height": 24,
-              "svgContent": "<svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n      <path d=\"M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z\" stroke=\"#3A4980\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n    </svg>",
+              "svgContent": "<svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n      <path d=\"M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z\" stroke=\"#3A4980\" stroke-width=\"1.5\" stroke-linecap=\"round\" stroke-linejoin=\"round\"></path>\n    </svg>",
               "pluginData": {
                 "originalFigmaId": "100:1",
                 "originalFigmaType": "vector"
@@ -54,7 +54,7 @@
               "y": 0,
               "width": 16,
               "height": 16,
-              "svgContent": "<svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n      <circle cx=\"8\" cy=\"8\" r=\"7\" stroke=\"#000000\" stroke-width=\"1\"/>\n    </svg>",
+              "svgContent": "<svg width=\"16\" height=\"16\" viewBox=\"0 0 16 16\" fill=\"none\" xmlns=\"http://www.w3.org/2000/svg\">\n      <circle cx=\"8\" cy=\"8\" r=\"7\" stroke=\"#000000\" stroke-width=\"1\"></circle>\n    </svg>",
               "pluginData": {
                 "originalFigmaId": "100:2",
                 "originalFigmaType": "vector"

@@ -874,6 +874,32 @@ function convertImageElement(element: HTMLElement): FigmaVendorDocument {
 }
 
 /**
+ * Converts a data-figma-type="vector" wrapper element to a VECTOR node.
+ * Serializes the inner <svg> back to a string as svgContent.
+ */
+function convertVectorElement(element: HTMLElement): FigmaVendorDocument {
+    const styles = parseStyleString(element.getAttribute('style') || '');
+    const layoutProps = stylesToFigmaProps(styles);
+    const pluginData = extractJayPluginData(element) || {};
+
+    // Find the <svg> child and serialize it
+    const svgChild = element.querySelector('svg');
+    const svgContent = svgChild ? svgChild.outerHTML : undefined;
+
+    return {
+        id: pluginData?.['originalFigmaId'] || generateNodeId(),
+        name: element.getAttribute('data-name') || 'Vector',
+        type: 'VECTOR',
+        x: layoutProps.x ?? 0,
+        y: layoutProps.y ?? 0,
+        width: layoutProps.width,
+        height: layoutProps.height,
+        ...(svgContent ? { svgContent } : {}),
+        pluginData,
+    };
+}
+
+/**
  * Converts an HTML element and its children to a FigmaVendorDocument tree
  */
 function convertElement(element: HTMLElement): FigmaVendorDocument | null {
@@ -888,6 +914,12 @@ function convertElement(element: HTMLElement): FigmaVendorDocument | null {
     // Handle <img> elements
     if (tag === 'img') {
         return convertImageElement(element);
+    }
+
+    // Handle vector elements (data-figma-type="vector" wrapping an <svg>)
+    const figmaTypeAttr = element.getAttribute('data-figma-type');
+    if (figmaTypeAttr === 'vector') {
+        return convertVectorElement(element);
     }
 
     // Handle text-like elements
