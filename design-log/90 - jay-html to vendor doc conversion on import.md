@@ -161,6 +161,13 @@ npx vitest test/vendors/figma/from-jay-html.test.ts
 
 On mismatch, the test writes `actual-output.figma.json` to the fixture folder for easy diff/debugging.
 
+### Test Comparison Decisions
+
+**Root node `x`, `y` — ignored.** The root SECTION's `x`/`y` is its position on the Figma canvas.
+This is a placement decision made by the plugin when it puts the section on the stage — it cannot
+be derived from jay-html and is irrelevant to the conversion. Inner node `x`/`y` values ARE compared
+since they represent position within the parent frame and affect layout.
+
 ### What Gets Tested (End-to-End)
 
 The test exercises the full pipeline that runs in production:

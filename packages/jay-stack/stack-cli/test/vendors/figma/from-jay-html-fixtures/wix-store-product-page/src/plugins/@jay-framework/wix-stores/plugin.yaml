@@ -1,0 +1,6 @@
+name: wix-stores
+
+contracts:
+  - name: product-page
+    contract: product-page.jay-contract
+    component: productPage

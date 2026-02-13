@@ -1,0 +1,5 @@
+name: media
+tags:
+  - {tag: url, type: data, dataType: string, description: Media Url}
+  - {tag: mediaType, type: variant, dataType: "enum (IMAGE | VIDEO)", description: Media type}
+  - {tag: thumbnail_50x50, type: data, dataType: string, description: Media Thumbnail Url }

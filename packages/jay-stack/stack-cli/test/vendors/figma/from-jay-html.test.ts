@@ -54,6 +54,20 @@ function normalizeJson(obj: unknown): unknown {
     return JSON.parse(JSON.stringify(obj));
 }
 
+/**
+ * Removes root-level x/y from a FigmaVendorDocument.
+ *
+ * The root SECTION node's x/y is its position on the Figma canvas — this is
+ * irrelevant for the conversion (the plugin places the section on the stage).
+ * Inner node x/y is position within the parent and IS important.
+ *
+ * See Design Log #90 — Testing: Root node position decision.
+ */
+function stripRootPosition(doc: FigmaVendorDocument): FigmaVendorDocument {
+    const { x, y, ...rest } = doc;
+    return rest as FigmaVendorDocument;
+}
+
 // ─── Test Suite ──────────────────────────────────────────────────────────────
 
 describe('Jay-HTML → Figma JSON (from-jay-html)', () => {
@@ -112,11 +126,15 @@ describe('Jay-HTML → Figma JSON (from-jay-html)', () => {
             const result = convertJayHtmlToFigmaDoc(parsedResult.val, pageUrl);
 
             // 7. Normalize and compare
-            const normalizedResult = normalizeJson(result);
+            const normalizedResult = normalizeJson(result) as FigmaVendorDocument;
+
+            // Strip root-level x/y — canvas placement is irrelevant for conversion
+            const comparableResult = stripRootPosition(normalizedResult);
+            const comparableExpected = stripRootPosition(expectedJson);
 
             // On mismatch, write actual output for debugging
             try {
-                expect(normalizedResult).toEqual(expectedJson);
+                expect(comparableResult).toEqual(comparableExpected);
             } catch (err) {
                 const actualPath = path.join(fixturePath, 'actual-output.figma.json');
                 fs.writeFileSync(
