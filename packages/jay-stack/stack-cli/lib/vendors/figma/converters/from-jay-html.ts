@@ -964,17 +964,22 @@ function convertFrameElement(element: HTMLElement): FigmaVendorDocument {
     }
 
     // Determine name from data attributes or element content
+    const figmaType = pluginData?.['originalFigmaType'] as string | undefined;
     const name =
         element.getAttribute('data-name') ||
         element.getAttribute('aria-label') ||
-        (pluginData?.['originalFigmaType']
-            ? `${pluginData['originalFigmaType']}`
+        (figmaType
+            ? figmaType.charAt(0).toUpperCase() + figmaType.slice(1)
             : element.rawTagName || 'Frame');
+
+    // Map data-figma-type to Figma node type
+    const FIGMA_TYPE_MAP: Record<string, string> = { group: 'GROUP', frame: 'FRAME' };
+    const nodeType = (figmaType && FIGMA_TYPE_MAP[figmaType.toLowerCase()]) || 'FRAME';
 
     return {
         id: pluginData?.['originalFigmaId'] || generateNodeId(),
         name,
-        type: 'FRAME',
+        type: nodeType,
         x: layoutProps.x ?? 0,
         y: layoutProps.y ?? 0,
         width: layoutProps.width,
