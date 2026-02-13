@@ -840,24 +840,33 @@ function convertImageElement(element: HTMLElement): FigmaVendorDocument {
     const alt = element.getAttribute('alt') || '';
 
     pluginData['semanticHtml'] = 'img';
+
+    let fills: any[] = [];
     if (src && !src.startsWith('{')) {
+        // Static image — extract imageRef from the path (e.g., "/images/200:1_FILL.png" → "200:1_FILL")
         pluginData['staticImageUrl'] = src;
+        const filename = src.split('/').pop() || '';
+        const imageRef = filename.replace(/\.[^.]+$/, ''); // strip extension
+        fills = [{ type: 'IMAGE', scaleMode: 'FILL', imageRef }];
+    } else if (src && src.startsWith('{') && src.endsWith('}')) {
+        // Dynamic image — store binding expression
+        const bindingExpr = src.slice(1, -1); // strip { and }
+        pluginData['attributeBindings'] = JSON.stringify({ src: bindingExpr });
     }
 
     return {
-        id: generateNodeId(),
+        id: pluginData?.['originalFigmaId'] || generateNodeId(),
         name: alt || 'Image',
-        type: 'FRAME',
+        type: 'RECTANGLE',
         x: layoutProps.x ?? 0,
         y: layoutProps.y ?? 0,
         width: layoutProps.width ?? 100,
         height: layoutProps.height ?? 100,
-        fills: layoutProps.fills || [],
+        fills,
         cornerRadius: layoutProps.cornerRadius,
         opacity: layoutProps.opacity,
         rotation: layoutProps.rotation,
         effects: layoutProps.effects,
-        clipsContent: true,
         layoutSizingHorizontal: layoutProps.layoutSizingHorizontal,
         layoutSizingVertical: layoutProps.layoutSizingVertical,
         pluginData,
