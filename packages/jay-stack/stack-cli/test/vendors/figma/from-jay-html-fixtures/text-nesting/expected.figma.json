@@ -1,5 +1,5 @@
 {
-  "id": "jay-import:4",
+  "id": "jay-import:3",
   "name": "Jay Page: Page",
   "type": "SECTION",
   "x": 0,
@@ -8,7 +8,7 @@
   "height": 900,
   "children": [
     {
-      "id": "jay-import:3",
+      "id": "jay-import:2",
       "name": "Content",
       "type": "FRAME",
       "x": 0,
@@ -20,7 +20,7 @@
       "counterAxisAlignItems": "MIN",
       "children": [
         {
-          "id": "jay-import:2",
+          "id": "jay-import:1",
           "name": "div",
           "type": "FRAME",
           "x": 0,
@@ -40,12 +40,12 @@
               "width": 200,
               "height": 30,
               "characters": "FashionHub",
+              "fontWeight": 800,
               "fontName": {
                 "family": "Inter",
                 "style": "Extra Bold"
               },
               "fontSize": 25,
-              "fontWeight": 800,
               "fills": [
                 {
                   "type": "SOLID",
@@ -70,12 +70,12 @@
               "width": 300,
               "height": 20,
               "characters": "Simple description text",
+              "fontWeight": 400,
               "fontName": {
                 "family": "Inter",
                 "style": "Regular"
               },
               "fontSize": 14,
-              "fontWeight": 400,
               "fills": [
                 {
                   "type": "SOLID",
@@ -100,8 +100,8 @@
               "width": 100,
               "height": 20,
               "characters": "Direct text element",
-              "fontSize": 16,
               "fontWeight": 500,
+              "fontSize": 16,
               "fills": [
                 {
                   "type": "SOLID",
