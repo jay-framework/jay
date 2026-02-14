@@ -31,6 +31,8 @@
           "primaryAxisAlignItems": "MIN",
           "counterAxisAlignItems": "MIN",
           "itemSpacing": 10,
+          "layoutSizingHorizontal": "FIXED",
+          "layoutSizingVertical": "FIXED",
           "children": [
             {
               "id": "jay-import:0",
@@ -41,12 +43,24 @@
               "width": 100,
               "height": 20,
               "characters": "Status Label",
-              "fontSize": 16,
               "fontWeight": 700,
+              "fontSize": 16,
+              "textAlignVertical": "TOP",
+              "letterSpacing": {
+                "value": 0,
+                "unit": "PERCENT"
+              },
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
-                  "color": { "r": 0, "g": 0, "b": 0 }
+                  "color": {
+                    "r": 0,
+                    "g": 0,
+                    "b": 0
+                  }
                 }
               ],
               "pluginData": {
@@ -54,30 +68,35 @@
               }
             },
             {
-              "id": "jay-import:5",
+              "id": "jay-import:1",
               "name": "status",
               "type": "COMPONENT_SET",
               "x": 0,
               "y": 0,
               "children": [
                 {
-                  "id": "jay-import:2",
+                  "id": "jay-import:3",
                   "name": "status=ACTIVE",
                   "type": "COMPONENT",
                   "x": 0,
                   "y": 0,
                   "width": 200,
                   "height": 40,
-                  "variantProperties": { "status": "ACTIVE" },
                   "fills": [
                     {
                       "type": "SOLID",
-                      "color": { "r": 0, "g": 0.5019607843137255, "b": 0 }
+                      "color": {
+                        "r": 0,
+                        "g": 0.5019607843137255,
+                        "b": 0
+                      }
                     }
                   ],
+                  "layoutSizingHorizontal": "FIXED",
+                  "layoutSizingVertical": "FIXED",
                   "children": [
                     {
-                      "id": "jay-import:1",
+                      "id": "jay-import:2",
                       "name": "Active",
                       "type": "TEXT",
                       "x": 0,
@@ -86,36 +105,56 @@
                       "height": 20,
                       "characters": "Active",
                       "fontSize": 14,
+                      "textAlignVertical": "TOP",
+                      "letterSpacing": {
+                        "value": 0,
+                        "unit": "PERCENT"
+                      },
+                      "textCase": "ORIGINAL",
+                      "textTruncation": "DISABLED",
+                      "textAutoResize": "WIDTH_AND_HEIGHT",
                       "fills": [
                         {
                           "type": "SOLID",
-                          "color": { "r": 1, "g": 1, "b": 1 }
+                          "color": {
+                            "r": 1,
+                            "g": 1,
+                            "b": 1
+                          }
                         }
                       ],
                       "pluginData": {
                         "semanticHtml": "p"
                       }
                     }
-                  ]
+                  ],
+                  "variantProperties": {
+                    "status": "ACTIVE"
+                  }
                 },
                 {
-                  "id": "jay-import:4",
+                  "id": "jay-import:5",
                   "name": "status=INACTIVE",
                   "type": "COMPONENT",
                   "x": 0,
                   "y": 0,
                   "width": 200,
                   "height": 40,
-                  "variantProperties": { "status": "INACTIVE" },
                   "fills": [
                     {
                       "type": "SOLID",
-                      "color": { "r": 0.7843137254901961, "g": 0, "b": 0 }
+                      "color": {
+                        "r": 0.7843137254901961,
+                        "g": 0,
+                        "b": 0
+                      }
                     }
                   ],
+                  "layoutSizingHorizontal": "FIXED",
+                  "layoutSizingVertical": "FIXED",
                   "children": [
                     {
-                      "id": "jay-import:3",
+                      "id": "jay-import:4",
                       "name": "Inactive",
                       "type": "TEXT",
                       "x": 0,
@@ -124,17 +163,32 @@
                       "height": 20,
                       "characters": "Inactive",
                       "fontSize": 14,
+                      "textAlignVertical": "TOP",
+                      "letterSpacing": {
+                        "value": 0,
+                        "unit": "PERCENT"
+                      },
+                      "textCase": "ORIGINAL",
+                      "textTruncation": "DISABLED",
+                      "textAutoResize": "WIDTH_AND_HEIGHT",
                       "fills": [
                         {
                           "type": "SOLID",
-                          "color": { "r": 1, "g": 1, "b": 1 }
+                          "color": {
+                            "r": 1,
+                            "g": 1,
+                            "b": 1
+                          }
                         }
                       ],
                       "pluginData": {
                         "semanticHtml": "p"
                       }
                     }
-                  ]
+                  ],
+                  "variantProperties": {
+                    "status": "INACTIVE"
+                  }
                 }
               ]
             },
@@ -144,12 +198,15 @@
               "type": "INSTANCE",
               "x": 0,
               "y": 0,
-              "componentSetId": "jay-import:5",
+              "componentSetId": "jay-import:1",
               "componentPropertyDefinitions": {
                 "status": {
                   "type": "VARIANT",
-                  "variantOptions": ["ACTIVE", "INACTIVE"],
-                  "defaultValue": "ACTIVE"
+                  "defaultValue": "ACTIVE",
+                  "variantOptions": [
+                    "ACTIVE",
+                    "INACTIVE"
+                  ]
                 }
               }
             }
@@ -159,13 +216,18 @@
       "fills": [
         {
           "type": "SOLID",
-          "color": { "r": 1, "g": 1, "b": 1 }
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          }
         }
       ]
     }
   ],
   "pluginData": {
     "jpage": "true",
-    "urlRoute": "/"
+    "urlRoute": "/",
+    "headlessImports": "[{\"key\":\"statusWidget\",\"contractName\":\"status-widget\",\"codeLinkModule\":\"./src/plugins/test-plugin/index.js\"}]"
   }
 }

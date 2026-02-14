@@ -1,5 +1,5 @@
 {
-  "id": "jay-import:3",
+  "id": "jay-import:4",
   "name": "Jay Page: Page",
   "type": "SECTION",
   "x": 0,
@@ -8,7 +8,7 @@
   "height": 900,
   "children": [
     {
-      "id": "jay-import:2",
+      "id": "jay-import:3",
       "name": "Content",
       "type": "FRAME",
       "x": 0,
@@ -20,7 +20,7 @@
       "counterAxisAlignItems": "MIN",
       "children": [
         {
-          "id": "jay-import:1",
+          "id": "jay-import:2",
           "name": "div",
           "type": "FRAME",
           "x": 0,
@@ -33,91 +33,14 @@
           "layoutSizingHorizontal": "FIXED",
           "children": [
             {
-              "id": "300:1",
-              "name": "FashionHub",
-              "type": "TEXT",
-              "x": 0,
-              "y": 0,
-              "width": 200,
-              "height": 30,
-              "characters": "FashionHub",
-              "fontWeight": 800,
-              "fontName": {
-                "family": "Inter",
-                "style": "Extra Bold"
-              },
-              "fontSize": 25,
-              "textAlignVertical": "TOP",
-              "letterSpacing": {
-                "value": 0,
-                "unit": "PERCENT"
-              },
-              "textCase": "ORIGINAL",
-              "textTruncation": "DISABLED",
-              "textAutoResize": "WIDTH_AND_HEIGHT",
-              "fills": [
-                {
-                  "type": "SOLID",
-                  "color": {
-                    "r": 0.050980392156862744,
-                    "g": 0.2,
-                    "b": 0.33725490196078434
-                  }
-                }
-              ],
-              "pluginData": {
-                "originalFigmaId": "300:1",
-                "originalFigmaType": "frame"
-              }
-            },
-            {
-              "id": "300:2",
-              "name": "Simple description text",
-              "type": "TEXT",
-              "x": 0,
-              "y": 0,
-              "width": 300,
-              "height": 20,
-              "characters": "Simple description text",
-              "fontWeight": 400,
-              "fontName": {
-                "family": "Inter",
-                "style": "Regular"
-              },
-              "fontSize": 14,
-              "textAlignVertical": "TOP",
-              "letterSpacing": {
-                "value": 0,
-                "unit": "PERCENT"
-              },
-              "textCase": "ORIGINAL",
-              "textTruncation": "DISABLED",
-              "textAutoResize": "WIDTH_AND_HEIGHT",
-              "fills": [
-                {
-                  "type": "SOLID",
-                  "color": {
-                    "r": 0.44313725490196076,
-                    "g": 0.44313725490196076,
-                    "b": 0.44313725490196076
-                  }
-                }
-              ],
-              "pluginData": {
-                "originalFigmaId": "300:2",
-                "originalFigmaType": "frame"
-              }
-            },
-            {
               "id": "jay-import:0",
-              "name": "Direct text element",
+              "name": "Basic text",
               "type": "TEXT",
               "x": 0,
               "y": 0,
               "width": 100,
               "height": 20,
-              "characters": "Direct text element",
-              "fontWeight": 500,
+              "characters": "Basic text",
               "fontSize": 16,
               "textAlignVertical": "TOP",
               "letterSpacing": {
@@ -139,6 +62,76 @@
               ],
               "pluginData": {
                 "semanticHtml": "p"
+              }
+            },
+            {
+              "id": "jay-import:1",
+              "name": "Spaced text",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Spaced text",
+              "fontSize": 14,
+              "letterSpacing": {
+                "value": 2,
+                "unit": "PIXELS"
+              },
+              "textAlignVertical": "TOP",
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.19607843137254902,
+                    "g": 0.19607843137254902,
+                    "b": 0.19607843137254902
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            },
+            {
+              "id": "500:1",
+              "name": "Wrapped text",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 200,
+              "height": 24,
+              "characters": "Wrapped text",
+              "fontWeight": 700,
+              "fontName": {
+                "family": "Inter",
+                "style": "Bold"
+              },
+              "fontSize": 20,
+              "textAlignVertical": "TOP",
+              "letterSpacing": {
+                "value": 0,
+                "unit": "PERCENT"
+              },
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0,
+                    "g": 0,
+                    "b": 0
+                  }
+                }
+              ],
+              "pluginData": {
+                "originalFigmaId": "500:1",
+                "originalFigmaType": "frame"
               }
             }
           ]

@@ -41,6 +41,8 @@
           "layoutMode": "VERTICAL",
           "primaryAxisAlignItems": "MIN",
           "counterAxisAlignItems": "MIN",
+          "layoutSizingHorizontal": "FIXED",
+          "layoutSizingVertical": "FIXED",
           "children": [
             {
               "id": "jay-import:0",
@@ -60,7 +62,9 @@
                   },
                   "opacity": 0.3
                 }
-              ]
+              ],
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED"
             },
             {
               "id": "jay-import:1",
@@ -69,7 +73,9 @@
               "x": 0,
               "y": 0,
               "width": 200,
-              "height": 100
+              "height": 100,
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED"
             },
             {
               "id": "jay-import:2",
@@ -88,7 +94,9 @@
                     "b": 0.9294117647058824
                   }
                 }
-              ]
+              ],
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED"
             },
             {
               "id": "jay-import:3",
@@ -108,7 +116,9 @@
                   },
                   "opacity": 0.5
                 }
-              ]
+              ],
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED"
             }
           ]
         }

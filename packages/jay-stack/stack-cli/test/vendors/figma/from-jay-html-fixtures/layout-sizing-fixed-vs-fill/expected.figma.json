@@ -1,5 +1,5 @@
 {
-  "id": "jay-import:8",
+  "id": "jay-import:9",
   "name": "Jay Page: Page",
   "type": "SECTION",
   "x": 0,
@@ -8,7 +8,7 @@
   "height": 900,
   "children": [
     {
-      "id": "jay-import:7",
+      "id": "jay-import:8",
       "name": "Content",
       "type": "FRAME",
       "x": 0,
@@ -20,12 +20,12 @@
       "counterAxisAlignItems": "MIN",
       "children": [
         {
-          "id": "jay-import:6",
+          "id": "jay-import:7",
           "name": "div",
           "type": "FRAME",
           "x": 0,
           "y": 0,
-          "width": 800,
+          "width": 1000,
           "height": 600,
           "layoutMode": "VERTICAL",
           "primaryAxisAlignItems": "MIN",
@@ -40,18 +40,21 @@
               "type": "FRAME",
               "x": 0,
               "y": 0,
+              "width": 300,
               "height": 50,
-              "fills": [
-                {
-                  "type": "SOLID",
-                  "color": {
-                    "r": 0.7843137254901961,
-                    "g": 0.7843137254901961,
-                    "b": 0.7843137254901961
-                  },
-                  "opacity": 1
-                }
-              ],
+              "layoutMode": "HORIZONTAL",
+              "primaryAxisAlignItems": "MIN",
+              "counterAxisAlignItems": "MIN",
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED"
+            },
+            {
+              "id": "jay-import:1",
+              "name": "div",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "height": 50,
               "layoutMode": "HORIZONTAL",
               "primaryAxisAlignItems": "MIN",
               "counterAxisAlignItems": "MIN",
@@ -64,62 +67,11 @@
               "type": "FRAME",
               "x": 0,
               "y": 0,
+              "height": 50,
               "layoutMode": "HORIZONTAL",
               "primaryAxisAlignItems": "MIN",
               "counterAxisAlignItems": "MIN",
-              "paddingLeft": 10,
-              "paddingRight": 10,
-              "paddingTop": 5,
-              "paddingBottom": 5,
-              "layoutSizingHorizontal": "HUG",
-              "layoutSizingVertical": "HUG",
-              "children": [
-                {
-                  "id": "jay-import:1",
-                  "name": "Hugging content",
-                  "type": "TEXT",
-                  "x": 0,
-                  "y": 0,
-                  "width": 100,
-                  "height": 20,
-                  "characters": "Hugging content",
-                  "fontSize": 14,
-                  "textAlignVertical": "TOP",
-                  "letterSpacing": {
-                    "value": 0,
-                    "unit": "PERCENT"
-                  },
-                  "textCase": "ORIGINAL",
-                  "textTruncation": "DISABLED",
-                  "textAutoResize": "WIDTH_AND_HEIGHT",
-                  "fills": [
-                    {
-                      "type": "SOLID",
-                      "color": {
-                        "r": 0,
-                        "g": 0,
-                        "b": 0
-                      }
-                    }
-                  ],
-                  "pluginData": {
-                    "semanticHtml": "p"
-                  }
-                }
-              ]
-            },
-            {
-              "id": "jay-import:3",
-              "name": "div",
-              "type": "FRAME",
-              "x": 0,
-              "y": 0,
-              "width": 300,
-              "height": 100,
-              "layoutMode": "HORIZONTAL",
-              "primaryAxisAlignItems": "MIN",
-              "counterAxisAlignItems": "MIN",
-              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingHorizontal": "FILL",
               "layoutSizingVertical": "FIXED"
             },
             {
@@ -129,22 +81,42 @@
               "x": 0,
               "y": 0,
               "height": 50,
-              "fills": [
-                {
-                  "type": "SOLID",
-                  "color": {
-                    "r": 0.9019607843137255,
-                    "g": 0.9019607843137255,
-                    "b": 0.9803921568627451
-                  },
-                  "opacity": 1
-                }
-              ],
               "layoutMode": "HORIZONTAL",
               "primaryAxisAlignItems": "MIN",
               "counterAxisAlignItems": "MIN",
-              "layoutSizingHorizontal": "FILL",
-              "layoutSizingVertical": "FIXED"
+              "paddingLeft": 10,
+              "paddingRight": 10,
+              "paddingTop": 10,
+              "paddingBottom": 10,
+              "layoutSizingHorizontal": "HUG",
+              "layoutSizingVertical": "FIXED",
+              "children": [
+                {
+                  "id": "jay-import:3",
+                  "name": "Content",
+                  "type": "TEXT",
+                  "x": 0,
+                  "y": 0,
+                  "width": 100,
+                  "height": 20,
+                  "characters": "Content",
+                  "fontSize": 14,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 0, "g": 0, "b": 0 }
+                    }
+                  ],
+                  "textAlignVertical": "TOP",
+                  "letterSpacing": { "value": 0, "unit": "PERCENT" },
+                  "textCase": "ORIGINAL",
+                  "textTruncation": "DISABLED",
+                  "textAutoResize": "WIDTH_AND_HEIGHT",
+                  "pluginData": {
+                    "semanticHtml": "p"
+                  }
+                }
+              ]
             },
             {
               "id": "jay-import:5",
@@ -152,11 +124,23 @@
               "type": "FRAME",
               "x": 0,
               "y": 0,
+              "width": 200,
+              "height": 100,
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED"
+            },
+            {
+              "id": "jay-import:6",
+              "name": "div",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "height": 80,
               "layoutMode": "HORIZONTAL",
               "primaryAxisAlignItems": "MIN",
               "counterAxisAlignItems": "MIN",
               "layoutSizingHorizontal": "FILL",
-              "layoutAlign": "STRETCH"
+              "layoutSizingVertical": "FIXED"
             }
           ]
         }
@@ -164,11 +148,7 @@
       "fills": [
         {
           "type": "SOLID",
-          "color": {
-            "r": 1,
-            "g": 1,
-            "b": 1
-          }
+          "color": { "r": 1, "g": 1, "b": 1 }
         }
       ]
     }

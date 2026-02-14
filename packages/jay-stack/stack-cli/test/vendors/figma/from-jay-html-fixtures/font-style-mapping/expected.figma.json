@@ -30,6 +30,7 @@
           "primaryAxisAlignItems": "MIN",
           "counterAxisAlignItems": "MIN",
           "itemSpacing": 5,
+          "layoutSizingHorizontal": "FIXED",
           "children": [
             {
               "id": "jay-import:0",
@@ -40,12 +41,20 @@
               "width": 100,
               "height": 20,
               "characters": "Thin 100",
+              "fontWeight": 100,
               "fontName": {
                 "family": "Inter",
                 "style": "Thin"
               },
               "fontSize": 14,
-              "fontWeight": 100,
+              "textAlignVertical": "TOP",
+              "letterSpacing": {
+                "value": 0,
+                "unit": "PERCENT"
+              },
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -69,12 +78,20 @@
               "width": 100,
               "height": 20,
               "characters": "Extra Light 200",
+              "fontWeight": 200,
               "fontName": {
                 "family": "Inter",
                 "style": "Extra Light"
               },
               "fontSize": 14,
-              "fontWeight": 200,
+              "textAlignVertical": "TOP",
+              "letterSpacing": {
+                "value": 0,
+                "unit": "PERCENT"
+              },
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -98,12 +115,20 @@
               "width": 100,
               "height": 20,
               "characters": "Light 300",
+              "fontWeight": 300,
               "fontName": {
                 "family": "Inter",
                 "style": "Light"
               },
               "fontSize": 14,
-              "fontWeight": 300,
+              "textAlignVertical": "TOP",
+              "letterSpacing": {
+                "value": 0,
+                "unit": "PERCENT"
+              },
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -127,12 +152,20 @@
               "width": 100,
               "height": 20,
               "characters": "Regular 400",
+              "fontWeight": 400,
               "fontName": {
                 "family": "Inter",
                 "style": "Regular"
               },
               "fontSize": 14,
-              "fontWeight": 400,
+              "textAlignVertical": "TOP",
+              "letterSpacing": {
+                "value": 0,
+                "unit": "PERCENT"
+              },
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -156,12 +189,20 @@
               "width": 100,
               "height": 20,
               "characters": "Medium 500",
+              "fontWeight": 500,
               "fontName": {
                 "family": "Inter",
                 "style": "Medium"
               },
               "fontSize": 14,
-              "fontWeight": 500,
+              "textAlignVertical": "TOP",
+              "letterSpacing": {
+                "value": 0,
+                "unit": "PERCENT"
+              },
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -185,12 +226,20 @@
               "width": 100,
               "height": 20,
               "characters": "Semi Bold 600",
+              "fontWeight": 600,
               "fontName": {
                 "family": "Inter",
                 "style": "Semi Bold"
               },
               "fontSize": 14,
-              "fontWeight": 600,
+              "textAlignVertical": "TOP",
+              "letterSpacing": {
+                "value": 0,
+                "unit": "PERCENT"
+              },
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -214,12 +263,20 @@
               "width": 100,
               "height": 20,
               "characters": "Bold 700",
+              "fontWeight": 700,
               "fontName": {
                 "family": "Inter",
                 "style": "Bold"
               },
               "fontSize": 14,
-              "fontWeight": 700,
+              "textAlignVertical": "TOP",
+              "letterSpacing": {
+                "value": 0,
+                "unit": "PERCENT"
+              },
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -243,12 +300,20 @@
               "width": 100,
               "height": 20,
               "characters": "Extra Bold 800",
+              "fontWeight": 800,
               "fontName": {
                 "family": "Inter",
                 "style": "Extra Bold"
               },
               "fontSize": 14,
-              "fontWeight": 800,
+              "textAlignVertical": "TOP",
+              "letterSpacing": {
+                "value": 0,
+                "unit": "PERCENT"
+              },
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -272,12 +337,20 @@
               "width": 100,
               "height": 20,
               "characters": "Black 900",
+              "fontWeight": 900,
               "fontName": {
                 "family": "Inter",
                 "style": "Black"
               },
               "fontSize": 14,
-              "fontWeight": 900,
+              "textAlignVertical": "TOP",
+              "letterSpacing": {
+                "value": 0,
+                "unit": "PERCENT"
+              },
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -301,12 +374,20 @@
               "width": 100,
               "height": 20,
               "characters": "Bold Italic",
+              "fontWeight": 700,
               "fontName": {
                 "family": "Inter",
                 "style": "Bold Italic"
               },
               "fontSize": 14,
-              "fontWeight": 700,
+              "textAlignVertical": "TOP",
+              "letterSpacing": {
+                "value": 0,
+                "unit": "PERCENT"
+              },
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -330,12 +411,20 @@
               "width": 100,
               "height": 20,
               "characters": "Extra Bold Italic",
+              "fontWeight": 800,
               "fontName": {
                 "family": "Inter",
                 "style": "Extra Bold Italic"
               },
               "fontSize": 14,
-              "fontWeight": 800,
+              "textAlignVertical": "TOP",
+              "letterSpacing": {
+                "value": 0,
+                "unit": "PERCENT"
+              },
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",

@@ -31,6 +31,8 @@
           "primaryAxisAlignItems": "MIN",
           "counterAxisAlignItems": "MIN",
           "itemSpacing": 10,
+          "layoutSizingHorizontal": "FIXED",
+          "layoutSizingVertical": "FIXED",
           "children": [
             {
               "id": "jay-import:0",
@@ -40,7 +42,9 @@
               "y": 0,
               "width": 200,
               "height": 100,
-              "cornerRadius": 8
+              "cornerRadius": 8,
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED"
             },
             {
               "id": "jay-import:1",
@@ -50,7 +54,9 @@
               "y": 0,
               "width": 200,
               "height": 100,
-              "cornerRadius": 0
+              "cornerRadius": 0,
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED"
             },
             {
               "id": "jay-import:2",
@@ -60,7 +66,9 @@
               "y": 0,
               "width": 100,
               "height": 100,
-              "cornerRadius": 50
+              "cornerRadius": 50,
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED"
             },
             {
               "id": "jay-import:3",
@@ -73,7 +81,9 @@
               "topLeftRadius": 10,
               "topRightRadius": 20,
               "bottomLeftRadius": 5,
-              "bottomRightRadius": 15
+              "bottomRightRadius": 15,
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED"
             }
           ]
         }

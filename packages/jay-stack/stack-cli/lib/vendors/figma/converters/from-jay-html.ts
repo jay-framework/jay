@@ -17,8 +17,15 @@
  */
 
 import { HTMLElement, NodeType } from 'node-html-parser';
-import type { JayHtmlSourceFile } from '@jay-framework/compiler-jay-html';
+import type { JayHtmlSourceFile, JayHeadlessImports } from '@jay-framework/compiler-jay-html';
+import { ContractTagType, parseEnumValues } from '@jay-framework/compiler-jay-html';
+import type { Contract, ContractTag } from '@jay-framework/compiler-jay-html';
 import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
+
+// ─── Module-level context (set per conversion) ──────────────────────────────
+
+/** Headless imports with resolved contracts — set in convertJayHtmlToFigmaDoc */
+let currentHeadlessImports: JayHeadlessImports[] = [];
 
 // ─── Style Parsing ───────────────────────────────────────────────────────────
 
@@ -288,6 +295,11 @@ interface FigmaLayoutProps {
     fills?: any[];
     strokes?: any[];
     strokeWeight?: number;
+    strokeAlign?: 'INSIDE' | 'OUTSIDE' | 'CENTER';
+    strokeTopWeight?: number;
+    strokeRightWeight?: number;
+    strokeBottomWeight?: number;
+    strokeLeftWeight?: number;
     opacity?: number;
     clipsContent?: boolean;
     overflowDirection?: 'NONE' | 'HORIZONTAL' | 'VERTICAL' | 'BOTH';
@@ -396,7 +408,12 @@ function stylesToFigmaProps(styles: Map<string, string>): FigmaLayoutProps {
     if (border) {
         const borderParts = border.match(/^([\d.]+)px\s+\w+\s+(.*)/);
         if (borderParts) {
-            props.strokeWeight = parseFloat(borderParts[1]);
+            const w = parseFloat(borderParts[1]);
+            props.strokeWeight = w;
+            props.strokeTopWeight = w;
+            props.strokeRightWeight = w;
+            props.strokeBottomWeight = w;
+            props.strokeLeftWeight = w;
             const strokeFill = parseColorToFill(borderParts[2]);
             if (strokeFill) {
                 props.strokes = [strokeFill];
@@ -415,14 +432,28 @@ function stylesToFigmaProps(styles: Map<string, string>): FigmaLayoutProps {
         const parts = borderWidth.trim().split(/\s+/);
         if (parts.length === 1) {
             const w = parsePx(parts[0]);
-            if (w !== undefined) props.strokeWeight = w;
+            if (w !== undefined) {
+                props.strokeWeight = w;
+                props.strokeTopWeight = w;
+                props.strokeRightWeight = w;
+                props.strokeBottomWeight = w;
+                props.strokeLeftWeight = w;
+            }
         } else if (parts.length === 4) {
-            // Per-side stroke weights — use the max as the uniform weight
-            // (Figma deserializer only uses strokeWeight for uniform borders)
-            const weights = parts.map((p) => parsePx(p) ?? 0);
-            const maxWeight = Math.max(...weights);
+            // Per-side stroke weights: top right bottom left
+            const [top, right, bottom, left] = parts.map((p) => parsePx(p) ?? 0);
+            props.strokeTopWeight = top;
+            props.strokeRightWeight = right;
+            props.strokeBottomWeight = bottom;
+            props.strokeLeftWeight = left;
+            const maxWeight = Math.max(top, right, bottom, left);
             if (maxWeight > 0) props.strokeWeight = maxWeight;
         }
+    }
+
+    // strokeAlign: CSS borders are always inside the element box
+    if (props.strokes && props.strokes.length > 0) {
+        props.strokeAlign = 'INSIDE';
     }
 
     // Opacity
@@ -455,7 +486,8 @@ function stylesToFigmaProps(styles: Map<string, string>): FigmaLayoutProps {
         props.clipsContent = true;
     }
 
-    // Width/height sizing — handle FILL, HUG, and explicit px
+    // Width/height sizing — handle FILL, HUG, FIXED
+    // Priority: FILL (100%, flex-grow) > HUG (fit-content) > FIXED (explicit px)
     const widthStr = styles.get('width');
     const heightStr = styles.get('height');
     if (widthStr === '100%') {
@@ -488,6 +520,16 @@ function stylesToFigmaProps(styles: Map<string, string>): FigmaLayoutProps {
         if (!props.layoutSizingHorizontal && !props.layoutSizingVertical) {
             props.layoutSizingHorizontal = 'FILL';
         }
+    }
+
+    // FIXED sizing: when explicit pixel dimensions are set and sizing isn't already FILL or HUG.
+    // In Figma, FIXED means "use the explicit width/height value" — this is the default for
+    // elements with pixel dimensions inside auto-layout parents.
+    if (props.width !== undefined && !props.layoutSizingHorizontal) {
+        props.layoutSizingHorizontal = 'FIXED';
+    }
+    if (props.height !== undefined && !props.layoutSizingVertical) {
+        props.layoutSizingVertical = 'FIXED';
     }
 
     // align-self → layoutAlign
@@ -769,6 +811,212 @@ function generateNodeId(): string {
     return `jay-import:${nodeIdCounter++}`;
 }
 
+// ─── Variant / Component Set Detection ───────────────────────────────────────
+
+interface ParsedIfCondition {
+    tagName: string;  // e.g. "status"
+    value: string;    // e.g. "ACTIVE"
+}
+
+/**
+ * Parses a simple enum `if` condition like "status == ACTIVE" into { tagName, value }.
+ * Returns null if the condition is not a simple enum equality check.
+ */
+function parseIfCondition(ifExpr: string): ParsedIfCondition | null {
+    const match = ifExpr.trim().match(/^(\w+)\s*==\s*(\w+)$/);
+    if (!match) return null;
+    return { tagName: match[1], value: match[2] };
+}
+
+interface VariantGroup {
+    tagName: string;           // The tag being switched on (e.g. "status")
+    propertyName: string;      // Figma property name (capitalized tag, e.g. "Status")
+    enumValues: string[];      // All enum values from contract (e.g. ["ACTIVE", "INACTIVE"])
+    elements: HTMLElement[];   // The sibling elements in this group
+    elementValues: string[];   // The value each element maps to
+}
+
+/**
+ * Looks up a tag in the headless imports' contracts and returns it if it's a variant tag.
+ */
+function findVariantTag(tagName: string): { tag: ContractTag; contract: Contract } | null {
+    for (const imp of currentHeadlessImports) {
+        if (!imp.contract) continue;
+        for (const tag of imp.contract.tags) {
+            if (tag.tag === tagName && tag.type.includes(ContractTagType.variant)) {
+                return { tag, contract: imp.contract };
+            }
+        }
+    }
+    return null;
+}
+
+/**
+ * Extract enum values from a ContractTag's dataType string like "enum (ACTIVE | INACTIVE)".
+ */
+function extractEnumValuesFromTag(tag: ContractTag): string[] {
+    if (!tag.dataType) return [];
+    // dataType is a JayType, which for enums is a string like "enum (ACTIVE | INACTIVE)"
+    const dtStr = typeof tag.dataType === 'string' ? tag.dataType : String(tag.dataType);
+    try {
+        return parseEnumValues(dtStr);
+    } catch {
+        // Fallback: manual parse "enum (A | B | C)"
+        const match = dtStr.match(/^enum\s*\(([^)]+)\)$/);
+        if (match) {
+            return match[1].split('|').map((v) => v.trim());
+        }
+        return [];
+    }
+}
+
+/**
+ * Scans a list of sibling child elements and detects variant groups:
+ * consecutive siblings that have `if="tag == VALUE"` with the same tag,
+ * where that tag is a `variant` type in the contract.
+ *
+ * Returns a map from the index of the FIRST element in each group to the VariantGroup.
+ * Elements that are part of a group (but not the first) are in `consumedIndices`.
+ */
+function detectVariantGroups(children: HTMLElement[]): {
+    groups: Map<number, VariantGroup>;
+    consumedIndices: Set<number>;
+} {
+    const groups = new Map<number, VariantGroup>();
+    const consumedIndices = new Set<number>();
+
+    let i = 0;
+    while (i < children.length) {
+        const child = children[i];
+        const ifAttr = child.getAttribute?.('if');
+        if (!ifAttr) { i++; continue; }
+
+        const parsed = parseIfCondition(ifAttr);
+        if (!parsed) { i++; continue; }
+
+        // Check if this tag is a variant in the contract
+        const variantInfo = findVariantTag(parsed.tagName);
+        if (!variantInfo) { i++; continue; }
+
+        // Found a variant element — scan ahead for more siblings with the same tag
+        const groupElements: HTMLElement[] = [child];
+        const groupValues: string[] = [parsed.value];
+        let j = i + 1;
+        while (j < children.length) {
+            const sibling = children[j];
+            const siblingIf = sibling.getAttribute?.('if');
+            if (!siblingIf) break;
+            const siblingParsed = parseIfCondition(siblingIf);
+            if (!siblingParsed || siblingParsed.tagName !== parsed.tagName) break;
+            groupElements.push(sibling);
+            groupValues.push(siblingParsed.value);
+            j++;
+        }
+
+        // Only form a group if we have 2+ siblings (a single if is not a variant set)
+        if (groupElements.length >= 2) {
+            const enumValues = extractEnumValuesFromTag(variantInfo.tag);
+            const group: VariantGroup = {
+                tagName: parsed.tagName,
+                propertyName: parsed.tagName, // Use the tag name as-is (lowercase)
+                enumValues: enumValues.length > 0 ? enumValues : groupValues,
+                elements: groupElements,
+                elementValues: groupValues,
+            };
+            groups.set(i, group);
+            for (let k = i; k < j; k++) {
+                consumedIndices.add(k);
+            }
+        }
+
+        i = j;
+    }
+
+    return { groups, consumedIndices };
+}
+
+/**
+ * Converts a variant group into COMPONENT_SET + COMPONENT children, plus an INSTANCE node.
+ * Returns the array of FigmaVendorDocument nodes to insert (component set + instance).
+ */
+function convertVariantGroup(group: VariantGroup): FigmaVendorDocument[] {
+    const componentSetId = generateNodeId();
+
+    // Convert each element into a COMPONENT node
+    const components: FigmaVendorDocument[] = group.elements.map((el, idx) => {
+        const variantValue = group.elementValues[idx];
+        // Convert the element normally first, then override type and add variant props
+        const converted = convertElement(el);
+        if (!converted) {
+            // Fallback: empty component
+            return {
+                id: generateNodeId(),
+                name: `${group.propertyName}=${variantValue}`,
+                type: 'COMPONENT',
+                x: 0,
+                y: 0,
+                width: 100,
+                height: 100,
+                variantProperties: { [group.propertyName]: variantValue },
+            } as FigmaVendorDocument;
+        }
+
+        // Override to COMPONENT type — remove `if` from pluginData since it's now structural
+        const cleanPluginData = converted.pluginData
+            ? (() => {
+                  const pd = { ...converted.pluginData };
+                  delete pd['if'];
+                  return Object.keys(pd).length > 0 ? pd : undefined;
+              })()
+            : undefined;
+
+        return {
+            ...converted,
+            name: `${group.propertyName}=${variantValue}`,
+            type: 'COMPONENT',
+            variantProperties: { [group.propertyName]: variantValue },
+            pluginData: cleanPluginData,
+        } as FigmaVendorDocument;
+    });
+
+    // Build componentPropertyDefinitions (placed on the INSTANCE)
+    const componentPropertyDefinitions: {
+        [propertyName: string]: {
+            type: 'VARIANT' | 'BOOLEAN' | 'TEXT' | 'INSTANCE_SWAP';
+            defaultValue: string;
+            variantOptions: string[];
+        };
+    } = {
+        [group.propertyName]: {
+            type: 'VARIANT' as const,
+            defaultValue: group.enumValues[0] || group.elementValues[0],
+            variantOptions: group.enumValues,
+        },
+    };
+
+    const componentSet: FigmaVendorDocument = {
+        id: componentSetId,
+        name: group.propertyName,
+        type: 'COMPONENT_SET',
+        x: 0,
+        y: 0,
+        children: components,
+    };
+
+    // Create an INSTANCE that references the component set
+    const instance: FigmaVendorDocument = {
+        id: generateNodeId(),
+        name: group.propertyName,
+        type: 'INSTANCE',
+        x: 0,
+        y: 0,
+        componentSetId,
+        componentPropertyDefinitions,
+    };
+
+    return [componentSet, instance];
+}
+
 /**
  * Checks if an HTML element is effectively a text-like element
  * (a leaf element with only text content, or a known text-like semantic element)
@@ -795,6 +1043,35 @@ function isTextElement(element: HTMLElement): boolean {
 }
 
 /**
+ * Builds Figma text default properties that should always be present on TEXT nodes.
+ * Only fills in defaults when the parsed text props don't already set them.
+ */
+function buildTextDefaults(textProps: FigmaTextProps): Record<string, unknown> {
+    const defaults: Record<string, unknown> = {};
+
+    // textAlignVertical — always "TOP" (Figma's default)
+    defaults.textAlignVertical = 'TOP';
+
+    // letterSpacing — default to 0% when not explicitly set from CSS
+    if (!textProps.letterSpacing) {
+        defaults.letterSpacing = { value: 0, unit: 'PERCENT' };
+    }
+
+    // textCase — default to "ORIGINAL" when not set via CSS text-transform
+    if (!textProps.textCase) {
+        defaults.textCase = 'ORIGINAL';
+    }
+
+    // textTruncation — always "DISABLED" (no CSS equivalent in our export)
+    defaults.textTruncation = 'DISABLED';
+
+    // textAutoResize — always "WIDTH_AND_HEIGHT" (Figma's default for text)
+    defaults.textAutoResize = 'WIDTH_AND_HEIGHT';
+
+    return defaults;
+}
+
+/**
  * Converts a text HTML element to a FigmaVendorDocument TEXT node
  */
 function convertTextElement(element: HTMLElement): FigmaVendorDocument {
@@ -808,6 +1085,9 @@ function convertTextElement(element: HTMLElement): FigmaVendorDocument {
     const colorStr = styles.get('color');
     const textFill = colorStr ? parseColorToFill(colorStr) : undefined;
 
+    // Apply Figma text defaults
+    const textDefaults = buildTextDefaults(textProps);
+
     return {
         id: generateNodeId(),
         name: textContent.substring(0, 30) || 'Text',
@@ -818,6 +1098,7 @@ function convertTextElement(element: HTMLElement): FigmaVendorDocument {
         height: layoutProps.height ?? 20,
         characters: textContent,
         ...textProps,
+        ...textDefaults,
         fills: textFill ? [textFill] : undefined,
         opacity: layoutProps.opacity,
         rotation: layoutProps.rotation,
@@ -940,6 +1221,9 @@ function tryCollapseTextWrapper(element: HTMLElement): FigmaVendorDocument | nul
     const colorStr = innerStyles.get('color');
     const textFill = colorStr ? parseColorToFill(colorStr) : undefined;
 
+    // Apply Figma text defaults
+    const textDefaults = buildTextDefaults(textProps);
+
     return {
         id: pluginData?.['originalFigmaId'] || generateNodeId(),
         name: textContent || 'Text',
@@ -950,6 +1234,7 @@ function tryCollapseTextWrapper(element: HTMLElement): FigmaVendorDocument | nul
         height: outerLayoutProps.height ?? 20,
         characters: textContent,
         ...textProps,
+        ...textDefaults,
         fills: textFill ? [textFill] : undefined,
         pluginData: Object.keys(pluginData).length > 0 ? pluginData : undefined,
     } as FigmaVendorDocument;
@@ -1043,10 +1328,42 @@ function convertFrameElement(element: HTMLElement): FigmaVendorDocument {
         pluginData['attributeBindings'] = JSON.stringify(attrBindings);
     }
 
-    // Convert children
+    // Convert children — with variant group detection
     const children: FigmaVendorDocument[] = [];
-    for (const child of element.childNodes) {
+
+    // Collect element children for variant group analysis
+    const elementChildren: HTMLElement[] = [];
+    const allChildNodes = element.childNodes;
+    for (const child of allChildNodes) {
         if (child.nodeType === NodeType.ELEMENT_NODE) {
+            elementChildren.push(child as HTMLElement);
+        }
+    }
+
+    // Detect variant groups among element children
+    const { groups: variantGroups, consumedIndices } = detectVariantGroups(elementChildren);
+
+    // Process all child nodes, inserting variant groups where detected
+    let elementIdx = 0;
+    for (const child of allChildNodes) {
+        if (child.nodeType === NodeType.ELEMENT_NODE) {
+            const currentIdx = elementIdx;
+            elementIdx++;
+
+            // If this element starts a variant group, emit the group
+            if (variantGroups.has(currentIdx)) {
+                const group = variantGroups.get(currentIdx)!;
+                const groupNodes = convertVariantGroup(group);
+                children.push(...groupNodes);
+                continue;
+            }
+
+            // If this element is consumed by a variant group (not the first), skip it
+            if (consumedIndices.has(currentIdx)) {
+                continue;
+            }
+
+            // Normal element conversion
             const converted = convertElement(child as HTMLElement);
             if (converted) children.push(converted);
         } else if (child.nodeType === NodeType.TEXT_NODE) {
@@ -1092,6 +1409,11 @@ function convertFrameElement(element: HTMLElement): FigmaVendorDocument {
         fills: layoutProps.fills,
         strokes: layoutProps.strokes,
         strokeWeight: layoutProps.strokeWeight,
+        strokeAlign: layoutProps.strokeAlign,
+        strokeTopWeight: layoutProps.strokeTopWeight,
+        strokeRightWeight: layoutProps.strokeRightWeight,
+        strokeBottomWeight: layoutProps.strokeBottomWeight,
+        strokeLeftWeight: layoutProps.strokeLeftWeight,
         cornerRadius: layoutProps.cornerRadius,
         topLeftRadius: layoutProps.topLeftRadius,
         topRightRadius: layoutProps.topRightRadius,
@@ -1145,18 +1467,38 @@ export function convertJayHtmlToFigmaDoc(
     parsedJayHtml: JayHtmlSourceFile,
     pageUrl: string,
 ): FigmaVendorDocument {
-    // Reset ID counter for each conversion
+    // Reset ID counter and set module-level context for each conversion
     nodeIdCounter = 0;
+    currentHeadlessImports = parsedJayHtml.headlessImports || [];
 
     const { body, headlessImports } = parsedJayHtml;
 
-    // Convert body children into FigmaVendorDocument nodes
-    const bodyChildren: FigmaVendorDocument[] = [];
+    // Collect body element children for variant detection at the top level
+    const bodyElementChildren: HTMLElement[] = [];
     for (const child of body.childNodes) {
         if (child.nodeType === NodeType.ELEMENT_NODE) {
-            const converted = convertElement(child as HTMLElement);
-            if (converted) bodyChildren.push(converted);
+            bodyElementChildren.push(child as HTMLElement);
         }
+    }
+
+    // Detect variant groups among top-level body children
+    const { groups: bodyVariantGroups, consumedIndices: bodyConsumed } =
+        detectVariantGroups(bodyElementChildren);
+
+    // Convert body children into FigmaVendorDocument nodes
+    const bodyChildren: FigmaVendorDocument[] = [];
+    for (let i = 0; i < bodyElementChildren.length; i++) {
+        if (bodyVariantGroups.has(i)) {
+            const group = bodyVariantGroups.get(i)!;
+            const groupNodes = convertVariantGroup(group);
+            bodyChildren.push(...groupNodes);
+            continue;
+        }
+        if (bodyConsumed.has(i)) {
+            continue;
+        }
+        const converted = convertElement(bodyElementChildren[i]);
+        if (converted) bodyChildren.push(converted);
     }
 
     // Determine page name from the source file metadata

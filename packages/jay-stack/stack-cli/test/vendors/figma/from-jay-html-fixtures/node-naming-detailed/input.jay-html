@@ -1,0 +1,24 @@
+<html>
+<head>
+  <script type="application/jay-data">
+    data:
+  </script>
+</head>
+<body>
+<div style="width: 600px; display: flex; flex-direction: column;">
+  <!-- Priority 1: data-name wins over all others -->
+  <div data-figma-id="100:1" data-name="My Custom Name" aria-label="Should Not Use This" style="width: 600px; height: 40px;"></div>
+  <!-- Priority 2: aria-label when no data-name -->
+  <div data-figma-id="100:2" aria-label="Accessible Label" style="width: 600px; height: 40px;"></div>
+  <!-- Priority 3: data-figma-type capitalized when no data-name or aria-label -->
+  <div data-figma-id="100:3" data-figma-type="frame" style="width: 600px; height: 40px;"></div>
+  <!-- Priority 4: semantic HTML tag name (nav, header, footer, etc.) -->
+  <header style="width: 600px; height: 40px;"></header>
+  <footer style="width: 600px; height: 40px;"></footer>
+  <!-- Forward converter id pattern: sanitized name-figmaId -->
+  <div id="hero-section-424-1" style="width: 600px; height: 40px;"></div>
+  <!-- Bare div with no naming hints → defaults to tag name -->
+  <div style="width: 600px; height: 40px;"></div>
+</div>
+</body>
+</html>

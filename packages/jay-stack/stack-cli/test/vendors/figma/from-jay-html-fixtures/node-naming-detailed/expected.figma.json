@@ -1,5 +1,5 @@
 {
-  "id": "jay-import:3",
+  "id": "jay-import:6",
   "name": "Jay Page: Page",
   "type": "SECTION",
   "x": 0,
@@ -8,7 +8,7 @@
   "height": 900,
   "children": [
     {
-      "id": "jay-import:2",
+      "id": "jay-import:5",
       "name": "Content",
       "type": "FRAME",
       "x": 0,
@@ -20,7 +20,7 @@
       "counterAxisAlignItems": "MIN",
       "children": [
         {
-          "id": "jay-import:1",
+          "id": "jay-import:4",
           "name": "div",
           "type": "FRAME",
           "x": 0,
@@ -32,22 +32,8 @@
           "layoutSizingHorizontal": "FIXED",
           "children": [
             {
-              "id": "400:1",
-              "name": "Header Section",
-              "type": "FRAME",
-              "x": 0,
-              "y": 0,
-              "width": 600,
-              "height": 60,
-              "layoutSizingHorizontal": "FIXED",
-              "layoutSizingVertical": "FIXED",
-              "pluginData": {
-                "originalFigmaId": "400:1"
-              }
-            },
-            {
-              "id": "400:2",
-              "name": "Navigation Menu",
+              "id": "100:1",
+              "name": "My Custom Name",
               "type": "FRAME",
               "x": 0,
               "y": 0,
@@ -56,52 +42,87 @@
               "layoutSizingHorizontal": "FIXED",
               "layoutSizingVertical": "FIXED",
               "pluginData": {
-                "originalFigmaId": "400:2"
+                "originalFigmaId": "100:1"
               }
             },
             {
-              "id": "400:3",
+              "id": "100:2",
+              "name": "Accessible Label",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 600,
+              "height": 40,
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED",
+              "pluginData": {
+                "originalFigmaId": "100:2"
+              }
+            },
+            {
+              "id": "100:3",
               "name": "Frame",
               "type": "FRAME",
               "x": 0,
               "y": 0,
               "width": 600,
-              "height": 100,
+              "height": 40,
               "layoutSizingHorizontal": "FIXED",
               "layoutSizingVertical": "FIXED",
               "pluginData": {
-                "originalFigmaId": "400:3",
+                "originalFigmaId": "100:3",
                 "originalFigmaType": "frame"
               }
             },
             {
-              "id": "400:4",
-              "name": "Group",
-              "type": "GROUP",
-              "x": 0,
-              "y": 0,
-              "width": 600,
-              "height": 50,
-              "layoutSizingHorizontal": "FIXED",
-              "layoutSizingVertical": "FIXED",
-              "pluginData": {
-                "originalFigmaId": "400:4",
-                "originalFigmaType": "group"
-              }
-            },
-            {
               "id": "jay-import:0",
-              "name": "nav",
+              "name": "header",
               "type": "FRAME",
               "x": 0,
               "y": 0,
               "width": 600,
-              "height": 30,
+              "height": 40,
               "layoutSizingHorizontal": "FIXED",
               "layoutSizingVertical": "FIXED",
               "pluginData": {
-                "semanticHtml": "nav"
+                "semanticHtml": "header"
               }
+            },
+            {
+              "id": "jay-import:1",
+              "name": "footer",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 600,
+              "height": 40,
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED",
+              "pluginData": {
+                "semanticHtml": "footer"
+              }
+            },
+            {
+              "id": "jay-import:2",
+              "name": "div",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 600,
+              "height": 40,
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED"
+            },
+            {
+              "id": "jay-import:3",
+              "name": "div",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 600,
+              "height": 40,
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED"
             }
           ]
         }

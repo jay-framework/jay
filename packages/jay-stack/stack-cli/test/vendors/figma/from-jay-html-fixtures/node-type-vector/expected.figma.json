@@ -31,6 +31,8 @@
           "primaryAxisAlignItems": "MIN",
           "counterAxisAlignItems": "MIN",
           "itemSpacing": 20,
+          "layoutSizingHorizontal": "FIXED",
+          "layoutSizingVertical": "FIXED",
           "children": [
             {
               "id": "100:1",

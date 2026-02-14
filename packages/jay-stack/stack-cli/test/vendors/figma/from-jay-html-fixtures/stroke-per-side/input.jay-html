@@ -1,0 +1,21 @@
+<html>
+<head>
+  <script type="application/jay-data">
+    data:
+  </script>
+</head>
+<body>
+<div style="width: 600px; height: 400px; display: flex; flex-direction: column; gap: 10px;">
+  <!-- Uniform border: all sides equal -->
+  <div style="width: 200px; height: 50px; border-color: rgb(200, 200, 200); border-width: 1px; border-style: solid;"></div>
+  <!-- Bottom-only border via multi-value border-width (0 0 1px 0) -->
+  <div style="width: 200px; height: 50px; border-color: rgb(0, 0, 0); border-width: 0px 0px 1px 0px; border-style: solid;"></div>
+  <!-- Top-only border via multi-value border-width (2px 0 0 0) -->
+  <div style="width: 200px; height: 50px; border-color: rgb(255, 0, 0); border-width: 2px 0px 0px 0px; border-style: solid;"></div>
+  <!-- Mixed per-side border widths (1px 2px 3px 4px = top right bottom left) -->
+  <div style="width: 200px; height: 50px; border-color: rgb(0, 100, 200); border-width: 1px 2px 3px 4px; border-style: solid;"></div>
+  <!-- Shorthand border (uniform) -->
+  <div style="width: 200px; height: 50px; border: 2px solid rgb(0, 0, 0);"></div>
+</div>
+</body>
+</html>

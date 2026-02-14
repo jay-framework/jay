@@ -1,5 +1,5 @@
 {
-  "id": "jay-import:5",
+  "id": "jay-import:7",
   "name": "Jay Page: Page",
   "type": "SECTION",
   "x": 0,
@@ -8,7 +8,7 @@
   "height": 900,
   "children": [
     {
-      "id": "jay-import:4",
+      "id": "jay-import:6",
       "name": "Content",
       "type": "FRAME",
       "x": 0,
@@ -20,7 +20,7 @@
       "counterAxisAlignItems": "MIN",
       "children": [
         {
-          "id": "jay-import:3",
+          "id": "jay-import:5",
           "name": "div",
           "type": "FRAME",
           "x": 0,
@@ -46,9 +46,9 @@
                 {
                   "type": "SOLID",
                   "color": {
-                    "r": 0.9294117647058824,
-                    "g": 0.9294117647058824,
-                    "b": 0.9294117647058824
+                    "r": 0.7843137254901961,
+                    "g": 0.7843137254901961,
+                    "b": 0.7843137254901961
                   }
                 }
               ],
@@ -76,21 +76,74 @@
                     "r": 0,
                     "g": 0,
                     "b": 0
-                  },
-                  "opacity": 0.5
+                  }
                 }
               ],
-              "strokeWeight": 2,
+              "strokeWeight": 1,
               "strokeAlign": "INSIDE",
-              "strokeTopWeight": 2,
-              "strokeRightWeight": 2,
-              "strokeBottomWeight": 2,
-              "strokeLeftWeight": 2,
+              "strokeTopWeight": 0,
+              "strokeRightWeight": 0,
+              "strokeBottomWeight": 1,
+              "strokeLeftWeight": 0,
               "layoutSizingHorizontal": "FIXED",
               "layoutSizingVertical": "FIXED"
             },
             {
               "id": "jay-import:2",
+              "name": "div",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 200,
+              "height": 50,
+              "strokes": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 1,
+                    "g": 0,
+                    "b": 0
+                  }
+                }
+              ],
+              "strokeWeight": 2,
+              "strokeAlign": "INSIDE",
+              "strokeTopWeight": 2,
+              "strokeRightWeight": 0,
+              "strokeBottomWeight": 0,
+              "strokeLeftWeight": 0,
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED"
+            },
+            {
+              "id": "jay-import:3",
+              "name": "div",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "width": 200,
+              "height": 50,
+              "strokes": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0,
+                    "g": 0.39215686274509803,
+                    "b": 0.7843137254901961
+                  }
+                }
+              ],
+              "strokeWeight": 4,
+              "strokeAlign": "INSIDE",
+              "strokeTopWeight": 1,
+              "strokeRightWeight": 2,
+              "strokeBottomWeight": 3,
+              "strokeLeftWeight": 4,
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED"
+            },
+            {
+              "id": "jay-import:4",
               "name": "div",
               "type": "FRAME",
               "x": 0,
@@ -107,12 +160,12 @@
                   }
                 }
               ],
-              "strokeWeight": 1,
+              "strokeWeight": 2,
               "strokeAlign": "INSIDE",
-              "strokeTopWeight": 1,
-              "strokeRightWeight": 1,
-              "strokeBottomWeight": 1,
-              "strokeLeftWeight": 1,
+              "strokeTopWeight": 2,
+              "strokeRightWeight": 2,
+              "strokeBottomWeight": 2,
+              "strokeLeftWeight": 2,
               "layoutSizingHorizontal": "FIXED",
               "layoutSizingVertical": "FIXED"
             }

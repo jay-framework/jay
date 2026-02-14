@@ -30,6 +30,7 @@
           "primaryAxisAlignItems": "MIN",
           "counterAxisAlignItems": "MIN",
           "itemSpacing": 10,
+          "layoutSizingHorizontal": "FIXED",
           "children": [
             {
               "id": "jay-import:0",
@@ -40,12 +41,20 @@
               "width": 100,
               "height": 20,
               "characters": "Bold Heading",
+              "fontWeight": 700,
               "fontName": {
                 "family": "Inter",
                 "style": "Bold"
               },
               "fontSize": 24,
-              "fontWeight": 700,
+              "textAlignVertical": "TOP",
+              "letterSpacing": {
+                "value": 0,
+                "unit": "PERCENT"
+              },
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -69,12 +78,12 @@
               "width": 100,
               "height": 20,
               "characters": "Body text with spacing",
+              "fontWeight": 400,
               "fontName": {
                 "family": "Inter",
                 "style": "Regular"
               },
               "fontSize": 14,
-              "fontWeight": 400,
               "textAlignHorizontal": "CENTER",
               "letterSpacing": {
                 "value": 0.5,
@@ -84,6 +93,10 @@
                 "value": 20,
                 "unit": "PIXELS"
               },
+              "textAlignVertical": "TOP",
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -107,13 +120,21 @@
               "width": 100,
               "height": 20,
               "characters": "Underlined link",
+              "fontWeight": 500,
               "fontName": {
                 "family": "Inter",
                 "style": "Medium"
               },
               "fontSize": 16,
-              "fontWeight": 500,
               "textDecoration": "UNDERLINE",
+              "textAlignVertical": "TOP",
+              "letterSpacing": {
+                "value": 0,
+                "unit": "PERCENT"
+              },
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -137,13 +158,21 @@
               "width": 100,
               "height": 20,
               "characters": "Strikethrough price",
+              "fontWeight": 400,
               "fontName": {
                 "family": "Inter",
                 "style": "Regular"
               },
               "fontSize": 16,
-              "fontWeight": 400,
               "textDecoration": "STRIKETHROUGH",
+              "textAlignVertical": "TOP",
+              "letterSpacing": {
+                "value": 0,
+                "unit": "PERCENT"
+              },
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -167,13 +196,20 @@
               "width": 100,
               "height": 20,
               "characters": "Uppercase label",
+              "fontWeight": 400,
               "fontName": {
                 "family": "Inter",
                 "style": "Regular"
               },
               "fontSize": 12,
-              "fontWeight": 400,
               "textCase": "UPPER",
+              "textAlignVertical": "TOP",
+              "letterSpacing": {
+                "value": 0,
+                "unit": "PERCENT"
+              },
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -197,15 +233,23 @@
               "width": 100,
               "height": 20,
               "characters": "Normal line height",
+              "fontWeight": 400,
               "fontName": {
                 "family": "Inter",
                 "style": "Regular"
               },
               "fontSize": 14,
-              "fontWeight": 400,
               "lineHeight": {
                 "unit": "AUTO"
               },
+              "textAlignVertical": "TOP",
+              "letterSpacing": {
+                "value": 0,
+                "unit": "PERCENT"
+              },
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -229,16 +273,24 @@
               "width": 100,
               "height": 20,
               "characters": "Percent line height",
+              "fontWeight": 400,
               "fontName": {
                 "family": "Inter",
                 "style": "Regular"
               },
               "fontSize": 14,
-              "fontWeight": 400,
               "lineHeight": {
                 "value": 150,
                 "unit": "PERCENT"
               },
+              "textAlignVertical": "TOP",
+              "letterSpacing": {
+                "value": 0,
+                "unit": "PERCENT"
+              },
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",

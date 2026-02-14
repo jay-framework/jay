@@ -31,6 +31,8 @@
           "primaryAxisAlignItems": "MIN",
           "counterAxisAlignItems": "MIN",
           "itemSpacing": 20,
+          "layoutSizingHorizontal": "FIXED",
+          "layoutSizingVertical": "FIXED",
           "children": [
             {
               "id": "200:1",
@@ -48,6 +50,8 @@
                 }
               ],
               "cornerRadius": 8,
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED",
               "pluginData": {
                 "originalFigmaId": "200:1",
                 "semanticHtml": "img",
@@ -63,6 +67,8 @@
               "width": 100,
               "height": 100,
               "fills": [],
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED",
               "pluginData": {
                 "originalFigmaId": "200:2",
                 "semanticHtml": "img",

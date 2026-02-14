@@ -1,0 +1,19 @@
+<html>
+<head>
+  <script type="application/jay-data">
+    data:
+  </script>
+</head>
+<body>
+<div style="width: 600px; display: flex; flex-direction: column; gap: 10px;">
+  <!-- Basic text with no special text styling — should still get Figma defaults -->
+  <p style="font-size: 16px; color: rgb(0, 0, 0);">Basic text</p>
+  <!-- Text with explicit letter-spacing — should use the explicit value, not the default -->
+  <p style="font-size: 14px; letter-spacing: 2px; color: rgb(50, 50, 50);">Spaced text</p>
+  <!-- Collapsed text wrapper pattern — should also get defaults -->
+  <div data-figma-id="500:1" data-figma-type="frame" style="width: 200px; height: 24px; font-family: 'Inter', sans-serif; font-size: 20px; font-weight: 700; color: rgb(0, 0, 0); display: flex; flex-direction: column;">
+    <div style="font-family: 'Inter', sans-serif; font-size: 20px; font-weight: 700; color: rgb(0, 0, 0);">Wrapped text</div>
+  </div>
+</div>
+</body>
+</html>
