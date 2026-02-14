@@ -8,12 +8,14 @@ plain FRAME with the condition stored in `pluginData['if']`. It does not produce
 sets, component variants, or instances.
 
 In Figma, variant-driven UI is modeled as:
+
 - **COMPONENT_SET**: A container that groups variant components
 - **COMPONENT**: One variant — named `PropertyName=Value` (e.g., `Media Type=IMAGE`)
 - **INSTANCE**: A usage of a component set, bound to a specific variant
 
 The forward conversion (Figma → jay-html, in `converters/variants.ts`) already converts these
 into `if` conditions:
+
 ```html
 <div data-figma-type="variant-container" style="...">
   <div if="path.tag == VALUE_A"><!-- variant A content --></div>
@@ -96,11 +98,13 @@ the forward path uses human-readable names that may differ from tag names.
 ### Q3: What Figma structure should the converter produce?
 
 The Figma plugin deserializer (`deserializer.ts`) creates component sets by:
+
 1. Creating each COMPONENT child
 2. Calling `figma.combineAsVariants()` to produce a COMPONENT_SET
 3. Creating an INSTANCE of the component set
 
 **Answer**: The converter should produce a structure the deserializer can consume:
+
 - A **COMPONENT_SET** node containing COMPONENT children (one per variant permutation)
 - An **INSTANCE** node that references the COMPONENT_SET and has `componentPropertyDefinitions`
   and `variants` array (matching the serialization format from `instanceNode.ts`)
@@ -164,6 +168,7 @@ Analyze the HTML DOM before converting. Identify variant groups, annotate them, 
 converter use these annotations to produce proper Figma structures.
 
 **Pros**:
+
 - The HTML DOM has richer context (tag names, attributes, parent-child relationships are explicit)
 - Contract resolution is already done at this point (from `JayHtmlSourceFile`)
 - Grouping sibling `if` elements is natural in the DOM
@@ -171,6 +176,7 @@ converter use these annotations to produce proper Figma structures.
 - The main converter sees pre-analyzed groups and directly emits the right Figma structure
 
 **Cons**:
+
 - Requires passing variant analysis results to the converter (additional context parameter)
 - Two-phase approach adds some structural complexity
 
@@ -181,10 +187,12 @@ sibling FRAMEs with related `if` conditions in pluginData, and restructure them 
 COMPONENT_SET/COMPONENT/INSTANCE.
 
 **Pros**:
+
 - Doesn't change the existing converter at all initially
 - Incrementally addable
 
 **Cons**:
+
 - We'd be creating FRAME nodes just to tear them down and restructure into COMPONENT/INSTANCE
 - The `if` conditions are now just strings in pluginData — we'd need to re-parse them
 - Restructuring a tree after creation is messy (moving children, recomputing parent references)
@@ -197,11 +205,13 @@ Detect variant patterns during the main conversion walk. When processing childre
 group sibling `if` elements and emit COMPONENT_SET/COMPONENT/INSTANCE structures directly.
 
 **Pros**:
+
 - Single pass, clean output
 - Natural place for the decision (while processing children, we see all siblings)
 - Has access to both DOM context and contract data simultaneously
 
 **Cons**:
+
 - Makes the main converter more complex
 - Harder to test variant detection in isolation
 - Mixes analysis and conversion concerns
@@ -274,6 +284,7 @@ This handles jay-html files written without a contract or with an incomplete con
 ### Example 1: Enum variant (category page — stock status)
 
 **Jay-HTML** (no `data-figma-type`):
+
 ```html
 <div if="inventory.availabilityStatus == IN_STOCK">
   <span>In Stock</span>
@@ -284,6 +295,7 @@ This handles jay-html files written without a contract or with an incomplete con
 ```
 
 **Contract**:
+
 ```yaml
 - tag: availabilityStatus
   type: variant
@@ -291,6 +303,7 @@ This handles jay-html files written without a contract or with an incomplete con
 ```
 
 **Expected Figma output**:
+
 ```json
 {
   "type": "COMPONENT_SET",
@@ -331,6 +344,7 @@ Note: `PARTIALLY_OUT_OF_STOCK` appears in `variantOptions` (from contract) but h
 ### Example 2: Multi-value enum (category page — quickAddType)
 
 **Jay-HTML**:
+
 ```html
 <button if="quickAddType == SIMPLE">Add to Cart</button>
 <div if="quickAddType == SINGLE_OPTION">quick options...</div>
@@ -341,6 +355,7 @@ These are siblings under the same parent. Despite being different element types 
 `a`), they all check `quickAddType` → grouped as one variant.
 
 **Contract**:
+
 ```yaml
 - tag: quickAddType
   type: variant
@@ -350,12 +365,14 @@ These are siblings under the same parent. Despite being different element types 
 ### Example 3: Boolean variant (cart page — checkout button)
 
 **Jay-HTML**:
+
 ```html
 <span if="!cartPage.isCheckingOut">Proceed to Checkout</span>
 <span if="cartPage.isCheckingOut">Processing...</span>
 ```
 
 **Contract**:
+
 ```yaml
 - tag: isCheckingOut
   type: variant
@@ -363,6 +380,7 @@ These are siblings under the same parent. Despite being different element types 
 ```
 
 Parsed conditions:
+
 - `!cartPage.isCheckingOut` → tag=`isCheckingOut`, value=`false`
 - `cartPage.isCheckingOut` → tag=`isCheckingOut`, value=`true`
 
@@ -371,6 +389,7 @@ Same tag, two values → variant group.
 ### Example 4: Multi-property variant (product page — media thumbnails)
 
 **Jay-HTML**:
+
 ```html
 <div if="media.mediaType == IMAGE && selected == selected">...</div>
 <div if="media.mediaType == IMAGE && selected == notSelected">...</div>
@@ -385,6 +404,7 @@ Two tags: `media.mediaType` and `selected`. All four siblings check the same two
 ### Example 5: Standalone `if` — NOT grouped
 
 **Jay-HTML** (cart page):
+
 ```html
 <span class="cart-item-variant" if="variantName">{variantName}</span>
 <span class="cart-item-sku" if="sku">SKU: {sku}</span>
@@ -398,6 +418,7 @@ tag. → These remain standalone `if` conditions (FRAME with `pluginData['if']`)
 ### Variant detection tests (unit)
 
 Test the analysis pass independently:
+
 - Input: DOM fragment + contract tags
 - Output: VariantAnalysisMap (which elements form groups, property names, values)
 

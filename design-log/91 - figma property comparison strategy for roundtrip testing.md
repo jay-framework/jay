@@ -26,6 +26,7 @@ The current test uses exact deep equality (`toEqual`), which fails because:
    have `blendMode`, `boundVariables`, `visible` sub-properties)
 
 We need a comparison strategy that:
+
 - Catches **real bugs** in the converter (wrong layout mode, missing padding, wrong color)
 - Ignores **acceptable losses** (Figma editor metadata that can't come from HTML)
 - Is **explicit** about what's ignored (not a loose "anything goes" comparison)
@@ -38,33 +39,33 @@ We need a comparison strategy that:
 Properties derivable from CSS/HTML that the converter is responsible for producing correctly.
 Mismatches here indicate a converter bug.
 
-| Property | Derived from |
-|----------|-------------|
-| `width`, `height` | CSS `width`, `height` |
-| `layoutMode` | CSS `display: flex` + `flex-direction` |
-| `primaryAxisAlignItems` | CSS `justify-content` |
-| `counterAxisAlignItems` | CSS `align-items` |
-| `itemSpacing` | CSS `gap` |
-| `paddingLeft/Right/Top/Bottom` | CSS `padding` |
-| `cornerRadius`, per-corner radius | CSS `border-radius` |
-| `fills` (color, type, opacity) | CSS `background-color` / `background` |
-| `strokes` (color, type) | CSS `border` / `border-color` |
-| `strokeWeight` | CSS `border-width` |
-| `opacity` | CSS `opacity` |
-| `clipsContent` | CSS `overflow: hidden` |
-| `overflowDirection` | CSS `overflow: auto/scroll` |
-| `layoutSizingHorizontal/Vertical` | CSS `width: 100%` / `height: 100%` |
-| `fontSize`, `fontWeight` | CSS `font-size`, `font-weight` |
-| `fontName` (family, style) | CSS `font-family`, `font-style` |
-| `textAlignHorizontal` | CSS `text-align` |
-| `characters` | Text content |
-| `letterSpacing` | CSS `letter-spacing` |
-| `lineHeight` | CSS `line-height` |
-| `textDecoration` | CSS `text-decoration` |
-| `textCase` | CSS `text-transform` |
-| `pluginData` (Jay bindings) | Jay attributes (`forEach`, `if`, `ref`, `data-figma-id`, etc.) |
-| `name` | `data-name`, `aria-label`, or tag name |
-| `type` | Element type mapping (FRAME, TEXT, SECTION) |
+| Property                          | Derived from                                                   |
+| --------------------------------- | -------------------------------------------------------------- |
+| `width`, `height`                 | CSS `width`, `height`                                          |
+| `layoutMode`                      | CSS `display: flex` + `flex-direction`                         |
+| `primaryAxisAlignItems`           | CSS `justify-content`                                          |
+| `counterAxisAlignItems`           | CSS `align-items`                                              |
+| `itemSpacing`                     | CSS `gap`                                                      |
+| `paddingLeft/Right/Top/Bottom`    | CSS `padding`                                                  |
+| `cornerRadius`, per-corner radius | CSS `border-radius`                                            |
+| `fills` (color, type, opacity)    | CSS `background-color` / `background`                          |
+| `strokes` (color, type)           | CSS `border` / `border-color`                                  |
+| `strokeWeight`                    | CSS `border-width`                                             |
+| `opacity`                         | CSS `opacity`                                                  |
+| `clipsContent`                    | CSS `overflow: hidden`                                         |
+| `overflowDirection`               | CSS `overflow: auto/scroll`                                    |
+| `layoutSizingHorizontal/Vertical` | CSS `width: 100%` / `height: 100%`                             |
+| `fontSize`, `fontWeight`          | CSS `font-size`, `font-weight`                                 |
+| `fontName` (family, style)        | CSS `font-family`, `font-style`                                |
+| `textAlignHorizontal`             | CSS `text-align`                                               |
+| `characters`                      | Text content                                                   |
+| `letterSpacing`                   | CSS `letter-spacing`                                           |
+| `lineHeight`                      | CSS `line-height`                                              |
+| `textDecoration`                  | CSS `text-decoration`                                          |
+| `textCase`                        | CSS `text-transform`                                           |
+| `pluginData` (Jay bindings)       | Jay attributes (`forEach`, `if`, `ref`, `data-figma-id`, etc.) |
+| `name`                            | `data-name`, `aria-label`, or tag name                         |
+| `type`                            | Element type mapping (FRAME, TEXT, SECTION)                    |
 
 ### Category 2: Figma-only — acceptable loss
 

@@ -14,6 +14,7 @@ We have a conversion pipeline: **Figma → jay-html → Figma** (roundtrip).
 The reverse conversion is **lossy by nature** — jay-html/CSS doesn't carry all Figma-specific properties (blend modes, variable bindings, effects, component variants, vector paths, etc.).
 
 We have end-to-end tests that:
+
 1. Parse a real `input.jay-html` through the actual compiler (`parseJayFile` + `JAY_IMPORT_RESOLVER`)
 2. Run `convertJayHtmlToFigmaDoc` on the parsed result
 3. Compare the output against an `expected.figma.json`
@@ -23,6 +24,7 @@ For roundtrip test fixtures, the `expected.figma.json` is the **original Figma e
 ## The Problem
 
 Simple `deepEqual` comparison fails with thousands of differences because:
+
 - Some properties are acceptable losses (e.g. `effects`, `blendMode`, `boundVariables`, `locked`, `visible`)
 - Some properties the converter should produce but currently doesn't (e.g. gradient fills, per-corner radius)
 - Node IDs differ (converter generates `jay-import:N`, original has `424:366` style IDs)
@@ -32,6 +34,7 @@ Simple `deepEqual` comparison fails with thousands of differences because:
 ## What I Need
 
 A comparison strategy that:
+
 1. **Catches real converter bugs** — if layout mode is wrong, padding is missing, a color is off, the test should fail
 2. **Ignores acceptable losses** — properties that HTML/CSS simply cannot represent
 3. **Is explicit** — there's a clear list of what's stripped/ignored, not a fuzzy comparison
@@ -41,6 +44,7 @@ A comparison strategy that:
 ## Property Categories
 
 ### Must match (converter is responsible)
+
 `width`, `height`, `layoutMode`, `primaryAxisAlignItems`, `counterAxisAlignItems`, `itemSpacing`,
 `paddingLeft/Right/Top/Bottom`, `cornerRadius`, `fills` (type + color + opacity), `strokes`,
 `strokeWeight`, `opacity`, `clipsContent`, `overflowDirection`, `layoutSizingHorizontal/Vertical`,
@@ -48,12 +52,14 @@ A comparison strategy that:
 `lineHeight`, `textDecoration`, `textCase`, `pluginData`, `name`, `type`
 
 ### Acceptable loss (Figma-only, no CSS equivalent)
+
 `parentId`, `parentType`, `locked`, `visible`, `blendMode` (on fills), `boundVariables`,
 `effects`, `COMPONENT_SET`/`COMPONENT` nodes and their properties, `vectorPaths`,
 `fillGeometry`, `strokeGeometry`, `dashPattern`, `rotation`, `scrollBehavior`,
 `layoutPositioning`, `layoutGrow`, `layoutAlign`, root SECTION `x`/`y`
 
 ### Future improvements (could be derived but aren't yet)
+
 `fills` from `linear-gradient(...)`, individual stroke weights, `textAutoResize`,
 `textTruncation`, `textAlignVertical`, per-corner radius from CSS shorthand
 

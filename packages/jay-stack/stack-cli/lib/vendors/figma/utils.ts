@@ -41,7 +41,8 @@ function getPositionType(
     const parentLayoutMode = parent?.layoutMode ?? node.parentLayoutMode;
     const parentOverflowDirection = parent?.overflowDirection ?? node.parentOverflowDirection;
     const parentChildIndex = parent?.childIndex ?? node.parentChildIndex;
-    const parentNumberOfFixedChildren = parent?.numberOfFixedChildren ?? node.parentNumberOfFixedChildren;
+    const parentNumberOfFixedChildren =
+        parent?.numberOfFixedChildren ?? node.parentNumberOfFixedChildren;
 
     // If node has explicit absolute positioning
     if (node.layoutPositioning === 'ABSOLUTE') {
@@ -52,10 +53,7 @@ function getPositionType(
     if (parentOverflowDirection && parentOverflowDirection !== 'NONE') {
         // Check if this node should be fixed during scroll
         if (parentNumberOfFixedChildren && parentChildIndex !== undefined) {
-            if (
-                parentChildIndex >= 0 &&
-                parentChildIndex < parentNumberOfFixedChildren
-            ) {
+            if (parentChildIndex >= 0 && parentChildIndex < parentNumberOfFixedChildren) {
                 return 'sticky';
             }
         }

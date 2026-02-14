@@ -130,7 +130,11 @@ function parseBackgroundImageToFills(
 ): Array<{ type: 'SOLID'; color: { r: number; g: number; b: number }; opacity?: number }> {
     if (!bgImage) return [];
 
-    const fills: Array<{ type: 'SOLID'; color: { r: number; g: number; b: number }; opacity?: number }> = [];
+    const fills: Array<{
+        type: 'SOLID';
+        color: { r: number; g: number; b: number };
+        opacity?: number;
+    }> = [];
 
     // Find each linear-gradient(...) by matching balanced parentheses
     const prefix = 'linear-gradient(';
@@ -170,9 +174,7 @@ function parseBackgroundImageToFills(
  *   box-shadow: Xpx Ypx Rpx Spx rgba(R, G, B, A), ...;
  * where inset keyword maps to INNER_SHADOW, otherwise DROP_SHADOW.
  */
-function parseBoxShadowToEffects(
-    boxShadow: string,
-): Array<{
+function parseBoxShadowToEffects(boxShadow: string): Array<{
     type: 'DROP_SHADOW' | 'INNER_SHADOW';
     color: { r: number; g: number; b: number; a: number };
     offset: { x: number; y: number };
@@ -209,7 +211,9 @@ function parseBoxShadowToEffects(
             pxValues.push(parseFloat(pxMatch[1]));
         }
 
-        const colorMatch = valuePart.match(/rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/);
+        const colorMatch = valuePart.match(
+            /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([\d.]+))?\s*\)/,
+        );
         if (pxValues.length >= 3 && colorMatch) {
             const [offsetX, offsetY, blur, spread] = pxValues;
             effects.push({
@@ -814,8 +818,8 @@ function generateNodeId(): string {
 // ─── Variant / Component Set Detection ───────────────────────────────────────
 
 interface ParsedIfCondition {
-    tagName: string;  // e.g. "status"
-    value: string;    // e.g. "ACTIVE"
+    tagName: string; // e.g. "status"
+    value: string; // e.g. "ACTIVE"
 }
 
 /**
@@ -829,11 +833,11 @@ function parseIfCondition(ifExpr: string): ParsedIfCondition | null {
 }
 
 interface VariantGroup {
-    tagName: string;           // The tag being switched on (e.g. "status")
-    propertyName: string;      // Figma property name (capitalized tag, e.g. "Status")
-    enumValues: string[];      // All enum values from contract (e.g. ["ACTIVE", "INACTIVE"])
-    elements: HTMLElement[];   // The sibling elements in this group
-    elementValues: string[];   // The value each element maps to
+    tagName: string; // The tag being switched on (e.g. "status")
+    propertyName: string; // Figma property name (capitalized tag, e.g. "Status")
+    enumValues: string[]; // All enum values from contract (e.g. ["ACTIVE", "INACTIVE"])
+    elements: HTMLElement[]; // The sibling elements in this group
+    elementValues: string[]; // The value each element maps to
 }
 
 /**
@@ -889,14 +893,23 @@ function detectVariantGroups(children: HTMLElement[]): {
     while (i < children.length) {
         const child = children[i];
         const ifAttr = child.getAttribute?.('if');
-        if (!ifAttr) { i++; continue; }
+        if (!ifAttr) {
+            i++;
+            continue;
+        }
 
         const parsed = parseIfCondition(ifAttr);
-        if (!parsed) { i++; continue; }
+        if (!parsed) {
+            i++;
+            continue;
+        }
 
         // Check if this tag is a variant in the contract
         const variantInfo = findVariantTag(parsed.tagName);
-        if (!variantInfo) { i++; continue; }
+        if (!variantInfo) {
+            i++;
+            continue;
+        }
 
         // Found a variant element — scan ahead for more siblings with the same tag
         const groupElements: HTMLElement[] = [child];
@@ -1206,7 +1219,10 @@ function tryCollapseTextWrapper(element: HTMLElement): FigmaVendorDocument | nul
 
     // The outer element should have text-related styles (font-family, font-size, etc.)
     const outerStyles = parseStyleString(element.getAttribute('style') || '');
-    const hasTextStyles = outerStyles.has('font-family') || outerStyles.has('font-size') || outerStyles.has('font-weight');
+    const hasTextStyles =
+        outerStyles.has('font-family') ||
+        outerStyles.has('font-size') ||
+        outerStyles.has('font-weight');
     if (!hasTextStyles) return null;
 
     // Collapse: use inner child's text content + styles, outer element's dimensions and id

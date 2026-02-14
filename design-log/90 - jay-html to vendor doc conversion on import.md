@@ -204,18 +204,18 @@ The test exercises the full pipeline that runs in production:
 
 Each fixture targets a specific aspect of the conversion. Examples:
 
-| Fixture | Tests |
-|---------|-------|
-| `hello-world` | Basic: static text in a flex column, font styles, color |
-| `wix-store-product-page` | Real-world: complex layout, many nested elements, bindings |
-| *(future)* text-styles | Font family, weight, size, alignment, decoration, line-height |
-| *(future)* layout-modes | Flex row/column, justify, align, gap, padding |
-| *(future)* bindings | `{expression}` in text, `forEach`, `if`, `ref` attributes |
-| *(future)* images | `<img>` elements with src, alt, bound src |
-| *(future)* nested-sections | `<section>` with `data-page-url`, headless pluginData |
-| *(future)* border-radius | Uniform and per-corner radius |
-| *(future)* overflow-scroll | `overflow: hidden/auto/scroll` → clipsContent/overflowDirection |
-| *(future)* headless-imports | Jay-html with `<script type="application/jay-headless">` — real plugin resolution |
+| Fixture                     | Tests                                                                             |
+| --------------------------- | --------------------------------------------------------------------------------- |
+| `hello-world`               | Basic: static text in a flex column, font styles, color                           |
+| `wix-store-product-page`    | Real-world: complex layout, many nested elements, bindings                        |
+| _(future)_ text-styles      | Font family, weight, size, alignment, decoration, line-height                     |
+| _(future)_ layout-modes     | Flex row/column, justify, align, gap, padding                                     |
+| _(future)_ bindings         | `{expression}` in text, `forEach`, `if`, `ref` attributes                         |
+| _(future)_ images           | `<img>` elements with src, alt, bound src                                         |
+| _(future)_ nested-sections  | `<section>` with `data-page-url`, headless pluginData                             |
+| _(future)_ border-radius    | Uniform and per-corner radius                                                     |
+| _(future)_ overflow-scroll  | `overflow: hidden/auto/scroll` → clipsContent/overflowDirection                   |
+| _(future)_ headless-imports | Jay-html with `<script type="application/jay-headless">` — real plugin resolution |
 
 ---
 
@@ -230,6 +230,7 @@ are perfectly representable.
 #### Critical mismatch: Background fills
 
 **Forward export produces:**
+
 ```css
 background-image: linear-gradient(rgba(255, 255, 255, 1), rgba(255, 255, 255, 1));
 background-size: 100% 100%;
@@ -238,6 +239,7 @@ background-repeat: no-repeat;
 ```
 
 **Reverse converter looks for:**
+
 ```typescript
 const bgColor = styles.get('background-color') || styles.get('background');
 ```
@@ -247,19 +249,19 @@ Result: **every background color is lost** because the forward export uses `back
 
 #### Other mismatches between forward export and reverse converter
 
-| Forward export CSS | Reverse converter handling | Status |
-|-|-|-|
-| `background-image: linear-gradient(rgba(...))` | Only checks `background-color`/`background` | **BROKEN** |
-| `background: transparent` | Tries to parse as color, fails | **BROKEN** |
+| Forward export CSS                                                          | Reverse converter handling                      | Status      |
+| --------------------------------------------------------------------------- | ----------------------------------------------- | ----------- |
+| `background-image: linear-gradient(rgba(...))`                              | Only checks `background-color`/`background`     | **BROKEN**  |
+| `background: transparent`                                                   | Tries to parse as color, fails                  | **BROKEN**  |
 | `border-color: rgb(...)` + `border-width` + `border-style` (separate props) | Only handles shorthand `border: 1px solid #000` | **PARTIAL** |
-| `flex-grow: 1` | Not mapped | **MISSING** |
-| `align-self: stretch/center/...` | Not mapped | **MISSING** |
-| `width: fit-content` / `height: fit-content` | Not mapped | **MISSING** |
-| `box-shadow: ...` | Not mapped | **MISSING** |
-| `filter: blur(...)` | Not mapped | **MISSING** |
-| `backdrop-filter: blur(...)` | Not mapped | **MISSING** |
-| `transform: rotate(Ndeg)` | Not mapped | **MISSING** |
-| `min-width/max-width/min-height/max-height` | Not mapped | **MISSING** |
+| `flex-grow: 1`                                                              | Not mapped                                      | **MISSING** |
+| `align-self: stretch/center/...`                                            | Not mapped                                      | **MISSING** |
+| `width: fit-content` / `height: fit-content`                                | Not mapped                                      | **MISSING** |
+| `box-shadow: ...`                                                           | Not mapped                                      | **MISSING** |
+| `filter: blur(...)`                                                         | Not mapped                                      | **MISSING** |
+| `backdrop-filter: blur(...)`                                                | Not mapped                                      | **MISSING** |
+| `transform: rotate(Ndeg)`                                                   | Not mapped                                      | **MISSING** |
+| `min-width/max-width/min-height/max-height`                                 | Not mapped                                      | **MISSING** |
 
 ### Approaches Considered
 
@@ -284,6 +286,7 @@ losing the info that it should be `FILL` in Figma).
 #### Approach C: Hybrid (future enhancement)
 
 Parse inline styles directly (Approach A) for known patterns, optionally use browser for:
+
 - Resolving dimensions for auto-sized elements
 - Handling jay-html not generated by our export (AI-generated, hand-written)
 - Inheriting font/color from parent elements
@@ -295,11 +298,11 @@ Parse inline styles directly (Approach A) for known patterns, optionally use bro
 
 Key insight: the browser computed styles approach loses layout "intent":
 
-| CSS (intent) | Computed style | Figma property needed |
-|-|-|-|
-| `flex-grow: 1` | `width: 347px` | `layoutSizingHorizontal: 'FILL'` |
-| `width: fit-content` | `width: 200px` | `layoutSizingHorizontal: 'HUG'` |
-| `width: 100%` | `width: 800px` | `layoutSizingHorizontal: 'FILL'` |
+| CSS (intent)         | Computed style | Figma property needed            |
+| -------------------- | -------------- | -------------------------------- |
+| `flex-grow: 1`       | `width: 347px` | `layoutSizingHorizontal: 'FILL'` |
+| `width: fit-content` | `width: 200px` | `layoutSizingHorizontal: 'HUG'`  |
+| `width: 100%`        | `width: 800px` | `layoutSizingHorizontal: 'FILL'` |
 
 For layout properties we need the **declared** CSS value, not the **computed** value.
 
@@ -316,31 +319,31 @@ The converter now correctly parses styles that were previously lost in the round
 
 #### New parsing functions added
 
-| Function | Purpose |
-|-|-|
+| Function                        | Purpose                                                                        |
+| ------------------------------- | ------------------------------------------------------------------------------ |
 | `parseBackgroundImageToFills()` | Parses `background-image: linear-gradient(rgba(...), rgba(...))` → solid fills |
-| `parseBoxShadowToEffects()` | Parses `box-shadow` → `DROP_SHADOW` / `INNER_SHADOW` effects |
-| `parseBlurFromFilter()` | Parses `filter: blur(Npx)` → `LAYER_BLUR` effects |
-| `splitOutsideParens()` | Splits CSS values on commas outside parentheses (for multi-shadow parsing) |
-| `parseRotationFromTransform()` | Parses `transform: rotate(Ndeg)` → `rotation` |
+| `parseBoxShadowToEffects()`     | Parses `box-shadow` → `DROP_SHADOW` / `INNER_SHADOW` effects                   |
+| `parseBlurFromFilter()`         | Parses `filter: blur(Npx)` → `LAYER_BLUR` effects                              |
+| `splitOutsideParens()`          | Splits CSS values on commas outside parentheses (for multi-shadow parsing)     |
+| `parseRotationFromTransform()`  | Parses `transform: rotate(Ndeg)` → `rotation`                                  |
 
 #### Updated `stylesToFigmaProps()` — new CSS → Figma mappings
 
-| CSS pattern | Figma property | Status |
-|-|-|-|
-| `background-image: linear-gradient(rgba(...))` | `fills` | **FIXED** (was broken) |
-| `background: transparent` | no fills (leave undefined) | **FIXED** (was broken) |
-| `border-color` + `border-width` + `border-style` (separate) | `strokes` + `strokeWeight` | **FIXED** (was partial) |
-| Multi-value `border-width: T R B L` | `strokeWeight` (max) | **NEW** |
-| `width: fit-content` / `height: fit-content` | `layoutSizingHorizontal/Vertical: 'HUG'` | **NEW** |
-| `flex-grow: 1` + `width: 0` | `layoutSizingHorizontal: 'FILL'` | **NEW** |
-| `align-self: stretch/center/...` | `layoutAlign` | **NEW** |
-| `box-shadow: ...` | `effects` (DROP_SHADOW / INNER_SHADOW) | **NEW** |
-| `filter: blur(Npx)` | `effects` (LAYER_BLUR) | **NEW** |
-| `backdrop-filter: blur(Npx)` | `effects` (BACKGROUND_BLUR) | **NEW** |
-| `transform: rotate(Ndeg)` | `rotation` | **NEW** |
-| `min-width/max-width/min-height/max-height` | `minWidth/maxWidth/minHeight/maxHeight` | **NEW** |
-| `flex-wrap: wrap` | `layoutWrap: 'WRAP'` | **NEW** |
+| CSS pattern                                                 | Figma property                           | Status                  |
+| ----------------------------------------------------------- | ---------------------------------------- | ----------------------- |
+| `background-image: linear-gradient(rgba(...))`              | `fills`                                  | **FIXED** (was broken)  |
+| `background: transparent`                                   | no fills (leave undefined)               | **FIXED** (was broken)  |
+| `border-color` + `border-width` + `border-style` (separate) | `strokes` + `strokeWeight`               | **FIXED** (was partial) |
+| Multi-value `border-width: T R B L`                         | `strokeWeight` (max)                     | **NEW**                 |
+| `width: fit-content` / `height: fit-content`                | `layoutSizingHorizontal/Vertical: 'HUG'` | **NEW**                 |
+| `flex-grow: 1` + `width: 0`                                 | `layoutSizingHorizontal: 'FILL'`         | **NEW**                 |
+| `align-self: stretch/center/...`                            | `layoutAlign`                            | **NEW**                 |
+| `box-shadow: ...`                                           | `effects` (DROP_SHADOW / INNER_SHADOW)   | **NEW**                 |
+| `filter: blur(Npx)`                                         | `effects` (LAYER_BLUR)                   | **NEW**                 |
+| `backdrop-filter: blur(Npx)`                                | `effects` (BACKGROUND_BLUR)              | **NEW**                 |
+| `transform: rotate(Ndeg)`                                   | `rotation`                               | **NEW**                 |
+| `min-width/max-width/min-height/max-height`                 | `minWidth/maxWidth/minHeight/maxHeight`  | **NEW**                 |
+| `flex-wrap: wrap`                                           | `layoutWrap: 'WRAP'`                     | **NEW**                 |
 
 #### Updated node converters
 
@@ -360,14 +363,14 @@ through the new properties: `rotation`, `effects`, `layoutAlign`, `layoutWrap`, 
 
 These remain as future work:
 
-| CSS | Figma | Reason |
-|-|-|-|
-| CSS classes / `<style>` block | Various | No CSS cascade resolution (would need Approach B/C) |
-| Inherited styles (color, font) on child text | `fills`, `fontName` | No CSS inheritance resolution |
-| `rem`, `em`, `vh`, `vw` units | Various | Only `px` and `%` parsed |
-| `calc()` expressions | Various | Would need CSS expression evaluator |
-| `hsl()`/`hsla()` colors | fills/strokes | Only `rgb()`/`rgba()`/hex supported |
-| Named colors (`red`, `blue`) | fills/strokes | Only numeric colors supported |
+| CSS                                          | Figma               | Reason                                              |
+| -------------------------------------------- | ------------------- | --------------------------------------------------- |
+| CSS classes / `<style>` block                | Various             | No CSS cascade resolution (would need Approach B/C) |
+| Inherited styles (color, font) on child text | `fills`, `fontName` | No CSS inheritance resolution                       |
+| `rem`, `em`, `vh`, `vw` units                | Various             | Only `px` and `%` parsed                            |
+| `calc()` expressions                         | Various             | Would need CSS expression evaluator                 |
+| `hsl()`/`hsla()` colors                      | fills/strokes       | Only `rgb()`/`rgba()`/hex supported                 |
+| Named colors (`red`, `blue`)                 | fills/strokes       | Only numeric colors supported                       |
 
 ### Next steps
 
@@ -387,6 +390,7 @@ passes while the actual Figma import still looks broken. The test becomes meanin
 **Decision**: Instead of one big test with loose comparison, break down into **focused test fixtures**,
 each targeting a specific converter capability. Each fixture has its own expected output that the
 converter MUST match exactly. This way:
+
 - Every test that passes means a real capability works
 - Every test that fails means a specific gap we need to fix
 - No properties are hidden or ignored
@@ -401,13 +405,13 @@ vs `expected.figma.json` (original Figma export, 44236 lines, 305 nodes).
 **Problem**: The converter treats all elements as FRAME or TEXT. But the jay-html carries
 `data-figma-type` attributes that specify the original Figma node type. The converter ignores them.
 
-| `data-figma-type` | Expected Figma type | Current converter output |
-|-|-|-|
-| `frame` | FRAME | FRAME (correct) |
-| `vector` | VECTOR (with svgContent) | FRAME (wrong) |
-| `group` | GROUP | FRAME (wrong) |
-| `frame-repeater` | FRAME (with forEach) | FRAME (correct) |
-| `variant-container` | INSTANCE | FRAME (wrong) |
+| `data-figma-type`   | Expected Figma type      | Current converter output |
+| ------------------- | ------------------------ | ------------------------ |
+| `frame`             | FRAME                    | FRAME (correct)          |
+| `vector`            | VECTOR (with svgContent) | FRAME (wrong)            |
+| `group`             | GROUP                    | FRAME (wrong)            |
+| `frame-repeater`    | FRAME (with forEach)     | FRAME (correct)          |
+| `variant-container` | INSTANCE                 | FRAME (wrong)            |
 
 In the wix-store-product-page: 22 vector elements, 3 groups, 5 variant containers all become FRAMEs.
 
@@ -444,6 +448,7 @@ level.
 names like "Page", "Frame 4", "Section".
 
 Sources of names in order of priority:
+
 1. `data-name` attribute (already used)
 2. `aria-label` attribute (already used)
 3. The original Figma node name from the `name` field in the serialized JSON
@@ -456,6 +461,7 @@ Longer-term: the forward export could set `data-name` on more elements.
 #### Gap 5: Root SECTION — name, dimensions, fills
 
 **Problem**:
+
 - Name: converter produces "Jay Page: Page", expected is "Product Page" (from Figma layer name)
 - Dimensions: converter uses default 1440x900, expected is 2013x1704 (real content size)
 - Fills: converter produces no fills, expected has a gray background
@@ -469,6 +475,7 @@ jay-html CSS (sections don't have style attributes in our export).
 #### Gap 6: Text nesting structure
 
 **Problem**: The forward export wraps text in nested divs:
+
 ```html
 <div data-figma-id="424:371" style="...font-size: 25px;...">
   <div style="font-size: 25px;...">FashionHub</div>
@@ -504,11 +511,13 @@ reads, but it maps to `fontName: { family: "Inter", style: "Italic" }` instead o
 (containing `imageHash`, `imageUrl`, `scaleMode`).
 
 The jay-html has 7 images:
+
 - 1 static: `src="/images/424:387_FILL.png"` (the static image path in the project)
 - 6 bound: `src="{productPage.mediaGallery.selectedMedia.url}"` etc.
 
 **Decision (from discussion)**: Images are a special case. The dev server has the static images in
 the project. In principle, we could:
+
 1. For static images: set `imageUrl` to the src path, let the plugin resolve it
 2. For bound images: store the binding, leave image empty (can't resolve at conversion time)
 
@@ -573,53 +582,53 @@ specific capability, and has its own `expected.figma.json` that the converter mu
 
 #### Phase 1: Style fidelity (current focus)
 
-| # | Fixture name | Tests | Status |
-|---|---|---|---|
-| 1 | `hello-world` | Basic flex layout, text with font/color | PASSING |
-| 2 | `background-fills` | Solid fills from `linear-gradient()`, transparent | TODO |
-| 3 | `strokes-borders` | `border-color` + `border-width` + `border-style` | TODO |
-| 4 | `text-styles` | Font family/weight/size, alignment, decoration, line-height, color | TODO |
-| 5 | `font-style-mapping` | Weight→style name (Regular, Bold, Extra Bold Italic, etc.) | TODO |
-| 6 | `layout-sizing` | FILL (100%, flex-grow), HUG (fit-content), FIXED (px) | TODO |
-| 7 | `effects` | box-shadow→DROP_SHADOW, filter→LAYER_BLUR, backdrop-filter→BACKGROUND_BLUR | TODO |
-| 8 | `overflow-clipping` | overflow hidden/auto/scroll → clipsContent/overflowDirection | TODO |
-| 9 | `rotation` | transform: rotate(Ndeg) → rotation | TODO |
-| 10 | `border-radius` | Uniform and per-corner radius | TODO |
+| #   | Fixture name         | Tests                                                                      | Status  |
+| --- | -------------------- | -------------------------------------------------------------------------- | ------- |
+| 1   | `hello-world`        | Basic flex layout, text with font/color                                    | PASSING |
+| 2   | `background-fills`   | Solid fills from `linear-gradient()`, transparent                          | TODO    |
+| 3   | `strokes-borders`    | `border-color` + `border-width` + `border-style`                           | TODO    |
+| 4   | `text-styles`        | Font family/weight/size, alignment, decoration, line-height, color         | TODO    |
+| 5   | `font-style-mapping` | Weight→style name (Regular, Bold, Extra Bold Italic, etc.)                 | TODO    |
+| 6   | `layout-sizing`      | FILL (100%, flex-grow), HUG (fit-content), FIXED (px)                      | TODO    |
+| 7   | `effects`            | box-shadow→DROP_SHADOW, filter→LAYER_BLUR, backdrop-filter→BACKGROUND_BLUR | TODO    |
+| 8   | `overflow-clipping`  | overflow hidden/auto/scroll → clipsContent/overflowDirection               | TODO    |
+| 9   | `rotation`           | transform: rotate(Ndeg) → rotation                                         | TODO    |
+| 10  | `border-radius`      | Uniform and per-corner radius                                              | TODO    |
 
 #### Phase 2: Node type mapping
 
-| # | Fixture name | Tests | Status |
-|---|---|---|---|
-| 11 | `node-type-vector` | `data-figma-type="vector"` with inline SVG → VECTOR with svgContent | TODO |
-| 12 | `node-type-group` | `data-figma-type="group"` → GROUP node | TODO |
-| 13 | `node-type-image` | `<img>` with static/bound src → image node with semanticHtml | TODO |
-| 14 | `text-nesting` | Outer div + inner text div → single TEXT node (merge) | TODO |
-| 15 | `node-naming` | data-name, aria-label, tag name → correct node name | TODO |
+| #   | Fixture name       | Tests                                                               | Status |
+| --- | ------------------ | ------------------------------------------------------------------- | ------ |
+| 11  | `node-type-vector` | `data-figma-type="vector"` with inline SVG → VECTOR with svgContent | TODO   |
+| 12  | `node-type-group`  | `data-figma-type="group"` → GROUP node                              | TODO   |
+| 13  | `node-type-image`  | `<img>` with static/bound src → image node with semanticHtml        | TODO   |
+| 14  | `text-nesting`     | Outer div + inner text div → single TEXT node (merge)               | TODO   |
+| 15  | `node-naming`      | data-name, aria-label, tag name → correct node name                 | TODO   |
 
 #### Phase 3: Variant conversion (Design Log #92)
 
-| # | Fixture name | Tests | Status |
-|---|---|---|---|
-| 16 | `variant-enum` | `if` siblings checking same tag → COMPONENT_SET/COMPONENT | TODO |
-| 17 | `variant-boolean` | `if`/`!if` pair → boolean variant | TODO |
-| 18 | `variant-multi-prop` | Compound `if` (tag1 && tag2) → multi-property variant | TODO |
-| 19 | `variant-container` | `data-figma-type="variant-container"` → INSTANCE | TODO |
-| 20 | `variant-standalone-if` | Lone `if` (no matching siblings) → FRAME with pluginData | TODO |
+| #   | Fixture name            | Tests                                                     | Status |
+| --- | ----------------------- | --------------------------------------------------------- | ------ |
+| 16  | `variant-enum`          | `if` siblings checking same tag → COMPONENT_SET/COMPONENT | TODO   |
+| 17  | `variant-boolean`       | `if`/`!if` pair → boolean variant                         | TODO   |
+| 18  | `variant-multi-prop`    | Compound `if` (tag1 && tag2) → multi-property variant     | TODO   |
+| 19  | `variant-container`     | `data-figma-type="variant-container"` → INSTANCE          | TODO   |
+| 20  | `variant-standalone-if` | Lone `if` (no matching siblings) → FRAME with pluginData  | TODO   |
 
 #### Phase 4: Bindings and structural
 
-| # | Fixture name | Tests | Status |
-|---|---|---|---|
-| 21 | `for-each` | `forEach` + `trackBy` → repeater with pluginData | TODO |
-| 22 | `attribute-bindings` | `src="{expr}"`, dynamic attributes | TODO |
-| 23 | `headless-imports` | Headless component resolution → section pluginData | TODO |
-| 24 | `section-structure` | Section with data-page-url → correct SECTION without Content wrapper | TODO |
+| #   | Fixture name         | Tests                                                                | Status |
+| --- | -------------------- | -------------------------------------------------------------------- | ------ |
+| 21  | `for-each`           | `forEach` + `trackBy` → repeater with pluginData                     | TODO   |
+| 22  | `attribute-bindings` | `src="{expr}"`, dynamic attributes                                   | TODO   |
+| 23  | `headless-imports`   | Headless component resolution → section pluginData                   | TODO   |
+| 24  | `section-structure`  | Section with data-page-url → correct SECTION without Content wrapper | TODO   |
 
 #### Phase 5: Roundtrip validation
 
-| # | Fixture name | Tests | Status |
-|---|---|---|---|
-| 25 | `wix-store-product-page` | Full roundtrip comparison (with Figma-only metadata stripped, image fills excluded) | FAILING |
+| #   | Fixture name             | Tests                                                                               | Status  |
+| --- | ------------------------ | ----------------------------------------------------------------------------------- | ------- |
+| 25  | `wix-store-product-page` | Full roundtrip comparison (with Figma-only metadata stripped, image fills excluded) | FAILING |
 
 ### Implementation Order
 
@@ -648,6 +657,7 @@ metadata) and exclude image fill content. At this point, the test should pass or
 
 **For now**: Images are excluded from fill comparison in the roundtrip test. The converter
 should still:
+
 1. Produce the correct node type (RECTANGLE for `<img>`, not FRAME)
 2. Preserve `semanticHtml: "img"` in pluginData
 3. Preserve the `src` binding if dynamic (`src="{expr}"`)
@@ -667,21 +677,21 @@ Created 12 focused test fixtures (Sprint 1 + Sprint 2), each testing a specific 
 
 **All fixtures passing (14/15 total):**
 
-| # | Fixture | What it tests | Lines |
-|---|---------|---------------|-------|
-| 1 | `hello-world` | Basic flex layout, text with font/color | 13 |
-| 2 | `background-fills` | Solid fills from linear-gradient, transparent, rgb, rgba | 14 |
-| 3 | `strokes-borders` | Separate border-color/width/style, shorthand border | 12 |
-| 4 | `text-styles` | Font family/weight/size, color, alignment, decoration, line-height, letter-spacing | 16 |
-| 5 | `font-style-mapping` | Weight 100-900 + italic combinations → fontName.style | 18 |
-| 6 | `layout-sizing` | FILL (100%, flex-grow), HUG (fit-content), FIXED (px), align-self | 13 |
-| 7 | `effects` | box-shadow (drop/inner), filter blur, backdrop-filter blur | 12 |
-| 8 | `overflow-clipping` | overflow hidden/auto, overflow-x/y combinations | 14 |
-| 9 | `border-radius` | Uniform, zero, large (circle), per-corner | 12 |
-| 10 | `node-type-vector` | data-figma-type="vector" with inline SVG (currently → FRAME, not VECTOR) | 15 |
-| 11 | `node-type-image` | img tags with static/bound src | 10 |
-| 12 | `text-nesting` | Outer div + inner text div pattern (currently → FRAME wrapper + TEXT) | 14 |
-| 13 | `node-naming` | data-name, aria-label, data-figma-type defaults | 11 |
+| #   | Fixture              | What it tests                                                                      | Lines |
+| --- | -------------------- | ---------------------------------------------------------------------------------- | ----- |
+| 1   | `hello-world`        | Basic flex layout, text with font/color                                            | 13    |
+| 2   | `background-fills`   | Solid fills from linear-gradient, transparent, rgb, rgba                           | 14    |
+| 3   | `strokes-borders`    | Separate border-color/width/style, shorthand border                                | 12    |
+| 4   | `text-styles`        | Font family/weight/size, color, alignment, decoration, line-height, letter-spacing | 16    |
+| 5   | `font-style-mapping` | Weight 100-900 + italic combinations → fontName.style                              | 18    |
+| 6   | `layout-sizing`      | FILL (100%, flex-grow), HUG (fit-content), FIXED (px), align-self                  | 13    |
+| 7   | `effects`            | box-shadow (drop/inner), filter blur, backdrop-filter blur                         | 12    |
+| 8   | `overflow-clipping`  | overflow hidden/auto, overflow-x/y combinations                                    | 14    |
+| 9   | `border-radius`      | Uniform, zero, large (circle), per-corner                                          | 12    |
+| 10  | `node-type-vector`   | data-figma-type="vector" with inline SVG (currently → FRAME, not VECTOR)           | 15    |
+| 11  | `node-type-image`    | img tags with static/bound src                                                     | 10    |
+| 12  | `text-nesting`       | Outer div + inner text div pattern (currently → FRAME wrapper + TEXT)              | 14    |
+| 13  | `node-naming`        | data-name, aria-label, data-figma-type defaults                                    | 11    |
 
 **Still failing (1/15):** `wix-store-product-page` — the full roundtrip test. This will be
 addressed after the focused fixtures cover all gaps.
@@ -706,13 +716,13 @@ These fixtures pass today but their expected output represents the CURRENT conve
 which has known gaps. When we implement each gap fix, we update the expected output FIRST (test
 fails), then fix the converter (test passes):
 
-| Fixture | Known gap | What needs to change |
-|---------|-----------|---------------------|
-| `font-style-mapping` | Gap 7 | `fontName.style` should be "Bold", "Extra Bold Italic", etc. instead of "Regular" |
-| `node-type-vector` | Gap 9 | Should produce VECTOR with svgContent, not FRAME with nested svg/path FRAMEs |
-| `node-type-image` | Gap 8 | Should produce correct image node type, not generic FRAME |
-| `text-nesting` | Gap 6 | Should merge outer+inner into single TEXT node, not FRAME wrapper |
-| `node-naming` | Gap 4 | Some names should be better (capitalize data-figma-type, etc.) |
+| Fixture              | Known gap | What needs to change                                                              |
+| -------------------- | --------- | --------------------------------------------------------------------------------- |
+| `font-style-mapping` | Gap 7     | `fontName.style` should be "Bold", "Extra Bold Italic", etc. instead of "Regular" |
+| `node-type-vector`   | Gap 9     | Should produce VECTOR with svgContent, not FRAME with nested svg/path FRAMEs      |
+| `node-type-image`    | Gap 8     | Should produce correct image node type, not generic FRAME                         |
+| `text-nesting`       | Gap 6     | Should merge outer+inner into single TEXT node, not FRAME wrapper                 |
+| `node-naming`        | Gap 4     | Some names should be better (capitalize data-figma-type, etc.)                    |
 
 ### How to evolve a fixture when fixing a gap
 

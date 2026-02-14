@@ -203,10 +203,7 @@
                 "status": {
                   "type": "VARIANT",
                   "defaultValue": "ACTIVE",
-                  "variantOptions": [
-                    "ACTIVE",
-                    "INACTIVE"
-                  ]
+                  "variantOptions": ["ACTIVE", "INACTIVE"]
                 }
               }
             }

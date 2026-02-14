@@ -11,7 +11,11 @@ import type { ParentContext } from '../types';
 /**
  * Converts an ELLIPSE node to HTML with circular border radius
  */
-export function convertEllipseToHtml(node: FigmaVendorDocument, indent: string, parent?: ParentContext): string {
+export function convertEllipseToHtml(
+    node: FigmaVendorDocument,
+    indent: string,
+    parent?: ParentContext,
+): string {
     const { id } = node;
 
     // Get positioning and sizing

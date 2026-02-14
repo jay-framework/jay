@@ -5,7 +5,11 @@ import type { ParentContext } from '../types';
 /**
  * Converts a VECTOR node to HTML with embedded SVG
  */
-export function convertVectorToHtml(node: FigmaVendorDocument, indent: string, parent?: ParentContext): string {
+export function convertVectorToHtml(
+    node: FigmaVendorDocument,
+    indent: string,
+    parent?: ParentContext,
+): string {
     const { id, name, svgContent, svgExportFailed, width, height } = node;
 
     // Get positioning and sizing
