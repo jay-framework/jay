@@ -1,0 +1,6 @@
+name: status-widget
+tags:
+  - tag: status
+    type: variant
+    dataType: "enum (ACTIVE | INACTIVE)"
+    description: The current status

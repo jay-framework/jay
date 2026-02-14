@@ -900,6 +900,62 @@ function convertVectorElement(element: HTMLElement): FigmaVendorDocument {
 }
 
 /**
+ * Detects the frame-wrapping-text pattern from the forward converter:
+ *   <div data-figma-id="..." style="font-styles; dimensions">
+ *     <div style="font-styles">text content</div>
+ *   </div>
+ * Returns a collapsed TEXT node, or null if the pattern doesn't match.
+ */
+function tryCollapseTextWrapper(element: HTMLElement): FigmaVendorDocument | null {
+    const tag = element.rawTagName?.toLowerCase();
+    if (tag !== 'div') return null;
+
+    // Must have exactly one child element (the inner text div)
+    const childElements = element.childNodes.filter(
+        (child) => child.nodeType === NodeType.ELEMENT_NODE,
+    ) as HTMLElement[];
+    if (childElements.length !== 1) return null;
+
+    const innerChild = childElements[0];
+    const innerTag = innerChild.rawTagName?.toLowerCase();
+    if (innerTag !== 'div') return null;
+
+    // The inner child must be text-only (no sub-elements)
+    if (!isTextElement(innerChild)) return null;
+
+    // The outer element should have text-related styles (font-family, font-size, etc.)
+    const outerStyles = parseStyleString(element.getAttribute('style') || '');
+    const hasTextStyles = outerStyles.has('font-family') || outerStyles.has('font-size') || outerStyles.has('font-weight');
+    if (!hasTextStyles) return null;
+
+    // Collapse: use inner child's text content + styles, outer element's dimensions and id
+    const innerStyles = parseStyleString(innerChild.getAttribute('style') || '');
+    const outerLayoutProps = stylesToFigmaProps(outerStyles);
+    const textProps = stylesToTextProps(innerStyles);
+    const pluginData = extractJayPluginData(element) || {};
+
+    const textContent = innerChild.text.trim();
+
+    // Parse text color from inner styles (same as convertTextElement)
+    const colorStr = innerStyles.get('color');
+    const textFill = colorStr ? parseColorToFill(colorStr) : undefined;
+
+    return {
+        id: pluginData?.['originalFigmaId'] || generateNodeId(),
+        name: textContent || 'Text',
+        type: 'TEXT',
+        x: outerLayoutProps.x ?? 0,
+        y: outerLayoutProps.y ?? 0,
+        width: outerLayoutProps.width ?? 100,
+        height: outerLayoutProps.height ?? 20,
+        characters: textContent,
+        ...textProps,
+        fills: textFill ? [textFill] : undefined,
+        pluginData: Object.keys(pluginData).length > 0 ? pluginData : undefined,
+    } as FigmaVendorDocument;
+}
+
+/**
  * Converts an HTML element and its children to a FigmaVendorDocument tree
  */
 function convertElement(element: HTMLElement): FigmaVendorDocument | null {
@@ -920,6 +976,14 @@ function convertElement(element: HTMLElement): FigmaVendorDocument | null {
     const figmaTypeAttr = element.getAttribute('data-figma-type');
     if (figmaTypeAttr === 'vector') {
         return convertVectorElement(element);
+    }
+
+    // Handle frame-wrapping-text pattern: a div/frame with a single child div that is text-only.
+    // This is the forward converter's pattern for Figma TEXT nodes.
+    // Collapse into a single TEXT node using the outer frame's dimensions and id.
+    const collapsedText = tryCollapseTextWrapper(element);
+    if (collapsedText) {
+        return collapsedText;
     }
 
     // Handle text-like elements

@@ -1,0 +1,171 @@
+{
+  "id": "jay-import:9",
+  "name": "Jay Page: Page",
+  "type": "SECTION",
+  "x": 0,
+  "y": 0,
+  "width": 1440,
+  "height": 900,
+  "children": [
+    {
+      "id": "jay-import:8",
+      "name": "Content",
+      "type": "FRAME",
+      "x": 0,
+      "y": 0,
+      "width": 1440,
+      "height": 900,
+      "layoutMode": "VERTICAL",
+      "primaryAxisAlignItems": "MIN",
+      "counterAxisAlignItems": "MIN",
+      "children": [
+        {
+          "id": "jay-import:7",
+          "name": "div",
+          "type": "FRAME",
+          "x": 0,
+          "y": 0,
+          "width": 400,
+          "height": 200,
+          "layoutMode": "VERTICAL",
+          "primaryAxisAlignItems": "MIN",
+          "counterAxisAlignItems": "MIN",
+          "itemSpacing": 10,
+          "children": [
+            {
+              "id": "jay-import:0",
+              "name": "Status Label",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Status Label",
+              "fontSize": 16,
+              "fontWeight": 700,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": { "r": 0, "g": 0, "b": 0 }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "p"
+              }
+            },
+            {
+              "id": "jay-import:5",
+              "name": "status",
+              "type": "COMPONENT_SET",
+              "x": 0,
+              "y": 0,
+              "children": [
+                {
+                  "id": "jay-import:2",
+                  "name": "status=ACTIVE",
+                  "type": "COMPONENT",
+                  "x": 0,
+                  "y": 0,
+                  "width": 200,
+                  "height": 40,
+                  "variantProperties": { "status": "ACTIVE" },
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 0, "g": 0.5019607843137255, "b": 0 }
+                    }
+                  ],
+                  "children": [
+                    {
+                      "id": "jay-import:1",
+                      "name": "Active",
+                      "type": "TEXT",
+                      "x": 0,
+                      "y": 0,
+                      "width": 100,
+                      "height": 20,
+                      "characters": "Active",
+                      "fontSize": 14,
+                      "fills": [
+                        {
+                          "type": "SOLID",
+                          "color": { "r": 1, "g": 1, "b": 1 }
+                        }
+                      ],
+                      "pluginData": {
+                        "semanticHtml": "p"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "id": "jay-import:4",
+                  "name": "status=INACTIVE",
+                  "type": "COMPONENT",
+                  "x": 0,
+                  "y": 0,
+                  "width": 200,
+                  "height": 40,
+                  "variantProperties": { "status": "INACTIVE" },
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 0.7843137254901961, "g": 0, "b": 0 }
+                    }
+                  ],
+                  "children": [
+                    {
+                      "id": "jay-import:3",
+                      "name": "Inactive",
+                      "type": "TEXT",
+                      "x": 0,
+                      "y": 0,
+                      "width": 100,
+                      "height": 20,
+                      "characters": "Inactive",
+                      "fontSize": 14,
+                      "fills": [
+                        {
+                          "type": "SOLID",
+                          "color": { "r": 1, "g": 1, "b": 1 }
+                        }
+                      ],
+                      "pluginData": {
+                        "semanticHtml": "p"
+                      }
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "jay-import:6",
+              "name": "status",
+              "type": "INSTANCE",
+              "x": 0,
+              "y": 0,
+              "componentSetId": "jay-import:5",
+              "componentPropertyDefinitions": {
+                "status": {
+                  "type": "VARIANT",
+                  "variantOptions": ["ACTIVE", "INACTIVE"],
+                  "defaultValue": "ACTIVE"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": { "r": 1, "g": 1, "b": 1 }
+        }
+      ]
+    }
+  ],
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/"
+  }
+}

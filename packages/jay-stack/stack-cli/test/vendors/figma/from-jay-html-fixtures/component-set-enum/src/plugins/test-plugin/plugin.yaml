@@ -1,0 +1,6 @@
+name: test-plugin
+
+contracts:
+  - name: status-widget
+    contract: status-widget.jay-contract
+    component: statusWidget
