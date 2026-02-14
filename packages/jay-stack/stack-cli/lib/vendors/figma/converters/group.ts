@@ -1,5 +1,6 @@
 import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
 import type { ConversionContext, BindingAnalysis } from '../types';
+import { buildParentContext } from '../types';
 import { getPositionStyle, getNodeSizeStyles, getCommonStyles } from '../utils';
 
 /**
@@ -24,8 +25,8 @@ export function convertGroupNode(
     const indent = '  '.repeat(context.indentLevel);
 
     // Groups have position, size, and common styles but no visual styling
-    const positionStyle = getPositionStyle(node);
-    const sizeStyles = getNodeSizeStyles(node);
+    const positionStyle = getPositionStyle(node, context.parent);
+    const sizeStyles = getNodeSizeStyles(node, context.parent);
     const commonStyles = getCommonStyles(node);
 
     const styleAttr = `${positionStyle}${sizeStyles}${commonStyles}box-sizing: border-box;`;
@@ -49,15 +50,15 @@ export function convertGroupNode(
     // Build group container
     let html = `${indent}<div ${htmlAttrs}>\n`;
 
-    const childContext: ConversionContext = {
-        ...context,
-        indentLevel: context.indentLevel + 1,
-    };
-
     // Convert children
     if (node.children && node.children.length > 0) {
-        for (const child of node.children) {
-            html += convertNodeToJayHtml(child, childContext);
+        for (let i = 0; i < node.children.length; i++) {
+            const childContext: ConversionContext = {
+                ...context,
+                indentLevel: context.indentLevel + 1,
+                parent: buildParentContext(node, i),
+            };
+            html += convertNodeToJayHtml(node.children[i], childContext);
         }
     }
 

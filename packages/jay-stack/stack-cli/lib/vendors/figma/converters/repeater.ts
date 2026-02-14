@@ -1,5 +1,6 @@
 import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
 import type { ConversionContext, BindingAnalysis } from '../types';
+import { buildParentContext } from '../types';
 import {
     getPositionStyle,
     getFrameSizeStyles,
@@ -42,8 +43,8 @@ export function convertRepeaterNode(
 
     // Build styles for the outer container
     // This div has all the Frame's styling and is positioned once
-    const positionStyle = getPositionStyle(node);
-    const frameSizeStyles = getFrameSizeStyles(node);
+    const positionStyle = getPositionStyle(node, context.parent);
+    const frameSizeStyles = getFrameSizeStyles(node, context.parent);
     const backgroundStyle = getBackgroundFillsStyle(node);
     const borderRadius = getBorderRadius(node);
     const strokeStyles = getStrokeStyles(node);
@@ -77,6 +78,7 @@ export function convertRepeaterNode(
         ...context,
         repeaterPathStack: [...context.repeaterPathStack, repeaterPath!.split('.')],
         indentLevel: context.indentLevel + 2, // +2 because we're inside both divs
+        parent: buildParentContext(node, 0),
     };
 
     // Convert only the first child - it's the template that gets repeated

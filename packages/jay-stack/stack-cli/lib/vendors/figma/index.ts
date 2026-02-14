@@ -23,6 +23,7 @@ import { convertRepeaterNode } from './converters/repeater';
 import { convertGroupNode } from './converters/group';
 import { convertJayHtmlToFigmaDoc } from './converters/from-jay-html';
 import type { ConversionContext, BindingAnalysis } from './types';
+import { buildParentContext } from './types';
 import { getBindingsData, analyzeBindings, validateBindings } from './binding-analysis';
 
 /**
@@ -68,6 +69,7 @@ function convertRegularNode(
             dynamicContent || dualContent,
             refAttr || dualRef,
             attributesHtml,
+            context.parent,
         );
     }
 
@@ -104,12 +106,14 @@ function convertRegularNode(
             altBinding,
             refAttr,
             staticImageUrl,
+            context.parent,
         );
     }
 
-    // Get position, size, and common styles
-    const positionStyle = getPositionStyle(node);
-    const sizeStyles = getNodeSizeStyles(node);
+    // Get position, size, and common styles — pass parent context from tree walk
+    const parent = context.parent;
+    const positionStyle = getPositionStyle(node, parent);
+    const sizeStyles = getNodeSizeStyles(node, parent);
     const commonStyles = getCommonStyles(node);
 
     // For frames, build full styling
@@ -120,7 +124,7 @@ function convertRegularNode(
         const strokeStyles = getStrokeStyles(node);
         const flexStyles = getAutoLayoutStyles(node);
         const overflowStyles = getOverflowStyles(node);
-        const frameSizeStyles = getFrameSizeStyles(node);
+        const frameSizeStyles = getFrameSizeStyles(node, parent);
 
         styleAttr = `${positionStyle}${frameSizeStyles}${backgroundStyle}${strokeStyles}${borderRadius}${overflowStyles}${commonStyles}${flexStyles}box-sizing: border-box;`;
     } else {
@@ -129,7 +133,10 @@ function convertRegularNode(
 
     // Build HTML attributes
     const tag = semanticHtml || 'div';
-    let htmlAttrs = `data-figma-id="${node.id}" data-figma-type="${type.toLowerCase()}" style="${styleAttr}"`;
+    // Emit data-name on functionally required nodes (Design Log #91.1 naming guidance):
+    // - Content frame (direct child of SECTION) — must be named "Content" for contractUiGenerator lookup
+    const dataNameAttr = context.parent?.type === 'SECTION' ? ` data-name="${node.name}"` : '';
+    let htmlAttrs = `data-figma-id="${node.id}"${dataNameAttr} data-figma-type="${type.toLowerCase()}" style="${styleAttr}"`;
 
     // Add ref attribute
     if (analysis.refPath) {
@@ -145,9 +152,9 @@ function convertRegularNode(
 
     // Handle based on node type
     if (type === 'RECTANGLE') {
-        return convertRectangleToHtml(node, indent);
+        return convertRectangleToHtml(node, indent, context.parent);
     } else if (type === 'ELLIPSE') {
-        return convertEllipseToHtml(node, indent);
+        return convertEllipseToHtml(node, indent, context.parent);
     } else if (type === 'GROUP') {
         // Groups need special handling for layout
         return convertGroupNode(node, analysis, context, convertNodeToJayHtml);
@@ -158,19 +165,19 @@ function convertRegularNode(
         type === 'LINE' ||
         type === 'BOOLEAN_OPERATION'
     ) {
-        return convertVectorToHtml(node, indent);
+        return convertVectorToHtml(node, indent, context.parent);
     } else if (children && children.length > 0) {
         // Container with children
         let html = `${indent}<${tag} ${htmlAttrs}>\n`;
         html += `${indent}  <!-- ${node.name} -->\n`;
 
-        const childContext: ConversionContext = {
-            ...context,
-            indentLevel: context.indentLevel + 1,
-        };
-
-        for (const child of children) {
-            html += convertNodeToJayHtml(child, childContext);
+        for (let i = 0; i < children.length; i++) {
+            const childContext: ConversionContext = {
+                ...context,
+                indentLevel: context.indentLevel + 1,
+                parent: buildParentContext(node, i),
+            };
+            html += convertNodeToJayHtml(children[i], childContext);
         }
 
         html += `${indent}</${tag}>\n`;
@@ -201,16 +208,17 @@ function convertNodeToJayHtml(node: FigmaVendorDocument, context: ConversionCont
 
     // Handle Jay Page sections (don't process bindings for top-level sections)
     if (type === 'SECTION' && isJPage) {
-        let html = `${indent}<section data-figma-id="${node.id}" data-page-url="${urlRoute || ''}">\n`;
+        let html = `${indent}<section data-figma-id="${node.id}" data-name="${name}" data-page-url="${urlRoute || ''}">\n`;
         html += `${indent}  <!-- Jay Page: ${name} -->\n`;
 
         if (children && children.length > 0) {
-            const childContext: ConversionContext = {
-                ...context,
-                indentLevel: context.indentLevel + 1,
-            };
-            for (const child of children) {
-                html += convertNodeToJayHtml(child, childContext);
+            for (let i = 0; i < children.length; i++) {
+                const childContext: ConversionContext = {
+                    ...context,
+                    indentLevel: context.indentLevel + 1,
+                    parent: buildParentContext(node, i),
+                };
+                html += convertNodeToJayHtml(children[i], childContext);
             }
         }
 
@@ -319,13 +327,14 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
         // Create empty set to collect font families during conversion
         const fontFamilies = new Set<string>();
 
-        // Create conversion context
+        // Create conversion context — the content frame is a direct child of the SECTION
         const context: ConversionContext = {
             repeaterPathStack: [],
             indentLevel: 1, // Start at 1 for body content
             fontFamilies,
             projectPage,
             plugins,
+            parent: buildParentContext(vendorDoc, 0), // Content frame is child of SECTION
         };
 
         // Convert the content frame to body HTML (fontFamilies will be populated during conversion)

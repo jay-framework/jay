@@ -56,6 +56,37 @@ export interface BindingAnalysis {
 }
 
 /**
+ * Parent context derived from the tree walk.
+ * Replaces serialized parent* properties on FigmaVendorDocument.
+ * See Design Log #93.
+ */
+export interface ParentContext {
+    type: string;
+    layoutMode?: 'NONE' | 'HORIZONTAL' | 'VERTICAL';
+    overflowDirection?: 'NONE' | 'HORIZONTAL' | 'VERTICAL' | 'BOTH';
+    numberOfFixedChildren?: number;
+    childIndex?: number;
+}
+
+/**
+ * Builds a ParentContext from a FigmaVendorDocument node,
+ * for passing to its children during the tree walk.
+ */
+export function buildParentContext(
+    node: { type: string; layoutMode?: string; overflowDirection?: string },
+    childIndex: number,
+    numberOfFixedChildren?: number,
+): ParentContext {
+    return {
+        type: node.type,
+        layoutMode: node.layoutMode as ParentContext['layoutMode'],
+        overflowDirection: node.overflowDirection as ParentContext['overflowDirection'],
+        numberOfFixedChildren,
+        childIndex,
+    };
+}
+
+/**
  * Conversion context passed through the recursion
  */
 export interface ConversionContext {
@@ -73,4 +104,8 @@ export interface ConversionContext {
 
     // Available plugins
     plugins: any[]; // Plugin[] type from editor-protocol
+
+    // Parent context derived from the tree walk (Design Log #93)
+    // Replaces serialized parent* properties on FigmaVendorDocument
+    parent?: ParentContext;
 }

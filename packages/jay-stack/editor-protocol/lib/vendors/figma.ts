@@ -24,7 +24,7 @@ export type FigmaVendorDocument = {
     type: string;
     visible?: boolean;
     locked?: boolean;
-    parentId?: string;
+    // parentId removed — Design Log #93 (not used by forward converter or deserializer)
     children?: FigmaVendorDocument[];
 
     // Layout
@@ -118,11 +118,9 @@ export type FigmaVendorDocument = {
     clipsContent?: boolean;
     overflowDirection?: 'NONE' | 'HORIZONTAL' | 'VERTICAL' | 'BOTH';
     scrollBehavior?: 'SCROLLS' | 'FIXED';
-    parentLayoutMode?: 'NONE' | 'HORIZONTAL' | 'VERTICAL';
-    parentType?: string;
-    parentOverflowDirection?: 'NONE' | 'HORIZONTAL' | 'VERTICAL' | 'BOTH';
-    parentNumberOfFixedChildren?: number;
-    parentChildIndex?: number;
+    // parent* properties removed — Design Log #93.
+    // Forward converter now derives parent context from tree walk.
+    // Legacy JSON may still have these fields (allowed via [key: string]: any).
 
     // Common properties
     opacity?: number;

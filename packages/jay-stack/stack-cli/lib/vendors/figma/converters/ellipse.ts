@@ -6,16 +6,17 @@ import {
     getBackgroundFillsStyle,
     getStrokeStyles,
 } from '../utils';
+import type { ParentContext } from '../types';
 
 /**
  * Converts an ELLIPSE node to HTML with circular border radius
  */
-export function convertEllipseToHtml(node: FigmaVendorDocument, indent: string): string {
+export function convertEllipseToHtml(node: FigmaVendorDocument, indent: string, parent?: ParentContext): string {
     const { id } = node;
 
     // Get positioning and sizing
-    const positionStyle = getPositionStyle(node);
-    const sizeStyles = getNodeSizeStyles(node);
+    const positionStyle = getPositionStyle(node, parent);
+    const sizeStyles = getNodeSizeStyles(node, parent);
     const commonStyles = getCommonStyles(node);
 
     // Get ellipse-specific styles

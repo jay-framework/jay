@@ -1,8 +1,13 @@
 import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
+import type { ParentContext } from './types';
 
 /**
  * Utility functions for converting Figma properties to CSS styles.
  * These mirror the functions from the old plugin's utils.ts but work with serialized data.
+ *
+ * Functions that need parent context accept an optional `parent?: ParentContext` parameter.
+ * When provided, it is preferred over the serialized `node.parent*` properties.
+ * This enables Design Log #93's goal of removing parent* from the serialized JSON.
  */
 
 /**
@@ -24,23 +29,32 @@ export function rgbToHex(color: { r: number; g: number; b: number }, opacity?: n
 }
 
 /**
- * Calculates the position type for a node based on its layout context
+ * Calculates the position type for a node based on its layout context.
+ * Prefers explicit `parent` parameter over serialized `node.parent*` properties.
  */
 function getPositionType(
     node: FigmaVendorDocument,
+    parent?: ParentContext,
 ): 'absolute' | 'fixed' | 'static' | 'relative' | 'sticky' {
+    // Resolve parent properties: prefer explicit parent context, fall back to node.parent*
+    const parentType = parent?.type ?? node.parentType;
+    const parentLayoutMode = parent?.layoutMode ?? node.parentLayoutMode;
+    const parentOverflowDirection = parent?.overflowDirection ?? node.parentOverflowDirection;
+    const parentChildIndex = parent?.childIndex ?? node.parentChildIndex;
+    const parentNumberOfFixedChildren = parent?.numberOfFixedChildren ?? node.parentNumberOfFixedChildren;
+
     // If node has explicit absolute positioning
     if (node.layoutPositioning === 'ABSOLUTE') {
         return 'absolute';
     }
 
     // Check for scroll-related positioning
-    if (node.parentOverflowDirection && node.parentOverflowDirection !== 'NONE') {
+    if (parentOverflowDirection && parentOverflowDirection !== 'NONE') {
         // Check if this node should be fixed during scroll
-        if (node.parentNumberOfFixedChildren && node.parentChildIndex !== undefined) {
+        if (parentNumberOfFixedChildren && parentChildIndex !== undefined) {
             if (
-                node.parentChildIndex >= 0 &&
-                node.parentChildIndex < node.parentNumberOfFixedChildren
+                parentChildIndex >= 0 &&
+                parentChildIndex < parentNumberOfFixedChildren
             ) {
                 return 'sticky';
             }
@@ -48,24 +62,24 @@ function getPositionType(
     }
 
     // If node has fixed scroll behavior and parent is not auto layout
-    if (node.scrollBehavior === 'FIXED' && node.parentLayoutMode === 'NONE') {
+    if (node.scrollBehavior === 'FIXED' && parentLayoutMode === 'NONE') {
         return 'fixed';
     }
 
     // If node is a direct child of a SECTION (top level frame)
-    if (node.parentType === 'SECTION') {
+    if (parentType === 'SECTION') {
         return 'absolute';
     }
 
     // If parent is not an auto layout frame, use absolute positioning
-    if (node.parentLayoutMode === 'NONE') {
+    if (parentLayoutMode === 'NONE') {
         return 'absolute';
     }
 
     // For nodes in auto-layout parents, use relative positioning
     if (
-        node.parentLayoutMode &&
-        (node.parentLayoutMode === 'HORIZONTAL' || node.parentLayoutMode === 'VERTICAL')
+        parentLayoutMode &&
+        (parentLayoutMode === 'HORIZONTAL' || parentLayoutMode === 'VERTICAL')
     ) {
         return 'relative';
     }
@@ -76,12 +90,12 @@ function getPositionType(
 /**
  * Gets the position style for a node
  */
-export function getPositionStyle(node: FigmaVendorDocument): string {
+export function getPositionStyle(node: FigmaVendorDocument, parent?: ParentContext): string {
     if (node.type === 'COMPONENT') {
         return '';
     }
 
-    const positionType = getPositionType(node);
+    const positionType = getPositionType(node, parent);
     if (positionType === 'static') {
         return ''; // Empty string for flex layout
     }
@@ -105,9 +119,11 @@ export function getPositionStyle(node: FigmaVendorDocument): string {
 /**
  * Gets size styles for auto-layout children
  */
-function getAutoLayoutChildSizeStyles(node: FigmaVendorDocument): string {
+function getAutoLayoutChildSizeStyles(node: FigmaVendorDocument, parent?: ParentContext): string {
+    const parentLayoutMode = parent?.layoutMode ?? node.parentLayoutMode;
+
     // Check if parent is an auto layout container
-    if (!node.parentLayoutMode || node.parentLayoutMode === 'NONE') {
+    if (!parentLayoutMode || parentLayoutMode === 'NONE') {
         // Not in auto layout, use fixed dimensions
         const width = node.width !== undefined ? node.width : 0;
         const height = node.height !== undefined ? node.height : 0;
@@ -124,7 +140,7 @@ function getAutoLayoutChildSizeStyles(node: FigmaVendorDocument): string {
         return `width: ${width}px;height: ${height}px;`;
     }
 
-    const isHorizontalLayout = node.parentLayoutMode === 'HORIZONTAL';
+    const isHorizontalLayout = parentLayoutMode === 'HORIZONTAL';
     const width = node.width !== undefined ? node.width : 0;
     const height = node.height !== undefined ? node.height : 0;
 
@@ -222,14 +238,16 @@ function getAutoLayoutChildSizeStyles(node: FigmaVendorDocument): string {
 /**
  * Gets size styles for any node
  */
-export function getNodeSizeStyles(node: FigmaVendorDocument): string {
+export function getNodeSizeStyles(node: FigmaVendorDocument, parent?: ParentContext): string {
+    const parentType = parent?.type ?? node.parentType;
+
     // Skip first frame that is child of a SECTION node
-    if (node.parentType === 'SECTION') {
+    if (parentType === 'SECTION') {
         const height = node.height !== undefined ? node.height : 0;
         return `width: 100%;height: ${height}px;`;
     }
 
-    return getAutoLayoutChildSizeStyles(node);
+    return getAutoLayoutChildSizeStyles(node, parent);
 }
 
 /**
@@ -567,8 +585,9 @@ export function getStrokeStyles(node: FigmaVendorDocument): string {
 /**
  * Gets frame size styles (width/height based on layout mode)
  */
-export function getFrameSizeStyles(node: FigmaVendorDocument): string {
-    const isTopLevel = node.parentType === 'SECTION';
+export function getFrameSizeStyles(node: FigmaVendorDocument, parent?: ParentContext): string {
+    const parentType = parent?.type ?? node.parentType;
+    const isTopLevel = parentType === 'SECTION';
 
     // Top-level frames (direct children of SECTION)
     if (isTopLevel) {

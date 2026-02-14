@@ -1,5 +1,6 @@
 import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
 import { getPositionStyle, getNodeSizeStyles, getCommonStyles, getBorderRadius } from '../utils';
+import type { ParentContext } from '../types';
 
 /**
  * Converts a node marked as <img> semantic HTML to an image tag
@@ -21,11 +22,12 @@ export function convertImageNodeToHtml(
     altBinding?: string,
     refAttr?: string,
     staticImageUrl?: string,
+    parent?: ParentContext,
 ): string {
     const { name, id } = node;
 
     // Get positioning styles
-    const positionStyle = getPositionStyle(node);
+    const positionStyle = getPositionStyle(node, parent);
 
     // Get common styles (opacity, rotation, effects, etc.)
     const commonStyles = getCommonStyles(node);
@@ -34,7 +36,7 @@ export function convertImageNodeToHtml(
     const borderRadius = getBorderRadius(node);
 
     // Get size styles for auto layout compatibility
-    const sizeStyles = getNodeSizeStyles(node);
+    const sizeStyles = getNodeSizeStyles(node, parent);
 
     // Build the style string (excluding background fills since this is an image)
     const styles = `${positionStyle}${sizeStyles}${borderRadius}${commonStyles}`.trim();

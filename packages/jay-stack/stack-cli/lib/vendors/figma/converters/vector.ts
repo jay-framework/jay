@@ -1,15 +1,16 @@
 import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
 import { getPositionStyle, getNodeSizeStyles, getCommonStyles } from '../utils';
+import type { ParentContext } from '../types';
 
 /**
  * Converts a VECTOR node to HTML with embedded SVG
  */
-export function convertVectorToHtml(node: FigmaVendorDocument, indent: string): string {
+export function convertVectorToHtml(node: FigmaVendorDocument, indent: string, parent?: ParentContext): string {
     const { id, name, svgContent, svgExportFailed, width, height } = node;
 
     // Get positioning and sizing
-    const positionStyle = getPositionStyle(node);
-    const sizeStyles = getNodeSizeStyles(node);
+    const positionStyle = getPositionStyle(node, parent);
+    const sizeStyles = getNodeSizeStyles(node, parent);
     const commonStyles = getCommonStyles(node);
 
     let finalSvgContent: string;

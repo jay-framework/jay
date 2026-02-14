@@ -7,16 +7,17 @@ import {
     getStrokeStyles,
     getBorderRadius,
 } from '../utils';
+import type { ParentContext } from '../types';
 
 /**
  * Converts a RECTANGLE node to HTML with background fills, border radius, and strokes
  */
-export function convertRectangleToHtml(node: FigmaVendorDocument, indent: string): string {
+export function convertRectangleToHtml(node: FigmaVendorDocument, indent: string, parent?: ParentContext): string {
     const { id } = node;
 
     // Get positioning and sizing
-    const positionStyle = getPositionStyle(node);
-    const sizeStyles = getNodeSizeStyles(node);
+    const positionStyle = getPositionStyle(node, parent);
+    const sizeStyles = getNodeSizeStyles(node, parent);
     const commonStyles = getCommonStyles(node);
 
     // Get rectangle-specific styles

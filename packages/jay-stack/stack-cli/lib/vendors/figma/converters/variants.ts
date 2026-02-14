@@ -1,5 +1,6 @@
 import type { FigmaVendorDocument, ContractTag } from '@jay-framework/editor-protocol';
 import type { ConversionContext, BindingAnalysis } from '../types';
+import { buildParentContext } from '../types';
 import {
     getPositionStyle,
     getFrameSizeStyles,
@@ -280,15 +281,15 @@ export function convertVariantNode(
         // Convert variant with if condition
         variantHtml += `${innerIndent}<div if="${conditions}">\n`;
 
-        const variantContext: ConversionContext = {
-            ...context,
-            indentLevel: context.indentLevel + 2, // +2 because we're inside wrapper and if div
-        };
-
         // Convert variant node's children
         if (variantNode.children && variantNode.children.length > 0) {
-            for (const child of variantNode.children) {
-                variantHtml += convertNodeToJayHtml(child, variantContext);
+            for (let i = 0; i < variantNode.children.length; i++) {
+                const variantContext: ConversionContext = {
+                    ...context,
+                    indentLevel: context.indentLevel + 2, // +2 because we're inside wrapper and if div
+                    parent: buildParentContext(variantNode, i),
+                };
+                variantHtml += convertNodeToJayHtml(variantNode.children[i], variantContext);
             }
         }
 
@@ -297,8 +298,8 @@ export function convertVariantNode(
 
     // 4. Build styles for the outer wrapper (the instance node's Frame styling)
     // This wrapper is positioned once and contains all variant permutations
-    const positionStyle = getPositionStyle(node);
-    const frameSizeStyles = getFrameSizeStyles(node);
+    const positionStyle = getPositionStyle(node, context.parent);
+    const frameSizeStyles = getFrameSizeStyles(node, context.parent);
     const backgroundStyle = getBackgroundFillsStyle(node);
     const borderRadius = getBorderRadius(node);
     const strokeStyles = getStrokeStyles(node);
@@ -320,8 +321,10 @@ export function convertVariantNode(
     }
 
     // 5. Wrap everything in the outer container with Frame styling
+    // Emit data-name for variant containers — carries component set name (Design Log #91.1)
+    const dataName = node.componentSetName || node.name;
     return (
-        `${indent}<div id="${node.id}" data-figma-id="${node.id}" data-figma-type="variant-container"${refAttr} style="${wrapperStyleAttr}">\n` +
+        `${indent}<div id="${node.id}" data-figma-id="${node.id}" data-name="${dataName}" data-figma-type="variant-container"${refAttr} style="${wrapperStyleAttr}">\n` +
         variantHtml +
         `${indent}</div>\n`
     );

@@ -43,20 +43,20 @@
   </style>
 </head>
 <body>
-  <div data-figma-id="frame-1" data-figma-type="frame" style="position: absolute;top: 100px;left: 100px;width: 100%;height: 200px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;justify-content: flex-start;align-items: flex-start;gap: 20px;padding-left: 20px;padding-right: 20px;padding-top: 20px;padding-bottom: 20px;box-sizing: border-box;">
+  <div data-figma-id="frame-1" data-name="Content" data-figma-type="frame" style="position: absolute;top: 100px;left: 100px;width: 100%;height: 200px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;justify-content: flex-start;align-items: flex-start;gap: 20px;padding-left: 20px;padding-right: 20px;padding-top: 20px;padding-bottom: 20px;box-sizing: border-box;">
     <!-- Content -->
-    <div id="button-instance" data-figma-id="button-instance" data-figma-type="variant-container" style="position: relative;width: 200px;height: 50px;background: transparent;border-radius: 0px;overflow: visible;box-sizing: border-box;">
+    <div id="button-instance" data-figma-id="button-instance" data-name="Button" data-figma-type="variant-container" style="position: relative;width: 200px;height: 50px;background: transparent;border-radius: 0px;overflow: visible;box-sizing: border-box;">
       <div if="buttonVariant == primary && isDisabled">
-        <div data-figma-id="text-primary" style="width: 100px;height: 20px;font-family: 'Inter', sans-serif;font-size: 16px;font-weight: 500;color: #000000;text-align: left;">Click Me</div>
+        <div data-figma-id="text-primary" style="position: relative;width: 100px;height: 20px;font-family: 'Inter', sans-serif;font-size: 16px;font-weight: 500;color: #000000;text-align: left;">Click Me</div>
       </div>
       <div if="buttonVariant == primary && !isDisabled">
-        <div data-figma-id="text-primary" style="width: 100px;height: 20px;font-family: 'Inter', sans-serif;font-size: 16px;font-weight: 500;color: #000000;text-align: left;">Click Me</div>
+        <div data-figma-id="text-primary" style="position: relative;width: 100px;height: 20px;font-family: 'Inter', sans-serif;font-size: 16px;font-weight: 500;color: #000000;text-align: left;">Click Me</div>
       </div>
       <div if="buttonVariant == secondary && isDisabled">
-        <div data-figma-id="text-primary" style="width: 100px;height: 20px;font-family: 'Inter', sans-serif;font-size: 16px;font-weight: 500;color: #000000;text-align: left;">Click Me</div>
+        <div data-figma-id="text-primary" style="position: relative;width: 100px;height: 20px;font-family: 'Inter', sans-serif;font-size: 16px;font-weight: 500;color: #000000;text-align: left;">Click Me</div>
       </div>
       <div if="buttonVariant == secondary && !isDisabled">
-        <div data-figma-id="text-primary" style="width: 100px;height: 20px;font-family: 'Inter', sans-serif;font-size: 16px;font-weight: 500;color: #000000;text-align: left;">Click Me</div>
+        <div data-figma-id="text-primary" style="position: relative;width: 100px;height: 20px;font-family: 'Inter', sans-serif;font-size: 16px;font-weight: 500;color: #000000;text-align: left;">Click Me</div>
       </div>
     </div>
   </div>

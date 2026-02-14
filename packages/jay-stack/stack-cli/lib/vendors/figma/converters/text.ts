@@ -1,5 +1,6 @@
 import type { FigmaVendorDocument, Plugin, ProjectPage } from '@jay-framework/editor-protocol';
 import { getPositionStyle, getNodeSizeStyles, getCommonStyles, rgbToHex } from '../utils';
+import type { ParentContext } from '../types';
 import type { PageContractPath } from '../pageContractPath';
 
 /**
@@ -30,6 +31,7 @@ export function convertTextNodeToHtml(
     dynamicContent?: string,
     refAttr?: string,
     attributesHtml?: string,
+    parent?: ParentContext,
 ): string {
     const {
         name,
@@ -167,8 +169,8 @@ export function convertTextNodeToHtml(
     }
 
     // Position, size, and common styles
-    const positionStyle = getPositionStyle(node);
-    let sizeStyles = getNodeSizeStyles(node);
+    const positionStyle = getPositionStyle(node, parent);
+    let sizeStyles = getNodeSizeStyles(node, parent);
     const commonStyles = getCommonStyles(node);
 
     // For text nodes, handle auto-resize height specially

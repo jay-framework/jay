@@ -49,11 +49,11 @@
   </style>
 </head>
 <body>
-  <div data-figma-id="frame-1" data-figma-type="frame" style="position: absolute;top: 100px;left: 100px;width: 100%;height: 400px;background-image: linear-gradient(rgba(255, 255, 255, 1), rgba(255, 255, 255, 1));background-size: 100% 100%;background-position: center;background-repeat: no-repeat;border-radius: 8px;overflow: visible;display: flex;flex-direction: column;justify-content: flex-start;align-items: flex-start;gap: 16px;padding-left: 20px;padding-right: 20px;padding-top: 20px;padding-bottom: 20px;box-sizing: border-box;">
+  <div data-figma-id="frame-1" data-name="Product Card" data-figma-type="frame" style="position: absolute;top: 100px;left: 100px;width: 100%;height: 400px;background-image: linear-gradient(rgba(255, 255, 255, 1), rgba(255, 255, 255, 1));background-size: 100% 100%;background-position: center;background-repeat: no-repeat;border-radius: 8px;overflow: visible;display: flex;flex-direction: column;justify-content: flex-start;align-items: flex-start;gap: 16px;padding-left: 20px;padding-right: 20px;padding-top: 20px;padding-bottom: 20px;box-sizing: border-box;">
     <!-- Product Card -->
-    <img data-figma-id="product-image" src="{productCard.image}" alt="image" style="width: 260px;height: 200px;border-radius: 4px;" />
-    <div data-figma-id="product-name" style="width: 260px;height: 30px;font-family: 'Inter', sans-serif;font-size: 24px;font-weight: 700;color: #000000;text-align: left;">{productCard.name}</div>
-    <div data-figma-id="product-price" style="width: 260px;height: 24px;font-family: 'Inter', sans-serif;font-size: 18px;font-weight: 400;color: #4d4d4d;text-align: left;">{productCard.price}</div>
+    <img data-figma-id="product-image" src="{productCard.image}" alt="image" style="position: relative;width: 260px;height: 200px;border-radius: 4px;" />
+    <div data-figma-id="product-name" style="position: relative;width: 260px;height: 30px;font-family: 'Inter', sans-serif;font-size: 24px;font-weight: 700;color: #000000;text-align: left;">{productCard.name}</div>
+    <div data-figma-id="product-price" style="position: relative;width: 260px;height: 24px;font-family: 'Inter', sans-serif;font-size: 18px;font-weight: 400;color: #4d4d4d;text-align: left;">{productCard.price}</div>
   </div>
 
 </body>
