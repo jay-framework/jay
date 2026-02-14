@@ -1,0 +1,161 @@
+{
+  "id": "jay-import:6",
+  "name": "Jay Page: Page",
+  "type": "SECTION",
+  "x": 0,
+  "y": 0,
+  "width": 1440,
+  "height": 900,
+  "children": [
+    {
+      "id": "jay-import:5",
+      "name": "Content",
+      "type": "FRAME",
+      "x": 0,
+      "y": 0,
+      "width": 1440,
+      "height": 900,
+      "layoutMode": "VERTICAL",
+      "primaryAxisAlignItems": "MIN",
+      "counterAxisAlignItems": "MIN",
+      "children": [
+        {
+          "id": "jay-import:4",
+          "name": "header",
+          "type": "FRAME",
+          "x": 0,
+          "y": 0,
+          "layoutMode": "HORIZONTAL",
+          "primaryAxisAlignItems": "SPACE_BETWEEN",
+          "counterAxisAlignItems": "CENTER",
+          "paddingTop": 16,
+          "paddingBottom": 16,
+          "paddingLeft": 32,
+          "paddingRight": 32,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": { "r": 0.2, "g": 0.2, "b": 0.2 }
+            }
+          ],
+          "children": [
+            {
+              "id": "jay-import:0",
+              "name": "Store",
+              "type": "TEXT",
+              "x": 0,
+              "y": 0,
+              "width": 100,
+              "height": 20,
+              "characters": "Store",
+              "fontSize": 24,
+              "fontWeight": 700,
+              "textAlignVertical": "TOP",
+              "letterSpacing": {
+                "value": 0,
+                "unit": "PERCENT"
+              },
+              "textCase": "ORIGINAL",
+              "textTruncation": "DISABLED",
+              "textAutoResize": "WIDTH_AND_HEIGHT",
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": { "r": 1, "g": 1, "b": 1 }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "span"
+              }
+            },
+            {
+              "id": "jay-import:3",
+              "name": "nav",
+              "type": "FRAME",
+              "x": 0,
+              "y": 0,
+              "layoutMode": "HORIZONTAL",
+              "primaryAxisAlignItems": "MIN",
+              "counterAxisAlignItems": "MIN",
+              "itemSpacing": 24,
+              "children": [
+                {
+                  "id": "jay-import:1",
+                  "name": "Products",
+                  "type": "TEXT",
+                  "x": 0,
+                  "y": 0,
+                  "width": 100,
+                  "height": 20,
+                  "characters": "Products",
+                  "fontSize": 14,
+                  "textAlignVertical": "TOP",
+                  "letterSpacing": {
+                    "value": 0,
+                    "unit": "PERCENT"
+                  },
+                  "textCase": "ORIGINAL",
+                  "textTruncation": "DISABLED",
+                  "textAutoResize": "WIDTH_AND_HEIGHT",
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+                    }
+                  ],
+                  "pluginData": {
+                    "semanticHtml": "a"
+                  }
+                },
+                {
+                  "id": "jay-import:2",
+                  "name": "Cart",
+                  "type": "TEXT",
+                  "x": 0,
+                  "y": 0,
+                  "width": 100,
+                  "height": 20,
+                  "characters": "Cart",
+                  "fontSize": 14,
+                  "textAlignVertical": "TOP",
+                  "letterSpacing": {
+                    "value": 0,
+                    "unit": "PERCENT"
+                  },
+                  "textCase": "ORIGINAL",
+                  "textTruncation": "DISABLED",
+                  "textAutoResize": "WIDTH_AND_HEIGHT",
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+                    }
+                  ],
+                  "pluginData": {
+                    "semanticHtml": "a"
+                  }
+                }
+              ],
+              "pluginData": {
+                "semanticHtml": "nav"
+              }
+            }
+          ],
+          "pluginData": {
+            "semanticHtml": "header"
+          }
+        }
+      ],
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": { "r": 1, "g": 1, "b": 1 }
+        }
+      ]
+    }
+  ],
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/"
+  }
+}

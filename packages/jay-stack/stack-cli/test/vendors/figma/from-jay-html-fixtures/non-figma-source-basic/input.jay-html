@@ -1,0 +1,41 @@
+<html>
+<head>
+  <script type="application/jay-data">
+    data:
+  </script>
+  <style>
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-top: 16px;
+      padding-bottom: 16px;
+      padding-left: 32px;
+      padding-right: 32px;
+      background-color: #333333;
+    }
+    .logo {
+      font-size: 24px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+    .nav {
+      display: flex;
+      gap: 24px;
+    }
+    .nav-link {
+      font-size: 14px;
+      color: #999999;
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <span class="logo">Store</span>
+    <nav class="nav">
+      <a class="nav-link" href="/products">Products</a>
+      <a class="nav-link" href="/cart">Cart</a>
+    </nav>
+  </header>
+</body>
+</html>
