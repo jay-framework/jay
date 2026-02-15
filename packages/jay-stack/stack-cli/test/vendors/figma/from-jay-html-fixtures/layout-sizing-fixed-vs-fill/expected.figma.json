@@ -104,14 +104,13 @@
                   "fills": [
                     {
                       "type": "SOLID",
-                      "color": { "r": 0, "g": 0, "b": 0 }
+                      "color": {
+                        "r": 0,
+                        "g": 0,
+                        "b": 0
+                      }
                     }
                   ],
-                  "textAlignVertical": "TOP",
-                  "letterSpacing": { "value": 0, "unit": "PERCENT" },
-                  "textCase": "ORIGINAL",
-                  "textTruncation": "DISABLED",
-                  "textAutoResize": "WIDTH_AND_HEIGHT",
                   "pluginData": {
                     "semanticHtml": "p"
                   }
@@ -148,7 +147,11 @@
       "fills": [
         {
           "type": "SOLID",
-          "color": { "r": 1, "g": 1, "b": 1 }
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          }
         }
       ]
     }

@@ -74,6 +74,7 @@
               "y": 0,
               "width": 200,
               "height": 100,
+              "fills": [],
               "layoutSizingHorizontal": "FIXED",
               "layoutSizingVertical": "FIXED"
             },

@@ -317,6 +317,7 @@ interface FigmaLayoutProps {
     maxHeight?: number;
     layoutAlign?: 'MIN' | 'CENTER' | 'MAX' | 'STRETCH';
     layoutWrap?: 'NO_WRAP' | 'WRAP';
+    layoutPositioning?: 'AUTO' | 'ABSOLUTE';
 }
 
 /**
@@ -328,6 +329,12 @@ function stylesToFigmaProps(styles: Map<string, string>): FigmaLayoutProps {
     // Position
     props.x = parsePx(styles.get('left'));
     props.y = parsePx(styles.get('top'));
+
+    // layoutPositioning — "ABSOLUTE" when CSS has position: absolute (Design Log #91.1)
+    const position = styles.get('position');
+    if (position === 'absolute') {
+        props.layoutPositioning = 'ABSOLUTE';
+    }
 
     // Size
     props.width = parsePx(styles.get('width'));
@@ -390,7 +397,9 @@ function stylesToFigmaProps(styles: Map<string, string>): FigmaLayoutProps {
     // Background fills — multiple sources, in priority order:
     // 1. background-image: linear-gradient(rgba(...), rgba(...)) — our forward export pattern for solid fills
     // 2. background-color: rgb(...) or background: rgb(...) — standard CSS
-    // 3. background: transparent — no fills
+    // 3. background: transparent/none — explicitly empty fills
+    // IMPORTANT: fills: [] means "transparent" to the deserializer. Omitting fills entirely
+    // causes figma.createFrame() to keep its default WHITE fill. Must emit [] for transparent.
     const bgImage = styles.get('background-image');
     const bgColor = styles.get('background-color') || styles.get('background');
     if (bgImage) {
@@ -398,13 +407,15 @@ function stylesToFigmaProps(styles: Map<string, string>): FigmaLayoutProps {
         if (fills.length > 0) {
             props.fills = fills;
         }
-    } else if (bgColor && bgColor !== 'transparent') {
+    } else if (bgColor && bgColor !== 'transparent' && bgColor !== 'none') {
         const fill = parseColorToFill(bgColor);
         if (fill) {
             props.fills = [fill];
         }
+    } else if (bgColor === 'transparent' || bgColor === 'none') {
+        // Explicit transparent/none → empty fills array (overrides Figma's default white fill)
+        props.fills = [];
     }
-    // "background: transparent" or "background: none" → no fills (leave undefined)
 
     // Border → strokes
     // Handle both shorthand and separate properties (our forward export uses separate props)
@@ -1056,30 +1067,39 @@ function isTextElement(element: HTMLElement): boolean {
 }
 
 /**
- * Builds Figma text default properties that should always be present on TEXT nodes.
- * Only fills in defaults when the parsed text props don't already set them.
+ * Builds non-default Figma text properties that can be inferred from CSS context.
+ *
+ * Design Log #91.1 Figma Defaults Research:
+ * Removed constant defaults that match Figma's own defaults — the deserializer
+ * handles missing values gracefully (uses Figma defaults). Only emit properties
+ * that are NON-default and can be inferred from CSS signals.
+ *
+ * Removed (Figma defaults, no consumer needs them):
+ * - textAlignVertical: "TOP" — Figma default
+ * - letterSpacing: {value:0, unit:"PERCENT"} — Figma default
+ * - textCase: "ORIGINAL" — deserializer doesn't read it
+ * - textTruncation: "DISABLED" — deserializer doesn't read it
+ * - textAutoResize: "WIDTH_AND_HEIGHT" — Figma default
+ *
+ * Kept (non-default, inferred from CSS):
+ * - textAutoResize: "HEIGHT" — when text has fixed pixel width (Figma: fixed-width text box)
  */
-function buildTextDefaults(textProps: FigmaTextProps): Record<string, unknown> {
+function buildTextDefaults(
+    _textProps: FigmaTextProps,
+    layoutProps: FigmaLayoutProps,
+): Record<string, unknown> {
     const defaults: Record<string, unknown> = {};
 
-    // textAlignVertical — always "TOP" (Figma's default)
-    defaults.textAlignVertical = 'TOP';
-
-    // letterSpacing — default to 0% when not explicitly set from CSS
-    if (!textProps.letterSpacing) {
-        defaults.letterSpacing = { value: 0, unit: 'PERCENT' };
+    // textAutoResize: "HEIGHT" when text has an explicit pixel width but no explicit height.
+    // This means the text box has a fixed width and auto-resizes height to fit content.
+    // The Figma default "WIDTH_AND_HEIGHT" is omitted (deserializer uses Figma default).
+    if (
+        layoutProps.layoutSizingHorizontal === 'FIXED' &&
+        layoutProps.width !== undefined &&
+        layoutProps.layoutSizingVertical !== 'FIXED'
+    ) {
+        defaults.textAutoResize = 'HEIGHT';
     }
-
-    // textCase — default to "ORIGINAL" when not set via CSS text-transform
-    if (!textProps.textCase) {
-        defaults.textCase = 'ORIGINAL';
-    }
-
-    // textTruncation — always "DISABLED" (no CSS equivalent in our export)
-    defaults.textTruncation = 'DISABLED';
-
-    // textAutoResize — always "WIDTH_AND_HEIGHT" (Figma's default for text)
-    defaults.textAutoResize = 'WIDTH_AND_HEIGHT';
 
     return defaults;
 }
@@ -1098,8 +1118,8 @@ function convertTextElement(element: HTMLElement): FigmaVendorDocument {
     const colorStr = styles.get('color');
     const textFill = colorStr ? parseColorToFill(colorStr) : undefined;
 
-    // Apply Figma text defaults
-    const textDefaults = buildTextDefaults(textProps);
+    // Apply inferred non-default text properties
+    const textDefaults = buildTextDefaults(textProps, layoutProps);
 
     return {
         id: generateNodeId(),
@@ -1237,8 +1257,8 @@ function tryCollapseTextWrapper(element: HTMLElement): FigmaVendorDocument | nul
     const colorStr = innerStyles.get('color');
     const textFill = colorStr ? parseColorToFill(colorStr) : undefined;
 
-    // Apply Figma text defaults
-    const textDefaults = buildTextDefaults(textProps);
+    // Apply inferred non-default text properties
+    const textDefaults = buildTextDefaults(textProps, outerLayoutProps);
 
     return {
         id: pluginData?.['originalFigmaId'] || generateNodeId(),
@@ -1450,6 +1470,7 @@ function convertFrameElement(element: HTMLElement): FigmaVendorDocument {
         layoutSizingVertical: layoutProps.layoutSizingVertical,
         layoutAlign: layoutProps.layoutAlign,
         layoutWrap: layoutProps.layoutWrap,
+        layoutPositioning: layoutProps.layoutPositioning,
         rotation: layoutProps.rotation,
         effects: layoutProps.effects,
         minWidth: layoutProps.minWidth,

@@ -1,0 +1,25 @@
+<html>
+<head>
+  <script type="application/jay-data">
+    data:
+  </script>
+</head>
+<body>
+<!-- Regression test: transparent frames must produce fills: [] so the deserializer
+     overrides Figma's default white fill. Omitting fills causes white backgrounds. -->
+<div style="width: 400px; height: 300px; display: flex; flex-direction: column; background-image: linear-gradient(rgba(50, 50, 120, 1), rgba(50, 50, 120, 1)); background-size: 100% 100%; background-position: center; background-repeat: no-repeat;">
+  <!-- Frame with explicit transparent background — must get fills: [] -->
+  <div style="width: 300px; height: 80px; display: flex; flex-direction: row; background: transparent;">
+    <span style="color: rgb(255, 255, 255); font-size: 16px;">Button text on transparent frame</span>
+  </div>
+  <!-- Frame with no background CSS at all — no fills property (undefined) -->
+  <div style="width: 300px; height: 80px; display: flex; flex-direction: row;">
+    <span style="color: rgb(255, 255, 255); font-size: 16px;">Button text on no-bg frame</span>
+  </div>
+  <!-- Frame with actual fill — should get fills with color -->
+  <div style="width: 300px; height: 80px; display: flex; flex-direction: row; background-color: rgb(255, 255, 255);">
+    <span style="color: rgb(0, 0, 0); font-size: 16px;">Button text on white frame</span>
+  </div>
+</div>
+</body>
+</html>

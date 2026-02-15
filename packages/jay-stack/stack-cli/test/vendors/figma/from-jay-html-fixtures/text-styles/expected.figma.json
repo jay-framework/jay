@@ -47,14 +47,6 @@
                 "style": "Bold"
               },
               "fontSize": 24,
-              "textAlignVertical": "TOP",
-              "letterSpacing": {
-                "value": 0,
-                "unit": "PERCENT"
-              },
-              "textCase": "ORIGINAL",
-              "textTruncation": "DISABLED",
-              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -93,10 +85,6 @@
                 "value": 20,
                 "unit": "PIXELS"
               },
-              "textAlignVertical": "TOP",
-              "textCase": "ORIGINAL",
-              "textTruncation": "DISABLED",
-              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -127,14 +115,6 @@
               },
               "fontSize": 16,
               "textDecoration": "UNDERLINE",
-              "textAlignVertical": "TOP",
-              "letterSpacing": {
-                "value": 0,
-                "unit": "PERCENT"
-              },
-              "textCase": "ORIGINAL",
-              "textTruncation": "DISABLED",
-              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -165,14 +145,6 @@
               },
               "fontSize": 16,
               "textDecoration": "STRIKETHROUGH",
-              "textAlignVertical": "TOP",
-              "letterSpacing": {
-                "value": 0,
-                "unit": "PERCENT"
-              },
-              "textCase": "ORIGINAL",
-              "textTruncation": "DISABLED",
-              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -203,13 +175,6 @@
               },
               "fontSize": 12,
               "textCase": "UPPER",
-              "textAlignVertical": "TOP",
-              "letterSpacing": {
-                "value": 0,
-                "unit": "PERCENT"
-              },
-              "textTruncation": "DISABLED",
-              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -242,14 +207,6 @@
               "lineHeight": {
                 "unit": "AUTO"
               },
-              "textAlignVertical": "TOP",
-              "letterSpacing": {
-                "value": 0,
-                "unit": "PERCENT"
-              },
-              "textCase": "ORIGINAL",
-              "textTruncation": "DISABLED",
-              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -283,14 +240,6 @@
                 "value": 150,
                 "unit": "PERCENT"
               },
-              "textAlignVertical": "TOP",
-              "letterSpacing": {
-                "value": 0,
-                "unit": "PERCENT"
-              },
-              "textCase": "ORIGINAL",
-              "textTruncation": "DISABLED",
-              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",

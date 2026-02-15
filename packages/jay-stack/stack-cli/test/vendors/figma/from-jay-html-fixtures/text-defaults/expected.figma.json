@@ -42,14 +42,6 @@
               "height": 20,
               "characters": "Basic text",
               "fontSize": 16,
-              "textAlignVertical": "TOP",
-              "letterSpacing": {
-                "value": 0,
-                "unit": "PERCENT"
-              },
-              "textCase": "ORIGINAL",
-              "textTruncation": "DISABLED",
-              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -78,10 +70,6 @@
                 "value": 2,
                 "unit": "PIXELS"
               },
-              "textAlignVertical": "TOP",
-              "textCase": "ORIGINAL",
-              "textTruncation": "DISABLED",
-              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -111,14 +99,6 @@
                 "style": "Bold"
               },
               "fontSize": 20,
-              "textAlignVertical": "TOP",
-              "letterSpacing": {
-                "value": 0,
-                "unit": "PERCENT"
-              },
-              "textCase": "ORIGINAL",
-              "textTruncation": "DISABLED",
-              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",

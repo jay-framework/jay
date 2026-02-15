@@ -45,14 +45,6 @@
               "characters": "Status Label",
               "fontWeight": 700,
               "fontSize": 16,
-              "textAlignVertical": "TOP",
-              "letterSpacing": {
-                "value": 0,
-                "unit": "PERCENT"
-              },
-              "textCase": "ORIGINAL",
-              "textTruncation": "DISABLED",
-              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
@@ -105,14 +97,6 @@
                       "height": 20,
                       "characters": "Active",
                       "fontSize": 14,
-                      "textAlignVertical": "TOP",
-                      "letterSpacing": {
-                        "value": 0,
-                        "unit": "PERCENT"
-                      },
-                      "textCase": "ORIGINAL",
-                      "textTruncation": "DISABLED",
-                      "textAutoResize": "WIDTH_AND_HEIGHT",
                       "fills": [
                         {
                           "type": "SOLID",
@@ -163,14 +147,6 @@
                       "height": 20,
                       "characters": "Inactive",
                       "fontSize": 14,
-                      "textAlignVertical": "TOP",
-                      "letterSpacing": {
-                        "value": 0,
-                        "unit": "PERCENT"
-                      },
-                      "textCase": "ORIGINAL",
-                      "textTruncation": "DISABLED",
-                      "textAutoResize": "WIDTH_AND_HEIGHT",
                       "fills": [
                         {
                           "type": "SOLID",
@@ -203,7 +179,10 @@
                 "status": {
                   "type": "VARIANT",
                   "defaultValue": "ACTIVE",
-                  "variantOptions": ["ACTIVE", "INACTIVE"]
+                  "variantOptions": [
+                    "ACTIVE",
+                    "INACTIVE"
+                  ]
                 }
               }
             }

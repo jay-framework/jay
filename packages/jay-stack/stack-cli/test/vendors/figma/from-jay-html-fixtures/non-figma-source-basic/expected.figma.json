@@ -35,7 +35,11 @@
           "fills": [
             {
               "type": "SOLID",
-              "color": { "r": 0.2, "g": 0.2, "b": 0.2 }
+              "color": {
+                "r": 0.2,
+                "g": 0.2,
+                "b": 0.2
+              }
             }
           ],
           "children": [
@@ -50,18 +54,14 @@
               "characters": "Store",
               "fontSize": 24,
               "fontWeight": 700,
-              "textAlignVertical": "TOP",
-              "letterSpacing": {
-                "value": 0,
-                "unit": "PERCENT"
-              },
-              "textCase": "ORIGINAL",
-              "textTruncation": "DISABLED",
-              "textAutoResize": "WIDTH_AND_HEIGHT",
               "fills": [
                 {
                   "type": "SOLID",
-                  "color": { "r": 1, "g": 1, "b": 1 }
+                  "color": {
+                    "r": 1,
+                    "g": 1,
+                    "b": 1
+                  }
                 }
               ],
               "pluginData": {
@@ -89,18 +89,14 @@
                   "height": 20,
                   "characters": "Products",
                   "fontSize": 14,
-                  "textAlignVertical": "TOP",
-                  "letterSpacing": {
-                    "value": 0,
-                    "unit": "PERCENT"
-                  },
-                  "textCase": "ORIGINAL",
-                  "textTruncation": "DISABLED",
-                  "textAutoResize": "WIDTH_AND_HEIGHT",
                   "fills": [
                     {
                       "type": "SOLID",
-                      "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+                      "color": {
+                        "r": 0.6,
+                        "g": 0.6,
+                        "b": 0.6
+                      }
                     }
                   ],
                   "pluginData": {
@@ -117,18 +113,14 @@
                   "height": 20,
                   "characters": "Cart",
                   "fontSize": 14,
-                  "textAlignVertical": "TOP",
-                  "letterSpacing": {
-                    "value": 0,
-                    "unit": "PERCENT"
-                  },
-                  "textCase": "ORIGINAL",
-                  "textTruncation": "DISABLED",
-                  "textAutoResize": "WIDTH_AND_HEIGHT",
                   "fills": [
                     {
                       "type": "SOLID",
-                      "color": { "r": 0.6, "g": 0.6, "b": 0.6 }
+                      "color": {
+                        "r": 0.6,
+                        "g": 0.6,
+                        "b": 0.6
+                      }
                     }
                   ],
                   "pluginData": {
@@ -149,7 +141,11 @@
       "fills": [
         {
           "type": "SOLID",
-          "color": { "r": 1, "g": 1, "b": 1 }
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          }
         }
       ]
     }

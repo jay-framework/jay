@@ -212,18 +212,10 @@
                         }
                       ],
                       "textAlignHorizontal": "LEFT",
-                      "textAlignVertical": "TOP",
-                      "letterSpacing": {
-                        "value": 0,
-                        "unit": "PERCENT"
-                      },
                       "lineHeight": {
                         "unit": "AUTO"
                       },
-                      "textDecoration": "NONE",
-                      "textCase": "ORIGINAL",
-                      "textTruncation": "DISABLED",
-                      "textAutoResize": "WIDTH_AND_HEIGHT"
+                      "textDecoration": "NONE"
                     },
                     {
                       "id": "424:372",
@@ -291,18 +283,10 @@
                             }
                           ],
                           "textAlignHorizontal": "LEFT",
-                          "textAlignVertical": "TOP",
-                          "letterSpacing": {
-                            "value": 0,
-                            "unit": "PERCENT"
-                          },
                           "lineHeight": {
                             "unit": "AUTO"
                           },
-                          "textDecoration": "NONE",
-                          "textCase": "ORIGINAL",
-                          "textTruncation": "DISABLED",
-                          "textAutoResize": "WIDTH_AND_HEIGHT"
+                          "textDecoration": "NONE"
                         },
                         {
                           "id": "424:374",
@@ -336,18 +320,10 @@
                             }
                           ],
                           "textAlignHorizontal": "LEFT",
-                          "textAlignVertical": "TOP",
-                          "letterSpacing": {
-                            "value": 0,
-                            "unit": "PERCENT"
-                          },
                           "lineHeight": {
                             "unit": "AUTO"
                           },
-                          "textDecoration": "NONE",
-                          "textCase": "ORIGINAL",
-                          "textTruncation": "DISABLED",
-                          "textAutoResize": "WIDTH_AND_HEIGHT"
+                          "textDecoration": "NONE"
                         },
                         {
                           "id": "424:375",
@@ -381,18 +357,10 @@
                             }
                           ],
                           "textAlignHorizontal": "LEFT",
-                          "textAlignVertical": "TOP",
-                          "letterSpacing": {
-                            "value": 0,
-                            "unit": "PERCENT"
-                          },
                           "lineHeight": {
                             "unit": "AUTO"
                           },
-                          "textDecoration": "NONE",
-                          "textCase": "ORIGINAL",
-                          "textTruncation": "DISABLED",
-                          "textAutoResize": "WIDTH_AND_HEIGHT"
+                          "textDecoration": "NONE"
                         },
                         {
                           "id": "424:376",
@@ -426,18 +394,10 @@
                             }
                           ],
                           "textAlignHorizontal": "LEFT",
-                          "textAlignVertical": "TOP",
-                          "letterSpacing": {
-                            "value": 0,
-                            "unit": "PERCENT"
-                          },
                           "lineHeight": {
                             "unit": "AUTO"
                           },
-                          "textDecoration": "NONE",
-                          "textCase": "ORIGINAL",
-                          "textTruncation": "DISABLED",
-                          "textAutoResize": "WIDTH_AND_HEIGHT"
+                          "textDecoration": "NONE"
                         }
                       ]
                     }
@@ -1050,18 +1010,10 @@
                                 }
                               ],
                               "textAlignHorizontal": "LEFT",
-                              "textAlignVertical": "TOP",
-                              "letterSpacing": {
-                                "value": 0,
-                                "unit": "PERCENT"
-                              },
                               "lineHeight": {
                                 "unit": "AUTO"
                               },
-                              "textDecoration": "NONE",
-                              "textCase": "ORIGINAL",
-                              "textTruncation": "DISABLED",
-                              "textAutoResize": "WIDTH_AND_HEIGHT"
+                              "textDecoration": "NONE"
                             },
                             {
                               "id": "424:390",
@@ -1095,18 +1047,10 @@
                                 }
                               ],
                               "textAlignHorizontal": "LEFT",
-                              "textAlignVertical": "TOP",
-                              "letterSpacing": {
-                                "value": 0,
-                                "unit": "PERCENT"
-                              },
                               "lineHeight": {
                                 "unit": "AUTO"
                               },
-                              "textDecoration": "NONE",
-                              "textCase": "ORIGINAL",
-                              "textTruncation": "DISABLED",
-                              "textAutoResize": "WIDTH_AND_HEIGHT"
+                              "textDecoration": "NONE"
                             }
                           ]
                         }
@@ -6809,18 +6753,10 @@
                             }
                           ],
                           "textAlignHorizontal": "LEFT",
-                          "textAlignVertical": "TOP",
-                          "letterSpacing": {
-                            "value": 0,
-                            "unit": "PERCENT"
-                          },
                           "lineHeight": {
                             "unit": "AUTO"
                           },
-                          "textDecoration": "NONE",
-                          "textCase": "ORIGINAL",
-                          "textTruncation": "DISABLED",
-                          "textAutoResize": "WIDTH_AND_HEIGHT"
+                          "textDecoration": "NONE"
                         },
                         {
                           "id": "424:396",
@@ -6916,18 +6852,10 @@
                             }
                           ],
                           "textAlignHorizontal": "LEFT",
-                          "textAlignVertical": "TOP",
-                          "letterSpacing": {
-                            "value": 0,
-                            "unit": "PERCENT"
-                          },
                           "lineHeight": {
                             "unit": "AUTO"
                           },
-                          "textDecoration": "NONE",
-                          "textCase": "ORIGINAL",
-                          "textTruncation": "DISABLED",
-                          "textAutoResize": "WIDTH_AND_HEIGHT"
+                          "textDecoration": "NONE"
                         },
                         {
                           "id": "424:399",
@@ -7023,18 +6951,10 @@
                             }
                           ],
                           "textAlignHorizontal": "LEFT",
-                          "textAlignVertical": "TOP",
-                          "letterSpacing": {
-                            "value": 0,
-                            "unit": "PERCENT"
-                          },
                           "lineHeight": {
                             "unit": "AUTO"
                           },
-                          "textDecoration": "NONE",
-                          "textCase": "ORIGINAL",
-                          "textTruncation": "DISABLED",
-                          "textAutoResize": "WIDTH_AND_HEIGHT"
+                          "textDecoration": "NONE"
                         },
                         {
                           "id": "424:402",
@@ -7130,18 +7050,10 @@
                             }
                           ],
                           "textAlignHorizontal": "LEFT",
-                          "textAlignVertical": "TOP",
-                          "letterSpacing": {
-                            "value": 0,
-                            "unit": "PERCENT"
-                          },
                           "lineHeight": {
                             "unit": "AUTO"
                           },
-                          "textDecoration": "NONE",
-                          "textCase": "ORIGINAL",
-                          "textTruncation": "DISABLED",
-                          "textAutoResize": "WIDTH_AND_HEIGHT"
+                          "textDecoration": "NONE"
                         },
                         {
                           "id": "424:405",
@@ -7237,18 +7149,10 @@
                             }
                           ],
                           "textAlignHorizontal": "LEFT",
-                          "textAlignVertical": "TOP",
-                          "letterSpacing": {
-                            "value": 0,
-                            "unit": "PERCENT"
-                          },
                           "lineHeight": {
                             "unit": "AUTO"
                           },
-                          "textDecoration": "NONE",
-                          "textCase": "ORIGINAL",
-                          "textTruncation": "DISABLED",
-                          "textAutoResize": "WIDTH_AND_HEIGHT"
+                          "textDecoration": "NONE"
                         }
                       ]
                     },
@@ -7355,18 +7259,10 @@
                                 }
                               ],
                               "textAlignHorizontal": "LEFT",
-                              "textAlignVertical": "TOP",
-                              "letterSpacing": {
-                                "value": 0,
-                                "unit": "PERCENT"
-                              },
                               "lineHeight": {
                                 "unit": "AUTO"
                               },
-                              "textDecoration": "NONE",
-                              "textCase": "ORIGINAL",
-                              "textTruncation": "DISABLED",
-                              "textAutoResize": "WIDTH_AND_HEIGHT"
+                              "textDecoration": "NONE"
                             },
                             {
                               "id": "424:412",
@@ -7400,18 +7296,10 @@
                                 }
                               ],
                               "textAlignHorizontal": "LEFT",
-                              "textAlignVertical": "TOP",
-                              "letterSpacing": {
-                                "value": 0,
-                                "unit": "PERCENT"
-                              },
                               "lineHeight": {
                                 "unit": "AUTO"
                               },
-                              "textDecoration": "NONE",
-                              "textCase": "ORIGINAL",
-                              "textTruncation": "DISABLED",
-                              "textAutoResize": "WIDTH_AND_HEIGHT"
+                              "textDecoration": "NONE"
                             }
                           ]
                         },
@@ -7588,18 +7476,10 @@
                                     }
                                   ],
                                   "textAlignHorizontal": "LEFT",
-                                  "textAlignVertical": "TOP",
-                                  "letterSpacing": {
-                                    "value": 0,
-                                    "unit": "PERCENT"
-                                  },
                                   "lineHeight": {
                                     "unit": "AUTO"
                                   },
-                                  "textDecoration": "NONE",
-                                  "textCase": "ORIGINAL",
-                                  "textTruncation": "DISABLED",
-                                  "textAutoResize": "WIDTH_AND_HEIGHT"
+                                  "textDecoration": "NONE"
                                 }
                               ]
                             },
@@ -7943,18 +7823,10 @@
                                 }
                               ],
                               "textAlignHorizontal": "LEFT",
-                              "textAlignVertical": "TOP",
-                              "letterSpacing": {
-                                "value": 0,
-                                "unit": "PERCENT"
-                              },
                               "lineHeight": {
                                 "unit": "AUTO"
                               },
-                              "textDecoration": "NONE",
-                              "textCase": "ORIGINAL",
-                              "textTruncation": "DISABLED",
-                              "textAutoResize": "WIDTH_AND_HEIGHT"
+                              "textDecoration": "NONE"
                             },
                             {
                               "id": "424:427",
@@ -7991,18 +7863,10 @@
                                 }
                               ],
                               "textAlignHorizontal": "LEFT",
-                              "textAlignVertical": "TOP",
-                              "letterSpacing": {
-                                "value": 0,
-                                "unit": "PERCENT"
-                              },
                               "lineHeight": {
                                 "unit": "AUTO"
                               },
-                              "textDecoration": "STRIKETHROUGH",
-                              "textCase": "ORIGINAL",
-                              "textTruncation": "DISABLED",
-                              "textAutoResize": "WIDTH_AND_HEIGHT"
+                              "textDecoration": "STRIKETHROUGH"
                             }
                           ]
                         },
@@ -8213,18 +8077,10 @@
                                         }
                                       ],
                                       "textAlignHorizontal": "LEFT",
-                                      "textAlignVertical": "TOP",
-                                      "letterSpacing": {
-                                        "value": 0,
-                                        "unit": "PERCENT"
-                                      },
                                       "lineHeight": {
                                         "unit": "AUTO"
                                       },
-                                      "textDecoration": "NONE",
-                                      "textCase": "ORIGINAL",
-                                      "textTruncation": "DISABLED",
-                                      "textAutoResize": "WIDTH_AND_HEIGHT"
+                                      "textDecoration": "NONE"
                                     }
                                   ]
                                 },
@@ -8367,18 +8223,10 @@
                                         }
                                       ],
                                       "textAlignHorizontal": "LEFT",
-                                      "textAlignVertical": "TOP",
-                                      "letterSpacing": {
-                                        "value": 0,
-                                        "unit": "PERCENT"
-                                      },
                                       "lineHeight": {
                                         "unit": "AUTO"
                                       },
-                                      "textDecoration": "NONE",
-                                      "textCase": "ORIGINAL",
-                                      "textTruncation": "DISABLED",
-                                      "textAutoResize": "WIDTH_AND_HEIGHT"
+                                      "textDecoration": "NONE"
                                     }
                                   ]
                                 }
@@ -8402,18 +8250,10 @@
                               "fontSize": 10.67453670501709,
                               "fontWeight": "MIXED",
                               "textAlignHorizontal": "LEFT",
-                              "textAlignVertical": "TOP",
-                              "letterSpacing": {
-                                "value": 0,
-                                "unit": "PERCENT"
-                              },
                               "lineHeight": {
                                 "unit": "AUTO"
                               },
-                              "textDecoration": "NONE",
-                              "textCase": "ORIGINAL",
-                              "textTruncation": "DISABLED",
-                              "textAutoResize": "WIDTH_AND_HEIGHT"
+                              "textDecoration": "NONE"
                             }
                           ]
                         }
@@ -13219,18 +13059,10 @@
                                     }
                                   ],
                                   "textAlignHorizontal": "LEFT",
-                                  "textAlignVertical": "TOP",
-                                  "letterSpacing": {
-                                    "value": 0,
-                                    "unit": "PERCENT"
-                                  },
                                   "lineHeight": {
                                     "unit": "AUTO"
                                   },
-                                  "textDecoration": "NONE",
-                                  "textCase": "ORIGINAL",
-                                  "textTruncation": "DISABLED",
-                                  "textAutoResize": "WIDTH_AND_HEIGHT"
+                                  "textDecoration": "NONE"
                                 },
                                 {
                                   "id": "I424:453;424:512",
@@ -19887,18 +19719,10 @@
                                     }
                                   ],
                                   "textAlignHorizontal": "LEFT",
-                                  "textAlignVertical": "TOP",
-                                  "letterSpacing": {
-                                    "value": 0,
-                                    "unit": "PERCENT"
-                                  },
                                   "lineHeight": {
                                     "unit": "AUTO"
                                   },
-                                  "textDecoration": "NONE",
-                                  "textCase": "ORIGINAL",
-                                  "textTruncation": "DISABLED",
-                                  "textAutoResize": "WIDTH_AND_HEIGHT"
+                                  "textDecoration": "NONE"
                                 },
                                 {
                                   "id": "I424:454;424:504",
@@ -20426,18 +20250,10 @@
                                                     }
                                                   ],
                                                   "textAlignHorizontal": "LEFT",
-                                                  "textAlignVertical": "TOP",
-                                                  "letterSpacing": {
-                                                    "value": 0,
-                                                    "unit": "PERCENT"
-                                                  },
                                                   "lineHeight": {
                                                     "unit": "AUTO"
                                                   },
-                                                  "textDecoration": "NONE",
-                                                  "textCase": "ORIGINAL",
-                                                  "textTruncation": "DISABLED",
-                                                  "textAutoResize": "WIDTH_AND_HEIGHT"
+                                                  "textDecoration": "NONE"
                                                 }
                                               ]
                                             }
@@ -20912,18 +20728,10 @@
                                                     }
                                                   ],
                                                   "textAlignHorizontal": "LEFT",
-                                                  "textAlignVertical": "TOP",
-                                                  "letterSpacing": {
-                                                    "value": 0,
-                                                    "unit": "PERCENT"
-                                                  },
                                                   "lineHeight": {
                                                     "unit": "AUTO"
                                                   },
-                                                  "textDecoration": "NONE",
-                                                  "textCase": "ORIGINAL",
-                                                  "textTruncation": "DISABLED",
-                                                  "textAutoResize": "WIDTH_AND_HEIGHT"
+                                                  "textDecoration": "NONE"
                                                 }
                                               ]
                                             }
@@ -21414,18 +21222,10 @@
                                                     }
                                                   ],
                                                   "textAlignHorizontal": "LEFT",
-                                                  "textAlignVertical": "TOP",
-                                                  "letterSpacing": {
-                                                    "value": 0,
-                                                    "unit": "PERCENT"
-                                                  },
                                                   "lineHeight": {
                                                     "unit": "AUTO"
                                                   },
-                                                  "textDecoration": "NONE",
-                                                  "textCase": "ORIGINAL",
-                                                  "textTruncation": "DISABLED",
-                                                  "textAutoResize": "WIDTH_AND_HEIGHT"
+                                                  "textDecoration": "NONE"
                                                 }
                                               ]
                                             }
@@ -21916,18 +21716,10 @@
                                                     }
                                                   ],
                                                   "textAlignHorizontal": "LEFT",
-                                                  "textAlignVertical": "TOP",
-                                                  "letterSpacing": {
-                                                    "value": 0,
-                                                    "unit": "PERCENT"
-                                                  },
                                                   "lineHeight": {
                                                     "unit": "AUTO"
                                                   },
-                                                  "textDecoration": "NONE",
-                                                  "textCase": "ORIGINAL",
-                                                  "textTruncation": "DISABLED",
-                                                  "textAutoResize": "WIDTH_AND_HEIGHT"
+                                                  "textDecoration": "NONE"
                                                 }
                                               ]
                                             }
@@ -22418,18 +22210,10 @@
                                                     }
                                                   ],
                                                   "textAlignHorizontal": "LEFT",
-                                                  "textAlignVertical": "TOP",
-                                                  "letterSpacing": {
-                                                    "value": 0,
-                                                    "unit": "PERCENT"
-                                                  },
                                                   "lineHeight": {
                                                     "unit": "AUTO"
                                                   },
-                                                  "textDecoration": "NONE",
-                                                  "textCase": "ORIGINAL",
-                                                  "textTruncation": "DISABLED",
-                                                  "textAutoResize": "WIDTH_AND_HEIGHT"
+                                                  "textDecoration": "NONE"
                                                 }
                                               ]
                                             }
@@ -22574,17 +22358,10 @@
                                 }
                               ],
                               "textAlignHorizontal": "LEFT",
-                              "textAlignVertical": "TOP",
-                              "letterSpacing": {
-                                "value": 0,
-                                "unit": "PERCENT"
-                              },
                               "lineHeight": {
                                 "unit": "AUTO"
                               },
                               "textDecoration": "NONE",
-                              "textCase": "ORIGINAL",
-                              "textTruncation": "DISABLED",
                               "textAutoResize": "HEIGHT"
                             },
                             {
@@ -22622,17 +22399,10 @@
                                 }
                               ],
                               "textAlignHorizontal": "LEFT",
-                              "textAlignVertical": "TOP",
-                              "letterSpacing": {
-                                "value": 0,
-                                "unit": "PERCENT"
-                              },
                               "lineHeight": {
                                 "unit": "AUTO"
                               },
                               "textDecoration": "NONE",
-                              "textCase": "ORIGINAL",
-                              "textTruncation": "DISABLED",
                               "textAutoResize": "HEIGHT"
                             },
                             {
@@ -22670,17 +22440,10 @@
                                 }
                               ],
                               "textAlignHorizontal": "LEFT",
-                              "textAlignVertical": "TOP",
-                              "letterSpacing": {
-                                "value": 0,
-                                "unit": "PERCENT"
-                              },
                               "lineHeight": {
                                 "unit": "AUTO"
                               },
                               "textDecoration": "NONE",
-                              "textCase": "ORIGINAL",
-                              "textTruncation": "DISABLED",
                               "textAutoResize": "HEIGHT"
                             }
                           ]
@@ -22799,18 +22562,10 @@
                                     }
                                   ],
                                   "textAlignHorizontal": "LEFT",
-                                  "textAlignVertical": "TOP",
-                                  "letterSpacing": {
-                                    "value": 0,
-                                    "unit": "PERCENT"
-                                  },
                                   "lineHeight": {
                                     "unit": "AUTO"
                                   },
-                                  "textDecoration": "NONE",
-                                  "textCase": "ORIGINAL",
-                                  "textTruncation": "DISABLED",
-                                  "textAutoResize": "WIDTH_AND_HEIGHT"
+                                  "textDecoration": "NONE"
                                 }
                               ]
                             }
@@ -22992,18 +22747,10 @@
                                     }
                                   ],
                                   "textAlignHorizontal": "LEFT",
-                                  "textAlignVertical": "TOP",
-                                  "letterSpacing": {
-                                    "value": 0,
-                                    "unit": "PERCENT"
-                                  },
                                   "lineHeight": {
                                     "unit": "AUTO"
                                   },
-                                  "textDecoration": "NONE",
-                                  "textCase": "ORIGINAL",
-                                  "textTruncation": "DISABLED",
-                                  "textAutoResize": "WIDTH_AND_HEIGHT"
+                                  "textDecoration": "NONE"
                                 }
                               ]
                             }
@@ -23218,17 +22965,10 @@
                                     }
                                   ],
                                   "textAlignHorizontal": "LEFT",
-                                  "textAlignVertical": "TOP",
-                                  "letterSpacing": {
-                                    "value": 0,
-                                    "unit": "PERCENT"
-                                  },
                                   "lineHeight": {
                                     "unit": "AUTO"
                                   },
                                   "textDecoration": "NONE",
-                                  "textCase": "ORIGINAL",
-                                  "textTruncation": "DISABLED",
                                   "textAutoResize": "HEIGHT"
                                 },
                                 {
@@ -23263,17 +23003,10 @@
                                     }
                                   ],
                                   "textAlignHorizontal": "LEFT",
-                                  "textAlignVertical": "TOP",
-                                  "letterSpacing": {
-                                    "value": 0,
-                                    "unit": "PERCENT"
-                                  },
                                   "lineHeight": {
                                     "unit": "AUTO"
                                   },
                                   "textDecoration": "UNDERLINE",
-                                  "textCase": "ORIGINAL",
-                                  "textTruncation": "DISABLED",
                                   "textAutoResize": "HEIGHT"
                                 }
                               ]
@@ -23456,17 +23189,10 @@
                                     }
                                   ],
                                   "textAlignHorizontal": "LEFT",
-                                  "textAlignVertical": "TOP",
-                                  "letterSpacing": {
-                                    "value": 0,
-                                    "unit": "PERCENT"
-                                  },
                                   "lineHeight": {
                                     "unit": "AUTO"
                                   },
                                   "textDecoration": "NONE",
-                                  "textCase": "ORIGINAL",
-                                  "textTruncation": "DISABLED",
                                   "textAutoResize": "HEIGHT"
                                 },
                                 {
@@ -23501,16 +23227,9 @@
                                     }
                                   ],
                                   "textAlignHorizontal": "LEFT",
-                                  "textAlignVertical": "TOP",
-                                  "letterSpacing": {
-                                    "value": 0,
-                                    "unit": "PERCENT"
-                                  },
                                   "lineHeight": {
                                     "unit": "AUTO"
                                   },
-                                  "textCase": "ORIGINAL",
-                                  "textTruncation": "DISABLED",
                                   "textAutoResize": "HEIGHT"
                                 }
                               ]
@@ -23880,18 +23599,10 @@
                     }
                   ],
                   "textAlignHorizontal": "LEFT",
-                  "textAlignVertical": "TOP",
-                  "letterSpacing": {
-                    "value": 0,
-                    "unit": "PERCENT"
-                  },
                   "lineHeight": {
                     "unit": "AUTO"
                   },
-                  "textDecoration": "NONE",
-                  "textCase": "ORIGINAL",
-                  "textTruncation": "DISABLED",
-                  "textAutoResize": "WIDTH_AND_HEIGHT"
+                  "textDecoration": "NONE"
                 }
               ]
             }
@@ -24030,18 +23741,10 @@
                     }
                   ],
                   "textAlignHorizontal": "LEFT",
-                  "textAlignVertical": "TOP",
-                  "letterSpacing": {
-                    "value": 0,
-                    "unit": "PERCENT"
-                  },
                   "lineHeight": {
                     "unit": "AUTO"
                   },
-                  "textDecoration": "NONE",
-                  "textCase": "ORIGINAL",
-                  "textTruncation": "DISABLED",
-                  "textAutoResize": "WIDTH_AND_HEIGHT"
+                  "textDecoration": "NONE"
                 }
               ]
             }
@@ -24146,18 +23849,10 @@
                     }
                   ],
                   "textAlignHorizontal": "LEFT",
-                  "textAlignVertical": "TOP",
-                  "letterSpacing": {
-                    "value": 0,
-                    "unit": "PERCENT"
-                  },
                   "lineHeight": {
                     "unit": "AUTO"
                   },
-                  "textDecoration": "NONE",
-                  "textCase": "ORIGINAL",
-                  "textTruncation": "DISABLED",
-                  "textAutoResize": "WIDTH_AND_HEIGHT"
+                  "textDecoration": "NONE"
                 },
                 {
                   "id": "424:504",
@@ -24685,18 +24380,10 @@
                                     }
                                   ],
                                   "textAlignHorizontal": "LEFT",
-                                  "textAlignVertical": "TOP",
-                                  "letterSpacing": {
-                                    "value": 0,
-                                    "unit": "PERCENT"
-                                  },
                                   "lineHeight": {
                                     "unit": "AUTO"
                                   },
-                                  "textDecoration": "NONE",
-                                  "textCase": "ORIGINAL",
-                                  "textTruncation": "DISABLED",
-                                  "textAutoResize": "WIDTH_AND_HEIGHT"
+                                  "textDecoration": "NONE"
                                 }
                               ]
                             }
@@ -25171,18 +24858,10 @@
                                     }
                                   ],
                                   "textAlignHorizontal": "LEFT",
-                                  "textAlignVertical": "TOP",
-                                  "letterSpacing": {
-                                    "value": 0,
-                                    "unit": "PERCENT"
-                                  },
                                   "lineHeight": {
                                     "unit": "AUTO"
                                   },
-                                  "textDecoration": "NONE",
-                                  "textCase": "ORIGINAL",
-                                  "textTruncation": "DISABLED",
-                                  "textAutoResize": "WIDTH_AND_HEIGHT"
+                                  "textDecoration": "NONE"
                                 }
                               ]
                             }
@@ -25673,18 +25352,10 @@
                                     }
                                   ],
                                   "textAlignHorizontal": "LEFT",
-                                  "textAlignVertical": "TOP",
-                                  "letterSpacing": {
-                                    "value": 0,
-                                    "unit": "PERCENT"
-                                  },
                                   "lineHeight": {
                                     "unit": "AUTO"
                                   },
-                                  "textDecoration": "NONE",
-                                  "textCase": "ORIGINAL",
-                                  "textTruncation": "DISABLED",
-                                  "textAutoResize": "WIDTH_AND_HEIGHT"
+                                  "textDecoration": "NONE"
                                 }
                               ]
                             }
@@ -26175,18 +25846,10 @@
                                     }
                                   ],
                                   "textAlignHorizontal": "LEFT",
-                                  "textAlignVertical": "TOP",
-                                  "letterSpacing": {
-                                    "value": 0,
-                                    "unit": "PERCENT"
-                                  },
                                   "lineHeight": {
                                     "unit": "AUTO"
                                   },
-                                  "textDecoration": "NONE",
-                                  "textCase": "ORIGINAL",
-                                  "textTruncation": "DISABLED",
-                                  "textAutoResize": "WIDTH_AND_HEIGHT"
+                                  "textDecoration": "NONE"
                                 }
                               ]
                             }
@@ -26677,18 +26340,10 @@
                                     }
                                   ],
                                   "textAlignHorizontal": "LEFT",
-                                  "textAlignVertical": "TOP",
-                                  "letterSpacing": {
-                                    "value": 0,
-                                    "unit": "PERCENT"
-                                  },
                                   "lineHeight": {
                                     "unit": "AUTO"
                                   },
-                                  "textDecoration": "NONE",
-                                  "textCase": "ORIGINAL",
-                                  "textTruncation": "DISABLED",
-                                  "textAutoResize": "WIDTH_AND_HEIGHT"
+                                  "textDecoration": "NONE"
                                 }
                               ]
                             }
@@ -26785,18 +26440,10 @@
                     }
                   ],
                   "textAlignHorizontal": "LEFT",
-                  "textAlignVertical": "TOP",
-                  "letterSpacing": {
-                    "value": 0,
-                    "unit": "PERCENT"
-                  },
                   "lineHeight": {
                     "unit": "AUTO"
                   },
-                  "textDecoration": "NONE",
-                  "textCase": "ORIGINAL",
-                  "textTruncation": "DISABLED",
-                  "textAutoResize": "WIDTH_AND_HEIGHT"
+                  "textDecoration": "NONE"
                 },
                 {
                   "id": "424:512",

@@ -84,14 +84,6 @@
                   "height": 20,
                   "characters": "Hugging content",
                   "fontSize": 14,
-                  "textAlignVertical": "TOP",
-                  "letterSpacing": {
-                    "value": 0,
-                    "unit": "PERCENT"
-                  },
-                  "textCase": "ORIGINAL",
-                  "textTruncation": "DISABLED",
-                  "textAutoResize": "WIDTH_AND_HEIGHT",
                   "fills": [
                     {
                       "type": "SOLID",
