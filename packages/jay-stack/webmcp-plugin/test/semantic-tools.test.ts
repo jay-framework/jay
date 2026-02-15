@@ -88,6 +88,35 @@ describe('Semantic Tools', () => {
         expect(tool.inputSchema.required).toContain('value');
     });
 
+    it('should add enum of option values for select elements', () => {
+        const select = document.createElement('select');
+        select.innerHTML = '<option value="sm">Small</option><option value="md">Medium</option><option value="lg">Large</option>';
+        const automation = createMockAutomation({
+            interactions: [{
+                refName: 'sizeSelect',
+                items: [{ coordinate: ['sizeSelect'], element: select, events: ['change'] }],
+            }],
+        });
+
+        const tools = buildSemanticTools(automation);
+
+        const tool = tools[0];
+        expect(tool.name).toBe('fill-size-select');
+        expect(tool.inputSchema.properties.value.enum).toEqual(['sm', 'md', 'lg']);
+        expect(tool.inputSchema.properties.value.description).toBe('Value to select');
+    });
+
+    it('should not add enum for regular input elements', () => {
+        const automation = createMockAutomation({
+            interactions: [group('nameInput', 'input', 'nameInput')],
+        });
+
+        const tools = buildSemanticTools(automation);
+
+        expect(tools[0].inputSchema.properties.value.enum).toBeUndefined();
+        expect(tools[0].inputSchema.properties.value.description).toBe('Value to set');
+    });
+
     it('should not add value or coordinate for simple buttons', () => {
         const automation = createMockAutomation({
             interactions: [group('submitBtn', 'button', 'submitBtn')],

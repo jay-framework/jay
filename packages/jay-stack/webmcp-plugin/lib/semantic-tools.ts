@@ -1,6 +1,6 @@
 import type { AutomationAPI, Interaction } from '@jay-framework/runtime-automation';
 import type { ToolDescriptor } from './webmcp-types';
-import { toKebab, toHumanReadable, jsonResult, errorResult } from './util';
+import { toKebab, toHumanReadable, jsonResult, errorResult, getSelectOptions, withLogging } from './util';
 
 const FILLABLE_TYPES = new Set([
     'HTMLInputElement',
@@ -64,11 +64,16 @@ function makeSemanticTool(
     }
 
     if (isFillable) {
-        properties.value = { type: 'string', description: 'Value to set' };
+        const selectOptions = isSelect ? getSelectOptions(sample.element) : undefined;
+        properties.value = {
+            type: 'string',
+            description: isSelect ? 'Value to select' : 'Value to set',
+            ...(selectOptions ? { enum: selectOptions } : {}),
+        };
         required.push('value');
     }
 
-    return {
+    return withLogging({
         name: toolName,
         description,
         inputSchema: { type: 'object', properties, required },
@@ -92,5 +97,5 @@ function makeSemanticTool(
                 return errorResult((e as Error).message);
             }
         },
-    };
+    });
 }

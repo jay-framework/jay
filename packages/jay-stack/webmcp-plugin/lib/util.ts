@@ -1,4 +1,4 @@
-import type { ToolResult } from './webmcp-types';
+import type { ToolResult, ToolDescriptor, Agent } from './webmcp-types';
 
 /**
  * Convert a camelCase string to kebab-case.
@@ -50,4 +50,35 @@ export function errorResult(text: string): ToolResult {
         content: [{ type: 'text', text: `Error: ${text}` }],
         isError: true,
     };
+}
+
+/**
+ * Wrap a tool's execute function with console logging of tool name and params.
+ */
+export function withLogging(tool: ToolDescriptor): ToolDescriptor {
+    const original = tool.execute;
+    console.log(`[webMCP] ${tool.name}`, tool)
+    return {
+        ...tool,
+        execute(params: Record<string, unknown>, agent: Agent) {
+            const paramStr = Object.keys(params).length > 0
+                ? ' ' + JSON.stringify(params)
+                : '';
+            console.log(`[WebMCP] execute: ${tool.name}${paramStr}`);
+            return original(params, agent);
+        },
+    };
+}
+
+/**
+ * Extract available option values from a <select> element.
+ * Returns undefined for non-select elements.
+ */
+export function getSelectOptions(element: HTMLElement): string[] | undefined {
+    if (!(element instanceof HTMLSelectElement)) return undefined;
+    const options: string[] = [];
+    for (const opt of Array.from((element as HTMLSelectElement).options)) {
+        options.push(opt.value);
+    }
+    return options;
 }

@@ -4,9 +4,6 @@ import './webmcp-types'; // side-effect: augments Navigator
 import { makeGetPageStateTool, makeListInteractionsTool, makeTriggerInteractionTool, makeFillInputTool } from './generic-tools';
 import { buildSemanticTools } from './semantic-tools';
 
-/** Names of the generic tools (stable set) */
-const GENERIC_TOOL_NAMES = ['get-page-state', 'list-interactions', 'trigger-interaction', 'fill-input'];
-
 /**
  * Main entry point. Registers all WebMCP tools derived from the given
  * AutomationAPI instance.
@@ -22,10 +19,15 @@ export function setupWebMCP(automation: AutomationAPI): () => void {
     const mc = navigator.modelContext;
 
     // ── Generic tools (stable set, always registered) ───────────────────
-    mc.registerTool(makeGetPageStateTool(automation));
-    mc.registerTool(makeListInteractionsTool(automation));
-    mc.registerTool(makeTriggerInteractionTool(automation));
-    mc.registerTool(makeFillInputTool(automation));
+    const genericTools = [
+        makeGetPageStateTool(automation),
+        makeListInteractionsTool(automation),
+        makeTriggerInteractionTool(automation),
+        makeFillInputTool(automation),
+    ];
+    for (const tool of genericTools) {
+        mc.registerTool(tool);
+    }
 
     // ── Semantic tools (regenerated when interactions change) ────────────
     let semanticToolNames = registerSemanticTools(mc, automation);
@@ -42,13 +44,13 @@ export function setupWebMCP(automation: AutomationAPI): () => void {
     });
 
     console.log(
-        `[WebMCP] Registered ${GENERIC_TOOL_NAMES.length + semanticToolNames.length} tools (${GENERIC_TOOL_NAMES.length} generic + ${semanticToolNames.length} semantic)`,
+        `[WebMCP] Registered ${genericTools.length + semanticToolNames.length} tools (${genericTools.length} generic + ${semanticToolNames.length} semantic)`,
     );
 
     // ── Cleanup ─────────────────────────────────────────────────────────
     return () => {
         unsubscribe();
-        GENERIC_TOOL_NAMES.forEach((name) => mc.unregisterTool(name));
+        genericTools.forEach((t) => mc.unregisterTool(t.name));
         semanticToolNames.forEach((name) => mc.unregisterTool(name));
     };
 }

@@ -66,6 +66,39 @@ describe('Generic Tools', () => {
             expect(tool.description).toContain('coordinate');
             expect(tool.description).toContain('Multi-segment');
         });
+
+        it('should include options for select elements', () => {
+            const select = document.createElement('select');
+            select.innerHTML = '<option value="sm">Small</option><option value="lg">Large</option>';
+            const interactions: Interaction[] = [{
+                refName: 'sizeSelect',
+                items: [{ coordinate: ['sizeSelect'], element: select, events: ['change'] }],
+            }];
+            const automation = createMockAutomation({ interactions });
+            const tool = makeListInteractionsTool(automation);
+
+            const result = tool.execute({}, MOCK_AGENT);
+            const text = result.content[0].text!;
+
+            expect(text).toContain('"options"');
+            expect(text).toContain('"sm"');
+            expect(text).toContain('"lg"');
+        });
+
+        it('should not include options for non-select elements', () => {
+            const input = document.createElement('input');
+            const interactions: Interaction[] = [{
+                refName: 'nameInput',
+                items: [{ coordinate: ['nameInput'], element: input, events: ['input'] }],
+            }];
+            const automation = createMockAutomation({ interactions });
+            const tool = makeListInteractionsTool(automation);
+
+            const result = tool.execute({}, MOCK_AGENT);
+            const text = result.content[0].text!;
+
+            expect(text).not.toContain('"options"');
+        });
     });
 
     describe('trigger-interaction', () => {

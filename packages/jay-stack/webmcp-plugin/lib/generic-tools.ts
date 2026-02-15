@@ -1,20 +1,25 @@
 import type { AutomationAPI, Interaction } from '@jay-framework/runtime-automation';
 import type { ToolDescriptor } from './webmcp-types';
-import { parseCoordinate, jsonResult, errorResult } from './util';
+import { parseCoordinate, jsonResult, errorResult, getSelectOptions, withLogging } from './util';
 
 /**
  * Serialize Interaction[] to a WebMCP-friendly shape:
  *   element → elementType (string), coordinate[] → coordinate (string)
+ *   For <select> elements, includes available option values.
  */
 function serializeInteractions(interactions: Interaction[]) {
     return interactions.map((group) => ({
         refName: group.refName,
         ...(group.description ? { description: group.description } : {}),
-        items: group.items.map((i) => ({
-            coordinate: i.coordinate.join('/'),
-            elementType: i.element.constructor.name,
-            events: i.events,
-        })),
+        items: group.items.map((i) => {
+            const options = getSelectOptions(i.element);
+            return {
+                coordinate: i.coordinate.join('/'),
+                elementType: i.element.constructor.name,
+                events: i.events,
+                ...(options ? { options } : {}),
+            };
+        }),
     }));
 }
 
@@ -22,7 +27,7 @@ function serializeInteractions(interactions: Interaction[]) {
  * get-page-state: Returns the current ViewState with guidance on coordinates.
  */
 export function makeGetPageStateTool(automation: AutomationAPI): ToolDescriptor {
-    return {
+    return withLogging({
         name: 'get-page-state',
         description:
             'Get current page state (ViewState) — all data displayed on the page as JSON. ' +
@@ -38,14 +43,14 @@ export function makeGetPageStateTool(automation: AutomationAPI): ToolDescriptor 
             const { viewState } = automation.getPageState();
             return jsonResult('Current page state:', viewState);
         },
-    };
+    });
 }
 
 /**
  * list-interactions: Returns available interactions grouped by ref, serialized.
  */
 export function makeListInteractionsTool(automation: AutomationAPI): ToolDescriptor {
-    return {
+    return withLogging({
         name: 'list-interactions',
         description:
             'List all interactive elements on the page, grouped by ref name. ' +
@@ -61,14 +66,14 @@ export function makeListInteractionsTool(automation: AutomationAPI): ToolDescrip
             const { interactions } = automation.getPageState();
             return jsonResult('Available interactions:', serializeInteractions(interactions));
         },
-    };
+    });
 }
 
 /**
  * trigger-interaction: Trigger any event on any element by coordinate string.
  */
 export function makeTriggerInteractionTool(automation: AutomationAPI): ToolDescriptor {
-    return {
+    return withLogging({
         name: 'trigger-interaction',
         description:
             'Trigger an event on a UI element by its coordinate string. ' +
@@ -100,14 +105,14 @@ export function makeTriggerInteractionTool(automation: AutomationAPI): ToolDescr
                 return errorResult((e as Error).message);
             }
         },
-    };
+    });
 }
 
 /**
  * fill-input: Set a value on an input/textarea/select element and trigger the appropriate event.
  */
 export function makeFillInputTool(automation: AutomationAPI): ToolDescriptor {
-    return {
+    return withLogging({
         name: 'fill-input',
         description:
             'Set a value on an input, textarea, or select element and trigger an update event. ' +
@@ -150,5 +155,5 @@ export function makeFillInputTool(automation: AutomationAPI): ToolDescriptor {
                 return errorResult((e as Error).message);
             }
         },
-    };
+    });
 }

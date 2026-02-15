@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toKebab, toHumanReadable, parseCoordinate, jsonResult, textResult, errorResult } from '../lib/util';
+import { toKebab, toHumanReadable, parseCoordinate, jsonResult, textResult, errorResult, getSelectOptions } from '../lib/util';
 
 describe('util', () => {
     describe('toKebab', () => {
@@ -41,6 +41,24 @@ describe('util', () => {
             const r = errorResult('bad');
             expect(r.isError).toBe(true);
             expect(r.content[0].text).toContain('bad');
+        });
+    });
+
+    describe('getSelectOptions', () => {
+        it('should return option values for a select element', () => {
+            const select = document.createElement('select');
+            select.innerHTML = '<option value="sm">Small</option><option value="md">Medium</option><option value="lg">Large</option>';
+            expect(getSelectOptions(select)).toEqual(['sm', 'md', 'lg']);
+        });
+
+        it('should return undefined for non-select elements', () => {
+            expect(getSelectOptions(document.createElement('input'))).toBeUndefined();
+            expect(getSelectOptions(document.createElement('button'))).toBeUndefined();
+        });
+
+        it('should return empty array for select with no options', () => {
+            const select = document.createElement('select');
+            expect(getSelectOptions(select)).toEqual([]);
         });
     });
 });
