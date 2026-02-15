@@ -4687,10 +4687,11 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@jay-framework/webmcp-plugin@workspace:^, @jay-framework/webmcp-plugin@workspace:packages/jay-stack/webmcp-plugin":
+"@jay-framework/webmcp-plugin@workspace:^, @jay-framework/webmcp-plugin@workspace:packages/jay-stack-plugins/webmcp":
   version: 0.0.0-use.local
-  resolution: "@jay-framework/webmcp-plugin@workspace:packages/jay-stack/webmcp-plugin"
+  resolution: "@jay-framework/webmcp-plugin@workspace:packages/jay-stack-plugins/webmcp"
   dependencies:
+    "@jay-framework/compiler-jay-stack": "workspace:^"
     "@jay-framework/dev-environment": "workspace:^"
     "@jay-framework/fullstack-component": "workspace:^"
     "@jay-framework/runtime-automation": "workspace:^"
