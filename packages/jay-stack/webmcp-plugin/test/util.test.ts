@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toKebab, toHumanReadable, parseCoordinate, jsonResult, textResult, errorResult, getSelectOptions } from '../lib/util';
+import { toKebab, toHumanReadable, parseCoordinate, jsonResult, textResult, errorResult, getSelectOptions, isCheckable, setElementValue, getEventTypeForElement } from '../lib/util';
 
 describe('util', () => {
     describe('toKebab', () => {
@@ -59,6 +59,91 @@ describe('util', () => {
         it('should return empty array for select with no options', () => {
             const select = document.createElement('select');
             expect(getSelectOptions(select)).toEqual([]);
+        });
+    });
+
+    describe('isCheckable', () => {
+        it('should return true for checkbox inputs', () => {
+            const el = document.createElement('input');
+            el.type = 'checkbox';
+            expect(isCheckable(el)).toBe(true);
+        });
+
+        it('should return true for radio inputs', () => {
+            const el = document.createElement('input');
+            el.type = 'radio';
+            expect(isCheckable(el)).toBe(true);
+        });
+
+        it('should return false for text inputs', () => {
+            const el = document.createElement('input');
+            el.type = 'text';
+            expect(isCheckable(el)).toBe(false);
+        });
+
+        it('should return false for non-input elements', () => {
+            expect(isCheckable(document.createElement('button'))).toBe(false);
+            expect(isCheckable(document.createElement('select'))).toBe(false);
+        });
+    });
+
+    describe('setElementValue', () => {
+        it('should set .checked for checkbox inputs', () => {
+            const el = document.createElement('input');
+            el.type = 'checkbox';
+            setElementValue(el, 'true');
+            expect(el.checked).toBe(true);
+            setElementValue(el, 'false');
+            expect(el.checked).toBe(false);
+        });
+
+        it('should set .checked for radio inputs', () => {
+            const el = document.createElement('input');
+            el.type = 'radio';
+            setElementValue(el, 'true');
+            expect(el.checked).toBe(true);
+        });
+
+        it('should set .value for text inputs', () => {
+            const el = document.createElement('input');
+            el.type = 'text';
+            setElementValue(el, 'hello');
+            expect(el.value).toBe('hello');
+        });
+
+        it('should set .value for select elements', () => {
+            const el = document.createElement('select');
+            el.innerHTML = '<option value="a">A</option><option value="b">B</option>';
+            setElementValue(el, 'b');
+            expect(el.value).toBe('b');
+        });
+    });
+
+    describe('getEventTypeForElement', () => {
+        it('should return "change" for select elements', () => {
+            expect(getEventTypeForElement(document.createElement('select'))).toBe('change');
+        });
+
+        it('should return "change" for checkbox inputs', () => {
+            const el = document.createElement('input');
+            el.type = 'checkbox';
+            expect(getEventTypeForElement(el)).toBe('change');
+        });
+
+        it('should return "change" for radio inputs', () => {
+            const el = document.createElement('input');
+            el.type = 'radio';
+            expect(getEventTypeForElement(el)).toBe('change');
+        });
+
+        it('should return "input" for text inputs', () => {
+            const el = document.createElement('input');
+            el.type = 'text';
+            expect(getEventTypeForElement(el)).toBe('input');
+        });
+
+        it('should return "input" for textarea', () => {
+            expect(getEventTypeForElement(document.createElement('textarea'))).toBe('input');
         });
     });
 });

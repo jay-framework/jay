@@ -1,4 +1,5 @@
 import type { AutomationAPI } from '@jay-framework/runtime-automation';
+import type { ToolDescriptor } from './webmcp-types';
 import './webmcp-types'; // side-effect: augments Navigator
 
 import { makeGetPageStateTool, makeListInteractionsTool, makeTriggerInteractionTool, makeFillInputTool } from './generic-tools';
@@ -30,43 +31,54 @@ export function setupWebMCP(automation: AutomationAPI): () => void {
     }
 
     // ── Semantic tools (regenerated when interactions change) ────────────
-    let semanticToolNames = registerSemanticTools(mc, automation);
+    let semanticTools = buildAndRegisterSemanticTools(mc, automation);
     let lastKey = interactionKey(automation);
 
     const unsubscribe = automation.onStateChange(() => {
         const newKey = interactionKey(automation);
         if (newKey !== lastKey) {
             // Interactions structure changed — regenerate semantic tools
-            semanticToolNames.forEach((name) => mc.unregisterTool(name));
-            semanticToolNames = registerSemanticTools(mc, automation);
+            semanticTools.forEach((t) => mc.unregisterTool(t.name));
+            semanticTools = buildAndRegisterSemanticTools(mc, automation);
             lastKey = newKey;
         }
     });
 
+    // ── Console API ─────────────────────────────────────────────────────
+    const allTools = () => [...genericTools, ...semanticTools];
+    (window as any).webmcp = {
+        tools() {
+            const tools = allTools();
+            console.table(tools.map((t) => ({ name: t.name, description: t.description })));
+            return tools;
+        },
+    };
+
     console.log(
-        `[WebMCP] Registered ${genericTools.length + semanticToolNames.length} tools (${genericTools.length} generic + ${semanticToolNames.length} semantic)`,
+        `[WebMCP] Registered ${genericTools.length + semanticTools.length} tools — type webmcp.tools() to list`,
     );
 
     // ── Cleanup ─────────────────────────────────────────────────────────
     return () => {
         unsubscribe();
         genericTools.forEach((t) => mc.unregisterTool(t.name));
-        semanticToolNames.forEach((name) => mc.unregisterTool(name));
+        semanticTools.forEach((t) => mc.unregisterTool(t.name));
+        delete (window as any).webmcp;
     };
 }
 
 /**
- * Register semantic tools and return their names (for later unregistration).
+ * Build semantic tools, register them, and return the tool descriptors.
  */
-function registerSemanticTools(
+function buildAndRegisterSemanticTools(
     mc: Pick<Navigator['modelContext'] & object, 'registerTool'>,
     automation: AutomationAPI,
-): string[] {
+): ToolDescriptor[] {
     const tools = buildSemanticTools(automation);
     for (const tool of tools) {
         mc.registerTool(tool);
     }
-    return tools.map((t) => t.name);
+    return tools;
 }
 
 /**

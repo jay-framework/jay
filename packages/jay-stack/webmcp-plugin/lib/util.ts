@@ -57,17 +57,47 @@ export function errorResult(text: string): ToolResult {
  */
 export function withLogging(tool: ToolDescriptor): ToolDescriptor {
     const original = tool.execute;
-    console.log(`[webMCP] ${tool.name}`, tool)
     return {
         ...tool,
         execute(params: Record<string, unknown>, agent: Agent) {
             const paramStr = Object.keys(params).length > 0
                 ? ' ' + JSON.stringify(params)
                 : '';
-            console.log(`[WebMCP] execute: ${tool.name}${paramStr}`);
             return original(params, agent);
         },
     };
+}
+
+/**
+ * Check if an element is a checkbox or radio input.
+ */
+export function isCheckable(element: HTMLElement): boolean {
+    return element instanceof HTMLInputElement &&
+        (element.type === 'checkbox' || element.type === 'radio');
+}
+
+/**
+ * Set the value on an element, handling checkbox/radio (.checked) vs others (.value).
+ * Triggers the appropriate event via the automation API.
+ */
+export function setElementValue(
+    element: HTMLElement,
+    value: string,
+): void {
+    if (isCheckable(element)) {
+        (element as HTMLInputElement).checked = value === 'true';
+    } else {
+        (element as HTMLInputElement).value = value;
+    }
+}
+
+/**
+ * Return the appropriate event type for a given element after setting its value.
+ */
+export function getEventTypeForElement(element: HTMLElement): string {
+    if (element instanceof HTMLSelectElement) return 'change';
+    if (isCheckable(element)) return 'change';
+    return 'input';
 }
 
 /**

@@ -117,6 +117,40 @@ describe('Semantic Tools', () => {
         expect(tools[0].inputSchema.properties.value.description).toBe('Value to set');
     });
 
+    it('should use toggle- prefix and boolean enum for checkbox inputs', () => {
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        const automation = createMockAutomation({
+            interactions: [{
+                refName: 'agreeCheckbox',
+                items: [{ coordinate: ['agreeCheckbox'], element: checkbox, events: ['change'] }],
+            }],
+        });
+
+        const tools = buildSemanticTools(automation);
+
+        const tool = tools[0];
+        expect(tool.name).toBe('toggle-agree-checkbox');
+        expect(tool.description).toContain('Toggle');
+        expect(tool.inputSchema.properties.value.enum).toEqual(['true', 'false']);
+        expect(tool.inputSchema.properties.value.description).toBe('Checked state');
+    });
+
+    it('should use toggle- prefix for radio inputs', () => {
+        const radio = document.createElement('input');
+        radio.type = 'radio';
+        const automation = createMockAutomation({
+            interactions: [{
+                refName: 'optionRadio',
+                items: [{ coordinate: ['optionRadio'], element: radio, events: ['change'] }],
+            }],
+        });
+
+        const tools = buildSemanticTools(automation);
+
+        expect(tools[0].name).toBe('toggle-option-radio');
+    });
+
     it('should not add value or coordinate for simple buttons', () => {
         const automation = createMockAutomation({
             interactions: [group('submitBtn', 'button', 'submitBtn')],
@@ -178,6 +212,22 @@ describe('Semantic Tools', () => {
 
             expect(mockElement.value).toBe('Laptop');
             expect(automation.triggerEvent).toHaveBeenCalledWith('input', ['nameInput']);
+        });
+
+        it('should set checked and trigger change for checkbox tools', () => {
+            const mockElement = document.createElement('input');
+            mockElement.type = 'checkbox';
+            const interactions: Interaction[] = [{
+                refName: 'agreeCheckbox',
+                items: [{ coordinate: ['agreeCheckbox'], element: mockElement, events: ['change'] }],
+            }];
+            const automation = createMockAutomation({ interactions });
+
+            const tools = buildSemanticTools(automation);
+            tools[0].execute({ value: 'true' }, { requestUserInteraction: vi.fn() });
+
+            expect(mockElement.checked).toBe(true);
+            expect(automation.triggerEvent).toHaveBeenCalledWith('change', ['agreeCheckbox']);
         });
     });
 

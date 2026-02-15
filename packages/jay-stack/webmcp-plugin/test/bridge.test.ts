@@ -137,4 +137,38 @@ describe('WebMCP Bridge', () => {
         // No new registerTool calls
         expect((mc.registerTool as any).mock.calls.length).toBe(callCount);
     });
+
+    it('should expose window.webmcp.tools() console API', () => {
+        const mc = createMockModelContext();
+        (navigator as any).modelContext = mc;
+        const automation = createMockAutomation({
+            interactions: [{
+                refName: 'btn',
+                items: [{ coordinate: ['btn'], element: document.createElement('button'), events: ['click'] }],
+            }],
+        });
+
+        setupWebMCP(automation);
+
+        const webmcp = (window as any).webmcp;
+        expect(webmcp).toBeDefined();
+        expect(webmcp.tools).toBeInstanceOf(Function);
+
+        const tools = webmcp.tools();
+        expect(tools.length).toBe(5); // 4 generic + 1 semantic
+        expect(tools.map((t: any) => t.name)).toContain('get-page-state');
+        expect(tools.map((t: any) => t.name)).toContain('click-btn');
+    });
+
+    it('should remove window.webmcp on cleanup', () => {
+        const mc = createMockModelContext();
+        (navigator as any).modelContext = mc;
+        const automation = createMockAutomation();
+
+        const cleanup = setupWebMCP(automation);
+        expect((window as any).webmcp).toBeDefined();
+
+        cleanup();
+        expect((window as any).webmcp).toBeUndefined();
+    });
 });

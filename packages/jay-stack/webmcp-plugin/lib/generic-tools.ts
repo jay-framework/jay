@@ -1,6 +1,6 @@
 import type { AutomationAPI, Interaction } from '@jay-framework/runtime-automation';
 import type { ToolDescriptor } from './webmcp-types';
-import { parseCoordinate, jsonResult, errorResult, getSelectOptions, withLogging } from './util';
+import { parseCoordinate, jsonResult, errorResult, getSelectOptions, isCheckable, setElementValue, getEventTypeForElement, withLogging } from './util';
 
 /**
  * Serialize Interaction[] to a WebMCP-friendly shape:
@@ -13,11 +13,13 @@ function serializeInteractions(interactions: Interaction[]) {
         ...(group.description ? { description: group.description } : {}),
         items: group.items.map((i) => {
             const options = getSelectOptions(i.element);
+            const checkable = isCheckable(i.element);
             return {
                 coordinate: i.coordinate.join('/'),
                 elementType: i.element.constructor.name,
                 events: i.events,
                 ...(options ? { options } : {}),
+                ...(checkable ? { inputType: (i.element as HTMLInputElement).type } : {}),
             };
         }),
     }));
@@ -110,12 +112,14 @@ export function makeTriggerInteractionTool(automation: AutomationAPI): ToolDescr
 
 /**
  * fill-input: Set a value on an input/textarea/select element and trigger the appropriate event.
+ * For checkbox/radio inputs, pass "true" or "false" to set the checked state.
  */
 export function makeFillInputTool(automation: AutomationAPI): ToolDescriptor {
     return withLogging({
         name: 'fill-input',
         description:
             'Set a value on an input, textarea, or select element and trigger an update event. ' +
+            'For checkbox/radio inputs, pass "true" or "false" to toggle the checked state. ' +
             'Use list-interactions to find input coordinates.',
         inputSchema: {
             type: 'object',
@@ -127,7 +131,7 @@ export function makeFillInputTool(automation: AutomationAPI): ToolDescriptor {
                 },
                 value: {
                     type: 'string',
-                    description: 'The value to set on the element',
+                    description: 'The value to set (for checkbox/radio: "true" or "false")',
                 },
             },
             required: ['coordinate', 'value'],
@@ -142,13 +146,8 @@ export function makeFillInputTool(automation: AutomationAPI): ToolDescriptor {
                     return errorResult(`No element found at coordinate: ${coord.join('/')}`);
                 }
 
-                const el = instance.element as HTMLInputElement;
-                el.value = value;
-
-                // Trigger the appropriate event
-                const isSelect = instance.element instanceof HTMLSelectElement;
-                const eventType = isSelect ? 'change' : 'input';
-                automation.triggerEvent(eventType, coord);
+                setElementValue(instance.element, value);
+                automation.triggerEvent(getEventTypeForElement(instance.element), coord);
 
                 return jsonResult(`Set value "${value}" on ${params.coordinate}`, automation.getPageState().viewState);
             } catch (e) {

@@ -85,6 +85,22 @@ describe('Generic Tools', () => {
             expect(text).toContain('"lg"');
         });
 
+        it('should include inputType for checkbox/radio elements', () => {
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            const interactions: Interaction[] = [{
+                refName: 'agreeCheckbox',
+                items: [{ coordinate: ['agreeCheckbox'], element: checkbox, events: ['change'] }],
+            }];
+            const automation = createMockAutomation({ interactions });
+            const tool = makeListInteractionsTool(automation);
+
+            const result = tool.execute({}, MOCK_AGENT);
+            const text = result.content[0].text!;
+
+            expect(text).toContain('"inputType": "checkbox"');
+        });
+
         it('should not include options for non-select elements', () => {
             const input = document.createElement('input');
             const interactions: Interaction[] = [{
@@ -176,6 +192,36 @@ describe('Generic Tools', () => {
             tool.execute({ coordinate: 'sizeSelect', value: 'large' }, MOCK_AGENT);
 
             expect(automation.triggerEvent).toHaveBeenCalledWith('change', ['sizeSelect']);
+        });
+
+        it('should set checked and trigger change for checkbox inputs', () => {
+            const mockElement = document.createElement('input');
+            mockElement.type = 'checkbox';
+            const interactions: Interaction[] = [
+                { refName: 'agreeCheckbox', items: [{ coordinate: ['agreeCheckbox'], element: mockElement, events: ['change'] }] },
+            ];
+            const automation = createMockAutomation({ interactions });
+            const tool = makeFillInputTool(automation);
+
+            tool.execute({ coordinate: 'agreeCheckbox', value: 'true' }, MOCK_AGENT);
+
+            expect(mockElement.checked).toBe(true);
+            expect(automation.triggerEvent).toHaveBeenCalledWith('change', ['agreeCheckbox']);
+        });
+
+        it('should uncheck a checkbox when value is "false"', () => {
+            const mockElement = document.createElement('input');
+            mockElement.type = 'checkbox';
+            mockElement.checked = true;
+            const interactions: Interaction[] = [
+                { refName: 'agreeCheckbox', items: [{ coordinate: ['agreeCheckbox'], element: mockElement, events: ['change'] }] },
+            ];
+            const automation = createMockAutomation({ interactions });
+            const tool = makeFillInputTool(automation);
+
+            tool.execute({ coordinate: 'agreeCheckbox', value: 'false' }, MOCK_AGENT);
+
+            expect(mockElement.checked).toBe(false);
         });
 
         it('should return error for unknown coordinate', () => {

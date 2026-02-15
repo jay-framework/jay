@@ -1,6 +1,6 @@
 import type { AutomationAPI, Interaction } from '@jay-framework/runtime-automation';
 import type { ToolDescriptor } from './webmcp-types';
-import { toKebab, toHumanReadable, jsonResult, errorResult, getSelectOptions, withLogging } from './util';
+import { toKebab, toHumanReadable, jsonResult, errorResult, getSelectOptions, isCheckable, setElementValue, getEventTypeForElement, withLogging } from './util';
 
 const FILLABLE_TYPES = new Set([
     'HTMLInputElement',
@@ -41,14 +41,15 @@ function makeSemanticTool(
     const elementType = sample.element.constructor.name;
     const isFillable = FILLABLE_TYPES.has(elementType);
     const isSelect = elementType === 'HTMLSelectElement';
+    const checkable = isCheckable(sample.element);
     const isForEach = group.items.length > 1 || sample.coordinate.length > 1;
 
-    const prefix = isFillable ? 'fill' : 'click';
+    const prefix = checkable ? 'toggle' : isFillable ? 'fill' : 'click';
     const toolName = `${prefix}-${toKebab(group.refName)}`;
 
     const description =
         group.description ||
-        `${isFillable ? 'Fill' : 'Click'} ${toHumanReadable(group.refName)}${isForEach ? ' for a specific item' : ''}`;
+        `${checkable ? 'Toggle' : isFillable ? 'Fill' : 'Click'} ${toHumanReadable(group.refName)}${isForEach ? ' for a specific item' : ''}`;
 
     const properties: Record<string, { type: string; description?: string; enum?: string[] }> = {};
     const required: string[] = [];
@@ -64,12 +65,20 @@ function makeSemanticTool(
     }
 
     if (isFillable) {
-        const selectOptions = isSelect ? getSelectOptions(sample.element) : undefined;
-        properties.value = {
-            type: 'string',
-            description: isSelect ? 'Value to select' : 'Value to set',
-            ...(selectOptions ? { enum: selectOptions } : {}),
-        };
+        if (checkable) {
+            properties.value = {
+                type: 'string',
+                description: 'Checked state',
+                enum: ['true', 'false'],
+            };
+        } else {
+            const selectOptions = isSelect ? getSelectOptions(sample.element) : undefined;
+            properties.value = {
+                type: 'string',
+                description: isSelect ? 'Value to select' : 'Value to set',
+                ...(selectOptions ? { enum: selectOptions } : {}),
+            };
+        }
         required.push('value');
     }
 
@@ -86,8 +95,8 @@ function makeSemanticTool(
                 if (isFillable) {
                     const instance = automation.getInteraction(coord);
                     if (!instance) return errorResult(`Element not found: ${coord.join('/')}`);
-                    (instance.element as HTMLInputElement).value = params.value as string;
-                    automation.triggerEvent(isSelect ? 'change' : 'input', coord);
+                    setElementValue(instance.element, params.value as string);
+                    automation.triggerEvent(getEventTypeForElement(instance.element), coord);
                 } else {
                     automation.triggerEvent('click', coord);
                 }
