@@ -204,3 +204,35 @@ Node names are now preserved for the 3 functional cases through the roundtrip:
 | `complex-page`         | (no parent\* to remove)                        | `data-name`, position styles |
 | `plugin-product-card`  | Removed parent\*, absoluteRenderBounds, isMask | `data-name`, position styles |
 | `repeater-list`        | (no parent\* to remove)                        | `data-name`, position styles |
+
+---
+
+## Phase 5 — Further Figma Default Cleanup (Continued Evolution)
+
+### Decisions
+
+Based on analysis of downstream consumers (deserializer, forward converter, reverse converter):
+
+| Field | Decision | Rationale |
+|-------|----------|-----------|
+| `visible: false` | **Skip entire node** (don't export the node or its children at all) | Invisible nodes have no representation in jay-html; exporting them adds noise |
+| `visible: true` | **Don't emit the field** | Default — deserializer leaves Figma default (`true`) when omitted |
+| `locked` | **Remove entirely** | Figma-only concept (prevents editing in canvas); no target value in jay-html; no downstream consumer needs it |
+| `opacity` | **Emit only when ≠ 1** | Maps to CSS `opacity`; forward converter already skips when missing or `>= 1`; deserializer guarded |
+| `blendMode` | **Emit only when ≠ `"PASS_THROUGH"`** | Maps to CSS `mix-blend-mode`; rare in practice; deserializer guarded |
+| `rotation` | **Emit only when ≠ 0** | Maps to CSS `transform: rotate()`; forward converter already skips `=== 0`; already conditional in serializer |
+
+### Consumer Analysis
+
+All four consumers handle missing values gracefully:
+
+- **Deserializer**: All fields use guarded checks (`if (typeof doc.X ...)`) — omission keeps Figma default
+- **Forward converter (Figma JSON → jay-html)**: Only uses `opacity` (skips when `>= 1`) and `rotation` (skips when `=== 0`); doesn't use `visible`, `locked`, or `blendMode`
+- **Reverse converter (jay-html → Figma JSON)**: Produces `opacity` and `rotation` from CSS; doesn't produce `visible`, `locked`, or `blendMode`
+
+### Implementation
+
+**Repo: `jay-desktop-poc`**
+
+- `pluginsCommon/lib/serialization/serializer.ts` — Skip invisible nodes (`node.visible === false`) at tree level, returning `null`; filter null children
+- `pluginsCommon/lib/serialization/serializers/sceneNode.ts` — Remove `visible` and `locked` from base object; emit `opacity` only when `!== 1`; emit `blendMode` only when `!== "PASS_THROUGH"`; emit `rotation` only when `!== 0`
