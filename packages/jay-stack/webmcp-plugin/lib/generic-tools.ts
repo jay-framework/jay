@@ -1,6 +1,6 @@
 import type { AutomationAPI, Interaction } from '@jay-framework/runtime-automation';
 import type { ToolDescriptor } from './webmcp-types';
-import { parseCoordinate, jsonResult, errorResult, getSelectOptions, isCheckable, setElementValue, getEventTypeForElement, withLogging } from './util';
+import { parseCoordinate, jsonResult, errorResult, getSelectOptions, isCheckable, setElementValue, getValueEventTypes, withLogging } from './util';
 
 /**
  * Serialize Interaction[] to a WebMCP-friendly shape:
@@ -147,7 +147,9 @@ export function makeFillInputTool(automation: AutomationAPI): ToolDescriptor {
                 }
 
                 setElementValue(instance.element, value);
-                automation.triggerEvent(getEventTypeForElement(instance.element), coord);
+                for (const evt of getValueEventTypes(instance.events)) {
+                    automation.triggerEvent(evt, coord);
+                }
 
                 return jsonResult(`Set value "${value}" on ${params.coordinate}`, automation.getPageState().viewState);
             } catch (e) {

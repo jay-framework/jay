@@ -166,7 +166,7 @@ describe('Generic Tools', () => {
     });
 
     describe('fill-input', () => {
-        it('should set value and trigger input event', () => {
+        it('should set value and trigger both input and change events when both registered', () => {
             const mockElement = document.createElement('input');
             const interactions: Interaction[] = [
                 { refName: 'nameInput', items: [{ coordinate: ['nameInput'], element: mockElement, events: ['input', 'change'] }] },
@@ -177,7 +177,9 @@ describe('Generic Tools', () => {
             const result = tool.execute({ coordinate: 'nameInput', value: 'Test' }, MOCK_AGENT);
 
             expect(mockElement.value).toBe('Test');
-            expect(automation.triggerEvent).toHaveBeenCalledWith('input', ['nameInput']);
+            expect(automation.triggerEvent).toHaveBeenCalledTimes(2);
+            expect(automation.triggerEvent).toHaveBeenNthCalledWith(1, 'input', ['nameInput']);
+            expect(automation.triggerEvent).toHaveBeenNthCalledWith(2, 'change', ['nameInput']);
             expect(result.isError).toBeUndefined();
         });
 

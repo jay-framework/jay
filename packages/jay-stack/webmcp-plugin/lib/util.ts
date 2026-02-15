@@ -92,12 +92,18 @@ export function setElementValue(
 }
 
 /**
- * Return the appropriate event type for a given element after setting its value.
+ * Return value-related events to trigger after setting a value,
+ * based on the events actually registered on the interaction.
+ * Returns all matching value events (input, change) in browser order:
+ * 'input' fires first (on each keystroke), 'change' fires second (on commit).
+ * Falls back to ['input'] if no value events are registered.
  */
-export function getEventTypeForElement(element: HTMLElement): string {
-    if (element instanceof HTMLSelectElement) return 'change';
-    if (isCheckable(element)) return 'change';
-    return 'input';
+export function getValueEventTypes(registeredEvents: string[]): string[] {
+    const result: string[] = [];
+    if (registeredEvents.includes('input')) result.push('input');
+    if (registeredEvents.includes('change')) result.push('change');
+    if (result.length > 0) return result;
+    return registeredEvents.length > 0 ? [registeredEvents[0]] : ['input'];
 }
 
 /**

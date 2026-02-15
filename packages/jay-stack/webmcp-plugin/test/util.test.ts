@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { toKebab, toHumanReadable, parseCoordinate, jsonResult, textResult, errorResult, getSelectOptions, isCheckable, setElementValue, getEventTypeForElement } from '../lib/util';
+import { toKebab, toHumanReadable, parseCoordinate, jsonResult, textResult, errorResult, getSelectOptions, isCheckable, setElementValue, getValueEventTypes } from '../lib/util';
 
 describe('util', () => {
     describe('toKebab', () => {
@@ -119,31 +119,29 @@ describe('util', () => {
         });
     });
 
-    describe('getEventTypeForElement', () => {
-        it('should return "change" for select elements', () => {
-            expect(getEventTypeForElement(document.createElement('select'))).toBe('change');
+    describe('getValueEventTypes', () => {
+        it('should return both input and change when both are registered', () => {
+            expect(getValueEventTypes(['input', 'change'])).toEqual(['input', 'change']);
         });
 
-        it('should return "change" for checkbox inputs', () => {
-            const el = document.createElement('input');
-            el.type = 'checkbox';
-            expect(getEventTypeForElement(el)).toBe('change');
+        it('should return ["change"] when only change is registered', () => {
+            expect(getValueEventTypes(['change'])).toEqual(['change']);
         });
 
-        it('should return "change" for radio inputs', () => {
-            const el = document.createElement('input');
-            el.type = 'radio';
-            expect(getEventTypeForElement(el)).toBe('change');
+        it('should return ["input"] when only input is registered', () => {
+            expect(getValueEventTypes(['input'])).toEqual(['input']);
         });
 
-        it('should return "input" for text inputs', () => {
-            const el = document.createElement('input');
-            el.type = 'text';
-            expect(getEventTypeForElement(el)).toBe('input');
+        it('should return both in correct order regardless of registration order', () => {
+            expect(getValueEventTypes(['change', 'input'])).toEqual(['input', 'change']);
         });
 
-        it('should return "input" for textarea', () => {
-            expect(getEventTypeForElement(document.createElement('textarea'))).toBe('input');
+        it('should fall back to first event when neither input nor change', () => {
+            expect(getValueEventTypes(['blur', 'focus'])).toEqual(['blur']);
+        });
+
+        it('should fall back to ["input"] for empty events array', () => {
+            expect(getValueEventTypes([])).toEqual(['input']);
         });
     });
 });

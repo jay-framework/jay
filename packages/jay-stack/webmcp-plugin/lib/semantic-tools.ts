@@ -1,6 +1,6 @@
 import type { AutomationAPI, Interaction } from '@jay-framework/runtime-automation';
 import type { ToolDescriptor } from './webmcp-types';
-import { toKebab, toHumanReadable, jsonResult, errorResult, getSelectOptions, isCheckable, setElementValue, getEventTypeForElement, withLogging } from './util';
+import { toKebab, toHumanReadable, jsonResult, errorResult, getSelectOptions, isCheckable, setElementValue, getValueEventTypes, withLogging } from './util';
 
 const FILLABLE_TYPES = new Set([
     'HTMLInputElement',
@@ -96,7 +96,9 @@ function makeSemanticTool(
                     const instance = automation.getInteraction(coord);
                     if (!instance) return errorResult(`Element not found: ${coord.join('/')}`);
                     setElementValue(instance.element, params.value as string);
-                    automation.triggerEvent(getEventTypeForElement(instance.element), coord);
+                    for (const evt of getValueEventTypes(instance.events)) {
+                        automation.triggerEvent(evt, coord);
+                    }
                 } else {
                     automation.triggerEvent('click', coord);
                 }

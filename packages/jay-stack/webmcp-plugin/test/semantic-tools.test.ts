@@ -199,7 +199,7 @@ describe('Semantic Tools', () => {
             expect(automation.triggerEvent).toHaveBeenCalledWith('click', ['item-1', 'removeBtn']);
         });
 
-        it('should set value and trigger input for fill tools', () => {
+        it('should set value and trigger both input and change for fill tools', () => {
             const mockElement = document.createElement('input');
             const interactions: Interaction[] = [{
                 refName: 'nameInput',
@@ -211,7 +211,9 @@ describe('Semantic Tools', () => {
             tools[0].execute({ value: 'Laptop' }, { requestUserInteraction: vi.fn() });
 
             expect(mockElement.value).toBe('Laptop');
-            expect(automation.triggerEvent).toHaveBeenCalledWith('input', ['nameInput']);
+            expect(automation.triggerEvent).toHaveBeenCalledTimes(2);
+            expect(automation.triggerEvent).toHaveBeenNthCalledWith(1, 'input', ['nameInput']);
+            expect(automation.triggerEvent).toHaveBeenNthCalledWith(2, 'change', ['nameInput']);
         });
 
         it('should set checked and trigger change for checkbox tools', () => {

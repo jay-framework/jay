@@ -1091,10 +1091,125 @@ interface Interaction {
 
 ---
 
+### Post-implementation: Plugin loading and code splitting
+
+Three issues were discovered and fixed when running the webmcp-plugin with the `fake-shop` example:
+
+**1. Plugin not loaded on pages** — The `filterPluginsForPage` function excluded the webmcp-plugin because it's not referenced in any page's jay-html (it's a global tool, not a headless component).
+
+**Fix:** Added `global: true` flag to `plugin.yaml`. Propagated through `PluginManifest` → `PluginWithInit` → `filterPluginsForPage`. Global plugins are always included regardless of page-level usage.
+
+**Files:**
+| File | Change |
+|------|--------|
+| `webmcp-plugin/plugin.yaml` | Added `global: true` |
+| `compiler-shared/lib/plugin-resolution.ts` | Added `global?: boolean` to `PluginManifest` |
+| `stack-server-runtime/lib/plugin-init-discovery.ts` | Added `global: boolean` to `PluginWithInit`; propagated from manifest |
+| `dev-server/lib/dev-server.ts` | `filterPluginsForPage` seeds expanded packages with global plugins |
+
+**2. Init timing** — `queueMicrotask` fired too early; `window.__jay.automation` wasn't set yet. Plugin inits are `await`ed in the generated script, and `await undefined` yields to the microtask queue before the rest of the script runs.
+
+**Fix:** Changed to `setTimeout(0)` which defers to the macrotask queue, running after all synchronous code and microtasks (including component creation and automation setup).
+
+**3. Client code in server bundle** — The `makeJayInit().withClient(...)` callback was included in the server bundle (`dist/index.js`) because the vite config didn't use `jayStackCompiler` for code splitting.
+
+**Fix:** Added `jayStackCompiler` to the webmcp-plugin's `vite.config.ts` with dual client/server builds (same pattern as mood-tracker-plugin). The compiler strips `.withClient()` from SSR builds via the `options.ssr` flag.
+
+**Files:**
+| File | Change |
+|------|--------|
+| `webmcp-plugin/vite.config.ts` | Added `jayStackCompiler`, `isSsrBuild` dual entry, `ssr` flag |
+| `webmcp-plugin/package.json` | Added `@jay-framework/compiler-jay-stack` devDep; split build scripts to `build:client` + `build:server` |
+
+**Result:** Server bundle has `const init = makeJayInit();` (client code stripped). Client bundle has the full `.withClient(...)` callback.
+
+### Post-implementation: WebMCP API alignment with Chrome Canary
+
+The original design assumed `registerResource`, `registerPrompt`, and a `Registration` return type. Chrome Canary's actual `navigator.modelContext` API is:
+
+- `clearContext()` — clear all context
+- `provideContext({ tools })` — set all tools at once
+- `registerTool(tool): void` — register one tool
+- `unregisterTool(name)` — unregister by name
+
+No resources or prompts.
+
+**Changes:**
+- Deleted `resources.ts`, `prompts.ts`, `resources.test.ts`, `prompts.test.ts`
+- Updated `webmcp-types.ts` — `ModelContextContainer` has only the 4 real methods; removed `ResourceDescriptor`, `PromptDescriptor`, `Registration`
+- Updated `webmcp-bridge.ts` — cleanup uses `mc.unregisterTool(name)` instead of `Registration.unregister()`
+- Renamed `registerSemanticTools` → `buildSemanticTools` (returns `ToolDescriptor[]`, registration moved to bridge)
+- Updated `index.ts` exports
+
+The page state and interaction data previously exposed via resources is already available through the `get-page-state` and `list-interactions` tools.
+
+### Post-implementation: Select options, checkbox/radio, and event handling
+
+**Select options in tools:**
+- `list-interactions` serialization includes `options: string[]` for `<select>` elements (read from `element.options`)
+- Semantic fill tools for selects constrain `value` with `enum` of available option values
+
+**Checkbox/radio support:**
+- Added `isCheckable(element)` — detects `<input type="checkbox">` and `<input type="radio">`
+- Added `setElementValue(element, value)` — uses `.checked = (value === 'true')` for checkable elements, `.value` for others
+- Semantic tools for checkable elements get `toggle-` prefix (e.g., `toggle-agree-checkbox`) and `value` enum of `['true', 'false']`
+- `list-interactions` includes `inputType: "checkbox"` or `"radio"` for checkable elements
+
+**Event type from registered events:**
+- Replaced `getEventTypeForElement(element)` (guessed from element type) with `getValueEventType(registeredEvents)` (picks from actual `InteractionInstance.events`)
+- Prefers `input` > `change` > first registered event
+
+### Post-implementation: Logging and console API
+
+**Tool execution logging:**
+- Added `withLogging(tool)` wrapper in `util.ts` that logs `[WebMCP] tool-name {"param":"value"}` on every execution
+- Applied to all generic and semantic tools
+
+**Console API:**
+- `window.webmcp.tools()` — prints a `console.table` of all registered tools (name + description) and returns the `ToolDescriptor[]` array
+- Registration log: `[WebMCP] Registered N tools — type webmcp.tools() to list`
+- Cleaned up on disposal (`delete window.webmcp`)
+
+### Updated package structure
+
+```
+webmcp-plugin/
+├── plugin.yaml              # name: webmcp, global: true
+├── package.json
+├── tsconfig.json
+├── vite.config.ts           # jayStackCompiler, dual client/server builds
+├── lib/
+│   ├── index.ts             # Exports init + setupWebMCP + types
+│   ├── init.ts              # makeJayInit().withClient() with setTimeout(0)
+│   ├── webmcp-bridge.ts     # setupWebMCP() — registers tools, console API
+│   ├── generic-tools.ts     # 4 generic tools (with logging)
+│   ├── semantic-tools.ts    # Auto-generated tools from interactions
+│   ├── webmcp-types.ts      # Chrome Canary ModelContext API types
+│   └── util.ts              # Helpers, withLogging, setElementValue, etc.
+└── test/
+    ├── helpers.ts            # Mock automation + mock modelContext
+    ├── generic-tools.test.ts # 17 tests
+    ├── semantic-tools.test.ts# 17 tests
+    ├── bridge.test.ts        # 8 tests
+    └── util.test.ts          # 22 tests
+```
+
+### Updated test summary
+
+| Package | Files | Tests | Status |
+|---------|-------|-------|--------|
+| `runtime-automation` | 3 | 50 | All pass |
+| `webmcp-plugin` | 4 | 64 | All pass |
+| **Total** | **7** | **114** | **All pass** |
+
+---
+
 ## Related Design Logs
 
 - **#76** — AI Agent Integration (AutomationAPI design)
 - **#77** — Automation Dev Server Integration (dev server wiring)
 - **#63** — Jay-Stack Server Actions (action system)
+- **#52** — Jay-Stack Client-Server Code Splitting (dual builds, `jayStackCompiler`)
+- **#65** — makeJayInit Builder Pattern (code splitting for `withServer`/`withClient`)
 - **#84** — Headless Component Props (MCP tool references for actions)
 - **#80** — Materializing Dynamic Contracts (agent discovery)
