@@ -100,12 +100,7 @@ New compiler target that produces a function rendering HTML to a stream:
 
 ```ts
 // generated-server-element.ts
-import { escapeHtml } from '@jay-framework/ssr-runtime';
-
-export interface ServerRenderContext {
-    write: (chunk: string) => void;
-    onAsync: (promise: Promise<any>, pendingId: string) => void;
-}
+import { escapeHtml, type ServerRenderContext } from '@jay-framework/ssr-runtime';
 
 export function renderToStream(vs: ViewState, ctx: ServerRenderContext): void {
     const { write: w } = ctx;
@@ -140,7 +135,7 @@ Key properties:
 | `style` binding | Evaluate and inline: `w('style="color:' + escapeAttr(vs.color) + '"')` |
 | `if="cond"` (interactive) | Evaluate condition, render matching branch with `jay-coordinate` on dynamic elements. No comment markers — `Kindergarten` offset counting handles positioning. |
 | `if="cond"` (slow/fast only) | Evaluate condition, render or skip. No markers needed. |
-| `forEach` (interactive) | Iterate items with `jay-coordinate="trackByKey"` on each. No comment markers — items are children of a container `de()` element. |
+| `forEach` (interactive) | Add `jay-coordinate` (auto-index) on container element; iterate items with `jay-coordinate="trackByKey"` on each. |
 | `forEach` (slow) | Already unrolled by slow render (Design Log #75) |
 | `when-loading` (async) | Render pending variant inline with `jay-async="propName:pending"` wrapper. Register promise with `ctx.onAsync`. |
 | `when-resolved` (async) | Not rendered initially. Written via inline `<script>` when promise resolves. |
@@ -158,8 +153,8 @@ Uses the `jay-coordinate` attribute system from Design Log #93. No comment bound
 
 <!-- Interactive if (cond=false at SSR) — nothing rendered -->
 
-<!-- Interactive forEach (items are children of their container element) -->
-<ul>
+<!-- Interactive forEach (container gets auto-index coordinate for Kindergarten setup) -->
+<ul jay-coordinate="1">
   <li jay-coordinate="abc">
     <span jay-coordinate="abc/0">Item ABC</span>
     <button jay-coordinate="abc/addBtn">Add</button>
@@ -229,7 +224,7 @@ export function renderToStream(vs: ViewState, ctx: ServerRenderContext): void {
     }
     
     // forEach="items" — interactive collection
-    w('<ul>');
+    w('<ul jay-coordinate="1">');  // container for forEach, auto-index
     for (const item of vs.items) {
         const key = escapeHtml(String(item.id));
         w('<li jay-coordinate="' + key + '">');
@@ -420,9 +415,9 @@ In `compiler-jay-html`:
 
 1. **New render function**: `renderServerNode(node, context)` — similar to `renderElementNode` and `renderElementBridgeNode`
 2. **New file generator**: `generateServerElementFile(jayFile)` — produces `generated-server-element.ts`
-3. **Coordinate generation**: Assign `jay-coordinate` values using same coordinate system as Design Log #93 (ref names, auto-index for non-ref elements, trackBy keys for forEach)
+3. **Coordinate generation**: Assign `jay-coordinate` values using same coordinate system as Design Log #93 (ref names, auto-index for non-ref elements, trackBy keys for forEach, auto-index for container elements wrapping forEach/conditional)
 4. **Async handling**: `when-loading` → render inline with `jay-async` wrapper; `when-resolved`/`when-rejected` → generate template functions for `ctx.onAsync`
-6. **escapeHtml calls**: Wrap all dynamic text and attribute bindings with `escapeHtml()` / `escapeAttr()`
+5. **escapeHtml calls**: Wrap all dynamic text and attribute bindings with `escapeHtml()` / `escapeAttr()`
 
 ### When to Compile SSR vs Client-Only
 
@@ -503,9 +498,9 @@ Browser receives (streamed):
     <div id="target">
       <div>
         <h1 jay-coordinate="0">Hello</h1>
-        <ul>
-          <li jay-coordinate="1"><span jay-coordinate="1/0">Widget</span> - <span jay-coordinate="1/1">9.99</span></li>
-          <li jay-coordinate="2"><span jay-coordinate="2/0">Gadget</span> - <span jay-coordinate="2/1">19.99</span></li>
+        <ul jay-coordinate="1">
+          <li jay-coordinate="w1"><span jay-coordinate="w1/0">Widget</span> - <span jay-coordinate="w1/1">9.99</span></li>
+          <li jay-coordinate="g2"><span jay-coordinate="g2/0">Gadget</span> - <span jay-coordinate="g2/1">19.99</span></li>
         </ul>
       </div>
     </div>
