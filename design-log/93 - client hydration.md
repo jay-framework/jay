@@ -174,7 +174,7 @@ The hydrate target generates code that:
 - Calls standalone `adoptText(coordinate, accessor, ref?)` for dynamic text nodes
 - Calls standalone `adoptElement(coordinate, attributes, children, ref?)` for dynamic elements
 - Calls standalone `hydrateConditional(...)` for interactive `if=true` (Level 2) — adopt path only
-- Calls standalone `hydrateConditionalEmpty(...)` for interactive `if=false` (Level 3) — imports element creation from `generated-element.ts` (which uses regular `element()`, `dynamicText()` etc. — they work because `ConstructContext` is on the stack)
+- Uses existing `conditional()` from `generated-element.ts` for interactive `if=false` (Level 3) — no new function needed; creation code works because `ConstructContext` is on the stack
 - Calls standalone `hydrateForEach(...)` for interactive forEach — adopts existing items + imports item creation from `generated-element.ts`
 
 ### Server Markers: Coordinate-Based Attributes
@@ -183,6 +183,7 @@ The server adds `jay-coordinate` attributes to dynamic elements. The coordinate 
 
 - **Ref elements**: `jay-coordinate="refName"` (or `jay-coordinate="trackByKey/refName"` inside forEach)
 - **Dynamic elements without ref**: `jay-coordinate="0"`, `jay-coordinate="1"` (auto-index within scope)
+- **Container elements**: elements that wrap interactive forEach or conditional children get auto-index coordinates — needed so hydration can find them and set up `Kindergarten` groups
 - **forEach items**: `jay-coordinate="trackByKey"` on the item wrapper, establishing a coordinate scope
 - **Nested forEach**: coordinates chain: `jay-coordinate="parentKey/childKey/refName"`
 
@@ -192,7 +193,7 @@ The server adds `jay-coordinate` attributes to dynamic elements. The coordinate 
     <div jay-coordinate="content">Some text</div>                 <!-- ref="content" -->
     <p>Static footer</p>                                           <!-- no marker, skipped -->
     <div jay-coordinate="details">Details here</div>              <!-- interactive if, SSR=true -->
-    <ul>
+    <ul jay-coordinate="1">                                        <!-- forEach container, auto-index -->
         <li jay-coordinate="item-1">
             <span jay-coordinate="item-1/0">Widget</span>         <!-- auto-index 0 inside item -->
             <button jay-coordinate="item-1/addBtn">Add</button>   <!-- ref inside forEach -->
@@ -209,6 +210,8 @@ No comment boundaries are needed. The runtime's `Kindergarten` class handles DOM
 - **if=true**: element adopted into its group (size=1). On toggle to false, `removeNode` sets size=0.
 - **if=false**: group starts empty (size=0). On toggle to true, `ensureNode` inserts at the correct offset.
 - **forEach**: items tracked in their group. New items use offset counting for correct placement.
+
+**Kindergarten group setup during hydration**: The current `dynamicElement` creates Kindergarten groups for ALL children — including static ones — so offset counting is correct. Hydration must match this: for each container element (`de()` in compiled code), the hydration code must create groups for static siblings too (pre-populated with existing DOM nodes by child index). This ensures offsets remain correct when conditionals toggle or forEach items change post-hydration.
 
 The client builds a coordinate→element map via `querySelectorAll('[jay-coordinate]')`, then resolves each dynamic node by its coordinate path. This is the same coordinate structure used by the automation API (`getInteraction(["item-1", "addBtn"])`).
 
@@ -317,12 +320,14 @@ When Level 3 needs to create new elements (if=false toggles to true, or forEach 
 generated-element-hydrate.ts:
   withHydrationRootContext(viewState, refManager, rootElement, () => {
       adoptText("0", (vs) => vs.title);       // ← reads from coordinate map
-      hydrateForEach(
-          (vs) => vs.items,
-          'id',
-          () => { adoptText("0", ...); },      // ← adopt existing items
-          () => { e('li', {}, [dt(...)]); },   // ← create new items (regular element/dt!)
-      );
+      adoptElement("1", {}, [                  // ← adopt <ul> container (auto-index)
+          hydrateForEach(
+              (vs) => vs.items,
+              'id',
+              () => { adoptText("0", ...); },  // ← adopt existing items
+              () => { e('li', {}, [dt(...)]); },// ← create new items (regular element/dt!)
+          ),
+      ]);
   });
 ```
 
