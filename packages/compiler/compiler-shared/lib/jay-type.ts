@@ -12,6 +12,7 @@ export enum JayTypeKind {
     union,
     promise,
     recursive,
+    optional,
 }
 export interface JayType {
     name: string;
@@ -146,11 +147,24 @@ export class JayRecursiveType implements JayType {
     }
 }
 
+export class JayOptionalType implements JayType {
+    constructor(public readonly innerType: JayType) {}
+    readonly kind = JayTypeKind.optional;
+
+    get name() {
+        return `${this.innerType.name}?`;
+    }
+}
+
 export const JayErrorType = new JayObjectType('Error', {
     message: new JayAtomicType('string'),
     name: new JayAtomicType('string'),
     stack: new JayAtomicType('string'),
 });
+
+export function isOptionalType(aType: JayType): aType is JayOptionalType {
+    return aType.kind === JayTypeKind.optional;
+}
 
 export function isAtomicType(aType: JayType): aType is JayAtomicType {
     return aType.kind === JayTypeKind.atomic;
