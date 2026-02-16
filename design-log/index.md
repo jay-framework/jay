@@ -169,14 +169,16 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ---
 
-## Server-Side Rendering (SSR)
+## Server-Side Rendering (SSR) & Hydration
 
-| #   | Title                              | Description                    |
-| --- | ---------------------------------- | ------------------------------ |
-| 11  | server side rendering              | SSR design                     |
-| 23  | JSON compare and patch             | JSON diffing for SSR hydration |
-| 48  | Jay Stack Services                 | Service injection for SSR      |
-| 50  | jay stack - headless configuration | Headless SSR configuration     |
+| #   | Title                              | Description                                                        |
+| --- | ---------------------------------- | ------------------------------------------------------------------ |
+| 11  | server side rendering              | SSR design                                                         |
+| 23  | JSON compare and patch             | JSON diffing for SSR hydration                                     |
+| 48  | Jay Stack Services                 | Service injection for SSR                                          |
+| 50  | jay stack - headless configuration | Headless SSR configuration                                         |
+| 93  | client hydration                   | Hydrate server-rendered DOM: skip static HTML, adopt dynamic nodes |
+| 94  | SSR streaming renderer             | Compile jay-html to streaming server render, no DOM APIs           |
 
 ---
 
@@ -202,7 +204,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ### "I need to understand the rendering pipeline"
 
-→ See #34 (jay stack), #50 (rendering phases), #52 (code splitting), #75 (slow rendering)
+→ See #34 (jay stack), #50 (rendering phases), #52 (code splitting), #75 (slow rendering), #94 (SSR streaming)
 
 ### "I'm working on contracts and types"
 
@@ -226,7 +228,11 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ### "I'm adding client-side interactivity"
 
-→ See #06 (state management), #31 (createSignal), #30 (Context API), #09 (safe events)
+→ See #06 (state management), #31 (createSignal), #30 (Context API), #09 (safe events), #93 (client hydration)
+
+### "I'm working on SSR or hydration"
+
+→ See #11 (SSR concept), #93 (client hydration), #94 (SSR streaming renderer), #75 (slow rendering), #72 (skip client script)
 
 ### "I'm working on the dev server"
 
