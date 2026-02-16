@@ -67,9 +67,7 @@ function createContractResolver(
         try {
             const absolutePath = importResolver.resolveLink(baseDir, subpathWithExt);
             const relativePath = path.relative(baseDir, absolutePath);
-            const importPath = relativePath.startsWith('.')
-                ? relativePath
-                : './' + relativePath;
+            const importPath = relativePath.startsWith('.') ? relativePath : './' + relativePath;
             return { importPath, viewStateName };
         } catch {
             return { importPath: './' + subpathWithExt, viewStateName };

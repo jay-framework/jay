@@ -7,6 +7,7 @@ import {
     JayArrayType,
     JayImportedType,
     JayOptionalType,
+    JayUnknown,
 } from '../lib';
 
 describe('jayTypeToJsonSchema', () => {
@@ -37,7 +38,7 @@ describe('jayTypeToJsonSchema', () => {
     });
 
     it('should convert imported type as generic object', () => {
-        expect(jayTypeToJsonSchema(new JayImportedType('ProductCard', 'product-card.jay-contract'))).toEqual({
+        expect(jayTypeToJsonSchema(new JayImportedType('ProductCard', JayUnknown))).toEqual({
             type: 'object',
             description: 'Contract: ProductCard',
         });
