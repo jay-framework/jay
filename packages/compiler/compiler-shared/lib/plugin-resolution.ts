@@ -53,8 +53,10 @@ export interface PluginManifest {
         description?: string;
     }>;
     dynamic_contracts?: DynamicContractConfig | DynamicContractConfig[];
-    /** Named exports from plugin backend bundle that are JayAction instances */
-    actions?: string[];
+    /** Named exports from plugin backend bundle that are JayAction instances.
+     *  Can be a string (export name, no metadata) or an object with a .jay-action file reference.
+     *  Actions with .jay-action metadata are exposed to AI agents; those without are not. */
+    actions?: ActionManifestEntry[];
     /** Plugin initialization configuration */
     init?: PluginInitConfig;
     /** Plugin setup configuration (Design Log #87) */
@@ -66,6 +68,27 @@ export interface PluginManifest {
         /** Human-readable description of what setup does */
         description?: string;
     };
+}
+
+/**
+ * Action entry in plugin.yaml.
+ * - `string`: export name only, no metadata (not exposed to AI agents)
+ * - `{ name, action }`: export name + path to .jay-action metadata file
+ */
+export type ActionManifestEntry = string | { name: string; action: string };
+
+/**
+ * Normalizes an action manifest entry to { name, action? }.
+ * Strings become { name: string, action: undefined }.
+ */
+export function normalizeActionEntry(entry: ActionManifestEntry): {
+    name: string;
+    action?: string;
+} {
+    if (typeof entry === 'string') {
+        return { name: entry };
+    }
+    return { name: entry.name, action: entry.action };
 }
 
 /**

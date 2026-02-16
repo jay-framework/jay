@@ -1,6 +1,15 @@
 import type { AutomationAPI, Interaction } from '@jay-framework/runtime-automation';
 import type { ToolDescriptor } from './webmcp-types';
-import { parseCoordinate, jsonResult, errorResult, getSelectOptions, isCheckable, setElementValue, getValueEventTypes, withLogging } from './util';
+import {
+    parseCoordinate,
+    jsonResult,
+    errorResult,
+    getSelectOptions,
+    isCheckable,
+    setElementValue,
+    getValueEventTypes,
+    withLogging,
+} from './util';
 
 /**
  * Serialize Interaction[] to a WebMCP-friendly shape:
@@ -86,8 +95,7 @@ export function makeTriggerInteractionTool(automation: AutomationAPI): ToolDescr
             properties: {
                 coordinate: {
                     type: 'string',
-                    description:
-                        'Element coordinate (e.g. "addBtn" or "item-1/removeBtn")',
+                    description: 'Element coordinate (e.g. "addBtn" or "item-1/removeBtn")',
                 },
                 event: {
                     type: 'string',
@@ -102,7 +110,10 @@ export function makeTriggerInteractionTool(automation: AutomationAPI): ToolDescr
 
             try {
                 automation.triggerEvent(event, coord);
-                return jsonResult(`Triggered "${event}" on ${params.coordinate}`, automation.getPageState().viewState);
+                return jsonResult(
+                    `Triggered "${event}" on ${params.coordinate}`,
+                    automation.getPageState().viewState,
+                );
             } catch (e) {
                 return errorResult((e as Error).message);
             }
@@ -126,8 +137,7 @@ export function makeFillInputTool(automation: AutomationAPI): ToolDescriptor {
             properties: {
                 coordinate: {
                     type: 'string',
-                    description:
-                        'Element coordinate (e.g. "nameInput" or "item-1/quantityInput")',
+                    description: 'Element coordinate (e.g. "nameInput" or "item-1/quantityInput")',
                 },
                 value: {
                     type: 'string',
@@ -151,7 +161,10 @@ export function makeFillInputTool(automation: AutomationAPI): ToolDescriptor {
                     automation.triggerEvent(evt, coord);
                 }
 
-                return jsonResult(`Set value "${value}" on ${params.coordinate}`, automation.getPageState().viewState);
+                return jsonResult(
+                    `Set value "${value}" on ${params.coordinate}`,
+                    automation.getPageState().viewState,
+                );
             } catch (e) {
                 return errorResult((e as Error).message);
             }

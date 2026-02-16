@@ -1,9 +1,11 @@
 export const JAY_EXTENSION = '.jay-html';
 export const CSS_EXTENSION = '.css';
 export const JAY_CONTRACT_EXTENSION = '.jay-contract';
+export const JAY_ACTION_EXTENSION = '.jay-action';
 export const JAY_TS_EXTENSION = '.jay-html.ts';
 export const JAY_DTS_EXTENSION = '.jay-html.d.ts';
 export const JAY_CONTRACT_DTS_EXTENSION = '.jay-contract.d.ts';
+export const JAY_ACTION_DTS_EXTENSION = '.jay-action.d.ts';
 
 export const JAY_COMPONENT = '@jay-framework/component';
 export const JAY_SECURE = '@jay-framework/secure';

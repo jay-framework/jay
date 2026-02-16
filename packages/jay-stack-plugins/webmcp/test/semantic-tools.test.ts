@@ -8,13 +8,20 @@ function group(refName: string, tag: string, coordOrCoords: string | string[][])
     const coords = typeof coordOrCoords === 'string' ? [[coordOrCoords]] : coordOrCoords;
     return {
         refName,
-        items: coords.map((c): InteractionInstance => ({
-            coordinate: c,
-            element: document.createElement(tag),
-            events: tag === 'button' || tag === 'a' ? ['click']
-                : tag === 'select' ? ['change']
-                : tag === 'input' ? ['input', 'change'] : ['click'],
-        })),
+        items: coords.map(
+            (c): InteractionInstance => ({
+                coordinate: c,
+                element: document.createElement(tag),
+                events:
+                    tag === 'button' || tag === 'a'
+                        ? ['click']
+                        : tag === 'select'
+                          ? ['change']
+                          : tag === 'input'
+                            ? ['input', 'change']
+                            : ['click'],
+            }),
+        ),
     };
 }
 
@@ -50,7 +57,12 @@ describe('Semantic Tools', () => {
 
     it('should add coordinate enum for forEach interactions (multiple items)', () => {
         const automation = createMockAutomation({
-            interactions: [group('removeBtn', 'button', [['item-1', 'removeBtn'], ['item-2', 'removeBtn']])],
+            interactions: [
+                group('removeBtn', 'button', [
+                    ['item-1', 'removeBtn'],
+                    ['item-2', 'removeBtn'],
+                ]),
+            ],
         });
 
         const tools = buildSemanticTools(automation);
@@ -90,12 +102,15 @@ describe('Semantic Tools', () => {
 
     it('should add enum of option values for select elements', () => {
         const select = document.createElement('select');
-        select.innerHTML = '<option value="sm">Small</option><option value="md">Medium</option><option value="lg">Large</option>';
+        select.innerHTML =
+            '<option value="sm">Small</option><option value="md">Medium</option><option value="lg">Large</option>';
         const automation = createMockAutomation({
-            interactions: [{
-                refName: 'sizeSelect',
-                items: [{ coordinate: ['sizeSelect'], element: select, events: ['change'] }],
-            }],
+            interactions: [
+                {
+                    refName: 'sizeSelect',
+                    items: [{ coordinate: ['sizeSelect'], element: select, events: ['change'] }],
+                },
+            ],
         });
 
         const tools = buildSemanticTools(automation);
@@ -121,10 +136,14 @@ describe('Semantic Tools', () => {
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         const automation = createMockAutomation({
-            interactions: [{
-                refName: 'agreeCheckbox',
-                items: [{ coordinate: ['agreeCheckbox'], element: checkbox, events: ['change'] }],
-            }],
+            interactions: [
+                {
+                    refName: 'agreeCheckbox',
+                    items: [
+                        { coordinate: ['agreeCheckbox'], element: checkbox, events: ['change'] },
+                    ],
+                },
+            ],
         });
 
         const tools = buildSemanticTools(automation);
@@ -140,10 +159,12 @@ describe('Semantic Tools', () => {
         const radio = document.createElement('input');
         radio.type = 'radio';
         const automation = createMockAutomation({
-            interactions: [{
-                refName: 'optionRadio',
-                items: [{ coordinate: ['optionRadio'], element: radio, events: ['change'] }],
-            }],
+            interactions: [
+                {
+                    refName: 'optionRadio',
+                    items: [{ coordinate: ['optionRadio'], element: radio, events: ['change'] }],
+                },
+            ],
         });
 
         const tools = buildSemanticTools(automation);
@@ -165,10 +186,12 @@ describe('Semantic Tools', () => {
 
     it('should use description from Interaction group when available', () => {
         const automation = createMockAutomation({
-            interactions: [{
-                ...group('addToCart', 'button', 'addToCart'),
-                description: 'Add the product to cart',
-            }],
+            interactions: [
+                {
+                    ...group('addToCart', 'button', 'addToCart'),
+                    description: 'Add the product to cart',
+                },
+            ],
         });
 
         const tools = buildSemanticTools(automation);
@@ -194,17 +217,28 @@ describe('Semantic Tools', () => {
             });
 
             const tools = buildSemanticTools(automation);
-            tools[0].execute({ coordinate: 'item-1/removeBtn' }, { requestUserInteraction: vi.fn() });
+            tools[0].execute(
+                { coordinate: 'item-1/removeBtn' },
+                { requestUserInteraction: vi.fn() },
+            );
 
             expect(automation.triggerEvent).toHaveBeenCalledWith('click', ['item-1', 'removeBtn']);
         });
 
         it('should set value and trigger both input and change for fill tools', () => {
             const mockElement = document.createElement('input');
-            const interactions: Interaction[] = [{
-                refName: 'nameInput',
-                items: [{ coordinate: ['nameInput'], element: mockElement, events: ['input', 'change'] }],
-            }];
+            const interactions: Interaction[] = [
+                {
+                    refName: 'nameInput',
+                    items: [
+                        {
+                            coordinate: ['nameInput'],
+                            element: mockElement,
+                            events: ['input', 'change'],
+                        },
+                    ],
+                },
+            ];
             const automation = createMockAutomation({ interactions });
 
             const tools = buildSemanticTools(automation);
@@ -219,10 +253,14 @@ describe('Semantic Tools', () => {
         it('should set checked and trigger change for checkbox tools', () => {
             const mockElement = document.createElement('input');
             mockElement.type = 'checkbox';
-            const interactions: Interaction[] = [{
-                refName: 'agreeCheckbox',
-                items: [{ coordinate: ['agreeCheckbox'], element: mockElement, events: ['change'] }],
-            }];
+            const interactions: Interaction[] = [
+                {
+                    refName: 'agreeCheckbox',
+                    items: [
+                        { coordinate: ['agreeCheckbox'], element: mockElement, events: ['change'] },
+                    ],
+                },
+            ];
             const automation = createMockAutomation({ interactions });
 
             const tools = buildSemanticTools(automation);

@@ -2,7 +2,14 @@ import type { JayComponent } from '@jay-framework/runtime';
 import { deepMergeViewStates, type TrackByMap } from '@jay-framework/view-state-merge';
 import { collectInteractions } from './interaction-collector';
 import { groupInteractions } from './group-interactions';
-import type { AutomationAPI, PageState, Interaction, InteractionInstance, CollectedInteraction, Coordinate } from './types';
+import type {
+    AutomationAPI,
+    PageState,
+    Interaction,
+    InteractionInstance,
+    CollectedInteraction,
+    Coordinate,
+} from './types';
 
 /** Event type for ViewState change notifications (matches runtime export) */
 const VIEW_STATE_CHANGE = 'viewStateChange';

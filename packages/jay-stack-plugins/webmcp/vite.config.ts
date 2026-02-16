@@ -22,10 +22,7 @@ export default defineConfig(({ isSsrBuild }) => ({
             formats: ['es'],
         },
         rollupOptions: {
-            external: [
-                '@jay-framework/fullstack-component',
-                '@jay-framework/runtime-automation',
-            ],
+            external: ['@jay-framework/fullstack-component', '@jay-framework/runtime-automation'],
         },
     },
     test: {

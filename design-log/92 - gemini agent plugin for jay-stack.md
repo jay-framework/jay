@@ -7,6 +7,7 @@
 1. **WebMCP plugin** (Design Log #91) — automatically exposes page interactions as WebMCP tools to browsers with `navigator.modelContext`. Client-only plugin. Relies on an external AI agent (browser-side) to call the tools.
 
 2. **AutomationAPI** (`@jay-framework/runtime-automation`) — wraps Jay components:
+
    - `getPageState()` → `{ viewState, interactions, customEvents }`
    - `triggerEvent(eventType, coordinate)` → trigger UI events
    - `getInteraction(coordinate)` → find specific interaction (returns DOM element)
@@ -36,6 +37,7 @@ The WebMCP plugin requires a **WebMCP-enabled browser** (Chrome Canary). Most us
 4. **Converse** with the user via a chat UI
 
 The plugin should:
+
 - Use the **Gemini API** (server-side, with function calling)
 - Expose a **contract** for building a chat UI in jay-html
 - Reuse the same tool infrastructure as webmcp (same `ToolDescriptor` type and generation logic)
@@ -66,6 +68,7 @@ The plugin should:
 4. Server continues the Gemini conversation with the tool results
 
 This means a single user message may require **multiple round-trips**:
+
 - Client → Server (user message) → Gemini → tool calls needed
 - Server → Client (pending tool calls) → Client executes → Client → Server (tool results)
 - Server → Gemini (tool results) → final response or more tool calls
@@ -102,6 +105,7 @@ ToolDescriptor.inputSchema → FunctionDeclaration.parameters
 **Compact mode:** Shows only the input + the last question/answer pair. An expand button reveals full history. This is useful for embedding the agent as a small widget on a page without dominating the layout.
 
 Tags:
+
 - Messages list (repeated sub-contract): role, content, timestamp
 - Text input for user message
 - Send button
@@ -118,6 +122,7 @@ Tags:
 The client component holds the full `ConversationState` (message history in the Gemini format). On each request, the client sends the entire conversation history to the server action. The server passes it to Gemini, gets the response, and returns the updated history back to the client.
 
 **Why client-side:**
+
 - Server is stateless — no session management, no memory leaks, no cleanup timers
 - Scales trivially (any server instance can handle any request)
 - Page refresh / navigation loses state naturally (expected for a chat widget)
@@ -173,10 +178,10 @@ Actions in `plugin.yaml` currently list export names as strings. We extend this 
 name: wix-stores
 actions:
   - name: searchProducts
-    action: ./actions/search-products.jay-action   # metadata file
+    action: ./actions/search-products.jay-action # metadata file
   - name: getProductBySlug
     action: ./actions/get-product-by-slug.jay-action
-  - submitRating          # backward compat: string = export name, no metadata
+  - submitRating # backward compat: string = export name, no metadata
 ```
 
 When `action` points to a `.jay-action` file, the framework loads metadata at init time. Actions without a `.jay-action` file still work as normal server actions — they are simply **not exposed to the AI agent**. Only actions with `.jay-action` metadata become Gemini tools. This is intentional: not every action should be callable by the LLM (e.g., internal framework actions, auth actions).
@@ -225,6 +230,7 @@ export const sendMessage = makeJayAction<SendMessageInput, SendMessageOutput>()
 ### Q9: What should the system prompt include?
 
 **Answer:** The system prompt should describe:
+
 1. The current page state (ViewState snapshot) — included as **context**, not a tool (see Q11)
 2. Available page interactions summary
 3. Available server actions (only those with `.jay-action` files — names + descriptions)
@@ -239,12 +245,14 @@ In the future, the system prompt should be configurable — plugins or page auth
 **Answer:** Yes. Generate `Input` and `Output` interfaces from the `.jay-action` file, similar to how `.jay-contract` generates ViewState/Refs types. The `.jay-action` file becomes the **single source of truth** for the schema — both the TypeScript types and the Gemini function declarations are derived from it.
 
 Generated file: `send-message.jay-action.d.ts`
+
 ```typescript
 export interface SendMessageInput { ... }  // from inputSchema
 export interface SendMessageOutput { ... } // from outputSchema
 ```
 
 The action handler imports and uses these types:
+
 ```typescript
 import type { SendMessageInput, SendMessageOutput } from './send-message.jay-action';
 export const sendMessage = makeJayAction<SendMessageInput, SendMessageOutput>()
@@ -252,6 +260,7 @@ export const sendMessage = makeJayAction<SendMessageInput, SendMessageOutput>()
 ```
 
 This gives us:
+
 - Single source of truth (`.jay-action` file)
 - Type safety in action handlers
 - Same schema sent to Gemini for tool calling
@@ -285,7 +294,7 @@ sequenceDiagram
     C->>S: sendMessage(message, history, toolDefs, pageState)
     S->>S: Build system prompt with pageState as context
     S->>G: Generate content (history + tools)
-    
+
     alt Gemini requests tool calls
         G->>S: Function call responses
         S->>S: Execute server-action tools
@@ -296,7 +305,7 @@ sequenceDiagram
         S->>G: Continue with tool results
         Note over S,G: May loop for more tool calls
     end
-    
+
     G->>S: Text response
     S->>C: Return assistant message + updated history
     C->>C: Store history locally
@@ -305,11 +314,11 @@ sequenceDiagram
 
 ### Tool Categories
 
-| Category | Runs on | Examples | Discovery |
-|----------|---------|----------|-----------|
-| Page automation (generic) | Client | `trigger-interaction`, `fill-input` | From AutomationAPI, sent to server |
-| Page automation (semantic) | Client | `click-add-to-cart`, `fill-search-input` | From AutomationAPI, sent to server |
-| Server actions | Server | `moodTracker.submitMood`, `cart.addToCart` | From ActionRegistry |
+| Category                   | Runs on | Examples                                   | Discovery                          |
+| -------------------------- | ------- | ------------------------------------------ | ---------------------------------- |
+| Page automation (generic)  | Client  | `trigger-interaction`, `fill-input`        | From AutomationAPI, sent to server |
+| Page automation (semantic) | Client  | `click-add-to-cart`, `fill-search-input`   | From AutomationAPI, sent to server |
+| Server actions             | Server  | `moodTracker.submitMood`, `cart.addToCart` | From ActionRegistry                |
 
 **Context (not tools):** Page state (`getPageState()`) and available interactions are included in the system prompt as context, not as callable tools. This avoids wasting tool calls on read-only operations.
 
@@ -329,7 +338,7 @@ tags:
         dataType: string
       - tag: role
         type: variant
-        dataType: "enum (user | assistant | system)"
+        dataType: 'enum (user | assistant | system)'
       - tag: content
         type: data
         dataType: string
@@ -435,8 +444,7 @@ setup:
 
 ```yaml
 # Gemini Agent Configuration
-apiKey: "<your-gemini-api-key>"
-
+apiKey: '<your-gemini-api-key>'
 # Optional: model name (default: gemini-2.0-flash)
 # model: gemini-2.0-flash
 
@@ -452,31 +460,31 @@ The server is stateless — conversation history is managed client-side and sent
 
 ```typescript
 interface SendMessageInput {
-    message: string;
-    // Full conversation history (Gemini format)
-    history: GeminiMessage[];
-    // Client sends tool definitions (page automation tools) serialized
-    toolDefinitions: SerializedToolDef[];
-    // Current page state snapshot (included in system prompt)
-    pageState: object;
+  message: string;
+  // Full conversation history (Gemini format)
+  history: GeminiMessage[];
+  // Client sends tool definitions (page automation tools) serialized
+  toolDefinitions: SerializedToolDef[];
+  // Current page state snapshot (included in system prompt)
+  pageState: object;
 }
 
 interface SerializedToolDef {
-    name: string;
-    description: string;
-    inputSchema: ToolInputSchema;
-    category: 'page-automation';  // distinguishes from server actions
+  name: string;
+  description: string;
+  inputSchema: ToolInputSchema;
+  category: 'page-automation'; // distinguishes from server actions
 }
 
 type SendMessageOutput =
-    | { type: 'response'; message: string; history: GeminiMessage[] }
-    | { type: 'tool-calls'; calls: PendingToolCall[]; history: GeminiMessage[] };
+  | { type: 'response'; message: string; history: GeminiMessage[] }
+  | { type: 'tool-calls'; calls: PendingToolCall[]; history: GeminiMessage[] };
 
 interface PendingToolCall {
-    id: string;
-    name: string;
-    args: Record<string, unknown>;
-    category: 'page-automation' | 'server-action';
+  id: string;
+  name: string;
+  args: Record<string, unknown>;
+  category: 'page-automation' | 'server-action';
 }
 ```
 
@@ -484,20 +492,20 @@ interface PendingToolCall {
 
 ```typescript
 interface SubmitToolResultsInput {
-    results: ToolCallResult[];
-    // Full conversation history (including the tool call turn)
-    history: GeminiMessage[];
-    toolDefinitions: SerializedToolDef[];  // resend (page state may have changed)
-    pageState: object;  // re-sent (may have changed after tool execution)
+  results: ToolCallResult[];
+  // Full conversation history (including the tool call turn)
+  history: GeminiMessage[];
+  toolDefinitions: SerializedToolDef[]; // resend (page state may have changed)
+  pageState: object; // re-sent (may have changed after tool execution)
 }
 
 interface ToolCallResult {
-    callId: string;
-    result: string;  // JSON stringified
-    isError?: boolean;
+  callId: string;
+  result: string; // JSON stringified
+  isError?: boolean;
 }
 
-type SubmitToolResultsOutput = SendMessageOutput;  // same shape
+type SubmitToolResultsOutput = SendMessageOutput; // same shape
 ```
 
 ### Component Flow
@@ -522,31 +530,31 @@ The interactive phase of `gemini-chat`:
 import { GoogleGenAI } from '@google/genai';
 
 interface GeminiServiceConfig {
-    apiKey: string;
-    model: string;
-    systemPrompt?: string;
+  apiKey: string;
+  model: string;
+  systemPrompt?: string;
 }
 
 class GeminiService {
-    private client: GoogleGenAI;
-    
-    constructor(private config: GeminiServiceConfig) {
-        this.client = new GoogleGenAI({ apiKey: config.apiKey });
-    }
+  private client: GoogleGenAI;
 
-    async generateWithTools(
-        messages: GeminiMessage[],
-        tools: GeminiFunctionDeclaration[],
-        systemPrompt: string,
-    ): Promise<GeminiResponse> {
-        const response = await this.client.models.generateContent({
-            model: this.config.model,
-            contents: messages,
-            tools: [{ functionDeclarations: tools }],
-            config: { systemInstruction: systemPrompt },
-        });
-        return response;
-    }
+  constructor(private config: GeminiServiceConfig) {
+    this.client = new GoogleGenAI({ apiKey: config.apiKey });
+  }
+
+  async generateWithTools(
+    messages: GeminiMessage[],
+    tools: GeminiFunctionDeclaration[],
+    systemPrompt: string,
+  ): Promise<GeminiResponse> {
+    const response = await this.client.models.generateContent({
+      model: this.config.model,
+      contents: messages,
+      tools: [{ functionDeclarations: tools }],
+      config: { systemInstruction: systemPrompt },
+    });
+    return response;
+  }
 }
 ```
 
@@ -558,51 +566,51 @@ Converts between jay-stack tools and Gemini `FunctionDeclaration`:
 // tool-bridge.ts
 
 interface GeminiFunctionDeclaration {
-    name: string;
-    description: string;
-    parameters: {
-        type: 'object';
-        properties: Record<string, any>;
-        required?: string[];
-    };
+  name: string;
+  description: string;
+  parameters: {
+    type: 'object';
+    properties: Record<string, any>;
+    required?: string[];
+  };
 }
 
 /** Loaded from .jay-action file */
 interface ActionMetadata {
-    name: string;
-    description: string;
-    inputSchema: { type: 'object'; properties: Record<string, any>; required?: string[] };
-    outputSchema?: object;
+  name: string;
+  description: string;
+  inputSchema: { type: 'object'; properties: Record<string, any>; required?: string[] };
+  outputSchema?: object;
 }
 
 function toGeminiTools(
-    clientTools: SerializedToolDef[],
-    serverActions: Array<{ actionName: string; metadata: ActionMetadata }>,
+  clientTools: SerializedToolDef[],
+  serverActions: Array<{ actionName: string; metadata: ActionMetadata }>,
 ): GeminiFunctionDeclaration[] {
-    const tools: GeminiFunctionDeclaration[] = [];
+  const tools: GeminiFunctionDeclaration[] = [];
 
-    // Client page-automation tools → Gemini functions (already have schema)
-    for (const tool of clientTools) {
-        tools.push({
-            name: tool.name,
-            description: tool.description,
-            parameters: tool.inputSchema,
-        });
+  // Client page-automation tools → Gemini functions (already have schema)
+  for (const tool of clientTools) {
+    tools.push({
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.inputSchema,
+    });
+  }
+
+  // Server actions → Gemini functions (only actions with .jay-action metadata)
+  for (const { actionName, metadata } of serverActions) {
+    if (metadata) {
+      tools.push({
+        name: `action_${actionName.replace(/\./g, '_')}`,
+        description: metadata.description,
+        parameters: metadata.inputSchema,
+      });
     }
+    // No fallback: actions without .jay-action files are not exposed to AI
+  }
 
-    // Server actions → Gemini functions (only actions with .jay-action metadata)
-    for (const { actionName, metadata } of serverActions) {
-        if (metadata) {
-            tools.push({
-                name: `action_${actionName.replace(/\./g, '_')}`,
-                description: metadata.description,
-                parameters: metadata.inputSchema,
-            });
-        }
-        // No fallback: actions without .jay-action files are not exposed to AI
-    }
-
-    return tools;
+  return tools;
 }
 ```
 
@@ -612,23 +620,23 @@ Page state and interaction summary are included as **context** (not tools), so t
 
 ```typescript
 function buildSystemPrompt(
-    pageState: object,
-    serverActions: Array<{ name: string; description?: string }>,
-    customPrefix?: string,
+  pageState: object,
+  serverActions: Array<{ name: string; description?: string }>,
+  customPrefix?: string,
 ): string {
-    const parts = [
-        customPrefix || 'You are a helpful assistant for this web application.',
-        '',
-        '## Current Page State',
-        JSON.stringify(pageState, null, 2),
-        '',
-        '## Available Server Actions',
-        ...serverActions.map(a => `- ${a.name}${a.description ? `: ${a.description}` : ''}`),
-        '',
-        'Use the provided tools to interact with the page. After using tools, describe what you did.',
-        'The page state above is refreshed each turn — use it to understand what the user sees.',
-    ];
-    return parts.join('\n');
+  const parts = [
+    customPrefix || 'You are a helpful assistant for this web application.',
+    '',
+    '## Current Page State',
+    JSON.stringify(pageState, null, 2),
+    '',
+    '## Available Server Actions',
+    ...serverActions.map((a) => `- ${a.name}${a.description ? `: ${a.description}` : ''}`),
+    '',
+    'Use the provided tools to interact with the page. After using tools, describe what you did.',
+    'The page state above is refreshed each turn — use it to understand what the user sees.',
+  ];
+  return parts.join('\n');
 }
 ```
 
@@ -691,28 +699,28 @@ Add `.jay-action` file loading to the core framework — this benefits all plugi
 
 ### Multi-round-trip vs WebSocket
 
-| Approach | Pro | Con |
-|----------|-----|-----|
-| **Multi-round-trip (chosen)** | Simple, uses existing action infrastructure, no new transport | Higher latency for tool-heavy conversations |
-| **WebSocket/SSE** | Lower latency, real-time streaming | New infrastructure, complexity, connection management |
+| Approach                      | Pro                                                           | Con                                                   |
+| ----------------------------- | ------------------------------------------------------------- | ----------------------------------------------------- |
+| **Multi-round-trip (chosen)** | Simple, uses existing action infrastructure, no new transport | Higher latency for tool-heavy conversations           |
+| **WebSocket/SSE**             | Lower latency, real-time streaming                            | New infrastructure, complexity, connection management |
 
 We choose multi-round-trip for simplicity. The action system already handles request/response. Streaming can be added later as an optimization.
 
 ### Client-side conversation state vs server-side
 
-| Approach | Pro | Con |
-|----------|-----|-----|
-| **Client-side (chosen)** | Stateless server, scales trivially, no session cleanup, no memory leaks | Larger payloads (full history per request) |
-| **Server-side** | Smaller payloads | Memory on server, session management, cleanup timers, can't scale horizontally easily |
+| Approach                 | Pro                                                                     | Con                                                                                   |
+| ------------------------ | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **Client-side (chosen)** | Stateless server, scales trivially, no session cleanup, no memory leaks | Larger payloads (full history per request)                                            |
+| **Server-side**          | Smaller payloads                                                        | Memory on server, session management, cleanup timers, can't scale horizontally easily |
 
 API key stays server-side regardless — only conversation messages travel. For typical chat conversations (tens of messages), payload size is not a concern.
 
 ### Reusing webmcp tool builders vs independent implementation
 
-| Approach | Pro | Con |
-|----------|-----|-----|
+| Approach           | Pro                                             | Con                                 |
+| ------------------ | ----------------------------------------------- | ----------------------------------- |
 | **Reuse (chosen)** | DRY, consistent tool names/schemas, proven code | Dependency on webmcp-plugin package |
-| **Independent** | No dependency, can diverge | Duplication, risk of inconsistency |
+| **Independent**    | No dependency, can diverge                      | Duplication, risk of inconsistency  |
 
 We import and reuse `buildSemanticTools` and the generic tool builders from `@jay-framework/webmcp-plugin`. The gemini-agent plugin depends on webmcp-plugin as a library (not as a global plugin — it doesn't need `navigator.modelContext`).
 
@@ -721,6 +729,7 @@ We import and reuse `buildSemanticTools` and the generic tool builders from `@ja
 ## Verification Criteria
 
 ### `.jay-action` infrastructure (Phase 0)
+
 1. `.jay-action` files are loaded from paths in `plugin.yaml`
 2. Action metadata (description, inputSchema) is available in `ActionRegistry`
 3. `.jay-action.d.ts` files generated with `Input`/`Output` interfaces
@@ -728,6 +737,7 @@ We import and reuse `buildSemanticTools` and the generic tool builders from `@ja
 5. `jay-stack agent-kit` materializes action metadata for coding agents
 
 ### Gemini agent plugin (Phases 1–5)
+
 6. Plugin loads config from `config/.gemini.yaml` (API key)
 7. `jay-stack setup gemini-agent` creates config template
 8. Chat component renders messages list, input, send button via contract
@@ -739,3 +749,53 @@ We import and reuse `buildSemanticTools` and the generic tool builders from `@ja
 14. Multi-turn conversation maintained client-side (stateless server)
 15. Loading state shown during API calls
 16. Error handling: API errors, invalid config, tool execution failures
+
+---
+
+## Implementation Results
+
+### Phase 0: `.jay-action` file support — DONE
+
+**Test results:** 86/86 passing (stack-server-runtime), 530/530 passing (compiler-jay-html)
+
+#### Files modified
+
+| File                                       | Change                                                                                                                               |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `compiler-shared/lib/constants.ts`         | Added `JAY_ACTION_EXTENSION`, `JAY_ACTION_DTS_EXTENSION`                                                                             |
+| `compiler-shared/lib/plugin-resolution.ts` | Changed `actions?: string[]` → `actions?: ActionManifestEntry[]`, added `ActionManifestEntry` type + `normalizeActionEntry()` helper |
+
+#### Files created
+
+| File                                              | Purpose                                                                                                    |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `stack-server-runtime/lib/action-metadata.ts`     | `ActionMetadata` interface, `parseActionMetadata()`, `loadActionMetadata()`, `resolveActionMetadataPath()` |
+| `compiler-jay-html/lib/action/action-parser.ts`   | `parseAction()` — YAML → `ActionDefinition` with validations                                               |
+| `compiler-jay-html/lib/action/action-compiler.ts` | `compileAction()` — `ActionDefinition` → TypeScript `.d.ts` string                                         |
+| `compiler-jay-html/lib/action/index.ts`           | Barrel export                                                                                              |
+
+#### Files extended
+
+| File                                                    | Change                                                                                                                             |
+| ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `stack-server-runtime/lib/action-registry.ts`           | Added `metadata?: ActionMetadata` to `RegisteredAction`, `setMetadata()` and `getActionsWithMetadata()` methods                    |
+| `stack-server-runtime/lib/action-discovery.ts`          | Handles `{ name, action }` entries, loads `.jay-action` metadata, calls `registry.setMetadata()` — both local and NPM plugin paths |
+| `stack-server-runtime/lib/contract-materializer.ts`     | Collects action metadata during plugin scan, writes to `plugins-index.yaml` with `actions` array                                   |
+| `stack-server-runtime/lib/index.ts`                     | Exports `action-metadata` module                                                                                                   |
+| `compiler-jay-html/lib/index.ts`                        | Exports `action` module                                                                                                            |
+| `rollup-plugin/lib/definitions/definitions-compiler.ts` | Handles `.jay-action` → `.jay-action.d.ts` generation in `jayDefinitions` plugin                                                   |
+| `cli/lib/find-all-jay-element-contract-files.ts`        | Includes `.jay-action` in file discovery glob                                                                                      |
+
+#### Tests added
+
+| File                                                    | Tests                                                                                        |
+| ------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `stack-server-runtime/test/action-metadata.test.ts`     | 10 tests: parse valid/invalid YAML, load from file, resolve paths                            |
+| `stack-server-runtime/test/action-registry.test.ts`     | 4 new tests: setMetadata, getActionsWithMetadata, no-op on missing action, default undefined |
+| `stack-server-runtime/test/action-discovery.test.ts`    | 1 new test: mixed action format parsing                                                      |
+| `compiler-jay-html/test/action/action-parser.test.ts`   | 7 tests: valid YAML, missing fields, malformed input                                         |
+| `compiler-jay-html/test/action/action-compiler.test.ts` | 9 tests: input/output interfaces, enums, nested objects, arrays, empty props                 |
+
+#### Deviations from design
+
+None — implementation follows the design exactly.

@@ -7,8 +7,10 @@ import {
     hasExtension,
     checkValidationErrors,
     JAY_CONTRACT_EXTENSION,
+    JAY_ACTION_EXTENSION,
     JAY_DTS_EXTENSION,
     JAY_CONTRACT_DTS_EXTENSION,
+    JAY_ACTION_DTS_EXTENSION,
 } from '@jay-framework/compiler-shared';
 import {
     parseJayFile,
@@ -16,6 +18,8 @@ import {
     JAY_IMPORT_RESOLVER,
     parseContract,
     compileContract,
+    parseAction,
+    compileAction,
 } from '@jay-framework/compiler-jay-html';
 import { checkCodeErrors } from '../common/errors';
 
@@ -23,7 +27,11 @@ export function jayDefinitions(projectRoot: string) {
     return {
         name: 'jay:definitions', // this name will show up in warnings and errors
         async load(id: string): Promise<LoadResult> {
-            if (hasExtension(id, JAY_EXTENSION) || hasExtension(id, JAY_CONTRACT_EXTENSION)) {
+            if (
+                hasExtension(id, JAY_EXTENSION) ||
+                hasExtension(id, JAY_CONTRACT_EXTENSION) ||
+                hasExtension(id, JAY_ACTION_EXTENSION)
+            ) {
                 const code = await readFileAsString(id);
                 checkCodeErrors(code);
                 return { code };
@@ -85,6 +93,25 @@ export function jayDefinitions(projectRoot: string) {
                     filename,
                     validatedTsCode,
                     JAY_CONTRACT_DTS_EXTENSION,
+                );
+
+                context.info(`[transform] generated ${generatedFilename}`);
+
+                return { code: '', map: null };
+            } else if (hasExtension(id, JAY_ACTION_EXTENSION)) {
+                const context = this as PluginContext;
+                const { filename, dirname } = getFileContext(id, JAY_ACTION_EXTENSION);
+
+                const parsedFile = parseAction(code, filename);
+                const tsCode = compileAction(parsedFile);
+
+                const validatedTsCode: string = checkValidationErrors(tsCode);
+
+                const generatedFilename = await writeDefinitionFile(
+                    dirname,
+                    filename,
+                    validatedTsCode,
+                    JAY_ACTION_DTS_EXTENSION,
                 );
 
                 context.info(`[transform] generated ${generatedFilename}`);

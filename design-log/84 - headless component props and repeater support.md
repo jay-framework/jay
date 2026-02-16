@@ -1660,26 +1660,11 @@ values:
 2. [x] All existing tests updated and passing with new syntax
 3. [ ] Deprecation warning for old plain element names (deferred - both syntaxes supported)
 
-**Headless component props and instances** 
-4. [x] Can render same headless component multiple times with different props (Phase 2 syntax + Phase 4 runtime + fake-shop demo) 
-5. [x] Can use headless component inside `forEach` with bound props (Phase 3) 
-6. [ ] Props are validated at compile time against contract schema (not implemented — needs compiler changes) 
-7. [x] Agents can discover valid prop values via actions/CLI (Phase 5 — `jay-stack action <plugin>/<action>` + `jay-stack params <plugin>/<contract>`) 
-8. [x] Static props work correctly (Phase 2 - `productId="prod-hero"`) 
-9. [x] Dynamic props work correctly (`productId={_id}` from forEach context — Phase 3) 
-10. [x] Rendering phases (slow/fast/interactive) work with instances (Phase 4 — slow/fast server done, client wiring Phase 4b done) 
-11. [x] `slowForEach` generates separate template per item (Phase 3 — each item gets its own `_HeadlessProductCard{N}` component) 
-12. [x] `forEach` reuses single template for all items (Phase 3 — component defined once at module level)
+**Headless component props and instances** 4. [x] Can render same headless component multiple times with different props (Phase 2 syntax + Phase 4 runtime + fake-shop demo) 5. [x] Can use headless component inside `forEach` with bound props (Phase 3) 6. [ ] Props are validated at compile time against contract schema (not implemented — needs compiler changes) 7. [x] Agents can discover valid prop values via actions/CLI (Phase 5 — `jay-stack action <plugin>/<action>` + `jay-stack params <plugin>/<contract>`) 8. [x] Static props work correctly (Phase 2 - `productId="prod-hero"`) 9. [x] Dynamic props work correctly (`productId={_id}` from forEach context — Phase 3) 10. [x] Rendering phases (slow/fast/interactive) work with instances (Phase 4 — slow/fast server done, client wiring Phase 4b done) 11. [x] `slowForEach` generates separate template per item (Phase 3 — each item gets its own `_HeadlessProductCard{N}` component) 12. [x] `forEach` reuses single template for all items (Phase 3 — component defined once at module level)
 
-**Load params discovery** 
-12. [ ] `jay-stack params <plugin>/<contract>` CLI command works 
-13. [ ] CLI runs loadParams generator and returns valid combinations 
-14. [ ] Agents can discover valid URL params for SSG
+**Load params discovery** 12. [ ] `jay-stack params <plugin>/<contract>` CLI command works 13. [ ] CLI runs loadParams generator and returns valid combinations 14. [ ] Agents can discover valid URL params for SSG
 
-**Nested component rendering** 
-15. [x] ViewStates are isolated per component (not merged) — Phase 2 compilation uses component's ViewState 
-16. [x] CarryForward tracked per component instance across phases (Phase 4 — server passes per-instance carryForward via InstancePhaseData, client delivers via makeHeadlessInstanceComponent) 
-17. [x] Inline templates transformed with component's ViewState — Phase 2 compilation confirmed
+**Nested component rendering** 15. [x] ViewStates are isolated per component (not merged) — Phase 2 compilation uses component's ViewState 16. [x] CarryForward tracked per component instance across phases (Phase 4 — server passes per-instance carryForward via InstancePhaseData, client delivers via makeHeadlessInstanceComponent) 17. [x] Inline templates transformed with component's ViewState — Phase 2 compilation confirmed
 
 ## Open Questions (Answered)
 

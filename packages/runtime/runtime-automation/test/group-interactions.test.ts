@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { groupInteractions } from '../lib';
 import type { CollectedInteraction } from '../lib/types';
 
-function makeRaw(overrides: Partial<CollectedInteraction> & { refName: string }): CollectedInteraction {
+function makeRaw(
+    overrides: Partial<CollectedInteraction> & { refName: string },
+): CollectedInteraction {
     return {
         coordinate: [overrides.refName],
         element: document.createElement('button'),
@@ -17,10 +19,7 @@ describe('groupInteractions', () => {
     });
 
     it('should group by refName', () => {
-        const raw = [
-            makeRaw({ refName: 'submitBtn' }),
-            makeRaw({ refName: 'cancelBtn' }),
-        ];
+        const raw = [makeRaw({ refName: 'submitBtn' }), makeRaw({ refName: 'cancelBtn' })];
 
         const grouped = groupInteractions(raw);
 
@@ -112,9 +111,7 @@ describe('groupInteractions', () => {
     });
 
     it('should preserve description from first item', () => {
-        const raw = [
-            makeRaw({ refName: 'addToCart', description: 'Add product to cart' }),
-        ];
+        const raw = [makeRaw({ refName: 'addToCart', description: 'Add product to cart' })];
 
         const grouped = groupInteractions(raw);
 

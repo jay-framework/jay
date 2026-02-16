@@ -70,10 +70,12 @@ describe('Generic Tools', () => {
         it('should include options for select elements', async () => {
             const select = document.createElement('select');
             select.innerHTML = '<option value="sm">Small</option><option value="lg">Large</option>';
-            const interactions: Interaction[] = [{
-                refName: 'sizeSelect',
-                items: [{ coordinate: ['sizeSelect'], element: select, events: ['change'] }],
-            }];
+            const interactions: Interaction[] = [
+                {
+                    refName: 'sizeSelect',
+                    items: [{ coordinate: ['sizeSelect'], element: select, events: ['change'] }],
+                },
+            ];
             const automation = createMockAutomation({ interactions });
             const tool = makeListInteractionsTool(automation);
 
@@ -88,10 +90,14 @@ describe('Generic Tools', () => {
         it('should include inputType for checkbox/radio elements', async () => {
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
-            const interactions: Interaction[] = [{
-                refName: 'agreeCheckbox',
-                items: [{ coordinate: ['agreeCheckbox'], element: checkbox, events: ['change'] }],
-            }];
+            const interactions: Interaction[] = [
+                {
+                    refName: 'agreeCheckbox',
+                    items: [
+                        { coordinate: ['agreeCheckbox'], element: checkbox, events: ['change'] },
+                    ],
+                },
+            ];
             const automation = createMockAutomation({ interactions });
             const tool = makeListInteractionsTool(automation);
 
@@ -103,10 +109,12 @@ describe('Generic Tools', () => {
 
         it('should not include options for non-select elements', async () => {
             const input = document.createElement('input');
-            const interactions: Interaction[] = [{
-                refName: 'nameInput',
-                items: [{ coordinate: ['nameInput'], element: input, events: ['input'] }],
-            }];
+            const interactions: Interaction[] = [
+                {
+                    refName: 'nameInput',
+                    items: [{ coordinate: ['nameInput'], element: input, events: ['input'] }],
+                },
+            ];
             const automation = createMockAutomation({ interactions });
             const tool = makeListInteractionsTool(automation);
 
@@ -169,12 +177,24 @@ describe('Generic Tools', () => {
         it('should set value and trigger both input and change events when both registered', async () => {
             const mockElement = document.createElement('input');
             const interactions: Interaction[] = [
-                { refName: 'nameInput', items: [{ coordinate: ['nameInput'], element: mockElement, events: ['input', 'change'] }] },
+                {
+                    refName: 'nameInput',
+                    items: [
+                        {
+                            coordinate: ['nameInput'],
+                            element: mockElement,
+                            events: ['input', 'change'],
+                        },
+                    ],
+                },
             ];
             const automation = createMockAutomation({ interactions });
             const tool = makeFillInputTool(automation);
 
-            const result = await tool.execute({ coordinate: 'nameInput', value: 'Test' }, MOCK_AGENT);
+            const result = await tool.execute(
+                { coordinate: 'nameInput', value: 'Test' },
+                MOCK_AGENT,
+            );
 
             expect(mockElement.value).toBe('Test');
             expect(automation.triggerEvent).toHaveBeenCalledTimes(2);
@@ -186,7 +206,12 @@ describe('Generic Tools', () => {
         it('should trigger change event for select elements', () => {
             const mockElement = document.createElement('select');
             const interactions: Interaction[] = [
-                { refName: 'sizeSelect', items: [{ coordinate: ['sizeSelect'], element: mockElement, events: ['change'] }] },
+                {
+                    refName: 'sizeSelect',
+                    items: [
+                        { coordinate: ['sizeSelect'], element: mockElement, events: ['change'] },
+                    ],
+                },
             ];
             const automation = createMockAutomation({ interactions });
             const tool = makeFillInputTool(automation);
@@ -200,7 +225,12 @@ describe('Generic Tools', () => {
             const mockElement = document.createElement('input');
             mockElement.type = 'checkbox';
             const interactions: Interaction[] = [
-                { refName: 'agreeCheckbox', items: [{ coordinate: ['agreeCheckbox'], element: mockElement, events: ['change'] }] },
+                {
+                    refName: 'agreeCheckbox',
+                    items: [
+                        { coordinate: ['agreeCheckbox'], element: mockElement, events: ['change'] },
+                    ],
+                },
             ];
             const automation = createMockAutomation({ interactions });
             const tool = makeFillInputTool(automation);
@@ -216,7 +246,12 @@ describe('Generic Tools', () => {
             mockElement.type = 'checkbox';
             mockElement.checked = true;
             const interactions: Interaction[] = [
-                { refName: 'agreeCheckbox', items: [{ coordinate: ['agreeCheckbox'], element: mockElement, events: ['change'] }] },
+                {
+                    refName: 'agreeCheckbox',
+                    items: [
+                        { coordinate: ['agreeCheckbox'], element: mockElement, events: ['change'] },
+                    ],
+                },
             ];
             const automation = createMockAutomation({ interactions });
             const tool = makeFillInputTool(automation);

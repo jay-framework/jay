@@ -1,5 +1,11 @@
 // Types
-export type { AutomationAPI, Interaction, InteractionInstance, PageState, Coordinate } from './types';
+export type {
+    AutomationAPI,
+    Interaction,
+    InteractionInstance,
+    PageState,
+    Coordinate,
+} from './types';
 
 // Types (deprecated aliases for backward compatibility)
 export type { AIAgentAPI, AIInteraction, AIPageState } from './types';

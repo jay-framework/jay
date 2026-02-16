@@ -14,11 +14,16 @@ import type {
     GeneratedContractYaml,
     DynamicContractGenerator,
 } from '@jay-framework/fullstack-component';
-import type { DynamicContractConfig } from '@jay-framework/compiler-shared';
+import { type DynamicContractConfig, normalizeActionEntry } from '@jay-framework/compiler-shared';
 import { createRequire } from 'module';
 import { scanPlugins, type ScannedPlugin } from './plugin-scanner';
 import type { ViteSSRLoader } from './action-discovery';
 import { getLogger } from '@jay-framework/logger';
+import {
+    loadActionMetadata,
+    resolveActionMetadataPath,
+    type ActionMetadata,
+} from './action-metadata';
 
 const require = createRequire(import.meta.url);
 
@@ -40,11 +45,21 @@ export interface ContractsIndex {
     contracts: ContractIndexEntry[];
 }
 
+/** Action metadata entry in plugins-index.yaml */
+export interface ActionIndexEntry {
+    name: string;
+    description: string;
+    inputSchema: ActionMetadata['inputSchema'];
+    outputSchema?: ActionMetadata['outputSchema'];
+}
+
 /** Entry for plugins-index.yaml (Design Log #85) */
 export interface PluginsIndexEntry {
     name: string;
     path: string;
     contracts: Array<{ name: string; type: 'static' | 'dynamic'; path: string }>;
+    /** Actions with .jay-action metadata (exposed to AI agents) */
+    actions?: ActionIndexEntry[];
 }
 
 export interface PluginsIndex {
@@ -293,6 +308,7 @@ export async function materializeContracts(
         {
             path: string;
             contracts: Array<{ name: string; type: 'static' | 'dynamic'; path: string }>;
+            actions: ActionIndexEntry[];
         }
     >();
     let staticCount = 0;
@@ -348,6 +364,7 @@ export async function materializeContracts(
                     pluginsIndexMap.set(plugin.name, {
                         path: './' + pluginRelPath.replace(/\\/g, '/'),
                         contracts: [],
+                        actions: [],
                     });
                 }
                 pluginsIndexMap.get(plugin.name)!.contracts.push({
@@ -417,6 +434,7 @@ export async function materializeContracts(
                             pluginsIndexMap.set(plugin.name, {
                                 path: './' + pluginRelPath.replace(/\\/g, '/'),
                                 contracts: [],
+                                actions: [],
                             });
                         }
                         pluginsIndexMap.get(plugin.name)!.contracts.push({
@@ -434,6 +452,39 @@ export async function materializeContracts(
                         `   ❌ Failed to materialize dynamic contracts for ${plugin.name} (${config.prefix}): ${error}`,
                     );
                     // Continue with other generators
+                }
+            }
+        }
+
+        // Collect action metadata from .jay-action files (Design Log #92)
+        if (manifest.actions && Array.isArray(manifest.actions)) {
+            for (const entry of manifest.actions) {
+                const { name: actionName, action: actionPath } = normalizeActionEntry(entry);
+                if (!actionPath) continue; // No .jay-action file — skip
+
+                const metadataFilePath = resolveActionMetadataPath(actionPath, plugin.pluginPath);
+                const metadata = loadActionMetadata(metadataFilePath);
+                if (!metadata) continue;
+
+                // Ensure plugin entry exists in plugins index
+                const pluginRelPath = path.relative(projectRoot, plugin.pluginPath);
+                if (!pluginsIndexMap.has(plugin.name)) {
+                    pluginsIndexMap.set(plugin.name, {
+                        path: './' + pluginRelPath.replace(/\\/g, '/'),
+                        contracts: [],
+                        actions: [],
+                    });
+                }
+
+                pluginsIndexMap.get(plugin.name)!.actions.push({
+                    name: metadata.name,
+                    description: metadata.description,
+                    inputSchema: metadata.inputSchema,
+                    ...(metadata.outputSchema && { outputSchema: metadata.outputSchema }),
+                });
+
+                if (verbose) {
+                    getLogger().info(`   🔧 Action: ${metadata.name} (${actionPath})`);
                 }
             }
         }
@@ -458,6 +509,7 @@ export async function materializeContracts(
             name,
             path: data.path,
             contracts: data.contracts,
+            ...(data.actions.length > 0 && { actions: data.actions }),
         })),
     };
     const pluginsIndexPath = path.join(outputDir, 'plugins-index.yaml');
