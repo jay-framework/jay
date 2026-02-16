@@ -1,68 +1,58 @@
-# Design Log #95 — Contract References in .jay-action Files
+# Design Log #95 — Contract References and Compact Notation in .jay-action Files
 
 ## Background
 
-Design Log #92 introduced `.jay-action` files as metadata descriptors for server actions. These files define input/output schemas using inline JSON Schema, which generates TypeScript `.d.ts` interfaces.
+Design Log #92 introduced `.jay-action` files as metadata descriptors for server actions, using JSON Schema-style inline definitions for input/output types. Two problems emerged:
 
-However, many action outputs reference types that already exist as `.jay-contract` ViewState types. For example, in `wix-stores-v1`:
-
-```typescript
-// stores-v1-actions.ts
-export interface SearchProductsOutput {
-    products: ProductCardViewState[];  // ← from product-card.jay-contract
-    totalCount: number;
-    // ...
-}
-
-export const getProductBySlug = makeJayQuery(...)
-    .withHandler(async (...): Promise<ProductCardViewState | null> => { ... });
-```
-
-Currently the `.jay-action` file duplicates a subset of the contract schema inline, which is:
-- **Incomplete** — misses most fields from the ViewState
-- **Fragile** — contract changes aren't reflected
-- **Redundant** — same schema defined in two places
+1. **Contract duplication**: Action outputs often reference types from `.jay-contract` files (e.g., `ProductCardViewState`), but the schema is duplicated inline — incomplete and fragile.
+2. **Verbose format**: The JSON Schema notation is verbose compared to the compact type notation already used in jay-html data scripts and contract files.
 
 ## Problem
 
-How do we reference an existing contract's ViewState type from within a `.jay-action` file?
-
-Sub-questions:
-- Top-level or nested references? (e.g., `products: ProductCardViewState[]` vs `products.thumbnail: ThumbnailViewState`)
-- Same-package vs cross-package contracts?
-- How does this affect the compiler (`.d.ts` generation)?
-- How does this affect the AI agent runtime (schema resolution for LLM context)?
-
-## Questions and Answers
-
-**Q1: Do we need nested type references (e.g., referencing just the `mainMedia` sub-contract)?**
-
-A: Probably not for now. Actions typically return the full ViewState or a list of them. We can reference the top-level contract and get all sub-types included. If needed later, we could support `contract: product-card.jay-contract#mainMedia` syntax.
-
-**Q2: How should the contract path be expressed?**
-
-Options:
-- a) Relative path: `../contracts/product-card.jay-contract`
-- b) Export subpath: `product-card.jay-contract` (same as in plugin.yaml)
-
-Option (b) is consistent with how contracts are referenced in `plugin.yaml` and resolved via `package.json` exports. It also works for cross-package references if we ever need them.
-
-**Q3: What TypeScript type name should be generated?**
-
-Contracts generate a `ViewState` type (e.g., `ProductCardViewState` from `product-card.jay-contract`). The compiler already knows how to derive this name from the contract filename. We should import and use the same type.
-
-**Q4: What about nullable returns (e.g., `ProductCardViewState | null`)?**
-
-We need a way to mark a contract reference as nullable. Could use `nullable: true` alongside the `contract` field.
+The `.jay-action` format should:
+- Reference contract ViewState types instead of duplicating them
+- Use the same compact type notation as jay-html (`string`, `number`, `enum(...)`, arrays as YAML lists, `?` for optional)
+- Reuse existing infrastructure: `resolveType`, JayType system, enum parsing
 
 ## Design
 
-### New `contract` field in ActionSchemaProperty
+### Revised `.jay-action` format
 
-Add an optional `contract` field to any schema property. When present, it replaces the inline type with a reference to the contract's ViewState type.
+Replace JSON Schema with the compact jay-type notation. Add `import:` block for contract references.
+
+#### Before (JSON Schema — current)
 
 ```yaml
-# In a .jay-action file
+name: searchProducts
+description: Search products...
+
+inputSchema:
+  type: object
+  required:
+    - query
+  properties:
+    query:
+      type: string
+      description: Search query text
+    filters:
+      type: object
+      properties:
+        minPrice:
+          type: number
+        maxPrice:
+          type: number
+        collectionIds:
+          type: array
+          items:
+            type: string
+    sortBy:
+      type: string
+      enum: [relevance, price_asc, price_desc]
+    page:
+      type: number
+    pageSize:
+      type: number
+
 outputSchema:
   type: object
   required:
@@ -73,149 +63,235 @@ outputSchema:
     products:
       type: array
       items:
-        contract: product-card.jay-contract    # ← new field
+        type: object
+        properties:
+          _id:
+            type: string
+          name:
+            type: string
+          # ... 20 more lines of duplicated contract schema
     totalCount:
       type: number
     hasMore:
       type: boolean
 ```
 
-For a top-level contract return:
+#### After (compact jay-type notation)
 
 ```yaml
+name: searchProducts
+description: Search products...
+
+import:
+  productCard: product-card.jay-contract
+
+inputSchema:
+  query: string
+  filters?:
+    minPrice?: number
+    maxPrice?: number
+    collectionIds?: string[]
+  sortBy?: enum(relevance | price_asc | price_desc | name_asc | name_desc | newest)
+  page?: number
+  pageSize?: number
+
 outputSchema:
-  contract: product-card.jay-contract
-  nullable: true    # generates: ProductCardViewState | null
+  products:
+    - productCard
+  totalCount: number
+  currentPage: number
+  totalPages: number
+  hasMore: boolean
+  priceAggregation:
+    minBound: number
+    maxBound: number
+    ranges:
+      - rangeId: string
+        label: string
+        minValue?: number
+        maxValue?: number
+        isSelected: boolean
 ```
 
-### Resolution rules
+### Type notation rules
 
-The `contract` value is a subpath that matches the pattern used in `plugin.yaml` and `package.json` exports:
-- Same package: resolved relative to the package root (e.g., `product-card.jay-contract` → `./contracts/product-card.jay-contract` via the same lookup used for contracts)
-- The compiler needs to generate an import path. Since the `.jay-action.d.ts` is co-located with the action, and contracts are in a known location, we resolve the relative path at compile time.
+| Notation                      | Meaning                |  Example                     |
+|-------------------------------|------------------------|------------------------------|
+| `string`, `number`, `boolean` | Primitives             | `name: string`               |
+| `enum(a \| b \| c)`           | Enum type              | `sortBy?: enum(asc \| desc)` |
+| `propName?:`                  | Optional property      | `filters?: ...`              |
+| YAML list `- ...`             | Array of objects       | `items: \n- id: string`      |
+| `- importedName`              | Array of imported type | `products: \n- productCard`  |
+| `importedName`                | Imported contract type | `product: productCard`       |
+| `importedName?`               | Nullable imported type | `outputSchema: productCard?` |
+| Nested object                 | Inline object type     | `media: \n  url: string`     |
 
-### Compiler changes (`action-compiler.ts`)
+### `import:` block
 
-When a property has `contract` field:
+```yaml
+import:
+  localAlias: contract-subpath.jay-contract
+```
 
-1. **Parser** (`action-parser.ts`): Allow `contract` and `nullable` fields on `ActionSchemaProperty`
-2. **Compiler** (`action-compiler.ts`):
-   - Collect all contract references from the schema
-   - Generate import statements for each unique contract
-   - Use the ViewState type name instead of an inline type
+- Key is a local alias used in type expressions
+- Value is the contract subpath (same format as `plugin.yaml` and `package.json` exports)
+- The compiler resolves the import to generate a TS import statement
+- At runtime (AI agent), the contract schema is inlined by the materializer
 
-Generated output example:
+### Nullable types
+
+For top-level nullable outputs (e.g., `getProductBySlug` returning `ProductCardViewState | null`):
+
+```yaml
+outputSchema: productCard?
+```
+
+Generates: `export type GetProductBySlugOutput = ProductCardViewState | null`
+
+### Generated `.d.ts` example
+
+From the compact notation above:
 
 ```typescript
 import { ProductCardViewState } from '../contracts/product-card.jay-contract';
 
+export interface SearchProductsInput {
+  query: string;
+  filters?: {
+    minPrice?: number;
+    maxPrice?: number;
+    collectionIds?: string[];
+  };
+  sortBy?: 'relevance' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc' | 'newest';
+  page?: number;
+  pageSize?: number;
+}
+
 export interface SearchProductsOutput {
   products: Array<ProductCardViewState>;
   totalCount: number;
+  currentPage: number;
+  totalPages: number;
   hasMore: boolean;
+  priceAggregation: {
+    minBound: number;
+    maxBound: number;
+    ranges: Array<{
+      rangeId: string;
+      label: string;
+      minValue?: number;
+      maxValue?: number;
+      isSelected: boolean;
+    }>;
+  };
 }
 ```
 
-For nullable:
-```typescript
-export type GetProductBySlugOutput = ProductCardViewState | null;
-```
+### Reuse of existing infrastructure
 
-### Import path resolution
+| Component | Existing | Reuse for `.jay-action` |
+|-----------|----------|------------------------|
+| `resolveType()` | `jay-html-parser.ts` | Parse compact notation → JayType |
+| `resolvePrimitiveType()` | `compiler-shared` | Resolve `string`, `number`, etc. |
+| `parseIsEnum()` / `parseEnumValues()` | `expression-compiler.ts` | Parse `enum(...)` |
+| JayType hierarchy | `compiler-shared/jay-type.ts` | Internal type representation |
+| JayType → TypeScript | `contract-compiler.ts` | Generate `.d.ts` output |
 
-The compiler needs to resolve the import path from the `.jay-action.d.ts` location to the contract. Since both are in the same package:
-
-1. The compiler knows the project root (passed to `jayDefinitions`)
-2. Contract files are discovered by glob (`**/*.jay-contract`)
-3. Given a contract subpath like `product-card.jay-contract`, find the matching file
-4. Compute relative path from the action's directory to the contract file
-
-### AI agent runtime changes
-
-The action metadata resolver (in `stack-server-runtime`) needs to:
-1. When a `contract` reference is found in a `.jay-action`, resolve it to the full contract schema
-2. Inline the contract's tags as the schema for the AI agent's context
-3. This happens at materialization time, not compile time
+New code needed:
+- **Action parser**: Parse the `import:` block and `?` optional markers, then delegate to `resolveType`-like logic
+- **Action compiler**: Handle contract imports, generate import statements, emit TypeScript from JayType
+- **JayType → JSON Schema converter**: For AI agent runtime (materialization time), convert JayType to JSON Schema for Gemini function declarations
 
 ## Implementation Plan
 
-### Phase 1: Parser + Compiler support
-1. Add `contract` and `nullable` fields to `ActionSchemaProperty`
-2. Update `action-compiler.ts` to:
-   - Collect contract references during compilation
-   - Accept a contract resolver function (maps subpath → relative import path)
-   - Generate import statements
-   - Emit contract ViewState type names instead of inline types
-3. Update `definitions-compiler.ts` (rollup plugin) to pass a contract resolver to the compiler
-4. Add tests
+### Phase 1: Update parser and compiler
+1. Rewrite `action-parser.ts` to parse compact notation with `import:`, `?` optional, and YAML-based types
+2. Rewrite `action-compiler.ts` to emit TypeScript from JayType (with import statements for contracts)
+3. Add JayType → JSON Schema utility for runtime use
+4. Update tests
 
-### Phase 2: Update .jay-action files
-1. Update wix-stores, wix-stores-v1, wix-data `.jay-action` files to use contract references
-2. Verify generated `.d.ts` files import and use the correct ViewState types
+### Phase 2: Migrate `.jay-action` files
+1. Convert all existing `.jay-action` files (gemini-agent, wix-data, wix-stores, wix-stores-v1) to the new format
+2. Verify generated `.d.ts` files match expected output
 
-### Phase 3: Runtime resolution (if needed)
-1. Update action metadata resolution in `stack-server-runtime` to resolve contract references
-2. Inline contract schemas when building AI agent tool descriptions
+### Phase 3: Runtime integration
+1. Update action metadata resolution to parse compact format
+2. Convert to JSON Schema at materialization time for AI agent tool descriptions
 
-## Examples
+## More Examples
 
-### ✅ Array of contract items
+### ✅ Simple action with no imports
+
 ```yaml
+name: getCategories
+description: Get store categories
+
+inputSchema: {}
+
 outputSchema:
-  type: object
-  required: [products, totalCount]
-  properties:
-    products:
-      type: array
-      items:
-        contract: product-card.jay-contract
-    totalCount:
-      type: number
+  categories:
+    - _id: string
+      slug: string
+      title: string
+      itemCount: number
 ```
-→ Generates: `products: Array<ProductCardViewState>`
 
 ### ✅ Nullable contract return
-```yaml
-outputSchema:
-  contract: product-card.jay-contract
-  nullable: true
-```
-→ Generates: `export type GetProductBySlugOutput = ProductCardViewState | null`
 
-### ✅ Contract alongside other properties
 ```yaml
-outputSchema:
-  type: object
-  required: [product, relatedCategories]
-  properties:
-    product:
-      contract: product-card.jay-contract
-    relatedCategories:
-      type: array
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          name:
-            type: string
+name: getProductBySlug
+description: Get product by slug
+
+import:
+  productCard: product-card.jay-contract
+
+inputSchema:
+  slug: string
+
+outputSchema: productCard?
 ```
 
-### ❌ Nested sub-contract reference (not supported initially)
+### ✅ Mixed inline and contract types
+
 ```yaml
-# NOT supported in v1
+name: searchProducts
+description: Search products
+
+import:
+  productCard: product-card.jay-contract
+
+inputSchema:
+  query: string
+  pageSize?: number
+
 outputSchema:
-  type: object
-  properties:
-    media:
-      contract: product-card.jay-contract#mainMedia
+  products:
+    - productCard
+  totalCount: number
+  hasMore: boolean
+```
+
+### ✅ Array output (no wrapper object)
+
+```yaml
+name: getCollections
+description: Get collections
+
+inputSchema: {}
+
+outputSchema:
+  - _id: string
+    name: string
+    slug: string
+    productCount: number
 ```
 
 ## Trade-offs
 
 | Aspect | Pro | Con |
 |--------|-----|-----|
-| Single source of truth | Contract changes automatically reflected | Adds coupling between action and contract files |
-| Import generation | Clean TypeScript with proper types | Compiler needs contract resolution logic |
-| AI agent context | Can inline full contract schema | More complex materialization step |
-| Simplicity | Only top-level ViewState references | Can't reference sub-contracts directly |
+| Compact notation | Much shorter files, consistent with jay-html | Breaking change to format just introduced |
+| JayType reuse | Single type system across framework | Need to add optional/nullable to JayType if not present |
+| Contract imports | Single source of truth for ViewState types | Coupling between action and contract files |
+| JSON Schema at runtime | Clean separation (define compact, export JSON Schema) | Extra conversion step |
+| `?` for optional | More ergonomic than `required` arrays | Slightly extends the notation vs jay-html data scripts |
