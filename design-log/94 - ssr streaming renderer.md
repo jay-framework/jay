@@ -55,7 +55,7 @@ Headless components that have slow/fast phases already produce ViewState. The SS
 - `if`: evaluate the condition with the current ViewState, render the matching branch. For the client, include hydration markers (see Design Log #93).
 - `forEach`: iterate the array, render each item. Include markers for hydration.
 
-**A:** Confirmed. Uses `jay-coordinate` attributes on elements and `<!--jay-if-->` / `<!--jay-each-->` comment markers for boundaries, consistent with Design Log #93.
+**A:** Confirmed. Uses `jay-coordinate` attributes on elements for hydration targeting, consistent with Design Log #93. No comment boundaries needed — the runtime's `Kindergarten` handles DOM positioning via offset counting.
 
 ### Q7: How do we handle ViewState with Promise / async data?
 See Design Log #45 for async types (`when-resolved`, `when-loading`, `when-rejected`).
@@ -138,9 +138,9 @@ Key properties:
 | `{binding}` | Evaluate + escape + coordinate: `w('<h1 jay-coordinate="0">'); w(escapeHtml(vs.title)); w('</h1>')` |
 | `ref="name"` | Add `jay-coordinate="refName"` to element. Ref itself is client-only. |
 | `style` binding | Evaluate and inline: `w('style="color:' + escapeAttr(vs.color) + '"')` |
-| `if="cond"` (interactive) | Comment markers + evaluate: `<!--jay-if:0:1-->` ... `<!--/jay-if:0-->`. Render matching branch with `jay-coordinate` on dynamic elements. |
+| `if="cond"` (interactive) | Evaluate condition, render matching branch with `jay-coordinate` on dynamic elements. No comment markers — `Kindergarten` offset counting handles positioning. |
 | `if="cond"` (slow/fast only) | Evaluate condition, render or skip. No markers needed. |
-| `forEach` (interactive) | Comment markers + iterate: `<!--jay-each:0-->` ... items with `jay-coordinate="trackByKey"` ... `<!--/jay-each:0-->` |
+| `forEach` (interactive) | Iterate items with `jay-coordinate="trackByKey"` on each. No comment markers — items are children of a container `de()` element. |
 | `forEach` (slow) | Already unrolled by slow render (Design Log #75) |
 | `when-loading` (async) | Render pending variant inline with `jay-async="propName:pending"` wrapper. Register promise with `ctx.onAsync`. |
 | `when-resolved` (async) | Not rendered initially. Written via inline `<script>` when promise resolves. |
@@ -150,20 +150,16 @@ Key properties:
 
 ### Markers for Interactive Elements
 
-Uses the `jay-coordinate` attribute system from Design Log #93, plus comment markers for boundaries.
+Uses the `jay-coordinate` attribute system from Design Log #93. No comment boundaries — the runtime's `Kindergarten` class handles DOM positioning through offset counting (each dynamic child gets a `KindergartenGroup`, and `getOffsetFor()` computes insertion position by summing `children.size` of preceding groups).
 
 ```html
 <!-- Interactive if (cond=true at SSR) -->
-<!--jay-if:0:1-->
 <div jay-coordinate="details">Content when true</div>
-<!--/jay-if:0-->
 
-<!-- Interactive if (cond=false at SSR) -->
-<!--jay-if:1:0-->
-<!--/jay-if:1-->
+<!-- Interactive if (cond=false at SSR) — nothing rendered -->
 
-<!-- Interactive forEach -->
-<!--jay-each:0-->
+<!-- Interactive forEach (items are children of their container element) -->
+<ul>
   <li jay-coordinate="abc">
     <span jay-coordinate="abc/0">Item ABC</span>
     <button jay-coordinate="abc/addBtn">Add</button>
@@ -172,7 +168,7 @@ Uses the `jay-coordinate` attribute system from Design Log #93, plus comment mar
     <span jay-coordinate="def/0">Item DEF</span>
     <button jay-coordinate="def/addBtn">Add</button>
   </li>
-<!--/jay-each:0-->
+</ul>
 
 <!-- Async promise (pending) -->
 <div jay-async="po1:pending">
@@ -182,8 +178,6 @@ Uses the `jay-coordinate` attribute system from Design Log #93, plus comment mar
 
 Markers:
 - `jay-coordinate="..."` on elements — for hydration targeting (Design Log #93)
-- `<!--jay-if:INDEX:SSR_VALUE-->` / `<!--/jay-if:INDEX-->` — conditional boundaries with SSR value
-- `<!--jay-each:INDEX-->` / `<!--/jay-each:INDEX-->` — forEach boundaries
 - `jay-async="propName:state"` attribute — async promise placeholder (replaced by inline script when settled)
 
 ### Compiled Output Example
@@ -226,7 +220,6 @@ export function renderToStream(vs: ViewState, ctx: ServerRenderContext): void {
     w('</h1>');
     
     // if="showDetails" — interactive conditional
-    w('<!--jay-if:0:' + (vs.showDetails ? '1' : '0') + '-->');
     if (vs.showDetails) {
         w('<div jay-coordinate="details">');  // ref="details"
         w('<span jay-coordinate="details/0">');
@@ -234,11 +227,9 @@ export function renderToStream(vs: ViewState, ctx: ServerRenderContext): void {
         w('</span>');
         w('</div>');
     }
-    w('<!--/jay-if:0-->');
     
     // forEach="items" — interactive collection
     w('<ul>');
-    w('<!--jay-each:0-->');
     for (const item of vs.items) {
         const key = escapeHtml(String(item.id));
         w('<li jay-coordinate="' + key + '">');
@@ -251,7 +242,6 @@ export function renderToStream(vs: ViewState, ctx: ServerRenderContext): void {
         w('</span>');
         w('</li>');
     }
-    w('<!--/jay-each:0-->');
     w('</ul>');
     
     w('</div>');
@@ -431,8 +421,7 @@ In `compiler-jay-html`:
 1. **New render function**: `renderServerNode(node, context)` — similar to `renderElementNode` and `renderElementBridgeNode`
 2. **New file generator**: `generateServerElementFile(jayFile)` — produces `generated-server-element.ts`
 3. **Coordinate generation**: Assign `jay-coordinate` values using same coordinate system as Design Log #93 (ref names, auto-index for non-ref elements, trackBy keys for forEach)
-4. **Comment markers**: `<!--jay-if:INDEX:VALUE-->` for interactive conditionals, `<!--jay-each:INDEX-->` for interactive forEach
-5. **Async handling**: `when-loading` → render inline with `jay-async` wrapper; `when-resolved`/`when-rejected` → generate template functions for `ctx.onAsync`
+4. **Async handling**: `when-loading` → render inline with `jay-async` wrapper; `when-resolved`/`when-rejected` → generate template functions for `ctx.onAsync`
 6. **escapeHtml calls**: Wrap all dynamic text and attribute bindings with `escapeHtml()` / `escapeAttr()`
 
 ### When to Compile SSR vs Client-Only
@@ -459,8 +448,8 @@ In `compiler-jay-html`:
 5. Tests: fixture-based, starting with simple cases (static text, dynamic text, refs)
 
 ### Phase 3: Compiler — Conditionals and forEach
-1. Add `if` handling with `<!--jay-if:INDEX:VALUE-->` comment markers
-2. Add `forEach` handling with `<!--jay-each:INDEX-->` markers and `jay-coordinate` on items
+1. Add `if` handling — evaluate condition, render matching branch with `jay-coordinate` on dynamic elements
+2. Add `forEach` handling — iterate items with `jay-coordinate="trackByKey"` on each
 3. Handle nested conditionals and forEach
 4. Tests: conditions fixture, collections fixture
 
@@ -514,10 +503,10 @@ Browser receives (streamed):
     <div id="target">
       <div>
         <h1 jay-coordinate="0">Hello</h1>
-        <!--jay-each:0-->
+        <ul>
           <li jay-coordinate="1"><span jay-coordinate="1/0">Widget</span> - <span jay-coordinate="1/1">9.99</span></li>
           <li jay-coordinate="2"><span jay-coordinate="2/0">Gadget</span> - <span jay-coordinate="2/1">19.99</span></li>
-        <!--/jay-each:0-->
+        </ul>
       </div>
     </div>
     <script type="module">
@@ -571,7 +560,7 @@ User sees: "Hello" + "Still loading" → "Hello" + "World" (swap) → interactiv
 |----------|-----|-----|
 | Compile to `write()` calls | Streaming, no memory accumulation, reusable for production | More compiler complexity |
 | `jay-coordinate` on dynamic elements | Consistent with DL#93 hydration and automation API | Small HTML overhead |
-| Comment markers for if/forEach boundaries | Standard HTML, no extra elements | Slightly larger HTML |
+| No comment markers (Kindergarten offset counting) | Cleaner HTML, less output, simpler compiler | Relies on Kindergarten internals for position correctness |
 | Separate ssr-runtime package | Minimal server dependency | Another package to maintain |
 | SSR at fast phase (not slow) | Slow data already baked in, fast = per-request | Must re-render on every request (cacheable) |
 | Async: render pending inline, swap via script | Progressive loading, no re-render of entire page | Inline scripts add complexity; stream stays open |

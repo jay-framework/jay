@@ -122,22 +122,21 @@ function hydrate(rootElement: Element, viewState: ViewState): PreRender {
         [], [], [],
     );
     
-    const render = (viewState: ViewState) => {
-        // One querySelectorAll upfront — builds coordinate → element map
-        const h = hydrateRoot(viewState, refManager, rootElement);
-        
-        // Adopt by coordinate key — compact, one call per dynamic node
-        h.adoptText("0", (vs) => vs.title);               // h1 (auto-index)
-        h.adoptText("content", (vs) => vs.text, refContent()); // div ref="content"
-        
-        return h.element();  // returns JayElement with dom, update, mount, unmount
-    };
+    const render = (viewState: ViewState) =>
+        ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () => {
+            // Standalone adopt functions — read ConstructContext from the stack
+            // just like element(), dynamicText(), etc.
+            adoptText("0", (vs) => vs.title);               // h1 (auto-index)
+            adoptText("content", (vs) => vs.text, refContent()); // div ref="content"
+        });
     
     return [refManager.getPublicAPI(), render];
 }
 ```
 
-`hydrateRoot` does one `querySelectorAll('[jay-coordinate]')` to build a `Map<string, Element>`. Each `h.adoptText` / `h.adoptElement` call is just a map lookup + wiring. No repeated DOM queries.
+`withHydrationRootContext` does one `querySelectorAll('[jay-coordinate]')` to build a coordinate→element map, stores it on the `ConstructContext`, then pushes that context onto the stack. The standalone `adoptText` / `adoptElement` functions call `currentConstructionContext()` to access the map — same pattern as `element()`, `dynamicText()`, etc.
+
+This means Level 3 code (creating elements via `generated-element.ts`) works without any changes — the `ConstructContext` is already on the stack, so `element()`, `dynamicText()`, `conditional()`, `forEach()` all work as usual.
 
 ### Level 2: Interactive `if` (condition is true at SSR time)
 
@@ -171,12 +170,12 @@ New compiler target alongside existing ones:
 | **hydrate** | **`generated-element-hydrate.ts`** | **Adopt server-rendered DOM** |
 
 The hydrate target generates code that:
-- Creates a `HydrationContext` via `hydrateRoot(viewState, refManager, rootElement)` — one `querySelectorAll` upfront
-- Calls `h.adoptText(coordinate, accessor, ref?)` for dynamic text nodes
-- Calls `h.adoptElement(coordinate, attributes, children, ref?)` for dynamic elements
-- Calls `h.hydrateConditional(...)` for interactive `if=true` (Level 2) — adopt path only, no creation code
-- Calls `h.hydrateConditionalEmpty(...)` for interactive `if=false` (Level 3) — imports element creation from `generated-element.ts`
-- Calls `h.hydrateForEach(...)` for interactive forEach — adopts existing items + imports item creation from `generated-element.ts`
+- Uses `ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, callback)` — one `querySelectorAll` upfront, context pushed onto the stack
+- Calls standalone `adoptText(coordinate, accessor, ref?)` for dynamic text nodes
+- Calls standalone `adoptElement(coordinate, attributes, children, ref?)` for dynamic elements
+- Calls standalone `hydrateConditional(...)` for interactive `if=true` (Level 2) — adopt path only
+- Calls standalone `hydrateConditionalEmpty(...)` for interactive `if=false` (Level 3) — imports element creation from `generated-element.ts` (which uses regular `element()`, `dynamicText()` etc. — they work because `ConstructContext` is on the stack)
+- Calls standalone `hydrateForEach(...)` for interactive forEach — adopts existing items + imports item creation from `generated-element.ts`
 
 ### Server Markers: Coordinate-Based Attributes
 
@@ -192,11 +191,8 @@ The server adds `jay-coordinate` attributes to dynamic elements. The coordinate 
     <h1 jay-coordinate="0">Hello World</h1>                      <!-- dynamic text, auto-index 0 -->
     <div jay-coordinate="content">Some text</div>                 <!-- ref="content" -->
     <p>Static footer</p>                                           <!-- no marker, skipped -->
-    <!--jay-if:0:1-->                                              <!-- interactive if, SSR=true -->
-    <div jay-coordinate="details">Details here</div>
-    <!--/jay-if:0-->
+    <div jay-coordinate="details">Details here</div>              <!-- interactive if, SSR=true -->
     <ul>
-        <!--jay-each:0-->
         <li jay-coordinate="item-1">
             <span jay-coordinate="item-1/0">Widget</span>         <!-- auto-index 0 inside item -->
             <button jay-coordinate="item-1/addBtn">Add</button>   <!-- ref inside forEach -->
@@ -205,83 +201,132 @@ The server adds `jay-coordinate` attributes to dynamic elements. The coordinate 
             <span jay-coordinate="item-2/0">Gadget</span>
             <button jay-coordinate="item-2/addBtn">Add</button>
         </li>
-        <!--/jay-each:0-->
     </ul>
 </div>
 ```
+
+No comment boundaries are needed. The runtime's `Kindergarten` class handles DOM positioning through **offset counting** — each dynamic child gets a `KindergartenGroup`, and `getOffsetFor()` computes the insertion position by summing `children.size` of preceding groups. This works for:
+- **if=true**: element adopted into its group (size=1). On toggle to false, `removeNode` sets size=0.
+- **if=false**: group starts empty (size=0). On toggle to true, `ensureNode` inserts at the correct offset.
+- **forEach**: items tracked in their group. New items use offset counting for correct placement.
 
 The client builds a coordinate→element map via `querySelectorAll('[jay-coordinate]')`, then resolves each dynamic node by its coordinate path. This is the same coordinate structure used by the automation API (`getInteraction(["item-1", "addBtn"])`).
 
 ### Runtime API Changes
 
-New `HydrationContext` class in `@jay-framework/runtime`:
+#### Extending ConstructContext
+
+The existing `ConstructContext` is extended with an optional coordinate map for hydration mode:
 
 ```ts
-/**
- * Central hydration context. Created via hydrateRoot().
- * Resolves all jay-coordinate elements in one querySelectorAll,
- * then provides adopt methods keyed by coordinate string.
- */
-class HydrationContext<VS> {
-    // Built internally by hydrateRoot — holds coordinate → Element map
+class ConstructContext<ViewState> {
+    // Existing fields
+    private readonly data: ViewState;
+    public readonly forStaticElements: boolean;
+    private readonly coordinateBase: Coordinate;
     
-    /** Adopt a text node inside the element at the given coordinate */
-    adoptText(coordinate: string, accessor: (vs: VS) => string, ref?: PrivateRef<VS>): void;
+    // New: optional coordinate map for hydration mode
+    private readonly coordinateMap?: Map<string, Element>;
+    private readonly rootElement?: Element;
     
-    /** Adopt the element at the given coordinate with dynamic attributes/children */
-    adoptElement(
-        coordinate: string,
-        attributes: DynamicAttributes<VS>,
-        children: AdoptedChildren<VS>,
-        ref?: PrivateRef<VS>,
-    ): void;
+    // Existing methods (unchanged)
+    get currData(): ViewState;
+    get dataIds(): Coordinate;
+    coordinate(refName: string): Coordinate;
+    forItem<ChildVS>(childViewState: ChildVS, id: string): ConstructContext<ChildVS>;
+    forAsync<ChildVS>(childViewState: ChildVS): ConstructContext<ChildVS>;
     
-    /** Create a scoped HydrationContext for a forEach item */
-    forItem<ChildVS>(coordinatePrefix: string, childViewState: ChildVS): HydrationContext<ChildVS>;
+    // New: resolve an element by coordinate key from the map
+    resolveCoordinate(key: string): Element | undefined;
     
-    /** Hydration-aware conditional — for if=true at SSR time (Level 2)
-     *  Adopts existing DOM. No creation code — Jay retains element on toggle. */
-    hydrateConditional(
-        condition: (vs: VS) => boolean,
-        adoptExisting: (h: HydrationContext<VS>) => void,
-        marker: Comment,
-    ): void;
+    // New: whether this context is in hydration mode
+    get isHydrating(): boolean;
     
-    /** Hydration-aware conditional — for if=false at SSR time (Level 3)
-     *  Nothing in DOM, must create element on first true.
-     *  Uses element creation code imported from generated-element.ts. */
-    hydrateConditionalEmpty(
-        condition: (vs: VS) => boolean,
-        createElement: () => BaseJayElement<VS>,
-        marker: Comment,
-    ): void;
+    // Existing: create from scratch
+    static withRootContext(viewState, refManager, elementConstructor): JayElement;
     
-    /** Hydration-aware forEach.
-     *  Adopts existing items, creates new items via generated-element.ts logic. */
-    hydrateForEach<Item>(
-        accessor: (vs: VS) => Item[],
-        trackBy: string,
-        adoptItem: (h: HydrationContext<Item>) => void,
-        createItem: (item: Item) => BaseJayElement<Item>,
-    ): void;
-    
-    /** Finalize and return the hydrated JayElement */
-    element(): JayElement<VS, any>;
+    // New: hydrate existing DOM — builds coordinate map, pushes context onto stack
+    static withHydrationRootContext<VS, Refs>(
+        viewState: VS,
+        refManager: ReferencesManager,
+        rootElement: Element,
+        hydrateConstructor: () => void,
+    ): JayElement<VS, Refs>;
 }
-
-/** Create a HydrationContext — one querySelectorAll, then adopt by key */
-function hydrateRoot<VS>(
-    viewState: VS,
-    refManager: ReferencesManager,
-    rootElement: Element,
-): HydrationContext<VS>;
 ```
 
-Key design choices:
-- **One DOM traversal**: `hydrateRoot` does `querySelectorAll('[jay-coordinate]')` once, builds a `Map<string, Element>`
-- **Adopt by key**: each `h.adoptText("coordinate", ...)` is a map lookup — no repeated DOM queries
-- **Scoped contexts**: `h.forItem(prefix, childVS)` creates a child context that filters the map by prefix — used inside forEach
-- **Conditional/forEach on context**: `h.hydrateConditional(...)` and `h.hydrateForEach(...)` are methods on the context, keeping the generated code compact
+`withHydrationRootContext`:
+1. Does `rootElement.querySelectorAll('[jay-coordinate]')` once → `Map<string, Element>`
+2. Creates a `ConstructContext` with the coordinate map
+3. Pushes it onto the context stack via `withContext(CONSTRUCTION_CONTEXT_MARKER, ...)`
+4. Calls the `hydrateConstructor` callback
+5. Returns the hydrated `JayElement` (using `rootElement` as `.dom`)
+
+The `forItem()` method propagates the coordinate map to child contexts. The child context's `resolveCoordinate` scopes lookups by the `coordinateBase` prefix — e.g., inside a forEach item with trackBy `"item-1"`, `resolveCoordinate("addBtn")` resolves to the element with `jay-coordinate="item-1/addBtn"`.
+
+#### Standalone Adopt Functions
+
+New standalone functions, same pattern as `element()`, `dynamicText()`, `conditional()`, `forEach()`:
+
+```ts
+// Adopt a text node inside the element at the given coordinate.
+// Reads ConstructContext from the stack to resolve coordinate → element.
+function adoptText<VS>(
+    coordinate: string,
+    accessor: (vs: VS) => string,
+    ref?: PrivateRef<VS>,
+): BaseJayElement<VS>;
+
+// Adopt the element at the given coordinate with dynamic attributes/children.
+function adoptElement<VS>(
+    coordinate: string,
+    attributes: DynamicAttributes<VS>,
+    children: AdoptedChildren<VS>,
+    ref?: PrivateRef<VS>,
+): BaseJayElement<VS>;
+
+// Hydration-aware conditional — for if=true at SSR time (Level 2).
+// Adopts existing DOM. No creation code — Jay retains element on toggle.
+// No marker parameter — Kindergarten offset counting handles positioning.
+function hydrateConditional<VS>(
+    condition: (vs: VS) => boolean,
+    adoptExisting: () => BaseJayElement<VS>,
+): BaseJayElement<VS>;
+
+// Hydration-aware conditional — for if=false at SSR time (Level 3).
+// Nothing in DOM. Uses regular conditional() from generated-element.ts.
+// (This is just the existing conditional() — no new function needed.)
+
+// Hydration-aware forEach.
+// Adopts existing items, creates new items via regular forEach item creator.
+function hydrateForEach<VS, Item>(
+    accessor: (vs: VS) => Item[],
+    trackBy: string,
+    adoptItem: () => BaseJayElement<Item>,  // called per existing item (hydrate)
+    createItem: () => BaseJayElement<Item>, // called per new item (from generated-element.ts)
+): BaseJayElement<VS>;
+```
+
+All of these call `currentConstructionContext()` internally — they're just like `element()` and `dynamicText()` but instead of creating DOM, they adopt existing nodes from the coordinate map.
+
+#### Why this works for Level 3
+
+When Level 3 needs to create new elements (if=false toggles to true, or forEach adds items), it calls regular `element()`, `dynamicText()`, `conditional()`, `forEach()` from `generated-element.ts`. These functions call `currentConstructionContext()` and find the same `ConstructContext` on the stack — they work without any changes. The context is in hydration mode, but the creation functions don't care — they always create new DOM nodes regardless.
+
+```
+generated-element-hydrate.ts:
+  withHydrationRootContext(viewState, refManager, rootElement, () => {
+      adoptText("0", (vs) => vs.title);       // ← reads from coordinate map
+      hydrateForEach(
+          (vs) => vs.items,
+          'id',
+          () => { adoptText("0", ...); },      // ← adopt existing items
+          () => { e('li', {}, [dt(...)]); },   // ← create new items (regular element/dt!)
+      );
+  });
+```
+
+Both `adoptText` and `element` call `currentConstructionContext()`. The context stack manages scoping for forEach items via `forItem()`, just as it does today.
 
 ### Integration with makeCompositeJayComponent
 
@@ -297,19 +342,19 @@ const instance = pageComp({ /* props */ }, { hydrate: target });
 
 ## Implementation Plan
 
-### Phase 1: Runtime HydrationContext and Primitives
-1. Add `HydrationContext` class with coordinate map built from `querySelectorAll`
-2. Add `hydrateRoot(viewState, refManager, rootElement)` factory
-3. Add `h.adoptText(coordinate, accessor, ref?)` — map lookup + text node wiring
-4. Add `h.adoptElement(coordinate, attributes, children, ref?)` — map lookup + element wiring
-5. Add `h.forItem(prefix, childVS)` — scoped child context for forEach items
-6. Add `h.element()` — finalize and return `JayElement`
+### Phase 1: Extend ConstructContext + Adopt Primitives
+1. Extend `ConstructContext` with optional `coordinateMap` and `rootElement` fields
+2. Add `ConstructContext.withHydrationRootContext()` — builds map, pushes context onto stack
+3. Add `resolveCoordinate(key)` — scoped lookup by coordinateBase prefix
+4. Ensure `forItem()` propagates the coordinate map to child contexts
+5. Add standalone `adoptText(coordinate, accessor, ref?)` — reads context from stack
+6. Add standalone `adoptElement(coordinate, attributes, children, ref?)` — reads context from stack
 7. Tests: #1–#15, #34–#38 from test plan
 
 ### Phase 2: Hydration-Aware Conditional and forEach
-1. Add `h.hydrateConditional()` — for if=true at SSR: adopt only, no creation code
-2. Add `h.hydrateConditionalEmpty()` — for if=false at SSR: creation via generated-element.ts
-3. Add `h.hydrateForEach()` — adopt existing items, create new items via generated-element.ts
+1. Add standalone `hydrateConditional()` — for if=true at SSR: adopt only, no creation code
+2. For if=false at SSR: use existing `conditional()` from generated-element.ts (no new function)
+3. Add standalone `hydrateForEach()` — adopt existing items, create new items via regular `element()` / `dynamicText()`
 4. Tests: #16–#33 from test plan
 
 ### Phase 3: Compiler Hydrate Target
@@ -388,60 +433,60 @@ const instance = pageComp({ /* props */ }, { hydrate: target });
 
 Tests live in `packages/runtime/runtime/test/hydration/`. All use jsdom to simulate server-rendered HTML.
 
-### h.adoptText tests (`adopt-text.test.ts`)
+### adoptText tests (`adopt-text.test.ts`)
 
 | # | Test | Description |
 |---|------|-------------|
-| 1 | adopts existing text node | `h.adoptText("0", ...)` connects to the text node inside the element at coordinate "0"; verify node identity unchanged |
+| 1 | adopts existing text node | `adoptText("0", ...)` resolves coordinate from `ConstructContext`, connects to existing text node; verify node identity unchanged |
 | 2 | updates text on ViewState change | After adoption, ViewState update changes the text content |
-| 3 | handles empty string | `h.adoptText` with accessor returning `""` sets `textContent` to empty |
+| 3 | handles empty string | `adoptText` with accessor returning `""` sets `textContent` to empty |
 | 4 | handles special characters | HTML entities in text don't get double-escaped after adoption |
-| 5 | works with ref binding | `h.adoptText("refName", accessor, ref)` registers the element on the ref manager |
+| 5 | works with ref binding | `adoptText("refName", accessor, ref)` registers the element on the ref manager |
 
-### h.adoptElement tests (`adopt-element.test.ts`)
+### adoptElement tests (`adopt-element.test.ts`)
 
 | # | Test | Description |
 |---|------|-------------|
-| 6 | adopts existing element | `h.adoptElement("refName", ...)` — the resulting element's `.dom` is the same node (identity check) |
+| 6 | adopts existing element | `adoptElement("refName", ...)` — the resulting element's `.dom` is the same node (identity check) |
 | 7 | connects dynamic attributes | After adoption, attribute bindings update on ViewState change (e.g., `class`, `style`) |
 | 8 | connects dynamic children | Adopted element's dynamic text children update on ViewState change |
-| 9 | attaches ref | `h.adoptElement` with ref makes the element accessible via `refManager.getPublicAPI()` |
+| 9 | attaches ref | `adoptElement` with ref makes the element accessible via `refManager.getPublicAPI()` |
 | 10 | mount/unmount lifecycle | Calling `mount()` activates reactive updates; `unmount()` deactivates them |
 | 11 | adopts element with static + dynamic children | Mix of static text and dynamic text children; only dynamic ones update |
 
-### hydrateRoot / HydrationContext tests (`hydration-context.test.ts`)
+### withHydrationRootContext / ConstructContext tests (`hydration-context.test.ts`)
 
 | # | Test | Description |
 |---|------|-------------|
-| 12 | builds coordinate map from root | `hydrateRoot` does one `querySelectorAll`, builds `Map<string, Element>` with all `jay-coordinate` elements |
-| 13 | h.element() returns JayElement with original root DOM | `.dom` is the same root element passed to `hydrateRoot` |
+| 12 | builds coordinate map from root | `withHydrationRootContext` does one `querySelectorAll`, builds coordinate map on `ConstructContext` |
+| 13 | returns JayElement with original root DOM | `.dom` is the same root element passed to `withHydrationRootContext` |
 | 14 | ref manager is applied | Refs passed via adopt calls are accessible on the returned element |
 | 15 | ViewState updates propagate | After hydration, updating ViewState changes text/attributes in the adopted DOM |
 
-### h.hydrateConditional tests (if=true at SSR) (`hydrate-conditional.test.ts`)
+### hydrateConditional tests (if=true at SSR) (`hydrate-conditional.test.ts`)
 
 | # | Test | Description |
 |---|------|-------------|
-| 16 | adopts existing element when condition=true | Element exists in DOM, `h.hydrateConditional` adopts it, node identity preserved |
+| 16 | adopts existing element when condition=true | Element exists in DOM, `hydrateConditional` adopts it, node identity preserved |
 | 17 | hides element when condition toggles to false | After adoption, setting condition=false hides/removes the element |
 | 18 | shows element when condition toggles back to true | Element reappears — same node, not recreated |
 | 19 | dynamic content updates while visible | Text/attributes inside conditional element update on ViewState change |
 | 20 | ref works inside conditional | Ref on the conditional element is accessible and fires events |
 
-### h.hydrateConditionalEmpty tests (if=false at SSR) (`hydrate-conditional-empty.test.ts`)
+### hydrateConditionalEmpty tests (if=false at SSR) (`hydrate-conditional-empty.test.ts`)
 
 | # | Test | Description |
 |---|------|-------------|
-| 21 | no element in DOM initially | Nothing adopted; marker comment exists in DOM |
+| 21 | no element in DOM initially | Nothing adopted; Kindergarten group starts empty (size=0) |
 | 22 | creates element when condition becomes true | Uses imported `createElement` from generated-element.ts |
 | 23 | created element is functional | Dynamic text, attributes, and refs work on the newly created element |
 | 24 | toggles work after creation | true→false→true cycle works; element is retained, not recreated |
 
-### h.hydrateForEach tests (`hydrate-for-each.test.ts`)
+### hydrateForEach tests (`hydrate-for-each.test.ts`)
 
 | # | Test | Description |
 |---|------|-------------|
-| 25 | adopts all existing items | `h.hydrateForEach` — all server-rendered items adopted; node identity preserved via `h.forItem` scoping |
+| 25 | adopts all existing items | `hydrateForEach` — all server-rendered items adopted; node identity preserved via `ConstructContext.forItem` scoping |
 | 26 | item dynamic content updates | Text inside each adopted item updates on ViewState change |
 | 27 | item refs work | Refs inside forEach items are accessible with correct coordinates |
 | 28 | add new item | Appending to the array creates a new item via imported `createItem` |
@@ -449,18 +494,18 @@ Tests live in `packages/runtime/runtime/test/hydration/`. All use jsdom to simul
 | 30 | reorder items | Changing array order moves DOM nodes (verify via trackBy) |
 | 31 | mixed adopt and create | Existing items adopted, new items created in same update |
 | 32 | empty initial list then add | Server rendered 0 items; adding items creates them fresh |
-| 33 | nested forEach | Inner `h.hydrateForEach` inside outer, `h.forItem` creates nested scopes |
+| 33 | nested forEach | Inner `hydrateForEach` inside outer, `ConstructContext.forItem` creates nested scopes |
 
-### Coordinate map tests (`coordinate-map.test.ts`)
+### Coordinate resolution tests (`coordinate-resolution.test.ts`)
 
-Tests for the coordinate → element map built by `hydrateRoot`.
+Tests for coordinate → element resolution via `ConstructContext.resolveCoordinate`.
 
 | # | Test | Description |
 |---|------|-------------|
-| 34 | finds element by ref coordinate | `h.adoptText("refName", ...)` resolves correctly from map |
-| 35 | finds element by auto-index | `h.adoptText("0", ...)` resolves for elements without refs |
-| 36 | finds element in forEach scope | `h.forItem("item-1").adoptText("refName", ...)` resolves compound coordinate |
-| 37 | finds element in nested forEach | `h.forItem("parent-1").forItem("child-2").adoptText("refName", ...)` works |
+| 34 | finds element by ref coordinate | `adoptText("refName", ...)` resolves via `resolveCoordinate` from context |
+| 35 | finds element by auto-index | `adoptText("0", ...)` resolves for elements without refs |
+| 36 | finds element in forEach scope | Inside `forItem("item-1")` context, `adoptText("refName", ...)` resolves `"item-1/refName"` |
+| 37 | finds element in nested forEach | Nested `forItem("parent-1").forItem("child-2")`, `adoptText("refName", ...)` resolves `"parent-1/child-2/refName"` |
 | 38 | handles missing coordinate gracefully | Adopt call for missing coordinate logs warning in dev mode, does not throw |
 
 ### Integration tests (`hydration-integration.test.ts`)
@@ -493,22 +538,22 @@ Each fixture directory gets a new `generated-element-hydrate.ts` golden file alo
 
 | # | Fixture | Description |
 |---|---------|-------------|
-| C1 | `basics/simple-dynamic-text` | Single dynamic text — `h.adoptText("0", ...)` |
+| C1 | `basics/simple-dynamic-text` | Single dynamic text — `adoptText("0", ...)` |
 | C2 | `basics/simple-static-text` | Fully static — hydrate file is minimal (no adopt calls) |
 | C3 | `basics/empty-element` | Empty element — trivial hydrate |
-| C4 | `basics/refs` | Three refs (incl. nested) — `h.adoptElement` with ref bindings; static wrappers skipped (compact form like element bridge) |
-| C5 | `basics/composite` | Nested divs with dynamic text — only dynamic points get `h.adoptText` calls |
+| C4 | `basics/refs` | Three refs (incl. nested) — `adoptElement` with ref bindings; static wrappers skipped (compact form like element bridge) |
+| C5 | `basics/composite` | Nested divs with dynamic text — only dynamic points get `adoptText` calls |
 | C6 | `basics/composite 2` | More complex nesting — verifies coordinate auto-indexing |
-| C7 | `basics/attributes` | Dynamic attributes — `h.adoptElement` connects attribute bindings |
-| C8 | `basics/style-bindings` | Dynamic style bindings — `h.adoptElement` with style updates |
-| C9 | `basics/data-types` | Various ViewState types — accessors in `h.adoptText` handle different types |
+| C7 | `basics/attributes` | Dynamic attributes — `adoptElement` connects attribute bindings |
+| C8 | `basics/style-bindings` | Dynamic style bindings — `adoptElement` with style updates |
+| C9 | `basics/data-types` | Various ViewState types — accessors in `adoptText` handle different types |
 
 #### Conditions (`describe('conditions')`)
 
 | # | Fixture | Description |
 |---|---------|-------------|
-| C10 | `conditions/conditions` | Basic if/else — `h.hydrateConditional` for true branch, `h.hydrateConditionalEmpty` for false branch |
-| C11 | `conditions/conditions-with-refs` | Conditional with refs — ref binding inside `h.hydrateConditional` adopt path |
+| C10 | `conditions/conditions` | Basic if/else — `hydrateConditional` for true branch, regular `conditional()` for false branch |
+| C11 | `conditions/conditions-with-refs` | Conditional with refs — ref binding inside `hydrateConditional` adopt path |
 | C12 | `conditions/conditions-with-repeated-ref` | Same ref name in if/else branches — correct ref wiring per branch |
 | C13 | `conditions/conditions-with-enum` | Enum-based conditions — multiple conditional hydrations |
 
@@ -516,11 +561,11 @@ Each fixture directory gets a new `generated-element-hydrate.ts` golden file alo
 
 | # | Fixture | Description |
 |---|---------|-------------|
-| C14 | `collections/collections` | Basic forEach — `h.hydrateForEach` with adopt + create import from generated-element.ts |
-| C15 | `collections/collection-with-refs` | forEach with refs — `h.forItem` scoping, ref accessible per item |
+| C14 | `collections/collections` | Basic forEach — `hydrateForEach` with adopt + create import from generated-element.ts |
+| C15 | `collections/collection-with-refs` | forEach with refs — `forItem` scoping via `ConstructContext`, ref accessible per item |
 | C16 | `collections/collection-with-repeating-refs` | Repeated refs in forEach — each item gets own ref instance via coordinate |
-| C17 | `collections/collections-with-conditions` | forEach + if inside — nested `h.hydrateConditional` inside `h.hydrateForEach` adopt path |
-| C18 | `collections/nested-arrays-with-students` | Nested forEach — inner `h.hydrateForEach` inside outer, `h.forItem` compound scoping |
+| C17 | `collections/collections-with-conditions` | forEach + if inside — nested `hydrateConditional` inside `hydrateForEach` adopt path |
+| C18 | `collections/nested-arrays-with-students` | Nested forEach — inner `hydrateForEach` inside outer, compound coordinate scoping via `ConstructContext` |
 | C19 | `collections/nested-collection-with-refs` | Nested forEach with refs — deep coordinate paths |
 | C20 | `collections/slow-for-each` | Pre-rendered slow arrays — hydrate items that were unrolled at slow phase |
 
@@ -543,5 +588,5 @@ Each fixture directory gets a new `generated-element-hydrate.ts` golden file alo
 | # | Test | Description |
 |---|------|-------------|
 | C25 | hydrate file imports from generated-element.ts | Verify that Level 3 cases (if=false, forEach create) import the element creation functions from generated-element.ts |
-| C26 | hydrate file does not import document.createElement | Verify compact form: no `element as e` import, only `hydrateRoot` and `HydrationContext` methods |
+| C26 | hydrate file does not import document.createElement for Level 1/2 | Verify compact form: Level 1/2 only imports `adoptText`/`adoptElement`/`hydrateConditional` — no `element as e` |
 | C27 | jay-coordinate values match between server and hydrate | Verify the coordinates used in generated-element-hydrate.ts match those emitted by the server renderer (Design Log #94) |
