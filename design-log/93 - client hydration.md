@@ -315,11 +315,13 @@ const instance = pageComp({ /* props */ }, { hydrate: target });
 
 ### Phase 3: Compiler Hydrate Target
 1. Add `renderHydrateNode()` in `jay-html-compiler.ts` (similar to `renderElementBridgeNode`)
-2. Generate `generated-element-hydrate.ts` files
-3. For Level 1 (static + dynamic): compact form with coordinate lookups
-4. For Level 2 (if=true): `hydrateConditional` — adopt path only
-5. For Level 3 (if=false, forEach): import element creation from `generated-element.ts`
-6. Tests: fixture-based, compare output
+2. Add `generateElementHydrateFile()` in compiler
+3. Add `readFixtureElementHydrateFile()` and `readFileAndGenerateElementHydrateFile()` test utilities
+4. Generate `generated-element-hydrate.ts` golden files for existing fixtures
+5. For Level 1 (static + dynamic): compact form with coordinate lookups
+6. For Level 2 (if=true): `hydrateConditional` — adopt path only
+7. For Level 3 (if=false, forEach): import element creation from `generated-element.ts`
+8. Tests: #C1–#C27 from compiler test plan (fixture-based, compare output)
 
 ### Phase 4: Integration with jay-stack
 1. Modify `makeCompositeJayComponent` to accept `{ hydrate: Element }` option
@@ -381,7 +383,9 @@ const instance = pageComp({ /* props */ }, { hydrate: target });
 6. **No flash**: Page doesn't flash or re-layout during hydration
 7. **Bundle size**: Hydration-only components are smaller than full-render components (no createElement calls for static structure)
 
-## Runtime Test Plan
+## Test Plan
+
+### A. Runtime Tests
 
 Tests live in `packages/runtime/runtime/test/hydration/`. All use jsdom to simulate server-rendered HTML.
 
@@ -470,3 +474,73 @@ Tests live in `packages/runtime/runtime/test/hydration/`. All use jsdom to simul
 | 44 | full page hydration — mixed | Page with refs + conditionals + forEach; hydrate and mutate everything |
 | 45 | DOM identity preserved | Compare node references before and after hydration — must be identical |
 | 46 | no duplicate event handlers | After hydration, events fire exactly once (not double-bound) |
+
+---
+
+### B. Compiler Tests
+
+Tests live in `packages/compiler/compiler-jay-html/test/jay-target/generate-element-hydrate.test.ts`. Follow the existing fixture-based pattern: parse jay-html → generate hydrate file → prettify → compare against golden `generated-element-hydrate.ts` file in fixture directory.
+
+Each fixture directory gets a new `generated-element-hydrate.ts` golden file alongside existing `generated-element.ts` and `generated-element-bridge.ts`.
+
+#### Test utilities additions (`test-utils/file-utils.ts`)
+
+- `readFixtureElementHydrateFile(folder)` — reads `generated-element-hydrate.ts` from fixture
+- `readFileAndGenerateElementHydrateFile(folder)` — parse + generate hydrate file
+
+#### Basics (`generate-element-hydrate.test.ts` → `describe('basics')`)
+
+| # | Fixture | Description |
+|---|---------|-------------|
+| C1 | `basics/simple-dynamic-text` | Single dynamic text — `adoptText` with coordinate lookup |
+| C2 | `basics/simple-static-text` | Fully static — hydrate file is minimal (no adopt calls needed) |
+| C3 | `basics/empty-element` | Empty element — trivial hydrate |
+| C4 | `basics/refs` | Three refs (incl. nested) — `adoptElement` with ref bindings via `ReferencesManager`; static wrappers skipped (compact form like element bridge) |
+| C5 | `basics/composite` | Nested divs with dynamic text — only dynamic points get coordinate lookups |
+| C6 | `basics/composite 2` | More complex nesting — verifies coordinate auto-indexing |
+| C7 | `basics/attributes` | Dynamic attributes — `adoptElement` connects attribute bindings |
+| C8 | `basics/style-bindings` | Dynamic style bindings — `adoptElement` with style updates |
+| C9 | `basics/data-types` | Various ViewState types — accessors in `adoptText` handle different types |
+
+#### Conditions (`describe('conditions')`)
+
+| # | Fixture | Description |
+|---|---------|-------------|
+| C10 | `conditions/conditions` | Basic if/else — `hydrateConditional` for true branch, `hydrateConditionalEmpty` for false branch |
+| C11 | `conditions/conditions-with-refs` | Conditional with refs — ref binding inside `hydrateConditional` adopt path |
+| C12 | `conditions/conditions-with-repeated-ref` | Same ref name in if/else branches — correct ref wiring per branch |
+| C13 | `conditions/conditions-with-enum` | Enum-based conditions — multiple conditional hydrations |
+
+#### Collections (`describe('collections')`)
+
+| # | Fixture | Description |
+|---|---------|-------------|
+| C14 | `collections/collections` | Basic forEach — `hydrateForEach` with adopt + create import from generated-element.ts |
+| C15 | `collections/collection-with-refs` | forEach with refs — coordinate includes trackBy key, ref accessible per item |
+| C16 | `collections/collection-with-repeating-refs` | Repeated refs in forEach — each item gets own ref instance via coordinate |
+| C17 | `collections/collections-with-conditions` | forEach + if inside — nested `hydrateConditional` inside `hydrateForEach` adopt path |
+| C18 | `collections/nested-arrays-with-students` | Nested forEach — inner `hydrateForEach` inside outer, compound coordinates |
+| C19 | `collections/nested-collection-with-refs` | Nested forEach with refs — deep coordinate paths |
+| C20 | `collections/slow-for-each` | Pre-rendered slow arrays — hydrate items that were unrolled at slow phase |
+
+#### Components (`describe('components')`)
+
+| # | Fixture | Description |
+|---|---------|-------------|
+| C21 | `components/counter` | Child component — hydrate generates `childComp` with hydration option |
+| C22 | `components/component-in-component` | Nested components — recursive hydration through component boundary |
+
+#### Linked contracts / headless (`describe('linked contract')`)
+
+| # | Fixture | Description |
+|---|---------|-------------|
+| C23 | `html-with-contract-ref` (existing fixture) | Linked contract — hydrate respects contract-level phase annotations |
+| C24 | headless instance in forEach | Headless component inside forEach — hydrate items that include headless rendering |
+
+#### Structural verification (`describe('structure')`)
+
+| # | Test | Description |
+|---|------|-------------|
+| C25 | hydrate file imports from generated-element.ts | Verify that Level 3 cases (if=false, forEach create) import the element creation functions from generated-element.ts |
+| C26 | hydrate file does not import document.createElement | Verify compact form: no `element as e` import, only `adoptText`/`adoptElement`/coordinate helpers |
+| C27 | jay-coordinate values match between server and hydrate | Verify the coordinates used in generated-element-hydrate.ts match those emitted by the server renderer (Design Log #94) |
