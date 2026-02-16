@@ -8,7 +8,7 @@ import {
     resolveActionMetadataPath,
 } from '../lib/action-metadata';
 
-describe('Action Metadata', () => {
+describe('Action Metadata (compact notation)', () => {
     let tempDir: string;
 
     beforeEach(async () => {
@@ -20,33 +20,17 @@ describe('Action Metadata', () => {
     });
 
     describe('parseActionMetadata', () => {
-        it('should parse a valid .jay-action file', () => {
+        it('should parse a valid .jay-action file with compact notation', () => {
             const yaml = `
 name: searchProducts
 description: Search for products by query string
 inputSchema:
-  type: object
-  properties:
-    query:
-      type: string
-      description: Search query text
-    limit:
-      type: number
-      description: Maximum results
-      default: 10
-  required:
-    - query
+  query: string
+  limit?: number
 outputSchema:
-  type: array
-  items:
-    type: object
-    properties:
-      id:
-        type: string
-      name:
-        type: string
-      price:
-        type: number
+  - id: string
+    name: string
+    price: number
 `;
             const result = parseActionMetadata(yaml, 'search-products.jay-action');
 
@@ -54,44 +38,108 @@ outputSchema:
             expect(result!.name).toBe('searchProducts');
             expect(result!.description).toBe('Search for products by query string');
             expect(result!.inputSchema.type).toBe('object');
-            expect(result!.inputSchema.properties.query.type).toBe('string');
-            expect(result!.inputSchema.properties.limit.type).toBe('number');
+            expect(result!.inputSchema.properties.query).toEqual({ type: 'string' });
+            expect(result!.inputSchema.properties.limit).toEqual({ type: 'number' });
             expect(result!.inputSchema.required).toEqual(['query']);
             expect(result!.outputSchema).toBeDefined();
             expect(result!.outputSchema!.type).toBe('array');
         });
 
-        it('should parse action without outputSchema', () => {
+        it('should parse enum types', () => {
             const yaml = `
 name: submitMood
 description: Submit a mood entry
 inputSchema:
-  type: object
-  properties:
-    mood:
-      type: string
-      enum:
-        - happy
-        - neutral
-        - sad
-  required:
-    - mood
+  mood: enum(happy | neutral | sad)
 `;
             const result = parseActionMetadata(yaml, 'submit-mood.jay-action');
 
             expect(result).not.toBeNull();
             expect(result!.name).toBe('submitMood');
+            expect(result!.inputSchema.properties.mood).toEqual({
+                type: 'string',
+                enum: ['happy', 'neutral', 'sad'],
+            });
+            expect(result!.inputSchema.required).toEqual(['mood']);
             expect(result!.outputSchema).toBeUndefined();
+        });
+
+        it('should parse nested objects with optional properties', () => {
+            const yaml = `
+name: search
+description: Search
+inputSchema:
+  query: string
+  filters?:
+    minPrice?: number
+    maxPrice?: number
+`;
+            const result = parseActionMetadata(yaml, 'search.jay-action');
+
+            expect(result).not.toBeNull();
+            expect(result!.inputSchema.required).toEqual(['query']);
+            expect(result!.inputSchema.properties.filters.type).toBe('object');
+            expect(result!.inputSchema.properties.filters.properties!.minPrice).toEqual({
+                type: 'number',
+            });
+        });
+
+        it('should parse contract imports', () => {
+            const yaml = `
+name: searchProducts
+description: Search
+import:
+  productCard: product-card.jay-contract
+inputSchema:
+  query: string
+outputSchema:
+  products:
+    - productCard
+  totalCount: number
+`;
+            const result = parseActionMetadata(yaml, 'search.jay-action');
+
+            expect(result).not.toBeNull();
+            expect(result!.outputSchema!.type).toBe('object');
+            expect(result!.outputSchema!.properties!.products.type).toBe('array');
+            expect(result!.outputSchema!.properties!.products.items!.type).toBe('object');
+            expect(result!.outputSchema!.properties!.totalCount).toEqual({ type: 'number' });
+            expect(result!.outputSchema!.required).toEqual(['products', 'totalCount']);
+        });
+
+        it('should parse array shorthand: string[]', () => {
+            const yaml = `
+name: batch
+description: Batch
+inputSchema:
+  ids: string[]
+`;
+            const result = parseActionMetadata(yaml, 'batch.jay-action');
+
+            expect(result).not.toBeNull();
+            expect(result!.inputSchema.properties.ids).toEqual({
+                type: 'array',
+                items: { type: 'string' },
+            });
+        });
+
+        it('should parse empty input', () => {
+            const yaml = `
+name: healthCheck
+description: Health check
+inputSchema: {}
+`;
+            const result = parseActionMetadata(yaml, 'health.jay-action');
+
+            expect(result).not.toBeNull();
+            expect(result!.inputSchema.properties).toEqual({});
         });
 
         it('should return null for missing name', () => {
             const yaml = `
 description: Some action
 inputSchema:
-  type: object
-  properties:
-    x:
-      type: string
+  x: string
 `;
             const result = parseActionMetadata(yaml, 'test.jay-action');
             expect(result).toBeNull();
@@ -101,10 +149,7 @@ inputSchema:
             const yaml = `
 name: testAction
 inputSchema:
-  type: object
-  properties:
-    x:
-      type: string
+  x: string
 `;
             const result = parseActionMetadata(yaml, 'test.jay-action');
             expect(result).toBeNull();
@@ -114,17 +159,6 @@ inputSchema:
             const yaml = `
 name: testAction
 description: A test action
-`;
-            const result = parseActionMetadata(yaml, 'test.jay-action');
-            expect(result).toBeNull();
-        });
-
-        it('should return null for inputSchema without object type', () => {
-            const yaml = `
-name: testAction
-description: A test action
-inputSchema:
-  type: string
 `;
             const result = parseActionMetadata(yaml, 'test.jay-action');
             expect(result).toBeNull();
@@ -145,12 +179,7 @@ inputSchema:
 name: testAction
 description: A test action
 inputSchema:
-  type: object
-  properties:
-    value:
-      type: string
-  required:
-    - value
+  value: string
 `,
             );
 
@@ -159,6 +188,7 @@ inputSchema:
             expect(result).not.toBeNull();
             expect(result!.name).toBe('testAction');
             expect(result!.description).toBe('A test action');
+            expect(result!.inputSchema.required).toEqual(['value']);
         });
 
         it('should return null for non-existent file', () => {

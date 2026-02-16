@@ -1,36 +1,27 @@
 /**
  * Action metadata loaded from .jay-action files.
  *
- * .jay-action files describe an action's input/output schema and purpose.
- * They serve as the single source of truth for:
- * - AI agent tool definitions (Gemini function declarations)
- * - TypeScript type generation (.jay-action.d.ts)
- * - Agent-kit materialization for coding agents
+ * Uses the compiler's parseAction to parse .jay-action YAML into JayType,
+ * then converts JayType → JSON Schema for consumers (AI agent tool builders).
  *
  * Actions without .jay-action files are not exposed to AI agents.
  */
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import YAML from 'yaml';
 import { getLogger } from '@jay-framework/logger';
+import { parseAction } from '@jay-framework/compiler-jay-html';
+import {
+    type JsonSchemaProperty,
+    jayTypeToJsonSchema,
+    isObjectType,
+} from '@jay-framework/compiler-shared';
+
+// Re-export JsonSchemaProperty for consumers
+export type { JsonSchemaProperty };
 
 /**
- * JSON Schema-like type definition used in .jay-action files.
- * Supports object, array, string, number, boolean, and nested schemas.
- */
-export interface JsonSchemaProperty {
-    type: string;
-    description?: string;
-    default?: unknown;
-    enum?: string[];
-    items?: JsonSchemaProperty;
-    properties?: Record<string, JsonSchemaProperty>;
-    required?: string[];
-}
-
-/**
- * Input/output schema for an action (JSON Schema object type).
+ * Input schema for an action (JSON Schema object type).
  */
 export interface ActionSchema {
     type: 'object';
@@ -53,66 +44,53 @@ export interface ActionMetadata {
 }
 
 /**
- * Raw parsed YAML structure from a .jay-action file.
- */
-interface ParsedActionYaml {
-    name?: string;
-    description?: string;
-    inputSchema?: unknown;
-    outputSchema?: unknown;
-}
-
-/**
  * Parses a .jay-action YAML string into ActionMetadata.
- *
- * @param yamlContent - Raw YAML string
- * @param fileName - File name for error messages
- * @returns Parsed ActionMetadata or null if invalid
+ * Uses the compiler's parseAction to produce JayType, then converts to JSON Schema.
  */
 export function parseActionMetadata(yamlContent: string, fileName: string): ActionMetadata | null {
     try {
-        const parsed = YAML.parse(yamlContent) as ParsedActionYaml;
+        const parsed = parseAction(yamlContent, fileName);
 
-        if (!parsed || typeof parsed !== 'object') {
-            getLogger().warn(`[ActionMetadata] ${fileName}: empty or invalid YAML`);
-            return null;
-        }
-
-        if (!parsed.name || typeof parsed.name !== 'string') {
-            getLogger().warn(`[ActionMetadata] ${fileName}: missing or invalid 'name' field`);
-            return null;
-        }
-
-        if (!parsed.description || typeof parsed.description !== 'string') {
+        if (parsed.validations.length > 0) {
             getLogger().warn(
-                `[ActionMetadata] ${fileName}: missing or invalid 'description' field`,
+                `[ActionMetadata] ${fileName}: validation errors: ${parsed.validations.join(', ')}`,
             );
             return null;
         }
 
-        if (!parsed.inputSchema || typeof parsed.inputSchema !== 'object') {
-            getLogger().warn(
-                `[ActionMetadata] ${fileName}: missing or invalid 'inputSchema' field`,
-            );
+        if (!parsed.val) {
+            getLogger().warn(`[ActionMetadata] ${fileName}: parsing returned no result`);
             return null;
         }
 
-        const inputSchema = parsed.inputSchema as ActionSchema;
-        if (inputSchema.type !== 'object' || !inputSchema.properties) {
-            getLogger().warn(
-                `[ActionMetadata] ${fileName}: inputSchema must have type 'object' and 'properties'`,
-            );
-            return null;
+        const action = parsed.val;
+
+        // Convert inputType (JayObjectType) → JSON Schema
+        const inputJsonSchema = jayTypeToJsonSchema(action.inputType);
+        let inputSchema: ActionSchema;
+        if (inputJsonSchema && inputJsonSchema.type === 'object') {
+            inputSchema = {
+                type: 'object',
+                properties: inputJsonSchema.properties || {},
+                ...(inputJsonSchema.required &&
+                    inputJsonSchema.required.length > 0 && { required: inputJsonSchema.required }),
+            };
+        } else {
+            inputSchema = { type: 'object', properties: {} };
         }
 
         const metadata: ActionMetadata = {
-            name: parsed.name,
-            description: parsed.description,
+            name: action.name,
+            description: action.description,
             inputSchema,
         };
 
-        if (parsed.outputSchema && typeof parsed.outputSchema === 'object') {
-            metadata.outputSchema = parsed.outputSchema as JsonSchemaProperty;
+        // Convert outputType → JSON Schema
+        if (action.outputType) {
+            const outputJsonSchema = jayTypeToJsonSchema(action.outputType);
+            if (outputJsonSchema) {
+                metadata.outputSchema = outputJsonSchema;
+            }
         }
 
         return metadata;
@@ -126,9 +104,6 @@ export function parseActionMetadata(yamlContent: string, fileName: string): Acti
 
 /**
  * Loads action metadata from a .jay-action file on disk.
- *
- * @param filePath - Absolute path to the .jay-action file
- * @returns Parsed ActionMetadata or null if file not found or invalid
  */
 export function loadActionMetadata(filePath: string): ActionMetadata | null {
     if (!fs.existsSync(filePath)) {
@@ -143,10 +118,6 @@ export function loadActionMetadata(filePath: string): ActionMetadata | null {
 
 /**
  * Resolves the absolute path of a .jay-action file relative to a plugin directory.
- *
- * @param actionPath - Relative path from plugin.yaml (e.g., "./actions/send-message.jay-action")
- * @param pluginDir - Absolute path to the plugin directory
- * @returns Absolute path to the .jay-action file
  */
 export function resolveActionMetadataPath(actionPath: string, pluginDir: string): string {
     return path.resolve(pluginDir, actionPath);

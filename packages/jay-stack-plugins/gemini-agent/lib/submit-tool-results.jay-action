@@ -2,83 +2,28 @@ name: submitToolResults
 description: Submit tool execution results back to continue the Gemini conversation. Called after the client executes page automation tools. Returns either a text response or more pending tool calls.
 
 inputSchema:
-  type: object
-  properties:
-    results:
-      type: array
-      description: Tool execution results
-      items:
-        type: object
-        properties:
-          callId:
-            type: string
-            description: ID matching the original tool call
-          result:
-            type: string
-            description: JSON-stringified tool result
-          isError:
-            type: boolean
-            description: Whether the tool execution failed
-    history:
-      type: array
-      description: Full conversation history including the tool call turn
-      items:
-        type: object
-        properties:
-          role:
-            type: string
-          parts:
-            type: array
-            items:
-              type: object
-    toolDefinitions:
-      type: array
-      description: Page automation tool definitions (resent because page state may have changed)
-      items:
-        type: object
-        properties:
-          name:
-            type: string
-          description:
-            type: string
-          inputSchema:
-            type: object
-          category:
-            type: string
-    pageState:
-      type: object
-      description: Fresh page state snapshot (may have changed after tool execution)
-  required:
-    - results
-    - history
-    - toolDefinitions
-    - pageState
+  results:
+    - callId: string
+      result: string
+      isError: boolean
+  history:
+    - role: string
+      parts:
+        - {}
+  toolDefinitions:
+    - name: string
+      description: string
+      inputSchema: {}
+      category: string
+  pageState: {}
 
 outputSchema:
-  type: object
-  properties:
-    type:
-      type: string
-      description: "'response' for text reply, 'tool-calls' for more pending tool execution"
-    message:
-      type: string
-      description: Assistant text response (when type is 'response')
-    calls:
-      type: array
-      description: Pending tool calls (when type is 'tool-calls')
-      items:
-        type: object
-        properties:
-          id:
-            type: string
-          name:
-            type: string
-          args:
-            type: object
-          category:
-            type: string
-    history:
-      type: array
-      description: Updated conversation history
-      items:
-        type: object
+  type: string
+  message?: string
+  calls?:
+    - id: string
+      name: string
+      args: {}
+      category: string
+  history:
+    - {}

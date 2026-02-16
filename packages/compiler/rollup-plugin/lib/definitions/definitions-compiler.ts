@@ -2,6 +2,7 @@ import { generateElementDefinitionFile } from '@jay-framework/compiler';
 import { LoadResult, PluginContext, TransformResult } from 'rollup';
 import { getFileContext, readFileAsString, writeDefinitionFile } from '../common/files';
 import path from 'node:path';
+import fs from 'node:fs';
 import {
     JAY_EXTENSION,
     hasExtension,
@@ -20,8 +21,61 @@ import {
     compileContract,
     parseAction,
     compileAction,
+    defaultContractResolver,
+    type JayImportResolver,
+    type ContractResolver,
 } from '@jay-framework/compiler-jay-html';
 import { checkCodeErrors } from '../common/errors';
+
+/**
+ * Creates a ContractResolver for action compilation using the import resolver.
+ * Uses the same resolveLink mechanism as contract link resolution
+ * (see linked-contract-resolver.ts), with support for both relative
+ * paths and npm packages.
+ */
+function createContractResolver(
+    baseDir: string,
+    importResolver: JayImportResolver,
+): ContractResolver {
+    return (contractSubpath: string) => {
+        const { viewStateName } = defaultContractResolver(contractSubpath);
+        const subpathWithExt = contractSubpath.endsWith(JAY_CONTRACT_EXTENSION)
+            ? contractSubpath
+            : contractSubpath + JAY_CONTRACT_EXTENSION;
+
+        // Try common relative locations using resolveLink,
+        // same mechanism as contract link resolution (linked-contract-resolver.ts)
+        const candidates = [
+            `./${subpathWithExt}`,
+            `../contracts/${subpathWithExt}`,
+            `./contracts/${subpathWithExt}`,
+            `../${subpathWithExt}`,
+        ];
+
+        for (const candidate of candidates) {
+            const absolutePath = importResolver.resolveLink(baseDir, candidate);
+            if (fs.existsSync(absolutePath)) {
+                const relativePath = path.relative(baseDir, absolutePath);
+                const importPath = relativePath.startsWith('.')
+                    ? relativePath
+                    : './' + relativePath;
+                return { importPath, viewStateName };
+            }
+        }
+
+        // Try bare name via require.resolve (npm package)
+        try {
+            const absolutePath = importResolver.resolveLink(baseDir, subpathWithExt);
+            const relativePath = path.relative(baseDir, absolutePath);
+            const importPath = relativePath.startsWith('.')
+                ? relativePath
+                : './' + relativePath;
+            return { importPath, viewStateName };
+        } catch {
+            return { importPath: './' + subpathWithExt, viewStateName };
+        }
+    };
+}
 
 export function jayDefinitions(projectRoot: string) {
     return {
@@ -103,7 +157,9 @@ export function jayDefinitions(projectRoot: string) {
                 const { filename, dirname } = getFileContext(id, JAY_ACTION_EXTENSION);
 
                 const parsedFile = parseAction(code, filename);
-                const tsCode = compileAction(parsedFile);
+
+                const contractResolver = createContractResolver(dirname, JAY_IMPORT_RESOLVER);
+                const tsCode = compileAction(parsedFile, contractResolver);
 
                 const validatedTsCode: string = checkValidationErrors(tsCode);
 

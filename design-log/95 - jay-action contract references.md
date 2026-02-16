@@ -10,6 +10,7 @@ Design Log #92 introduced `.jay-action` files as metadata descriptors for server
 ## Problem
 
 The `.jay-action` format should:
+
 - Reference contract ViewState types instead of duplicating them
 - Use the same compact type notation as jay-html (`string`, `number`, `enum(...)`, arrays as YAML lists, `?` for optional)
 - Reuse existing infrastructure: `resolveType`, JayType system, enum parsing
@@ -115,8 +116,8 @@ outputSchema:
 
 ### Type notation rules
 
-| Notation                      | Meaning                |  Example                     |
-|-------------------------------|------------------------|------------------------------|
+| Notation                      | Meaning                | Example                      |
+| ----------------------------- | ---------------------- | ---------------------------- |
 | `string`, `number`, `boolean` | Primitives             | `name: string`               |
 | `enum(a \| b \| c)`           | Enum type              | `sortBy?: enum(asc \| desc)` |
 | `propName?:`                  | Optional property      | `filters?: ...`              |
@@ -189,32 +190,38 @@ export interface SearchProductsOutput {
 
 ### Reuse of existing infrastructure
 
-| Component | Existing | Reuse for `.jay-action` |
-|-----------|----------|------------------------|
-| `resolveType()` | `jay-html-parser.ts` | Parse compact notation → JayType |
-| `resolvePrimitiveType()` | `compiler-shared` | Resolve `string`, `number`, etc. |
-| `parseIsEnum()` / `parseEnumValues()` | `expression-compiler.ts` | Parse `enum(...)` |
-| JayType hierarchy | `compiler-shared/jay-type.ts` | Internal type representation |
-| JayType → TypeScript | `contract-compiler.ts` | Generate `.d.ts` output |
+| Component                             | Existing                      | Reuse for `.jay-action`                                 |
+| ------------------------------------- | ----------------------------- | ------------------------------------------------------- |
+| `resolvePrimitiveType()`              | `compiler-shared`             | Resolve `string`, `number`, `boolean` → `JayAtomicType` |
+| `parseIsEnum()` / `parseEnumValues()` | `expression-compiler.ts`      | Parse `enum(...)` → `JayEnumType`                       |
+| `JayObjectType`                       | `compiler-shared/jay-type.ts` | Objects with properties                                 |
+| `JayArrayType`                        | `compiler-shared/jay-type.ts` | Array wrapping                                          |
+| `JayImportedType`                     | `compiler-shared/jay-type.ts` | Contract references (alias + nullable)                  |
+| `JayOptionalType` (**new**)           | `compiler-shared/jay-type.ts` | Wrap any type to mark optional                          |
 
-New code needed:
-- **Action parser**: Parse the `import:` block and `?` optional markers, then delegate to `resolveType`-like logic
-- **Action compiler**: Handle contract imports, generate import statements, emit TypeScript from JayType
-- **JayType → JSON Schema converter**: For AI agent runtime (materialization time), convert JayType to JSON Schema for Gemini function declarations
+New code:
+
+- **`JayOptionalType`** in `compiler-shared/jay-type.ts` — wrapper type for optional properties
+- **`resolveActionType()`** in `action-parser.ts` — parses compact notation into JayType (handles `?`, imports, `type[]`)
+- **Action compiler** in `action-compiler.ts` — renders JayType → TypeScript with contract imports, inline objects, union enums
+- **Compact → JSON Schema** in `action-metadata.ts` (runtime) — converts compact notation to JSON Schema at materialization time
 
 ## Implementation Plan
 
 ### Phase 1: Update parser and compiler
+
 1. Rewrite `action-parser.ts` to parse compact notation with `import:`, `?` optional, and YAML-based types
 2. Rewrite `action-compiler.ts` to emit TypeScript from JayType (with import statements for contracts)
 3. Add JayType → JSON Schema utility for runtime use
 4. Update tests
 
 ### Phase 2: Migrate `.jay-action` files
+
 1. Convert all existing `.jay-action` files (gemini-agent, wix-data, wix-stores, wix-stores-v1) to the new format
 2. Verify generated `.d.ts` files match expected output
 
 ### Phase 3: Runtime integration
+
 1. Update action metadata resolution to parse compact format
 2. Convert to JSON Schema at materialization time for AI agent tool descriptions
 
@@ -288,10 +295,55 @@ outputSchema:
 
 ## Trade-offs
 
-| Aspect | Pro | Con |
-|--------|-----|-----|
-| Compact notation | Much shorter files, consistent with jay-html | Breaking change to format just introduced |
-| JayType reuse | Single type system across framework | Need to add optional/nullable to JayType if not present |
-| Contract imports | Single source of truth for ViewState types | Coupling between action and contract files |
-| JSON Schema at runtime | Clean separation (define compact, export JSON Schema) | Extra conversion step |
-| `?` for optional | More ergonomic than `required` arrays | Slightly extends the notation vs jay-html data scripts |
+| Aspect                 | Pro                                                   | Con                                                    |
+| ---------------------- | ----------------------------------------------------- | ------------------------------------------------------ |
+| Compact notation       | Much shorter files, consistent with jay-html          | Breaking change to format just introduced              |
+| JayType reuse          | Single type system across framework                   | Added `JayOptionalType` to shared types                |
+| Contract imports       | Single source of truth for ViewState types            | Coupling between action and contract files             |
+| JSON Schema at runtime | Clean separation (define compact, export JSON Schema) | Extra conversion step                                  |
+| `?` for optional       | More ergonomic than `required` arrays                 | Slightly extends the notation vs jay-html data scripts |
+
+## Implementation Results
+
+### What was implemented
+
+**Phase 1 — Parser & Compiler** (compiler-jay-html)
+
+- Added `JayOptionalType` to `compiler-shared/jay-type.ts` — a wrapper type (`JayOptionalType(innerType)`) that marks any `JayType` as optional. Optional properties in `JayObjectType.props` are wrapped: `{ limit: new JayOptionalType(JayNumber) }`.
+- Rewrote `action-parser.ts` to produce JayType trees. Uses `resolvePrimitiveType()`, `parseIsEnum()`/`parseEnumValues()` from shared infra. New `resolveActionType()` handles `?` optional, contract imports (`JayImportedType`), and `type[]` array shorthand.
+- Rewrote `action-compiler.ts` with `ContractResolver` interface. Walks JayType tree, collects `JayImportedType` nodes, resolves to ViewState names and import paths. Action-specific renderer: inline objects, union enums, `Array<primitive>`.
+- Updated `definitions-compiler.ts` (rollup plugin) with contract resolver that searches sibling `contracts/` directory and parent directories for `.jay-contract` files. ESM-compatible (no `require()`/`glob`).
+
+**Phase 1b — Runtime** (stack-server-runtime)
+
+- Refactored `action-metadata.ts` to reuse the compiler's `parseAction()` from `compiler-jay-html` (which produces JayType trees), then convert to JSON Schema via `jayTypeToJsonSchema()` from `compiler-shared`. Eliminated the duplicate compact-to-JSON-Schema conversion logic.
+- Added `jayTypeToJsonSchema()` converter in `compiler-shared/lib/jay-type-to-json-schema.ts` — walks JayType tree and produces JSON Schema properties. Handles atomic, enum, array, object, imported (→ `{ type: 'object', description: 'Contract: ...' }`), and optional (unwraps to inner type, excludes from `required`).
+
+**Phase 2 — Migrated all 11 `.jay-action` files**
+
+- `gemini-agent`: 2 files (send-message, submit-tool-results)
+- `wix-data`: 3 files (query-items, get-item-by-slug, get-categories)
+- `wix-stores`: 3 files (search-products, get-product-by-slug, get-categories)
+- `wix-stores-v1`: 3 files (search-products, get-product-by-slug, get-collections)
+
+### Deviations from design
+
+1. **New `JayOptionalType` wrapper**: Added `JayOptionalType` to `compiler-shared/jay-type.ts` as a wrapper type — `JayOptionalType(innerType: JayType)`. Optional properties in `JayObjectType.props` are wrapped: `{ limit: new JayOptionalType(JayNumber) }`. The compiler unwraps to render `limit?: number`. This is cleaner than tracking optional as a side-channel `Set<string>` on the parent object — the optional marker lives with the type itself, composable like `JayArrayType` and `JayPromiseType`.
+
+2. **Action-specific TypeScript renderer**: The existing `generateTypes()` / `renderInterface()` in `jay-html-compile-types.ts` renders enums as `export enum`, uses commas between properties, extracts child interfaces as separate named types, and doesn't support `Array<primitive>`. For actions we need inline union enums (`'a' | 'b'`), semicolons, inline objects, and array-of-primitive support. Wrote an action-specific renderer that consumes JayType but renders for action `.d.ts` output.
+
+3. **No direct `resolveType()` reuse**: The existing `resolveType()` doesn't handle `?` optional keys, contract imports, or `type[]` array shorthand. Wrote a parallel `resolveActionType()` in the action parser that uses `resolvePrimitiveType()` and `parseIsEnum()`/`parseEnumValues()` from the shared infrastructure but adds action-specific features.
+
+4. **Contract references via `JayImportedType`**: Used `JayImportedType(alias, JayUnknown, isOptional)` where `alias` is the import key (e.g., "productCard"), `JayUnknown` is a placeholder (the actual type is resolved at compile time via `ContractResolver`), and `isOptional` indicates nullable (`?`).
+
+5. **Enum identifiers with hyphens**: The PEG grammar's `Identifier` rule doesn't support hyphens (e.g., `tool-calls`). Changed gemini-agent's `type` field from `enum(response | tool-calls)` to plain `string`. Non-breaking since the enum was only informational.
+
+6. **Empty objects**: `{}` in YAML (e.g., `pageState: {}`, `filter: {}`) generates `Record<string, unknown>` in TypeScript. Consistent with how unknown-shape objects should be typed.
+
+### Test results
+
+- compiler-shared: 11 jayTypeToJsonSchema tests passing
+- compiler-jay-html: 540 passed (20 test files), including 26 action tests
+- stack-server-runtime: 89 passed (10 test files), including 13 action-metadata tests
+- All wix packages build successfully with correct generated `.d.ts` files
+- Contract import resolution verified: `import { ProductCardViewState } from '../contracts/product-card.jay-contract'`

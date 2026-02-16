@@ -41,7 +41,7 @@ See [Testing](./testing.md) for details on test mode and smoke tests.
 
 ### `jay-stack validate`
 
-Validate all `.jay-html` and `.jay-contract` files in a project.
+Validate all `.jay-html`, `.jay-contract`, and `.jay-action` files in a project.
 
 ```bash
 jay-stack validate [path]
@@ -142,15 +142,15 @@ jay-cli <command> [options]
 
 ### `jay-cli definitions`
 
-Generate TypeScript definition files (`.d.ts`) for `.jay-html` and `.jay-contract` files. The `.d.ts` files are placed alongside the source files.
+Generate TypeScript definition files (`.d.ts`) for `.jay-html`, `.jay-contract`, and `.jay-action` files. The `.d.ts` files are placed alongside the source files.
 
 ```bash
 jay-cli definitions <source>
 ```
 
-| Argument   | Description                                                     |
-| ---------- | --------------------------------------------------------------- |
-| `<source>` | Source folder to scan for `.jay-html` and `.jay-contract` files |
+| Argument   | Description                                                                     |
+| ---------- | ------------------------------------------------------------------------------- |
+| `<source>` | Source folder to scan for `.jay-html`, `.jay-contract`, and `.jay-action` files |
 
 This is typically run as part of a build script:
 
@@ -161,6 +161,8 @@ This is typically run as part of a build script:
   }
 }
 ```
+
+For `.jay-action` files, this generates `Input` and `Output` TypeScript interfaces from the compact type notation. See [Action Metadata Files](./server-actions.md#action-metadata-files-jay-action) for the format.
 
 ### `jay-cli runtime`
 
@@ -206,7 +208,7 @@ jay-stack dev --timeout 60
 ### Type Generation
 
 ```bash
-# Generate .d.ts files for all jay-html and contracts
+# Generate .d.ts files for all jay-html, contracts, and actions
 jay-cli definitions src
 ```
 

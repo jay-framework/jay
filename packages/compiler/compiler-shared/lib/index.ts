@@ -1,6 +1,7 @@
 export * from './imports';
 export * from './constants';
 export * from './jay-type';
+export * from './jay-type-to-json-schema';
 export * from './jay-imports';
 export * from './runtime-mode';
 export * from './jay-module-specifier';
