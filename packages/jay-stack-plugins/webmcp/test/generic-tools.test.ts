@@ -12,13 +12,13 @@ const MOCK_AGENT = { requestUserInteraction: vi.fn() };
 
 describe('Generic Tools', () => {
     describe('get-page-state', () => {
-        it('should return current viewState', () => {
+        it('should return current viewState', async () => {
             const automation = createMockAutomation({
                 viewState: { items: [{ id: 'item-1' }], total: 29.99 },
             });
             const tool = makeGetPageStateTool(automation);
 
-            const result = tool.execute({}, MOCK_AGENT);
+            const result = await tool.execute({}, MOCK_AGENT);
 
             expect(result.content[0].text).toContain('"total": 29.99');
             expect(result.content[0].text).toContain('"item-1"');
@@ -42,12 +42,12 @@ describe('Generic Tools', () => {
     });
 
     describe('list-interactions', () => {
-        it('should return grouped interactions with string coordinates and elementType', () => {
+        it('should return grouped interactions with string coordinates and elementType', async () => {
             const interactions = cartInteractions();
             const automation = createMockAutomation({ interactions });
             const tool = makeListInteractionsTool(automation);
 
-            const result = tool.execute({}, MOCK_AGENT);
+            const result = await tool.execute({}, MOCK_AGENT);
             const text = result.content[0].text!;
 
             // Should contain grouped structure with serialized fields
@@ -67,7 +67,7 @@ describe('Generic Tools', () => {
             expect(tool.description).toContain('Multi-segment');
         });
 
-        it('should include options for select elements', () => {
+        it('should include options for select elements', async () => {
             const select = document.createElement('select');
             select.innerHTML = '<option value="sm">Small</option><option value="lg">Large</option>';
             const interactions: Interaction[] = [{
@@ -77,7 +77,7 @@ describe('Generic Tools', () => {
             const automation = createMockAutomation({ interactions });
             const tool = makeListInteractionsTool(automation);
 
-            const result = tool.execute({}, MOCK_AGENT);
+            const result = await tool.execute({}, MOCK_AGENT);
             const text = result.content[0].text!;
 
             expect(text).toContain('"options"');
@@ -85,7 +85,7 @@ describe('Generic Tools', () => {
             expect(text).toContain('"lg"');
         });
 
-        it('should include inputType for checkbox/radio elements', () => {
+        it('should include inputType for checkbox/radio elements', async () => {
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             const interactions: Interaction[] = [{
@@ -95,13 +95,13 @@ describe('Generic Tools', () => {
             const automation = createMockAutomation({ interactions });
             const tool = makeListInteractionsTool(automation);
 
-            const result = tool.execute({}, MOCK_AGENT);
+            const result = await tool.execute({}, MOCK_AGENT);
             const text = result.content[0].text!;
 
             expect(text).toContain('"inputType": "checkbox"');
         });
 
-        it('should not include options for non-select elements', () => {
+        it('should not include options for non-select elements', async () => {
             const input = document.createElement('input');
             const interactions: Interaction[] = [{
                 refName: 'nameInput',
@@ -110,7 +110,7 @@ describe('Generic Tools', () => {
             const automation = createMockAutomation({ interactions });
             const tool = makeListInteractionsTool(automation);
 
-            const result = tool.execute({}, MOCK_AGENT);
+            const result = await tool.execute({}, MOCK_AGENT);
             const text = result.content[0].text!;
 
             expect(text).not.toContain('"options"');
@@ -118,14 +118,14 @@ describe('Generic Tools', () => {
     });
 
     describe('trigger-interaction', () => {
-        it('should trigger click on a simple coordinate', () => {
+        it('should trigger click on a simple coordinate', async () => {
             const automation = createMockAutomation({
                 viewState: { count: 1 },
                 interactions: cartInteractions(),
             });
             const tool = makeTriggerInteractionTool(automation);
 
-            const result = tool.execute({ coordinate: 'addBtn' }, MOCK_AGENT);
+            const result = await tool.execute({ coordinate: 'addBtn' }, MOCK_AGENT);
 
             expect(automation.triggerEvent).toHaveBeenCalledWith('click', ['addBtn']);
             expect(result.isError).toBeUndefined();
@@ -151,14 +151,14 @@ describe('Generic Tools', () => {
             expect(automation.triggerEvent).toHaveBeenCalledWith('input', ['myInput']);
         });
 
-        it('should return error when element not found', () => {
+        it('should return error when element not found', async () => {
             const automation = createMockAutomation();
             (automation.triggerEvent as any).mockImplementation(() => {
                 throw new Error('No element found at coordinate: bad/coord');
             });
             const tool = makeTriggerInteractionTool(automation);
 
-            const result = tool.execute({ coordinate: 'bad/coord' }, MOCK_AGENT);
+            const result = await tool.execute({ coordinate: 'bad/coord' }, MOCK_AGENT);
 
             expect(result.isError).toBe(true);
             expect(result.content[0].text).toContain('No element found');
@@ -166,7 +166,7 @@ describe('Generic Tools', () => {
     });
 
     describe('fill-input', () => {
-        it('should set value and trigger both input and change events when both registered', () => {
+        it('should set value and trigger both input and change events when both registered', async () => {
             const mockElement = document.createElement('input');
             const interactions: Interaction[] = [
                 { refName: 'nameInput', items: [{ coordinate: ['nameInput'], element: mockElement, events: ['input', 'change'] }] },
@@ -174,7 +174,7 @@ describe('Generic Tools', () => {
             const automation = createMockAutomation({ interactions });
             const tool = makeFillInputTool(automation);
 
-            const result = tool.execute({ coordinate: 'nameInput', value: 'Test' }, MOCK_AGENT);
+            const result = await tool.execute({ coordinate: 'nameInput', value: 'Test' }, MOCK_AGENT);
 
             expect(mockElement.value).toBe('Test');
             expect(automation.triggerEvent).toHaveBeenCalledTimes(2);
@@ -226,12 +226,12 @@ describe('Generic Tools', () => {
             expect(mockElement.checked).toBe(false);
         });
 
-        it('should return error for unknown coordinate', () => {
+        it('should return error for unknown coordinate', async () => {
             const automation = createMockAutomation();
             (automation.getInteraction as any).mockReturnValue(undefined);
             const tool = makeFillInputTool(automation);
 
-            const result = tool.execute({ coordinate: 'unknown', value: 'x' }, MOCK_AGENT);
+            const result = await tool.execute({ coordinate: 'unknown', value: 'x' }, MOCK_AGENT);
 
             expect(result.isError).toBe(true);
         });
