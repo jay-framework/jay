@@ -1,128 +1,214 @@
 /**
  * Compiler for .jay-action files → .jay-action.d.ts
  *
- * Generates TypeScript Input and Output interfaces from action schema definitions.
+ * Generates TypeScript Input/Output interfaces from JayType trees,
+ * including import statements for contract references (JayImportedType).
  */
 
-import { WithValidations } from '@jay-framework/compiler-shared';
-import { ActionDefinition, ActionSchemaProperty } from './action-parser';
+import {
+    WithValidations,
+    JayType,
+    JayObjectType,
+    JayArrayType,
+    JayEnumType,
+    JayImportedType,
+    JayOptionalType,
+    JayAtomicType,
+    isObjectType,
+    isArrayType,
+    isEnumType,
+    isAtomicType,
+    isImportedType,
+    isOptionalType,
+} from '@jay-framework/compiler-shared';
+import { ActionDefinition } from './action-parser';
 import { pascalCase } from 'change-case';
 
-/**
- * Converts a JSON Schema property to a TypeScript type string.
- */
-function schemaPropertyToTs(prop: ActionSchemaProperty, indent: string = '  '): string {
-    if (prop.enum && prop.enum.length > 0) {
-        return prop.enum.map((v) => `'${v}'`).join(' | ');
-    }
+// ============================================================================
+// Contract resolution
+// ============================================================================
 
-    switch (prop.type) {
-        case 'string':
-            return 'string';
-        case 'number':
-        case 'integer':
-            return 'number';
-        case 'boolean':
-            return 'boolean';
-        case 'null':
-            return 'null';
-        case 'array':
-            if (prop.items) {
-                const itemType = schemaPropertyToTs(prop.items, indent);
-                return `Array<${itemType}>`;
-            }
-            return 'unknown[]';
-        case 'object':
-            if (prop.properties && Object.keys(prop.properties).length > 0) {
-                return renderInlineObject(prop.properties, prop.required, indent);
-            }
-            return 'Record<string, unknown>';
-        default:
-            return 'unknown';
+export interface ContractImportInfo {
+    importPath: string;
+    viewStateName: string;
+}
+
+export type ContractResolver = (contractSubpath: string) => ContractImportInfo | null;
+
+/**
+ * Default contract resolver that derives names from the subpath.
+ */
+export function defaultContractResolver(contractSubpath: string): ContractImportInfo {
+    const baseName = contractSubpath.replace('.jay-contract', '');
+    const viewStateName = pascalCase(baseName) + 'ViewState';
+    return { importPath: `./${contractSubpath}`, viewStateName };
+}
+
+// ============================================================================
+// Collect contract aliases from JayType tree
+// ============================================================================
+
+function collectImportedAliases(type: JayType, aliases: Set<string>): void {
+    if (isImportedType(type)) {
+        aliases.add(type.name);
+    } else if (isOptionalType(type)) {
+        collectImportedAliases(type.innerType, aliases);
+    } else if (isObjectType(type)) {
+        for (const prop of Object.values(type.props)) {
+            collectImportedAliases(prop, aliases);
+        }
+    } else if (isArrayType(type)) {
+        collectImportedAliases(type.itemType, aliases);
     }
 }
 
-/**
- * Renders an inline object type from properties.
- */
-function renderInlineObject(
-    properties: Record<string, ActionSchemaProperty>,
-    required?: string[],
-    indent: string = '  ',
-): string {
-    const requiredSet = new Set(required || []);
-    const lines: string[] = [];
-    const childIndent = indent + '  ';
+// ============================================================================
+// Type rendering (JayType → TypeScript)
+// ============================================================================
 
-    for (const [propName, propDef] of Object.entries(properties)) {
-        const optional = requiredSet.has(propName) ? '' : '?';
-        const tsType = schemaPropertyToTs(propDef, childIndent);
-        lines.push(`${childIndent}${propName}${optional}: ${tsType};`);
+/**
+ * Renders a JayType as a TypeScript type string.
+ * Action-specific: enums as inline unions, objects as inline blocks.
+ */
+function renderType(type: JayType, aliasToViewState: Map<string, string>, indent: string): string {
+    if (isOptionalType(type)) {
+        return renderType(type.innerType, aliasToViewState, indent);
     }
 
+    if (isAtomicType(type)) {
+        return type.name;
+    }
+
+    if (isEnumType(type)) {
+        return type.values.map((v) => `'${v}'`).join(' | ');
+    }
+
+    if (isImportedType(type)) {
+        const viewStateName = aliasToViewState.get(type.name) || type.name;
+        return type.isOptional ? `${viewStateName} | null` : viewStateName;
+    }
+
+    if (isArrayType(type)) {
+        const itemStr = renderType(type.itemType, aliasToViewState, indent + '  ');
+        return `Array<${itemStr}>`;
+    }
+
+    if (isObjectType(type)) {
+        if (Object.keys(type.props).length === 0) {
+            return 'Record<string, unknown>';
+        }
+        return renderInlineObject(type, aliasToViewState, indent);
+    }
+
+    return 'unknown';
+}
+
+/**
+ * Renders a JayObjectType as an inline `{ ... }` block.
+ */
+function renderInlineObject(
+    type: JayObjectType,
+    aliasToViewState: Map<string, string>,
+    indent: string,
+): string {
+    const childIndent = indent + '  ';
+    const lines = Object.entries(type.props).map(([prop, propType]) => {
+        const optional = isOptionalType(propType) ? '?' : '';
+        const tsType = renderType(propType, aliasToViewState, childIndent);
+        return `${childIndent}${prop}${optional}: ${tsType};`;
+    });
     return `{\n${lines.join('\n')}\n${indent}}`;
 }
 
 /**
- * Renders a top-level interface from a schema.
+ * Renders a top-level interface from a JayObjectType.
  */
 function renderInterface(
     interfaceName: string,
-    properties: Record<string, ActionSchemaProperty>,
-    required?: string[],
+    type: JayObjectType,
+    aliasToViewState: Map<string, string>,
 ): string {
-    const requiredSet = new Set(required || []);
-    const lines: string[] = [];
-
-    for (const [propName, propDef] of Object.entries(properties)) {
-        const optional = requiredSet.has(propName) ? '' : '?';
-        const tsType = schemaPropertyToTs(propDef, '  ');
-        lines.push(`  ${propName}${optional}: ${tsType};`);
-    }
-
-    if (lines.length === 0) {
+    const propKeys = Object.keys(type.props);
+    if (propKeys.length === 0) {
         return `export interface ${interfaceName} {}`;
     }
+
+    const lines = propKeys.map((prop) => {
+        const optional = isOptionalType(type.props[prop]) ? '?' : '';
+        const tsType = renderType(type.props[prop], aliasToViewState, '  ');
+        return `  ${prop}${optional}: ${tsType};`;
+    });
 
     return `export interface ${interfaceName} {\n${lines.join('\n')}\n}`;
 }
 
 /**
- * Renders an output type from an outputSchema.
- * Handles object types (as interfaces) and other types (as type aliases).
+ * Renders the output type (interface for objects, type alias for other shapes).
  */
-function renderOutputType(typeName: string, schema: ActionSchemaProperty): string {
-    if (schema.type === 'object' && schema.properties) {
-        return renderInterface(typeName, schema.properties, schema.required);
+function renderOutputType(
+    typeName: string,
+    outputType: JayType,
+    aliasToViewState: Map<string, string>,
+): string {
+    if (isObjectType(outputType) && Object.keys(outputType.props).length > 0) {
+        return renderInterface(typeName, outputType, aliasToViewState);
     }
 
-    const tsType = schemaPropertyToTs(schema);
+    const tsType = renderType(outputType, aliasToViewState, '');
     return `export type ${typeName} = ${tsType};`;
 }
 
+// ============================================================================
+// Main compiler
+// ============================================================================
+
 /**
- * Compiles an ActionDefinition into a TypeScript .d.ts string.
- *
- * @param actionWithValidations - Parsed action definition
- * @returns TypeScript definition string with validation messages
+ * Compiles an ActionDefinition (with JayType) into a TypeScript .d.ts string.
  */
 export function compileAction(
     actionWithValidations: WithValidations<ActionDefinition>,
+    contractResolver: ContractResolver = defaultContractResolver,
 ): WithValidations<string> {
     return actionWithValidations.map((action) => {
         const baseName = pascalCase(action.name);
         const sections: string[] = [];
 
+        // Collect all JayImportedType aliases used in the tree
+        const usedAliases = new Set<string>();
+        collectImportedAliases(action.inputType, usedAliases);
+        if (action.outputType) {
+            collectImportedAliases(action.outputType, usedAliases);
+        }
+
+        // Resolve aliases to ViewState names and import paths
+        const aliasToViewState = new Map<string, string>();
+        const importStatements: string[] = [];
+
+        for (const alias of usedAliases) {
+            const contractSubpath = action.imports[alias];
+            if (!contractSubpath) continue;
+
+            const resolved = contractResolver(contractSubpath);
+            if (!resolved) continue;
+
+            aliasToViewState.set(alias, resolved.viewStateName);
+            importStatements.push(
+                `import { ${resolved.viewStateName} } from '${resolved.importPath}';`,
+            );
+        }
+
+        if (importStatements.length > 0) {
+            sections.push(importStatements.join('\n'));
+        }
+
         // Input interface
-        const inputName = `${baseName}Input`;
-        sections.push(
-            renderInterface(inputName, action.inputSchema.properties, action.inputSchema.required),
-        );
+        sections.push(renderInterface(`${baseName}Input`, action.inputType, aliasToViewState));
 
         // Output type (optional)
-        if (action.outputSchema) {
-            const outputName = `${baseName}Output`;
-            sections.push(renderOutputType(outputName, action.outputSchema));
+        if (action.outputType) {
+            sections.push(
+                renderOutputType(`${baseName}Output`, action.outputType, aliasToViewState),
+            );
         }
 
         return sections.join('\n\n');
