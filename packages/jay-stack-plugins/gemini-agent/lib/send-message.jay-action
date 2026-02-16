@@ -1,0 +1,72 @@
+name: sendMessage
+description: Send a user message to the Gemini agent. Includes conversation history, page automation tool definitions, and current page state. Returns either a text response or pending tool calls.
+
+inputSchema:
+  type: object
+  properties:
+    message:
+      type: string
+      description: The user's message text
+    history:
+      type: array
+      description: Full conversation history in Gemini format
+      items:
+        type: object
+        properties:
+          role:
+            type: string
+          parts:
+            type: array
+            items:
+              type: object
+    toolDefinitions:
+      type: array
+      description: Page automation tool definitions serialized from client
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+          description:
+            type: string
+          inputSchema:
+            type: object
+          category:
+            type: string
+    pageState:
+      type: object
+      description: Current page state snapshot from AutomationAPI
+  required:
+    - message
+    - history
+    - toolDefinitions
+    - pageState
+
+outputSchema:
+  type: object
+  properties:
+    type:
+      type: string
+      description: "'response' for text reply, 'tool-calls' for pending tool execution"
+    message:
+      type: string
+      description: Assistant text response (when type is 'response')
+    calls:
+      type: array
+      description: Pending tool calls (when type is 'tool-calls')
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+          name:
+            type: string
+          args:
+            type: object
+          category:
+            type: string
+    history:
+      type: array
+      description: Updated conversation history
+      items:
+        type: object

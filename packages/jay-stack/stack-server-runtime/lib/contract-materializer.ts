@@ -11,18 +11,18 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import YAML from 'yaml';
 import type {
-    GeneratedContractYaml,
     DynamicContractGenerator,
+    GeneratedContractYaml,
 } from '@jay-framework/fullstack-component';
 import { type DynamicContractConfig, normalizeActionEntry } from '@jay-framework/compiler-shared';
 import { createRequire } from 'module';
-import { scanPlugins, type ScannedPlugin } from './plugin-scanner';
+import { type ScannedPlugin, scanPlugins } from './plugin-scanner';
 import type { ViteSSRLoader } from './action-discovery';
 import { getLogger } from '@jay-framework/logger';
 import {
+    type ActionMetadata,
     loadActionMetadata,
     resolveActionMetadataPath,
-    type ActionMetadata,
 } from './action-metadata';
 
 const require = createRequire(import.meta.url);
@@ -217,8 +217,7 @@ async function executeDynamicGenerator(
         getLogger().info(`   Executing generator...`);
     }
 
-    const result = await generator.generate(...resolvedServices);
-    return result;
+    return await generator.generate(...resolvedServices);
 }
 
 // ============================================================================
@@ -255,6 +254,41 @@ function resolveStaticContractPath(
         // For local plugins, resolve relative to plugin directory
         return path.join(pluginPath, contractSpec);
     }
+}
+
+/**
+ * Resolves the path to a .jay-action file.
+ * For NPM packages, uses require.resolve (package exports).
+ * For local plugins, resolves relative to plugin directory.
+ */
+function resolveActionFilePath(
+    actionPath: string,
+    packageName: string,
+    pluginPath: string,
+    isLocal: boolean,
+    projectRoot: string,
+): string | null {
+    if (!isLocal && !actionPath.startsWith('.')) {
+        // NPM package: resolve via package exports
+        try {
+            return require.resolve(`${packageName}/${actionPath}`, {
+                paths: [projectRoot],
+            });
+        } catch {
+            // Fallback to common locations
+            const possiblePaths = [
+                path.join(pluginPath, 'dist', actionPath),
+                path.join(pluginPath, 'lib', actionPath),
+                path.join(pluginPath, actionPath),
+            ];
+            const found = possiblePaths.find((p) => fs.existsSync(p));
+            return found || null;
+        }
+    }
+
+    // Local plugin or relative path
+    const resolved = resolveActionMetadataPath(actionPath, pluginPath);
+    return fs.existsSync(resolved) ? resolved : null;
 }
 
 // ============================================================================
@@ -462,7 +496,14 @@ export async function materializeContracts(
                 const { name: actionName, action: actionPath } = normalizeActionEntry(entry);
                 if (!actionPath) continue; // No .jay-action file — skip
 
-                const metadataFilePath = resolveActionMetadataPath(actionPath, plugin.pluginPath);
+                const metadataFilePath = resolveActionFilePath(
+                    actionPath,
+                    plugin.packageName,
+                    plugin.pluginPath,
+                    plugin.isLocal,
+                    projectRoot,
+                );
+                if (!metadataFilePath) continue;
                 const metadata = loadActionMetadata(metadataFilePath);
                 if (!metadata) continue;
 

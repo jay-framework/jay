@@ -45,6 +45,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 51  | Project Structure Identification             | Pages vs Components identification                                     |
 | 61  | json-patch typed JSONPointer                 | Typed JSON operations                                                  |
 | 79  | linked contracts with mixed phase properties | Linked sub-contracts across rendering phases                           |
+| 95  | jay-action contract references               | Reference contract ViewState types from .jay-action output schemas     |
 
 ---
 
@@ -195,6 +196,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 83  | dev server logging and timing                          | Clean output, verbose mode, timing for render phases                                  |
 | 85  | rendering phases and agent kit for agentic generation  | Agent-kit folder: instructions, contracts, markdown content with headless annotations |
 | 91  | WebMCP plugin for jay-stack                            | Generic WebMCP support: automation→tools/resources/prompts, plugin packaging          |
+| 92  | Gemini agent plugin for jay-stack                      | Embedded AI agent: Gemini API, .jay-action metadata, chat contract, page automation   |
 
 ---
 
@@ -238,7 +240,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ### "I'm working on AI agent integration"
 
-→ See #76 (AI Agent Integration), #77 (automation dev server), #80 (contract materialization for agents), #85 (agent kit and rendering phases), #91 (WebMCP plugin)
+→ See #76 (AI Agent Integration), #77 (automation dev server), #80 (contract materialization for agents), #85 (agent kit and rendering phases), #91 (WebMCP plugin), #92 (Gemini agent plugin)
 → Agent kit skills: `.cursor/skills/jay-agent-kit/` (main), `jay-html-authoring/`, `jay-cli-commands/`, `jay-contracts-and-plugins/`, `jay-dev-server-test/`
 
 ### "I need to understand the full workflow lifecycle"

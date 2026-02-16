@@ -14,7 +14,6 @@ import {
     loadPluginManifest,
     PluginManifest,
     normalizeActionEntry,
-    type ActionManifestEntry,
 } from '@jay-framework/compiler-shared';
 import { getLogger } from '@jay-framework/logger';
 import { loadActionMetadata, resolveActionMetadataPath } from './action-metadata';
@@ -314,6 +313,41 @@ function tryResolvePluginYaml(packageName: string, projectRoot: string): string 
 }
 
 /**
+ * Resolves a .jay-action file path for an NPM package.
+ *
+ * For NPM packages, action paths are export subpaths (e.g. "send-message.jay-action")
+ * resolved via require.resolve (like contracts). Falls back to path.resolve from pluginDir
+ * for backward compatibility with relative paths.
+ */
+function resolveNpmActionMetadataPath(
+    actionPath: string,
+    packageName: string,
+    pluginDir: string,
+): string | null {
+    // First try as a package export subpath (e.g. "packageName/send-message.jay-action")
+    if (!actionPath.startsWith('.')) {
+        try {
+            return require.resolve(`${packageName}/${actionPath}`, {
+                paths: [pluginDir],
+            });
+        } catch {
+            // Fall through to relative resolution
+        }
+    }
+
+    // Fall back to relative resolution from plugin dir
+    const resolved = resolveActionMetadataPath(actionPath, pluginDir);
+    if (fs.existsSync(resolved)) {
+        return resolved;
+    }
+
+    getLogger().warn(
+        `[Actions] Could not resolve .jay-action file "${actionPath}" for package "${packageName}"`,
+    );
+    return null;
+}
+
+/**
  * Registers actions from an npm package plugin.
  */
 async function registerNpmPluginActions(
@@ -347,14 +381,20 @@ async function registerNpmPluginActions(
 
                 // Load .jay-action metadata if a file path is specified
                 if (actionPath) {
-                    const metadataFilePath = resolveActionMetadataPath(actionPath, pluginDir);
-                    const metadata = loadActionMetadata(metadataFilePath);
-                    if (metadata) {
-                        registry.setMetadata(registeredName, metadata);
-                        if (verbose) {
-                            getLogger().info(
-                                `[Actions] Loaded metadata for "${registeredName}" from ${actionPath}`,
-                            );
+                    const metadataFilePath = resolveNpmActionMetadataPath(
+                        actionPath,
+                        packageName,
+                        pluginDir,
+                    );
+                    if (metadataFilePath) {
+                        const metadata = loadActionMetadata(metadataFilePath);
+                        if (metadata) {
+                            registry.setMetadata(registeredName, metadata);
+                            if (verbose) {
+                                getLogger().info(
+                                    `[Actions] Loaded metadata for "${registeredName}" from ${actionPath}`,
+                                );
+                            }
                         }
                     }
                 }

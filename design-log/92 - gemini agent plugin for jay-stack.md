@@ -799,3 +799,68 @@ We import and reuse `buildSemanticTools` and the generic tool builders from `@ja
 #### Deviations from design
 
 None — implementation follows the design exactly.
+
+### Phases 1–4: Gemini Agent Plugin — DONE
+
+**Test results:** 36/36 passing (gemini-agent plugin)
+
+#### Package structure
+
+Created `packages/jay-stack-plugins/gemini-agent/` with:
+
+| File             | Purpose                                                                      |
+| ---------------- | ---------------------------------------------------------------------------- |
+| `package.json`   | Package config, deps: `@google/genai`, `js-yaml`, framework packages         |
+| `tsconfig.json`  | Extends `library-dom` config                                                 |
+| `vite.config.ts` | Client/server builds via `jayStackCompiler`                                  |
+| `plugin.yaml`    | `global: true`, contracts, actions (with `.jay-action` files), setup handler |
+
+#### Phase 1: Plugin scaffolding + config
+
+| File                   | Purpose                                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------------------ |
+| `lib/config-loader.ts` | Loads `config/.gemini.yaml`, validates apiKey, returns `GeminiAgentConfig`                             |
+| `lib/setup.ts`         | `setupGeminiAgent()` — creates config template, validates config status                                |
+| `lib/init.ts`          | `makeJayInit().withServer()` — loads config, creates `GeminiService`, registers via `createJayService` |
+| `lib/gemini-types.ts`  | Shared types: `GeminiMessage`, `SerializedToolDef`, `SendMessageInput/Output`, `PendingToolCall`, etc. |
+
+#### Phase 2: Gemini service + tool bridge
+
+| File                    | Purpose                                                                                                                                   |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `lib/gemini-service.ts` | Stateless `GeminiService` class wrapping `@google/genai` SDK — `generateWithTools()`                                                      |
+| `lib/tool-bridge.ts`    | `toGeminiTools()` — converts client tools + server action metadata → `FunctionDeclaration[]`; `resolveToolCallTarget()` — reverse mapping |
+| `lib/system-prompt.ts`  | `buildSystemPrompt()` — page state as JSON context, server action descriptions, custom prefix support                                     |
+
+#### Phase 3: Server actions
+
+| File                                         | Purpose                                                                                                                                                                                      |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `lib/gemini-actions.ts`                      | `sendMessage` + `submitToolResults` — `makeJayAction` with `GEMINI_SERVICE` injection                                                                                                        |
+| `lib/message-handler.ts`                     | `handleConversation()` + `processGeminiTurn()` — core loop: call Gemini, execute server-action tools immediately, return page-automation tool calls to client, recurse on all-server results |
+| `lib/actions/send-message.jay-action`        | Action metadata for AI agent discovery                                                                                                                                                       |
+| `lib/actions/submit-tool-results.jay-action` | Action metadata for AI agent discovery                                                                                                                                                       |
+
+#### Phase 4: Chat component + contract
+
+| File                           | Purpose                                                                                                                                                                                                                  |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `lib/gemini-chat.jay-contract` | Contract with: `messages` (repeated), `messageInput`, `sendMessage`, `toggleExpand`, `isLoading`/`isExpanded`/`hasError`/`hasMessages` variants, `lastUserMessage`/`lastAssistantMessage` (compact mode), `errorMessage` |
+| `lib/gemini-chat.ts`           | Headless component: client-side history management, tool building from `AutomationAPI`, tool execution loop, `createActionCaller` for server actions                                                                     |
+| `lib/index.ts`                 | Barrel exports: init, setup, actions, types, service, component, tool-bridge, system-prompt                                                                                                                              |
+
+#### Tests
+
+| File                           | Tests                                                                                                 |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `test/config-loader.test.ts`   | 8 tests: valid config, defaults, missing/empty/placeholder apiKey                                     |
+| `test/setup.test.ts`           | 9 tests: template creation, placeholder detection, init errors, configured status                     |
+| `test/tool-bridge.test.ts`     | 7 tests: client tools, server actions, mixed, reverse resolution                                      |
+| `test/system-prompt.test.ts`   | 6 tests: page state, server actions, custom/default prefix, instructions                              |
+| `test/message-handler.test.ts` | 6 tests: text response, tool calls, server action execution + recursion, mixed calls, empty responses |
+
+#### Deviations from design
+
+1. **Independent tool building** — the component builds serialized tools from `AutomationAPI` directly instead of importing `buildSemanticTools` from webmcp-plugin. This removes the dependency on webmcp-plugin and avoids coupling the two plugins. The tool name format (click-/fill-/toggle- prefix) is kept consistent.
+2. **No `conversation-manager.ts`** — conversation state is managed inline in the component (as simple signals), which is simpler than a separate file.
+3. **`gemini-types.ts` shared types** — types are in a single file rather than scattered across modules, providing a single import point.

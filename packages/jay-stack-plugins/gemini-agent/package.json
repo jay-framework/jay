@@ -1,0 +1,56 @@
+{
+  "name": "@jay-framework/gemini-agent-plugin",
+  "version": "0.12.0",
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "Gemini AI agent plugin for jay-stack — embedded chat agent with page automation and server action calling",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./client": "./dist/index.client.js",
+    "./gemini-chat.jay-contract": "./dist/gemini-chat.jay-contract",
+    "./send-message.jay-action": "./dist/send-message.jay-action",
+    "./submit-tool-results.jay-action": "./dist/submit-tool-results.jay-action",
+    "./plugin.yaml": "./plugin.yaml"
+  },
+  "files": [
+    "dist",
+    "plugin.yaml"
+  ],
+  "scripts": {
+    "build": "npm run definitions && npm run build:client && npm run build:server && npm run build:copy-contract && npm run build:types",
+    "build:client": "vite build",
+    "build:server": "vite build --ssr",
+    "build:copy-contract": "cp lib/*.jay-contract* lib/*.jay-action dist/",
+    "build:types": "tsup lib/index.ts --dts-only --format esm",
+    "build:check-types": "tsc",
+    "definitions": "jay-cli definitions lib",
+    "clean": "rimraf dist",
+    "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@google/genai": "^0.14.0",
+    "@jay-framework/component": "workspace:^",
+    "@jay-framework/fullstack-component": "workspace:^",
+    "@jay-framework/runtime": "workspace:^",
+    "@jay-framework/runtime-automation": "workspace:^",
+    "@jay-framework/stack-client-runtime": "workspace:^",
+    "@jay-framework/stack-server-runtime": "workspace:^",
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@jay-framework/compiler-jay-stack": "workspace:^",
+    "@jay-framework/dev-environment": "workspace:^",
+    "@jay-framework/jay-cli": "workspace:^",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.15.21",
+    "rimraf": "^5.0.5",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.11",
+    "vitest": "^1.2.1"
+  }
+}
