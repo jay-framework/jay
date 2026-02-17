@@ -8,7 +8,7 @@
 import { makeJayInit, createJayService } from '@jay-framework/fullstack-component';
 import { registerService } from '@jay-framework/stack-server-runtime';
 import { loadConfig } from './config-loader';
-import { GeminiService } from './gemini-service';
+import { GeminiService } from './agent/service';
 
 // Service marker for dependency injection
 export const GEMINI_SERVICE = createJayService<GeminiService>('GeminiService');

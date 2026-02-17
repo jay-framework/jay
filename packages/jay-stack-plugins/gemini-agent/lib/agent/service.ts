@@ -6,7 +6,7 @@
 
 import { GoogleGenAI, Type } from '@google/genai';
 import type { FunctionDeclaration, Schema } from '@google/genai';
-import type { GeminiMessage, GeminiFunctionDeclaration, GeminiServiceConfig } from './gemini-types';
+import type { GeminiMessage, GeminiFunctionDeclaration, GeminiServiceConfig } from '../types';
 
 /**
  * Maps JSON Schema type strings to Gemini SDK Type enum values.

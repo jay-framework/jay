@@ -6,7 +6,7 @@
  */
 
 import { actionRegistry } from '@jay-framework/stack-server-runtime';
-import { GeminiService } from './gemini-service';
+import { GeminiService } from './service';
 import { toGeminiTools, resolveToolCallTarget } from './tool-bridge';
 import { buildSystemPrompt } from './system-prompt';
 import type {
@@ -17,7 +17,7 @@ import type {
     SendMessageOutput,
     SerializedToolDef,
     GeminiFunctionResponsePart,
-} from './gemini-types';
+} from '../types';
 
 /**
  * Processes a Gemini response and handles tool calls:

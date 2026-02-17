@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { toGeminiTools, resolveToolCallTarget } from '../lib/tool-bridge';
-import type { SerializedToolDef } from '../lib/gemini-types';
+import { toGeminiTools, resolveToolCallTarget } from '../lib/agent/tool-bridge';
+import type { SerializedToolDef } from '../lib/types';
 import type { ActionMetadata } from '@jay-framework/stack-server-runtime';
 
 describe('tool-bridge', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSystemPrompt } from '../lib/system-prompt';
+import { buildSystemPrompt } from '../lib/agent/system-prompt';
 
 describe('system-prompt', () => {
     it('should include page state as JSON context', () => {

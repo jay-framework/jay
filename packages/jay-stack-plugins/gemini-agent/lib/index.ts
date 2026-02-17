@@ -5,7 +5,7 @@ export { init, GEMINI_SERVICE } from './init';
 export { setupGeminiAgent } from './setup';
 
 // Server actions
-export { sendMessage, submitToolResults } from './gemini-actions';
+export { sendMessage, submitToolResults } from './actions/handlers';
 
 // Types
 export type {
@@ -23,20 +23,20 @@ export type {
     ToolCallResult,
     GeminiFunctionDeclaration,
     GeminiServiceConfig,
-} from './gemini-types';
+} from './types';
 
 // Config
 export type { GeminiAgentConfig } from './config-loader';
 
 // Service
-export { GeminiService } from './gemini-service';
+export { GeminiService } from './agent/service';
 
 // Component
 export { geminiChat } from './gemini-chat';
 
 // Tool bridge (for advanced usage / testing)
-export { toGeminiTools, resolveToolCallTarget } from './tool-bridge';
+export { toGeminiTools, resolveToolCallTarget } from './agent/tool-bridge';
 
 // System prompt (for advanced usage / testing)
-export { buildSystemPrompt } from './system-prompt';
-export type { ServerActionSummary } from './system-prompt';
+export { buildSystemPrompt } from './agent/system-prompt';
+export type { ServerActionSummary } from './agent/system-prompt';

@@ -6,8 +6,8 @@
 
 import { makeJayAction } from '@jay-framework/fullstack-component';
 import { getService } from '@jay-framework/stack-server-runtime';
-import { GEMINI_SERVICE } from './init';
-import { handleConversation } from './message-handler';
+import { GEMINI_SERVICE } from '../init';
+import { handleConversation } from '../agent/message-handler';
 import type {
     SendMessageInput,
     SendMessageOutput,
@@ -15,7 +15,7 @@ import type {
     SubmitToolResultsOutput,
     GeminiMessage,
     GeminiFunctionResponsePart,
-} from './gemini-types';
+} from '../types';
 
 /**
  * Main entry point for chat messages.

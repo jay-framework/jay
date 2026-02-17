@@ -9,9 +9,9 @@
   "exports": {
     ".": "./dist/index.js",
     "./client": "./dist/index.client.js",
-    "./gemini-chat.jay-contract": "./dist/gemini-chat.jay-contract",
-    "./send-message.jay-action": "./dist/send-message.jay-action",
-    "./submit-tool-results.jay-action": "./dist/submit-tool-results.jay-action",
+    "./gemini-chat.jay-contract": "./dist/contracts/gemini-chat.jay-contract",
+    "./send-message.jay-action": "./dist/actions/send-message.jay-action",
+    "./submit-tool-results.jay-action": "./dist/actions/submit-tool-results.jay-action",
     "./plugin.yaml": "./plugin.yaml"
   },
   "files": [
@@ -22,7 +22,7 @@
     "build": "npm run definitions && npm run build:client && npm run build:server && npm run build:copy-contract && npm run build:types",
     "build:client": "vite build",
     "build:server": "vite build --ssr",
-    "build:copy-contract": "cp lib/*.jay-contract* lib/*.jay-action dist/",
+    "build:copy-contract": "mkdir -p dist/contracts && cp lib/contracts/*.jay-contract* dist/contracts/ && mkdir -p dist/actions && cp lib/actions/*.jay-action dist/actions/",
     "build:types": "tsup lib/index.ts --dts-only --format esm",
     "build:check-types": "tsc",
     "definitions": "jay-cli definitions lib",

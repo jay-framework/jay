@@ -15,7 +15,7 @@ import type {
     GeminiChatRefs,
     GeminiChatFastViewState,
     GeminiChatViewState,
-} from './gemini-chat.jay-contract';
+} from './contracts/gemini-chat.jay-contract';
 import type {
     GeminiMessage,
     SendMessageInput,
@@ -25,7 +25,7 @@ import type {
     SerializedToolDef,
     PendingToolCall,
     ToolCallResult,
-} from './gemini-types';
+} from './types';
 
 // ============================================================================
 // Types

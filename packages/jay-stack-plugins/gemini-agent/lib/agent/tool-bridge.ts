@@ -7,7 +7,7 @@
  */
 
 import type { ActionMetadata } from '@jay-framework/stack-server-runtime';
-import type { SerializedToolDef, GeminiFunctionDeclaration } from './gemini-types';
+import type { SerializedToolDef, GeminiFunctionDeclaration } from '../types';
 
 /**
  * Converts page automation tools and server actions into Gemini function declarations.

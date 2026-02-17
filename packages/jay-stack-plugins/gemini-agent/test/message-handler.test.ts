@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { handleConversation, processGeminiTurn } from '../lib/message-handler';
-import { GeminiService } from '../lib/gemini-service';
-import type { GeminiMessage, SerializedToolDef } from '../lib/gemini-types';
+import { handleConversation, processGeminiTurn } from '../lib/agent/message-handler';
+import { GeminiService } from '../lib/agent/service';
+import type { GeminiMessage, SerializedToolDef } from '../lib/types';
 
 // Mock dependencies
 vi.mock('@jay-framework/stack-server-runtime', () => ({
