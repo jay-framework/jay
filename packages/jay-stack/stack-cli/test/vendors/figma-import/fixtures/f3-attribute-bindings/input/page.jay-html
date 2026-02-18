@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+  <div style="display: flex; flex-direction: column; width: 500px; gap: 16px; padding: 20px; background-color: #ffffff;">
+    <img src="{imageUrl}" alt="{productName}" style="width: 460px; height: 300px; border-radius: 8px;" />
+    <a href="{link}" style="font-size: 20px; font-weight: 600; color: #0066cc;">View Details</a>
+    <div style="font-size: 14px; color: #888888;">Click the link above to learn more.</div>
+  </div>
+</body>
+</html>

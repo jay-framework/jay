@@ -1,0 +1,37 @@
+{
+  "id": "fbacc9edefa1",
+  "name": "test",
+  "type": "SECTION",
+  "visible": true,
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/test"
+  },
+  "children": [
+    {
+      "id": "73224e1a70d8",
+      "name": "content",
+      "type": "FRAME",
+      "visible": true,
+      "width": 600,
+      "layoutMode": "VERTICAL",
+      "itemSpacing": 20,
+      "paddingTop": 32,
+      "paddingRight": 32,
+      "paddingBottom": 32,
+      "paddingLeft": 32,
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": {
+            "r": 0.9607843137254902,
+            "g": 0.9607843137254902,
+            "b": 0.9607843137254902
+          },
+          "opacity": 1
+        }
+      ],
+      "cornerRadius": 8
+    }
+  ]
+}

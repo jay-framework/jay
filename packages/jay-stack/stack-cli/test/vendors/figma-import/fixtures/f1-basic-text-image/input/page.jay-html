@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+  <div style="display: flex; flex-direction: column; width: 600px; gap: 20px; padding: 32px; background-color: #f5f5f5; border-radius: 8px;">
+    <div style="font-size: 32px; font-weight: 700; color: #000000;">Welcome to Our Store</div>
+    <div style="font-size: 16px; color: #555555; line-height: 24px;">Browse our collection of premium products crafted with care.</div>
+    <img src="https://placeholder.com/hero.jpg" alt="Hero image" style="width: 536px; height: 280px; border-radius: 4px;" />
+  </div>
+</body>
+</html>
