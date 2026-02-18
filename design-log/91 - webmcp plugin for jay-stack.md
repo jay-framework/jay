@@ -1310,6 +1310,33 @@ webmcp-plugin/
 
 ---
 
+### Post-implementation: Init timing — setTimeout(0) race condition
+
+The `setTimeout(0)` approach from the previous timing fix has its own race condition. The generated client script `await`s each plugin `_clientInit` in order. If any plugin init after webmcp has genuinely async work (e.g., a network call), the `await` yields to the event loop, allowing webmcp's `setTimeout(0)` macrotask to fire before the script reaches `window.__jay.automation = ...`.
+
+**Sequence that fails:**
+
+1. webmcp `_clientInit` runs → `setTimeout(fn, 0)` scheduled → returns
+2. Next plugin's `_clientInit` runs → does `await fetch(...)` → yields to event loop
+3. Macrotask queue fires → webmcp's `setTimeout(0)` runs → `window.__jay.automation` not set yet
+
+**Fix:** Replaced `setTimeout(0)` with a deterministic event-based approach:
+
+- `generate-client-script.ts` dispatches a `jay:automation-ready` event right after setting `window.__jay.automation`
+- webmcp's `init.ts` listens for this event instead of using setTimeout
+- Also handles the edge case where automation is already set (listener registered after dispatch) by checking upfront
+
+Since `dispatchEvent` is synchronous, all listeners fire immediately in the same call stack as the assignment — no timing gaps.
+
+**Files changed:**
+
+| File | Change |
+|------|--------|
+| `webmcp-plugin/lib/init.ts` | Replaced `setTimeout(0)` with `addEventListener('jay:automation-ready', ...)` + upfront check |
+| `stack-server-runtime/lib/generate-client-script.ts` | Added `window.dispatchEvent(new Event('jay:automation-ready'))` after setting `window.__jay.automation` (both slow+fast ViewState branches) |
+
+---
+
 ## Related Design Logs
 
 - **#76** — AI Agent Integration (AutomationAPI design)

@@ -121,6 +121,7 @@ ${parts.map((part) => '        ' + part.clientPart).join(',\n')}
       registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
       window.__jay = window.__jay || {};
       window.__jay.automation = wrapped.automation;
+      window.dispatchEvent(new Event('jay:automation-ready'));
       target.appendChild(wrapped.element.dom);`
             : `
       // Wrap with automation for dev tooling
@@ -128,6 +129,7 @@ ${parts.map((part) => '        ' + part.clientPart).join(',\n')}
       registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
       window.__jay = window.__jay || {};
       window.__jay.automation = wrapped.automation;
+      window.dispatchEvent(new Event('jay:automation-ready'));
       target.appendChild(wrapped.element.dom);`
         : `
       target.appendChild(instance.element.dom);`;

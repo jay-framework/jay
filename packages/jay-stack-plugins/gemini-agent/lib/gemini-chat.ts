@@ -264,7 +264,17 @@ function GeminiChatInteractive(
     });
 
     // ── AutomationAPI access ─────────────────────────────────────────────
-    const getAutomation = (): AutomationAPI | null => (window as any).__jay?.automation || null;
+    let automation: AutomationAPI | null = (window as any).__jay?.automation || null;
+    if (!automation) {
+        window.addEventListener(
+            'jay:automation-ready',
+            () => {
+                automation = (window as any).__jay?.automation || null;
+            },
+            { once: true },
+        );
+    }
+    const getAutomation = (): AutomationAPI | null => automation;
 
     function getToolsAndState(): {
         toolDefinitions: SerializedToolDef[];
