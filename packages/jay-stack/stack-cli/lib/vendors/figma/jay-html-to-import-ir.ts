@@ -2,27 +2,64 @@ import { createHash } from 'crypto';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import type { Contract, ContractTag } from '@jay-framework/editor-protocol';
 import type { JayHeadlessImports } from '@jay-framework/compiler-jay-html';
-import type {
-    ImportIRDocument,
-    ImportIRNode,
-    ImportIRStyle,
-    ImportIRBinding,
-} from './import-ir';
+import type { ImportIRDocument, ImportIRNode, ImportIRStyle, ImportIRBinding } from './import-ir';
 import { generateNodeId, buildDomPath, getSemanticAnchors } from './id-generator';
 import { resolveStyle, parseInlineStyle } from './style-resolver';
 import { extractBindingsFromElement } from './binding-reconstructor';
 import type { PageContractPath } from './pageContractPath';
 
 const BLOCK_LEVEL_TAGS = new Set([
-    'div', 'section', 'header', 'footer', 'nav', 'main', 'article', 'aside',
-    'form', 'ul', 'ol', 'li', 'table', 'img', 'svg', 'video', 'canvas',
-    'select', 'textarea', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'pre',
-    'blockquote', 'figure', 'figcaption', 'details', 'summary',
+    'div',
+    'section',
+    'header',
+    'footer',
+    'nav',
+    'main',
+    'article',
+    'aside',
+    'form',
+    'ul',
+    'ol',
+    'li',
+    'table',
+    'img',
+    'svg',
+    'video',
+    'canvas',
+    'select',
+    'textarea',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'p',
+    'pre',
+    'blockquote',
+    'figure',
+    'figcaption',
+    'details',
+    'summary',
 ]);
 
 const INLINE_TAGS = new Set([
-    'span', 'a', 'strong', 'em', 'b', 'i', 'br', 'sub', 'sup', 'small',
-    'mark', 'abbr', 'code', 'kbd', 'var', 'samp',
+    'span',
+    'a',
+    'strong',
+    'em',
+    'b',
+    'i',
+    'br',
+    'sub',
+    'sup',
+    'small',
+    'mark',
+    'abbr',
+    'code',
+    'kbd',
+    'var',
+    'samp',
 ]);
 
 const HEADING_TAGS: Record<string, { fontSize: number; fontWeight: number }> = {
@@ -35,9 +72,7 @@ const HEADING_TAGS: Record<string, { fontSize: number; fontWeight: number }> = {
 };
 
 function getChildElements(element: HTMLElement): HTMLElement[] {
-    return element.childNodes.filter(
-        (n) => n.nodeType === NodeType.ELEMENT_NODE,
-    ) as HTMLElement[];
+    return element.childNodes.filter((n) => n.nodeType === NodeType.ELEMENT_NODE) as HTMLElement[];
 }
 
 function hasBlockLevelChild(element: HTMLElement): boolean {
@@ -136,18 +171,20 @@ function buildNodeFromElement(
     );
     warnings.push(...bindingWarnings);
 
-    const name = element.getAttribute('data-figma-type')
-        || element.getAttribute('ref')
-        || element.getAttribute('id')
-        || tag;
+    const name =
+        element.getAttribute('data-figma-type') ||
+        element.getAttribute('ref') ||
+        element.getAttribute('id') ||
+        tag;
 
     if (isImageElement(element)) {
         const src = element.getAttribute('src') ?? undefined;
         const alt = element.getAttribute('alt') ?? undefined;
         const { parsed: rawParsed } = parseInlineStyle(styleAttr);
         const objectFitRaw = rawParsed['object-fit'];
-        const objectFit = (['fill', 'contain', 'cover', 'none', 'scale-down'] as const)
-            .find((v) => v === objectFitRaw);
+        const objectFit = (['fill', 'contain', 'cover', 'none', 'scale-down'] as const).find(
+            (v) => v === objectFitRaw,
+        );
 
         const node: ImportIRNode = {
             id: nodeId,

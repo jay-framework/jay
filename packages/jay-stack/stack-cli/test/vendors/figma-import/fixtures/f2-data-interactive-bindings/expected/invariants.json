@@ -1,9 +1,5 @@
 {
-  "requiredNodes": [
-    { "type": "SECTION" },
-    { "type": "FRAME" },
-    { "type": "TEXT" }
-  ],
+  "requiredNodes": [{ "type": "SECTION" }, { "type": "FRAME" }, { "type": "TEXT" }],
   "requiredBindings": [
     { "tagPath": ["productName"], "jayPageSectionId": "fbacc9edefa1" },
     { "tagPath": ["price"], "jayPageSectionId": "fbacc9edefa1" },
