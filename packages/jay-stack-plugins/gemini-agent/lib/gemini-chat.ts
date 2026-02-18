@@ -5,25 +5,27 @@
  * full history is sent with each request.
  */
 
-import { makeJayStackComponent, RenderPipeline, Signals } from '@jay-framework/fullstack-component';
-import { createSignal, createMemo, createEffect } from '@jay-framework/component';
-import { createActionCaller } from '@jay-framework/stack-client-runtime';
-import type { AutomationAPI } from '@jay-framework/runtime-automation';
-import type { JayEvent } from '@jay-framework/runtime';
-import type {
-    GeminiChatContract,
-    GeminiChatRefs,
-    GeminiChatFastViewState,
-    GeminiChatViewState,
+import {makeJayStackComponent, RenderPipeline, Signals} from '@jay-framework/fullstack-component';
+import {createDerivedArray, createMemo, createSignal} from '@jay-framework/component';
+import {createActionCaller} from '@jay-framework/stack-client-runtime';
+import type {AutomationAPI} from '@jay-framework/runtime-automation';
+import type {JayEvent} from '@jay-framework/runtime';
+import {
+    type GeminiChatContract,
+    type GeminiChatFastViewState,
+    type GeminiChatRefs,
+    type GeminiChatViewState,
+    type MessageOfGeminiChatViewState,
+    Role,
 } from './contracts/gemini-chat.jay-contract';
 import type {
     GeminiMessage,
+    PendingToolCall,
     SendMessageInput,
     SendMessageOutput,
+    SerializedToolDef,
     SubmitToolResultsInput,
     SubmitToolResultsOutput,
-    SerializedToolDef,
-    PendingToolCall,
     ToolCallResult,
 } from './types';
 
@@ -34,12 +36,6 @@ import type {
 export interface GeminiChatProps {}
 
 interface ChatCarryForward {}
-
-interface DisplayMessage {
-    index: number;
-    role: 'user' | 'assistant';
-    content: string;
-}
 
 // ============================================================================
 // Action Callers (created once, used from interactive phase)
@@ -241,7 +237,7 @@ function GeminiChatInteractive(
     _carryForward: ChatCarryForward,
 ) {
     // ── State ────────────────────────────────────────────────────────────
-    const [getMessages, setMessages] = createSignal<DisplayMessage[]>([]);
+    const [getMessages, setMessages] = createSignal<MessageOfGeminiChatViewState[]>([]);
     const [getHistory, setHistory] = createSignal<GeminiMessage[]>([]);
     const [getInputValue, setInputValue] = createSignal('');
     const [getIsLoading, setIsLoading] = createSignal(false);
@@ -250,18 +246,19 @@ function GeminiChatInteractive(
 
     // ── Derived state ────────────────────────────────────────────────────
     const hasMessages = createMemo(() => getMessages().length > 0);
+    const displayMessages = createDerivedArray(getMessages, (item) => item());
     const hasError = createMemo(() => getError() !== null);
     const lastUserMessage = createMemo(() => {
         const msgs = getMessages();
         for (let i = msgs.length - 1; i >= 0; i--) {
-            if (msgs[i].role === 'user') return msgs[i].content;
+            if (msgs[i].role === Role.user) return msgs[i].content;
         }
         return '';
     });
     const lastAssistantMessage = createMemo(() => {
         const msgs = getMessages();
         for (let i = msgs.length - 1; i >= 0; i--) {
-            if (msgs[i].role === 'assistant') return msgs[i].content;
+            if (msgs[i].role === Role.assistant) return msgs[i].content;
         }
         return '';
     });
@@ -303,14 +300,12 @@ function GeminiChatInteractive(
             const { toolDefinitions, pageState } = getToolsAndState();
 
             // Submit results back to server
-            const nextOutput: SubmitToolResultsOutput = await callSubmitToolResults({
+            output = await callSubmitToolResults({
                 results,
                 history: output.history,
                 toolDefinitions,
                 pageState,
             });
-
-            output = nextOutput;
         }
 
         // Final text response
@@ -321,7 +316,7 @@ function GeminiChatInteractive(
                 ...msgs,
                 {
                     index: msgs.length,
-                    role: 'assistant',
+                    role: Role.assistant,
                     content: finalOutput.message,
                 },
             ]);
@@ -338,7 +333,7 @@ function GeminiChatInteractive(
         setInputValue('');
 
         // Add user message to display
-        setMessages((msgs) => [...msgs, { index: msgs.length, role: 'user', content: message }]);
+        setMessages((msgs) => [...msgs, { index: msgs.length, role: Role.user, content: message }]);
 
         try {
             const { toolDefinitions, pageState } = getToolsAndState();
@@ -379,12 +374,7 @@ function GeminiChatInteractive(
     // ── Render ───────────────────────────────────────────────────────────
     return {
         render: () => ({
-            messages: () =>
-                getMessages().map((m) => ({
-                    index: m.index,
-                    role: m.role as any,
-                    content: m.content,
-                })),
+            messages: displayMessages,
             lastUserMessage,
             lastAssistantMessage,
             messageInput: getInputValue,
