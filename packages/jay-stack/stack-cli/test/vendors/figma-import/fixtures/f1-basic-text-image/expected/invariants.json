@@ -1,0 +1,9 @@
+{
+  "requiredNodes": [
+    { "type": "SECTION" },
+    { "type": "FRAME" },
+    { "type": "TEXT" },
+    { "type": "RECTANGLE" }
+  ],
+  "warningsMustNotContain": ["IMPORT_PARSE_FAILED", "TIER2_FALLBACK"]
+}

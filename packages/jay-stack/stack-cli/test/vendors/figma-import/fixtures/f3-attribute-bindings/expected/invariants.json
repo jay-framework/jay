@@ -1,0 +1,14 @@
+{
+  "requiredNodes": [
+    { "type": "SECTION" },
+    { "type": "FRAME" },
+    { "type": "RECTANGLE" },
+    { "type": "TEXT" }
+  ],
+  "requiredBindings": [
+    { "tagPath": ["imageUrl"] },
+    { "tagPath": ["productName"] },
+    { "tagPath": ["link"] }
+  ],
+  "warningsMustNotContain": ["IMPORT_PARSE_FAILED", "TIER2_FALLBACK", "BINDING_UNRESOLVED"]
+}

@@ -1,0 +1,88 @@
+{
+  "type": "SECTION",
+  "name": "test",
+  "visible": true,
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/test"
+  },
+  "children": [
+    {
+      "type": "FRAME",
+      "name": "div",
+      "visible": true,
+      "width": 500,
+      "layoutMode": "VERTICAL",
+      "itemSpacing": 16,
+      "paddingTop": 20,
+      "paddingRight": 20,
+      "paddingBottom": 20,
+      "paddingLeft": 20,
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "opacity": 1
+        }
+      ],
+      "children": [
+        {
+          "type": "RECTANGLE",
+          "name": "img",
+          "visible": true,
+          "pluginData": {
+            "semanticHtml": "img",
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"imageUrl\"],\"attribute\":\"src\"},{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"productName\"],\"attribute\":\"alt\"}]"
+          },
+          "width": 460,
+          "height": 300,
+          "cornerRadius": 8
+        },
+        {
+          "type": "TEXT",
+          "name": "a",
+          "visible": true,
+          "characters": "View Details",
+          "fontSize": 20,
+          "fontWeight": 600,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0,
+                "g": 0.4,
+                "b": 0.8
+              },
+              "opacity": 1
+            }
+          ],
+          "pluginData": {
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"link\"],\"attribute\":\"href\"}]"
+          }
+        },
+        {
+          "type": "TEXT",
+          "name": "div",
+          "visible": true,
+          "characters": "Click the link above to learn more.",
+          "fontSize": 14,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0.5333333333333333,
+                "g": 0.5333333333333333,
+                "b": 0.5333333333333333
+              },
+              "opacity": 1
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

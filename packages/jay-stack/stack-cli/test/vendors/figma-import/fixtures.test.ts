@@ -137,6 +137,29 @@ function checkInvariants(
         }
     }
 
+    if (invariants.requiredBindings) {
+        for (const required of invariants.requiredBindings) {
+            const found = allNodes.some((n) => {
+                if (!n.pluginData?.['jay-layer-bindings']) return false;
+                try {
+                    const bindings = JSON.parse(n.pluginData['jay-layer-bindings']);
+                    return bindings.some(
+                        (b: any) =>
+                            JSON.stringify(b.tagPath) === JSON.stringify(required.tagPath) &&
+                            (!required.jayPageSectionId ||
+                                b.jayPageSectionId === required.jayPageSectionId),
+                    );
+                } catch {
+                    return false;
+                }
+            });
+            if (!found)
+                errors.push(
+                    `requiredBinding not found: tagPath=${JSON.stringify(required.tagPath)}`,
+                );
+        }
+    }
+
     if (invariants.warningsMustContain) {
         for (const expected of invariants.warningsMustContain) {
             if (!warnings?.some((w) => w.includes(expected)))

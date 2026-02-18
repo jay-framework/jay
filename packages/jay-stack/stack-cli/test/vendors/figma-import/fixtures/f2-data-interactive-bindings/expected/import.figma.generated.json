@@ -1,0 +1,102 @@
+{
+  "type": "SECTION",
+  "name": "test",
+  "visible": true,
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/test"
+  },
+  "children": [
+    {
+      "type": "FRAME",
+      "name": "div",
+      "visible": true,
+      "width": 400,
+      "layoutMode": "VERTICAL",
+      "itemSpacing": 12,
+      "paddingTop": 24,
+      "paddingRight": 24,
+      "paddingBottom": 24,
+      "paddingLeft": 24,
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "opacity": 1
+        }
+      ],
+      "cornerRadius": 8,
+      "children": [
+        {
+          "type": "TEXT",
+          "name": "div",
+          "visible": true,
+          "characters": "{productName}",
+          "fontSize": 24,
+          "fontWeight": 700,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0.10196078431372549,
+                "g": 0.10196078431372549,
+                "b": 0.10196078431372549
+              },
+              "opacity": 1
+            }
+          ],
+          "pluginData": {
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"productName\"]}]"
+          }
+        },
+        {
+          "type": "TEXT",
+          "name": "div",
+          "visible": true,
+          "characters": "{price}",
+          "fontSize": 18,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0.4,
+                "g": 0.4,
+                "b": 0.4
+              },
+              "opacity": 1
+            }
+          ],
+          "pluginData": {
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"price\"]}]"
+          }
+        },
+        {
+          "type": "TEXT",
+          "name": "buyNow",
+          "visible": true,
+          "characters": "Buy Now",
+          "fontSize": 16,
+          "fontWeight": 600,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 1,
+                "g": 1,
+                "b": 1
+              },
+              "opacity": 1
+            }
+          ],
+          "pluginData": {
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"buyNow\"]}]"
+          }
+        }
+      ]
+    }
+  ]
+}

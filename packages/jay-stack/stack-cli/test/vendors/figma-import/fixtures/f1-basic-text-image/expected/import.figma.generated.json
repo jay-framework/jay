@@ -1,0 +1,89 @@
+{
+  "type": "SECTION",
+  "name": "test",
+  "visible": true,
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/test"
+  },
+  "children": [
+    {
+      "type": "FRAME",
+      "name": "div",
+      "visible": true,
+      "width": 600,
+      "layoutMode": "VERTICAL",
+      "itemSpacing": 20,
+      "paddingTop": 32,
+      "paddingRight": 32,
+      "paddingBottom": 32,
+      "paddingLeft": 32,
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": {
+            "r": 0.9607843137254902,
+            "g": 0.9607843137254902,
+            "b": 0.9607843137254902
+          },
+          "opacity": 1
+        }
+      ],
+      "cornerRadius": 8,
+      "children": [
+        {
+          "type": "TEXT",
+          "name": "div",
+          "visible": true,
+          "characters": "Welcome to Our Store",
+          "fontSize": 32,
+          "fontWeight": 700,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0,
+                "g": 0,
+                "b": 0
+              },
+              "opacity": 1
+            }
+          ]
+        },
+        {
+          "type": "TEXT",
+          "name": "div",
+          "visible": true,
+          "characters": "Browse our collection of premium products crafted with care.",
+          "fontSize": 16,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0.3333333333333333,
+                "g": 0.3333333333333333,
+                "b": 0.3333333333333333
+              },
+              "opacity": 1
+            }
+          ],
+          "lineHeight": {
+            "value": 24,
+            "unit": "PIXELS"
+          }
+        },
+        {
+          "type": "RECTANGLE",
+          "name": "img",
+          "visible": true,
+          "pluginData": {
+            "semanticHtml": "img"
+          },
+          "width": 536,
+          "height": 280,
+          "cornerRadius": 4
+        }
+      ]
+    }
+  ]
+}

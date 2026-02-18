@@ -9,7 +9,7 @@
   "children": [
     {
       "type": "FRAME",
-      "name": "content",
+      "name": "div",
       "visible": true,
       "width": 400,
       "height": 300,

@@ -1,0 +1,13 @@
+{
+  "requiredNodes": [
+    { "type": "SECTION" },
+    { "type": "FRAME" },
+    { "type": "TEXT" }
+  ],
+  "requiredBindings": [
+    { "tagPath": ["productName"], "jayPageSectionId": "fbacc9edefa1" },
+    { "tagPath": ["price"], "jayPageSectionId": "fbacc9edefa1" },
+    { "tagPath": ["buyNow"], "jayPageSectionId": "fbacc9edefa1" }
+  ],
+  "warningsMustNotContain": ["IMPORT_PARSE_FAILED", "TIER2_FALLBACK", "BINDING_UNRESOLVED"]
+}

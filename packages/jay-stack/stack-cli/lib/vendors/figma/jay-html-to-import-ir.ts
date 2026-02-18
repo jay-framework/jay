@@ -1,240 +1,103 @@
 import { createHash } from 'crypto';
 import { HTMLElement, NodeType } from 'node-html-parser';
-import type { Contract } from '@jay-framework/editor-protocol';
+import type { Contract, ContractTag } from '@jay-framework/editor-protocol';
 import type { JayHeadlessImports } from '@jay-framework/compiler-jay-html';
 import type {
     ImportIRDocument,
     ImportIRNode,
     ImportIRStyle,
-    ImportIRLayoutMode,
+    ImportIRBinding,
 } from './import-ir';
 import { generateNodeId, buildDomPath, getSemanticAnchors } from './id-generator';
+import { resolveStyle, parseInlineStyle } from './style-resolver';
+import { extractBindingsFromElement } from './binding-reconstructor';
+import type { PageContractPath } from './pageContractPath';
 
-function parseInlineStyle(styleAttr: string): Record<string, string> {
-    const result: Record<string, string> = {};
-    if (!styleAttr) return result;
+const BLOCK_LEVEL_TAGS = new Set([
+    'div', 'section', 'header', 'footer', 'nav', 'main', 'article', 'aside',
+    'form', 'ul', 'ol', 'li', 'table', 'img', 'svg', 'video', 'canvas',
+    'select', 'textarea', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'pre',
+    'blockquote', 'figure', 'figcaption', 'details', 'summary',
+]);
 
-    for (const declaration of styleAttr.split(';')) {
-        const trimmed = declaration.trim();
-        if (!trimmed) continue;
+const INLINE_TAGS = new Set([
+    'span', 'a', 'strong', 'em', 'b', 'i', 'br', 'sub', 'sup', 'small',
+    'mark', 'abbr', 'code', 'kbd', 'var', 'samp',
+]);
 
-        const colonIdx = trimmed.indexOf(':');
-        if (colonIdx === -1) continue;
+const HEADING_TAGS: Record<string, { fontSize: number; fontWeight: number }> = {
+    h1: { fontSize: 32, fontWeight: 700 },
+    h2: { fontSize: 24, fontWeight: 700 },
+    h3: { fontSize: 20, fontWeight: 700 },
+    h4: { fontSize: 16, fontWeight: 700 },
+    h5: { fontSize: 14, fontWeight: 700 },
+    h6: { fontSize: 12, fontWeight: 700 },
+};
 
-        const prop = trimmed.slice(0, colonIdx).trim();
-        const value = trimmed.slice(colonIdx + 1).trim();
-        if (prop && value) {
-            result[prop] = value;
+function getChildElements(element: HTMLElement): HTMLElement[] {
+    return element.childNodes.filter(
+        (n) => n.nodeType === NodeType.ELEMENT_NODE,
+    ) as HTMLElement[];
+}
+
+function hasBlockLevelChild(element: HTMLElement): boolean {
+    const children = getChildElements(element);
+    return children.some((child) => {
+        const tag = (child.rawTagName || '').toLowerCase();
+        return BLOCK_LEVEL_TAGS.has(tag) && !INLINE_TAGS.has(tag);
+    });
+}
+
+function isImageElement(element: HTMLElement): boolean {
+    return (element.rawTagName || '').toLowerCase() === 'img';
+}
+
+function hasTextContent(element: HTMLElement): boolean {
+    for (const child of element.childNodes) {
+        if (child.nodeType === NodeType.TEXT_NODE) {
+            const raw = (child as any).rawText ?? (child as any).text ?? '';
+            if (raw.trim()) return true;
+        } else if (child.nodeType === NodeType.ELEMENT_NODE) {
+            const el = child as HTMLElement;
+            const tag = (el.rawTagName || '').toLowerCase();
+            if (INLINE_TAGS.has(tag) && hasTextContent(el)) return true;
         }
     }
-    return result;
+    return false;
 }
 
-function parsePxValue(value: string): number | undefined {
-    if (!value) return undefined;
-    const match = value.match(/^([\d.]+)px$/);
-    return match ? parseFloat(match[1]) : undefined;
+function isTextElement(element: HTMLElement): boolean {
+    if (isImageElement(element)) return false;
+    const tag = (element.rawTagName || '').toLowerCase();
+    if (HEADING_TAGS[tag]) return true;
+    if (hasBlockLevelChild(element)) return false;
+    return hasTextContent(element);
 }
 
-function resolveInlineStyle(styleAttr: string): { style: ImportIRStyle; warnings: string[] } {
-    const warnings: string[] = [];
-    const style: ImportIRStyle = {};
-    const parsed = parseInlineStyle(styleAttr);
+function flattenTextContent(element: HTMLElement): string {
+    const parts: string[] = [];
 
-    for (const [prop, value] of Object.entries(parsed)) {
-        if (value.includes('{') && value.includes('}')) {
-            warnings.push(`CSS_DYNAMIC_VALUE: Skipping dynamic value in '${prop}'`);
-            continue;
-        }
-
-        switch (prop) {
-            case 'width': {
-                const px = parsePxValue(value);
-                if (px !== undefined) style.width = px;
-                else warnings.push(`CSS_UNSUPPORTED_UNIT: '${prop}: ${value}'`);
-                break;
+    for (const child of element.childNodes) {
+        if (child.nodeType === NodeType.TEXT_NODE) {
+            const raw = (child as any).rawText ?? (child as any).text ?? '';
+            const text = raw.trim();
+            if (text) parts.push(text);
+        } else if (child.nodeType === NodeType.ELEMENT_NODE) {
+            const el = child as HTMLElement;
+            const tag = (el.rawTagName || '').toLowerCase();
+            if (tag === 'br') {
+                parts.push('\n');
+            } else if (INLINE_TAGS.has(tag)) {
+                const nested = flattenTextContent(el);
+                if (nested) parts.push(nested);
+            } else {
+                const nested = flattenTextContent(el);
+                if (nested) parts.push(nested);
             }
-            case 'height': {
-                const px = parsePxValue(value);
-                if (px !== undefined) style.height = px;
-                else warnings.push(`CSS_UNSUPPORTED_UNIT: '${prop}: ${value}'`);
-                break;
-            }
-            case 'display':
-                if (value === 'flex') {
-                    // layoutMode will be set by flex-direction (default 'row')
-                    if (!style.layoutMode) style.layoutMode = 'row';
-                }
-                break;
-            case 'flex-direction':
-                if (value === 'column') style.layoutMode = 'column';
-                else if (value === 'row') style.layoutMode = 'row';
-                break;
-            case 'gap': {
-                const px = parsePxValue(value);
-                if (px !== undefined) style.gap = px;
-                break;
-            }
-            case 'padding': {
-                const parts = value.split(/\s+/).map(parsePxValue);
-                if (parts.length === 1 && parts[0] !== undefined) {
-                    style.padding = {
-                        top: parts[0],
-                        right: parts[0],
-                        bottom: parts[0],
-                        left: parts[0],
-                    };
-                } else if (parts.length === 2 && parts[0] !== undefined && parts[1] !== undefined) {
-                    style.padding = {
-                        top: parts[0],
-                        right: parts[1],
-                        bottom: parts[0],
-                        left: parts[1],
-                    };
-                } else if (parts.length === 4 && parts.every((p) => p !== undefined)) {
-                    style.padding = {
-                        top: parts[0]!,
-                        right: parts[1]!,
-                        bottom: parts[2]!,
-                        left: parts[3]!,
-                    };
-                }
-                break;
-            }
-            case 'padding-top': {
-                const px = parsePxValue(value);
-                if (px !== undefined) {
-                    style.padding = {
-                        ...{ top: 0, right: 0, bottom: 0, left: 0 },
-                        ...style.padding,
-                        top: px,
-                    };
-                }
-                break;
-            }
-            case 'padding-right': {
-                const px = parsePxValue(value);
-                if (px !== undefined) {
-                    style.padding = {
-                        ...{ top: 0, right: 0, bottom: 0, left: 0 },
-                        ...style.padding,
-                        right: px,
-                    };
-                }
-                break;
-            }
-            case 'padding-bottom': {
-                const px = parsePxValue(value);
-                if (px !== undefined) {
-                    style.padding = {
-                        ...{ top: 0, right: 0, bottom: 0, left: 0 },
-                        ...style.padding,
-                        bottom: px,
-                    };
-                }
-                break;
-            }
-            case 'padding-left': {
-                const px = parsePxValue(value);
-                if (px !== undefined) {
-                    style.padding = {
-                        ...{ top: 0, right: 0, bottom: 0, left: 0 },
-                        ...style.padding,
-                        left: px,
-                    };
-                }
-                break;
-            }
-            case 'background-color':
-                style.backgroundColor = value;
-                break;
-            case 'color':
-                style.textColor = value;
-                break;
-            case 'font-family':
-                style.fontFamily = value
-                    .split(',')[0]
-                    .trim()
-                    .replace(/^['"]|['"]$/g, '');
-                break;
-            case 'font-size': {
-                const px = parsePxValue(value);
-                if (px !== undefined) style.fontSize = px;
-                break;
-            }
-            case 'font-weight': {
-                const num = parseInt(value, 10);
-                if (!isNaN(num)) style.fontWeight = num;
-                else if (value === 'bold') style.fontWeight = 700;
-                else if (value === 'normal') style.fontWeight = 400;
-                break;
-            }
-            case 'line-height': {
-                const px = parsePxValue(value);
-                if (px !== undefined) style.lineHeight = px;
-                break;
-            }
-            case 'letter-spacing': {
-                const px = parsePxValue(value);
-                if (px !== undefined) style.letterSpacing = px;
-                break;
-            }
-            case 'border-radius': {
-                const px = parsePxValue(value);
-                if (px !== undefined) style.borderRadius = px;
-                break;
-            }
-            case 'opacity': {
-                const num = parseFloat(value);
-                if (!isNaN(num)) style.opacity = num;
-                break;
-            }
-            case 'border': {
-                const parts = value.split(/\s+/);
-                if (parts.length >= 1) {
-                    const widthPx = parsePxValue(parts[0]);
-                    if (widthPx !== undefined) style.borderWidth = widthPx;
-                }
-                if (parts.length >= 3) {
-                    style.borderColor = parts[2];
-                }
-                break;
-            }
-            case 'justify-content': {
-                const map: Record<string, ImportIRStyle['justifyContent']> = {
-                    'flex-start': 'MIN',
-                    center: 'CENTER',
-                    'flex-end': 'MAX',
-                    'space-between': 'SPACE_BETWEEN',
-                };
-                if (map[value]) style.justifyContent = map[value];
-                break;
-            }
-            case 'align-items': {
-                const map: Record<string, ImportIRStyle['alignItems']> = {
-                    'flex-start': 'MIN',
-                    center: 'CENTER',
-                    'flex-end': 'MAX',
-                    stretch: 'STRETCH',
-                };
-                if (map[value]) style.alignItems = map[value];
-                break;
-            }
-            // Properties recognized but not stored (handled by adapter or later phases)
-            case 'box-sizing':
-            case 'overflow':
-            case 'position':
-            case 'top':
-            case 'left':
-            case 'object-fit':
-            case 'text-align':
-                break;
-            default:
-                break;
         }
     }
 
-    return { style, warnings };
+    return parts.join(' ').replace(/\s+/g, ' ').trim();
 }
 
 function findFirstBlockChild(body: HTMLElement): HTMLElement | null {
@@ -244,10 +107,124 @@ function findFirstBlockChild(body: HTMLElement): HTMLElement | null {
     return children[0] ?? null;
 }
 
-/**
- * Build an Import IR document from a parsed Jay-HTML body.
- * Phase 0: Creates SECTION > FRAME skeleton with basic inline style parsing.
- */
+function buildNodeFromElement(
+    element: HTMLElement,
+    body: HTMLElement,
+    contractTags: ContractTag[],
+    jayPageSectionId: string,
+    pageContractPath: PageContractPath,
+    repeaterContext: string[][],
+): { node: ImportIRNode; warnings: string[] } {
+    const warnings: string[] = [];
+    const tag = (element.rawTagName || 'div').toLowerCase();
+
+    const domPath = buildDomPath(element, body);
+    const figmaId = element.getAttribute('data-figma-id') ?? undefined;
+    const anchors = getSemanticAnchors(element);
+    const nodeId = generateNodeId(domPath, anchors, figmaId);
+
+    const styleAttr = element.getAttribute('style') || '';
+    const { style, warnings: styleWarnings } = resolveStyle(styleAttr);
+    warnings.push(...styleWarnings);
+
+    const { bindings, warnings: bindingWarnings } = extractBindingsFromElement(
+        element,
+        contractTags,
+        jayPageSectionId,
+        pageContractPath,
+        repeaterContext,
+    );
+    warnings.push(...bindingWarnings);
+
+    const name = element.getAttribute('data-figma-type')
+        || element.getAttribute('ref')
+        || element.getAttribute('id')
+        || tag;
+
+    if (isImageElement(element)) {
+        const src = element.getAttribute('src') ?? undefined;
+        const alt = element.getAttribute('alt') ?? undefined;
+        const { parsed: rawParsed } = parseInlineStyle(styleAttr);
+        const objectFitRaw = rawParsed['object-fit'];
+        const objectFit = (['fill', 'contain', 'cover', 'none', 'scale-down'] as const)
+            .find((v) => v === objectFitRaw);
+
+        const node: ImportIRNode = {
+            id: nodeId,
+            sourcePath: domPath,
+            kind: 'IMAGE',
+            name,
+            tagName: tag,
+            visible: true,
+            style,
+            image: { src, alt, objectFit },
+            bindings: bindings.length > 0 ? bindings : undefined,
+            warnings: warnings.length > 0 ? [...warnings] : undefined,
+            children: [],
+        };
+        return { node, warnings };
+    }
+
+    if (isTextElement(element)) {
+        const characters = flattenTextContent(element);
+
+        const headingDefaults = HEADING_TAGS[tag];
+        if (headingDefaults) {
+            if (style.fontSize === undefined) style.fontSize = headingDefaults.fontSize;
+            if (style.fontWeight === undefined) style.fontWeight = headingDefaults.fontWeight;
+        }
+
+        const node: ImportIRNode = {
+            id: nodeId,
+            sourcePath: domPath,
+            kind: 'TEXT',
+            name,
+            tagName: tag,
+            visible: true,
+            style,
+            text: { characters },
+            bindings: bindings.length > 0 ? bindings : undefined,
+            warnings: warnings.length > 0 ? [...warnings] : undefined,
+            children: [],
+        };
+        return { node, warnings };
+    }
+
+    // FRAME — recurse into children
+    const childElements = getChildElements(element);
+    const children: ImportIRNode[] = [];
+
+    for (const childEl of childElements) {
+        const childTag = (childEl.rawTagName || '').toLowerCase();
+        if (childTag === 'script' || childTag === 'style' || childTag === 'link') continue;
+
+        const { node: childNode, warnings: childWarnings } = buildNodeFromElement(
+            childEl,
+            body,
+            contractTags,
+            jayPageSectionId,
+            pageContractPath,
+            repeaterContext,
+        );
+        children.push(childNode);
+        warnings.push(...childWarnings);
+    }
+
+    const node: ImportIRNode = {
+        id: nodeId,
+        sourcePath: domPath,
+        kind: 'FRAME',
+        name,
+        tagName: tag,
+        visible: true,
+        style,
+        bindings: bindings.length > 0 ? bindings : undefined,
+        warnings: warnings.length > 0 ? [...warnings] : undefined,
+        children,
+    };
+    return { node, warnings };
+}
+
 export function buildImportIR(
     body: HTMLElement,
     pageUrl: string,
@@ -262,32 +239,23 @@ export function buildImportIR(
     const warnings: string[] = [];
 
     const sectionId = generateNodeId(`section:${pageUrl}`);
+    const contractTags: ContractTag[] = options?.contract?.tags ?? [];
+    const pageContractPath: PageContractPath = { pageUrl };
 
     const contentElement = findFirstBlockChild(body);
     let rootChildren: ImportIRNode[] = [];
 
     if (contentElement) {
-        const domPath = buildDomPath(contentElement, body);
-        const figmaId = contentElement.getAttribute('data-figma-id') ?? undefined;
-        const anchors = getSemanticAnchors(contentElement);
-        const frameId = generateNodeId(domPath, anchors, figmaId);
-
-        const styleAttr = contentElement.getAttribute('style') || '';
-        const { style, warnings: styleWarnings } = resolveInlineStyle(styleAttr);
-        warnings.push(...styleWarnings);
-
-        const frameNode: ImportIRNode = {
-            id: frameId,
-            sourcePath: domPath,
-            kind: 'FRAME',
-            name: contentElement.getAttribute('data-figma-type') || 'content',
-            tagName: contentElement.rawTagName || 'div',
-            visible: true,
-            style,
-            children: [],
-        };
-
-        rootChildren = [frameNode];
+        const { node, warnings: nodeWarnings } = buildNodeFromElement(
+            contentElement,
+            body,
+            contractTags,
+            sectionId,
+            pageContractPath,
+            [],
+        );
+        rootChildren = [node];
+        warnings.push(...nodeWarnings);
     } else {
         warnings.push('IMPORT_EMPTY_BODY: No block-level content found in <body>');
     }
