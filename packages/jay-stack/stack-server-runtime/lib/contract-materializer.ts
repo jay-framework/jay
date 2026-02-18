@@ -19,11 +19,7 @@ import { createRequire } from 'module';
 import { type ScannedPlugin, scanPlugins } from './plugin-scanner';
 import type { ViteSSRLoader } from './action-discovery';
 import { getLogger } from '@jay-framework/logger';
-import {
-    type ActionMetadata,
-    loadActionMetadata,
-    resolveActionMetadataPath,
-} from './action-metadata';
+import { loadActionMetadata, resolveActionMetadataPath } from './action-metadata';
 
 const require = createRequire(import.meta.url);
 
@@ -49,8 +45,8 @@ export interface ContractsIndex {
 export interface ActionIndexEntry {
     name: string;
     description: string;
-    inputSchema: ActionMetadata['inputSchema'];
-    outputSchema?: ActionMetadata['outputSchema'];
+    /** Path to the .jay-action file (relative to project root) */
+    path: string;
 }
 
 /** Entry for plugins-index.yaml (Design Log #85) */
@@ -517,11 +513,11 @@ export async function materializeContracts(
                     });
                 }
 
+                const actionRelPath = path.relative(projectRoot, metadataFilePath);
                 pluginsIndexMap.get(plugin.name)!.actions.push({
                     name: metadata.name,
                     description: metadata.description,
-                    inputSchema: metadata.inputSchema,
-                    ...(metadata.outputSchema && { outputSchema: metadata.outputSchema }),
+                    path: './' + actionRelPath.replace(/\\/g, '/'),
                 });
 
                 if (verbose) {

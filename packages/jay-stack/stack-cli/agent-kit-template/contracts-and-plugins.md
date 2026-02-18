@@ -17,6 +17,13 @@ plugins:
       - name: product-search
         type: static
         path: ./node_modules/@wix/stores/lib/contracts/product-search.jay-contract
+    actions:
+      - name: searchProducts
+        description: Search products with text/filter/sort/pagination
+        path: ./node_modules/@wix/stores/lib/actions/search-products.jay-action
+      - name: getProductBySlug
+        description: Get a single product by URL slug
+        path: ./node_modules/@wix/stores/lib/actions/get-product-by-slug.jay-action
 ```
 
 Fields:
@@ -26,6 +33,9 @@ Fields:
 - `contracts[].name` — contract name (use in `contract="..."` attributes)
 - `contracts[].type` — `static` (defined in source) or `dynamic` (generated at runtime)
 - `contracts[].path` — path to the `.jay-contract` file you can read
+- `actions[].name` — action name (use with `jay-stack action <plugin>/<action>`)
+- `actions[].description` — short description of what the action does
+- `actions[].path` — path to the `.jay-action` file with full input/output schemas
 
 ## Discovery: Contracts Index
 
@@ -55,16 +65,20 @@ contracts:
     component: productSearch
     description: Headless product search page
 actions:
-  - searchProducts
-  - getProductBySlug
-  - getCategories
+  - name: searchProducts
+    action: search-products.jay-action
+  - name: getProductBySlug
+    action: get-product-by-slug.jay-action
+  - name: getCategories
+    action: get-categories.jay-action
 ```
 
 Key fields:
 
 - `contracts[].name` — use in `contract="..."` in jay-html
 - `contracts[].description` — what the component does (helps you decide which to use)
-- `actions[]` — action names you can run with `jay-stack action <plugin>/<action>`
+- `actions[].name` — action name (use with `jay-stack action <plugin>/<action>`)
+- `actions[].action` — path to `.jay-action` file with full metadata (description, input/output schemas)
 
 ## Reading .jay-contract Files
 
@@ -201,6 +215,56 @@ tags:
             type: interactive
             elementType: HTMLButtonElement
 ```
+
+## Reading .jay-action Files
+
+Actions with `.jay-action` files have rich metadata: name, description, and typed input/output schemas. Read the file at the `path` from `plugins-index.yaml` (or from `plugin.yaml`'s `actions[].action` field).
+
+### .jay-action Format
+
+```yaml
+name: searchProducts
+description: Search products with text/filter/sort/pagination
+
+import:
+  productCard: product-card.jay-contract
+
+inputSchema:
+  query: string
+  filters?:
+    inStockOnly?: boolean
+    minPrice?: number
+    maxPrice?: number
+  sortBy?: enum(relevance | price_asc | price_desc)
+  pageSize?: number
+
+outputSchema:
+  products:
+    - productCard
+  totalCount: number
+  hasMore: boolean
+```
+
+### Jay-Type Notation
+
+Schemas use a compact type notation:
+
+| Notation | Meaning |
+| --- | --- |
+| `propName: string` | Required string property |
+| `propName?: number` | Optional number property |
+| `propName: boolean` | Required boolean |
+| `propName: enum(a \| b \| c)` | Required enum |
+| `propName:` + nested block | Nested object |
+| `propName:` + `- childProp: type` | Array of objects (YAML list) |
+| `propName: importedName` | Type from `import:` block (references a `.jay-contract`) |
+| `- importedName` | Array of imported type |
+
+### Using Action Metadata
+
+1. **Discovery** — read `plugins-index.yaml` for action names and descriptions
+2. **Details** — read the `.jay-action` file at the path for full input/output schemas
+3. **Run** — use `jay-stack action <plugin>/<action> --input '{...}'` with a JSON body matching the inputSchema
 
 ## From Contract to Jay-HTML
 

@@ -388,3 +388,7 @@ agent-kit/
 5. **cli-commands.md** — `jay-stack agent-kit`, `validate`, `params`, `action`, `dev` with examples and output formats.
 
 **Type-check:** `tsc --noEmit` passes.
+
+### Update: .jay-action metadata in agent-kit (see Design Log #92)
+
+The agent-kit docs and materialized indexes now include `.jay-action` metadata. `plugins-index.yaml` lists actions with `{ name, description, path }` — matching the contract pattern where the index is a lightweight discovery layer and the `.jay-action` file at the path has full input/output schemas. Documentation templates updated: `INSTRUCTIONS.md`, `contracts-and-plugins.md`, `cli-commands.md`.

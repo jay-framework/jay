@@ -18,7 +18,7 @@ export default defineConfig(({ isSsrBuild }) => ({
         lib: {
             entry: isSsrBuild
                 ? { index: resolve(__dirname, 'lib/index.ts') }
-                : { 'index.client': resolve(__dirname, 'lib/index.ts') },
+                : { 'index.client': resolve(__dirname, 'lib/index.client.ts') },
             formats: ['es'],
         },
         rollupOptions: {

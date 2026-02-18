@@ -864,3 +864,19 @@ Created `packages/jay-stack-plugins/gemini-agent/` with:
 1. **Independent tool building** — the component builds serialized tools from `AutomationAPI` directly instead of importing `buildSemanticTools` from webmcp-plugin. This removes the dependency on webmcp-plugin and avoids coupling the two plugins. The tool name format (click-/fill-/toggle- prefix) is kept consistent.
 2. **No `conversation-manager.ts`** — conversation state is managed inline in the component (as simple signals), which is simpler than a separate file.
 3. **`gemini-types.ts` shared types** — types are in a single file rather than scattered across modules, providing a single import point.
+
+### Agent-Kit: Action Metadata in plugins-index.yaml — DONE
+
+Updated the agent-kit materialization and documentation to expose `.jay-action` metadata through the same path-based pattern used by contracts.
+
+#### Materializer change (`contract-materializer.ts`)
+
+`ActionIndexEntry` now stores `{ name, description, path }` instead of inlining `inputSchema`/`outputSchema`. The `path` points to the `.jay-action` file (relative to project root), matching the contract pattern where `plugins-index.yaml` is a lightweight discovery index and the full details live in the source files.
+
+#### Agent-kit documentation updates
+
+| File | Change |
+| --- | --- |
+| `INSTRUCTIONS.md` | Workflow step 4 now says "Read actions — read `.jay-action` files". Plugins-index example shows `actions:` with `name`, `description`, `path`. |
+| `contracts-and-plugins.md` | Plugins-index example includes actions. Plugin.yaml example shows `action:` field referencing `.jay-action` files. New "Reading .jay-action Files" section: format spec, Jay-Type notation table, usage workflow. |
+| `cli-commands.md` | Action section references `plugins-index.yaml` actions array and `.jay-action` files for input/output schemas. |
