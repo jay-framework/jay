@@ -81,17 +81,26 @@ This separation enables:
 Jay is built on reactive principles:
 
 - **Fine-grained reactivity** - only changed data triggers updates
-- **Immutable data** - predictable state management
+- **Immutable data** - predictable state management via JSON Patch
 - **Automatic dependency tracking** - no manual subscription management
-- **Performance optimization** - minimal re-rendering
+- **Efficient derived collections** - `createDerivedArray` for list mapping without re-creating unchanged items
 
 ```typescript
-// Reactive state automatically updates the UI
+import { createSignal, createMemo, createPatchableSignal, createDerivedArray } from '@jay-framework/component';
+import { REPLACE } from '@jay-framework/json-patch';
+
 const [count, setCount] = createSignal(0);
 const doubled = createMemo(() => count() * 2);
 
-// UI automatically reflects changes
-<span>{doubled}</span>
+// Patchable signal for complex nested state
+const [user, setUser, patchUser] = createPatchableSignal({ name: '', settings: { theme: 'light' } });
+patchUser({ op: REPLACE, path: ['settings', 'theme'], value: 'dark' });
+
+// Derived array: only re-maps items that changed
+const rows = createDerivedArray(items, (item) => {
+  const { id, name } = item();
+  return { id, name, isSelected: id === selectedId() };
+});
 ```
 
 ### 4. Zero Trust Security

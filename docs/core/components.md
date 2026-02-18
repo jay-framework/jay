@@ -232,46 +232,85 @@ function CounterConstructor(props, refs) {
 
 ### Updating State
 
-Update signals using the setter function:
+For simple scalar signals, use the setter directly:
 
 ```typescript
-function TodoConstructor(props, refs) {
-  const [todos, setTodos] = createSignal([]);
+const [count, setCount] = createSignal(0);
+refs.increment.onclick(() => setCount(count() + 1));
 
-  // Simple update
+// Setter also accepts a function that receives the previous value
+refs.increment.onclick(() => setCount((prev) => prev + 1));
+```
+
+For complex or nested state (objects, arrays), use `createPatchableSignal` with JSON Patch operations from `@jay-framework/json-patch`:
+
+```typescript
+import { createPatchableSignal } from '@jay-framework/component';
+import { ADD, REPLACE, REMOVE } from '@jay-framework/json-patch';
+
+function TodoConstructor(props, refs) {
+  const [todos, setTodos, patchTodos] = createPatchableSignal([]);
+
+  // Add an item
   refs.addButton.onclick(() => {
-    const newTodo = { id: uuid(), title: 'New Todo', completed: false };
-    setTodos([...todos(), newTodo]);
+    patchTodos({
+      op: ADD,
+      path: [todos().length],
+      value: { id: uuid(), title: 'New Todo', completed: false },
+    });
   });
 
-  // Update specific item
-  refs.toggleButton.onclick((event) => {
-    const todoId = event.target.dataset.id;
-    setTodos(
-      todos().map((todo) => (todo.id === todoId ? { ...todo, completed: !todo.completed } : todo)),
+  // Update a specific property of an item
+  refs.shownTodos.completed.onchange(({ viewState: todo }) => {
+    let itemIndex = todos().findIndex((_) => _.id === todo.id);
+    patchTodos({ op: REPLACE, path: [itemIndex, 'completed'], value: !todo.completed });
+  });
+
+  // Update multiple properties at once
+  refs.shownTodos.title.onblur(({ viewState: todo }) => {
+    let itemIndex = todos().findIndex((_) => _.id === todo.id);
+    patchTodos(
+      { op: REPLACE, path: [itemIndex, 'title'], value: todo.editText.trim() },
+      { op: REPLACE, path: [itemIndex, 'isEditing'], value: false },
     );
   });
 
-  // Remove item
-  refs.deleteButton.onclick((event) => {
-    const todoId = event.target.dataset.id;
-    setTodos(todos().filter((todo) => todo.id !== todoId));
+  // Remove an item
+  refs.shownTodos.deleteButton.onclick(({ viewState: todo }) => {
+    let itemIndex = todos().findIndex((_) => _.id === todo.id);
+    patchTodos({ op: REMOVE, path: [itemIndex] });
   });
 }
 ```
 
+The patch function accepts one or more JSON Patch operations (`ADD`, `REPLACE`, `REMOVE`, `MOVE`). Each operation targets a path within the state tree using an array of keys/indices. This approach is preferred over spread operators and `.map()` because:
+
+- It expresses the **intent** of the update (replace this field, add this item) rather than reconstructing the whole state
+- It produces minimal immutable updates -- only the affected objects are replaced, parents are shallow-copied, siblings keep referential identity
+- It composes well -- multiple operations in a single `patch` call are applied atomically
+
+You can also use the standalone `patch` function from `@jay-framework/json-patch` with regular signals:
+
+```typescript
+import { patch, REPLACE } from '@jay-framework/json-patch';
+
+const [filters, setFilters] = createSignal({ priceRange: { min: 0, max: 100 }, category: 'all' });
+
+refs.priceSlider.oninput((event) => {
+  setFilters(patch(filters(), [{ op: REPLACE, path: ['priceRange', 'min'], value: event.value }]));
+});
+```
+
 ### Computed Values
 
-Use `createMemo` for derived state:
+Use `createMemo` for derived scalar values:
 
 ```typescript
 function TodoConstructor(props, refs) {
   const [todos, setTodos] = createSignal([]);
   const [filter, setFilter] = createSignal('all');
 
-  // Computed values
   const activeTodos = createMemo(() => todos().filter((todo) => !todo.completed));
-
   const completedTodos = createMemo(() => todos().filter((todo) => todo.completed));
 
   const filteredTodos = createMemo(() => {
@@ -289,6 +328,46 @@ function TodoConstructor(props, refs) {
   const completedCount = createMemo(() => completedTodos().length);
 }
 ```
+
+### Derived Arrays
+
+Use `createDerivedArray` to efficiently map arrays into view state. It is the reactive equivalent of `Array.map` -- but unlike `createMemo(() => items().map(...))`, it only re-maps items that actually changed, keeping the rest stable.
+
+```typescript
+import { createDerivedArray } from '@jay-framework/component';
+```
+
+The mapping function re-runs for an item only when:
+
+- The source item changed
+- The item's index changed (if `index` signal is read)
+- The array length changed (if `length` signal is read)
+- Any other signal the mapping function depends on changed
+
+```typescript
+function PillarConstructor({ pillarTasks, hasNext, hasPrev }: Props<PillarProps>, refs) {
+  const taskData = createDerivedArray(pillarTasks, (item, index, length) => {
+    let { id, title, description } = item();
+    return {
+      id,
+      taskProps: {
+        title,
+        description,
+        hasNext: hasNext(),
+        hasPrev: hasPrev(),
+        isBottom: index() === length() - 1,
+        isTop: index() === 0,
+      },
+    };
+  });
+
+  return {
+    render: () => ({ taskData }),
+  };
+}
+```
+
+`createDerivedArray` is preferred over `createMemo` with `.map()` for rendering lists because it avoids re-creating every mapped item when only one source item changes. This is important for performance with large lists and for preserving referential stability of unchanged items.
 
 ### Effects
 
@@ -327,67 +406,79 @@ function FormConstructor(props, refs) {
 }
 ```
 
-### Additional State Management Hooks
+### Hooks Summary
 
-Jay provides several additional hooks for state management:
+Jay provides the following hooks, all imported from `@jay-framework/component`:
+
+| Hook | Purpose |
+| --- | --- |
+| `createSignal` | Reactive state for any value |
+| `createMemo` | Derived scalar values that recompute when dependencies change |
+| `createEffect` | Side effects that re-run when dependencies change |
+| `createPatchableSignal` | Signal with a `patch` function for complex/nested state |
+| `createDerivedArray` | Efficient reactive array mapping (reactive `Array.map`) |
+| `createEvent` | Custom event emitters for component communication |
+| `provideContext` | Provide static context to child components |
+| `provideReactiveContext` | Provide reactive context that updates children on change |
+| `useReactive` | Access reactive context from parent |
+
+JSON Patch operations are imported from `@jay-framework/json-patch`:
 
 ```typescript
-import {
-  createSignal,
-  createMemo,
-  createEffect,
-  createPatchableSignal,
-  provideContext,
-  provideReactiveContext,
-  useReactive,
-} from '@jay-framework/component';
+import { ADD, REPLACE, REMOVE, MOVE, patch } from '@jay-framework/json-patch';
+```
+
+| Operation | Description |
+| --- | --- |
+| `ADD` | Insert a value at a path (for arrays: splice at index) |
+| `REPLACE` | Replace the value at a path |
+| `REMOVE` | Remove the value at a path (for arrays: splice out) |
+| `MOVE` | Move an array element from one index to another |
+
+#### Patchable Signal with JSON Patch
+
+`createPatchableSignal` combines a signal with the `patch` function for updating nested state:
+
+```typescript
+import { createPatchableSignal } from '@jay-framework/component';
+import { ADD, REPLACE, REMOVE } from '@jay-framework/json-patch';
 
 function AdvancedComponent(props, refs) {
-  // Patchable signal for complex state updates
   const [user, setUser, patchUser] = createPatchableSignal({
     name: '',
     email: '',
     preferences: { theme: 'light', notifications: true },
   });
 
-  // Patch specific properties
   refs.updateName.onclick(() => {
     patchUser({ op: REPLACE, path: ['name'], value: 'New Name' });
   });
 
-  // Provide context to child components
-  provideContext(UserContext, {
-    user: user(),
-    updateUser: setUser,
-  });
-
-  // Provide reactive context that updates when dependencies change
-  const { theme, toggleTheme } = provideReactiveContext(ThemeContext, () => {
-    // create signal for the context, which components can listen to signal changes
-    const [theme, setTheme] = createSignal(user().preferences.theme);
-    // return the context API
-    return {
-      theme: theme,
-      toggleTheme: () => setTheme(theme() === 'light' ? 'dark' : 'light'),
-    };
-  });
-
   refs.updatePreferences.onclick(() => {
     patchUser({ op: REPLACE, path: ['preferences', 'theme'], value: 'dark' });
-    toggleTheme();
   });
 
-  // Use reactive context from parent
-  const themeContext = useReactive(ThemeContext);
-
   return {
-    render: () => ({
-      user: user(),
-      currentTheme: themeContext.theme,
-    }),
+    render: () => ({ user: user() }),
   };
 }
 ```
+
+#### Standalone `patch` Function
+
+The `patch` function from `@jay-framework/json-patch` can be used directly with regular signals for one-off immutable updates:
+
+```typescript
+import { patch, REPLACE } from '@jay-framework/json-patch';
+
+const [config, setConfig] = createSignal({ display: { columns: 3 }, sort: 'name' });
+
+refs.setColumns.onclick(() => {
+  setConfig(patch(config(), [{ op: REPLACE, path: ['display', 'columns'], value: 4 }]));
+});
+```
+
+`patch` returns the same reference if no values actually changed, avoiding unnecessary reactive updates.
 
 ## Event Handling
 
@@ -511,23 +602,28 @@ function TodoItemConstructor(props, refs) {
 
 ### Handling Child Component Events
 
-Handle events from child components:
+Handle events from child components using `createPatchableSignal` for efficient updates:
 
 ```typescript
-function TodoListConstructor(props, refs) {
-  const [todos, setTodos] = createSignal([]);
+import { createPatchableSignal } from '@jay-framework/component';
+import { REPLACE, REMOVE } from '@jay-framework/json-patch';
 
-  // Handle events from child components
+function TodoListConstructor(props, refs) {
+  const [todos, setTodos, patchTodos] = createPatchableSignal([]);
+
   refs.todoItems.onCompletedToggle(({ event: completed, viewState: todo }) => {
-    setTodos(todos().map((t) => (t.id === todo.id ? { ...t, completed } : t)));
+    let index = todos().findIndex((t) => t.id === todo.id);
+    patchTodos({ op: REPLACE, path: [index, 'completed'], value: completed });
   });
 
   refs.todoItems.onDelete(({ viewState: todo }) => {
-    setTodos(todos().filter((t) => t.id !== todo.id));
+    let index = todos().findIndex((t) => t.id === todo.id);
+    patchTodos({ op: REMOVE, path: [index] });
   });
 
   refs.todoItems.onEdit(({ event: newTitle, viewState: todo }) => {
-    setTodos(todos().map((t) => (t.id === todo.id ? { ...t, title: newTitle } : t)));
+    let index = todos().findIndex((t) => t.id === todo.id);
+    patchTodos({ op: REPLACE, path: [index, 'title'], value: newTitle });
   });
 }
 ```
@@ -1023,60 +1119,60 @@ function FormConstructor(props, refs) {
 
 ## Performance Optimization
 
-### Memoization
+### Use `createDerivedArray` for List Mapping
 
-Use memoization for expensive computations:
+When mapping arrays to view state, prefer `createDerivedArray` over `createMemo` with `.map()`. The derived array only re-maps items that actually changed:
 
 ```typescript
+import { createDerivedArray, createSignal, createMemo } from '@jay-framework/component';
+
 function DataGridConstructor(props, refs) {
   const [data, setData] = createSignal([]);
-  const [sortBy, setSortBy] = createSignal('name');
-  const [filter, setFilter] = createSignal('');
+  const [selectedId, setSelectedId] = createSignal(null);
 
-  // Memoize expensive operations
-  const sortedData = createMemo(() => {
-    const sorted = [...data()].sort((a, b) => {
-      if (sortBy() === 'name') return a.name.localeCompare(b.name);
-      if (sortBy() === 'date') return new Date(a.date) - new Date(b.date);
-      return 0;
-    });
-    return sorted;
+  // createDerivedArray: only re-maps rows whose data changed or whose selection state changed
+  const rows = createDerivedArray(data, (item) => {
+    const { id, name, date } = item();
+    return {
+      id,
+      name,
+      date,
+      isSelected: id === selectedId(),
+    };
   });
 
-  const filteredData = createMemo(() => {
-    if (!filter()) return sortedData();
-    return sortedData().filter((item) => item.name.toLowerCase().includes(filter().toLowerCase()));
-  });
+  refs.rows.onclick(({ viewState }) => setSelectedId(viewState.id));
 
   return {
-    render: () => ({ data: filteredData() }),
+    render: () => ({ rows }),
   };
 }
 ```
 
-### Conditional Rendering
+### Use `createMemo` for Scalar Derived Values
 
-Optimize rendering with conditional logic:
+`createMemo` is the right choice for scalar values derived from reactive state:
 
 ```typescript
-function ListConstructor(props, refs) {
-  const [items, setItems] = createSignal([]);
-  const [showDetails, setShowDetails] = createSignal(false);
+const activeCount = createMemo(() => todos().filter((t) => !t.completed).length);
+const hasCompleted = createMemo(() => todos().some((t) => t.completed));
+```
 
-  // Only render details when needed
-  const itemsWithDetails = createMemo(() => {
-    if (!showDetails()) {
-      return items().map((item) => ({ id: item.id, title: item.title }));
-    }
-    return items();
+### Targeted Updates with `patch`
+
+Use JSON Patch operations to update only the specific fields that changed, rather than reconstructing entire objects or arrays:
+
+```typescript
+import { createPatchableSignal } from '@jay-framework/component';
+import { REPLACE } from '@jay-framework/json-patch';
+
+function GridConstructor(props, refs) {
+  const [rows, setRows, patchRows] = createPatchableSignal(props.initialRows());
+
+  // Only replace the changed cell, not the entire row or array
+  refs.cells.oninput(({ viewState: cell, event }) => {
+    patchRows({ op: REPLACE, path: [cell.rowIndex, 'value'], value: event.target.value });
   });
-
-  return {
-    render: () => ({
-      items: itemsWithDetails(),
-      showDetails: showDetails(),
-    }),
-  };
 }
 ```
 
