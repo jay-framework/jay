@@ -1,0 +1,9 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+  <div style="display: flex; flex-direction: column; width: 400px; height: 300px;"></div>
+</body>
+</html>

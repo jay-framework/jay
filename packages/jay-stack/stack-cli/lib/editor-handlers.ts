@@ -1140,34 +1140,78 @@ export function createEditorHandlers(
         try {
             const pagesBasePath = path.resolve(config.devServer.pagesBase);
             const { vendorId, pageUrl } = params;
-
-            // Convert route to file path
             const dirname = pageUrlToDirectoryPath(pageUrl, pagesBasePath);
-            const vendorFilename = `page.${vendorId}.json`;
-            const vendorFilePath = path.join(dirname, vendorFilename);
 
-            // Check if the file exists
-            if (!fs.existsSync(vendorFilePath)) {
+            // Read page.jay-html
+            const jayHtmlPath = path.join(dirname, PAGE_FILENAME);
+            if (!fs.existsSync(jayHtmlPath)) {
                 return {
                     type: 'import',
                     success: false,
-                    error: `No ${vendorId} document found at ${pageUrl}. File not found: ${vendorFilePath}`,
+                    error: `IMPORT_FILE_NOT_FOUND: No Jay-HTML file found at ${jayHtmlPath}`,
+                };
+            }
+            const jayHtmlContent = await fs.promises.readFile(jayHtmlPath, 'utf-8');
+
+            // Parse with compiler-jay-html
+            const warnings: string[] = [];
+            const parsedResult = await parseJayFile(
+                jayHtmlContent,
+                'page.jay-html',
+                dirname,
+                { relativePath: tsConfigPath },
+                JAY_IMPORT_RESOLVER,
+                projectRoot,
+            );
+
+            warnings.push(...(parsedResult.validations || []));
+
+            if (!parsedResult.val) {
+                return {
+                    type: 'import',
+                    success: false,
+                    error: `IMPORT_PARSE_FAILED: parseJayFile returned validation errors: ${parsedResult.validations.join('; ')}`,
                 };
             }
 
-            // Read and parse the vendor document
-            const fileContent = await fs.promises.readFile(vendorFilePath, 'utf-8');
-            const vendorDoc = JSON.parse(fileContent) as TVendorDoc;
+            // Load contracts
+            const { projectPage, plugins } = await loadPageContracts(dirname, pageUrl, projectRoot);
 
-            getLogger().info(`📥 Imported ${vendorId} document from: ${vendorFilePath}`);
+            // Run vendor reverse conversion
+            if (!hasVendor(vendorId)) {
+                return {
+                    type: 'import',
+                    success: false,
+                    error: `No vendor found for '${vendorId}'`,
+                };
+            }
+            const vendor = getVendor(vendorId)!;
+            if (!vendor.convertFromJayHtml) {
+                return {
+                    type: 'import',
+                    success: false,
+                    error: `Vendor '${vendorId}' does not support Jay-HTML import`,
+                };
+            }
+
+            const vendorDoc = await vendor.convertFromJayHtml(
+                parsedResult.val,
+                pageUrl,
+                projectPage,
+                plugins,
+            );
+
+            getLogger().info(`📥 Imported ${vendorId} document from Jay-HTML: ${jayHtmlPath}`);
 
             return {
                 type: 'import',
                 success: true,
-                vendorDoc,
+                vendorDoc: vendorDoc as TVendorDoc,
+                source: 'jay-html-reconstructed',
+                warnings,
             };
         } catch (error) {
-            getLogger().error(`Failed to import vendor document:${error}`);
+            getLogger().error(`Failed to import from Jay-HTML: ${error}`);
             return {
                 type: 'import',
                 success: false,

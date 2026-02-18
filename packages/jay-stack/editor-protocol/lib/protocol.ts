@@ -170,6 +170,13 @@ export interface ExportResponse extends BaseResponse {
 export interface ImportResponse<TVendorDoc> extends BaseResponse {
     type: 'import';
     vendorDoc?: TVendorDoc;
+    source?: 'jay-html-reconstructed';
+    warnings?: string[];
+    stats?: {
+        nodes: number;
+        bindings: number;
+        variantExpressions: number;
+    };
 }
 
 // Union types for all messages and responses

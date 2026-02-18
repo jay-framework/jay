@@ -1,3 +1,4 @@
+import path from 'path';
 import { Vendor, VendorConversionResult } from '../types';
 import type { FigmaVendorDocument, ProjectPage, Plugin } from '@jay-framework/editor-protocol';
 import {
@@ -21,6 +22,8 @@ import { convertRepeaterNode } from './converters/repeater';
 import { convertGroupNode } from './converters/group';
 import type { ConversionContext, BindingAnalysis } from './types';
 import { getBindingsData, analyzeBindings, validateBindings } from './binding-analysis';
+import { buildImportIR } from './jay-html-to-import-ir';
+import { adaptIRToFigmaVendorDoc } from './import-ir-to-figma-vendor-doc';
 
 /**
  * Figma Vendor Implementation
@@ -340,5 +343,19 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
             // No contract data for now - Figma vendor doesn't generate contracts yet
             contractData: undefined,
         };
+    },
+
+    async convertFromJayHtml(parsedJayHtml, pageUrl, projectPage, plugins) {
+        const ir = buildImportIR(
+            parsedJayHtml.body,
+            pageUrl,
+            projectPage.name || path.basename(pageUrl),
+            {
+                contract: projectPage.contract,
+                headlessImports: parsedJayHtml.headlessImports,
+                css: parsedJayHtml.css,
+            },
+        );
+        return adaptIRToFigmaVendorDoc(ir);
     },
 };

@@ -1,0 +1,4 @@
+{
+  "requiredNodes": [{ "type": "SECTION" }, { "type": "FRAME" }],
+  "warningsMustNotContain": ["IMPORT_PARSE_FAILED", "IMPORT_FILE_NOT_FOUND"]
+}

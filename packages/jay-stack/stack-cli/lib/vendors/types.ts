@@ -6,6 +6,7 @@
  */
 
 import { Plugin, ProjectPage } from '@jay-framework/editor-protocol';
+import type { JayHtmlSourceFile } from '@jay-framework/compiler-jay-html';
 
 /**
  * Result of vendor conversion containing body HTML, fonts, and contract data
@@ -37,7 +38,7 @@ export interface VendorConversionResult {
     };
 }
 
-export interface Vendor<TVendorDoc = any> {
+export interface Vendor<TExportDoc = any, TImportDoc = TExportDoc> {
     /**
      * The unique identifier for this vendor (e.g., 'figma', 'sketch', 'xd')
      */
@@ -51,9 +52,25 @@ export interface Vendor<TVendorDoc = any> {
      * @returns Conversion result with body HTML, fonts, and contract data
      */
     convertToBodyHtml(
-        vendorDoc: TVendorDoc,
+        vendorDoc: TExportDoc,
         pageUrl: string,
         projectPage: ProjectPage,
         plugins: Plugin[],
     ): Promise<VendorConversionResult>;
+
+    /**
+     * Convert parsed Jay-HTML source to vendor document format (import direction)
+     *
+     * @param parsedJayHtml - The parsed Jay-HTML AST from compiler-jay-html
+     * @param pageUrl - The page URL/route
+     * @param projectPage - Page metadata including contract
+     * @param plugins - Available plugins with their contracts
+     * @returns Vendor document that the editor plugin can materialize
+     */
+    convertFromJayHtml?(
+        parsedJayHtml: JayHtmlSourceFile,
+        pageUrl: string,
+        projectPage: ProjectPage,
+        plugins: Plugin[],
+    ): Promise<TImportDoc>;
 }

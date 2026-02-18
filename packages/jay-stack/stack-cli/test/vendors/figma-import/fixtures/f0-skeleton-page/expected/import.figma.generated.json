@@ -1,0 +1,19 @@
+{
+  "type": "SECTION",
+  "name": "test",
+  "visible": true,
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/test"
+  },
+  "children": [
+    {
+      "type": "FRAME",
+      "name": "content",
+      "visible": true,
+      "width": 400,
+      "height": 300,
+      "layoutMode": "VERTICAL"
+    }
+  ]
+}
