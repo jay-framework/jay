@@ -40,7 +40,12 @@ export async function writeGeneratedFile(
     code: string,
 ): Promise<string> {
     if (!jayContext.outputDir) return;
-    const relativePath = path.dirname(path.relative(jayContext.projectRoot, id));
+    let relativePath = path.dirname(path.relative(jayContext.projectRoot, id));
+    // When the source file is itself a build artifact (e.g., pre-rendered HTML),
+    // strip the 'build/' prefix to avoid nested build directories in the output
+    if (relativePath.startsWith('build' + path.sep)) {
+        relativePath = relativePath.slice(('build' + path.sep).length);
+    }
     const filePath = path.resolve(jayContext.outputDir, relativePath, path.basename(id));
     await mkdir(path.dirname(filePath), { recursive: true });
     await writeFile(filePath, code, { encoding: 'utf8', flag: 'w' });

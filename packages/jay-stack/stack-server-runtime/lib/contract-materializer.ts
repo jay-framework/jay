@@ -66,7 +66,7 @@ export interface PluginsIndex {
 
 export interface MaterializeContractsOptions {
     projectRoot: string;
-    outputDir?: string; // defaults to build/materialized-contracts
+    outputDir?: string; // defaults to agent-kit/materialized-contracts
     force?: boolean;
     dynamicOnly?: boolean;
     pluginFilter?: string;
@@ -324,7 +324,7 @@ export async function materializeContracts(
 ): Promise<MaterializeResult> {
     const {
         projectRoot,
-        outputDir = path.join(projectRoot, 'build', 'materialized-contracts'),
+        outputDir = path.join(projectRoot, 'agent-kit', 'materialized-contracts'),
         dynamicOnly = false,
         pluginFilter,
         verbose = false,

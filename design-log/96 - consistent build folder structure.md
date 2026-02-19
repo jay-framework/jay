@@ -51,34 +51,29 @@ build/
 
 ### Where the paths are hardcoded
 
-| Artifact | Source file | Line |
-|----------|------------|------|
-| `build/` default | `dev-server/lib/dev-server.ts` | 73 |
-| `client-scripts/` | `dev-server/lib/dev-server.ts` | 816 |
-| `slow-render-cache/` | `dev-server/lib/dev-server.ts` | 1178 |
-| `materialized-contracts/` | `stack-server-runtime/lib/contract-materializer.ts` | 327 |
-| `build/materialized-contracts` (resolver fallback) | `compiler-jay-html/lib/jay-target/jay-import-resolver.ts` | 91 |
-| `build/jay-runtime` (outputDir) | `stack-cli/lib/server.ts` | 37 |
-| `jay-runtime/` (Vite plugin) | `compiler/rollup-plugin/lib/common/files.ts` | 44 |
-| Vite plugin config | `compiler/rollup-plugin/lib/runtime/jay-plugin-context.ts` | 26 |
+| Artifact                                           | Source file                                                | Line |
+| -------------------------------------------------- | ---------------------------------------------------------- | ---- |
+| `build/` default                                   | `dev-server/lib/dev-server.ts`                             | 73   |
+| `client-scripts/`                                  | `dev-server/lib/dev-server.ts`                             | 816  |
+| `slow-render-cache/`                               | `dev-server/lib/dev-server.ts`                             | 1178 |
+| `materialized-contracts/`                          | `stack-server-runtime/lib/contract-materializer.ts`        | 327  |
+| `build/materialized-contracts` (resolver fallback) | `compiler-jay-html/lib/jay-target/jay-import-resolver.ts`  | 91   |
+| `build/jay-runtime` (outputDir)                    | `stack-cli/lib/server.ts`                                  | 37   |
+| `jay-runtime/` (Vite plugin)                       | `compiler/rollup-plugin/lib/common/files.ts`               | 44   |
+| Vite plugin config                                 | `compiler/rollup-plugin/lib/runtime/jay-plugin-context.ts` | 26   |
 
 ## Design
 
 ### Proposed structure
 
+The build folder mirrors the source layout directly. Compiled `.ts` files sit alongside their source `.jay-html` files. No extra `compiled/` wrapper.
+
 ```
 build/
-├── compiled/                     # Compiler output (.jay-html → .ts)
-│   └── <mirrors source layout>   # e.g., pages/cart/page.jay-html.ts
-│                                  #       components/todo.jay-html.ts
+├── <mirrors source layout>       # Compiled .jay-html.ts (e.g., lib/, src/, lib-secure/)
 │
-├── compiled-secure/              # Sandbox variants (when secure mode enabled)
-│   └── <mirrors source layout>   # e.g., todo.jay-html?jay-workerSandbox.ts
-│
-├── pre-rendered/                  # Slow-phase pre-rendered HTML (Jay Stack only)
-│   └── <mirrors route layout>    # e.g., page.jay-html
-│                                  #       cart/page.jay-html
-│                                  #       products/[slug]/page_<hash>.jay-html
+├── pre-rendered/                  # Slow-phase HTML + compiled TS wrappers (Jay Stack only)
+│   └── <mirrors route layout>    # e.g., page.jay-html + page.jay-html.ts side by side
 │
 └── debug/                         # Debug-only artifacts (dev server only)
     └── client-entry/              # Generated HTML entry points per route
@@ -90,15 +85,15 @@ Contracts are **not** in the build folder. See "Unifying contracts into agent-ki
 
 ### What changes and why
 
-| Current | Proposed | Rationale |
-|---------|----------|-----------|
-| `jay-runtime/<lib\|src>/` | `compiled/` | Neutral name; doesn't leak source directory structure or collide with package name |
-| `jay-runtime/lib-secure/` | `compiled-secure/` | Parallel to `compiled/`, clearly separated |
-| `jay-runtime/build/slow-render-cache/` | (merged into `compiled/`) | Eliminates "build inside build"; TS-compiled templates go under `compiled/` like all other compiled output |
-| `slow-render-cache/` | `pre-rendered/` | Describes content (pre-rendered HTML), not mechanism (cache) |
-| `build/materialized-contracts/` | Removed from build | Unified into `agent-kit/materialized-contracts/` (see below) |
-| `client-scripts/` | `debug/client-entry/` | These exist only for debugging; make that explicit |
-| `jay-runtime/src/pages/` (source mirror) | Removed | Redundant — `compiled/` already contains the TS versions |
+| Current                                  | Proposed                     | Rationale                                                                          |
+| ---------------------------------------- | ---------------------------- | ---------------------------------------------------------------------------------- |
+| `jay-runtime/<lib\|src>/`                | `<lib\|src>/` (no wrapper)   | Drop the `jay-runtime/` prefix; source layout mirrors directly into `build/`       |
+| `jay-runtime/lib-secure/`                | `lib-secure/` (no wrapper)   | Same — no collision since `lib/` and `lib-secure/` are distinct source directories |
+| `jay-runtime/build/slow-render-cache/`   | `pre-rendered/*.jay-html.ts` | Compiled TS sits alongside pre-rendered HTML; no nested build directories          |
+| `slow-render-cache/`                     | `pre-rendered/`              | Describes content (pre-rendered HTML), not mechanism (cache)                       |
+| `build/materialized-contracts/`          | Removed from build           | Unified into `agent-kit/materialized-contracts/` (see below)                       |
+| `client-scripts/`                        | `debug/client-entry/`        | These exist only for debugging; make that explicit                                 |
+| `jay-runtime/src/pages/` (source mirror) | Removed                      | Redundant                                                                          |
 
 ### Unifying contracts into agent-kit
 
@@ -112,6 +107,7 @@ Both are produced by the same `materializeContracts()` function and contain iden
 **Decision:** Remove `build/materialized-contracts/` entirely. Both the dev server and the import resolver should use `agent-kit/materialized-contracts/` as the single location for materialized contracts.
 
 **Changes:**
+
 - Dev server startup writes contracts to `agent-kit/materialized-contracts/` instead of `build/materialized-contracts/`
 - `JAY_IMPORT_RESOLVER` fallback path changes from `build/materialized-contracts` to `agent-kit/materialized-contracts`
 - The `jay-stack agent-kit` command continues to work as before (it already writes to `agent-kit/materialized-contracts/`)
@@ -121,29 +117,22 @@ This means `agent-kit/materialized-contracts/` is always kept fresh by the dev s
 
 ### Design principles
 
-1. **Names describe content, not mechanism** — `pre-rendered` not `slow-render-cache`, `compiled` not `jay-runtime`
-2. **No nested build directories** — `build/compiled/pages/...` instead of `build/jay-runtime/build/slow-render-cache/...`
-3. **Predictable output regardless of source layout** — compiler output always goes under `compiled/` whether source lives in `lib/`, `src/`, or `pages/`
+1. **Names describe content, not mechanism** — `pre-rendered` not `slow-render-cache`
+2. **No nested build directories** — `build/pre-rendered/...` instead of `build/jay-runtime/build/slow-render-cache/...`
+3. **No unnecessary wrapper directories** — compiled output mirrors source layout directly under `build/`
 4. **Same top-level structure for both contexts** — Jay Stack projects just have more folders than client-only ones
 5. **Debug artifacts are clearly separated** — `debug/` is obviously non-essential
 
-### Client-only project (example)
+### Client-only project (example: todo with source in `lib/`)
 
 ```
 build/
-└── compiled/
-    ├── todo.jay-html.ts
-    └── item.jay-html.ts
-```
-
-With secure mode:
-```
-build/
-├── compiled/
+├── lib/
 │   ├── app.jay-html.ts
 │   ├── todo.jay-html.ts
 │   └── item.jay-html.ts
-└── compiled-secure/
+└── lib-secure/
+    ├── app.jay-html.ts
     ├── app.jay-html?jay-workerTrusted.ts
     ├── todo.jay-html?jay-workerSandbox.ts
     └── item.jay-html?jay-mainSandbox.ts
@@ -153,25 +142,20 @@ build/
 
 ```
 build/
-├── compiled/
-│   └── pages/
-│       ├── page.jay-html.ts
-│       ├── cart/
-│       │   └── page.jay-html.ts
-│       └── products/
-│           ├── page.jay-html.ts
-│           └── [slug]/
-│               ├── page_2b5d64d8.jay-html.ts
-│               └── page_a8a43fe5.jay-html.ts
-├── pre-rendered/
+├── pre-rendered/                          # HTML and compiled TS side by side
 │   ├── page.jay-html
+│   ├── page.jay-html.ts
 │   ├── cart/
-│   │   └── page.jay-html
+│   │   ├── page.jay-html
+│   │   └── page.jay-html.ts
 │   └── products/
 │       ├── page.jay-html
+│       ├── page.jay-html.ts
 │       └── [slug]/
 │           ├── page_2b5d64d8.jay-html
-│           └── page_a8a43fe5.jay-html
+│           ├── page_2b5d64d8.jay-html.ts
+│           ├── page_a8a43fe5.jay-html
+│           └── page_a8a43fe5.jay-html.ts
 └── debug/
     └── client-entry/
         ├── index.html
@@ -179,8 +163,8 @@ build/
         └── products.html
 
 agent-kit/
-└── materialized-contracts/       # Single location for contract metadata
-    ├── contracts-index.yaml      #   (used by resolver, agents, and editor)
+└── materialized-contracts/                # Single location for contract metadata
+    ├── contracts-index.yaml               #   (used by resolver, agents, and editor)
     ├── plugins-index.yaml
     └── wix-stores/
         └── product-page.jay-contract
@@ -235,19 +219,63 @@ agent-kit/
 ## Trade-offs
 
 **Pros:**
+
 - Consistent, predictable structure across all project types
 - Self-documenting folder names
 - No confusing nested `build/build` paths
 - Debug artifacts clearly separated from production-relevant output
-- Source directory names (`lib/` vs `src/`) no longer leak into build output
+- No redundant wrapper directories — compiled output sits alongside source
 - Single source of truth for contracts (`agent-kit/materialized-contracts/`) — no duplication
 - Dev server keeps agent-kit contracts fresh automatically, so agents always see current data during development
 
 **Cons:**
+
 - Breaking change for anyone with tooling that references current build paths (mitigated by the fact that `build/` is gitignored and regenerated)
 - Multiple files to change across packages
 - Existing examples need `build/` folders deleted and regenerated
 - `agent-kit/` folder must exist for the import resolver to find dynamic contracts — but this is already the case in practice since `jay-stack agent-kit` is a required setup step
 
 **Risk:**
+
 - Generated client HTML imports reference `build/slow-render-cache` paths — these must be updated in the template generation code, not just the folder names, or the dev server will break at runtime. This is the most important thing to get right.
+
+## Implementation Results
+
+All changes implemented and verified. `yarn build` and `yarn test` pass across all 67 packages.
+
+### Deviation from plan
+
+The initial design proposed a `compiled/` wrapper directory. This was dropped because it created unnecessary nesting — especially for Jay Stack where `compiled/pre-rendered/` was redundant. Instead, `outputDir` was set to `build/` directly, and the `build/` prefix is stripped from relative paths in `writeGeneratedFile()` to prevent nested build directories.
+
+The result is that compiled `.ts` files sit alongside their source `.jay-html` files:
+
+```
+build/pre-rendered/cart/page.jay-html       # pre-rendered HTML
+build/pre-rendered/cart/page.jay-html.ts    # compiled TS wrapper (was: build/jay-runtime/build/slow-render-cache/cart/page.jay-html.ts)
+build/lib/app.jay-html.ts                  # compiled from lib/ source (was: build/jay-runtime/lib/app.jay-html.ts)
+```
+
+### Files modified
+
+**Core framework (jay repo):**
+
+- `packages/compiler/rollup-plugin/lib/common/files.ts` — strip `build/` prefix in `writeGeneratedFile`
+- `packages/jay-stack/stack-cli/lib/server.ts` — outputDir `build/jay-runtime` → `build`
+- `packages/jay-stack/dev-server/lib/dev-server.ts` — `client-scripts` → `debug/client-entry`, `slow-render-cache` → `pre-rendered`, contracts → `agent-kit/materialized-contracts`
+- `packages/jay-stack/dev-server/lib/dev-server-options.ts` — updated comment
+- `packages/jay-stack/dev-server/lib/vite-factory.ts` — updated comment
+- `packages/jay-stack/stack-server-runtime/lib/contract-materializer.ts` — default outputDir → `agent-kit/materialized-contracts`
+- `packages/jay-stack/stack-cli/lib/cli.ts` — updated comment
+- `packages/compiler/compiler-jay-html/lib/jay-target/jay-import-resolver.ts` — fallback → `agent-kit/materialized-contracts`
+- `docs/core/building-jay-packages.md` — updated docs reference
+
+**Vite configs (31 files):**
+
+- `packages/compiler/rollup-plugin/test/jayRuntime/fixtures/*/source/vite.config.ts` (2)
+- `packages/jay-stack-plugins/*/vite.config.ts` (2)
+- `examples/*/vite.config.ts` (22)
+- `wix/packages/*/vite.config.ts` (5)
+
+**Generated files (wix repo):**
+
+- `wix/examples/cms/src/pages/**/page.jay-html.d.ts` (4) — import paths → `agent-kit/materialized-contracts`

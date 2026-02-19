@@ -813,7 +813,7 @@ async function sendResponse(
     // Save generated client script to build folder for debugging
     if (options.buildFolder) {
         const pageName = !url || url === '/' ? 'index' : url.replace(/^\//, '').replace(/\//g, '-');
-        const clientScriptDir = path.join(options.buildFolder, 'client-scripts');
+        const clientScriptDir = path.join(options.buildFolder, 'debug', 'client-entry');
         await fs.mkdir(clientScriptDir, { recursive: true });
         await fs.writeFile(path.join(clientScriptDir, `${pageName}.html`), pageHtml, 'utf-8');
     }
@@ -1103,7 +1103,6 @@ function resolveBinding(binding: string, item: any): string {
  */
 async function materializeDynamicContracts(
     projectRootFolder: string,
-    buildFolder: string,
     viteServer: ViteDevServer,
 ): Promise<void> {
     try {
@@ -1111,7 +1110,7 @@ async function materializeDynamicContracts(
         const result = await materializeContracts(
             {
                 projectRoot: projectRootFolder,
-                outputDir: path.join(buildFolder, 'materialized-contracts'),
+                outputDir: path.join(projectRootFolder, 'agent-kit', 'materialized-contracts'),
                 verbose: false,
                 viteServer,
             },
@@ -1162,7 +1161,7 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     await lifecycleManager.initialize();
 
     // Materialize dynamic contracts for agent discovery
-    await materializeDynamicContracts(projectRootFolder, buildFolder!, vite);
+    await materializeDynamicContracts(projectRootFolder!, vite);
 
     // Set up hot reload for lib/init.ts
     setupServiceHotReload(vite, lifecycleManager);
@@ -1173,9 +1172,9 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     const routes: JayRoutes = await initRoutes(pagesRootFolder);
     const slowlyPhase = new DevSlowlyChangingPhase(dontCacheSlowly);
 
-    // Create slow render cache for pre-rendered jay-html
-    // Files are written to <buildFolder>/slow-render-cache/
-    const slowRenderCacheDir = path.join(buildFolder!, 'slow-render-cache');
+    // Create pre-rendered jay-html cache
+    // Files are written to <buildFolder>/pre-rendered/
+    const slowRenderCacheDir = path.join(buildFolder!, 'pre-rendered');
     const slowRenderCache = new SlowRenderCache(slowRenderCacheDir, pagesRootFolder);
 
     // Set up file watching for slow render cache invalidation
