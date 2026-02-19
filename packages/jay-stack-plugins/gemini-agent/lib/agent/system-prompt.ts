@@ -1,14 +1,46 @@
 /**
  * System Prompt Builder — constructs the system prompt for Gemini.
  *
- * Page state and available server actions are included as context
- * (not tools), so the LLM always knows the current state without
- * wasting tool calls.
+ * Page state is compacted (no pretty-printing, truncated arrays/strings)
+ * to reduce token usage. Tool summaries replace per-tool schema details.
  */
 
-export interface ServerActionSummary {
-    name: string;
-    description?: string;
+const MAX_ARRAY_ITEMS = 3;
+const MAX_STRING_LENGTH = 200;
+
+/**
+ * Recursively compacts a page state object to reduce token usage:
+ * - Arrays longer than 3 items are truncated with a count suffix
+ * - Strings longer than 200 chars are truncated with ellipsis
+ */
+export function compactPageState(value: unknown): unknown {
+    if (value === null || value === undefined) return value;
+
+    if (typeof value === 'string') {
+        if (value.length > MAX_STRING_LENGTH) {
+            return value.slice(0, MAX_STRING_LENGTH) + '...';
+        }
+        return value;
+    }
+
+    if (Array.isArray(value)) {
+        if (value.length > MAX_ARRAY_ITEMS) {
+            const truncated = value.slice(0, MAX_ARRAY_ITEMS).map(compactPageState);
+            truncated.push(`... (${value.length} total)`);
+            return truncated;
+        }
+        return value.map(compactPageState);
+    }
+
+    if (typeof value === 'object') {
+        const result: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(value)) {
+            result[k] = compactPageState(v);
+        }
+        return result;
+    }
+
+    return value;
 }
 
 /**
@@ -16,33 +48,35 @@ export interface ServerActionSummary {
  *
  * The prompt includes:
  * 1. Custom prefix (from config) or default greeting
- * 2. Current page state as JSON context
- * 3. List of available server actions with descriptions
- * 4. Instructions for tool use
+ * 2. Current page state as compact JSON context
+ * 3. Tool summary list
+ * 4. Instructions for tool use and discovery
  */
 export function buildSystemPrompt(
     pageState: object,
-    serverActions: ServerActionSummary[],
+    toolSummary: string,
     customPrefix?: string,
 ): string {
+    const compacted = compactPageState(pageState);
+
     const parts: string[] = [
         customPrefix || 'You are a helpful assistant for this web application.',
         '',
         '## Current Page State',
-        JSON.stringify(pageState, null, 2),
+        JSON.stringify(compacted),
         '',
     ];
 
-    if (serverActions.length > 0) {
-        parts.push('## Available Server Actions');
-        for (const action of serverActions) {
-            parts.push(`- ${action.name}${action.description ? `: ${action.description}` : ''}`);
-        }
+    if (toolSummary) {
+        parts.push('## Available Tools');
+        parts.push(toolSummary);
         parts.push('');
     }
 
     parts.push(
         'Use the provided tools to interact with the page and call server actions.',
+        'For tools with parameters, call `get_tool_details` first to learn valid values.',
+        'The page state above is a compact summary. Call `get_page_state` for the full untruncated state when needed.',
         'After using tools, describe what you did to the user.',
         'The page state above is refreshed each turn — use it to understand what the user sees.',
     );

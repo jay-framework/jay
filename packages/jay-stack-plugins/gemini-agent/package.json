@@ -35,6 +35,7 @@
     "@google/genai": "^0.14.0",
     "@jay-framework/component": "workspace:^",
     "@jay-framework/fullstack-component": "workspace:^",
+    "@jay-framework/logger": "workspace:^",
     "@jay-framework/runtime": "workspace:^",
     "@jay-framework/runtime-automation": "workspace:^",
     "@jay-framework/stack-client-runtime": "workspace:^",

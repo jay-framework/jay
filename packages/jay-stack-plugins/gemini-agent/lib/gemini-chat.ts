@@ -18,6 +18,7 @@ import {
     type MessageOfGeminiChatViewState,
     Role,
 } from './contracts/gemini-chat.jay-contract';
+import { compactPageState } from './agent/system-prompt';
 import type {
     GeminiMessage,
     PendingToolCall,
@@ -219,11 +220,14 @@ function executePageAutomationTool(
             item.element.click();
         }
 
-        // Get updated page state
+        // Return compact page state so the LLM sees what changed
         const newState = automation.getPageState();
         return {
             callId: call.id,
-            result: JSON.stringify({ success: true, pageState: newState.viewState }),
+            result: JSON.stringify({
+                success: true,
+                pageState: compactPageState(newState.viewState),
+            }),
         };
     } catch (error: any) {
         return {
