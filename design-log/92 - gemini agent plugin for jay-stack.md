@@ -875,8 +875,8 @@ Updated the agent-kit materialization and documentation to expose `.jay-action` 
 
 #### Agent-kit documentation updates
 
-| File | Change |
-| --- | --- |
-| `INSTRUCTIONS.md` | Workflow step 4 now says "Read actions — read `.jay-action` files". Plugins-index example shows `actions:` with `name`, `description`, `path`. |
+| File                       | Change                                                                                                                                                                                                            |
+| -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `INSTRUCTIONS.md`          | Workflow step 4 now says "Read actions — read `.jay-action` files". Plugins-index example shows `actions:` with `name`, `description`, `path`.                                                                    |
 | `contracts-and-plugins.md` | Plugins-index example includes actions. Plugin.yaml example shows `action:` field referencing `.jay-action` files. New "Reading .jay-action Files" section: format spec, Jay-Type notation table, usage workflow. |
-| `cli-commands.md` | Action section references `plugins-index.yaml` actions array and `.jay-action` files for input/output schemas. |
+| `cli-commands.md`          | Action section references `plugins-index.yaml` actions array and `.jay-action` files for input/output schemas.                                                                                                    |

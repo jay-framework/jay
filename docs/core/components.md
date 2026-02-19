@@ -410,17 +410,17 @@ function FormConstructor(props, refs) {
 
 Jay provides the following hooks, all imported from `@jay-framework/component`:
 
-| Hook | Purpose |
-| --- | --- |
-| `createSignal` | Reactive state for any value |
-| `createMemo` | Derived scalar values that recompute when dependencies change |
-| `createEffect` | Side effects that re-run when dependencies change |
-| `createPatchableSignal` | Signal with a `patch` function for complex/nested state |
-| `createDerivedArray` | Efficient reactive array mapping (reactive `Array.map`) |
-| `createEvent` | Custom event emitters for component communication |
-| `provideContext` | Provide static context to child components |
-| `provideReactiveContext` | Provide reactive context that updates children on change |
-| `useReactive` | Access reactive context from parent |
+| Hook                     | Purpose                                                       |
+| ------------------------ | ------------------------------------------------------------- |
+| `createSignal`           | Reactive state for any value                                  |
+| `createMemo`             | Derived scalar values that recompute when dependencies change |
+| `createEffect`           | Side effects that re-run when dependencies change             |
+| `createPatchableSignal`  | Signal with a `patch` function for complex/nested state       |
+| `createDerivedArray`     | Efficient reactive array mapping (reactive `Array.map`)       |
+| `createEvent`            | Custom event emitters for component communication             |
+| `provideContext`         | Provide static context to child components                    |
+| `provideReactiveContext` | Provide reactive context that updates children on change      |
+| `useReactive`            | Access reactive context from parent                           |
 
 JSON Patch operations are imported from `@jay-framework/json-patch`:
 
@@ -428,12 +428,12 @@ JSON Patch operations are imported from `@jay-framework/json-patch`:
 import { ADD, REPLACE, REMOVE, MOVE, patch } from '@jay-framework/json-patch';
 ```
 
-| Operation | Description |
-| --- | --- |
-| `ADD` | Insert a value at a path (for arrays: splice at index) |
-| `REPLACE` | Replace the value at a path |
-| `REMOVE` | Remove the value at a path (for arrays: splice out) |
-| `MOVE` | Move an array element from one index to another |
+| Operation | Description                                            |
+| --------- | ------------------------------------------------------ |
+| `ADD`     | Insert a value at a path (for arrays: splice at index) |
+| `REPLACE` | Replace the value at a path                            |
+| `REMOVE`  | Remove the value at a path (for arrays: splice out)    |
+| `MOVE`    | Move an array element from one index to another        |
 
 #### Patchable Signal with JSON Patch
 

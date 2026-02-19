@@ -86,14 +86,22 @@ Jay is built on reactive principles:
 - **Efficient derived collections** - `createDerivedArray` for list mapping without re-creating unchanged items
 
 ```typescript
-import { createSignal, createMemo, createPatchableSignal, createDerivedArray } from '@jay-framework/component';
+import {
+  createSignal,
+  createMemo,
+  createPatchableSignal,
+  createDerivedArray,
+} from '@jay-framework/component';
 import { REPLACE } from '@jay-framework/json-patch';
 
 const [count, setCount] = createSignal(0);
 const doubled = createMemo(() => count() * 2);
 
 // Patchable signal for complex nested state
-const [user, setUser, patchUser] = createPatchableSignal({ name: '', settings: { theme: 'light' } });
+const [user, setUser, patchUser] = createPatchableSignal({
+  name: '',
+  settings: { theme: 'light' },
+});
 patchUser({ op: REPLACE, path: ['settings', 'theme'], value: 'dark' });
 
 // Derived array: only re-maps items that changed

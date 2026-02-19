@@ -1330,9 +1330,9 @@ Since `dispatchEvent` is synchronous, all listeners fire immediately in the same
 
 **Files changed:**
 
-| File | Change |
-|------|--------|
-| `webmcp-plugin/lib/init.ts` | Replaced `setTimeout(0)` with `addEventListener('jay:automation-ready', ...)` + upfront check |
+| File                                                 | Change                                                                                                                                      |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `webmcp-plugin/lib/init.ts`                          | Replaced `setTimeout(0)` with `addEventListener('jay:automation-ready', ...)` + upfront check                                               |
 | `stack-server-runtime/lib/generate-client-script.ts` | Added `window.dispatchEvent(new Event('jay:automation-ready'))` after setting `window.__jay.automation` (both slow+fast ViewState branches) |
 
 ---
