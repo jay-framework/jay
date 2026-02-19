@@ -61,9 +61,7 @@ function normalizeHtml(html: string): string {
             }
         }
         parsed.sort((x, y) => x.name.localeCompare(y.name));
-        const sortedAttrs = parsed
-            .map((p) => `${p.name}=${p.value}`)
-            .join(' ');
+        const sortedAttrs = parsed.map((p) => `${p.name}=${p.value}`).join(' ');
         return `<${tagName} ${sortedAttrs}>`;
     });
 
@@ -155,7 +153,10 @@ function extractSignificantText(html: string): string[] {
         const raw = m[1].trim();
         if (raw.length <= 3) continue;
         if (/^\s*\{[^}]*\}\s*$/.test(raw)) continue; // Pure binding - skip
-        const staticParts = raw.split(/\{[^}]*\}/).map((s) => s.trim()).filter(Boolean);
+        const staticParts = raw
+            .split(/\{[^}]*\}/)
+            .map((s) => s.trim())
+            .filter(Boolean);
         for (const part of staticParts) {
             if (part.length > 3) texts.push(part);
         }

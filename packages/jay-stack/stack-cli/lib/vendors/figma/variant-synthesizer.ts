@@ -24,9 +24,7 @@ export interface SynthesizedVariant {
 }
 
 function getElementChildren(parent: HTMLElement): HTMLElement[] {
-    return parent.childNodes.filter(
-        (n) => n.nodeType === NodeType.ELEMENT_NODE,
-    ) as HTMLElement[];
+    return parent.childNodes.filter((n) => n.nodeType === NodeType.ELEMENT_NODE) as HTMLElement[];
 }
 
 /**
@@ -36,8 +34,7 @@ function getElementChildren(parent: HTMLElement): HTMLElement[] {
 export function detectVariantGroups(parent: HTMLElement): VariantGroup[] {
     const children = getElementChildren(parent);
     const groups: VariantGroup[] = [];
-    let currentGroup: { elements: HTMLElement[]; conditions: string[] } | null =
-        null;
+    let currentGroup: { elements: HTMLElement[]; conditions: string[] } | null = null;
 
     for (const child of children) {
         const ifExpr = child.getAttribute('if');
@@ -158,9 +155,7 @@ function getVariantPropertiesForCondition(
 
     for (const dim of dimensions) {
         const pathKey = dim.tagPath.join('.');
-        const matchingToken = tokens.find(
-            (t) => t.path.join('.') === pathKey,
-        );
+        const matchingToken = tokens.find((t) => t.path.join('.') === pathKey);
         if (matchingToken) {
             if (matchingToken.operator === '==' && matchingToken.comparedValue != null) {
                 result[dim.name] = matchingToken.comparedValue;
@@ -202,9 +197,7 @@ export function synthesizeVariant(
     }
 
     const dimensionNames = dimensions.map((d) => d.name).join(', ');
-    const componentSetName = dimensionNames
-        ? `${dimensionNames} variants`
-        : 'variants';
+    const componentSetName = dimensionNames ? `${dimensionNames} variants` : 'variants';
 
     const componentSetDomPath = buildDomPath(group.containerParent, body);
     const componentSetId = generateNodeId(componentSetDomPath, [
@@ -216,10 +209,7 @@ export function synthesizeVariant(
     for (let i = 0; i < group.elements.length; i++) {
         const element = group.elements[i]!;
         const condition = group.conditions[i]!;
-        const variantProps = getVariantPropertiesForCondition(
-            condition,
-            dimensions,
-        );
+        const variantProps = getVariantPropertiesForCondition(condition, dimensions);
         const variantName = Object.entries(variantProps)
             .map(([k, v]) => `${k}=${v}`)
             .join(', ');
@@ -267,10 +257,7 @@ export function synthesizeVariant(
     }
 
     const instanceDomPath = buildDomPath(group.containerParent, body);
-    const instanceId = generateNodeId(instanceDomPath, [
-        'variant-instance',
-        ...group.conditions,
-    ]);
+    const instanceId = generateNodeId(instanceDomPath, ['variant-instance', ...group.conditions]);
 
     const instance: ImportIRNode = {
         id: instanceId,
@@ -327,7 +314,10 @@ export function synthesizeRepeater(
         kind: 'FRAME',
         name: element.rawTagName || 'div',
         visible: true,
-        bindings: layerBindings.length > 0 ? layerBindings.map((b) => ({ kind: 'layer' as const, binding: b })) : undefined,
+        bindings:
+            layerBindings.length > 0
+                ? layerBindings.map((b) => ({ kind: 'layer' as const, binding: b }))
+                : undefined,
         children: childNode ? [childNode] : [],
     };
 }

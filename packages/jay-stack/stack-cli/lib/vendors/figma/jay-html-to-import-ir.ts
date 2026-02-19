@@ -319,7 +319,7 @@ function buildNodeFromElement(
     const variantGroups = detectVariantGroups(element);
 
     const variantElementSet = new Set<HTMLElement>();
-    const firstOfGroup = new Map<HTMLElement, typeof variantGroups[number]>();
+    const firstOfGroup = new Map<HTMLElement, (typeof variantGroups)[number]>();
     for (const group of variantGroups) {
         for (const el of group.elements) {
             variantElementSet.add(el);
@@ -339,15 +339,29 @@ function buildNodeFromElement(
 
             const buildChildNodeCb = (el: HTMLElement): ImportIRNode => {
                 const result = buildNodeFromElement(
-                    el, body, contractTags, jayPageSectionId, pageContractPath, repeaterContext,
+                    el,
+                    body,
+                    contractTags,
+                    jayPageSectionId,
+                    pageContractPath,
+                    repeaterContext,
                 );
                 warnings.push(...result.warnings);
                 componentSets.push(...result.componentSets);
                 return result.node;
             };
 
-            const { componentSet, instance, warnings: variantWarnings } = synthesizeVariant(
-                group, body, contractTags, jayPageSectionId, pageContractPath, buildChildNodeCb,
+            const {
+                componentSet,
+                instance,
+                warnings: variantWarnings,
+            } = synthesizeVariant(
+                group,
+                body,
+                contractTags,
+                jayPageSectionId,
+                pageContractPath,
+                buildChildNodeCb,
             );
             componentSets.push(componentSet);
             children.push(instance);
@@ -356,7 +370,12 @@ function buildNodeFromElement(
         }
 
         const childResult = buildNodeFromElement(
-            childEl, body, contractTags, jayPageSectionId, pageContractPath, repeaterContext,
+            childEl,
+            body,
+            contractTags,
+            jayPageSectionId,
+            pageContractPath,
+            repeaterContext,
         );
         children.push(childResult.node);
         warnings.push(...childResult.warnings);
@@ -399,7 +418,11 @@ export function buildImportIR(
     let rootChildren: ImportIRNode[] = [];
 
     if (contentElement) {
-        const { node, warnings: nodeWarnings, componentSets } = buildNodeFromElement(
+        const {
+            node,
+            warnings: nodeWarnings,
+            componentSets,
+        } = buildNodeFromElement(
             contentElement,
             body,
             contractTags,

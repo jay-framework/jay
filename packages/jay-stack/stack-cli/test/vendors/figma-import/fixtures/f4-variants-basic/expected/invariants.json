@@ -7,9 +7,6 @@
     { "type": "COMPONENT" },
     { "type": "INSTANCE" }
   ],
-  "requiredBindings": [
-    { "tagPath": ["mediaType"] },
-    { "tagPath": ["productName"] }
-  ],
+  "requiredBindings": [{ "tagPath": ["mediaType"] }, { "tagPath": ["productName"] }],
   "warningsMustNotContain": ["IMPORT_PARSE_FAILED", "BINDING_UNRESOLVED"]
 }

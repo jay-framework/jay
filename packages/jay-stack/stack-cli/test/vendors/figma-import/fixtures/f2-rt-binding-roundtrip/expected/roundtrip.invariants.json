@@ -1,5 +1,5 @@
 {
-    "requiredRefs": ["buyNow"],
-    "requiredTextBindings": ["productName", "price"],
-    "warningsMustNotContain": ["VARIANT_COMPONENT_SET_REQUIRED"]
+  "requiredRefs": ["buyNow"],
+  "requiredTextBindings": ["productName", "price"],
+  "warningsMustNotContain": ["VARIANT_COMPONENT_SET_REQUIRED"]
 }

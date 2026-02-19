@@ -10,7 +10,12 @@ import {
 } from '../../../lib/vendors/figma/variant-synthesizer';
 
 const mockContractTags: ContractTag[] = [
-    { tag: 'mediaType', type: 'variant' as any, dataType: 'enum', values: ['IMAGE', 'VIDEO'] } as any,
+    {
+        tag: 'mediaType',
+        type: 'variant' as any,
+        dataType: 'enum',
+        values: ['IMAGE', 'VIDEO'],
+    } as any,
     { tag: 'isOnSale', type: 'variant' as any, dataType: 'boolean' } as any,
     { tag: 'a', type: 'variant' as any, dataType: 'enum' } as any,
     { tag: 'b', type: 'variant' as any, dataType: 'enum' } as any,
@@ -28,7 +33,10 @@ const mockContractTags: ContractTag[] = [
 const pageContractPath: PageContractPath = { pageUrl: '/test' };
 const jayPageSectionId = 'section-1';
 
-const mockBuildChildNode = (element: { getAttribute: (name: string) => string | undefined; rawTagName?: string }): ImportIRNode => ({
+const mockBuildChildNode = (element: {
+    getAttribute: (name: string) => string | undefined;
+    rawTagName?: string;
+}): ImportIRNode => ({
     id: 'child-' + (element.getAttribute('data-test-id') || 'unknown'),
     sourcePath: 'test',
     kind: 'FRAME',
@@ -50,10 +58,7 @@ describe('variant-synthesizer', () => {
             const groups = detectVariantGroups(parent);
             expect(groups).toHaveLength(1);
             expect(groups[0]!.elements).toHaveLength(2);
-            expect(groups[0]!.conditions).toEqual([
-                'mediaType == IMAGE',
-                'mediaType == VIDEO',
-            ]);
+            expect(groups[0]!.conditions).toEqual(['mediaType == IMAGE', 'mediaType == VIDEO']);
         });
 
         it('non-if sibling between two if-siblings → two separate groups (each with 1 element, neither qualifies)', () => {
