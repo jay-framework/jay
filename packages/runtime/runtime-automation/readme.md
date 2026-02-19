@@ -69,6 +69,37 @@ Wraps a Jay component with automation capabilities.
 - `onComponentEvent(name, callback)` - Subscribe to a custom component event
 - `dispose()` - Clean up listeners
 
+## Jay-Stack Integration
+
+In jay-stack dev mode, the generated client script automatically wraps the page component with automation and exposes it on `window.__jay.automation`. A `jay:automation-ready` event is dispatched on `window` immediately after the automation instance is set.
+
+### Accessing automation from plugins
+
+Plugin client inits run **before** the page component is created, so `window.__jay.automation` is not yet available during init. Listen for the ready event:
+
+```typescript
+// In a plugin's client init
+const automation = (window as any).__jay?.automation;
+if (automation) {
+    // Already available
+    setup(automation);
+} else {
+    window.addEventListener('jay:automation-ready', () => {
+        setup((window as any).__jay.automation);
+    }, { once: true });
+}
+```
+
+### Accessing automation from interactive components
+
+Component interactive phases run after the page is mounted and automation is set. Access it directly:
+
+```typescript
+const automation: AutomationAPI | null = (window as any).__jay?.automation || null;
+```
+
+If the component may initialize before automation is ready (e.g. in a plugin), use the event pattern above.
+
 ## Design
 
 See [Design Log #76 - AI Agent Integration](../../../design-log/76%20-%20AI%20Agent%20Integration.md) for full design documentation.
