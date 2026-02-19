@@ -52,8 +52,38 @@ const callSubmitToolResults = createActionCaller<SubmitToolResultsInput, SubmitT
 );
 
 // ============================================================================
-// Tool Building (from AutomationAPI, similar to webmcp)
+// Tool Building (from AutomationAPI, aligned with webmcp semantic tools)
 // ============================================================================
+
+const FILLABLE_TYPES = new Set(['HTMLInputElement', 'HTMLTextAreaElement', 'HTMLSelectElement']);
+
+function isCheckable(element: HTMLElement): boolean {
+    return (
+        element instanceof HTMLInputElement &&
+        (element.type === 'checkbox' || element.type === 'radio')
+    );
+}
+
+function getSelectOptions(element: HTMLElement): string[] | undefined {
+    if (!(element instanceof HTMLSelectElement)) return undefined;
+    return Array.from(element.options).map((opt) => opt.value);
+}
+
+function setElementValue(element: HTMLElement, value: string): void {
+    if (isCheckable(element)) {
+        (element as HTMLInputElement).checked = value === 'true';
+    } else {
+        (element as HTMLInputElement).value = value;
+    }
+}
+
+function getValueEventTypes(registeredEvents: string[]): string[] {
+    const result: string[] = [];
+    if (registeredEvents.includes('input')) result.push('input');
+    if (registeredEvents.includes('change')) result.push('change');
+    if (result.length > 0) return result;
+    return registeredEvents.length > 0 ? [registeredEvents[0]] : ['input'];
+}
 
 function buildSerializedTools(automation: AutomationAPI): SerializedToolDef[] {
     const { interactions } = automation.getPageState();
@@ -64,40 +94,47 @@ function buildSerializedTools(automation: AutomationAPI): SerializedToolDef[] {
         if (!sample) continue;
 
         const elementType = sample.element.constructor.name;
-        const isFillable = [
-            'HTMLInputElement',
-            'HTMLTextAreaElement',
-            'HTMLSelectElement',
-        ].includes(elementType);
-        const isCheckbox =
-            elementType === 'HTMLInputElement' &&
-            ['checkbox', 'radio'].includes((sample.element as HTMLInputElement).type);
+        const isFillable = FILLABLE_TYPES.has(elementType);
+        const isSelect = elementType === 'HTMLSelectElement';
+        const checkable = isCheckable(sample.element);
         const isForEach = group.items.length > 1 || sample.coordinate.length > 1;
 
-        const prefix = isCheckbox ? 'toggle' : isFillable ? 'fill' : 'click';
+        const prefix = checkable ? 'toggle' : isFillable ? 'fill' : 'click';
         const toolName = `${prefix}-${toKebab(group.refName)}`;
         const humanName = toHumanReadable(group.refName);
 
         const description =
             group.description ||
-            `${isCheckbox ? 'Toggle' : isFillable ? 'Fill' : 'Click'} ${humanName}${isForEach ? ' for a specific item' : ''}`;
+            `${checkable ? 'Toggle' : isFillable ? 'Fill' : 'Click'} ${humanName}${isForEach ? ' for a specific item' : ''}`;
 
         const properties: Record<string, any> = {};
         const required: string[] = [];
 
         if (isForEach) {
+            const coordStrings = group.items.map((i) => i.coordinate.join('/'));
             properties.coordinate = {
                 type: 'string',
-                description: `Item coordinate (e.g. "${sample.coordinate.join('/')}")`,
+                description: 'Item coordinate',
+                enum: coordStrings,
             };
             required.push('coordinate');
         }
 
-        if (isFillable && !isCheckbox) {
-            properties.value = {
-                type: 'string',
-                description: `Value to set in ${humanName}`,
-            };
+        if (isFillable) {
+            if (checkable) {
+                properties.value = {
+                    type: 'string',
+                    description: 'Checked state',
+                    enum: ['true', 'false'],
+                };
+            } else {
+                const selectOptions = isSelect ? getSelectOptions(sample.element) : undefined;
+                properties.value = {
+                    type: 'string',
+                    description: isSelect ? 'Value to select' : `Value to set in ${humanName}`,
+                    ...(selectOptions ? { enum: selectOptions } : {}),
+                };
+            }
             required.push('value');
         }
 
@@ -159,7 +196,6 @@ function executePageAutomationTool(
         // Find the specific item
         let item = group.items[0];
         if (args.coordinate && typeof args.coordinate === 'string') {
-            const coord = args.coordinate.split('/');
             item =
                 group.items.find((i) => i.coordinate.join('/') === args.coordinate) ||
                 group.items[0];
@@ -174,21 +210,12 @@ function executePageAutomationTool(
         }
 
         // Execute based on prefix
-        if (prefix === 'fill' && args.value != null) {
-            const el = item.element as HTMLInputElement;
-            const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
-                window.HTMLInputElement.prototype,
-                'value',
-            )?.set;
-            if (nativeInputValueSetter) {
-                nativeInputValueSetter.call(el, String(args.value));
-            } else {
-                el.value = String(args.value);
+        if (prefix === 'fill' || prefix === 'toggle') {
+            setElementValue(item.element, String(args.value));
+            for (const evt of getValueEventTypes(item.events)) {
+                item.element.dispatchEvent(new Event(evt, { bubbles: true }));
             }
-            el.dispatchEvent(new Event('input', { bubbles: true }));
-            el.dispatchEvent(new Event('change', { bubbles: true }));
         } else {
-            // click or toggle
             item.element.click();
         }
 
