@@ -22,10 +22,10 @@ yarn jay-stack dev --test-mode --timeout 120
 
 ## Test Endpoints
 
-| Endpoint | Method | Response |
-|----------|--------|----------|
-| `/_jay/health` | GET | `{"status":"ready","port":3300,"editorPort":3301,"uptime":5.2}` |
-| `/_jay/shutdown` | POST | `{"status":"shutting_down"}` |
+| Endpoint         | Method | Response                                                        |
+| ---------------- | ------ | --------------------------------------------------------------- |
+| `/_jay/health`   | GET    | `{"status":"ready","port":3300,"editorPort":3301,"uptime":5.2}` |
+| `/_jay/shutdown` | POST   | `{"status":"shutting_down"}`                                    |
 
 ## Waiting for Server Ready
 
@@ -33,21 +33,21 @@ Poll the health endpoint until ready:
 
 ```typescript
 async function waitForServer(timeout = 30000): Promise<string> {
-    const start = Date.now();
-    
-    while (Date.now() - start < timeout) {
-        try {
-            const res = await fetch('http://localhost:3300/_jay/health');
-            if (res.ok) {
-                const { port } = await res.json();
-                return `http://localhost:${port}`;
-            }
-        } catch {
-            // Not ready yet
-        }
-        await new Promise(r => setTimeout(r, 500));
+  const start = Date.now();
+
+  while (Date.now() - start < timeout) {
+    try {
+      const res = await fetch('http://localhost:3300/_jay/health');
+      if (res.ok) {
+        const { port } = await res.json();
+        return `http://localhost:${port}`;
+      }
+    } catch {
+      // Not ready yet
     }
-    throw new Error(`Server not ready within ${timeout}ms`);
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error(`Server not ready within ${timeout}ms`);
 }
 ```
 
@@ -70,27 +70,27 @@ import { spawn, ChildProcess } from 'child_process';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 
 describe('Smoke Tests', () => {
-    let serverUrl: string;
-    let serverProcess: ChildProcess;
+  let serverUrl: string;
+  let serverProcess: ChildProcess;
 
-    beforeAll(async () => {
-        serverProcess = spawn('yarn', ['dev', '--test-mode'], {
-            cwd: process.cwd(),
-            shell: true,
-        });
-
-        serverUrl = await waitForServer(30000);
-    }, 35000);
-
-    afterAll(async () => {
-        await fetch(`${serverUrl}/_jay/shutdown`, { method: 'POST' });
+  beforeAll(async () => {
+    serverProcess = spawn('yarn', ['dev', '--test-mode'], {
+      cwd: process.cwd(),
+      shell: true,
     });
 
-    it('renders home page', async () => {
-        const res = await fetch(`${serverUrl}/`);
-        expect(res.status).toBe(200);
-        expect(await res.text()).toContain('<!doctype html>');
-    });
+    serverUrl = await waitForServer(30000);
+  }, 35000);
+
+  afterAll(async () => {
+    await fetch(`${serverUrl}/_jay/shutdown`, { method: 'POST' });
+  });
+
+  it('renders home page', async () => {
+    const res = await fetch(`${serverUrl}/`);
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain('<!doctype html>');
+  });
 });
 ```
 

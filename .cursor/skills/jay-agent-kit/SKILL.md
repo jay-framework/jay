@@ -10,6 +10,7 @@ This is the main entry point for building jay-stack applications. Read the relev
 ## Overview
 
 Jay Stack is a full-stack framework where:
+
 - **Plugins** provide headless components (data + interactions, no UI)
 - **Contracts** define the data shape and interaction points of each component
 - **jay-html** templates provide the UI that binds to contract data
@@ -28,25 +29,26 @@ Jay Stack is a full-stack framework where:
 
 Read these as needed:
 
-| Skill | When to Read |
-|-------|-------------|
-| [jay-html-authoring](../jay-html-authoring/SKILL.md) | Creating or editing `.jay-html` pages, understanding routing, template syntax, headless components |
-| [jay-contracts-and-plugins](../jay-contracts-and-plugins/SKILL.md) | Reading plugin.yaml, materialized contracts, contracts-index, plugins-index |
-| [jay-cli-commands](../jay-cli-commands/SKILL.md) | Running `jay-stack params`, `validate`, or `action` commands |
-| [jay-dev-server-test](../jay-dev-server-test/SKILL.md) | Starting dev server in test mode, smoke testing |
+| Skill                                                              | When to Read                                                                                       |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| [jay-html-authoring](../jay-html-authoring/SKILL.md)               | Creating or editing `.jay-html` pages, understanding routing, template syntax, headless components |
+| [jay-contracts-and-plugins](../jay-contracts-and-plugins/SKILL.md) | Reading plugin.yaml, materialized contracts, contracts-index, plugins-index                        |
+| [jay-cli-commands](../jay-cli-commands/SKILL.md)                   | Running `jay-stack params`, `validate`, or `action` commands                                       |
+| [jay-dev-server-test](../jay-dev-server-test/SKILL.md)             | Starting dev server in test mode, smoke testing                                                    |
 
 Also see the agent-kit generated docs (run `jay-stack agent-kit`):
+
 - `agent-kit/project-structure.md` — Project layout, styling patterns, CSS themes, configuration |
 
 ## Quick Reference
 
 ### Rendering Phases
 
-| Phase | When | Use For |
-|-------|------|---------|
-| **slow** | Build time (SSG) | Static content, SEO data, pre-rendered lists |
-| **fast** | Request time (SSR) | Per-request data (prices, stock, personalization) |
-| **fast+interactive** | Request + client | Data that also updates on the client |
+| Phase                | When               | Use For                                           |
+| -------------------- | ------------------ | ------------------------------------------------- |
+| **slow**             | Build time (SSG)   | Static content, SEO data, pre-rendered lists      |
+| **fast**             | Request time (SSR) | Per-request data (prices, stock, personalization) |
+| **fast+interactive** | Request + client   | Data that also updates on the client              |
 
 There is no standalone "interactive" phase. Any tag with `type: interactive` is automatically `fast+interactive`. Tags without an explicit phase are available in all phases.
 
@@ -64,6 +66,7 @@ src/pages/
 ```
 
 Each page directory can contain:
+
 - `page.jay-html` — template (required for rendering)
 - `page.jay-contract` — page-level data contract (optional)
 - `page.conf.yaml` — configuration: which headless components to use (optional, used when jay-html is missing)
@@ -73,7 +76,12 @@ Each page directory can contain:
 **1. Key-based** (data merged into parent ViewState under a key):
 
 ```html
-<script type="application/jay-headless" plugin="my-plugin" contract="my-contract" key="data"></script>
+<script
+  type="application/jay-headless"
+  plugin="my-plugin"
+  contract="my-contract"
+  key="data"
+></script>
 <!-- Access: {data.fieldName}, ref="data.refName" -->
 ```
 
@@ -108,9 +116,9 @@ yarn jay-stack validate
 
 ### Key Directories
 
-| Path | Purpose |
-|------|---------|
-| `src/pages/` | Page routes (directory-based routing) |
+| Path                                | Purpose                                                  |
+| ----------------------------------- | -------------------------------------------------------- |
+| `src/pages/`                        | Page routes (directory-based routing)                    |
 | `agent-kit/materialized-contracts/` | Generated contracts, indexes (run `jay-stack agent-kit`) |
-| `agent-kit/references/<plugin>/` | Pre-generated discovery data (run `jay-stack agent-kit`) |
-| `node_modules/<plugin>/` | Plugin packages with `plugin.yaml` |
+| `agent-kit/references/<plugin>/`    | Pre-generated discovery data (run `jay-stack agent-kit`) |
+| `node_modules/<plugin>/`            | Plugin packages with `plugin.yaml`                       |

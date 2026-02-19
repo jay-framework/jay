@@ -142,6 +142,7 @@ yarn jay-stack params wix-stores/product-page -v
 ```
 
 **When to use:**
+
 - Before generating pages for dynamic routes like `[slug]`
 - To discover what param values are valid
 - Only works on contracts whose component has `loadParams` (uses `withLoadParams()`)
@@ -183,11 +184,13 @@ yarn jay-stack action wix-stores/getProductBySlug --input '{"slug": "blue-shirt"
 ```
 
 **When to use:**
+
 - To discover valid prop values (e.g., product IDs for `<jay:product-card productId="...">`)
 - To understand what data a plugin provides
 - To explore available actions and their response shapes
 
 **Action names** are listed in the plugin's `plugin.yaml` under `actions:`. The CLI matches by:
+
 1. Exact action name
 2. Dotted suffix (e.g., `searchProducts` matches `wix-stores.searchProducts`)
 3. Full reference (`wix-stores/searchProducts`)
@@ -223,6 +226,7 @@ yarn jay-stack agent-kit --force
 ```
 
 **Outputs to `agent-kit/materialized-contracts/`:**
+
 - `contracts-index.yaml` — index of all contracts
 - `plugins-index.yaml` — index of all plugins and their contracts
 - `<plugin>/*.jay-contract` — materialized dynamic contracts
