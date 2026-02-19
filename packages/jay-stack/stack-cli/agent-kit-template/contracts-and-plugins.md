@@ -249,16 +249,16 @@ outputSchema:
 
 Schemas use a compact type notation:
 
-| Notation | Meaning |
-| --- | --- |
-| `propName: string` | Required string property |
-| `propName?: number` | Optional number property |
-| `propName: boolean` | Required boolean |
-| `propName: enum(a \| b \| c)` | Required enum |
-| `propName:` + nested block | Nested object |
-| `propName:` + `- childProp: type` | Array of objects (YAML list) |
-| `propName: importedName` | Type from `import:` block (references a `.jay-contract`) |
-| `- importedName` | Array of imported type |
+| Notation                          | Meaning                                                  |
+| --------------------------------- | -------------------------------------------------------- |
+| `propName: string`                | Required string property                                 |
+| `propName?: number`               | Optional number property                                 |
+| `propName: boolean`               | Required boolean                                         |
+| `propName: enum(a \| b \| c)`     | Required enum                                            |
+| `propName:` + nested block        | Nested object                                            |
+| `propName:` + `- childProp: type` | Array of objects (YAML list)                             |
+| `propName: importedName`          | Type from `import:` block (references a `.jay-contract`) |
+| `- importedName`                  | Array of imported type                                   |
 
 ### Using Action Metadata
 
