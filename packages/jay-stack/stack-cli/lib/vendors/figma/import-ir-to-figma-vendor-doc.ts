@@ -157,16 +157,32 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
             base.type = 'COMPONENT';
             const styleProps = mapStyleToFigmaProps(node.style);
             Object.assign(base, styleProps);
+            if (node.variantProperties) {
+                base.variantProperties = node.variantProperties;
+            }
             break;
         }
         case 'COMPONENT_SET': {
             base.type = 'COMPONENT_SET';
             const styleProps = mapStyleToFigmaProps(node.style);
             Object.assign(base, styleProps);
+            if (node.componentPropertyDefinitions) {
+                base.componentPropertyDefinitions = Object.fromEntries(
+                    Object.entries(node.componentPropertyDefinitions).map(([k, v]) => [
+                        k,
+                        { type: 'VARIANT' as const, variantOptions: v.variantOptions },
+                    ]),
+                );
+            }
             break;
         }
         case 'INSTANCE': {
             base.type = 'INSTANCE';
+            if (node.mainComponentId) {
+                base.mainComponentId = node.mainComponentId;
+            }
+            const styleProps = mapStyleToFigmaProps(node.style);
+            Object.assign(base, styleProps);
             break;
         }
         case 'VECTOR_PLACEHOLDER': {

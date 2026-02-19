@@ -1,0 +1,11 @@
+name: product-card
+tags:
+  - tag: productName
+    type: data
+    dataType: string
+  - tag: price
+    type: data
+    dataType: string
+  - tag: buyNow
+    type: interactive
+    elementType: HTMLButtonElement

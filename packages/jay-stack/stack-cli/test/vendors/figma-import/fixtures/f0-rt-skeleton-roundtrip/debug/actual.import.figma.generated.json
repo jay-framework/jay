@@ -1,0 +1,23 @@
+{
+  "id": "fbacc9edefa1",
+  "name": "test",
+  "type": "SECTION",
+  "visible": true,
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/test"
+  },
+  "children": [
+    {
+      "id": "73224e1a70d8",
+      "name": "div",
+      "type": "FRAME",
+      "visible": true,
+      "width": 400,
+      "height": 300,
+      "layoutMode": "VERTICAL",
+      "layoutSizingHorizontal": "FIXED",
+      "layoutSizingVertical": "FIXED"
+    }
+  ]
+}

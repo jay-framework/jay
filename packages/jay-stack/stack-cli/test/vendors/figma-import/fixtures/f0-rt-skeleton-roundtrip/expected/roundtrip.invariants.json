@@ -1,0 +1,4 @@
+{
+    "maxNestingDepthDelta": 2,
+    "warningsMustNotContain": ["IMPORT_PARSE_FAILED"]
+}

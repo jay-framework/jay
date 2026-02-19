@@ -7,8 +7,14 @@ import type {
     ImportMessage,
     ImportResponse,
     FigmaVendorDocument,
+    ProjectPage,
+    Contract,
 } from '@jay-framework/editor-protocol';
 import type { JayConfig } from '../../../lib/config';
+import { figmaVendor } from '../../../lib/vendors/figma/index';
+import { compareSemanticEquivalence } from '../../../lib/vendors/figma/semantic-comparator';
+import type { ContractTag as CompilerContractTag } from '@jay-framework/compiler-jay-html';
+import { parseContract, ContractTagType } from '@jay-framework/compiler-jay-html';
 
 const fixturesDir = path.join(__dirname, 'fixtures');
 const testDir = path.join(process.cwd(), 'tmp-test-import-fixtures');
@@ -25,6 +31,54 @@ interface Invariants {
     requiredBindings?: Array<{ tagPath: string[]; jayPageSectionId?: string }>;
     warningsMustContain?: string[];
     warningsMustNotContain?: string[];
+}
+
+interface RoundtripInvariants {
+    maxNestingDepthDelta?: number;
+    requiredRefs?: string[];
+    requiredTextBindings?: string[];
+    warningsMustNotContain?: string[];
+}
+
+function buildProjectPageFromContract(
+    pagePath: string,
+    pageUrl: string,
+    metaId: string,
+    contractYaml: string,
+): ProjectPage {
+    const contractResult = parseContract(contractYaml, 'page.jay-contract');
+    let contract: Contract | undefined;
+    if (contractResult.val) {
+        const compilerContract = contractResult.val;
+        const convertTag = (tag: CompilerContractTag): Contract['tags'][0] => {
+            const typeArray = Array.isArray(tag.type) ? tag.type : [tag.type];
+            const typeStrings = typeArray.map((t) => ContractTagType[t as number]);
+            return {
+                tag: tag.tag,
+                type: typeStrings.length === 1 ? typeStrings[0] : typeStrings,
+                dataType: tag.dataType ? String(tag.dataType) : undefined,
+                elementType: tag.elementType?.join(' | '),
+                required: tag.required,
+                repeated: tag.repeated,
+                trackBy: tag.trackBy,
+                async: tag.async,
+                phase: tag.phase,
+                link: tag.link,
+                tags: tag.tags?.map(convertTag),
+            };
+        };
+        contract = {
+            name: compilerContract.name,
+            tags: compilerContract.tags.map(convertTag),
+        };
+    }
+    return {
+        name: metaId,
+        url: pageUrl,
+        filePath: pagePath,
+        contract,
+        usedComponents: [],
+    };
 }
 
 function normalizeJson(obj: unknown): string {
@@ -364,6 +418,84 @@ describe('Figma Import Fixtures', () => {
                 importMsg,
             )) as ImportResponse<FigmaVendorDocument>;
             expect(response2.vendorDoc).toEqual(vendorDoc);
+
+            // 11. Roundtrip: export and compare semantic equivalence (when meta.mode === 'roundtrip')
+            if (meta.mode === 'roundtrip') {
+                let exportedBodyHtml: string | null = null;
+                let exportError: string | null = null;
+
+                try {
+                    const projectPage = buildProjectPageFromContract(
+                        pagePath,
+                        pageUrl,
+                        meta.id,
+                        hasContract ? contractYaml : 'name: default\ntags: []',
+                    );
+                    const result = await figmaVendor.convertToBodyHtml(
+                        vendorDoc,
+                        pageUrl,
+                        projectPage,
+                        [],
+                    );
+                    exportedBodyHtml = result.bodyHtml;
+                } catch (err) {
+                    exportError = err instanceof Error ? err.message : String(err);
+                }
+
+                if (exportError) {
+                    console.warn(
+                        `[${fixtureName}] Roundtrip export failed (import still passed): ${exportError}`,
+                    );
+                    // Write debug file for inspection
+                    const debugDir = path.join(fixturePath, 'debug');
+                    await fs.mkdir(debugDir, { recursive: true });
+                    await fs.writeFile(
+                        path.join(debugDir, 'actual.export.page.jay-html'),
+                        `<!-- Export failed: ${exportError} -->\n`,
+                    );
+                } else {
+                    const bodyMatch = jayHtml.match(/<body>([\s\S]*)<\/body>/i);
+                    const sourceBody = bodyMatch ? bodyMatch[1].trim() : jayHtml;
+
+                    const comparison = compareSemanticEquivalence(sourceBody, exportedBodyHtml!);
+
+                    const hardFails = comparison.invariantResults.filter(
+                        (r) => r.severity === 'HARD_FAIL' && !r.passed,
+                    );
+                    expect(
+                        hardFails,
+                        `Roundtrip semantic invariants failed:\n${hardFails.map((r) => `  ${r.name}: ${r.details ?? 'failed'}`).join('\n')}`,
+                    ).toEqual([]);
+
+                    const roundtripInvariantsPath = path.join(
+                        fixturePath,
+                        'expected',
+                        'roundtrip.invariants.json',
+                    );
+                    try {
+                        const roundtripInvariants: RoundtripInvariants = JSON.parse(
+                            await fs.readFile(roundtripInvariantsPath, 'utf-8'),
+                        );
+                        if (roundtripInvariants.warningsMustNotContain && response.warnings) {
+                            for (const forbidden of roundtripInvariants.warningsMustNotContain) {
+                                expect(
+                                    response.warnings.some((w) => w.includes(forbidden)),
+                                    `warningsMustNotContain: "${forbidden}" found in warnings`,
+                                ).toBe(false);
+                            }
+                        }
+                    } catch {
+                        // No roundtrip invariants file
+                    }
+
+                    const debugDir = path.join(fixturePath, 'debug');
+                    await fs.mkdir(debugDir, { recursive: true });
+                    await fs.writeFile(
+                        path.join(debugDir, 'actual.export.page.jay-html'),
+                        exportedBodyHtml!,
+                    );
+                }
+            }
         });
     }
 

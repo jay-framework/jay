@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+  <div style="display: flex; flex-direction: column; width: 400px; gap: 12px; padding: 24px; background-color: #ffffff; border-radius: 8px;">
+    <div style="font-size: 24px; font-weight: 700; color: #1a1a1a;">{productName}</div>
+    <div style="font-size: 18px; color: #666666;">{price}</div>
+    <div ref="buyNow" style="display: flex; justify-content: center; align-items: center; padding: 12px 24px; background-color: #2563eb; color: #ffffff; border-radius: 6px; font-size: 16px; font-weight: 600;">Buy Now</div>
+  </div>
+</body>
+</html>

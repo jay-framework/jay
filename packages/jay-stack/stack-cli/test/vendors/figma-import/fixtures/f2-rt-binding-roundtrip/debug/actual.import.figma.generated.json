@@ -1,0 +1,141 @@
+{
+  "id": "fbacc9edefa1",
+  "name": "test",
+  "type": "SECTION",
+  "visible": true,
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/test"
+  },
+  "children": [
+    {
+      "id": "73224e1a70d8",
+      "name": "div",
+      "type": "FRAME",
+      "visible": true,
+      "width": 400,
+      "layoutMode": "VERTICAL",
+      "itemSpacing": 12,
+      "paddingTop": 24,
+      "paddingRight": 24,
+      "paddingBottom": 24,
+      "paddingLeft": 24,
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
+          "opacity": 1
+        }
+      ],
+      "cornerRadius": 8,
+      "layoutSizingHorizontal": "FIXED",
+      "layoutSizingVertical": "HUG",
+      "children": [
+        {
+          "id": "e2401b98adbf",
+          "name": "div",
+          "type": "TEXT",
+          "visible": true,
+          "textAutoResize": "WIDTH_AND_HEIGHT",
+          "characters": "{productName}",
+          "fontSize": 24,
+          "fontWeight": 700,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0.10196078431372549,
+                "g": 0.10196078431372549,
+                "b": 0.10196078431372549
+              },
+              "opacity": 1
+            }
+          ],
+          "pluginData": {
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"productName\"]}]"
+          }
+        },
+        {
+          "id": "85132b213414",
+          "name": "div",
+          "type": "TEXT",
+          "visible": true,
+          "textAutoResize": "WIDTH_AND_HEIGHT",
+          "characters": "{price}",
+          "fontSize": 18,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0.4,
+                "g": 0.4,
+                "b": 0.4
+              },
+              "opacity": 1
+            }
+          ],
+          "pluginData": {
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"price\"]}]"
+          }
+        },
+        {
+          "id": "36700c56518a",
+          "name": "buyNow",
+          "type": "FRAME",
+          "visible": true,
+          "layoutMode": "HORIZONTAL",
+          "paddingTop": 12,
+          "paddingRight": 24,
+          "paddingBottom": 12,
+          "paddingLeft": 24,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0.1450980392156863,
+                "g": 0.38823529411764707,
+                "b": 0.9215686274509803
+              },
+              "opacity": 1
+            }
+          ],
+          "cornerRadius": 6,
+          "primaryAxisAlignItems": "CENTER",
+          "counterAxisAlignItems": "CENTER",
+          "layoutSizingHorizontal": "HUG",
+          "layoutSizingVertical": "HUG",
+          "pluginData": {
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"buyNow\"]}]"
+          },
+          "children": [
+            {
+              "id": "7fe22bd5170f",
+              "name": "Buy Now",
+              "type": "TEXT",
+              "visible": true,
+              "textAutoResize": "WIDTH_AND_HEIGHT",
+              "characters": "Buy Now",
+              "fontSize": 16,
+              "fontWeight": 600,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 1,
+                    "g": 1,
+                    "b": 1
+                  },
+                  "opacity": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

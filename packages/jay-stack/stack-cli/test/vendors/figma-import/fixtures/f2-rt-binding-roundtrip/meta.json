@@ -1,0 +1,6 @@
+{
+    "id": "f2-rt-binding-roundtrip",
+    "feature": "binding-roundtrip",
+    "milestone": 1,
+    "mode": "roundtrip"
+}
