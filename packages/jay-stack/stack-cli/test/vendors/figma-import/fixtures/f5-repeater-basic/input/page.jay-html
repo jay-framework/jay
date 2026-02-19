@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+  <div style="display: flex; flex-direction: column; width: 400px; gap: 8px; padding: 16px;">
+    <div style="font-size: 20px; font-weight: 700; color: #1a1a1a;">Items List</div>
+    <div forEach="items" trackBy="id" style="display: flex; flex-direction: column; gap: 4px;">
+      <div style="display: flex; flex-direction: row; gap: 8px; padding: 8px; background-color: #f0f0f0; border-radius: 4px;">
+        <div style="font-size: 14px; font-weight: 600; color: #333333;">{name}</div>
+        <div style="font-size: 12px; color: #888888;">{description}</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

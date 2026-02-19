@@ -1,0 +1,15 @@
+{
+  "requiredNodes": [
+    { "type": "SECTION" },
+    { "type": "FRAME" },
+    { "type": "TEXT" },
+    { "type": "COMPONENT_SET" },
+    { "type": "COMPONENT" },
+    { "type": "INSTANCE" }
+  ],
+  "requiredBindings": [
+    { "tagPath": ["mediaType"] },
+    { "tagPath": ["productName"] }
+  ],
+  "warningsMustNotContain": ["IMPORT_PARSE_FAILED", "BINDING_UNRESOLVED"]
+}

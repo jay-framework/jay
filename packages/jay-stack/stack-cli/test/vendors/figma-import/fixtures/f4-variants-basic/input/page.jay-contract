@@ -1,0 +1,9 @@
+name: variant-test
+tags:
+  - tag: mediaType
+    type: variant
+    dataType: enum
+    values: [IMAGE, VIDEO]
+  - tag: productName
+    type: data
+    dataType: string

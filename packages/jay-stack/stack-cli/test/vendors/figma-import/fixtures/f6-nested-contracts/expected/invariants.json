@@ -1,0 +1,17 @@
+{
+  "requiredNodes": [
+    { "type": "SECTION" },
+    { "type": "FRAME" },
+    { "type": "TEXT" },
+    { "type": "RECTANGLE" }
+  ],
+  "requiredBindings": [
+    { "tagPath": ["product", "name"] },
+    { "tagPath": ["product", "price"] },
+    { "tagPath": ["product", "imageUrl"] },
+    { "tagPath": ["product", "options"] },
+    { "tagPath": ["product", "options", "label"] },
+    { "tagPath": ["product", "options", "value"] }
+  ],
+  "warningsMustNotContain": ["IMPORT_PARSE_FAILED", "BINDING_UNRESOLVED"]
+}

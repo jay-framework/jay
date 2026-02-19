@@ -1,0 +1,151 @@
+{
+  "type": "SECTION",
+  "name": "test",
+  "visible": true,
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/test"
+  },
+  "children": [
+    {
+      "type": "FRAME",
+      "name": "div",
+      "visible": true,
+      "width": 500,
+      "layoutMode": "VERTICAL",
+      "itemSpacing": 16,
+      "paddingTop": 24,
+      "paddingRight": 24,
+      "paddingBottom": 24,
+      "paddingLeft": 24,
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": { "r": 1, "g": 1, "b": 1 },
+          "opacity": 1
+        }
+      ],
+      "cornerRadius": 12,
+      "layoutSizingHorizontal": "FIXED",
+      "layoutSizingVertical": "HUG",
+      "children": [
+        {
+          "type": "TEXT",
+          "name": "div",
+          "visible": true,
+          "textAutoResize": "WIDTH_AND_HEIGHT",
+          "characters": "{product.name}",
+          "fontSize": 24,
+          "fontWeight": 700,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": { "r": 0.10196078431372549, "g": 0.10196078431372549, "b": 0.10196078431372549 },
+              "opacity": 1
+            }
+          ],
+          "pluginData": {
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"name\"]}]"
+          }
+        },
+        {
+          "type": "TEXT",
+          "name": "div",
+          "visible": true,
+          "textAutoResize": "WIDTH_AND_HEIGHT",
+          "characters": "{product.price}",
+          "fontSize": 18,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": { "r": 0.4, "g": 0.4, "b": 0.4 },
+              "opacity": 1
+            }
+          ],
+          "pluginData": {
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"price\"]}]"
+          }
+        },
+        {
+          "type": "RECTANGLE",
+          "name": "img",
+          "visible": true,
+          "pluginData": {
+            "semanticHtml": "img",
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"imageUrl\"],\"attribute\":\"src\"},{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"name\"],\"attribute\":\"alt\"}]"
+          },
+          "width": 452,
+          "height": 300,
+          "cornerRadius": 8
+        },
+        {
+          "type": "FRAME",
+          "name": "div",
+          "visible": true,
+          "layoutMode": "VERTICAL",
+          "itemSpacing": 8,
+          "layoutSizingHorizontal": "HUG",
+          "layoutSizingVertical": "HUG",
+          "pluginData": {
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"options\"]}]"
+          },
+          "children": [
+            {
+              "type": "FRAME",
+              "name": "div",
+              "visible": true,
+              "layoutMode": "HORIZONTAL",
+              "itemSpacing": 8,
+              "paddingTop": 8,
+              "paddingRight": 8,
+              "paddingBottom": 8,
+              "paddingLeft": 8,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": { "r": 0.9607843137254902, "g": 0.9607843137254902, "b": 0.9607843137254902 },
+                  "opacity": 1
+                }
+              ],
+              "cornerRadius": 4,
+              "layoutSizingHorizontal": "HUG",
+              "layoutSizingVertical": "HUG",
+              "children": [
+                {
+                  "type": "TEXT",
+                  "name": "div",
+                  "visible": true,
+                  "textAutoResize": "WIDTH_AND_HEIGHT",
+                  "characters": "{label}",
+                  "fontSize": 14,
+                  "fontWeight": 600,
+                  "pluginData": {
+                    "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"options\",\"label\"]}]"
+                  }
+                },
+                {
+                  "type": "TEXT",
+                  "name": "div",
+                  "visible": true,
+                  "textAutoResize": "WIDTH_AND_HEIGHT",
+                  "characters": "{value}",
+                  "fontSize": 14,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": { "r": 0.5333333333333333, "g": 0.5333333333333333, "b": 0.5333333333333333 },
+                      "opacity": 1
+                    }
+                  ],
+                  "pluginData": {
+                    "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"options\",\"value\"]}]"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

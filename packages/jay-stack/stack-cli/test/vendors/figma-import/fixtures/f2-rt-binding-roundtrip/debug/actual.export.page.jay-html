@@ -1,9 +1,0 @@
-  <div data-figma-id="73224e1a70d8" data-figma-type="frame" style="width: 400px;height: fit-content;background-image: linear-gradient(rgba(255, 255, 255, 1), rgba(255, 255, 255, 1));background-size: 100% 100%;background-position: center;background-repeat: no-repeat;border-radius: 8px;overflow: visible;display: flex;flex-direction: column;gap: 12px;padding-left: 24px;padding-right: 24px;padding-top: 24px;padding-bottom: 24px;box-sizing: border-box;">
-    <!-- div -->
-    <div data-figma-id="e2401b98adbf" style="width: 0px;height: 0px;font-family: sans-serif;font-size: 24px;font-weight: 700;color: #1a1a1a;text-align: left;">{productName}</div>
-    <div data-figma-id="85132b213414" style="width: 0px;height: 0px;font-family: sans-serif;font-size: 18px;font-weight: 400;color: #666666;text-align: left;">{price}</div>
-    <div data-figma-id="36700c56518a" data-figma-type="frame" style="width: fit-content;height: fit-content;background-image: linear-gradient(rgba(37, 99, 235, 1), rgba(37, 99, 235, 1));background-size: 100% 100%;background-position: center;background-repeat: no-repeat;border-radius: 6px;overflow: visible;display: flex;flex-direction: row;justify-content: center;align-items: center;padding-left: 24px;padding-right: 24px;padding-top: 12px;padding-bottom: 12px;box-sizing: border-box;" ref="buyNow">
-      <!-- buyNow -->
-      <div data-figma-id="7fe22bd5170f" style="width: 0px;height: 0px;font-family: sans-serif;font-size: 16px;font-weight: 600;color: #ffffff;text-align: left;">Buy Now</div>
-    </div>
-  </div>

@@ -496,6 +496,10 @@ describe('Figma Import Fixtures', () => {
                     );
                 }
             }
+
+            // 12. Clean up debug directory if test passed (all assertions above succeeded)
+            const debugDir = path.join(fixturePath, 'debug');
+            await fs.rm(debugDir, { recursive: true, force: true });
         });
     }
 

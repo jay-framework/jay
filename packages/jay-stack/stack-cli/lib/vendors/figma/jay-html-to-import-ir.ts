@@ -6,6 +6,7 @@ import type { ImportIRDocument, ImportIRNode, ImportIRStyle, ImportIRBinding } f
 import { generateNodeId, buildDomPath, getSemanticAnchors } from './id-generator';
 import { resolveStyle, parseInlineStyle } from './style-resolver';
 import { extractBindingsFromElement } from './binding-reconstructor';
+import { detectVariantGroups, synthesizeVariant, synthesizeRepeater } from './variant-synthesizer';
 import type { PageContractPath } from './pageContractPath';
 
 const BLOCK_LEVEL_TAGS = new Set([
@@ -142,6 +143,12 @@ function findFirstBlockChild(body: HTMLElement): HTMLElement | null {
     return children[0] ?? null;
 }
 
+interface BuildResult {
+    node: ImportIRNode;
+    warnings: string[];
+    componentSets: ImportIRNode[];
+}
+
 function buildNodeFromElement(
     element: HTMLElement,
     body: HTMLElement,
@@ -149,8 +156,9 @@ function buildNodeFromElement(
     jayPageSectionId: string,
     pageContractPath: PageContractPath,
     repeaterContext: string[][],
-): { node: ImportIRNode; warnings: string[] } {
+): BuildResult {
     const warnings: string[] = [];
+    const componentSets: ImportIRNode[] = [];
     const tag = (element.rawTagName || 'div').toLowerCase();
 
     const domPath = buildDomPath(element, body);
@@ -199,7 +207,7 @@ function buildNodeFromElement(
             warnings: warnings.length > 0 ? [...warnings] : undefined,
             children: [],
         };
-        return { node, warnings };
+        return { node, warnings, componentSets };
     }
 
     if (isTextElement(element)) {
@@ -207,8 +215,6 @@ function buildNodeFromElement(
         const hasContainer = !!(style.backgroundColor || style.padding || style.layoutMode);
 
         if (hasContainer) {
-            // Element has both text and container styles (e.g. styled button) →
-            // wrap as FRAME with a TEXT child so container props are preserved.
             const textStyle: ImportIRStyle = {};
             if (style.fontFamily) textStyle.fontFamily = style.fontFamily;
             if (style.fontSize) textStyle.fontSize = style.fontSize;
@@ -242,7 +248,7 @@ function buildNodeFromElement(
                 warnings: warnings.length > 0 ? [...warnings] : undefined,
                 children: [textChild],
             };
-            return { node, warnings };
+            return { node, warnings, componentSets };
         }
 
         const headingDefaults = HEADING_TAGS[tag];
@@ -264,27 +270,97 @@ function buildNodeFromElement(
             warnings: warnings.length > 0 ? [...warnings] : undefined,
             children: [],
         };
-        return { node, warnings };
+        return { node, warnings, componentSets };
     }
 
-    // FRAME — recurse into children
+    // forEach (repeater) — process only first child with updated repeater context
+    const forEachAttr = element.getAttribute('forEach');
+    if (forEachAttr != null && forEachAttr.trim()) {
+        const forEachPath = forEachAttr.trim().split('.');
+        const newRepeaterContext = [...repeaterContext, forEachPath];
+        const childElements = getChildElements(element);
+        const firstChild = childElements.find((el) => {
+            const t = (el.rawTagName || '').toLowerCase();
+            return t !== 'script' && t !== 'style' && t !== 'link';
+        });
+
+        const children: ImportIRNode[] = [];
+        if (firstChild) {
+            const childResult = buildNodeFromElement(
+                firstChild,
+                body,
+                contractTags,
+                jayPageSectionId,
+                pageContractPath,
+                newRepeaterContext,
+            );
+            children.push(childResult.node);
+            warnings.push(...childResult.warnings);
+            componentSets.push(...childResult.componentSets);
+        }
+
+        const node: ImportIRNode = {
+            id: nodeId,
+            sourcePath: domPath,
+            kind: 'FRAME',
+            name,
+            tagName: tag,
+            visible: true,
+            style,
+            bindings: bindings.length > 0 ? bindings : undefined,
+            warnings: warnings.length > 0 ? [...warnings] : undefined,
+            children,
+        };
+        return { node, warnings, componentSets };
+    }
+
+    // FRAME — recurse into children, detecting variant groups
     const childElements = getChildElements(element);
+    const variantGroups = detectVariantGroups(element);
+
+    const variantElementSet = new Set<HTMLElement>();
+    const firstOfGroup = new Map<HTMLElement, typeof variantGroups[number]>();
+    for (const group of variantGroups) {
+        for (const el of group.elements) {
+            variantElementSet.add(el);
+        }
+        firstOfGroup.set(group.elements[0]!, group);
+    }
+
     const children: ImportIRNode[] = [];
 
     for (const childEl of childElements) {
         const childTag = (childEl.rawTagName || '').toLowerCase();
         if (childTag === 'script' || childTag === 'style' || childTag === 'link') continue;
 
-        const { node: childNode, warnings: childWarnings } = buildNodeFromElement(
-            childEl,
-            body,
-            contractTags,
-            jayPageSectionId,
-            pageContractPath,
-            repeaterContext,
+        if (variantElementSet.has(childEl)) {
+            const group = firstOfGroup.get(childEl);
+            if (!group) continue; // not first in group → already handled
+
+            const buildChildNodeCb = (el: HTMLElement): ImportIRNode => {
+                const result = buildNodeFromElement(
+                    el, body, contractTags, jayPageSectionId, pageContractPath, repeaterContext,
+                );
+                warnings.push(...result.warnings);
+                componentSets.push(...result.componentSets);
+                return result.node;
+            };
+
+            const { componentSet, instance, warnings: variantWarnings } = synthesizeVariant(
+                group, body, contractTags, jayPageSectionId, pageContractPath, buildChildNodeCb,
+            );
+            componentSets.push(componentSet);
+            children.push(instance);
+            warnings.push(...variantWarnings);
+            continue;
+        }
+
+        const childResult = buildNodeFromElement(
+            childEl, body, contractTags, jayPageSectionId, pageContractPath, repeaterContext,
         );
-        children.push(childNode);
-        warnings.push(...childWarnings);
+        children.push(childResult.node);
+        warnings.push(...childResult.warnings);
+        componentSets.push(...childResult.componentSets);
     }
 
     const node: ImportIRNode = {
@@ -299,7 +375,7 @@ function buildNodeFromElement(
         warnings: warnings.length > 0 ? [...warnings] : undefined,
         children,
     };
-    return { node, warnings };
+    return { node, warnings, componentSets };
 }
 
 export function buildImportIR(
@@ -323,7 +399,7 @@ export function buildImportIR(
     let rootChildren: ImportIRNode[] = [];
 
     if (contentElement) {
-        const { node, warnings: nodeWarnings } = buildNodeFromElement(
+        const { node, warnings: nodeWarnings, componentSets } = buildNodeFromElement(
             contentElement,
             body,
             contractTags,
@@ -331,7 +407,7 @@ export function buildImportIR(
             pageContractPath,
             [],
         );
-        rootChildren = [node];
+        rootChildren = [node, ...componentSets];
         warnings.push(...nodeWarnings);
     } else {
         warnings.push('IMPORT_EMPTY_BODY: No block-level content found in <body>');

@@ -1,0 +1,13 @@
+{
+  "requiredNodes": [
+    { "type": "SECTION" },
+    { "type": "FRAME" },
+    { "type": "TEXT" }
+  ],
+  "requiredBindings": [
+    { "tagPath": ["items"] },
+    { "tagPath": ["items", "name"] },
+    { "tagPath": ["items", "description"] }
+  ],
+  "warningsMustNotContain": ["IMPORT_PARSE_FAILED", "BINDING_UNRESOLVED"]
+}

@@ -1,0 +1,133 @@
+{
+  "type": "SECTION",
+  "name": "test",
+  "visible": true,
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/test"
+  },
+  "children": [
+    {
+      "type": "FRAME",
+      "name": "div",
+      "visible": true,
+      "width": 400,
+      "layoutMode": "VERTICAL",
+      "itemSpacing": 8,
+      "paddingTop": 16,
+      "paddingRight": 16,
+      "paddingBottom": 16,
+      "paddingLeft": 16,
+      "layoutSizingHorizontal": "FIXED",
+      "layoutSizingVertical": "HUG",
+      "children": [
+        {
+          "type": "TEXT",
+          "name": "div",
+          "visible": true,
+          "textAutoResize": "WIDTH_AND_HEIGHT",
+          "characters": "Items List",
+          "fontSize": 20,
+          "fontWeight": 700,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0.10196078431372549,
+                "g": 0.10196078431372549,
+                "b": 0.10196078431372549
+              },
+              "opacity": 1
+            }
+          ]
+        },
+        {
+          "type": "FRAME",
+          "name": "div",
+          "visible": true,
+          "layoutMode": "VERTICAL",
+          "itemSpacing": 4,
+          "layoutSizingHorizontal": "HUG",
+          "layoutSizingVertical": "HUG",
+          "pluginData": {
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"items\"]}]"
+          },
+          "children": [
+            {
+              "type": "FRAME",
+              "name": "div",
+              "visible": true,
+              "layoutMode": "HORIZONTAL",
+              "itemSpacing": 8,
+              "paddingTop": 8,
+              "paddingRight": 8,
+              "paddingBottom": 8,
+              "paddingLeft": 8,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.9411764705882353,
+                    "g": 0.9411764705882353,
+                    "b": 0.9411764705882353
+                  },
+                  "opacity": 1
+                }
+              ],
+              "cornerRadius": 4,
+              "layoutSizingHorizontal": "HUG",
+              "layoutSizingVertical": "HUG",
+              "children": [
+                {
+                  "type": "TEXT",
+                  "name": "div",
+                  "visible": true,
+                  "textAutoResize": "WIDTH_AND_HEIGHT",
+                  "characters": "{name}",
+                  "fontSize": 14,
+                  "fontWeight": 600,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.2,
+                        "g": 0.2,
+                        "b": 0.2
+                      },
+                      "opacity": 1
+                    }
+                  ],
+                  "pluginData": {
+                    "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"items\",\"name\"]}]"
+                  }
+                },
+                {
+                  "type": "TEXT",
+                  "name": "div",
+                  "visible": true,
+                  "textAutoResize": "WIDTH_AND_HEIGHT",
+                  "characters": "{description}",
+                  "fontSize": 12,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.5333333333333333,
+                        "g": 0.5333333333333333,
+                        "b": 0.5333333333333333
+                      },
+                      "opacity": 1
+                    }
+                  ],
+                  "pluginData": {
+                    "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"items\",\"description\"]}]"
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

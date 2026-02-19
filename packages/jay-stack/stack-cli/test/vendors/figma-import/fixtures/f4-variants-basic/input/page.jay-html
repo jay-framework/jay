@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+  <div style="display: flex; flex-direction: column; width: 400px; gap: 12px; padding: 16px; background-color: #f9f9f9;">
+    <div if="mediaType == IMAGE" style="width: 368px; height: 300px; background-color: #eeeeee; border-radius: 8px;">Image Media</div>
+    <div if="mediaType == VIDEO" style="width: 368px; height: 300px; background-color: #333333; color: #ffffff; border-radius: 8px;">Video Media</div>
+    <div style="font-size: 20px; font-weight: 700; color: #1a1a1a;">{productName}</div>
+  </div>
+</body>
+</html>

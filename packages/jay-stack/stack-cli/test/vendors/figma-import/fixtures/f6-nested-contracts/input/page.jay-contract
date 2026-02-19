@@ -1,0 +1,28 @@
+name: nested-contracts-test
+tags:
+  - tag: product
+    type: sub-contract
+    tags:
+      - tag: name
+        type: data
+        dataType: string
+      - tag: price
+        type: data
+        dataType: string
+      - tag: imageUrl
+        type: data
+        dataType: string
+      - tag: options
+        type: sub-contract
+        repeated: true
+        trackBy: id
+        tags:
+          - tag: label
+            type: data
+            dataType: string
+          - tag: value
+            type: data
+            dataType: string
+          - tag: id
+            type: data
+            dataType: string

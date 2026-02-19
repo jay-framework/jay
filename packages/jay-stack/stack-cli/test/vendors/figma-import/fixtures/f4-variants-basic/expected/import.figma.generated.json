@@ -1,0 +1,172 @@
+{
+  "type": "SECTION",
+  "name": "test",
+  "visible": true,
+  "pluginData": {
+    "jpage": "true",
+    "urlRoute": "/test"
+  },
+  "children": [
+    {
+      "type": "FRAME",
+      "name": "div",
+      "visible": true,
+      "width": 400,
+      "layoutMode": "VERTICAL",
+      "itemSpacing": 12,
+      "paddingTop": 16,
+      "paddingRight": 16,
+      "paddingBottom": 16,
+      "paddingLeft": 16,
+      "fills": [
+        {
+          "type": "SOLID",
+          "color": {
+            "r": 0.9764705882352941,
+            "g": 0.9764705882352941,
+            "b": 0.9764705882352941
+          },
+          "opacity": 1
+        }
+      ],
+      "layoutSizingHorizontal": "FIXED",
+      "layoutSizingVertical": "HUG",
+      "children": [
+        {
+          "type": "INSTANCE",
+          "name": "mediaType variants",
+          "visible": true,
+          "mainComponentId": "93709c5b8159",
+          "pluginData": {
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"mediaType\"],\"property\":\"mediaType\"}]"
+          }
+        },
+        {
+          "type": "TEXT",
+          "name": "div",
+          "visible": true,
+          "textAutoResize": "WIDTH_AND_HEIGHT",
+          "characters": "{productName}",
+          "fontSize": 20,
+          "fontWeight": 700,
+          "fills": [
+            {
+              "type": "SOLID",
+              "color": {
+                "r": 0.10196078431372549,
+                "g": 0.10196078431372549,
+                "b": 0.10196078431372549
+              },
+              "opacity": 1
+            }
+          ],
+          "pluginData": {
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"productName\"]}]"
+          }
+        }
+      ]
+    },
+    {
+      "type": "COMPONENT_SET",
+      "name": "mediaType variants",
+      "visible": true,
+      "componentPropertyDefinitions": {
+        "mediaType": {
+          "type": "VARIANT",
+          "variantOptions": ["IMAGE", "VIDEO"]
+        }
+      },
+      "children": [
+        {
+          "type": "COMPONENT",
+          "name": "mediaType=IMAGE",
+          "visible": true,
+          "variantProperties": {
+            "mediaType": "IMAGE"
+          },
+          "children": [
+            {
+              "type": "FRAME",
+              "name": "div",
+              "visible": true,
+              "width": 368,
+              "height": 300,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.9333333333333333,
+                    "g": 0.9333333333333333,
+                    "b": 0.9333333333333333
+                  },
+                  "opacity": 1
+                }
+              ],
+              "cornerRadius": 8,
+              "pluginData": {},
+              "children": [
+                {
+                  "type": "TEXT",
+                  "name": "Image Media",
+                  "visible": true,
+                  "textAutoResize": "WIDTH_AND_HEIGHT",
+                  "characters": "Image Media"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "type": "COMPONENT",
+          "name": "mediaType=VIDEO",
+          "visible": true,
+          "variantProperties": {
+            "mediaType": "VIDEO"
+          },
+          "children": [
+            {
+              "type": "FRAME",
+              "name": "div",
+              "visible": true,
+              "width": 368,
+              "height": 300,
+              "fills": [
+                {
+                  "type": "SOLID",
+                  "color": {
+                    "r": 0.2,
+                    "g": 0.2,
+                    "b": 0.2
+                  },
+                  "opacity": 1
+                }
+              ],
+              "cornerRadius": 8,
+              "pluginData": {},
+              "children": [
+                {
+                  "type": "TEXT",
+                  "name": "Video Media",
+                  "visible": true,
+                  "textAutoResize": "WIDTH_AND_HEIGHT",
+                  "characters": "Video Media",
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 1,
+                        "g": 1,
+                        "b": 1
+                      },
+                      "opacity": 1
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
