@@ -215,7 +215,12 @@ export async function handleConversation(
     toolDefinitions: SerializedToolDef[],
     pageState: object,
 ): Promise<SendMessageOutput> {
-    const serverActions = actionRegistry.getActionsWithMetadata();
+    // Exclude the gemini agent's own actions — they should never be
+    // exposed as tools (calling sendMessage/submitToolResults from the
+    // LLM would be recursive and nonsensical).
+    const serverActions = actionRegistry
+        .getActionsWithMetadata()
+        .filter((a) => !a.actionName.startsWith('geminiAgent.'));
 
     // Full declarations — used for the lookup map only
     const fullTools = toGeminiTools(toolDefinitions, serverActions);

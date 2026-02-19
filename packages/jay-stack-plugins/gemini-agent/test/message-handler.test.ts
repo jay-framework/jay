@@ -480,5 +480,66 @@ describe('message-handler', () => {
             expect(clickBtn).toBeDefined();
             expect(clickBtn!.parameters).toEqual({ type: 'object', properties: {} });
         });
+
+        it('should exclude gemini agent own actions from tools', async () => {
+            const { actionRegistry } = await import('@jay-framework/stack-server-runtime');
+
+            vi.mocked(actionRegistry.getActionsWithMetadata).mockReturnValue([
+                {
+                    actionName: 'geminiAgent.sendMessage',
+                    metadata: {
+                        name: 'sendMessage',
+                        description: 'Send a message',
+                        inputSchema: { type: 'object', properties: {} },
+                    },
+                },
+                {
+                    actionName: 'geminiAgent.submitToolResults',
+                    metadata: {
+                        name: 'submitToolResults',
+                        description: 'Submit tool results',
+                        inputSchema: { type: 'object', properties: {} },
+                    },
+                },
+                {
+                    actionName: 'wixStoresV1.searchProducts',
+                    metadata: {
+                        name: 'searchProducts',
+                        description: 'Search for products',
+                        inputSchema: {
+                            type: 'object',
+                            properties: { query: { type: 'string' } },
+                        },
+                    },
+                },
+            ] as any);
+
+            const service = mockService(() => ({
+                candidates: [
+                    {
+                        content: {
+                            parts: [{ text: 'Response' }],
+                        },
+                    },
+                ],
+            }));
+
+            await handleConversation(service, [{ role: 'user', parts: [{ text: 'Hi' }] }], [], {});
+
+            const toolsArg = vi.mocked(service.generateWithTools).mock
+                .calls[0][1] as GeminiFunctionDeclaration[];
+            const toolNames = toolsArg.map((t) => t.name);
+
+            // Should NOT include gemini agent's own actions
+            expect(toolNames).not.toContain('action_geminiAgent_sendMessage');
+            expect(toolNames).not.toContain('action_geminiAgent_submitToolResults');
+
+            // Should include other server actions
+            expect(toolNames).toContain('action_wixStoresV1_searchProducts');
+
+            // Should include meta-tools
+            expect(toolNames).toContain('get_tool_details');
+            expect(toolNames).toContain('get_page_state');
+        });
     });
 });
