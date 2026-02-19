@@ -23,6 +23,7 @@ yarn reinstall            # Full clean + yarn install + rebuild
 Run commands from a specific package directory for scoped work. Prefix with `yarn run` if dependency resolution errors occur.
 
 To run a single test file:
+
 ```bash
 cd packages/<group>/<package>
 yarn vitest run test/<test-file>.test.ts
@@ -35,6 +36,7 @@ Yarn workspaces with `wsrun` for cross-package commands. All publishable package
 ### Package Groups
 
 - **`packages/runtime/`** — Client-side libraries
+
   - `reactive` — Signal/memo/effect reactivity core
   - `component` — Component construction (`makeJayComponent`), hooks (`createSignal`, `createMemo`, `createEffect`, `createEvent`, `provideContext`)
   - `runtime` — DOM manipulation (compiler output target)
@@ -45,6 +47,7 @@ Yarn workspaces with `wsrun` for cross-package commands. All publishable package
   - `contract-types`, `serialization`, `view-state-merge`, `runtime-automation`
 
 - **`packages/compiler/`** — Build-time tools
+
   - `compiler` — Core compiler library
   - `compiler-jay-html` — `.jay-html` parsing and code generation
   - `compiler-jay-stack` — Full-stack compilation
@@ -55,6 +58,7 @@ Yarn workspaces with `wsrun` for cross-package commands. All publishable package
   - `typescript-bridge` — TS interop
 
 - **`packages/jay-stack/`** — Full-stack framework
+
   - `full-stack-component` — `makeJayStackComponent` with three-phase rendering
   - `stack-client-runtime`, `stack-server-runtime` — Client/server runtimes
   - `dev-server` — Development server
@@ -66,27 +70,34 @@ Yarn workspaces with `wsrun` for cross-package commands. All publishable package
 ## Key Architectural Concepts
 
 ### Three-Phase Rendering (Jay Stack)
+
 Components render in three phases, each for different data availability:
+
 1. **Slow** — Build time (SSG), static content
 2. **Fast** — Request time (SSR), per-request data
 3. **Interactive** — Client-side, reactive updates
 
 ### Contract → ViewState + Refs
+
 A `.jay-contract` (YAML) compiles to TypeScript types:
+
 - **ViewState**: Data and variant states the component provides to the view
 - **Refs**: Named HTML elements/sub-components the component can interact with
 
 ### Component Types
+
 - **Headfull** (jay-html + component): Has both UI and logic
 - **Headless** (contract + component): Logic only, UI provided separately
 - Both can be client-only (`makeJayComponent`) or full-stack (`makeJayStackComponent`)
 
 ### Plugin System
+
 Plugins provide headless components via `plugin.yaml` declaring contracts and actions. `agent-kit` generates discovery indexes.
 
 ## Package Layout Convention
 
 Each package follows:
+
 ```
 lib/          # Source TypeScript
 test/         # Tests (mirrors lib/ structure)

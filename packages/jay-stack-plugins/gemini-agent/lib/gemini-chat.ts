@@ -5,11 +5,11 @@
  * full history is sent with each request.
  */
 
-import {makeJayStackComponent, RenderPipeline, Signals} from '@jay-framework/fullstack-component';
-import {createDerivedArray, createMemo, createSignal} from '@jay-framework/component';
-import {createActionCaller} from '@jay-framework/stack-client-runtime';
-import type {AutomationAPI} from '@jay-framework/runtime-automation';
-import type {JayEvent} from '@jay-framework/runtime';
+import { makeJayStackComponent, RenderPipeline, Signals } from '@jay-framework/fullstack-component';
+import { createDerivedArray, createMemo, createSignal } from '@jay-framework/component';
+import { createActionCaller } from '@jay-framework/stack-client-runtime';
+import type { AutomationAPI } from '@jay-framework/runtime-automation';
+import type { JayEvent } from '@jay-framework/runtime';
 import {
     type GeminiChatContract,
     type GeminiChatFastViewState,
