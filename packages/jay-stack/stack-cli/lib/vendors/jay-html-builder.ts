@@ -35,6 +35,12 @@ export interface JayHtmlBuildOptions {
     };
 
     /**
+     * Path to an external .jay-contract file (e.g. './page.jay-contract').
+     * When set, the script tag uses a contract attribute instead of inline data.
+     */
+    contractReference?: string;
+
+    /**
      * List of headless components to include
      */
     headlessComponents?: HeadlessComponent[];
@@ -101,18 +107,24 @@ function generateHeadlessComponentScripts(components: HeadlessComponent[]): stri
 }
 
 /**
- * Generates the jay-data script tag
+ * Generates the jay-data script tag.
+ * Prefers an external contract reference over inline data when available.
  */
-function generateJayDataScript(contractData?: { name: string; tagsYaml: string }): string {
+function generateJayDataScript(
+    contractData?: { name: string; tagsYaml: string },
+    contractReference?: string,
+): string {
+    if (contractReference) {
+        return `  <script type="application/jay-data" contract="${contractReference}"></script>`;
+    }
+
     if (contractData) {
-        // TODO: Generate proper contract from vendor data
         return `  <script type="application/jay-data">
     data:
 ${contractData.tagsYaml}
   </script>`;
     }
 
-    // Default empty contract
     return `  <script type="application/jay-data">
     data:
   </script>`;
@@ -126,6 +138,7 @@ export function buildJayHtml(options: JayHtmlBuildOptions): string {
         bodyHtml,
         fontFamilies,
         contractData,
+        contractReference,
         headlessComponents = [],
         title = 'Page',
     } = options;
@@ -133,7 +146,7 @@ export function buildJayHtml(options: JayHtmlBuildOptions): string {
     // Generate head content
     const fontLinks = generateGoogleFontsLinks(fontFamilies);
     const headlessScripts = generateHeadlessComponentScripts(headlessComponents);
-    const jayDataScript = generateJayDataScript(contractData);
+    const jayDataScript = generateJayDataScript(contractData, contractReference);
 
     // Construct the full Jay HTML document
     return `<!DOCTYPE html>
@@ -219,10 +232,15 @@ export async function buildJayHtmlFromVendorResult(
     // Use directory name as default title if not provided
     const title = pageTitle || path.basename(pageDirectory);
 
+    // Preserve external contract reference if page.jay-contract exists
+    const contractFilePath = path.join(pageDirectory, 'page.jay-contract');
+    const contractReference = fs.existsSync(contractFilePath) ? './page.jay-contract' : undefined;
+
     return buildJayHtml({
         bodyHtml: conversionResult.bodyHtml,
         fontFamilies: conversionResult.fontFamilies,
-        contractData: conversionResult.contractData,
+        contractData: contractReference ? undefined : conversionResult.contractData,
+        contractReference,
         headlessComponents,
         title,
     });

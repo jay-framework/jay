@@ -105,10 +105,17 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
             base.type = 'FRAME';
             const styleProps = mapStyleToFigmaProps(node.style);
             Object.assign(base, styleProps);
+
+            // Set sizing modes for auto-layout frames
+            if (styleProps.layoutMode && styleProps.layoutMode !== 'NONE') {
+                base.layoutSizingHorizontal = node.style?.width !== undefined ? 'FIXED' : 'HUG';
+                base.layoutSizingVertical = node.style?.height !== undefined ? 'FIXED' : 'HUG';
+            }
             break;
         }
         case 'TEXT': {
             base.type = 'TEXT';
+            base.textAutoResize = 'WIDTH_AND_HEIGHT';
             if (node.text) {
                 base.characters = node.text.characters;
             }

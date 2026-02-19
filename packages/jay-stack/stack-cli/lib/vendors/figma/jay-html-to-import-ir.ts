@@ -204,6 +204,46 @@ function buildNodeFromElement(
 
     if (isTextElement(element)) {
         const characters = flattenTextContent(element);
+        const hasContainer = !!(style.backgroundColor || style.padding || style.layoutMode);
+
+        if (hasContainer) {
+            // Element has both text and container styles (e.g. styled button) →
+            // wrap as FRAME with a TEXT child so container props are preserved.
+            const textStyle: ImportIRStyle = {};
+            if (style.fontFamily) textStyle.fontFamily = style.fontFamily;
+            if (style.fontSize) textStyle.fontSize = style.fontSize;
+            if (style.fontWeight) textStyle.fontWeight = style.fontWeight;
+            if (style.textColor) textStyle.textColor = style.textColor;
+            if (style.lineHeight !== undefined) textStyle.lineHeight = style.lineHeight;
+            if (style.letterSpacing !== undefined) textStyle.letterSpacing = style.letterSpacing;
+
+            const textChildId = generateNodeId(domPath + '/text');
+            const textChild: ImportIRNode = {
+                id: textChildId,
+                sourcePath: domPath + '/text',
+                kind: 'TEXT',
+                name: characters.substring(0, 20) || 'text',
+                tagName: 'span',
+                visible: true,
+                style: textStyle,
+                text: { characters },
+                children: [],
+            };
+
+            const node: ImportIRNode = {
+                id: nodeId,
+                sourcePath: domPath,
+                kind: 'FRAME',
+                name,
+                tagName: tag,
+                visible: true,
+                style,
+                bindings: bindings.length > 0 ? bindings : undefined,
+                warnings: warnings.length > 0 ? [...warnings] : undefined,
+                children: [textChild],
+            };
+            return { node, warnings };
+        }
 
         const headingDefaults = HEADING_TAGS[tag];
         if (headingDefaults) {

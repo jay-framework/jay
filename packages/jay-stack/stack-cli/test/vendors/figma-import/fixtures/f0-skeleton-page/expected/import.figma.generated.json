@@ -13,7 +13,9 @@
       "visible": true,
       "width": 400,
       "height": 300,
-      "layoutMode": "VERTICAL"
+      "layoutMode": "VERTICAL",
+      "layoutSizingHorizontal": "FIXED",
+      "layoutSizingVertical": "FIXED"
     }
   ]
 }
