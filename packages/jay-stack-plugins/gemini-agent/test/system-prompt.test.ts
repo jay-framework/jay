@@ -111,6 +111,15 @@ describe('system-prompt', () => {
             expect(prompt).toContain('page state is refreshed each turn');
         });
 
+        it('should explain page tools vs server actions', () => {
+            const prompt = buildSystemPrompt({}, '');
+
+            expect(prompt).toContain('Page tools');
+            expect(prompt).toContain('Server actions');
+            expect(prompt).toContain('user does NOT see them on the page');
+            expect(prompt).toContain('Prefer page tools');
+        });
+
         it('should compact page state in output', () => {
             const pageState = {
                 items: [1, 2, 3, 4, 5, 6],

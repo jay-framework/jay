@@ -66,11 +66,19 @@ export async function processGeminiTurn(
 ): Promise<SendMessageOutput> {
     const log = getLogger();
 
+    // Extract latest user message for logging
+    const lastUserMsg = [...history]
+        .reverse()
+        .find((m) => m.role === 'user' && m.parts.some((p: any) => p.text));
+    const userText = lastUserMsg
+        ? (lastUserMsg.parts.find((p: any) => p.text) as any)?.text || ''
+        : '';
+
     // Log pre-call metrics
     const historySize = approxSize(history);
     const toolNames = tools.map((t) => t.name);
     log.info(
-        `[gemini-agent] Turn ${turnNumber} | history: ${history.length} msgs (~${historySize} chars) | tools: ${toolNames.length} (${toolNames.join(', ')}) | prompt: ${systemPrompt.length} chars`,
+        `[gemini-agent] Turn ${turnNumber} | user: "${userText}" | history: ${history.length} msgs (~${historySize} chars) | tools: ${toolNames.length} (${toolNames.join(', ')}) | prompt: ${systemPrompt.length} chars`,
     );
 
     const startTime = Date.now();

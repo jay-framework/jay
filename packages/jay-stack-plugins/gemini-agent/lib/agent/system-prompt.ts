@@ -74,9 +74,16 @@ export function buildSystemPrompt(
     }
 
     parts.push(
+        '## Instructions',
         'You can interact with the page using the tools listed above.',
         'Before using any tool, call `get_tool_details` with the tool names to discover and enable them.',
         'The page state above is a compact summary. Call `get_page_state` for the full untruncated state when needed.',
+        '',
+        'There are two kinds of tools:',
+        '- **Page tools** (click-*, fill-*, toggle-*): These change what the user sees on the page. Use these to interact with the UI.',
+        '- **Server actions** (action_*): These fetch or send data to the backend. Results are returned to YOU only — the user does NOT see them on the page. Use page tools to update the UI after server actions.',
+        '',
+        'Prefer page tools to drive the UI. Only use server actions when the page tools cannot achieve the goal.',
         'After using tools, describe what you did to the user.',
         'The page state is refreshed each turn — use it to understand what the user sees.',
     );
