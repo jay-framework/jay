@@ -86,11 +86,16 @@ function getValueEventTypes(registeredEvents: string[]): string[] {
     return registeredEvents.length > 0 ? [registeredEvents[0]] : ['input'];
 }
 
+/** Ref names belonging to the chat widget itself — exclude from tool list. */
+const CHAT_WIDGET_REFS = new Set(['messageInput', 'sendMessage', 'toggleExpand']);
+
 function buildSerializedTools(automation: AutomationAPI): SerializedToolDef[] {
     const { interactions } = automation.getPageState();
     const tools: SerializedToolDef[] = [];
 
     for (const group of interactions) {
+        // Skip the chat widget's own interactive elements
+        if (CHAT_WIDGET_REFS.has(group.refName)) continue;
         const sample = group.items[0];
         if (!sample) continue;
 
