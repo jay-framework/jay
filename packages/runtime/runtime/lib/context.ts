@@ -1,4 +1,13 @@
-import { BaseJayElement, ContextMarker, Coordinate, JayElement } from './element-types';
+import {
+    BaseJayElement,
+    ContextMarker,
+    Coordinate,
+    JayElement,
+    MountFunc,
+    noopMount,
+    noopUpdate,
+    updateFunc,
+} from './element-types';
 
 import { ReferencesManager } from './references-manager';
 
@@ -154,11 +163,29 @@ export function wrapWithModifiedCheck<T extends object>(
 }
 
 export class ConstructContext<ViewState> {
+    private readonly _coordinateMap?: Map<string, Element>;
+    private readonly _rootElement?: Element;
+    /** Collector for adopted element updates during hydration. */
+    readonly _hydrationUpdates?: updateFunc<any>[];
+    readonly _hydrationMounts?: MountFunc[];
+    readonly _hydrationUnmounts?: MountFunc[];
+
     constructor(
         private readonly data: ViewState,
         public readonly forStaticElements: boolean = true,
         private readonly coordinateBase: Coordinate = [],
-    ) {}
+        coordinateMap?: Map<string, Element>,
+        rootElement?: Element,
+        hydrationUpdates?: updateFunc<any>[],
+        hydrationMounts?: MountFunc[],
+        hydrationUnmounts?: MountFunc[],
+    ) {
+        this._coordinateMap = coordinateMap;
+        this._rootElement = rootElement;
+        this._hydrationUpdates = hydrationUpdates;
+        this._hydrationMounts = hydrationMounts;
+        this._hydrationUnmounts = hydrationUnmounts;
+    }
 
     get currData() {
         return this.data;
@@ -174,10 +201,52 @@ export class ConstructContext<ViewState> {
     };
 
     forItem<ChildViewState>(childViewState: ChildViewState, id: string) {
-        return new ConstructContext(childViewState, false, [...this.coordinateBase, id]);
+        return new ConstructContext(
+            childViewState,
+            false,
+            [...this.coordinateBase, id],
+            this._coordinateMap,
+            this._rootElement,
+            this._hydrationUpdates,
+            this._hydrationMounts,
+            this._hydrationUnmounts,
+        );
     }
     forAsync<ChildViewState>(childViewState: ChildViewState) {
-        return new ConstructContext(childViewState, false, [...this.coordinateBase]);
+        return new ConstructContext(
+            childViewState,
+            false,
+            [...this.coordinateBase],
+            this._coordinateMap,
+            this._rootElement,
+            this._hydrationUpdates,
+            this._hydrationMounts,
+            this._hydrationUnmounts,
+        );
+    }
+
+    /** Whether this context is in hydration mode (adopting existing DOM). */
+    get isHydrating(): boolean {
+        return this._coordinateMap !== undefined;
+    }
+
+    /** The root element being hydrated (undefined in non-hydration mode). */
+    get rootElement(): Element | undefined {
+        return this._rootElement;
+    }
+
+    /**
+     * Resolve an element by its coordinate key from the hydration map.
+     * The key is scoped by the current coordinateBase — e.g., inside a forEach
+     * item with trackBy "item-1", resolveCoordinate("addBtn") looks up "item-1/addBtn".
+     */
+    resolveCoordinate(key: string): Element | undefined {
+        if (!this._coordinateMap) return undefined;
+        const fullKey =
+            this.coordinateBase.length > 0
+                ? this.coordinateBase.join('/') + '/' + key
+                : key;
+        return this._coordinateMap.get(fullKey);
     }
 
     static withRootContext<ViewState, Refs>(
@@ -192,4 +261,86 @@ export class ConstructContext<ViewState> {
         element.mount();
         return refManager.applyToElement(element);
     }
+
+    /**
+     * Hydrate existing server-rendered DOM.
+     *
+     * Builds a coordinate→element map from all [jay-coordinate] attributes
+     * inside rootElement, creates a ConstructContext in hydration mode,
+     * pushes it onto the context stack, then calls hydrateConstructor.
+     *
+     * The hydrateConstructor calls adoptText(), adoptElement(), etc. which
+     * read from the context stack — same pattern as element(), dynamicText().
+     */
+    static withHydrationRootContext<ViewState, Refs>(
+        viewState: ViewState,
+        refManager: ReferencesManager,
+        rootElement: Element,
+        hydrateConstructor: () => void,
+    ): JayElement<ViewState, Refs> {
+        const coordinateMap = buildCoordinateMap(rootElement);
+        const updates: updateFunc<any>[] = [];
+        const mounts: MountFunc[] = [];
+        const unmounts: MountFunc[] = [];
+        const context = new ConstructContext(
+            viewState,
+            true,
+            [],
+            coordinateMap,
+            rootElement,
+            updates,
+            mounts,
+            unmounts,
+        );
+
+        const element = withContext(CONSTRUCTION_CONTEXT_MARKER, context, () => {
+            hydrateConstructor();
+
+            // Build combined update/mount/unmount from all adopted elements
+            const update: updateFunc<ViewState> =
+                updates.length === 0
+                    ? noopUpdate
+                    : updates.length === 1
+                      ? updates[0]
+                      : (newData: ViewState) => {
+                            for (const u of updates) u(newData);
+                        };
+            const mount: MountFunc =
+                mounts.length === 0
+                    ? noopMount
+                    : () => {
+                          for (const m of mounts) m();
+                      };
+            const unmount: MountFunc =
+                unmounts.length === 0
+                    ? noopMount
+                    : () => {
+                          for (const u of unmounts) u();
+                      };
+
+            return wrapWithModifiedCheck(context.currData, {
+                dom: rootElement,
+                update,
+                mount,
+                unmount,
+            } as BaseJayElement<ViewState>);
+        });
+        element.mount();
+        return refManager.applyToElement(element);
+    }
+}
+
+/**
+ * Build a coordinate → element map by querying all [jay-coordinate] elements
+ * inside the given root. This is called once during hydration setup.
+ */
+function buildCoordinateMap(root: Element): Map<string, Element> {
+    const map = new Map<string, Element>();
+    const elements = root.querySelectorAll('[jay-coordinate]');
+    for (let i = 0; i < elements.length; i++) {
+        const el = elements[i];
+        const key = el.getAttribute('jay-coordinate');
+        if (key) map.set(key, el);
+    }
+    return map;
 }

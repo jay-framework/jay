@@ -595,3 +595,36 @@ Each fixture directory gets a new `generated-element-hydrate.ts` golden file alo
 | C25 | hydrate file imports from generated-element.ts | Verify that Level 3 cases (if=false, forEach create) import the element creation functions from generated-element.ts |
 | C26 | hydrate file does not import document.createElement for Level 1/2 | Verify compact form: Level 1/2 only imports `adoptText`/`adoptElement`/`hydrateConditional` — no `element as e` |
 | C27 | jay-coordinate values match between server and hydrate | Verify the coordinates used in generated-element-hydrate.ts match those emitted by the server renderer (Design Log #94) |
+
+---
+
+## Implementation Results
+
+### Phase 1 & 2 — Runtime Hydration (Completed)
+
+**Files modified:**
+- `packages/runtime/runtime/lib/context.ts` — Extended `ConstructContext` with `_coordinateMap`, `_rootElement`, `_hydrationUpdates/Mounts/Unmounts` collector arrays. Added `isHydrating`, `rootElement`, `resolveCoordinate(key)` and static `withHydrationRootContext()`. Propagation through `forItem()` and `forAsync()`.
+- `packages/runtime/runtime/lib/hydrate.ts` — New file with `adoptText`, `adoptElement`, `hydrateConditional`, `hydrateForEach` + internal helpers for registration/deregistration.
+- `packages/runtime/runtime/lib/index.ts` — Exports for all four new functions.
+
+**Tests added (38 total, all passing):**
+- `test/lib/hydration/adopt-text.test.ts` — 7 tests (#1-#5 + extras)
+- `test/lib/hydration/adopt-element.test.ts` — 6 tests (#6-#11)
+- `test/lib/hydration/hydration-context.test.ts` — 4 tests (#12-#15)
+- `test/lib/hydration/coordinate-resolution.test.ts` — 8 tests (#34-#38 + extras)
+- `test/lib/hydration/hydrate-conditional.test.ts` — 6 tests (#16-#21)
+- `test/lib/hydration/hydrate-for-each.test.ts` — 7 tests (#25-#32)
+
+**Test results: 231 passed | 3 skipped (0 regressions)**
+
+### Deviations from original design
+
+1. **Hydration update propagation**: Added `_hydrationUpdates/Mounts/Unmounts` collector arrays to `ConstructContext`. Each adopt function registers its element; `withHydrationRootContext` combines them into the root JayElement's update. `adoptElement` deregisters child updates to prevent double-firing.
+
+2. **`hydrateConditional` uses anchor comment**: Instead of Kindergarten for conditional toggle, `hydrateConditional` inserts a comment node after the adopted element as a position anchor. This avoids the complexity of shared Kindergarten groups for sibling dynamics.
+
+3. **`hydrateForEach` accepts `containerCoordinate`**: Added a first parameter `containerCoordinate: string` to resolve the container element (e.g., `<ul>`) directly via the coordinate map. This is more reliable than inferring the container from the first item's parentNode (especially for empty initial lists).
+
+4. **`hydrateForEach` resolves item root elements by trackBy coordinate**: Item root elements (e.g., `<li>`) are resolved via `context.resolveCoordinate(trackByValue)` BEFORE entering the `forItem` scope. The `adoptItem` callback then operates within the forItem scope to adopt inner elements. The `dom` of each adopted item is the item root element, not the inner element.
+
+5. **Coordinate convention for forEach items**: Item root elements get `jay-coordinate="{trackByValue}"` at the current scope level. Inner elements get `jay-coordinate="{trackByValue}/{childCoordinate}"`. This aligns with `ConstructContext.forItem(item, id)` setting `coordinateBase = [...parentBase, id]`.
