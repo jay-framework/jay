@@ -2,11 +2,11 @@
  * Tool Bridge — converts jay-stack tool descriptors and action metadata
  * to Gemini FunctionDeclarations.
  *
- * Supports two modes:
- * - Full declarations (toGeminiTools) — used for the fullToolLookup map
- * - Slim declarations (toSlimGeminiTools) — sent to Gemini with empty
- *   parameters to reduce token usage. The LLM calls `get_tool_details`
- *   to retrieve full schemas on demand.
+ * Slim declarations (name + description, empty params) are sent so
+ * Gemini knows the exact tool names. When the LLM calls a tool that
+ * hasn't been discovered via get_tool_details, it gets an error
+ * response telling it to discover first. After discovery, the full
+ * declaration replaces the slim one for subsequent calls.
  */
 
 import type { ActionMetadata } from '@jay-framework/stack-server-runtime';
@@ -82,7 +82,8 @@ export function toGeminiTools(
 /**
  * Converts page automation tools and server actions into slim Gemini
  * function declarations — name + description only, empty parameters.
- * The LLM uses `get_tool_details` to fetch full schemas on demand.
+ * Ensures Gemini uses correct tool names. The LLM must call
+ * get_tool_details before using any tool.
  */
 export function toSlimGeminiTools(
     clientTools: SerializedToolDef[],

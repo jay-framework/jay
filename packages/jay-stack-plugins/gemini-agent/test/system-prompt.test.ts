@@ -108,7 +108,7 @@ describe('system-prompt', () => {
 
             expect(prompt).toContain('get_tool_details');
             expect(prompt).toContain('get_page_state');
-            expect(prompt).toContain('page state above is refreshed each turn');
+            expect(prompt).toContain('page state is refreshed each turn');
         });
 
         it('should compact page state in output', () => {

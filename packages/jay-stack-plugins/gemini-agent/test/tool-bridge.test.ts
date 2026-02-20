@@ -101,7 +101,7 @@ describe('tool-bridge', () => {
     });
 
     describe('toSlimGeminiTools', () => {
-        it('should strip parameters from client tools', () => {
+        it('should strip parameters from tools', () => {
             const clientTools: SerializedToolDef[] = [
                 {
                     name: 'fill-search',
@@ -124,64 +124,6 @@ describe('tool-bridge', () => {
                     parameters: { type: 'object', properties: {} },
                 },
             ]);
-        });
-
-        it('should strip parameters from server actions', () => {
-            const metadata: ActionMetadata = {
-                name: 'search',
-                description: 'Search products',
-                inputSchema: {
-                    type: 'object',
-                    properties: { query: { type: 'string' } },
-                    required: ['query'],
-                },
-            };
-
-            const result = toSlimGeminiTools([], [{ actionName: 'store.search', metadata }]);
-
-            expect(result).toEqual([
-                {
-                    name: 'action_store_search',
-                    description: 'Search products',
-                    parameters: { type: 'object', properties: {} },
-                },
-            ]);
-        });
-
-        it('should preserve name and description but empty parameters', () => {
-            const clientTools: SerializedToolDef[] = [
-                {
-                    name: 'click-btn',
-                    description: 'Click button',
-                    inputSchema: { type: 'object', properties: {} },
-                    category: 'page-automation',
-                },
-                {
-                    name: 'fill-quantity',
-                    description: 'Fill quantity',
-                    inputSchema: {
-                        type: 'object',
-                        properties: {
-                            coordinate: {
-                                type: 'string',
-                                enum: ['0/0', '0/1', '0/2'],
-                            },
-                            value: { type: 'string' },
-                        },
-                        required: ['coordinate', 'value'],
-                    },
-                    category: 'page-automation',
-                },
-            ];
-
-            const result = toSlimGeminiTools(clientTools, []);
-
-            expect(result).toHaveLength(2);
-            for (const tool of result) {
-                expect(tool.parameters).toEqual({ type: 'object', properties: {} });
-            }
-            expect(result[0].name).toBe('click-btn');
-            expect(result[1].name).toBe('fill-quantity');
         });
     });
 

@@ -74,11 +74,11 @@ export function buildSystemPrompt(
     }
 
     parts.push(
-        'Use the provided tools to interact with the page and call server actions.',
-        'For tools with parameters, call `get_tool_details` first to learn valid values.',
+        'You can interact with the page using the tools listed above.',
+        'Before using any tool, call `get_tool_details` with the tool names to discover and enable them.',
         'The page state above is a compact summary. Call `get_page_state` for the full untruncated state when needed.',
         'After using tools, describe what you did to the user.',
-        'The page state above is refreshed each turn — use it to understand what the user sees.',
+        'The page state is refreshed each turn — use it to understand what the user sees.',
     );
 
     return parts.join('\n');

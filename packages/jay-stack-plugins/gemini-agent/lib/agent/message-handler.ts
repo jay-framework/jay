@@ -3,6 +3,12 @@
  *
  * Shared between sendMessage and submitToolResults actions.
  * The server is stateless — history is passed in and returned.
+ *
+ * Tool discovery: slim declarations (name + description, empty params)
+ * are sent so Gemini uses correct tool names. When the LLM calls a tool
+ * without first calling get_tool_details, it gets an error response
+ * telling it to discover first. After discovery, the full declaration
+ * replaces the slim one for subsequent calls.
  */
 
 import { actionRegistry } from '@jay-framework/stack-server-runtime';
@@ -34,14 +40,18 @@ function approxSize(value: unknown): number {
     return JSON.stringify(value).length;
 }
 
+/** Names of meta-tools that are always available (not subject to discovery). */
+const META_TOOL_NAMES = new Set(['get_tool_details', 'get_page_state']);
+
 /**
  * Processes a Gemini response and handles tool calls:
  * - `get_page_state` calls return the full untruncated page state.
- * - `get_tool_details` calls are resolved from the fullToolLookup and fed back.
+ * - `get_tool_details` calls return full schemas and upgrade the slim
+ *   declarations to full ones so the LLM can call those tools next.
+ * - Calls to undiscovered tools (still slim) are rejected with an error
+ *   telling the LLM to call get_tool_details first.
  * - Server-action tools are executed immediately on the server.
  * - Page-automation tools are returned to the client for execution.
- * - If all tools are server-side / discovery, the result is fed back to Gemini automatically.
- * - If any tools are client-side, the response is returned with pending calls.
  */
 export async function processGeminiTurn(
     service: GeminiService,
@@ -51,6 +61,7 @@ export async function processGeminiTurn(
     clientToolNames: Set<string>,
     fullToolLookup: Map<string, GeminiFunctionDeclaration>,
     pageState: object,
+    discoveredTools: Set<string>,
     turnNumber: number = 1,
 ): Promise<SendMessageOutput> {
     const log = getLogger();
@@ -95,7 +106,7 @@ export async function processGeminiTurn(
         const message = textParts.map((p: any) => p.text).join('');
 
         log.info(
-            `[gemini-agent] Turn ${turnNumber} | response: text (~${responseSize} chars) | ${duration}ms`,
+            `[gemini-agent] Turn ${turnNumber} | response: text (~${responseSize} chars) | ${duration}ms\n${JSON.stringify(responseParts, null, 2)}`,
         );
 
         const updatedHistory: GeminiMessage[] = [
@@ -113,13 +124,16 @@ export async function processGeminiTurn(
     // We have function calls — categorize them
     const callNames = functionCalls.map((fc) => fc.functionCall.name);
     log.info(
-        `[gemini-agent] Turn ${turnNumber} | response: tool-calls (${callNames.join(', ')}) (~${responseSize} chars) | ${duration}ms`,
+        `[gemini-agent] Turn ${turnNumber} | response: tool-calls (${callNames.join(', ')}) (~${responseSize} chars) | ${duration}ms\n${JSON.stringify(responseParts, null, 2)}`,
     );
 
     const updatedHistory: GeminiMessage[] = [...history, { role: 'model', parts: responseParts }];
 
     const pendingClientCalls: PendingToolCall[] = [];
     const serverCallResults: GeminiFunctionResponsePart[] = [];
+
+    // Track tools to upgrade from slim to full after get_tool_details
+    let expandedTools = tools;
 
     for (const fc of functionCalls) {
         const name = fc.functionCall.name;
@@ -135,22 +149,69 @@ export async function processGeminiTurn(
             continue;
         }
 
-        // Handle get_tool_details — return full schemas from the lookup
+        // Handle get_tool_details — return full schemas and upgrade declarations
         if (name === 'get_tool_details') {
             const requestedNames = (fc.functionCall.args?.tool_names as string[]) || [];
             const schemas: Record<string, unknown> = {};
+            const newFullDeclarations: GeminiFunctionDeclaration[] = [];
+
             for (const toolName of requestedNames) {
                 const full = fullToolLookup.get(toolName);
                 if (full) {
                     schemas[toolName] = full.parameters;
+                    discoveredTools.add(toolName);
+                    // Replace slim declaration with full one
+                    if (!newFullDeclarations.some((d) => d.name === toolName)) {
+                        newFullDeclarations.push(full);
+                    }
                 }
             }
+
+            if (newFullDeclarations.length > 0) {
+                // Replace slim declarations with full ones
+                const upgradeNames = new Set(newFullDeclarations.map((d) => d.name));
+                expandedTools = [
+                    ...expandedTools.filter((t) => !upgradeNames.has(t.name)),
+                    ...newFullDeclarations,
+                ];
+            }
+
             serverCallResults.push({
                 functionResponse: {
                     name: 'get_tool_details',
                     response: schemas,
                 },
             });
+            continue;
+        }
+
+        // Auto-discover tools that haven't been discovered yet:
+        // return their full schema so the LLM can retry with correct params
+        if (!META_TOOL_NAMES.has(name) && !discoveredTools.has(name)) {
+            const full = fullToolLookup.get(name);
+            if (full) {
+                discoveredTools.add(name);
+                const upgradeNames = new Set([name]);
+                expandedTools = [
+                    ...expandedTools.filter((t) => !upgradeNames.has(t.name)),
+                    full,
+                ];
+                serverCallResults.push({
+                    functionResponse: {
+                        name,
+                        response: {
+                            error: `This tool requires parameters. Here is the schema: ${JSON.stringify(full.parameters)}. Call ${name} again with the correct parameters.`,
+                        },
+                    },
+                });
+            } else {
+                serverCallResults.push({
+                    functionResponse: {
+                        name,
+                        response: { error: `Unknown tool '${name}'.` },
+                    },
+                });
+            }
             continue;
         }
 
@@ -196,11 +257,12 @@ export async function processGeminiTurn(
     return processGeminiTurn(
         service,
         historyWithResults,
-        tools,
+        expandedTools,
         systemPrompt,
         clientToolNames,
         fullToolLookup,
         pageState,
+        discoveredTools,
         turnNumber + 1,
     );
 }
@@ -222,14 +284,16 @@ export async function handleConversation(
         .getActionsWithMetadata()
         .filter((a) => !a.actionName.startsWith('geminiAgent.'));
 
-    // Full declarations — used for the lookup map only
+    // Full declarations — used for the lookup map only (not sent to Gemini)
     const fullTools = toGeminiTools(toolDefinitions, serverActions);
     const fullToolLookup = new Map<string, GeminiFunctionDeclaration>();
     for (const tool of fullTools) {
         fullToolLookup.set(tool.name, tool);
     }
 
-    // Slim declarations + meta-tools — sent to Gemini
+    // Slim declarations + meta-tools — sent to Gemini.
+    // Slim declarations ensure correct tool names; the LLM must call
+    // get_tool_details before using any tool.
     const slimTools = toSlimGeminiTools(toolDefinitions, serverActions);
     const toolsForGemini = [...slimTools, DISCOVERY_TOOL, PAGE_STATE_TOOL];
 
@@ -248,5 +312,6 @@ export async function handleConversation(
         clientToolNames,
         fullToolLookup,
         pageState,
+        new Set<string>(),
     );
 }

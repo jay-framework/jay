@@ -1033,3 +1033,46 @@ This gives visibility into what's actually hitting the rate limit and validates 
 | 1: Compact tool results                | 30-60% of history growth | 0                      | Low — LLM sees compact state, can call get_page_state if needed |
 | 1+2: + compact prompt + get_page_state | 50-70% total             | 0-1 for data questions | Low — LLM calls get_page_state when it needs full arrays        |
 | 1+2+3: + slim tools + get_tool_details | 70-90% total             | 0-2 per turn           | Medium — LLM may need to learn discovery pattern                |
+
+### Implementation Results — Token Usage Optimization — DONE
+
+Phases 0-3 implemented. Additionally fixed: gemini agent's own actions (`geminiAgent.sendMessage`, `geminiAgent.submitToolResults`) were being exposed as tools, causing the LLM to call itself recursively. Filtered out in `handleConversation()`.
+
+---
+
+## Prompt-Only Tool Discovery (replacing slim declarations)
+
+### Problem
+
+With slim declarations, the LLM sees all tools as callable `functionDeclarations` with empty parameters. This causes two issues:
+
+1. **Silent wrong actions** — the LLM calls tools like `toggle-is-selected` without coordinates. Since parameters aren't validated, the call goes through and defaults to the first item — silently doing the wrong thing.
+2. **Wasted tokens** — 19 slim `functionDeclarations` are sent on every Gemini call, even though most won't be used in a given turn.
+
+### Design
+
+Remove slim `functionDeclarations` entirely. Only declare meta-tools (`get_tool_details`, `get_page_state`) as callable functions. All other tools are listed only in the system prompt text via `buildToolSummary()`.
+
+**Flow:**
+
+1. First call: only `get_tool_details` and `get_page_state` as `functionDeclarations`. System prompt lists all tools by name, description, and parameter names.
+2. LLM reads prompt, decides which tools to use, calls `get_tool_details({ tool_names: ['toggle-is-selected'] })`.
+3. Server returns full schemas as `functionResponse` **and adds those tools to `functionDeclarations`** for the next Gemini call.
+4. Recursive call includes the requested tools with full schemas — LLM can now call them correctly.
+
+**Key change in `processGeminiTurn`:** When handling `get_tool_details`, expand the `tools` array with the full declarations from `fullToolLookup` before recursing.
+
+### Implementation: Slim declarations + enforced discovery
+
+Prompt-only approach (no declarations) failed: Gemini guesses tool names from prompt text with wrong casing (`toggle_is_selected` instead of `toggle-is-selected`) and calls tools without discovering them first.
+
+**Final approach:** Slim declarations (name + description, empty params) ensure Gemini uses correct tool names. `processGeminiTurn` tracks a `discoveredTools` set and **auto-discovers** tools on first use: when the LLM calls a tool without parameters, the server returns the full schema inline in the `functionResponse` and upgrades the slim declaration to full — so the LLM can retry with correct parameters on the next turn without user interaction.
+
+Initial attempt used a hard rejection ("call get_tool_details first") but Gemini treated that as something to ask the user about rather than acting autonomously. Auto-discovery with inline schema eliminated this problem.
+
+| File                 | Change                                                                                                                                                                                      |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `message-handler.ts` | `handleConversation` sends slim tools + meta-tools. `processGeminiTurn` tracks `discoveredTools` set, auto-discovers on first undiscovered call (returns schema + upgrades declaration).    |
+| `tool-bridge.ts`     | `toSlimGeminiTools()` retained — needed for correct tool names in declarations.                                                                                                             |
+| `system-prompt.ts`   | Instructions: "Before using any tool, call `get_tool_details` to discover and enable them."                                                                                                 |
+| Tests                | Tests for undiscovered auto-discovery, discovered passthrough, slim→full upgrade after discovery.                                                                                           |
