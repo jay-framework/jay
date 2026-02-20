@@ -63,8 +63,8 @@ A server action registered by the gemini-agent plugin that reads contract files 
 
 ```typescript
 interface ToolDescription {
-    refName: string;
-    description: string;
+  refName: string;
+  description: string;
 }
 
 // Returns descriptions for all interactive tags across all contracts
@@ -72,6 +72,7 @@ type GetToolDescriptionsOutput = ToolDescription[];
 ```
 
 The action:
+
 1. Reads `plugins-index.yaml` to find all contract paths
 2. Parses each `.jay-contract` YAML
 3. Walks the tag tree, collecting `description` fields for interactive tags (leaf description only, no parent concatenation)
@@ -80,15 +81,16 @@ The action:
 ### Client-side integration
 
 In `gemini-chat.ts`, the interactive phase:
+
 1. Calls `getToolDescriptions` once at init
 2. Stores the result as a `Map<string, string>` (refName → description)
 3. In `buildSerializedTools`, uses the map to override auto-generated descriptions
 
 ```typescript
 const description =
-    toolDescriptionMap.get(group.refName) ||
-    group.description ||
-    `${prefix} ${humanName}${isForEach ? ' for a specific item' : ''}`;
+  toolDescriptionMap.get(group.refName) ||
+  group.description ||
+  `${prefix} ${humanName}${isForEach ? ' for a specific item' : ''}`;
 ```
 
 ### Contract authoring
@@ -135,8 +137,8 @@ tags:
 
 ## Trade-offs
 
-| Approach | Pro | Con |
-|----------|-----|-----|
-| **Server action (chosen)** | Zero bundle cost, descriptions from source of truth | Extra HTTP call at init |
-| Embed in HTML/JS | No init call needed | Increases bundle for all pages, even without AI agent |
-| Materializer writes descriptions | Available without parsing contracts | Bloats plugins-index.yaml, duplicates source of truth |
+| Approach                         | Pro                                                 | Con                                                   |
+| -------------------------------- | --------------------------------------------------- | ----------------------------------------------------- |
+| **Server action (chosen)**       | Zero bundle cost, descriptions from source of truth | Extra HTTP call at init                               |
+| Embed in HTML/JS                 | No init call needed                                 | Increases bundle for all pages, even without AI agent |
+| Materializer writes descriptions | Available without parsing contracts                 | Bloats plugins-index.yaml, duplicates source of truth |

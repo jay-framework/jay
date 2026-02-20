@@ -5,7 +5,7 @@ export { init, GEMINI_SERVICE } from './init';
 export { setupGeminiAgent } from './setup';
 
 // Server actions
-export { sendMessage, submitToolResults } from './actions/handlers';
+export { sendMessage, submitToolResults, getToolDescriptions } from './actions/handlers';
 
 // Types
 export type {

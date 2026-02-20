@@ -1070,9 +1070,9 @@ Prompt-only approach (no declarations) failed: Gemini guesses tool names from pr
 
 Initial attempt used a hard rejection ("call get_tool_details first") but Gemini treated that as something to ask the user about rather than acting autonomously. Auto-discovery with inline schema eliminated this problem.
 
-| File                 | Change                                                                                                                                                                                      |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `message-handler.ts` | `handleConversation` sends slim tools + meta-tools. `processGeminiTurn` tracks `discoveredTools` set, auto-discovers on first undiscovered call (returns schema + upgrades declaration).    |
-| `tool-bridge.ts`     | `toSlimGeminiTools()` retained — needed for correct tool names in declarations.                                                                                                             |
-| `system-prompt.ts`   | Instructions: "Before using any tool, call `get_tool_details` to discover and enable them."                                                                                                 |
-| Tests                | Tests for undiscovered auto-discovery, discovered passthrough, slim→full upgrade after discovery.                                                                                           |
+| File                 | Change                                                                                                                                                                                   |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `message-handler.ts` | `handleConversation` sends slim tools + meta-tools. `processGeminiTurn` tracks `discoveredTools` set, auto-discovers on first undiscovered call (returns schema + upgrades declaration). |
+| `tool-bridge.ts`     | `toSlimGeminiTools()` retained — needed for correct tool names in declarations.                                                                                                          |
+| `system-prompt.ts`   | Instructions: "Before using any tool, call `get_tool_details` to discover and enable them."                                                                                              |
+| Tests                | Tests for undiscovered auto-discovery, discovered passthrough, slim→full upgrade after discovery.                                                                                        |

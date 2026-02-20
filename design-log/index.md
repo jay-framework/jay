@@ -197,7 +197,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 85  | rendering phases and agent kit for agentic generation  | Agent-kit folder: instructions, contracts, markdown content with headless annotations |
 | 91  | WebMCP plugin for jay-stack                            | Generic WebMCP support: automation→tools/resources/prompts, plugin packaging          |
 | 92  | Gemini agent plugin for jay-stack                      | Embedded AI agent: Gemini API, .jay-action metadata, chat contract, page automation   |
-| 97  | Contract-based tool descriptions for gemini agent      | Semantic tool descriptions from .jay-contract via server action, not embedded in HTML  |
+| 97  | Contract-based tool descriptions for gemini agent      | Semantic tool descriptions from .jay-contract via server action, not embedded in HTML |
 
 ---
 

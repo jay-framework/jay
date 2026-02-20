@@ -200,10 +200,7 @@ export async function processGeminiTurn(
             if (full) {
                 discoveredTools.add(name);
                 const upgradeNames = new Set([name]);
-                expandedTools = [
-                    ...expandedTools.filter((t) => !upgradeNames.has(t.name)),
-                    full,
-                ];
+                expandedTools = [...expandedTools.filter((t) => !upgradeNames.has(t.name)), full];
                 serverCallResults.push({
                     functionResponse: {
                         name,
