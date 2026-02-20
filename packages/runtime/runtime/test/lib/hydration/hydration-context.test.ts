@@ -1,37 +1,19 @@
 import { ConstructContext, ReferencesManager, adoptText, adoptElement } from '../../../lib';
-
-function makeServerHTML(html: string): Element {
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    return div;
-}
+import { hydrate, makeServerHTML } from './hydration-test-utils';
 
 describe('withHydrationRootContext / ConstructContext hydration', () => {
     // Test #12: builds coordinate map from root
     it('builds coordinate map from root via querySelectorAll', () => {
-        const root = makeServerHTML(
-            '<h1 jay-coordinate="0">Hello</h1>' +
-                '<div jay-coordinate="content">Text</div>',
-        );
-
         interface VS {
             title: string;
             text: string;
         }
 
-        let contextIsHydrating = false;
-        let resolvedH1: Element | undefined;
-        let resolvedContent: Element | undefined;
-
-        const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        ConstructContext.withHydrationRootContext<VS, {}>(
+        const { root } = hydrate<VS>(
+            '<h1 jay-coordinate="0">Hello</h1>' +
+                '<div jay-coordinate="content">Text</div>',
             { title: 'Hello', text: 'Text' },
-            refManager,
-            root,
             () => {
-                // Access context inside the callback to verify hydration mode
-                const ctx = (ConstructContext as any).prototype;
-                // We verify hydration works by resolving coordinates
                 adoptText('0', (vs: VS) => vs.title);
                 adoptText('content', (vs: VS) => vs.text);
             },
@@ -46,13 +28,9 @@ describe('withHydrationRootContext / ConstructContext hydration', () => {
 
     // Test #13: returns JayElement with original root DOM
     it('returns JayElement with original root DOM node', () => {
-        const root = makeServerHTML('<h1 jay-coordinate="0">Hello</h1>');
-
-        const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        const jayElement = ConstructContext.withHydrationRootContext(
+        const { jayElement, root } = hydrate(
+            '<h1 jay-coordinate="0">Hello</h1>',
             { title: 'Hello' },
-            refManager,
-            root,
             () => {
                 adoptText('0', (vs: { title: string }) => vs.title);
             },
@@ -92,21 +70,15 @@ describe('withHydrationRootContext / ConstructContext hydration', () => {
 
     // Test #15: ViewState updates propagate
     it('ViewState updates propagate through adopted elements', () => {
-        const root = makeServerHTML(
-            '<h1 jay-coordinate="0">Original</h1>' +
-                '<p jay-coordinate="1">Text</p>',
-        );
-
         interface VS {
             heading: string;
             para: string;
         }
 
-        const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        const jayElement = ConstructContext.withHydrationRootContext<VS, {}>(
+        const { jayElement, root } = hydrate<VS>(
+            '<h1 jay-coordinate="0">Original</h1>' +
+                '<p jay-coordinate="1">Text</p>',
             { heading: 'Original', para: 'Text' },
-            refManager,
-            root,
             () => {
                 adoptText('0', (vs: VS) => vs.heading);
                 adoptText('1', (vs: VS) => vs.para);

@@ -318,12 +318,12 @@ export class ConstructContext<ViewState> {
                           for (const u of unmounts) u();
                       };
 
-            return wrapWithModifiedCheck(context.currData, {
+            return wrapWithModifiedCheck(currentConstructionContext().currData, {
                 dom: rootElement,
                 update,
                 mount,
                 unmount,
-            } as BaseJayElement<ViewState>);
+            });
         });
         element.mount();
         return refManager.applyToElement(element);

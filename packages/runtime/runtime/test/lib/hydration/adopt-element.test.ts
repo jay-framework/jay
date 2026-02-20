@@ -5,12 +5,7 @@ import {
     adoptText,
     dynamicAttribute as da,
 } from '../../../lib';
-
-function makeServerHTML(html: string): Element {
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    return div;
-}
+import { hydrate, makeServerHTML } from './hydration-test-utils';
 
 describe('adoptElement', () => {
     interface ViewState {
@@ -20,30 +15,23 @@ describe('adoptElement', () => {
 
     // Test #6: adopts existing element — identity check
     it('adopts existing element — DOM identity preserved', () => {
-        const root = makeServerHTML('<div jay-coordinate="box">Content</div>');
-        const box = root.querySelector('[jay-coordinate="box"]')!;
-
-        const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        ConstructContext.withHydrationRootContext(
+        let adoptedDom: Element | undefined;
+        const { root } = hydrate<ViewState>(
+            '<div jay-coordinate="box">Content</div>',
             { text: 'Content', cls: 'active' },
-            refManager,
-            root,
             () => {
                 const el = adoptElement<ViewState>('box', {});
-                expect(el.dom).toBe(box);
+                adoptedDom = el.dom;
             },
         );
+        expect(adoptedDom).toBe(root.querySelector('[jay-coordinate="box"]'));
     });
 
     // Test #7: connects dynamic attributes
     it('connects dynamic attributes — updates on ViewState change', () => {
-        const root = makeServerHTML('<div jay-coordinate="box" class="initial">Content</div>');
-
-        const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        const jayElement = ConstructContext.withHydrationRootContext(
+        const { jayElement, root } = hydrate<ViewState>(
+            '<div jay-coordinate="box" class="initial">Content</div>',
             { text: 'Content', cls: 'initial' },
-            refManager,
-            root,
             () => {
                 adoptElement<ViewState>('box', {
                     class: da((vs) => vs.cls),
@@ -60,19 +48,13 @@ describe('adoptElement', () => {
 
     // Test #8: connects dynamic children
     it('connects dynamic children — text updates on ViewState change', () => {
-        const root = makeServerHTML(
-            '<div jay-coordinate="box"><span jay-coordinate="0">Hello</span></div>',
-        );
-
         interface VS {
             text: string;
         }
 
-        const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        const jayElement = ConstructContext.withHydrationRootContext<VS, {}>(
+        const { jayElement, root } = hydrate<VS>(
+            '<div jay-coordinate="box"><span jay-coordinate="0">Hello</span></div>',
             { text: 'Hello' },
-            refManager,
-            root,
             () => {
                 adoptElement<VS>('box', {}, [
                     adoptText<VS>('0', (vs) => vs.text),
@@ -109,12 +91,10 @@ describe('adoptElement', () => {
     // Test #10: mount/unmount lifecycle
     it('mount/unmount lifecycle works on adopted element', () => {
         const root = makeServerHTML('<div jay-coordinate="box">Content</div>');
-        let mountCount = 0;
-        let unmountCount = 0;
 
         const [refManager, [refBox]] = ReferencesManager.for({}, ['box'], [], [], []);
 
-        const jayElement = ConstructContext.withHydrationRootContext(
+        ConstructContext.withHydrationRootContext(
             { text: 'Content', cls: '' },
             refManager,
             root,
@@ -131,22 +111,16 @@ describe('adoptElement', () => {
 
     // Test #11: adopts element with static + dynamic children
     it('adopts element with static + dynamic children — only dynamic ones update', () => {
-        const root = makeServerHTML(
-            '<div jay-coordinate="container">' +
-                '<p>Static paragraph</p>' +
-                '<span jay-coordinate="0">Dynamic text</span>' +
-                '</div>',
-        );
-
         interface VS {
             dynamicText: string;
         }
 
-        const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        const jayElement = ConstructContext.withHydrationRootContext<VS, {}>(
+        const { jayElement, root } = hydrate<VS>(
+            '<div jay-coordinate="container">' +
+                '<p>Static paragraph</p>' +
+                '<span jay-coordinate="0">Dynamic text</span>' +
+                '</div>',
             { dynamicText: 'Dynamic text' },
-            refManager,
-            root,
             () => {
                 adoptElement<VS>('container', {}, [
                     adoptText<VS>('0', (vs) => vs.dynamicText),

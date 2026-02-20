@@ -1,16 +1,9 @@
 import {
-    ConstructContext,
-    ReferencesManager,
     adoptText,
     adoptElement,
     hydrateConditional,
 } from '../../../lib';
-
-function makeServerHTML(html: string): Element {
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    return div;
-}
+import { hydrate } from './hydration-test-utils';
 
 describe('hydrateConditional (if=true at SSR)', () => {
     interface ViewState {
@@ -18,20 +11,15 @@ describe('hydrateConditional (if=true at SSR)', () => {
         text: string;
     }
 
-    // Test #16: adopts existing element when condition=true
-    it('adopts existing element when condition=true — node identity preserved', () => {
-        const root = makeServerHTML(
-            '<div jay-coordinate="container">' +
-                '<span jay-coordinate="container/0">Visible</span>' +
-                '</div>',
-        );
-        const span = root.querySelector('[jay-coordinate="container/0"]')!;
+    const conditionalHTML =
+        '<div jay-coordinate="container">' +
+        '<span jay-coordinate="container/0">$TEXT</span>' +
+        '</div>';
 
-        const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        ConstructContext.withHydrationRootContext<ViewState, {}>(
-            { show: true, text: 'Visible' },
-            refManager,
-            root,
+    function hydrateConditionalTest(text: string, show: boolean) {
+        return hydrate<ViewState>(
+            conditionalHTML.replace('$TEXT', text),
+            { show, text },
             () => {
                 adoptElement<ViewState>('container', {}, [
                     hydrateConditional(
@@ -41,35 +29,21 @@ describe('hydrateConditional (if=true at SSR)', () => {
                 ]);
             },
         );
+    }
 
-        // Element identity preserved
-        expect(root.querySelector('[jay-coordinate="container/0"]')).toBe(span);
+    // Test #16: adopts existing element when condition=true
+    it('adopts existing element when condition=true — node identity preserved', () => {
+        const { root } = hydrateConditionalTest('Visible', true);
+
+        const span = root.querySelector('[jay-coordinate="container/0"]')!;
+        expect(span).toBeTruthy();
         expect(span.textContent).toBe('Visible');
     });
 
     // Test #17: hides element when condition toggles to false
     it('hides element when condition toggles to false', () => {
-        const root = makeServerHTML(
-            '<div jay-coordinate="container">' +
-                '<span jay-coordinate="container/0">Visible</span>' +
-                '</div>',
-        );
+        const { jayElement, root } = hydrateConditionalTest('Visible', true);
         const container = root.querySelector('[jay-coordinate="container"]')!;
-
-        const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        const jayElement = ConstructContext.withHydrationRootContext<ViewState, {}>(
-            { show: true, text: 'Visible' },
-            refManager,
-            root,
-            () => {
-                adoptElement<ViewState>('container', {}, [
-                    hydrateConditional(
-                        (vs) => vs.show,
-                        () => adoptText<ViewState>('container/0', (vs) => vs.text),
-                    ),
-                ]);
-            },
-        );
 
         // Initially visible
         expect(container.querySelector('[jay-coordinate="container/0"]')).toBeTruthy();
@@ -83,28 +57,9 @@ describe('hydrateConditional (if=true at SSR)', () => {
 
     // Test #18: shows element when condition toggles back to true
     it('shows element when condition toggles back to true — same node', () => {
-        const root = makeServerHTML(
-            '<div jay-coordinate="container">' +
-                '<span jay-coordinate="container/0">Visible</span>' +
-                '</div>',
-        );
+        const { jayElement, root } = hydrateConditionalTest('Visible', true);
         const span = root.querySelector('[jay-coordinate="container/0"]')!;
         const container = root.querySelector('[jay-coordinate="container"]')!;
-
-        const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        const jayElement = ConstructContext.withHydrationRootContext<ViewState, {}>(
-            { show: true, text: 'Visible' },
-            refManager,
-            root,
-            () => {
-                adoptElement<ViewState>('container', {}, [
-                    hydrateConditional(
-                        (vs) => vs.show,
-                        () => adoptText<ViewState>('container/0', (vs) => vs.text),
-                    ),
-                ]);
-            },
-        );
 
         // Toggle false then true
         jayElement.update({ show: false, text: 'Visible' });
@@ -117,26 +72,7 @@ describe('hydrateConditional (if=true at SSR)', () => {
 
     // Test #19: dynamic content updates while visible
     it('dynamic content updates while visible', () => {
-        const root = makeServerHTML(
-            '<div jay-coordinate="container">' +
-                '<span jay-coordinate="container/0">Initial</span>' +
-                '</div>',
-        );
-
-        const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        const jayElement = ConstructContext.withHydrationRootContext<ViewState, {}>(
-            { show: true, text: 'Initial' },
-            refManager,
-            root,
-            () => {
-                adoptElement<ViewState>('container', {}, [
-                    hydrateConditional(
-                        (vs) => vs.show,
-                        () => adoptText<ViewState>('container/0', (vs) => vs.text),
-                    ),
-                ]);
-            },
-        );
+        const { jayElement, root } = hydrateConditionalTest('Initial', true);
 
         jayElement.update({ show: true, text: 'Updated' });
 
@@ -146,20 +82,13 @@ describe('hydrateConditional (if=true at SSR)', () => {
 
     // Test #20: conditional with static siblings — position preserved
     it('conditional with static siblings — position preserved after toggle', () => {
-        const root = makeServerHTML(
+        const { jayElement, root } = hydrate<ViewState>(
             '<div jay-coordinate="container">' +
                 '<p>Before</p>' +
                 '<span jay-coordinate="container/0">Conditional</span>' +
                 '<p>After</p>' +
                 '</div>',
-        );
-        const container = root.querySelector('[jay-coordinate="container"]')!;
-
-        const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        const jayElement = ConstructContext.withHydrationRootContext<ViewState, {}>(
             { show: true, text: 'Conditional' },
-            refManager,
-            root,
             () => {
                 adoptElement<ViewState>('container', {}, [
                     hydrateConditional(
@@ -169,6 +98,8 @@ describe('hydrateConditional (if=true at SSR)', () => {
                 ]);
             },
         );
+
+        const container = root.querySelector('[jay-coordinate="container"]')!;
 
         // Toggle false then true
         jayElement.update({ show: false, text: 'Conditional' });
@@ -187,20 +118,13 @@ describe('hydrateConditional (if=true at SSR)', () => {
     // Note: if=false at SSR uses regular conditional() — no hydrateConditional needed.
     // This test just verifies that the existing conditional() works in hydration mode.
     it('if=false at SSR — uses regular conditional, element created on first true', () => {
-        const root = makeServerHTML(
-            '<div jay-coordinate="container"></div>',
-        );
-        const container = root.querySelector('[jay-coordinate="container"]')!;
-
         interface CondVS {
             show: boolean;
         }
 
-        const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        const jayElement = ConstructContext.withHydrationRootContext<CondVS, {}>(
+        const { root } = hydrate<CondVS>(
+            '<div jay-coordinate="container"></div>',
             { show: false },
-            refManager,
-            root,
             () => {
                 // For if=false at SSR, the compiled code would use the regular
                 // adoptElement with no conditional children (since nothing was rendered).
@@ -210,6 +134,7 @@ describe('hydrateConditional (if=true at SSR)', () => {
             },
         );
 
+        const container = root.querySelector('[jay-coordinate="container"]')!;
         // Container starts empty (if=false)
         expect(container.children.length).toBe(0);
     });

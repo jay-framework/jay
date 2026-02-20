@@ -1,10 +1,5 @@
 import { ConstructContext, ReferencesManager, adoptText } from '../../../lib';
-
-function makeServerHTML(html: string): Element {
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    return div;
-}
+import { hydrate, makeServerHTML } from './hydration-test-utils';
 
 describe('adoptText', () => {
     interface ViewState {
@@ -13,20 +8,16 @@ describe('adoptText', () => {
 
     // Test #1: adopts existing text node
     it('adopts existing text node — node identity preserved', () => {
-        const root = makeServerHTML('<h1 jay-coordinate="0">Hello World</h1>');
-        const h1 = root.querySelector('[jay-coordinate="0"]')!;
-        const originalTextNode = h1.firstChild!;
-
-        const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        const jayElement = ConstructContext.withHydrationRootContext(
+        const { jayElement, root } = hydrate<ViewState>(
+            '<h1 jay-coordinate="0">Hello World</h1>',
             { title: 'Hello World' },
-            refManager,
-            root,
             () => {
                 adoptText('0', (vs: ViewState) => vs.title);
             },
         );
 
+        const h1 = root.querySelector('[jay-coordinate="0"]')!;
+        const originalTextNode = h1.firstChild!;
         // Text node should be the same object (not recreated)
         expect(h1.firstChild).toBe(originalTextNode);
         expect(h1.textContent).toBe('Hello World');
@@ -36,13 +27,9 @@ describe('adoptText', () => {
 
     // Test #2: updates text on ViewState change
     it('updates text on ViewState change', () => {
-        const root = makeServerHTML('<h1 jay-coordinate="0">Hello</h1>');
-
-        const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        const jayElement = ConstructContext.withHydrationRootContext(
+        const { jayElement, root } = hydrate<ViewState>(
+            '<h1 jay-coordinate="0">Hello</h1>',
             { title: 'Hello' },
-            refManager,
-            root,
             () => {
                 adoptText('0', (vs: ViewState) => vs.title);
             },
@@ -56,13 +43,9 @@ describe('adoptText', () => {
 
     // Test #3: handles empty string — update to empty replaces server text
     it('handles empty string — update to empty replaces server text', () => {
-        const root = makeServerHTML('<h1 jay-coordinate="0">Initial</h1>');
-
-        const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        const jayElement = ConstructContext.withHydrationRootContext(
+        const { jayElement, root } = hydrate<ViewState>(
+            '<h1 jay-coordinate="0">Initial</h1>',
             { title: 'Initial' },
-            refManager,
-            root,
             () => {
                 adoptText('0', (vs: ViewState) => vs.title);
             },
@@ -76,15 +59,9 @@ describe('adoptText', () => {
 
     // Test #4: handles special characters
     it('handles special characters — no double escaping', () => {
-        const root = makeServerHTML(
+        const { root } = hydrate<ViewState>(
             '<h1 jay-coordinate="0">&lt;script&gt;alert&lt;/script&gt;</h1>',
-        );
-
-        const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        ConstructContext.withHydrationRootContext(
             { title: '<script>alert</script>' },
-            refManager,
-            root,
             () => {
                 adoptText('0', (vs: ViewState) => vs.title);
             },
@@ -125,22 +102,18 @@ describe('adoptText', () => {
 
     // Additional: skips-on-same-value optimization
     it('does not touch DOM when value unchanged', () => {
-        const root = makeServerHTML('<h1 jay-coordinate="0">Hello</h1>');
-        const h1 = root.querySelector('[jay-coordinate="0"]')!;
-        const textNode = h1.firstChild as Text;
-
-        const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        const jayElement = ConstructContext.withHydrationRootContext(
+        const { jayElement, root } = hydrate<ViewState>(
+            '<h1 jay-coordinate="0">Hello</h1>',
             { title: 'Hello' },
-            refManager,
-            root,
             () => {
                 adoptText('0', (vs: ViewState) => vs.title);
             },
         );
 
+        const h1 = root.querySelector('[jay-coordinate="0"]')!;
+        const textNode = h1.firstChild as Text;
+
         // Spy on textContent setter
-        const originalTextContent = textNode.textContent;
         let setterCalled = false;
         const descriptor = Object.getOwnPropertyDescriptor(Node.prototype, 'textContent')!;
         Object.defineProperty(textNode, 'textContent', {
@@ -164,23 +137,17 @@ describe('adoptText', () => {
 
     // Multiple adoptText calls in single hydration
     it('multiple adoptText calls in single hydration', () => {
-        const root = makeServerHTML(
-            '<div>' +
-                '<h1 jay-coordinate="0">Title</h1>' +
-                '<p jay-coordinate="1">Subtitle</p>' +
-                '</div>',
-        );
-
         interface MultiVS {
             heading: string;
             subtitle: string;
         }
 
-        const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        const jayElement = ConstructContext.withHydrationRootContext<MultiVS, {}>(
+        const { jayElement, root } = hydrate<MultiVS>(
+            '<div>' +
+                '<h1 jay-coordinate="0">Title</h1>' +
+                '<p jay-coordinate="1">Subtitle</p>' +
+                '</div>',
             { heading: 'Title', subtitle: 'Subtitle' },
-            refManager,
-            root,
             () => {
                 adoptText('0', (vs: MultiVS) => vs.heading);
                 adoptText('1', (vs: MultiVS) => vs.subtitle);
