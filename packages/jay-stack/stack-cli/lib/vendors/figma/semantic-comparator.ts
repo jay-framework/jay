@@ -166,6 +166,59 @@ function extractSignificantText(html: string): string[] {
 }
 
 /**
+ * Extracts if="condition" attribute values from HTML.
+ */
+function extractIfConditions(html: string): string[] {
+    const conditions: string[] = [];
+    const re = /if="([^"]+)"/g;
+    let m;
+    while ((m = re.exec(html)) !== null) {
+        conditions.push(m[1].trim());
+    }
+    return conditions;
+}
+
+/**
+ * Extracts forEach="collection" trackBy="key" pairs from HTML.
+ * Returns array of { forEach, trackBy } objects.
+ */
+function extractRepeaters(html: string): Array<{ forEach: string; trackBy: string | null }> {
+    const repeaters: Array<{ forEach: string; trackBy: string | null }> = [];
+    const re = /forEach="([^"]+)"(?:\s+[^>]*?)?(?:\s+trackBy="([^"]+)")?/g;
+    let m;
+    while ((m = re.exec(html)) !== null) {
+        repeaters.push({ forEach: m[1].trim(), trackBy: m[2]?.trim() ?? null });
+    }
+    return repeaters;
+}
+
+/**
+ * Extracts <script type="application/jay-headless" ...> tags and their key attributes.
+ * Returns array of { plugin, contract, key } objects.
+ */
+function extractHeadlessScripts(
+    html: string,
+): Array<{ plugin: string; contract: string; key: string }> {
+    const scripts: Array<{ plugin: string; contract: string; key: string }> = [];
+    const re = /<script[^>]*type="application\/jay-headless"[^>]*>/gi;
+    let m;
+    while ((m = re.exec(html)) !== null) {
+        const tag = m[0];
+        const pluginMatch = tag.match(/plugin="([^"]+)"/);
+        const contractMatch = tag.match(/contract="([^"]+)"/);
+        const keyMatch = tag.match(/key="([^"]+)"/);
+        if (pluginMatch && contractMatch && keyMatch) {
+            scripts.push({
+                plugin: pluginMatch[1],
+                contract: contractMatch[1],
+                key: keyMatch[1],
+            });
+        }
+    }
+    return scripts;
+}
+
+/**
  * Checks if a string contains another (for text content preservation).
  */
 function containsText(haystack: string, needle: string): boolean {
@@ -227,6 +280,69 @@ export function compareSemanticEquivalence(
             details: inOutput ? undefined : `attr="{${path}}" not found in exported HTML`,
         });
         if (!inOutput) equivalent = false;
+    }
+
+    // SI-5: Every if="condition" semantically preserved
+    const sourceIfConditions = extractIfConditions(normalizedSource);
+    for (const condition of sourceIfConditions) {
+        const inOutput = normalizedActual.includes(`if="${condition}"`);
+        invariantResults.push({
+            id: 'SI-5',
+            name: `if="${condition}"`,
+            passed: inOutput,
+            severity: 'HARD_FAIL',
+            details: inOutput ? undefined : `if="${condition}" not found in exported HTML`,
+        });
+        if (!inOutput) equivalent = false;
+    }
+
+    // SI-6: Every forEach + trackBy preserved
+    const sourceRepeaters = extractRepeaters(normalizedSource);
+    for (const repeater of sourceRepeaters) {
+        const forEachFound = normalizedActual.includes(`forEach="${repeater.forEach}"`);
+        invariantResults.push({
+            id: 'SI-6',
+            name: `forEach="${repeater.forEach}"`,
+            passed: forEachFound,
+            severity: 'HARD_FAIL',
+            details: forEachFound
+                ? undefined
+                : `forEach="${repeater.forEach}" not found in exported HTML`,
+        });
+        if (!forEachFound) equivalent = false;
+
+        if (repeater.trackBy) {
+            const trackByFound = normalizedActual.includes(`trackBy="${repeater.trackBy}"`);
+            invariantResults.push({
+                id: 'SI-6',
+                name: `trackBy="${repeater.trackBy}" (for forEach="${repeater.forEach}")`,
+                passed: trackByFound,
+                severity: 'HARD_FAIL',
+                details: trackByFound
+                    ? undefined
+                    : `trackBy="${repeater.trackBy}" not found in exported HTML`,
+            });
+            if (!trackByFound) equivalent = false;
+        }
+    }
+
+    // SI-10: application/jay-headless scripts preserved
+    const sourceHeadlessScripts = extractHeadlessScripts(sourceJayHtml);
+    for (const script of sourceHeadlessScripts) {
+        const keyInOutput = exportedJayHtml.includes(`key="${script.key}"`);
+        const pluginInOutput = exportedJayHtml.includes(`plugin="${script.plugin}"`);
+        const contractInOutput = exportedJayHtml.includes(`contract="${script.contract}"`);
+        const allFound = keyInOutput && pluginInOutput && contractInOutput;
+        invariantResults.push({
+            id: 'SI-10',
+            name: `jay-headless plugin="${script.plugin}" key="${script.key}"`,
+            passed: allFound,
+            severity: 'HARD_FAIL',
+            details: allFound
+                ? undefined
+                : `jay-headless script (plugin="${script.plugin}", contract="${script.contract}", key="${script.key}") not fully preserved`,
+        });
+        if (!allFound) equivalent = false;
     }
 
     // SI-9: Static text content preserved verbatim

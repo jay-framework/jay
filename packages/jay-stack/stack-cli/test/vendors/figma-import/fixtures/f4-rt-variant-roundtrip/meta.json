@@ -1,0 +1,6 @@
+{
+  "id": "f4-rt-variant-roundtrip",
+  "feature": "variant-roundtrip",
+  "milestone": 3,
+  "mode": "roundtrip"
+}

@@ -1,0 +1,6 @@
+{
+  "id": "f5-rt-repeater-roundtrip",
+  "feature": "repeater-roundtrip",
+  "milestone": 3,
+  "mode": "roundtrip"
+}

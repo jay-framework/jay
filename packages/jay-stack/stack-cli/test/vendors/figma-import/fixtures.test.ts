@@ -435,12 +435,14 @@ describe('Figma Import Fixtures', () => {
                     );
                     const plugins = projectInfoResponse.info?.plugins ?? [];
 
-                    const projectPage = realProjectPage ?? buildProjectPageFromContract(
-                        pagePath,
-                        pageUrl,
-                        meta.id,
-                        hasContract ? contractYaml : 'name: default\ntags: []',
-                    );
+                    const projectPage =
+                        realProjectPage ??
+                        buildProjectPageFromContract(
+                            pagePath,
+                            pageUrl,
+                            meta.id,
+                            hasContract ? contractYaml : 'name: default\ntags: []',
+                        );
                     const result = await figmaVendor.convertToBodyHtml(
                         vendorDoc,
                         pageUrl,
