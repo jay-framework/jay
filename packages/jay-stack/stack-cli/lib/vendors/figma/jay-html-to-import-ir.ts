@@ -2,6 +2,7 @@ import { createHash } from 'crypto';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import type { Contract, ContractTag, Plugin, ProjectPage } from '@jay-framework/editor-protocol';
 import type { JayHeadlessImports } from '@jay-framework/compiler-jay-html';
+import { ContractTagType } from '@jay-framework/compiler-jay-html';
 import type { ImportIRDocument, ImportIRNode, ImportIRStyle, ImportIRBinding } from './import-ir';
 import { generateNodeId, buildDomPath, getSemanticAnchors } from './id-generator';
 import { resolveStyle, parseInlineStyle } from './style-resolver';
@@ -144,6 +145,28 @@ function findFirstBlockChild(body: HTMLElement): HTMLElement | null {
     return children[0] ?? null;
 }
 
+function normalizeCompilerTags(tags: unknown[]): ContractTag[] {
+    return (tags as any[]).map((tag) => {
+        const typeVal = tag.type;
+        let typeStr: string | string[];
+        if (Array.isArray(typeVal)) {
+            const strings = typeVal.map((t: unknown) =>
+                typeof t === 'number' ? ContractTagType[t] : String(t),
+            );
+            typeStr = strings.length === 1 ? strings[0] : strings;
+        } else if (typeof typeVal === 'number') {
+            typeStr = ContractTagType[typeVal];
+        } else {
+            typeStr = String(typeVal);
+        }
+        return {
+            ...tag,
+            type: typeStr,
+            tags: tag.tags ? normalizeCompilerTags(tag.tags) : undefined,
+        } as ContractTag;
+    });
+}
+
 function buildHeadlessImportInfos(
     headlessImports: JayHeadlessImports[] | undefined,
     usedComponents: ProjectPage['usedComponents'],
@@ -161,7 +184,8 @@ function buildHeadlessImportInfos(
                   componentName: usedComponent.componentName,
               }
             : { pageUrl };
-        result.push({ key: hi.key, tags: hi.contract.tags, pageContractPath });
+        const normalizedTags = normalizeCompilerTags(hi.contract.tags);
+        result.push({ key: hi.key, tags: normalizedTags, pageContractPath });
     }
     return result;
 }
