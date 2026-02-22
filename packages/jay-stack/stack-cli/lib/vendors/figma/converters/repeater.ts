@@ -101,10 +101,7 @@ export function convertRepeaterNode(
             if (node.layoutMode === 'VERTICAL' && templateChild.layoutSizingHorizontal === 'HUG') {
                 overrides.layoutSizingHorizontal = 'FILL';
             }
-            if (
-                node.layoutMode === 'HORIZONTAL' &&
-                templateChild.layoutSizingVertical === 'HUG'
-            ) {
+            if (node.layoutMode === 'HORIZONTAL' && templateChild.layoutSizingVertical === 'HUG') {
                 overrides.layoutSizingVertical = 'FILL';
             }
             if (Object.keys(overrides).length > 0) {
