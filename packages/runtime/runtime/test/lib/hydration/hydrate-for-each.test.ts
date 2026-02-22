@@ -1,9 +1,4 @@
-import {
-    adoptText,
-    hydrateForEach,
-    dynamicText as dt,
-    dynamicElement as de,
-} from '../../../lib';
+import { adoptText, hydrateForEach, dynamicText as dt, dynamicElement as de } from '../../../lib';
 import { hydrate } from './hydration-test-utils';
 
 interface Item {
@@ -16,7 +11,7 @@ interface ViewState {
 }
 
 function forEachAdopt() {
-    return adoptText<Item>('0', (item) => item.name);
+    return [adoptText<Item>('0', (item) => item.name)];
 }
 
 function forEachCreate() {
@@ -24,15 +19,15 @@ function forEachCreate() {
 }
 
 function hydrateForEachTest(html: string, items: Item[]) {
-    return hydrate<ViewState>(html, { items }, () => {
+    return hydrate<ViewState>(html, { items }, () =>
         hydrateForEach<ViewState, Item>(
             '0',
             (vs) => vs.items,
             'id',
             forEachAdopt,
             (_item, _id) => forEachCreate(),
-        );
-    });
+        ),
+    );
 }
 
 const twoItemsHTML =
@@ -83,9 +78,7 @@ describe('hydrateForEach', () => {
 
     // Test #28: add new item
     it('add new item — creates via createItem callback', () => {
-        const { jayElement, root } = hydrateForEachTest(oneItemHTML, [
-            { id: 'a', name: 'Alice' },
-        ]);
+        const { jayElement, root } = hydrateForEachTest(oneItemHTML, [{ id: 'a', name: 'Alice' }]);
         const ul = root.querySelector('[jay-coordinate="0"]')!;
 
         jayElement.update({
@@ -138,9 +131,7 @@ describe('hydrateForEach', () => {
 
     // Test #31: empty list
     it('empty list — all items removed from DOM', () => {
-        const { jayElement, root } = hydrateForEachTest(oneItemHTML, [
-            { id: 'a', name: 'Alice' },
-        ]);
+        const { jayElement, root } = hydrateForEachTest(oneItemHTML, [{ id: 'a', name: 'Alice' }]);
         const ul = root.querySelector('[jay-coordinate="0"]')!;
 
         jayElement.update({ items: [] });
@@ -150,10 +141,7 @@ describe('hydrateForEach', () => {
 
     // Test #32: start from empty list
     it('start from empty list — items created via createItem', () => {
-        const { jayElement, root } = hydrateForEachTest(
-            '<ul jay-coordinate="0"></ul>',
-            [],
-        );
+        const { jayElement, root } = hydrateForEachTest('<ul jay-coordinate="0"></ul>', []);
         const ul = root.querySelector('[jay-coordinate="0"]')!;
 
         jayElement.update({

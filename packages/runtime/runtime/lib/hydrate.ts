@@ -3,20 +3,13 @@ import { RandomAccessLinkedList as List } from '@jay-framework/list-compare';
 import { Kindergarten, KindergartenGroup } from './kindergarden';
 import {
     CONSTRUCTION_CONTEXT_MARKER,
-    ConstructContext,
     currentConstructionContext,
     restoreContext,
     saveContext,
     withContext,
     wrapWithModifiedCheck,
 } from './context';
-import {
-    BaseJayElement,
-    MountFunc,
-    noopMount,
-    noopUpdate,
-    updateFunc,
-} from './element-types';
+import { BaseJayElement, MountFunc, updateFunc, noopMount, noopUpdate } from './element-types';
 import { normalizeMount, normalizeUpdates, type Attributes } from './element';
 import type { PrivateRef } from './node-reference';
 
@@ -73,17 +66,12 @@ export function adoptText<ViewState>(
         unmounts.push(ref.unmount);
     }
 
-    const result: BaseJayElement<ViewState> = {
+    return {
         dom: element,
         update: normalizeUpdates(updates),
         mount: normalizeMount(mounts),
         unmount: normalizeMount(unmounts),
     };
-
-    // Register into the hydration collector so the root update propagates
-    registerAdoptedElement(context, result);
-
-    return result;
 }
 
 // ============================================================================
@@ -149,32 +137,19 @@ export function adoptElement<ViewState>(
         }
     });
 
-    // Collect updates/mounts from adopted children.
-    // Remove child registrations from hydration collectors since this element
-    // incorporates them (avoids double-firing on update).
+    // Collect updates/mounts from adopted children
     for (const child of children) {
-        if (child.update !== noopUpdate) {
-            updates.push(child.update);
-            unregisterUpdate(context, child.update);
-        }
-        if (child.mount !== noopMount) {
-            mounts.push(child.mount);
-            unmounts.push(child.unmount);
-            unregisterMount(context, child.mount, child.unmount);
-        }
+        if (child.update !== noopUpdate) updates.push(child.update);
+        if (child.mount !== noopMount) mounts.push(child.mount);
+        if (child.unmount !== noopMount) unmounts.push(child.unmount);
     }
 
-    const result: BaseJayElement<ViewState> = {
+    return {
         dom: element,
         update: normalizeUpdates(updates),
         mount: normalizeMount(mounts),
         unmount: normalizeMount(unmounts),
     };
-
-    // Register into the hydration collector so the root update propagates
-    registerAdoptedElement(context, result);
-
-    return result;
 }
 
 // ============================================================================
@@ -229,17 +204,12 @@ export function hydrateConditional<ViewState>(
         visible = result;
     };
 
-    const result: BaseJayElement<ViewState> = {
+    return {
         dom,
         update,
         mount: adopted.mount,
         unmount: adopted.unmount,
     };
-
-    // Register into the hydration collector
-    registerAdoptedElement(context, result);
-
-    return result;
 }
 
 // ============================================================================
@@ -266,7 +236,7 @@ export function hydrateForEach<ViewState, Item>(
     containerCoordinate: string,
     accessor: (vs: ViewState) => Item[],
     trackBy: string,
-    adoptItem: () => BaseJayElement<Item>,
+    adoptItem: () => BaseJayElement<Item>[],
     createItem: (item: Item, id: string) => BaseJayElement<Item>,
 ): BaseJayElement<ViewState> {
     const context = currentConstructionContext();
@@ -290,14 +260,21 @@ export function hydrateForEach<ViewState, Item>(
 
         const childContext = context.forItem(item, id);
         const adopted = withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => {
-            const innerElement = adoptItem();
-            // Use the item's root DOM element (not the inner element's dom),
-            // so Kindergarten can manage the whole item node
+            const elements = adoptItem();
+            // Combine array of adopted elements into a single BaseJayElement
+            const updates: updateFunc<Item>[] = [];
+            const mounts: MountFunc[] = [];
+            const unmounts: MountFunc[] = [];
+            for (const el of elements) {
+                if (el.update !== noopUpdate) updates.push(el.update);
+                if (el.mount !== noopMount) mounts.push(el.mount);
+                if (el.unmount !== noopMount) unmounts.push(el.unmount);
+            }
             return {
-                dom: itemDom || innerElement.dom,
-                update: innerElement.update,
-                mount: innerElement.mount,
-                unmount: innerElement.unmount,
+                dom: itemDom || elements[0]?.dom,
+                update: normalizeUpdates(updates),
+                mount: normalizeMount(mounts),
+                unmount: normalizeMount(unmounts),
             } as BaseJayElement<Item>;
         });
         adoptedItems.push(adopted);
@@ -374,17 +351,12 @@ export function hydrateForEach<ViewState, Item>(
         }
     };
 
-    const result: BaseJayElement<ViewState> = {
+    return {
         dom: containerElement,
         update,
         mount,
         unmount,
     };
-
-    // Register into the hydration collector
-    registerAdoptedElement(context, result);
-
-    return result;
 }
 
 /**
@@ -406,48 +378,4 @@ function applyListChanges<Item>(
             group.moveNode(instruction.fromPos, instruction.pos);
         }
     });
-}
-
-// ============================================================================
-// Internal: register adopted element into hydration collectors
-// ============================================================================
-
-function registerAdoptedElement<VS>(
-    context: ConstructContext<VS>,
-    element: BaseJayElement<VS>,
-): void {
-    if (context._hydrationUpdates && element.update !== noopUpdate) {
-        context._hydrationUpdates.push(element.update);
-    }
-    if (context._hydrationMounts && element.mount !== noopMount) {
-        context._hydrationMounts.push(element.mount);
-    }
-    if (context._hydrationUnmounts && element.unmount !== noopMount) {
-        context._hydrationUnmounts.push(element.unmount);
-    }
-}
-
-function unregisterUpdate<VS>(
-    context: ConstructContext<VS>,
-    update: updateFunc<VS>,
-): void {
-    if (context._hydrationUpdates) {
-        const idx = context._hydrationUpdates.indexOf(update);
-        if (idx !== -1) context._hydrationUpdates.splice(idx, 1);
-    }
-}
-
-function unregisterMount<VS>(
-    context: ConstructContext<VS>,
-    mount: MountFunc,
-    unmount: MountFunc,
-): void {
-    if (context._hydrationMounts) {
-        const idx = context._hydrationMounts.indexOf(mount);
-        if (idx !== -1) context._hydrationMounts.splice(idx, 1);
-    }
-    if (context._hydrationUnmounts) {
-        const idx = context._hydrationUnmounts.indexOf(unmount);
-        if (idx !== -1) context._hydrationUnmounts.splice(idx, 1);
-    }
 }

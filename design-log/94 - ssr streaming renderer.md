@@ -5,6 +5,7 @@
 Jay currently does NOT render HTML on the server. The server produces ViewState data (slow + fast phases), then sends an empty `<div id="target"></div>` plus a `<script>` that imports the compiled element and creates the entire DOM on the client (see `generate-client-script.ts`).
 
 This means:
+
 - Users see a blank page until JavaScript loads and executes
 - Search engines see an empty page (no SEO)
 - Time to First Contentful Paint is slow
@@ -12,6 +13,7 @@ This means:
 We need the server to render the full HTML from compiled jay-html, streaming it directly to the response without materializing the full HTML string in memory.
 
 ### Related Design Logs
+
 - #11 — SSR (original concept, mentions stream support)
 - #34 — Jay Stack (3-phase rendering pipeline)
 - #50 — Rendering phases in contracts
@@ -27,42 +29,50 @@ We need the server to render the full HTML from compiled jay-html, streaming it 
 ## Questions and Answers
 
 ### Q1: Should we compile jay-html into a streaming render function, or interpret jay-html at runtime on the server?
+
 Compilation is preferred — it avoids parsing jay-html at request time and produces optimal code.
 
 **A:** Confirmed — compile. The compiled output will also be used for production builds later, not just dev server.
 
 ### Q2: What format should the compiled server render function output?
+
 A stream of strings (or chunks). The function yields/writes HTML fragments sequentially, allowing the HTTP response to start immediately.
 
 **A:** Confirmed — stream of string chunks via `write()` callback.
 
 ### Q3: How do slow-rendered (pre-rendered) jay-html templates work with SSR?
+
 After slow rendering (Design Log #75), we have pre-rendered jay-html with slow data baked in. The SSR compiler should compile this pre-rendered jay-html into the streaming render function, binding only fast + interactive data at request time.
 
 **A:** Confirmed.
 
 ### Q4: Where does the SSR render function live — in the compiler output or in jay-stack server runtime?
+
 In the compiler output. The compiler produces a `generated-server-element.ts` (or similar) that exports a render function. Jay-stack's server runtime calls it.
 
 **A:** Confirmed — compiler output.
 
 ### Q5: How do headless components render on the server?
+
 Headless components that have slow/fast phases already produce ViewState. The SSR render function needs the merged ViewState to render the HTML. The headless component resolution happens before SSR rendering.
 
 **A:** Confirmed.
 
 ### Q6: How do we handle interactive `if` and `forEach` in SSR?
+
 - `if`: evaluate the condition with the current ViewState, render the matching branch. For the client, include hydration markers (see Design Log #93).
 - `forEach`: iterate the array, render each item. Include markers for hydration.
 
 **A:** Confirmed. Uses `jay-coordinate` attributes on elements for hydration targeting, consistent with Design Log #93. No comment boundaries needed — the runtime's `Kindergarten` handles DOM positioning via offset counting.
 
 ### Q7: How do we handle ViewState with Promise / async data?
+
 See Design Log #45 for async types (`when-resolved`, `when-loading`, `when-rejected`).
 
 **A:** Render the `when-pending` (loading) variant immediately into the stream. Do NOT close the final `</html>` tag yet — keep the stream open. Once the promise resolves (or rejects), write inline `<script>` that replaces the pending content with the resolved/rejected variant. This is similar to React Suspense streaming.
 
 Flow:
+
 1. When SSR hits an `async` property, render the `when-loading` variant inline
 2. Mark it with a placeholder: `<template jay-async="p1:pending">...</template>` wrapper (or similar)
 3. Continue streaming other HTML
@@ -80,7 +90,7 @@ This means `renderToStream` becomes **async** — it returns a Promise that reso
 ```
                           Build Time                    Request Time
                           ─────────                    ────────────
-                               
+
 jay-html ──→ slow render ──→ pre-rendered jay-html ──→ SSR compiler output
                                                             │
                                                     ┌───────┴────────┐
@@ -103,21 +113,22 @@ New compiler target that produces a function rendering HTML to a stream:
 import { escapeHtml, type ServerRenderContext } from '@jay-framework/ssr-runtime';
 
 export function renderToStream(vs: ViewState, ctx: ServerRenderContext): void {
-    const { write: w } = ctx;
-    
-    w('<div>');
-    w('<h1 jay-coordinate="0">');
-    w(escapeHtml(vs.title));
-    w('</h1>');
-    w('<div jay-coordinate="content">');
-    w(escapeHtml(vs.text));
-    w('</div>');
-    w('<p>Static footer</p>');
-    w('</div>');
+  const { write: w } = ctx;
+
+  w('<div>');
+  w('<h1 jay-coordinate="0">');
+  w(escapeHtml(vs.title));
+  w('</h1>');
+  w('<div jay-coordinate="content">');
+  w(escapeHtml(vs.text));
+  w('</div>');
+  w('<p>Static footer</p>');
+  w('</div>');
 }
 ```
 
 Key properties:
+
 - **No DOM APIs** — pure string concatenation via `write()` calls
 - **Streaming** — each `write()` can flush to the HTTP response
 - **No intermediate string** — never builds the full HTML in memory
@@ -127,21 +138,21 @@ Key properties:
 
 ### Rendering Rules by Jay-HTML Construct
 
-| Construct | SSR Behavior |
-|-----------|-------------|
-| Static HTML | Write directly: `w('<p>Hello</p>')` |
-| `{binding}` | Evaluate + escape + coordinate: `w('<h1 jay-coordinate="0">'); w(escapeHtml(vs.title)); w('</h1>')` |
-| `ref="name"` | Add `jay-coordinate="refName"` to element. Ref itself is client-only. |
-| `style` binding | Evaluate and inline: `w('style="color:' + escapeAttr(vs.color) + '"')` |
-| `if="cond"` (interactive) | Evaluate condition, render matching branch with `jay-coordinate` on dynamic elements. No comment markers — `Kindergarten` offset counting handles positioning. |
-| `if="cond"` (slow/fast only) | Evaluate condition, render or skip. No markers needed. |
-| `forEach` (interactive) | Add `jay-coordinate` (auto-index) on container element; iterate items with `jay-coordinate="trackByKey"` on each. |
-| `forEach` (slow) | Already unrolled by slow render (Design Log #75) |
-| `when-loading` (async) | Render pending variant inline with `jay-async="propName:pending"` wrapper. Register promise with `ctx.onAsync`. |
-| `when-resolved` (async) | Not rendered initially. Written via inline `<script>` when promise resolves. |
-| `when-rejected` (async) | Not rendered initially. Written via inline `<script>` when promise rejects. |
-| headless component | Already resolved to ViewState before SSR. Render its jay-html with merged ViewState. |
-| child component | Render component's server element recursively |
+| Construct                    | SSR Behavior                                                                                                                                                   |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Static HTML                  | Write directly: `w('<p>Hello</p>')`                                                                                                                            |
+| `{binding}`                  | Evaluate + escape + coordinate: `w('<h1 jay-coordinate="0">'); w(escapeHtml(vs.title)); w('</h1>')`                                                            |
+| `ref="name"`                 | Add `jay-coordinate="refName"` to element. Ref itself is client-only.                                                                                          |
+| `style` binding              | Evaluate and inline: `w('style="color:' + escapeAttr(vs.color) + '"')`                                                                                         |
+| `if="cond"` (interactive)    | Evaluate condition, render matching branch with `jay-coordinate` on dynamic elements. No comment markers — `Kindergarten` offset counting handles positioning. |
+| `if="cond"` (slow/fast only) | Evaluate condition, render or skip. No markers needed.                                                                                                         |
+| `forEach` (interactive)      | Add `jay-coordinate` (auto-index) on container element; iterate items with `jay-coordinate="trackByKey"` on each.                                              |
+| `forEach` (slow)             | Already unrolled by slow render (Design Log #75)                                                                                                               |
+| `when-loading` (async)       | Render pending variant inline with `jay-async="propName:pending"` wrapper. Register promise with `ctx.onAsync`.                                                |
+| `when-resolved` (async)      | Not rendered initially. Written via inline `<script>` when promise resolves.                                                                                   |
+| `when-rejected` (async)      | Not rendered initially. Written via inline `<script>` when promise rejects.                                                                                    |
+| headless component           | Already resolved to ViewState before SSR. Render its jay-html with merged ViewState.                                                                           |
+| child component              | Render component's server element recursively                                                                                                                  |
 
 ### Markers for Interactive Elements
 
@@ -172,6 +183,7 @@ Uses the `jay-coordinate` attribute system from Design Log #93. No comment bound
 ```
 
 Markers:
+
 - `jay-coordinate="..."` on elements — for hydration targeting (Design Log #93)
 - `jay-async="propName:state"` attribute — async promise placeholder (replaced by inline script when settled)
 
@@ -181,15 +193,13 @@ Given this jay-html:
 
 ```html
 <div>
-    <h1>{title}</h1>
-    <div if="showDetails" ref="details">
-        <span>{description}</span>
-    </div>
-    <ul>
-        <li forEach="items" trackBy="id">
-            <span>{name}</span> - <span>{price}</span>
-        </li>
-    </ul>
+  <h1>{title}</h1>
+  <div if="showDetails" ref="details">
+    <span>{description}</span>
+  </div>
+  <ul>
+    <li forEach="items" trackBy="id"><span>{name}</span> - <span>{price}</span></li>
+  </ul>
 </div>
 ```
 
@@ -199,47 +209,47 @@ Compiled `generated-server-element.ts`:
 import { escapeHtml } from '@jay-framework/ssr-runtime';
 
 interface ViewState {
-    title: string;
-    showDetails: boolean;
-    description: string;
-    items: Array<{ id: string; name: string; price: number }>;
+  title: string;
+  showDetails: boolean;
+  description: string;
+  items: Array<{ id: string; name: string; price: number }>;
 }
 
 export function renderToStream(vs: ViewState, ctx: ServerRenderContext): void {
-    const { write: w } = ctx;
-    w('<div>');
-    
-    // {title} — dynamic text, coordinate for hydration
-    w('<h1 jay-coordinate="0">');
-    w(escapeHtml(String(vs.title)));
-    w('</h1>');
-    
-    // if="showDetails" — interactive conditional
-    if (vs.showDetails) {
-        w('<div jay-coordinate="details">');  // ref="details"
-        w('<span jay-coordinate="details/0">');
-        w(escapeHtml(String(vs.description)));
-        w('</span>');
-        w('</div>');
-    }
-    
-    // forEach="items" — interactive collection
-    w('<ul jay-coordinate="1">');  // container for forEach, auto-index
-    for (const item of vs.items) {
-        const key = escapeHtml(String(item.id));
-        w('<li jay-coordinate="' + key + '">');
-        w('<span jay-coordinate="' + key + '/0">');
-        w(escapeHtml(String(item.name)));
-        w('</span>');
-        w(' - ');
-        w('<span jay-coordinate="' + key + '/1">');
-        w(escapeHtml(String(item.price)));
-        w('</span>');
-        w('</li>');
-    }
-    w('</ul>');
-    
+  const { write: w } = ctx;
+  w('<div>');
+
+  // {title} — dynamic text, coordinate for hydration
+  w('<h1 jay-coordinate="0">');
+  w(escapeHtml(String(vs.title)));
+  w('</h1>');
+
+  // if="showDetails" — interactive conditional
+  if (vs.showDetails) {
+    w('<div jay-coordinate="details">'); // ref="details"
+    w('<span jay-coordinate="details/0">');
+    w(escapeHtml(String(vs.description)));
+    w('</span>');
     w('</div>');
+  }
+
+  // forEach="items" — interactive collection
+  w('<ul jay-coordinate="1">'); // container for forEach, auto-index
+  for (const item of vs.items) {
+    const key = escapeHtml(String(item.id));
+    w('<li jay-coordinate="' + key + '">');
+    w('<span jay-coordinate="' + key + '/0">');
+    w(escapeHtml(String(item.name)));
+    w('</span>');
+    w(' - ');
+    w('<span jay-coordinate="' + key + '/1">');
+    w(escapeHtml(String(item.price)));
+    w('</span>');
+    w('</li>');
+  }
+  w('</ul>');
+
+  w('</div>');
 }
 ```
 
@@ -249,10 +259,10 @@ Given this jay-html with async data (Design Log #45):
 
 ```html
 <div>
-    <span>{s1}</span>
-    <span when-resolved="p1">{.}</span>
-    <span when-loading="p1">Still loading</span>
-    <span when-rejected="p1">Error: {message}</span>
+  <span>{s1}</span>
+  <span when-resolved="p1">{.}</span>
+  <span when-loading="p1">Still loading</span>
+  <span when-rejected="p1">Error: {message}</span>
 </div>
 ```
 
@@ -260,24 +270,25 @@ Compiled `generated-server-element.ts`:
 
 ```ts
 export function renderToStream(vs: ViewState, ctx: ServerRenderContext): void {
-    const { write: w, onAsync } = ctx;
-    w('<div>');
-    w('<span jay-coordinate="0">');
-    w(escapeHtml(String(vs.s1)));
-    w('</span>');
-    
-    // Async p1: render when-loading immediately, register promise for later
-    w('<div jay-async="p1:pending" jay-coordinate="p1">');
-    w('<span>Still loading</span>');
-    w('</div>');
-    
-    // Register the promise — when it settles, the framework writes inline JS
-    onAsync(vs.p1, 'p1', {
-        resolved: (val) => '<span jay-coordinate="p1">' + escapeHtml(String(val)) + '</span>',
-        rejected: (err) => '<span jay-coordinate="p1">Error: ' + escapeHtml(String(err.message)) + '</span>',
-    });
-    
-    w('</div>');
+  const { write: w, onAsync } = ctx;
+  w('<div>');
+  w('<span jay-coordinate="0">');
+  w(escapeHtml(String(vs.s1)));
+  w('</span>');
+
+  // Async p1: render when-loading immediately, register promise for later
+  w('<div jay-async="p1:pending" jay-coordinate="p1">');
+  w('<span>Still loading</span>');
+  w('</div>');
+
+  // Register the promise — when it settles, the framework writes inline JS
+  onAsync(vs.p1, 'p1', {
+    resolved: (val) => '<span jay-coordinate="p1">' + escapeHtml(String(val)) + '</span>',
+    rejected: (err) =>
+      '<span jay-coordinate="p1">Error: ' + escapeHtml(String(err.message)) + '</span>',
+  });
+
+  w('</div>');
 }
 ```
 
@@ -285,18 +296,19 @@ When the promise resolves, the framework appends to the stream:
 
 ```html
 <script>
-(function(){
-  var t = document.querySelector('[jay-async="p1:pending"]');
-  var d = document.createElement('div');
-  d.innerHTML = '<span jay-coordinate="p1">Hello World</span>';
-  t.replaceWith(d.firstChild);
-  // Trigger hydration update for this coordinate
-  window.__jay?.hydrateAsync?.('p1');
-})();
+  (function () {
+    var t = document.querySelector('[jay-async="p1:pending"]');
+    var d = document.createElement('div');
+    d.innerHTML = '<span jay-coordinate="p1">Hello World</span>';
+    t.replaceWith(d.firstChild);
+    // Trigger hydration update for this coordinate
+    window.__jay?.hydrateAsync?.('p1');
+  })();
 </script>
 ```
 
 This pattern:
+
 1. Renders pending content immediately — user sees loading state
 2. Keeps the HTTP stream open until all promises settle
 3. When a promise settles, writes an inline `<script>` that does a DOM swap
@@ -328,11 +340,11 @@ async function generateSSRResponse(res: ServerResponse, viewState, jayHtmlPath, 
     // 1. Write HTML head
     res.write('<!doctype html><html><head>...</head><body>');
     res.write('<div id="target">');
-    
+
     // 2. Stream the rendered component HTML
     const { renderToStream } = await import(serverElementPath);
     const pendingPromises: Array<Promise<void>> = [];
-    
+
     const ctx: ServerRenderContext = {
         write: (chunk) => res.write(chunk),
         onAsync: (promise, id, templates) => {
@@ -354,15 +366,15 @@ async function generateSSRResponse(res: ServerResponse, viewState, jayHtmlPath, 
             );
         },
     };
-    
+
     renderToStream(viewState, ctx);
-    
+
     // 3. Close target div
     res.write('</div>');
-    
+
     // 4. Wait for all async promises to settle (scripts stream as they resolve)
     await Promise.allSettled(pendingPromises);
-    
+
     // 5. Add hydration script (after all async swaps)
     res.write(`<script type="module">
         import { hydrate } from '${hydrateElementPath}';
@@ -387,7 +399,7 @@ Minimal server-side utilities (no DOM dependency):
 /** HTML-escape a string for safe embedding in HTML content */
 export function escapeHtml(str: string): string { ... }
 
-/** HTML-escape a string for safe embedding in attribute values */  
+/** HTML-escape a string for safe embedding in attribute values */
 export function escapeAttr(str: string): string { ... }
 
 /** Context passed to compiled renderToStream functions */
@@ -421,21 +433,23 @@ In `compiler-jay-html`:
 
 ### When to Compile SSR vs Client-Only
 
-| Scenario | Generate server element? | Generate hydrate element? | Generate client element? |
-|----------|------------------------|--------------------------|-------------------------|
-| Component has slow/fast + interactive | Yes | Yes | No (hydrate replaces it) |
-| Component is server-only (no interactive) | Yes | No | No |
-| Component is client-only (no slow/fast) | No | No | Yes (current behavior) |
+| Scenario                                  | Generate server element? | Generate hydrate element? | Generate client element? |
+| ----------------------------------------- | ------------------------ | ------------------------- | ------------------------ |
+| Component has slow/fast + interactive     | Yes                      | Yes                       | No (hydrate replaces it) |
+| Component is server-only (no interactive) | Yes                      | No                        | No                       |
+| Component is client-only (no slow/fast)   | No                       | No                        | Yes (current behavior)   |
 
 ## Implementation Plan
 
 ### Phase 1: SSR Runtime Package
+
 1. Create `packages/runtime/ssr-runtime`
 2. Implement `escapeHtml()`, `escapeAttr()`, `asyncSwapScript()`
 3. Define `ServerRenderContext` interface
 4. Tests: escape edge cases (HTML entities, quotes, null bytes), async swap script generation
 
 ### Phase 2: Compiler — Server Element Target (basics)
+
 1. Add `renderServerNode()` in `jay-html-compiler.ts`
 2. Handle static HTML, dynamic text, attributes, style bindings
 3. Generate `jay-coordinate` attributes (same coordinate system as Design Log #93)
@@ -443,18 +457,21 @@ In `compiler-jay-html`:
 5. Tests: fixture-based, starting with simple cases (static text, dynamic text, refs)
 
 ### Phase 3: Compiler — Conditionals and forEach
+
 1. Add `if` handling — evaluate condition, render matching branch with `jay-coordinate` on dynamic elements
 2. Add `forEach` handling — iterate items with `jay-coordinate="trackByKey"` on each
 3. Handle nested conditionals and forEach
 4. Tests: conditions fixture, collections fixture
 
 ### Phase 4: Compiler — Async Promise Streaming
+
 1. Add `when-loading` → render inline with `jay-async="propName:pending"` wrapper
 2. Add `when-resolved` / `when-rejected` → generate template functions for `ctx.onAsync`
 3. `renderToStream` signature uses `ServerRenderContext` (with `onAsync`)
 4. Tests: async fixtures (async-simple-types, async-objects, async-arrays)
 
 ### Phase 5: Jay-Stack Integration
+
 1. Create `generate-ssr-response.ts` in `stack-server-runtime`
 2. Modify dev server to use SSR rendering
 3. Stream HTML response, wait for async promises, then write hydration script
@@ -462,6 +479,7 @@ In `compiler-jay-html`:
 5. Tests: dev server integration tests
 
 ### Phase 6: Production Optimizations
+
 1. Concatenate adjacent static `w()` calls at compile time: `w('<div><h1 jay-coordinate="0">')` instead of separate calls
 2. Pre-compute static portions as template literals
 3. Async timeout: close stream after N seconds even if promises haven't settled
@@ -471,6 +489,7 @@ In `compiler-jay-html`:
 ### Before (current)
 
 Browser receives:
+
 ```html
 <!doctype html>
 <html>
@@ -491,6 +510,7 @@ User sees: blank page → flash → content
 ### After (with SSR)
 
 Browser receives (streamed):
+
 ```html
 <!doctype html>
 <html>
@@ -499,8 +519,12 @@ Browser receives (streamed):
       <div>
         <h1 jay-coordinate="0">Hello</h1>
         <ul jay-coordinate="1">
-          <li jay-coordinate="w1"><span jay-coordinate="w1/0">Widget</span> - <span jay-coordinate="w1/1">9.99</span></li>
-          <li jay-coordinate="g2"><span jay-coordinate="g2/0">Gadget</span> - <span jay-coordinate="g2/1">19.99</span></li>
+          <li jay-coordinate="w1">
+            <span jay-coordinate="w1/0">Widget</span> - <span jay-coordinate="w1/1">9.99</span>
+          </li>
+          <li jay-coordinate="g2">
+            <span jay-coordinate="g2/0">Gadget</span> - <span jay-coordinate="g2/1">19.99</span>
+          </li>
         </ul>
       </div>
     </div>
@@ -518,6 +542,7 @@ User sees: content immediately → interactive after hydration
 ### After (with SSR + async promise)
 
 Browser receives (streamed progressively):
+
 ```html
 <!doctype html>
 <html>
@@ -532,12 +557,14 @@ Browser receives (streamed progressively):
       </div>
     </div>
     <!-- Promise p1 resolves while streaming — inline script swaps content -->
-    <script>(function(){
-      var t=document.querySelector('[jay-async="p1:pending"]');
-      var d=document.createElement('div');
-      d.innerHTML='<span jay-coordinate="p1">World</span>';
-      t.replaceWith(d.firstChild);
-    })()</script>
+    <script>
+      (function () {
+        var t = document.querySelector('[jay-async="p1:pending"]');
+        var d = document.createElement('div');
+        d.innerHTML = '<span jay-coordinate="p1">World</span>';
+        t.replaceWith(d.firstChild);
+      })();
+    </script>
     <!-- All promises settled, now hydrate -->
     <script type="module">
       const viewState = {"s1":"Hello","p1":"World"};
@@ -551,15 +578,15 @@ User sees: "Hello" + "Still loading" → "Hello" + "World" (swap) → interactiv
 
 ## Trade-offs
 
-| Decision | Pro | Con |
-|----------|-----|-----|
-| Compile to `write()` calls | Streaming, no memory accumulation, reusable for production | More compiler complexity |
-| `jay-coordinate` on dynamic elements | Consistent with DL#93 hydration and automation API | Small HTML overhead |
-| No comment markers (Kindergarten offset counting) | Cleaner HTML, less output, simpler compiler | Relies on Kindergarten internals for position correctness |
-| Separate ssr-runtime package | Minimal server dependency | Another package to maintain |
-| SSR at fast phase (not slow) | Slow data already baked in, fast = per-request | Must re-render on every request (cacheable) |
-| Async: render pending inline, swap via script | Progressive loading, no re-render of entire page | Inline scripts add complexity; stream stays open |
-| Async: wait for all promises before hydration | Hydration sees final DOM, no race conditions | Slow promises delay interactivity |
+| Decision                                          | Pro                                                        | Con                                                       |
+| ------------------------------------------------- | ---------------------------------------------------------- | --------------------------------------------------------- |
+| Compile to `write()` calls                        | Streaming, no memory accumulation, reusable for production | More compiler complexity                                  |
+| `jay-coordinate` on dynamic elements              | Consistent with DL#93 hydration and automation API         | Small HTML overhead                                       |
+| No comment markers (Kindergarten offset counting) | Cleaner HTML, less output, simpler compiler                | Relies on Kindergarten internals for position correctness |
+| Separate ssr-runtime package                      | Minimal server dependency                                  | Another package to maintain                               |
+| SSR at fast phase (not slow)                      | Slow data already baked in, fast = per-request             | Must re-render on every request (cacheable)               |
+| Async: render pending inline, swap via script     | Progressive loading, no re-render of entire page           | Inline scripts add complexity; stream stays open          |
+| Async: wait for all promises before hydration     | Hydration sees final DOM, no race conditions               | Slow promises delay interactivity                         |
 
 ## Verification Criteria
 
@@ -573,3 +600,24 @@ User sees: "Hello" + "Still loading" → "Hello" + "World" (swap) → interactiv
 8. **Performance**: SSR response is faster than client-side render for First Contentful Paint
 9. **SEO**: HTML content is visible without JavaScript (verify with curl)
 10. **escapeHtml**: No XSS vectors in server-rendered dynamic content
+
+## Implementation Results
+
+### Phase 1 — SSR Runtime Package (Completed)
+
+**Package created:** `packages/runtime/ssr-runtime` (`@jay-framework/ssr-runtime`)
+
+**Files created:**
+
+- `lib/escape.ts` — `escapeHtml()` and `escapeAttr()` using map-based regex replacement (escapes `& < > " '`)
+- `lib/server-render-context.ts` — `ServerRenderContext` interface with `write` and `onAsync` members
+- `lib/async-swap-script.ts` — `asyncSwapScript(id, html)` generates inline `<script>` for async promise swap
+- `lib/index.ts` — re-exports all public API
+- `package.json`, `tsconfig.json`, `vite.config.ts` — package scaffolding (modeled on list-compare)
+
+**Tests added (22 total, all passing):**
+
+- `test/escape.test.ts` — 15 tests (P1-P15): escapeHtml + escapeAttr covering all 5 HTML entities, multiple entities, empty string, non-string coercion, XSS prevention
+- `test/async-swap-script.test.ts` — 7 tests (P16-P20 + extras): script tag generation, quote/backslash escaping, placeholder targeting, replaceWith usage, hydration callback trigger
+
+**No deviations from design.** Implementation matches DL#94 Phase 1 specification exactly.

@@ -10,12 +10,26 @@ describe('withHydrationRootContext / ConstructContext hydration', () => {
         }
 
         const { root } = hydrate<VS>(
-            '<h1 jay-coordinate="0">Hello</h1>' +
-                '<div jay-coordinate="content">Text</div>',
+            '<h1 jay-coordinate="0">Hello</h1>' + '<div jay-coordinate="content">Text</div>',
             { title: 'Hello', text: 'Text' },
             () => {
-                adoptText('0', (vs: VS) => vs.title);
-                adoptText('content', (vs: VS) => vs.text);
+                const a = adoptText('0', (vs: VS) => vs.title);
+                const b = adoptText('content', (vs: VS) => vs.text);
+                return {
+                    dom: a.dom,
+                    update: (vs: VS) => {
+                        a.update(vs);
+                        b.update(vs);
+                    },
+                    mount: () => {
+                        a.mount();
+                        b.mount();
+                    },
+                    unmount: () => {
+                        a.unmount();
+                        b.unmount();
+                    },
+                };
             },
         );
 
@@ -31,9 +45,7 @@ describe('withHydrationRootContext / ConstructContext hydration', () => {
         const { jayElement, root } = hydrate(
             '<h1 jay-coordinate="0">Hello</h1>',
             { title: 'Hello' },
-            () => {
-                adoptText('0', (vs: { title: string }) => vs.title);
-            },
+            () => adoptText('0', (vs: { title: string }) => vs.title),
         );
 
         expect(jayElement.dom).toBe(root);
@@ -41,25 +53,15 @@ describe('withHydrationRootContext / ConstructContext hydration', () => {
 
     // Test #14: ref manager is applied
     it('ref manager is applied — refs accessible on returned element', async () => {
-        const root = makeServerHTML(
-            '<div jay-coordinate="myRef">Content</div>',
-        );
+        const root = makeServerHTML('<div jay-coordinate="myRef">Content</div>');
         const myRefEl = root.querySelector('[jay-coordinate="myRef"]')!;
 
-        const [refManager, [refMyRef]] = ReferencesManager.for(
-            {},
-            ['myRef'],
-            [],
-            [],
-            [],
-        );
+        const [refManager, [refMyRef]] = ReferencesManager.for({}, ['myRef'], [], [], []);
         const jayElement = ConstructContext.withHydrationRootContext(
             { text: 'Content' },
             refManager,
             root,
-            () => {
-                adoptElement('myRef', {}, [], refMyRef());
-            },
+            () => adoptElement('myRef', {}, [], refMyRef()),
         );
 
         expect((jayElement as any).refs).toBeDefined();
@@ -76,12 +78,26 @@ describe('withHydrationRootContext / ConstructContext hydration', () => {
         }
 
         const { jayElement, root } = hydrate<VS>(
-            '<h1 jay-coordinate="0">Original</h1>' +
-                '<p jay-coordinate="1">Text</p>',
+            '<h1 jay-coordinate="0">Original</h1>' + '<p jay-coordinate="1">Text</p>',
             { heading: 'Original', para: 'Text' },
             () => {
-                adoptText('0', (vs: VS) => vs.heading);
-                adoptText('1', (vs: VS) => vs.para);
+                const a = adoptText('0', (vs: VS) => vs.heading);
+                const b = adoptText('1', (vs: VS) => vs.para);
+                return {
+                    dom: a.dom,
+                    update: (vs: VS) => {
+                        a.update(vs);
+                        b.update(vs);
+                    },
+                    mount: () => {
+                        a.mount();
+                        b.mount();
+                    },
+                    unmount: () => {
+                        a.unmount();
+                        b.unmount();
+                    },
+                };
             },
         );
 

@@ -1,4 +1,4 @@
-import { ConstructContext, JayElement, ReferencesManager } from '../../../lib';
+import { BaseJayElement, ConstructContext, JayElement, ReferencesManager } from '../../../lib';
 
 /**
  * Parse an HTML string into a root element (simulates server-rendered HTML).
@@ -17,7 +17,7 @@ export function makeServerHTML(html: string): Element {
 export function hydrate<VS>(
     html: string,
     viewState: VS,
-    hydrateConstructor: () => void,
+    hydrateConstructor: () => BaseJayElement<VS>,
 ): { jayElement: JayElement<VS, {}>; root: Element } {
     const root = makeServerHTML(html);
     const [refManager] = ReferencesManager.for({}, [], [], [], []);

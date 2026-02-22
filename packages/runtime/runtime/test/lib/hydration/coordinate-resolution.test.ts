@@ -5,6 +5,8 @@ import {
     currentConstructionContext,
     withContext,
     element as e,
+    noopMount,
+    noopUpdate,
 } from '../../../lib';
 import { CONSTRUCTION_CONTEXT_MARKER } from '../../../lib/context';
 import { hydrate } from './hydration-test-utils';
@@ -19,6 +21,7 @@ describe('coordinate resolution', () => {
             () => {
                 const el = adoptText('content', (vs: { text: string }) => vs.text);
                 adoptedDom = el.dom;
+                return el;
             },
         );
         expect(adoptedDom).toBe(root.querySelector('[jay-coordinate="content"]'));
@@ -27,21 +30,18 @@ describe('coordinate resolution', () => {
     // Test #35: finds element by auto-index
     it('finds element by auto-index coordinate', () => {
         let adoptedDom: Element | undefined;
-        const { root } = hydrate(
-            '<h1 jay-coordinate="0">Title</h1>',
-            { title: 'Title' },
-            () => {
-                const el = adoptText('0', (vs: { title: string }) => vs.title);
-                adoptedDom = el.dom;
-            },
-        );
+        const { root } = hydrate('<h1 jay-coordinate="0">Title</h1>', { title: 'Title' }, () => {
+            const el = adoptText('0', (vs: { title: string }) => vs.title);
+            adoptedDom = el.dom;
+            return el;
+        });
         expect(adoptedDom).toBe(root.querySelector('[jay-coordinate="0"]'));
     });
 
     // Test #36: finds element in forEach scope
     it('finds element in forEach scope via forItem context', () => {
         let adoptedDom: Element | undefined;
-        const { root } = hydrate(
+        const { root } = hydrate<any>(
             '<li jay-coordinate="item-1">' +
                 '<span jay-coordinate="item-1/name">Widget</span>' +
                 '</li>',
@@ -51,15 +51,14 @@ describe('coordinate resolution', () => {
                 // with coordinateBase ["item-1"]
                 const ctx = currentConstructionContext();
                 const childCtx = ctx.forItem({ id: 'item-1', name: 'Widget' }, 'item-1');
-                withContext(CONSTRUCTION_CONTEXT_MARKER, childCtx, () => {
+                return withContext(CONSTRUCTION_CONTEXT_MARKER, childCtx, () => {
                     const el = adoptText('name', (vs: { name: string }) => vs.name);
                     adoptedDom = el.dom;
+                    return el;
                 });
             },
         );
-        expect(adoptedDom).toBe(
-            root.querySelector('[jay-coordinate="item-1/name"]'),
-        );
+        expect(adoptedDom).toBe(root.querySelector('[jay-coordinate="item-1/name"]'));
     });
 
     // Test #37: finds element in nested forEach
@@ -71,38 +70,32 @@ describe('coordinate resolution', () => {
             () => {
                 const ctx = currentConstructionContext();
                 const parentCtx = ctx.forItem({}, 'parent-1');
-                withContext(CONSTRUCTION_CONTEXT_MARKER, parentCtx, () => {
+                return withContext(CONSTRUCTION_CONTEXT_MARKER, parentCtx, () => {
                     const childCtx = currentConstructionContext().forItem({}, 'child-2');
-                    withContext(CONSTRUCTION_CONTEXT_MARKER, childCtx, () => {
+                    return withContext(CONSTRUCTION_CONTEXT_MARKER, childCtx, () => {
                         const el = adoptText('label', (vs: any) => 'Nested');
                         adoptedDom = el.dom;
+                        return el;
                     });
                 });
             },
         );
-        expect(adoptedDom).toBe(
-            root.querySelector('[jay-coordinate="parent-1/child-2/label"]'),
-        );
+        expect(adoptedDom).toBe(root.querySelector('[jay-coordinate="parent-1/child-2/label"]'));
     });
 
     // Test #38: handles missing coordinate gracefully
     it('handles missing coordinate gracefully — warns in dev mode, does not throw', () => {
         const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-        hydrate(
-            '<h1 jay-coordinate="0">Title</h1>',
-            { text: 'hello' },
-            () => {
-                // Try to adopt a coordinate that doesn't exist
-                const el = adoptText('nonexistent', (vs: any) => vs.text);
-                // Should not throw, returns a noop element
-                expect(el.dom).toBeUndefined();
-            },
-        );
+        hydrate('<h1 jay-coordinate="0">Title</h1>', { text: 'hello' }, () => {
+            // Try to adopt a coordinate that doesn't exist
+            const el = adoptText('nonexistent', (vs: any) => vs.text);
+            // Should not throw, returns a noop element
+            expect(el.dom).toBeUndefined();
+            return el;
+        });
 
-        expect(warnSpy).toHaveBeenCalledWith(
-            expect.stringContaining('nonexistent'),
-        );
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('nonexistent'));
         warnSpy.mockRestore();
     });
 
@@ -110,13 +103,15 @@ describe('coordinate resolution', () => {
     it('isHydrating returns true inside withHydrationRootContext', () => {
         let wasHydrating = false;
 
-        hydrate(
-            '<h1 jay-coordinate="0">Test</h1>',
-            {},
-            () => {
-                wasHydrating = currentConstructionContext().isHydrating;
-            },
-        );
+        hydrate('<h1 jay-coordinate="0">Test</h1>', {}, () => {
+            wasHydrating = currentConstructionContext().isHydrating;
+            return {
+                dom: undefined as any,
+                update: noopUpdate,
+                mount: noopMount,
+                unmount: noopMount,
+            };
+        });
 
         expect(wasHydrating).toBe(true);
     });
@@ -136,23 +131,23 @@ describe('coordinate resolution', () => {
     // Verify forItem propagates coordinateMap
     it('forItem propagates coordinateMap to child context', () => {
         let resolvedEl: Element | undefined;
-        const { root } = hydrate(
-            '<span jay-coordinate="item-1/0">Child Text</span>',
-            {},
-            () => {
-                const ctx = currentConstructionContext();
-                expect(ctx.isHydrating).toBe(true);
-                const childCtx = ctx.forItem({}, 'item-1');
-                expect(childCtx.isHydrating).toBe(true);
+        const { root } = hydrate('<span jay-coordinate="item-1/0">Child Text</span>', {}, () => {
+            const ctx = currentConstructionContext();
+            expect(ctx.isHydrating).toBe(true);
+            const childCtx = ctx.forItem({}, 'item-1');
+            expect(childCtx.isHydrating).toBe(true);
 
-                // The child can resolve within its scope
-                withContext(CONSTRUCTION_CONTEXT_MARKER, childCtx, () => {
-                    resolvedEl = currentConstructionContext().resolveCoordinate('0');
-                });
-            },
-        );
-        expect(resolvedEl).toBe(
-            root.querySelector('[jay-coordinate="item-1/0"]'),
-        );
+            // The child can resolve within its scope
+            withContext(CONSTRUCTION_CONTEXT_MARKER, childCtx, () => {
+                resolvedEl = currentConstructionContext().resolveCoordinate('0');
+            });
+            return {
+                dom: undefined as any,
+                update: noopUpdate,
+                mount: noopMount,
+                unmount: noopMount,
+            };
+        });
+        expect(resolvedEl).toBe(root.querySelector('[jay-coordinate="item-1/0"]'));
     });
 });

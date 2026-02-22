@@ -4575,6 +4575,20 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@jay-framework/ssr-runtime@workspace:packages/runtime/ssr-runtime":
+  version: 0.0.0-use.local
+  resolution: "@jay-framework/ssr-runtime@workspace:packages/runtime/ssr-runtime"
+  dependencies:
+    "@jay-framework/dev-environment": "workspace:^"
+    "@types/node": "npm:^20.11.5"
+    rimraf: "npm:^5.0.5"
+    tsup: "npm:^8.0.1"
+    typescript: "npm:^5.3.3"
+    vite: "npm:^5.0.11"
+    vitest: "npm:^1.2.1"
+  languageName: unknown
+  linkType: soft
+
 "@jay-framework/stack-client-runtime@workspace:^, @jay-framework/stack-client-runtime@workspace:packages/jay-stack/stack-client-runtime":
   version: 0.0.0-use.local
   resolution: "@jay-framework/stack-client-runtime@workspace:packages/jay-stack/stack-client-runtime"

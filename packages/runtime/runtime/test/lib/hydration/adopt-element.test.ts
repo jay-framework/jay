@@ -22,6 +22,7 @@ describe('adoptElement', () => {
             () => {
                 const el = adoptElement<ViewState>('box', {});
                 adoptedDom = el.dom;
+                return el;
             },
         );
         expect(adoptedDom).toBe(root.querySelector('[jay-coordinate="box"]'));
@@ -32,11 +33,10 @@ describe('adoptElement', () => {
         const { jayElement, root } = hydrate<ViewState>(
             '<div jay-coordinate="box" class="initial">Content</div>',
             { text: 'Content', cls: 'initial' },
-            () => {
+            () =>
                 adoptElement<ViewState>('box', {
                     class: da((vs) => vs.cls),
-                });
-            },
+                }),
         );
 
         const box = root.querySelector('[jay-coordinate="box"]')!;
@@ -55,11 +55,7 @@ describe('adoptElement', () => {
         const { jayElement, root } = hydrate<VS>(
             '<div jay-coordinate="box"><span jay-coordinate="0">Hello</span></div>',
             { text: 'Hello' },
-            () => {
-                adoptElement<VS>('box', {}, [
-                    adoptText<VS>('0', (vs) => vs.text),
-                ]);
-            },
+            () => adoptElement<VS>('box', {}, [adoptText<VS>('0', (vs) => vs.text)]),
         );
 
         jayElement.update({ text: 'World' });
@@ -77,9 +73,7 @@ describe('adoptElement', () => {
             { text: 'Content', cls: '' },
             refManager,
             root,
-            () => {
-                adoptElement<ViewState>('myRef', {}, [], refMyRef());
-            },
+            () => adoptElement<ViewState>('myRef', {}, [], refMyRef()),
         );
 
         const refs = jayElement.refs as any;
@@ -98,9 +92,7 @@ describe('adoptElement', () => {
             { text: 'Content', cls: '' },
             refManager,
             root,
-            () => {
-                adoptElement<ViewState>('box', {}, [], refBox());
-            },
+            () => adoptElement<ViewState>('box', {}, [], refBox()),
         );
 
         // withHydrationRootContext calls mount() internally
@@ -121,11 +113,7 @@ describe('adoptElement', () => {
                 '<span jay-coordinate="0">Dynamic text</span>' +
                 '</div>',
             { dynamicText: 'Dynamic text' },
-            () => {
-                adoptElement<VS>('container', {}, [
-                    adoptText<VS>('0', (vs) => vs.dynamicText),
-                ]);
-            },
+            () => adoptElement<VS>('container', {}, [adoptText<VS>('0', (vs) => vs.dynamicText)]),
         );
 
         jayElement.update({ dynamicText: 'Updated dynamic' });

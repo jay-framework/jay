@@ -293,6 +293,18 @@ export const Import = {
         'makeHeadlessInstanceComponent',
         ImportsFor.implementation,
     ),
+    adoptText: importStatementFragment(JAY_RUNTIME, 'adoptText', ImportsFor.implementation),
+    adoptElement: importStatementFragment(JAY_RUNTIME, 'adoptElement', ImportsFor.implementation),
+    hydrateConditional: importStatementFragment(
+        JAY_RUNTIME,
+        'hydrateConditional',
+        ImportsFor.implementation,
+    ),
+    hydrateForEach: importStatementFragment(
+        JAY_RUNTIME,
+        'hydrateForEach',
+        ImportsFor.implementation,
+    ),
 };
 
 export class Imports {

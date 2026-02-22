@@ -11,9 +11,7 @@ describe('adoptText', () => {
         const { jayElement, root } = hydrate<ViewState>(
             '<h1 jay-coordinate="0">Hello World</h1>',
             { title: 'Hello World' },
-            () => {
-                adoptText('0', (vs: ViewState) => vs.title);
-            },
+            () => adoptText('0', (vs: ViewState) => vs.title),
         );
 
         const h1 = root.querySelector('[jay-coordinate="0"]')!;
@@ -30,9 +28,7 @@ describe('adoptText', () => {
         const { jayElement, root } = hydrate<ViewState>(
             '<h1 jay-coordinate="0">Hello</h1>',
             { title: 'Hello' },
-            () => {
-                adoptText('0', (vs: ViewState) => vs.title);
-            },
+            () => adoptText('0', (vs: ViewState) => vs.title),
         );
 
         jayElement.update({ title: 'Updated' });
@@ -46,9 +42,7 @@ describe('adoptText', () => {
         const { jayElement, root } = hydrate<ViewState>(
             '<h1 jay-coordinate="0">Initial</h1>',
             { title: 'Initial' },
-            () => {
-                adoptText('0', (vs: ViewState) => vs.title);
-            },
+            () => adoptText('0', (vs: ViewState) => vs.title),
         );
 
         const h1 = root.querySelector('[jay-coordinate="0"]')!;
@@ -62,9 +56,7 @@ describe('adoptText', () => {
         const { root } = hydrate<ViewState>(
             '<h1 jay-coordinate="0">&lt;script&gt;alert&lt;/script&gt;</h1>',
             { title: '<script>alert</script>' },
-            () => {
-                adoptText('0', (vs: ViewState) => vs.title);
-            },
+            () => adoptText('0', (vs: ViewState) => vs.title),
         );
 
         const h1 = root.querySelector('[jay-coordinate="0"]')!;
@@ -77,20 +69,12 @@ describe('adoptText', () => {
         const root = makeServerHTML('<div jay-coordinate="content">Some text</div>');
         const contentEl = root.querySelector('[jay-coordinate="content"]')!;
 
-        const [refManager, [refContent]] = ReferencesManager.for(
-            {},
-            ['content'],
-            [],
-            [],
-            [],
-        );
+        const [refManager, [refContent]] = ReferencesManager.for({}, ['content'], [], [], []);
         const jayElement = ConstructContext.withHydrationRootContext(
             { title: 'Some text' },
             refManager,
             root,
-            () => {
-                adoptText('content', (vs: ViewState) => vs.title, refContent());
-            },
+            () => adoptText('content', (vs: ViewState) => vs.title, refContent()),
         );
 
         const refs = jayElement.refs as any;
@@ -105,9 +89,7 @@ describe('adoptText', () => {
         const { jayElement, root } = hydrate<ViewState>(
             '<h1 jay-coordinate="0">Hello</h1>',
             { title: 'Hello' },
-            () => {
-                adoptText('0', (vs: ViewState) => vs.title);
-            },
+            () => adoptText('0', (vs: ViewState) => vs.title),
         );
 
         const h1 = root.querySelector('[jay-coordinate="0"]')!;
@@ -149,8 +131,23 @@ describe('adoptText', () => {
                 '</div>',
             { heading: 'Title', subtitle: 'Subtitle' },
             () => {
-                adoptText('0', (vs: MultiVS) => vs.heading);
-                adoptText('1', (vs: MultiVS) => vs.subtitle);
+                const a = adoptText('0', (vs: MultiVS) => vs.heading);
+                const b = adoptText('1', (vs: MultiVS) => vs.subtitle);
+                return {
+                    dom: a.dom,
+                    update: (vs: MultiVS) => {
+                        a.update(vs);
+                        b.update(vs);
+                    },
+                    mount: () => {
+                        a.mount();
+                        b.mount();
+                    },
+                    unmount: () => {
+                        a.unmount();
+                        b.unmount();
+                    },
+                };
             },
         );
 

@@ -1,8 +1,4 @@
-import {
-    adoptText,
-    adoptElement,
-    hydrateConditional,
-} from '../../../lib';
+import { adoptText, adoptElement, hydrateConditional } from '../../../lib';
 import { hydrate } from './hydration-test-utils';
 
 describe('hydrateConditional (if=true at SSR)', () => {
@@ -17,17 +13,13 @@ describe('hydrateConditional (if=true at SSR)', () => {
         '</div>';
 
     function hydrateConditionalTest(text: string, show: boolean) {
-        return hydrate<ViewState>(
-            conditionalHTML.replace('$TEXT', text),
-            { show, text },
-            () => {
-                adoptElement<ViewState>('container', {}, [
-                    hydrateConditional(
-                        (vs) => vs.show,
-                        () => adoptText<ViewState>('container/0', (vs) => vs.text),
-                    ),
-                ]);
-            },
+        return hydrate<ViewState>(conditionalHTML.replace('$TEXT', text), { show, text }, () =>
+            adoptElement<ViewState>('container', {}, [
+                hydrateConditional(
+                    (vs) => vs.show,
+                    () => adoptText<ViewState>('container/0', (vs) => vs.text),
+                ),
+            ]),
         );
     }
 
@@ -89,14 +81,13 @@ describe('hydrateConditional (if=true at SSR)', () => {
                 '<p>After</p>' +
                 '</div>',
             { show: true, text: 'Conditional' },
-            () => {
+            () =>
                 adoptElement<ViewState>('container', {}, [
                     hydrateConditional(
                         (vs) => vs.show,
                         () => adoptText<ViewState>('container/0', (vs) => vs.text),
                     ),
-                ]);
-            },
+                ]),
         );
 
         const container = root.querySelector('[jay-coordinate="container"]')!;
@@ -125,13 +116,12 @@ describe('hydrateConditional (if=true at SSR)', () => {
         const { root } = hydrate<CondVS>(
             '<div jay-coordinate="container"></div>',
             { show: false },
-            () => {
+            () =>
                 // For if=false at SSR, the compiled code would use the regular
                 // adoptElement with no conditional children (since nothing was rendered).
                 // When the condition becomes true, it needs full element creation.
                 // This is handled by the compiler generating both adopt and create paths.
-                adoptElement<CondVS>('container', {});
-            },
+                adoptElement<CondVS>('container', {}),
         );
 
         const container = root.querySelector('[jay-coordinate="container"]')!;

@@ -1,13 +1,4 @@
-import {
-    BaseJayElement,
-    ContextMarker,
-    Coordinate,
-    JayElement,
-    MountFunc,
-    noopMount,
-    noopUpdate,
-    updateFunc,
-} from './element-types';
+import { BaseJayElement, ContextMarker, Coordinate, JayElement } from './element-types';
 
 import { ReferencesManager } from './references-manager';
 
@@ -165,10 +156,6 @@ export function wrapWithModifiedCheck<T extends object>(
 export class ConstructContext<ViewState> {
     private readonly _coordinateMap?: Map<string, Element>;
     private readonly _rootElement?: Element;
-    /** Collector for adopted element updates during hydration. */
-    readonly _hydrationUpdates?: updateFunc<any>[];
-    readonly _hydrationMounts?: MountFunc[];
-    readonly _hydrationUnmounts?: MountFunc[];
 
     constructor(
         private readonly data: ViewState,
@@ -176,15 +163,9 @@ export class ConstructContext<ViewState> {
         private readonly coordinateBase: Coordinate = [],
         coordinateMap?: Map<string, Element>,
         rootElement?: Element,
-        hydrationUpdates?: updateFunc<any>[],
-        hydrationMounts?: MountFunc[],
-        hydrationUnmounts?: MountFunc[],
     ) {
         this._coordinateMap = coordinateMap;
         this._rootElement = rootElement;
-        this._hydrationUpdates = hydrationUpdates;
-        this._hydrationMounts = hydrationMounts;
-        this._hydrationUnmounts = hydrationUnmounts;
     }
 
     get currData() {
@@ -207,9 +188,6 @@ export class ConstructContext<ViewState> {
             [...this.coordinateBase, id],
             this._coordinateMap,
             this._rootElement,
-            this._hydrationUpdates,
-            this._hydrationMounts,
-            this._hydrationUnmounts,
         );
     }
     forAsync<ChildViewState>(childViewState: ChildViewState) {
@@ -219,9 +197,6 @@ export class ConstructContext<ViewState> {
             [...this.coordinateBase],
             this._coordinateMap,
             this._rootElement,
-            this._hydrationUpdates,
-            this._hydrationMounts,
-            this._hydrationUnmounts,
         );
     }
 
@@ -243,9 +218,7 @@ export class ConstructContext<ViewState> {
     resolveCoordinate(key: string): Element | undefined {
         if (!this._coordinateMap) return undefined;
         const fullKey =
-            this.coordinateBase.length > 0
-                ? this.coordinateBase.join('/') + '/' + key
-                : key;
+            this.coordinateBase.length > 0 ? this.coordinateBase.join('/') + '/' + key : key;
         return this._coordinateMap.get(fullKey);
     }
 
@@ -271,58 +244,23 @@ export class ConstructContext<ViewState> {
      *
      * The hydrateConstructor calls adoptText(), adoptElement(), etc. which
      * read from the context stack — same pattern as element(), dynamicText().
+     * It returns a BaseJayElement whose update/mount/unmount are composed
+     * from all adopted children — same as withRootContext's elementConstructor.
      */
     static withHydrationRootContext<ViewState, Refs>(
         viewState: ViewState,
         refManager: ReferencesManager,
         rootElement: Element,
-        hydrateConstructor: () => void,
+        hydrateConstructor: () => BaseJayElement<ViewState>,
     ): JayElement<ViewState, Refs> {
         const coordinateMap = buildCoordinateMap(rootElement);
-        const updates: updateFunc<any>[] = [];
-        const mounts: MountFunc[] = [];
-        const unmounts: MountFunc[] = [];
-        const context = new ConstructContext(
-            viewState,
-            true,
-            [],
-            coordinateMap,
-            rootElement,
-            updates,
-            mounts,
-            unmounts,
-        );
+        const context = new ConstructContext(viewState, true, [], coordinateMap, rootElement);
 
         const element = withContext(CONSTRUCTION_CONTEXT_MARKER, context, () => {
-            hydrateConstructor();
-
-            // Build combined update/mount/unmount from all adopted elements
-            const update: updateFunc<ViewState> =
-                updates.length === 0
-                    ? noopUpdate
-                    : updates.length === 1
-                      ? updates[0]
-                      : (newData: ViewState) => {
-                            for (const u of updates) u(newData);
-                        };
-            const mount: MountFunc =
-                mounts.length === 0
-                    ? noopMount
-                    : () => {
-                          for (const m of mounts) m();
-                      };
-            const unmount: MountFunc =
-                unmounts.length === 0
-                    ? noopMount
-                    : () => {
-                          for (const u of unmounts) u();
-                      };
-
+            const constructed = hydrateConstructor();
             return wrapWithModifiedCheck(currentConstructionContext().currData, {
+                ...constructed,
                 dom: rootElement,
-                update,
-                mount,
-                unmount,
             });
         });
         element.mount();
