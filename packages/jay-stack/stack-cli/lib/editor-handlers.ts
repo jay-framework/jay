@@ -333,13 +333,22 @@ async function extractHeadlessComponentsFromJayHtml(
             if (headlessImport.codeLink) {
                 // Extract plugin name from the codeLink module
                 // For NPM packages, this will be the package name (e.g., 'test-app')
-                // For local plugins, this will be a path to the plugin
+                // For local plugins, this will be a relative path (e.g., '../../plugins/product-data/product-data.ts')
                 let pluginName = headlessImport.codeLink.module;
 
                 // If it's a path to node_modules, extract just the package name
                 const nodeModulesMatch = pluginName.match(/node_modules\/([^/]+)/);
                 if (nodeModulesMatch) {
                     pluginName = nodeModulesMatch[1];
+                }
+
+                // For local plugins, extract the plugin directory name from the path
+                // Local plugin paths look like: ../../plugins/{pluginName}/{file}.ts
+                if (!nodeModulesMatch) {
+                    const localPluginMatch = pluginName.match(/(?:^|\/)plugins\/([^/]+)/);
+                    if (localPluginMatch) {
+                        pluginName = localPluginMatch[1];
+                    }
                 }
 
                 // For the component name, we use the contract name from the loaded contract
