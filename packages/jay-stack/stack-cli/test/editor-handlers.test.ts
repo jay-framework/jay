@@ -959,6 +959,97 @@ tags:
             fs.rmSync(nodeModulesAppDir, { recursive: true, force: true });
         });
 
+        it('should resolve local plugins from src/plugins/ for headless imports', async () => {
+            const localTestDir = path.resolve('./tmp-local-plugin-test');
+            const localPagesDir = path.join(localTestDir, 'pages');
+
+            try {
+                fs.mkdirSync(localPagesDir, { recursive: true });
+
+                const localPluginDir = path.join(localTestDir, 'src', 'plugins', 'product-data');
+                fs.mkdirSync(localPluginDir, { recursive: true });
+
+                fs.writeFileSync(
+                    path.join(localPluginDir, 'plugin.yaml'),
+                    `name: product-data
+module: ./product-data
+contracts:
+  - name: product
+    contract: ./product.jay-contract
+    component: productData`,
+                );
+
+                fs.writeFileSync(
+                    path.join(localPluginDir, 'product.jay-contract'),
+                    `name: product
+tags:
+  - tag: name
+    type: data
+    dataType: string
+  - tag: price
+    type: data
+    dataType: string`,
+                );
+
+                fs.writeFileSync(
+                    path.join(localPagesDir, 'page.jay-html'),
+                    `<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data">
+        data:
+    </script>
+    <script type="application/jay-headless"
+            plugin="product-data"
+            contract="product"
+            key="product"
+    ></script>
+</head>
+<body>
+    <div>{product.name}</div>
+</body>
+</html>`,
+                );
+
+                const localConfig: Required<JayConfig> = {
+                    devServer: {
+                        portRange: [3000, 3010],
+                        pagesBase: localPagesDir,
+                        componentsBase: path.join(localTestDir, 'components'),
+                        publicFolder: path.join(localTestDir, 'public'),
+                        configBase: path.join(localTestDir, 'config'),
+                    },
+                    editorServer: {
+                        portRange: [3000, 3010],
+                        editorId: 'xxx-xxx',
+                    },
+                };
+
+                const handlers = createEditorHandlers(localConfig, './tsconfig.json', localTestDir);
+
+                const result = await handlers.onGetProjectInfo({
+                    type: 'getProjectInfo',
+                });
+
+                expect(result.success).toBe(true);
+                expect(result.info.pages).toHaveLength(1);
+
+                const page = result.info.pages[0];
+                expect(page.usedComponents).toHaveLength(1);
+                expect(page.usedComponents[0].appName).toBe('product-data');
+                expect(page.usedComponents[0].componentName).toBe('product');
+                expect(page.usedComponents[0].key).toBe('product');
+
+                expect(result.info.plugins).toBeDefined();
+                const plugin = result.info.plugins.find((p: any) => p.name === 'product-data');
+                expect(plugin).toBeDefined();
+                expect(plugin.contracts).toHaveLength(1);
+                expect(plugin.contracts[0].name).toBe('product');
+            } finally {
+                fs.rmSync(localTestDir, { recursive: true, force: true });
+            }
+        });
+
         it('should return complete installed app contracts', async () => {
             const handlers = createEditorHandlers(testConfig, TS_CONFIG, process.cwd());
 

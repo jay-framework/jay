@@ -425,7 +425,17 @@ describe('Figma Import Fixtures', () => {
                 let exportError: string | null = null;
 
                 try {
-                    const projectPage = buildProjectPageFromContract(
+                    // Use onGetProjectInfo to get the full project page with plugins
+                    // This ensures usedComponents and plugin contracts are properly resolved
+                    const projectInfoResponse = await handlers.onGetProjectInfo({
+                        type: 'getProjectInfo',
+                    });
+                    const realProjectPage = projectInfoResponse.info?.pages?.find(
+                        (p: ProjectPage) => p.url === pageUrl,
+                    );
+                    const plugins = projectInfoResponse.info?.plugins ?? [];
+
+                    const projectPage = realProjectPage ?? buildProjectPageFromContract(
                         pagePath,
                         pageUrl,
                         meta.id,
@@ -435,7 +445,7 @@ describe('Figma Import Fixtures', () => {
                         vendorDoc,
                         pageUrl,
                         projectPage,
-                        [],
+                        plugins,
                     );
                     exportedBodyHtml = result.bodyHtml;
                 } catch (err) {
