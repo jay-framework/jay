@@ -1,12 +1,18 @@
 import type { AutomationAPI, Interaction } from '@jay-framework/runtime-automation';
 import type { ToolDescriptor } from './webmcp-types';
-import { toKebab, toHumanReadable, jsonResult, errorResult, getSelectOptions, isCheckable, setElementValue, getValueEventTypes, withLogging } from './util';
+import {
+    toKebab,
+    toHumanReadable,
+    jsonResult,
+    errorResult,
+    getSelectOptions,
+    isCheckable,
+    setElementValue,
+    getValueEventTypes,
+    withLogging,
+} from './util';
 
-const FILLABLE_TYPES = new Set([
-    'HTMLInputElement',
-    'HTMLTextAreaElement',
-    'HTMLSelectElement',
-]);
+const FILLABLE_TYPES = new Set(['HTMLInputElement', 'HTMLTextAreaElement', 'HTMLSelectElement']);
 
 /**
  * Build semantic tools derived from the current page interactions.
@@ -31,10 +37,7 @@ export function buildSemanticTools(automation: AutomationAPI): ToolDescriptor[] 
 /**
  * Build a semantic tool for an Interaction group.
  */
-function makeSemanticTool(
-    group: Interaction,
-    automation: AutomationAPI,
-): ToolDescriptor | null {
+function makeSemanticTool(group: Interaction, automation: AutomationAPI): ToolDescriptor | null {
     const sample = group.items[0];
     if (!sample) return null;
 
@@ -87,9 +90,7 @@ function makeSemanticTool(
         description,
         inputSchema: { type: 'object', properties, required },
         execute: (params) => {
-            const coord = isForEach
-                ? (params.coordinate as string).split('/')
-                : [group.refName];
+            const coord = isForEach ? (params.coordinate as string).split('/') : [group.refName];
 
             try {
                 if (isFillable) {

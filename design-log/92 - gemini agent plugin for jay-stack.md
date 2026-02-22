@@ -7,6 +7,7 @@
 1. **WebMCP plugin** (Design Log #91) — automatically exposes page interactions as WebMCP tools to browsers with `navigator.modelContext`. Client-only plugin. Relies on an external AI agent (browser-side) to call the tools.
 
 2. **AutomationAPI** (`@jay-framework/runtime-automation`) — wraps Jay components:
+
    - `getPageState()` → `{ viewState, interactions, customEvents }`
    - `triggerEvent(eventType, coordinate)` → trigger UI events
    - `getInteraction(coordinate)` → find specific interaction (returns DOM element)
@@ -35,6 +36,7 @@ The WebMCP plugin requires a **WebMCP-enabled browser** (Chrome Canary). Most us
 4. **Converse** with the user via a chat UI
 
 The plugin should:
+
 - Use the **Gemini API** (server-side, with function calling)
 - Expose a **contract** for building a chat UI in jay-html
 - Reuse the same tool infrastructure as webmcp (same `ToolDescriptor` type and generation logic)
@@ -65,6 +67,7 @@ The plugin should:
 4. Server continues the Gemini conversation with the tool results
 
 This means a single user message may require **multiple round-trips**:
+
 - Client → Server (user message) → Gemini → tool calls needed
 - Server → Client (pending tool calls) → Client executes → Client → Server (tool results)
 - Server → Gemini (tool results) → final response or more tool calls
@@ -154,10 +157,10 @@ Actions in `plugin.yaml` currently list export names as strings. We extend this 
 name: wix-stores
 actions:
   - name: searchProducts
-    action: ./actions/search-products.jay-action   # metadata file
+    action: ./actions/search-products.jay-action # metadata file
   - name: getProductBySlug
     action: ./actions/get-product-by-slug.jay-action
-  - submitRating          # backward compat: string = export name, no metadata
+  - submitRating # backward compat: string = export name, no metadata
 ```
 
 When `action` points to a `.jay-action` file, the framework loads metadata at init time. Actions without a `.jay-action` file still work — they just get a generic tool definition for the LLM ("call action X with JSON input").
@@ -179,6 +182,7 @@ When `action` points to a `.jay-action` file, the framework loads metadata at in
 ### Q9: What should the system prompt include?
 
 **Answer:** The system prompt should describe:
+
 1. The current page state (ViewState snapshot)
 2. Available page interactions (from `list-interactions`)
 3. Available server actions (names + descriptions from `.jay-action` files when available)
@@ -209,7 +213,7 @@ sequenceDiagram
     C->>C: Collect tool definitions from AutomationAPI
     C->>S: sendMessage(sessionId, message, toolDefs)
     S->>G: Generate content (messages + tools)
-    
+
     alt Gemini requests tool calls
         G->>S: Function call responses
         S->>S: Execute server-action tools
@@ -219,7 +223,7 @@ sequenceDiagram
         S->>G: Continue with tool results
         Note over S,G: May loop for more tool calls
     end
-    
+
     G->>S: Text response
     S->>C: Return assistant message
     C->>U: Display in chat
@@ -227,11 +231,11 @@ sequenceDiagram
 
 ### Tool Categories
 
-| Category | Runs on | Examples | Discovery |
-|----------|---------|----------|-----------|
-| Page automation (generic) | Client | `get-page-state`, `trigger-interaction`, `fill-input` | From AutomationAPI, sent to server |
-| Page automation (semantic) | Client | `click-add-to-cart`, `fill-search-input` | From AutomationAPI, sent to server |
-| Server actions | Server | `moodTracker.submitMood`, `cart.addToCart` | From ActionRegistry |
+| Category                   | Runs on | Examples                                              | Discovery                          |
+| -------------------------- | ------- | ----------------------------------------------------- | ---------------------------------- |
+| Page automation (generic)  | Client  | `get-page-state`, `trigger-interaction`, `fill-input` | From AutomationAPI, sent to server |
+| Page automation (semantic) | Client  | `click-add-to-cart`, `fill-search-input`              | From AutomationAPI, sent to server |
+| Server actions             | Server  | `moodTracker.submitMood`, `cart.addToCart`            | From ActionRegistry                |
 
 ### Contract: `gemini-chat`
 
@@ -249,7 +253,7 @@ tags:
         dataType: string
       - tag: role
         type: variant
-        dataType: "enum (user | assistant | system)"
+        dataType: 'enum (user | assistant | system)'
       - tag: content
         type: data
         dataType: string
@@ -335,8 +339,7 @@ setup:
 
 ```yaml
 # Gemini Agent Configuration
-apiKey: "<your-gemini-api-key>"
-
+apiKey: '<your-gemini-api-key>'
 # Optional: model name (default: gemini-2.0-flash)
 # model: gemini-2.0-flash
 
@@ -350,28 +353,28 @@ apiKey: "<your-gemini-api-key>"
 
 ```typescript
 interface SendMessageInput {
-    sessionId: string;
-    message: string;
-    // Client sends tool definitions (page automation tools) serialized
-    toolDefinitions: SerializedToolDef[];
+  sessionId: string;
+  message: string;
+  // Client sends tool definitions (page automation tools) serialized
+  toolDefinitions: SerializedToolDef[];
 }
 
 interface SerializedToolDef {
-    name: string;
-    description: string;
-    inputSchema: ToolInputSchema;
-    category: 'page-automation';  // distinguishes from server actions
+  name: string;
+  description: string;
+  inputSchema: ToolInputSchema;
+  category: 'page-automation'; // distinguishes from server actions
 }
 
 type SendMessageOutput =
-    | { type: 'response'; message: string; messages: ChatMessage[] }
-    | { type: 'tool-calls'; calls: PendingToolCall[]; messages: ChatMessage[] };
+  | { type: 'response'; message: string; messages: ChatMessage[] }
+  | { type: 'tool-calls'; calls: PendingToolCall[]; messages: ChatMessage[] };
 
 interface PendingToolCall {
-    id: string;
-    name: string;
-    args: Record<string, unknown>;
-    category: 'page-automation' | 'server-action';
+  id: string;
+  name: string;
+  args: Record<string, unknown>;
+  category: 'page-automation' | 'server-action';
 }
 ```
 
@@ -379,18 +382,18 @@ interface PendingToolCall {
 
 ```typescript
 interface SubmitToolResultsInput {
-    sessionId: string;
-    results: ToolCallResult[];
-    toolDefinitions: SerializedToolDef[];  // resend (page state may have changed)
+  sessionId: string;
+  results: ToolCallResult[];
+  toolDefinitions: SerializedToolDef[]; // resend (page state may have changed)
 }
 
 interface ToolCallResult {
-    callId: string;
-    result: string;  // JSON stringified
-    isError?: boolean;
+  callId: string;
+  result: string; // JSON stringified
+  isError?: boolean;
 }
 
-type SubmitToolResultsOutput = SendMessageOutput;  // same shape
+type SubmitToolResultsOutput = SendMessageOutput; // same shape
 ```
 
 ### Component Flow
@@ -413,31 +416,31 @@ The interactive phase of `gemini-chat`:
 import { GoogleGenAI } from '@google/genai';
 
 interface GeminiServiceConfig {
-    apiKey: string;
-    model: string;
-    systemPrompt?: string;
+  apiKey: string;
+  model: string;
+  systemPrompt?: string;
 }
 
 class GeminiService {
-    private client: GoogleGenAI;
-    
-    constructor(private config: GeminiServiceConfig) {
-        this.client = new GoogleGenAI({ apiKey: config.apiKey });
-    }
+  private client: GoogleGenAI;
 
-    async generateWithTools(
-        messages: GeminiMessage[],
-        tools: GeminiFunctionDeclaration[],
-        systemPrompt: string,
-    ): Promise<GeminiResponse> {
-        const response = await this.client.models.generateContent({
-            model: this.config.model,
-            contents: messages,
-            tools: [{ functionDeclarations: tools }],
-            config: { systemInstruction: systemPrompt },
-        });
-        return response;
-    }
+  constructor(private config: GeminiServiceConfig) {
+    this.client = new GoogleGenAI({ apiKey: config.apiKey });
+  }
+
+  async generateWithTools(
+    messages: GeminiMessage[],
+    tools: GeminiFunctionDeclaration[],
+    systemPrompt: string,
+  ): Promise<GeminiResponse> {
+    const response = await this.client.models.generateContent({
+      model: this.config.model,
+      contents: messages,
+      tools: [{ functionDeclarations: tools }],
+      config: { systemInstruction: systemPrompt },
+    });
+    return response;
+  }
 }
 ```
 
@@ -449,67 +452,67 @@ Converts between jay-stack tools and Gemini `FunctionDeclaration`:
 // tool-bridge.ts
 
 interface GeminiFunctionDeclaration {
-    name: string;
-    description: string;
-    parameters: {
-        type: 'object';
-        properties: Record<string, any>;
-        required?: string[];
-    };
+  name: string;
+  description: string;
+  parameters: {
+    type: 'object';
+    properties: Record<string, any>;
+    required?: string[];
+  };
 }
 
 /** Loaded from .jay-action file */
 interface ActionMetadata {
-    name: string;
-    description: string;
-    inputSchema: { type: 'object'; properties: Record<string, any>; required?: string[] };
-    outputSchema?: object;
+  name: string;
+  description: string;
+  inputSchema: { type: 'object'; properties: Record<string, any>; required?: string[] };
+  outputSchema?: object;
 }
 
 function toGeminiTools(
-    clientTools: SerializedToolDef[],
-    serverActions: Array<{ actionName: string; metadata?: ActionMetadata }>,
+  clientTools: SerializedToolDef[],
+  serverActions: Array<{ actionName: string; metadata?: ActionMetadata }>,
 ): GeminiFunctionDeclaration[] {
-    const tools: GeminiFunctionDeclaration[] = [];
+  const tools: GeminiFunctionDeclaration[] = [];
 
-    // Client page-automation tools → Gemini functions (already have schema)
-    for (const tool of clientTools) {
-        tools.push({
-            name: tool.name,
-            description: tool.description,
-            parameters: tool.inputSchema,
-        });
+  // Client page-automation tools → Gemini functions (already have schema)
+  for (const tool of clientTools) {
+    tools.push({
+      name: tool.name,
+      description: tool.description,
+      parameters: tool.inputSchema,
+    });
+  }
+
+  // Server actions → Gemini functions
+  for (const { actionName, metadata } of serverActions) {
+    if (metadata) {
+      // Rich metadata from .jay-action file
+      tools.push({
+        name: `action_${actionName.replace(/\./g, '_')}`,
+        description: metadata.description,
+        parameters: metadata.inputSchema,
+      });
+    } else {
+      // Fallback: no .jay-action file — generic JSON input
+      tools.push({
+        name: `action_${actionName.replace(/\./g, '_')}`,
+        description: `Call server action: ${actionName}`,
+        parameters: {
+          type: 'object',
+          properties: {
+            input: {
+              type: 'string',
+              description: 'JSON-encoded input for the action',
+            },
+          },
+          required: ['input'],
+        },
+      });
     }
+  }
 
-    // Server actions → Gemini functions
-    for (const { actionName, metadata } of serverActions) {
-        if (metadata) {
-            // Rich metadata from .jay-action file
-            tools.push({
-                name: `action_${actionName.replace(/\./g, '_')}`,
-                description: metadata.description,
-                parameters: metadata.inputSchema,
-            });
-        } else {
-            // Fallback: no .jay-action file — generic JSON input
-            tools.push({
-                name: `action_${actionName.replace(/\./g, '_')}`,
-                description: `Call server action: ${actionName}`,
-                parameters: {
-                    type: 'object',
-                    properties: {
-                        input: {
-                            type: 'string',
-                            description: 'JSON-encoded input for the action',
-                        },
-                    },
-                    required: ['input'],
-                },
-            });
-        }
-    }
-
-    return tools;
+  return tools;
 }
 ```
 
@@ -517,24 +520,24 @@ function toGeminiTools(
 
 ```typescript
 function buildSystemPrompt(
-    pageState: object,
-    interactions: SerializedToolDef[],
-    serverActions: string[],
-    customPrefix?: string,
+  pageState: object,
+  interactions: SerializedToolDef[],
+  serverActions: string[],
+  customPrefix?: string,
 ): string {
-    const parts = [
-        customPrefix || 'You are a helpful assistant for this web application.',
-        '',
-        'Current page state:',
-        JSON.stringify(pageState, null, 2),
-        '',
-        `Available page interactions: ${interactions.map(t => t.name).join(', ')}`,
-        `Available server actions: ${serverActions.join(', ')}`,
-        '',
-        'Use the provided tools to help the user. After using tools, describe what you did.',
-        'For page automation tools, the results include the updated page state.',
-    ];
-    return parts.join('\n');
+  const parts = [
+    customPrefix || 'You are a helpful assistant for this web application.',
+    '',
+    'Current page state:',
+    JSON.stringify(pageState, null, 2),
+    '',
+    `Available page interactions: ${interactions.map((t) => t.name).join(', ')}`,
+    `Available server actions: ${serverActions.join(', ')}`,
+    '',
+    'Use the provided tools to help the user. After using tools, describe what you did.',
+    'For page automation tools, the results include the updated page state.',
+  ];
+  return parts.join('\n');
 }
 ```
 
@@ -596,26 +599,26 @@ Add `.jay-action` file loading to the core framework — this benefits all plugi
 
 ### Multi-round-trip vs WebSocket
 
-| Approach | Pro | Con |
-|----------|-----|-----|
-| **Multi-round-trip (chosen)** | Simple, uses existing action infrastructure, no new transport | Higher latency for tool-heavy conversations |
-| **WebSocket/SSE** | Lower latency, real-time streaming | New infrastructure, complexity, connection management |
+| Approach                      | Pro                                                           | Con                                                   |
+| ----------------------------- | ------------------------------------------------------------- | ----------------------------------------------------- |
+| **Multi-round-trip (chosen)** | Simple, uses existing action infrastructure, no new transport | Higher latency for tool-heavy conversations           |
+| **WebSocket/SSE**             | Lower latency, real-time streaming                            | New infrastructure, complexity, connection management |
 
 We choose multi-round-trip for simplicity. The action system already handles request/response. Streaming can be added later as an optimization.
 
 ### Server-side conversation state vs client-side
 
-| Approach | Pro | Con |
-|----------|-----|-----|
-| **Server-side (chosen)** | API key secure, conversation history stays server-side, simpler client | Memory usage on server, needs session cleanup |
-| **Client-side** | Stateless server, scales easily | API key exposure risk, large payloads on every request |
+| Approach                 | Pro                                                                    | Con                                                    |
+| ------------------------ | ---------------------------------------------------------------------- | ------------------------------------------------------ |
+| **Server-side (chosen)** | API key secure, conversation history stays server-side, simpler client | Memory usage on server, needs session cleanup          |
+| **Client-side**          | Stateless server, scales easily                                        | API key exposure risk, large payloads on every request |
 
 ### Reusing webmcp tool builders vs independent implementation
 
-| Approach | Pro | Con |
-|----------|-----|-----|
+| Approach           | Pro                                             | Con                                 |
+| ------------------ | ----------------------------------------------- | ----------------------------------- |
 | **Reuse (chosen)** | DRY, consistent tool names/schemas, proven code | Dependency on webmcp-plugin package |
-| **Independent** | No dependency, can diverge | Duplication, risk of inconsistency |
+| **Independent**    | No dependency, can diverge                      | Duplication, risk of inconsistency  |
 
 We import and reuse `buildSemanticTools` and the generic tool builders from `@jay-framework/webmcp-plugin`. The gemini-agent plugin depends on webmcp-plugin as a library (not as a global plugin — it doesn't need `navigator.modelContext`).
 
@@ -624,12 +627,14 @@ We import and reuse `buildSemanticTools` and the generic tool builders from `@ja
 ## Verification Criteria
 
 ### `.jay-action` infrastructure (Phase 0)
+
 1. `.jay-action` files are loaded from paths in `plugin.yaml`
 2. Action metadata (description, inputSchema) is available in `ActionRegistry`
 3. Plugins with string-only action declarations still work (backward compat)
 4. `jay-stack agent-kit` materializes action metadata for coding agents
 
 ### Gemini agent plugin (Phases 1–5)
+
 5. Plugin loads config from `config/.gemini.yaml` (API key)
 6. `jay-stack setup gemini-agent` creates config template
 7. Chat component renders messages list, input, send button via contract

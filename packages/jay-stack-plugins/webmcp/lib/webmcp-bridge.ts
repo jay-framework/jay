@@ -2,7 +2,12 @@ import type { AutomationAPI } from '@jay-framework/runtime-automation';
 import type { ToolDescriptor } from './webmcp-types';
 import './webmcp-types'; // side-effect: augments Navigator
 
-import { makeGetPageStateTool, makeListInteractionsTool, makeTriggerInteractionTool, makeFillInputTool } from './generic-tools';
+import {
+    makeGetPageStateTool,
+    makeListInteractionsTool,
+    makeTriggerInteractionTool,
+    makeFillInputTool,
+} from './generic-tools';
 import { buildSemanticTools } from './semantic-tools';
 
 /**
@@ -88,8 +93,8 @@ function buildAndRegisterSemanticTools(
 function interactionKey(automation: AutomationAPI): string {
     return automation
         .getPageState()
-        .interactions.map((g) =>
-            `${g.refName}:${g.items.map((i) => i.coordinate.join('/')).join(',')}`,
+        .interactions.map(
+            (g) => `${g.refName}:${g.items.map((i) => i.coordinate.join('/')).join(',')}`,
         )
         .join('|');
 }

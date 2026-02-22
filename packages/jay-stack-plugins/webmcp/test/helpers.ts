@@ -1,20 +1,23 @@
 import { vi } from 'vitest';
-import type { AutomationAPI, PageState, Interaction, InteractionInstance } from '@jay-framework/runtime-automation';
+import type {
+    AutomationAPI,
+    PageState,
+    Interaction,
+    InteractionInstance,
+} from '@jay-framework/runtime-automation';
 import type { ModelContextContainer, ToolDescriptor } from '../lib/webmcp-types';
 
 /**
  * Create a mock AutomationAPI for testing.
  */
-export function createMockAutomation(overrides: Partial<{
-    viewState: object;
-    interactions: Interaction[];
-    customEvents: Array<{ name: string }>;
-}>= {}): AutomationAPI {
-    const {
-        viewState = {},
-        interactions = [],
-        customEvents = [],
-    } = overrides;
+export function createMockAutomation(
+    overrides: Partial<{
+        viewState: object;
+        interactions: Interaction[];
+        customEvents: Array<{ name: string }>;
+    }> = {},
+): AutomationAPI {
+    const { viewState = {}, interactions = [], customEvents = [] } = overrides;
 
     const stateListeners = new Set<(state: PageState) => void>();
 
@@ -86,10 +89,14 @@ export function createMockModelContext(): ModelContextContainer & {
 /** Helper: create an InteractionInstance with a real DOM element */
 function instance(coordinate: string[], tag: string = 'button'): InteractionInstance {
     const el = document.createElement(tag);
-    const events = tag === 'button' || tag === 'a' ? ['click']
-        : tag === 'select' ? ['change']
-        : tag === 'input' || tag === 'textarea' ? ['input', 'change']
-        : ['click'];
+    const events =
+        tag === 'button' || tag === 'a'
+            ? ['click']
+            : tag === 'select'
+              ? ['change']
+              : tag === 'input' || tag === 'textarea'
+                ? ['input', 'change']
+                : ['click'];
     return { coordinate, element: el, events };
 }
 
@@ -101,24 +108,15 @@ export function cartInteractions(): Interaction[] {
     return [
         {
             refName: 'decreaseBtn',
-            items: [
-                instance(['item-1', 'decreaseBtn']),
-                instance(['item-2', 'decreaseBtn']),
-            ],
+            items: [instance(['item-1', 'decreaseBtn']), instance(['item-2', 'decreaseBtn'])],
         },
         {
             refName: 'increaseBtn',
-            items: [
-                instance(['item-1', 'increaseBtn']),
-                instance(['item-2', 'increaseBtn']),
-            ],
+            items: [instance(['item-1', 'increaseBtn']), instance(['item-2', 'increaseBtn'])],
         },
         {
             refName: 'removeBtn',
-            items: [
-                instance(['item-1', 'removeBtn']),
-                instance(['item-2', 'removeBtn']),
-            ],
+            items: [instance(['item-1', 'removeBtn']), instance(['item-2', 'removeBtn'])],
         },
         {
             refName: 'nameInput',

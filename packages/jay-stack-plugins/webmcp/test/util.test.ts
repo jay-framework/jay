@@ -1,5 +1,16 @@
 import { describe, it, expect } from 'vitest';
-import { toKebab, toHumanReadable, parseCoordinate, jsonResult, textResult, errorResult, getSelectOptions, isCheckable, setElementValue, getValueEventTypes } from '../lib/util';
+import {
+    toKebab,
+    toHumanReadable,
+    parseCoordinate,
+    jsonResult,
+    textResult,
+    errorResult,
+    getSelectOptions,
+    isCheckable,
+    setElementValue,
+    getValueEventTypes,
+} from '../lib/util';
 
 describe('util', () => {
     describe('toKebab', () => {
@@ -47,7 +58,8 @@ describe('util', () => {
     describe('getSelectOptions', () => {
         it('should return option values for a select element', () => {
             const select = document.createElement('select');
-            select.innerHTML = '<option value="sm">Small</option><option value="md">Medium</option><option value="lg">Large</option>';
+            select.innerHTML =
+                '<option value="sm">Small</option><option value="md">Medium</option><option value="lg">Large</option>';
             expect(getSelectOptions(select)).toEqual(['sm', 'md', 'lg']);
         });
 

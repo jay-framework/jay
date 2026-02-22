@@ -137,14 +137,14 @@ The WebMCP plugin's client init runs at step 1, but automation isn't ready until
 ```typescript
 // Plugin client init
 export function clientInit() {
-    // Automation context isn't populated yet, but we can set up
-    // to run when it becomes available (after component mount)
-    queueMicrotask(() => {
-        const automation = window.__jay?.automation;
-        if (automation) {
-            setupWebMCP(automation);
-        }
-    });
+  // Automation context isn't populated yet, but we can set up
+  // to run when it becomes available (after component mount)
+  queueMicrotask(() => {
+    const automation = window.__jay?.automation;
+    if (automation) {
+      setupWebMCP(automation);
+    }
+  });
 }
 ```
 
@@ -177,9 +177,9 @@ For resources and prompts, use `registerResource` and `registerPrompt`.
 
 **Answer:**
 
-| Resource URI             | Description                        |
-| ------------------------ | ---------------------------------- |
-| `state://page-viewstate` | Complete current ViewState as JSON |
+| Resource URI             | Description                             |
+| ------------------------ | --------------------------------------- |
+| `state://page-viewstate` | Complete current ViewState as JSON      |
 | `state://interactions`   | Available interactions (grouped by ref) |
 
 Resources are read-only and always return current state. They complement tools by giving the AI passive context without requiring tool calls.
@@ -266,7 +266,13 @@ registerResource({
   async read() {
     const { viewState } = automation.getPageState();
     return {
-      contents: [{ uri: 'state://viewstate', text: JSON.stringify(viewState, null, 2), mimeType: 'application/json' }],
+      contents: [
+        {
+          uri: 'state://viewstate',
+          text: JSON.stringify(viewState, null, 2),
+          mimeType: 'application/json',
+        },
+      ],
     };
   },
 });
@@ -277,9 +283,15 @@ registerResource({
   description: 'Interactive elements on the page, grouped by ref name',
   mimeType: 'application/json',
   async read() {
-    const { interactions } = automation.getPageState();  // already grouped
+    const { interactions } = automation.getPageState(); // already grouped
     return {
-      contents: [{ uri: 'state://interactions', text: JSON.stringify(interactions, null, 2), mimeType: 'application/json' }],
+      contents: [
+        {
+          uri: 'state://interactions',
+          text: JSON.stringify(interactions, null, 2),
+          mimeType: 'application/json',
+        },
+      ],
     };
   },
 });
@@ -353,33 +365,36 @@ init:
 **Change `PageState.interactions` to return grouped interactions by default.** The current flat per-coordinate list is an implementation detail that no consumer wants directly — every consumer (WebMCP, test tools, console debugging) needs to group by refName first.
 
 **Before (current):**
+
 ```typescript
 interface PageState {
-    viewState: object;
-    interactions: Interaction[];   // flat: one entry per coordinate (N items × M refs)
-    customEvents: Array<{ name: string }>;
+  viewState: object;
+  interactions: Interaction[]; // flat: one entry per coordinate (N items × M refs)
+  customEvents: Array<{ name: string }>;
 }
 ```
 
 **After:**
+
 ```typescript
 interface PageState {
-    viewState: object;
-    interactions: GroupedInteraction[];  // grouped: one entry per unique refName
-    customEvents: Array<{ name: string }>;
+  viewState: object;
+  interactions: GroupedInteraction[]; // grouped: one entry per unique refName
+  customEvents: Array<{ name: string }>;
 }
 
 interface GroupedInteraction {
-    ref: string;               // "removeBtn"
-    type: string;              // "Button", "TextInput", etc.
-    events: string[];          // ["click"]
-    description?: string;      // from contract
-    inForEach?: true;
-    items?: Array<{ id: string; label: string }>;
+  ref: string; // "removeBtn"
+  type: string; // "Button", "TextInput", etc.
+  events: string[]; // ["click"]
+  description?: string; // from contract
+  inForEach?: true;
+  items?: Array<{ id: string; label: string }>;
 }
 ```
 
 The existing per-coordinate APIs remain unchanged:
+
 - `getInteraction(coordinate)` → still returns a single `Interaction` (with `element`, `coordinate`, etc.)
 - `triggerEvent(eventType, coordinate)` → unchanged
 
@@ -404,54 +419,57 @@ import type { AutomationAPI, Interaction } from '@jay-framework/runtime-automati
  * Main entry point. Called from plugin client init via deferred access.
  */
 export function setupWebMCP(automation: AutomationAPI): () => void {
-    if (!navigator.modelContext) {
-        console.warn('[WebMCP] navigator.modelContext not available');
-        return () => {};
+  if (!navigator.modelContext) {
+    console.warn('[WebMCP] navigator.modelContext not available');
+    return () => {};
+  }
+
+  const mc = navigator.modelContext;
+  const registrations: Array<{ unregister(): void }> = [];
+
+  // Generic tools (always registered, stable set)
+  registrations.push(mc.registerTool(makeGetPageStateTool(automation)));
+  registrations.push(mc.registerTool(makeListInteractionsTool(automation)));
+  registrations.push(mc.registerTool(makeTriggerInteractionTool(automation)));
+  registrations.push(mc.registerTool(makeFillInputTool(automation)));
+
+  // Resources
+  registrations.push(mc.registerResource(makeViewStateResource(automation)));
+  registrations.push(mc.registerResource(makeInteractionsResource(automation)));
+
+  // Prompt
+  registrations.push(mc.registerPrompt(makePageGuidePrompt(automation)));
+
+  // Semantic tools (regenerated when interactions change)
+  let semanticRegs = registerSemanticTools(mc, automation);
+  let lastInteractionKey = interactionKey(automation);
+
+  automation.onStateChange(() => {
+    const newKey = interactionKey(automation);
+    if (newKey !== lastInteractionKey) {
+      // Interactions changed (items added/removed) — regenerate
+      semanticRegs.forEach((r) => r.unregister());
+      semanticRegs = registerSemanticTools(mc, automation);
+      lastInteractionKey = newKey;
     }
+  });
 
-    const mc = navigator.modelContext;
-    const registrations: Array<{ unregister(): void }> = [];
+  console.log(`[WebMCP] Registered ${4 + semanticRegs.length} tools, 2 resources, 1 prompt`);
 
-    // Generic tools (always registered, stable set)
-    registrations.push(mc.registerTool(makeGetPageStateTool(automation)));
-    registrations.push(mc.registerTool(makeListInteractionsTool(automation)));
-    registrations.push(mc.registerTool(makeTriggerInteractionTool(automation)));
-    registrations.push(mc.registerTool(makeFillInputTool(automation)));
-
-    // Resources
-    registrations.push(mc.registerResource(makeViewStateResource(automation)));
-    registrations.push(mc.registerResource(makeInteractionsResource(automation)));
-
-    // Prompt
-    registrations.push(mc.registerPrompt(makePageGuidePrompt(automation)));
-
-    // Semantic tools (regenerated when interactions change)
-    let semanticRegs = registerSemanticTools(mc, automation);
-    let lastInteractionKey = interactionKey(automation);
-
-    automation.onStateChange(() => {
-        const newKey = interactionKey(automation);
-        if (newKey !== lastInteractionKey) {
-            // Interactions changed (items added/removed) — regenerate
-            semanticRegs.forEach(r => r.unregister());
-            semanticRegs = registerSemanticTools(mc, automation);
-            lastInteractionKey = newKey;
-        }
-    });
-
-    console.log(`[WebMCP] Registered ${4 + semanticRegs.length} tools, 2 resources, 1 prompt`);
-
-    return () => {
-        registrations.forEach(r => r.unregister());
-        semanticRegs.forEach(r => r.unregister());
-    };
+  return () => {
+    registrations.forEach((r) => r.unregister());
+    semanticRegs.forEach((r) => r.unregister());
+  };
 }
 
 /** Quick fingerprint of interaction structure to detect changes */
 function interactionKey(automation: AutomationAPI): string {
-    return automation.getPageState().interactions
-        .map(g => g.inForEach ? `${g.ref}:${g.items!.map(i => i.id).join(',')}` : g.ref)
-        .join('|');
+  return automation
+    .getPageState()
+    .interactions.map((g) =>
+      g.inForEach ? `${g.ref}:${g.items!.map((i) => i.id).join(',')}` : g.ref,
+    )
+    .join('|');
 }
 ```
 
@@ -463,16 +481,16 @@ import { makeJayInit } from '@jay-framework/full-stack-component';
 import { setupWebMCP } from './webmcp-bridge';
 
 export const init = makeJayInit().withClient(() => {
-    // Automation isn't ready yet during client init.
-    // After all client inits complete, the component mounts and
-    // automation wraps synchronously. A microtask fires after that.
-    queueMicrotask(() => {
-        const automation = (window as any).__jay?.automation;
-        if (automation) {
-            const cleanup = setupWebMCP(automation);
-            window.addEventListener('beforeunload', cleanup);
-        }
-    });
+  // Automation isn't ready yet during client init.
+  // After all client inits complete, the component mounts and
+  // automation wraps synchronously. A microtask fires after that.
+  queueMicrotask(() => {
+    const automation = (window as any).__jay?.automation;
+    if (automation) {
+      const cleanup = setupWebMCP(automation);
+      window.addEventListener('beforeunload', cleanup);
+    }
+  });
 });
 ```
 
@@ -483,62 +501,63 @@ export const init = makeJayInit().withClient(() => {
 ```typescript
 // semantic-tools.ts
 function registerSemanticTools(mc: ModelContextContainer, automation: AutomationAPI) {
-    const { interactions } = automation.getPageState();  // already GroupedInteraction[]
-    const registrations = [];
+  const { interactions } = automation.getPageState(); // already GroupedInteraction[]
+  const registrations = [];
 
-    for (const group of interactions) {
-        const isInput = group.type === 'TextInput' || group.type === 'TextArea' || group.type === 'NumberInput';
-        const isSelect = group.type === 'Select';
+  for (const group of interactions) {
+    const isInput =
+      group.type === 'TextInput' || group.type === 'TextArea' || group.type === 'NumberInput';
+    const isSelect = group.type === 'Select';
 
-        const toolName = isInput || isSelect
-            ? `fill-${toKebab(group.ref)}`
-            : `click-${toKebab(group.ref)}`;
+    const toolName =
+      isInput || isSelect ? `fill-${toKebab(group.ref)}` : `click-${toKebab(group.ref)}`;
 
-        const description = group.description
-            || `${isInput ? 'Fill' : 'Click'} ${toHumanReadable(group.ref)}${group.inForEach ? ' for a specific item' : ''}`;
+    const description =
+      group.description ||
+      `${isInput ? 'Fill' : 'Click'} ${toHumanReadable(group.ref)}${group.inForEach ? ' for a specific item' : ''}`;
 
-        const properties: Record<string, any> = {};
-        const required: string[] = [];
+    const properties: Record<string, any> = {};
+    const required: string[] = [];
 
-        if (group.inForEach && group.items) {
-            const itemIds = group.items.map(i => i.id);
-            properties.itemId = {
-                type: 'string',
-                description: 'Item identifier',
-                enum: itemIds,
-            };
-            required.push('itemId');
-        }
-
-        if (isInput || isSelect) {
-            properties.value = { type: 'string', description: 'Value to set' };
-            required.push('value');
-        }
-
-        registrations.push(mc.registerTool({
-            name: toolName,
-            description,
-            inputSchema: { type: 'object', properties, required },
-            execute: (params) => {
-                const coord = group.inForEach
-                    ? [params.itemId as string, group.ref]
-                    : [group.ref];
-
-                if (isInput || isSelect) {
-                    const interaction = automation.getInteraction(coord);
-                    if (!interaction) return errorResult(`Element not found: ${coord.join('/')}`);
-                    (interaction.element as HTMLInputElement).value = params.value as string;
-                    automation.triggerEvent(isSelect ? 'change' : 'input', coord);
-                } else {
-                    automation.triggerEvent('click', coord);
-                }
-
-                return jsonResult('Done', automation.getPageState().viewState);
-            },
-        }));
+    if (group.inForEach && group.items) {
+      const itemIds = group.items.map((i) => i.id);
+      properties.itemId = {
+        type: 'string',
+        description: 'Item identifier',
+        enum: itemIds,
+      };
+      required.push('itemId');
     }
 
-    return registrations;
+    if (isInput || isSelect) {
+      properties.value = { type: 'string', description: 'Value to set' };
+      required.push('value');
+    }
+
+    registrations.push(
+      mc.registerTool({
+        name: toolName,
+        description,
+        inputSchema: { type: 'object', properties, required },
+        execute: (params) => {
+          const coord = group.inForEach ? [params.itemId as string, group.ref] : [group.ref];
+
+          if (isInput || isSelect) {
+            const interaction = automation.getInteraction(coord);
+            if (!interaction) return errorResult(`Element not found: ${coord.join('/')}`);
+            (interaction.element as HTMLInputElement).value = params.value as string;
+            automation.triggerEvent(isSelect ? 'change' : 'input', coord);
+          } else {
+            automation.triggerEvent('click', coord);
+          }
+
+          return jsonResult('Done', automation.getPageState().viewState);
+        },
+      }),
+    );
+  }
+
+  return registrations;
 }
 ```
 
@@ -551,6 +570,7 @@ function registerSemanticTools(mc: ModelContextContainer, automation: Automation
 Change `PageState.interactions` from flat `Interaction[]` to `GroupedInteraction[]`.
 
 **Files:**
+
 - `packages/runtime/runtime-automation/lib/types.ts` — add `GroupedInteraction`, change `PageState.interactions` type
 - `packages/runtime/runtime-automation/lib/group-interactions.ts` (new) — grouping logic
 - `packages/runtime/runtime-automation/lib/automation-agent.ts` — call grouping in `getPageState()`
@@ -609,32 +629,33 @@ Using the cart from `cart-webmcp` as the example:
 ```html
 <!-- cart.jay-html -->
 <div class="cart-items">
-    <div class="cart-item" forEach="items" trackBy="id">
-        <span>{name}</span>
-        <span>${price}</span>
-        <button ref="decreaseBtn">-</button>
-        <span>{quantity}</span>
-        <button ref="increaseBtn">+</button>
-        <button ref="removeBtn">Remove</button>
-    </div>
+  <div class="cart-item" forEach="items" trackBy="id">
+    <span>{name}</span>
+    <span>${price}</span>
+    <button ref="decreaseBtn">-</button>
+    <span>{quantity}</span>
+    <button ref="increaseBtn">+</button>
+    <button ref="removeBtn">Remove</button>
+  </div>
 </div>
 <div class="add-section">
-    <input ref="nameInput" type="text" placeholder="Item name" />
-    <input ref="priceInput" type="number" placeholder="Price" />
-    <button ref="addBtn">Add to Cart</button>
+  <input ref="nameInput" type="text" placeholder="Item name" />
+  <input ref="priceInput" type="number" placeholder="Price" />
+  <button ref="addBtn">Add to Cart</button>
 </div>
 ```
 
 With ViewState:
+
 ```json
 {
-    "items": [
-        { "id": "item-1", "name": "Wireless Mouse", "price": 29.99, "quantity": 1 },
-        { "id": "item-2", "name": "USB-C Hub", "price": 49.99, "quantity": 2 },
-        { "id": "item-3", "name": "Mechanical Keyboard", "price": 89.99, "quantity": 1 }
-    ],
-    "total": 219.96,
-    "itemCount": 3
+  "items": [
+    { "id": "item-1", "name": "Wireless Mouse", "price": 29.99, "quantity": 1 },
+    { "id": "item-2", "name": "USB-C Hub", "price": 49.99, "quantity": 2 },
+    { "id": "item-3", "name": "Mechanical Keyboard", "price": 89.99, "quantity": 1 }
+  ],
+  "total": 219.96,
+  "itemCount": 3
 }
 ```
 
@@ -644,18 +665,87 @@ Internally, the interaction collector produces a flat list — **12 entries** (3
 
 ```json
 [
-    { "refName": "decreaseBtn", "coordinate": ["item-1", "decreaseBtn"], "elementType": "HTMLButtonElement", "supportedEvents": ["click"], "itemContext": { "id": "item-1", "name": "Wireless Mouse", "price": 29.99, "quantity": 1 } },
-    { "refName": "increaseBtn", "coordinate": ["item-1", "increaseBtn"], "elementType": "HTMLButtonElement", "supportedEvents": ["click"], "itemContext": { "id": "item-1", "name": "Wireless Mouse", "price": 29.99, "quantity": 1 } },
-    { "refName": "removeBtn",   "coordinate": ["item-1", "removeBtn"],   "elementType": "HTMLButtonElement", "supportedEvents": ["click"], "itemContext": { "id": "item-1", "name": "Wireless Mouse", "price": 29.99, "quantity": 1 } },
-    { "refName": "decreaseBtn", "coordinate": ["item-2", "decreaseBtn"], "elementType": "HTMLButtonElement", "supportedEvents": ["click"], "itemContext": { "id": "item-2", "name": "USB-C Hub", "price": 49.99, "quantity": 2 } },
-    { "refName": "increaseBtn", "coordinate": ["item-2", "increaseBtn"], "elementType": "HTMLButtonElement", "supportedEvents": ["click"], "itemContext": { "id": "item-2", "name": "USB-C Hub", "price": 49.99, "quantity": 2 } },
-    { "refName": "removeBtn",   "coordinate": ["item-2", "removeBtn"],   "elementType": "HTMLButtonElement", "supportedEvents": ["click"], "itemContext": { "id": "item-2", "name": "USB-C Hub", "price": 49.99, "quantity": 2 } },
-    { "refName": "decreaseBtn", "coordinate": ["item-3", "decreaseBtn"], "elementType": "HTMLButtonElement", "supportedEvents": ["click"], "itemContext": { "id": "item-3", "name": "Mechanical Keyboard", "price": 89.99, "quantity": 1 } },
-    { "refName": "increaseBtn", "coordinate": ["item-3", "increaseBtn"], "elementType": "HTMLButtonElement", "supportedEvents": ["click"], "itemContext": { "id": "item-3", "name": "Mechanical Keyboard", "price": 89.99, "quantity": 1 } },
-    { "refName": "removeBtn",   "coordinate": ["item-3", "removeBtn"],   "elementType": "HTMLButtonElement", "supportedEvents": ["click"], "itemContext": { "id": "item-3", "name": "Mechanical Keyboard", "price": 89.99, "quantity": 1 } },
-    { "refName": "nameInput",   "coordinate": ["nameInput"],             "elementType": "HTMLInputElement",  "supportedEvents": ["click", "input", "change"] },
-    { "refName": "priceInput",  "coordinate": ["priceInput"],            "elementType": "HTMLInputElement",  "supportedEvents": ["click", "input", "change"] },
-    { "refName": "addBtn",      "coordinate": ["addBtn"],                "elementType": "HTMLButtonElement", "supportedEvents": ["click"] }
+  {
+    "refName": "decreaseBtn",
+    "coordinate": ["item-1", "decreaseBtn"],
+    "elementType": "HTMLButtonElement",
+    "supportedEvents": ["click"],
+    "itemContext": { "id": "item-1", "name": "Wireless Mouse", "price": 29.99, "quantity": 1 }
+  },
+  {
+    "refName": "increaseBtn",
+    "coordinate": ["item-1", "increaseBtn"],
+    "elementType": "HTMLButtonElement",
+    "supportedEvents": ["click"],
+    "itemContext": { "id": "item-1", "name": "Wireless Mouse", "price": 29.99, "quantity": 1 }
+  },
+  {
+    "refName": "removeBtn",
+    "coordinate": ["item-1", "removeBtn"],
+    "elementType": "HTMLButtonElement",
+    "supportedEvents": ["click"],
+    "itemContext": { "id": "item-1", "name": "Wireless Mouse", "price": 29.99, "quantity": 1 }
+  },
+  {
+    "refName": "decreaseBtn",
+    "coordinate": ["item-2", "decreaseBtn"],
+    "elementType": "HTMLButtonElement",
+    "supportedEvents": ["click"],
+    "itemContext": { "id": "item-2", "name": "USB-C Hub", "price": 49.99, "quantity": 2 }
+  },
+  {
+    "refName": "increaseBtn",
+    "coordinate": ["item-2", "increaseBtn"],
+    "elementType": "HTMLButtonElement",
+    "supportedEvents": ["click"],
+    "itemContext": { "id": "item-2", "name": "USB-C Hub", "price": 49.99, "quantity": 2 }
+  },
+  {
+    "refName": "removeBtn",
+    "coordinate": ["item-2", "removeBtn"],
+    "elementType": "HTMLButtonElement",
+    "supportedEvents": ["click"],
+    "itemContext": { "id": "item-2", "name": "USB-C Hub", "price": 49.99, "quantity": 2 }
+  },
+  {
+    "refName": "decreaseBtn",
+    "coordinate": ["item-3", "decreaseBtn"],
+    "elementType": "HTMLButtonElement",
+    "supportedEvents": ["click"],
+    "itemContext": { "id": "item-3", "name": "Mechanical Keyboard", "price": 89.99, "quantity": 1 }
+  },
+  {
+    "refName": "increaseBtn",
+    "coordinate": ["item-3", "increaseBtn"],
+    "elementType": "HTMLButtonElement",
+    "supportedEvents": ["click"],
+    "itemContext": { "id": "item-3", "name": "Mechanical Keyboard", "price": 89.99, "quantity": 1 }
+  },
+  {
+    "refName": "removeBtn",
+    "coordinate": ["item-3", "removeBtn"],
+    "elementType": "HTMLButtonElement",
+    "supportedEvents": ["click"],
+    "itemContext": { "id": "item-3", "name": "Mechanical Keyboard", "price": 89.99, "quantity": 1 }
+  },
+  {
+    "refName": "nameInput",
+    "coordinate": ["nameInput"],
+    "elementType": "HTMLInputElement",
+    "supportedEvents": ["click", "input", "change"]
+  },
+  {
+    "refName": "priceInput",
+    "coordinate": ["priceInput"],
+    "elementType": "HTMLInputElement",
+    "supportedEvents": ["click", "input", "change"]
+  },
+  {
+    "refName": "addBtn",
+    "coordinate": ["addBtn"],
+    "elementType": "HTMLButtonElement",
+    "supportedEvents": ["click"]
+  }
 ]
 ```
 
@@ -667,54 +757,54 @@ That's 12 entries. With 100 items it would be 302 — mostly repetitive.
 
 ```json
 [
-    {
-        "ref": "decreaseBtn",
-        "type": "Button",
-        "events": ["click"],
-        "inForEach": true,
-        "items": [
-            { "id": "item-1", "label": "Wireless Mouse" },
-            { "id": "item-2", "label": "USB-C Hub" },
-            { "id": "item-3", "label": "Mechanical Keyboard" }
-        ]
-    },
-    {
-        "ref": "increaseBtn",
-        "type": "Button",
-        "events": ["click"],
-        "inForEach": true,
-        "items": [
-            { "id": "item-1", "label": "Wireless Mouse" },
-            { "id": "item-2", "label": "USB-C Hub" },
-            { "id": "item-3", "label": "Mechanical Keyboard" }
-        ]
-    },
-    {
-        "ref": "removeBtn",
-        "type": "Button",
-        "events": ["click"],
-        "inForEach": true,
-        "items": [
-            { "id": "item-1", "label": "Wireless Mouse" },
-            { "id": "item-2", "label": "USB-C Hub" },
-            { "id": "item-3", "label": "Mechanical Keyboard" }
-        ]
-    },
-    {
-        "ref": "nameInput",
-        "type": "TextInput",
-        "events": ["input", "change"]
-    },
-    {
-        "ref": "priceInput",
-        "type": "NumberInput",
-        "events": ["input", "change"]
-    },
-    {
-        "ref": "addBtn",
-        "type": "Button",
-        "events": ["click"]
-    }
+  {
+    "ref": "decreaseBtn",
+    "type": "Button",
+    "events": ["click"],
+    "inForEach": true,
+    "items": [
+      { "id": "item-1", "label": "Wireless Mouse" },
+      { "id": "item-2", "label": "USB-C Hub" },
+      { "id": "item-3", "label": "Mechanical Keyboard" }
+    ]
+  },
+  {
+    "ref": "increaseBtn",
+    "type": "Button",
+    "events": ["click"],
+    "inForEach": true,
+    "items": [
+      { "id": "item-1", "label": "Wireless Mouse" },
+      { "id": "item-2", "label": "USB-C Hub" },
+      { "id": "item-3", "label": "Mechanical Keyboard" }
+    ]
+  },
+  {
+    "ref": "removeBtn",
+    "type": "Button",
+    "events": ["click"],
+    "inForEach": true,
+    "items": [
+      { "id": "item-1", "label": "Wireless Mouse" },
+      { "id": "item-2", "label": "USB-C Hub" },
+      { "id": "item-3", "label": "Mechanical Keyboard" }
+    ]
+  },
+  {
+    "ref": "nameInput",
+    "type": "TextInput",
+    "events": ["input", "change"]
+  },
+  {
+    "ref": "priceInput",
+    "type": "NumberInput",
+    "events": ["input", "change"]
+  },
+  {
+    "ref": "addBtn",
+    "type": "Button",
+    "events": ["click"]
+  }
 ]
 ```
 
@@ -730,59 +820,66 @@ The grouping happens inside `getPageState()` — the internal flat interaction l
 // packages/runtime/runtime-automation/lib/group-interactions.ts
 
 export interface GroupedInteraction {
-    ref: string;
-    type: string;              // "Button", "TextInput", "NumberInput", "Select", etc.
-    events: string[];
-    description?: string;      // from contract
-    inForEach?: true;
-    items?: Array<{ id: string; label: string }>;
+  ref: string;
+  type: string; // "Button", "TextInput", "NumberInput", "Select", etc.
+  events: string[];
+  description?: string; // from contract
+  inForEach?: true;
+  items?: Array<{ id: string; label: string }>;
 }
 
 export function groupInteractions(rawInteractions: Interaction[]): GroupedInteraction[] {
-    const byRef = new Map<string, Interaction[]>();
-    for (const i of rawInteractions) {
-        const group = byRef.get(i.refName) || [];
-        group.push(i);
-        byRef.set(i.refName, group);
-    }
+  const byRef = new Map<string, Interaction[]>();
+  for (const i of rawInteractions) {
+    const group = byRef.get(i.refName) || [];
+    group.push(i);
+    byRef.set(i.refName, group);
+  }
 
-    return Array.from(byRef.entries()).map(([refName, items]) => {
-        const sample = items[0];
-        const isForEach = items.length > 1 || sample.coordinate.length > 1;
-        const result: GroupedInteraction = {
-            ref: refName,
-            type: friendlyType(sample.elementType),
-            events: sample.supportedEvents.filter(e => e !== 'click' || sample.elementType === 'HTMLButtonElement'),
-            description: sample.description,
-        };
-        if (isForEach) {
-            result.inForEach = true;
-            result.items = items.map(i => ({
-                id: i.coordinate[0],
-                label: guessLabel(i.itemContext),
-            }));
-        }
-        return result;
-    });
+  return Array.from(byRef.entries()).map(([refName, items]) => {
+    const sample = items[0];
+    const isForEach = items.length > 1 || sample.coordinate.length > 1;
+    const result: GroupedInteraction = {
+      ref: refName,
+      type: friendlyType(sample.elementType),
+      events: sample.supportedEvents.filter(
+        (e) => e !== 'click' || sample.elementType === 'HTMLButtonElement',
+      ),
+      description: sample.description,
+    };
+    if (isForEach) {
+      result.inForEach = true;
+      result.items = items.map((i) => ({
+        id: i.coordinate[0],
+        label: guessLabel(i.itemContext),
+      }));
+    }
+    return result;
+  });
 }
 
 function friendlyType(elementType: string): string {
-    switch (elementType) {
-        case 'HTMLButtonElement': return 'Button';
-        case 'HTMLInputElement': return 'TextInput';
-        case 'HTMLTextAreaElement': return 'TextArea';
-        case 'HTMLSelectElement': return 'Select';
-        default: return elementType.replace('HTML', '').replace('Element', '');
-    }
+  switch (elementType) {
+    case 'HTMLButtonElement':
+      return 'Button';
+    case 'HTMLInputElement':
+      return 'TextInput';
+    case 'HTMLTextAreaElement':
+      return 'TextArea';
+    case 'HTMLSelectElement':
+      return 'Select';
+    default:
+      return elementType.replace('HTML', '').replace('Element', '');
+  }
 }
 
 function guessLabel(ctx?: object): string {
-    if (!ctx) return '';
-    for (const key of ['name', 'title', 'label']) {
-        if (key in ctx && typeof (ctx as any)[key] === 'string') return (ctx as any)[key];
-    }
-    const firstString = Object.values(ctx).find(v => typeof v === 'string');
-    return firstString || '';
+  if (!ctx) return '';
+  for (const key of ['name', 'title', 'label']) {
+    if (key in ctx && typeof (ctx as any)[key] === 'string') return (ctx as any)[key];
+  }
+  const firstString = Object.values(ctx).find((v) => typeof v === 'string');
+  return firstString || '';
 }
 ```
 
@@ -797,23 +894,23 @@ const { interactions } = automation.getPageState();
 
 **Generic tools (4):**
 
-| Tool | Description | Input |
-|---|---|---|
-| `get-page-state` | Get current page state (items, total, itemCount) | `{}` |
-| `list-interactions` | List available interactions (grouped by ref) | `{}` |
-| `trigger-interaction` | Trigger any interaction by coordinate | `{ coordinate: "item-1/removeBtn", event?: "click" }` |
-| `fill-input` | Set a value on an input element | `{ coordinate: "nameInput", value: "Laptop Stand" }` |
+| Tool                  | Description                                      | Input                                                 |
+| --------------------- | ------------------------------------------------ | ----------------------------------------------------- |
+| `get-page-state`      | Get current page state (items, total, itemCount) | `{}`                                                  |
+| `list-interactions`   | List available interactions (grouped by ref)     | `{}`                                                  |
+| `trigger-interaction` | Trigger any interaction by coordinate            | `{ coordinate: "item-1/removeBtn", event?: "click" }` |
+| `fill-input`          | Set a value on an input element                  | `{ coordinate: "nameInput", value: "Laptop Stand" }`  |
 
 **Semantic tools (6) — auto-generated from the 6 grouped interactions:**
 
-| Tool | Description | Input Schema |
-|---|---|---|
+| Tool                 | Description                            | Input Schema                                         |
+| -------------------- | -------------------------------------- | ---------------------------------------------------- |
 | `click-decrease-btn` | Click decrease btn for a specific item | `{ itemId: { enum: ["item-1","item-2","item-3"] } }` |
 | `click-increase-btn` | Click increase btn for a specific item | `{ itemId: { enum: ["item-1","item-2","item-3"] } }` |
-| `click-remove-btn` | Click remove btn for a specific item | `{ itemId: { enum: ["item-1","item-2","item-3"] } }` |
-| `fill-name-input` | Fill the name input | `{ value: string }` |
-| `fill-price-input` | Fill the price input | `{ value: string }` |
-| `click-add-btn` | Click add btn | `{}` |
+| `click-remove-btn`   | Click remove btn for a specific item   | `{ itemId: { enum: ["item-1","item-2","item-3"] } }` |
+| `fill-name-input`    | Fill the name input                    | `{ value: string }`                                  |
+| `fill-price-input`   | Fill the price input                   | `{ value: string }`                                  |
+| `click-add-btn`      | Click add btn                          | `{}`                                                 |
 
 **Total: 10 tools** (4 generic + 6 semantic). Stable count regardless of how many forEach items exist.
 
@@ -876,10 +973,10 @@ Tools are auto-generated from the page's interactions. Semantic tools have meani
 
 ### Plugin vs dev server built-in
 
-| Approach                | Pro                                                        | Con                                                 |
-| ----------------------- | ---------------------------------------------------------- | --------------------------------------------------- |
-| **Plugin** (chosen)     | Opt-in, doesn't affect apps that don't need it, extensible, no framework changes | Must be installed per project                        |
-| **Dev server built-in** | No plugin needed, always available                         | Bloats dev server, opinionated, harder to customize |
+| Approach                | Pro                                                                              | Con                                                 |
+| ----------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------- |
+| **Plugin** (chosen)     | Opt-in, doesn't affect apps that don't need it, extensible, no framework changes | Must be installed per project                       |
+| **Dev server built-in** | No plugin needed, always available                                               | Bloats dev server, opinionated, harder to customize |
 
 ### Regenerating semantic tools on state change
 
@@ -920,18 +1017,18 @@ Tools are auto-generated from the page's interactions. Semantic tools have meani
 
 #### Files changed
 
-| File | Change |
-|------|--------|
-| `runtime-automation/lib/types.ts` | Added `GroupedInteraction` interface; changed `PageState.interactions` type |
-| `runtime-automation/lib/group-interactions.ts` | **New** — `groupInteractions()`, `friendlyType()`, `relevantEvents()`, `guessLabel()` |
-| `runtime-automation/lib/automation-agent.ts` | Internal: separate raw + grouped caches; `getPageState()` returns grouped; `getInteraction()` uses raw |
-| `runtime-automation/lib/index.ts` | Export `GroupedInteraction`, `groupInteractions` |
-| `runtime-automation/test/group-interactions.test.ts` | **New** — 15 tests for grouping logic |
-| `runtime-automation/test/automation-agent.test.ts` | Updated to check `GroupedInteraction` shape |
-| `runtime-automation/test/integration.test.ts` | Updated forEach and nested ref tests for grouped shape |
-| `examples/jay/cart-automation/lib/index.ts` | Updated `interactions()` helper for grouped shape |
-| `examples/jay/cart-webmcp/lib/index.ts` | Updated `get-interactions` tool for grouped shape |
-| `stack-client-runtime/lib/index.ts` | Added `GroupedInteraction` re-export |
+| File                                                 | Change                                                                                                 |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| `runtime-automation/lib/types.ts`                    | Added `GroupedInteraction` interface; changed `PageState.interactions` type                            |
+| `runtime-automation/lib/group-interactions.ts`       | **New** — `groupInteractions()`, `friendlyType()`, `relevantEvents()`, `guessLabel()`                  |
+| `runtime-automation/lib/automation-agent.ts`         | Internal: separate raw + grouped caches; `getPageState()` returns grouped; `getInteraction()` uses raw |
+| `runtime-automation/lib/index.ts`                    | Export `GroupedInteraction`, `groupInteractions`                                                       |
+| `runtime-automation/test/group-interactions.test.ts` | **New** — 15 tests for grouping logic                                                                  |
+| `runtime-automation/test/automation-agent.test.ts`   | Updated to check `GroupedInteraction` shape                                                            |
+| `runtime-automation/test/integration.test.ts`        | Updated forEach and nested ref tests for grouped shape                                                 |
+| `examples/jay/cart-automation/lib/index.ts`          | Updated `interactions()` helper for grouped shape                                                      |
+| `examples/jay/cart-webmcp/lib/index.ts`              | Updated `get-interactions` tool for grouped shape                                                      |
+| `stack-client-runtime/lib/index.ts`                  | Added `GroupedInteraction` re-export                                                                   |
 
 #### Deviations from design
 
@@ -1010,12 +1107,12 @@ Based on review feedback, several simplifications were made:
 
 ```typescript
 interface GroupedInteraction {
-    ref: string;                              // "removeBtn"
-    elementType: string;                      // "HTMLButtonElement"
-    events: string[];                         // ["click"]
-    description?: string;                     // from contract
-    inForEach?: true;
-    items?: Array<{ coordinate: Coordinate }>; // full coordinate path
+  ref: string; // "removeBtn"
+  elementType: string; // "HTMLButtonElement"
+  events: string[]; // ["click"]
+  description?: string; // from contract
+  inForEach?: true;
+  items?: Array<{ coordinate: Coordinate }>; // full coordinate path
 }
 ```
 
@@ -1027,12 +1124,13 @@ Disabled elements (`<button disabled>`, `<input disabled>`, elements inside `<fi
 
 **Files changed:**
 
-| File | Change |
-|------|--------|
-| `runtime-automation/lib/interaction-collector.ts` | Added `isDisabled()` check; skip disabled elements during collection |
+| File                                               | Change                                                                                              |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `runtime-automation/lib/interaction-collector.ts`  | Added `isDisabled()` check; skip disabled elements during collection                                |
 | `runtime-automation/test/automation-agent.test.ts` | 5 new tests: disabled buttons, inputs, forEach partial disable, all-disabled, enable/disable toggle |
 
 **Behavior:**
+
 - Disabled elements are excluded from `getPageState().interactions` (grouped)
 - Disabled elements are not found by `getInteraction(coordinate)`
 - Semantic WebMCP tools won't include disabled items in `itemId` enums
@@ -1044,23 +1142,25 @@ Disabled elements (`<button disabled>`, `<input disabled>`, elements inside `<fi
 Redesigned the automation API types. Replaced the complex `GroupedInteraction` shape (with `ref`, `inForEach`, `items`, `elementType`) and the flat `InteractionInfo` approach with a clean two-level structure that keeps DOM elements in the automation layer and lets the WebMCP layer do only minimal serialization.
 
 **Automation API types:**
+
 ```typescript
 interface InteractionInstance {
-    coordinate: Coordinate;   // ["item-1", "removeBtn"]
-    element: HTMLElement;      // actual DOM element
-    events: string[];          // filtered: ["click"]
+  coordinate: Coordinate; // ["item-1", "removeBtn"]
+  element: HTMLElement; // actual DOM element
+  events: string[]; // filtered: ["click"]
 }
 
 interface Interaction {
-    refName: string;           // "removeBtn"
-    items: InteractionInstance[];
-    description?: string;
+  refName: string; // "removeBtn"
+  items: InteractionInstance[];
+  description?: string;
 }
 ```
 
 **Internal collector type** (`CollectedInteraction`) holds `refName`, `coordinate`, `element`, `supportedEvents`, `description`. The `groupInteractions()` function groups by `refName` and filters events per element type (using `instanceof` checks on the DOM element).
 
 **WebMCP serialization is minimal — just two transforms:**
+
 - `element` → `element.constructor.name` (e.g., `"HTMLButtonElement"`)
 - `coordinate: string[]` → `coordinate.join('/')` (e.g., `"item-1/removeBtn"`)
 
@@ -1070,24 +1170,24 @@ interface Interaction {
 
 **Files changed:**
 
-| File | Change |
-|------|--------|
-| `runtime-automation/lib/types.ts` | New `InteractionInstance`, `Interaction` (grouped), `CollectedInteraction` (internal) |
-| `runtime-automation/lib/group-interactions.ts` | Groups `CollectedInteraction[]` → `Interaction[]`, filters events |
-| `runtime-automation/lib/interaction-collector.ts` | Produces `CollectedInteraction[]` |
-| `runtime-automation/lib/automation-agent.ts` | Caches grouped `Interaction[]`; `getInteraction` returns `InteractionInstance` |
-| `webmcp-plugin/lib/generic-tools.ts` | Serializes `element→elementType`, `coordinate[]→string` |
-| `webmcp-plugin/lib/semantic-tools.ts` | Iterates `Interaction[]` groups directly |
-| `webmcp-plugin/lib/resources.ts` | Same serialization |
-| `webmcp-plugin/lib/prompts.ts` | Same serialization |
+| File                                              | Change                                                                                |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `runtime-automation/lib/types.ts`                 | New `InteractionInstance`, `Interaction` (grouped), `CollectedInteraction` (internal) |
+| `runtime-automation/lib/group-interactions.ts`    | Groups `CollectedInteraction[]` → `Interaction[]`, filters events                     |
+| `runtime-automation/lib/interaction-collector.ts` | Produces `CollectedInteraction[]`                                                     |
+| `runtime-automation/lib/automation-agent.ts`      | Caches grouped `Interaction[]`; `getInteraction` returns `InteractionInstance`        |
+| `webmcp-plugin/lib/generic-tools.ts`              | Serializes `element→elementType`, `coordinate[]→string`                               |
+| `webmcp-plugin/lib/semantic-tools.ts`             | Iterates `Interaction[]` groups directly                                              |
+| `webmcp-plugin/lib/resources.ts`                  | Same serialization                                                                    |
+| `webmcp-plugin/lib/prompts.ts`                    | Same serialization                                                                    |
 
 ### Test Summary
 
-| Package | Files | Tests | Status |
-|---------|-------|-------|--------|
-| `runtime-automation` | 3 | 50 | All pass |
-| `webmcp-plugin` | 6 | 41 | All pass |
-| **Total** | **9** | **91** | **All pass** |
+| Package              | Files | Tests  | Status       |
+| -------------------- | ----- | ------ | ------------ |
+| `runtime-automation` | 3     | 50     | All pass     |
+| `webmcp-plugin`      | 6     | 41     | All pass     |
+| **Total**            | **9** | **91** | **All pass** |
 
 ---
 
@@ -1135,6 +1235,7 @@ The original design assumed `registerResource`, `registerPrompt`, and a `Registr
 No resources or prompts.
 
 **Changes:**
+
 - Deleted `resources.ts`, `prompts.ts`, `resources.test.ts`, `prompts.test.ts`
 - Updated `webmcp-types.ts` — `ModelContextContainer` has only the 4 real methods; removed `ResourceDescriptor`, `PromptDescriptor`, `Registration`
 - Updated `webmcp-bridge.ts` — cleanup uses `mc.unregisterTool(name)` instead of `Registration.unregister()`
@@ -1146,26 +1247,31 @@ The page state and interaction data previously exposed via resources is already 
 ### Post-implementation: Select options, checkbox/radio, and event handling
 
 **Select options in tools:**
+
 - `list-interactions` serialization includes `options: string[]` for `<select>` elements (read from `element.options`)
 - Semantic fill tools for selects constrain `value` with `enum` of available option values
 
 **Checkbox/radio support:**
+
 - Added `isCheckable(element)` — detects `<input type="checkbox">` and `<input type="radio">`
 - Added `setElementValue(element, value)` — uses `.checked = (value === 'true')` for checkable elements, `.value` for others
 - Semantic tools for checkable elements get `toggle-` prefix (e.g., `toggle-agree-checkbox`) and `value` enum of `['true', 'false']`
 - `list-interactions` includes `inputType: "checkbox"` or `"radio"` for checkable elements
 
 **Event type from registered events:**
+
 - Replaced `getEventTypeForElement(element)` (guessed from element type) with `getValueEventType(registeredEvents)` (picks from actual `InteractionInstance.events`)
 - Prefers `input` > `change` > first registered event
 
 ### Post-implementation: Logging and console API
 
 **Tool execution logging:**
+
 - Added `withLogging(tool)` wrapper in `util.ts` that logs `[WebMCP] tool-name {"param":"value"}` on every execution
 - Applied to all generic and semantic tools
 
 **Console API:**
+
 - `window.webmcp.tools()` — prints a `console.table` of all registered tools (name + description) and returns the `ToolDescriptor[]` array
 - Registration log: `[WebMCP] Registered N tools — type webmcp.tools() to list`
 - Cleaned up on disposal (`delete window.webmcp`)
@@ -1196,11 +1302,11 @@ webmcp-plugin/
 
 ### Updated test summary
 
-| Package | Files | Tests | Status |
-|---------|-------|-------|--------|
-| `runtime-automation` | 3 | 50 | All pass |
-| `webmcp-plugin` | 4 | 64 | All pass |
-| **Total** | **7** | **114** | **All pass** |
+| Package              | Files | Tests   | Status       |
+| -------------------- | ----- | ------- | ------------ |
+| `runtime-automation` | 3     | 50      | All pass     |
+| `webmcp-plugin`      | 4     | 64      | All pass     |
+| **Total**            | **7** | **114** | **All pass** |
 
 ---
 
