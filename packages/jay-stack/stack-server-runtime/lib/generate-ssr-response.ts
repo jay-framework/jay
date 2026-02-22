@@ -8,21 +8,61 @@ import type { ServerRenderContext } from '@jay-framework/ssr-runtime';
 import type { ViteDevServer } from 'vite';
 import type { DevServerPagePart } from './load-page-parts';
 import type { TrackByMap } from '@jay-framework/view-state-merge';
-import type { ProjectClientInitInfo, GenerateClientScriptOptions } from './generate-client-script';
+import {
+    buildScriptFragments,
+    buildAutomationWrap,
+    type ProjectClientInitInfo,
+    type GenerateClientScriptOptions,
+} from './generate-client-script';
 import type { PluginClientInitInfo } from './plugin-init-discovery';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { getLogger } from '@jay-framework/logger';
 
+// ============================================================================
+// Server Element Module Cache
+// ============================================================================
+
+interface CachedServerModule {
+    renderToStream: (vs: object, ctx: ServerRenderContext) => void;
+}
+
+/**
+ * Cache of compiled server element modules, keyed by jay-html file path.
+ * Avoids re-parsing, re-generating, and re-loading the server element
+ * on every request for the same route.
+ */
+const serverModuleCache = new Map<string, CachedServerModule>();
+
+/**
+ * Invalidate the cached server element module for a jay-html file.
+ * Called when the source file changes (via file watcher).
+ */
+export function invalidateServerElementCache(jayHtmlPath: string): void {
+    if (serverModuleCache.delete(jayHtmlPath)) {
+        getLogger().info(`[SSR] Invalidated server element cache for ${jayHtmlPath}`);
+    }
+}
+
+/**
+ * Invalidate all cached server element modules.
+ */
+export function clearServerElementCache(): void {
+    serverModuleCache.clear();
+}
+
+// ============================================================================
+// SSR Page Generation
+// ============================================================================
+
 /**
  * Generate a complete SSR HTML page with server-rendered content and hydration script.
  *
  * Flow:
- * 1. Parse jay-html → generate server element code
- * 2. Write server element to build folder, load via vite.ssrLoadModule()
- * 3. Execute renderToStream() to produce HTML
- * 4. Build hydration script (uses ?jay-hydrate query for hydrate target)
- * 5. Return full HTML page string
+ * 1. Load (or reuse cached) server element module
+ * 2. Execute renderToStream() to produce HTML
+ * 3. Build hydration script (uses ?jay-hydrate query for hydrate target)
+ * 4. Return full HTML page string
  */
 export async function generateSSRPageHtml(
     vite: ViteDevServer,
@@ -42,33 +82,24 @@ export async function generateSSRPageHtml(
     pluginInits: PluginClientInitInfo[] = [],
     options: GenerateClientScriptOptions = {},
 ): Promise<string> {
-    // Step 1: Parse jay-html and generate server element code
-    const jayFile = await parseJayFile(
-        jayHtmlContent,
-        jayHtmlFilename,
-        jayHtmlDir,
-        { relativePath: tsConfigFilePath },
-        JAY_IMPORT_RESOLVER,
-        projectRoot,
-    );
-    const parsedJayFile = checkValidationErrors(jayFile);
-    const serverElementCode = checkValidationErrors(generateServerElementFile(parsedJayFile));
+    const jayHtmlPath = path.join(jayHtmlDir, jayHtmlFilename);
 
-    // Step 2: Write to build folder and load via Vite SSR
-    const serverElementsDir = path.join(buildFolder, 'server-elements');
-    await fs.mkdir(serverElementsDir, { recursive: true });
+    // Step 1: Get server element module (cached or compile fresh)
+    let cached = serverModuleCache.get(jayHtmlPath);
+    if (!cached) {
+        cached = await compileAndLoadServerElement(
+            vite,
+            jayHtmlContent,
+            jayHtmlFilename,
+            jayHtmlDir,
+            buildFolder,
+            projectRoot,
+            tsConfigFilePath,
+        );
+        serverModuleCache.set(jayHtmlPath, cached);
+    }
 
-    const serverElementFilename = jayHtmlFilename.replace('.jay-html', '.server-element.ts');
-    const serverElementPath = path.join(serverElementsDir, serverElementFilename);
-    await fs.writeFile(serverElementPath, serverElementCode, 'utf-8');
-
-    const serverModule = await vite.ssrLoadModule(serverElementPath);
-    const renderToStream = serverModule.renderToStream as (
-        vs: object,
-        ctx: ServerRenderContext,
-    ) => void;
-
-    // Step 3: Render HTML to buffer
+    // Step 2: Render HTML to buffer
     const htmlChunks: string[] = [];
     const asyncPromises: Array<Promise<string>> = [];
 
@@ -95,17 +126,17 @@ export async function generateSSRPageHtml(
         },
     };
 
-    renderToStream(viewState, ctx);
+    cached.renderToStream(viewState, ctx);
 
     // Wait for all async content to resolve
     // (In buffered mode we wait for everything before sending)
     const asyncResults = await Promise.all(asyncPromises);
-    let ssrHtml = htmlChunks.join('');
+    const ssrHtml = htmlChunks.join('');
 
     // Append async swap scripts for any resolved async content
     const asyncScripts = asyncResults.filter((r) => r !== '').join('');
 
-    // Step 4: Build hydration script
+    // Step 3: Build hydration script
     const hydrationScript = generateHydrationScript(
         viewState,
         carryForward,
@@ -118,7 +149,7 @@ export async function generateSSRPageHtml(
         options,
     );
 
-    // Step 5: Build full HTML page
+    // Step 4: Build full HTML page
     return `<!doctype html>
 <html lang="en">
   <head>
@@ -134,13 +165,50 @@ export async function generateSSRPageHtml(
 }
 
 /**
+ * Compile a jay-html file into a server element module.
+ * Parses the jay-html, generates server element TS code,
+ * writes it to the build folder, and loads it via Vite SSR.
+ */
+async function compileAndLoadServerElement(
+    vite: ViteDevServer,
+    jayHtmlContent: string,
+    jayHtmlFilename: string,
+    jayHtmlDir: string,
+    buildFolder: string,
+    projectRoot: string,
+    tsConfigFilePath?: string,
+): Promise<CachedServerModule> {
+    const jayFile = await parseJayFile(
+        jayHtmlContent,
+        jayHtmlFilename,
+        jayHtmlDir,
+        { relativePath: tsConfigFilePath },
+        JAY_IMPORT_RESOLVER,
+        projectRoot,
+    );
+    const parsedJayFile = checkValidationErrors(jayFile);
+    const serverElementCode = checkValidationErrors(generateServerElementFile(parsedJayFile));
+
+    const serverElementsDir = path.join(buildFolder, 'server-elements');
+    await fs.mkdir(serverElementsDir, { recursive: true });
+
+    const serverElementFilename = jayHtmlFilename.replace('.jay-html', '.server-element.ts');
+    const serverElementPath = path.join(serverElementsDir, serverElementFilename);
+    await fs.writeFile(serverElementPath, serverElementCode, 'utf-8');
+
+    const serverModule = await vite.ssrLoadModule(serverElementPath);
+
+    return {
+        renderToStream: serverModule.renderToStream as (
+            vs: object,
+            ctx: ServerRenderContext,
+        ) => void,
+    };
+}
+
+/**
  * Generate the hydration script that adopts the server-rendered DOM.
- *
- * Similar to generateClientScript() but:
- * - Imports hydrateCompositeJayComponent instead of makeCompositeJayComponent
- * - Imports hydrate function from ?jay-hydrate target instead of render from element target
- * - Passes rootElement (target.firstElementChild) to hydrateCompositeJayComponent
- * - No target.appendChild — DOM already in place
+ * Uses shared buildScriptFragments() and buildAutomationWrap() from generate-client-script.
  */
 function generateHydrationScript(
     defaultViewState: object,
@@ -153,109 +221,26 @@ function generateHydrationScript(
     pluginInits: PluginClientInitInfo[] = [],
     options: GenerateClientScriptOptions = {},
 ): string {
-    const { enableAutomation = true, slowViewState } = options;
-    const hasSlowViewState = slowViewState && Object.keys(slowViewState).length > 0;
-
-    const imports =
-        parts.length > 0 ? parts.map((part) => part.clientImport).join('\n') + '\n' : '';
-    const compositeParts =
-        parts.length > 0
-            ? `[
-${parts.map((part) => '        ' + part.clientPart).join(',\n')}
-        ]`
-            : '[]';
-
-    // Client init imports and execution
-    const hasClientInit = projectInit || pluginInits.length > 0;
-
-    const pluginClientInitImports = pluginInits
-        .map((plugin, idx) => {
-            return `import { ${plugin.initExport} as jayInit${idx} } from "${plugin.importPath}";`;
-        })
-        .join('\n      ');
-
-    const projectInitImport = projectInit
-        ? `import { ${projectInit.initExport || 'init'} as projectJayInit } from "${projectInit.importPath}";`
-        : '';
-
-    const pluginClientInitCalls = pluginInits
-        .map((plugin, idx) => {
-            const pluginData = clientInitData[plugin.name] || {};
-            return `if (typeof jayInit${idx}._clientInit === 'function') {
-        console.log('[DevServer] Running client init: ${plugin.name}');
-        await jayInit${idx}._clientInit(${JSON.stringify(pluginData)});
-      }`;
-        })
-        .join('\n      ');
-
-    const projectInitCall = projectInit
-        ? `if (typeof projectJayInit._clientInit === 'function') {
-        console.log('[DevServer] Running client init: project');
-        const projectData = ${JSON.stringify(clientInitData['project'] || {})};
-        await projectJayInit._clientInit(projectData);
-      }`
-        : '';
-
-    const clientInitExecution = hasClientInit
-        ? `
-      // Plugin client initialization (in dependency order)
-      ${pluginClientInitCalls}
-
-      // Project client initialization
-      ${projectInitCall}
-`
-        : '';
-
-    // Automation integration
-    const automationImport = enableAutomation
-        ? hasSlowViewState
-            ? `import { wrapWithAutomation, AUTOMATION_CONTEXT } from "@jay-framework/runtime-automation";
-      import { registerGlobalContext } from "@jay-framework/runtime";
-      import { deepMergeViewStates } from "@jay-framework/view-state-merge";`
-            : `import { wrapWithAutomation, AUTOMATION_CONTEXT } from "@jay-framework/runtime-automation";
-      import { registerGlobalContext } from "@jay-framework/runtime";`
-        : '';
-
-    const slowViewStateDecl =
-        enableAutomation && hasSlowViewState
-            ? `const slowViewState = ${JSON.stringify(slowViewState)};`
-            : '';
-
-    // For hydration, automation wraps but doesn't appendChild (DOM already in place)
-    const automationWrap = enableAutomation
-        ? hasSlowViewState
-            ? `
-      // Wrap with automation for dev tooling
-      const fullViewState = deepMergeViewStates(slowViewState, {...viewState, ...fastCarryForward}, trackByMap);
-      const wrapped = wrapWithAutomation(instance, { initialViewState: fullViewState, trackByMap });
-      registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
-      window.__jay = window.__jay || {};
-      window.__jay.automation = wrapped.automation;`
-            : `
-      // Wrap with automation for dev tooling
-      const wrapped = wrapWithAutomation(instance);
-      registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
-      window.__jay = window.__jay || {};
-      window.__jay.automation = wrapped.automation;`
-        : '';
+    const f = buildScriptFragments(parts, clientInitData, projectInit, pluginInits, options);
+    const automationWrap = buildAutomationWrap(options, 'hydrate');
 
     // Build the hydrate import path: append ?jay-hydrate to the jay-html path
     const hydrateImportPath = `${jayHtmlPath}${JAY_QUERY_HYDRATE}`;
 
     return `<script type="module">
       import {hydrateCompositeJayComponent} from "@jay-framework/stack-client-runtime";
-      ${automationImport}
-      ${pluginClientInitImports}
-      ${projectInitImport}
+      ${f.automationImport}
+      ${f.pluginClientInitImports}
+      ${f.projectInitImport}
       import { hydrate } from '${hydrateImportPath}';
-      ${imports}${slowViewStateDecl}
+      ${f.partImports}${f.slowViewStateDecl}
       const viewState = ${JSON.stringify(defaultViewState)};
       const fastCarryForward = ${JSON.stringify(fastCarryForward)};
       const trackByMap = ${JSON.stringify(trackByMap)};
-${clientInitExecution}
+${f.clientInitExecution}
       const target = document.getElementById('target');
       const rootElement = target.firstElementChild;
-      const pageComp = hydrateCompositeJayComponent(hydrate, viewState, fastCarryForward, ${compositeParts}, trackByMap, rootElement);
+      const pageComp = hydrateCompositeJayComponent(hydrate, viewState, fastCarryForward, ${f.compositeParts}, trackByMap, rootElement);
 
       const instance = pageComp({/* placeholder for page props */});
 ${automationWrap}

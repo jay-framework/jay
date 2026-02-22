@@ -21,7 +21,6 @@ import type {
     Redirect3xx,
     ServerError5xx,
 } from '@jay-framework/fullstack-component';
-import { jayStackCompiler } from '@jay-framework/compiler-jay-stack';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { RequestHandler } from 'express-serve-static-core';
@@ -30,6 +29,7 @@ import { loadPageParts } from '@jay-framework/stack-server-runtime';
 import {
     generateClientScript,
     generateSSRPageHtml,
+    invalidateServerElementCache,
     ProjectClientInitInfo,
 } from '@jay-framework/stack-server-runtime';
 import { Request, Response } from 'express';
@@ -1323,6 +1323,7 @@ function setupSlowRenderCacheInvalidation(
 
         // Invalidate cache for jay-html file changes
         if (changedPath.endsWith('.jay-html')) {
+            invalidateServerElementCache(changedPath);
             cache.invalidate(changedPath).then(() => {
                 getLogger().info(`[SlowRender] Cache invalidated for ${changedPath}`);
             });
