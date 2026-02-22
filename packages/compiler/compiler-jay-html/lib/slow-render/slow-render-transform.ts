@@ -520,6 +520,22 @@ export function slowRenderTransform(input: SlowRenderInput): WithValidations<Slo
             input.importResolver,
         );
 
+        // Remove phase map entries for headless keys that have no slow data.
+        // This happens when a plugin only provides fast/interactive data (e.g., withInteractive()).
+        // Without this, the slow render would resolve those properties to `undefined` and produce
+        // invalid pre-rendered HTML like if="undefined === IMAGE".
+        if (input.headlessContracts) {
+            for (const { key } of input.headlessContracts) {
+                if (!(key in input.slowViewState)) {
+                    for (const path of [...phaseMap.keys()]) {
+                        if (path === key || path.startsWith(`${key}.`)) {
+                            phaseMap.delete(path);
+                        }
+                    }
+                }
+            }
+        }
+
         // Get the body element
         const body = root.querySelector('body');
         if (!body) {

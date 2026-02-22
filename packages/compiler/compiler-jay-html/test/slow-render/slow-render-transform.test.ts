@@ -130,6 +130,68 @@ describe('Slow Render Transform', () => {
         it('should preserve headless component references and resolve slow bindings', async () => {
             await runSlowRenderTest('headless-preserved');
         });
+
+        it('should preserve bindings when headless plugin has no slow data (withInteractive only)', () => {
+            const headlessContractYaml = `
+name: product
+tags:
+  - tag: name
+    type: data
+    dataType: string
+  - tag: mediaType
+    type: variant
+    dataType: 'enum(IMAGE | VIDEO)'
+  - tag: options
+    type: sub-contract
+    repeated: true
+    trackBy: id
+    tags:
+      - tag: id
+        type: data
+        dataType: string
+      - tag: label
+        type: data
+        dataType: string
+`;
+            const headlessContract = checkValidationErrors(
+                parseContract(headlessContractYaml, 'product.jay-contract'),
+            );
+
+            const input: SlowRenderInput = {
+                jayHtmlContent: `<!DOCTYPE html>
+<html>
+<head>
+  <script type="application/jay-headless" plugin="product-data" contract="product" key="product"></script>
+</head>
+<body>
+  <div if="product.mediaType == IMAGE">Image</div>
+  <div if="product.mediaType == VIDEO">Video</div>
+  <div>{product.name}</div>
+  <div forEach="product.options" trackBy="id">
+    <span>{label}</span>
+  </div>
+</body>
+</html>`,
+                slowViewState: {},
+                headlessContracts: [
+                    {
+                        key: 'product',
+                        contract: headlessContract,
+                    },
+                ],
+            };
+
+            const result = slowRenderTransform(input);
+            expect(result.validations).toEqual([]);
+
+            const html = prettifyHtml(result.val!.preRenderedJayHtml);
+            // == is normalized to === by the expression parser, which is correct for runtime evaluation
+            expect(html).toContain('if="product.mediaType === IMAGE"');
+            expect(html).toContain('if="product.mediaType === VIDEO"');
+            expect(html).toContain('{product.name}');
+            expect(html).toContain('forEach="product.options"');
+            expect(html).not.toContain('="undefined');
+        });
     });
 });
 
