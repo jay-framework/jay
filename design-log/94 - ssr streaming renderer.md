@@ -676,10 +676,12 @@ User sees: "Hello" + "Still loading" → "Hello" + "World" (swap) → interactiv
 ### Phase 5 — Jay-Stack Integration (SSR + Hydration in Dev Server)
 
 **Files created:**
+
 - `packages/jay-stack/stack-server-runtime/lib/generate-ssr-response.ts` — `generateSSRPageHtml()` function
 - `packages/jay-stack/stack-client-runtime/lib/hydrate-composite-component.ts` — `hydrateCompositeJayComponent()`
 
 **Files modified:**
+
 - `packages/compiler/compiler-shared/lib/runtime-mode.ts` — added `JAY_QUERY_HYDRATE` constant
 - `packages/compiler/compiler-shared/lib/jay-module-specifier.ts` — added `isHydrate` to `ParsedJayModuleSpecifier`, added hydrate pattern to `JAY_QUERY_PATTERNS`
 - `packages/compiler/rollup-plugin/lib/runtime/generate-code-from-structure.ts` — detect `?jay-hydrate` query, call `generateElementHydrateFile` when hydrate target requested
@@ -692,6 +694,7 @@ User sees: "Hello" + "Still loading" → "Hello" + "World" (swap) → interactiv
 **Test results:** 67/67 packages pass. TSC clean.
 
 **SSR flow (implemented):**
+
 1. `sendResponse()` reads jay-html, calls `generateSSRPageHtml()`
 2. `generateSSRPageHtml()` parses jay-html via `parseJayFile()`, generates server element code via `generateServerElementFile()`
 3. Writes server element TS to `<buildFolder>/server-elements/`, loads via `vite.ssrLoadModule()`
@@ -701,11 +704,13 @@ User sees: "Hello" + "Still loading" → "Hello" + "World" (swap) → interactiv
 7. On SSR failure, falls back to client-only rendering via `generateClientScript()`
 
 **Hydration flow:**
+
 - Client imports `hydrate` from `page.jay-html?jay-hydrate` (vite plugin generates hydrate target code)
 - `hydrateCompositeJayComponent()` adapts the hydrate function signature `(rootElement, options?) => [Refs, Render]` to the `PreRenderElement` signature expected by `makeJayComponent` by binding `rootElement`
 - No `target.appendChild` — DOM is already present from SSR
 
 **Deviations from plan:**
+
 1. `generateSSRPageHtml` accepts `projectRoot` and `tsConfigFilePath` instead of the full `JayRollupConfig` (to avoid adding `@jay-framework/rollup-plugin` as a dependency of stack-server-runtime)
 2. The `?jay-hydrate` query is recognized directly in the `parseJayModuleSpecifier` infrastructure (via `isHydrate` field) rather than using a separate detection mechanism
 3. Test pages that use `{{expr}}` syntax (double braces) or have multiple root elements in body correctly fall back to client-only rendering — SSR requires valid jay-html single-brace syntax and single root element

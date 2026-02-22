@@ -6,7 +6,12 @@ import {
     Props,
     COMPONENT_CONTEXT,
 } from '@jay-framework/component';
-import { JayElement, RenderElement, RenderElementOptions, useContext } from '@jay-framework/runtime';
+import {
+    JayElement,
+    RenderElement,
+    RenderElementOptions,
+    useContext,
+} from '@jay-framework/runtime';
 import { CompositePart } from './composite-part';
 import { Signals } from '@jay-framework/fullstack-component';
 import { deepMergeViewStates, TrackByMap } from '@jay-framework/view-state-merge';

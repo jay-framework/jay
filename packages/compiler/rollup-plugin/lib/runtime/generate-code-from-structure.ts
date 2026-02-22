@@ -52,7 +52,12 @@ export async function generateCodeFromStructure(
     const isHydrate = parseJayModuleSpecifier(id).isHydrate === true;
     const tsCode =
         format === SourceFileFormat.JayHtml
-            ? generateCodeFromJayHtmlFile(mode, jayFile as JayHtmlSourceFile, generationTarget, isHydrate)
+            ? generateCodeFromJayHtmlFile(
+                  mode,
+                  jayFile as JayHtmlSourceFile,
+                  generationTarget,
+                  isHydrate,
+              )
             : generateCodeFromTsFile(jayContext, mode, jayFile, id, code);
     await writeGeneratedFile(jayContext, context, id, tsCode);
     return tsCode;

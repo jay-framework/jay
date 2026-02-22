@@ -137,7 +137,12 @@ export function parseJayModuleSpecifier(specifier: string): ParsedJayModuleSpeci
     let remainingQuery = fullQueryString;
 
     // Extract jay-specific query parameters
-    for (const { pattern, buildEnv, runtimeMode: rtMode, isHydrate: hydrate } of JAY_QUERY_PATTERNS) {
+    for (const {
+        pattern,
+        buildEnv,
+        runtimeMode: rtMode,
+        isHydrate: hydrate,
+    } of JAY_QUERY_PATTERNS) {
         if (remainingQuery.includes(pattern)) {
             if (buildEnv) buildEnvironment = buildEnv;
             if (rtMode) runtimeMode = rtMode;

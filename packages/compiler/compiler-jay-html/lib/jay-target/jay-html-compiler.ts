@@ -2893,12 +2893,13 @@ function renderServerElementAsString(
     // Join all parts with ' + '
     const filtered = stringParts.filter((f) => f.rendered.trim().length > 0);
     if (filtered.length === 0) return RenderFragment.empty();
-    return filtered.reduce((prev, curr) =>
-        new RenderFragment(
-            prev.rendered + ' + ' + curr.rendered,
-            prev.imports.plus(curr.imports),
-            [...prev.validations, ...curr.validations],
-        ),
+    return filtered.reduce(
+        (prev, curr) =>
+            new RenderFragment(
+                prev.rendered + ' + ' + curr.rendered,
+                prev.imports.plus(curr.imports),
+                [...prev.validations, ...curr.validations],
+            ),
     );
 }
 
@@ -2988,12 +2989,13 @@ function renderServerAttributesAsString(
 
     const filtered = parts.filter((f) => f.rendered.trim().length > 0);
     if (filtered.length === 0) return RenderFragment.empty();
-    return filtered.reduce((prev, curr) =>
-        new RenderFragment(
-            prev.rendered + ' + ' + curr.rendered,
-            prev.imports.plus(curr.imports),
-            [...prev.validations, ...curr.validations],
-        ),
+    return filtered.reduce(
+        (prev, curr) =>
+            new RenderFragment(
+                prev.rendered + ' + ' + curr.rendered,
+                prev.imports.plus(curr.imports),
+                [...prev.validations, ...curr.validations],
+            ),
     );
 }
 
@@ -3107,7 +3109,10 @@ function renderServerElementContent(
             // Skip async resolved/rejected — they're handled when we encounter their loading sibling
             if (child.nodeType === NodeType.ELEMENT_NODE) {
                 const asyncDir = checkAsync(child as HTMLElement);
-                if (asyncDir === AsyncDirectiveTypes.resolved || asyncDir === AsyncDirectiveTypes.rejected) {
+                if (
+                    asyncDir === AsyncDirectiveTypes.resolved ||
+                    asyncDir === AsyncDirectiveTypes.rejected
+                ) {
                     continue;
                 }
                 if (asyncDir === AsyncDirectiveTypes.loading) {
