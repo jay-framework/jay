@@ -221,7 +221,15 @@ function generateHydrationScript(
     pluginInits: PluginClientInitInfo[] = [],
     options: GenerateClientScriptOptions = {},
 ): string {
-    const f = buildScriptFragments(parts, clientInitData, projectInit, pluginInits, options);
+    const {
+        partImports,
+        compositeParts,
+        pluginClientInitImports,
+        projectInitImport,
+        clientInitExecution,
+        automationImport,
+        slowViewStateDecl,
+    } = buildScriptFragments(parts, clientInitData, projectInit, pluginInits, options);
     const automationWrap = buildAutomationWrap(options, 'hydrate');
 
     // Build the hydrate import path: append ?jay-hydrate to the jay-html path
@@ -229,18 +237,18 @@ function generateHydrationScript(
 
     return `<script type="module">
       import {hydrateCompositeJayComponent} from "@jay-framework/stack-client-runtime";
-      ${f.automationImport}
-      ${f.pluginClientInitImports}
-      ${f.projectInitImport}
+      ${automationImport}
+      ${pluginClientInitImports}
+      ${projectInitImport}
       import { hydrate } from '${hydrateImportPath}';
-      ${f.partImports}${f.slowViewStateDecl}
+      ${partImports}${slowViewStateDecl}
       const viewState = ${JSON.stringify(defaultViewState)};
       const fastCarryForward = ${JSON.stringify(fastCarryForward)};
       const trackByMap = ${JSON.stringify(trackByMap)};
-${f.clientInitExecution}
+${clientInitExecution}
       const target = document.getElementById('target');
       const rootElement = target.firstElementChild;
-      const pageComp = hydrateCompositeJayComponent(hydrate, viewState, fastCarryForward, ${f.compositeParts}, trackByMap, rootElement);
+      const pageComp = hydrateCompositeJayComponent(hydrate, viewState, fastCarryForward, ${compositeParts}, trackByMap, rootElement);
 
       const instance = pageComp({/* placeholder for page props */});
 ${automationWrap}

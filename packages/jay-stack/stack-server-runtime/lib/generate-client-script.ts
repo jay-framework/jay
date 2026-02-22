@@ -175,7 +175,15 @@ export function generateClientScript(
     pluginInits: PluginClientInitInfo[] = [],
     options: GenerateClientScriptOptions = {},
 ) {
-    const f = buildScriptFragments(parts, clientInitData, projectInit, pluginInits, options);
+    const {
+        partImports,
+        compositeParts,
+        pluginClientInitImports,
+        projectInitImport,
+        clientInitExecution,
+        automationImport,
+        slowViewStateDecl,
+    } = buildScriptFragments(parts, clientInitData, projectInit, pluginInits, options);
     const automationWrap = buildAutomationWrap(options, 'client');
 
     return `<!doctype html>
@@ -189,17 +197,17 @@ export function generateClientScript(
     <div id="target"></div>
     <script type="module">
       import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
-      ${f.automationImport}
-      ${f.pluginClientInitImports}
-      ${f.projectInitImport}
+      ${automationImport}
+      ${pluginClientInitImports}
+      ${projectInitImport}
       import { render } from '${jayHtmlPath}';
-      ${f.partImports}${f.slowViewStateDecl}
+      ${partImports}${slowViewStateDecl}
       const viewState = ${JSON.stringify(defaultViewState)};
       const fastCarryForward = ${JSON.stringify(fastCarryForward)};
       const trackByMap = ${JSON.stringify(trackByMap)};
-${f.clientInitExecution}
+${clientInitExecution}
       const target = document.getElementById('target');
-      const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, ${f.compositeParts}, trackByMap)
+      const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, ${compositeParts}, trackByMap)
 
       const instance = pageComp({/* placeholder for page props */})
 ${automationWrap}
