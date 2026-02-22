@@ -1,0 +1,28 @@
+name: product
+tags:
+  - tag: name
+    type: data
+    dataType: string
+
+  - tag: price
+    type: data
+    dataType: string
+
+  - tag: mediaType
+    type: variant
+    dataType: "enum (IMAGE | VIDEO)"
+
+  - tag: options
+    type: sub-contract
+    repeated: true
+    trackBy: id
+    tags:
+      - tag: label
+        type: data
+        dataType: string
+      - tag: value
+        type: data
+        dataType: string
+      - tag: id
+        type: data
+        dataType: string

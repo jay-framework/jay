@@ -1,11 +1,12 @@
 import { createHash } from 'crypto';
 import { HTMLElement, NodeType } from 'node-html-parser';
-import type { Contract, ContractTag } from '@jay-framework/editor-protocol';
+import type { Contract, ContractTag, Plugin, ProjectPage } from '@jay-framework/editor-protocol';
 import type { JayHeadlessImports } from '@jay-framework/compiler-jay-html';
 import type { ImportIRDocument, ImportIRNode, ImportIRStyle, ImportIRBinding } from './import-ir';
 import { generateNodeId, buildDomPath, getSemanticAnchors } from './id-generator';
 import { resolveStyle, parseInlineStyle } from './style-resolver';
-import { extractBindingsFromElement } from './binding-reconstructor';
+import { extractBindingsFromElement, buildMergedContractTags } from './binding-reconstructor';
+import type { ImportContractContext, HeadlessImportInfo } from './binding-reconstructor';
 import { detectVariantGroups, synthesizeVariant, synthesizeRepeater } from './variant-synthesizer';
 import type { PageContractPath } from './pageContractPath';
 
@@ -143,6 +144,28 @@ function findFirstBlockChild(body: HTMLElement): HTMLElement | null {
     return children[0] ?? null;
 }
 
+function buildHeadlessImportInfos(
+    headlessImports: JayHeadlessImports[] | undefined,
+    usedComponents: ProjectPage['usedComponents'],
+    pageUrl: string,
+): HeadlessImportInfo[] {
+    if (!headlessImports) return [];
+    const result: HeadlessImportInfo[] = [];
+    for (const hi of headlessImports) {
+        if (!hi.key || !hi.contract?.tags) continue;
+        const usedComponent = usedComponents.find((c) => c.key === hi.key);
+        const pageContractPath: PageContractPath = usedComponent
+            ? {
+                  pageUrl,
+                  pluginName: usedComponent.appName,
+                  componentName: usedComponent.componentName,
+              }
+            : { pageUrl };
+        result.push({ key: hi.key, tags: hi.contract.tags, pageContractPath });
+    }
+    return result;
+}
+
 interface BuildResult {
     node: ImportIRNode;
     warnings: string[];
@@ -156,6 +179,7 @@ function buildNodeFromElement(
     jayPageSectionId: string,
     pageContractPath: PageContractPath,
     repeaterContext: string[][],
+    contractContext?: ImportContractContext,
 ): BuildResult {
     const warnings: string[] = [];
     const componentSets: ImportIRNode[] = [];
@@ -176,6 +200,7 @@ function buildNodeFromElement(
         jayPageSectionId,
         pageContractPath,
         repeaterContext,
+        contractContext,
     );
     warnings.push(...bindingWarnings);
 
@@ -293,6 +318,7 @@ function buildNodeFromElement(
                 jayPageSectionId,
                 pageContractPath,
                 newRepeaterContext,
+                contractContext,
             );
             children.push(childResult.node);
             warnings.push(...childResult.warnings);
@@ -345,6 +371,7 @@ function buildNodeFromElement(
                     jayPageSectionId,
                     pageContractPath,
                     repeaterContext,
+                    contractContext,
                 );
                 warnings.push(...result.warnings);
                 componentSets.push(...result.componentSets);
@@ -376,6 +403,7 @@ function buildNodeFromElement(
             jayPageSectionId,
             pageContractPath,
             repeaterContext,
+            contractContext,
         );
         children.push(childResult.node);
         warnings.push(...childResult.warnings);
@@ -404,6 +432,7 @@ export function buildImportIR(
     options?: {
         contract?: Contract;
         headlessImports?: JayHeadlessImports[];
+        usedComponents?: ProjectPage['usedComponents'];
         css?: string;
         contentHash?: string;
     },
@@ -411,8 +440,17 @@ export function buildImportIR(
     const warnings: string[] = [];
 
     const sectionId = generateNodeId(`section:${pageUrl}`);
-    const contractTags: ContractTag[] = options?.contract?.tags ?? [];
     const pageContractPath: PageContractPath = { pageUrl };
+
+    const contractContext: ImportContractContext = {
+        tags: options?.contract?.tags ?? [],
+        headlessImports: buildHeadlessImportInfos(
+            options?.headlessImports,
+            options?.usedComponents ?? [],
+            pageUrl,
+        ),
+    };
+    const contractTags = buildMergedContractTags(contractContext);
 
     const contentElement = findFirstBlockChild(body);
     let rootChildren: ImportIRNode[] = [];
@@ -429,6 +467,7 @@ export function buildImportIR(
             sectionId,
             pageContractPath,
             [],
+            contractContext,
         );
         rootChildren = [node, ...componentSets];
         warnings.push(...nodeWarnings);

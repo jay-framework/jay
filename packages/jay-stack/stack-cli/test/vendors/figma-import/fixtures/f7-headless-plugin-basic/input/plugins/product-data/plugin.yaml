@@ -1,0 +1,6 @@
+name: product-data
+module: ./product-data
+contracts:
+  - name: product
+    contract: ./product.jay-contract
+    component: productData

@@ -627,12 +627,16 @@ async function scanPlugins(projectRootPath: string): Promise<Plugin[]> {
     return plugins;
 }
 
-async function loadProjectPage(pageContext: PageContext, plugins: Plugin[]): Promise<ProjectPage> {
+async function loadProjectPage(
+    pageContext: PageContext,
+    plugins: Plugin[],
+    projectRootPath?: string,
+): Promise<ProjectPage> {
     const { dirPath, pageUrl, pageName, hasPageHtml, hasPageContract, hasPageConfig } = pageContext;
     const pageFilePath = path.join(dirPath, PAGE_FILENAME);
     const pageConfigPath = path.join(dirPath, PAGE_CONFIG_FILENAME);
     const contractPath = path.join(dirPath, PAGE_CONTRACT_FILENAME);
-    const projectRootPath = process.cwd();
+    if (!projectRootPath) projectRootPath = process.cwd();
 
     let usedComponents: {
         appName: string;
@@ -878,6 +882,7 @@ async function loadPageContracts(
             hasPageConfig,
         },
         plugins,
+        projectRootPath,
     );
 
     return { projectPage: pageInfo, plugins };

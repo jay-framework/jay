@@ -1,0 +1,6 @@
+{
+  "id": "f7-headless-plugin-basic",
+  "feature": "headless-plugin-import",
+  "milestone": 3,
+  "mode": "import"
+}

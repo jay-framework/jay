@@ -1,0 +1,5 @@
+name: headless-plugin-test
+tags:
+  - tag: addToCart
+    type: interactive
+    elementType: HTMLButtonElement

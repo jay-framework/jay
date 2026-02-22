@@ -1,0 +1,12 @@
+{
+  "requiredNodes": [{ "type": "SECTION" }, { "type": "FRAME" }, { "type": "TEXT" }],
+  "requiredBindings": [
+    { "tagPath": ["product", "name"] },
+    { "tagPath": ["product", "price"] },
+    { "tagPath": ["product", "options"] },
+    { "tagPath": ["product", "options", "label"] },
+    { "tagPath": ["product", "options", "value"] },
+    { "tagPath": ["addToCart"] }
+  ],
+  "warningsMustNotContain": ["IMPORT_PARSE_FAILED", "BINDING_UNRESOLVED"]
+}

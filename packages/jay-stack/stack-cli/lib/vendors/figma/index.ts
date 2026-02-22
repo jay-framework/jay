@@ -353,6 +353,7 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
             {
                 contract: projectPage.contract,
                 headlessImports: parsedJayHtml.headlessImports,
+                usedComponents: projectPage.usedComponents,
                 css: parsedJayHtml.css,
             },
         );
