@@ -43,7 +43,18 @@ export function convertRepeaterNode(
     // Build styles for the outer container
     // This div has all the Frame's styling and is positioned once
     const positionStyle = getPositionStyle(node);
-    const frameSizeStyles = getFrameSizeStyles(node);
+    let frameSizeStyles = getFrameSizeStyles(node);
+
+    // Repeater containers should fill available cross-axis space.
+    // In Figma, HUG sizing is based on a single template item with placeholder text,
+    // but at runtime the repeater has real content that should fill the parent.
+    if (node.layoutMode === 'VERTICAL' && node.layoutSizingHorizontal === 'HUG') {
+        frameSizeStyles = frameSizeStyles.replace('width: fit-content;', 'width: 100%;');
+    }
+    if (node.layoutMode === 'HORIZONTAL' && node.layoutSizingVertical === 'HUG') {
+        frameSizeStyles = frameSizeStyles.replace('height: fit-content;', 'height: 100%;');
+    }
+
     const backgroundStyle = getBackgroundFillsStyle(node);
     const borderRadius = getBorderRadius(node);
     const strokeStyles = getStrokeStyles(node);
@@ -79,9 +90,29 @@ export function convertRepeaterNode(
         indentLevel: context.indentLevel + 2, // +2 because we're inside both divs
     };
 
-    // Convert only the first child - it's the template that gets repeated
+    // Convert only the first child - it's the template that gets repeated.
+    // Override the template child's cross-axis HUG to FILL so items stretch
+    // to fill the repeater container (enabling layouts like space-between).
     if (node.children && node.children.length > 0) {
-        html += convertNodeToJayHtml(node.children[0], newContext);
+        let templateChild = node.children[0];
+
+        if (templateChild.type === 'FRAME') {
+            const overrides: Partial<typeof templateChild> = {};
+            if (node.layoutMode === 'VERTICAL' && templateChild.layoutSizingHorizontal === 'HUG') {
+                overrides.layoutSizingHorizontal = 'FILL';
+            }
+            if (
+                node.layoutMode === 'HORIZONTAL' &&
+                templateChild.layoutSizingVertical === 'HUG'
+            ) {
+                overrides.layoutSizingVertical = 'FILL';
+            }
+            if (Object.keys(overrides).length > 0) {
+                templateChild = { ...templateChild, ...overrides };
+            }
+        }
+
+        html += convertNodeToJayHtml(templateChild, newContext);
     } else {
         throw new Error(
             `Repeater node "${node.name}" has no children - repeater template is required`,

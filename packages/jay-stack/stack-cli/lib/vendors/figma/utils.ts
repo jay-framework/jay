@@ -223,10 +223,44 @@ function getAutoLayoutChildSizeStyles(node: FigmaVendorDocument): string {
  * Gets size styles for any node
  */
 export function getNodeSizeStyles(node: FigmaVendorDocument): string {
-    // Skip first frame that is child of a SECTION node
     if (node.parentType === 'SECTION') {
+        const width = node.width !== undefined ? node.width : 0;
         const height = node.height !== undefined ? node.height : 0;
-        return `width: 100%;height: ${height}px;`;
+        let sizeStyles = '';
+
+        if (node.layoutSizingHorizontal) {
+            switch (node.layoutSizingHorizontal) {
+                case 'FIXED':
+                    sizeStyles += `width: ${width}px;`;
+                    break;
+                case 'HUG':
+                    sizeStyles += 'width: fit-content;';
+                    break;
+                case 'FILL':
+                    sizeStyles += 'width: 100%;';
+                    break;
+            }
+        } else {
+            sizeStyles += 'width: 100%;';
+        }
+
+        if (node.layoutSizingVertical) {
+            switch (node.layoutSizingVertical) {
+                case 'FIXED':
+                    sizeStyles += `height: ${height}px;`;
+                    break;
+                case 'HUG':
+                    sizeStyles += 'height: fit-content;';
+                    break;
+                case 'FILL':
+                    sizeStyles += `height: ${height}px;`;
+                    break;
+            }
+        } else {
+            sizeStyles += `height: ${height}px;`;
+        }
+
+        return sizeStyles;
     }
 
     return getAutoLayoutChildSizeStyles(node);
@@ -572,8 +606,43 @@ export function getFrameSizeStyles(node: FigmaVendorDocument): string {
 
     // Top-level frames (direct children of SECTION)
     if (isTopLevel) {
+        const width = node.width !== undefined ? node.width : 0;
         const height = node.height !== undefined ? node.height : 0;
-        return `width: 100%;height: ${height}px;`;
+        let sizeStyles = '';
+
+        if (node.layoutSizingHorizontal) {
+            switch (node.layoutSizingHorizontal) {
+                case 'FIXED':
+                    sizeStyles += `width: ${width}px;`;
+                    break;
+                case 'HUG':
+                    sizeStyles += 'width: fit-content;';
+                    break;
+                case 'FILL':
+                    sizeStyles += 'width: 100%;';
+                    break;
+            }
+        } else {
+            sizeStyles += 'width: 100%;';
+        }
+
+        if (node.layoutSizingVertical) {
+            switch (node.layoutSizingVertical) {
+                case 'FIXED':
+                    sizeStyles += `height: ${height}px;`;
+                    break;
+                case 'HUG':
+                    sizeStyles += 'height: fit-content;';
+                    break;
+                case 'FILL':
+                    sizeStyles += `height: ${height}px;`;
+                    break;
+            }
+        } else {
+            sizeStyles += `height: ${height}px;`;
+        }
+
+        return sizeStyles;
     }
 
     // Non-auto-layout frames
