@@ -621,3 +621,54 @@ User sees: "Hello" + "Still loading" → "Hello" + "World" (swap) → interactiv
 - `test/async-swap-script.test.ts` — 7 tests (P16-P20 + extras): script tag generation, quote/backslash escaping, placeholder targeting, replaceWith usage, hydration callback trigger
 
 **No deviations from design.** Implementation matches DL#94 Phase 1 specification exactly.
+
+### Phase 2 & 3 — Server Element Target: Basics, Conditionals, forEach (Completed)
+
+**Files modified:**
+
+- `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts` — Added `ServerContext` interface, `renderServerNode()`, `renderServerElement()`, `renderServerElementContent()`, `renderServerOpenTag()`, `renderServerAttributes()`, `generateServerElementFile()`. Handles static HTML, dynamic text/attributes, conditionals (`if=`), and `forEach` with `jay-coordinate` attributes.
+- `packages/compiler/compiler-shared/lib/imports.ts` — Added `Import.escapeHtml`, `Import.escapeAttr`, `Import.ServerRenderContext`
+- `packages/compiler/compiler-jay-html/lib/index.ts` — Exported `generateServerElementFile`
+- `packages/compiler/compiler-jay-html/test/test-utils/file-utils.ts` — Added `readFixtureServerElementFile()`, `readFileAndGenerateServerElementFile()`
+
+**Tests added (6 total, all passing):**
+
+- `test/jay-target/generate-server-element.test.ts`:
+  - basics: simple-dynamic-text, composite, refs, attributes
+  - conditions: conditions
+  - collections: collections (forEach)
+
+**Golden fixtures created:** `generated-server-element.ts` in each fixture directory.
+
+### Phase 4 — Async Promise Streaming (Completed)
+
+**Files modified:**
+
+- `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts` — Added async handling to server element target:
+  - `renderServerNodeAsString()` / `renderServerElementAsString()` — Template string rendering mode that produces string concatenation expressions instead of `w()` calls. Used inside `onAsync` template callbacks.
+  - `renderServerForEachAsString()` — Handles `forEach` inside resolved templates using `.map().join('')`.
+  - `renderServerAttributesAsString()` — Attribute rendering for template string mode.
+  - `collectAsyncGroups()` — Groups `when-loading`, `when-resolved`, `when-rejected` siblings by property name.
+  - `renderServerAsyncGroup()` — Renders loading content inline with `<div jay-async="propName:pending">` wrapper, then emits `onAsync()` call with resolved/rejected template functions.
+  - Updated `renderServerElementContent()` — Children processing now detects async groups, renders loading inline, skips resolved/rejected siblings, and emits `onAsync()` after loading.
+  - Updated `generateServerElementFile()` — Destructures `onAsync` from ctx when async directives are present.
+  - Updated `renderServerAttributes()` — Filters async directive attributes.
+  - Updated `hasInteractiveChildElements()` — Includes async check.
+
+**Tests added (3 new, 9 total, all passing):**
+
+- `test/jay-target/generate-server-element.test.ts`:
+  - async: async-simple-types — `Promise<string>` with loading/resolved/rejected
+  - async: async-objects — `Promise<{ps2, pn2}>` with loading/resolved
+  - async: async-arrays — `Promise<Array<{ps3, pn3}>>` with loading/resolved containing forEach
+
+**Golden fixtures created:** `generated-server-element.ts` in async-simple-types, async-objects, async-arrays directories.
+
+**Key design decisions:**
+
+1. Template functions use string concatenation (`'<span>' + escapeHtml(String(val)) + '</span>'`) — not `w()` calls — because they're passed to `onAsync` which returns the HTML string.
+2. The resolved/rejected template's root element uses the property name as its `jay-coordinate` (e.g., `jay-coordinate="p1"`), matching the hydration convention.
+3. `forEach` inside resolved templates renders as `.map((item) => ...).join('')`.
+4. The `jay-async` wrapper div is always emitted around loading content, even when the loading element itself is a div.
+
+**No deviations from design.** Implementation matches DL#94 Phase 4 specification.

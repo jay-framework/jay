@@ -64,4 +64,33 @@ describe('generate jay-html server element', () => {
             );
         });
     });
+
+    describe('async', () => {
+        it('for async simple types', async () => {
+            const folder = 'async/async-simple-types';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
+
+        it('for async objects', async () => {
+            const folder = 'async/async-objects';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
+
+        it('for async arrays', async () => {
+            const folder = 'async/async-arrays';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
+    });
 });

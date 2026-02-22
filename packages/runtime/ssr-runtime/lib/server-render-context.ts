@@ -17,8 +17,8 @@ export interface ServerRenderContext {
         promise: Promise<any>,
         id: string,
         templates: {
-            resolved: (val: any) => string;
-            rejected: (err: any) => string;
+            resolved?: (val: any) => string;
+            rejected?: (err: any) => string;
         },
     ) => void;
 }

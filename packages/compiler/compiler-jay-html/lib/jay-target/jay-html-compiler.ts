@@ -2588,6 +2588,10 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
         );
     }
 
+    // --- Async directives are handled by the parent's child processing ---
+    // when-loading, when-resolved, when-rejected are never reached here
+    // because renderServerElementContent groups them and handles them directly.
+
     // --- Regular element ---
     return renderServerElementContent(element, context);
 }
@@ -2640,7 +2644,10 @@ function renderServerAttributes(element: HTMLElement, context: ServerContext): R
             attrCanonical === 'ref' ||
             attrCanonical === 'slowforeach' ||
             attrCanonical === 'jayindex' ||
-            attrCanonical === 'jaytrackby'
+            attrCanonical === 'jaytrackby' ||
+            attrCanonical === AsyncDirectiveTypes.loading.directive ||
+            attrCanonical === AsyncDirectiveTypes.resolved.directive ||
+            attrCanonical === AsyncDirectiveTypes.rejected.directive
         )
             return;
 
@@ -2735,6 +2742,296 @@ const voidElements = new Set([
     'wbr',
 ]);
 
+/**
+ * Render a server node as a string concatenation expression (for async template functions).
+ * Instead of w() calls, returns string expressions like `'<span>' + escapeHtml(String(val)) + '</span>'`.
+ */
+function renderServerNodeAsString(node: Node, context: ServerContext): RenderFragment {
+    if (node.nodeType === NodeType.TEXT_NODE) {
+        const text = node.innerText;
+        if (text.trim() === '') return RenderFragment.empty();
+        const [fragment, isDynamic] = parseServerTemplateExpression(
+            textEscape(text),
+            context.variables,
+        );
+        if (isDynamic) {
+            return new RenderFragment(
+                `escapeHtml(String(${fragment.rendered}))`,
+                Imports.for(Import.escapeHtml),
+            );
+        }
+        return new RenderFragment(fragment.rendered);
+    }
+    if (node.nodeType === NodeType.ELEMENT_NODE) {
+        const el = node as HTMLElement;
+        // Handle forEach inside template strings — use .map().join('')
+        if (isForEach(el)) {
+            return renderServerForEachAsString(el, context);
+        }
+        return renderServerElementAsString(el, context);
+    }
+    return RenderFragment.empty();
+}
+
+/**
+ * Render a forEach element as a string expression using .map().join('').
+ */
+function renderServerForEachAsString(element: HTMLElement, context: ServerContext): RenderFragment {
+    const { variables } = context;
+    const forEach = element.getAttribute('forEach');
+    const forEachAccessor = parseAccessor(forEach, variables);
+
+    if (forEachAccessor.resolvedType === JayUnknown)
+        return new RenderFragment('', Imports.none(), [
+            `forEach directive - failed to resolve forEach type [forEach=${forEach}]`,
+        ]);
+    if (!isArrayType(forEachAccessor.resolvedType))
+        return new RenderFragment('', Imports.none(), [
+            `forEach directive - resolved forEach type is not an array [forEach=${forEach}]`,
+        ]);
+
+    const forEachVariables = variables.childVariableFor(forEachAccessor);
+    const arrayExpr = forEachAccessor.render().rendered;
+    const itemContext: ServerContext = {
+        ...context,
+        variables: forEachVariables,
+        coordinateCounter: { count: 0 },
+    };
+
+    // Render the element content (not the forEach wrapper) as a string
+    const itemContent = renderServerElementAsString(element, itemContext);
+
+    return new RenderFragment(
+        `${arrayExpr}.map((${forEachVariables.currentVar}) => ${itemContent.rendered}).join('')`,
+        itemContent.imports,
+        itemContent.validations,
+    );
+}
+
+/**
+ * Render a server element as a string concatenation expression (for async template functions).
+ * Handles conditionals and forEach within resolved/rejected templates.
+ */
+function renderServerElementAsString(
+    element: HTMLElement,
+    context: ServerContext,
+    overrideCoordinate?: string,
+): RenderFragment {
+    const { variables } = context;
+    const refAttr = element.attributes.ref;
+    const refName = refAttr ? camelCase(refAttr) : null;
+
+    const childNodes =
+        element.childNodes.length > 1
+            ? element.childNodes.filter(
+                  (_) => _.nodeType !== NodeType.TEXT_NODE || (_.innerText || '').trim() !== '',
+              )
+            : element.childNodes;
+
+    // Determine coordinate
+    let dynamicTextFragment: RenderFragment | null = null;
+    if (childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE) {
+        const text = childNodes[0].innerText || '';
+        const [fragment, isDynamic] = parseServerTemplateExpression(textEscape(text), variables);
+        if (isDynamic) {
+            dynamicTextFragment = fragment;
+        }
+    }
+
+    const needsCoordinate =
+        overrideCoordinate !== undefined ||
+        dynamicTextFragment !== null ||
+        refName !== null ||
+        hasDynamicAttributeBindings(element, variables) ||
+        hasInteractiveChildElements(childNodes);
+
+    let coordinate: string | null = null;
+    if (needsCoordinate) {
+        coordinate = overrideCoordinate || refName || String(context.coordinateCounter.count++);
+    }
+
+    const isVoid = voidElements.has(element.rawTagName.toLowerCase());
+    const stringParts: RenderFragment[] = [];
+
+    // Opening tag
+    stringParts.push(new RenderFragment(`'<${element.rawTagName}'`));
+
+    // Attributes (rendered as string parts)
+    const attrs = renderServerAttributesAsString(element, context);
+    if (attrs.rendered.trim()) {
+        stringParts.push(attrs);
+    }
+
+    if (coordinate !== null) {
+        stringParts.push(new RenderFragment(`' jay-coordinate="${coordinate}">'`));
+    } else {
+        stringParts.push(new RenderFragment(`'>'`));
+    }
+
+    if (!isVoid) {
+        // Children
+        if (dynamicTextFragment) {
+            stringParts.push(
+                new RenderFragment(
+                    `escapeHtml(String(${dynamicTextFragment.rendered}))`,
+                    Imports.for(Import.escapeHtml),
+                ),
+            );
+        } else {
+            for (const child of childNodes) {
+                const childFragment = renderServerNodeAsString(child, context);
+                if (childFragment.rendered.trim()) {
+                    stringParts.push(childFragment);
+                }
+            }
+        }
+
+        // Closing tag
+        stringParts.push(new RenderFragment(`'</${element.rawTagName}>'`));
+    }
+
+    // Join all parts with ' + '
+    const filtered = stringParts.filter((f) => f.rendered.trim().length > 0);
+    if (filtered.length === 0) return RenderFragment.empty();
+    return filtered.reduce((prev, curr) =>
+        new RenderFragment(
+            prev.rendered + ' + ' + curr.rendered,
+            prev.imports.plus(curr.imports),
+            [...prev.validations, ...curr.validations],
+        ),
+    );
+}
+
+/**
+ * Render attributes as string parts for template string mode.
+ * Returns a fragment like `' class="foo"' + ' href="' + escapeAttr(...) + '"'`
+ */
+function renderServerAttributesAsString(
+    element: HTMLElement,
+    context: ServerContext,
+): RenderFragment {
+    const { variables } = context;
+    const attributes = element.attributes;
+    const parts: RenderFragment[] = [];
+
+    Object.keys(attributes).forEach((attrName) => {
+        const attrCanonical = attrName.toLowerCase();
+        if (
+            attrCanonical === 'if' ||
+            attrCanonical === 'foreach' ||
+            attrCanonical === 'trackby' ||
+            attrCanonical === 'ref' ||
+            attrCanonical === 'slowforeach' ||
+            attrCanonical === 'jayindex' ||
+            attrCanonical === 'jaytrackby' ||
+            attrCanonical === AsyncDirectiveTypes.loading.directive ||
+            attrCanonical === AsyncDirectiveTypes.resolved.directive ||
+            attrCanonical === AsyncDirectiveTypes.rejected.directive
+        )
+            return;
+
+        const attrValue = attributes[attrName];
+
+        if (propertyMapping[attrCanonical]?.type === BOOLEAN_ATTRIBUTE) {
+            if (attrValue === '') {
+                parts.push(new RenderFragment(`' ${attrCanonical}'`));
+            }
+            // Dynamic boolean attributes in template strings are complex — skip for now
+        } else if (propertyMapping[attrCanonical]?.type === PROPERTY) {
+            const [fragment, isDynamic] = parseServerTemplateExpression(attrValue, variables);
+            if (isDynamic) {
+                parts.push(
+                    new RenderFragment(
+                        `' ${attrCanonical}="' + escapeAttr(String(${fragment.rendered})) + '"'`,
+                        Imports.for(Import.escapeAttr),
+                    ),
+                );
+            } else {
+                const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                parts.push(new RenderFragment(`' ${attrCanonical}="${escaped}"'`));
+            }
+        } else if (attrCanonical === 'class') {
+            const classExpr = parseClassExpression(attrValue, variables);
+            if (classExpr.imports.has(Import.dynamicAttribute)) {
+                const rawExpr = classExpr.rendered.replace(/^da\(\w+ => /, '').replace(/\)$/, '');
+                parts.push(
+                    new RenderFragment(
+                        `' class="' + escapeAttr(String(${rawExpr})) + '"'`,
+                        Imports.for(Import.escapeAttr),
+                    ),
+                );
+            } else {
+                const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                parts.push(new RenderFragment(`' class="${escaped}"'`));
+            }
+        } else if (attrCanonical === 'style') {
+            const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            parts.push(new RenderFragment(`' style="${escaped}"'`));
+        } else {
+            const [fragment, isDynamic] = parseServerTemplateExpression(
+                textEscape(attrValue),
+                variables,
+            );
+            if (isDynamic) {
+                parts.push(
+                    new RenderFragment(
+                        `' ${attrCanonical}="' + escapeAttr(String(${fragment.rendered})) + '"'`,
+                        Imports.for(Import.escapeAttr),
+                    ),
+                );
+            } else {
+                const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                parts.push(new RenderFragment(`' ${attrCanonical}="${escaped}"'`));
+            }
+        }
+    });
+
+    const filtered = parts.filter((f) => f.rendered.trim().length > 0);
+    if (filtered.length === 0) return RenderFragment.empty();
+    return filtered.reduce((prev, curr) =>
+        new RenderFragment(
+            prev.rendered + ' + ' + curr.rendered,
+            prev.imports.plus(curr.imports),
+            [...prev.validations, ...curr.validations],
+        ),
+    );
+}
+
+/**
+ * Collect async directive groups from child nodes.
+ * Groups when-loading, when-resolved, when-rejected by property name.
+ */
+interface AsyncGroup {
+    propertyName: string;
+    loadingElement: HTMLElement | null;
+    resolvedElement: HTMLElement | null;
+    rejectedElement: HTMLElement | null;
+}
+
+function collectAsyncGroups(childNodes: Node[]): Map<string, AsyncGroup> {
+    const groups = new Map<string, AsyncGroup>();
+    for (const child of childNodes) {
+        if (child.nodeType !== NodeType.ELEMENT_NODE) continue;
+        const el = child as HTMLElement;
+        const asyncDir = checkAsync(el);
+        if (!asyncDir.isAsync) continue;
+        const propName = el.getAttribute(asyncDir.directive);
+        if (!groups.has(propName)) {
+            groups.set(propName, {
+                propertyName: propName,
+                loadingElement: null,
+                resolvedElement: null,
+                rejectedElement: null,
+            });
+        }
+        const group = groups.get(propName);
+        if (asyncDir === AsyncDirectiveTypes.loading) group.loadingElement = el;
+        else if (asyncDir === AsyncDirectiveTypes.resolved) group.resolvedElement = el;
+        else if (asyncDir === AsyncDirectiveTypes.rejected) group.rejectedElement = el;
+    }
+    return groups;
+}
+
 function renderServerElementContent(
     element: HTMLElement,
     context: ServerContext,
@@ -2802,7 +3099,31 @@ function renderServerElementContent(
         );
     } else {
         const childContext = { ...context, indent: new Indent(indent.curr + '    ') };
+        // Collect async groups for this element's children
+        const asyncGroups = collectAsyncGroups(childNodes);
+        const processedAsyncProps = new Set<string>();
+
         for (const child of childNodes) {
+            // Skip async resolved/rejected — they're handled when we encounter their loading sibling
+            if (child.nodeType === NodeType.ELEMENT_NODE) {
+                const asyncDir = checkAsync(child as HTMLElement);
+                if (asyncDir === AsyncDirectiveTypes.resolved || asyncDir === AsyncDirectiveTypes.rejected) {
+                    continue;
+                }
+                if (asyncDir === AsyncDirectiveTypes.loading) {
+                    const propName = (child as HTMLElement).getAttribute(asyncDir.directive);
+                    if (processedAsyncProps.has(propName)) continue;
+                    processedAsyncProps.add(propName);
+
+                    const group = asyncGroups.get(propName);
+                    const asyncFragment = renderServerAsyncGroup(group, childContext);
+                    if (asyncFragment.rendered.trim()) {
+                        parts.push(asyncFragment);
+                    }
+                    continue;
+                }
+            }
+
             const childFragment = renderServerNode(child, childContext);
             if (childFragment.rendered.trim()) {
                 parts.push(childFragment);
@@ -2812,6 +3133,92 @@ function renderServerElementContent(
 
     // Closing tag
     parts.push(w(indent, `'</${element.rawTagName}>'`));
+
+    return mergeServerFragments(parts);
+}
+
+/**
+ * Render an async group: when-loading inline + onAsync() call with resolved/rejected templates.
+ */
+function renderServerAsyncGroup(group: AsyncGroup, context: ServerContext): RenderFragment {
+    const { variables, indent } = context;
+    const propName = group.propertyName;
+    const parts: RenderFragment[] = [];
+
+    // Parse the async accessor from the parent's variables
+    const asyncAccessor = parseAccessor(propName, variables);
+    if (asyncAccessor.resolvedType === JayUnknown) {
+        return new RenderFragment('', Imports.none(), [
+            `async directive - failed to resolve type for when-loading=${propName}`,
+        ]);
+    }
+    if (!isPromiseType(asyncAccessor.resolvedType)) {
+        return new RenderFragment('', Imports.none(), [
+            `async directive - resolved type for when-loading=${propName} is not a promise`,
+        ]);
+    }
+
+    // 1. Render when-loading inline with jay-async wrapper
+    if (group.loadingElement) {
+        parts.push(w(indent, `'<div jay-async="${propName}:pending">'`));
+
+        // Render the loading element's content (using parent variables — not resolved type)
+        const loadingContent = renderServerElementContent(group.loadingElement, context);
+        if (loadingContent.rendered.trim()) {
+            parts.push(loadingContent);
+        }
+
+        parts.push(w(indent, `'</div>'`));
+    }
+
+    // 2. Build onAsync() call with resolved/rejected template functions
+    const templateParts: string[] = [];
+    let templateImports = Imports.none();
+    const templateValidations: string[] = [];
+
+    if (group.resolvedElement) {
+        const promiseResolvedType = asyncAccessor.resolvedType.itemType;
+        const resolvedVariables = new Variables(promiseResolvedType, variables, 1);
+        const resolvedContext: ServerContext = {
+            ...context,
+            variables: resolvedVariables,
+            coordinateCounter: { count: 0 },
+        };
+        const resolvedString = renderServerElementAsString(
+            group.resolvedElement,
+            resolvedContext,
+            propName,
+        );
+        templateParts.push(
+            `resolved: (${resolvedVariables.currentVar}) => ${resolvedString.rendered}`,
+        );
+        templateImports = templateImports.plus(resolvedString.imports);
+        templateValidations.push(...resolvedString.validations);
+    }
+
+    if (group.rejectedElement) {
+        const rejectedVariables = new Variables(JayErrorType, variables, 1);
+        const rejectedContext: ServerContext = {
+            ...context,
+            variables: rejectedVariables,
+            coordinateCounter: { count: 0 },
+        };
+        const rejectedString = renderServerElementAsString(
+            group.rejectedElement,
+            rejectedContext,
+            propName,
+        );
+        templateParts.push(
+            `rejected: (${rejectedVariables.currentVar}) => ${rejectedString.rendered}`,
+        );
+        templateImports = templateImports.plus(rejectedString.imports);
+        templateValidations.push(...rejectedString.validations);
+    }
+
+    // Emit onAsync call
+    const asyncExpr = asyncAccessor.render().rendered;
+    const onAsyncCall = `${indent.firstLine}onAsync(${asyncExpr}, '${propName}', {${templateParts.join(', ')}});`;
+    parts.push(new RenderFragment(onAsyncCall, templateImports, templateValidations));
 
     return mergeServerFragments(parts);
 }
@@ -2851,7 +3258,9 @@ function hasInteractiveChildElements(childNodes: Node[]): boolean {
     return childNodes.some(
         (child) =>
             child.nodeType === NodeType.ELEMENT_NODE &&
-            (isConditional(child as HTMLElement) || isForEach(child as HTMLElement)),
+            (isConditional(child as HTMLElement) ||
+                isForEach(child as HTMLElement) ||
+                checkAsync(child as HTMLElement).isAsync),
     );
 }
 
@@ -2875,6 +3284,9 @@ export function generateServerElementFile(jayFile: JayHtmlSourceFile): WithValid
 
     const viewStateType = jayFile.types.name;
 
+    // Detect if async is used (onAsync call was emitted)
+    const hasAsync = rendered.rendered.includes('onAsync(');
+
     // Build import statement for ssr-runtime
     const importParts: string[] = [];
     if (rendered.imports.has(Import.escapeHtml)) importParts.push('escapeHtml');
@@ -2883,11 +3295,16 @@ export function generateServerElementFile(jayFile: JayHtmlSourceFile): WithValid
 
     const importStatement = `import {${importParts.join(', ')}} from "@jay-framework/ssr-runtime";`;
 
+    // Destructure onAsync from ctx when async directives are present
+    const ctxDestructure = hasAsync
+        ? 'const { write: w, onAsync } = ctx;'
+        : 'const { write: w } = ctx;';
+
     const renderedFile = [
         importStatement,
         types,
         `export function renderToStream(vs: ${viewStateType}, ctx: ServerRenderContext): void {
-    const { write: w } = ctx;
+    ${ctxDestructure}
 ${rendered.rendered}
 }`,
     ]

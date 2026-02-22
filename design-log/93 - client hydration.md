@@ -738,6 +738,13 @@ The composition now happens naturally through the element tree: `adoptElement` a
 
 **Test results: 38 runtime + 7 compiler + 62 existing compiler = 107 passing (0 regressions)**
 
-**Remaining for Phase 3:**
+### Phase 3 — Step 3d: Components in Hydrate Target (Completed)
 
-- Step 3d: Components + structural (C21-C27) — child components, headless instances
+Added component support to the hydrate target. Child components in the hydrate target use `childComp()` with a `{ hydrate: true }` option to signal that the component should adopt existing DOM rather than create new elements.
+
+**Tests added (2 more, total 9 compiler hydrate tests passing):**
+
+- C21: `components/counter` — child component with hydration option
+- C22: `components/component-in-component` — nested components with hydration
+
+**Test results: 38 runtime + 9 compiler hydrate + 62 existing compiler = 109 passing (0 regressions)**
