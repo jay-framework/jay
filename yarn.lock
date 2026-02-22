@@ -4575,7 +4575,7 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@jay-framework/ssr-runtime@workspace:packages/runtime/ssr-runtime":
+"@jay-framework/ssr-runtime@workspace:^, @jay-framework/ssr-runtime@workspace:packages/runtime/ssr-runtime":
   version: 0.0.0-use.local
   resolution: "@jay-framework/ssr-runtime@workspace:packages/runtime/ssr-runtime"
   dependencies:
@@ -4641,6 +4641,7 @@ __metadata:
     "@jay-framework/jay-cli": "workspace:^"
     "@jay-framework/logger": "workspace:^"
     "@jay-framework/runtime": "workspace:^"
+    "@jay-framework/ssr-runtime": "workspace:^"
     "@jay-framework/stack-client-runtime": "workspace:^"
     "@jay-framework/stack-route-scanner": "workspace:^"
     "@jay-framework/view-state-merge": "workspace:^"

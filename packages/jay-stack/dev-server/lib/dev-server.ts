@@ -27,7 +27,11 @@ import fs from 'node:fs/promises';
 import { RequestHandler } from 'express-serve-static-core';
 import { renderFastChangingData } from '@jay-framework/stack-server-runtime';
 import { loadPageParts } from '@jay-framework/stack-server-runtime';
-import { generateClientScript, ProjectClientInitInfo } from '@jay-framework/stack-server-runtime';
+import {
+    generateClientScript,
+    generateSSRPageHtml,
+    ProjectClientInitInfo,
+} from '@jay-framework/stack-server-runtime';
 import { Request, Response } from 'express';
 import { DevServerOptions } from './dev-server-options';
 import { ServiceLifecycleManager } from './service-lifecycle';
@@ -795,22 +799,55 @@ async function sendResponse(
     slowViewState?: object,
     timing?: RequestTiming,
 ): Promise<void> {
-    const pageHtml = generateClientScript(
-        viewState,
-        carryForward,
-        pageParts,
-        jayHtmlPath,
-        clientTrackByMap,
-        getClientInitData(),
-        projectInit,
-        pluginsForPage,
-        {
-            enableAutomation: !options.disableAutomation,
-            slowViewState,
-        },
-    );
+    let pageHtml: string;
 
-    // Save generated client script to build folder for debugging
+    try {
+        // Try SSR: server-render HTML + hydration script
+        const jayHtmlContent = await fs.readFile(jayHtmlPath, 'utf-8');
+        const jayHtmlFilename = path.basename(jayHtmlPath);
+        const jayHtmlDir = path.dirname(jayHtmlPath);
+
+        pageHtml = await generateSSRPageHtml(
+            vite,
+            jayHtmlContent,
+            jayHtmlFilename,
+            jayHtmlDir,
+            viewState,
+            jayHtmlPath,
+            pageParts,
+            carryForward,
+            clientTrackByMap,
+            getClientInitData(),
+            options.buildFolder!,
+            options.projectRootFolder!,
+            options.jayRollupConfig?.tsConfigFilePath,
+            projectInit,
+            pluginsForPage,
+            {
+                enableAutomation: !options.disableAutomation,
+                slowViewState,
+            },
+        );
+    } catch (err) {
+        // Fall back to client-only rendering
+        getLogger().warn(`[SSR] Failed, falling back to client rendering: ${err.message}`);
+        pageHtml = generateClientScript(
+            viewState,
+            carryForward,
+            pageParts,
+            jayHtmlPath,
+            clientTrackByMap,
+            getClientInitData(),
+            projectInit,
+            pluginsForPage,
+            {
+                enableAutomation: !options.disableAutomation,
+                slowViewState,
+            },
+        );
+    }
+
+    // Save generated page to build folder for debugging
     if (options.buildFolder) {
         const pageName = !url || url === '/' ? 'index' : url.replace(/^\//, '').replace(/\//g, '-');
         const clientScriptDir = path.join(options.buildFolder, 'client-scripts');

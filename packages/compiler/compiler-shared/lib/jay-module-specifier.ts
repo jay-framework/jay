@@ -9,7 +9,13 @@
  * while correctly handling file extensions like `.jay-contract` and `.jay-html`.
  */
 
-import { RuntimeMode, JAY_QUERY_PREFIX, TS_EXTENSION, TSX_EXTENSION } from './runtime-mode';
+import {
+    RuntimeMode,
+    JAY_QUERY_PREFIX,
+    JAY_QUERY_HYDRATE,
+    TS_EXTENSION,
+    TSX_EXTENSION,
+} from './runtime-mode';
 
 /**
  * Environment types for Jay code splitting
@@ -40,6 +46,8 @@ export interface ParsedJayModuleSpecifier {
     buildEnvironment?: JayBuildEnvironment;
     /** The runtime mode (sandbox modes) if present */
     runtimeMode?: RuntimeMode;
+    /** Whether this is a hydrate target (?jay-hydrate) */
+    isHydrate?: boolean;
     /** Any remaining query parameters (not jay-related) */
     otherQueryParams: string;
     /** The full query string for reconstruction */
@@ -53,7 +61,14 @@ const JAY_QUERY_PATTERNS: Array<{
     pattern: string;
     buildEnv?: JayBuildEnvironment;
     runtimeMode?: RuntimeMode;
+    isHydrate?: boolean;
 }> = [
+    // Hydrate target
+    {
+        pattern: JAY_QUERY_HYDRATE,
+        buildEnv: JayBuildEnvironment.Client,
+        isHydrate: true,
+    },
     // Build environments
     {
         pattern: `${JAY_QUERY_PREFIX}${JayBuildEnvironment.Client}`,
@@ -118,13 +133,15 @@ export function parseJayModuleSpecifier(specifier: string): ParsedJayModuleSpeci
 
     let buildEnvironment: JayBuildEnvironment | undefined;
     let runtimeMode: RuntimeMode | undefined;
+    let isHydrate: boolean | undefined;
     let remainingQuery = fullQueryString;
 
     // Extract jay-specific query parameters
-    for (const { pattern, buildEnv, runtimeMode: rtMode } of JAY_QUERY_PATTERNS) {
+    for (const { pattern, buildEnv, runtimeMode: rtMode, isHydrate: hydrate } of JAY_QUERY_PATTERNS) {
         if (remainingQuery.includes(pattern)) {
             if (buildEnv) buildEnvironment = buildEnv;
             if (rtMode) runtimeMode = rtMode;
+            if (hydrate) isHydrate = true;
             remainingQuery = remainingQuery.replace(pattern, '');
         }
     }
@@ -140,6 +157,7 @@ export function parseJayModuleSpecifier(specifier: string): ParsedJayModuleSpeci
         basePath,
         buildEnvironment,
         runtimeMode,
+        isHydrate,
         otherQueryParams,
         fullQueryString,
     };

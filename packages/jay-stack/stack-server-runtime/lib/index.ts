@@ -1,6 +1,7 @@
 export * from './slowly-changing-runner';
 export * from './fast-changing-runner';
 export * from './generate-client-script';
+export * from './generate-ssr-response';
 export {
     loadPageParts,
     type LoadedPageParts,
