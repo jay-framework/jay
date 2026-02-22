@@ -1,0 +1,5 @@
+{
+  "requiredRefs": [],
+  "requiredTextBindings": ["imageUrl", "productName", "link"],
+  "warningsMustNotContain": ["IMPORT_PARSE_FAILED", "BINDING_UNRESOLVED"]
+}

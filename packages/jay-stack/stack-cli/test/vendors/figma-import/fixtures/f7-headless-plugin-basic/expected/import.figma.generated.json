@@ -89,7 +89,7 @@
           "visible": true,
           "mainComponentId": "85835bbf2eb8",
           "pluginData": {
-            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"mediaType\"],\"property\":\"mediaType\"}]"
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\",\"pluginName\":\"product-data\",\"componentName\":\"product\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"mediaType\"],\"property\":\"mediaType\"}]"
           }
         },
         {

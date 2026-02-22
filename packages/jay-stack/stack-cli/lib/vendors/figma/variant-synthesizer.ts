@@ -8,6 +8,7 @@ import { tokenizeCondition } from './condition-tokenizer';
 import { findContractTag } from './binding-analysis';
 import { generateNodeId, buildDomPath, getSemanticAnchors } from './id-generator';
 import { extractBindingsFromElement } from './binding-reconstructor';
+import type { ImportContractContext } from './binding-reconstructor';
 
 const VARIANT_SYNTHETIC_DIMENSION = 'VARIANT_SYNTHETIC_DIMENSION';
 
@@ -177,6 +178,7 @@ export function synthesizeVariant(
     jayPageSectionId: string,
     pageContractPath: PageContractPath,
     buildChildNode: (element: HTMLElement) => ImportIRNode,
+    contractContext?: ImportContractContext,
 ): SynthesizedVariant {
     const warnings: string[] = [];
     const { dimensions, warnings: dimWarnings } = classifyDimensions(
@@ -246,8 +248,18 @@ export function synthesizeVariant(
     for (const dim of dimensions) {
         const tag = findContractTag(contractTags, dim.tagPath);
         if (tag) {
+            let resolvedPath = pageContractPath;
+            if (contractContext && dim.tagPath.length > 0) {
+                const rootSegment = dim.tagPath[0];
+                const headlessImport = contractContext.headlessImports.find(
+                    (hi) => hi.key === rootSegment,
+                );
+                if (headlessImport) {
+                    resolvedPath = headlessImport.pageContractPath;
+                }
+            }
             const binding: LayerBinding = {
-                pageContractPath,
+                pageContractPath: resolvedPath,
                 jayPageSectionId,
                 tagPath: dim.tagPath,
                 property: dim.name,

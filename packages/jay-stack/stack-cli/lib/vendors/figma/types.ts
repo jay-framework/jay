@@ -1,5 +1,5 @@
 import { PageContractPath } from './pageContractPath';
-import type { ContractTag } from '@jay-framework/editor-protocol';
+import type { ContractTag, FigmaVendorDocument } from '@jay-framework/editor-protocol';
 
 /**
  * Type definition for layer bindings stored in Figma plugin data
@@ -73,4 +73,7 @@ export interface ConversionContext {
 
     // Available plugins
     plugins: any[]; // Plugin[] type from editor-protocol
+
+    // Map from component ID → parent COMPONENT_SET node (for resolving INSTANCE variant data)
+    componentSetIndex?: Map<string, FigmaVendorDocument>;
 }

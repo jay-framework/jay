@@ -1,0 +1,11 @@
+name: attribute-test
+tags:
+  - tag: imageUrl
+    type: data
+    dataType: string
+  - tag: productName
+    type: data
+    dataType: string
+  - tag: link
+    type: data
+    dataType: string

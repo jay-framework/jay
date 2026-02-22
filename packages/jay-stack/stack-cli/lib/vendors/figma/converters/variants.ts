@@ -25,18 +25,31 @@ import {
 export function getComponentVariantValues(
     node: FigmaVendorDocument,
     propertyBindings: Array<{ property: string; contractTag: ContractTag }>,
+    componentSetIndex?: Map<string, FigmaVendorDocument>,
 ): Map<string, string[]> {
     const values = new Map<string, string[]>();
 
-    // Helper to filter out pseudo-CSS variants
     const filterPseudoVariants = (variantValues: string[]): string[] => {
         return variantValues.filter((value) => !value.includes(':'));
     };
 
-    // Extract from node.componentPropertyDefinitions if available
-    if (node.componentPropertyDefinitions) {
+    // For INSTANCE nodes without inline variant data, resolve via componentSetIndex
+    let resolvedNode = node;
+    if (
+        !node.componentPropertyDefinitions &&
+        (!node.variants || node.variants.length === 0) &&
+        node.mainComponentId &&
+        componentSetIndex
+    ) {
+        const componentSet = componentSetIndex.get(node.mainComponentId);
+        if (componentSet) {
+            resolvedNode = componentSet;
+        }
+    }
+
+    if (resolvedNode.componentPropertyDefinitions) {
         for (const binding of propertyBindings) {
-            const propDef = node.componentPropertyDefinitions[binding.property];
+            const propDef = resolvedNode.componentPropertyDefinitions[binding.property];
             if (propDef && propDef.type === 'VARIANT' && propDef.variantOptions) {
                 const filtered = filterPseudoVariants(propDef.variantOptions);
                 if (filtered.length > 0) {
@@ -46,17 +59,13 @@ export function getComponentVariantValues(
         }
     }
 
-    // If we didn't get values from componentPropertyDefinitions,
-    // try to extract from the variants array
-    if (values.size === 0 && node.variants && node.variants.length > 0) {
-        // Build set of unique values for each property from all variants
+    if (values.size === 0 && resolvedNode.variants && resolvedNode.variants.length > 0) {
         const propertyValuesMap = new Map<string, Set<string>>();
 
-        for (const variant of node.variants) {
+        for (const variant of resolvedNode.variants) {
             if (variant.variantProperties) {
                 for (const binding of propertyBindings) {
                     const propValue = variant.variantProperties[binding.property];
-                    // Skip pseudo-CSS variants (values containing ':')
                     if (propValue && !propValue.includes(':')) {
                         if (!propertyValuesMap.has(binding.property)) {
                             propertyValuesMap.set(binding.property, new Set());
@@ -67,7 +76,32 @@ export function getComponentVariantValues(
             }
         }
 
-        // Convert sets to arrays
+        for (const [prop, valueSet] of propertyValuesMap) {
+            if (valueSet.size > 0) {
+                values.set(prop, Array.from(valueSet));
+            }
+        }
+    }
+
+    // If resolvedNode is COMPONENT_SET (from index lookup) and we need variants,
+    // build them from children
+    if (values.size === 0 && resolvedNode.children && resolvedNode.type === 'COMPONENT_SET') {
+        const propertyValuesMap = new Map<string, Set<string>>();
+
+        for (const child of resolvedNode.children) {
+            if (child.type === 'COMPONENT' && child.variantProperties) {
+                for (const binding of propertyBindings) {
+                    const propValue = child.variantProperties[binding.property];
+                    if (propValue && !propValue.includes(':')) {
+                        if (!propertyValuesMap.has(binding.property)) {
+                            propertyValuesMap.set(binding.property, new Set());
+                        }
+                        propertyValuesMap.get(binding.property)!.add(propValue);
+                    }
+                }
+            }
+        }
+
         for (const [prop, valueSet] of propertyValuesMap) {
             if (valueSet.size > 0) {
                 values.set(prop, Array.from(valueSet));
@@ -159,34 +193,36 @@ export function findComponentVariant(
     node: FigmaVendorDocument,
     permutation: Array<{ property: string; value: string }>,
 ): FigmaVendorDocument {
-    // If node has variants array (serialized from component set)
-    if (!node.variants || node.variants.length === 0) {
+    // Use variants array if available, otherwise check children (for COMPONENT_SET nodes)
+    const variants =
+        node.variants && node.variants.length > 0
+            ? node.variants
+            : node.type === 'COMPONENT_SET' && node.children
+              ? node.children.filter((c) => c.type === 'COMPONENT')
+              : null;
+
+    if (!variants || variants.length === 0) {
         throw new Error(
             `Node "${node.name}" has no variants array - cannot find variant component`,
         );
     }
 
-    // Build target property map from permutation
     const targetProps = new Map<string, string>();
     for (const { property, value } of permutation) {
         targetProps.set(property, value);
     }
 
-    // Find matching variant
-    const matchingVariant = node.variants.find((variant) => {
+    const matchingVariant = variants.find((variant) => {
         if (!variant.variantProperties) {
             return false;
         }
 
-        // Check if all target properties match
         for (const [prop, value] of targetProps) {
             if (variant.variantProperties[prop] !== value) {
                 return false;
             }
         }
 
-        // Also verify no extra properties that differ
-        // (This ensures exact match for component sets with >2 properties)
         for (const [prop, value] of Object.entries(variant.variantProperties)) {
             if (targetProps.has(prop) && targetProps.get(prop) !== value) {
                 return false;
@@ -197,16 +233,14 @@ export function findComponentVariant(
     });
 
     if (!matchingVariant) {
-        // Log for debugging but use fallback
         console.log(
             `No matching variant found for "${node.name}" with properties:`,
             Object.fromEntries(targetProps),
             '\nAvailable variants:',
-            node.variants.map((v) => v.variantProperties),
+            variants.map((v) => v.variantProperties),
             '\nUsing first variant as fallback',
         );
-        // Fallback to first variant or the node itself
-        return node.variants[0] || node;
+        return variants[0] || node;
     }
 
     return matchingVariant;
@@ -257,8 +291,12 @@ export function convertVariantNode(
     const indent = '  '.repeat(context.indentLevel);
     const innerIndent = '  '.repeat(context.indentLevel + 1);
 
-    // 1. Get all variant property values
-    const propertyValues = getComponentVariantValues(node, analysis.propertyBindings);
+    // 1. Get all variant property values (resolve via componentSetIndex if needed)
+    const propertyValues = getComponentVariantValues(
+        node,
+        analysis.propertyBindings,
+        context.componentSetIndex,
+    );
 
     // 2. Generate all permutations
     const permutations = generatePermutations(propertyValues, analysis.propertyBindings);
@@ -268,14 +306,27 @@ export function convertVariantNode(
         );
     }
 
+    // Resolve INSTANCE to COMPONENT_SET for variant lookup
+    let resolvedNode = node;
+    if (
+        (!node.variants || node.variants.length === 0) &&
+        node.mainComponentId &&
+        context.componentSetIndex
+    ) {
+        const componentSet = context.componentSetIndex.get(node.mainComponentId);
+        if (componentSet) {
+            resolvedNode = componentSet;
+        }
+    }
+
     // 3. Build the variant if divs
     let variantHtml = '';
     for (const permutation of permutations) {
         // Build if condition (handles both boolean and enum properties)
         const conditions = buildVariantCondition(permutation);
 
-        // Find variant component
-        const variantNode = findComponentVariant(node, permutation);
+        // Find variant component (use resolvedNode which may be the COMPONENT_SET)
+        const variantNode = findComponentVariant(resolvedNode, permutation);
 
         // Convert variant with if condition
         variantHtml += `${innerIndent}<div if="${conditions}">\n`;

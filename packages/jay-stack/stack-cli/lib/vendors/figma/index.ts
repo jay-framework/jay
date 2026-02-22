@@ -319,6 +319,22 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
         // Create empty set to collect font families during conversion
         const fontFamilies = new Set<string>();
 
+        // Build component set index for resolving INSTANCE variant data
+        const componentSetIndex = new Map<string, FigmaVendorDocument>();
+        function indexComponentSets(node: FigmaVendorDocument) {
+            if (node.type === 'COMPONENT_SET' && node.children) {
+                for (const child of node.children) {
+                    if (child.type === 'COMPONENT') {
+                        componentSetIndex.set(child.id, node);
+                    }
+                }
+            }
+            if (node.children) {
+                for (const child of node.children) indexComponentSets(child);
+            }
+        }
+        indexComponentSets(vendorDoc);
+
         // Create conversion context
         const context: ConversionContext = {
             repeaterPathStack: [],
@@ -326,6 +342,7 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
             fontFamilies,
             projectPage,
             plugins,
+            componentSetIndex,
         };
 
         // Convert the content frame to body HTML (fontFamilies will be populated during conversion)

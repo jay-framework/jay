@@ -1,0 +1,6 @@
+{
+  "id": "f6-rt-nested-contracts-roundtrip",
+  "feature": "nested-contracts-roundtrip",
+  "milestone": 3,
+  "mode": "roundtrip"
+}

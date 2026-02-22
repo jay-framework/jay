@@ -413,6 +413,7 @@ function buildNodeFromElement(
                 jayPageSectionId,
                 pageContractPath,
                 buildChildNodeCb,
+                contractContext,
             );
             componentSets.push(componentSet);
             children.push(instance);

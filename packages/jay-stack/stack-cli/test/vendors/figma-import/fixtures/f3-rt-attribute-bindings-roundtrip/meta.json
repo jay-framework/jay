@@ -1,0 +1,6 @@
+{
+  "id": "f3-rt-attribute-bindings-roundtrip",
+  "feature": "attribute-bindings-roundtrip",
+  "milestone": 3,
+  "mode": "roundtrip"
+}
