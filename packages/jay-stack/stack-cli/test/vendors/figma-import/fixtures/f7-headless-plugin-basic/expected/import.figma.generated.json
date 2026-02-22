@@ -56,7 +56,7 @@
             }
           ],
           "pluginData": {
-            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\",\"pluginName\":\"../../src/plugins/product-data/product-data\",\"componentName\":\"product\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"name\"]}]"
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\",\"pluginName\":\"product-data\",\"componentName\":\"product\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"name\"]}]"
           }
         },
         {
@@ -79,7 +79,7 @@
             }
           ],
           "pluginData": {
-            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\",\"pluginName\":\"../../src/plugins/product-data/product-data\",\"componentName\":\"product\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"price\"]}]"
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\",\"pluginName\":\"product-data\",\"componentName\":\"product\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"price\"]}]"
           }
         },
         {
@@ -101,6 +101,9 @@
           "itemSpacing": 8,
           "layoutSizingHorizontal": "HUG",
           "layoutSizingVertical": "HUG",
+          "pluginData": {
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\",\"pluginName\":\"product-data\",\"componentName\":\"product\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"options\"]}]"
+          },
           "children": [
             {
               "id": "d430c8c4e7d7",
@@ -138,7 +141,7 @@
                   "fontSize": 14,
                   "fontWeight": 600,
                   "pluginData": {
-                    "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\",\"pluginName\":\"../../src/plugins/product-data/product-data\",\"componentName\":\"product\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"options\",\"label\"]}]"
+                    "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\",\"pluginName\":\"product-data\",\"componentName\":\"product\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"options\",\"label\"]}]"
                   }
                 },
                 {
@@ -161,7 +164,7 @@
                     }
                   ],
                   "pluginData": {
-                    "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\",\"pluginName\":\"../../src/plugins/product-data/product-data\",\"componentName\":\"product\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"options\",\"value\"]}]"
+                    "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\",\"pluginName\":\"product-data\",\"componentName\":\"product\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"options\",\"value\"]}]"
                   }
                 }
               ]
