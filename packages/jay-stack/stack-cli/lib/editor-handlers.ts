@@ -746,7 +746,7 @@ async function scanProjectInfo(
     const pages: ProjectPage[] = [];
 
     await scanPageDirectories(pagesBasePath, async (context) => {
-        const page = await loadProjectPage(context, plugins);
+        const page = await loadProjectPage(context, plugins, projectRootPath);
         pages.push(page);
     });
 
