@@ -4,6 +4,7 @@ export { generateElementFileReactTarget } from './react-target/jay-html-compiler
 export {
     generateElementBridgeFile,
     generateElementHydrateFile,
+    generateServerElementFile,
     generateSandboxRootFile,
 } from './jay-target/jay-html-compiler';
 export { parseJayFile, getJayHtmlImports } from './jay-target/jay-html-parser';

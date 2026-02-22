@@ -33,6 +33,8 @@ import {
     parseComponentPropExpression,
     parseCondition,
     parsePropertyExpression,
+    parseServerCondition,
+    parseServerTemplateExpression,
     parseStyleDeclarations,
     parseTextExpression,
     Variables,
@@ -1988,6 +1990,8 @@ interface HydrateContext {
     dynamicRef: boolean;
     refNameGenerator: RefNameGenerator;
     importedRefNameToRef: Map<string, Ref>;
+    importedSymbols: Set<string>;
+    headlessContractNames: Set<string>;
 }
 
 /**
@@ -2015,7 +2019,7 @@ function renderHydrateNode(node: Node, context: HydrateContext): RenderFragment 
 function buildRenderContext(context: HydrateContext): RenderContext {
     return {
         variables: context.variables,
-        importedSymbols: new Set(),
+        importedSymbols: context.importedSymbols,
         indent: context.indent,
         dynamicRef: context.dynamicRef,
         importedSandboxedSymbols: new Set(),
@@ -2027,7 +2031,7 @@ function buildRenderContext(context: HydrateContext): RenderContext {
         isInsideGuard: false,
         insideFastForEach: false,
         usedComponentImports: new Set(),
-        headlessContractNames: new Set(),
+        headlessContractNames: context.headlessContractNames,
         headlessImports: [],
         headlessInstanceDefs: [],
         headlessInstanceCounter: { count: 0 },
@@ -2150,6 +2154,30 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
                 ...createChildren.validations,
             ],
             mergeRefsTrees(itemContent.refs, createChildren.refs),
+        );
+    }
+
+    // --- Component (childComp) ---
+    const componentMatch = getComponentName(
+        element.rawTagName,
+        context.importedSymbols,
+        context.headlessContractNames,
+    );
+    if (componentMatch !== null) {
+        const componentName = componentMatch.name;
+        // In hydrate mode, child components handle their own hydration.
+        // Emit the same childComp() call as the standard element target.
+        const propsGetterAndRefs = renderChildCompProps(element, renderContext);
+        const renderedRef = renderChildCompRef(element, renderContext, componentName);
+        const refSuffix = renderedRef.rendered !== '' ? `, ${renderedRef.rendered}` : '';
+        const getProps = `(${context.variables.currentVar}: ${context.variables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
+        return new RenderFragment(
+            `${context.indent.firstLine}childComp(${componentName}, ${getProps}${refSuffix})`,
+            Imports.for(Import.childComp)
+                .plus(propsGetterAndRefs.imports)
+                .plus(renderedRef.imports),
+            propsGetterAndRefs.validations,
+            renderedRef.refs,
         );
     }
 
@@ -2311,6 +2339,7 @@ function renderHydrateElementContent(
 function renderHydrate(
     types: JayType,
     rootBodyElement: HTMLElement,
+    importStatements: JayImportLink[],
     elementType: string,
     preRenderType: string,
     refsType: string,
@@ -2318,6 +2347,8 @@ function renderHydrate(
 ): RenderFragment {
     const variables = new Variables(types);
     const importedRefNameToRef = processImportedHeadless(headlessImports);
+    const { importedSymbols } = processImportedComponents(importStatements);
+    const headlessContractNames = new Set(headlessImports.map((h) => h.contractName));
     const context: HydrateContext = {
         variables,
         indent: new Indent('        '),
@@ -2325,6 +2356,8 @@ function renderHydrate(
         dynamicRef: false,
         refNameGenerator: new RefNameGenerator(),
         importedRefNameToRef,
+        importedSymbols,
+        headlessContractNames,
     };
 
     // Always adopt the root body element — it provides the single-expression
@@ -2389,6 +2422,7 @@ export function generateElementHydrateFile(
     const renderedHydrate = renderHydrate(
         jayFile.types,
         jayFile.body,
+        jayFile.imports,
         elementType,
         preRenderType,
         refsType,
@@ -2441,6 +2475,426 @@ export function generateElementHydrateFile(
         .filter((_) => _ !== null && _ !== '')
         .join('\n\n');
     return new WithValidations(renderedFile, renderedHydrate.validations);
+}
+
+// ============================================================================
+// Server Element Target
+// ============================================================================
+
+interface ServerContext {
+    variables: Variables;
+    indent: Indent;
+    coordinateCounter: { count: number };
+}
+
+/** Helper: create a single-line w() statement as a RenderFragment */
+function w(indent: Indent, code: string, imports: Imports = Imports.none()): RenderFragment {
+    return new RenderFragment(`${indent.firstLine}w(${code});`, imports);
+}
+
+function renderServerNode(node: Node, context: ServerContext): RenderFragment {
+    if (node.nodeType === NodeType.TEXT_NODE) {
+        const text = node.innerText;
+        if (text.trim() === '') return RenderFragment.empty();
+        // Use template PEG rule to get raw accessor (no dt() wrapping)
+        const [fragment, isDynamic] = parseServerTemplateExpression(
+            textEscape(text),
+            context.variables,
+        );
+        if (isDynamic) {
+            return w(
+                context.indent,
+                `escapeHtml(String(${fragment.rendered}))`,
+                Imports.for(Import.escapeHtml),
+            );
+        }
+        // Static text — fragment.rendered is already single-quoted
+        return w(context.indent, fragment.rendered);
+    }
+    if (node.nodeType === NodeType.ELEMENT_NODE) {
+        return renderServerElement(node as HTMLElement, context);
+    }
+    return RenderFragment.empty();
+}
+
+function renderServerElement(element: HTMLElement, context: ServerContext): RenderFragment {
+    const { variables, indent } = context;
+
+    // --- Conditional (if=) ---
+    if (isConditional(element)) {
+        const condition = element.getAttribute('if');
+        // Use condition PEG rule (raw expression, no arrow function wrapping)
+        const renderedCondition = parseServerCondition(condition, variables);
+        const body = renderServerElementContent(element, {
+            ...context,
+            indent: new Indent(indent.curr + '    '),
+        });
+        return new RenderFragment(
+            `${indent.firstLine}if (${renderedCondition.rendered}) {\n${body.rendered}\n${indent.firstLine}}`,
+            body.imports,
+            body.validations,
+        );
+    }
+
+    // --- forEach ---
+    if (isForEach(element)) {
+        const forEach = element.getAttribute('forEach');
+        const trackBy = element.getAttribute('trackBy');
+        const forEachAccessor = parseAccessor(forEach, variables);
+
+        if (forEachAccessor.resolvedType === JayUnknown)
+            return new RenderFragment('', Imports.none(), [
+                `forEach directive - failed to resolve forEach type [forEach=${forEach}]`,
+            ]);
+        if (!isArrayType(forEachAccessor.resolvedType))
+            return new RenderFragment('', Imports.none(), [
+                `forEach directive - resolved forEach type is not an array [forEach=${forEach}]`,
+            ]);
+
+        const forEachVariables = variables.childVariableFor(forEachAccessor);
+        const arrayExpr = forEachAccessor.render().rendered;
+        const itemIndent = new Indent(indent.curr + '    ');
+        const itemContext: ServerContext = {
+            ...context,
+            variables: forEachVariables,
+            indent: itemIndent,
+            coordinateCounter: { count: 0 },
+        };
+
+        // Build opening tag for each item with jay-coordinate from trackBy
+        const trackByExpr = `${forEachVariables.currentVar}.${trackBy}`;
+        const openTag = renderServerOpenTag(element, itemContext, null);
+        const coordinateW = w(
+            itemIndent,
+            `' jay-coordinate="' + escapeAttr(String(${trackByExpr})) + '">'`,
+            Imports.for(Import.escapeAttr),
+        );
+
+        // Render children
+        const childNodes = element.childNodes.filter(
+            (_) => _.nodeType !== NodeType.TEXT_NODE || (_.innerText || '').trim() !== '',
+        );
+        const children = mergeServerFragments(
+            childNodes.map((child) => renderServerNode(child, itemContext)),
+        );
+        const closeTag = w(itemIndent, `'</${element.rawTagName}>'`);
+
+        const itemBody = mergeServerFragments([openTag, coordinateW, children, closeTag]);
+
+        return new RenderFragment(
+            `${indent.firstLine}for (const ${forEachVariables.currentVar} of ${arrayExpr}) {\n${itemBody.rendered}\n${indent.firstLine}}`,
+            itemBody.imports,
+            itemBody.validations,
+        );
+    }
+
+    // --- Regular element ---
+    return renderServerElementContent(element, context);
+}
+
+/** Merge multiple server fragments, filtering out empty ones. */
+function mergeServerFragments(fragments: RenderFragment[]): RenderFragment {
+    return fragments
+        .filter((f) => f.rendered.trim().length > 0)
+        .reduce((prev, curr) => RenderFragment.merge(prev, curr, '\n'), RenderFragment.empty());
+}
+
+/**
+ * Build the opening tag w() calls (tag name + attributes) as a RenderFragment.
+ * coordinateClose: if non-null, append jay-coordinate and '>'; if null, just '>'.
+ */
+function renderServerOpenTag(
+    element: HTMLElement,
+    context: ServerContext,
+    coordinateClose: string | null,
+): RenderFragment {
+    const parts: RenderFragment[] = [];
+    parts.push(w(context.indent, `'<${element.rawTagName}'`));
+
+    const attrs = renderServerAttributes(element, context);
+    if (attrs.rendered.trim()) {
+        parts.push(attrs);
+    }
+
+    // coordinateClose is appended by the caller for forEach (dynamic coordinate)
+    // For regular elements, it's included here
+    if (coordinateClose !== null) {
+        parts.push(w(context.indent, `' jay-coordinate="${coordinateClose}">'`));
+    }
+    // If coordinateClose is null, caller handles closing the tag
+
+    return mergeServerFragments(parts);
+}
+
+function renderServerAttributes(element: HTMLElement, context: ServerContext): RenderFragment {
+    const { variables, indent } = context;
+    const attributes = element.attributes;
+    const parts: RenderFragment[] = [];
+
+    Object.keys(attributes).forEach((attrName) => {
+        const attrCanonical = attrName.toLowerCase();
+        if (
+            attrCanonical === 'if' ||
+            attrCanonical === 'foreach' ||
+            attrCanonical === 'trackby' ||
+            attrCanonical === 'ref' ||
+            attrCanonical === 'slowforeach' ||
+            attrCanonical === 'jayindex' ||
+            attrCanonical === 'jaytrackby'
+        )
+            return;
+
+        const attrValue = attributes[attrName];
+
+        if (propertyMapping[attrCanonical]?.type === BOOLEAN_ATTRIBUTE) {
+            if (attrValue === '') {
+                parts.push(w(indent, `' ${attrCanonical}'`));
+            } else {
+                // Use condition PEG rule (raw expression)
+                const condExpr = parseServerCondition(attrValue, variables);
+                parts.push(
+                    new RenderFragment(
+                        `${indent.firstLine}if (${condExpr.rendered}) { w(' ${attrCanonical}'); }`,
+                    ),
+                );
+            }
+        } else if (propertyMapping[attrCanonical]?.type === PROPERTY) {
+            const [fragment, isDynamic] = parseServerTemplateExpression(attrValue, variables);
+            if (isDynamic) {
+                parts.push(
+                    w(
+                        indent,
+                        `' ${attrCanonical}="' + escapeAttr(String(${fragment.rendered})) + '"'`,
+                        Imports.for(Import.escapeAttr),
+                    ),
+                );
+            } else {
+                const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                parts.push(w(indent, `' ${attrCanonical}="${escaped}"'`));
+            }
+        } else if (attrCanonical === 'class') {
+            // Class attribute — may have conditional class syntax like {bool1?main}
+            const classExpr = parseClassExpression(attrValue, variables);
+            if (classExpr.imports.has(Import.dynamicAttribute)) {
+                // classExpression PEG wraps dynamic classes with da(vs => `...`).
+                // Extract the template literal: strip "da(vs => " prefix and ")" suffix.
+                const rawExpr = classExpr.rendered.replace(/^da\(\w+ => /, '').replace(/\)$/, '');
+                parts.push(
+                    w(
+                        indent,
+                        `' class="' + escapeAttr(String(${rawExpr})) + '"'`,
+                        Imports.for(Import.escapeAttr),
+                    ),
+                );
+            } else {
+                const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                parts.push(w(indent, `' class="${escaped}"'`));
+            }
+        } else if (attrCanonical === 'style') {
+            const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+            parts.push(w(indent, `' style="${escaped}"'`));
+        } else {
+            // Regular attribute — use template PEG rule for raw accessor
+            const [fragment, isDynamic] = parseServerTemplateExpression(
+                textEscape(attrValue),
+                variables,
+            );
+            if (isDynamic) {
+                parts.push(
+                    w(
+                        indent,
+                        `' ${attrCanonical}="' + escapeAttr(String(${fragment.rendered})) + '"'`,
+                        Imports.for(Import.escapeAttr),
+                    ),
+                );
+            } else {
+                const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                parts.push(w(indent, `' ${attrCanonical}="${escaped}"'`));
+            }
+        }
+    });
+
+    return mergeServerFragments(parts);
+}
+
+/** Void elements that don't have closing tags */
+const voidElements = new Set([
+    'area',
+    'base',
+    'br',
+    'col',
+    'embed',
+    'hr',
+    'img',
+    'input',
+    'link',
+    'meta',
+    'param',
+    'source',
+    'track',
+    'wbr',
+]);
+
+function renderServerElementContent(
+    element: HTMLElement,
+    context: ServerContext,
+    forceCoordinate: boolean = false,
+): RenderFragment {
+    const { variables, indent } = context;
+    const refAttr = element.attributes.ref;
+    const refName = refAttr ? camelCase(refAttr) : null;
+
+    // Check if this element has a single dynamic text child
+    const childNodes =
+        element.childNodes.length > 1
+            ? element.childNodes.filter(
+                  (_) => _.nodeType !== NodeType.TEXT_NODE || (_.innerText || '').trim() !== '',
+              )
+            : element.childNodes;
+
+    let dynamicTextFragment: RenderFragment | null = null;
+    if (childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE) {
+        const text = childNodes[0].innerText || '';
+        const [fragment, isDynamic] = parseServerTemplateExpression(textEscape(text), variables);
+        if (isDynamic) {
+            dynamicTextFragment = fragment;
+        }
+    }
+
+    // Determine coordinate
+    const needsCoordinate =
+        forceCoordinate ||
+        dynamicTextFragment !== null ||
+        refName !== null ||
+        hasDynamicAttributeBindings(element, variables) ||
+        hasInteractiveChildElements(childNodes);
+
+    let coordinate: string | null = null;
+    if (needsCoordinate) {
+        coordinate = refName || String(context.coordinateCounter.count++);
+    }
+
+    const isVoid = voidElements.has(element.rawTagName.toLowerCase());
+    const parts: RenderFragment[] = [];
+
+    // Opening tag
+    parts.push(w(indent, `'<${element.rawTagName}'`));
+    const attrs = renderServerAttributes(element, context);
+    if (attrs.rendered.trim()) {
+        parts.push(attrs);
+    }
+    if (coordinate !== null) {
+        parts.push(w(indent, `' jay-coordinate="${coordinate}">'`));
+    } else {
+        parts.push(w(indent, `'>'`));
+    }
+
+    if (isVoid) return mergeServerFragments(parts);
+
+    // Children
+    if (dynamicTextFragment) {
+        parts.push(
+            w(
+                indent,
+                `escapeHtml(String(${dynamicTextFragment.rendered}))`,
+                Imports.for(Import.escapeHtml),
+            ),
+        );
+    } else {
+        const childContext = { ...context, indent: new Indent(indent.curr + '    ') };
+        for (const child of childNodes) {
+            const childFragment = renderServerNode(child, childContext);
+            if (childFragment.rendered.trim()) {
+                parts.push(childFragment);
+            }
+        }
+    }
+
+    // Closing tag
+    parts.push(w(indent, `'</${element.rawTagName}>'`));
+
+    return mergeServerFragments(parts);
+}
+
+function hasDynamicAttributeBindings(element: HTMLElement, variables: Variables): boolean {
+    const attributes = element.attributes;
+    for (const attrName of Object.keys(attributes)) {
+        const attrCanonical = attrName.toLowerCase();
+        if (
+            attrCanonical === 'if' ||
+            attrCanonical === 'foreach' ||
+            attrCanonical === 'trackby' ||
+            attrCanonical === 'ref' ||
+            attrCanonical === 'slowforeach' ||
+            attrCanonical === 'jayindex' ||
+            attrCanonical === 'jaytrackby'
+        )
+            continue;
+        const attrValue = attributes[attrName];
+        if (propertyMapping[attrCanonical]?.type === BOOLEAN_ATTRIBUTE) {
+            if (attrValue !== '') return true; // Dynamic boolean is always dynamic
+        } else if (propertyMapping[attrCanonical]?.type === PROPERTY) {
+            const [, isDynamic] = parseServerTemplateExpression(attrValue, variables);
+            if (isDynamic) return true;
+        } else if (attrCanonical === 'class') {
+            const classExpr = parseClassExpression(attrValue, variables);
+            if (classExpr.imports.has(Import.dynamicAttribute)) return true;
+        } else {
+            const [, isDynamic] = parseServerTemplateExpression(textEscape(attrValue), variables);
+            if (isDynamic) return true;
+        }
+    }
+    return false;
+}
+
+function hasInteractiveChildElements(childNodes: Node[]): boolean {
+    return childNodes.some(
+        (child) =>
+            child.nodeType === NodeType.ELEMENT_NODE &&
+            (isConditional(child as HTMLElement) || isForEach(child as HTMLElement)),
+    );
+}
+
+export function generateServerElementFile(jayFile: JayHtmlSourceFile): WithValidations<string> {
+    const types = generateTypes(jayFile.types);
+    const variables = new Variables(jayFile.types);
+    const rootElement = ensureSingleChildElement(jayFile.body);
+
+    if (!rootElement.val) {
+        return new WithValidations('', rootElement.validations);
+    }
+
+    const context: ServerContext = {
+        variables,
+        indent: new Indent('    '),
+        coordinateCounter: { count: 0 },
+    };
+
+    // Render root element with forced coordinate (matches hydrate forceAdopt)
+    const rendered = renderServerElementContent(rootElement.val as HTMLElement, context, true);
+
+    const viewStateType = jayFile.types.name;
+
+    // Build import statement for ssr-runtime
+    const importParts: string[] = [];
+    if (rendered.imports.has(Import.escapeHtml)) importParts.push('escapeHtml');
+    if (rendered.imports.has(Import.escapeAttr)) importParts.push('escapeAttr');
+    importParts.push('type ServerRenderContext');
+
+    const importStatement = `import {${importParts.join(', ')}} from "@jay-framework/ssr-runtime";`;
+
+    const renderedFile = [
+        importStatement,
+        types,
+        `export function renderToStream(vs: ${viewStateType}, ctx: ServerRenderContext): void {
+    const { write: w } = ctx;
+${rendered.rendered}
+}`,
+    ]
+        .filter((_) => _ !== null && _ !== '')
+        .join('\n\n');
+
+    return new WithValidations(renderedFile, rendered.validations);
 }
 
 const CALL_INITIALIZE_WORKER = `setWorkerPort(new JayPort(new HandshakeMessageJayChannel(self)));

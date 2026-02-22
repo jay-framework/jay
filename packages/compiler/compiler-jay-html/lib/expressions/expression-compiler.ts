@@ -293,6 +293,26 @@ export function parseClassExpression(expression: string, vars: Variables): Rende
     return doParse(expression, 'classExpression', vars);
 }
 
+/**
+ * Parse a template expression and return the raw accessor without dt()/da() wrapping.
+ * Returns [fragment, isDynamic]. For the server target.
+ */
+export function parseServerTemplateExpression(
+    expression: string,
+    vars: Variables,
+): [RenderFragment, boolean] {
+    return doParse(expression, 'template', vars);
+}
+
+/**
+ * Parse a condition expression without arrow function wrapping.
+ * Returns the raw condition (e.g., "vs.cond" instead of "vs => vs.cond").
+ * For the server target.
+ */
+export function parseServerCondition(expression: string, vars: Variables): RenderFragment {
+    return doParse(expression, 'condition', vars);
+}
+
 export function parseReactClassExpression(expression: string, vars: Variables): RenderFragment {
     const { rendered, validations, refs }: RenderFragment = doParse(
         expression,

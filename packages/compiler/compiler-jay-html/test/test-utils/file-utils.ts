@@ -16,6 +16,7 @@ import {
     generateElementBridgeFile,
     generateElementFileReactTarget,
     generateElementHydrateFile,
+    generateServerElementFile,
 } from '../../lib';
 import { generateElementFile } from '../../lib';
 import path from 'path';
@@ -62,6 +63,31 @@ export async function readFixtureElementBridgeFile(folder) {
 
 export async function readFixtureElementHydrateFile(folder) {
     return prettify(await readFixtureFileRaw(folder, 'generated-element-hydrate.ts'));
+}
+
+export async function readFixtureServerElementFile(folder) {
+    return prettify(await readFixtureFileRaw(folder, 'generated-server-element.ts'));
+}
+
+export async function readFileAndGenerateServerElementFile(
+    folder: string,
+    givenFile?: string,
+    resolver?: JayImportResolver,
+) {
+    const dirname = fixtureDir(folder);
+    const file = givenFile || getFileFromFolder(folder);
+    const jayFile = await readFixtureSourceJayFile(folder, file);
+    const parsedFile = checkValidationErrors(
+        await parseJayFile(
+            jayFile,
+            `${file}.jay-html`,
+            dirname,
+            {},
+            resolver || TEST_IMPORT_RESOLVER,
+            fixturesRoot(),
+        ),
+    );
+    return generateServerElementFile(parsedFile);
 }
 
 export async function readFixtureReactFile(folder, file) {

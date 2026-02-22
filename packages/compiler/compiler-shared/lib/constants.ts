@@ -11,6 +11,7 @@ export const JAY_RUNTIME = '@jay-framework/runtime';
 export const JAY_4_REACT = '@jay-framework/4-react';
 export const JAY_FULLSTACK_COMPONENTS = '@jay-framework/fullstack-component';
 export const JAY_STACK_CLIENT_RUNTIME = '@jay-framework/stack-client-runtime';
+export const JAY_SSR_RUNTIME = '@jay-framework/ssr-runtime';
 export const REACT = 'react';
 
 export const MAKE_JAY_COMPONENT = 'makeJayComponent';

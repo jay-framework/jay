@@ -73,4 +73,24 @@ describe('generate jay-html element hydrate', () => {
             );
         });
     });
+
+    describe('components', () => {
+        it('for counter component', async () => {
+            const folder = 'components/counter';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
+        it('for component in component', async () => {
+            const folder = 'components/component-in-component';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+    });
 });

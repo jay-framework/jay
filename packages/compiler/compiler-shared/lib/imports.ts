@@ -4,6 +4,7 @@ import {
     JAY_FULLSTACK_COMPONENTS,
     JAY_RUNTIME,
     JAY_SECURE,
+    JAY_SSR_RUNTIME,
     JAY_STACK_CLIENT_RUNTIME,
 } from './constants';
 
@@ -303,6 +304,13 @@ export const Import = {
     hydrateForEach: importStatementFragment(
         JAY_RUNTIME,
         'hydrateForEach',
+        ImportsFor.implementation,
+    ),
+    escapeHtml: importStatementFragment(JAY_SSR_RUNTIME, 'escapeHtml', ImportsFor.implementation),
+    escapeAttr: importStatementFragment(JAY_SSR_RUNTIME, 'escapeAttr', ImportsFor.implementation),
+    ServerRenderContext: importStatementFragment(
+        JAY_SSR_RUNTIME,
+        'type ServerRenderContext',
         ImportsFor.implementation,
     ),
 };
