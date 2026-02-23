@@ -368,6 +368,38 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
     },
 
     async convertFromJayHtml(parsedJayHtml, pageUrl, projectPage, plugins) {
+        // Optional: Enable computed style enrichment via environment variable
+        // This requires a running dev server
+        const enableComputedStyles = process.env.ENABLE_COMPUTED_STYLES === '1';
+        let computedStyleMap;
+
+        if (enableComputedStyles) {
+            try {
+                const { enrichWithComputedStyles, generateVariantScenarios } = await import(
+                    './computed-style-enricher'
+                );
+                
+                const devServerUrl = process.env.DEV_SERVER_URL || 'http://localhost:3000';
+                const scenarios = generateVariantScenarios(
+                    parsedJayHtml.body,
+                    projectPage.contract,
+                    12
+                );
+
+                console.log('[Import] Computing styles via headless browser...');
+                computedStyleMap = await enrichWithComputedStyles({
+                    pageRoute: pageUrl,
+                    devServerUrl,
+                    scenarios,
+                    timeout: 10000,
+                    maxScenarios: 12,
+                });
+            } catch (error) {
+                console.warn('[Import] Computed style enrichment failed:', (error as Error).message);
+                computedStyleMap = undefined;
+            }
+        }
+
         const ir = buildImportIR(
             parsedJayHtml.body,
             pageUrl,
@@ -377,6 +409,7 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
                 headlessImports: parsedJayHtml.headlessImports,
                 usedComponents: projectPage.usedComponents,
                 css: parsedJayHtml.css,
+                computedStyleMap,
             },
         );
         return adaptIRToFigmaVendorDoc(ir);

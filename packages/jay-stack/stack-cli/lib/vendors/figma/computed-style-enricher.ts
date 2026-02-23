@@ -6,6 +6,8 @@
  * solve: cascade, inheritance, shorthand expansion, computed values.
  */
 
+import type { HTMLElement } from 'node-html-parser';
+import type { Contract } from '@jay-framework/editor-protocol';
 import type {
     ComputedStyleMap,
     ComputedStyleData,
@@ -59,19 +61,32 @@ export async function enrichWithComputedStyles(
             // Set timeout
             page.setDefaultTimeout(options.timeout ?? 5000);
 
-            // Navigate to page
-            const url = `${options.devServerUrl}${options.pageRoute}`;
-            console.log(`[ComputedStyles] Navigating to ${url}`);
+            const scenarios = options.scenarios && options.scenarios.length > 0 
+                ? options.scenarios 
+                : [{ id: 'default', contractValues: {}, queryString: '' }];
 
-            await page.goto(url, { waitUntil: 'networkidle' });
+            const mergedStyleMap = new Map<string, ComputedStyleData>();
 
-            // Extract computed styles (Phase 3)
-            const computedStyleMap = await extractComputedStyles(page);
+            // Render each scenario
+            for (const scenario of scenarios) {
+                const url = `${options.devServerUrl}${options.pageRoute}${scenario.queryString}`;
+                console.log(`[ComputedStyles] Navigating to ${url} (scenario: ${scenario.id})`);
 
-            console.log(`[ComputedStyles] Enriched ${computedStyleMap.size} elements`);
+                await page.goto(url, { waitUntil: 'networkidle' });
+
+                // Extract computed styles for this scenario
+                const scenarioStyleMap = await extractComputedStyles(page, scenario.id);
+
+                // Merge into main map
+                for (const [key, data] of scenarioStyleMap) {
+                    mergedStyleMap.set(key, data);
+                }
+            }
+
+            console.log(`[ComputedStyles] Enriched ${mergedStyleMap.size} elements across ${scenarios.length} scenario(s)`);
 
             await context.close();
-            return computedStyleMap;
+            return mergedStyleMap;
         } finally {
             await browser.close();
         }
@@ -142,6 +157,40 @@ async function extractComputedStyles(
             'text-transform',
         ];
 
+        /**
+         * Generate deterministic DOM path for an element.
+         * Format: tag:nth-child(N) > tag:nth-child(M) > ...
+         */
+        function generateDomPath(element: any): string {
+            const segments: string[] = [];
+            let current: any = element;
+
+            while (current && current !== document.body) {
+                const parent = current.parentElement;
+                if (!parent) break;
+
+                const siblings = Array.from(parent.children);
+                const index = siblings.indexOf(current) + 1;
+                const tag = current.tagName.toLowerCase();
+                
+                // Add semantic anchors if available
+                const id = current.getAttribute('id');
+                const ref = current.getAttribute('ref');
+                
+                if (id) {
+                    segments.unshift(`${tag}#${id}`);
+                } else if (ref) {
+                    segments.unshift(`${tag}[ref="${ref}"]`);
+                } else {
+                    segments.unshift(`${tag}:nth-child(${index})`);
+                }
+                
+                current = parent;
+            }
+
+            return segments.join(' > ');
+        }
+
         const result: Array<{
             key: string;
             styles: Record<string, string>;
@@ -149,13 +198,13 @@ async function extractComputedStyles(
         }> = [];
 
         // Query all elements with data-figma-id
-        const elements = document.querySelectorAll('[data-figma-id]');
+        const elementsWithFigmaId = document.querySelectorAll('[data-figma-id]');
 
-        for (const element of Array.from(elements)) {
+        for (const element of Array.from(elementsWithFigmaId)) {
             const figmaId = element.getAttribute('data-figma-id');
             if (!figmaId) continue;
 
-            const htmlElement = element as HTMLElement;
+            const htmlElement = element as any;
             const computedStyle = window.getComputedStyle(htmlElement);
             const rect = htmlElement.getBoundingClientRect();
 
@@ -169,6 +218,39 @@ async function extractComputedStyles(
 
             result.push({
                 key: figmaId,
+                styles,
+                boundingRect: {
+                    x: rect.x,
+                    y: rect.y,
+                    width: rect.width,
+                    height: rect.height,
+                },
+            });
+        }
+
+        // Also query elements without data-figma-id (developer-authored pages)
+        // Use DOM path as fallback key
+        const allElements = document.querySelectorAll('body *');
+        
+        for (const element of Array.from(allElements)) {
+            if (element.getAttribute('data-figma-id')) continue; // Skip elements with figma-id
+            
+            const htmlElement = element as any;
+            const computedStyle = window.getComputedStyle(htmlElement);
+            const rect = htmlElement.getBoundingClientRect();
+
+            const styles: Record<string, string> = {};
+            for (const prop of properties) {
+                const value = computedStyle.getPropertyValue(prop);
+                if (value && value !== 'none' && value !== 'normal' && value !== '0px') {
+                    styles[prop] = value;
+                }
+            }
+
+            const domPath = generateDomPath(element);
+
+            result.push({
+                key: domPath,
                 styles,
                 boundingRect: {
                     x: rect.x,
@@ -206,10 +288,45 @@ async function extractComputedStyles(
  * @returns Array of variant scenarios
  */
 export function generateVariantScenarios(
-    bodyDom: any,
-    pageContract: any,
+    bodyDom: HTMLElement,
+    pageContract: Contract | undefined,
     maxScenarios: number = 12
 ): VariantScenario[] {
-    // Phase 4: Variant scenario generation (deferred to Step 5.2)
+    // TODO: Implement full scenario generation in a follow-up
+    // For now, return empty array (only default scenario will be rendered)
+    // This requires parsing Contract dataType strings to extract enum values
+    
+    if (!pageContract || !pageContract.tags || pageContract.tags.length === 0) {
+        return [];
+    }
+
+    // Scan for if attributes to see if we need scenarios
+    const ifConditions = new Set<string>();
+    scanForIfAttributes(bodyDom, ifConditions);
+
+    if (ifConditions.size === 0) {
+        return [];
+    }
+
+    console.log(`[ComputedStyles] Found ${ifConditions.size} if conditions, but scenario generation not yet implemented`);
+    console.log(`[ComputedStyles] Will render default scenario only`);
     return [];
+}
+
+/**
+ * Recursively scan HTML element for if attributes.
+ */
+function scanForIfAttributes(element: HTMLElement, conditions: Set<string>): void {
+    const ifAttr = element.getAttribute('if');
+    if (ifAttr) {
+        conditions.add(ifAttr);
+    }
+
+    if (element.childNodes) {
+        for (const child of element.childNodes) {
+            if ((child as any).rawTagName) {
+                scanForIfAttributes(child as HTMLElement, conditions);
+            }
+        }
+    }
 }
