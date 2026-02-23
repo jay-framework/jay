@@ -178,7 +178,14 @@ export function hydrateConditional<ViewState>(
     const adopted = adoptExisting();
 
     if (!adopted || !adopted.dom) {
-        return adopted || { dom: undefined as any, update: noopUpdate, mount: noopMount, unmount: noopMount };
+        return (
+            adopted || {
+                dom: undefined as any,
+                update: noopUpdate,
+                mount: noopMount,
+                unmount: noopMount,
+            }
+        );
     }
 
     const dom = adopted.dom;
