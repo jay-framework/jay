@@ -74,6 +74,26 @@ describe('generate jay-html element hydrate', () => {
         });
     });
 
+    describe('duplicate refs', () => {
+        it('for headless contract with duplicate ref names', async () => {
+            const folder = 'collections/duplicate-ref-only-one-used';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
+        it('for same ref name in different branches', async () => {
+            const folder = 'collections/duplicate-ref-different-branches';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+    });
+
     describe('components', () => {
         it('for counter component', async () => {
             const folder = 'components/counter';
