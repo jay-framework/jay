@@ -2343,7 +2343,7 @@ function renderHydrateElementContent(
 
 function renderHydrate(
     types: JayType,
-    rootBodyElement: HTMLElement,
+    body: HTMLElement,
     importStatements: JayImportLink[],
     elementType: string,
     preRenderType: string,
@@ -2365,14 +2365,22 @@ function renderHydrate(
         headlessContractNames,
     };
 
-    // Always adopt the root body element — it provides the single-expression
+    // Use ensureSingleChildElement to skip the <body> wrapper and get the
+    // root content element — matching the server element target which does
+    // the same. This ensures coordinate numbering is aligned between both targets.
+    const rootElement = ensureSingleChildElement(body);
+    if (!rootElement.val) {
+        return new RenderFragment('', Imports.none(), rootElement.validations);
+    }
+
+    // Always adopt the root element — it provides the single-expression
     // return value for the constructor, composing all children.
     let renderedHydrate = renderHydrateElementContent(
-        rootBodyElement,
+        rootElement.val,
         context,
         buildRenderContext(context),
         null,
-        true, // forceAdopt — root body element always needs adoption
+        true, // forceAdopt — root element always needs adoption
     );
     renderedHydrate = optimizeRefs(renderedHydrate, headlessImports);
 

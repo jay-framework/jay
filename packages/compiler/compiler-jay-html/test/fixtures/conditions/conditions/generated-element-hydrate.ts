@@ -45,16 +45,14 @@ export function hydrate(
     const render = (viewState: ConditionsViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('0', {}, [
-                adoptElement('1', {}, [
-                    hydrateConditional(
-                        (vs) => vs.cond,
-                        () => adoptText('2', (vs) => vs.text1),
-                    ),
-                    hydrateConditional(
-                        (vs) => !vs.cond,
-                        () => adoptText('3', (vs) => vs.text2),
-                    ),
-                ]),
+                hydrateConditional(
+                    (vs) => vs.cond,
+                    () => adoptText('1', (vs) => vs.text1),
+                ),
+                hydrateConditional(
+                    (vs) => !vs.cond,
+                    () => adoptText('2', (vs) => vs.text2),
+                ),
             ]),
         ) as ConditionsElement;
     return [refManager.getPublicAPI() as ConditionsElementRefs, render];

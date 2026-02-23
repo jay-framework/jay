@@ -274,6 +274,10 @@ export class ConstructContext<ViewState> {
  */
 function buildCoordinateMap(root: Element): Map<string, Element> {
     const map = new Map<string, Element>();
+    // Include the root element itself if it has a coordinate
+    const rootKey = root.getAttribute('jay-coordinate');
+    if (rootKey) map.set(rootKey, root);
+    // Include all descendants with coordinates
     const elements = root.querySelectorAll('[jay-coordinate]');
     for (let i = 0; i < elements.length; i++) {
         const el = elements[i];
