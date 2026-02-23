@@ -120,7 +120,11 @@ function makeNestedIR(
     };
 }
 
-function importNestedAndGetChild(parentStyle: string, childStyle: string, childKind?: 'FRAME' | 'TEXT') {
+function importNestedAndGetChild(
+    parentStyle: string,
+    childStyle: string,
+    childKind?: 'FRAME' | 'TEXT',
+) {
     const ir = makeNestedIR(parentStyle, childStyle, childKind);
     const figmaDoc = adaptIRToFigmaVendorDoc(ir);
     const parentFrame = figmaDoc.children![0];

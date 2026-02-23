@@ -294,13 +294,17 @@ describe('style-resolver', () => {
             const css = '.card:hover { background-color: #f0f0f0; }';
             const { classMap, warnings } = parseCssToClassMap(css);
             expect(classMap.size).toBe(0);
-            expect(warnings).toEqual(expect.arrayContaining([expect.stringContaining('CSS_PSEUDO_NOT_SUPPORTED')]));
+            expect(warnings).toEqual(
+                expect.arrayContaining([expect.stringContaining('CSS_PSEUDO_NOT_SUPPORTED')]),
+            );
         });
 
         it('parseCssToClassMap: descendant selector emits warning', () => {
             const css = '.card .button { color: white; }';
             const { warnings } = parseCssToClassMap(css);
-            expect(warnings).toEqual(expect.arrayContaining([expect.stringContaining('CSS_COMPLEX_SELECTOR_SKIPPED')]));
+            expect(warnings).toEqual(
+                expect.arrayContaining([expect.stringContaining('CSS_COMPLEX_SELECTOR_SKIPPED')]),
+            );
         });
 
         it('resolveClassStyles: single class lookup', () => {
@@ -310,7 +314,9 @@ describe('style-resolver', () => {
         });
 
         it('resolveStyle merges class + inline (inline wins)', () => {
-            const classMap = new Map([['button', { 'background-color': '#000', 'font-size': '16px' }]]);
+            const classMap = new Map([
+                ['button', { 'background-color': '#000', 'font-size': '16px' }],
+            ]);
             const { style } = resolveStyle('font-size: 14px', ['button'], classMap);
             expect(style.fontSize).toBe(14);
             expect(style.backgroundColor).toBe('#000');

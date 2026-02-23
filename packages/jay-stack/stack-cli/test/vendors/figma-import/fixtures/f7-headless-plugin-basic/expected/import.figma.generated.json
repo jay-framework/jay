@@ -253,10 +253,7 @@
       "componentPropertyDefinitions": {
         "mediaType": {
           "type": "VARIANT",
-          "variantOptions": [
-            "IMAGE",
-            "VIDEO"
-          ]
+          "variantOptions": ["IMAGE", "VIDEO"]
         }
       },
       "children": [

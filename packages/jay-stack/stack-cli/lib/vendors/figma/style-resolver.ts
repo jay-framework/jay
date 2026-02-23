@@ -64,9 +64,7 @@ const RECOGNIZED_BUT_NOT_STORED = new Set([
 
 function parseBoxShadow(value: string): ImportIREffect | undefined {
     // Parse: offsetX offsetY blurRadius [spreadRadius] color
-    const match = value.match(
-        /^([\d.]+)px\s+([\d.]+)px\s+([\d.]+)px\s*(?:([\d.]+)px\s+)?(.+)$/,
-    );
+    const match = value.match(/^([\d.]+)px\s+([\d.]+)px\s+([\d.]+)px\s*(?:([\d.]+)px\s+)?(.+)$/);
     if (!match) return undefined;
     const [, xStr, yStr, blurStr, spreadStr, colorStr] = match;
     return {
