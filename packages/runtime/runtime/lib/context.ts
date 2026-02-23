@@ -154,14 +154,14 @@ export function wrapWithModifiedCheck<T extends object>(
 }
 
 export class ConstructContext<ViewState> {
-    private readonly _coordinateMap?: Map<string, Element>;
+    private readonly _coordinateMap?: Map<string, Element[]>;
     private readonly _rootElement?: Element;
 
     constructor(
         private readonly data: ViewState,
         public readonly forStaticElements: boolean = true,
         private readonly coordinateBase: Coordinate = [],
-        coordinateMap?: Map<string, Element>,
+        coordinateMap?: Map<string, Element[]>,
         rootElement?: Element,
     ) {
         this._coordinateMap = coordinateMap;
@@ -214,12 +214,17 @@ export class ConstructContext<ViewState> {
      * Resolve an element by its coordinate key from the hydration map.
      * The key is scoped by the current coordinateBase — e.g., inside a forEach
      * item with trackBy "item-1", resolveCoordinate("addBtn") looks up "item-1/addBtn".
+     *
+     * When multiple elements share the same coordinate (e.g., duplicate ref names),
+     * each call returns the next element in document order.
      */
     resolveCoordinate(key: string): Element | undefined {
         if (!this._coordinateMap) return undefined;
         const fullKey =
             this.coordinateBase.length > 0 ? this.coordinateBase.join('/') + '/' + key : key;
-        return this._coordinateMap.get(fullKey);
+        const elements = this._coordinateMap.get(fullKey);
+        if (!elements || elements.length === 0) return undefined;
+        return elements.shift();
     }
 
     static withRootContext<ViewState, Refs>(
@@ -269,20 +274,29 @@ export class ConstructContext<ViewState> {
 }
 
 /**
- * Build a coordinate → element map by querying all [jay-coordinate] elements
+ * Build a coordinate → element[] map by querying all [jay-coordinate] elements
  * inside the given root. This is called once during hydration setup.
+ *
+ * Elements are stored in document order. When multiple elements share the same
+ * coordinate (e.g., duplicate ref names), resolveCoordinate() returns them
+ * one at a time in order, preventing duplicate event handler binding.
  */
-function buildCoordinateMap(root: Element): Map<string, Element> {
-    const map = new Map<string, Element>();
+function buildCoordinateMap(root: Element): Map<string, Element[]> {
+    const map = new Map<string, Element[]>();
+    const addToMap = (key: string, el: Element) => {
+        const arr = map.get(key);
+        if (arr) arr.push(el);
+        else map.set(key, [el]);
+    };
     // Include the root element itself if it has a coordinate
     const rootKey = root.getAttribute('jay-coordinate');
-    if (rootKey) map.set(rootKey, root);
-    // Include all descendants with coordinates
+    if (rootKey) addToMap(rootKey, root);
+    // Include all descendants with coordinates (in document order)
     const elements = root.querySelectorAll('[jay-coordinate]');
     for (let i = 0; i < elements.length; i++) {
         const el = elements[i];
         const key = el.getAttribute('jay-coordinate');
-        if (key) map.set(key, el);
+        if (key) addToMap(key, el);
     }
     return map;
 }
