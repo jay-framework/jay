@@ -790,3 +790,14 @@ Both issues fixed — see DL#94 "Phase 5 Bug Fix — CSS and Head Links Missing 
 **Tests (2 new, total 11 hydrate tests, 535 total passing):**
 - `collections/duplicate-ref-only-one-used` — headless contract with same ref name (`isSelected`) in two branches, only one used in template.
 - `collections/duplicate-ref-different-branches` — same ref name (`deleteButton`) in forEach and conditional branches.
+
+### Phase 3 Bug Fix — Missing Headless Type Imports in SSR Server Element (Resolved)
+
+**Problem:** The generated server element file (`generated-server-element.ts`) used headless contract types (e.g., `CounterViewState`) in ViewState interfaces without importing them, causing TypeScript compile errors.
+
+**Root cause:** `generateServerElementFile` inlined enum types from headless contracts but never imported other types (ViewState, forEach iteration types). The client-side element generator handles this via `renderImports(filteredImports)`, but the server element generator had no equivalent.
+
+**Fix:** Collect all non-Refs type names from headless imports and generate import statements from the contract modules. Enums are now imported alongside other types instead of being inlined — since we're importing from the contract module anyway, there's no need to duplicate the enum definition.
+
+**Files modified:**
+- `jay-html-compiler.ts` — `generateServerElementFile` now generates contract import statements for headless types (ViewState, enums, iteration types), excluding Refs types (not used in SSR). Removed enum inlining.

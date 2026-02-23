@@ -3323,25 +3323,34 @@ export function generateServerElementFile(jayFile: JayHtmlSourceFile): WithValid
 
     const importStatement = `import {${importParts.join(', ')}} from "@jay-framework/ssr-runtime";`;
 
-    // Collect enum types from headless imports and generate inline definitions.
-    // Enums are inlined rather than imported because the SSR output file lives in a
-    // different directory (build/server-elements/) where the source-relative import
-    // paths would not resolve correctly.
-    const enumDefinitions: string[] = [];
-    const seenEnums = new Set<string>();
+    // Collect type names used from headless imports (ViewState types, enum types,
+    // forEach iteration types) so we can generate import statements for them.
+    // Refs types are excluded since SSR doesn't handle refs.
+    const usedTypeNames = new Set<string>();
+    const headlessModules = new Set<string>();
     for (const headless of jayFile.headlessImports) {
+        usedTypeNames.add(headless.rootType.name);
         for (const link of headless.contractLinks) {
+            headlessModules.add(link.module);
             for (const name of link.names) {
-                if (isEnumType(name.type) && !seenEnums.has(name.name)) {
-                    seenEnums.add(name.name);
-                    const enumDef = `enum ${name.name} {\n${name.type.values
-                        .map((_) => '  ' + _)
-                        .join(',\n')}\n}`;
-                    enumDefinitions.push(enumDef);
+                if (!name.name.endsWith('Refs')) {
+                    usedTypeNames.add(name.name);
                 }
             }
         }
     }
+
+    // Generate import statements for headless types (ViewState, enums, iteration types).
+    const contractImports = jayFile.imports
+        .filter((imp) => headlessModules.has(imp.module))
+        .map((imp) => {
+            const typeNames = imp.names
+                .filter((n) => usedTypeNames.has(n.as || n.name))
+                .map((n) => (n.as ? `${n.name} as ${n.as}` : n.name));
+            if (typeNames.length === 0) return null;
+            return `import {${typeNames.join(', ')}} from "${imp.module}";`;
+        })
+        .filter((_): _ is string => _ !== null);
 
     // Destructure onAsync from ctx when async directives are present
     const ctxDestructure = hasAsync
@@ -3350,7 +3359,7 @@ export function generateServerElementFile(jayFile: JayHtmlSourceFile): WithValid
 
     const renderedFile = [
         importStatement,
-        ...enumDefinitions,
+        ...contractImports,
         types,
         `export function renderToStream(vs: ${viewStateType}, ctx: ServerRenderContext): void {
     ${ctxDestructure}

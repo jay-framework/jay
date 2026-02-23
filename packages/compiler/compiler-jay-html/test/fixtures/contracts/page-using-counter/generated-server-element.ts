@@ -1,9 +1,6 @@
 import { escapeHtml, type ServerRenderContext } from '@jay-framework/ssr-runtime';
 
-enum IsPositive {
-    positive,
-    negative,
-}
+import { CounterViewState, IsPositive } from '../counter/counter.jay-contract';
 
 export interface PageUsingCounterViewState {
     counter?: CounterViewState;
