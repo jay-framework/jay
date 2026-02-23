@@ -43,7 +43,25 @@ function parseUnitless(value: string): number | undefined {
     return !isNaN(num) ? num : undefined;
 }
 
-const RECOGNIZED_BUT_NOT_STORED = new Set(['box-sizing', 'overflow', 'object-fit', 'text-align']);
+const RECOGNIZED_BUT_NOT_STORED = new Set([
+    'box-sizing',
+    'overflow',
+    'overflow-x',
+    'overflow-y',
+    'object-fit',
+    'text-align',
+    'flex-grow',
+    'align-self',
+    'border-style',
+    'scrollbar-width',
+    'scrollbar-color',
+    '-webkit-backdrop-filter',
+    'backdrop-filter',
+    'box-shadow',
+    'filter',
+    'transform',
+    'transform-origin',
+]);
 
 export function resolveStyle(
     inlineStyle: string,
@@ -178,6 +196,30 @@ export function resolveStyle(
             case 'background-color':
                 style.backgroundColor = value;
                 break;
+            case 'background-image': {
+                const solidGradient = value.match(
+                    /^linear-gradient\(rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\),\s*rgba\(\1,\s*\2,\s*\3,\s*\4\)\)$/,
+                );
+                if (solidGradient) {
+                    const [, rs, gs, bs, as] = solidGradient;
+                    const r = parseInt(rs, 10);
+                    const g = parseInt(gs, 10);
+                    const b = parseInt(bs, 10);
+                    const a = parseFloat(as);
+                    const hex = `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+                    if (a < 1) {
+                        style.backgroundColor = `rgba(${r}, ${g}, ${b}, ${a})`;
+                    } else {
+                        style.backgroundColor = hex;
+                    }
+                }
+                break;
+            }
+            case 'background-size':
+            case 'background-position':
+            case 'background-repeat':
+            case 'background':
+                break;
             case 'color':
                 style.textColor = value;
                 break;
@@ -218,6 +260,15 @@ export function resolveStyle(
                     if (widthPx !== undefined) style.borderWidth = widthPx;
                 }
                 if (parts.length >= 3) style.borderColor = parts[2];
+                break;
+            }
+            case 'border-width': {
+                const px = parsePx(value);
+                if (px !== undefined) style.borderWidth = px;
+                break;
+            }
+            case 'border-color': {
+                style.borderColor = value;
                 break;
             }
             case 'border-radius': {

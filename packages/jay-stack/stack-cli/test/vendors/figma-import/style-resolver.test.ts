@@ -162,6 +162,41 @@ describe('style-resolver', () => {
             expect(warnings.some((w) => w.includes('CSS_UNSUPPORTED_PROPERTY'))).toBe(true);
             expect(warnings.some((w) => w.includes('cursor'))).toBe(true);
         });
+
+        it('background-image: linear-gradient solid fill → backgroundColor', () => {
+            const { style, warnings } = resolveStyle(
+                'background-image: linear-gradient(rgba(255, 255, 255, 1), rgba(255, 255, 255, 1))',
+            );
+            expect(style.backgroundColor).toBe('#ffffff');
+            expect(warnings).toEqual([]);
+        });
+
+        it('background-image: linear-gradient with alpha → rgba backgroundColor', () => {
+            const { style } = resolveStyle(
+                'background-image: linear-gradient(rgba(17, 17, 17, 0.8), rgba(17, 17, 17, 0.8))',
+            );
+            expect(style.backgroundColor).toBe('rgba(17, 17, 17, 0.8)');
+        });
+
+        it('background-size/position/repeat are recognized (no warning)', () => {
+            const { warnings } = resolveStyle(
+                'background-size: 100% 100%; background-position: center; background-repeat: no-repeat',
+            );
+            expect(warnings).toEqual([]);
+        });
+
+        it('border-width and border-color parsed individually', () => {
+            const { style } = resolveStyle('border-width: 2px; border-color: rgb(200, 200, 200)');
+            expect(style.borderWidth).toBe(2);
+            expect(style.borderColor).toBe('rgb(200, 200, 200)');
+        });
+
+        it('export-emitted properties do not produce warnings', () => {
+            const exportStyle =
+                'overflow: visible; box-sizing: border-box; scrollbar-width: thin; scrollbar-color: rgba(0,0,0,0.3) transparent';
+            const { warnings } = resolveStyle(exportStyle);
+            expect(warnings).toEqual([]);
+        });
     });
 
     describe('parseInlineStyle', () => {

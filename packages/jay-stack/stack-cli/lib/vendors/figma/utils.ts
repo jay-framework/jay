@@ -479,20 +479,32 @@ export function getBackgroundFillsStyle(node: FigmaVendorDocument): string {
         return 'background: transparent;';
     }
 
+    const visibleFills = [...node.fills].reverse().filter((f: any) => f.visible !== false);
+    if (visibleFills.length === 0) {
+        return 'background: transparent;';
+    }
+
+    // Single solid fill → emit clean background-color for roundtrip fidelity
+    if (visibleFills.length === 1 && visibleFills[0].type === 'SOLID' && visibleFills[0].color) {
+        const { r, g, b } = visibleFills[0].color;
+        const opacity = visibleFills[0].opacity !== undefined ? visibleFills[0].opacity : 1;
+        const hex = rgbToHex({ r, g, b });
+        if (opacity < 1) {
+            return `background-color: rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${opacity});`;
+        }
+        return `background-color: ${hex};`;
+    }
+
+    // Multiple fills or non-solid → use background-image layers
     const backgrounds: string[] = [];
     const backgroundSizes: string[] = [];
     const backgroundPositions: string[] = [];
     const backgroundRepeats: string[] = [];
 
-    // Process fills in reverse order (bottom to top)
-    for (const fill of [...node.fills].reverse()) {
-        if (fill.visible === false) continue;
-
+    for (const fill of visibleFills) {
         if (fill.type === 'SOLID' && fill.color) {
             const { r, g, b } = fill.color;
             const opacity = fill.opacity !== undefined ? fill.opacity : 1;
-
-            // Create a solid color layer using linear-gradient
             backgrounds.push(
                 `linear-gradient(rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${opacity}), rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${opacity}))`,
             );
@@ -500,8 +512,6 @@ export function getBackgroundFillsStyle(node: FigmaVendorDocument): string {
             backgroundPositions.push('center');
             backgroundRepeats.push('no-repeat');
         } else if (fill.type === 'IMAGE') {
-            // TODO: Handle image fills - requires image export from plugin
-            // For now, use a placeholder
             console.warn('Image fills are not yet supported in vendor conversion');
         }
     }
@@ -510,7 +520,6 @@ export function getBackgroundFillsStyle(node: FigmaVendorDocument): string {
         return 'background: transparent;';
     }
 
-    // Combine all background properties
     let style = `background-image: ${backgrounds.join(', ')};`;
     style += `background-size: ${backgroundSizes.join(', ')};`;
     style += `background-position: ${backgroundPositions.join(', ')};`;
