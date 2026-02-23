@@ -1,4 +1,4 @@
-import type { ImportIRLayoutMode, ImportIRStyle } from './import-ir';
+import type { ImportIRLayoutMode, ImportIRStyle, ImportIREffect } from './import-ir';
 
 const DYNAMIC_PATTERN = /\{[^}]*\}/;
 
@@ -57,20 +57,132 @@ const RECOGNIZED_BUT_NOT_STORED = new Set([
     'scrollbar-color',
     '-webkit-backdrop-filter',
     'backdrop-filter',
-    'box-shadow',
     'filter',
     'transform',
     'transform-origin',
 ]);
 
+function parseBoxShadow(value: string): ImportIREffect | undefined {
+    // Parse: offsetX offsetY blurRadius [spreadRadius] color
+    const match = value.match(
+        /^([\d.]+)px\s+([\d.]+)px\s+([\d.]+)px\s*(?:([\d.]+)px\s+)?(.+)$/,
+    );
+    if (!match) return undefined;
+    const [, xStr, yStr, blurStr, spreadStr, colorStr] = match;
+    return {
+        type: 'DROP_SHADOW',
+        offset: { x: parseFloat(xStr), y: parseFloat(yStr) },
+        radius: parseFloat(blurStr),
+        spread: spreadStr ? parseFloat(spreadStr) : undefined,
+        color: colorStr.trim(),
+    };
+}
+
+export type CssClassMap = Map<string, Record<string, string>>;
+
+export function parseCssToClassMap(cssText: string): { classMap: CssClassMap; warnings: string[] } {
+    const classMap: CssClassMap = new Map();
+    const warnings: string[] = [];
+    if (!cssText) return { classMap, warnings };
+
+    // Remove comments
+    const cleaned = cssText.replace(/\/\*[\s\S]*?\*\//g, '');
+
+    // Match rule blocks: selector { declarations }
+    const ruleRegex = /([^{}]+)\{([^{}]*)\}/g;
+    let match: RegExpExecArray | null;
+
+    while ((match = ruleRegex.exec(cleaned)) !== null) {
+        const selectorGroup = match[1].trim();
+        const declarations = match[2].trim();
+
+        // Skip @-rules
+        if (selectorGroup.startsWith('@')) {
+            warnings.push(`CSS_AT_RULE_SKIPPED: ${selectorGroup.split('{')[0].trim()}`);
+            continue;
+        }
+
+        for (const selector of selectorGroup.split(',')) {
+            const sel = selector.trim();
+
+            // Skip pseudo-class selectors
+            if (sel.includes(':')) {
+                warnings.push(`CSS_PSEUDO_NOT_SUPPORTED: ${sel}`);
+                continue;
+            }
+
+            // Match simple class selectors: .foo or .foo.bar (compound)
+            const classMatch = sel.match(/^(\.[a-zA-Z_-][\w-]*(?:\.[a-zA-Z_-][\w-]*)*)$/);
+            if (!classMatch) {
+                // Skip descendant selectors, element selectors, etc.
+                if (sel.includes(' ') || sel.includes('>')) {
+                    warnings.push(`CSS_COMPLEX_SELECTOR_SKIPPED: ${sel}`);
+                }
+                continue;
+            }
+
+            const classNames = classMatch[1].split('.').filter(Boolean);
+            const key = classNames.sort().join('.');
+
+            const props = classMap.get(key) ?? {};
+            for (const decl of declarations.split(';')) {
+                const trimmed = decl.trim();
+                if (!trimmed) continue;
+                const colonIdx = trimmed.indexOf(':');
+                if (colonIdx === -1) continue;
+                const prop = trimmed.slice(0, colonIdx).trim();
+                const val = trimmed.slice(colonIdx + 1).trim();
+                if (prop && val) props[prop] = val;
+            }
+            classMap.set(key, props);
+        }
+    }
+    return { classMap, warnings };
+}
+
+export function resolveClassStyles(
+    classAttr: string,
+    classMap: CssClassMap,
+): Record<string, string> {
+    const result: Record<string, string> = {};
+    if (!classAttr || classMap.size === 0) return result;
+
+    const classes = classAttr.split(/\s+/).filter(Boolean);
+    // Single class lookups
+    for (const cls of classes) {
+        const props = classMap.get(cls);
+        if (props) Object.assign(result, props);
+    }
+    // Compound class lookups (e.g., .foo.bar)
+    if (classes.length > 1) {
+        const compound = classes.sort().join('.');
+        const props = classMap.get(compound);
+        if (props) Object.assign(result, props);
+    }
+    return result;
+}
+
 export function resolveStyle(
     inlineStyle: string,
-    _classNames?: string[],
-    _cssRules?: string,
+    classNames?: string[],
+    cssClassMap?: CssClassMap,
 ): { style: ImportIRStyle; warnings: string[] } {
     const warnings: string[] = [];
     const style: ImportIRStyle = {};
-    const { parsed, dynamicProperties } = parseInlineStyle(inlineStyle);
+
+    // Build merged style: class properties first, then inline overrides
+    let mergedStyleStr = '';
+    if (classNames && classNames.length > 0 && cssClassMap) {
+        const classStyles = resolveClassStyles(classNames.join(' '), cssClassMap);
+        mergedStyleStr = Object.entries(classStyles)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join('; ');
+    }
+    if (inlineStyle) {
+        mergedStyleStr = mergedStyleStr ? `${mergedStyleStr}; ${inlineStyle}` : inlineStyle;
+    }
+
+    const { parsed, dynamicProperties } = parseInlineStyle(mergedStyleStr);
 
     for (const prop of dynamicProperties) {
         warnings.push(`CSS_DYNAMIC_VALUE: ${prop}`);
@@ -303,6 +415,35 @@ export function resolveStyle(
                     stretch: 'STRETCH',
                 };
                 if (map[value]) style.alignItems = map[value];
+                break;
+            }
+            case 'box-shadow': {
+                const effect = parseBoxShadow(value);
+                if (effect) {
+                    style.effects = style.effects || [];
+                    style.effects.push(effect);
+                }
+                break;
+            }
+            case 'text-decoration':
+            case 'text-decoration-line': {
+                if (value.includes('underline')) style.textDecoration = 'UNDERLINE';
+                else if (value.includes('line-through')) style.textDecoration = 'STRIKETHROUGH';
+                else if (value === 'none') style.textDecoration = 'NONE';
+                break;
+            }
+            case 'text-transform': {
+                const caseMap: Record<string, ImportIRStyle['textCase']> = {
+                    uppercase: 'UPPER',
+                    lowercase: 'LOWER',
+                    capitalize: 'TITLE',
+                    none: 'ORIGINAL',
+                };
+                if (caseMap[value]) style.textCase = caseMap[value];
+                break;
+            }
+            case 'text-overflow': {
+                if (value === 'ellipsis') style.textTruncation = 'ENDING';
                 break;
             }
             default:

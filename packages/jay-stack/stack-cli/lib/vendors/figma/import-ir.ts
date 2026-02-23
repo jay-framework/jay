@@ -39,6 +39,14 @@ export type ImportIRBinding =
     | { kind: 'layer'; binding: LayerBinding }
     | { kind: 'variant'; binding: VariantExpressionBinding | PseudoVariantBinding };
 
+export type ImportIREffect = {
+    type: 'DROP_SHADOW';
+    color: string;
+    offset: { x: number; y: number };
+    radius: number;
+    spread?: number;
+};
+
 export type ImportIRStyle = {
     width?: number;
     height?: number;
@@ -64,6 +72,10 @@ export type ImportIRStyle = {
     fontWeight?: number;
     lineHeight?: number;
     letterSpacing?: number;
+    textDecoration?: 'UNDERLINE' | 'STRIKETHROUGH' | 'NONE';
+    textCase?: 'UPPER' | 'LOWER' | 'TITLE' | 'ORIGINAL';
+    textTruncation?: 'ENDING';
+    effects?: ImportIREffect[];
 };
 
 export type ImportIRNode = {
@@ -84,6 +96,7 @@ export type ImportIRNode = {
         objectFit?: 'fill' | 'contain' | 'cover' | 'none' | 'scale-down';
     };
     bindings?: ImportIRBinding[];
+    svgData?: string;
     warnings?: string[];
     children?: ImportIRNode[];
     // Variant-related fields for COMPONENT_SET / COMPONENT / INSTANCE

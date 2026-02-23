@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+  <style>
+    .card { display: flex; flex-direction: column; width: 400px; padding: 24px; background-color: #ffffff; border-radius: 12px; }
+    .title { font-size: 24px; font-weight: 700; color: #1a1a1a; }
+    .subtitle { font-size: 16px; color: #666666; }
+    .button { padding: 12px 24px; background-color: #000000; border-radius: 8px; }
+    .card:hover { background-color: #f0f0f0; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="title">{productName}</div>
+    <div class="subtitle">{price}</div>
+    <div class="button" style="font-size: 14px;" ref="addToCart">Buy Now</div>
+  </div>
+</body>
+</html>

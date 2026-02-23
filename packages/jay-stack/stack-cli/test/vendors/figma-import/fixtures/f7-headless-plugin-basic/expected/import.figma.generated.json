@@ -57,7 +57,12 @@
           ],
           "pluginData": {
             "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\",\"pluginName\":\"product-data\",\"componentName\":\"product\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"name\"]}]"
-          }
+          },
+          "fontName": {
+            "family": "Inter",
+            "style": "Bold"
+          },
+          "layoutSizingHorizontal": "FILL"
         },
         {
           "id": "85132b213414",
@@ -80,7 +85,12 @@
           ],
           "pluginData": {
             "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\",\"pluginName\":\"product-data\",\"componentName\":\"product\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"price\"]}]"
-          }
+          },
+          "fontName": {
+            "family": "Inter",
+            "style": "Regular"
+          },
+          "layoutSizingHorizontal": "FILL"
         },
         {
           "id": "ad9de6f4248d",
@@ -90,7 +100,8 @@
           "mainComponentId": "85835bbf2eb8",
           "pluginData": {
             "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\",\"pluginName\":\"product-data\",\"componentName\":\"product\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"mediaType\"],\"property\":\"mediaType\"}]"
-          }
+          },
+          "layoutSizingHorizontal": "FILL"
         },
         {
           "id": "43f5ec15bcfd",
@@ -99,7 +110,7 @@
           "visible": true,
           "layoutMode": "VERTICAL",
           "itemSpacing": 8,
-          "layoutSizingHorizontal": "HUG",
+          "layoutSizingHorizontal": "FILL",
           "layoutSizingVertical": "HUG",
           "pluginData": {
             "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\",\"pluginName\":\"product-data\",\"componentName\":\"product\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"options\"]}]"
@@ -128,7 +139,7 @@
                 }
               ],
               "cornerRadius": 4,
-              "layoutSizingHorizontal": "HUG",
+              "layoutSizingHorizontal": "FILL",
               "layoutSizingVertical": "HUG",
               "children": [
                 {
@@ -142,7 +153,12 @@
                   "fontWeight": 600,
                   "pluginData": {
                     "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\",\"pluginName\":\"product-data\",\"componentName\":\"product\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"options\",\"label\"]}]"
-                  }
+                  },
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Semi Bold"
+                  },
+                  "layoutSizingVertical": "FILL"
                 },
                 {
                   "id": "2d71e1b223cf",
@@ -165,7 +181,12 @@
                   ],
                   "pluginData": {
                     "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\",\"pluginName\":\"product-data\",\"componentName\":\"product\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"options\",\"value\"]}]"
-                  }
+                  },
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Regular"
+                  },
+                  "layoutSizingVertical": "FILL"
                 }
               ]
             }
@@ -213,9 +234,14 @@
                   },
                   "opacity": 1
                 }
-              ]
+              ],
+              "fontName": {
+                "family": "Inter",
+                "style": "Regular"
+              }
             }
-          ]
+          ],
+          "layoutSizingHorizontal": "FILL"
         }
       ]
     },
@@ -227,7 +253,10 @@
       "componentPropertyDefinitions": {
         "mediaType": {
           "type": "VARIANT",
-          "variantOptions": ["IMAGE", "VIDEO"]
+          "variantOptions": [
+            "IMAGE",
+            "VIDEO"
+          ]
         }
       },
       "children": [
@@ -266,7 +295,11 @@
                   "type": "TEXT",
                   "visible": true,
                   "textAutoResize": "WIDTH_AND_HEIGHT",
-                  "characters": "Image placeholder"
+                  "characters": "Image placeholder",
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Regular"
+                  }
                 }
               ]
             }
@@ -307,7 +340,11 @@
                   "type": "TEXT",
                   "visible": true,
                   "textAutoResize": "WIDTH_AND_HEIGHT",
-                  "characters": "Video placeholder"
+                  "characters": "Video placeholder",
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Regular"
+                  }
                 }
               ]
             }

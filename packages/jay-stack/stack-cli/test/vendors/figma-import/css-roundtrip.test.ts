@@ -6,6 +6,7 @@ import {
     getAutoLayoutStyles,
     getFrameSizeStyles,
 } from '../../../lib/vendors/figma/utils';
+import { convertTextNodeToHtml } from '../../../lib/vendors/figma/converters/text';
 import type { ImportIRDocument, ImportIRNode } from '../../../lib/vendors/figma/import-ir';
 
 function makeFrameIR(inlineStyle: string): ImportIRDocument {
@@ -40,6 +41,90 @@ function importAndGetFigmaFrame(inlineStyle: string) {
     const ir = makeFrameIR(inlineStyle);
     const figmaDoc = adaptIRToFigmaVendorDoc(ir);
     return figmaDoc.children![0];
+}
+
+function makeTextIR(inlineStyle: string, text: string): ImportIRDocument {
+    const { style } = resolveStyle(inlineStyle);
+    const node: ImportIRNode = {
+        id: 'test-text',
+        sourcePath: '/body/div',
+        kind: 'TEXT',
+        name: 'test-text',
+        style,
+        text: { characters: text },
+        children: [],
+    };
+    return {
+        version: 'import-ir/v0',
+        pageName: 'test',
+        route: '/test',
+        source: { kind: 'jay-html', filePath: '/test/page.jay-html', contentHash: 'test' },
+        parser: { baseElementName: 'div' },
+        contracts: {},
+        root: {
+            id: 'section-root',
+            sourcePath: '/body',
+            kind: 'SECTION',
+            name: 'test-section',
+            children: [node],
+        },
+        warnings: [],
+    };
+}
+
+function importAndGetFigmaText(inlineStyle: string, text = 'Test') {
+    const ir = makeTextIR(inlineStyle, text);
+    const figmaDoc = adaptIRToFigmaVendorDoc(ir);
+    return figmaDoc.children![0];
+}
+
+function makeNestedIR(
+    parentStyle: string,
+    childStyle: string,
+    childKind: 'FRAME' | 'TEXT' = 'FRAME',
+): ImportIRDocument {
+    const parent = resolveStyle(parentStyle);
+    const child = resolveStyle(childStyle);
+    const childNode: ImportIRNode = {
+        id: 'test-child',
+        sourcePath: '/body/div/div',
+        kind: childKind,
+        name: 'child',
+        style: child.style,
+        ...(childKind === 'TEXT' ? { text: { characters: 'Label' } } : {}),
+        children: [],
+    };
+    const parentNode: ImportIRNode = {
+        id: 'test-parent',
+        sourcePath: '/body/div',
+        kind: 'FRAME',
+        name: 'parent',
+        style: parent.style,
+        children: [childNode],
+    };
+    return {
+        version: 'import-ir/v0',
+        pageName: 'test',
+        route: '/test',
+        source: { kind: 'jay-html', filePath: '/test/page.jay-html', contentHash: 'test' },
+        parser: { baseElementName: 'div' },
+        contracts: {},
+        root: {
+            id: 'section-root',
+            sourcePath: '/body',
+            kind: 'SECTION',
+            name: 'test-section',
+            children: [parentNode],
+        },
+        warnings: [],
+    };
+}
+
+function importNestedAndGetChild(parentStyle: string, childStyle: string, childKind?: 'FRAME' | 'TEXT') {
+    const ir = makeNestedIR(parentStyle, childStyle, childKind);
+    const figmaDoc = adaptIRToFigmaVendorDoc(ir);
+    const parentFrame = figmaDoc.children![0];
+    return { parent: parentFrame, child: parentFrame.children![0] };
 }
 
 describe('CSS Roundtrip Fidelity', () => {
@@ -174,6 +259,118 @@ describe('CSS Roundtrip Fidelity', () => {
             expect(flexCss).toContain('justify-content: space-between;');
             expect(flexCss).toContain('padding-top: 10px;');
             expect(flexCss).toContain('padding-right: 14px;');
+        });
+    });
+
+    describe('Step 4.1a: font-weight survives roundtrip', () => {
+        it('font-weight: 700 → Bold fontName.style + fontWeight 700', () => {
+            const text = importAndGetFigmaText('font-size: 24px; font-weight: 700; color: #111111');
+            expect(text.fontWeight).toBe(700);
+            expect(text.fontName).toEqual({ family: 'Inter', style: 'Bold' });
+        });
+
+        it('font-weight: 600 → Semi Bold fontName.style + fontWeight 600', () => {
+            const text = importAndGetFigmaText('font-size: 14px; font-weight: 600; color: #111111');
+            expect(text.fontWeight).toBe(600);
+            expect(text.fontName).toEqual({ family: 'Inter', style: 'Semi Bold' });
+        });
+
+        it('font-weight: 400 → Regular fontName.style', () => {
+            const text = importAndGetFigmaText('font-size: 16px; font-weight: 400');
+            expect(text.fontWeight).toBe(400);
+            expect(text.fontName).toEqual({ family: 'Inter', style: 'Regular' });
+        });
+
+        it('no font-weight defaults to Regular', () => {
+            const text = importAndGetFigmaText('font-size: 16px; color: #000000');
+            expect(text.fontName).toEqual({ family: 'Inter', style: 'Regular' });
+        });
+
+        it('font-weight: bold → 700 / Bold', () => {
+            const text = importAndGetFigmaText('font-weight: bold');
+            expect(text.fontWeight).toBe(700);
+            expect(text.fontName).toEqual({ family: 'Inter', style: 'Bold' });
+        });
+
+        it('font-weight: 500 → Medium', () => {
+            const text = importAndGetFigmaText('font-weight: 500');
+            expect(text.fontWeight).toBe(500);
+            expect(text.fontName).toEqual({ family: 'Inter', style: 'Medium' });
+        });
+
+        it('custom font-family preserved with correct weight style', () => {
+            const text = importAndGetFigmaText("font-family: 'Helvetica Neue'; font-weight: 700");
+            expect(text.fontName).toEqual({ family: 'Helvetica Neue', style: 'Bold' });
+            expect(text.fontWeight).toBe(700);
+        });
+
+        it('font-weight roundtrip through export', () => {
+            const text = importAndGetFigmaText(
+                'font-size: 24px; font-weight: 700; color: #111111',
+                'Product Name',
+            );
+            const html = convertTextNodeToHtml(text, '');
+            expect(html).toContain('font-weight: 700;');
+        });
+
+        it('font-weight: 600 roundtrip through export', () => {
+            const text = importAndGetFigmaText(
+                'font-size: 14px; font-weight: 600; color: #111111',
+                'Matte Black',
+            );
+            const html = convertTextNodeToHtml(text, '');
+            expect(html).toContain('font-weight: 600;');
+        });
+    });
+
+    describe('Step 4.1b: cross-axis FILL for flex children', () => {
+        it('flex-column child without width gets FILL horizontal', () => {
+            const { child } = importNestedAndGetChild(
+                'display: flex; flex-direction: column; width: 480px; gap: 20px',
+                'display: flex; flex-direction: row; justify-content: space-between; padding: 10px',
+            );
+            expect(child.layoutSizingHorizontal).toBe('FILL');
+        });
+
+        it('flex-column child with explicit width stays FIXED', () => {
+            const { child } = importNestedAndGetChild(
+                'display: flex; flex-direction: column; width: 480px',
+                'display: flex; flex-direction: row; width: 300px',
+            );
+            expect(child.layoutSizingHorizontal).toBe('FIXED');
+        });
+
+        it('flex-row child without height gets FILL vertical', () => {
+            const { child } = importNestedAndGetChild(
+                'display: flex; flex-direction: row; width: 480px',
+                'display: flex; flex-direction: column; width: 200px; gap: 8px',
+            );
+            expect(child.layoutSizingVertical).toBe('FILL');
+        });
+
+        it('flex-row child with explicit height stays FIXED', () => {
+            const { child } = importNestedAndGetChild(
+                'display: flex; flex-direction: row; width: 480px',
+                'display: flex; flex-direction: column; width: 200px; height: 100px',
+            );
+            expect(child.layoutSizingVertical).toBe('FIXED');
+        });
+
+        it('flex-column parent with align-items: center does not FILL', () => {
+            const { child } = importNestedAndGetChild(
+                'display: flex; flex-direction: column; width: 480px; align-items: center',
+                'display: flex; flex-direction: row; padding: 10px',
+            );
+            expect(child.layoutSizingHorizontal).not.toBe('FILL');
+        });
+
+        it('spec row pattern: child fills card width for space-between', () => {
+            const { child } = importNestedAndGetChild(
+                'display: flex; flex-direction: column; width: 480px; gap: 12px; padding: 28px',
+                'display: flex; flex-direction: row; justify-content: space-between; padding: 10px 14px; background-color: #f7f7f7',
+            );
+            expect(child.layoutSizingHorizontal).toBe('FILL');
+            expect(child.primaryAxisAlignItems).toBe('SPACE_BETWEEN');
         });
     });
 });

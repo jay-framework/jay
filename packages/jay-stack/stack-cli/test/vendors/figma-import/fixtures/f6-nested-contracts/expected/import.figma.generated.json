@@ -21,7 +21,11 @@
       "fills": [
         {
           "type": "SOLID",
-          "color": { "r": 1, "g": 1, "b": 1 },
+          "color": {
+            "r": 1,
+            "g": 1,
+            "b": 1
+          },
           "opacity": 1
         }
       ],
@@ -50,7 +54,12 @@
           ],
           "pluginData": {
             "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"name\"]}]"
-          }
+          },
+          "fontName": {
+            "family": "Inter",
+            "style": "Bold"
+          },
+          "layoutSizingHorizontal": "FILL"
         },
         {
           "type": "TEXT",
@@ -62,13 +71,22 @@
           "fills": [
             {
               "type": "SOLID",
-              "color": { "r": 0.4, "g": 0.4, "b": 0.4 },
+              "color": {
+                "r": 0.4,
+                "g": 0.4,
+                "b": 0.4
+              },
               "opacity": 1
             }
           ],
           "pluginData": {
             "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"price\"]}]"
-          }
+          },
+          "fontName": {
+            "family": "Inter",
+            "style": "Regular"
+          },
+          "layoutSizingHorizontal": "FILL"
         },
         {
           "type": "RECTANGLE",
@@ -80,7 +98,8 @@
           },
           "width": 452,
           "height": 300,
-          "cornerRadius": 8
+          "cornerRadius": 8,
+          "layoutSizingHorizontal": "FILL"
         },
         {
           "type": "FRAME",
@@ -88,7 +107,7 @@
           "visible": true,
           "layoutMode": "VERTICAL",
           "itemSpacing": 8,
-          "layoutSizingHorizontal": "HUG",
+          "layoutSizingHorizontal": "FILL",
           "layoutSizingVertical": "HUG",
           "pluginData": {
             "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"options\"]}]"
@@ -116,7 +135,7 @@
                 }
               ],
               "cornerRadius": 4,
-              "layoutSizingHorizontal": "HUG",
+              "layoutSizingHorizontal": "FILL",
               "layoutSizingVertical": "HUG",
               "children": [
                 {
@@ -129,7 +148,12 @@
                   "fontWeight": 600,
                   "pluginData": {
                     "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"options\",\"label\"]}]"
-                  }
+                  },
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Semi Bold"
+                  },
+                  "layoutSizingVertical": "FILL"
                 },
                 {
                   "type": "TEXT",
@@ -151,7 +175,12 @@
                   ],
                   "pluginData": {
                     "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"options\",\"value\"]}]"
-                  }
+                  },
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Regular"
+                  },
+                  "layoutSizingVertical": "FILL"
                 }
               ]
             }

@@ -1,0 +1,11 @@
+name: class-css-page
+tags:
+  - tag: productName
+    type: data
+    dataType: string
+  - tag: price
+    type: data
+    dataType: string
+  - tag: addToCart
+    type: interactive
+    elementType: HTMLButtonElement

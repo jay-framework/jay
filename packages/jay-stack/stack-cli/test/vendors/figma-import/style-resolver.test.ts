@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { parseInlineStyle, resolveStyle } from '../../../lib/vendors/figma/style-resolver';
+import {
+    parseInlineStyle,
+    resolveStyle,
+    parseCssToClassMap,
+    resolveClassStyles,
+} from '../../../lib/vendors/figma/style-resolver';
 
 describe('style-resolver', () => {
     describe('resolveStyle', () => {
@@ -218,6 +223,103 @@ describe('style-resolver', () => {
             const { parsed, dynamicProperties } = parseInlineStyle('');
             expect(parsed).toEqual({});
             expect(dynamicProperties).toEqual([]);
+        });
+    });
+
+    describe('extended style mapping (Step 4.4)', () => {
+        it('box-shadow → DROP_SHADOW effect', () => {
+            const { style } = resolveStyle('box-shadow: 2px 4px 8px rgba(0,0,0,0.1)');
+            expect(style.effects).toHaveLength(1);
+            expect(style.effects![0]).toEqual({
+                type: 'DROP_SHADOW',
+                offset: { x: 2, y: 4 },
+                radius: 8,
+                spread: undefined,
+                color: 'rgba(0,0,0,0.1)',
+            });
+        });
+
+        it('box-shadow with spread → DROP_SHADOW effect', () => {
+            const { style } = resolveStyle('box-shadow: 0px 2px 10px 1px #00000020');
+            expect(style.effects).toHaveLength(1);
+            expect(style.effects![0].spread).toBe(1);
+        });
+
+        it('text-decoration: underline', () => {
+            const { style } = resolveStyle('text-decoration: underline');
+            expect(style.textDecoration).toBe('UNDERLINE');
+        });
+
+        it('text-decoration: line-through', () => {
+            const { style } = resolveStyle('text-decoration: line-through');
+            expect(style.textDecoration).toBe('STRIKETHROUGH');
+        });
+
+        it('text-decoration-line: underline', () => {
+            const { style } = resolveStyle('text-decoration-line: underline');
+            expect(style.textDecoration).toBe('UNDERLINE');
+        });
+
+        it('text-transform: uppercase → UPPER', () => {
+            const { style } = resolveStyle('text-transform: uppercase');
+            expect(style.textCase).toBe('UPPER');
+        });
+
+        it('text-transform: capitalize → TITLE', () => {
+            const { style } = resolveStyle('text-transform: capitalize');
+            expect(style.textCase).toBe('TITLE');
+        });
+
+        it('text-overflow: ellipsis → ENDING', () => {
+            const { style } = resolveStyle('text-overflow: ellipsis');
+            expect(style.textTruncation).toBe('ENDING');
+        });
+    });
+
+    describe('CSS class resolution (Step 4.3)', () => {
+        it('parseCssToClassMap: simple class selector', () => {
+            const css = '.card { width: 400px; padding: 24px; }';
+            const { classMap } = parseCssToClassMap(css);
+            expect(classMap.get('card')).toEqual({ width: '400px', padding: '24px' });
+        });
+
+        it('parseCssToClassMap: multiple classes', () => {
+            const css = '.title { font-size: 24px; } .subtitle { font-size: 16px; }';
+            const { classMap } = parseCssToClassMap(css);
+            expect(classMap.get('title')).toEqual({ 'font-size': '24px' });
+            expect(classMap.get('subtitle')).toEqual({ 'font-size': '16px' });
+        });
+
+        it('parseCssToClassMap: pseudo-class emits warning', () => {
+            const css = '.card:hover { background-color: #f0f0f0; }';
+            const { classMap, warnings } = parseCssToClassMap(css);
+            expect(classMap.size).toBe(0);
+            expect(warnings).toEqual(expect.arrayContaining([expect.stringContaining('CSS_PSEUDO_NOT_SUPPORTED')]));
+        });
+
+        it('parseCssToClassMap: descendant selector emits warning', () => {
+            const css = '.card .button { color: white; }';
+            const { warnings } = parseCssToClassMap(css);
+            expect(warnings).toEqual(expect.arrayContaining([expect.stringContaining('CSS_COMPLEX_SELECTOR_SKIPPED')]));
+        });
+
+        it('resolveClassStyles: single class lookup', () => {
+            const classMap = new Map([['card', { width: '400px', padding: '24px' }]]);
+            const result = resolveClassStyles('card', classMap);
+            expect(result).toEqual({ width: '400px', padding: '24px' });
+        });
+
+        it('resolveStyle merges class + inline (inline wins)', () => {
+            const classMap = new Map([['button', { 'background-color': '#000', 'font-size': '16px' }]]);
+            const { style } = resolveStyle('font-size: 14px', ['button'], classMap);
+            expect(style.fontSize).toBe(14);
+            expect(style.backgroundColor).toBe('#000');
+        });
+
+        it('parseCssToClassMap: removes CSS comments', () => {
+            const css = '/* comment */ .foo { color: red; } /* another */';
+            const { classMap } = parseCssToClassMap(css);
+            expect(classMap.get('foo')).toEqual({ color: 'red' });
         });
     });
 });

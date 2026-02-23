@@ -42,7 +42,8 @@
           },
           "width": 460,
           "height": 300,
-          "cornerRadius": 8
+          "cornerRadius": 8,
+          "layoutSizingHorizontal": "FILL"
         },
         {
           "type": "TEXT",
@@ -65,7 +66,12 @@
           ],
           "pluginData": {
             "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"link\"],\"attribute\":\"href\"}]"
-          }
+          },
+          "fontName": {
+            "family": "Inter",
+            "style": "Semi Bold"
+          },
+          "layoutSizingHorizontal": "FILL"
         },
         {
           "type": "TEXT",
@@ -84,7 +90,12 @@
               },
               "opacity": 1
             }
-          ]
+          ],
+          "fontName": {
+            "family": "Inter",
+            "style": "Regular"
+          },
+          "layoutSizingHorizontal": "FILL"
         }
       ]
     }

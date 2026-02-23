@@ -1,6 +1,21 @@
 import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
 import type { ImportIRDocument, ImportIRNode, ImportIRStyle } from './import-ir';
 
+const DEFAULT_FONT_FAMILY = 'Inter';
+
+function fontWeightToStyle(weight: number | undefined): string {
+    if (!weight) return 'Regular';
+    if (weight < 150) return 'Thin';
+    if (weight < 250) return 'Extra Light';
+    if (weight < 350) return 'Light';
+    if (weight < 450) return 'Regular';
+    if (weight < 550) return 'Medium';
+    if (weight < 650) return 'Semi Bold';
+    if (weight < 750) return 'Bold';
+    if (weight < 850) return 'Extra Bold';
+    return 'Black';
+}
+
 function parseColor(cssColor: string): { r: number; g: number; b: number; a: number } {
     if (cssColor === 'transparent') return { r: 0, g: 0, b: 0, a: 0 };
 
@@ -72,7 +87,6 @@ function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVe
 
     if (style.justifyContent) props.primaryAxisAlignItems = style.justifyContent;
     if (style.alignItems) {
-        // Figma uses BASELINE instead of STRETCH for counterAxis; STRETCH is handled via layoutAlign on children
         const alignMap: Record<string, 'MIN' | 'CENTER' | 'MAX' | 'BASELINE'> = {
             MIN: 'MIN',
             CENTER: 'CENTER',
@@ -80,6 +94,20 @@ function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVe
             STRETCH: 'MIN',
         };
         props.counterAxisAlignItems = alignMap[style.alignItems] ?? 'MIN';
+    }
+
+    if (style.effects && style.effects.length > 0) {
+        props.effects = style.effects.map((e) => {
+            const color = parseColor(e.color);
+            return {
+                type: e.type,
+                color: { r: color.r, g: color.g, b: color.b, a: color.a },
+                offset: e.offset,
+                radius: e.radius,
+                spread: e.spread ?? 0,
+                visible: true,
+            };
+        });
     }
 
     return props;
@@ -119,11 +147,11 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
             if (node.text) {
                 base.characters = node.text.characters;
             }
-            if (node.style?.fontFamily) {
-                base.fontName = { family: node.style.fontFamily, style: 'Regular' };
-            }
+            const family = node.style?.fontFamily || DEFAULT_FONT_FAMILY;
+            const weight = node.style?.fontWeight;
+            base.fontName = { family, style: fontWeightToStyle(weight) };
             if (node.style?.fontSize) base.fontSize = node.style.fontSize;
-            if (node.style?.fontWeight) base.fontWeight = node.style.fontWeight;
+            if (weight) base.fontWeight = weight;
             if (node.style?.textColor) {
                 const color = parseColor(node.style.textColor);
                 base.fills = [
@@ -140,6 +168,9 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
             if (node.style?.letterSpacing !== undefined) {
                 base.letterSpacing = { value: node.style.letterSpacing, unit: 'PIXELS' };
             }
+            if (node.style?.textDecoration) base.textDecoration = node.style.textDecoration;
+            if (node.style?.textCase) base.textCase = node.style.textCase;
+            if (node.style?.textTruncation) base.textTruncation = node.style.textTruncation;
             const sizeProps = mapStyleToFigmaProps(node.style);
             if (sizeProps.width) base.width = sizeProps.width;
             if (sizeProps.height) base.height = sizeProps.height;
@@ -189,6 +220,11 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
             base.type = 'FRAME';
             const styleProps = mapStyleToFigmaProps(node.style);
             Object.assign(base, styleProps);
+            base.pluginData = base.pluginData || {};
+            base.pluginData['semanticHtml'] = 'svg';
+            if (node.svgData) {
+                base.pluginData['svgData'] = node.svgData;
+            }
             break;
         }
     }
@@ -205,6 +241,25 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
     // Recursively adapt children
     if (node.children && node.children.length > 0) {
         base.children = node.children.map((child, i) => adaptNode(child, i));
+    }
+
+    // CSS flexbox default: children stretch on cross-axis (align-items: stretch)
+    if (base.layoutMode && base.layoutMode !== 'NONE' && base.children) {
+        const explicitAlign =
+            base.counterAxisAlignItems === 'CENTER' || base.counterAxisAlignItems === 'MAX';
+        if (!explicitAlign) {
+            for (const child of base.children) {
+                if (base.layoutMode === 'VERTICAL') {
+                    if (!child.layoutSizingHorizontal || child.layoutSizingHorizontal === 'HUG') {
+                        child.layoutSizingHorizontal = 'FILL';
+                    }
+                } else if (base.layoutMode === 'HORIZONTAL') {
+                    if (!child.layoutSizingVertical || child.layoutSizingVertical === 'HUG') {
+                        child.layoutSizingVertical = 'FILL';
+                    }
+                }
+            }
+        }
     }
 
     return base;

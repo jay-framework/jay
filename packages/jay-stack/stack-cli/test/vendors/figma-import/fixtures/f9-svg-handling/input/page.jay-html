@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+  <div style="display: flex; flex-direction: column; gap: 16px; padding: 24px;">
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
+      <path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17" stroke="currentColor" stroke-width="2"/>
+    </svg>
+    <svg viewBox="0 0 48 48">
+      <circle cx="24" cy="24" r="22" fill="#eee"/>
+      <polygon points="20,14 20,34 36,24" fill="#333"/>
+    </svg>
+    <div style="display: flex; flex-direction: row; gap: 8px; align-items: center;">
+      <svg viewBox="0 0 16 16" width="16" height="16">
+        <path d="M8 1l2 5h5l-4 3 2 5-5-3-5 3 2-5-4-3h5z" fill="gold"/>
+      </svg>
+      <div style="font-size: 14px; color: #333;" ref="addToCart">Add to Cart</div>
+    </div>
+  </div>
+</body>
+</html>

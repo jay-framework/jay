@@ -51,7 +51,12 @@
               },
               "opacity": 1
             }
-          ]
+          ],
+          "fontName": {
+            "family": "Inter",
+            "style": "Bold"
+          },
+          "layoutSizingHorizontal": "FILL"
         },
         {
           "type": "TEXT",
@@ -74,7 +79,12 @@
           "lineHeight": {
             "value": 24,
             "unit": "PIXELS"
-          }
+          },
+          "fontName": {
+            "family": "Inter",
+            "style": "Regular"
+          },
+          "layoutSizingHorizontal": "FILL"
         },
         {
           "type": "RECTANGLE",
@@ -85,7 +95,8 @@
           },
           "width": 536,
           "height": 280,
-          "cornerRadius": 4
+          "cornerRadius": 4,
+          "layoutSizingHorizontal": "FILL"
         }
       ]
     }

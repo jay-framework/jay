@@ -39,7 +39,8 @@
           "mainComponentId": "93709c5b8159",
           "pluginData": {
             "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"mediaType\"],\"property\":\"mediaType\"}]"
-          }
+          },
+          "layoutSizingHorizontal": "FILL"
         },
         {
           "type": "TEXT",
@@ -62,7 +63,12 @@
           ],
           "pluginData": {
             "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"productName\"]}]"
-          }
+          },
+          "fontName": {
+            "family": "Inter",
+            "style": "Bold"
+          },
+          "layoutSizingHorizontal": "FILL"
         }
       ]
     },
@@ -73,7 +79,10 @@
       "componentPropertyDefinitions": {
         "mediaType": {
           "type": "VARIANT",
-          "variantOptions": ["IMAGE", "VIDEO"]
+          "variantOptions": [
+            "IMAGE",
+            "VIDEO"
+          ]
         }
       },
       "children": [
@@ -110,7 +119,11 @@
                   "name": "Image Media",
                   "visible": true,
                   "textAutoResize": "WIDTH_AND_HEIGHT",
-                  "characters": "Image Media"
+                  "characters": "Image Media",
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Regular"
+                  }
                 }
               ]
             }
@@ -160,7 +173,11 @@
                       },
                       "opacity": 1
                     }
-                  ]
+                  ],
+                  "fontName": {
+                    "family": "Inter",
+                    "style": "Regular"
+                  }
                 }
               ]
             }

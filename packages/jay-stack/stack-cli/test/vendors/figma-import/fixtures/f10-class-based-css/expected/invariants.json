@@ -1,0 +1,9 @@
+{
+  "requiredBindings": [
+    { "tagPath": ["productName"] },
+    { "tagPath": ["price"] },
+    { "tagPath": ["addToCart"] }
+  ],
+  "warningsMustNotContain": ["IMPORT_PARSE_FAILED", "BINDING_UNRESOLVED"],
+  "warningsMustContain": ["CSS_PSEUDO_NOT_SUPPORTED"]
+}

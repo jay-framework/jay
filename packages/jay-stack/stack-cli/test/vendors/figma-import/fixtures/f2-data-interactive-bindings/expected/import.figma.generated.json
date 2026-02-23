@@ -54,7 +54,12 @@
           ],
           "pluginData": {
             "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"productName\"]}]"
-          }
+          },
+          "fontName": {
+            "family": "Inter",
+            "style": "Bold"
+          },
+          "layoutSizingHorizontal": "FILL"
         },
         {
           "type": "TEXT",
@@ -76,14 +81,19 @@
           ],
           "pluginData": {
             "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"price\"]}]"
-          }
+          },
+          "fontName": {
+            "family": "Inter",
+            "style": "Regular"
+          },
+          "layoutSizingHorizontal": "FILL"
         },
         {
           "type": "FRAME",
           "name": "buyNow",
           "visible": true,
           "layoutMode": "HORIZONTAL",
-          "layoutSizingHorizontal": "HUG",
+          "layoutSizingHorizontal": "FILL",
           "layoutSizingVertical": "HUG",
           "primaryAxisAlignItems": "CENTER",
           "counterAxisAlignItems": "CENTER",
@@ -125,7 +135,11 @@
                   },
                   "opacity": 1
                 }
-              ]
+              ],
+              "fontName": {
+                "family": "Inter",
+                "style": "Semi Bold"
+              }
             }
           ]
         }

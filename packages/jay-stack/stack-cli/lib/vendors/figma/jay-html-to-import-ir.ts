@@ -5,7 +5,8 @@ import type { JayHeadlessImports } from '@jay-framework/compiler-jay-html';
 import { ContractTagType } from '@jay-framework/compiler-jay-html';
 import type { ImportIRDocument, ImportIRNode, ImportIRStyle, ImportIRBinding } from './import-ir';
 import { generateNodeId, buildDomPath, getSemanticAnchors } from './id-generator';
-import { resolveStyle, parseInlineStyle } from './style-resolver';
+import { resolveStyle, parseInlineStyle, parseCssToClassMap } from './style-resolver';
+import type { CssClassMap } from './style-resolver';
 import { extractBindingsFromElement, buildMergedContractTags } from './binding-reconstructor';
 import type { ImportContractContext, HeadlessImportInfo } from './binding-reconstructor';
 import { detectVariantGroups, synthesizeVariant, synthesizeRepeater } from './variant-synthesizer';
@@ -204,6 +205,7 @@ function buildNodeFromElement(
     pageContractPath: PageContractPath,
     repeaterContext: string[][],
     contractContext?: ImportContractContext,
+    cssClassMap?: CssClassMap,
 ): BuildResult {
     const warnings: string[] = [];
     const componentSets: ImportIRNode[] = [];
@@ -215,7 +217,9 @@ function buildNodeFromElement(
     const nodeId = generateNodeId(domPath, anchors, figmaId);
 
     const styleAttr = element.getAttribute('style') || '';
-    const { style, warnings: styleWarnings } = resolveStyle(styleAttr);
+    const classAttr = element.getAttribute('class') || '';
+    const classNames = classAttr ? classAttr.split(/\s+/).filter(Boolean) : undefined;
+    const { style, warnings: styleWarnings } = resolveStyle(styleAttr, classNames, cssClassMap);
     warnings.push(...styleWarnings);
 
     const { bindings, warnings: bindingWarnings } = extractBindingsFromElement(
@@ -233,6 +237,46 @@ function buildNodeFromElement(
         element.getAttribute('ref') ||
         element.getAttribute('id') ||
         tag;
+
+    if (tag === 'svg') {
+        const viewBox = element.getAttribute('viewBox');
+        let svgWidth = style.width;
+        let svgHeight = style.height;
+        if (viewBox) {
+            const parts = viewBox.split(/\s+/).map(Number);
+            if (parts.length === 4 && parts.every((n) => !isNaN(n))) {
+                svgWidth = svgWidth ?? parts[2];
+                svgHeight = svgHeight ?? parts[3];
+            }
+        }
+        const widthAttr = element.getAttribute('width');
+        const heightAttr = element.getAttribute('height');
+        if (!svgWidth && widthAttr) svgWidth = parseFloat(widthAttr) || undefined;
+        if (!svgHeight && heightAttr) svgHeight = parseFloat(heightAttr) || undefined;
+
+        const svgStyle: ImportIRStyle = {
+            ...style,
+            width: svgWidth ?? 24,
+            height: svgHeight ?? 24,
+        };
+
+        const rawSvg = element.outerHTML;
+
+        const node: ImportIRNode = {
+            id: nodeId,
+            sourcePath: domPath,
+            kind: 'VECTOR_PLACEHOLDER',
+            name: name === 'svg' ? 'svg-icon' : name,
+            tagName: 'svg',
+            visible: true,
+            style: svgStyle,
+            svgData: rawSvg,
+            bindings: bindings.length > 0 ? bindings : undefined,
+            warnings: warnings.length > 0 ? [...warnings] : undefined,
+            children: [],
+        };
+        return { node, warnings, componentSets };
+    }
 
     if (isImageElement(element)) {
         const src = element.getAttribute('src') ?? undefined;
@@ -343,6 +387,7 @@ function buildNodeFromElement(
                 pageContractPath,
                 newRepeaterContext,
                 contractContext,
+                cssClassMap,
             );
             children.push(childResult.node);
             warnings.push(...childResult.warnings);
@@ -396,6 +441,7 @@ function buildNodeFromElement(
                     pageContractPath,
                     repeaterContext,
                     contractContext,
+                    cssClassMap,
                 );
                 warnings.push(...result.warnings);
                 componentSets.push(...result.componentSets);
@@ -429,6 +475,7 @@ function buildNodeFromElement(
             pageContractPath,
             repeaterContext,
             contractContext,
+            cssClassMap,
         );
         children.push(childResult.node);
         warnings.push(...childResult.warnings);
@@ -477,6 +524,13 @@ export function buildImportIR(
     };
     const contractTags = buildMergedContractTags(contractContext);
 
+    let cssClassMap: CssClassMap | undefined;
+    if (options?.css) {
+        const { classMap, warnings: cssWarnings } = parseCssToClassMap(options.css);
+        cssClassMap = classMap.size > 0 ? classMap : undefined;
+        warnings.push(...cssWarnings);
+    }
+
     const contentElement = findFirstBlockChild(body);
     let rootChildren: ImportIRNode[] = [];
 
@@ -493,6 +547,7 @@ export function buildImportIR(
             pageContractPath,
             [],
             contractContext,
+            cssClassMap,
         );
         rootChildren = [node, ...componentSets];
         warnings.push(...nodeWarnings);

@@ -1,0 +1,8 @@
+{
+  "requiredNodes": [
+    { "type": "FRAME", "pluginData": { "semanticHtml": "svg" } },
+    { "type": "FRAME", "pluginData": { "semanticHtml": "svg" } },
+    { "type": "FRAME", "pluginData": { "semanticHtml": "svg" } }
+  ],
+  "warningsMustNotContain": ["IMPORT_PARSE_FAILED"]
+}
