@@ -36,6 +36,8 @@
           "type": "INSTANCE",
           "name": "mediaType variants",
           "visible": true,
+          "width": 368,
+          "height": 300,
           "mainComponentId": "93709c5b8159",
           "pluginData": {
             "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"mediaType\"],\"property\":\"mediaType\"}]"

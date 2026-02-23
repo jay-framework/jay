@@ -349,13 +349,35 @@ export function convertVariantNode(
     // 4. Build styles for the outer wrapper (the instance node's Frame styling)
     // This wrapper is positioned once and contains all variant permutations
     const positionStyle = getPositionStyle(node);
-    const frameSizeStyles = getFrameSizeStyles(node);
+    let frameSizeStyles = getFrameSizeStyles(node);
     const backgroundStyle = getBackgroundFillsStyle(node);
     const borderRadius = getBorderRadius(node);
     const strokeStyles = getStrokeStyles(node);
     const flexStyles = getAutoLayoutStyles(node);
     const overflowStyles = getOverflowStyles(node);
     const commonStyles = getCommonStyles(node);
+
+    // Variant containers: use absoluteRenderBounds or max variant component height
+    // when the INSTANCE's logical height is smaller than its content
+    const renderHeight = node.absoluteRenderBounds?.height;
+    const nodeHeight = node.height ?? 0;
+    if (renderHeight && renderHeight > nodeHeight) {
+        frameSizeStyles = frameSizeStyles.replace(
+            /height:\s*[\d.]+px/,
+            `height: ${renderHeight}px`,
+        );
+    } else if (node.variants && node.variants.length > 0) {
+        let maxH = nodeHeight;
+        for (const v of node.variants) {
+            if (v.height !== undefined && v.height > maxH) maxH = v.height;
+        }
+        if (maxH > nodeHeight) {
+            frameSizeStyles = frameSizeStyles.replace(
+                /height:\s*[\d.]+px/,
+                `height: ${maxH}px`,
+            );
+        }
+    }
 
     const wrapperStyleAttr = `${positionStyle}${frameSizeStyles}${backgroundStyle}${strokeStyles}${borderRadius}${overflowStyles}${commonStyles}${flexStyles}box-sizing: border-box;`;
 

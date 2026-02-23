@@ -71,6 +71,11 @@ function convertRegularNode(
         );
     }
 
+    // For SVG semantic nodes, emit raw SVG markup from pluginData
+    if (semanticHtml === 'svg' && pluginData?.['svgData']) {
+        return `${indent}${pluginData['svgData']}\n`;
+    }
+
     // For image semantic nodes, handle specially
     if (semanticHtml === 'img') {
         // Extract src and alt bindings

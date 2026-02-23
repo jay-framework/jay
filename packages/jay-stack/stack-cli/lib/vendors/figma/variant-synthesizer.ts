@@ -271,6 +271,19 @@ export function synthesizeVariant(
     const instanceDomPath = buildDomPath(group.containerParent, body);
     const instanceId = generateNodeId(instanceDomPath, ['variant-instance', ...group.conditions]);
 
+    // Compute INSTANCE dimensions from the max of all COMPONENT children
+    let maxWidth = 0;
+    let maxHeight = 0;
+    for (const comp of components) {
+        const child = comp.children?.[0];
+        if (child?.style) {
+            if (child.style.width !== undefined && child.style.width > maxWidth)
+                maxWidth = child.style.width;
+            if (child.style.height !== undefined && child.style.height > maxHeight)
+                maxHeight = child.style.height;
+        }
+    }
+
     const instance: ImportIRNode = {
         id: instanceId,
         sourcePath: 'variant-synthesizer',
@@ -278,6 +291,13 @@ export function synthesizeVariant(
         name: componentSetName,
         mainComponentId: firstComponentId,
         bindings: instanceBindings,
+        style:
+            maxWidth > 0 || maxHeight > 0
+                ? {
+                      ...(maxWidth > 0 ? { width: maxWidth } : {}),
+                      ...(maxHeight > 0 ? { height: maxHeight } : {}),
+                  }
+                : undefined,
     };
 
     return { componentSet, instance, warnings };

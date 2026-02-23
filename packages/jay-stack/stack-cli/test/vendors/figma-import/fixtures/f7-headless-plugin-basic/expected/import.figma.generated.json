@@ -97,6 +97,8 @@
           "name": "mediaType variants",
           "type": "INSTANCE",
           "visible": true,
+          "width": 452,
+          "height": 300,
           "mainComponentId": "85835bbf2eb8",
           "pluginData": {
             "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\",\"pluginName\":\"product-data\",\"componentName\":\"product\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"mediaType\"],\"property\":\"mediaType\"}]"
