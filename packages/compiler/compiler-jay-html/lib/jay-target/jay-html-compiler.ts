@@ -3318,6 +3318,39 @@ export function generateServerElementFile(jayFile: JayHtmlSourceFile): WithValid
 
     const importStatement = `import {${importParts.join(', ')}} from "@jay-framework/ssr-runtime";`;
 
+    // Collect enum type names from headless imports and generate import statements
+    const enumTypeNames = new Set<string>();
+    const headlessModules = new Set<string>();
+    for (const headless of jayFile.headlessImports) {
+        for (const link of headless.contractLinks) {
+            headlessModules.add(link.module);
+            for (const name of link.names) {
+                if (isEnumType(name.type)) {
+                    enumTypeNames.add(name.name);
+                }
+            }
+        }
+    }
+
+    // Filter imports to only include enum types (needed for SSR conditions/class expressions)
+    const enumImports = jayFile.imports
+        .map((importLink) => {
+            if (!headlessModules.has(importLink.module)) return null;
+            const filteredNames = importLink.names.filter((name) =>
+                enumTypeNames.has(name.as || name.name),
+            );
+            if (filteredNames.length === 0) return null;
+            return { ...importLink, names: filteredNames };
+        })
+        .filter((imp): imp is JayImportLink => imp !== null);
+
+    const enumImportStatements = enumImports.map((importLink) => {
+        const symbols = importLink.names
+            .map((symbol) => (symbol.as ? `${symbol.name} as ${symbol.as}` : symbol.name))
+            .join(', ');
+        return `import {${symbols}} from "${importLink.module}";`;
+    });
+
     // Destructure onAsync from ctx when async directives are present
     const ctxDestructure = hasAsync
         ? 'const { write: w, onAsync } = ctx;'
@@ -3325,6 +3358,7 @@ export function generateServerElementFile(jayFile: JayHtmlSourceFile): WithValid
 
     const renderedFile = [
         importStatement,
+        ...enumImportStatements,
         types,
         `export function renderToStream(vs: ${viewStateType}, ctx: ServerRenderContext): void {
     ${ctxDestructure}
