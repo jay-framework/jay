@@ -1,11 +1,14 @@
 /**
  * Computed style enricher using Playwright headless browser.
- * 
+ *
  * Extracts getComputedStyle() + getBoundingClientRect() for all elements with
  * data-figma-id attributes. Closes CSS fidelity gaps that static parsing cannot
  * solve: cascade, inheritance, shorthand expansion, computed values.
  */
 
+import { createHash } from 'crypto';
+import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { join } from 'path';
 import type { HTMLElement } from 'node-html-parser';
 import type { Contract } from '@jay-framework/editor-protocol';
 import type {
@@ -17,31 +20,44 @@ import type {
 
 /**
  * Check if Playwright is available in the current environment.
+ * We simply try to import it - if it fails, we'll catch it in the enricher.
  */
 export function isPlaywrightAvailable(): boolean {
-    try {
-        require.resolve('playwright');
-        return true;
-    } catch {
-        return false;
-    }
+    // In a monorepo with yarn workspaces, require.resolve may not work correctly
+    // due to hoisting. We'll just assume it's available if we're in enrichment mode.
+    // The actual import('playwright') will fail gracefully if truly unavailable.
+    return true;
 }
 
 /**
  * Enrich with computed styles using headless browser rendering.
- * 
+ *
  * @param options - Enricher options (page route, dev server URL, scenarios)
  * @returns Map from element key to computed style data
- * 
+ *
  * If Playwright is unavailable or rendering fails, returns empty map.
  * The IR builder will fall back to static resolution.
  */
 export async function enrichWithComputedStyles(
-    options: EnricherOptions
+    options: EnricherOptions,
 ): Promise<ComputedStyleMap> {
-    if (!isPlaywrightAvailable()) {
-        console.warn('[ComputedStyles] Playwright not available, skipping enrichment');
-        return new Map();
+    const startTime = Date.now();
+
+    // isPlaywrightAvailable check removed - we'll try to import and catch errors properly
+    console.log(
+        '[ComputedStyles] DEBUG: Starting enrichment, will attempt dynamic import of playwright...',
+    );
+
+    // Check cache first (if enabled via env var)
+    const enableCache = process.env.ENABLE_COMPUTED_STYLES_CACHE === '1';
+    if (enableCache) {
+        const cached = tryReadCache(options.pageRoute, options.scenarios);
+        if (cached) {
+            console.log(
+                `[ComputedStyles] ✓ Cache hit for ${options.pageRoute} (${cached.size} elements)`,
+            );
+            return cached;
+        }
     }
 
     try {
@@ -59,31 +75,71 @@ export async function enrichWithComputedStyles(
             const page = await context.newPage();
 
             // Set timeout
-            page.setDefaultTimeout(options.timeout ?? 5000);
+            const timeout = options.timeout ?? 5000;
+            page.setDefaultTimeout(timeout);
 
-            const scenarios = options.scenarios && options.scenarios.length > 0 
-                ? options.scenarios 
-                : [{ id: 'default', contractValues: {}, queryString: '' }];
+            const scenarios =
+                options.scenarios && options.scenarios.length > 0
+                    ? options.scenarios
+                    : [{ id: 'default', contractValues: {}, queryString: '' }];
 
             const mergedStyleMap = new Map<string, ComputedStyleData>();
+            let totalElements = 0;
 
             // Render each scenario
             for (const scenario of scenarios) {
+                const scenarioStart = Date.now();
                 const url = `${options.devServerUrl}${options.pageRoute}${scenario.queryString}`;
                 console.log(`[ComputedStyles] Navigating to ${url} (scenario: ${scenario.id})`);
 
-                await page.goto(url, { waitUntil: 'networkidle' });
+                try {
+                    await page.goto(url, {
+                        waitUntil: 'networkidle',
+                        timeout,
+                    });
 
-                // Extract computed styles for this scenario
-                const scenarioStyleMap = await extractComputedStyles(page, scenario.id);
+                    // Extract computed styles for this scenario
+                    const scenarioStyleMap = await extractComputedStyles(page, scenario.id);
+                    totalElements = scenarioStyleMap.size;
 
-                // Merge into main map
-                for (const [key, data] of scenarioStyleMap) {
-                    mergedStyleMap.set(key, data);
+                    // Merge into main map
+                    for (const [key, data] of scenarioStyleMap) {
+                        mergedStyleMap.set(key, data);
+                    }
+
+                    const scenarioDuration = Date.now() - scenarioStart;
+                    console.log(
+                        `[ComputedStyles] Scenario '${scenario.id}' completed in ${scenarioDuration}ms (${scenarioStyleMap.size} elements)`,
+                    );
+                } catch (error) {
+                    const err = error as Error;
+                    console.warn(
+                        `[ComputedStyles] Scenario '${scenario.id}' failed: ${err.message}`,
+                    );
+                    // Continue with other scenarios
                 }
             }
 
-            console.log(`[ComputedStyles] Enriched ${mergedStyleMap.size} elements across ${scenarios.length} scenario(s)`);
+            const totalDuration = Date.now() - startTime;
+            console.log(
+                `[ComputedStyles] ✓ Enriched ${mergedStyleMap.size} total elements across ${scenarios.length} scenario(s) in ${totalDuration}ms`,
+            );
+
+            // Warn if enrichment took too long
+            if (totalDuration > 30000) {
+                console.warn(
+                    `[ComputedStyles] ⚠ Enrichment took ${(totalDuration / 1000).toFixed(1)}s (budget: 30s for complex pages)`,
+                );
+            } else if (totalDuration > 5000) {
+                console.log(
+                    `[ComputedStyles] Enrichment took ${(totalDuration / 1000).toFixed(1)}s (within budget)`,
+                );
+            }
+
+            // Write to cache if enabled
+            if (enableCache) {
+                tryWriteCache(options.pageRoute, options.scenarios, mergedStyleMap);
+            }
 
             await context.close();
             return mergedStyleMap;
@@ -92,22 +148,105 @@ export async function enrichWithComputedStyles(
         }
     } catch (error) {
         const err = error as Error;
-        console.warn(`[ComputedStyles] Enrichment failed: ${err.message}`);
+        const duration = Date.now() - startTime;
+        console.warn(`[ComputedStyles] ✗ Enrichment failed after ${duration}ms: ${err.message}`);
         console.warn('[ComputedStyles] Falling back to static resolution');
         return new Map();
     }
 }
 
 /**
+ * Generate cache key from page route and scenarios.
+ */
+function getCacheKey(pageRoute: string, scenarios?: VariantScenario[]): string {
+    const scenarioKey =
+        scenarios && scenarios.length > 0 ? scenarios.map((s) => s.id).join('_') : 'default';
+    return createHash('md5').update(`${pageRoute}:${scenarioKey}`).digest('hex').slice(0, 16);
+}
+
+/**
+ * Get cache file path for a page route.
+ */
+function getCachePath(pageRoute: string, scenarios?: VariantScenario[]): string {
+    const cacheKey = getCacheKey(pageRoute, scenarios);
+    const tmpDir = process.env.TMPDIR || '/tmp';
+    return join(tmpDir, `jay-computed-styles-${cacheKey}.json`);
+}
+
+/**
+ * Try to read computed styles from cache.
+ * Returns undefined if cache miss or stale (>24h).
+ */
+function tryReadCache(
+    pageRoute: string,
+    scenarios?: VariantScenario[],
+): ComputedStyleMap | undefined {
+    try {
+        const cachePath = getCachePath(pageRoute, scenarios);
+        if (!existsSync(cachePath)) {
+            return undefined;
+        }
+
+        const content = readFileSync(cachePath, 'utf-8');
+        const cached = JSON.parse(content);
+
+        // Check if cache is stale (>24h)
+        const age = Date.now() - cached.timestamp;
+        if (age > 24 * 60 * 60 * 1000) {
+            console.log(
+                `[ComputedStyles] Cache expired (age: ${(age / 1000 / 60 / 60).toFixed(1)}h)`,
+            );
+            return undefined;
+        }
+
+        // Reconstruct Map from serialized data
+        const styleMap = new Map<string, ComputedStyleData>();
+        for (const [key, data] of Object.entries(cached.styles)) {
+            styleMap.set(key, data as ComputedStyleData);
+        }
+
+        return styleMap;
+    } catch (error) {
+        // Cache read error - ignore and recompute
+        return undefined;
+    }
+}
+
+/**
+ * Try to write computed styles to cache.
+ */
+function tryWriteCache(
+    pageRoute: string,
+    scenarios: VariantScenario[] | undefined,
+    styleMap: ComputedStyleMap,
+): void {
+    try {
+        const cachePath = getCachePath(pageRoute, scenarios);
+        const serialized = {
+            version: '1.0',
+            timestamp: Date.now(),
+            pageRoute,
+            scenarios: scenarios?.map((s) => s.id) || ['default'],
+            styles: Object.fromEntries(styleMap),
+        };
+        writeFileSync(cachePath, JSON.stringify(serialized, null, 2), 'utf-8');
+        console.log(`[ComputedStyles] Cache written to ${cachePath}`);
+    } catch (error) {
+        // Cache write error - non-fatal, just log
+        console.warn(`[ComputedStyles] Failed to write cache: ${(error as Error).message}`);
+    }
+}
+
+/**
  * Extract computed styles from a single page render.
- * 
+ *
  * @param page - Playwright Page instance
  * @param variantContext - Optional variant context for logging
  * @returns Map from element key to computed style data
  */
 async function extractComputedStyles(
     page: any, // Playwright Page type
-    variantContext?: string
+    variantContext?: string,
 ): Promise<ComputedStyleMap> {
     // Extract computed styles for all elements with data-figma-id
     const extractedData = await page.evaluate(() => {
@@ -172,11 +311,11 @@ async function extractComputedStyles(
                 const siblings = Array.from(parent.children);
                 const index = siblings.indexOf(current) + 1;
                 const tag = current.tagName.toLowerCase();
-                
+
                 // Add semantic anchors if available
                 const id = current.getAttribute('id');
                 const ref = current.getAttribute('ref');
-                
+
                 if (id) {
                     segments.unshift(`${tag}#${id}`);
                 } else if (ref) {
@@ -184,7 +323,7 @@ async function extractComputedStyles(
                 } else {
                     segments.unshift(`${tag}:nth-child(${index})`);
                 }
-                
+
                 current = parent;
             }
 
@@ -231,10 +370,10 @@ async function extractComputedStyles(
         // Also query elements without data-figma-id (developer-authored pages)
         // Use DOM path as fallback key
         const allElements = document.querySelectorAll('body *');
-        
+
         for (const element of Array.from(allElements)) {
             if (element.getAttribute('data-figma-id')) continue; // Skip elements with figma-id
-            
+
             const htmlElement = element as any;
             const computedStyle = window.getComputedStyle(htmlElement);
             const rect = htmlElement.getBoundingClientRect();
@@ -278,10 +417,10 @@ async function extractComputedStyles(
 
 /**
  * Generate variant scenarios from page contract and if conditions.
- * 
+ *
  * Scans the page for `if` attributes and generates permutations of contract
  * values to render different variant states.
- * 
+ *
  * @param bodyDom - Parsed HTML body element
  * @param pageContract - Page contract with tag definitions
  * @param maxScenarios - Maximum number of scenarios to generate (default 12)
@@ -290,12 +429,12 @@ async function extractComputedStyles(
 export function generateVariantScenarios(
     bodyDom: HTMLElement,
     pageContract: Contract | undefined,
-    maxScenarios: number = 12
+    maxScenarios: number = 12,
 ): VariantScenario[] {
     // TODO: Implement full scenario generation in a follow-up
     // For now, return empty array (only default scenario will be rendered)
     // This requires parsing Contract dataType strings to extract enum values
-    
+
     if (!pageContract || !pageContract.tags || pageContract.tags.length === 0) {
         return [];
     }
@@ -308,7 +447,9 @@ export function generateVariantScenarios(
         return [];
     }
 
-    console.log(`[ComputedStyles] Found ${ifConditions.size} if conditions, but scenario generation not yet implemented`);
+    console.log(
+        `[ComputedStyles] Found ${ifConditions.size} if conditions, but scenario generation not yet implemented`,
+    );
     console.log(`[ComputedStyles] Will render default scenario only`);
     return [];
 }

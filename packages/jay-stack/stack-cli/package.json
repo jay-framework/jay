@@ -36,6 +36,7 @@
     "commander": "^14.0.0",
     "express": "^5.0.1",
     "glob": "^10.3.10",
+    "playwright": "^1.58.2",
     "vite": "^5.0.11",
     "yaml": "^2.3.4"
   },
@@ -44,7 +45,6 @@
     "@types/express": "^5.0.2",
     "@types/node": "^22.15.21",
     "nodemon": "^3.0.3",
-    "playwright": "^1.58.2",
     "replace-in-file": "^7.1.0",
     "rimraf": "^5.0.5",
     "tsup": "^8.0.1",

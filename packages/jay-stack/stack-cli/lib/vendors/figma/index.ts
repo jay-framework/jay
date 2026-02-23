@@ -378,12 +378,12 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
                 const { enrichWithComputedStyles, generateVariantScenarios } = await import(
                     './computed-style-enricher'
                 );
-                
+
                 const devServerUrl = process.env.DEV_SERVER_URL || 'http://localhost:3000';
                 const scenarios = generateVariantScenarios(
                     parsedJayHtml.body,
                     projectPage.contract,
-                    12
+                    12,
                 );
 
                 console.log('[Import] Computing styles via headless browser...');
@@ -395,7 +395,10 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
                     maxScenarios: 12,
                 });
             } catch (error) {
-                console.warn('[Import] Computed style enrichment failed:', (error as Error).message);
+                console.warn(
+                    '[Import] Computed style enrichment failed:',
+                    (error as Error).message,
+                );
                 computedStyleMap = undefined;
             }
         }

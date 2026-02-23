@@ -221,11 +221,11 @@ function buildNodeFromElement(
     const styleAttr = element.getAttribute('style') || '';
     const classAttr = element.getAttribute('class') || '';
     const classNames = classAttr ? classAttr.split(/\s+/).filter(Boolean) : undefined;
-    
+
     // Lookup computed styles for this element
     const elementKey = figmaId || domPath;
     const enrichedStyles = computedStyleMap?.get(elementKey);
-    
+
     const { style, warnings: styleWarnings } = resolveStyle(
         styleAttr,
         classNames,

@@ -372,10 +372,7 @@ export function convertVariantNode(
             if (v.height !== undefined && v.height > maxH) maxH = v.height;
         }
         if (maxH > nodeHeight) {
-            frameSizeStyles = frameSizeStyles.replace(
-                /height:\s*[\d.]+px/,
-                `height: ${maxH}px`,
-            );
+            frameSizeStyles = frameSizeStyles.replace(/height:\s*[\d.]+px/, `height: ${maxH}px`);
         }
     }
 

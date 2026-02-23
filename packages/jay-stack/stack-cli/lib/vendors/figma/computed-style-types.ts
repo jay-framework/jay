@@ -1,6 +1,6 @@
 /**
  * Types for computed style enrichment.
- * 
+ *
  * The enricher uses a headless browser to extract computed styles and layout
  * dimensions from rendered pages, closing the CSS fidelity gap that static
  * parsing cannot solve (cascade, inheritance, shorthand expansion, computed values).
