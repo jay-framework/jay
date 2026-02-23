@@ -25,6 +25,8 @@ import { getLogger } from '@jay-framework/logger';
 
 interface CachedServerModule {
     renderToStream: (vs: object, ctx: ServerRenderContext) => void;
+    headLinks: Array<{ rel: string; href: string; attributes: Record<string, string> }>;
+    css?: string;
 }
 
 /**
@@ -149,13 +151,26 @@ export async function generateSSRPageHtml(
         options,
     );
 
-    // Step 4: Build full HTML page
+    // Step 4: Build head links from jay-html <head> section
+    const headLinksHtml = cached.headLinks
+        .map((link) => {
+            const attrs = Object.entries(link.attributes)
+                .map(([k, v]) => ` ${k}="${v}"`)
+                .join('');
+            return `    <link rel="${link.rel}" href="${link.href}"${attrs} />`;
+        })
+        .join('\n');
+    const inlineCss = cached.css ? `    <style>\n${cached.css}\n    </style>` : '';
+
+    // Step 5: Build full HTML page
     return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vite + TS</title>
+${headLinksHtml}
+${inlineCss}
   </head>
   <body>
     <div id="target">${ssrHtml}</div>${asyncScripts}
@@ -203,6 +218,8 @@ async function compileAndLoadServerElement(
             vs: object,
             ctx: ServerRenderContext,
         ) => void,
+        headLinks: parsedJayFile.headLinks,
+        css: parsedJayFile.css,
     };
 }
 
