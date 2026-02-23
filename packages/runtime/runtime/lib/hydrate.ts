@@ -172,11 +172,13 @@ export function hydrateConditional<ViewState>(
 ): BaseJayElement<ViewState> {
     const context = currentConstructionContext();
 
-    // Adopt the existing element
+    // Adopt the existing element.
+    // adopted may be undefined when the conditional has only static content
+    // (the hydrate compiler emits () => {} which returns undefined).
     const adopted = adoptExisting();
 
-    if (!adopted.dom) {
-        return adopted;
+    if (!adopted || !adopted.dom) {
+        return adopted || { dom: undefined as any, update: noopUpdate, mount: noopMount, unmount: noopMount };
     }
 
     const dom = adopted.dom;

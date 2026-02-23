@@ -2048,12 +2048,17 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         const condition = element.getAttribute('if');
         const renderedCondition = parseCondition(condition, context.variables);
         const coordinate = String(context.coordinateCounter.count++);
-        // Render the element content (without the if= directive) as the adopt callback
+        // Render the element content as the adopt callback.
+        // forceAdopt=true ensures the element is always adopted even if its
+        // content is purely static (e.g., <div if="cond">static text</div>).
+        // Without this, renderHydrateElementContent would skip adoption and
+        // the callback would return undefined, crashing hydrateConditional.
         const childContent = renderHydrateElementContent(
             element,
             context,
             renderContext,
             coordinate,
+            true,
         );
         const adoptBody = childContent.rendered.trim()
             ? `() => ${childContent.rendered.trim()}`
@@ -2525,10 +2530,15 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
         const condition = element.getAttribute('if');
         // Use condition PEG rule (raw expression, no arrow function wrapping)
         const renderedCondition = parseServerCondition(condition, variables);
-        const body = renderServerElementContent(element, {
-            ...context,
-            indent: new Indent(indent.curr + '    '),
-        });
+        // Force coordinate assignment on conditional elements to keep the coordinate
+        // counter aligned with the hydrate target (which always assigns coordinates
+        // to conditionals). Without this, coordinates diverge after the first
+        // conditional and hydration fails to adopt the correct elements.
+        const body = renderServerElementContent(
+            element,
+            { ...context, indent: new Indent(indent.curr + '    ') },
+            true,
+        );
         return new RenderFragment(
             `${indent.firstLine}if (${renderedCondition.rendered}) {\n${body.rendered}\n${indent.firstLine}}`,
             body.imports,

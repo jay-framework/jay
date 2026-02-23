@@ -714,3 +714,21 @@ User sees: "Hello" + "Still loading" → "Hello" + "World" (swap) → interactiv
 1. `generateSSRPageHtml` accepts `projectRoot` and `tsConfigFilePath` instead of the full `JayRollupConfig` (to avoid adding `@jay-framework/rollup-plugin` as a dependency of stack-server-runtime)
 2. The `?jay-hydrate` query is recognized directly in the `parseJayModuleSpecifier` infrastructure (via `isHydrate` field) rather than using a separate detection mechanism
 3. Test pages that use `{{expr}}` syntax (double braces) or have multiple root elements in body correctly fall back to client-only rendering — SSR requires valid jay-html single-brace syntax and single root element
+
+### Phase 5 Bug Fix — Coordinate Alignment Between Server Element and Hydrate Targets
+
+**Problem:** Product pages crashed with `Cannot read properties of undefined (reading 'dom')` in `hydrateConditional`. Two root causes:
+
+1. **Coordinate counter divergence.** The server element target only assigned `jay-coordinate` to elements with dynamic content (text, attributes, refs). Conditional elements with static content (e.g., `<div if="cond">static text</div>`) got no coordinate. The hydrate target always assigns coordinates to conditionals via `context.coordinateCounter.count++` in its conditional handler. After the first static-content conditional, all subsequent coordinates were misaligned between the two targets — the hydrate code tried to adopt elements at wrong coordinates.
+
+2. **`hydrateConditional` crash on static-content conditionals.** When a conditional has only static content, `renderHydrateElementContent` determined `needsAdoption = false` and returned empty content. The adopt callback became `() => {}` (returns `undefined`), and `hydrateConditional` crashed accessing `.dom` on `undefined`.
+
+**Fix:**
+
+- Server element target: pass `forceCoordinate: true` to `renderServerElementContent` for conditional elements (`jay-html-compiler.ts:2528`)
+- Hydrate target: pass `forceAdopt: true` to `renderHydrateElementContent` for conditional elements (`jay-html-compiler.ts:2052`)
+- Runtime: `hydrateConditional` defensively handles `adopted === undefined` (`hydrate.ts:178`)
+
+**Key insight:** The server element and hydrate targets share a coordinate counter convention. Any element that receives a coordinate in one target MUST receive the same coordinate in the other. Conditionals always consume a coordinate in the hydrate target (via the handler's `count++`), so the server target must do the same.
+
+**Additional finding:** The homepage SSR falls back to client rendering because enum values (e.g., `CurrentMood` from `if="mt.currentMood === happy"`) are not imported in the generated server element file. This is a known limitation for Phase 5 — enum support in SSR will need the server element generator to emit enum imports.

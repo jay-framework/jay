@@ -68,7 +68,10 @@ export function hydrate(
                     ),
                     hydrateConditional(
                         (vs) => !vs.cond,
-                        () => adoptText('text2', (vs) => vs.text2, refText2()),
+                        () =>
+                            adoptElement('3', {}, [
+                                adoptText('text2', (vs) => vs.text2, refText2()),
+                            ]),
                     ),
                 ]),
             ]),
