@@ -783,3 +783,11 @@ User sees: "Hello" + "Still loading" → "Hello" + "World" (swap) → interactiv
 - **Hydration:** Vite discovers CSS via the hydrate module's `import './page.css'` and processes it through `transformIndexHtml()`
 
 **Key architectural insight:** The SSR output directory (`build/server-elements/`) is separate from the source file tree. Any generated code that lives in this directory cannot use source-relative import paths (this principle also applies to the enum fix above). For CSS, the solution is to include it directly in the HTML `<head>` rather than rely on import resolution. For the hydrate target (which Vite generates on-the-fly at the source location), CSS imports work but only if the plugin's import resolver recognizes the `?jay-hydrate` query suffix.
+
+### Phase 5 Bug Fix — Duplicate Ref Declarations in Hydrate forEach
+
+**Problem:** Pages with refs inside forEach produced flat ref trees in the hydrate output instead of nested ones, causing incorrect ref manager structure and potential duplicate declarations.
+
+**Root cause:** The hydrate forEach handler was missing `nestRefs(forEachAccessPath, ...)` which the standard element target uses to nest child refs under the forEach access path. It was also missing `dynamicRef: true`. Additionally, `deDuplicateRefsTree` had a broken comparison (`refsMap[ref.ref] === ref.ref` — object vs string, always false), and `equalJayTypes` had bugs in `JayObjectType` comparison (`a[prop]` instead of `a.props[prop]`, `.map()` instead of `.every()`).
+
+**Fix:** Added `nestRefs`, `dynamicRef: true`, and adopt-only refs to the hydrate forEach handler. Fixed `deDuplicateRefsTree` to use proper `Map`-based comparison. Fixed `equalJayTypes` in compiler-shared. See DL#93 "Phase 3 Bug Fix — Duplicate Ref Declarations in Hydrate forEach" for full details and tests.

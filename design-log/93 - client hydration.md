@@ -762,3 +762,31 @@ The hydrate compiler target (`generateElementHydrateFile`) was missing the CSS i
 Additionally, the Vite plugin's CSS import resolver (`hasCssImportedByJayHtml` in `rollup-plugin/resolve-id.ts`) didn't recognize the `?jay-hydrate` query suffix on importers, causing CSS resolution to fail even after adding the import.
 
 Both issues fixed — see DL#94 "Phase 5 Bug Fix — CSS and Head Links Missing from SSR Response" for full details.
+
+### Phase 3 Bug Fix — Duplicate Ref Declarations in Hydrate forEach (Resolved)
+
+**Problem:** Pages with refs inside forEach and conditional branches (e.g., same `ref="deleteButton"` inside `forEach="items"` and inside `if="showGlobalDelete"`) produced flat ref trees in the hydrate output instead of nested ones. This caused duplicate variable declarations or incorrect ref manager structure.
+
+**Root cause (two issues):**
+
+1. **Missing `nestRefs` in hydrate forEach handler.** The standard element target wraps forEach child refs under the access path via `nestRefs(forEachAccessPath, ...)` (line 1088). The hydrate forEach handler was missing this step, so refs like `name` and `deleteButton` inside `forEach="items"` stayed flat at the root level instead of being nested under `items`. When a top-level `deleteButton` ref also existed (from a conditional branch), the flat structure produced incorrect ref manager output.
+
+2. **Missing `dynamicRef: true` in hydrate forEach context.** The standard element target sets `dynamicRef: true` for forEach contexts (line 1082), marking refs inside forEach as collection refs. The hydrate handler was missing this flag.
+
+**Fix:**
+- Added `nestRefs(forEachAccessor.terms, hydrateForEachFragment)` to the hydrate forEach return, matching the standard element target pattern.
+- Added `dynamicRef: true` to the hydrate forEach context.
+- Used only adopt callback refs (`itemContent.refs`) instead of `mergeRefsTrees(itemContent.refs, createChildren.refs)` — the create callback's refs are redundant and the adopt callback already captures all refs correctly.
+
+**Additional fix — `deDuplicateRefsTree` and `equalJayTypes` bugs:**
+- `deDuplicateRefsTree` in `jay-html-compile-refs.ts` had a bug where `refsMap[ref.ref] === ref.ref` compared a Ref object to a string (always false), so deduplication never ran. Fixed by rewriting to use a `Map` with composite key `${ref.ref}:${ref.repeated}`, null guards for `viewStateType`/`elementType`.
+- `equalJayTypes` in `compiler-shared/lib/jay-type.ts` had two bugs in the `JayObjectType` branch: used `a[prop]` instead of `a.props[prop]` (accessing instance properties instead of the props map), and used `.map()` instead of `.every()` (returned a truthy array instead of a boolean). Both fixed.
+
+**Files modified:**
+- `jay-html-compiler.ts` — Added `nestRefs`, `dynamicRef: true`, and adopt-only refs in hydrate forEach handler.
+- `jay-html-compile-refs.ts` — Fixed `deDuplicateRefsTree` comparison bug, restored viewStateType validation with null guards.
+- `compiler-shared/lib/jay-type.ts` — Fixed `equalJayTypes` `JayObjectType` comparison (`a.props[prop]`, `.every()`).
+
+**Tests (2 new, total 11 hydrate tests, 535 total passing):**
+- `collections/duplicate-ref-only-one-used` — headless contract with same ref name (`isSelected`) in two branches, only one used in template.
+- `collections/duplicate-ref-different-branches` — same ref name (`deleteButton`) in forEach and conditional branches.

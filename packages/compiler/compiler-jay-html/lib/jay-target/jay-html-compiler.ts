@@ -2107,6 +2107,7 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             variables: forEachVariables,
             indent: indent.child().child(),
             coordinateCounter: { count: 0 },
+            dynamicRef: true, // Refs inside forEach are collection refs
         };
         const itemContent = mergeHydrateFragments(
             itemChildNodes.map((child) => renderHydrateNode(child, itemContext)),
@@ -2145,7 +2146,7 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         const createAttributes = renderAttributes(element, createRenderContext);
         const createBody = `(${forEachVariables.currentVar}: ${forEachVariables.currentType.name}) => {\n${indent.firstLine}    return e('${element.rawTagName}', ${createAttributes.rendered}, [${createChildren.rendered}]);\n${indent.firstLine}    }`;
 
-        return new RenderFragment(
+        const hydrateForEachFragment = new RenderFragment(
             `${indent.firstLine}hydrateForEach("${containerCoordinate}", ${forEachFragment.rendered}, '${trackBy}',\n${indent.firstLine}    ${adoptBody},\n${indent.firstLine}    ${createBody},\n${indent.firstLine})`,
             Imports.for(Import.hydrateForEach)
                 .plus(Import.element)
@@ -2158,8 +2159,10 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
                 ...itemContent.validations,
                 ...createChildren.validations,
             ],
-            mergeRefsTrees(itemContent.refs, createChildren.refs),
+            itemContent.refs,
         );
+        // Nest refs under the forEach access path, matching the standard element target
+        return nestRefs(forEachAccessor.terms, hydrateForEachFragment);
     }
 
     // --- Component (childComp) ---
