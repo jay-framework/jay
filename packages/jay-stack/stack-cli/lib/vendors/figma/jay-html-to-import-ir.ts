@@ -11,6 +11,7 @@ import { extractBindingsFromElement, buildMergedContractTags } from './binding-r
 import type { ImportContractContext, HeadlessImportInfo } from './binding-reconstructor';
 import { detectVariantGroups, synthesizeVariant, synthesizeRepeater } from './variant-synthesizer';
 import type { PageContractPath } from './pageContractPath';
+import type { ComputedStyleMap } from './computed-style-types';
 
 const BLOCK_LEVEL_TAGS = new Set([
     'div',
@@ -206,6 +207,7 @@ function buildNodeFromElement(
     repeaterContext: string[][],
     contractContext?: ImportContractContext,
     cssClassMap?: CssClassMap,
+    computedStyleMap?: ComputedStyleMap,
 ): BuildResult {
     const warnings: string[] = [];
     const componentSets: ImportIRNode[] = [];
@@ -219,7 +221,17 @@ function buildNodeFromElement(
     const styleAttr = element.getAttribute('style') || '';
     const classAttr = element.getAttribute('class') || '';
     const classNames = classAttr ? classAttr.split(/\s+/).filter(Boolean) : undefined;
-    const { style, warnings: styleWarnings } = resolveStyle(styleAttr, classNames, cssClassMap);
+    
+    // Lookup computed styles for this element
+    const elementKey = figmaId || domPath;
+    const enrichedStyles = computedStyleMap?.get(elementKey);
+    
+    const { style, warnings: styleWarnings } = resolveStyle(
+        styleAttr,
+        classNames,
+        cssClassMap,
+        enrichedStyles,
+    );
     warnings.push(...styleWarnings);
 
     const { bindings, warnings: bindingWarnings } = extractBindingsFromElement(
@@ -388,6 +400,7 @@ function buildNodeFromElement(
                 newRepeaterContext,
                 contractContext,
                 cssClassMap,
+                computedStyleMap,
             );
             children.push(childResult.node);
             warnings.push(...childResult.warnings);
@@ -442,6 +455,7 @@ function buildNodeFromElement(
                     repeaterContext,
                     contractContext,
                     cssClassMap,
+                    computedStyleMap,
                 );
                 warnings.push(...result.warnings);
                 componentSets.push(...result.componentSets);
@@ -476,6 +490,7 @@ function buildNodeFromElement(
             repeaterContext,
             contractContext,
             cssClassMap,
+            computedStyleMap,
         );
         children.push(childResult.node);
         warnings.push(...childResult.warnings);
@@ -507,6 +522,7 @@ export function buildImportIR(
         usedComponents?: ProjectPage['usedComponents'];
         css?: string;
         contentHash?: string;
+        computedStyleMap?: ComputedStyleMap;
     },
 ): ImportIRDocument {
     const warnings: string[] = [];
@@ -548,6 +564,7 @@ export function buildImportIR(
             [],
             contractContext,
             cssClassMap,
+            options?.computedStyleMap,
         );
         rootChildren = [node, ...componentSets];
         warnings.push(...nodeWarnings);

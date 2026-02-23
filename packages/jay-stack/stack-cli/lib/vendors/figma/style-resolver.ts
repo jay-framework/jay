@@ -1,4 +1,5 @@
 import type { ImportIRLayoutMode, ImportIRStyle, ImportIREffect } from './import-ir';
+import type { ComputedStyleData } from './computed-style-types';
 
 const DYNAMIC_PATTERN = /\{[^}]*\}/;
 
@@ -164,6 +165,7 @@ export function resolveStyle(
     inlineStyle: string,
     classNames?: string[],
     cssClassMap?: CssClassMap,
+    enrichedStyles?: ComputedStyleData,
 ): { style: ImportIRStyle; warnings: string[] } {
     const warnings: string[] = [];
     const style: ImportIRStyle = {};
@@ -178,6 +180,16 @@ export function resolveStyle(
     }
     if (inlineStyle) {
         mergedStyleStr = mergedStyleStr ? `${mergedStyleStr}; ${inlineStyle}` : inlineStyle;
+    }
+
+    // Apply computed styles if available (computed overrides static)
+    if (enrichedStyles && enrichedStyles.styles) {
+        const computedStyleStr = Object.entries(enrichedStyles.styles)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join('; ');
+        mergedStyleStr = mergedStyleStr
+            ? `${mergedStyleStr}; ${computedStyleStr}`
+            : computedStyleStr;
     }
 
     const { parsed, dynamicProperties } = parseInlineStyle(mergedStyleStr);
@@ -455,6 +467,15 @@ export function resolveStyle(
         const leftPx = parsePx(parsed['left'] ?? '');
         if (topPx !== undefined) style.y = topPx;
         if (leftPx !== undefined) style.x = leftPx;
+    }
+
+    // Apply computed bounding rect dimensions (always use computed layout)
+    if (enrichedStyles?.boundingRect) {
+        const rect = enrichedStyles.boundingRect;
+        if (rect.width > 0) style.width = rect.width;
+        if (rect.height > 0) style.height = rect.height;
+        style.x = rect.x;
+        style.y = rect.y;
     }
 
     return { style, warnings };
