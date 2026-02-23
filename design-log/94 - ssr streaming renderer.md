@@ -732,3 +732,54 @@ User sees: "Hello" + "Still loading" → "Hello" + "World" (swap) → interactiv
 **Key insight:** The server element and hydrate targets share a coordinate counter convention. Any element that receives a coordinate in one target MUST receive the same coordinate in the other. Conditionals always consume a coordinate in the hydrate target (via the handler's `count++`), so the server target must do the same.
 
 **Additional finding:** The homepage SSR falls back to client rendering because enum values (e.g., `CurrentMood` from `if="mt.currentMood === happy"`) are not imported in the generated server element file. This is a known limitation for Phase 5 — enum support in SSR will need the server element generator to emit enum imports.
+
+### Phase 5 Bug Fix — Enum Types in Server Element Target (Resolved)
+
+**Problem:** SSR failed with `[type] is not defined` for pages using headless contracts with enum types. The generated `server-element.ts` referenced enum values (e.g., `Selected.selected`, `StockStatus.IN_STOCK`, `IsPositive.positive`) in conditions and class expressions, but never made them available. The client-side `generateElementFile` handled this correctly by importing enum types from contract modules.
+
+**Root cause:** `generateServerElementFile()` only generated an import for `@jay-framework/ssr-runtime`. It had no logic to include enum types from headless contract imports (`jayFile.headlessImports`).
+
+**Why imports don't work for SSR:** The SSR output lives in `build/server-elements/` while the module paths in `jayFile.imports` are relative to the original source file location. These paths don't resolve from the server-element output directory. Attempting to import enums with the source-relative paths causes `ENOENT: no such file or directory`.
+
+**Solution:** Inline enum definitions in the server element file instead of importing them. This makes the SSR file self-contained and avoids path resolution issues. The approach mirrors how inline data enums already work via `generateTypes()`.
+
+**Files modified:**
+
+- `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts` — Added enum collection loop in `generateServerElementFile()` (lines 3321-3339). Iterates `jayFile.headlessImports`, finds all `JayEnumType` names via `isEnumType()`, deduplicates with `seenEnums` set, generates inline `enum Name { value1, value2 }` definitions, and includes them in the output between the ssr-runtime import and the ViewState interface.
+
+**Tests added (1 new, 10 total server element tests passing):**
+
+- `test/jay-target/generate-server-element.test.ts` — `conditions > for headless enum conditions`: uses existing `contracts/page-using-counter` fixture with headless counter contract containing `IsPositive` enum. Verifies the generated server element file includes an inline `enum IsPositive { positive, negative }` definition and uses it in `if (vs.counter?.isPositive === IsPositive.positive)` conditions.
+
+**Golden fixture created:** `test/fixtures/contracts/page-using-counter/generated-server-element.ts`
+
+**Test results:** 537 passing (533 + 4 skipped), 0 regressions.
+
+### Phase 5 Bug Fix — CSS and Head Links Missing from SSR Response (Resolved)
+
+**Problem:** After the enum fix enabled SSR to render successfully, the page lost all CSS styling. Two separate issues:
+
+1. **SSR `<head>` was hardcoded** — `generateSSRPageHtml()` used a static `<head>` with only `<meta charset>`, `<meta viewport>`, and `<title>`. The jay-html's `<link rel="stylesheet">` tags and inline `<style>` blocks were ignored entirely.
+
+2. **Hydrate file missing CSS import** — `generateElementHydrateFile()` did not include `import './page.css'` (the compiled inline CSS), while `generateElementFile()` did. When the client imported the hydrate module, Vite couldn't discover the CSS import chain.
+
+3. **Vite plugin didn't recognize hydrate importer for CSS** — `hasCssImportedByJayHtml()` in the rollup plugin only recognized `.jay-html` and `.jay-html?jay-mainSandbox` importers. The hydrate target's `.jay-html?jay-hydrate` was not recognized, causing the CSS import to fail with `Failed to resolve import "./page.css"`.
+
+**How CSS works in the client-only path (for reference):**
+- Inline `<style>` blocks are extracted by the compiler into a `.css` file and imported via `import './page.css'` in `generateElementFile()` output
+- External `<link rel="stylesheet">` tags are parsed as `headLinks` and injected dynamically via `injectHeadLinks()` at runtime inside the `render()` function
+- Vite's `transformIndexHtml()` follows the module import chain, discovers the CSS import, and injects `<style>` tags into the HTML
+
+**Solution — three files changed:**
+
+1. **`packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts`** — Added `generateCssImport(jayFile)` to `generateElementHydrateFile()` output array, matching what `generateElementFile()` already does.
+
+2. **`packages/compiler/rollup-plugin/lib/runtime/resolve-id.ts`** — Added `JAY_QUERY_HYDRATE` to the `hasCssImportedByJayHtml()` check so the Vite plugin recognizes CSS imports from `page.jay-html?jay-hydrate` importers and resolves them to the jay-html's extracted CSS.
+
+3. **`packages/jay-stack/stack-server-runtime/lib/generate-ssr-response.ts`** — Extended `CachedServerModule` to store `headLinks` and `css` from the parsed jay-html. Updated `compileAndLoadServerElement()` to return these alongside `renderToStream`. Updated `generateSSRPageHtml()` to render `<link>` tags and inline `<style>` blocks from the jay-html into the SSR response's `<head>` section.
+
+**CSS now reaches the browser through two channels:**
+- **Initial paint:** SSR `<head>` includes inline `<style>` and `<link>` tags directly — no JavaScript needed
+- **Hydration:** Vite discovers CSS via the hydrate module's `import './page.css'` and processes it through `transformIndexHtml()`
+
+**Key architectural insight:** The SSR output directory (`build/server-elements/`) is separate from the source file tree. Any generated code that lives in this directory cannot use source-relative import paths (this principle also applies to the enum fix above). For CSS, the solution is to include it directly in the HTML `<head>` rather than rely on import resolution. For the hydrate target (which Vite generates on-the-fly at the source location), CSS imports work but only if the plugin's import resolver recognizes the `?jay-hydrate` query suffix.

@@ -748,3 +748,17 @@ Added component support to the hydrate target. Child components in the hydrate t
 - C22: `components/component-in-component` — nested components with hydration
 
 **Test results: 38 runtime + 9 compiler hydrate + 62 existing compiler = 109 passing (0 regressions)**
+
+### Cross-cutting: SSR Enum Support (see DL#94)
+
+The SSR server element target (DL#94) had a bug where enum types from headless contracts were referenced but never defined in the generated file, causing `[EnumType] is not defined` at runtime and falling back to client rendering. This affected the full SSR→hydration pipeline — without a successful SSR render, hydration never runs.
+
+The fix inlines enum definitions in the server element file rather than importing them (import paths are relative to the source file, not the SSR output directory). See DL#94 "Phase 5 Bug Fix — Enum Types in Server Element Target" for full details.
+
+### Cross-cutting: CSS Missing from Hydration Path (see DL#94)
+
+The hydrate compiler target (`generateElementHydrateFile`) was missing the CSS import (`import './page.css'`) that the element target (`generateElementFile`) includes. This meant that when the client imported the hydrate module, Vite couldn't discover the CSS import chain and the page rendered without styles.
+
+Additionally, the Vite plugin's CSS import resolver (`hasCssImportedByJayHtml` in `rollup-plugin/resolve-id.ts`) didn't recognize the `?jay-hydrate` query suffix on importers, causing CSS resolution to fail even after adding the import.
+
+Both issues fixed — see DL#94 "Phase 5 Bug Fix — CSS and Head Links Missing from SSR Response" for full details.
