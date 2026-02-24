@@ -766,6 +766,7 @@ User sees: "Hello" + "Still loading" → "Hello" + "World" (swap) → interactiv
 3. **Vite plugin didn't recognize hydrate importer for CSS** — `hasCssImportedByJayHtml()` in the rollup plugin only recognized `.jay-html` and `.jay-html?jay-mainSandbox` importers. The hydrate target's `.jay-html?jay-hydrate` was not recognized, causing the CSS import to fail with `Failed to resolve import "./page.css"`.
 
 **How CSS works in the client-only path (for reference):**
+
 - Inline `<style>` blocks are extracted by the compiler into a `.css` file and imported via `import './page.css'` in `generateElementFile()` output
 - External `<link rel="stylesheet">` tags are parsed as `headLinks` and injected dynamically via `injectHeadLinks()` at runtime inside the `render()` function
 - Vite's `transformIndexHtml()` follows the module import chain, discovers the CSS import, and injects `<style>` tags into the HTML
@@ -779,6 +780,7 @@ User sees: "Hello" + "Still loading" → "Hello" + "World" (swap) → interactiv
 3. **`packages/jay-stack/stack-server-runtime/lib/generate-ssr-response.ts`** — Extended `CachedServerModule` to store `headLinks` and `css` from the parsed jay-html. Updated `compileAndLoadServerElement()` to return these alongside `renderToStream`. Updated `generateSSRPageHtml()` to render `<link>` tags and inline `<style>` blocks from the jay-html into the SSR response's `<head>` section.
 
 **CSS now reaches the browser through two channels:**
+
 - **Initial paint:** SSR `<head>` includes inline `<style>` and `<link>` tags directly — no JavaScript needed
 - **Hydration:** Vite discovers CSS via the hydrate module's `import './page.css'` and processes it through `transformIndexHtml()`
 

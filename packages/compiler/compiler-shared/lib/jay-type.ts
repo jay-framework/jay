@@ -238,7 +238,9 @@ export function equalJayTypes(a: JayType, b: JayType) {
         const bProps = new Set(Object.keys(b.props));
         return (
             aProps.size === bProps.size &&
-            [...aProps].every((aProp) => bProps.has(aProp) && equalJayTypes(a.props[aProp], b.props[aProp]))
+            [...aProps].every(
+                (aProp) => bProps.has(aProp) && equalJayTypes(a.props[aProp], b.props[aProp]),
+            )
         );
     } else if (a instanceof JayUnionType && b instanceof JayUnionType) {
         return (

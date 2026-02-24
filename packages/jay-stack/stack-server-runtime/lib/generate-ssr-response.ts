@@ -163,15 +163,14 @@ export async function generateSSRPageHtml(
     const inlineCss = cached.css ? `    <style>\n${cached.css}\n    </style>` : '';
 
     // Step 5: Build full HTML page
+    const headExtras = [headLinksHtml, inlineCss].filter((_) => _).join('\n');
     return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Vite + TS</title>
-${headLinksHtml}
-${inlineCss}
-  </head>
+${headExtras ? headExtras + '\n' : ''}  </head>
   <body>
     <div id="target">${ssrHtml}</div>${asyncScripts}
     ${hydrationScript}

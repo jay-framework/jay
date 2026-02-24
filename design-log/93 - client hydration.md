@@ -774,20 +774,24 @@ Both issues fixed — see DL#94 "Phase 5 Bug Fix — CSS and Head Links Missing 
 2. **Missing `dynamicRef: true` in hydrate forEach context.** The standard element target sets `dynamicRef: true` for forEach contexts (line 1082), marking refs inside forEach as collection refs. The hydrate handler was missing this flag.
 
 **Fix:**
+
 - Added `nestRefs(forEachAccessor.terms, hydrateForEachFragment)` to the hydrate forEach return, matching the standard element target pattern.
 - Added `dynamicRef: true` to the hydrate forEach context.
 - Used only adopt callback refs (`itemContent.refs`) instead of `mergeRefsTrees(itemContent.refs, createChildren.refs)` — the create callback's refs are redundant and the adopt callback already captures all refs correctly.
 
 **Additional fix — `deDuplicateRefsTree` and `equalJayTypes` bugs:**
+
 - `deDuplicateRefsTree` in `jay-html-compile-refs.ts` had a bug where `refsMap[ref.ref] === ref.ref` compared a Ref object to a string (always false), so deduplication never ran. Fixed by rewriting to use a `Map` with composite key `${ref.ref}:${ref.repeated}`, null guards for `viewStateType`/`elementType`.
 - `equalJayTypes` in `compiler-shared/lib/jay-type.ts` had two bugs in the `JayObjectType` branch: used `a[prop]` instead of `a.props[prop]` (accessing instance properties instead of the props map), and used `.map()` instead of `.every()` (returned a truthy array instead of a boolean). Both fixed.
 
 **Files modified:**
+
 - `jay-html-compiler.ts` — Added `nestRefs`, `dynamicRef: true`, and adopt-only refs in hydrate forEach handler.
 - `jay-html-compile-refs.ts` — Fixed `deDuplicateRefsTree` comparison bug, restored viewStateType validation with null guards.
 - `compiler-shared/lib/jay-type.ts` — Fixed `equalJayTypes` `JayObjectType` comparison (`a.props[prop]`, `.every()`).
 
 **Tests (2 new, total 11 hydrate tests, 535 total passing):**
+
 - `collections/duplicate-ref-only-one-used` — headless contract with same ref name (`isSelected`) in two branches, only one used in template.
 - `collections/duplicate-ref-different-branches` — same ref name (`deleteButton`) in forEach and conditional branches.
 
@@ -800,4 +804,5 @@ Both issues fixed — see DL#94 "Phase 5 Bug Fix — CSS and Head Links Missing 
 **Fix:** Collect all non-Refs type names from headless imports and generate import statements from the contract modules. Enums are now imported alongside other types instead of being inlined — since we're importing from the contract module anyway, there's no need to duplicate the enum definition.
 
 **Files modified:**
+
 - `jay-html-compiler.ts` — `generateServerElementFile` now generates contract import statements for headless types (ViewState, enums, iteration types), excluding Refs types (not used in SSR). Removed enum inlining.
