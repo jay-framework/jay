@@ -381,6 +381,7 @@ async function handleCachedRequest(
         res,
         url,
         cachedEntry.preRenderedPath,
+        route.jayHtmlPath,
         pageParts,
         fastViewState,
         fastCarryForward,
@@ -580,6 +581,7 @@ async function handlePreRenderRequest(
         res,
         url,
         preRenderedPath,
+        route.jayHtmlPath,
         pageParts,
         fastViewState,
         fastCarryForward,
@@ -766,6 +768,7 @@ async function handleDirectRequest(
         res,
         url,
         route.jayHtmlPath,
+        route.jayHtmlPath,
         pageParts,
         viewState,
         renderedFast.carryForward,
@@ -789,6 +792,7 @@ async function sendResponse(
     res: Response,
     url: string,
     jayHtmlPath: string,
+    sourceJayHtmlPath: string,
     pageParts: any[],
     viewState: object,
     carryForward: object,
@@ -800,6 +804,8 @@ async function sendResponse(
     timing?: RequestTiming,
 ): Promise<void> {
     let pageHtml: string;
+
+    const routeDir = path.dirname(path.relative(options.pagesRootFolder!, sourceJayHtmlPath));
 
     try {
         // Try SSR: server-render HTML + hydration script
@@ -820,6 +826,7 @@ async function sendResponse(
             getClientInitData(),
             options.buildFolder!,
             options.projectRootFolder!,
+            routeDir,
             options.jayRollupConfig?.tsConfigFilePath,
             projectInit,
             pluginsForPage,

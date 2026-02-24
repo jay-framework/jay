@@ -79,6 +79,7 @@ export async function generateSSRPageHtml(
     clientInitData: Record<string, Record<string, any>> = {},
     buildFolder: string,
     projectRoot: string,
+    routeDir: string,
     tsConfigFilePath?: string,
     projectInit?: ProjectClientInitInfo,
     pluginInits: PluginClientInitInfo[] = [],
@@ -96,6 +97,7 @@ export async function generateSSRPageHtml(
             jayHtmlDir,
             buildFolder,
             projectRoot,
+            routeDir,
             tsConfigFilePath,
         );
         serverModuleCache.set(jayHtmlPath, cached);
@@ -179,6 +181,22 @@ ${headExtras ? headExtras + '\n' : ''}  </head>
 }
 
 /**
+ * Rebase relative import paths in generated code from one directory to another.
+ * The compiler calculates import paths relative to the source jay-html directory,
+ * but the generated server-element file lives in a different directory (build/pre-rendered/{routeDir}/).
+ */
+function rebaseRelativeImports(code: string, fromDir: string, toDir: string): string {
+    return code.replace(/from "(\.\.\/[^"]+)"/g, (_match, relPath) => {
+        const absolutePath = path.resolve(fromDir, relPath);
+        let newRelPath = path.relative(toDir, absolutePath);
+        if (!newRelPath.startsWith('.')) {
+            newRelPath = './' + newRelPath;
+        }
+        return `from "${newRelPath}"`;
+    });
+}
+
+/**
  * Compile a jay-html file into a server element module.
  * Parses the jay-html, generates server element TS code,
  * writes it to the build folder, and loads it via Vite SSR.
@@ -190,6 +208,7 @@ async function compileAndLoadServerElement(
     jayHtmlDir: string,
     buildFolder: string,
     projectRoot: string,
+    routeDir: string,
     tsConfigFilePath?: string,
 ): Promise<CachedServerModule> {
     const jayFile = await parseJayFile(
@@ -203,12 +222,16 @@ async function compileAndLoadServerElement(
     const parsedJayFile = checkValidationErrors(jayFile);
     const serverElementCode = checkValidationErrors(generateServerElementFile(parsedJayFile));
 
-    const serverElementsDir = path.join(buildFolder, 'server-elements');
-    await fs.mkdir(serverElementsDir, { recursive: true });
+    const serverElementDir = path.join(buildFolder, 'pre-rendered', routeDir);
+    await fs.mkdir(serverElementDir, { recursive: true });
+
+    // Rebase relative import paths: the compiler calculates them relative to jayHtmlDir,
+    // but the server-element file lives in serverElementDir.
+    const adjustedCode = rebaseRelativeImports(serverElementCode, jayHtmlDir, serverElementDir);
 
     const serverElementFilename = jayHtmlFilename.replace('.jay-html', '.server-element.ts');
-    const serverElementPath = path.join(serverElementsDir, serverElementFilename);
-    await fs.writeFile(serverElementPath, serverElementCode, 'utf-8');
+    const serverElementPath = path.join(serverElementDir, serverElementFilename);
+    await fs.writeFile(serverElementPath, adjustedCode, 'utf-8');
 
     const serverModule = await vite.ssrLoadModule(serverElementPath);
 

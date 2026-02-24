@@ -180,6 +180,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 50  | jay stack - headless configuration | Headless SSR configuration                                         |
 | 93  | client hydration                   | Hydrate server-rendered DOM: skip static HTML, adopt dynamic nodes |
 | 94  | SSR streaming renderer             | Compile jay-html to streaming server render, no DOM APIs           |
+| 98  | route-based server-element output  | Server-element files follow route structure (consistent with DL96) |
 
 ---
 
