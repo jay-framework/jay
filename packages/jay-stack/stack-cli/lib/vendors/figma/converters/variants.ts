@@ -250,22 +250,29 @@ export function findComponentVariant(
  * Builds a condition string for a variant permutation
  * Handles both boolean and enum variant properties
  */
-function buildVariantCondition(
+const EXPRESSION_VALUE_RE = /^(>=|<=|>|<)\s/;
+
+export function buildVariantCondition(
     permutation: Array<{ property: string; tagPath: string; value: string; isBoolean: boolean }>,
 ): string {
-    const conditions = permutation.map(({ tagPath, value, isBoolean }) => {
+    const conditions: string[] = [];
+    for (const { tagPath, value, isBoolean } of permutation) {
+        if (value === 'any') continue;
+
         if (isBoolean) {
-            // For boolean properties, use simpler syntax
             if (value === 'true') {
-                return tagPath;
+                conditions.push(tagPath);
             } else {
-                return `!${tagPath}`;
+                conditions.push(`!${tagPath}`);
             }
+        } else if (value.startsWith('!')) {
+            conditions.push(`${tagPath} != ${value.slice(1)}`);
+        } else if (EXPRESSION_VALUE_RE.test(value)) {
+            conditions.push(`${tagPath} ${value}`);
         } else {
-            // For enum properties, use equality check
-            return `${tagPath} == ${value}`;
+            conditions.push(`${tagPath} == ${value}`);
         }
-    });
+    }
 
     return conditions.join(' && ');
 }

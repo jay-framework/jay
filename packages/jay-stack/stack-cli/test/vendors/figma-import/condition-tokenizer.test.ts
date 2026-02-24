@@ -205,4 +205,47 @@ describe('condition-tokenizer', () => {
             },
         ]);
     });
+
+    it('strict equality === normalizes to ==', () => {
+        expect(tokenizeCondition('inventory.availabilityStatus === IN_STOCK')).toEqual([
+            {
+                path: ['inventory', 'availabilityStatus'],
+                operator: '==',
+                comparedValue: 'IN_STOCK',
+                isNegated: false,
+                isComputed: false,
+                rawExpression: 'inventory.availabilityStatus === IN_STOCK',
+            },
+        ]);
+    });
+
+    it('strict inequality !== normalizes to !=', () => {
+        expect(tokenizeCondition('inventory.availabilityStatus !== OUT_OF_STOCK')).toEqual([
+            {
+                path: ['inventory', 'availabilityStatus'],
+                operator: '!=',
+                comparedValue: 'OUT_OF_STOCK',
+                isNegated: false,
+                isComputed: false,
+                rawExpression: 'inventory.availabilityStatus !== OUT_OF_STOCK',
+            },
+        ]);
+    });
+
+    it('compound with === and !==: "quickAddType === SIMPLE && status !== OUT_OF_STOCK"', () => {
+        const result = tokenizeCondition('quickAddType === SIMPLE && status !== OUT_OF_STOCK');
+        expect(result).toHaveLength(2);
+        expect(result[0]).toMatchObject({
+            path: ['quickAddType'],
+            operator: '==',
+            comparedValue: 'SIMPLE',
+            isComputed: false,
+        });
+        expect(result[1]).toMatchObject({
+            path: ['status'],
+            operator: '!=',
+            comparedValue: 'OUT_OF_STOCK',
+            isComputed: false,
+        });
+    });
 });

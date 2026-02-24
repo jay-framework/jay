@@ -8,6 +8,7 @@ import {
     synthesizeVariant,
     synthesizeRepeater,
 } from '../../../lib/vendors/figma/variant-synthesizer';
+import { buildVariantCondition } from '../../../lib/vendors/figma/converters/variants';
 
 const mockContractTags: ContractTag[] = [
     {
@@ -19,6 +20,12 @@ const mockContractTags: ContractTag[] = [
     { tag: 'isOnSale', type: 'variant' as any, dataType: 'boolean' } as any,
     { tag: 'a', type: 'variant' as any, dataType: 'enum' } as any,
     { tag: 'b', type: 'variant' as any, dataType: 'enum' } as any,
+    { tag: 'quickAddType', type: 'variant' as any, dataType: 'enum' } as any,
+    {
+        tag: 'inventory',
+        type: 'subContract' as any,
+        tags: [{ tag: 'availabilityStatus', type: 'variant' as any, dataType: 'enum' } as any],
+    } as any,
     {
         tag: 'items',
         type: 'subContract',
@@ -61,7 +68,7 @@ describe('variant-synthesizer', () => {
             expect(groups[0]!.conditions).toEqual(['mediaType == IMAGE', 'mediaType == VIDEO']);
         });
 
-        it('non-if sibling between two if-siblings → two separate groups (each with 1 element, neither qualifies)', () => {
+        it('non-if sibling between two if-siblings → two separate groups of 1', () => {
             const doc = parse(`
                 <div>
                     <div if="mediaType == IMAGE" data-test-id="img"></div>
@@ -71,7 +78,26 @@ describe('variant-synthesizer', () => {
             `);
             const parent = doc.querySelector('div')!;
             const groups = detectVariantGroups(parent);
-            expect(groups).toHaveLength(0);
+            expect(groups).toHaveLength(2);
+            expect(groups[0]!.elements).toHaveLength(1);
+            expect(groups[0]!.conditions).toEqual(['mediaType == IMAGE']);
+            expect(groups[1]!.elements).toHaveLength(1);
+            expect(groups[1]!.conditions).toEqual(['mediaType == VIDEO']);
+        });
+
+        it('single if-element → group of 1', () => {
+            const doc = parse(`
+                <div>
+                    <div>plain</div>
+                    <div if="isSearching" data-test-id="loading"></div>
+                    <div>plain</div>
+                </div>
+            `);
+            const parent = doc.querySelector('div')!;
+            const groups = detectVariantGroups(parent);
+            expect(groups).toHaveLength(1);
+            expect(groups[0]!.elements).toHaveLength(1);
+            expect(groups[0]!.conditions).toEqual(['isSearching']);
         });
 
         it('no if siblings → empty array', () => {
@@ -280,6 +306,327 @@ describe('variant-synthesizer', () => {
         });
     });
 
+    describe('inequality (!=) variant values', () => {
+        it('!= condition produces !-prefixed variant value', () => {
+            const doc = parse(`
+                <body>
+                    <div>
+                        <div if="mediaType == IMAGE" data-test-id="img"></div>
+                        <div if="mediaType != IMAGE" data-test-id="not-img"></div>
+                    </div>
+                </body>
+            `);
+            const body = doc.querySelector('body')!;
+            const parent = doc.querySelector('div')!;
+            const groups = detectVariantGroups(parent);
+            const result = synthesizeVariant(
+                groups[0]!,
+                body,
+                mockContractTags,
+                jayPageSectionId,
+                pageContractPath,
+                (el) => mockBuildChildNode(el),
+            );
+
+            expect(
+                result.componentSet.componentPropertyDefinitions!['mediaType']?.variantOptions,
+            ).toEqual(expect.arrayContaining(['IMAGE', '!IMAGE']));
+
+            const notImgComp = result.componentSet.children!.find(
+                (c) => c.variantProperties?.mediaType === '!IMAGE',
+            );
+            expect(notImgComp).toBeDefined();
+        });
+
+        it('=== and !== (strict operators) produce correct variant values', () => {
+            const doc = parse(`
+                <body>
+                    <div>
+                        <div if="mediaType === IMAGE" data-test-id="img"></div>
+                        <div if="mediaType !== IMAGE" data-test-id="not-img"></div>
+                    </div>
+                </body>
+            `);
+            const body = doc.querySelector('body')!;
+            const parent = doc.querySelector('div')!;
+            const groups = detectVariantGroups(parent);
+            const result = synthesizeVariant(
+                groups[0]!,
+                body,
+                mockContractTags,
+                jayPageSectionId,
+                pageContractPath,
+                (el) => mockBuildChildNode(el),
+            );
+
+            expect(
+                result.componentSet.componentPropertyDefinitions!['mediaType']?.variantOptions,
+            ).toEqual(expect.arrayContaining(['IMAGE', '!IMAGE']));
+        });
+
+        it('compound with mixed == and != fills missing dimensions with "any"', () => {
+            const doc = parse(`
+                <body>
+                    <div>
+                        <button if="quickAddType === SIMPLE && inventory.availabilityStatus === IN_STOCK" data-test-id="a"></button>
+                        <button if="quickAddType === SINGLE_OPTION && inventory.availabilityStatus !== OUT_OF_STOCK" data-test-id="b"></button>
+                        <button if="quickAddType === NEEDS_CONFIGURATION && inventory.availabilityStatus !== OUT_OF_STOCK" data-test-id="c"></button>
+                        <div if="inventory.availabilityStatus === OUT_OF_STOCK" data-test-id="d"></div>
+                    </div>
+                </body>
+            `);
+            const body = doc.querySelector('body')!;
+            const parent = doc.querySelector('div')!;
+            const groups = detectVariantGroups(parent);
+            expect(groups).toHaveLength(1);
+
+            const result = synthesizeVariant(
+                groups[0]!,
+                body,
+                mockContractTags,
+                jayPageSectionId,
+                pageContractPath,
+                (el) => mockBuildChildNode(el),
+            );
+
+            const defs = result.componentSet.componentPropertyDefinitions!;
+            expect(defs['quickAddType']?.variantOptions).toEqual(
+                expect.arrayContaining(['SIMPLE', 'SINGLE_OPTION', 'NEEDS_CONFIGURATION', 'any']),
+            );
+            expect(defs['availabilityStatus']?.variantOptions).toEqual(
+                expect.arrayContaining(['IN_STOCK', 'OUT_OF_STOCK', '!OUT_OF_STOCK']),
+            );
+
+            const components = result.componentSet.children!;
+            expect(components).toHaveLength(4);
+
+            // All components must have both dimension keys
+            for (const comp of components) {
+                expect(comp.variantProperties).toHaveProperty('quickAddType');
+                expect(comp.variantProperties).toHaveProperty('availabilityStatus');
+            }
+
+            // Condition 4 has no quickAddType → should get "any"
+            const outOfStockComp = components.find(
+                (c) => c.variantProperties?.availabilityStatus === 'OUT_OF_STOCK',
+            );
+            expect(outOfStockComp?.variantProperties?.quickAddType).toBe('any');
+
+            // Condition 2 has != OUT_OF_STOCK → should get "!OUT_OF_STOCK"
+            const singleOptionComp = components.find(
+                (c) => c.variantProperties?.quickAddType === 'SINGLE_OPTION',
+            );
+            expect(singleOptionComp?.variantProperties?.availabilityStatus).toBe('!OUT_OF_STOCK');
+        });
+    });
+
+    describe('single-element variant groups', () => {
+        it('standalone boolean if → 1-variant COMPONENT_SET', () => {
+            const doc = parse(`
+                <body>
+                    <div>
+                        <div>plain content</div>
+                        <div if="isOnSale" data-test-id="sale"></div>
+                        <div>more plain</div>
+                    </div>
+                </body>
+            `);
+            const body = doc.querySelector('body')!;
+            const parent = doc.querySelector('div')!;
+            const groups = detectVariantGroups(parent);
+            expect(groups).toHaveLength(1);
+
+            const result = synthesizeVariant(
+                groups[0]!,
+                body,
+                mockContractTags,
+                jayPageSectionId,
+                pageContractPath,
+                (el) => mockBuildChildNode(el),
+            );
+
+            expect(result.componentSet.kind).toBe('COMPONENT_SET');
+            expect(result.componentSet.children).toHaveLength(1);
+            expect(result.componentSet.componentPropertyDefinitions!['isOnSale']).toEqual({
+                type: 'VARIANT',
+                variantOptions: ['true'],
+            });
+        });
+
+        it('standalone negated boolean → 1-variant with "false"', () => {
+            const doc = parse(`
+                <body>
+                    <div>
+                        <div>plain</div>
+                        <div if="!isOnSale" data-test-id="no-sale"></div>
+                    </div>
+                </body>
+            `);
+            const body = doc.querySelector('body')!;
+            const parent = doc.querySelector('div')!;
+            const groups = detectVariantGroups(parent);
+            const result = synthesizeVariant(
+                groups[0]!,
+                body,
+                mockContractTags,
+                jayPageSectionId,
+                pageContractPath,
+                (el) => mockBuildChildNode(el),
+            );
+
+            expect(result.componentSet.children).toHaveLength(1);
+            expect(result.componentSet.componentPropertyDefinitions!['isOnSale']).toEqual({
+                type: 'VARIANT',
+                variantOptions: ['false'],
+            });
+        });
+
+        it('standalone equality → 1-variant with the value', () => {
+            const doc = parse(`
+                <body>
+                    <div>
+                        <div>plain</div>
+                        <div if="mediaType == IMAGE" data-test-id="img"></div>
+                    </div>
+                </body>
+            `);
+            const body = doc.querySelector('body')!;
+            const parent = doc.querySelector('div')!;
+            const groups = detectVariantGroups(parent);
+            const result = synthesizeVariant(
+                groups[0]!,
+                body,
+                mockContractTags,
+                jayPageSectionId,
+                pageContractPath,
+                (el) => mockBuildChildNode(el),
+            );
+
+            expect(result.componentSet.children).toHaveLength(1);
+            expect(result.componentSet.componentPropertyDefinitions!['mediaType']).toEqual({
+                type: 'VARIANT',
+                variantOptions: ['IMAGE'],
+            });
+        });
+    });
+
+    describe('expression operator variants (>, <, >=, <=)', () => {
+        it('> and <= siblings → expression values as variant options', () => {
+            const tags: ContractTag[] = [
+                { tag: 'count', type: 'variant' as any, dataType: 'number' } as any,
+            ];
+            const doc = parse(`
+                <body>
+                    <div>
+                        <span if="count > 0" data-test-id="in-stock"></span>
+                        <span if="count <= 0" data-test-id="out-of-stock"></span>
+                    </div>
+                </body>
+            `);
+            const body = doc.querySelector('body')!;
+            const parent = doc.querySelector('div')!;
+            const groups = detectVariantGroups(parent);
+            expect(groups).toHaveLength(1);
+
+            const result = synthesizeVariant(
+                groups[0]!,
+                body,
+                tags,
+                jayPageSectionId,
+                pageContractPath,
+                (el) => mockBuildChildNode(el),
+            );
+
+            expect(result.componentSet.componentPropertyDefinitions!['count']).toEqual({
+                type: 'VARIANT',
+                variantOptions: ['<= 0', '> 0'],
+            });
+
+            const inStockComp = result.componentSet.children!.find(
+                (c) => c.variantProperties?.count === '> 0',
+            );
+            const outStockComp = result.componentSet.children!.find(
+                (c) => c.variantProperties?.count === '<= 0',
+            );
+            expect(inStockComp).toBeDefined();
+            expect(outStockComp).toBeDefined();
+        });
+
+        it('standalone >= → single-variant expression', () => {
+            const tags: ContractTag[] = [
+                { tag: 'score', type: 'variant' as any, dataType: 'number' } as any,
+            ];
+            const doc = parse(`
+                <body>
+                    <div>
+                        <div>plain</div>
+                        <span if="score >= 80" data-test-id="pass"></span>
+                    </div>
+                </body>
+            `);
+            const body = doc.querySelector('body')!;
+            const parent = doc.querySelector('div')!;
+            const groups = detectVariantGroups(parent);
+            const result = synthesizeVariant(
+                groups[0]!,
+                body,
+                tags,
+                jayPageSectionId,
+                pageContractPath,
+                (el) => mockBuildChildNode(el),
+            );
+
+            expect(result.componentSet.children).toHaveLength(1);
+            expect(result.componentSet.componentPropertyDefinitions!['score']).toEqual({
+                type: 'VARIANT',
+                variantOptions: ['>= 80'],
+            });
+        });
+    });
+
+    describe('duplicate variant values', () => {
+        it('siblings with same condition are merged into one COMPONENT with multiple children', () => {
+            const doc = parse(`
+                <body>
+                    <div>
+                        <div if="!isOnSale" data-test-id="empty"></div>
+                        <div if="isOnSale" data-test-id="grid"></div>
+                        <div if="isOnSale" data-test-id="pagination"></div>
+                    </div>
+                </body>
+            `);
+            const body = doc.querySelector('body')!;
+            const parent = doc.querySelector('div')!;
+            const groups = detectVariantGroups(parent);
+            expect(groups).toHaveLength(1);
+            expect(groups[0]!.elements).toHaveLength(3);
+
+            const result = synthesizeVariant(
+                groups[0]!,
+                body,
+                mockContractTags,
+                jayPageSectionId,
+                pageContractPath,
+                (el) => mockBuildChildNode(el),
+            );
+
+            // Should produce 2 COMPONENTs (not 3), since two share isOnSale=true
+            expect(result.componentSet.children).toHaveLength(2);
+
+            const trueComp = result.componentSet.children!.find(
+                (c) => c.variantProperties?.isOnSale === 'true',
+            );
+            const falseComp = result.componentSet.children!.find(
+                (c) => c.variantProperties?.isOnSale === 'false',
+            );
+
+            expect(trueComp).toBeDefined();
+            expect(trueComp!.children).toHaveLength(2);
+            expect(falseComp).toBeDefined();
+            expect(falseComp!.children).toHaveLength(1);
+        });
+    });
+
     describe('COMPONENT children', () => {
         it('have correct variantProperties', () => {
             const doc = parse(`
@@ -311,5 +658,94 @@ describe('variant-synthesizer', () => {
             expect(vidComp).toBeDefined();
             expect(vidComp!.variantProperties).toEqual({ mediaType: 'VIDEO' });
         });
+    });
+});
+
+describe('buildVariantCondition (export: Figma → HTML)', () => {
+    it('enum value → tagPath == value', () => {
+        const result = buildVariantCondition([
+            { property: 'status', tagPath: 'order.status', value: 'ACTIVE', isBoolean: false },
+        ]);
+        expect(result).toBe('order.status == ACTIVE');
+    });
+
+    it('boolean true → tagPath', () => {
+        const result = buildVariantCondition([
+            { property: 'isOnSale', tagPath: 'isOnSale', value: 'true', isBoolean: true },
+        ]);
+        expect(result).toBe('isOnSale');
+    });
+
+    it('boolean false → !tagPath', () => {
+        const result = buildVariantCondition([
+            { property: 'isOnSale', tagPath: 'isOnSale', value: 'false', isBoolean: true },
+        ]);
+        expect(result).toBe('!isOnSale');
+    });
+
+    it('! prefixed value → tagPath != value', () => {
+        const result = buildVariantCondition([
+            {
+                property: 'availabilityStatus',
+                tagPath: 'inventory.availabilityStatus',
+                value: '!OUT_OF_STOCK',
+                isBoolean: false,
+            },
+        ]);
+        expect(result).toBe('inventory.availabilityStatus != OUT_OF_STOCK');
+    });
+
+    it('"any" value → skipped from condition', () => {
+        const result = buildVariantCondition([
+            { property: 'quickAddType', tagPath: 'quickAddType', value: 'any', isBoolean: false },
+            {
+                property: 'availabilityStatus',
+                tagPath: 'inventory.availabilityStatus',
+                value: 'OUT_OF_STOCK',
+                isBoolean: false,
+            },
+        ]);
+        expect(result).toBe('inventory.availabilityStatus == OUT_OF_STOCK');
+    });
+
+    it('expression value > 0 → tagPath > 0', () => {
+        const result = buildVariantCondition([
+            { property: 'count', tagPath: 'count', value: '> 0', isBoolean: false },
+        ]);
+        expect(result).toBe('count > 0');
+    });
+
+    it('expression value <= 0 → tagPath <= 0', () => {
+        const result = buildVariantCondition([
+            { property: 'count', tagPath: 'count', value: '<= 0', isBoolean: false },
+        ]);
+        expect(result).toBe('count <= 0');
+    });
+
+    it('expression value >= 80 → tagPath >= 80', () => {
+        const result = buildVariantCondition([
+            { property: 'score', tagPath: 'score', value: '>= 80', isBoolean: false },
+        ]);
+        expect(result).toBe('score >= 80');
+    });
+
+    it('compound with mixed == and != values', () => {
+        const result = buildVariantCondition([
+            {
+                property: 'quickAddType',
+                tagPath: 'quickAddType',
+                value: 'SINGLE_OPTION',
+                isBoolean: false,
+            },
+            {
+                property: 'availabilityStatus',
+                tagPath: 'inventory.availabilityStatus',
+                value: '!OUT_OF_STOCK',
+                isBoolean: false,
+            },
+        ]);
+        expect(result).toBe(
+            'quickAddType == SINGLE_OPTION && inventory.availabilityStatus != OUT_OF_STOCK',
+        );
     });
 });

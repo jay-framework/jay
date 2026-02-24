@@ -7,7 +7,9 @@ export interface ConditionIdentifier {
     rawExpression: string;
 }
 
-const COMPARISON_OPS = ['==', '!=', '>=', '<=', '>', '<'] as const;
+const COMPARISON_OPS = ['===', '!==', '==', '!=', '>=', '<=', '>', '<'] as const;
+type NormalizedOp = '==' | '!=' | '>' | '<' | '>=' | '<=';
+const NORMALIZE_OP: Record<string, NormalizedOp> = { '===': '==', '!==': '!=' };
 const JS_PROPERTIES = new Set(['length', 'size']);
 
 function splitOnLogicalAtDepthZero(expr: string): { parts: string[]; separators: ('&&' | '||')[] } {
@@ -163,6 +165,7 @@ function tokenizeSingleTerm(term: string, rawOverride?: string): ConditionIdenti
         const right = t.slice(idx + op.length).trim();
         const pathParts = parsePath(left);
         const comparedValue = right;
+        const normalizedOp: NormalizedOp = NORMALIZE_OP[op] ?? (op as NormalizedOp);
 
         const isComputed =
             pathHasJsProperty(pathParts) ||
@@ -172,7 +175,7 @@ function tokenizeSingleTerm(term: string, rawOverride?: string): ConditionIdenti
 
         return {
             path: pathParts,
-            operator: op,
+            operator: normalizedOp,
             comparedValue,
             isNegated,
             isComputed,

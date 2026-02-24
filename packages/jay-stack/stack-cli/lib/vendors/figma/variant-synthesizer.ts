@@ -10,7 +10,31 @@ import { generateNodeId, buildDomPath, getSemanticAnchors } from './id-generator
 import { extractBindingsFromElement } from './binding-reconstructor';
 import type { ImportContractContext } from './binding-reconstructor';
 
+import type { ConditionIdentifier } from './condition-tokenizer';
+
 const VARIANT_SYNTHETIC_DIMENSION = 'VARIANT_SYNTHETIC_DIMENSION';
+const EXPRESSION_OPS = new Set(['>', '<', '>=', '<=']);
+
+/**
+ * Convert a condition token to the variant value string stored in Figma.
+ *
+ * - `==` / `===`  → bare value (`IMAGE`)
+ * - `!=` / `!==`  → `!` prefix (`!OUT_OF_STOCK`)
+ * - `>`, `<`, `>=`, `<=` → operator + value (`> 0`, `<= 100`)
+ * - boolean truthy → `true`
+ * - boolean negated → `false`
+ */
+function tokenToVariantValue(token: ConditionIdentifier): string | null {
+    if (token.operator && token.comparedValue != null) {
+        if (token.operator === '==') return token.comparedValue;
+        if (token.operator === '!=') return `!${token.comparedValue}`;
+        if (EXPRESSION_OPS.has(token.operator)) return `${token.operator} ${token.comparedValue}`;
+    }
+    if (!token.operator) {
+        return token.isNegated ? 'false' : 'true';
+    }
+    return null;
+}
 
 export interface VariantGroup {
     elements: HTMLElement[];
@@ -29,8 +53,9 @@ function getElementChildren(parent: HTMLElement): HTMLElement[] {
 }
 
 /**
- * Scan children of parent for consecutive siblings with if="..." attributes.
- * Non-if siblings break the group. A group must have at least 2 elements.
+ * Scan children of parent for elements with if="..." attributes.
+ * Consecutive if-siblings form a group. Single if-elements form a group of 1.
+ * Non-if siblings break consecutive runs.
  */
 export function detectVariantGroups(parent: HTMLElement): VariantGroup[] {
     const children = getElementChildren(parent);
@@ -48,7 +73,7 @@ export function detectVariantGroups(parent: HTMLElement): VariantGroup[] {
                 currentGroup = { elements: [child], conditions: [condition] };
             }
         } else {
-            if (currentGroup && currentGroup.elements.length >= 2) {
+            if (currentGroup && currentGroup.elements.length >= 1) {
                 groups.push({
                     ...currentGroup,
                     containerParent: parent,
@@ -58,7 +83,7 @@ export function detectVariantGroups(parent: HTMLElement): VariantGroup[] {
         }
     }
 
-    if (currentGroup && currentGroup.elements.length >= 2) {
+    if (currentGroup && currentGroup.elements.length >= 1) {
         groups.push({
             ...currentGroup,
             containerParent: parent,
@@ -101,15 +126,13 @@ function classifyDimensions(
                 const pathKey = token.path.join('.');
                 const lastSegment = token.path[token.path.length - 1]!;
 
+                const variantValue = tokenToVariantValue(token);
                 if (!pathToDimension.has(pathKey)) {
                     const values = new Set<string>();
                     let isBoolean = false;
-                    if (token.operator === '==' && token.comparedValue != null) {
-                        values.add(token.comparedValue);
-                    } else if (token.isNegated || !token.operator) {
-                        isBoolean = true;
-                        values.add('true');
-                        values.add('false');
+                    if (variantValue != null) {
+                        values.add(variantValue);
+                        if (!token.operator) isBoolean = true;
                     }
                     pathToDimension.set(pathKey, {
                         values,
@@ -118,12 +141,9 @@ function classifyDimensions(
                     });
                 } else {
                     const dim = pathToDimension.get(pathKey)!;
-                    if (token.operator === '==' && token.comparedValue != null) {
-                        dim.values.add(token.comparedValue);
-                    } else if (token.isNegated || !token.operator) {
-                        dim.isBoolean = true;
-                        dim.values.add('true');
-                        dim.values.add('false');
+                    if (variantValue != null) {
+                        dim.values.add(variantValue);
+                        if (!token.operator) dim.isBoolean = true;
                     }
                 }
             }
@@ -147,6 +167,8 @@ function classifyDimensions(
     return { dimensions, warnings };
 }
 
+const DEFAULT_VARIANT_VALUE = 'any';
+
 function getVariantPropertiesForCondition(
     condition: string,
     dimensions: DimensionInfo[],
@@ -158,11 +180,9 @@ function getVariantPropertiesForCondition(
         const pathKey = dim.tagPath.join('.');
         const matchingToken = tokens.find((t) => t.path.join('.') === pathKey);
         if (matchingToken) {
-            if (matchingToken.operator === '==' && matchingToken.comparedValue != null) {
-                result[dim.name] = matchingToken.comparedValue;
-            } else {
-                result[dim.name] = matchingToken.isNegated ? 'false' : 'true';
-            }
+            result[dim.name] = tokenToVariantValue(matchingToken) ?? DEFAULT_VARIANT_VALUE;
+        } else {
+            result[dim.name] = DEFAULT_VARIANT_VALUE;
         }
     }
     return result;
@@ -187,17 +207,6 @@ export function synthesizeVariant(
     );
     warnings.push(...dimWarnings);
 
-    const componentPropertyDefinitions: Record<
-        string,
-        { type: 'VARIANT'; variantOptions: string[] }
-    > = {};
-    for (const dim of dimensions) {
-        componentPropertyDefinitions[dim.name] = {
-            type: 'VARIANT',
-            variantOptions: Array.from(dim.values).sort(),
-        };
-    }
-
     const dimensionNames = dimensions.map((d) => d.name).join(', ');
     const componentSetName = dimensionNames ? `${dimensionNames} variants` : 'variants';
 
@@ -207,31 +216,75 @@ export function synthesizeVariant(
         ...group.conditions,
     ]);
 
-    const components: ImportIRNode[] = [];
+    // Group elements by their variant property signature to merge duplicates.
+    // Multiple siblings with the same condition become children of one COMPONENT.
+    const variantKeyToComponent = new Map<
+        string,
+        { props: Record<string, string>; children: ImportIRNode[]; firstElement: HTMLElement; conditions: string[] }
+    >();
+    const insertionOrder: string[] = [];
+
     for (let i = 0; i < group.elements.length; i++) {
         const element = group.elements[i]!;
         const condition = group.conditions[i]!;
         const variantProps = getVariantPropertiesForCondition(condition, dimensions);
-        const variantName = Object.entries(variantProps)
+        const variantKey = Object.entries(variantProps)
+            .sort(([a], [b]) => a.localeCompare(b))
             .map(([k, v]) => `${k}=${v}`)
             .join(', ');
 
         const childNode = buildChildNode(element);
-        const compDomPath = buildDomPath(element, body);
+        const existing = variantKeyToComponent.get(variantKey);
+        if (existing) {
+            existing.children.push(childNode);
+            existing.conditions.push(condition);
+        } else {
+            variantKeyToComponent.set(variantKey, {
+                props: variantProps,
+                children: [childNode],
+                firstElement: element,
+                conditions: [condition],
+            });
+            insertionOrder.push(variantKey);
+        }
+    }
+
+    const components: ImportIRNode[] = [];
+    for (const variantKey of insertionOrder) {
+        const entry = variantKeyToComponent.get(variantKey)!;
+        const compDomPath = buildDomPath(entry.firstElement, body);
         const compId = generateNodeId(compDomPath, [
             'variant',
-            condition,
-            ...getSemanticAnchors(element),
+            ...entry.conditions,
+            ...getSemanticAnchors(entry.firstElement),
         ]);
 
         components.push({
             id: compId,
             sourcePath: 'variant-synthesizer',
             kind: 'COMPONENT',
-            name: variantName,
-            variantProperties: variantProps,
-            children: [childNode],
+            name: variantKey,
+            variantProperties: entry.props,
+            children: entry.children,
         });
+    }
+
+    // Build componentPropertyDefinitions from ALL values actually used by components,
+    // including synthetic values like "any" (default) and "!X" (inequality)
+    const componentPropertyDefinitions: Record<
+        string,
+        { type: 'VARIANT'; variantOptions: string[] }
+    > = {};
+    for (const dim of dimensions) {
+        const allValues = new Set(dim.values);
+        for (const comp of components) {
+            const val = comp.variantProperties?.[dim.name];
+            if (val) allValues.add(val);
+        }
+        componentPropertyDefinitions[dim.name] = {
+            type: 'VARIANT',
+            variantOptions: Array.from(allValues).sort(),
+        };
     }
 
     const componentSet: ImportIRNode = {
