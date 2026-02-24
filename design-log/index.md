@@ -181,6 +181,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 93  | client hydration                   | Hydrate server-rendered DOM: skip static HTML, adopt dynamic nodes |
 | 94  | SSR streaming renderer             | Compile jay-html to streaming server render, no DOM APIs           |
 | 98  | route-based server-element output  | Server-element files follow route structure (consistent with DL96) |
+| 99  | hydration coordinate alignment bugs | Fix forEach prefix, conditional+ref counter, containerCoordinate  |
 
 ---
 
