@@ -1992,6 +1992,8 @@ interface HydrateContext {
     importedRefNameToRef: Map<string, Ref>;
     importedSymbols: Set<string>;
     headlessContractNames: Set<string>;
+    /** Coordinate of the enclosing adopted element, used by forEach as containerCoordinate. */
+    parentCoordinate?: string;
 }
 
 /**
@@ -2047,7 +2049,11 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
     if (isConditional(element)) {
         const condition = element.getAttribute('if');
         const renderedCondition = parseCondition(condition, context.variables);
-        const coordinate = String(context.coordinateCounter.count++);
+        // Use ref name when available to match server element compiler behavior
+        // (which uses refName || counter++). Only increment counter when no ref.
+        const refAttr = element.attributes.ref;
+        const refName = refAttr ? camelCase(refAttr) : null;
+        const coordinate = refName || String(context.coordinateCounter.count++);
         // Render the element content as the adopt callback.
         // forceAdopt=true ensures the element is always adopted even if its
         // content is purely static (e.g., <div if="cond">static text</div>).
@@ -2089,7 +2095,10 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
                 `forEach directive - resolved forEach type is not an array [forEach=${forEach}]`,
             ]);
 
-        const containerCoordinate = String(context.coordinateCounter.count++);
+        // Use parent element's coordinate as container (same element, resolved via peek).
+        // Don't increment counter — the server element doesn't emit a separate coordinate.
+        const containerCoordinate =
+            context.parentCoordinate || String(context.coordinateCounter.count++);
         const paramName = forEachAccessor.rootVar;
         const paramType = variables.currentType.name;
         const forEachFragment = forEachAccessor
@@ -2267,10 +2276,13 @@ function renderHydrateElementContent(
     // Build the ref argument if present
     const renderedRef = renderElementRef(element, renderContext);
 
-    // If this element has interactive children (conditionals/forEach), render them
+    // If this element has interactive children (conditionals/forEach), render them.
+    // Pass the current element's coordinate as parentCoordinate so that forEach
+    // children can use it as their containerCoordinate (same element, peek mode).
     if (hasInteractiveChildren) {
+        const childContext = { ...context, parentCoordinate: coordinate };
         const childFragments = mergeHydrateFragments(
-            childNodes.map((child) => renderHydrateNode(child, context)),
+            childNodes.map((child) => renderHydrateNode(child, childContext)),
             ',\n',
         );
         const refSuffix = renderedRef.rendered ? `, ${renderedRef.rendered}` : '';
@@ -2503,6 +2515,9 @@ interface ServerContext {
     variables: Variables;
     indent: Indent;
     coordinateCounter: { count: number };
+    /** Runtime expression for coordinate prefix inside forEach items (e.g., `vs1.id`).
+     *  When set, child coordinates are emitted as `{prefix}/{coordinate}`. */
+    coordinatePrefix?: string;
 }
 
 /** Helper: create a single-line w() statement as a RenderFragment */
@@ -2577,19 +2592,31 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
         const forEachVariables = variables.childVariableFor(forEachAccessor);
         const arrayExpr = forEachAccessor.render().rendered;
         const itemIndent = new Indent(indent.curr + '    ');
+        // Build trackBy expression for item coordinate and child prefix.
+        // coordinatePrefix is a complete JS expression producing the escaped prefix string.
+        // For nested forEach, chain: `outerPrefix + '/' + escapeAttr(String(innerTrackBy))`.
+        const trackByExpr = `${forEachVariables.currentVar}.${trackBy}`;
+        const itemPrefixExpr = `escapeAttr(String(${trackByExpr}))`;
+        const coordinatePrefix = context.coordinatePrefix
+            ? `${context.coordinatePrefix} + '/' + ${itemPrefixExpr}`
+            : itemPrefixExpr;
         const itemContext: ServerContext = {
             ...context,
             variables: forEachVariables,
             indent: itemIndent,
             coordinateCounter: { count: 0 },
+            coordinatePrefix,
         };
-
-        // Build opening tag for each item with jay-coordinate from trackBy
-        const trackByExpr = `${forEachVariables.currentVar}.${trackBy}`;
         const openTag = renderServerOpenTag(element, itemContext, null);
+        // Item root coordinate: for nested forEach, prefix with parent scope.
+        // Top-level: jay-coordinate="{trackById}"
+        // Nested:    jay-coordinate="{outerTrackById}/{innerTrackById}"
+        const itemRootCoordExpr = context.coordinatePrefix
+            ? `${context.coordinatePrefix} + '/' + escapeAttr(String(${trackByExpr}))`
+            : `escapeAttr(String(${trackByExpr}))`;
         const coordinateW = w(
             itemIndent,
-            `' jay-coordinate="' + escapeAttr(String(${trackByExpr})) + '">'`,
+            `' jay-coordinate="' + ${itemRootCoordExpr} + '">'`,
             Imports.for(Import.escapeAttr),
         );
 
@@ -3106,7 +3133,18 @@ function renderServerElementContent(
         parts.push(attrs);
     }
     if (coordinate !== null) {
-        parts.push(w(indent, `' jay-coordinate="${coordinate}">'`));
+        if (context.coordinatePrefix) {
+            // coordinatePrefix is a JS expression producing the escaped prefix string
+            parts.push(
+                w(
+                    indent,
+                    `' jay-coordinate="' + ${context.coordinatePrefix} + '/${coordinate}">'`,
+                    Imports.for(Import.escapeAttr),
+                ),
+            );
+        } else {
+            parts.push(w(indent, `' jay-coordinate="${coordinate}">'`));
+        }
     } else {
         parts.push(w(indent, `'>'`));
     }

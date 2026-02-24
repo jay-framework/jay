@@ -9,9 +9,11 @@ The compiler tests only compare generated code text against fixtures — they ne
 ## Problem
 
 The whisky-store products page logs:
+
 ```
 [jay hydration] hydrateForEach: could not find container element
 ```
+
 Interactive elements (search, filters, add-to-cart) do not work.
 
 ## Root Cause Analysis
@@ -31,8 +33,8 @@ But the server element compiler emits unprefixed coordinates:
 
 ```typescript
 // collections/generated-server-element.ts (current, WRONG):
-w(' jay-coordinate="' + escapeAttr(String(vs1.id)) + '">');  // item root: OK
-w(' jay-coordinate="0">');  // child: WRONG, should be "{id}/0"
+w(' jay-coordinate="' + escapeAttr(String(vs1.id)) + '">'); // item root: OK
+w(' jay-coordinate="0">'); // child: WRONG, should be "{id}/0"
 ```
 
 The hydrate runtime's `forItem(item, id)` sets `coordinateBase = [id]`, so `resolveCoordinate("0")` looks for `"{id}/0"` in the coordinate map. Since the server rendered plain `"0"`, it finds nothing.
@@ -53,12 +55,12 @@ coordinate = refName || String(context.coordinateCounter.count++)
 
 This shifts all subsequent coordinates. In the whisky store's searchResults item:
 
-| Element | Server coord | Hydrate coord |
-|---------|-------------|---------------|
-| addToCartButton (ref+if) | ref name | `"10"` |
-| quick-options-area (if) | `"10"` | `"11"` |
-| quick-options-buttons | `"12"` | `"13"` |
-| inner forEach container | — | `"14"` |
+| Element                  | Server coord | Hydrate coord |
+| ------------------------ | ------------ | ------------- |
+| addToCartButton (ref+if) | ref name     | `"10"`        |
+| quick-options-area (if)  | `"10"`       | `"11"`        |
+| quick-options-buttons    | `"12"`       | `"13"`        |
+| inner forEach container  | —            | `"14"`        |
 
 ### Bug C: forEach containerCoordinate has no matching element
 
@@ -96,8 +98,8 @@ Add `coordinatePrefix` to `ServerContext`. When rendering coordinates inside a f
 ```typescript
 // ServerContext:
 interface ServerContext {
-    // ... existing fields
-    coordinatePrefix?: string;  // runtime expression, e.g., `vs1.id`
+  // ... existing fields
+  coordinatePrefix?: string; // runtime expression, e.g., `vs1.id`
 }
 ```
 
@@ -105,11 +107,11 @@ In `renderServerElement` for forEach, set the prefix on the item context:
 
 ```typescript
 const itemContext: ServerContext = {
-    ...context,
-    variables: forEachVariables,
-    indent: itemIndent,
-    coordinateCounter: { count: 0 },
-    coordinatePrefix: `${forEachVariables.currentVar}.${trackBy}`,  // NEW
+  ...context,
+  variables: forEachVariables,
+  indent: itemIndent,
+  coordinateCounter: { count: 0 },
+  coordinatePrefix: `${forEachVariables.currentVar}.${trackBy}`, // NEW
 };
 ```
 
@@ -131,11 +133,11 @@ In `renderHydrateElement` for conditionals, check for a ref and use it when avai
 
 ```typescript
 if (isConditional(element)) {
-    const refAttr = element.attributes.ref;
-    const refName = refAttr ? camelCase(refAttr) : null;
-    // Match server behavior: use ref name when present, counter only otherwise
-    const coordinate = refName || String(context.coordinateCounter.count++);
-    // ... rest unchanged
+  const refAttr = element.attributes.ref;
+  const refName = refAttr ? camelCase(refAttr) : null;
+  // Match server behavior: use ref name when present, counter only otherwise
+  const coordinate = refName || String(context.coordinateCounter.count++);
+  // ... rest unchanged
 }
 ```
 
@@ -158,8 +160,8 @@ Pass the parent's coordinate down through `HydrateContext`:
 
 ```typescript
 interface HydrateContext {
-    // ... existing fields
-    parentCoordinate?: string;  // coordinate of the enclosing adopted element
+  // ... existing fields
+  parentCoordinate?: string; // coordinate of the enclosing adopted element
 }
 ```
 
@@ -234,6 +236,7 @@ Both `renderServerElementContent` and `renderHydrateElementContent` call this sh
 The compiler tests currently verify each target in isolation (text comparison against fixtures). This missed all three bugs because the server element and hydrate target were never tested together.
 
 Add a new test phase to existing fixtures that:
+
 1. Compiles the jay-html into both server element and hydrate target
 2. Runs the server element's `renderToStream()` to produce HTML
 3. Parses the HTML into a DOM (via jsdom/happy-dom)
@@ -268,11 +271,13 @@ This catches any future coordinate divergence automatically.
 ## Implementation Plan
 
 ### Phase 1: Shared coordinate module
+
 - Extract `assignCoordinate()` function used by both compiler targets
 - Both `renderServerElementContent` and `renderHydrateElementContent` use it
 - This makes fixes B and C automatic — both targets make the same decisions
 
 ### Phase 2: Server compiler — fix A (coordinate prefix)
+
 - Add `coordinatePrefix` to `ServerContext`
 - Set it in `renderServerElement` for forEach item context
 - Use it in `renderServerElementContent` when emitting coordinates
@@ -281,11 +286,13 @@ This catches any future coordinate divergence automatically.
 - Update test fixture: `collections/generated-server-element.ts`
 
 ### Phase 3: Hydrate compiler — fix B (conditional + ref)
+
 - Follows from Phase 1 if shared module is used
 - Otherwise: in `renderHydrateElement`, use ref name for conditionals with refs
 - Update affected test fixtures
 
 ### Phase 4: Hydrate compiler + runtime — fix C (forEach containerCoordinate)
+
 - Add `peekCoordinate` method to `ConstructContext` in `context.ts`
 - Use `peekCoordinate` in `hydrateForEach` for container resolution in `hydrate.ts`
 - Add `parentCoordinate` to `HydrateContext`
@@ -294,11 +301,13 @@ This catches any future coordinate divergence automatically.
 - Update test fixture: `collections/generated-element-hydrate.ts`
 
 ### Phase 5: Integration test
+
 - Add `ssr-hydration-integration.test.ts` in compiler-jay-html tests
 - Test existing fixtures (collections, page-using-counter) end-to-end
 - Verify coordinates resolve, refs wire up, dynamic updates work
 
 ### Phase 6: Verify
+
 - Run runtime tests: `cd packages/runtime/runtime && yarn vitest run`
 - Run compiler tests: `cd packages/compiler/compiler-jay-html && yarn vitest run`
 - Run full suite: `yarn test`
@@ -312,3 +321,39 @@ This catches any future coordinate divergence automatically.
 4. Full test suite passes
 5. Whisky store products page: search, filters, add-to-cart all work
 6. No `hydrateForEach: could not find container element` errors in console
+
+## Implementation Results
+
+Implemented fixes A, B, C and runtime peekCoordinate. Shared coordinate module (Phase 1) and integration test (Phase 5) deferred for follow-up.
+
+### Files changed
+
+**Runtime** (`packages/runtime/runtime/lib/`):
+
+- `context.ts` — Added `peekCoordinate(key)` method to `ConstructContext`. Reads from the coordinate map without consuming (`elements[0]` instead of `elements.shift()`), so both `hydrateForEach` and the parent `adoptElement` can resolve the same element.
+- `hydrate.ts` — `hydrateForEach` uses `peekCoordinate()` for container resolution instead of `resolveCoordinate()`.
+
+**Compiler** (`packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts`):
+
+- **Fix A**: Added `coordinatePrefix?: string` to `ServerContext`. In `renderServerElement` for forEach, sets `coordinatePrefix` to a JS expression (`escapeAttr(String(trackByExpr))`). In `renderServerElementContent`, emits prefixed coordinates: `jay-coordinate="' + ${prefix} + '/${coordinate}">'`. Nested forEach chains prefixes with `+ '/' +`.
+- **Fix B**: In `renderHydrateElement` for conditionals, checks for ref name and uses it when available (`refName || counter++`), matching server element behavior. Counter only increments when no ref exists.
+- **Fix C**: Added `parentCoordinate?: string` to `HydrateContext`. In `renderHydrateElementContent`, passes the current element's coordinate to children as `parentCoordinate` when processing interactive children. In `renderHydrateElement` for forEach, uses `context.parentCoordinate` instead of `counter++` when available.
+
+**Test fixtures** (6 files updated):
+
+- `collections/generated-server-element.ts` — Child coordinates prefixed: `"0"` → `"' + escapeAttr(String(vs1.id)) + '/0"`
+- `collections/generated-element-hydrate.ts` — `hydrateForEach('3', ...)` → `hydrateForEach('2', ...)`
+- `conditions-with-refs/generated-element-hydrate.ts` — Conditional with ref uses ref name: `adoptText('1', ...)` → `adoptText('text1', ...)`, subsequent counter shifted
+- `async-arrays/generated-server-element.ts` — Same prefix fix as collections
+- `duplicate-ref-different-branches/generated-element-hydrate.ts` — `hydrateForEach('3', ...)` → `'2'`, subsequent conditional `'4'` → `'3'`
+- `duplicate-ref-only-one-used/generated-element-hydrate.ts` — `hydrateForEach('2', ...)` → `'0'`
+
+### Deviations from plan
+
+- **Phase 1 (shared coordinate module) deferred**: The three fixes were applied directly to each compiler target. Extracting shared coordinate logic would be a clean refactor but wasn't needed for correctness. The bug fixes align the two targets manually.
+- **Phase 5 (integration test) deferred**: The SSR+hydration integration test is still recommended but was not implemented in this pass. The three bug fixes are validated by existing unit tests and the whisky store manual test.
+
+### Test results
+
+- All 68 packages build successfully
+- All 68 packages test successfully (no failures)

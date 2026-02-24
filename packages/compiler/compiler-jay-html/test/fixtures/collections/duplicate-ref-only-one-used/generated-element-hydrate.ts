@@ -90,7 +90,7 @@ export function hydrate(
             adoptElement('0', {}, [
                 adoptText('1', (vs) => vs.title),
                 hydrateForEach(
-                    '2',
+                    '0',
                     (vs: DuplicateRefOnlyOneUsedViewState) => vs.filters?.filter2?.categories,
                     'id',
                     () => [

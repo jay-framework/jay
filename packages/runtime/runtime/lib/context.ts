@@ -227,6 +227,21 @@ export class ConstructContext<ViewState> {
         return elements.shift();
     }
 
+    /**
+     * Peek at an element by its coordinate key without consuming it.
+     * Used by hydrateForEach to resolve the container element — the same element
+     * is also consumed by the parent adoptElement call (which evaluates after
+     * hydrateForEach due to JavaScript argument evaluation order).
+     */
+    peekCoordinate(key: string): Element | undefined {
+        if (!this._coordinateMap) return undefined;
+        const fullKey =
+            this.coordinateBase.length > 0 ? this.coordinateBase.join('/') + '/' + key : key;
+        const elements = this._coordinateMap.get(fullKey);
+        if (!elements || elements.length === 0) return undefined;
+        return elements[0];
+    }
+
     static withRootContext<ViewState, Refs>(
         viewState: ViewState,
         refManager: ReferencesManager,

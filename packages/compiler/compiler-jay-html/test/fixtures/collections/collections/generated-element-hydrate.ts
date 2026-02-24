@@ -56,7 +56,7 @@ export function hydrate(
                 adoptText('1', (vs) => vs.title),
                 adoptElement('2', {}, [
                     hydrateForEach(
-                        '3',
+                        '2',
                         (vs: CollectionsViewState) => vs.things,
                         'id',
                         () => [

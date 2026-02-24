@@ -23,11 +23,11 @@ export function renderToStream(vs: AsyncArraysViewState, ctx: ServerRenderContex
         w('<div');
         w(' jay-coordinate="' + escapeAttr(String(vs1.s3)) + '">');
         w('<span');
-        w(' jay-coordinate="0">');
+        w(' jay-coordinate="' + escapeAttr(String(vs1.s3)) + '/0">');
         w(escapeHtml(String(vs1.s3)));
         w('</span>');
         w('<span');
-        w(' jay-coordinate="1">');
+        w(' jay-coordinate="' + escapeAttr(String(vs1.s3)) + '/1">');
         w(escapeHtml(String(vs1.n3)));
         w('</span>');
         w('</div>');

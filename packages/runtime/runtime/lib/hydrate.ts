@@ -289,8 +289,10 @@ export function hydrateForEach<ViewState, Item>(
         adoptedItems.push(adopted);
     }
 
-    // Resolve the container element by coordinate
-    const containerElement = context.resolveCoordinate(containerCoordinate);
+    // Resolve the container element by coordinate (peek — don't consume).
+    // The same coordinate is used by the parent adoptElement, which evaluates
+    // after hydrateForEach (JS argument evaluation order) and consumes it.
+    const containerElement = context.peekCoordinate(containerCoordinate);
 
     if (!containerElement) {
         console.warn('[jay hydration] hydrateForEach: could not find container element');

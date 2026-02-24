@@ -93,7 +93,7 @@ export function hydrate(
                 adoptText('1', (vs) => vs.title),
                 adoptElement('2', {}, [
                     hydrateForEach(
-                        '3',
+                        '2',
                         (vs: DuplicateRefDifferentBranchesViewState) => vs.items,
                         'id',
                         () => [
@@ -111,7 +111,7 @@ export function hydrate(
                 hydrateConditional(
                     (vs) => vs.showGlobalDelete,
                     () =>
-                        adoptElement('4', {}, [
+                        adoptElement('3', {}, [
                             adoptElement('deleteButton', {}, [], refDeleteButton2()),
                         ]),
                 ),
