@@ -1098,11 +1098,11 @@ export function createEditorHandlers(
                         plugins,
                     );
 
-                    // Build the full Jay HTML document with headless components from page.conf.yaml
                     const fullJayHtml = await buildJayHtmlFromVendorResult(
                         conversionResult,
                         dirname,
                         path.basename(dirname),
+                        projectPage.usedComponents,
                     );
 
                     // Write Jay HTML file

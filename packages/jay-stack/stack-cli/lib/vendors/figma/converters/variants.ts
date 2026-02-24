@@ -121,17 +121,11 @@ export function getComponentVariantValues(
  * explicitly declares the property as boolean AND Figma values match.
  */
 function isBooleanVariant(values: string[], contractTag: ContractTag): boolean {
-    // Check contract tag dataType first - this is the source of truth
     if (contractTag.dataType !== 'boolean') {
         return false;
     }
-
-    // Then verify Figma values match boolean pattern
-    if (values.length !== 2) {
-        return false;
-    }
-    const sortedValues = [...values].sort();
-    return sortedValues[0] === 'false' && sortedValues[1] === 'true';
+    const nonWildcard = values.filter((v) => v !== '*');
+    return nonWildcard.length === 0 || nonWildcard.every((v) => v === 'true' || v === 'false');
 }
 
 /**
@@ -250,6 +244,24 @@ export function findComponentVariant(
  * Builds a condition string for a variant permutation
  * Handles both boolean and enum variant properties
  */
+/**
+ * Extract variant properties from a component node.
+ * Tries `variantProperties` first, falls back to parsing from the
+ * Figma component name (e.g. "buttonVariant=primary, isDisabled=false").
+ */
+function resolveVariantProperties(node: FigmaVendorDocument): Record<string, string> | null {
+    if (node.variantProperties) return node.variantProperties;
+    if (node.name?.includes('=')) {
+        const props: Record<string, string> = {};
+        for (const part of node.name.split(',')) {
+            const eq = part.indexOf('=');
+            if (eq > 0) props[part.substring(0, eq).trim()] = part.substring(eq + 1).trim();
+        }
+        return Object.keys(props).length > 0 ? props : null;
+    }
+    return null;
+}
+
 const EXPRESSION_VALUE_RE = /^(>=|<=|>|<)\s/;
 
 export function buildVariantCondition(
@@ -257,7 +269,7 @@ export function buildVariantCondition(
 ): string {
     const conditions: string[] = [];
     for (const { tagPath, value, isBoolean } of permutation) {
-        if (value === 'any') continue;
+        if (value === '*') continue;
 
         if (isBoolean) {
             if (value === 'true') {
@@ -305,14 +317,6 @@ export function convertVariantNode(
         context.componentSetIndex,
     );
 
-    // 2. Generate all permutations
-    const permutations = generatePermutations(propertyValues, analysis.propertyBindings);
-    if (permutations.length === 0) {
-        throw new Error(
-            `No permutations generated for variant node "${node.name}" - check property definitions`,
-        );
-    }
-
     // Resolve INSTANCE to COMPONENT_SET for variant lookup
     let resolvedNode = node;
     if (
@@ -326,24 +330,61 @@ export function convertVariantNode(
         }
     }
 
-    // 3. Build the variant if divs
+    // 2. Get actual variant components instead of generating all permutations.
+    // This preserves the original condition set from import rather than
+    // creating a Cartesian product explosion of all dimension values.
+    const variantComponents =
+        resolvedNode.variants && resolvedNode.variants.length > 0
+            ? resolvedNode.variants
+            : resolvedNode.children?.filter((c) => c.type === 'COMPONENT') ?? [];
+
+    const realVariants = variantComponents.filter((v) => {
+        const props = resolveVariantProperties(v);
+        if (!props) return false;
+        return !Object.values(props).some((val) => val.includes(':'));
+    });
+
+    if (realVariants.length === 0) {
+        throw new Error(
+            `No variant components found for "${node.name}" - check component set structure`,
+        );
+    }
+
+    // 3. Build the variant if divs from actual components
     let variantHtml = '';
-    for (const permutation of permutations) {
-        // Build if condition (handles both boolean and enum properties)
+    for (const variantNode of realVariants) {
+        const variantProps = resolveVariantProperties(variantNode);
+        if (!variantProps) continue;
+
+        const permutation: Array<{
+            property: string;
+            tagPath: string;
+            value: string;
+            isBoolean: boolean;
+        }> = [];
+        for (const binding of analysis.propertyBindings) {
+            const value = variantProps[binding.property];
+            if (!value) continue;
+            const allValues = propertyValues.get(binding.property) || [];
+            const isBoolean = isBooleanVariant(allValues, binding.contractTag);
+            permutation.push({
+                property: binding.property,
+                tagPath: binding.tagPath,
+                value,
+                isBoolean,
+            });
+        }
+
         const conditions = buildVariantCondition(permutation);
+        if (!conditions) continue;
 
-        // Find variant component (use resolvedNode which may be the COMPONENT_SET)
-        const variantNode = findComponentVariant(resolvedNode, permutation);
-
-        // Convert variant with if condition
         variantHtml += `${innerIndent}<div if="${conditions}">\n`;
 
         const variantContext: ConversionContext = {
             ...context,
-            indentLevel: context.indentLevel + 2, // +2 because we're inside wrapper and if div
+            indentLevel: context.indentLevel + 2,
         };
 
-        // Convert variant node's children
         if (variantNode.children && variantNode.children.length > 0) {
             for (const child of variantNode.children) {
                 variantHtml += convertNodeToJayHtml(child, variantContext);

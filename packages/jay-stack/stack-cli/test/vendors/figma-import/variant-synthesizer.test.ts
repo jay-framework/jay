@@ -364,7 +364,7 @@ describe('variant-synthesizer', () => {
             ).toEqual(expect.arrayContaining(['IMAGE', '!IMAGE']));
         });
 
-        it('compound with mixed == and != fills missing dimensions with "any"', () => {
+        it('compound with mixed == and != fills missing dimensions with "*"', () => {
             const doc = parse(`
                 <body>
                     <div>
@@ -391,7 +391,7 @@ describe('variant-synthesizer', () => {
 
             const defs = result.componentSet.componentPropertyDefinitions!;
             expect(defs['quickAddType']?.variantOptions).toEqual(
-                expect.arrayContaining(['SIMPLE', 'SINGLE_OPTION', 'NEEDS_CONFIGURATION', 'any']),
+                expect.arrayContaining(['SIMPLE', 'SINGLE_OPTION', 'NEEDS_CONFIGURATION', '*']),
             );
             expect(defs['availabilityStatus']?.variantOptions).toEqual(
                 expect.arrayContaining(['IN_STOCK', 'OUT_OF_STOCK', '!OUT_OF_STOCK']),
@@ -406,11 +406,11 @@ describe('variant-synthesizer', () => {
                 expect(comp.variantProperties).toHaveProperty('availabilityStatus');
             }
 
-            // Condition 4 has no quickAddType → should get "any"
+            // Condition 4 has no quickAddType → should get "*"
             const outOfStockComp = components.find(
                 (c) => c.variantProperties?.availabilityStatus === 'OUT_OF_STOCK',
             );
-            expect(outOfStockComp?.variantProperties?.quickAddType).toBe('any');
+            expect(outOfStockComp?.variantProperties?.quickAddType).toBe('*');
 
             // Condition 2 has != OUT_OF_STOCK → should get "!OUT_OF_STOCK"
             const singleOptionComp = components.find(
@@ -695,9 +695,9 @@ describe('buildVariantCondition (export: Figma → HTML)', () => {
         expect(result).toBe('inventory.availabilityStatus != OUT_OF_STOCK');
     });
 
-    it('"any" value → skipped from condition', () => {
+    it('"*" value → skipped from condition', () => {
         const result = buildVariantCondition([
-            { property: 'quickAddType', tagPath: 'quickAddType', value: 'any', isBoolean: false },
+            { property: 'quickAddType', tagPath: 'quickAddType', value: '*', isBoolean: false },
             {
                 property: 'availabilityStatus',
                 tagPath: 'inventory.availabilityStatus',

@@ -203,6 +203,7 @@ export async function buildJayHtmlFromVendorResult(
     conversionResult: VendorConversionResult,
     pageDirectory: string,
     pageTitle?: string,
+    usedComponents?: Array<{ appName: string; componentName: string; key: string }>,
 ): Promise<string> {
     // Read page.conf.yaml to get used components
     const pageConfigPath = path.join(pageDirectory, 'page.conf.yaml');
@@ -226,6 +227,16 @@ export async function buildJayHtmlFromVendorResult(
             }
         } catch (configError) {
             console.warn(`Failed to read page config ${pageConfigPath}:`, configError);
+        }
+    }
+
+    if (headlessComponents.length === 0 && usedComponents) {
+        for (const comp of usedComponents) {
+            headlessComponents.push({
+                plugin: comp.appName,
+                contract: comp.componentName,
+                key: comp.key,
+            });
         }
     }
 

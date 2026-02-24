@@ -167,7 +167,7 @@ function classifyDimensions(
     return { dimensions, warnings };
 }
 
-const DEFAULT_VARIANT_VALUE = 'any';
+const DEFAULT_VARIANT_VALUE = '*';
 
 function getVariantPropertiesForCondition(
     condition: string,
@@ -220,7 +220,12 @@ export function synthesizeVariant(
     // Multiple siblings with the same condition become children of one COMPONENT.
     const variantKeyToComponent = new Map<
         string,
-        { props: Record<string, string>; children: ImportIRNode[]; firstElement: HTMLElement; conditions: string[] }
+        {
+            props: Record<string, string>;
+            children: ImportIRNode[];
+            firstElement: HTMLElement;
+            conditions: string[];
+        }
     >();
     const insertionOrder: string[] = [];
 
@@ -270,7 +275,7 @@ export function synthesizeVariant(
     }
 
     // Build componentPropertyDefinitions from ALL values actually used by components,
-    // including synthetic values like "any" (default) and "!X" (inequality)
+    // including synthetic values like "*" (wildcard default) and "!X" (inequality)
     const componentPropertyDefinitions: Record<
         string,
         { type: 'VARIANT'; variantOptions: string[] }
@@ -399,6 +404,7 @@ export function synthesizeRepeater(
         kind: 'FRAME',
         name: element.rawTagName || 'div',
         visible: true,
+        style: { layoutMode: 'column' },
         bindings:
             layerBindings.length > 0
                 ? layerBindings.map((b) => ({ kind: 'layer' as const, binding: b }))

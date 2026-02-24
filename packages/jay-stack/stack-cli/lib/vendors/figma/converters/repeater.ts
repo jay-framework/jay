@@ -35,9 +35,7 @@ export function convertRepeaterNode(
     }
 
     if (!node.layoutMode || node.layoutMode === 'NONE') {
-        throw new Error(
-            `Repeater node "${node.name}" must have auto-layout (HORIZONTAL or VERTICAL)`,
-        );
+        node = { ...node, layoutMode: 'VERTICAL' };
     }
 
     // Build styles for the outer container

@@ -25,6 +25,8 @@ import { createProtocolMessage } from '@jay-framework/editor-protocol';
 export interface ConnectionManagerOptions {
     portRange?: [number, number];
     scanTimeout?: number;
+    /** Timeout for import/export/publish requests (ms). Default: 120000 (2 minutes) */
+    requestTimeout?: number;
     retryAttempts?: number;
     editorId?: string;
     autoReconnect?: boolean;
@@ -38,6 +40,7 @@ export class ConnectionManager {
     private connectionState: ConnectionState = 'disconnected';
     private portRange: [number, number];
     private scanTimeout: number;
+    private requestTimeout: number;
     private retryAttempts: number;
     private editorId: string;
     private autoReconnect: boolean;
@@ -51,6 +54,7 @@ export class ConnectionManager {
     constructor(options: ConnectionManagerOptions = {}) {
         this.portRange = options.portRange || [3101, 3200];
         this.scanTimeout = options.scanTimeout || 5000;
+        this.requestTimeout = options.requestTimeout || 120_000;
         this.retryAttempts = options.retryAttempts || 3;
         this.editorId = options.editorId || uuidv4();
         this.autoReconnect = options.autoReconnect || true;
@@ -138,13 +142,12 @@ export class ConnectionManager {
 
             this.pendingRequests.set(protocolMessage.id, { resolve, reject });
 
-            // Set timeout for the request
             setTimeout(() => {
                 if (this.pendingRequests.has(protocolMessage.id)) {
                     this.pendingRequests.delete(protocolMessage.id);
-                    reject(new Error('Request timeout'));
+                    reject(new Error(`Request timeout after ${this.requestTimeout}ms`));
                 }
-            }, this.scanTimeout);
+            }, this.requestTimeout);
 
             this.socket!.emit('protocol-message', protocolMessage);
         }) as any;
