@@ -168,7 +168,6 @@ function peg$parse(input, options) {
       condition: peg$parsecondition,
       styleDeclarations: peg$parsestyleDeclarations,
       slowCondition: peg$parseslowCondition,
-      template: peg$parsetemplate,
     },
     peg$startRuleFunction = peg$parsedynamicAttribute,
     peg$c0 = function (declarations) {

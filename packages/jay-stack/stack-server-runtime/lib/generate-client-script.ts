@@ -153,7 +153,8 @@ export function buildAutomationWrap(
       const wrapped = wrapWithAutomation(instance, { initialViewState: fullViewState, trackByMap });
       registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
       window.__jay = window.__jay || {};
-      window.__jay.automation = wrapped.automation;${appendLine}`;
+      window.__jay.automation = wrapped.automation;
+      window.dispatchEvent(new Event('jay:automation-ready'));${appendLine}`;
     }
 
     return `
@@ -161,7 +162,8 @@ export function buildAutomationWrap(
       const wrapped = wrapWithAutomation(instance);
       registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
       window.__jay = window.__jay || {};
-      window.__jay.automation = wrapped.automation;${appendLine}`;
+      window.__jay.automation = wrapped.automation;
+      window.dispatchEvent(new Event('jay:automation-ready'));${appendLine}`;
 }
 
 export function generateClientScript(

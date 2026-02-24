@@ -1,0 +1,69 @@
+name: gemini-chat
+description: AI chat agent powered by Gemini with page automation capabilities
+tags:
+  # Message list — repeated sub-contract for full chat history
+  - tag: messages
+    type: sub-contract
+    repeated: true
+    trackBy: index
+    phase: fast+interactive
+    tags:
+      - tag: index
+        type: data
+        dataType: number
+      - tag: role
+        type: [data, variant]
+        dataType: enum (user | assistant)
+      - tag: content
+        type: data
+        dataType: string
+
+  # Compact mode shortcuts — avoid iterating full list
+  - tag: lastUserMessage
+    type: data
+    dataType: string
+    phase: fast+interactive
+  - tag: lastAssistantMessage
+    type: data
+    dataType: string
+    phase: fast+interactive
+
+  # Chat input
+  - tag: messageInput
+    type: [data, interactive]
+    dataType: string
+    elementType: HTMLInputElement
+
+  # Send button
+  - tag: sendMessage
+    type: interactive
+    elementType: HTMLButtonElement
+
+  # Expand/collapse toggle for compact mode
+  - tag: toggleExpand
+    type: interactive
+    elementType: HTMLButtonElement
+
+  # State variants
+  - tag: isLoading
+    type: variant
+    dataType: boolean
+    phase: fast+interactive
+  - tag: isExpanded
+    type: variant
+    dataType: boolean
+    phase: fast+interactive
+  - tag: hasError
+    type: variant
+    dataType: boolean
+    phase: fast+interactive
+  - tag: hasMessages
+    type: variant
+    dataType: boolean
+    phase: fast+interactive
+
+  # Error message
+  - tag: errorMessage
+    type: data
+    dataType: string
+    phase: fast+interactive

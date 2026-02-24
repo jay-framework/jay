@@ -12,6 +12,7 @@ export * from './services';
 export * from './instance-slow-render';
 export * from './action-registry';
 export * from './action-discovery';
+export * from './action-metadata';
 export * from './plugin-init-discovery';
 export * from './slow-render-cache';
 export * from './contract-materializer';

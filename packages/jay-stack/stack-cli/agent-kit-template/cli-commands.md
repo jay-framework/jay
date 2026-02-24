@@ -147,7 +147,7 @@ jay-stack action wix-stores/getProductBySlug --input '{"slug": "blue-shirt"}' -v
 
 Format: `<plugin-name>/<action-name>`
 
-Action names are listed in the plugin's `plugin.yaml` under `actions:`.
+Action names are listed in `plugins-index.yaml` under each plugin's `actions:` array. Each action entry includes a `description` and a `path` to the `.jay-action` file. Read the `.jay-action` file to see the full input/output schemas before calling an action.
 
 Example output:
 

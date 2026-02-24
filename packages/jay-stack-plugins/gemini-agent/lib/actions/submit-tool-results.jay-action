@@ -1,0 +1,29 @@
+name: submitToolResults
+description: Submit tool execution results back to continue the Gemini conversation. Called after the client executes page automation tools. Returns either a text response or more pending tool calls.
+
+inputSchema:
+  results:
+    - callId: string
+      result: string
+      isError: boolean
+  history:
+    - role: string
+      parts:
+        - {}
+  toolDefinitions:
+    - name: string
+      description: string
+      inputSchema: {}
+      category: string
+  pageState: {}
+
+outputSchema:
+  type: string
+  message?: string
+  calls?:
+    - id: string
+      name: string
+      args: {}
+      category: string
+  history:
+    - {}

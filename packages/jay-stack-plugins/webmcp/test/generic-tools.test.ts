@@ -47,8 +47,8 @@ describe('Generic Tools', () => {
             const automation = createMockAutomation({ interactions });
             const tool = makeListInteractionsTool(automation);
 
-            const result = tool.execute({}, MOCK_AGENT);
-            const text = (await result).content[0].text!;
+            const result = await tool.execute({}, MOCK_AGENT);
+            const text = result.content[0].text!;
 
             // Should contain grouped structure with serialized fields
             expect(text).toContain('"refName": "removeBtn"');
@@ -87,7 +87,7 @@ describe('Generic Tools', () => {
             expect(text).toContain('"lg"');
         });
 
-        it('should include inputType for checkbox/radio elements', async (a) => {
+        it('should include inputType for checkbox/radio elements', async () => {
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
             const interactions: Interaction[] = [

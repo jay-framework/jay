@@ -627,7 +627,7 @@ export const collectionList = makeJayStackComponent<MyViewState>()
 
 **Materializing contracts:**
 
-Dynamic contracts are materialized to `build/materialized-contracts/` during dev server startup or via CLI:
+Dynamic contracts are materialized to `agent-kit/materialized-contracts/` during dev server startup or via CLI:
 
 ```bash
 # Materialize all dynamic contracts

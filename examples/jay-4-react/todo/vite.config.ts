@@ -9,7 +9,7 @@ import { GenerateTarget } from '@jay-framework/compiler-shared';
 const root = resolve(__dirname);
 const jayOptions: JayRollupConfig = {
     tsConfigFilePath: resolve(root, 'tsconfig.json'),
-    outputDir: 'build/jay-runtime',
+    outputDir: 'build',
     generationTarget: GenerateTarget.react,
 };
 

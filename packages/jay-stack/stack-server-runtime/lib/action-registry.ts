@@ -13,6 +13,7 @@ import type {
     ActionError,
 } from '@jay-framework/fullstack-component';
 import { resolveServices } from './services';
+import type { ActionMetadata } from './action-metadata';
 
 // ============================================================================
 // Action Registry Types
@@ -36,6 +37,10 @@ export interface RegisteredAction {
 
     /** The handler function */
     handler: (input: any, ...services: any[]) => Promise<any>;
+
+    /** Optional metadata from .jay-action file (description, input/output schemas).
+     *  Actions with metadata are exposed to AI agents; those without are not. */
+    metadata?: ActionMetadata;
 }
 
 /**
@@ -123,6 +128,36 @@ export class ActionRegistry {
      */
     getNames(): string[] {
         return Array.from(this.actions.keys());
+    }
+
+    /**
+     * Attaches metadata from a .jay-action file to a registered action.
+     * Called during action discovery when a plugin declares action metadata.
+     *
+     * @param actionName - The action name
+     * @param metadata - Parsed ActionMetadata from .jay-action file
+     */
+    setMetadata(actionName: string, metadata: ActionMetadata): void {
+        const action = this.actions.get(actionName);
+        if (action) {
+            action.metadata = metadata;
+        }
+    }
+
+    /**
+     * Gets all registered actions that have .jay-action metadata.
+     * These are the actions that should be exposed to AI agents.
+     *
+     * @returns Array of { actionName, metadata } for actions with metadata
+     */
+    getActionsWithMetadata(): Array<{ actionName: string; metadata: ActionMetadata }> {
+        const result: Array<{ actionName: string; metadata: ActionMetadata }> = [];
+        for (const action of this.actions.values()) {
+            if (action.metadata) {
+                result.push({ actionName: action.actionName, metadata: action.metadata });
+            }
+        }
+        return result;
     }
 
     /**
