@@ -232,6 +232,7 @@ function checkInvariants(
 }
 
 describe('Figma Import Fixtures', () => {
+    const originalEnableComputedStyles = process.env.ENABLE_COMPUTED_STYLES;
     const config: Required<JayConfig> = {
         devServer: {
             portRange: [3000, 3010],
@@ -264,12 +265,19 @@ describe('Figma Import Fixtures', () => {
     );
 
     beforeEach(async () => {
+        // Keep fixture tests deterministic: they run without a live dev server.
+        process.env.ENABLE_COMPUTED_STYLES = '0';
         await fs.rm(testDir, { recursive: true, force: true });
         await fs.mkdir(testDir, { recursive: true });
         await fs.mkdir(path.join(testDir, 'pages'), { recursive: true });
     });
 
     afterEach(async () => {
+        if (originalEnableComputedStyles === undefined) {
+            delete process.env.ENABLE_COMPUTED_STYLES;
+        } else {
+            process.env.ENABLE_COMPUTED_STYLES = originalEnableComputedStyles;
+        }
         await fs.rm(testDir, { recursive: true, force: true });
     });
 

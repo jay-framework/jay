@@ -8,6 +8,7 @@
 
 import { createHash } from 'crypto';
 import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { createRequire } from 'module';
 import { join } from 'path';
 import type { HTMLElement } from 'node-html-parser';
 import type { Contract } from '@jay-framework/editor-protocol';
@@ -20,13 +21,16 @@ import type {
 
 /**
  * Check if Playwright is available in the current environment.
- * We simply try to import it - if it fails, we'll catch it in the enricher.
+ * Uses module resolution so we can skip enrichment when dependency is missing.
  */
 export function isPlaywrightAvailable(): boolean {
-    // In a monorepo with yarn workspaces, require.resolve may not work correctly
-    // due to hoisting. We'll just assume it's available if we're in enrichment mode.
-    // The actual import('playwright') will fail gracefully if truly unavailable.
-    return true;
+    try {
+        const require = createRequire(import.meta.url);
+        require.resolve('playwright');
+        return true;
+    } catch {
+        return false;
+    }
 }
 
 /**
@@ -43,10 +47,17 @@ export async function enrichWithComputedStyles(
 ): Promise<ComputedStyleMap> {
     const startTime = Date.now();
 
-    // isPlaywrightAvailable check removed - we'll try to import and catch errors properly
-    console.log(
-        '[ComputedStyles] DEBUG: Starting enrichment, will attempt dynamic import of playwright...',
-    );
+    if (process.env.ENABLE_COMPUTED_STYLES === '0') {
+        return new Map();
+    }
+
+    if (!isPlaywrightAvailable()) {
+        console.warn(
+            '[ComputedStyles] Computed style enrichment requires playwright. Please run: npm install -D playwright',
+        );
+        console.warn('[ComputedStyles] Falling back to static resolution');
+        return new Map();
+    }
 
     // Check cache first (if enabled via env var)
     const enableCache = process.env.ENABLE_COMPUTED_STYLES_CACHE === '1';
@@ -149,6 +160,12 @@ export async function enrichWithComputedStyles(
     } catch (error) {
         const err = error as Error;
         const duration = Date.now() - startTime;
+        const missingPlaywright = /Cannot find (package|module) 'playwright'/.test(err.message);
+        if (missingPlaywright) {
+            console.warn(
+                '[ComputedStyles] Computed style enrichment requires playwright. Please run: npm install -D playwright',
+            );
+        }
         console.warn(`[ComputedStyles] ✗ Enrichment failed after ${duration}ms: ${err.message}`);
         console.warn('[ComputedStyles] Falling back to static resolution');
         return new Map();
