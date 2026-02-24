@@ -57,6 +57,7 @@ export type ImportIRStyle = {
     x?: number;
     y?: number;
     layoutMode?: ImportIRLayoutMode;
+    layoutWrap?: boolean;
     gap?: number;
     padding?: { top: number; right: number; bottom: number; left: number };
     alignItems?: 'MIN' | 'CENTER' | 'MAX' | 'STRETCH';

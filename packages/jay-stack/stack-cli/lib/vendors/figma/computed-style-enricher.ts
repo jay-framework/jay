@@ -280,6 +280,8 @@ async function extractComputedStyles(
             'justify-content',
             'align-items',
             'gap',
+            'grid-template-columns',
+            'flex-wrap',
             'padding-top',
             'padding-right',
             'padding-bottom',
@@ -427,6 +429,37 @@ async function extractComputedStyles(
             styles: item.styles,
             boundingRect: item.boundingRect,
         });
+    }
+
+    // Normalize CSS-selector keys to index-based keys to match buildDomPath format.
+    // The browser wraps content in <div id="target">, so enricher keys look like
+    // "div#target > div:nth-child(1) > header:nth-child(1)" while the IR builder
+    // produces "body>0>0". Add index-based aliases so lookups succeed.
+    const targetPrefix = /^div#target\s*>\s*/;
+    for (const [key, data] of Array.from(styleMap.entries())) {
+        if (!targetPrefix.test(key)) continue;
+
+        const pathAfterTarget = key.replace(targetPrefix, '');
+        const segments = pathAfterTarget.split(/\s*>\s*/);
+        const indices: number[] = [];
+        let valid = true;
+
+        for (const segment of segments) {
+            const nthMatch = segment.match(/:nth-child\((\d+)\)/);
+            if (nthMatch) {
+                indices.push(parseInt(nthMatch[1], 10) - 1);
+            } else {
+                valid = false;
+                break;
+            }
+        }
+
+        if (valid && indices.length > 0) {
+            const indexKey = `body>${indices.join('>')}`;
+            if (!styleMap.has(indexKey)) {
+                styleMap.set(indexKey, data);
+            }
+        }
     }
 
     return styleMap;

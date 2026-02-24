@@ -41,6 +41,30 @@ function parseColor(cssColor: string): { r: number; g: number; b: number; a: num
         };
     }
 
+    // rgb(r, g, b)
+    const rgbMatch = cssColor.match(/^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/);
+    if (rgbMatch) {
+        return {
+            r: parseInt(rgbMatch[1], 10) / 255,
+            g: parseInt(rgbMatch[2], 10) / 255,
+            b: parseInt(rgbMatch[3], 10) / 255,
+            a: 1,
+        };
+    }
+
+    // rgba(r, g, b, a)
+    const rgbaMatch = cssColor.match(
+        /^rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)$/,
+    );
+    if (rgbaMatch) {
+        return {
+            r: parseInt(rgbaMatch[1], 10) / 255,
+            g: parseInt(rgbaMatch[2], 10) / 255,
+            b: parseInt(rgbaMatch[3], 10) / 255,
+            a: parseFloat(rgbaMatch[4]),
+        };
+    }
+
     // Fallback for unrecognized color formats
     return { r: 0.9, g: 0.9, b: 0.9, a: 1 };
 }
@@ -57,6 +81,9 @@ function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVe
         if (style.layoutMode === 'row') props.layoutMode = 'HORIZONTAL';
         else if (style.layoutMode === 'column') props.layoutMode = 'VERTICAL';
         else props.layoutMode = 'NONE';
+    }
+    if (style.layoutWrap) {
+        props.layoutWrap = 'WRAP';
     }
 
     if (style.gap !== undefined) props.itemSpacing = style.gap;
@@ -77,12 +104,14 @@ function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVe
 
     if (style.borderRadius !== undefined) props.cornerRadius = style.borderRadius;
     if (style.opacity !== undefined) props.opacity = style.opacity;
-    if (style.borderWidth !== undefined) props.strokeWeight = style.borderWidth;
-    if (style.borderColor) {
-        const color = parseColor(style.borderColor);
-        props.strokes = [
-            { type: 'SOLID', color: { r: color.r, g: color.g, b: color.b }, opacity: color.a },
-        ];
+    if (style.borderWidth !== undefined && style.borderWidth > 0) {
+        props.strokeWeight = style.borderWidth;
+        if (style.borderColor) {
+            const color = parseColor(style.borderColor);
+            props.strokes = [
+                { type: 'SOLID', color: { r: color.r, g: color.g, b: color.b }, opacity: color.a },
+            ];
+        }
     }
 
     if (style.justifyContent) props.primaryAxisAlignItems = style.justifyContent;

@@ -61,6 +61,17 @@ const RECOGNIZED_BUT_NOT_STORED = new Set([
     'filter',
     'transform',
     'transform-origin',
+    'grid-template-columns',
+    'grid-template-rows',
+    'grid-auto-flow',
+    'flex-shrink',
+    'flex-basis',
+    'border-right-color',
+    'border-bottom-color',
+    'border-left-color',
+    'border-right-width',
+    'border-bottom-width',
+    'border-left-width',
 ]);
 
 function parseBoxShadow(value: string): ImportIREffect | undefined {
@@ -237,13 +248,27 @@ export function resolveStyle(
                 break;
             }
             case 'display':
-                if (value === 'flex') {
+                if (value === 'flex' || value === 'inline-flex') {
                     if (!style.layoutMode) style.layoutMode = 'row';
+                } else if (value === 'grid' || value === 'inline-grid') {
+                    style.layoutMode = 'row';
+                    style.layoutWrap = true;
+                } else if (value === 'block' || value === 'flow-root') {
+                    if (!style.layoutMode) style.layoutMode = 'column';
                 }
                 break;
-            case 'flex-direction':
+            case 'flex-direction': {
+                const display = parsed['display'];
+                const isFlex = display === 'flex' || display === 'inline-flex';
+                if (!isFlex) break;
                 if (value === 'column') style.layoutMode = 'column';
                 else if (value === 'row') style.layoutMode = 'row';
+                break;
+            }
+            case 'flex-wrap':
+                if (value === 'wrap' || value === 'wrap-reverse') {
+                    style.layoutWrap = true;
+                }
                 break;
             case 'gap': {
                 const px = parsePx(value);
@@ -393,6 +418,20 @@ export function resolveStyle(
                 style.borderColor = value;
                 break;
             }
+            case 'border-top-width': {
+                const px = parsePx(value);
+                if (px !== undefined && px > 0 && style.borderWidth === undefined) {
+                    style.borderWidth = px;
+                }
+                break;
+            }
+            case 'border-top-color': {
+                const hasBorder = style.borderWidth !== undefined && style.borderWidth > 0;
+                if (hasBorder && (!style.borderColor || style.borderColor.startsWith('var('))) {
+                    style.borderColor = value;
+                }
+                break;
+            }
             case 'border-radius': {
                 const px = parsePx(value);
                 if (px !== undefined) style.borderRadius = px;
@@ -408,6 +447,8 @@ export function resolveStyle(
             case 'left':
                 break;
             case 'justify-content': {
+                const display = parsed['display'];
+                if (display !== 'flex' && display !== 'inline-flex') break;
                 const map: Record<string, ImportIRStyle['justifyContent']> = {
                     'flex-start': 'MIN',
                     center: 'CENTER',
@@ -418,6 +459,8 @@ export function resolveStyle(
                 break;
             }
             case 'align-items': {
+                const display = parsed['display'];
+                if (display !== 'flex' && display !== 'inline-flex') break;
                 const map: Record<string, ImportIRStyle['alignItems']> = {
                     'flex-start': 'MIN',
                     center: 'CENTER',

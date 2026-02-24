@@ -1,4 +1,5 @@
 import path from 'path';
+import fs from 'fs';
 import { Vendor, VendorConversionResult } from '../types';
 import type { FigmaVendorDocument, ProjectPage, Plugin } from '@jay-framework/editor-protocol';
 import {
@@ -284,6 +285,82 @@ function findContentFrame(section: FigmaVendorDocument): {
     return { frame: frameNodes[0] };
 }
 
+function getDebugDir(projectPage: ProjectPage): string | null {
+    try {
+        if (projectPage.filePath) {
+            return path.dirname(projectPage.filePath);
+        }
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+function writeDebugFile(dir: string | null, filename: string, data: unknown): void {
+    if (!dir) return;
+    try {
+        const debugDir = path.join(dir, '_debug');
+        fs.mkdirSync(debugDir, { recursive: true });
+        const filePath = path.join(debugDir, filename);
+        const json = JSON.stringify(data, null, 2);
+        fs.writeFileSync(filePath, json, 'utf-8');
+        console.log(`[Debug] Wrote ${filePath} (${(json.length / 1024).toFixed(1)}KB)`);
+    } catch (e) {
+        console.warn(`[Debug] Failed to write ${filename}:`, (e as Error).message);
+    }
+}
+
+function irNodeSummary(node: any, depth = 0): any {
+    if (!node) return null;
+    const summary: any = {
+        kind: node.kind,
+        name: node.name,
+        id: node.id,
+    };
+    if (node.text) summary.text = node.text;
+    if (node.bindings?.length) summary.bindings = node.bindings;
+    if (node.variantProperties) summary.variantProperties = node.variantProperties;
+    if (node.componentPropertyDefinitions)
+        summary.componentPropertyDefinitions = node.componentPropertyDefinitions;
+    if (node.style) {
+        const s = node.style;
+        const styleKeys = Object.keys(s).filter((k) => s[k] !== undefined);
+        summary.style = Object.fromEntries(styleKeys.map((k) => [k, s[k]]));
+    }
+    if (node.children?.length) {
+        summary.childCount = node.children.length;
+        if (depth < 4) {
+            summary.children = node.children.map((c: any) => irNodeSummary(c, depth + 1));
+        }
+    }
+    return summary;
+}
+
+function figmaNodeSummary(node: FigmaVendorDocument, depth = 0): any {
+    if (!node) return null;
+    const summary: any = {
+        type: node.type,
+        name: node.name,
+        id: node.id,
+    };
+    if (node.layoutMode) summary.layoutMode = node.layoutMode;
+    if (node.width) summary.width = node.width;
+    if (node.height) summary.height = node.height;
+    if (node.characters) summary.characters = node.characters?.substring(0, 80);
+    if (node.pluginData) summary.pluginData = node.pluginData;
+    if (node.variantProperties) summary.variantProperties = node.variantProperties;
+    if (node.componentPropertyDefinitions)
+        summary.componentPropertyDefinitions = node.componentPropertyDefinitions;
+    if (node.fills?.length) summary.fillCount = node.fills.length;
+    if (node.children?.length) {
+        summary.childCount = node.children.length;
+        if (depth < 5) {
+            summary.children = node.children.map((c: any) => figmaNodeSummary(c, depth + 1));
+        }
+    }
+    return summary;
+}
+
 export const figmaVendor: Vendor<FigmaVendorDocument> = {
     vendorId: 'figma',
 
@@ -359,16 +436,34 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
             );
         }
 
+        const debugDir = getDebugDir(projectPage);
+        writeDebugFile(
+            debugDir,
+            'export-input-figma-doc-summary.json',
+            figmaNodeSummary(vendorDoc),
+        );
+        writeDebugFile(debugDir, 'export-body-html.html', bodyHtml);
+        writeDebugFile(debugDir, 'export-metadata.json', {
+            pageUrl,
+            fontFamilies: Array.from(fontFamilies),
+            bodyHtmlLength: bodyHtml.length,
+            bodyHtmlLineCount: bodyHtml.split('\n').length,
+        });
+
         return {
             bodyHtml,
             fontFamilies,
-            // No contract data for now - Figma vendor doesn't generate contracts yet
             contractData: undefined,
         };
     },
 
     async convertFromJayHtml(parsedJayHtml, pageUrl, projectPage, plugins) {
+        const debugDir = getDebugDir(projectPage);
         let computedStyleMap;
+
+        writeDebugFile(debugDir, 'import-input-body.html', parsedJayHtml.body.outerHTML);
+        writeDebugFile(debugDir, 'import-input-css.json', parsedJayHtml.css || null);
+        writeDebugFile(debugDir, 'import-input-contract.json', projectPage.contract || null);
 
         try {
             const { enrichWithComputedStyles, generateVariantScenarios } = await import(
@@ -390,6 +485,12 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
                 timeout: 10000,
                 maxScenarios: 12,
             });
+
+            writeDebugFile(
+                debugDir,
+                'import-computed-styles.json',
+                computedStyleMap ? Object.fromEntries(computedStyleMap) : null,
+            );
         } catch (error) {
             console.warn('[Import] Computed style enrichment failed:', (error as Error).message);
             computedStyleMap = undefined;
@@ -407,6 +508,19 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
                 computedStyleMap,
             },
         );
-        return adaptIRToFigmaVendorDoc(ir);
+
+        writeDebugFile(debugDir, 'import-ir-summary.json', {
+            route: ir.route,
+            pageName: ir.pageName,
+            rootSummary: irNodeSummary(ir.root),
+        });
+        writeDebugFile(debugDir, 'import-ir-full.json', ir);
+
+        const vendorDoc = adaptIRToFigmaVendorDoc(ir);
+
+        writeDebugFile(debugDir, 'import-figma-doc-summary.json', figmaNodeSummary(vendorDoc));
+        writeDebugFile(debugDir, 'import-figma-doc-full.json', vendorDoc);
+
+        return vendorDoc;
     },
 };
