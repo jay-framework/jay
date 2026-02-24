@@ -391,10 +391,7 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
                 maxScenarios: 12,
             });
         } catch (error) {
-            console.warn(
-                '[Import] Computed style enrichment failed:',
-                (error as Error).message,
-            );
+            console.warn('[Import] Computed style enrichment failed:', (error as Error).message);
             computedStyleMap = undefined;
         }
 
