@@ -2174,6 +2174,66 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         return nestRefs(forEachAccessor.terms, hydrateForEachFragment);
     }
 
+    // --- slowForEach (pre-rendered slow-phase forEach items) ---
+    if (isSlowForEach(element)) {
+        const slowForEachInfo = getSlowForEachInfo(element);
+        if (!slowForEachInfo) {
+            return new RenderFragment('', Imports.none(), [
+                `slowForEach element is missing required attributes (slowForEach, jayIndex, jayTrackBy)`,
+            ]);
+        }
+
+        const { arrayName, jayIndex, jayTrackBy } = slowForEachInfo;
+        const { variables, indent } = context;
+
+        const arrayAccessor = parseAccessor(arrayName, variables);
+        if (arrayAccessor.resolvedType === JayUnknown)
+            return new RenderFragment('', Imports.none(), [
+                `slowForEach directive - failed to resolve array type [slowForEach=${arrayName}]`,
+            ]);
+        if (!isArrayType(arrayAccessor.resolvedType))
+            return new RenderFragment('', Imports.none(), [
+                `slowForEach directive - resolved type is not an array [slowForEach=${arrayName}]`,
+            ]);
+
+        const slowForEachVariables = variables.childVariableFor(arrayAccessor);
+        const parentTypeName = variables.currentType.name;
+        const itemTypeName = slowForEachVariables.currentType.name;
+        const paramName = arrayAccessor.rootVar;
+        const getItemsFragment = arrayAccessor
+            .render()
+            .map((_) => `(${paramName}: ${parentTypeName}) => ${_}`);
+
+        // Render element content in the item's variable scope
+        const itemContext: HydrateContext = {
+            ...context,
+            variables: slowForEachVariables,
+            indent: indent.child().child(),
+            dynamicRef: true,
+        };
+        const renderContext2 = buildRenderContext(itemContext);
+        // Don't force adoption — let renderHydrateElementContent decide naturally.
+        // The slowForEach element root typically has no ref/dynamic attrs of its own;
+        // only its children need adoption (e.g., input refs, dynamic text).
+        const childContent = renderHydrateElementContent(
+            element,
+            itemContext,
+            renderContext2,
+            null,
+        );
+
+        const slowForEachFragment = new RenderFragment(
+            `${indent.firstLine}slowForEachItem<${parentTypeName}, ${itemTypeName}>(${getItemsFragment.rendered}, ${jayIndex}, '${jayTrackBy}',\n${indent.firstLine}() => ${childContent.rendered.trim()}\n${indent.firstLine})`,
+            Imports.for(Import.slowForEachItem)
+                .plus(getItemsFragment.imports)
+                .plus(childContent.imports),
+            [...getItemsFragment.validations, ...childContent.validations],
+            childContent.refs,
+        );
+
+        return nestRefs(arrayName.split('.'), slowForEachFragment);
+    }
+
     // --- Component (childComp) ---
     const componentMatch = getComponentName(
         element.rawTagName,
@@ -2636,6 +2696,29 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
             itemBody.imports,
             itemBody.validations,
         );
+    }
+
+    // --- slowForEach (pre-rendered slow-phase forEach items) ---
+    if (isSlowForEach(element)) {
+        const slowForEachInfo = getSlowForEachInfo(element);
+        if (slowForEachInfo) {
+            const { jayTrackBy } = slowForEachInfo;
+            const slowForEachVariables = variables.childVariableFor(
+                parseAccessor(slowForEachInfo.arrayName, variables),
+            );
+            // Set coordinate prefix for children using the literal jayTrackBy value
+            const itemPrefixExpr = `'${jayTrackBy}'`;
+            const coordinatePrefix = context.coordinatePrefix
+                ? `${context.coordinatePrefix} + '/' + ${itemPrefixExpr}`
+                : itemPrefixExpr;
+            const itemContext: ServerContext = {
+                ...context,
+                variables: slowForEachVariables,
+                indent,
+                coordinatePrefix,
+            };
+            return renderServerElementContent(element, itemContext);
+        }
     }
 
     // --- Async directives are handled by the parent's child processing ---

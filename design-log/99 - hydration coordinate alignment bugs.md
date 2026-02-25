@@ -324,20 +324,42 @@ This catches any future coordinate divergence automatically.
 
 ## Implementation Results
 
-Implemented fixes A, B, C and runtime peekCoordinate. Shared coordinate module (Phase 1) and integration test (Phase 5) deferred for follow-up.
+Implemented fixes A, B, C, plus two additional bugs discovered during whisky-store testing: slowForEach support and false-conditional forEach warning. Shared coordinate module (Phase 1) and integration test (Phase 5) deferred for follow-up.
+
+### Bugs found and fixed
+
+**Bugs A, B, C** — as designed above.
+
+**Bug D: `slowForEach` not handled in hydrate or server compilers**
+
+Pre-rendered slow-phase forEach items (marked with `slowForEach`, `jayIndex`, `jayTrackBy` attributes) were not recognized by either the hydrate compiler or the server element compiler. The standard element compiler handles them via `slowForEachItem()`, but the hydrate and server targets treated them as regular elements.
+
+Impact: Refs inside slow-rendered forEach items (e.g., category filter checkboxes) were not associated with their array items — the `forItem` context was never created, so coordinate resolution was unscoped and event handlers didn't wire up.
+
+Fix:
+- **Hydrate compiler**: Added `isSlowForEach` handling in `renderHydrateElement`. Wraps adoption in `slowForEachItem()` with the correct array accessor, jayIndex, and jayTrackBy. Uses the item's variable scope but does NOT force adoption on the element root — lets `renderHydrateElementContent` decide naturally, so only children that actually need adoption (refs, dynamic text) get coordinates.
+- **Server compiler**: Added `isSlowForEach` handling in `renderServerElement`. Sets `coordinatePrefix` to the literal jayTrackBy value so child coordinates are prefixed (e.g., `jay-coordinate="{jayTrackBy}/refName"`).
+
+**Bug E: `hydrateForEach` warning inside false conditionals**
+
+When `hydrateForEach` is inside a `hydrateConditional` whose condition was false at SSR time, the server didn't render the conditional content, so the forEach container coordinate doesn't exist. `hydrateConditional` always evaluates its adopt callback (JS evaluates arguments before function calls), so `hydrateForEach` runs and logged a spurious warning. The `hydrateConditional` already handles this gracefully (returns noop when `adopted.dom` is undefined).
+
+Fix: Removed the `console.warn` from `hydrateForEach` when container is not found. This is expected behavior for false-at-SSR conditionals.
 
 ### Files changed
 
 **Runtime** (`packages/runtime/runtime/lib/`):
 
 - `context.ts` — Added `peekCoordinate(key)` method to `ConstructContext`. Reads from the coordinate map without consuming (`elements[0]` instead of `elements.shift()`), so both `hydrateForEach` and the parent `adoptElement` can resolve the same element.
-- `hydrate.ts` — `hydrateForEach` uses `peekCoordinate()` for container resolution instead of `resolveCoordinate()`.
+- `hydrate.ts` — `hydrateForEach` uses `peekCoordinate()` for container resolution instead of `resolveCoordinate()`. Removed container-not-found warning (Bug E).
 
 **Compiler** (`packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts`):
 
-- **Fix A**: Added `coordinatePrefix?: string` to `ServerContext`. In `renderServerElement` for forEach, sets `coordinatePrefix` to a JS expression (`escapeAttr(String(trackByExpr))`). In `renderServerElementContent`, emits prefixed coordinates: `jay-coordinate="' + ${prefix} + '/${coordinate}">'`. Nested forEach chains prefixes with `+ '/' +`. Additionally, the forEach **item root** coordinate is also prefixed for nested forEach (e.g., `{outerTrackBy}/{innerTrackBy}`), since the hydrate runtime resolves item roots via `resolveCoordinate(id)` with the parent's `coordinateBase`.
+- **Fix A**: Added `coordinatePrefix?: string` to `ServerContext`. In `renderServerElement` for forEach, sets `coordinatePrefix` to a JS expression (`escapeAttr(String(trackByExpr))`). In `renderServerElementContent`, emits prefixed coordinates: `jay-coordinate="' + ${prefix} + '/${coordinate}">'`. Nested forEach chains prefixes with `+ '/' +`. The forEach **item root** coordinate is also prefixed for nested forEach (e.g., `{outerTrackBy}/{innerTrackBy}`), since the hydrate runtime resolves item roots via `resolveCoordinate(id)` with the parent's `coordinateBase`.
 - **Fix B**: In `renderHydrateElement` for conditionals, checks for ref name and uses it when available (`refName || counter++`), matching server element behavior. Counter only increments when no ref exists.
 - **Fix C**: Added `parentCoordinate?: string` to `HydrateContext`. In `renderHydrateElementContent`, passes the current element's coordinate to children as `parentCoordinate` when processing interactive children. In `renderHydrateElement` for forEach, uses `context.parentCoordinate` instead of `counter++` when available.
+- **Fix D (hydrate)**: Added `isSlowForEach` handling in `renderHydrateElement`. Wraps in `slowForEachItem()` with item variable scope and `dynamicRef: true`. Does not force adoption on root — only children with refs/dynamic content get adopted.
+- **Fix D (server)**: Added `isSlowForEach` handling in `renderServerElement`. Sets `coordinatePrefix` to the literal jayTrackBy value for child coordinate prefixing.
 
 **Test fixtures** (6 files updated):
 
@@ -350,10 +372,11 @@ Implemented fixes A, B, C and runtime peekCoordinate. Shared coordinate module (
 
 ### Deviations from plan
 
-- **Phase 1 (shared coordinate module) deferred**: The three fixes were applied directly to each compiler target. Extracting shared coordinate logic would be a clean refactor but wasn't needed for correctness. The bug fixes align the two targets manually.
-- **Phase 5 (integration test) deferred**: The SSR+hydration integration test is still recommended but was not implemented in this pass. The three bug fixes are validated by existing unit tests and the whisky store manual test.
+- **Phase 1 (shared coordinate module) deferred**: The three fixes were applied directly to each compiler target. Extracting shared coordinate logic would be a clean refactor but wasn't needed for correctness.
+- **Phase 5 (integration test) deferred**: The SSR+hydration integration test is still recommended but was not implemented in this pass.
+- **Bugs D and E were not in the original design**: Discovered during whisky-store testing. Bug D (slowForEach) was a missing feature in both compiler targets. Bug E (false-conditional warning) was a UX issue, not a functional bug.
 
 ### Test results
 
 - All 68 packages build successfully
-- All 68 packages test successfully (no failures)
+- All 68 packages test successfully (561 compiler tests, no failures)
