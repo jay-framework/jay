@@ -1,6 +1,6 @@
 # 93 - Import-Export Workflow (Pillar 2)
 
-**Status:** Architecture (ready for review)  
+**Status:** Architecture (reviewed — issues fixed, ready for planning)  
 **Date:** 2026-02-25  
 **Master plan:** `jay-desktop-poc/docs/parallel-pillars-master-plan.md` (Pillar 2 section)  
 **Prerequisites:**
@@ -58,7 +58,7 @@ A: No server-side persistence. The plugin stores `jay-sync-content-hash` on each
 
 **Q3: How detailed should the "View diff" be?**
 
-A: Show a unified text diff of the jay-html changes (baseline vs current file). The baseline (`page.jay-html.sync-base`) is stored on every import/export. For Figma-side changes, we just say "Figma has been modified" — the designer already knows what they did. Full visual diff (using computed styles) is a future enhancement, not needed for MVP.
+A: Show a unified text diff of the jay-html changes (baseline vs current file). The baseline (`page.jay-html.base`) is stored on every import/export. For Figma-side changes, we just say "Figma has been modified" — the designer already knows what they did. Full visual diff (using computed styles) is a future enhancement, not needed for MVP.
 
 **Q4: What about whitespace-only or formatting-only changes?**
 
@@ -96,7 +96,7 @@ State transitions:
 
  Any state ──── import or export ───► IN_SYNC
  CONFLICT ──── export (overwrite) ──► IN_SYNC
- CONFLICT ──── import first ────────► FIGMA_MODIFIED ── export ──► IN_SYNC
+ CONFLICT ──── import first ────────► IN_SYNC ── designer edits ──► FIGMA_MODIFIED ── export ──► IN_SYNC
 ```
 
 ### Architecture: Who Tracks What
@@ -174,9 +174,13 @@ interface SyncSubscribeResponse extends BaseResponse {
     pageStatuses: {
         pageUrl: string;
         jayHtmlModified: boolean;
-        currentContentHash: string;
+        currentContentHash: string;  // empty string if file doesn't exist
     }[];
 }
+// Edge case: if the plugin sends a hash for a pageUrl whose jay-html
+// file doesn't exist on disk (deleted page, stale data), the server
+// returns jayHtmlModified: true with an empty currentContentHash.
+// The plugin treats a missing file as a change.
 ```
 
 **3. Sync diff message (new request-response)**
@@ -240,8 +244,8 @@ New module in `editor-server` (or `stack-cli` where handlers live). Responsibili
 1. **File watching**: Watch `*.jay-html` and `*.jay-contract` in the project's pages directory using the existing Vite watcher (reuse, don't duplicate)
 2. **Hash tracking**: Maintain `syncHashes: Map<pageUrl, string>` — set on import, export, or sync-subscribe
 3. **Change detection**: When a file changes, hash it, compare with stored hash, broadcast `jay-html-changed` if different
-4. **Baseline storage**: On every import/export, copy `page.jay-html` to `page.jay-html.sync-base`. Used for diff computation.
-5. **Diff computation**: Read `page.jay-html.sync-base` and current `page.jay-html`, produce unified diff
+4. **Baseline storage**: On every import/export, copy `page.jay-html` to `page.jay-html.base`. Used for diff computation and future Phase 2 hybrid import.
+5. **Diff computation**: Read `page.jay-html.base` and current `page.jay-html`, produce unified diff
 
 ```typescript
 class SyncStateManager {
@@ -420,11 +424,11 @@ When the designer presses **Export** while status is CONFLICT:
    └─────────────────────────────────────────────────┘
 ```
 
-**"View jay-html changes"**: Plugin sends `sync-diff` request to server. Server diffs `page.jay-html.sync-base` against current `page.jay-html`. Plugin displays unified diff in a scrollable panel.
+**"View jay-html changes"**: Plugin sends `sync-diff` request to server. Server diffs `page.jay-html.base` against current `page.jay-html`. Plugin displays unified diff in a scrollable panel.
 
 **"Export (overwrite)"**: Plugin re-sends export without hash check (or with a `force: true` flag). Server writes jay-html, stores new baseline. Plugin clears both flags. Status → IN_SYNC.
 
-**"Import First"**: Plugin sends import request. Server converts current jay-html → FigmaVendorDocument. Plugin replaces Figma nodes (re-import with replace). Status → FIGMA_MODIFIED (designer's Figma changes are now lost for the replaced section, but the AI's changes are in). Designer can then re-apply visual changes and export. Status → IN_SYNC.
+**"Import First"**: Plugin sends import request. Server converts current jay-html → FigmaVendorDocument. Plugin replaces Figma nodes (re-import with replace). Both flags cleared → Status → IN_SYNC. The designer's previous Figma changes are gone (replaced by the import), but the AI's changes are now on canvas. Designer re-applies visual changes (status transitions to FIGMA_MODIFIED), then exports → IN_SYNC.
 
 **"Cancel"**: No action. Status stays CONFLICT. Designer can continue working.
 
@@ -451,7 +455,7 @@ A confirmation dialog is shown:
 In the page list (app structure view), each page row shows a status dot:
 
 - 🟢 **In Sync** — no indicator (clean state is the default, no visual noise)
-- 🟡 **Jay-HTML Modified** — yellow dot + "jay-html changed" tooltip
+- 🟡 **Jay-HTML Modified** — yellow dot + "jay-html changed externally" tooltip. Change summary with line counts (e.g., "3 lines added, 1 removed") deferred to P2-3 where the baseline file and diff computation are implemented.
 - 🔵 **Figma Modified** — blue dot + "unsaved Figma changes" tooltip
 - 🔴 **Conflict** — red dot + "both sides modified" tooltip
 
@@ -469,12 +473,12 @@ When a page has a non-sync status, the import/export buttons for that page refle
 On every successful import or export, the server writes:
 
 ```
-pages/{route}/page.jay-html.sync-base
+pages/{route}/page.jay-html.base
 ```
 
-This is the same file the Phase 2 hybrid import (from the single-writer design) will use as its diff base. Building it now means Phase 2 hybrid import can be added later without changing the storage model.
+This is the same file referenced in the single-writer import-export system design as `page.jay-html.base` — the diff base for Phase 2 hybrid import. One file, one name, two uses: sync diff (this pillar) and hybrid import (future). Building it now means Phase 2 hybrid import can be added later without changing the storage model.
 
-The `.sync-base` file should be gitignored (it's a local sync artifact, not source).
+The `.base` file should be gitignored (it's a local sync artifact, not source).
 
 ---
 
@@ -563,7 +567,7 @@ Per the master plan's cross-pillar coordination rules:
 
 2. **Server: sync tracking on import/export** — In export handler: hash current jay-html, compare with `lastSyncContentHash`, set `diskDiverged`. On success: call `syncStateManager.recordSync()`. In import handler: on success, return `contentHash`.
 
-3. **Server: baseline storage** — On import/export success, write `page.jay-html.sync-base` alongside `page.jay-html`.
+3. **Server: baseline storage** — On import/export success, write `page.jay-html.base` alongside `page.jay-html`.
 
 4. **Plugin: update hash on import/export** — After successful import: store returned `contentHash` on SECTION plugin data as `jay-sync-content-hash`. After successful export: store `currentContentHash`.
 
@@ -585,7 +589,7 @@ Per the master plan's cross-pillar coordination rules:
 
 **Steps:**
 
-1. **Protocol: sync-diff** — Add `SyncDiffMessage/Response` to protocol. Server reads `page.jay-html.sync-base` and current `page.jay-html`, computes unified diff.
+1. **Protocol: sync-diff** — Add `SyncDiffMessage/Response` to protocol. Server reads `page.jay-html.base` and current `page.jay-html`, computes unified diff.
 
 2. **Server: diff computation** — Add `computeDiff(pageUrl)` to SyncStateManager. Use a lightweight diff algorithm (line-based, no external dependency — or use the `diff` npm package if already available).
 
@@ -597,7 +601,7 @@ Per the master plan's cross-pillar coordination rules:
 
 6. **Plugin: "Export (overwrite)" flow** — Re-send export without hash (or with force flag). Server writes unconditionally. Status → IN_SYNC.
 
-7. **Plugin: "Import First" flow** — Run import (replace Figma), then status → FIGMA_MODIFIED. Designer can now re-apply visual changes and export.
+7. **Plugin: "Import First" flow** — Run import (replace Figma), clear both flags → IN_SYNC. Designer re-applies visual changes → FIGMA_MODIFIED → export → IN_SYNC.
 
 **Demo P2-3 exit criteria:**
 - [ ] Conflict dialog appears when both sides modified
@@ -678,12 +682,13 @@ Per the master plan's cross-pillar coordination rules:
 
 6. Designer clicks "Import First"
    → Figma page replaced with AI's version (button says "Buy Now")
-   Status: 🔵 Figma Modified (from designer's perspective: need to re-export)
-   → actually status is In Sync because the import just reset everything
-   → designer re-applies the red button color
+   → both flags cleared
+   Status: 🟢 In Sync
+
+7. Designer re-applies the red button color in Figma
    Status: 🔵 Figma Modified
 
-7. Designer exports
+8. Designer exports
    Status: 🟢 In Sync
    → jay-html has "Buy Now" + red button
 ```
@@ -722,10 +727,16 @@ Each cycle is: AI → yellow → import → green → design → blue → export
 |----------|-------------|-----------------|
 | Status computed in plugin UI, not server | Server stays simple (no Figma state). Plugin has all signals locally. | Plugin UI has more logic. But it's the right place — it owns the UI. |
 | No Figma-side diff (just "modified" boolean) | Avoids expensive serialization-compare. Simple and fast. | "View diff" only shows jay-html changes, not Figma changes. Acceptable — designer knows what they did in Figma. |
-| Baseline file on disk (`page.jay-html.sync-base`) | Enables diff view now, Phase 2 hybrid import later. | One more file per page. Gitignored. Small cost. |
+| Baseline file on disk (`page.jay-html.base`) | Enables diff view now, Phase 2 hybrid import later. Same file as single-writer design's `.base`. | One more file per page. Gitignored. Small cost. |
 | Whitespace normalization for hash | No false positives from formatters. | Genuine whitespace-only changes are invisible. Acceptable — whitespace rarely matters in jay-html. |
 | No three-way merge | Much simpler. The conflict dialog gives the designer clear choices: overwrite or sequence (import then export). | No automatic merge of non-conflicting changes. The designer must re-apply Figma changes after "Import First". Acceptable for first users — automatic merge is complex and error-prone. |
 | `documentchange` for Figma tracking | Lightweight, no serialization. | May have false positives (undo back to original state still shows "modified"). Acceptable — re-exporting a page that hasn't actually changed is cheap and harmless. |
+
+### Notes
+
+- **`ContractChangedNotification`** is also defined in the single-writer import-export system design (that document's "Contract Change Notification" section). This design log adopts the same shape. Implementation should produce one definition, not two.
+- **Error handling**: File watcher failure → log warning, degrade to manual refresh (no status updates until watcher recovers). Corrupt file during hash → treat as changed (safe default). Missing baseline for diff → return an error response with `diff: null` and a message "No baseline available — import or export first to establish one."
+- **`broadcast()` sends to all connected sockets.** This is correct for single-designer use (one Figma plugin connected). For future multi-user scenarios, scope notifications to the socket that subscribed to each page. Not needed now — flag for later.
 
 ### What We're NOT Building
 
