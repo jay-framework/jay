@@ -194,6 +194,14 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ---
 
+## Figma Integration & Import
+
+| #   | Title                                        | Description                                                           |
+| --- | -------------------------------------------- | --------------------------------------------------------------------- |
+| 88  | variant style extraction for figma import    | Dev server variant mode, scenario generation, class-path key matching |
+
+---
+
 ## Quick Lookup by Task
 
 ### "I need to understand the rendering pipeline"
@@ -236,6 +244,11 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 → See #76 (AI Agent Integration), #77 (automation dev server), #80 (contract materialization for agents), #85 (agent kit and rendering phases)
 → Agent kit skills: `.cursor/skills/jay-agent-kit/` (main), `jay-html-authoring/`, `jay-cli-commands/`, `jay-contracts-and-plugins/`, `jay-dev-server-test/`
+
+### "I'm working on the Figma import pipeline"
+
+→ See #88 (variant style extraction, scenario generation, key matching)
+→ Also see jay-desktop-poc design logs: `figma-jay-two-way-sync-system-design.md`, `conditional-visibility-in-figma.md`
 
 ### "I need to understand the full workflow lifecycle"
 
