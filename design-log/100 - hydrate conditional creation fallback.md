@@ -37,76 +37,60 @@ export function hydrateConditional<ViewState>(
 ): BaseJayElement<ViewState>
 ```
 
-### DOM insertion challenge
+### How it works
 
-When the condition was false at SSR, the element doesn't exist in the DOM. When it toggles true, where should the created element be inserted?
-
-The standard element target uses Kindergarten groups — the parent `dynamicElement` manages child positions via offset-based insertion. But `adoptElement` (used in hydration) doesn't set up Kindergarten.
-
-**Solution: comment anchor from adoptElement**
-
-`adoptElement` already knows its DOM element (the parent container). After evaluating children, it can insert comment anchors for any children that have `dom: undefined` (false-at-SSR conditionals). These anchors mark the insertion positions.
-
-The challenge: `adoptElement` evaluates children before resolving its own element (JS argument evaluation). So children don't know the parent during construction.
-
-**Workaround**: `hydrateConditional` returns `dom: undefined` with a `setAnchor(parent)` callback. After `adoptElement` resolves its element, it scans children for missing DOM and inserts anchors in document order.
-
-### Alternative considered: use `dynamicElement` for parents with conditionals
-
-Change the hydrate compiler to emit `de()` instead of `adoptElement()` for parents that contain conditional children. `de()` handles Kindergarten and `Conditional` descriptors natively.
-
-Rejected because:
-- `de()` creates DOM from scratch — it doesn't adopt existing server-rendered elements
-- Would need a new hybrid function that adopts AND manages Kindergarten
-- More complex than the anchor approach
-
-### Compiler changes
-
-The hydrate compiler generates BOTH adopt AND create code for conditionals (same pattern as `hydrateForEach` which already generates both):
+`hydrateConditional` already handles the conditional logic — it IS the adoption of the conditional itself. The adopt callback tries to find and adopt the element. When adoption fails (false at SSR), the create callback provides the element creation code as a fallback.
 
 ```typescript
 hydrateConditional(
     vs => vs.productSearch?.isSearching,
-    // Adopt callback (for true-at-SSR):
-    () => adoptElement("3", {}, []),
-    // Create callback (for false-at-SSR):
-    () => e('div', {class: 'loading-overlay'}, [
+    () => adoptElement("3", {}, []),                              // adopt (existing)
+    () => e('div', {class: 'loading-overlay'}, [                  // create (fallback)
         e('div', {class: 'loading-spinner'}, [])
     ])
 )
 ```
 
-The create callback uses the standard element target (`e()`, `dt()`, `da()` etc.), exactly like `hydrateForEach`'s create callback.
+- **True at SSR**: adopt callback finds the element → existing toggle behavior, create callback ignored
+- **False at SSR**: adopt callback returns noop → create callback stored, called lazily when condition first becomes true
+
+The create callback uses the standard element target (`e()`, `dt()`, `da()` etc.), same pattern as `hydrateForEach`'s create callback.
+
+### Why not split into `hydrateConditionalTrue` / `hydrateConditionalFalse`?
+
+Considered splitting into two methods to reduce client script size. Doesn't help because the compiler can't determine at compile time whether a condition is true or false at SSR — conditions like `if="productSearch.isSearching"` depend on fast/interactive-phase data resolved at request time. The hydrate compiler must generate code for both outcomes; the runtime decides based on whether adoption succeeds.
+
+The one exception is **slow-phase conditions**: the value IS known at compile time (baked into pre-rendered jay-html). If true → only adoption needed. If false → no code needed (slow data doesn't change). These are already handled implicitly.
+
+### DOM insertion position
+
+When the condition was false at SSR and toggles true, the created element needs a position in the DOM. Solution: `hydrateConditional` creates a comment anchor node as a position marker. The parent `adoptElement` inserts anchors for children that returned `dom: undefined`.
+
+Challenge: `adoptElement` evaluates children before resolving its own element (JS argument evaluation order). Workaround: `adoptElement` post-processes children after resolving — scans for comment-anchor DOMs and appends them to the parent in order.
 
 ## Implementation Plan
 
 ### Phase 1: Runtime — `hydrateConditional` with createFallback
 
-In `hydrateConditional`, when `!adopted.dom` and `createFallback` exists:
+Add optional third parameter `createFallback` to `hydrateConditional`.
+
+When `!adopted.dom` and `createFallback` exists:
 - Create a comment anchor node
-- Return a `BaseJayElement` with:
-  - `dom: anchor` (comment node — zero-width, doesn't affect layout)
-  - `mount`: no-op (anchor is already positioned by parent)
-  - `update`: on first true → call `createFallback()`, insert before anchor, track as visible. On subsequent toggles, remove/re-insert before anchor (same as true-at-SSR path).
+- Return a `BaseJayElement` with `dom: anchor` and an `update` function that:
+  - On first true condition → call `createFallback()`, insert created element before anchor
+  - On subsequent toggles → remove/re-insert before anchor (same as true-at-SSR path)
 
-The anchor gets its position from being returned as `dom`. The parent `adoptElement` ignores child `dom` values, but the anchor is in the correct logical position because it was created at construction time.
+### Phase 2: Runtime — `adoptElement` anchor insertion
 
-**Anchor insertion**: After `adoptElement` resolves its element and processes children, it needs to insert anchors for children with comment-node DOMs. Add a post-processing step in `adoptElement` that appends comment-node children to the parent element in order.
+After `adoptElement` resolves its DOM element and collects children, scan children for comment-node DOMs and append them to the parent element. This places anchors at the correct document position.
 
-### Phase 2: Hydrate compiler — generate create callback
+### Phase 3: Hydrate compiler — generate create callback
 
-In `renderHydrateElement` for conditionals, also generate the creation code:
-- Use `renderHtmlElementContent` / manual `e()` construction (same approach as `hydrateForEach`'s create callback)
-- Pass as the third argument to `hydrateConditional`
-- Import `element as e`, `dynamicText as dt`, etc. when needed
-
-### Phase 3: Update `adoptElement` — anchor insertion
-
-After `adoptElement` resolves its DOM element and collects children, scan children for comment-node DOMs and insert them into the parent element. This places anchors at the correct document position for conditional insertion/removal.
+In `renderHydrateElement` for conditionals, also generate the creation code using the standard element target (manual `e()` construction, same approach as `hydrateForEach`'s create callback). Pass as third argument to `hydrateConditional`.
 
 ### Phase 4: Test and verify
 
-- Add runtime test for false-at-SSR conditional
+- Add runtime test for false-at-SSR conditional toggling true
 - Update compiler test fixtures if needed
 - Full test suite
 - Whisky store: verify loading overlay appears on search
