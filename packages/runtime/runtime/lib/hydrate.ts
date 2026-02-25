@@ -137,8 +137,14 @@ export function adoptElement<ViewState>(
         }
     });
 
-    // Collect updates/mounts from adopted children
+    // Collect updates/mounts from adopted children.
+    // Also insert comment anchors for false-at-SSR conditionals (Level 3).
+    // These anchors mark the DOM position where elements will be created
+    // when conditions toggle true.
     for (const child of children) {
+        if (child.dom instanceof Comment) {
+            element.appendChild(child.dom);
+        }
         if (child.update !== noopUpdate) updates.push(child.update);
         if (child.mount !== noopMount) mounts.push(child.mount);
         if (child.unmount !== noopMount) unmounts.push(child.unmount);
@@ -157,27 +163,32 @@ export function adoptElement<ViewState>(
 // ============================================================================
 
 /**
- * Hydration-aware conditional for if=true at SSR time (Level 2).
+ * Hydration-aware conditional.
  *
- * The element exists in the DOM. We adopt it and wire up conditional toggling.
- * When the condition becomes false, the element is removed from its parent.
- * When it becomes true again, the same element is re-inserted at its original
- * position (using an anchor comment node).
+ * Handles two cases:
+ * - **True at SSR (Level 2)**: Element exists in DOM. Adopt it, wire up toggle.
+ * - **False at SSR (Level 3)**: Element absent. Use createFallback to lazily
+ *   create the element when the condition first becomes true.
  *
- * No creation code is needed — Jay retains the element on toggle.
+ * @param createFallback - Optional element creator for false-at-SSR conditionals.
+ *   Uses the standard element target (e(), dt(), etc.). Same pattern as
+ *   hydrateForEach's createItem callback.
  */
 export function hydrateConditional<ViewState>(
     condition: (vs: ViewState) => boolean,
     adoptExisting: () => BaseJayElement<ViewState>,
+    createFallback?: () => BaseJayElement<ViewState>,
 ): BaseJayElement<ViewState> {
-    const context = currentConstructionContext();
-
     // Adopt the existing element.
     // adopted may be undefined when the conditional has only static content
     // (the hydrate compiler emits () => {} which returns undefined).
     const adopted = adoptExisting();
 
     if (!adopted || !adopted.dom) {
+        // Element not in DOM — condition was false at SSR.
+        if (createFallback) {
+            return hydrateConditionalFalse(condition, createFallback);
+        }
         return (
             adopted || {
                 dom: undefined as any,
@@ -188,6 +199,7 @@ export function hydrateConditional<ViewState>(
         );
     }
 
+    // Element exists — condition was true at SSR. Wire up toggle behavior.
     const dom = adopted.dom;
     const parent = dom.parentNode!;
 
@@ -218,6 +230,59 @@ export function hydrateConditional<ViewState>(
         update,
         mount: adopted.mount,
         unmount: adopted.unmount,
+    };
+}
+
+/**
+ * Handle a conditional that was false at SSR time (Level 3).
+ * Returns a comment anchor as dom. The parent adoptElement will insert it
+ * into the DOM. When the condition becomes true, the element is lazily
+ * created and inserted before the anchor.
+ */
+function hydrateConditionalFalse<ViewState>(
+    condition: (vs: ViewState) => boolean,
+    createElement: () => BaseJayElement<ViewState>,
+): BaseJayElement<ViewState> {
+    const savedContext = saveContext();
+    const anchor = document.createComment('');
+    let created: BaseJayElement<ViewState> | undefined;
+    let visible = false;
+
+    const update = (newData: ViewState) => {
+        const result = condition(newData);
+
+        // Lazy creation: build the element on first true
+        if (!created && result) {
+            restoreContext(savedContext, () => {
+                created = wrapWithModifiedCheck(
+                    currentConstructionContext().currData,
+                    createElement(),
+                );
+            });
+        }
+
+        if (result && !visible && created) {
+            anchor.parentNode!.insertBefore(created.dom, anchor);
+            created.mount();
+        } else if (!result && visible && created) {
+            anchor.parentNode!.removeChild(created.dom);
+            created.unmount();
+        }
+        if (result && created) {
+            created.update(newData);
+        }
+        visible = result;
+    };
+
+    return {
+        dom: anchor as any,
+        update,
+        mount: noopMount,
+        unmount: () => {
+            if (created && visible) {
+                created.unmount();
+            }
+        },
     };
 }
 

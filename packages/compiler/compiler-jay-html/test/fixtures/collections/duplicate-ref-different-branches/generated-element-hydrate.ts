@@ -114,6 +114,7 @@ export function hydrate(
                         adoptElement('3', {}, [
                             adoptElement('deleteButton', {}, [], refDeleteButton2()),
                         ]),
+                    () => e('div', {}, [e('button', {}, ['Delete All'], refDeleteButton2())]),
                 ),
             ]),
         ) as DuplicateRefDifferentBranchesElement;

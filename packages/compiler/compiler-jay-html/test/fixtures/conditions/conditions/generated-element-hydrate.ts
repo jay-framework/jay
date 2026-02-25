@@ -1,5 +1,7 @@
 import {
     JayElement,
+    element as e,
+    dynamicText as dt,
     RenderElement,
     ReferencesManager,
     ConstructContext,
@@ -48,10 +50,12 @@ export function hydrate(
                 hydrateConditional(
                     (vs) => vs.cond,
                     () => adoptText('1', (vs) => vs.text1),
+                    () => e('div', { style: { cssText: 'color:red' } }, [dt((vs) => vs.text1)]),
                 ),
                 hydrateConditional(
                     (vs) => !vs.cond,
                     () => adoptText('2', (vs) => vs.text2),
+                    () => e('div', { style: { cssText: 'color:green' } }, [dt((vs) => vs.text2)]),
                 ),
             ]),
         ) as ConditionsElement;

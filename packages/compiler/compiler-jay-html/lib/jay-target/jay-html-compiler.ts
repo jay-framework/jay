@@ -2069,12 +2069,44 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         const adoptBody = childContent.rendered.trim()
             ? `() => ${childContent.rendered.trim()}`
             : '() => {}';
+
+        // Generate creation callback for false-at-SSR fallback (Level 3).
+        // Uses the standard element target (e(), dt(), da()) — same pattern
+        // as hydrateForEach's createItem callback.
+        const createRenderContext: RenderContext = {
+            ...renderContext,
+            indent: new Indent('    ').child().noFirstLineBreak(),
+            isInsideGuard: true,
+        };
+        const createChildNodes = element.childNodes.filter(
+            (_) => _.nodeType !== NodeType.TEXT_NODE || (_.innerText || '').trim() !== '',
+        );
+        let createChildren =
+            createChildNodes.length === 0
+                ? RenderFragment.empty()
+                : createChildNodes
+                      .map((_) =>
+                          renderNode(_, {
+                              ...createRenderContext,
+                              indent: createRenderContext.indent.child(),
+                          }),
+                      )
+                      .reduce(
+                          (prev, current) => RenderFragment.merge(prev, current, ',\n'),
+                          RenderFragment.empty(),
+                      );
+        const createAttributes = renderAttributes(element, createRenderContext);
+        const createBody = `() => e('${element.rawTagName}', ${createAttributes.rendered}, [${createChildren.rendered}])`;
+
         return new RenderFragment(
-            `${context.indent.firstLine}hydrateConditional(${renderedCondition.rendered}, ${adoptBody})`,
+            `${context.indent.firstLine}hydrateConditional(${renderedCondition.rendered}, ${adoptBody},\n${context.indent.firstLine}    ${createBody})`,
             Imports.for(Import.hydrateConditional)
+                .plus(Import.element)
                 .plus(renderedCondition.imports)
-                .plus(childContent.imports),
-            [...renderedCondition.validations, ...childContent.validations],
+                .plus(childContent.imports)
+                .plus(createChildren.imports)
+                .plus(createAttributes.imports),
+            [...renderedCondition.validations, ...childContent.validations, ...createChildren.validations],
             childContent.refs,
         );
     }
