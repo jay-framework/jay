@@ -1,7 +1,15 @@
 import type { JayComponent } from '@jay-framework/runtime';
 import { deepMergeViewStates, type TrackByMap } from '@jay-framework/view-state-merge';
 import { collectInteractions } from './interaction-collector';
-import type { AutomationAPI, PageState, Interaction, Coordinate } from './types';
+import { groupInteractions } from './group-interactions';
+import type {
+    AutomationAPI,
+    PageState,
+    Interaction,
+    InteractionInstance,
+    CollectedInteraction,
+    Coordinate,
+} from './types';
 
 /** Event type for ViewState change notifications (matches runtime export) */
 const VIEW_STATE_CHANGE = 'viewStateChange';
@@ -21,7 +29,8 @@ export interface AutomationAgentOptions {
  */
 class AutomationAgent implements AutomationAPI {
     private stateListeners = new Set<(state: PageState) => void>();
-    private cachedInteractions: Interaction[] | null = null;
+    private cachedRaw: CollectedInteraction[] | null = null;
+    private cachedGrouped: Interaction[] | null = null;
     private viewStateHandler: (() => void) | null = null;
     /**
      * When slow rendering is used, this holds the merged slow+fast ViewState.
@@ -54,7 +63,8 @@ class AutomationAgent implements AutomationAPI {
     private subscribeToUpdates(): void {
         // Use addEventListener with 'viewStateChange' event
         this.viewStateHandler = () => {
-            this.cachedInteractions = null; // Invalidate cache
+            this.cachedRaw = null;
+            this.cachedGrouped = null;
             // Update merged state if we're tracking slow ViewState
             if (this.initialSlowViewState && this.trackByMap) {
                 this.mergedViewState = deepMergeViewStates(
@@ -74,21 +84,28 @@ class AutomationAgent implements AutomationAPI {
         this.stateListeners.forEach((callback) => callback(state));
     }
 
-    getPageState(): PageState {
-        if (!this.cachedInteractions) {
-            this.cachedInteractions = collectInteractions(this.component.element?.refs);
+    private getGrouped(): Interaction[] {
+        if (!this.cachedGrouped) {
+            if (!this.cachedRaw) {
+                this.cachedRaw = collectInteractions(this.component.element?.refs);
+            }
+            this.cachedGrouped = groupInteractions(this.cachedRaw);
         }
+        return this.cachedGrouped;
+    }
+
+    getPageState(): PageState {
         return {
             // Use merged state if available (slow+fast), otherwise component's viewState
             viewState: this.mergedViewState || this.component.viewState,
-            interactions: this.cachedInteractions,
+            interactions: this.getGrouped(),
             customEvents: this.getCustomEvents(),
         };
     }
 
     triggerEvent(eventType: string, coordinate: Coordinate, eventData?: object): void {
-        const interaction = this.getInteraction(coordinate);
-        if (!interaction) {
+        const instance = this.getInteraction(coordinate);
+        if (!instance) {
             throw new Error(`No element found at coordinate: ${coordinate.join('/')}`);
         }
 
@@ -96,16 +113,21 @@ class AutomationAgent implements AutomationAPI {
         if (eventData) {
             Object.assign(event, eventData);
         }
-        interaction.element.dispatchEvent(event);
+        instance.element.dispatchEvent(event);
     }
 
-    getInteraction(coordinate: Coordinate): Interaction | undefined {
-        const state = this.getPageState();
-        return state.interactions.find(
-            (i) =>
-                i.coordinate.length === coordinate.length &&
-                i.coordinate.every((c, idx) => c === coordinate[idx]),
-        );
+    getInteraction(coordinate: Coordinate): InteractionInstance | undefined {
+        for (const group of this.getGrouped()) {
+            for (const instance of group.items) {
+                if (
+                    instance.coordinate.length === coordinate.length &&
+                    instance.coordinate.every((c, idx) => c === coordinate[idx])
+                ) {
+                    return instance;
+                }
+            }
+        }
+        return undefined;
     }
 
     onStateChange(callback: (state: PageState) => void): () => void {
@@ -153,7 +175,8 @@ class AutomationAgent implements AutomationAPI {
             this.viewStateHandler = null;
         }
         this.stateListeners.clear();
-        this.cachedInteractions = null;
+        this.cachedRaw = null;
+        this.cachedGrouped = null;
     }
 }
 

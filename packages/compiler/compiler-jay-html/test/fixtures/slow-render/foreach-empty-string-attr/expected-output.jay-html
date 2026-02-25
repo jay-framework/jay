@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data" contract="./test.jay-contract"></script>
+</head>
+<body>
+    <div class="grid">
+        <a class="card" slowForEach="categories" jayIndex="0" jayTrackBy="cat1">
+            <img src alt="Whisky">
+            <div class="name">Whisky</div>
+            <div class="count">42 products</div>
+        </a><a class="card" slowForEach="categories" jayIndex="1" jayTrackBy="cat2">
+            <img src="https://example.com/bourbon.jpg" alt="Bourbon">
+            <div class="name">Bourbon</div>
+            <div class="count">15 products</div>
+        </a>
+    </div>
+</body>
+</html>

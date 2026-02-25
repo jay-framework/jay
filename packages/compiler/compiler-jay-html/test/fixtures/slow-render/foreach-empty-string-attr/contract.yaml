@@ -1,0 +1,19 @@
+name: Test
+tags:
+  - tag: categories
+    type: sub-contract
+    repeated: true
+    trackBy: _id
+    tags:
+      - tag: _id
+        type: data
+        dataType: string
+      - tag: name
+        type: data
+        dataType: string
+      - tag: imageUrl
+        type: data
+        dataType: string
+      - tag: productCount
+        type: data
+        dataType: number

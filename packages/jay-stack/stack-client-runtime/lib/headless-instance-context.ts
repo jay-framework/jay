@@ -17,6 +17,7 @@ import {
     ContextMarker,
     PreRenderElement,
     JayElement,
+    currentConstructionContext,
 } from '@jay-framework/runtime';
 import {
     ComponentConstructor,
@@ -60,7 +61,9 @@ function makeSignals<T extends object>(obj: T): Signals<T> {
  *
  * @param preRender - The inline template's render function
  * @param interactiveConstructor - The plugin's interactive constructor
- * @param coordinateKey - The coordinate key for this instance (e.g., "product-card:0")
+ * @param coordinateKey - Static coordinate key (e.g., "product-card:0") or a
+ *   factory function for forEach instances that receives the current dataIds
+ *   (accumulated trackBy values from ancestor forEach loops) and returns the key.
  * @param pluginContexts - Additional context markers from the plugin (if any)
  */
 export function makeHeadlessInstanceComponent<
@@ -72,7 +75,7 @@ export function makeHeadlessInstanceComponent<
 >(
     preRender: PreRenderElement<ViewState, Refs, JayElementT>,
     interactiveConstructor: ComponentConstructor<PropsT, Refs, ViewState, any, CompCore>,
-    coordinateKey: string,
+    coordinateKey: string | ((dataIds: string[]) => string),
     pluginContexts: ContextMarkers<any> = [] as any,
 ) {
     // Wrap the interactive constructor to read instance data from the provided context
@@ -87,9 +90,15 @@ export function makeHeadlessInstanceComponent<
         // Read instance data from the context stack (provided by composite component)
         const instanceData = useContext(HEADLESS_INSTANCES);
 
+        // Resolve coordinate key: static string or dynamic factory (for forEach instances)
+        const resolvedKey =
+            typeof coordinateKey === 'function'
+                ? coordinateKey(currentConstructionContext()?.dataIds ?? [])
+                : coordinateKey;
+
         // Look up this instance's fast ViewState and carryForward by coordinate
-        const fastVS = instanceData?.viewStates?.[coordinateKey];
-        const cf = instanceData?.carryForwards?.[coordinateKey] || {};
+        const fastVS = instanceData?.viewStates?.[resolvedKey];
+        const cf = instanceData?.carryForwards?.[resolvedKey] || {};
 
         // Create signals from fast ViewState (like makeCompositeJayComponent does for key-based parts)
         const signalVS = fastVS ? makeSignals(fastVS) : undefined;

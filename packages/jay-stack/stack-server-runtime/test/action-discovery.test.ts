@@ -177,11 +177,11 @@ describe('Action Discovery', () => {
             expect(result).toEqual([]);
         });
 
-        it('should parse plugin.yaml with actions array', async () => {
+        it('should parse plugin.yaml with actions array (string format)', async () => {
             const pluginDir = path.join(tempDir, 'src/plugins/my-plugin');
             await fs.promises.mkdir(pluginDir, { recursive: true });
 
-            // Create plugin.yaml with actions
+            // Create plugin.yaml with string-only actions (backward compat)
             await fs.promises.writeFile(
                 path.join(pluginDir, 'plugin.yaml'),
                 `name: my-plugin\nversion: "1.0.0"\nactions:\n  - addToCart\n  - removeFromCart`,
@@ -201,6 +201,38 @@ describe('Action Discovery', () => {
             });
 
             // Import will fail in test, so no actions registered
+            expect(result).toEqual([]);
+        });
+
+        it('should parse plugin.yaml with mixed action formats', async () => {
+            const pluginDir = path.join(tempDir, 'src/plugins/my-plugin');
+            await fs.promises.mkdir(pluginDir, { recursive: true });
+
+            // Create plugin.yaml with mixed action formats
+            await fs.promises.writeFile(
+                path.join(pluginDir, 'plugin.yaml'),
+                `name: my-plugin
+version: "1.0.0"
+actions:
+  - name: sendMessage
+    action: ./actions/send-message.jay-action
+  - submitRating
+`,
+            );
+
+            // Create an index.ts
+            await fs.promises.writeFile(
+                path.join(pluginDir, 'index.ts'),
+                `export const sendMessage = {}; export const submitRating = {};`,
+            );
+
+            // Will fail to import in test environment, but validates mixed format parsing
+            const result = await discoverAllPluginActions({
+                projectRoot: tempDir,
+                registry,
+                verbose: false,
+            });
+
             expect(result).toEqual([]);
         });
     });

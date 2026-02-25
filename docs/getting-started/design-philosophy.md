@@ -112,17 +112,18 @@ Jay is built on reactive principles from the ground up.
 **Reactive Principles**:
 
 - **Fine-grained reactivity** - only changed data triggers updates
-- **Immutable data** - predictable state management
+- **Immutable data** - predictable state management via JSON Patch operations
 - **Automatic dependency tracking** - no manual subscription management
-- **Performance optimization** - minimal re-rendering
+- **Efficient derived collections** - `createDerivedArray` only re-maps items that actually changed
 
 ```typescript
 // Reactive state automatically updates the UI
 const [count, setCount] = createSignal(0);
 const doubled = createMemo(() => count() * 2);
 
-// UI automatically reflects changes
-<span>{doubled}</span>
+// Patch-based updates for nested state
+const [user, setUser, patchUser] = createPatchableSignal({ name: '', theme: 'light' });
+patchUser({ op: REPLACE, path: ['theme'], value: 'dark' });
 ```
 
 ### 4. "No Magic" Philosophy
@@ -322,11 +323,20 @@ const MyComponent = makeJayComponent<MyComponentContract>(render, constructor);
 **Reactive State Management**:
 
 ```typescript
-// Use signals for reactive state
-const [state, setState] = createSignal(initialState);
+// Scalar state
+const [count, setCount] = createSignal(0);
 
-// Use memos for derived state
-const derived = createMemo(() => computeDerived(state()));
+// Complex/nested state with JSON Patch
+const [todos, setTodos, patchTodos] = createPatchableSignal(initialTodos);
+
+// Scalar derived values
+const activeCount = createMemo(() => todos().filter((t) => !t.completed).length);
+
+// Derived array for efficient list mapping
+const todoViews = createDerivedArray(todos, (item) => {
+  const { id, title, completed } = item();
+  return { id, title, completed };
+});
 ```
 
 ## Conclusion

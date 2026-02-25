@@ -465,6 +465,131 @@ await runAction(searchProducts, { wrongField: true }); // ❌ Type error
 
 ---
 
+# Action Metadata Files (.jay-action)
+
+`.jay-action` files provide metadata for server actions. They describe the action's purpose, input/output types, and contract references. Actions with `.jay-action` files are exposed to AI agents; actions without them are not.
+
+## Format
+
+`.jay-action` files use the same compact type notation as jay-html data scripts:
+
+```yaml
+name: searchProducts
+description: Search products in the store catalog.
+
+import:
+  productCard: product-card.jay-contract
+
+inputSchema:
+  query: string
+  filters?:
+    minPrice?: number
+    maxPrice?: number
+    categoryIds?: string[]
+  sortBy?: enum(relevance | price_asc | price_desc)
+  pageSize?: number
+
+outputSchema:
+  products:
+    - productCard
+  totalCount: number
+  hasMore: boolean
+```
+
+## Type Notation
+
+| Notation                      | Meaning                | Example                      |
+| ----------------------------- | ---------------------- | ---------------------------- |
+| `string`, `number`, `boolean` | Primitives             | `name: string`               |
+| `enum(a \| b \| c)`           | Enum type              | `sortBy?: enum(asc \| desc)` |
+| `propName?:`                  | Optional property      | `filters?: ...`              |
+| `type[]`                      | Array shorthand        | `ids: string[]`              |
+| YAML list `- ...`             | Array of objects       | `items:\n  - id: string`     |
+| `- importedName`              | Array of imported type | `products:\n  - productCard` |
+| `importedName`                | Imported contract type | `product: productCard`       |
+| `importedName?`               | Nullable imported type | `outputSchema: productCard?` |
+| `{}`                          | Unknown-shape object   | `filter: {}`                 |
+
+## Contract Imports
+
+The `import:` block aliases `.jay-contract` files for use in type expressions:
+
+```yaml
+import:
+  productCard: product-card.jay-contract
+```
+
+This generates a TypeScript import in the `.d.ts` file:
+
+```typescript
+import { ProductCardViewState } from '../contracts/product-card.jay-contract';
+```
+
+## Generated Types
+
+Each `.jay-action` file generates a `.jay-action.d.ts` file with `Input` and `Output` interfaces:
+
+```typescript
+import { ProductCardViewState } from '../contracts/product-card.jay-contract';
+
+export interface SearchProductsInput {
+  query: string;
+  filters?: {
+    minPrice?: number;
+    maxPrice?: number;
+    categoryIds?: Array<string>;
+  };
+  sortBy?: 'relevance' | 'price_asc' | 'price_desc';
+  pageSize?: number;
+}
+
+export interface SearchProductsOutput {
+  products: Array<ProductCardViewState>;
+  totalCount: number;
+  hasMore: boolean;
+}
+```
+
+## Nullable Output
+
+For actions that return `null` on miss (e.g., lookup by slug):
+
+```yaml
+import:
+  productCard: product-card.jay-contract
+
+inputSchema:
+  slug: string
+
+outputSchema: productCard?
+```
+
+Generates: `export type GetProductBySlugOutput = ProductCardViewState | null;`
+
+## Plugin Integration
+
+Reference `.jay-action` files from `plugin.yaml`:
+
+```yaml
+actions:
+  - name: searchProducts
+    action: search-products.jay-action
+  - name: getProductBySlug
+    action: get-product-by-slug.jay-action
+```
+
+And export from `package.json`:
+
+```json
+{
+  "exports": {
+    "./search-products.jay-action": "./dist/actions/search-products.jay-action"
+  }
+}
+```
+
+---
+
 # Plugin Actions
 
 Plugins can also define and export actions for use by projects that install them.

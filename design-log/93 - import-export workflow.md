@@ -4,6 +4,7 @@
 **Date:** 2026-02-25  
 **Master plan:** `jay-desktop-poc/docs/parallel-pillars-master-plan.md` (Pillar 2 section)  
 **Prerequisites:**
+
 - [single-writer-design-ownership.md](../../../jay-desktop-poc/docs/design-log/single-writer-design-ownership.md) (adopted)
 - [single-writer-import-export-system-design.md](../../../jay-desktop-poc/docs/design-log/single-writer-import-export-system-design.md) (Phase 1 partially designed)
 - Pillar 1 design (Compute Styles) — Pillar 2 does NOT depend on Pillar 1 for its core functionality, but P2-3's "View diff" may optionally use computed styles for visual comparison in a later phase
@@ -17,6 +18,7 @@ The single-writer model is adopted: the designer owns `page.jay-html`. It's modi
 Today, import and export are stateless fire-and-forget operations. The plugin has no awareness of whether the jay-html on disk matches what's on the Figma canvas. The single-writer import-export design (already written) adds re-import-with-replace and a basic `diskDiverged` check on export. But the designer still has no real-time awareness of file changes, no per-page sync status, and no structured workflow for resolving conflicts when both Figma and the filesystem have been modified.
 
 **What exists today:**
+
 - Import: jay-html → parse → Import IR → FigmaVendorDocument → Figma nodes (works, full replace)
 - Export: Figma nodes → serialize → FigmaVendorDocument → jay-html on disk (works)
 - No file watching for jay-html in the editor protocol
@@ -38,6 +40,7 @@ AI agent → directly edits jay-html on disk
 When the designer makes changes in Figma AND the AI modifies jay-html, neither side knows about the other. The designer discovers this only at export time (if we implement `diskDiverged`) or worse — silently overwrites the AI's work.
 
 **Pillar 2 solves this** by adding:
+
 1. Real-time awareness of jay-html file changes in the plugin
 2. Per-page sync status indicators
 3. Conflict detection when both sides have changed
@@ -76,12 +79,12 @@ A: Non-blocking. The status indicator is always visible. The conflict dialog app
 
 Each page has an independent sync status, computed from two boolean signals:
 
-| `jayHtmlModified` | `figmaModified` | Status |
-|:-:|:-:|:--|
-| false | false | **IN_SYNC** (green) |
-| true | false | **JAY_HTML_MODIFIED** (yellow) |
-| false | true | **FIGMA_MODIFIED** (blue) |
-| true | true | **CONFLICT** (red) |
+| `jayHtmlModified` | `figmaModified` | Status                         |
+| :---------------: | :-------------: | :----------------------------- |
+|       false       |      false      | **IN_SYNC** (green)            |
+|       true        |      false      | **JAY_HTML_MODIFIED** (yellow) |
+|       false       |      true       | **FIGMA_MODIFIED** (blue)      |
+|       true        |      true       | **CONFLICT** (red)             |
 
 State transitions:
 
@@ -134,26 +137,24 @@ The editor server currently only responds to requests. Pillar 2 adds a `server-n
 // Direction: server → client (broadcast to all connected sockets)
 
 interface ServerNotification {
-    type: string;
-    timestamp: number;
+  type: string;
+  timestamp: number;
 }
 
 interface JayHtmlChangedNotification extends ServerNotification {
-    type: 'jay-html-changed';
-    pageUrl: string;
-    contentHash: string;
+  type: 'jay-html-changed';
+  pageUrl: string;
+  contentHash: string;
 }
 
 interface ContractChangedNotification extends ServerNotification {
-    type: 'contract-changed';
-    pageUrl: string;
-    addedTags: string[];
-    removedTags: string[];
+  type: 'contract-changed';
+  pageUrl: string;
+  addedTags: string[];
+  removedTags: string[];
 }
 
-type ServerNotificationTypes =
-    | JayHtmlChangedNotification
-    | ContractChangedNotification;
+type ServerNotificationTypes = JayHtmlChangedNotification | ContractChangedNotification;
 ```
 
 **2. Sync subscribe message (new request-response)**
@@ -162,20 +163,20 @@ When the plugin connects (or reconnects), it sends the last known sync hashes fo
 
 ```typescript
 interface SyncSubscribeMessage extends BaseMessage<SyncSubscribeResponse> {
-    type: 'sync-subscribe';
-    pages: {
-        pageUrl: string;
-        lastSyncContentHash: string;
-    }[];
+  type: 'sync-subscribe';
+  pages: {
+    pageUrl: string;
+    lastSyncContentHash: string;
+  }[];
 }
 
 interface SyncSubscribeResponse extends BaseResponse {
-    type: 'sync-subscribe';
-    pageStatuses: {
-        pageUrl: string;
-        jayHtmlModified: boolean;
-        currentContentHash: string;  // empty string if file doesn't exist
-    }[];
+  type: 'sync-subscribe';
+  pageStatuses: {
+    pageUrl: string;
+    jayHtmlModified: boolean;
+    currentContentHash: string; // empty string if file doesn't exist
+  }[];
 }
 // Edge case: if the plugin sends a hash for a pageUrl whose jay-html
 // file doesn't exist on disk (deleted page, stale data), the server
@@ -189,15 +190,15 @@ Plugin requests the jay-html diff for a page (used in "View diff" during conflic
 
 ```typescript
 interface SyncDiffMessage extends BaseMessage<SyncDiffResponse> {
-    type: 'sync-diff';
-    pageUrl: string;
+  type: 'sync-diff';
+  pageUrl: string;
 }
 
 interface SyncDiffResponse extends BaseResponse {
-    type: 'sync-diff';
-    diff: string;       // unified diff format
-    linesAdded: number;
-    linesRemoved: number;
+  type: 'sync-diff';
+  diff: string; // unified diff format
+  linesAdded: number;
+  linesRemoved: number;
 }
 ```
 
@@ -206,34 +207,34 @@ interface SyncDiffResponse extends BaseResponse {
 ```typescript
 // ExportMessage: add optional sync hash
 interface ExportMessage<TVendorDoc> {
-    type: 'export';
-    vendorId: string;
-    pageUrl: string;
-    vendorDoc: TVendorDoc;
-    lastSyncContentHash?: string;  // NEW
+  type: 'export';
+  vendorId: string;
+  pageUrl: string;
+  vendorDoc: TVendorDoc;
+  lastSyncContentHash?: string; // NEW
 }
 
 // ExportResponse: add divergence info
 interface ExportResponse {
-    type: 'export';
-    success: boolean;
-    vendorSourcePath?: string;
-    jayHtmlPath?: string;
-    contractPath?: string;
-    warnings?: string[];
-    diskDiverged?: boolean;        // NEW
-    currentContentHash?: string;   // NEW
+  type: 'export';
+  success: boolean;
+  vendorSourcePath?: string;
+  jayHtmlPath?: string;
+  contractPath?: string;
+  warnings?: string[];
+  diskDiverged?: boolean; // NEW
+  currentContentHash?: string; // NEW
 }
 
 // ImportResponse: add content hash
 interface ImportResponse<TVendorDoc> {
-    type: 'import';
-    success: boolean;
-    vendorDoc?: TVendorDoc;
-    source?: string;
-    warnings?: string[];
-    stats?: { nodes: number; bindings: number; variantExpressions: number };
-    contentHash?: string;          // NEW
+  type: 'import';
+  success: boolean;
+  vendorDoc?: TVendorDoc;
+  source?: string;
+  warnings?: string[];
+  stats?: { nodes: number; bindings: number; variantExpressions: number };
+  contentHash?: string; // NEW
 }
 ```
 
@@ -249,25 +250,28 @@ New module in `editor-server` (or `stack-cli` where handlers live). Responsibili
 
 ```typescript
 class SyncStateManager {
-    private syncHashes = new Map<string, string>();
-    private broadcast: (notification: ServerNotificationTypes) => void;
+  private syncHashes = new Map<string, string>();
+  private broadcast: (notification: ServerNotificationTypes) => void;
 
-    constructor(
-        private projectRoot: string,
-        broadcast: (notification: ServerNotificationTypes) => void,
-    ) {}
+  constructor(
+    private projectRoot: string,
+    broadcast: (notification: ServerNotificationTypes) => void,
+  ) {}
 
-    // Called on import/export success
-    recordSync(pageUrl: string, jayHtmlContent: string): void;
+  // Called on import/export success
+  recordSync(pageUrl: string, jayHtmlContent: string): void;
 
-    // Called on sync-subscribe
-    checkStatus(pageUrl: string, clientHash: string): { jayHtmlModified: boolean; currentHash: string };
+  // Called on sync-subscribe
+  checkStatus(
+    pageUrl: string,
+    clientHash: string,
+  ): { jayHtmlModified: boolean; currentHash: string };
 
-    // Called on file watcher event
-    onFileChanged(filePath: string): void;
+  // Called on file watcher event
+  onFileChanged(filePath: string): void;
 
-    // Called for sync-diff request
-    computeDiff(pageUrl: string): { diff: string; linesAdded: number; linesRemoved: number };
+  // Called for sync-diff request
+  computeDiff(pageUrl: string): { diff: string; linesAdded: number; linesRemoved: number };
 }
 ```
 
@@ -281,12 +285,12 @@ The `EditorServer` class gains a `broadcast` method:
 
 ```typescript
 class EditorServer {
-    // Existing...
+  // Existing...
 
-    // NEW: broadcast to all connected sockets
-    broadcast(event: string, data: any): void {
-        this.io?.emit(event, data);
-    }
+  // NEW: broadcast to all connected sockets
+  broadcast(event: string, data: any): void {
+    this.io?.emit(event, data);
+  }
 }
 ```
 
@@ -298,12 +302,12 @@ The `EditorProtocol` interface gains a notification subscription:
 
 ```typescript
 interface EditorProtocol {
-    // Existing methods...
+  // Existing methods...
 
-    // NEW
-    onNotification(callback: (notification: ServerNotificationTypes) => void): void;
-    syncSubscribe(params: SyncSubscribeMessage): Promise<SyncSubscribeResponse>;
-    syncDiff(params: SyncDiffMessage): Promise<SyncDiffResponse>;
+  // NEW
+  onNotification(callback: (notification: ServerNotificationTypes) => void): void;
+  syncSubscribe(params: SyncSubscribeMessage): Promise<SyncSubscribeResponse>;
+  syncDiff(params: SyncDiffMessage): Promise<SyncDiffResponse>;
 }
 ```
 
@@ -317,36 +321,36 @@ In `code.ts`, listen for `documentchange` to track which jay page sections have 
 const figmaModifiedPages = new Set<string>();
 
 figma.on('documentchange', (event) => {
-    for (const change of event.documentChanges) {
-        if (change.origin !== 'LOCAL') continue;
+  for (const change of event.documentChanges) {
+    if (change.origin !== 'LOCAL') continue;
 
-        const node = figma.getNodeById(change.id);
-        if (!node) continue;
+    const node = figma.getNodeById(change.id);
+    if (!node) continue;
 
-        const jaySection = findAncestorJaySection(node);
-        if (!jaySection) continue;
+    const jaySection = findAncestorJaySection(node);
+    if (!jaySection) continue;
 
-        const urlRoute = jaySection.getPluginData(URL_ROUTE_KEY);
-        if (urlRoute && !figmaModifiedPages.has(urlRoute)) {
-            figmaModifiedPages.add(urlRoute);
-            figma.ui.postMessage({
-                type: 'figma-modified',
-                pageUrl: urlRoute,
-                modified: true,
-            });
-        }
+    const urlRoute = jaySection.getPluginData(URL_ROUTE_KEY);
+    if (urlRoute && !figmaModifiedPages.has(urlRoute)) {
+      figmaModifiedPages.add(urlRoute);
+      figma.ui.postMessage({
+        type: 'figma-modified',
+        pageUrl: urlRoute,
+        modified: true,
+      });
     }
+  }
 });
 
 function findAncestorJaySection(node: BaseNode): SectionNode | null {
-    let current: BaseNode | null = node;
-    while (current) {
-        if (current.type === 'SECTION' && current.getPluginData(JPAGE_KEY) === 'true') {
-            return current as SectionNode;
-        }
-        current = current.parent;
+  let current: BaseNode | null = node;
+  while (current) {
+    if (current.type === 'SECTION' && current.getPluginData(JPAGE_KEY) === 'true') {
+      return current as SectionNode;
     }
-    return null;
+    current = current.parent;
+  }
+  return null;
 }
 ```
 
@@ -354,12 +358,12 @@ On successful export, clear the flag:
 
 ```typescript
 function clearFigmaModified(pageUrl: string) {
-    figmaModifiedPages.delete(pageUrl);
-    figma.ui.postMessage({
-        type: 'figma-modified',
-        pageUrl,
-        modified: false,
-    });
+  figmaModifiedPages.delete(pageUrl);
+  figma.ui.postMessage({
+    type: 'figma-modified',
+    pageUrl,
+    modified: false,
+  });
 }
 ```
 
@@ -371,30 +375,30 @@ New module in the UI that combines both signals:
 type SyncStatus = 'in-sync' | 'jay-html-modified' | 'figma-modified' | 'conflict';
 
 class SyncStatusTracker {
-    private jayHtmlModified = new Map<string, boolean>();
-    private figmaModified = new Map<string, boolean>();
-    private listeners = new Set<(pageUrl: string, status: SyncStatus) => void>();
+  private jayHtmlModified = new Map<string, boolean>();
+  private figmaModified = new Map<string, boolean>();
+  private listeners = new Set<(pageUrl: string, status: SyncStatus) => void>();
 
-    getStatus(pageUrl: string): SyncStatus {
-        const jay = this.jayHtmlModified.get(pageUrl) ?? false;
-        const figma = this.figmaModified.get(pageUrl) ?? false;
+  getStatus(pageUrl: string): SyncStatus {
+    const jay = this.jayHtmlModified.get(pageUrl) ?? false;
+    const figma = this.figmaModified.get(pageUrl) ?? false;
 
-        if (jay && figma) return 'conflict';
-        if (jay) return 'jay-html-modified';
-        if (figma) return 'figma-modified';
-        return 'in-sync';
-    }
+    if (jay && figma) return 'conflict';
+    if (jay) return 'jay-html-modified';
+    if (figma) return 'figma-modified';
+    return 'in-sync';
+  }
 
-    // Called from server notification handler
-    setJayHtmlModified(pageUrl: string, modified: boolean): void;
+  // Called from server notification handler
+  setJayHtmlModified(pageUrl: string, modified: boolean): void;
 
-    // Called from sandbox postMessage handler
-    setFigmaModified(pageUrl: string, modified: boolean): void;
+  // Called from sandbox postMessage handler
+  setFigmaModified(pageUrl: string, modified: boolean): void;
 
-    // Called after successful import or export
-    clearAll(pageUrl: string): void;
+  // Called after successful import or export
+  clearAll(pageUrl: string): void;
 
-    onChange(listener: (pageUrl: string, status: SyncStatus) => void): () => void;
+  onChange(listener: (pageUrl: string, status: SyncStatus) => void): () => void;
 }
 ```
 
@@ -461,12 +465,12 @@ In the page list (app structure view), each page row shows a status dot:
 
 When a page has a non-sync status, the import/export buttons for that page reflect the action:
 
-| Status | Import Button | Export Button |
-|--------|---------------|---------------|
-| IN_SYNC | Import | Export |
-| JAY_HTML_MODIFIED | **Import Changes** (highlighted) | Export |
-| FIGMA_MODIFIED | Import | **Export Changes** (highlighted) |
-| CONFLICT | Import (with replace warning) | Export (shows conflict dialog) |
+| Status            | Import Button                    | Export Button                    |
+| ----------------- | -------------------------------- | -------------------------------- |
+| IN_SYNC           | Import                           | Export                           |
+| JAY_HTML_MODIFIED | **Import Changes** (highlighted) | Export                           |
+| FIGMA_MODIFIED    | Import                           | **Export Changes** (highlighted) |
+| CONFLICT          | Import (with replace warning)    | Export (shows conflict dialog)   |
 
 ### Baseline File Convention
 
@@ -486,40 +490,40 @@ The `.base` file should be gitignored (it's a local sync artifact, not source).
 
 ### New Files
 
-| File | Repo | Purpose |
-|------|------|---------|
-| `packages/jay-stack/editor-protocol/lib/notifications.ts` | jay | Server notification types, sync-subscribe/sync-diff message types |
-| `packages/jay-stack/stack-cli/lib/sync-state-manager.ts` | jay | File watching, hash tracking, baseline storage, diff computation |
-| `NewPluginIn/JUI/devServer/src/sync-status-tracker.ts` | jay-desktop-poc | Combines server + Figma signals, computes per-page status |
+| File                                                      | Repo            | Purpose                                                           |
+| --------------------------------------------------------- | --------------- | ----------------------------------------------------------------- |
+| `packages/jay-stack/editor-protocol/lib/notifications.ts` | jay             | Server notification types, sync-subscribe/sync-diff message types |
+| `packages/jay-stack/stack-cli/lib/sync-state-manager.ts`  | jay             | File watching, hash tracking, baseline storage, diff computation  |
+| `NewPluginIn/JUI/devServer/src/sync-status-tracker.ts`    | jay-desktop-poc | Combines server + Figma signals, computes per-page status         |
 
 ### Modified Files
 
-| File | Repo | Change |
-|------|------|--------|
-| `packages/jay-stack/editor-protocol/lib/protocol.ts` | jay | Add optional fields to ExportMessage, ExportResponse, ImportResponse. Add SyncSubscribeMessage/Response, SyncDiffMessage/Response to union types. |
-| `packages/jay-stack/editor-protocol/index.ts` | jay | Re-export notification types |
-| `packages/jay-stack/editor-server/lib/editor-server.ts` | jay | Add `broadcast()` method. Add `server-notification` event emission. Add `onSyncSubscribe`, `onSyncDiff` handler registration. |
-| `packages/jay-stack/editor-client/lib/editor-client.ts` | jay | Add `onNotification()`, `syncSubscribe()`, `syncDiff()` methods |
-| `packages/jay-stack/editor-client/lib/connection-manager.ts` | jay | Register `server-notification` Socket.IO listener, forward to callbacks |
-| `packages/jay-stack/stack-cli/lib/editor-handlers.ts` | jay | Integrate SyncStateManager. On import/export success: record sync + write baseline. Register sync-subscribe, sync-diff handlers. Wire file watcher. |
-| `packages/jay-stack/stack-cli/lib/server.ts` | jay | Pass broadcast function from editor server to SyncStateManager |
-| `NewPluginIn/JayFrameworkPlugin/src/code.ts` | jay-desktop-poc | Add `documentchange` listener for Figma modification tracking. Add `figma-modified` postMessage. Clear flag on export. |
-| `NewPluginIn/JayFrameworkPlugin/src/messaging.ts` | jay-desktop-poc | Add `figma-modified` message type |
-| `NewPluginIn/JUI/devServer/src/messaging.ts` | jay-desktop-poc | Handle `server-notification` from editor client. Handle `figma-modified` from plugin sandbox. |
-| `NewPluginIn/JUI/devServer/src/editor-client.ts` | jay-desktop-poc | Subscribe to notifications on connect. Call `syncSubscribe` on connect. |
-| `NewPluginIn/JUI/devServer/src/pages/page.ts` | jay-desktop-poc | Add sync status indicators to page list. Add conflict resolution dialog. Wire import/export buttons to status-aware flows. |
+| File                                                         | Repo            | Change                                                                                                                                              |
+| ------------------------------------------------------------ | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/jay-stack/editor-protocol/lib/protocol.ts`         | jay             | Add optional fields to ExportMessage, ExportResponse, ImportResponse. Add SyncSubscribeMessage/Response, SyncDiffMessage/Response to union types.   |
+| `packages/jay-stack/editor-protocol/index.ts`                | jay             | Re-export notification types                                                                                                                        |
+| `packages/jay-stack/editor-server/lib/editor-server.ts`      | jay             | Add `broadcast()` method. Add `server-notification` event emission. Add `onSyncSubscribe`, `onSyncDiff` handler registration.                       |
+| `packages/jay-stack/editor-client/lib/editor-client.ts`      | jay             | Add `onNotification()`, `syncSubscribe()`, `syncDiff()` methods                                                                                     |
+| `packages/jay-stack/editor-client/lib/connection-manager.ts` | jay             | Register `server-notification` Socket.IO listener, forward to callbacks                                                                             |
+| `packages/jay-stack/stack-cli/lib/editor-handlers.ts`        | jay             | Integrate SyncStateManager. On import/export success: record sync + write baseline. Register sync-subscribe, sync-diff handlers. Wire file watcher. |
+| `packages/jay-stack/stack-cli/lib/server.ts`                 | jay             | Pass broadcast function from editor server to SyncStateManager                                                                                      |
+| `NewPluginIn/JayFrameworkPlugin/src/code.ts`                 | jay-desktop-poc | Add `documentchange` listener for Figma modification tracking. Add `figma-modified` postMessage. Clear flag on export.                              |
+| `NewPluginIn/JayFrameworkPlugin/src/messaging.ts`            | jay-desktop-poc | Add `figma-modified` message type                                                                                                                   |
+| `NewPluginIn/JUI/devServer/src/messaging.ts`                 | jay-desktop-poc | Handle `server-notification` from editor client. Handle `figma-modified` from plugin sandbox.                                                       |
+| `NewPluginIn/JUI/devServer/src/editor-client.ts`             | jay-desktop-poc | Subscribe to notifications on connect. Call `syncSubscribe` on connect.                                                                             |
+| `NewPluginIn/JUI/devServer/src/pages/page.ts`                | jay-desktop-poc | Add sync status indicators to page list. Add conflict resolution dialog. Wire import/export buttons to status-aware flows.                          |
 
 ### Conflict Zone Assessment
 
 Per the master plan's cross-pillar coordination rules:
 
-| File | Also touched by | Risk | Mitigation |
-|------|-----------------|------|------------|
-| `editor-protocol/lib/protocol.ts` | Pillar 1 (playground), Pillar 3 (agent) | **HIGH** | Pillar 2 adds sync-specific types to the union. Other pillars add their own types. All additive — extend union, don't modify existing types. |
-| `editor-server/lib/editor-server.ts` | Pillar 1, Pillar 3 | **HIGH** | Pillar 2 adds `broadcast()` + 2 new handler registrations. Other pillars add their own handlers. All additive. |
-| `stack-cli/lib/editor-handlers.ts` | Pillar 1, Pillar 3 | **HIGH** | Pillar 2 integrates SyncStateManager and registers 2 new handlers. Core logic lives in `sync-state-manager.ts` (new file, no conflict). Handler registration is additive. |
-| `NewPluginIn/.../code.ts` | Pillar 3 (AI panel) | **MEDIUM** | Pillar 2 adds `documentchange` listener (isolated). Pillar 3 adds AI request handling (isolated). Different concerns, low conflict risk. |
-| `NewPluginIn/.../page.ts` | Pillar 3 (AI panel) | **MEDIUM** | Pillar 2 adds status indicators + conflict dialog. Pillar 3 adds AI assistant tab. Both are UI additions to different areas. |
+| File                                 | Also touched by                         | Risk       | Mitigation                                                                                                                                                                |
+| ------------------------------------ | --------------------------------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `editor-protocol/lib/protocol.ts`    | Pillar 1 (playground), Pillar 3 (agent) | **HIGH**   | Pillar 2 adds sync-specific types to the union. Other pillars add their own types. All additive — extend union, don't modify existing types.                              |
+| `editor-server/lib/editor-server.ts` | Pillar 1, Pillar 3                      | **HIGH**   | Pillar 2 adds `broadcast()` + 2 new handler registrations. Other pillars add their own handlers. All additive.                                                            |
+| `stack-cli/lib/editor-handlers.ts`   | Pillar 1, Pillar 3                      | **HIGH**   | Pillar 2 integrates SyncStateManager and registers 2 new handlers. Core logic lives in `sync-state-manager.ts` (new file, no conflict). Handler registration is additive. |
+| `NewPluginIn/.../code.ts`            | Pillar 3 (AI panel)                     | **MEDIUM** | Pillar 2 adds `documentchange` listener (isolated). Pillar 3 adds AI request handling (isolated). Different concerns, low conflict risk.                                  |
+| `NewPluginIn/.../page.ts`            | Pillar 3 (AI panel)                     | **MEDIUM** | Pillar 2 adds status indicators + conflict dialog. Pillar 3 adds AI assistant tab. Both are UI additions to different areas.                                              |
 
 ---
 
@@ -550,6 +554,7 @@ Per the master plan's cross-pillar coordination rules:
 9. **Plugin UI: status indicators** — Add colored dots to page list rows. Show tooltips on hover.
 
 **Demo P2-1 exit criteria:**
+
 - [ ] File watcher detects external jay-html changes within 2 seconds
 - [ ] Plugin displays correct status: In Sync / Jay-HTML Modified / Figma Modified / Conflict
 - [ ] Change detection is per-page
@@ -576,6 +581,7 @@ Per the master plan's cross-pillar coordination rules:
 6. **Plugin: re-import with replace** — Implement the re-import flow from the single-writer design: detect existing SECTION by `urlRoute`, show Replace/Import as New/Cancel dialog, capture position, replace.
 
 **Demo P2-2 exit criteria:**
+
 - [ ] Export writes jay-html and updates sync hash
 - [ ] Import reads jay-html and updates Figma page
 - [ ] After successful export or import, status returns to In Sync
@@ -604,6 +610,7 @@ Per the master plan's cross-pillar coordination rules:
 7. **Plugin: "Import First" flow** — Run import (replace Figma), clear both flags → IN_SYNC. Designer re-applies visual changes → FIGMA_MODIFIED → export → IN_SYNC.
 
 **Demo P2-3 exit criteria:**
+
 - [ ] Conflict dialog appears when both sides modified
 - [ ] "Export (overwrite)" works
 - [ ] "Import first" works
@@ -627,6 +634,7 @@ Per the master plan's cross-pillar coordination rules:
 4. **Edge cases** — Rapid successive file changes (debouncing works). Plugin disconnects mid-operation (graceful recovery on reconnect via sync-subscribe). Server restart while plugin is connected (reconnect + re-subscribe).
 
 **Demo P2-4 exit criteria:**
+
 - [ ] Full roundtrip: AI edit → import → design adjust → export → browser works
 - [ ] Multiple import-export cycles maintain structural integrity
 - [ ] New contract tags from AI edits are discovered
@@ -723,14 +731,14 @@ Each cycle is: AI → yellow → import → green → design → blue → export
 
 ## Trade-offs
 
-| Decision | What we gain | What we give up |
-|----------|-------------|-----------------|
-| Status computed in plugin UI, not server | Server stays simple (no Figma state). Plugin has all signals locally. | Plugin UI has more logic. But it's the right place — it owns the UI. |
-| No Figma-side diff (just "modified" boolean) | Avoids expensive serialization-compare. Simple and fast. | "View diff" only shows jay-html changes, not Figma changes. Acceptable — designer knows what they did in Figma. |
-| Baseline file on disk (`page.jay-html.base`) | Enables diff view now, Phase 2 hybrid import later. Same file as single-writer design's `.base`. | One more file per page. Gitignored. Small cost. |
-| Whitespace normalization for hash | No false positives from formatters. | Genuine whitespace-only changes are invisible. Acceptable — whitespace rarely matters in jay-html. |
-| No three-way merge | Much simpler. The conflict dialog gives the designer clear choices: overwrite or sequence (import then export). | No automatic merge of non-conflicting changes. The designer must re-apply Figma changes after "Import First". Acceptable for first users — automatic merge is complex and error-prone. |
-| `documentchange` for Figma tracking | Lightweight, no serialization. | May have false positives (undo back to original state still shows "modified"). Acceptable — re-exporting a page that hasn't actually changed is cheap and harmless. |
+| Decision                                     | What we gain                                                                                                    | What we give up                                                                                                                                                                        |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Status computed in plugin UI, not server     | Server stays simple (no Figma state). Plugin has all signals locally.                                           | Plugin UI has more logic. But it's the right place — it owns the UI.                                                                                                                   |
+| No Figma-side diff (just "modified" boolean) | Avoids expensive serialization-compare. Simple and fast.                                                        | "View diff" only shows jay-html changes, not Figma changes. Acceptable — designer knows what they did in Figma.                                                                        |
+| Baseline file on disk (`page.jay-html.base`) | Enables diff view now, Phase 2 hybrid import later. Same file as single-writer design's `.base`.                | One more file per page. Gitignored. Small cost.                                                                                                                                        |
+| Whitespace normalization for hash            | No false positives from formatters.                                                                             | Genuine whitespace-only changes are invisible. Acceptable — whitespace rarely matters in jay-html.                                                                                     |
+| No three-way merge                           | Much simpler. The conflict dialog gives the designer clear choices: overwrite or sequence (import then export). | No automatic merge of non-conflicting changes. The designer must re-apply Figma changes after "Import First". Acceptable for first users — automatic merge is complex and error-prone. |
+| `documentchange` for Figma tracking          | Lightweight, no serialization.                                                                                  | May have false positives (undo back to original state still shows "modified"). Acceptable — re-exporting a page that hasn't actually changed is cheap and harmless.                    |
 
 ### Notes
 

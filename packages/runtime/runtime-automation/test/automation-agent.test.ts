@@ -67,7 +67,7 @@ function createMockComponent(initialViewState: object = { count: 0 }) {
 
 describe('runtime-automation', () => {
     describe('wrapWithAutomation', () => {
-        it('should add ai property to component', () => {
+        it('should add automation property to component', () => {
             const component = createMockComponent();
             const wrapped = wrapWithAutomation(component);
 
@@ -106,7 +106,7 @@ describe('runtime-automation', () => {
             expect(state.viewState).toEqual({ count: 42, name: 'test' });
         });
 
-        it('should return interactions from refs', () => {
+        it('should return grouped Interactions from refs', () => {
             const component = createMockComponent();
             const wrapped = wrapWithAutomation(component);
 
@@ -114,29 +114,34 @@ describe('runtime-automation', () => {
 
             expect(state.interactions.length).toBe(2);
             expect(state.interactions[0].refName).toBe('incrementBtn');
-            expect(state.interactions[0].coordinate).toEqual(['incrementBtn']);
+            expect(state.interactions[0].items).toHaveLength(1);
+            expect(state.interactions[0].items[0].coordinate).toEqual(['incrementBtn']);
+            expect(state.interactions[0].items[0].element).toBeInstanceOf(HTMLButtonElement);
+            expect(state.interactions[0].items[0].events).toEqual(['click']);
             expect(state.interactions[1].refName).toBe('decrementBtn');
         });
     });
 
     describe('AutomationAPI.getInteraction', () => {
-        it('should find interaction by coordinate', () => {
+        it('should find InteractionInstance by coordinate', () => {
             const component = createMockComponent();
             const wrapped = wrapWithAutomation(component);
 
-            const interaction = wrapped.automation.getInteraction(['incrementBtn']);
+            const instance = wrapped.automation.getInteraction(['incrementBtn']);
 
-            expect(interaction).toBeDefined();
-            expect(interaction!.refName).toBe('incrementBtn');
+            expect(instance).toBeDefined();
+            expect(instance!.coordinate).toEqual(['incrementBtn']);
+            expect(instance!.element).toBeInstanceOf(HTMLButtonElement);
+            expect(instance!.events).toEqual(['click']);
         });
 
         it('should return undefined for unknown coordinate', () => {
             const component = createMockComponent();
             const wrapped = wrapWithAutomation(component);
 
-            const interaction = wrapped.automation.getInteraction(['unknownRef']);
+            const instance = wrapped.automation.getInteraction(['unknownRef']);
 
-            expect(interaction).toBeUndefined();
+            expect(instance).toBeUndefined();
         });
     });
 
@@ -145,9 +150,9 @@ describe('runtime-automation', () => {
             const component = createMockComponent();
             const wrapped = wrapWithAutomation(component);
 
-            const interaction = wrapped.automation.getInteraction(['incrementBtn']);
+            const instance = wrapped.automation.getInteraction(['incrementBtn']);
             const clickHandler = vi.fn();
-            interaction!.element.addEventListener('click', clickHandler);
+            instance!.element.addEventListener('click', clickHandler);
 
             wrapped.automation.triggerEvent('click', ['incrementBtn']);
 
@@ -282,6 +287,162 @@ describe('runtime-automation', () => {
             expect(() => {
                 wrapped.automation.onComponentEvent('UnknownEvent', vi.fn());
             }).toThrow('Unknown component event: UnknownEvent');
+        });
+    });
+
+    describe('disabled element filtering', () => {
+        it('should exclude disabled buttons from interactions', () => {
+            const disabledBtn = document.createElement('button');
+            disabledBtn.disabled = true;
+
+            const enabledBtn = document.createElement('button');
+
+            const component = createMockComponent();
+            component.element.refs = {
+                submitBtn: {
+                    elements: new Set([
+                        { element: enabledBtn, coordinate: ['submitBtn'], viewState: undefined },
+                    ]),
+                },
+                disabledBtn: {
+                    elements: new Set([
+                        { element: disabledBtn, coordinate: ['disabledBtn'], viewState: undefined },
+                    ]),
+                },
+            };
+
+            const wrapped = wrapWithAutomation(component);
+            const state = wrapped.automation.getPageState();
+
+            expect(state.interactions.length).toBe(1);
+            expect(state.interactions[0].refName).toBe('submitBtn');
+        });
+
+        it('should exclude disabled inputs from interactions', () => {
+            const disabledInput = document.createElement('input');
+            disabledInput.disabled = true;
+
+            const enabledInput = document.createElement('input');
+
+            const component = createMockComponent();
+            component.element.refs = {
+                nameInput: {
+                    elements: new Set([
+                        { element: enabledInput, coordinate: ['nameInput'], viewState: undefined },
+                    ]),
+                },
+                disabledInput: {
+                    elements: new Set([
+                        {
+                            element: disabledInput,
+                            coordinate: ['disabledInput'],
+                            viewState: undefined,
+                        },
+                    ]),
+                },
+            };
+
+            const wrapped = wrapWithAutomation(component);
+            const state = wrapped.automation.getPageState();
+
+            expect(state.interactions.length).toBe(1);
+            expect(state.interactions[0].refName).toBe('nameInput');
+        });
+
+        it('should exclude disabled forEach items but keep enabled ones', () => {
+            const enabledBtn = document.createElement('button');
+            const disabledBtn = document.createElement('button');
+            disabledBtn.disabled = true;
+
+            const component = createMockComponent();
+            component.element.refs = {
+                removeBtn: {
+                    elements: new Set([
+                        {
+                            element: enabledBtn,
+                            coordinate: ['item-1', 'removeBtn'],
+                            viewState: { id: 'item-1', name: 'Mouse' },
+                        },
+                        {
+                            element: disabledBtn,
+                            coordinate: ['item-2', 'removeBtn'],
+                            viewState: { id: 'item-2', name: 'Hub' },
+                        },
+                    ]),
+                },
+            };
+
+            const wrapped = wrapWithAutomation(component);
+            const state = wrapped.automation.getPageState();
+
+            // Should have 1 group with 1 item (only the enabled one)
+            expect(state.interactions.length).toBe(1);
+            expect(state.interactions[0].refName).toBe('removeBtn');
+            expect(state.interactions[0].items).toHaveLength(1);
+            expect(state.interactions[0].items[0].coordinate).toEqual(['item-1', 'removeBtn']);
+        });
+
+        it('should exclude entire group when all instances are disabled', () => {
+            const disabledBtn1 = document.createElement('button');
+            disabledBtn1.disabled = true;
+            const disabledBtn2 = document.createElement('button');
+            disabledBtn2.disabled = true;
+
+            const component = createMockComponent();
+            component.element.refs = {
+                removeBtn: {
+                    elements: new Set([
+                        {
+                            element: disabledBtn1,
+                            coordinate: ['item-1', 'removeBtn'],
+                            viewState: { id: 'item-1' },
+                        },
+                        {
+                            element: disabledBtn2,
+                            coordinate: ['item-2', 'removeBtn'],
+                            viewState: { id: 'item-2' },
+                        },
+                    ]),
+                },
+            };
+
+            const wrapped = wrapWithAutomation(component);
+            const state = wrapped.automation.getPageState();
+
+            expect(state.interactions.length).toBe(0);
+        });
+
+        it('should update when disabled state changes', () => {
+            const btn = document.createElement('button');
+
+            const component = createMockComponent();
+            component.element.refs = {
+                myBtn: {
+                    elements: new Set([
+                        { element: btn, coordinate: ['myBtn'], viewState: undefined },
+                    ]),
+                },
+            };
+
+            const wrapped = wrapWithAutomation(component);
+
+            // Initially enabled
+            let state = wrapped.automation.getPageState();
+            expect(state.interactions.length).toBe(1);
+
+            // Disable and trigger state change to invalidate cache
+            btn.disabled = true;
+            component._setViewState({ count: 1 });
+
+            state = wrapped.automation.getPageState();
+            expect(state.interactions.length).toBe(0);
+
+            // Re-enable
+            btn.disabled = false;
+            component._setViewState({ count: 2 });
+
+            state = wrapped.automation.getPageState();
+            expect(state.interactions.length).toBe(1);
         });
     });
 });

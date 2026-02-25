@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data" contract="./test.jay-contract"></script>
+</head>
+<body>
+    <div class="grid">
+        <a forEach="categories" trackBy="_id" class="card">
+            <img src="{imageUrl}" alt="{name}" />
+            <div class="name">{name}</div>
+            <div class="count">{productCount} products</div>
+        </a>
+    </div>
+</body>
+</html>

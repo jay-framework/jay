@@ -1,0 +1,23 @@
+name: StockStatus
+props:
+  - name: productId
+    type: string
+    required: true
+    description: The ID of the product to check stock for
+tags:
+  - tag: units
+    type: data
+    dataType: number
+    phase: fast+interactive
+    description: Number of available units
+
+  - tag: inStock
+    type: variant
+    dataType: boolean
+    phase: fast+interactive
+    description: Whether the product is currently in stock
+
+  - tag: refreshButton
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Button to refresh stock status

@@ -43,16 +43,20 @@ export interface PluginManifest {
     name: string;
     version?: string;
     module?: string; // Optional: For local plugins, relative path to module (e.g., "dist/index.js"). For NPM packages, omit to use main export.
+    /** When true, this plugin is loaded on every page regardless of usage in jay-html.
+     *  Useful for global tools like WebMCP, analytics, or dev tools. */
+    global?: boolean;
     contracts?: Array<{
         name: string;
         contract: string; // For NPM: export subpath (e.g., "contract.jay-contract"). For local: relative path.
         component: string; // Exported member name from module (e.g., "moodTracker")
         description?: string;
-        slugs?: string[]; // Dynamic URL slugs expected by this contract (e.g., ["productId", "userId"])
     }>;
     dynamic_contracts?: DynamicContractConfig | DynamicContractConfig[];
-    /** Named exports from plugin backend bundle that are JayAction instances */
-    actions?: string[];
+    /** Named exports from plugin backend bundle that are JayAction instances.
+     *  Can be a string (export name, no metadata) or an object with a .jay-action file reference.
+     *  Actions with .jay-action metadata are exposed to AI agents; those without are not. */
+    actions?: ActionManifestEntry[];
     /** Plugin initialization configuration */
     init?: PluginInitConfig;
     /** Plugin setup configuration (Design Log #87) */
@@ -64,6 +68,27 @@ export interface PluginManifest {
         /** Human-readable description of what setup does */
         description?: string;
     };
+}
+
+/**
+ * Action entry in plugin.yaml.
+ * - `string`: export name only, no metadata (not exposed to AI agents)
+ * - `{ name, action }`: export name + path to .jay-action metadata file
+ */
+export type ActionManifestEntry = string | { name: string; action: string };
+
+/**
+ * Normalizes an action manifest entry to { name, action? }.
+ * Strings become { name: string, action: undefined }.
+ */
+export function normalizeActionEntry(entry: ActionManifestEntry): {
+    name: string;
+    action?: string;
+} {
+    if (typeof entry === 'string') {
+        return { name: entry };
+    }
+    return { name: entry.name, action: entry.action };
 }
 
 /**
@@ -111,7 +136,7 @@ export function loadPluginManifest(pluginDir: string): PluginManifest | null {
  * @param contractName - The contract name to match (e.g., "list/recipes-list")
  * @returns The matching DynamicContractConfig or null if not found
  */
-function findDynamicContract(
+export function findDynamicContract(
     manifest: PluginManifest,
     contractName: string,
 ): DynamicContractConfig | null {
@@ -137,12 +162,11 @@ function findDynamicContract(
 }
 
 /**
- * Resolves a plugin component from a local plugin directory (src/plugins/)
+ * Resolves a plugin manifest from a local plugin directory (src/plugins/)
  *
  * @param projectRoot - Project root directory
  * @param pluginName - Name of the plugin
- * @param contractName - Name of the contract to resolve
- * @returns Resolution result with validation messages
+ * @returns Resolution result with validation messages, or null if not found locally
  */
 function resolveLocalPluginManifest(
     projectRoot: string,
@@ -169,9 +193,9 @@ function resolveLocalPluginManifest(
         ]);
     }
 
-    if (!manifest.contracts || manifest.contracts.length === 0) {
+    if (!manifest.contracts && !manifest.dynamic_contracts) {
         return new WithValidations(null as any, [
-            `Local plugin "${pluginName}" has no contracts defined in plugin.yaml`,
+            `Local plugin "${pluginName}" has no contracts or dynamic_contracts defined in plugin.yaml`,
         ]);
     }
 
@@ -191,7 +215,7 @@ function resolveLocalPlugin(
     pluginName: string,
     contractName: string,
 ): WithValidations<PluginComponentResolution> | null {
-    let manifestWithValidations = resolveLocalPluginManifest(projectRoot, pluginName);
+    const manifestWithValidations = resolveLocalPluginManifest(projectRoot, pluginName);
     if (!manifestWithValidations) {
         return null;
     }
@@ -200,13 +224,6 @@ function resolveLocalPlugin(
         return new WithValidations(null, manifestWithValidations.validations);
 
     const manifest = manifestWithValidations.val;
-    const contract = manifest.contracts.find((c) => c.name === contractName);
-    if (!contract) {
-        const availableContracts = manifest.contracts.map((c) => c.name).join(', ');
-        return new WithValidations(null as any, [
-            `Contract "${contractName}" not found in local plugin "${pluginName}". Available contracts: ${availableContracts}`,
-        ]);
-    }
 
     // Component path comes from manifest.module (or defaults to index.js)
     const componentModule = manifest.module || 'index.js';
@@ -246,12 +263,6 @@ function resolveLocalPlugin(
     }
 
     // No matching contract found
-    if (!manifest.contracts && !manifest.dynamic_contracts) {
-        return new WithValidations(null as any, [
-            `Local plugin "${pluginName}" has no contracts or dynamic_contracts defined in plugin.yaml`,
-        ]);
-    }
-
     const availableContracts = manifest.contracts?.map((c) => c.name) || [];
     const dynamicPrefixes = manifest.dynamic_contracts
         ? (Array.isArray(manifest.dynamic_contracts)
@@ -267,12 +278,11 @@ function resolveLocalPlugin(
 }
 
 /**
- * Resolves a plugin component from an NPM package (node_modules/)
+ * Resolves a plugin manifest from an NPM package (node_modules/)
  *
  * @param projectRoot - Project root directory
  * @param pluginName - Name of the NPM package
- * @param contractName - Name of the contract to resolve
- * @returns Resolution result with validation messages
+ * @returns Resolution result with validation messages, or null if not found
  */
 function resolveNpmPluginManifest(
     projectRoot: string,
@@ -307,9 +317,9 @@ function resolveNpmPluginManifest(
         ]);
     }
 
-    if (!manifest.contracts || manifest.contracts.length === 0) {
+    if (!manifest.contracts && !manifest.dynamic_contracts) {
         return new WithValidations(null as any, [
-            `NPM package "${pluginName}" has no contracts defined in plugin.yaml`,
+            `NPM package "${pluginName}" has no contracts or dynamic_contracts defined in plugin.yaml`,
         ]);
     }
 
@@ -338,14 +348,6 @@ function resolveNpmPlugin(
         return new WithValidations(null, manifestWithValidations.validations);
 
     const manifest = manifestWithValidations.val;
-
-    const contract = manifest.contracts.find((c) => c.name === contractName);
-    if (!contract) {
-        const availableContracts = manifest.contracts.map((c) => c.name).join(', ');
-        return new WithValidations(null as any, [
-            `Contract "${contractName}" not found in NPM package "${pluginName}". Available contracts: ${availableContracts}`,
-        ]);
-    }
 
     // For NPM packages, resolve through package.json exports
     const pluginYamlPath: string = require.resolve(`${pluginName}/plugin.yaml`, {
@@ -444,12 +446,6 @@ function resolveNpmPlugin(
     }
 
     // No matching contract found
-    if (!manifest.contracts && !manifest.dynamic_contracts) {
-        return new WithValidations(null as any, [
-            `NPM package "${pluginName}" has no contracts or dynamic_contracts defined in plugin.yaml`,
-        ]);
-    }
-
     const availableContracts = manifest.contracts?.map((c) => c.name) || [];
     const dynamicPrefixes = manifest.dynamic_contracts
         ? (Array.isArray(manifest.dynamic_contracts)
@@ -498,12 +494,6 @@ export function resolvePluginComponent(
     // If NPM plugin exists but has errors, return those
     // However, only if local didn't exist at all (localResult is null)
     if (npmResult && npmResult.validations.length > 0 && localResult === null) {
-        // But if it's a generic "plugin/package not found" error, show our combined message instead
-        // We want to replace errors like:
-        // - "NPM package X not found..."
-        // But keep specific errors like:
-        // - "Contract X not found in NPM package Y"
-        // - "Failed to parse plugin.yaml for NPM package X"
         const npmError = npmResult.validations[0];
         const isGenericPackageNotFound =
             (npmError.startsWith('NPM package') && npmError.includes('not found')) ||
@@ -542,20 +532,12 @@ export function resolvePluginManifest(
     }
 
     // If local plugin exists but has errors, return those (prefer local over NPM)
-    // localResult is non-null when the directory exists but has issues
     if (localResult && localResult.validations.length > 0) {
         return localResult;
     }
 
     // If NPM plugin exists but has errors, return those
-    // However, only if local didn't exist at all (localResult is null)
     if (npmResult && npmResult.validations.length > 0 && localResult === null) {
-        // But if it's a generic "plugin/package not found" error, show our combined message instead
-        // We want to replace errors like:
-        // - "NPM package X not found..."
-        // But keep specific errors like:
-        // - "Failed to parse plugin.yaml for NPM package X"
-        // - "NPM package X has no contracts defined"
         const npmError = npmResult.validations[0];
         const isGenericPackageNotFound =
             (npmError.startsWith('NPM package') && npmError.includes('not found')) ||

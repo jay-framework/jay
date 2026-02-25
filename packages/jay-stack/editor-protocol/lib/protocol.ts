@@ -140,7 +140,6 @@ export interface StaticContractDef {
     component: string; // Exported member name from the module (e.g., "moodTracker")
     description?: string; // Optional description
 }
-
 export interface Plugin {
     name: string; // Plugin name (kebab-case) for the plugin attribute
     contracts: Contract[]; // Array of available contracts

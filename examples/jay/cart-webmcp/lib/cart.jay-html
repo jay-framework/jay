@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<header>
+    <title>Shopping Cart with Automation</title>
+    <script type="application/jay-data">
+data:
+    items:
+    - id: string
+      name: string
+      price: number
+      quantity: number
+    total: number
+    itemCount: number
+    </script>
+</header>
+<body>
+<div class="cart-container">
+    <h1>Shopping Cart</h1>
+    
+    <div class="cart-items">
+        <div class="cart-item" forEach="items" trackBy="id">
+            <span class="item-name">{name}</span>
+            <span class="item-price">${price}</span>
+            <div class="quantity-controls">
+                <button ref="decreaseBtn" class="qty-btn">-</button>
+                <span class="quantity">{quantity}</span>
+                <button ref="increaseBtn" class="qty-btn">+</button>
+            </div>
+            <button ref="removeBtn" class="remove-btn">Remove</button>
+        </div>
+    </div>
+
+    <div class="cart-summary" if="itemCount > 0">
+        <p>Items: {itemCount}</p>
+        <p class="total">Total: ${total}</p>
+    </div>
+
+    <div class="empty-cart" if="itemCount == 0">
+        <p>Your cart is empty</p>
+    </div>
+
+    <div class="add-section">
+        <h3>Add Item</h3>
+        <input ref="nameInput" type="text" placeholder="Item name" />
+        <input ref="priceInput" type="number" placeholder="Price" />
+        <button ref="addBtn">Add to Cart</button>
+    </div>
+</div>
+</body>
+</html>

@@ -1,10 +1,16 @@
-// Types (new names)
-export type { AutomationAPI, Interaction, PageState, Coordinate } from './types';
+// Types
+export type {
+    AutomationAPI,
+    Interaction,
+    InteractionInstance,
+    PageState,
+    Coordinate,
+} from './types';
 
 // Types (deprecated aliases for backward compatibility)
 export type { AIAgentAPI, AIInteraction, AIPageState } from './types';
 
-// Main API (new names)
+// Main API
 export {
     wrapWithAutomation,
     type AutomationWrappedComponent,
@@ -16,3 +22,4 @@ export { AUTOMATION_CONTEXT } from './automation-context';
 
 // Utilities (for advanced use cases)
 export { collectInteractions } from './interaction-collector';
+export { groupInteractions } from './group-interactions';

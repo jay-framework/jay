@@ -42,6 +42,8 @@ export interface PluginWithInit {
     initExport: string;
     /** Dependencies from package.json (for ordering) */
     dependencies: string[];
+    /** When true, plugin is loaded on every page regardless of usage in jay-html */
+    global: boolean;
 }
 
 /**
@@ -95,6 +97,7 @@ export async function discoverPluginsWithInit(
             initModule: initConfig.module,
             initExport: initConfig.export,
             dependencies: scanned.dependencies,
+            global: scanned.manifest.global === true,
         });
 
         if (verbose) {
@@ -232,7 +235,9 @@ export async function executePluginServerInits(
     plugins: PluginWithInit[],
     viteServer?: ViteSSRLoader,
     verbose: boolean = false,
-): Promise<void> {
+): Promise<Map<string, Error>> {
+    const initErrors = new Map<string, Error>();
+
     for (const plugin of plugins) {
         try {
             // Build the module path
@@ -284,11 +289,15 @@ export async function executePluginServerInits(
                 }
             }
         } catch (error) {
+            const err = error instanceof Error ? error : new Error(String(error));
+            initErrors.set(plugin.name, err);
             getLogger().error(
                 `[PluginInit] Failed to execute server init for "${plugin.name}": ${error}`,
             );
         }
     }
+
+    return initErrors;
 }
 
 /**

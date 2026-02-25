@@ -1,0 +1,104 @@
+# Jay Framework Testing Standards
+
+## Fixture-Based Testing
+
+### Use External Fixture Files
+- Store inputs and expected outputs in separate files, not inline in tests
+- Makes comparison and debugging easier (can diff files directly)
+- Enables IDE syntax highlighting for fixture content
+
+```
+test/fixtures/<feature-name>/
+  input.jay-html
+  expected-output.jay-html
+  contract.yaml
+  slow-view-state.json
+```
+
+### Contracts in YAML Format
+- Use `.yaml` extension for contract fixtures
+- Parse contracts using `parseContract()` to validate they're correct
+- Use `checkValidationErrors()` to surface parsing errors in tests
+
+```typescript
+// ✅ Good
+const contractYaml = await readFile(path.join(dir, 'contract.yaml'), 'utf-8');
+const contract = checkValidationErrors(parseContract(contractYaml, 'contract.yaml'));
+
+// ❌ Bad - inline JSON, no validation
+const contract = { name: 'Test', tags: [...] };
+```
+
+## Assertions
+
+### Use `toEqual` for Full File Comparisons
+- When generating complete files, use `toEqual` with formatting
+- Do NOT use `toContain` for full file outputs
+
+```typescript
+// ✅ Good - exact comparison with formatting
+expect(prettifyHtml(result)).toEqual(prettifyHtml(expected));
+
+// ❌ Bad - partial matching hides issues
+expect(result).toContain('<div class="foo">');
+```
+
+### Use Existing Formatting Utilities
+- Use `prettifyHtml` from `@jay-framework/compiler-shared` for HTML
+- Don't create custom normalization functions when utilities exist
+
+## Test Structure
+
+### Extract Element Creations as Functions
+- Avoid `beforeEach` + `container.appendChild` pattern
+- Create helper functions that return elements for direct assertions
+
+```typescript
+// ✅ Good - helper function returns element
+function makeProductElement(): JayElement<ProductVS> {
+  return slowForEachItem('products', 0, 'prod1', () =>
+    e('div', {}, [dt((vs) => vs.name)])
+  );
+}
+
+it('should render product', () => {
+  const element = makeProductElement();
+  expect(element.dom.textContent).toBe('Widget');
+});
+
+// ❌ Bad - beforeEach with side effects
+let container: HTMLElement;
+let result: JayElement;
+
+beforeEach(() => {
+  container = document.createElement('div');
+  result = makeElement();
+  container.appendChild(result.dom);
+});
+```
+
+### Consolidate Similar Tests
+- Merge tests that only differ by input data
+- Use test.each or parameterized helpers for variations
+
+### Test Missing/Edge Cases Explicitly
+- Add dedicated tests for missing data, undefined values
+- Follow the runtime's "silent failure" pattern (render undefined, don't throw)
+
+```typescript
+it('should render undefined when array item is missing', () => {
+  const element = makeElement();
+  element.update({ products: [] }); // empty array
+  expect(element.dom.textContent).toBe('undefined');
+});
+```
+
+## File Organization
+
+### Mirror Source Structure
+- Test files in `test/` directory mirroring `lib/` structure
+- Fixtures in `test/fixtures/<feature>/`
+
+### One Test File Per Module
+- Each source module has a corresponding test file
+- Name: `<module-name>.test.ts`

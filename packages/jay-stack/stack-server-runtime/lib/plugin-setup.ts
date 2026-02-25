@@ -67,7 +67,7 @@ export type PluginSetupHandler = (context: PluginSetupContext) => Promise<Plugin
 
 /**
  * Context passed to a plugin's references handler.
- * Services are guaranteed to be initialized (agent-kit already does this).
+ * Services may or may not be initialized — check initError if your handler needs them.
  */
 export interface PluginReferencesContext {
     /** Plugin name (from plugin.yaml) */
@@ -78,6 +78,8 @@ export interface PluginReferencesContext {
     referencesDir: string;
     /** Registered services */
     services: Map<symbol, unknown>;
+    /** Present if this plugin's server init failed */
+    initError?: Error;
     /** Whether --force flag was passed */
     force: boolean;
 }
@@ -292,11 +294,12 @@ export async function executePluginReferences(
     options: {
         projectRoot: string;
         force: boolean;
+        initError?: Error;
         viteServer?: ViteSSRLoader;
         verbose?: boolean;
     },
 ): Promise<PluginReferencesResult> {
-    const { projectRoot, force, viteServer } = options;
+    const { projectRoot, force, initError, viteServer } = options;
 
     const referencesDir = path.join(projectRoot, 'agent-kit', 'references', plugin.name);
 
@@ -305,6 +308,7 @@ export async function executePluginReferences(
         projectRoot,
         referencesDir,
         services: getServiceRegistry(),
+        initError,
         force,
     };
 

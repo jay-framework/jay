@@ -77,6 +77,7 @@ const wrapped = wrapWithAutomation(instance);
 registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
 window.__jay = window.__jay || {};
 window.__jay.automation = wrapped.automation;
+window.dispatchEvent(new Event('jay:automation-ready'));
 target.appendChild(wrapped.element.dom);
 
 // source-map`);
@@ -136,6 +137,7 @@ const wrapped = wrapWithAutomation(instance);
 registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
 window.__jay = window.__jay || {};
 window.__jay.automation = wrapped.automation;
+window.dispatchEvent(new Event('jay:automation-ready'));
 target.appendChild(wrapped.element.dom);
 
 // source-map`);
@@ -197,6 +199,7 @@ const wrapped = wrapWithAutomation(instance);
 registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
 window.__jay = window.__jay || {};
 window.__jay.automation = wrapped.automation;
+window.dispatchEvent(new Event('jay:automation-ready'));
 target.appendChild(wrapped.element.dom);
 
 // source-map`);

@@ -72,14 +72,11 @@ export async function runSetup(
         }
 
         // Initialize services (for all plugins, dependency-ordered)
-        // Capture init error but don't fail — setup handlers need to know
-        let initError: Error | undefined;
-        try {
-            await initializeServices(projectRoot, viteServer);
-        } catch (error: any) {
-            initError = error;
-            if (options.verbose) {
-                logger.info(chalk.yellow(`⚠️  Service init error: ${error.message}`));
+        // Capture per-plugin init errors — setup handlers need to know
+        const { initErrors } = await initializeServices(projectRoot, viteServer);
+        if (initErrors.size > 0 && options.verbose) {
+            for (const [name, err] of initErrors) {
+                logger.info(chalk.yellow(`⚠️  ${name} init error: ${err.message}`));
             }
         }
 
@@ -100,7 +97,7 @@ export async function runSetup(
                     projectRoot,
                     configDir,
                     force: options.force ?? false,
-                    initError,
+                    initError: initErrors.get(plugin.name),
                     viteServer,
                     verbose: options.verbose,
                 });

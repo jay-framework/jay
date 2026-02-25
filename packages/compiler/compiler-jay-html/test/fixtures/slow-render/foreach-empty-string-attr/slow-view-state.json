@@ -1,0 +1,16 @@
+{
+  "categories": [
+    {
+      "_id": "cat1",
+      "name": "Whisky",
+      "imageUrl": "",
+      "productCount": 42
+    },
+    {
+      "_id": "cat2",
+      "name": "Bourbon",
+      "imageUrl": "https://example.com/bourbon.jpg",
+      "productCount": 15
+    }
+  ]
+}

@@ -1,11 +1,11 @@
-import type { Interaction } from './types';
+import type { CollectedInteraction } from './types';
 
 /**
  * Collects all interactive elements from a component's refs.
  * Handles nested refs (e.g., headless components) by recursively traversing the refs tree.
  */
-export function collectInteractions(refs: any): Interaction[] {
-    const interactions: Interaction[] = [];
+export function collectInteractions(refs: any): CollectedInteraction[] {
+    const interactions: CollectedInteraction[] = [];
 
     if (!refs) return interactions;
 
@@ -17,7 +17,7 @@ export function collectInteractions(refs: any): Interaction[] {
 /**
  * Recursively collects interactions from refs, handling nested ref managers.
  */
-function collectInteractionsRecursive(refs: any, interactions: Interaction[]): void {
+function collectInteractionsRecursive(refs: any, interactions: CollectedInteraction[]): void {
     if (!refs) return;
 
     // Iterate through all refs in the component
@@ -29,14 +29,13 @@ function collectInteractionsRecursive(refs: any, interactions: Interaction[]): v
         if (refImpl.elements && refImpl.elements instanceof Set) {
             // Iterate through all elements in the ref
             for (const elem of refImpl.elements) {
-                if (elem.element) {
+                if (elem.element && !isDisabled(elem.element)) {
                     interactions.push({
                         refName,
                         coordinate: elem.coordinate || [refName],
                         element: elem.element,
-                        elementType: getElementType(elem.element),
                         supportedEvents: getSupportedEvents(elem.element),
-                        itemContext: elem.viewState,
+                        description: elem.description,
                     });
                 }
             }
@@ -64,12 +63,21 @@ function isNestedRefsObject(obj: any): boolean {
     const proto = Object.getPrototypeOf(obj);
     if (proto !== Object.prototype && proto !== null) return false;
 
-    // It's a plain object - likely nested refs
+    // It's a plain object — likely nested refs
     return true;
 }
 
-function getElementType(element: HTMLElement): string {
-    return element.constructor.name; // e.g., "HTMLButtonElement"
+/**
+ * Check if an element is disabled — either via its own `disabled` property
+ * or via a parent `<fieldset disabled>`.
+ */
+function isDisabled(element: HTMLElement): boolean {
+    if ('disabled' in element && (element as HTMLButtonElement).disabled) {
+        return true;
+    }
+    // Check for ancestor <fieldset disabled>
+    const fieldset = element.closest?.('fieldset:disabled');
+    return !!fieldset;
 }
 
 function getSupportedEvents(element: HTMLElement): string[] {

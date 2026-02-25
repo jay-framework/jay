@@ -36,6 +36,7 @@
       "packages/runtime/*",
       "packages/compiler/*",
       "packages/jay-stack/*",
+      "packages/jay-stack-plugins/*",
       "packages/_deprecated/*",
       "examples/**",
       "exploration/*"

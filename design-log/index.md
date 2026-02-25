@@ -45,6 +45,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 51  | Project Structure Identification             | Pages vs Components identification                                     |
 | 61  | json-patch typed JSONPointer                 | Typed JSON operations                                                  |
 | 79  | linked contracts with mixed phase properties | Linked sub-contracts across rendering phases                           |
+| 95  | jay-action contract references               | Reference contract ViewState types from .jay-action output schemas     |
 
 ---
 
@@ -64,6 +65,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 72  | skip client script for non-interactive components     | Optimization for static components                                                |
 | 84  | headless component props and repeater support         | Props, multiple instances, forEach, jay: prefix                                   |
 | 85  | rendering phases and agent kit for agentic generation | Phases + contract/action discovery; agent-kit folder, markdown content → jay-html |
+| 90  | headless instances in interactive forEach             | Allow fast/interactive-only headless components inside forEach (no slow phase)    |
 
 ---
 
@@ -78,14 +80,16 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Plugin System
 
-| #   | Title                                             | Description                                                   |
-| --- | ------------------------------------------------- | ------------------------------------------------------------- |
-| 39  | Plugin package                                    | Plugin package requirements and structure                     |
-| 43  | Jay Package                                       | Jay package format                                            |
-| 60  | plugin system refinement and dynamic contracts    | Plugin.yaml, contract resolution, dynamic contract generation |
-| 66  | transitive plugin dependency resolution           | Plugin dependency resolution                                  |
-| 80  | exposing dynamic contracts for agentic generation | CLI and dev server contract generation for AI agents          |
-| 87  | jay-stack setup command                           | Plugin config templating, credential validation, references   |
+| #   | Title                                             | Description                                                              |
+| --- | ------------------------------------------------- | ------------------------------------------------------------------------ |
+| 39  | Plugin package                                    | Plugin package requirements and structure                                |
+| 43  | Jay Package                                       | Jay package format                                                       |
+| 60  | plugin system refinement and dynamic contracts    | Plugin.yaml, contract resolution, dynamic contract generation            |
+| 66  | transitive plugin dependency resolution           | Plugin dependency resolution                                             |
+| 80  | exposing dynamic contracts for agentic generation | CLI and dev server contract generation for AI agents                     |
+| 87  | jay-stack setup command                           | Plugin config templating, credential validation, references              |
+| 88  | PR 158 review guide                               | Review guide for export_import branch (Figma vendor + plugin resolution) |
+| 89  | PR 158 merge concerns                             | Merge conflicts, duplicate work, and decisions for PR #158 into main     |
 
 ---
 
@@ -191,16 +195,18 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 81  | dev server test mode                                   | Health/shutdown endpoints and timeout for smoke testing                               |
 | 83  | dev server logging and timing                          | Clean output, verbose mode, timing for render phases                                  |
 | 85  | rendering phases and agent kit for agentic generation  | Agent-kit folder: instructions, contracts, markdown content with headless annotations |
+| 91  | WebMCP plugin for jay-stack                            | Generic WebMCP support: automation→tools/resources/prompts, plugin packaging          |
+| 92  | Gemini agent plugin for jay-stack                      | Embedded AI agent: Gemini API, .jay-action metadata, chat contract, page automation   |
 
 ---
 
 ## Figma Integration & Import
 
-| #   | Title                                        | Description                                                           |
-| --- | -------------------------------------------- | --------------------------------------------------------------------- |
-| 88  | variant style extraction for figma import    | Dev server variant mode, scenario generation, class-path key matching |
-| 92  | pillar 1 compute styles                      | Query param rendering, developer playground UI, compute styles for Figma import (Pillar 1 master design) |
-| 93  | import-export workflow pillar 2               | Change detection, sync status, conflict resolution UX, designer-AI roundtrip workflow (Pillar 2 master design) |
+| #   | Title                                     | Description                                                                                                    |
+| --- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| 88  | variant style extraction for figma import | Dev server variant mode, scenario generation, class-path key matching                                          |
+| 92  | pillar 1 compute styles                   | Query param rendering, developer playground UI, compute styles for Figma import (Pillar 1 master design)       |
+| 93  | import-export workflow pillar 2           | Change detection, sync status, conflict resolution UX, designer-AI roundtrip workflow (Pillar 2 master design) |
 
 ---
 
@@ -224,7 +230,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ### "I'm working with headless components"
 
-→ See #50 (headless configuration), #58 (headless resolution), #84 (props, multiple instances, jay: prefix)
+→ See #50 (headless configuration), #58 (headless resolution), #84 (props, multiple instances, jay: prefix), #90 (forEach instances without slow phase)
 
 ### "I'm working on the compiler"
 
@@ -244,7 +250,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ### "I'm working on AI agent integration"
 
-→ See #76 (AI Agent Integration), #77 (automation dev server), #80 (contract materialization for agents), #85 (agent kit and rendering phases)
+→ See #76 (AI Agent Integration), #77 (automation dev server), #80 (contract materialization for agents), #85 (agent kit and rendering phases), #91 (WebMCP plugin), #92 (Gemini agent plugin)
 → Agent kit skills: `.cursor/skills/jay-agent-kit/` (main), `jay-html-authoring/`, `jay-cli-commands/`, `jay-contracts-and-plugins/`, `jay-dev-server-test/`
 
 ### "I'm working on the Figma import pipeline"

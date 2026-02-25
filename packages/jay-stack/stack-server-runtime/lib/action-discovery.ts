@@ -10,8 +10,13 @@ import * as path from 'node:path';
 import { createRequire } from 'node:module';
 import { ActionRegistry, actionRegistry } from './action-registry';
 import { isJayAction } from '@jay-framework/fullstack-component';
-import { loadPluginManifest, PluginManifest } from '@jay-framework/compiler-shared';
+import {
+    loadPluginManifest,
+    PluginManifest,
+    normalizeActionEntry,
+} from '@jay-framework/compiler-shared';
 import { getLogger } from '@jay-framework/logger';
+import { loadActionMetadata, resolveActionMetadataPath } from './action-metadata';
 
 const require = createRequire(import.meta.url);
 
@@ -273,6 +278,7 @@ async function discoverNpmPluginActions(
                 const actions = await registerNpmPluginActions(
                     packageName,
                     pluginConfig,
+                    pluginDir,
                     registry,
                     verbose,
                     viteServer,
@@ -307,11 +313,47 @@ function tryResolvePluginYaml(packageName: string, projectRoot: string): string 
 }
 
 /**
+ * Resolves a .jay-action file path for an NPM package.
+ *
+ * For NPM packages, action paths are export subpaths (e.g. "send-message.jay-action")
+ * resolved via require.resolve (like contracts). Falls back to path.resolve from pluginDir
+ * for backward compatibility with relative paths.
+ */
+function resolveNpmActionMetadataPath(
+    actionPath: string,
+    packageName: string,
+    pluginDir: string,
+): string | null {
+    // First try as a package export subpath (e.g. "packageName/send-message.jay-action")
+    if (!actionPath.startsWith('.')) {
+        try {
+            return require.resolve(`${packageName}/${actionPath}`, {
+                paths: [pluginDir],
+            });
+        } catch {
+            // Fall through to relative resolution
+        }
+    }
+
+    // Fall back to relative resolution from plugin dir
+    const resolved = resolveActionMetadataPath(actionPath, pluginDir);
+    if (fs.existsSync(resolved)) {
+        return resolved;
+    }
+
+    getLogger().warn(
+        `[Actions] Could not resolve .jay-action file "${actionPath}" for package "${packageName}"`,
+    );
+    return null;
+}
+
+/**
  * Registers actions from an npm package plugin.
  */
 async function registerNpmPluginActions(
     packageName: string,
     pluginConfig: PluginManifest,
+    pluginDir: string,
     registry: ActionRegistry,
     verbose: boolean,
     viteServer?: ViteSSRLoader,
@@ -328,17 +370,37 @@ async function registerNpmPluginActions(
         }
 
         // Register each declared action
-        for (const actionName of pluginConfig.actions!) {
+        for (const entry of pluginConfig.actions!) {
+            const { name: actionName, action: actionPath } = normalizeActionEntry(entry);
             const actionExport = pluginModule[actionName];
 
             if (actionExport && isJayAction(actionExport)) {
                 registry.register(actionExport as any);
-                registeredActions.push((actionExport as any).actionName);
+                const registeredName = (actionExport as any).actionName;
+                registeredActions.push(registeredName);
+
+                // Load .jay-action metadata if a file path is specified
+                if (actionPath) {
+                    const metadataFilePath = resolveNpmActionMetadataPath(
+                        actionPath,
+                        packageName,
+                        pluginDir,
+                    );
+                    if (metadataFilePath) {
+                        const metadata = loadActionMetadata(metadataFilePath);
+                        if (metadata) {
+                            registry.setMetadata(registeredName, metadata);
+                            if (verbose) {
+                                getLogger().info(
+                                    `[Actions] Loaded metadata for "${registeredName}" from ${actionPath}`,
+                                );
+                            }
+                        }
+                    }
+                }
 
                 if (verbose) {
-                    getLogger().info(
-                        `[Actions] Registered NPM plugin action: ${(actionExport as any).actionName}`,
-                    );
+                    getLogger().info(`[Actions] Registered NPM plugin action: ${registeredName}`);
                 }
             } else {
                 getLogger().warn(
@@ -424,17 +486,31 @@ export async function discoverPluginActions(
         }
 
         // Register each declared action
-        for (const actionName of pluginConfig.actions) {
+        for (const entry of pluginConfig.actions) {
+            const { name: actionName, action: actionPath } = normalizeActionEntry(entry);
             const actionExport = pluginModule[actionName];
 
             if (actionExport && isJayAction(actionExport)) {
                 registry.register(actionExport as any);
-                registeredActions.push((actionExport as any).actionName);
+                const registeredName = (actionExport as any).actionName;
+                registeredActions.push(registeredName);
+
+                // Load .jay-action metadata if a file path is specified
+                if (actionPath) {
+                    const metadataFilePath = resolveActionMetadataPath(actionPath, pluginPath);
+                    const metadata = loadActionMetadata(metadataFilePath);
+                    if (metadata) {
+                        registry.setMetadata(registeredName, metadata);
+                        if (verbose) {
+                            getLogger().info(
+                                `[Actions] Loaded metadata for "${registeredName}" from ${actionPath}`,
+                            );
+                        }
+                    }
+                }
 
                 if (verbose) {
-                    getLogger().info(
-                        `[Actions] Registered plugin action: ${(actionExport as any).actionName}`,
-                    );
+                    getLogger().info(`[Actions] Registered plugin action: ${registeredName}`);
                 }
             } else {
                 getLogger().warn(

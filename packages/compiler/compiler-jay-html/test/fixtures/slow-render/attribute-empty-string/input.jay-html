@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data" contract="./test.jay-contract"></script>
+</head>
+<body>
+    <img src="{imageUrl}" alt="{name}" />
+    <a href="{link}">{name}</a>
+</body>
+</html>

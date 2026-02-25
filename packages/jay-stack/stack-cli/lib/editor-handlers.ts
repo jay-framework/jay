@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs';
-import YAML from 'yaml';
 import { getLogger } from '@jay-framework/logger';
+import YAML from 'yaml';
 import type {
     PublishMessage,
     PublishComponent,
@@ -183,7 +183,7 @@ async function scanPageDirectories(
                 }
             }
         } catch (error) {
-            getLogger().warn(`Failed to scan directory ${dirPath}: ${error}`);
+            getLogger().warn(`Failed to scan directory ${dirPath}:`, error);
         }
     }
 
@@ -235,7 +235,7 @@ function expandContractTags(tags: ContractTag[], baseDir: string): ContractTag[]
                     resolvedTags.push(tag);
                 }
             } catch (error) {
-                getLogger().warn(`Error resolving linked contract ${tag.link}: ${error}`);
+                getLogger().warn(`Error resolving linked contract ${tag.link}:`, error);
                 resolvedTags.push(tag);
             }
         } else if (tag.tags) {
@@ -263,7 +263,8 @@ function loadAndExpandContract(contractFilePath: string): Contract | null {
 
         if (loadResult.validations.length > 0) {
             getLogger().warn(
-                `Contract validation errors in ${contractFilePath}: ${JSON.stringify(loadResult.validations)}`,
+                `Contract validation errors in ${contractFilePath}:`,
+                loadResult.validations,
             );
         }
 
@@ -280,7 +281,7 @@ function loadAndExpandContract(contractFilePath: string): Contract | null {
             });
         }
     } catch (error) {
-        getLogger().warn(`Failed to parse contract file ${contractFilePath}: ${error}`);
+        getLogger().warn(`Failed to parse contract file ${contractFilePath}:`, error);
     }
     return null;
 }
@@ -311,7 +312,8 @@ async function extractHeadlessComponentsFromJayHtml(
 
         if (parsedJayHtml.validations.length > 0) {
             getLogger().warn(
-                `Jay-HTML parsing warnings for ${pageFilePath}:${parsedJayHtml.validations.join(', ')}`,
+                `Jay-HTML parsing warnings for ${pageFilePath}:`,
+                parsedJayHtml.validations,
             );
         }
 
@@ -364,7 +366,7 @@ async function extractHeadlessComponentsFromJayHtml(
 
         return resolvedComponents;
     } catch (error) {
-        getLogger().warn(`Failed to parse jay-html content for ${pageFilePath}:${error}`);
+        getLogger().warn(`Failed to parse jay-html content for ${pageFilePath}:`, error);
         return [];
     }
 }
@@ -395,7 +397,7 @@ async function scanProjectComponents(componentsBasePath: string): Promise<Projec
             }
         }
     } catch (error) {
-        getLogger().warn(`Failed to scan components directory ${componentsBasePath}: ${error}`);
+        getLogger().warn(`Failed to scan components directory ${componentsBasePath}:`, error);
     }
 
     return components;
@@ -412,7 +414,7 @@ async function getProjectName(configBasePath: string): Promise<string> {
             return projectConfig.name || 'Unnamed Project';
         }
     } catch (error) {
-        getLogger().warn(`Failed to read project config ${projectConfigPath}: ${error}`);
+        getLogger().warn(`Failed to read project config ${projectConfigPath}:`, error);
     }
 
     return 'Unnamed Project';
@@ -443,7 +445,7 @@ async function scanLocalPluginNames(projectRoot: string): Promise<string[]> {
             }
         }
     } catch (error) {
-        getLogger().warn(`Failed to scan local plugins directory ${localPluginsDir}: ${error}`);
+        getLogger().warn(`Failed to scan local plugins directory ${localPluginsDir}:`, error);
     }
 
     return plugins;
@@ -506,7 +508,7 @@ async function findPluginNamesFromPackageJson(projectRootPath: string): Promise<
             }
         }
     } catch (error) {
-        getLogger().error(`Error finding plugins from package.json: ${error}`);
+        getLogger().error('Error finding plugins from package.json:', error);
     }
 
     return pluginNames;
@@ -589,13 +591,15 @@ async function scanPlugins(projectRootPath: string): Promise<Plugin[]> {
             const manifest = resolvePluginManifest(projectRootPath, pluginName);
             if (manifest.validations.length > 0) {
                 getLogger().warn(
-                    `Failed to resolve plugin manifest for ${pluginName}:${manifest.validations.join(', ')}`,
+                    `Failed to resolve plugin manifest for ${pluginName}:`,
+                    manifest.validations,
                 );
                 continue;
             }
             if (!manifest.val) {
                 getLogger().warn(
-                    `Failed to resolve plugin manifest for ${pluginName}:${manifest.validations.join(', ')}`,
+                    `Failed to resolve plugin manifest for ${pluginName}:`,
+                    manifest.validations,
                 );
                 continue;
             }
@@ -610,13 +614,15 @@ async function scanPlugins(projectRootPath: string): Promise<Plugin[]> {
                     );
                     if (resolveResult.validations.length > 0) {
                         getLogger().warn(
-                            `Failed to resolve plugin component for ${pluginName}:${contract.name}:${resolveResult.validations.join(', ')}`,
+                            `Failed to resolve plugin component for ${pluginName}:${contract.name}:`,
+                            resolveResult.validations,
                         );
                         return null;
                     }
                     if (!resolveResult.val) {
                         getLogger().warn(
-                            `Failed to resolve plugin component for ${pluginName}:${contract.name}:${resolveResult.validations.join(', ')}`,
+                            `Failed to resolve plugin component for ${pluginName}:${contract.name}:`,
+                            resolveResult.validations,
                         );
                         return null;
                     }
@@ -630,7 +636,7 @@ async function scanPlugins(projectRootPath: string): Promise<Plugin[]> {
             });
         }
     } catch (error) {
-        getLogger().error(`Error scanning plugins: ${error}`);
+        getLogger().error('Error scanning plugins:', error);
     }
 
     return plugins;
@@ -672,7 +678,7 @@ async function loadProjectPage(
                 projectRootPath,
             );
         } catch (error) {
-            getLogger().warn(`Failed to read page file ${pageFilePath}:${error}`);
+            getLogger().warn(`Failed to read page file ${pageFilePath}:`, error);
         }
     }
     // Priority 2: page.conf.yaml
@@ -709,13 +715,14 @@ async function loadProjectPage(
                         });
                     } else {
                         getLogger().warn(
-                            `Invalid component definition in ${pageConfigPath}: Only plugin/contract syntax is supported for headless components. Found:${JSON.stringify(comp)}`,
+                            `Invalid component definition in ${pageConfigPath}: Only plugin/contract syntax is supported for headless components. Found:`,
+                            comp,
                         );
                     }
                 }
             }
         } catch (error) {
-            getLogger().warn(`Failed to parse page config ${pageConfigPath}:${error}`);
+            getLogger().warn(`Failed to parse page config ${pageConfigPath}:`, error);
         }
     }
 
@@ -810,7 +817,7 @@ async function handlePagePublish(
             createdJayHtml,
         ];
     } catch (error) {
-        getLogger().error(`Failed to publish page ${page.route}: ${error}`);
+        getLogger().error(`Failed to publish page ${page.route}:`, error);
         return [
             {
                 success: false,
@@ -862,7 +869,7 @@ async function handleComponentPublish(
             createdJayHtml,
         ];
     } catch (error) {
-        getLogger().error(`Failed to publish component ${component.name}: ${error}`);
+        getLogger().error(`Failed to publish component ${component.name}:`, error);
         return [
             {
                 success: false,
@@ -938,7 +945,7 @@ export function createEditorHandlers(
             );
             const definitionFile = generateElementDefinitionFile(parsedJayHtml);
             if (definitionFile.validations.length > 0)
-                getLogger().warn(
+                getLogger().info(
                     `failed to generate .d.ts for ${fullPath} with validation errors: ${definitionFile.validations.join('\n')}`,
                 );
             else await fs.promises.writeFile(fullPath + '.d.ts', definitionFile.val, 'utf-8');
@@ -973,7 +980,7 @@ export function createEditorHandlers(
                 imageUrl: `/images/${filename}`,
             };
         } catch (error) {
-            getLogger().error(`Failed to save image: ${error}`);
+            getLogger().error('Failed to save image:', error);
             return {
                 type: 'saveImage',
                 success: false,
@@ -1000,7 +1007,7 @@ export function createEditorHandlers(
                 imageUrl: exists ? `/images/${filename}` : undefined,
             };
         } catch (error) {
-            getLogger().error(`Failed to check image: ${error}`);
+            getLogger().error('Failed to check image:', error);
             return {
                 type: 'hasImage',
                 success: false,
@@ -1037,7 +1044,7 @@ export function createEditorHandlers(
                 info,
             };
         } catch (error) {
-            getLogger().error(`Failed to get project info: ${error}`);
+            getLogger().error('Failed to get project info:', error);
             return {
                 type: 'getProjectInfo',
                 success: false,
@@ -1134,7 +1141,7 @@ export function createEditorHandlers(
                         );
                         getLogger().info(`[Debug] Export artifacts written to ${debugDir}`);
                     } catch (debugErr) {
-                        getLogger().warn(`[Debug] Failed to write export debug files: ${debugErr}`);
+                        getLogger().warn('[Debug] Failed to write export debug files:', debugErr);
                     }
 
                     getLogger().info(`✅ Successfully converted to Jay HTML: ${jayHtmlPath}`);
@@ -1146,7 +1153,7 @@ export function createEditorHandlers(
                         jayHtmlPath,
                     };
                 } catch (conversionError) {
-                    getLogger().error(`❌ Vendor conversion threw an error:${conversionError}`);
+                    getLogger().error('❌ Vendor conversion threw an error:', conversionError);
                     return {
                         type: 'export',
                         success: false,
@@ -1167,7 +1174,7 @@ export function createEditorHandlers(
                 vendorSourcePath: vendorFilePath,
             };
         } catch (error) {
-            getLogger().error(`Failed to export vendor document:${error}`);
+            getLogger().error('Failed to export vendor document:', error);
             return {
                 type: 'export',
                 success: false,
@@ -1253,7 +1260,7 @@ export function createEditorHandlers(
                 warnings,
             };
         } catch (error) {
-            getLogger().error(`Failed to import from Jay-HTML: ${error}`);
+            getLogger().error('Failed to import from Jay-HTML:', error);
             return {
                 type: 'import',
                 success: false,

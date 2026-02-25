@@ -74,6 +74,10 @@ describe('Slow Render Transform', () => {
         it('should preserve fast bindings in attributes', async () => {
             await runSlowRenderTest('attribute-fast-preserved');
         });
+
+        it('should resolve empty string attribute values (not skip them as falsy)', async () => {
+            await runSlowRenderTest('attribute-empty-string');
+        });
     });
 
     describe('Style Binding Resolution', () => {
@@ -115,6 +119,10 @@ describe('Slow Render Transform', () => {
 
         it('should handle mixed-phase arrays (slow array with fast properties)', async () => {
             await runSlowRenderTest('foreach-mixed-phase');
+        });
+
+        it('should resolve empty string attributes in forEach items', async () => {
+            await runSlowRenderTest('foreach-empty-string-attr');
         });
 
         it('should preserve fast arrays', async () => {
@@ -924,7 +932,7 @@ tags:
             ]);
         });
 
-        it('should skip instances inside preserved forEach (fast phase)', () => {
+        it('should discover static instances and forEach instances separately', () => {
             const jayHtml = `<!DOCTYPE html>
 <html>
 <head></head>
@@ -940,14 +948,56 @@ tags:
 </body>
 </html>`;
 
-            const { instances } = discoverHeadlessInstances(jayHtml);
+            const { instances, forEachInstances } = discoverHeadlessInstances(jayHtml);
 
-            // Only the static instance should be discovered (not the one inside forEach)
+            // Static instance goes to instances
             expect(instances).toEqual([
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-static' },
                     coordinate: ['product-card:0'],
+                },
+            ]);
+
+            // forEach instance goes to forEachInstances with prop bindings
+            expect(forEachInstances).toEqual([
+                {
+                    contractName: 'product-card',
+                    forEachPath: 'products',
+                    trackBy: '_id',
+                    propBindings: { productId: '{_id}' },
+                    coordinateSuffix: 'product-card:0',
+                },
+            ]);
+        });
+
+        it('should discover forEach instances with correct context for nested forEach', () => {
+            const jayHtml = `<!DOCTYPE html>
+<html>
+<head></head>
+<body>
+    <div forEach="categories" trackBy="id">
+        <div forEach="items" trackBy="_id">
+            <jay:product-card productId="{_id}">
+                <h2>{name}</h2>
+            </jay:product-card>
+        </div>
+    </div>
+</body>
+</html>`;
+
+            const { instances, forEachInstances } = discoverHeadlessInstances(jayHtml);
+
+            expect(instances).toEqual([]);
+
+            // Nested forEach uses the innermost forEach context
+            expect(forEachInstances).toEqual([
+                {
+                    contractName: 'product-card',
+                    forEachPath: 'items',
+                    trackBy: '_id',
+                    propBindings: { productId: '{_id}' },
+                    coordinateSuffix: 'product-card:0',
                 },
             ]);
         });

@@ -1441,6 +1441,24 @@ Slow-phase binding {description} at path "description" has no value in slowViewS
 - `should fail validation and render "undefined" for missing image sub-contract`
 - `should correctly render valid falsy values (0, empty string, false)`
 
+#### Fix 7: Empty String Attributes Skipped During Slow Rendering (2026-02-10)
+
+**Problem:** Slow-phase attribute bindings that resolved to an empty string `""` were not being inlined. For example, `<img src="{imageUrl}">` where `imageUrl` was `""` in the data would leave `{imageUrl}` unresolved in the output. This caused a runtime error: "Cannot read properties of undefined (reading 'imageUrl')" because the client tried to resolve it as a fast-phase binding.
+
+**Root Cause:** `WithValidations.map()` used `if (this.val)` to check for a value, which treated falsy values (empty string `""`, `0`, `false`, `null`) as "no value". When `resolveTextBindings` returned `""` for an empty imageUrl, the `.map()` callback that called `element.setAttribute()` was never executed.
+
+**Fix:** Changed `WithValidations.map()`, `flatMap()`, `mapAsync()`, and `flatMapAsync()` to use `if (this.val !== undefined)` instead of `if (this.val)`. This correctly distinguishes between `undefined` (no value) and valid falsy values like empty strings.
+
+**Files Modified:**
+
+- `compiler-shared/lib/with-validations.ts` - Fixed 4 methods to use `!== undefined`
+- NEW: `compiler-shared/test/with-validations.test.ts` - 12 tests for falsy value handling
+- NEW: `compiler-jay-html/test/fixtures/slow-render/attribute-empty-string/` - Test fixture
+- NEW: `compiler-jay-html/test/fixtures/slow-render/foreach-empty-string-attr/` - Test fixture for forEach + empty string
+- `compiler-jay-html/test/slow-render/slow-render-transform.test.ts` - Added 2 tests
+
+**Tests:** All 513 compiler-jay-html tests passing, 60 compiler-shared tests passing, 190 runtime tests passing.
+
 ### Phase 6-7: Production Build & Incremental Regeneration (FUTURE)
 
 Deferred to future implementation.

@@ -48,6 +48,7 @@ Enricher                          Dev Server
 ### Element Key Matching
 
 **Start with Option B (class-path matching):**
+
 - In the browser, key each element by its class chain: `div.collection-page > header.site-header > nav`
 - In the IR builder, generate the same key from the source DOM
 - Handles ~90% of elements (those with classes). Falls back to index-based for classless elements.
@@ -67,12 +68,12 @@ Implement `generateVariantScenarios()` from contract tags:
 
 // Output: bounded scenario list (one per value, linear not combinatorial)
 [
-  { id: "default",       queryString: "?_jay=variant" },
-  { id: "isSearching",   queryString: "?_jay=variant&isSearching=true" },
-  { id: "hasResults-t",  queryString: "?_jay=variant&hasResults=true" },
-  { id: "hasResults-f",  queryString: "?_jay=variant&hasResults=false" },
-  { id: "mediaType-IMG", queryString: "?_jay=variant&mediaType=IMAGE" },
-]
+  { id: 'default', queryString: '?_jay=variant' },
+  { id: 'isSearching', queryString: '?_jay=variant&isSearching=true' },
+  { id: 'hasResults-t', queryString: '?_jay=variant&hasResults=true' },
+  { id: 'hasResults-f', queryString: '?_jay=variant&hasResults=false' },
+  { id: 'mediaType-IMG', queryString: '?_jay=variant&mediaType=IMAGE' },
+];
 ```
 
 Strategy: one scenario per boolean value + one per enum value. No combinatorial explosion. Bounded by `maxScenarios` (default 12).
@@ -90,6 +91,7 @@ In `dev-server.ts`, intercept `?_jay=variant` requests:
 ### Style Merging
 
 Each scenario produces a `ComputedStyleMap`. The enricher merges all maps:
+
 - If an element appears in multiple scenarios, use the styles from the scenario where it's visible (not `display: none`)
 - Elements that appear in only one scenario get those styles
 - The variant-synthesizer receives per-scenario style maps to assign correct styles per variant
@@ -141,9 +143,9 @@ Files to read: `dev-server/lib/dev-server.ts`, `full-stack-component/lib/server-
 
 ## Trade-offs
 
-| Decision | Chosen | Alternative | Why |
-|----------|--------|-------------|-----|
-| Key matching | Class-path (Option B) | Compiler injection (Option A) | Zero compiler changes; handles 90% of cases; can upgrade later |
-| Scenario strategy | One per value (linear) | All combinations (exponential) | 5 booleans = 10 scenarios (linear) vs 32 (exponential). Linear is sufficient for style capture |
-| Import mode | Switch to dev server for variants | Stay on direct HTML | Dev server gives real compiled output with runtime styles; direct HTML misses runtime-applied styles |
-| Scope | Variant extraction only | Variant + playground | Playground is a separate feature for a different user. Ship the import fix first |
+| Decision          | Chosen                            | Alternative                    | Why                                                                                                  |
+| ----------------- | --------------------------------- | ------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| Key matching      | Class-path (Option B)             | Compiler injection (Option A)  | Zero compiler changes; handles 90% of cases; can upgrade later                                       |
+| Scenario strategy | One per value (linear)            | All combinations (exponential) | 5 booleans = 10 scenarios (linear) vs 32 (exponential). Linear is sufficient for style capture       |
+| Import mode       | Switch to dev server for variants | Stay on direct HTML            | Dev server gives real compiled output with runtime styles; direct HTML misses runtime-applied styles |
+| Scope             | Variant extraction only           | Variant + playground           | Playground is a separate feature for a different user. Ship the import fix first                     |

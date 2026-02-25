@@ -1,0 +1,15 @@
+name: gemini-agent
+global: true
+contracts:
+  - name: gemini-chat
+    contract: gemini-chat.jay-contract
+    component: geminiChat
+    description: AI chat agent powered by Gemini with page automation capabilities
+actions:
+  - name: sendMessage
+    action: send-message.jay-action
+  - name: submitToolResults
+    action: submit-tool-results.jay-action
+setup:
+  handler: setupGeminiAgent
+  description: Configure Gemini API key

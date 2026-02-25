@@ -279,6 +279,83 @@ describe('ActionRegistry', () => {
         });
     });
 
+    describe('metadata', () => {
+        it('should set and retrieve action metadata', () => {
+            const action = makeJayAction('test.action').withHandler(
+                async (input: { name: string }) => ({ greeting: `Hello ${input.name}` }),
+            );
+
+            registry.register(action);
+
+            const metadata = {
+                name: 'testAction',
+                description: 'A test action',
+                inputSchema: {
+                    type: 'object' as const,
+                    properties: {
+                        name: { type: 'string', description: 'The name' },
+                    },
+                    required: ['name'],
+                },
+            };
+
+            registry.setMetadata('test.action', metadata);
+
+            const registered = registry.get('test.action');
+            expect(registered).toBeDefined();
+            expect(registered!.metadata).toBeDefined();
+            expect(registered!.metadata!.name).toBe('testAction');
+            expect(registered!.metadata!.description).toBe('A test action');
+        });
+
+        it('should return actions with metadata via getActionsWithMetadata', () => {
+            const action1 = makeJayAction('action.with-meta').withHandler(async () => ({}));
+            const action2 = makeJayAction('action.without-meta').withHandler(async () => ({}));
+            const action3 = makeJayAction('action.also-with-meta').withHandler(async () => ({}));
+
+            registry.register(action1);
+            registry.register(action2);
+            registry.register(action3);
+
+            registry.setMetadata('action.with-meta', {
+                name: 'withMeta',
+                description: 'Has metadata',
+                inputSchema: { type: 'object', properties: {}, required: [] },
+            });
+
+            registry.setMetadata('action.also-with-meta', {
+                name: 'alsoWithMeta',
+                description: 'Also has metadata',
+                inputSchema: { type: 'object', properties: {}, required: [] },
+            });
+
+            const actionsWithMeta = registry.getActionsWithMetadata();
+            expect(actionsWithMeta).toHaveLength(2);
+            expect(actionsWithMeta.map((a) => a.actionName)).toContain('action.with-meta');
+            expect(actionsWithMeta.map((a) => a.actionName)).toContain('action.also-with-meta');
+            expect(actionsWithMeta.map((a) => a.actionName)).not.toContain('action.without-meta');
+        });
+
+        it('should not set metadata on non-existent action', () => {
+            registry.setMetadata('nonexistent.action', {
+                name: 'nonexistent',
+                description: 'Does not exist',
+                inputSchema: { type: 'object', properties: {}, required: [] },
+            });
+
+            expect(registry.getActionsWithMetadata()).toHaveLength(0);
+        });
+
+        it('should register action without metadata by default', () => {
+            const action = makeJayAction('test.no-meta').withHandler(async () => ({}));
+            registry.register(action);
+
+            const registered = registry.get('test.no-meta');
+            expect(registered).toBeDefined();
+            expect(registered!.metadata).toBeUndefined();
+        });
+    });
+
     describe('isolation', () => {
         it('should have isolated registries for testing', () => {
             const registry1 = new ActionRegistry();
