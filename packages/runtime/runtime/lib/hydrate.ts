@@ -295,7 +295,9 @@ export function hydrateForEach<ViewState, Item>(
     const containerElement = context.peekCoordinate(containerCoordinate);
 
     if (!containerElement) {
-        console.warn('[jay hydration] hydrateForEach: could not find container element');
+        // Container may be absent when hydrateForEach is inside a hydrateConditional
+        // whose condition was false at SSR time — the server didn't render the content,
+        // so no coordinate exists. hydrateConditional handles this gracefully (returns noop).
         return { dom: undefined as any, update: noopUpdate, mount: noopMount, unmount: noopMount };
     }
 

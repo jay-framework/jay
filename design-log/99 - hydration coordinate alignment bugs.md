@@ -335,7 +335,7 @@ Implemented fixes A, B, C and runtime peekCoordinate. Shared coordinate module (
 
 **Compiler** (`packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts`):
 
-- **Fix A**: Added `coordinatePrefix?: string` to `ServerContext`. In `renderServerElement` for forEach, sets `coordinatePrefix` to a JS expression (`escapeAttr(String(trackByExpr))`). In `renderServerElementContent`, emits prefixed coordinates: `jay-coordinate="' + ${prefix} + '/${coordinate}">'`. Nested forEach chains prefixes with `+ '/' +`.
+- **Fix A**: Added `coordinatePrefix?: string` to `ServerContext`. In `renderServerElement` for forEach, sets `coordinatePrefix` to a JS expression (`escapeAttr(String(trackByExpr))`). In `renderServerElementContent`, emits prefixed coordinates: `jay-coordinate="' + ${prefix} + '/${coordinate}">'`. Nested forEach chains prefixes with `+ '/' +`. Additionally, the forEach **item root** coordinate is also prefixed for nested forEach (e.g., `{outerTrackBy}/{innerTrackBy}`), since the hydrate runtime resolves item roots via `resolveCoordinate(id)` with the parent's `coordinateBase`.
 - **Fix B**: In `renderHydrateElement` for conditionals, checks for ref name and uses it when available (`refName || counter++`), matching server element behavior. Counter only increments when no ref exists.
 - **Fix C**: Added `parentCoordinate?: string` to `HydrateContext`. In `renderHydrateElementContent`, passes the current element's coordinate to children as `parentCoordinate` when processing interactive children. In `renderHydrateElement` for forEach, uses `context.parentCoordinate` instead of `counter++` when available.
 
