@@ -5,7 +5,7 @@ export { init, GEMINI_SERVICE } from './init';
 export { setupGeminiAgent } from './setup';
 
 // Server actions
-export { sendMessage, submitToolResults } from './actions/handlers';
+export { sendMessage, submitToolResults, getToolDescriptions } from './actions/handlers';
 
 // Types
 export type {
@@ -35,8 +35,14 @@ export { GeminiService } from './agent/service';
 export { geminiChat } from './gemini-chat';
 
 // Tool bridge (for advanced usage / testing)
-export { toGeminiTools, resolveToolCallTarget } from './agent/tool-bridge';
+export {
+    toGeminiTools,
+    toSlimGeminiTools,
+    buildToolSummary,
+    resolveToolCallTarget,
+    DISCOVERY_TOOL,
+    PAGE_STATE_TOOL,
+} from './agent/tool-bridge';
 
 // System prompt (for advanced usage / testing)
-export { buildSystemPrompt } from './agent/system-prompt';
-export type { ServerActionSummary } from './agent/system-prompt';
+export { buildSystemPrompt, compactPageState } from './agent/system-prompt';

@@ -1,0 +1,480 @@
+import { ITEM_ADDED, ITEM_REMOVED, listCompare, MatchResult } from '@jay-framework/list-compare';
+import { RandomAccessLinkedList as List } from '@jay-framework/list-compare';
+import { Kindergarten, KindergartenGroup } from './kindergarden';
+import {
+    CONSTRUCTION_CONTEXT_MARKER,
+    currentConstructionContext,
+    restoreContext,
+    saveContext,
+    withContext,
+    wrapWithModifiedCheck,
+} from './context';
+import { BaseJayElement, MountFunc, updateFunc, noopMount, noopUpdate } from './element-types';
+import { normalizeMount, normalizeUpdates, type Attributes } from './element';
+import type { PrivateRef } from './node-reference';
+
+const STYLE = 'style';
+
+// ============================================================================
+// adoptText
+// ============================================================================
+
+/**
+ * Adopt an existing text node inside the element at the given coordinate.
+ *
+ * Reads the current ConstructContext from the stack (via currentConstructionContext())
+ * to resolve the coordinate to an existing DOM element. Finds the first text child
+ * of that element and connects a dynamic text updater to it.
+ *
+ * This is the hydration counterpart to dynamicText() — instead of creating a new
+ * text node, it adopts an existing one from server-rendered HTML.
+ */
+export function adoptText<ViewState>(
+    coordinate: string,
+    accessor: (vs: ViewState) => string | number | boolean,
+    ref?: PrivateRef<ViewState, BaseJayElement<ViewState>>,
+): BaseJayElement<ViewState> {
+    const context = currentConstructionContext();
+    const element = context.resolveCoordinate(coordinate);
+
+    if (!element) {
+        if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
+            console.warn(`[jay hydration] coordinate "${coordinate}" not found in DOM`);
+        }
+        return { dom: undefined as any, update: noopUpdate, mount: noopMount, unmount: noopMount };
+    }
+
+    const textNode = element.firstChild as Text;
+    let content = accessor(context.currData as ViewState);
+
+    const updates: updateFunc<ViewState>[] = [];
+    const mounts: MountFunc[] = [];
+    const unmounts: MountFunc[] = [];
+
+    updates.push((newData: ViewState) => {
+        const newContent = accessor(newData);
+        if (newContent !== content) {
+            textNode.textContent = newContent as string;
+        }
+        content = newContent;
+    });
+
+    if (ref) {
+        ref.set(element);
+        updates.push(ref.update);
+        mounts.push(ref.mount);
+        unmounts.push(ref.unmount);
+    }
+
+    return {
+        dom: element,
+        update: normalizeUpdates(updates),
+        mount: normalizeMount(mounts),
+        unmount: normalizeMount(unmounts),
+    };
+}
+
+// ============================================================================
+// adoptElement
+// ============================================================================
+
+/**
+ * Adopt an existing element at the given coordinate, connecting dynamic
+ * attributes and adopted children to it.
+ *
+ * This is the hydration counterpart to element()/dynamicElement() — instead of
+ * creating a new DOM element, it adopts an existing one from server-rendered HTML
+ * and wires up dynamic attribute bindings and children.
+ *
+ * The children parameter receives already-adopted children (e.g. from adoptText,
+ * other adoptElement calls, hydrateForEach, etc.).
+ */
+export function adoptElement<ViewState>(
+    coordinate: string,
+    attributes: Attributes<ViewState>,
+    children: BaseJayElement<ViewState>[] = [],
+    ref?: PrivateRef<ViewState, BaseJayElement<ViewState>>,
+): BaseJayElement<ViewState> {
+    const context = currentConstructionContext();
+    const element = context.resolveCoordinate(coordinate);
+
+    if (!element) {
+        if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
+            console.warn(`[jay hydration] coordinate "${coordinate}" not found in DOM`);
+        }
+        return { dom: undefined as any, update: noopUpdate, mount: noopMount, unmount: noopMount };
+    }
+
+    const updates: updateFunc<ViewState>[] = [];
+    const mounts: MountFunc[] = [];
+    const unmounts: MountFunc[] = [];
+
+    if (ref) {
+        ref.set(element);
+        updates.push(ref.update);
+        mounts.push(ref.mount);
+        unmounts.push(ref.unmount);
+    }
+
+    // Wire up dynamic attributes on the adopted element
+    Object.entries(attributes).forEach(([key, value]) => {
+        if (typeof value === 'object' && value !== null && 'valueFunc' in value) {
+            const dynAttr = value as { valueFunc: (vs: ViewState) => any; style: number };
+            let attrValue = dynAttr.valueFunc(context.currData as ViewState);
+
+            if (key === STYLE && element instanceof HTMLElement) {
+                // Style bindings — value is a record of style properties
+                // For adoptElement, STYLE attributes are handled at the top level
+            } else {
+                updates.push((newData: ViewState) => {
+                    const newAttrValue = dynAttr.valueFunc(newData);
+                    if (newAttrValue !== attrValue) {
+                        element.setAttribute(key, newAttrValue as string);
+                    }
+                    attrValue = newAttrValue;
+                });
+            }
+        }
+    });
+
+    // Collect updates/mounts from adopted children.
+    // Also insert comment anchors for false-at-SSR conditionals (Level 3).
+    // These anchors mark the DOM position where elements will be created
+    // when conditions toggle true.
+    for (const child of children) {
+        if (child.dom instanceof Comment) {
+            element.appendChild(child.dom);
+        }
+        if (child.update !== noopUpdate) updates.push(child.update);
+        if (child.mount !== noopMount) mounts.push(child.mount);
+        if (child.unmount !== noopMount) unmounts.push(child.unmount);
+    }
+
+    return {
+        dom: element,
+        update: normalizeUpdates(updates),
+        mount: normalizeMount(mounts),
+        unmount: normalizeMount(unmounts),
+    };
+}
+
+// ============================================================================
+// hydrateConditional
+// ============================================================================
+
+/**
+ * Hydration-aware conditional.
+ *
+ * Handles two cases:
+ * - **True at SSR (Level 2)**: Element exists in DOM. Adopt it, wire up toggle.
+ * - **False at SSR (Level 3)**: Element absent. Use createFallback to lazily
+ *   create the element when the condition first becomes true.
+ *
+ * @param createFallback - Optional element creator for false-at-SSR conditionals.
+ *   Uses the standard element target (e(), dt(), etc.). Same pattern as
+ *   hydrateForEach's createItem callback.
+ */
+export function hydrateConditional<ViewState>(
+    condition: (vs: ViewState) => boolean,
+    adoptExisting: () => BaseJayElement<ViewState>,
+    createFallback?: () => BaseJayElement<ViewState>,
+): BaseJayElement<ViewState> {
+    // Adopt the existing element.
+    // adopted may be undefined when the conditional has only static content
+    // (the hydrate compiler emits () => {} which returns undefined).
+    const adopted = adoptExisting();
+
+    if (!adopted || !adopted.dom) {
+        // Element not in DOM — condition was false at SSR.
+        if (createFallback) {
+            return hydrateConditionalFalse(condition, createFallback);
+        }
+        return (
+            adopted || {
+                dom: undefined as any,
+                update: noopUpdate,
+                mount: noopMount,
+                unmount: noopMount,
+            }
+        );
+    }
+
+    // Element exists — condition was true at SSR. Wire up toggle behavior.
+    const dom = adopted.dom;
+    const parent = dom.parentNode!;
+
+    // Insert an anchor comment after the adopted element to remember position.
+    // If the element is removed, re-inserting before the anchor restores order.
+    const anchor = document.createComment('');
+    parent.insertBefore(anchor, dom.nextSibling);
+
+    let visible = true;
+
+    const update = (newData: ViewState) => {
+        const result = condition(newData);
+        if (result && !visible) {
+            parent.insertBefore(dom, anchor);
+            adopted.mount();
+        } else if (!result && visible) {
+            parent.removeChild(dom);
+            adopted.unmount();
+        }
+        if (result) {
+            adopted.update(newData);
+        }
+        visible = result;
+    };
+
+    return {
+        dom,
+        update,
+        mount: adopted.mount,
+        unmount: adopted.unmount,
+    };
+}
+
+/**
+ * Handle a conditional that was false at SSR time (Level 3).
+ * Returns a comment anchor as dom. The parent adoptElement will insert it
+ * into the DOM.
+ *
+ * Checks the condition immediately with the current ViewState — if the state
+ * has changed since SSR (e.g., services loaded data during client init), the
+ * element is created right away rather than waiting for the first update.
+ */
+function hydrateConditionalFalse<ViewState>(
+    condition: (vs: ViewState) => boolean,
+    createElement: () => BaseJayElement<ViewState>,
+): BaseJayElement<ViewState> {
+    const context = currentConstructionContext();
+    const savedContext = saveContext();
+    const anchor = document.createComment('');
+    let created: BaseJayElement<ViewState> | undefined;
+    let visible = false;
+
+    // Check condition with current state — it may already be true
+    // if data arrived between SSR and hydration (e.g., client init).
+    const initialResult = condition(context.currData as ViewState);
+    if (initialResult) {
+        created = wrapWithModifiedCheck(context.currData, createElement());
+        visible = true;
+    }
+
+    const update = (newData: ViewState) => {
+        const result = condition(newData);
+
+        // Lazy creation: build the element on first true
+        if (!created && result) {
+            restoreContext(savedContext, () => {
+                created = wrapWithModifiedCheck(
+                    currentConstructionContext().currData,
+                    createElement(),
+                );
+            });
+        }
+
+        if (result && !visible && created) {
+            anchor.parentNode!.insertBefore(created.dom, anchor);
+            created.mount();
+        } else if (!result && visible && created) {
+            anchor.parentNode!.removeChild(created.dom);
+            created.unmount();
+        }
+        if (result && created) {
+            created.update(newData);
+        }
+        visible = result;
+    };
+
+    // Always return anchor as dom — adoptElement inserts Comment nodes into
+    // the parent. If element was created immediately, it will be inserted
+    // before the anchor when adoptElement processes children.
+    return {
+        dom: anchor as any,
+        update,
+        mount: () => {
+            // If created immediately, insert before anchor once it's in the DOM
+            if (created && visible && anchor.parentNode && !created.dom.parentNode) {
+                anchor.parentNode.insertBefore(created.dom, anchor);
+                created.mount();
+            }
+        },
+        unmount: () => {
+            if (created && visible) {
+                created.unmount();
+            }
+        },
+    };
+}
+
+// ============================================================================
+// hydrateForEach
+// ============================================================================
+
+/**
+ * Hydration-aware forEach.
+ *
+ * Adopts existing items that were server-rendered, and creates new items via
+ * the regular element creation path when the list changes.
+ *
+ * Uses a Kindergarten group for DOM ordering within the container element.
+ * The container element is the parent of the first adopted item (the element
+ * adopted by the parent adoptElement call).
+ *
+ * @param containerCoordinate - Coordinate of the container element (e.g. the <ul>)
+ * @param accessor - Function to get the array from the ViewState
+ * @param trackBy - Property name used for item identity (reconciliation key)
+ * @param adoptItem - Called per existing item during hydration (should use adoptText/adoptElement)
+ * @param createItem - Called per new item (regular element()/dynamicText() from generated-element.ts)
+ */
+export function hydrateForEach<ViewState, Item>(
+    containerCoordinate: string,
+    accessor: (vs: ViewState) => Item[],
+    trackBy: string,
+    adoptItem: () => BaseJayElement<Item>[],
+    createItem: (item: Item, id: string) => BaseJayElement<Item>,
+): BaseJayElement<ViewState> {
+    const context = currentConstructionContext();
+    const savedContext = saveContext();
+    const parentContext = context;
+
+    // Get initial items from current ViewState
+    const initialItems: Item[] = accessor(context.currData as ViewState) || [];
+
+    // Adopt existing items. For each item:
+    // 1. Resolve the item's root DOM element by its trackBy coordinate (BEFORE forItem scope)
+    // 2. Create a forItem child context (which changes coordinateBase)
+    // 3. Call adoptItem within that context (adopts inner elements like text, attributes)
+    // 4. Build a BaseJayElement with dom = item root element, updates from adopted children
+    const adoptedItems: BaseJayElement<Item>[] = [];
+    for (const item of initialItems) {
+        const id = String(item[trackBy]);
+
+        // Resolve the item root element at the CURRENT scope (before forItem changes base)
+        const itemDom = context.resolveCoordinate(id);
+
+        const childContext = context.forItem(item, id);
+        const adopted = withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => {
+            const elements = adoptItem();
+            // Combine array of adopted elements into a single BaseJayElement
+            const updates: updateFunc<Item>[] = [];
+            const mounts: MountFunc[] = [];
+            const unmounts: MountFunc[] = [];
+            for (const el of elements) {
+                if (el.update !== noopUpdate) updates.push(el.update);
+                if (el.mount !== noopMount) mounts.push(el.mount);
+                if (el.unmount !== noopMount) unmounts.push(el.unmount);
+            }
+            return {
+                dom: itemDom || elements[0]?.dom,
+                update: normalizeUpdates(updates),
+                mount: normalizeMount(mounts),
+                unmount: normalizeMount(unmounts),
+            } as BaseJayElement<Item>;
+        });
+        adoptedItems.push(adopted);
+    }
+
+    // Resolve the container element by coordinate (peek — don't consume).
+    // The same coordinate is used by the parent adoptElement, which evaluates
+    // after hydrateForEach (JS argument evaluation order) and consumes it.
+    const containerElement = context.peekCoordinate(containerCoordinate);
+
+    if (!containerElement) {
+        // Container may be absent when hydrateForEach is inside a hydrateConditional
+        // whose condition was false at SSR time — the server didn't render the content,
+        // so no coordinate exists. hydrateConditional handles this gracefully (returns noop).
+        return { dom: undefined as any, update: noopUpdate, mount: noopMount, unmount: noopMount };
+    }
+
+    // Set up Kindergarten for the container
+    const kindergarten = new Kindergarten(containerElement);
+    const group = kindergarten.newGroup();
+
+    // Pre-register existing item DOM nodes in the group (so offset counting works)
+    for (const adopted of adoptedItems) {
+        if (adopted.dom) {
+            group.children.add(adopted.dom);
+        }
+    }
+
+    // Build the initial list with adopted items as attachments for list-compare
+    let lastItems: Item[] = initialItems;
+    let lastItemsList = new List<Item, BaseJayElement<Item>>(initialItems, trackBy);
+
+    for (let i = 0; i < initialItems.length; i++) {
+        const id = String(initialItems[i][trackBy]);
+        const node = lastItemsList.get(id);
+        if (node) {
+            node.attach = adoptedItems[i];
+        }
+    }
+
+    const mount = () => {
+        lastItemsList.forEach((_value, elem) => {
+            if (elem && elem.mount !== noopMount) elem.mount();
+        });
+    };
+    const unmount = () => {
+        lastItemsList.forEach((_value, elem) => {
+            if (elem && elem.unmount !== noopMount) elem.unmount();
+        });
+    };
+
+    const update = (newData: ViewState) => {
+        const items = accessor(newData) || [];
+        const isModified = items !== lastItems;
+        lastItems = items;
+
+        if (isModified) {
+            const itemsList = new List<Item, BaseJayElement<Item>>(items, trackBy);
+            const instructions = listCompare<Item, BaseJayElement<Item>>(
+                lastItemsList,
+                itemsList,
+                (item: Item, id: string) => {
+                    // Create new items via the regular creation path
+                    const childContext = parentContext.forItem(item, id);
+                    return restoreContext(savedContext, () =>
+                        withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () =>
+                            wrapWithModifiedCheck(
+                                currentConstructionContext().currData,
+                                createItem(item, id),
+                            ),
+                        ),
+                    );
+                },
+            );
+            lastItemsList = itemsList;
+            applyListChanges(group, instructions);
+            itemsList.forEach((value, elem) => elem.update(value));
+        }
+    };
+
+    return {
+        dom: containerElement,
+        update,
+        mount,
+        unmount,
+    };
+}
+
+/**
+ * Apply list changes to the DOM via KindergartenGroup.
+ * (Same logic as in element.ts but exported for hydration use.)
+ */
+function applyListChanges<Item>(
+    group: KindergartenGroup,
+    instructions: Array<MatchResult<Item, BaseJayElement<Item>>>,
+) {
+    instructions.forEach((instruction) => {
+        if (instruction.action === ITEM_ADDED) {
+            group.ensureNode(instruction.elem.dom, instruction.pos);
+            instruction.elem.mount();
+        } else if (instruction.action === ITEM_REMOVED) {
+            group.removeNodeAt(instruction.pos);
+            instruction.elem.unmount();
+        } else {
+            group.moveNode(instruction.fromPos, instruction.pos);
+        }
+    });
+}

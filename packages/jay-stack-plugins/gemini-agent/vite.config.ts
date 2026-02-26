@@ -5,7 +5,7 @@ import { JayRollupConfig, jayStackCompiler } from '@jay-framework/compiler-jay-s
 const root = resolve(__dirname);
 const jayOptions: JayRollupConfig = {
     tsConfigFilePath: resolve(root, 'tsconfig.json'),
-    outputDir: 'build/jay-runtime',
+    outputDir: 'build',
 };
 
 export default defineConfig(({ isSsrBuild }) => ({

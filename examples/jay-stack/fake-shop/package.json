@@ -5,6 +5,8 @@
   "private": true,
   "license": "Apache-2.0",
   "scripts": {
+    "setup": "jay-stack-cli setup",
+    "agent-kit": "jay-stack-cli agent-kit",
     "dev": "jay-stack-cli dev",
     "contracts": "jay-stack-cli contracts",
     "contracts:list": "jay-stack-cli contracts --list",

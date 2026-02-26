@@ -8,6 +8,7 @@ import { makeJayAction } from '@jay-framework/fullstack-component';
 import { getService } from '@jay-framework/stack-server-runtime';
 import { GEMINI_SERVICE } from '../init';
 import { handleConversation } from '../agent/message-handler';
+import { loadToolDescriptions } from '../agent/tool-descriptions';
 import type {
     SendMessageInput,
     SendMessageOutput,
@@ -63,4 +64,17 @@ export const submitToolResults = makeJayAction('geminiAgent.submitToolResults')
         ];
 
         return handleConversation(service, updatedHistory, toolDefinitions, pageState);
+    });
+
+/**
+ * Returns tool descriptions extracted from .jay-contract files.
+ *
+ * Internal use only — called once by the client component at init.
+ * Not exposed to the LLM (filtered by geminiAgent.* prefix).
+ * Results are cached server-side after the first call.
+ */
+export const getToolDescriptions = makeJayAction('geminiAgent.getToolDescriptions')
+    .withMethod('GET')
+    .withHandler(async () => {
+        return loadToolDescriptions(process.cwd());
     });

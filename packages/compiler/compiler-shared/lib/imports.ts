@@ -4,6 +4,7 @@ import {
     JAY_FULLSTACK_COMPONENTS,
     JAY_RUNTIME,
     JAY_SECURE,
+    JAY_SSR_RUNTIME,
     JAY_STACK_CLIENT_RUNTIME,
 } from './constants';
 
@@ -291,6 +292,25 @@ export const Import = {
     makeHeadlessInstanceComponent: importStatementFragment(
         JAY_STACK_CLIENT_RUNTIME,
         'makeHeadlessInstanceComponent',
+        ImportsFor.implementation,
+    ),
+    adoptText: importStatementFragment(JAY_RUNTIME, 'adoptText', ImportsFor.implementation),
+    adoptElement: importStatementFragment(JAY_RUNTIME, 'adoptElement', ImportsFor.implementation),
+    hydrateConditional: importStatementFragment(
+        JAY_RUNTIME,
+        'hydrateConditional',
+        ImportsFor.implementation,
+    ),
+    hydrateForEach: importStatementFragment(
+        JAY_RUNTIME,
+        'hydrateForEach',
+        ImportsFor.implementation,
+    ),
+    escapeHtml: importStatementFragment(JAY_SSR_RUNTIME, 'escapeHtml', ImportsFor.implementation),
+    escapeAttr: importStatementFragment(JAY_SSR_RUNTIME, 'escapeAttr', ImportsFor.implementation),
+    ServerRenderContext: importStatementFragment(
+        JAY_SSR_RUNTIME,
+        'type ServerRenderContext',
         ImportsFor.implementation,
     ),
 };

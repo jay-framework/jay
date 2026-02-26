@@ -33,7 +33,7 @@ export interface JayImportResolver {
     /**
      * Load a contract from a plugin, handling both static and dynamic contracts.
      * For static contracts, loads from the plugin's contract file.
-     * For dynamic contracts, loads from materialized location (build/materialized-contracts/).
+     * For dynamic contracts, loads from materialized location (agent-kit/materialized-contracts/).
      *
      * Returns the contract, path, and optional metadata (for dynamic contracts).
      */
@@ -86,9 +86,9 @@ export const JAY_IMPORT_RESOLVER: JayImportResolver = {
             return contractResult.map((contract) => ({ contract, contractPath }));
         }
 
-        // Dynamic contract - try materialized location
+        // Dynamic contract - try materialized location (agent-kit is the single source of truth)
         // Contract name format: "prefix/name" (e.g., "list/recipes-list")
-        const materializedDir = path.join(projectRoot, 'build/materialized-contracts');
+        const materializedDir = path.join(projectRoot, 'agent-kit/materialized-contracts');
 
         // Convert plugin name to directory name (e.g., "@jay-framework/wix-data" -> "wix-data")
         const pluginDir = pluginName.startsWith('@')

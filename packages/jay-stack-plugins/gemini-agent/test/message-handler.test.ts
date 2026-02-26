@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handleConversation, processGeminiTurn } from '../lib/agent/message-handler';
 import { GeminiService } from '../lib/agent/service';
-import type { GeminiMessage, SerializedToolDef } from '../lib/types';
+import type { GeminiMessage, GeminiFunctionDeclaration, SerializedToolDef } from '../lib/types';
 
 // Mock dependencies
 vi.mock('@jay-framework/stack-server-runtime', () => ({
@@ -16,6 +16,15 @@ vi.mock('@google/genai', () => ({
     Type: {},
 }));
 
+vi.mock('@jay-framework/logger', () => ({
+    getLogger: () => ({
+        important: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+    }),
+}));
+
 function mockService(responseFactory: () => any): GeminiService {
     const service = Object.create(GeminiService.prototype);
     service.config = { apiKey: 'test', model: 'gemini-2.0-flash' };
@@ -24,6 +33,10 @@ function mockService(responseFactory: () => any): GeminiService {
     Object.defineProperty(service, 'systemPromptPrefix', { get: () => undefined });
     return service;
 }
+
+const emptyLookup = new Map<string, GeminiFunctionDeclaration>();
+const emptyPageState = {};
+const emptyDiscovered = new Set<string>();
 
 describe('message-handler', () => {
     describe('processGeminiTurn', () => {
@@ -46,6 +59,9 @@ describe('message-handler', () => {
                 [],
                 'System prompt',
                 new Set(),
+                emptyLookup,
+                emptyPageState,
+                emptyDiscovered,
             );
 
             expect(result.type).toBe('response');
@@ -56,7 +72,69 @@ describe('message-handler', () => {
             }
         });
 
-        it('should return tool-calls when Gemini requests page automation tools', async () => {
+        it('should reject undiscovered tool calls with error', async () => {
+            let callCount = 0;
+            const service = mockService(() => {
+                callCount++;
+                if (callCount === 1) {
+                    return {
+                        candidates: [
+                            {
+                                content: {
+                                    parts: [
+                                        {
+                                            functionCall: {
+                                                name: 'click-add-to-cart',
+                                                args: {},
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                    };
+                }
+                return {
+                    candidates: [
+                        {
+                            content: {
+                                parts: [{ text: 'Let me discover the tool first.' }],
+                            },
+                        },
+                    ],
+                };
+            });
+
+            const result = await processGeminiTurn(
+                service,
+                [{ role: 'user', parts: [{ text: 'Add to cart' }] }],
+                [],
+                'System prompt',
+                new Set(['click-add-to-cart']),
+                emptyLookup,
+                emptyPageState,
+                new Set<string>(),
+            );
+
+            // Should have recursed: first call rejected, second call text
+            expect(service.generateWithTools).toHaveBeenCalledTimes(2);
+
+            // The error response should be in the history of the second call
+            const secondCallHistory = vi.mocked(service.generateWithTools).mock
+                .calls[1][0] as GeminiMessage[];
+            const errorPart = secondCallHistory.find(
+                (m) =>
+                    m.role === 'user' &&
+                    m.parts.some(
+                        (p: any) =>
+                            p.functionResponse?.name === 'click-add-to-cart' &&
+                            p.functionResponse?.response?.error,
+                    ),
+            );
+            expect(errorPart).toBeDefined();
+        });
+
+        it('should allow discovered tool calls through', async () => {
             const service = mockService(() => ({
                 candidates: [
                     {
@@ -75,23 +153,23 @@ describe('message-handler', () => {
             }));
 
             const clientTools = new Set(['click-add-to-cart']);
-            const history: GeminiMessage[] = [
-                { role: 'user', parts: [{ text: 'Add item to cart' }] },
-            ];
+            const discovered = new Set(['click-add-to-cart']);
 
             const result = await processGeminiTurn(
                 service,
-                history,
+                [{ role: 'user', parts: [{ text: 'Add to cart' }] }],
                 [],
                 'System prompt',
                 clientTools,
+                emptyLookup,
+                emptyPageState,
+                discovered,
             );
 
             expect(result.type).toBe('tool-calls');
             if (result.type === 'tool-calls') {
                 expect(result.calls).toHaveLength(1);
                 expect(result.calls[0].name).toBe('click-add-to-cart');
-                expect(result.calls[0].category).toBe('page-automation');
             }
         });
 
@@ -135,14 +213,17 @@ describe('message-handler', () => {
                 data: [{ name: 'Running Shoe', price: 99 }],
             });
 
-            const history: GeminiMessage[] = [{ role: 'user', parts: [{ text: 'Find shoes' }] }];
+            const discovered = new Set(['action_store_searchProducts']);
 
             const result = await processGeminiTurn(
                 service,
-                history,
+                [{ role: 'user', parts: [{ text: 'Find shoes' }] }],
                 [],
                 'System prompt',
                 new Set(),
+                emptyLookup,
+                emptyPageState,
+                discovered,
             );
 
             expect(result.type).toBe('response');
@@ -153,7 +234,6 @@ describe('message-handler', () => {
             expect(actionRegistry.execute).toHaveBeenCalledWith('store.searchProducts', {
                 query: 'shoes',
             });
-            expect(service.generateWithTools).toHaveBeenCalledTimes(2);
         });
 
         it('should handle empty/malformed responses gracefully', async () => {
@@ -161,14 +241,15 @@ describe('message-handler', () => {
                 candidates: [],
             }));
 
-            const history: GeminiMessage[] = [{ role: 'user', parts: [{ text: 'Hello' }] }];
-
             const result = await processGeminiTurn(
                 service,
-                history,
+                [{ role: 'user', parts: [{ text: 'Hello' }] }],
                 [],
                 'System prompt',
                 new Set(),
+                emptyLookup,
+                emptyPageState,
+                emptyDiscovered,
             );
 
             expect(result.type).toBe('response');
@@ -177,71 +258,150 @@ describe('message-handler', () => {
             }
         });
 
-        it('should handle mixed server + client tool calls', async () => {
-            const { actionRegistry } = await import('@jay-framework/stack-server-runtime');
+        it('should handle get_tool_details, upgrade declarations, and mark as discovered', async () => {
+            let callCount = 0;
+            const service = mockService(() => {
+                callCount++;
+                if (callCount === 1) {
+                    return {
+                        candidates: [
+                            {
+                                content: {
+                                    parts: [
+                                        {
+                                            functionCall: {
+                                                name: 'get_tool_details',
+                                                args: {
+                                                    tool_names: ['fill-quantity'],
+                                                },
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                    };
+                }
+                // After discovery, call the tool
+                if (callCount === 2) {
+                    return {
+                        candidates: [
+                            {
+                                content: {
+                                    parts: [
+                                        {
+                                            functionCall: {
+                                                name: 'fill-quantity',
+                                                args: { coordinate: '0/0', value: '3' },
+                                            },
+                                        },
+                                    ],
+                                },
+                            },
+                        ],
+                    };
+                }
+                return {
+                    candidates: [{ content: { parts: [{ text: 'Done' }] } }],
+                };
+            });
 
-            const service = mockService(() => ({
-                candidates: [
+            const fullToolLookup = new Map<string, GeminiFunctionDeclaration>([
+                [
+                    'fill-quantity',
                     {
-                        content: {
-                            parts: [
-                                {
-                                    functionCall: {
-                                        name: 'action_store_search',
-                                        args: { q: 'test' },
-                                    },
-                                },
-                                {
-                                    functionCall: {
-                                        name: 'click-button',
-                                        args: {},
-                                    },
-                                },
-                            ],
+                        name: 'fill-quantity',
+                        description: 'Fill quantity',
+                        parameters: {
+                            type: 'object',
+                            properties: {
+                                coordinate: { type: 'string', enum: ['0/0', '0/1'] },
+                                value: { type: 'string' },
+                            },
+                            required: ['coordinate', 'value'],
                         },
                     },
                 ],
-            }));
+            ]);
 
-            vi.mocked(actionRegistry.execute).mockResolvedValue({
-                success: true,
-                data: { found: true },
-            });
-
-            const history: GeminiMessage[] = [{ role: 'user', parts: [{ text: 'Do stuff' }] }];
+            // Start with slim declaration
+            const slimTools: GeminiFunctionDeclaration[] = [
+                {
+                    name: 'fill-quantity',
+                    description: 'Fill quantity',
+                    parameters: { type: 'object', properties: {} },
+                },
+            ];
 
             const result = await processGeminiTurn(
                 service,
-                history,
-                [],
+                [{ role: 'user', parts: [{ text: 'Set qty to 3' }] }],
+                slimTools,
                 'System prompt',
-                new Set(['click-button']),
+                new Set(['fill-quantity']),
+                fullToolLookup,
+                emptyPageState,
+                new Set<string>(),
             );
 
-            // Has client calls → returns tool-calls
+            // Turn 1: discover, Turn 2: call fill-quantity (now discovered → goes to client)
             expect(result.type).toBe('tool-calls');
             if (result.type === 'tool-calls') {
-                // Only client calls are pending
-                expect(result.calls).toHaveLength(1);
-                expect(result.calls[0].name).toBe('click-button');
-                expect(result.calls[0].category).toBe('page-automation');
+                expect(result.calls[0].name).toBe('fill-quantity');
             }
 
-            // Server action was still executed
-            expect(actionRegistry.execute).toHaveBeenCalledWith('store.search', { q: 'test' });
+            // Second call should have full declaration (not slim)
+            const secondCallTools = vi.mocked(service.generateWithTools).mock
+                .calls[1][1] as GeminiFunctionDeclaration[];
+            const fillQty = secondCallTools.find((t) => t.name === 'fill-quantity');
+            expect(fillQty!.parameters.properties.coordinate).toBeDefined();
+            expect(fillQty!.parameters.properties.coordinate.enum).toEqual(['0/0', '0/1']);
+        });
+
+        it('should handle get_page_state calls and return full page state', async () => {
+            let callCount = 0;
+            const service = mockService(() => {
+                callCount++;
+                if (callCount === 1) {
+                    return {
+                        candidates: [
+                            {
+                                content: {
+                                    parts: [{ functionCall: { name: 'get_page_state', args: {} } }],
+                                },
+                            },
+                        ],
+                    };
+                }
+                return {
+                    candidates: [{ content: { parts: [{ text: '5 products.' }] } }],
+                };
+            });
+
+            const pageState = {
+                products: Array.from({ length: 5 }, (_, i) => ({ name: `P${i}` })),
+            };
+
+            const result = await processGeminiTurn(
+                service,
+                [{ role: 'user', parts: [{ text: 'How many?' }] }],
+                [],
+                'System prompt',
+                new Set(),
+                emptyLookup,
+                pageState,
+                emptyDiscovered,
+            );
+
+            expect(result.type).toBe('response');
+            expect(service.generateWithTools).toHaveBeenCalledTimes(2);
         });
     });
 
     describe('handleConversation', () => {
-        it('should build tools and system prompt and process turn', async () => {
+        it('should send slim tools + meta-tools as declarations', async () => {
             const service = mockService(() => ({
-                candidates: [
-                    {
-                        content: {
-                            parts: [{ text: 'Response text' }],
-                        },
-                    },
-                ],
+                candidates: [{ content: { parts: [{ text: 'Response text' }] } }],
             }));
 
             const toolDefs: SerializedToolDef[] = [
@@ -251,19 +411,77 @@ describe('message-handler', () => {
                     inputSchema: { type: 'object', properties: {} },
                     category: 'page-automation',
                 },
+                {
+                    name: 'fill-search',
+                    description: 'Fill search',
+                    inputSchema: {
+                        type: 'object',
+                        properties: { value: { type: 'string' } },
+                        required: ['value'],
+                    },
+                    category: 'page-automation',
+                },
             ];
 
-            const result = await handleConversation(
+            await handleConversation(
                 service,
                 [{ role: 'user', parts: [{ text: 'Hello' }] }],
                 toolDefs,
                 { viewState: { title: 'Test' } },
             );
 
-            expect(result.type).toBe('response');
-            // System prompt should include page state
-            const systemPromptArg = vi.mocked(service.generateWithTools).mock.calls[0][2];
-            expect(systemPromptArg).toContain('Test');
+            const toolsArg = vi.mocked(service.generateWithTools).mock
+                .calls[0][1] as GeminiFunctionDeclaration[];
+            const toolNames = toolsArg.map((t) => t.name);
+
+            // Slim tools + meta-tools
+            expect(toolNames).toContain('click-btn');
+            expect(toolNames).toContain('fill-search');
+            expect(toolNames).toContain('get_tool_details');
+            expect(toolNames).toContain('get_page_state');
+
+            // Slim tools should have empty parameters
+            const clickBtn = toolsArg.find((t) => t.name === 'click-btn');
+            expect(clickBtn!.parameters).toEqual({ type: 'object', properties: {} });
+        });
+
+        it('should exclude gemini agent own actions from tools', async () => {
+            const { actionRegistry } = await import('@jay-framework/stack-server-runtime');
+
+            vi.mocked(actionRegistry.getActionsWithMetadata).mockReturnValue([
+                {
+                    actionName: 'geminiAgent.sendMessage',
+                    metadata: {
+                        name: 'sendMessage',
+                        description: 'Send a message',
+                        inputSchema: { type: 'object', properties: {} },
+                    },
+                },
+                {
+                    actionName: 'wixStoresV1.searchProducts',
+                    metadata: {
+                        name: 'searchProducts',
+                        description: 'Search for products',
+                        inputSchema: {
+                            type: 'object',
+                            properties: { query: { type: 'string' } },
+                        },
+                    },
+                },
+            ] as any);
+
+            const service = mockService(() => ({
+                candidates: [{ content: { parts: [{ text: 'Response' }] } }],
+            }));
+
+            await handleConversation(service, [{ role: 'user', parts: [{ text: 'Hi' }] }], [], {});
+
+            const toolsArg = vi.mocked(service.generateWithTools).mock
+                .calls[0][1] as GeminiFunctionDeclaration[];
+            const toolNames = toolsArg.map((t) => t.name);
+
+            expect(toolNames).not.toContain('action_geminiAgent_sendMessage');
+            expect(toolNames).toContain('action_wixStoresV1_searchProducts');
         });
     });
 });
