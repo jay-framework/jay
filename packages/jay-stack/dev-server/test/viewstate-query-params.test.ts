@@ -22,6 +22,10 @@ describe('extractViewStateParams', () => {
         expect(extractViewStateParams(query)).toBeUndefined();
     });
 
+    it('returns undefined when query is undefined', () => {
+        expect(extractViewStateParams(undefined)).toBeUndefined();
+    });
+
     it('extracts only vs params and strips prefix', () => {
         const query = { 'vs.title': 'Hello', 'vs.price': '42', foo: 'bar' };
         expect(extractViewStateParams(query)).toEqual({ title: 'Hello', price: '42' });
@@ -411,6 +415,40 @@ describe('findContractTag', () => {
         const tag = findContractTag([], contract);
         expect(tag).toBeUndefined();
     });
+
+    it('finds headless tag when no page contract exists', () => {
+        const headlessContracts = [
+            {
+                key: 'productPage',
+                contract: {
+                    name: 'ProductPage',
+                    tags: [
+                        { tag: 'product-name', type: [ContractTagType.data], dataType: JayString },
+                        { tag: 'price', type: [ContractTagType.data], dataType: JayNumber },
+                    ],
+                },
+            },
+        ];
+        const tag = findContractTag(['productPage', 'price'], undefined, headlessContracts);
+        expect(tag?.tag).toBe('price');
+        expect(tag?.dataType).toBe(JayNumber);
+    });
+
+    it('returns undefined for unknown path when no page contract exists', () => {
+        const headlessContracts = [
+            {
+                key: 'productPage',
+                contract: {
+                    name: 'ProductPage',
+                    tags: [
+                        { tag: 'product-name', type: [ContractTagType.data], dataType: JayString },
+                    ],
+                },
+            },
+        ];
+        const tag = findContractTag(['unknownKey', 'field'], undefined, headlessContracts);
+        expect(tag).toBeUndefined();
+    });
 });
 
 describe('applyViewStateOverrides', () => {
@@ -481,6 +519,43 @@ describe('applyViewStateOverrides', () => {
         const overrides = { title: 'Changed' };
         applyViewStateOverrides(viewState, overrides);
         expect(viewState).toEqual({ title: 'Original' });
+    });
+
+    it('works with no page contract (headless-only page)', () => {
+        const headlessContracts = [
+            {
+                key: 'productPage',
+                contract: {
+                    name: 'ProductPage',
+                    tags: [
+                        { tag: 'product-name', type: [ContractTagType.data], dataType: JayString },
+                        { tag: 'price', type: [ContractTagType.data], dataType: JayNumber },
+                    ],
+                },
+            },
+        ];
+        const viewState = {
+            productPage: { productName: 'Baseball Cap', price: 68 },
+        };
+        const overrides = {
+            'productPage.productName': 'Custom Product',
+            'productPage.price': '99',
+        };
+        const result = applyViewStateOverrides(viewState, overrides, undefined, headlessContracts);
+        expect(result).toEqual({
+            productPage: { productName: 'Custom Product', price: 99 },
+        });
+    });
+
+    it('applies string overrides on headless-only page without type coercion', () => {
+        const viewState = {
+            myPlugin: { title: 'Original', description: 'Desc' },
+        };
+        const overrides = { 'myPlugin.title': 'Override' };
+        const result = applyViewStateOverrides(viewState, overrides, undefined, []);
+        expect(result).toEqual({
+            myPlugin: { title: 'Override', description: 'Desc' },
+        });
     });
 
     it('creates array from empty state', () => {

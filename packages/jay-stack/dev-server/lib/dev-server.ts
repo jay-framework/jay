@@ -784,17 +784,21 @@ async function handleDirectRequest(
 
     // Apply ViewState overrides from query params if present
     if (vsParams) {
+        let contract: Contract | undefined;
         const contractPath = route.jayHtmlPath.replace('.jay-html', '.jay-contract');
-        const loadResult = JAY_IMPORT_RESOLVER.loadContract(contractPath);
-
-        // Log warnings for parse errors (but continue - overrides will work as strings)
-        if (!loadResult.val && loadResult.validations.length > 0) {
-            getLogger().warn(
-                `[ViewState Overrides] Contract parse errors in ${contractPath}: ${loadResult.validations.join(', ')}`,
-            );
+        try {
+            const loadResult = JAY_IMPORT_RESOLVER.loadContract(contractPath);
+            if (!loadResult.val && loadResult.validations.length > 0) {
+                getLogger().warn(
+                    `[ViewState Overrides] Contract parse errors in ${contractPath}: ${loadResult.validations.join(', ')}`,
+                );
+            }
+            contract = loadResult.val;
+        } catch {
+            // No page contract file — page uses only headless components
         }
 
-        viewState = applyViewStateOverrides(viewState, vsParams, loadResult.val, headlessContracts);
+        viewState = applyViewStateOverrides(viewState, vsParams, contract, headlessContracts);
     }
 
     // Use original jay-html path (no pre-rendering)
@@ -906,19 +910,21 @@ async function preRenderJayHtml(
     const jayHtmlContent = await fs.readFile(route.jayHtmlPath, 'utf-8');
 
     // Load and parse the main contract for phase detection
+    // Contract file might not exist (pages with only headless components) — that's OK
+    let contract: Contract | undefined;
     const contractPath = route.jayHtmlPath.replace('.jay-html', '.jay-contract');
-    const loadResult = JAY_IMPORT_RESOLVER.loadContract(contractPath);
-
-    // Log errors for parse failures and return undefined (slow render cannot continue)
-    if (!loadResult.val && loadResult.validations.length > 0) {
-        getLogger().error(
-            `[SlowRender] Contract parse errors in ${contractPath}: ${loadResult.validations.join(', ')}`,
-        );
-        return undefined;
+    try {
+        const loadResult = JAY_IMPORT_RESOLVER.loadContract(contractPath);
+        if (!loadResult.val && loadResult.validations.length > 0) {
+            getLogger().error(
+                `[SlowRender] Contract parse errors in ${contractPath}: ${loadResult.validations.join(', ')}`,
+            );
+            return undefined;
+        }
+        contract = loadResult.val;
+    } catch {
+        // No page contract file — page uses only headless components
     }
-
-    // Contract file might not exist (ENOENT) - that's OK, continue without contract
-    const contract = loadResult.val;
 
     // ── Pass 1: Resolve page-level slow bindings ──
     const result = slowRenderTransform({
