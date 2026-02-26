@@ -18,8 +18,10 @@ export type CoerceResult = { value: unknown; ok: true } | { ok: false; reason: s
  * Accepts any query object (Record or ParsedQs from Express).
  */
 export function extractViewStateParams(
-    query: Record<string, any>,
+    query: Record<string, any> | undefined,
 ): Record<string, string> | undefined {
+    if (!query) return undefined;
+
     const vsParams: Record<string, string> = {};
     let hasAny = false;
 
