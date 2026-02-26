@@ -140,6 +140,7 @@ In `renderHydrateElement` for conditionals, also generate the creation code usin
 **Runtime tests** (`packages/runtime/runtime/test/lib/hydration/hydrate-conditional.test.ts`):
 
 Added 9 tests covering:
+
 - False at SSR, still false at hydration — anchor only
 - False at SSR → toggled true — element created via fallback
 - False at SSR → true → false — created then removed
@@ -149,6 +150,12 @@ Added 9 tests covering:
 - False at SSR, true at hydration → toggle off/on
 - True at SSR, false at hydration → first update removes
 - True at SSR, false at hydration → toggle back (same node)
+
+### Bug fix: create callbacks must use `de()` for parents with conditional children
+
+The create callbacks in both `hydrateConditional` and `hydrateForEach` initially used `e()` (static element) for the fallback element wrapper. But when the element has conditional children (`c()`), the parent must use `de()` (dynamicElement with Kindergarten) to manage child insertion/removal. Without `de()`, `normalizeUpdates` crashes because `e()` doesn't handle `Conditional` descriptors.
+
+Fix: the hydrate compiler checks `createChildNodes` for conditionals/forEach/async (same check as the standard element target at `needDynamicElement`) and emits `de()` instead of `e()` when needed.
 
 ### Key insight: hydration cannot assume client state matches SSR state
 

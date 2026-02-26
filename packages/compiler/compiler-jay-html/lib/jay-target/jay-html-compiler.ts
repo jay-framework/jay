@@ -2096,12 +2096,24 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
                           RenderFragment.empty(),
                       );
         const createAttributes = renderAttributes(element, createRenderContext);
-        const createBody = `() => e('${element.rawTagName}', ${createAttributes.rendered}, [${createChildren.rendered}])`;
+        // Use de() (dynamicElement) when children include conditionals/forEach,
+        // matching the standard element target's e() vs de() decision.
+        const needDynamicElement = createChildNodes.some(
+            (_) =>
+                _.nodeType === NodeType.ELEMENT_NODE &&
+                (isConditional(_ as HTMLElement) ||
+                    isForEach(_ as HTMLElement) ||
+                    isSlowForEach(_ as HTMLElement) ||
+                    checkAsync(_ as HTMLElement).isAsync),
+        );
+        const createElementFunc = needDynamicElement ? 'de' : 'e';
+        const createElementImport = needDynamicElement ? Import.dynamicElement : Import.element;
+        const createBody = `() => ${createElementFunc}('${element.rawTagName}', ${createAttributes.rendered}, [${createChildren.rendered}])`;
 
         return new RenderFragment(
             `${context.indent.firstLine}hydrateConditional(${renderedCondition.rendered}, ${adoptBody},\n${context.indent.firstLine}    ${createBody})`,
             Imports.for(Import.hydrateConditional)
-                .plus(Import.element)
+                .plus(createElementImport)
                 .plus(renderedCondition.imports)
                 .plus(childContent.imports)
                 .plus(createChildren.imports)
@@ -2189,12 +2201,23 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
                           RenderFragment.empty(),
                       );
         const createAttributes = renderAttributes(element, createRenderContext);
-        const createBody = `(${forEachVariables.currentVar}: ${forEachVariables.currentType.name}) => {\n${indent.firstLine}    return e('${element.rawTagName}', ${createAttributes.rendered}, [${createChildren.rendered}]);\n${indent.firstLine}    }`;
+        // Use de() when children include conditionals/forEach, matching standard target
+        const forEachNeedsDynamic = createChildNodes.some(
+            (_) =>
+                _.nodeType === NodeType.ELEMENT_NODE &&
+                (isConditional(_ as HTMLElement) ||
+                    isForEach(_ as HTMLElement) ||
+                    isSlowForEach(_ as HTMLElement) ||
+                    checkAsync(_ as HTMLElement).isAsync),
+        );
+        const forEachElementFunc = forEachNeedsDynamic ? 'de' : 'e';
+        const forEachElementImport = forEachNeedsDynamic ? Import.dynamicElement : Import.element;
+        const createBody = `(${forEachVariables.currentVar}: ${forEachVariables.currentType.name}) => {\n${indent.firstLine}    return ${forEachElementFunc}('${element.rawTagName}', ${createAttributes.rendered}, [${createChildren.rendered}]);\n${indent.firstLine}    }`;
 
         const hydrateForEachFragment = new RenderFragment(
             `${indent.firstLine}hydrateForEach("${containerCoordinate}", ${forEachFragment.rendered}, '${trackBy}',\n${indent.firstLine}    ${adoptBody},\n${indent.firstLine}    ${createBody},\n${indent.firstLine})`,
             Imports.for(Import.hydrateForEach)
-                .plus(Import.element)
+                .plus(forEachElementImport)
                 .plus(forEachFragment.imports)
                 .plus(itemContent.imports)
                 .plus(createChildren.imports)
