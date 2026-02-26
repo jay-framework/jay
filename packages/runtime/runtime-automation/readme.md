@@ -81,12 +81,16 @@ Plugin client inits run **before** the page component is created, so `window.__j
 // In a plugin's client init
 const automation = (window as any).__jay?.automation;
 if (automation) {
-    // Already available
-    setup(automation);
+  // Already available
+  setup(automation);
 } else {
-    window.addEventListener('jay:automation-ready', () => {
-        setup((window as any).__jay.automation);
-    }, { once: true });
+  window.addEventListener(
+    'jay:automation-ready',
+    () => {
+      setup((window as any).__jay.automation);
+    },
+    { once: true },
+  );
 }
 ```
 
