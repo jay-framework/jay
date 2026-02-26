@@ -1,5 +1,7 @@
 # Design Log #96: ViewState Query Params in Dev Server
 
+Related: [System Design](./96a%20-%20viewstate%20query%20params%20-%20system%20design.md) | [Execution Plan](./96b%20-%20viewstate%20query%20params%20-%20execution%20plan.md)
+
 ## Background
 
 The Jay dev server renders jay-html pages by running headless component logic (plugins, page.ts) through a three-phase pipeline (slow → fast → interactive). The resulting ViewState data fills `{binding}` expressions in jay-html templates.
