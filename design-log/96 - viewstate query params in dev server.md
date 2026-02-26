@@ -219,7 +219,7 @@ function findContractTag(
 
 #### 4. Type Coercion (`coerceValue`)
 
-Pseudocode — actual implementation should use `JayTypeKind` enum values and `isEnumType()` from `compiler-shared`. Returns `{ value, ok }` so caller can log on failure:
+Pseudocode — uses `isEnumType()` and `isAtomicType()` type guards from `compiler-shared`. All primitive types (`string`, `number`, `boolean`, `Date`) are `JayAtomicType` with `kind = JayTypeKind.atomic`, distinguished by `name`. Returns `{ value, ok }` so caller can log on failure:
 
 ```typescript
 type CoerceResult = { value: unknown; ok: true } | { ok: false; reason: string };
@@ -243,24 +243,29 @@ function coerceValue(rawValue: string, tag?: ContractTag): CoerceResult {
         return { ok: false, reason: `"${rawValue}" is not a valid enum value (${dataType.values.join(', ')})` };
     }
 
-    switch (dataType.kind) {
-        case 'number': {
-            const num = Number(rawValue);
-            if (Number.isFinite(num)) return { value: num, ok: true };
-            return { ok: false, reason: `"${rawValue}" is not a valid number` };
+    // Atomic types: all have kind = JayTypeKind.atomic, distinguished by name
+    if (isAtomicType(dataType)) {
+        switch (dataType.name) {
+            case 'number': {
+                const num = Number(rawValue);
+                if (Number.isFinite(num)) return { value: num, ok: true };
+                return { ok: false, reason: `"${rawValue}" is not a valid number` };
+            }
+            case 'boolean': {
+                if (rawValue === 'true') return { value: true, ok: true };
+                if (rawValue === 'false') return { value: false, ok: true };
+                return { ok: false, reason: `"${rawValue}" is not a valid boolean (expected "true" or "false")` };
+            }
+            case 'Date': {
+                const date = new Date(rawValue);
+                if (isNaN(date.getTime())) return { ok: false, reason: `"${rawValue}" is not a valid date` };
+                return { value: date.toISOString(), ok: true };
+            }
+            default: return { value: rawValue, ok: true }; // string, Unknown, etc.
         }
-        case 'boolean': {
-            if (rawValue === 'true') return { value: true, ok: true };
-            if (rawValue === 'false') return { value: false, ok: true };
-            return { ok: false, reason: `"${rawValue}" is not a valid boolean (expected "true" or "false")` };
-        }
-        case 'date': {
-            const date = new Date(rawValue);
-            if (isNaN(date.getTime())) return { ok: false, reason: `"${rawValue}" is not a valid date` };
-            return { value: date.toISOString(), ok: true };
-        }
-        default: return { value: rawValue, ok: true };
     }
+
+    return { value: rawValue, ok: true };
 }
 ```
 
