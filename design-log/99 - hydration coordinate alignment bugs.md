@@ -337,6 +337,7 @@ Pre-rendered slow-phase forEach items (marked with `slowForEach`, `jayIndex`, `j
 Impact: Refs inside slow-rendered forEach items (e.g., category filter checkboxes) were not associated with their array items — the `forItem` context was never created, so coordinate resolution was unscoped and event handlers didn't wire up.
 
 Fix:
+
 - **Hydrate compiler**: Added `isSlowForEach` handling in `renderHydrateElement`. Wraps adoption in `slowForEachItem()` with the correct array accessor, jayIndex, and jayTrackBy. Uses the item's variable scope but does NOT force adoption on the element root — lets `renderHydrateElementContent` decide naturally, so only children that actually need adoption (refs, dynamic text) get coordinates.
 - **Server compiler**: Added `isSlowForEach` handling in `renderServerElement`. Sets `coordinatePrefix` to the literal jayTrackBy value so child coordinates are prefixed (e.g., `jay-coordinate="{jayTrackBy}/refName"`).
 

@@ -806,3 +806,46 @@ Both issues fixed — see DL#94 "Phase 5 Bug Fix — CSS and Head Links Missing 
 **Files modified:**
 
 - `jay-html-compiler.ts` — `generateServerElementFile` now generates contract import statements for headless types (ViewState, enums, iteration types), excluding Refs types (not used in SSR). Removed enum inlining.
+
+## Appendix: Hydration Timing and Client Init State Mismatch
+
+### Problem
+
+When SSR renders a page, some data is unavailable at server time (e.g., cart data loaded via client init). The SSR ViewState has these parts as `undefined`. Client init runs before hydration in the generated script:
+
+```javascript
+const viewState = {...};        // SSR ViewState (no cart)
+${clientInitExecution}           // Client init runs — sets up cart API
+const pageComp = hydrateCompositeJayComponent(hydrate, viewState, ...);
+const instance = pageComp({});   // Instantiates component
+```
+
+Inside `hydrateCompositeJayComponent`, signals are created from the SSR ViewState:
+
+```typescript
+const partViewState = part.key ? defaultViewState?.[part.key] : defaultViewState;
+const partFastViewState = partViewState ? makeSignals(partViewState) : undefined;
+```
+
+When `partViewState` is `undefined` (e.g., `cartIndicator` not in SSR data), `makeSignals` is skipped entirely — **no signals are created** for that part. When the part's interactive phase later produces cart data, there are no signals to propagate the changes to the UI.
+
+### Solution (implemented)
+
+The ordering constraint: `pageComp()` depends on contexts from client init (services), but client init may fire signals before the component listens. The solution splits concerns:
+
+1. **`hydrateCompositeJayComponent`** — sets up hydration wrapper (binds rootElement)
+2. **`clientInitExecution`** — sets up services/contexts
+3. **`pageComp({})`** — creates component, reads current signal values, registers reactive listeners
+
+This works because `pageComp()` runs after services are initialized, so contexts are available. Signals set by services during init are read immediately by the component's effects when they first run (Jay's reactive system runs effects on creation with current values).
+
+For `undefined` parts (no SSR data), `makeSignals({} as any)` creates an empty signal object so the reactive graph exists. When the part later provides data, signals can propagate.
+
+Additionally, `hydrateConditionalFalse` (DL100) checks the condition with the CURRENT ViewState during construction — if data changed between SSR and hydration, elements are created immediately rather than waiting for the first update.
+
+### Files changed
+
+- `generate-ssr-response.ts` — reordered: `hydrateCompositeJayComponent → clientInit → pageComp()`
+- `hydrate-composite-component.ts` — `makeSignals({} as any)` for undefined partViewState
+- `composite-component.ts` — same signal fix
+- `headless-instance-context.ts` — same signal fix

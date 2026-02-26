@@ -2106,7 +2106,11 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
                 .plus(childContent.imports)
                 .plus(createChildren.imports)
                 .plus(createAttributes.imports),
-            [...renderedCondition.validations, ...childContent.validations, ...createChildren.validations],
+            [
+                ...renderedCondition.validations,
+                ...childContent.validations,
+                ...createChildren.validations,
+            ],
             childContent.refs,
         );
     }

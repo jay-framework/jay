@@ -79,7 +79,7 @@ export function hydrateCompositeJayComponent<
                         : defaultViewState;
                     const partFastViewState = partViewState
                         ? makeSignals(partViewState)
-                        : undefined;
+                        : makeSignals({} as any);
 
                     const partCarryForward = part.key
                         ? fastCarryForward?.[part.key]

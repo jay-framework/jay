@@ -236,17 +236,29 @@ export function hydrateConditional<ViewState>(
 /**
  * Handle a conditional that was false at SSR time (Level 3).
  * Returns a comment anchor as dom. The parent adoptElement will insert it
- * into the DOM. When the condition becomes true, the element is lazily
- * created and inserted before the anchor.
+ * into the DOM.
+ *
+ * Checks the condition immediately with the current ViewState — if the state
+ * has changed since SSR (e.g., services loaded data during client init), the
+ * element is created right away rather than waiting for the first update.
  */
 function hydrateConditionalFalse<ViewState>(
     condition: (vs: ViewState) => boolean,
     createElement: () => BaseJayElement<ViewState>,
 ): BaseJayElement<ViewState> {
+    const context = currentConstructionContext();
     const savedContext = saveContext();
     const anchor = document.createComment('');
     let created: BaseJayElement<ViewState> | undefined;
     let visible = false;
+
+    // Check condition with current state — it may already be true
+    // if data arrived between SSR and hydration (e.g., client init).
+    const initialResult = condition(context.currData as ViewState);
+    if (initialResult) {
+        created = wrapWithModifiedCheck(context.currData, createElement());
+        visible = true;
+    }
 
     const update = (newData: ViewState) => {
         const result = condition(newData);
@@ -274,10 +286,19 @@ function hydrateConditionalFalse<ViewState>(
         visible = result;
     };
 
+    // Always return anchor as dom — adoptElement inserts Comment nodes into
+    // the parent. If element was created immediately, it will be inserted
+    // before the anchor when adoptElement processes children.
     return {
         dom: anchor as any,
         update,
-        mount: noopMount,
+        mount: () => {
+            // If created immediately, insert before anchor once it's in the DOM
+            if (created && visible && anchor.parentNode && !created.dom.parentNode) {
+                anchor.parentNode.insertBefore(created.dom, anchor);
+                created.mount();
+            }
+        },
         unmount: () => {
             if (created && visible) {
                 created.unmount();

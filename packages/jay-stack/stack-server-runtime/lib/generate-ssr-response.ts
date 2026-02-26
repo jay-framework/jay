@@ -284,11 +284,11 @@ function generateHydrationScript(
       const viewState = ${JSON.stringify(defaultViewState)};
       const fastCarryForward = ${JSON.stringify(fastCarryForward)};
       const trackByMap = ${JSON.stringify(trackByMap)};
-${clientInitExecution}
+
       const target = document.getElementById('target');
       const rootElement = target.firstElementChild;
       const pageComp = hydrateCompositeJayComponent(hydrate, viewState, fastCarryForward, ${compositeParts}, trackByMap, rootElement);
-
+${clientInitExecution}
       const instance = pageComp({/* placeholder for page props */});
 ${automationWrap}
     </script>`;
