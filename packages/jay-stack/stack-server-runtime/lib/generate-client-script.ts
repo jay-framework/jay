@@ -24,6 +24,13 @@ export interface GenerateClientScriptOptions {
      * so that AI/automation tools can see the complete page state.
      */
     slowViewState?: object;
+    /**
+     * Enable preview mode (ViewState overrides from query params).
+     * When true, interactive components are disabled (compositeParts = []).
+     * No visual indicators are injected — the rendered HTML must stay clean
+     * for downstream consumers like style calculation and Figma import.
+     */
+    previewMode?: boolean;
 }
 
 export function generateClientScript(
@@ -37,16 +44,18 @@ export function generateClientScript(
     pluginInits: PluginClientInitInfo[] = [],
     options: GenerateClientScriptOptions = {},
 ) {
-    const { enableAutomation = true, slowViewState } = options;
+    const { enableAutomation = true, slowViewState, previewMode } = options;
     const hasSlowViewState = slowViewState && Object.keys(slowViewState).length > 0;
     const imports =
         parts.length > 0 ? parts.map((part) => part.clientImport).join('\n') + '\n' : '';
-    const compositeParts =
-        parts.length > 0
-            ? `[
+    // In preview mode, pass empty array to disable interactive components
+    const compositeParts = previewMode
+        ? '[]'
+        : parts.length > 0
+          ? `[
 ${parts.map((part) => '        ' + part.clientPart).join(',\n')}
         ]`
-            : '[]';
+          : '[]';
 
     // Client init imports and execution
     const hasClientInit = projectInit || pluginInits.length > 0;

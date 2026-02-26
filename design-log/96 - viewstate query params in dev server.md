@@ -622,7 +622,7 @@ Design decisions captured as questions during the design process. The answers ar
 
 ### Q16: Should interactive refs (buttons, inputs) be disabled when overrides are active?
 
-**A: Yes.** Preview mode: pass `[]` for `compositeParts` (no event handlers), inject a visual banner, and disable pointer events on ref elements. This prevents real backend actions with mock data.
+**A: Yes, but no visual banner.** Preview mode passes `[]` for `compositeParts` (disabling event handlers) to prevent real backend actions with mock data. A visual banner was originally planned but removed — the rendered HTML will be consumed by downstream tools (style calculation, Figma import), so injecting extra DOM elements or styles would pollute the output.
 
 ### Q17: What happens when the same vs.* param appears multiple times?
 

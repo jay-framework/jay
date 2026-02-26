@@ -55,6 +55,7 @@ import {
 } from '@jay-framework/stack-server-runtime';
 import { WithValidations } from '@jay-framework/compiler-shared';
 import { getLogger, getDevLogger, type RequestTiming } from '@jay-framework/logger';
+import { extractViewStateParams, applyViewStateOverrides } from './viewstate-query-params';
 
 async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
     return await scanRoutes(pagesBaseFolder, {
@@ -183,6 +184,29 @@ function mkRoute(
                 language: 'en',
                 url,
             };
+
+            // Extract ViewState override params
+            const vsParams = extractViewStateParams(req.query);
+
+            // If vs params are present, force direct request path (bypass cache)
+            if (vsParams) {
+                await handleDirectRequest(
+                    vite,
+                    route,
+                    options,
+                    slowlyPhase,
+                    pageParams,
+                    pageProps,
+                    allPluginClientInits,
+                    allPluginsWithInit,
+                    projectInit,
+                    res,
+                    url,
+                    timing,
+                    vsParams,
+                );
+                return;
+            }
 
             // Check if slow render caching is enabled
             const useSlowRenderCache = !options.dontCacheSlowly;
@@ -605,6 +629,7 @@ async function handleDirectRequest(
     res: Response,
     url: string,
     timing?: RequestTiming,
+    vsParams?: Record<string, string>,
 ): Promise<void> {
     const loadStart = Date.now();
     const pagePartsResult = await loadPageParts(
@@ -628,6 +653,7 @@ async function handleDirectRequest(
         serverTrackByMap,
         clientTrackByMap,
         usedPackages,
+        headlessContracts,
     } = pagePartsResult.val;
 
     const pluginsForPage = filterPluginsForPage(
@@ -756,6 +782,21 @@ async function handleDirectRequest(
         };
     }
 
+    // Apply ViewState overrides from query params if present
+    if (vsParams) {
+        const contractPath = route.jayHtmlPath.replace('.jay-html', '.jay-contract');
+        const loadResult = JAY_IMPORT_RESOLVER.loadContract(contractPath);
+        
+        // Log warnings for parse errors (but continue - overrides will work as strings)
+        if (!loadResult.val && loadResult.validations.length > 0) {
+            getLogger().warn(
+                `[ViewState Overrides] Contract parse errors in ${contractPath}: ${loadResult.validations.join(', ')}`,
+            );
+        }
+        
+        viewState = applyViewStateOverrides(viewState, vsParams, loadResult.val, headlessContracts);
+    }
+
     // Use original jay-html path (no pre-rendering)
     await sendResponse(
         vite,
@@ -771,6 +812,7 @@ async function handleDirectRequest(
         options,
         undefined,
         timing,
+        !!vsParams,
     );
 }
 
@@ -794,6 +836,7 @@ async function sendResponse(
     options: DevServerOptions,
     slowViewState?: object,
     timing?: RequestTiming,
+    previewMode?: boolean,
 ): Promise<void> {
     const pageHtml = generateClientScript(
         viewState,
@@ -807,6 +850,7 @@ async function sendResponse(
         {
             enableAutomation: !options.disableAutomation,
             slowViewState,
+            previewMode,
         },
     );
 
@@ -861,30 +905,20 @@ async function preRenderJayHtml(
     // Read the original jay-html
     const jayHtmlContent = await fs.readFile(route.jayHtmlPath, 'utf-8');
 
-    // Try to load and parse the main contract for phase detection
+    // Load and parse the main contract for phase detection
     const contractPath = route.jayHtmlPath.replace('.jay-html', '.jay-contract');
-    let contract: Contract | undefined;
-
-    try {
-        const contractContent = await fs.readFile(contractPath, 'utf-8');
-        // Contract file exists - parse it (errors should fail the function)
-        const parseResult = parseContract(contractContent, path.basename(contractPath));
-        if (parseResult.val) {
-            contract = parseResult.val;
-        } else if (parseResult.validations.length > 0) {
-            getLogger().error(
-                `[SlowRender] Contract parse error for ${contractPath}: ${parseResult.validations.join(', ')}`,
-            );
-            return undefined;
-        }
-    } catch (error) {
-        // File doesn't exist - that's OK, continue without contract
-        if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
-            // Some other error (permissions, etc.) - log and fail
-            getLogger().error(`[SlowRender] Error reading contract ${contractPath}: ${error}`);
-            return undefined;
-        }
+    const loadResult = JAY_IMPORT_RESOLVER.loadContract(contractPath);
+    
+    // Log errors for parse failures and return undefined (slow render cannot continue)
+    if (!loadResult.val && loadResult.validations.length > 0) {
+        getLogger().error(
+            `[SlowRender] Contract parse errors in ${contractPath}: ${loadResult.validations.join(', ')}`,
+        );
+        return undefined;
     }
+    
+    // Contract file might not exist (ENOENT) - that's OK, continue without contract
+    const contract = loadResult.val;
 
     // ── Pass 1: Resolve page-level slow bindings ──
     const result = slowRenderTransform({

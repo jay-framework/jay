@@ -371,3 +371,17 @@ Total: **2 new files, 3 modified files.** That's it.
 | **DEMO 4** | Phase 5 | Full feature demo on any Jay project | 5 min |
 
 Each demo builds on the previous one. Every demo is independently valuable and shows clear progress to management.
+
+---
+
+## Implementation Notes
+
+### Phase 4: Preview Banner Removed
+
+The original Phase 4 design included a yellow preview banner (`⚠ ViewState Preview Mode`) and CSS (`pointer-events:none; opacity:0.6`) injected into the HTML output. These were **removed** because:
+
+- The rendered HTML from the dev server will be used downstream for **style calculation and Figma import**
+- Injecting a banner `<div>` and `<style>` tag into the HTML would pollute the output and be imported into Figma as actual page content
+- The banner is purely cosmetic — the functional part (disabling interactive components via `compositeParts = []`) is retained
+
+**What remains:** `previewMode: true` still disables interactive components by passing an empty `compositeParts` array to the client script. This prevents real actions with mock data without polluting the HTML.
