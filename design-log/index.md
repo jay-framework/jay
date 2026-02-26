@@ -170,14 +170,19 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ---
 
-## Server-Side Rendering (SSR)
+## Server-Side Rendering (SSR) & Hydration
 
-| #   | Title                              | Description                    |
-| --- | ---------------------------------- | ------------------------------ |
-| 11  | server side rendering              | SSR design                     |
-| 23  | JSON compare and patch             | JSON diffing for SSR hydration |
-| 48  | Jay Stack Services                 | Service injection for SSR      |
-| 50  | jay stack - headless configuration | Headless SSR configuration     |
+| #   | Title                                 | Description                                                        |
+| --- | ------------------------------------- | ------------------------------------------------------------------ |
+| 11  | server side rendering                 | SSR design                                                         |
+| 23  | JSON compare and patch                | JSON diffing for SSR hydration                                     |
+| 48  | Jay Stack Services                    | Service injection for SSR                                          |
+| 50  | jay stack - headless configuration    | Headless SSR configuration                                         |
+| 93  | client hydration                      | Hydrate server-rendered DOM: skip static HTML, adopt dynamic nodes |
+| 94  | SSR streaming renderer                | Compile jay-html to streaming server render, no DOM APIs           |
+| 98  | route-based server-element output     | Server-element files follow route structure (consistent with DL96) |
+| 99  | hydration coordinate alignment bugs   | Fix forEach prefix, conditional+ref counter, containerCoordinate   |
+| 100 | hydrate conditional creation fallback | Level 3 hydration: create elements for false-at-SSR conditionals   |
 
 ---
 
@@ -198,6 +203,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 85  | rendering phases and agent kit for agentic generation  | Agent-kit folder: instructions, contracts, markdown content with headless annotations |
 | 91  | WebMCP plugin for jay-stack                            | Generic WebMCP support: automation→tools/resources/prompts, plugin packaging          |
 | 92  | Gemini agent plugin for jay-stack                      | Embedded AI agent: Gemini API, .jay-action metadata, chat contract, page automation   |
+| 97  | Contract-based tool descriptions for gemini agent      | Semantic tool descriptions from .jay-contract via server action, not embedded in HTML |
 
 ---
 
@@ -205,7 +211,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ### "I need to understand the rendering pipeline"
 
-→ See #34 (jay stack), #50 (rendering phases), #52 (code splitting), #75 (slow rendering)
+→ See #34 (jay stack), #50 (rendering phases), #52 (code splitting), #75 (slow rendering), #94 (SSR streaming)
 
 ### "I'm working on contracts and types"
 
@@ -229,7 +235,11 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ### "I'm adding client-side interactivity"
 
-→ See #06 (state management), #31 (createSignal), #30 (Context API), #09 (safe events)
+→ See #06 (state management), #31 (createSignal), #30 (Context API), #09 (safe events), #93 (client hydration)
+
+### "I'm working on SSR or hydration"
+
+→ See #11 (SSR concept), #93 (client hydration), #94 (SSR streaming renderer), #75 (slow rendering), #72 (skip client script)
 
 ### "I'm working on the dev server"
 

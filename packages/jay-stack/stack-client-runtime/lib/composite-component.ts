@@ -72,7 +72,7 @@ export function makeCompositeJayComponent<
                         : defaultViewState;
                     const partFastViewState = partViewState
                         ? makeSignals(partViewState)
-                        : undefined;
+                        : makeSignals({} as any);
 
                     // Carry forward as plain object (no signals)
                     const partCarryForward = part.key

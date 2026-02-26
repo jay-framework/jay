@@ -21,13 +21,17 @@ import type {
     Redirect3xx,
     ServerError5xx,
 } from '@jay-framework/fullstack-component';
-import { jayStackCompiler } from '@jay-framework/compiler-jay-stack';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { RequestHandler } from 'express-serve-static-core';
 import { renderFastChangingData } from '@jay-framework/stack-server-runtime';
 import { loadPageParts } from '@jay-framework/stack-server-runtime';
-import { generateClientScript, ProjectClientInitInfo } from '@jay-framework/stack-server-runtime';
+import {
+    generateClientScript,
+    generateSSRPageHtml,
+    invalidateServerElementCache,
+    ProjectClientInitInfo,
+} from '@jay-framework/stack-server-runtime';
 import { Request, Response } from 'express';
 import { DevServerOptions } from './dev-server-options';
 import { ServiceLifecycleManager } from './service-lifecycle';
@@ -401,6 +405,7 @@ async function handleCachedRequest(
         res,
         url,
         cachedEntry.preRenderedPath,
+        route.jayHtmlPath,
         pageParts,
         fastViewState,
         fastCarryForward,
@@ -600,6 +605,7 @@ async function handlePreRenderRequest(
         res,
         url,
         preRenderedPath,
+        route.jayHtmlPath,
         pageParts,
         fastViewState,
         fastCarryForward,
@@ -807,6 +813,7 @@ async function handleDirectRequest(
         res,
         url,
         route.jayHtmlPath,
+        route.jayHtmlPath,
         pageParts,
         viewState,
         renderedFast.carryForward,
@@ -831,6 +838,7 @@ async function sendResponse(
     res: Response,
     url: string,
     jayHtmlPath: string,
+    sourceJayHtmlPath: string,
     pageParts: any[],
     viewState: object,
     carryForward: object,
@@ -842,26 +850,63 @@ async function sendResponse(
     timing?: RequestTiming,
     previewMode?: boolean,
 ): Promise<void> {
-    const pageHtml = generateClientScript(
-        viewState,
-        carryForward,
-        pageParts,
-        jayHtmlPath,
-        clientTrackByMap,
-        getClientInitData(),
-        projectInit,
-        pluginsForPage,
-        {
-            enableAutomation: !options.disableAutomation,
-            slowViewState,
-            previewMode,
-        },
-    );
+    let pageHtml: string;
 
-    // Save generated client script to build folder for debugging
+    const routeDir = path.dirname(path.relative(options.pagesRootFolder!, sourceJayHtmlPath));
+
+    try {
+        // Try SSR: server-render HTML + hydration script
+        const jayHtmlContent = await fs.readFile(jayHtmlPath, 'utf-8');
+        const jayHtmlFilename = path.basename(jayHtmlPath);
+        const jayHtmlDir = path.dirname(jayHtmlPath);
+
+        pageHtml = await generateSSRPageHtml(
+            vite,
+            jayHtmlContent,
+            jayHtmlFilename,
+            jayHtmlDir,
+            viewState,
+            jayHtmlPath,
+            pageParts,
+            carryForward,
+            clientTrackByMap,
+            getClientInitData(),
+            options.buildFolder!,
+            options.projectRootFolder!,
+            routeDir,
+            options.jayRollupConfig?.tsConfigFilePath,
+            projectInit,
+            pluginsForPage,
+            {
+                enableAutomation: !options.disableAutomation,
+                slowViewState,
+                previewMode,
+            },
+        );
+    } catch (err) {
+        // Fall back to client-only rendering
+        getLogger().warn(`[SSR] Failed, falling back to client rendering: ${err.message}`);
+        pageHtml = generateClientScript(
+            viewState,
+            carryForward,
+            pageParts,
+            jayHtmlPath,
+            clientTrackByMap,
+            getClientInitData(),
+            projectInit,
+            pluginsForPage,
+            {
+                enableAutomation: !options.disableAutomation,
+                slowViewState,
+                previewMode,
+            },
+        );
+    }
+
+    // Save generated page to build folder for debugging
     if (options.buildFolder) {
         const pageName = !url || url === '/' ? 'index' : url.replace(/^\//, '').replace(/\//g, '-');
-        const clientScriptDir = path.join(options.buildFolder, 'client-scripts');
+        const clientScriptDir = path.join(options.buildFolder, 'debug', 'client-entry');
         await fs.mkdir(clientScriptDir, { recursive: true });
         await fs.writeFile(path.join(clientScriptDir, `${pageName}.html`), pageHtml, 'utf-8');
     }
@@ -1143,7 +1188,6 @@ function resolveBinding(binding: string, item: any): string {
  */
 async function materializeDynamicContracts(
     projectRootFolder: string,
-    buildFolder: string,
     viteServer: ViteDevServer,
 ): Promise<void> {
     try {
@@ -1151,7 +1195,7 @@ async function materializeDynamicContracts(
         const result = await materializeContracts(
             {
                 projectRoot: projectRootFolder,
-                outputDir: path.join(buildFolder, 'materialized-contracts'),
+                outputDir: path.join(projectRootFolder, 'agent-kit', 'materialized-contracts'),
                 verbose: false,
                 viteServer,
             },
@@ -1202,7 +1246,7 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     await lifecycleManager.initialize();
 
     // Materialize dynamic contracts for agent discovery
-    await materializeDynamicContracts(projectRootFolder, buildFolder!, vite);
+    await materializeDynamicContracts(projectRootFolder!, vite);
 
     // Set up hot reload for lib/init.ts
     setupServiceHotReload(vite, lifecycleManager);
@@ -1213,9 +1257,9 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     const routes: JayRoutes = await initRoutes(pagesRootFolder);
     const slowlyPhase = new DevSlowlyChangingPhase(dontCacheSlowly);
 
-    // Create slow render cache for pre-rendered jay-html
-    // Files are written to <buildFolder>/slow-render-cache/
-    const slowRenderCacheDir = path.join(buildFolder!, 'slow-render-cache');
+    // Create pre-rendered jay-html cache
+    // Files are written to <buildFolder>/pre-rendered/
+    const slowRenderCacheDir = path.join(buildFolder!, 'pre-rendered');
     const slowRenderCache = new SlowRenderCache(slowRenderCacheDir, pagesRootFolder);
 
     // Set up file watching for slow render cache invalidation
@@ -1326,6 +1370,7 @@ function setupSlowRenderCacheInvalidation(
 
         // Invalidate cache for jay-html file changes
         if (changedPath.endsWith('.jay-html')) {
+            invalidateServerElementCache(changedPath);
             cache.invalidate(changedPath).then(() => {
                 getLogger().info(`[SlowRender] Cache invalidated for ${changedPath}`);
             });

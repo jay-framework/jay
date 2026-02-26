@@ -7,7 +7,7 @@ const root = resolve(__dirname);
 const compilerPatternFiles = ['./patterns/events.ts'];
 const jayOptions: JayRollupConfig = {
     tsConfigFilePath: resolve(root, 'tsconfig.json'),
-    outputDir: 'build/jay-runtime',
+    outputDir: 'build',
     compilerPatternFiles,
 };
 

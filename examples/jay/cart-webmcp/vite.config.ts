@@ -5,7 +5,7 @@ import { JayRollupConfig, jayRuntime } from '@jay-framework/vite-plugin';
 const root = resolve(__dirname);
 const jayOptions: JayRollupConfig = {
     tsConfigFilePath: resolve(root, 'tsconfig.json'),
-    outputDir: 'build/jay-runtime',
+    outputDir: 'build',
 };
 
 export default defineConfig(({ mode }) => {

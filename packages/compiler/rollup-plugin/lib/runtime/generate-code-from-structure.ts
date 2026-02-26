@@ -16,11 +16,13 @@ import {
     CompilerSourceFile,
     GenerateTarget,
     getModeFromExtension,
+    parseJayModuleSpecifier,
     RuntimeMode,
     SourceFileFormat,
 } from '@jay-framework/compiler-shared';
 import {
     generateElementBridgeFile,
+    generateElementHydrateFile,
     generateSandboxRootFile,
     JayHtmlSourceFile,
 } from '@jay-framework/compiler-jay-html';
@@ -47,9 +49,15 @@ export async function generateCodeFromStructure(
     const mode = getModeFromExtension(id);
     const generationTarget: GenerateTarget =
         jayContext.jayOptions.generationTarget || GenerateTarget.jay;
+    const isHydrate = parseJayModuleSpecifier(id).isHydrate === true;
     const tsCode =
         format === SourceFileFormat.JayHtml
-            ? generateCodeFromJayHtmlFile(mode, jayFile as JayHtmlSourceFile, generationTarget)
+            ? generateCodeFromJayHtmlFile(
+                  mode,
+                  jayFile as JayHtmlSourceFile,
+                  generationTarget,
+                  isHydrate,
+              )
             : generateCodeFromTsFile(jayContext, mode, jayFile, id, code);
     await writeGeneratedFile(jayContext, context, id, tsCode);
     return tsCode;
@@ -59,10 +67,14 @@ export function generateCodeFromJayHtmlFile(
     mode: RuntimeMode,
     jayFile: JayHtmlSourceFile,
     generationTarget: GenerateTarget,
+    isHydrate: boolean = false,
 ): string {
     switch (mode) {
         case RuntimeMode.MainTrusted:
         case RuntimeMode.MainSandbox:
+            if (isHydrate) {
+                return checkValidationErrors(generateElementHydrateFile(jayFile, mode));
+            }
             return checkValidationErrors(generateElementFile(jayFile, mode, generationTarget));
         case RuntimeMode.WorkerSandbox:
             return generateElementBridgeFile(jayFile);

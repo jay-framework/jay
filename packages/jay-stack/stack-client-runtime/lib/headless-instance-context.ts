@@ -101,7 +101,7 @@ export function makeHeadlessInstanceComponent<
         const cf = instanceData?.carryForwards?.[resolvedKey] || {};
 
         // Create signals from fast ViewState (like makeCompositeJayComponent does for key-based parts)
-        const signalVS = fastVS ? makeSignals(fastVS) : undefined;
+        const signalVS = fastVS ? makeSignals(fastVS) : makeSignals({} as any);
 
         // Call the original constructor with fast data injected before plugin contexts
         return interactiveConstructor(props, refs, signalVS, cf, ...pluginResolvedContexts);
