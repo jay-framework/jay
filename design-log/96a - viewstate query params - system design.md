@@ -54,8 +54,8 @@ All new logic lives in a **single new file** — pure functions, fully unit-test
 
 ```typescript
 function extractViewStateParams(
-    query: Record<string, string | string[]>
-): Record<string, string> | undefined
+  query: Record<string, string | string[]>,
+): Record<string, string> | undefined;
 ```
 
 - Filters keys starting with `vs.`, strips prefix
@@ -65,7 +65,7 @@ function extractViewStateParams(
 #### `isPathSafe`
 
 ```typescript
-function isPathSafe(segments: string[]): boolean
+function isPathSafe(segments: string[]): boolean;
 ```
 
 - Returns `false` if any segment is `__proto__`, `constructor`, or `prototype`
@@ -74,37 +74,43 @@ function isPathSafe(segments: string[]): boolean
 #### `coerceValue`
 
 ```typescript
-type CoerceResult =
-    | { value: unknown; ok: true }
-    | { ok: false; reason: string };
+type CoerceResult = { value: unknown; ok: true } | { ok: false; reason: string };
 
-function coerceValue(rawValue: string, tag?: ContractTag): CoerceResult
+function coerceValue(rawValue: string, tag?: ContractTag): CoerceResult;
 ```
 
 Type coercion based on `ContractTag.dataType`:
 
-| dataType | Coercion | Failure |
-|----------|----------|---------|
-| _(none / unknown type)_ | Return raw string | — |
-| `string` | As-is | — |
-| `number` | `Number(value)` + `Number.isFinite` check | `{ ok: false }` |
-| `boolean` | Only exact `"true"` / `"false"` | `{ ok: false }` |
-| `Date` | `new Date(value).toISOString()` if valid | `{ ok: false }` |
-| `enum(a\|b\|c)` | Name → index, or valid integer index (0 ≤ n < length) | `{ ok: false }` |
+| dataType                | Coercion                                              | Failure         |
+| ----------------------- | ----------------------------------------------------- | --------------- |
+| _(none / unknown type)_ | Return raw string                                     | —               |
+| `string`                | As-is                                                 | —               |
+| `number`                | `Number(value)` + `Number.isFinite` check             | `{ ok: false }` |
+| `boolean`               | Only exact `"true"` / `"false"`                       | `{ ok: false }` |
+| `Date`                  | `new Date(value).toISOString()` if valid              | `{ ok: false }` |
+| `enum(a\|b\|c)`         | Name → index, or valid integer index (0 ≤ n < length) | `{ ok: false }` |
 
 **JSON shortcut:** If value starts with `[` or `{`, attempt `JSON.parse` regardless of declared type.
 
 **Critical type system detail:** All primitive types (`string`, `number`, `boolean`, `Date`) are `JayAtomicType` instances with `kind = JayTypeKind.atomic`. They are distinguished by `name`, not `kind`. Use `isAtomicType(dataType)` guard first, then switch on `dataType.name`. Note that date is `'Date'` (capital D), matching `JayDate.name`.
 
 ```typescript
-if (isEnumType(dataType)) { /* enum logic using dataType.values */ }
-else if (isAtomicType(dataType)) {
-    switch (dataType.name) {
-        case 'number': { /* Number() + isFinite check */ }
-        case 'boolean': { /* exact "true"/"false" */ }
-        case 'Date':   { /* new Date() + isNaN check → toISOString() */ }
-        default: return { value: rawValue, ok: true }; // string, Unknown, etc.
+if (isEnumType(dataType)) {
+  /* enum logic using dataType.values */
+} else if (isAtomicType(dataType)) {
+  switch (dataType.name) {
+    case 'number': {
+      /* Number() + isFinite check */
     }
+    case 'boolean': {
+      /* exact "true"/"false" */
+    }
+    case 'Date': {
+      /* new Date() + isNaN check → toISOString() */
+    }
+    default:
+      return { value: rawValue, ok: true }; // string, Unknown, etc.
+  }
 }
 ```
 
@@ -113,7 +119,7 @@ Uses `isEnumType()` and `isAtomicType()` type guards from `@jay-framework/compil
 #### `setNestedValue`
 
 ```typescript
-function setNestedValue(obj: Record<string, unknown>, path: string[], value: unknown): void
+function setNestedValue(obj: Record<string, unknown>, path: string[], value: unknown): void;
 ```
 
 - Walks dot-separated path segments, auto-creating intermediates
@@ -125,10 +131,10 @@ function setNestedValue(obj: Record<string, unknown>, path: string[], value: unk
 
 ```typescript
 function findContractTag(
-    path: string[],
-    contract?: Contract,
-    headlessContracts?: HeadlessContractInfo[],
-): ContractTag | undefined
+  path: string[],
+  contract?: Contract,
+  headlessContracts?: HeadlessContractInfo[],
+): ContractTag | undefined;
 ```
 
 - Walks path through contract tag tree
@@ -141,14 +147,15 @@ function findContractTag(
 
 ```typescript
 function applyViewStateOverrides(
-    viewState: object,
-    overrides: Record<string, string>,
-    contract?: Contract,
-    headlessContracts?: HeadlessContractInfo[],
-): object
+  viewState: object,
+  overrides: Record<string, string>,
+  contract?: Contract,
+  headlessContracts?: HeadlessContractInfo[],
+): object;
 ```
 
 Orchestration function:
+
 1. Partition overrides into JSON replacements (value starts with `[` or `{`) and dot-path overrides
 2. Apply JSON replacements first, sorted by path length (shortest first)
 3. Apply dot-path overrides
@@ -161,13 +168,14 @@ Returns the mutated viewState object.
 
 **Three surgical changes:**
 
-| Location | Change |
-|----------|--------|
-| `mkRoute` | Call `extractViewStateParams(req.query)`. If result is defined, force `handleDirectRequest` (bypass cache) and pass `vsParams`. |
+| Location              | Change                                                                                                                                    |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `mkRoute`             | Call `extractViewStateParams(req.query)`. If result is defined, force `handleDirectRequest` (bypass cache) and pass `vsParams`.           |
 | `handleDirectRequest` | Accept optional `vsParams`. After ViewState merge, if `vsParams`: load page contract via `parseContract`, call `applyViewStateOverrides`. |
-| `sendResponse` call | Pass `{ previewMode: !!vsParams }` to `generateClientScript` options. |
+| `sendResponse` call   | Pass `{ previewMode: !!vsParams }` to `generateClientScript` options.                                                                     |
 
 **Contract loading:**
+
 - **Page contract:** Read the `.jay-contract` file (same path as `.jay-html` with extension swap), parse with `parseContract` + `checkValidationErrors`. Graceful if file doesn't exist (return `undefined`).
 - **Headless contracts:** Already available from `loadPageParts` return value. The `pagePartsResult.val` object has a `headlessContracts: HeadlessContractInfo[]` field (key-based headless components with their parsed contracts). Currently `handleDirectRequest` only destructures `parts`, `serverTrackByMap`, `clientTrackByMap`, `usedPackages` — add `headlessContracts` to the destructuring.
 
@@ -177,13 +185,14 @@ Returns the mutated viewState object.
 
 ```typescript
 export interface GenerateClientScriptOptions {
-    enableAutomation?: boolean;
-    slowViewState?: object;
-    previewMode?: boolean;  // NEW
+  enableAutomation?: boolean;
+  slowViewState?: object;
+  previewMode?: boolean; // NEW
 }
 ```
 
 When `previewMode: true`, inside `generateClientScript`:
+
 1. Override the local `compositeParts` variable to `'[]'` (this is a string variable built from the `parts` parameter — it controls whether client-side event handlers mount). The `parts` parameter itself is unchanged; we just short-circuit the local variable.
 2. Inject preview banner HTML at top of body
 3. Inject CSS: `<style>[ref] { pointer-events: none; opacity: 0.6; }</style>`
@@ -195,9 +204,13 @@ When `previewMode: true`, inside `generateClientScript`:
 **Two options (pick one):**
 
 - **A (Recommended): Add a parameter.** Add `previewMode?: boolean` as the last parameter of `sendResponse`. Pass it into the options object:
+
   ```typescript
-  { enableAutomation: !options.disableAutomation, slowViewState, previewMode }
+  {
+    enableAutomation: !options.disableAutomation, slowViewState, previewMode;
+  }
   ```
+
   The two callers (`handleCachedRequest`, `handleDirectRequest`) pass `undefined` / `false` normally, and `handleDirectRequest` passes `!!vsParams` when overrides are active.
 
 - **B: Use an options object.** Replace the last few positional params with an options bag. Cleaner long-term but larger diff — avoid for this feature.
@@ -261,12 +274,12 @@ This is a one-line, non-breaking change to a stable internal utility. Do this at
 
 ## 6. What's NOT in Scope (v1)
 
-| Feature | Why deferred |
-|---------|-------------|
-| Keyless headless instances (`<jay:xxx>`) | Internal DOM coordinates not meaningful in URLs |
-| Linked sub-contract deep resolution | Adds complexity; can be added later |
-| Contract defaults for array holes | v1 fills with `{}`, future can use contract defaults |
-| Production support | Dev-time tool only |
+| Feature                                  | Why deferred                                         |
+| ---------------------------------------- | ---------------------------------------------------- |
+| Keyless headless instances (`<jay:xxx>`) | Internal DOM coordinates not meaningful in URLs      |
+| Linked sub-contract deep resolution      | Adds complexity; can be added later                  |
+| Contract defaults for array holes        | v1 fills with `{}`, future can use contract defaults |
+| Production support                       | Dev-time tool only                                   |
 
 ---
 
@@ -281,10 +294,10 @@ This is a one-line, non-breaking change to a stable internal utility. Do this at
 
 ## 8. Dependencies
 
-| Package | Used for |
-|---------|----------|
+| Package                            | Used for                                                                        |
+| ---------------------------------- | ------------------------------------------------------------------------------- |
 | `@jay-framework/compiler-jay-html` | `Contract`, `ContractTag`, `HeadlessContractInfo`, `parseContract`, `camelCase` |
-| `@jay-framework/compiler-shared` | `isEnumType`, `isAtomicType`, `JayEnumType`, `JayAtomicType` |
-| `@jay-framework/logger` | `getDevLogger()` for warning output |
+| `@jay-framework/compiler-shared`   | `isEnumType`, `isAtomicType`, `JayEnumType`, `JayAtomicType`                    |
+| `@jay-framework/logger`            | `getDevLogger()` for warning output                                             |
 
 No new external dependencies needed.

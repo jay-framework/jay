@@ -14,7 +14,7 @@ export type CoerceResult = { value: unknown; ok: true } | { ok: false; reason: s
  * Extract ViewState override parameters from query string.
  * Filters params starting with "vs.", strips the prefix, and returns a flat Record.
  * Returns undefined if no vs.* params are present.
- * 
+ *
  * Accepts any query object (Record or ParsedQs from Express).
  */
 export function extractViewStateParams(
@@ -73,7 +73,11 @@ export function setNestedValue(obj: any, path: string[], value: unknown): void {
         const nextSegment = path[i + 1];
         const isNextNumeric = /^\d+$/.test(nextSegment);
 
-        if (!(segment in current) || typeof current[segment] !== 'object' || current[segment] === null) {
+        if (
+            !(segment in current) ||
+            typeof current[segment] !== 'object' ||
+            current[segment] === null
+        ) {
             // Need to create intermediate value
             const isCurrentNumeric = /^\d+$/.test(segment);
             if (isCurrentNumeric) {

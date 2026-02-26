@@ -8,7 +8,13 @@ import {
     applyViewStateOverrides,
 } from '../lib/viewstate-query-params';
 import { Contract, ContractTag, ContractTagType } from '@jay-framework/compiler-jay-html';
-import { JayString, JayNumber, JayBoolean, JayDate, JayEnumType } from '@jay-framework/compiler-shared';
+import {
+    JayString,
+    JayNumber,
+    JayBoolean,
+    JayDate,
+    JayEnumType,
+} from '@jay-framework/compiler-shared';
 
 describe('extractViewStateParams', () => {
     it('returns undefined when no vs params present', () => {
@@ -109,10 +115,7 @@ describe('setNestedValue', () => {
         setNestedValue(obj, ['products', '0', 'price'], 25);
         setNestedValue(obj, ['products', '1', 'name'], 'Pants');
         expect(obj).toEqual({
-            products: [
-                { name: 'Shirt', price: 25 },
-                { name: 'Pants' },
-            ],
+            products: [{ name: 'Shirt', price: 25 }, { name: 'Pants' }],
         });
     });
 
@@ -130,19 +133,31 @@ describe('coerceValue', () => {
     });
 
     it('returns string for string type', () => {
-        const tag: ContractTag = { tag: 'title', type: [ContractTagType.data], dataType: JayString };
+        const tag: ContractTag = {
+            tag: 'title',
+            type: [ContractTagType.data],
+            dataType: JayString,
+        };
         const result = coerceValue('Hello', tag);
         expect(result).toEqual({ value: 'Hello', ok: true });
     });
 
     it('coerces valid number', () => {
-        const tag: ContractTag = { tag: 'price', type: [ContractTagType.data], dataType: JayNumber };
+        const tag: ContractTag = {
+            tag: 'price',
+            type: [ContractTagType.data],
+            dataType: JayNumber,
+        };
         const result = coerceValue('42.5', tag);
         expect(result).toEqual({ value: 42.5, ok: true });
     });
 
     it('fails on invalid number', () => {
-        const tag: ContractTag = { tag: 'price', type: [ContractTagType.data], dataType: JayNumber };
+        const tag: ContractTag = {
+            tag: 'price',
+            type: [ContractTagType.data],
+            dataType: JayNumber,
+        };
         const result = coerceValue('not-a-number', tag);
         expect(result.ok).toBe(false);
         expect(result).toMatchObject({ ok: false });
@@ -152,19 +167,31 @@ describe('coerceValue', () => {
     });
 
     it('coerces true for boolean', () => {
-        const tag: ContractTag = { tag: 'inStock', type: [ContractTagType.data], dataType: JayBoolean };
+        const tag: ContractTag = {
+            tag: 'inStock',
+            type: [ContractTagType.data],
+            dataType: JayBoolean,
+        };
         const result = coerceValue('true', tag);
         expect(result).toEqual({ value: true, ok: true });
     });
 
     it('coerces false for boolean', () => {
-        const tag: ContractTag = { tag: 'inStock', type: [ContractTagType.data], dataType: JayBoolean };
+        const tag: ContractTag = {
+            tag: 'inStock',
+            type: [ContractTagType.data],
+            dataType: JayBoolean,
+        };
         const result = coerceValue('false', tag);
         expect(result).toEqual({ value: false, ok: true });
     });
 
     it('fails on invalid boolean', () => {
-        const tag: ContractTag = { tag: 'inStock', type: [ContractTagType.data], dataType: JayBoolean };
+        const tag: ContractTag = {
+            tag: 'inStock',
+            type: [ContractTagType.data],
+            dataType: JayBoolean,
+        };
         const result = coerceValue('tru', tag);
         expect(result.ok).toBe(false);
         expect(result).toMatchObject({ ok: false });
@@ -174,7 +201,11 @@ describe('coerceValue', () => {
     });
 
     it('coerces valid date to ISO string', () => {
-        const tag: ContractTag = { tag: 'created', type: [ContractTagType.data], dataType: JayDate };
+        const tag: ContractTag = {
+            tag: 'created',
+            type: [ContractTagType.data],
+            dataType: JayDate,
+        };
         const result = coerceValue('2024-01-15', tag);
         expect(result.ok).toBe(true);
         if (result.ok) {
@@ -183,7 +214,11 @@ describe('coerceValue', () => {
     });
 
     it('fails on invalid date', () => {
-        const tag: ContractTag = { tag: 'created', type: [ContractTagType.data], dataType: JayDate };
+        const tag: ContractTag = {
+            tag: 'created',
+            type: [ContractTagType.data],
+            dataType: JayDate,
+        };
         const result = coerceValue('not-a-date', tag);
         expect(result.ok).toBe(false);
         expect(result).toMatchObject({ ok: false });
@@ -194,21 +229,33 @@ describe('coerceValue', () => {
 
     it('coerces enum by name to index', () => {
         const enumType = new JayEnumType('ProductType', ['digital', 'physical']);
-        const tag: ContractTag = { tag: 'productType', type: [ContractTagType.variant], dataType: enumType };
+        const tag: ContractTag = {
+            tag: 'productType',
+            type: [ContractTagType.variant],
+            dataType: enumType,
+        };
         const result = coerceValue('physical', tag);
         expect(result).toEqual({ value: 1, ok: true });
     });
 
     it('coerces enum by valid index', () => {
         const enumType = new JayEnumType('ProductType', ['digital', 'physical']);
-        const tag: ContractTag = { tag: 'productType', type: [ContractTagType.variant], dataType: enumType };
+        const tag: ContractTag = {
+            tag: 'productType',
+            type: [ContractTagType.variant],
+            dataType: enumType,
+        };
         const result = coerceValue('0', tag);
         expect(result).toEqual({ value: 0, ok: true });
     });
 
     it('fails on invalid enum name', () => {
         const enumType = new JayEnumType('ProductType', ['digital', 'physical']);
-        const tag: ContractTag = { tag: 'productType', type: [ContractTagType.variant], dataType: enumType };
+        const tag: ContractTag = {
+            tag: 'productType',
+            type: [ContractTagType.variant],
+            dataType: enumType,
+        };
         const result = coerceValue('unknown', tag);
         expect(result.ok).toBe(false);
         expect(result).toMatchObject({ ok: false });
@@ -219,21 +266,33 @@ describe('coerceValue', () => {
 
     it('fails on enum out of range', () => {
         const enumType = new JayEnumType('ProductType', ['digital', 'physical']);
-        const tag: ContractTag = { tag: 'productType', type: [ContractTagType.variant], dataType: enumType };
+        const tag: ContractTag = {
+            tag: 'productType',
+            type: [ContractTagType.variant],
+            dataType: enumType,
+        };
         const result = coerceValue('5', tag);
         expect(result.ok).toBe(false);
     });
 
     it('fails on enum non-integer', () => {
         const enumType = new JayEnumType('ProductType', ['digital', 'physical']);
-        const tag: ContractTag = { tag: 'productType', type: [ContractTagType.variant], dataType: enumType };
+        const tag: ContractTag = {
+            tag: 'productType',
+            type: [ContractTagType.variant],
+            dataType: enumType,
+        };
         const result = coerceValue('1.5', tag);
         expect(result.ok).toBe(false);
     });
 
     it('fails on enum negative index', () => {
         const enumType = new JayEnumType('ProductType', ['digital', 'physical']);
-        const tag: ContractTag = { tag: 'productType', type: [ContractTagType.variant], dataType: enumType };
+        const tag: ContractTag = {
+            tag: 'productType',
+            type: [ContractTagType.variant],
+            dataType: enumType,
+        };
         const result = coerceValue('-1', tag);
         expect(result.ok).toBe(false);
     });
@@ -274,9 +333,7 @@ describe('findContractTag', () => {
     it('finds camelCase match for hyphenated tag', () => {
         const contract: Contract = {
             name: 'TestPage',
-            tags: [
-                { tag: 'product-type', type: [ContractTagType.variant], dataType: JayString },
-            ],
+            tags: [{ tag: 'product-type', type: [ContractTagType.variant], dataType: JayString }],
         };
         const tag = findContractTag(['productType'], contract);
         expect(tag?.tag).toBe('product-type');
@@ -329,9 +386,7 @@ describe('findContractTag', () => {
                     tag: 'products',
                     type: [ContractTagType.subContract],
                     repeated: true,
-                    tags: [
-                        { tag: 'name', type: [ContractTagType.data], dataType: JayString },
-                    ],
+                    tags: [{ tag: 'name', type: [ContractTagType.data], dataType: JayString }],
                 },
             ],
         };
@@ -342,9 +397,7 @@ describe('findContractTag', () => {
     it('returns undefined for missing path', () => {
         const contract: Contract = {
             name: 'TestPage',
-            tags: [
-                { tag: 'title', type: [ContractTagType.data], dataType: JayString },
-            ],
+            tags: [{ tag: 'title', type: [ContractTagType.data], dataType: JayString }],
         };
         const tag = findContractTag(['nonexistent'], contract);
         expect(tag).toBeUndefined();
@@ -385,9 +438,7 @@ describe('applyViewStateOverrides', () => {
     it('preserves original value on failed coercion', () => {
         const contract: Contract = {
             name: 'TestPage',
-            tags: [
-                { tag: 'price', type: [ContractTagType.data], dataType: JayNumber },
-            ],
+            tags: [{ tag: 'price', type: [ContractTagType.data], dataType: JayNumber }],
         };
         const viewState = { price: 100, title: 'Product' };
         const overrides = { price: 'not-a-number', title: 'Updated' };
@@ -397,7 +448,7 @@ describe('applyViewStateOverrides', () => {
 
     it('skips blocked path', () => {
         const viewState = { title: 'Safe' };
-        const overrides = { '__proto__': 'evil' };
+        const overrides = { __proto__: 'evil' };
         const result = applyViewStateOverrides(viewState, overrides);
         expect(result).toEqual({ title: 'Safe' });
         expect(result).not.toHaveProperty('__proto__');
@@ -440,10 +491,7 @@ describe('applyViewStateOverrides', () => {
         };
         const result = applyViewStateOverrides(viewState, overrides);
         expect(result).toEqual({
-            items: [
-                { name: 'First' },
-                { name: 'Second' },
-            ],
+            items: [{ name: 'First' }, { name: 'Second' }],
         });
     });
 });

@@ -82,14 +82,14 @@ This sets `viewState.product.priceData.formatted.price` to `"$99.00"`. The `setN
 
 Query params are always strings, but ViewState fields have typed contracts. The contract (`<script type="application/jay-data" contract="...">`) is loaded and each param's path is looked up to find the declared `dataType`. Coercion rules:
 
-| dataType | Coercion | On failure |
-|----------|----------|------------|
-| `string` | Use as-is | — |
-| `number` | `Number(value)`, only if `Number.isFinite(result)` | Skip, warn |
-| `boolean` | Only exact `"true"` → `true`, `"false"` → `false` | Skip, warn |
-| `date` | `new Date(value).toISOString()`, only if valid (not `NaN`). Stored as ISO string | Skip, warn |
-| `enum(a \| b \| c)` | Name → numeric index. Only valid indices accepted (0 to values.length-1) | Skip, warn |
-| JSON value | `JSON.parse(value)` if starts with `[` or `{` | Skip, warn |
+| dataType            | Coercion                                                                         | On failure |
+| ------------------- | -------------------------------------------------------------------------------- | ---------- |
+| `string`            | Use as-is                                                                        | —          |
+| `number`            | `Number(value)`, only if `Number.isFinite(result)`                               | Skip, warn |
+| `boolean`           | Only exact `"true"` → `true`, `"false"` → `false`                                | Skip, warn |
+| `date`              | `new Date(value).toISOString()`, only if valid (not `NaN`). Stored as ISO string | Skip, warn |
+| `enum(a \| b \| c)` | Name → numeric index. Only valid indices accepted (0 to values.length-1)         | Skip, warn |
+| JSON value          | `JSON.parse(value)` if starts with `[` or `{`                                    | Skip, warn |
 
 If no contract type is found (or the path doesn't match a contract tag), the raw string value is used.
 
@@ -154,14 +154,14 @@ const BLOCKED_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype']);
 
 **Non-fatal error handling.** All coercion failures are graceful — the override is skipped, the original ViewState value is preserved, and a warning is logged. The page always renders. `coerceValue` returns a `CoerceResult` discriminated union so the caller can log structured warnings:
 
-| Failure | Behavior |
-|---------|----------|
-| `Number("abc")` → `NaN` | Skip override, log warning |
-| `"tru"` for boolean field | Skip override, log warning (only exact `"true"`/`"false"` accepted) |
-| `new Date("bad")` → Invalid Date | Skip override, log warning |
-| `JSON.parse("{bad")` → SyntaxError | Skip override, log warning |
-| Enum value not in list, or numeric but out of range / non-integer | Skip override, log warning |
-| Blocked path segment (`__proto__`) | Skip override, log warning |
+| Failure                                                           | Behavior                                                            |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------- |
+| `Number("abc")` → `NaN`                                           | Skip override, log warning                                          |
+| `"tru"` for boolean field                                         | Skip override, log warning (only exact `"true"`/`"false"` accepted) |
+| `new Date("bad")` → Invalid Date                                  | Skip override, log warning                                          |
+| `JSON.parse("{bad")` → SyntaxError                                | Skip override, log warning                                          |
+| Enum value not in list, or numeric but out of range / non-integer | Skip override, log warning                                          |
+| Blocked path segment (`__proto__`)                                | Skip override, log warning                                          |
 
 ---
 
@@ -173,8 +173,8 @@ const BLOCKED_SEGMENTS = new Set(['__proto__', 'constructor', 'prototype']);
 
 ```typescript
 function extractViewStateParams(
-    query: Record<string, string | string[]>
-): Record<string, string> | undefined
+  query: Record<string, string | string[]>,
+): Record<string, string> | undefined;
 ```
 
 - Filters query params starting with `vs.`
@@ -186,11 +186,11 @@ function extractViewStateParams(
 
 ```typescript
 function applyViewStateOverrides(
-    viewState: object,
-    overrides: Record<string, string>,
-    contract?: Contract,
-    headlessContracts?: HeadlessContractInfo[],
-): object
+  viewState: object,
+  overrides: Record<string, string>,
+  contract?: Contract,
+  headlessContracts?: HeadlessContractInfo[],
+): object;
 ```
 
 - Sorts overrides: JSON replacements first (by path length), then dot-path overrides
@@ -205,10 +205,10 @@ function applyViewStateOverrides(
 
 ```typescript
 function findContractTag(
-    path: string[],
-    contract?: Contract,
-    headlessContracts?: HeadlessContractInfo[],
-): ContractTag | undefined
+  path: string[],
+  contract?: Contract,
+  headlessContracts?: HeadlessContractInfo[],
+): ContractTag | undefined;
 ```
 
 - Walks path segments through the contract tag tree
@@ -225,47 +225,59 @@ Pseudocode — uses `isEnumType()` and `isAtomicType()` type guards from `compil
 type CoerceResult = { value: unknown; ok: true } | { ok: false; reason: string };
 
 function coerceValue(rawValue: string, tag?: ContractTag): CoerceResult {
-    // JSON values (arrays or objects) — parse regardless of contract type
-    if (rawValue.startsWith('[') || rawValue.startsWith('{')) {
-        try { return { value: JSON.parse(rawValue), ok: true }; }
-        catch { return { ok: false, reason: `invalid JSON: ${rawValue}` }; }
+  // JSON values (arrays or objects) — parse regardless of contract type
+  if (rawValue.startsWith('[') || rawValue.startsWith('{')) {
+    try {
+      return { value: JSON.parse(rawValue), ok: true };
+    } catch {
+      return { ok: false, reason: `invalid JSON: ${rawValue}` };
     }
+  }
 
-    const dataType = tag?.dataType;
-    if (!dataType) return { value: rawValue, ok: true }; // no type info → string
+  const dataType = tag?.dataType;
+  if (!dataType) return { value: rawValue, ok: true }; // no type info → string
 
-    // Enum type: match by name → index, or accept valid integer index
-    if (isEnumType(dataType)) {
-        const idx = dataType.values.indexOf(rawValue);
-        if (idx !== -1) return { value: idx, ok: true };
+  // Enum type: match by name → index, or accept valid integer index
+  if (isEnumType(dataType)) {
+    const idx = dataType.values.indexOf(rawValue);
+    if (idx !== -1) return { value: idx, ok: true };
+    const num = Number(rawValue);
+    if (Number.isInteger(num) && num >= 0 && num < dataType.values.length)
+      return { value: num, ok: true };
+    return {
+      ok: false,
+      reason: `"${rawValue}" is not a valid enum value (${dataType.values.join(', ')})`,
+    };
+  }
+
+  // Atomic types: all have kind = JayTypeKind.atomic, distinguished by name
+  if (isAtomicType(dataType)) {
+    switch (dataType.name) {
+      case 'number': {
         const num = Number(rawValue);
-        if (Number.isInteger(num) && num >= 0 && num < dataType.values.length) return { value: num, ok: true };
-        return { ok: false, reason: `"${rawValue}" is not a valid enum value (${dataType.values.join(', ')})` };
+        if (Number.isFinite(num)) return { value: num, ok: true };
+        return { ok: false, reason: `"${rawValue}" is not a valid number` };
+      }
+      case 'boolean': {
+        if (rawValue === 'true') return { value: true, ok: true };
+        if (rawValue === 'false') return { value: false, ok: true };
+        return {
+          ok: false,
+          reason: `"${rawValue}" is not a valid boolean (expected "true" or "false")`,
+        };
+      }
+      case 'Date': {
+        const date = new Date(rawValue);
+        if (isNaN(date.getTime()))
+          return { ok: false, reason: `"${rawValue}" is not a valid date` };
+        return { value: date.toISOString(), ok: true };
+      }
+      default:
+        return { value: rawValue, ok: true }; // string, Unknown, etc.
     }
+  }
 
-    // Atomic types: all have kind = JayTypeKind.atomic, distinguished by name
-    if (isAtomicType(dataType)) {
-        switch (dataType.name) {
-            case 'number': {
-                const num = Number(rawValue);
-                if (Number.isFinite(num)) return { value: num, ok: true };
-                return { ok: false, reason: `"${rawValue}" is not a valid number` };
-            }
-            case 'boolean': {
-                if (rawValue === 'true') return { value: true, ok: true };
-                if (rawValue === 'false') return { value: false, ok: true };
-                return { ok: false, reason: `"${rawValue}" is not a valid boolean (expected "true" or "false")` };
-            }
-            case 'Date': {
-                const date = new Date(rawValue);
-                if (isNaN(date.getTime())) return { ok: false, reason: `"${rawValue}" is not a valid date` };
-                return { value: date.toISOString(), ok: true };
-            }
-            default: return { value: rawValue, ok: true }; // string, Unknown, etc.
-        }
-    }
-
-    return { value: rawValue, ok: true };
+  return { value: rawValue, ok: true };
 }
 ```
 
@@ -277,9 +289,9 @@ In `mkRoute` handler — detect overrides and force direct path:
 const vsParams = extractViewStateParams(req.query);
 
 if (vsParams) {
-    await handleDirectRequest(/* ... with vsParams ... */);
+  await handleDirectRequest(/* ... with vsParams ... */);
 } else {
-    // Existing cache/pre-render/direct logic
+  // Existing cache/pre-render/direct logic
 }
 ```
 
@@ -287,26 +299,39 @@ In `handleDirectRequest` — apply overrides after merge:
 
 ```typescript
 if (vsParams) {
-    viewState = applyViewStateOverrides(viewState, vsParams, pageContract, headlessContracts);
+  viewState = applyViewStateOverrides(viewState, vsParams, pageContract, headlessContracts);
 }
 ```
 
 In `sendResponse` — enable preview mode:
 
 ```typescript
-await sendResponse(vite, res, url, jayHtmlPath, pageParts, viewState, carryForward,
-    clientTrackByMap, projectInit, pluginsForPage, options, undefined, timing,
-    { previewMode: !!vsParams });
+await sendResponse(
+  vite,
+  res,
+  url,
+  jayHtmlPath,
+  pageParts,
+  viewState,
+  carryForward,
+  clientTrackByMap,
+  projectInit,
+  pluginsForPage,
+  options,
+  undefined,
+  timing,
+  { previewMode: !!vsParams },
+);
 ```
 
 ### File Changes
 
-| File | Change |
-|------|--------|
-| `dev-server/lib/dev-server.ts` | Extract `vs.*` params in `mkRoute`, pass to `handleDirectRequest`, apply overrides after merge |
-| `dev-server/lib/viewstate-query-params.ts` | **New file**: `extractViewStateParams`, `applyViewStateOverrides`, `findContractTag`, `coerceValue`, `isPathSafe` |
-| `dev-server/lib/dev-server.ts` (`handleDirectRequest`) | Accept optional `vsParams`, load contract for type lookup, apply overrides |
-| `stack-server-runtime/lib/generate-client-script.ts` | Accept `previewMode` option: skip `compositeParts`, inject preview banner + disabled ref styles |
+| File                                                   | Change                                                                                                            |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `dev-server/lib/dev-server.ts`                         | Extract `vs.*` params in `mkRoute`, pass to `handleDirectRequest`, apply overrides after merge                    |
+| `dev-server/lib/viewstate-query-params.ts`             | **New file**: `extractViewStateParams`, `applyViewStateOverrides`, `findContractTag`, `coerceValue`, `isPathSafe` |
+| `dev-server/lib/dev-server.ts` (`handleDirectRequest`) | Accept optional `vsParams`, load contract for type lookup, apply overrides                                        |
+| `stack-server-runtime/lib/generate-client-script.ts`   | Accept `previewMode` option: skip `compositeParts`, inject preview banner + disabled ref styles                   |
 
 ---
 
@@ -315,6 +340,7 @@ await sendResponse(vite, res, url, jayHtmlPath, pageParts, viewState, carryForwa
 ### Phase 1: Core Override Logic
 
 1. Create `dev-server/lib/viewstate-query-params.ts` with:
+
    - `extractViewStateParams(query)` — filter and strip `vs.` prefix. Last-wins for repeated params
    - `isPathSafe(segments)` — block `__proto__`, `constructor`, `prototype`
    - `coerceValue(value, tag)` → `CoerceResult` — type coercion with strict validation: NaN check for numbers, exact true/false for booleans, valid Date check, try/catch for JSON
@@ -342,6 +368,7 @@ await sendResponse(vite, res, url, jayHtmlPath, pageParts, viewState, carryForwa
 ### Phase 3: Testing
 
 1. Unit tests for `viewstate-query-params.ts`:
+
    - `extractViewStateParams`: prefix filtering, no vs params, mixed params, repeated params (last-wins), array values
    - `isPathSafe`: block `__proto__`, `constructor`, `prototype`; allow normal segments
    - `coerceValue`: string, number, boolean, date, enum (name→index and valid integer index), JSON arrays, JSON objects, fallback to string. Failure cases: NaN, invalid bool, invalid date, bad JSON, unknown enum, **enum out-of-range, enum non-integer, enum negative** — all return `{ ok: false }`. **Date produces ISO string, not Date object**
@@ -360,6 +387,7 @@ await sendResponse(vite, res, url, jayHtmlPath, pageParts, viewState, carryForwa
 ### Simple override
 
 Contract:
+
 ```yaml
 data:
   - tag: title
@@ -376,6 +404,7 @@ data:
 ```
 
 Jay-html:
+
 ```html
 <h1>{title}</h1>
 <span>{price}</span>
@@ -383,6 +412,7 @@ Jay-html:
 ```
 
 Request:
+
 ```
 GET /product/123?vs.title=Custom+Title&vs.price=42.5&vs.inStock=false
 ```
@@ -392,6 +422,7 @@ Result: ViewState `{ title: "Custom Title", price: 42.5, inStock: false, ... }` 
 ### Nested headless component override
 
 Jay-html with headless component:
+
 ```html
 <script type="application/jay" src="..." key="product" />
 ...
@@ -400,6 +431,7 @@ Jay-html with headless component:
 ```
 
 Request:
+
 ```
 GET /product/123?vs.product.name=Test&vs.product.priceData.formatted.price=$99.00
 ```
@@ -409,6 +441,7 @@ Result: `product.name` and `product.priceData.formatted.price` overridden; rest 
 ### Variant override — boolean
 
 Contract:
+
 ```yaml
 data:
   - tag: isLoading
@@ -418,6 +451,7 @@ data:
 ```
 
 Request:
+
 ```
 GET /dashboard?vs.isLoading=true
 ```
@@ -427,6 +461,7 @@ Result: `isLoading` → `true` (boolean, not string). Jay-html `<div if="isLoadi
 ### Variant override — enum
 
 Contract:
+
 ```yaml
 data:
   - tag: productType
@@ -435,6 +470,7 @@ data:
 ```
 
 Request:
+
 ```
 GET /product/123?vs.productType=digital
 ```
@@ -491,25 +527,26 @@ No `vs.*` params detected → existing behavior, no changes.
 
 ## Trade-offs
 
-| Decision | Pro | Con |
-|----------|-----|-----|
-| `vs.` prefix | No collision with route/framework params | Slightly more typing |
-| Always use direct path | Simple, no cache invalidation concerns | Slower than cached path for override requests |
-| Run phases then override | Full ViewState available, simple merge | Wasted computation on overridden fields |
-| Contract-based type coercion | Correct types for number/boolean | Requires contract loading; graceful fallback to string |
-| Arrays via dot-path + JSON | Covers both tweaking existing items and creating from scratch | Dot-path for many items is verbose; JSON values need URL encoding |
-| Mixed method precedence | Powerful flexibility (reset then tweak) | Requires stricter processing order |
-| Auto-fill array holes | Prevents runtime crashes on sparse arrays | Might create "dummy" objects that look valid but are incomplete |
-| Non-fatal coercion errors | Page always renders; developer gets warnings | Silently ignored bad values might confuse |
-| Path segment blocklist | Prevents prototype pollution | Minimal; only blocks 3 well-known keys |
-| Disable interactive refs in preview | Prevents real actions with mock data | Page looks slightly different from normal mode (disabled buttons, banner) |
-| No keyless headless instance support in v1 | Avoids exposing internal coordinates | Can't override `<jay:xxx>` instance data (key-based headless already works via dot-path) |
+| Decision                                   | Pro                                                           | Con                                                                                      |
+| ------------------------------------------ | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| `vs.` prefix                               | No collision with route/framework params                      | Slightly more typing                                                                     |
+| Always use direct path                     | Simple, no cache invalidation concerns                        | Slower than cached path for override requests                                            |
+| Run phases then override                   | Full ViewState available, simple merge                        | Wasted computation on overridden fields                                                  |
+| Contract-based type coercion               | Correct types for number/boolean                              | Requires contract loading; graceful fallback to string                                   |
+| Arrays via dot-path + JSON                 | Covers both tweaking existing items and creating from scratch | Dot-path for many items is verbose; JSON values need URL encoding                        |
+| Mixed method precedence                    | Powerful flexibility (reset then tweak)                       | Requires stricter processing order                                                       |
+| Auto-fill array holes                      | Prevents runtime crashes on sparse arrays                     | Might create "dummy" objects that look valid but are incomplete                          |
+| Non-fatal coercion errors                  | Page always renders; developer gets warnings                  | Silently ignored bad values might confuse                                                |
+| Path segment blocklist                     | Prevents prototype pollution                                  | Minimal; only blocks 3 well-known keys                                                   |
+| Disable interactive refs in preview        | Prevents real actions with mock data                          | Page looks slightly different from normal mode (disabled buttons, banner)                |
+| No keyless headless instance support in v1 | Avoids exposing internal coordinates                          | Can't override `<jay:xxx>` instance data (key-based headless already works via dot-path) |
 
 ---
 
 ## Verification Criteria
 
 **Functional:**
+
 1. A page requested with `vs.title=Foo` renders "Foo" in the `{title}` binding
 2. A page requested with `vs.price=42` renders `42` (number, not string "42") in the `{price}` binding
 3. A page requested without `vs.*` params behaves identically to today
@@ -525,22 +562,9 @@ No `vs.*` params detected → existing behavior, no changes.
 13. Array holes: `vs.list.2.val=X` on empty list creates 3 items, where index 0 and 1 are `{}` (not undefined)
 14. Repeated params: `vs.name=A&vs.name=B` → last wins (`"B"`)
 
-**Safety:**
-15. Prototype pollution: `vs.__proto__.polluted=true` is blocked and logged as warning
-16. `vs.constructor.polluted=true` is blocked
-17. Invalid number: `vs.price=abc` → override skipped, warning logged, original value preserved
-18. Invalid boolean: `vs.inStock=tru` → override skipped, warning logged
-19. Invalid date: `vs.date=not-a-date` → override skipped, warning logged
-20. Invalid JSON: `vs.data={bad` → override skipped, warning logged
-21. Enum out-of-range: `vs.productType=5` for `enum(digital | physical)` → override skipped, warning logged
-22. Enum non-integer: `vs.productType=1.5` → override skipped, warning logged
-23. Enum negative: `vs.productType=-1` → override skipped, warning logged
-24. Date coercion produces ISO string: `vs.date=2024-01-15` → `"2024-01-15T00:00:00.000Z"` (string, not Date object)
+**Safety:** 15. Prototype pollution: `vs.__proto__.polluted=true` is blocked and logged as warning 16. `vs.constructor.polluted=true` is blocked 17. Invalid number: `vs.price=abc` → override skipped, warning logged, original value preserved 18. Invalid boolean: `vs.inStock=tru` → override skipped, warning logged 19. Invalid date: `vs.date=not-a-date` → override skipped, warning logged 20. Invalid JSON: `vs.data={bad` → override skipped, warning logged 21. Enum out-of-range: `vs.productType=5` for `enum(digital | physical)` → override skipped, warning logged 22. Enum non-integer: `vs.productType=1.5` → override skipped, warning logged 23. Enum negative: `vs.productType=-1` → override skipped, warning logged 24. Date coercion produces ISO string: `vs.date=2024-01-15` → `"2024-01-15T00:00:00.000Z"` (string, not Date object)
 
-**Preview mode:**
-25. When vs overrides are active, interactive components (buttons, inputs) do not fire event handlers
-26. A visual banner indicates "ViewState Preview Mode"
-27. Ref elements appear visually disabled (reduced opacity, no pointer events)
+**Preview mode:** 25. When vs overrides are active, interactive components (buttons, inputs) do not fire event handlers 26. A visual banner indicates "ViewState Preview Mode" 27. Ref elements appear visually disabled (reduced opacity, no pointer events)
 
 ---
 
@@ -555,6 +579,7 @@ Design decisions captured as questions during the design process. The answers ar
 ### Q2: Should we skip running headless component phases entirely when query params are present?
 
 **A: No.** Run the phases normally, then override the specified fields. Reasons:
+
 - The page may have multiple headless components; query params likely target only some fields
 - CarryForward data between phases may be needed for fields the user isn't overriding
 - Headless instances (`<jay:xxx>`) have their own ViewState that wouldn't make sense to skip
@@ -577,6 +602,7 @@ Design decisions captured as questions during the design process. The answers ar
 **Keyless inline instances** (`<jay:productCard>`): ❌ Deferred. Their ViewState is stored in `viewState.__headlessInstances` keyed by DOM coordinate strings like `"0:3"`. These coordinates are internal and not meaningful to the user.
 
 **Future approach for keyless instances:** Introduce a `vs-instance.` prefix with a stable addressing scheme:
+
 - **By component name + index**: `vs-instance.productCard.0.title=Foo`
 - **By explicit id attribute**: `<jay:productCard id="featured">` → `vs-instance.featured.title=Foo`
 
@@ -624,6 +650,6 @@ Design decisions captured as questions during the design process. The answers ar
 
 **A: Yes, but no visual banner.** Preview mode passes `[]` for `compositeParts` (disabling event handlers) to prevent real backend actions with mock data. A visual banner was originally planned but removed — the rendered HTML will be consumed by downstream tools (style calculation, Figma import), so injecting extra DOM elements or styles would pollute the output.
 
-### Q17: What happens when the same vs.* param appears multiple times?
+### Q17: What happens when the same vs.\* param appears multiple times?
 
 **A: Last value wins.** `extractViewStateParams` takes the last element when the value is an array. Deterministic and consistent with standard HTTP convention.

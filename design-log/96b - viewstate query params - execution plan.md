@@ -16,13 +16,13 @@
 
 ## Phase Overview
 
-| Phase | Deliverable | Demo? | Estimated effort |
-|-------|-------------|-------|-----------------|
-| 1 | Core pure functions + unit tests | No | Medium |
-| 2 | Dev server integration (string overrides) | **DEMO 1** | Small |
-| 3 | Contract-based type coercion | **DEMO 2** | Small |
-| 4 | Preview mode (banner + disabled interactions) | **DEMO 3** | Small |
-| 5 | Arrays, JSON, headless components | **DEMO 4** | Medium |
+| Phase | Deliverable                                   | Demo?      | Estimated effort |
+| ----- | --------------------------------------------- | ---------- | ---------------- |
+| 1     | Core pure functions + unit tests              | No         | Medium           |
+| 2     | Dev server integration (string overrides)     | **DEMO 1** | Small            |
+| 3     | Contract-based type coercion                  | **DEMO 2** | Small            |
+| 4     | Preview mode (banner + disabled interactions) | **DEMO 3** | Small            |
+| 5     | Arrays, JSON, headless components             | **DEMO 4** | Medium           |
 
 ---
 
@@ -33,9 +33,11 @@
 ### Tasks
 
 0. **Prerequisite:** Re-export `camelCase` from `compiler-jay-html/lib/index.ts`:
+
    ```typescript
    export { camelCase } from './case-utils';
    ```
+
    This is needed by `findContractTag`. One line, non-breaking. Run `yarn build` in `compiler-jay-html` to verify.
 
 1. **Create** `packages/jay-stack/dev-server/lib/viewstate-query-params.ts`
@@ -49,14 +51,14 @@
 3. **Create** `packages/jay-stack/dev-server/test/viewstate-query-params.test.ts`
 4. **Write unit tests** for every function:
 
-| Function | Test cases |
-|----------|-----------|
-| `extractViewStateParams` | No vs params → `undefined`; mixed params → only vs extracted; repeated params → last wins; array values → last element |
-| `isPathSafe` | Normal paths → `true`; `__proto__` / `constructor` / `prototype` → `false`; nested blocked segment → `false` |
-| `setNestedValue` | Flat key; nested key; auto-create intermediate objects; numeric index → array; array holes filled with `{}`; deeply nested |
-| `coerceValue` | String as-is; number valid/invalid; boolean true/false/invalid; date valid/invalid → ISO string (note: `'Date'` capital D in `JayAtomicType.name`); enum by name/by index/invalid/out-of-range/non-integer/negative; JSON array/object/invalid. All use `isAtomicType` → `name` switch, NOT `kind` switch |
-| `findContractTag` | Direct tag match; camelCase match ("product type" → productType); nested tags; headless key match; numeric segment skips into sub-contract; missing path → `undefined` |
-| `applyViewStateOverrides` | String override; type-coerced override; failed coercion → original preserved; blocked path → skipped; JSON then dot-path precedence |
+| Function                  | Test cases                                                                                                                                                                                                                                                                                                |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `extractViewStateParams`  | No vs params → `undefined`; mixed params → only vs extracted; repeated params → last wins; array values → last element                                                                                                                                                                                    |
+| `isPathSafe`              | Normal paths → `true`; `__proto__` / `constructor` / `prototype` → `false`; nested blocked segment → `false`                                                                                                                                                                                              |
+| `setNestedValue`          | Flat key; nested key; auto-create intermediate objects; numeric index → array; array holes filled with `{}`; deeply nested                                                                                                                                                                                |
+| `coerceValue`             | String as-is; number valid/invalid; boolean true/false/invalid; date valid/invalid → ISO string (note: `'Date'` capital D in `JayAtomicType.name`); enum by name/by index/invalid/out-of-range/non-integer/negative; JSON array/object/invalid. All use `isAtomicType` → `name` switch, NOT `kind` switch |
+| `findContractTag`         | Direct tag match; camelCase match ("product type" → productType); nested tags; headless key match; numeric segment skips into sub-contract; missing path → `undefined`                                                                                                                                    |
+| `applyViewStateOverrides` | String override; type-coerced override; failed coercion → original preserved; blocked path → skipped; JSON then dot-path precedence                                                                                                                                                                       |
 
 ### Run tests
 
@@ -76,16 +78,18 @@ yarn vitest run test/viewstate-query-params.test.ts
 ### Tasks
 
 1. **In `mkRoute`** (`dev-server/lib/dev-server.ts`):
+
    - Import `extractViewStateParams` from `./viewstate-query-params`
    - After building `pageParams`, call `extractViewStateParams(req.query)`
    - If result is defined, force `handleDirectRequest` (bypass cache logic), passing `vsParams`
 
 2. **In `handleDirectRequest`**:
+
    - Add optional parameter: `vsParams?: Record<string, string>`
    - After the ViewState merge step (where `renderedSlowly` and `renderedFast` are merged), add:
      ```typescript
      if (vsParams) {
-         viewState = applyViewStateOverrides(viewState, vsParams);
+       viewState = applyViewStateOverrides(viewState, vsParams);
      }
      ```
    - Note: No contract passed yet — all overrides applied as strings. This is correct behavior for string fields and sufficient for Demo 1.
@@ -112,6 +116,7 @@ Verify existing dev-server tests still pass (no regressions).
 **Setup:** Start any Jay project dev server (`yarn dev`).
 
 **Script:**
+
 1. Open a page in the browser normally — show default data
 2. Add `?vs.title=Hello+Management` to the URL — title changes to "Hello Management"
 3. Add `&vs.subtitle=Live+Demo` — subtitle also changes
@@ -129,15 +134,22 @@ Verify existing dev-server tests still pass (no regressions).
 ### Tasks
 
 1. **In `handleDirectRequest`** (when `vsParams` is present):
+
    - **Page contract:** Load via `fs.readFile` on the `.jay-contract` file (same path as `.jay-html` with extension swap) → `parseContract()` → `checkValidationErrors()`. Wrap in try/catch — return `undefined` if file doesn't exist.
    - **Headless contracts:** Add `headlessContracts` to the existing destructuring of `pagePartsResult.val` (currently only destructures `parts`, `serverTrackByMap`, `clientTrackByMap`, `usedPackages`). The field is `headlessContracts: HeadlessContractInfo[]` — it's already populated by `loadPageParts`.
    - Pass both to `applyViewStateOverrides`:
      ```typescript
-     const { parts: pageParts, serverTrackByMap, clientTrackByMap, usedPackages, headlessContracts } = pagePartsResult.val;
+     const {
+       parts: pageParts,
+       serverTrackByMap,
+       clientTrackByMap,
+       usedPackages,
+       headlessContracts,
+     } = pagePartsResult.val;
      // ... later, after ViewState merge:
      if (vsParams) {
-         const contract = await loadPageContract(route.jayHtmlPath);
-         viewState = applyViewStateOverrides(viewState, vsParams, contract, headlessContracts);
+       const contract = await loadPageContract(route.jayHtmlPath);
+       viewState = applyViewStateOverrides(viewState, vsParams, contract, headlessContracts);
      }
      ```
    - Create a small helper `loadPageContract(jayHtmlPath)` that reads the `.jay-contract` file and returns `Contract | undefined` (graceful if no contract file exists)
@@ -168,6 +180,7 @@ yarn vitest run
 **Setup:** Use a Jay project that has a page with numeric, boolean, and ideally enum fields.
 
 **Script:**
+
 1. Open a product page normally — show real data
 2. Override price: `?vs.price=1.99` — price updates (it's a real number, not a string)
 3. Override stock status: `&vs.inStock=false` — "In Stock" indicator disappears (boolean, not string "false")
@@ -184,20 +197,24 @@ yarn vitest run
 ### Tasks
 
 1. **In `generateClientScript`** (`stack-server-runtime/lib/generate-client-script.ts`):
+
    - Add `previewMode?: boolean` to `GenerateClientScriptOptions`
    - Destructure it: `const { enableAutomation = true, slowViewState, previewMode } = options;`
    - When `previewMode` is true, override the **local** `compositeParts` variable (line ~44) to `'[]'`. This variable is a string built from the `parts` parameter — it controls whether client-side event handlers mount. The `parts` parameter stays unchanged.
    - Inject at the top of the HTML body:
      ```html
-     <div style="position:fixed;top:0;left:0;right:0;z-index:99999;
+     <div
+       style="position:fixed;top:0;left:0;right:0;z-index:99999;
          background:#f59e0b;color:#000;text-align:center;padding:6px 12px;
-         font-family:system-ui;font-size:13px;font-weight:500;">
-         ⚠ ViewState Preview Mode — interactions disabled
+         font-family:system-ui;font-size:13px;font-weight:500;"
+     >
+       ⚠ ViewState Preview Mode — interactions disabled
      </div>
      ```
    - Inject CSS: `<style>[ref]{pointer-events:none;opacity:0.6;}</style>`
 
 2. **In `sendResponse`** (`dev-server/lib/dev-server.ts`, line ~783):
+
    - Add `previewMode?: boolean` as the last parameter
    - Pass it through to the `GenerateClientScriptOptions` object (line ~807): `{ enableAutomation: !options.disableAutomation, slowViewState, previewMode }`
 
@@ -224,6 +241,7 @@ Update or add a test in `stack-server-runtime` that verifies `previewMode: true`
 > **Message:** "When previewing with custom data, the system prevents any real actions and clearly shows you're in preview mode."
 
 **Script:**
+
 1. Open a page with overrides: `?vs.title=Preview+Demo&vs.price=0`
 2. Point out the yellow banner: "ViewState Preview Mode — interactions disabled"
 3. Try clicking a button (Add to Cart, Submit, etc.) — nothing happens
@@ -240,11 +258,13 @@ Update or add a test in `stack-server-runtime` that verifies `previewMode: true`
 ### Tasks
 
 1. **Verify array support** — should already work from Phase 1's `setNestedValue` (numeric path segments create arrays). Add integration-level tests:
+
    - `vs.products.0.name=Shirt&vs.products.1.name=Pants` on a page with a products list
    - Verify array creation from empty state
    - Verify array hole filling
 
 2. **Verify JSON replacement** — should already work from Phase 1's `coerceValue` (JSON detection). Add tests:
+
    - `vs.products=[{"name":"A"},{"name":"B"}]` replaces entire array
    - `vs.priceData={"currency":"USD","amount":42}` replaces entire object
    - Mixed: JSON replacement then dot-path override
@@ -275,20 +295,24 @@ yarn vitest run
 **Script:**
 
 **Part A — List/Array override:**
+
 1. Open a page with a product list
 2. `?vs.products=[{"name":"Demo Item 1","price":10},{"name":"Demo Item 2","price":20}]` — entire list replaced
 3. Tweak one item: add `&vs.products.0.name=Modified+Item` — first item's name changes
 
 **Part B — Headless component override:**
+
 1. Open a page that uses a headless component (e.g., product detail with `key="product"`)
 2. `?vs.product.name=Custom+Product&vs.product.price=99.99` — headless component data overridden
 
 **Part C — Different project:**
+
 1. Switch to a completely different Jay project
 2. Override fields on a page — works immediately with no setup
 3. Explain: "This is a framework feature. Any page, any project, any data."
 
 **Part D — Edge cases (brief):**
+
 1. Show empty list → populated: `?vs.items.0.name=First+Item`
 2. Show variant toggle: `?vs.isLoading=true` → loading state appears
 3. Show preview banner is always there when overriding
@@ -337,13 +361,13 @@ All tests in `packages/jay-stack/dev-server/test/viewstate-query-params.test.ts`
 
 ## File Summary
 
-| File | Action | Phase |
-|------|--------|-------|
-| `compiler-jay-html/lib/index.ts` | **Modify** (1 line: re-export `camelCase`) | 1 (prerequisite) |
-| `dev-server/lib/viewstate-query-params.ts` | **Create** | 1 |
-| `dev-server/test/viewstate-query-params.test.ts` | **Create** | 1 |
-| `dev-server/lib/dev-server.ts` | **Modify** (4 small changes: extract params, force direct, apply overrides, pass previewMode) | 2, 3, 4 |
-| `stack-server-runtime/lib/generate-client-script.ts` | **Modify** (1 option + conditional logic for preview mode) | 4 |
+| File                                                 | Action                                                                                        | Phase            |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------- | ---------------- |
+| `compiler-jay-html/lib/index.ts`                     | **Modify** (1 line: re-export `camelCase`)                                                    | 1 (prerequisite) |
+| `dev-server/lib/viewstate-query-params.ts`           | **Create**                                                                                    | 1                |
+| `dev-server/test/viewstate-query-params.test.ts`     | **Create**                                                                                    | 1                |
+| `dev-server/lib/dev-server.ts`                       | **Modify** (4 small changes: extract params, force direct, apply overrides, pass previewMode) | 2, 3, 4          |
+| `stack-server-runtime/lib/generate-client-script.ts` | **Modify** (1 option + conditional logic for preview mode)                                    | 4                |
 
 Total: **2 new files, 3 modified files.** That's it.
 
@@ -351,24 +375,24 @@ Total: **2 new files, 3 modified files.** That's it.
 
 ## Risk Mitigation
 
-| Risk | Mitigation |
-|------|-----------|
-| Import paths don't resolve | Prerequisite step (Phase 1) re-exports `camelCase` from `compiler-jay-html`. Run `yarn build` in that package first. All other imports (`Contract`, `parseContract`, `HeadlessContractInfo`) are already in the main index. |
-| Contract file doesn't exist for a page | `loadPageContract` returns `undefined` gracefully; overrides still work as strings |
-| Performance impact on normal requests | Zero impact — `extractViewStateParams` returns `undefined` immediately, normal path unchanged |
-| Headless contract info shape mismatch | Confirmed: `loadPageParts` returns `headlessContracts: HeadlessContractInfo[]` directly — same type used by `findContractTag`. No adapter needed. |
-| `yarn build` fails after changes | Run `yarn build` after each phase to catch cross-package issues early |
+| Risk                                   | Mitigation                                                                                                                                                                                                                  |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Import paths don't resolve             | Prerequisite step (Phase 1) re-exports `camelCase` from `compiler-jay-html`. Run `yarn build` in that package first. All other imports (`Contract`, `parseContract`, `HeadlessContractInfo`) are already in the main index. |
+| Contract file doesn't exist for a page | `loadPageContract` returns `undefined` gracefully; overrides still work as strings                                                                                                                                          |
+| Performance impact on normal requests  | Zero impact — `extractViewStateParams` returns `undefined` immediately, normal path unchanged                                                                                                                               |
+| Headless contract info shape mismatch  | Confirmed: `loadPageParts` returns `headlessContracts: HeadlessContractInfo[]` directly — same type used by `findContractTag`. No adapter needed.                                                                           |
+| `yarn build` fails after changes       | Run `yarn build` after each phase to catch cross-package issues early                                                                                                                                                       |
 
 ---
 
 ## Quick Reference: Demo Schedule
 
-| Demo | After Phase | Title | Duration |
-|------|-------------|-------|----------|
-| **DEMO 1** | Phase 2 | Override any text on the page | 2 min |
-| **DEMO 2** | Phase 3 | Smart type coercion from the URL | 3 min |
-| **DEMO 3** | Phase 4 | Safe preview with visual indicator | 2 min |
-| **DEMO 4** | Phase 5 | Full feature demo on any Jay project | 5 min |
+| Demo       | After Phase | Title                                | Duration |
+| ---------- | ----------- | ------------------------------------ | -------- |
+| **DEMO 1** | Phase 2     | Override any text on the page        | 2 min    |
+| **DEMO 2** | Phase 3     | Smart type coercion from the URL     | 3 min    |
+| **DEMO 3** | Phase 4     | Safe preview with visual indicator   | 2 min    |
+| **DEMO 4** | Phase 5     | Full feature demo on any Jay project | 5 min    |
 
 Each demo builds on the previous one. Every demo is independently valuable and shows clear progress to management.
 

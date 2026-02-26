@@ -786,14 +786,14 @@ async function handleDirectRequest(
     if (vsParams) {
         const contractPath = route.jayHtmlPath.replace('.jay-html', '.jay-contract');
         const loadResult = JAY_IMPORT_RESOLVER.loadContract(contractPath);
-        
+
         // Log warnings for parse errors (but continue - overrides will work as strings)
         if (!loadResult.val && loadResult.validations.length > 0) {
             getLogger().warn(
                 `[ViewState Overrides] Contract parse errors in ${contractPath}: ${loadResult.validations.join(', ')}`,
             );
         }
-        
+
         viewState = applyViewStateOverrides(viewState, vsParams, loadResult.val, headlessContracts);
     }
 
@@ -908,7 +908,7 @@ async function preRenderJayHtml(
     // Load and parse the main contract for phase detection
     const contractPath = route.jayHtmlPath.replace('.jay-html', '.jay-contract');
     const loadResult = JAY_IMPORT_RESOLVER.loadContract(contractPath);
-    
+
     // Log errors for parse failures and return undefined (slow render cannot continue)
     if (!loadResult.val && loadResult.validations.length > 0) {
         getLogger().error(
@@ -916,7 +916,7 @@ async function preRenderJayHtml(
         );
         return undefined;
     }
-    
+
     // Contract file might not exist (ENOENT) - that's OK, continue without contract
     const contract = loadResult.val;
 
