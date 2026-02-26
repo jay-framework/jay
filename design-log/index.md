@@ -194,6 +194,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 80  | materializing dynamic contracts for agentic generation | CLI and dev server contract materialization for AI agents                             |
 | 81  | dev server test mode                                   | Health/shutdown endpoints and timeout for smoke testing                               |
 | 83  | dev server logging and timing                          | Clean output, verbose mode, timing for render phases                                  |
+| 96  | viewstate query params in dev server                   | Override ViewState via `vs.*` URL query params for design preview                     |
 | 85  | rendering phases and agent kit for agentic generation  | Agent-kit folder: instructions, contracts, markdown content with headless annotations |
 | 91  | WebMCP plugin for jay-stack                            | Generic WebMCP support: automation→tools/resources/prompts, plugin packaging          |
 | 92  | Gemini agent plugin for jay-stack                      | Embedded AI agent: Gemini API, .jay-action metadata, chat contract, page automation   |
@@ -232,7 +233,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ### "I'm working on the dev server"
 
-→ See #26 (jay start), #74 (file watching), #77 (automation integration), #81 (test mode)
+→ See #26 (jay start), #74 (file watching), #77 (automation integration), #81 (test mode), #96 (viewstate query params)
 
 ### "I need to understand security model"
 
