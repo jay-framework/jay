@@ -1,0 +1,34 @@
+name: test-widget
+tags:
+  - tag: title
+    type: data
+    dataType: string
+    required: true
+
+  - tag: description
+    type: data
+    dataType: string
+    required: true
+
+  - tag: price
+    type: data
+    dataType: number
+
+  - tag: items
+    type: sub-contract
+    repeated: true
+    trackBy: _id
+    tags:
+      - tag: _id
+        type: data
+        dataType: string
+      - tag: name
+        type: data
+        dataType: string
+      - tag: label
+        type: data
+        dataType: string
+
+  - tag: addToCart
+    type: interactive
+    elementType: HTMLButtonElement
