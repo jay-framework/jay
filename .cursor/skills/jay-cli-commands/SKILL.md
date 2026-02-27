@@ -227,8 +227,7 @@ yarn jay-stack agent-kit --force
 
 **Outputs to `agent-kit/materialized-contracts/`:**
 
-- `contracts-index.yaml` — index of all contracts
-- `plugins-index.yaml` — index of all plugins and their contracts
+- `plugins-index.yaml` — index of all plugins, their contracts, and actions
 - `<plugin>/*.jay-contract` — materialized dynamic contracts
 
 Also creates `agent-kit/INSTRUCTIONS.md` if it doesn't exist.

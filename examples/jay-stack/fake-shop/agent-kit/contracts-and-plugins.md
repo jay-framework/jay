@@ -2,7 +2,7 @@
 
 ## Discovery: Plugins Index
 
-After running `jay-stack agent-kit`, read `materialized-contracts/plugins-index.yaml`:
+After running `jay-stack agent-kit`, read `plugins-index.yaml`:
 
 ```yaml
 jay_stack_version: '1.0.0'

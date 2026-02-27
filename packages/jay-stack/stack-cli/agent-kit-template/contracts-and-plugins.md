@@ -2,10 +2,9 @@
 
 ## Discovery: Plugins Index
 
-After running `jay-stack agent-kit`, read `materialized-contracts/plugins-index.yaml`:
+After running `jay-stack agent-kit`, read `plugins-index.yaml`:
 
 ```yaml
-materialized_at: '2026-02-09T...'
 jay_stack_version: '1.0.0'
 plugins:
   - name: wix-stores
@@ -36,18 +35,6 @@ Fields:
 - `actions[].name` — action name (use with `jay-stack action <plugin>/<action>`)
 - `actions[].description` — short description of what the action does
 - `actions[].path` — path to the `.jay-action` file with full input/output schemas
-
-## Discovery: Contracts Index
-
-`materialized-contracts/contracts-index.yaml` lists all contracts across all plugins:
-
-```yaml
-contracts:
-  - plugin: wix-stores
-    name: product-page
-    type: static
-    path: ./node_modules/@wix/stores/lib/contracts/product-page.jay-contract
-```
 
 ## Reading plugin.yaml
 

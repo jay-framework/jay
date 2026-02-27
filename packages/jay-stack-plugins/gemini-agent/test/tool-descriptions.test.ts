@@ -24,7 +24,7 @@ describe('tool-descriptions', () => {
 
     it('should extract interactive tag descriptions from contract', () => {
         const tmpDir = fs.mkdtempSync(path.join('/tmp', 'tool-desc-'));
-        const agentKitDir = path.join(tmpDir, 'agent-kit', 'materialized-contracts');
+        const agentKitDir = path.join(tmpDir, 'agent-kit');
         fs.mkdirSync(agentKitDir, { recursive: true });
 
         const contractDir = path.join(tmpDir, 'contracts');
@@ -83,7 +83,7 @@ tags:
 
     it('should extract descriptions from nested sub-contracts', () => {
         const tmpDir = fs.mkdtempSync(path.join('/tmp', 'tool-desc-'));
-        const agentKitDir = path.join(tmpDir, 'agent-kit', 'materialized-contracts');
+        const agentKitDir = path.join(tmpDir, 'agent-kit');
         fs.mkdirSync(agentKitDir, { recursive: true });
 
         const contractDir = path.join(tmpDir, 'contracts');
@@ -140,7 +140,7 @@ tags:
 
     it('should handle multi-type tags (variant + interactive)', () => {
         const tmpDir = fs.mkdtempSync(path.join('/tmp', 'tool-desc-'));
-        const agentKitDir = path.join(tmpDir, 'agent-kit', 'materialized-contracts');
+        const agentKitDir = path.join(tmpDir, 'agent-kit');
         fs.mkdirSync(agentKitDir, { recursive: true });
 
         const contractDir = path.join(tmpDir, 'contracts');
@@ -182,7 +182,7 @@ tags:
 
     it('should cache results after first call', () => {
         const tmpDir = fs.mkdtempSync(path.join('/tmp', 'tool-desc-'));
-        const agentKitDir = path.join(tmpDir, 'agent-kit', 'materialized-contracts');
+        const agentKitDir = path.join(tmpDir, 'agent-kit');
         fs.mkdirSync(agentKitDir, { recursive: true });
 
         fs.writeFileSync(path.join(agentKitDir, 'plugins-index.yaml'), 'plugins: []\n');

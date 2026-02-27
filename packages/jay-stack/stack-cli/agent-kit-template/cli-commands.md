@@ -50,8 +50,7 @@ jay-stack agent-kit --no-references
 
 Outputs:
 
-- `materialized-contracts/contracts-index.yaml`
-- `materialized-contracts/plugins-index.yaml`
+- `plugins-index.yaml`
 - `materialized-contracts/<plugin>/*.jay-contract` (dynamic contracts)
 - `references/<plugin>/` — plugin reference data (product catalogs, collection schemas, etc.)
 - Documentation files (INSTRUCTIONS.md and reference docs)
