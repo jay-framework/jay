@@ -1,0 +1,19 @@
+materialized_at: 2026-02-26T18:51:57.731Z
+jay_stack_version: 0.0.0
+contracts:
+  - plugin: product-rating
+    name: product-rating
+    type: static
+    path: ./src/plugins/product-rating/product-rating.jay-contract
+  - plugin: product-widget
+    name: product-widget
+    type: static
+    path: ./src/plugins/product-widget/product-widget.jay-contract
+  - plugin: stock-status
+    name: stock-status
+    type: static
+    path: ./src/plugins/stock-status/stock-status.jay-contract
+  - plugin: mood-tracker-plugin
+    name: mood-tracker
+    type: static
+    path: ./../mood-tracker-plugin/dist/mood-tracker.jay-contract
