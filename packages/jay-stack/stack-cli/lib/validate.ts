@@ -13,6 +13,8 @@ import {
     JAY_IMPORT_RESOLVER,
     generateElementFile,
     parseContract,
+    type ContractTag,
+    type JayHtmlSourceFile,
 } from '@jay-framework/compiler-jay-html';
 import { getLogger } from '@jay-framework/logger';
 import { loadConfig, getConfigWithDefaults } from './config';
@@ -21,6 +23,7 @@ export interface ValidateOptions {
     path?: string;
     verbose?: boolean;
     json?: boolean;
+    projectRoot?: string;
 }
 
 export interface ValidationError {
@@ -34,12 +37,27 @@ export interface ValidationWarning {
     message: string;
 }
 
+export interface ContractCoverage {
+    key?: string;
+    contractName: string;
+    totalTags: number;
+    usedTags: number;
+    unusedTags: string[];
+    requiredUnusedTags: string[];
+}
+
+export interface FileCoverage {
+    file: string;
+    contracts: ContractCoverage[];
+}
+
 export interface ValidationResult {
     valid: boolean;
     jayHtmlFilesScanned: number;
     contractFilesScanned: number;
     errors: ValidationError[];
     warnings: ValidationWarning[];
+    coverage: FileCoverage[];
 }
 
 async function findJayFiles(dir: string): Promise<string[]> {
@@ -50,10 +68,245 @@ async function findContractFiles(dir: string): Promise<string[]> {
     return await glob(`${dir}/**/*${JAY_CONTRACT_EXTENSION}`);
 }
 
+// --- Tag coverage internals ---
+
+interface TagInfo {
+    path: string;
+    required: boolean;
+}
+
+interface TagScope {
+    importIndex: number;
+    prefix: string;
+}
+
+/** @internal Exported for testing */
+export function flattenContractTags(tags: ContractTag[], prefix?: string): TagInfo[] {
+    const result: TagInfo[] = [];
+    for (const tag of tags) {
+        const tagPath = prefix ? `${prefix}.${tag.tag}` : tag.tag;
+        result.push({ path: tagPath, required: tag.required === true });
+        if (tag.tags) {
+            result.push(...flattenContractTags(tag.tags, tagPath));
+        }
+    }
+    return result;
+}
+
+/** @internal Exported for testing */
+export function extractExpressions(text: string): string[] {
+    const results: string[] = [];
+    const regex = /\{([^}]+)\}/g;
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+        results.push(match[1].trim());
+    }
+    return results;
+}
+
+/** @internal Exported for testing */
+export function extractTagPath(expr: string): string | null {
+    let cleaned = expr.replace(/^!/, '').trim();
+    cleaned = cleaned.split(/\s*[!=]==?\s*/)[0].trim();
+    if (cleaned === '.' || cleaned === '') return null;
+    if (/^[a-zA-Z_$][a-zA-Z0-9_$]*(\.[a-zA-Z_$][a-zA-Z0-9_$]*)*$/.test(cleaned)) {
+        return cleaned;
+    }
+    return null;
+}
+
+const SKIP_ATTRS = new Set([
+    'forEach',
+    'if',
+    'ref',
+    'trackBy',
+    'slowForEach',
+    'jayIndex',
+    'jayTrackBy',
+    'when-resolved',
+    'when-loading',
+    'when-rejected',
+    'accessor',
+]);
+
+function collectUsedTags(jayHtml: JayHtmlSourceFile): Map<number, Set<string>> {
+    const imports = jayHtml.headlessImports;
+    const usedTags = new Map<number, Set<string>>();
+    const keyMap = new Map<string, number>();
+
+    for (let i = 0; i < imports.length; i++) {
+        if (imports[i].contract) {
+            usedTags.set(i, new Set<string>());
+            if (imports[i].key) {
+                keyMap.set(imports[i].key!, i);
+            }
+        }
+    }
+
+    function markUsed(importIndex: number, tagPath: string): void {
+        usedTags.get(importIndex)?.add(tagPath);
+    }
+
+    function resolvePath(path: string, scopes: TagScope[]): void {
+        const dot = path.indexOf('.');
+        if (dot !== -1) {
+            const key = path.substring(0, dot);
+            const idx = keyMap.get(key);
+            if (idx !== undefined) {
+                markUsed(idx, path.substring(dot + 1));
+                return;
+            }
+        }
+        if (scopes.length > 0) {
+            const scope = scopes[scopes.length - 1];
+            const full = scope.prefix ? `${scope.prefix}.${path}` : path;
+            markUsed(scope.importIndex, full);
+        }
+    }
+
+    function walkElement(element: any, scopes: TagScope[]): void {
+        const tagName: string | undefined = element.rawTagName?.toLowerCase();
+        let childScopes = scopes;
+
+        // <jay:contract-name> → instance scope for children
+        if (tagName?.startsWith('jay:')) {
+            const contractName = tagName.substring(4);
+            const idx = imports.findIndex(
+                (imp) => imp.contractName === contractName && imp.contract,
+            );
+            if (idx !== -1) {
+                childScopes = [...scopes, { importIndex: idx, prefix: '' }];
+            }
+        }
+
+        // forEach → mark tag used, push scope for children
+        const forEachVal = element.getAttribute?.('forEach');
+        if (forEachVal) {
+            const fePath = extractTagPath(forEachVal);
+            if (fePath) {
+                resolvePath(fePath, childScopes);
+                const dot = fePath.indexOf('.');
+                if (dot !== -1) {
+                    const key = fePath.substring(0, dot);
+                    const idx = keyMap.get(key);
+                    if (idx !== undefined) {
+                        childScopes = [
+                            ...childScopes,
+                            { importIndex: idx, prefix: fePath.substring(dot + 1) },
+                        ];
+                    }
+                } else if (childScopes.length > 0) {
+                    const scope = childScopes[childScopes.length - 1];
+                    const newPrefix = scope.prefix ? `${scope.prefix}.${fePath}` : fePath;
+                    childScopes = [
+                        ...childScopes,
+                        { importIndex: scope.importIndex, prefix: newPrefix },
+                    ];
+                }
+            }
+        }
+
+        // <with-data accessor="X"> → push scope for children
+        if (tagName === 'with-data') {
+            const accessor = element.getAttribute?.('accessor');
+            if (accessor && accessor !== '.' && childScopes.length > 0) {
+                resolvePath(accessor, childScopes);
+                const scope = childScopes[childScopes.length - 1];
+                const newPrefix = scope.prefix ? `${scope.prefix}.${accessor}` : accessor;
+                childScopes = [
+                    ...childScopes,
+                    { importIndex: scope.importIndex, prefix: newPrefix },
+                ];
+            }
+        }
+
+        // if attribute
+        const ifVal = element.getAttribute?.('if');
+        if (ifVal) {
+            const ifPath = extractTagPath(ifVal);
+            if (ifPath) resolvePath(ifPath, scopes);
+        }
+
+        // ref attribute
+        const refVal = element.getAttribute?.('ref');
+        if (refVal) {
+            resolvePath(refVal, scopes);
+        }
+
+        // Other attribute expressions
+        const attrs: Record<string, string> = element.attributes ?? {};
+        for (const [name, value] of Object.entries(attrs)) {
+            if (SKIP_ATTRS.has(name)) continue;
+            for (const expr of extractExpressions(value)) {
+                const p = extractTagPath(expr);
+                if (p) resolvePath(p, scopes);
+            }
+        }
+
+        // Walk children
+        for (const child of element.childNodes ?? []) {
+            if (child.nodeType === 3) {
+                const text: string = child.rawText ?? child.text ?? '';
+                for (const expr of extractExpressions(text)) {
+                    const p = extractTagPath(expr);
+                    if (p) resolvePath(p, childScopes);
+                }
+            } else if (child.nodeType === 1) {
+                walkElement(child, childScopes);
+            }
+        }
+    }
+
+    walkElement(jayHtml.body, []);
+    return usedTags;
+}
+
+/** @internal Exported for testing */
+export function analyzeTagCoverage(jayHtml: JayHtmlSourceFile, file: string): FileCoverage | null {
+    const imports = jayHtml.headlessImports;
+    const withContracts = imports.filter((imp) => imp.contract);
+    if (withContracts.length === 0) return null;
+
+    const usedTagsMap = collectUsedTags(jayHtml);
+    const contracts: ContractCoverage[] = [];
+
+    for (let i = 0; i < imports.length; i++) {
+        const imp = imports[i];
+        if (!imp.contract) continue;
+
+        const allTags = flattenContractTags(imp.contract.tags);
+        const usedSet = usedTagsMap.get(i) ?? new Set<string>();
+
+        // Mark parent paths as used when a child is used
+        // (sub-contract containers are implicitly used if any child is)
+        const expanded = new Set<string>(usedSet);
+        for (const usedPath of usedSet) {
+            const segments = usedPath.split('.');
+            for (let j = 1; j < segments.length; j++) {
+                expanded.add(segments.slice(0, j).join('.'));
+            }
+        }
+
+        const unused = allTags.filter((t) => !expanded.has(t.path));
+        const requiredUnused = unused.filter((t) => t.required);
+
+        contracts.push({
+            key: imp.key,
+            contractName: imp.contractName,
+            totalTags: allTags.length,
+            usedTags: allTags.length - unused.length,
+            unusedTags: unused.map((t) => t.path),
+            requiredUnusedTags: requiredUnused.map((t) => t.path),
+        });
+    }
+
+    return { file, contracts };
+}
+
 export async function validateJayFiles(options: ValidateOptions = {}): Promise<ValidationResult> {
     const config = loadConfig();
     const resolvedConfig = getConfigWithDefaults(config);
-    const projectRoot = process.cwd();
+    const projectRoot = options.projectRoot ?? process.cwd();
 
     // Use provided path or default to pagesBase from config
     const scanDir = options.path
@@ -62,6 +315,7 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
 
     const errors: ValidationError[] = [];
     const warnings: ValidationWarning[] = [];
+    const coverage: FileCoverage[] = [];
 
     // Find all jay files
     const jayHtmlFiles = await findJayFiles(scanDir);
@@ -139,6 +393,12 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                 continue; // Skip generation if parsing failed
             }
 
+            // Analyze tag coverage for headless imports
+            const fileCoverage = analyzeTagCoverage(parsedFile.val!, relativePath);
+            if (fileCoverage) {
+                coverage.push(fileCoverage);
+            }
+
             // Try to generate the code (without writing to disk)
             const generatedFile = generateElementFile(
                 parsedFile.val!,
@@ -178,6 +438,7 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
         contractFilesScanned: contractFiles.length,
         errors,
         warnings,
+        coverage,
     };
 }
 
@@ -211,5 +472,31 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
         logger.important(
             chalk.red(`${result.errors.length} error(s) found, ${validFiles} file(s) valid.`),
         );
+    }
+
+    if (result.coverage.length > 0) {
+        logger.important('');
+        logger.important('Tag Coverage:');
+        for (const fileCov of result.coverage) {
+            logger.important(`  ${fileCov.file}`);
+            for (const contract of fileCov.contracts) {
+                const label = contract.key
+                    ? `${contract.key} (${contract.contractName})`
+                    : contract.contractName;
+                logger.important(
+                    `    ${label}: ${contract.usedTags}/${contract.totalTags} tags used`,
+                );
+                if (contract.unusedTags.length > 0) {
+                    logger.important(chalk.gray(`      Unused: ${contract.unusedTags.join(', ')}`));
+                }
+                if (contract.requiredUnusedTags.length > 0) {
+                    logger.important(
+                        chalk.yellow(
+                            `      ⚠ Required unused: ${contract.requiredUnusedTags.join(', ')}`,
+                        ),
+                    );
+                }
+            }
+        }
     }
 }

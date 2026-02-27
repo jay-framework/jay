@@ -28,6 +28,7 @@ This feedback lets the agent decide whether to iterate on the page or move on.
 ### Q2: How do we detect which tags are "used" in a jay-html file?
 
 **Answer:** HTML tree traversal. Walk the parsed DOM tree returned by `parseJayFile()` (a `node-html-parser` HTMLElement), tracking the current scope (key + forEach nesting). Extract tag references from:
+
 - `{key.tagName}` text expressions
 - `if="key.tagName"` condition attributes
 - `ref="key.tagName"` ref attributes
@@ -51,6 +52,7 @@ Tag Coverage:
 ```
 
 When there are required unused tags:
+
 ```
       ⚠ Required unused: productName, price
 ```
@@ -75,6 +77,7 @@ Walk the parsed `body: HTMLElement` tree. Maintain a scope stack that tracks the
 4. When entering `<with-data accessor="path">`, push scope for nested sub-contract
 
 At each element, extract tag references from:
+
 - `forEach` attribute value — marks the repeated tag as used
 - `if` attribute value — parse the condition expression for tag references
 - `ref` attribute value — marks the interactive tag as used
@@ -88,6 +91,7 @@ For each headless import (with or without key), maintain a `Set<string>` of used
 ### Flattening contract tags
 
 Recursively flatten `Contract.tags` into a list of paths:
+
 - `{ tag: "name", type: data }` → path `"name"`
 - `{ tag: "options", type: sub-contract, tags: [{ tag: "_id" }, { tag: "name" }] }` → paths `"options"`, `"options._id"`, `"options.name"`
 
@@ -118,3 +122,27 @@ Add `coverage: FileCoverage[]` to `ValidationResult`. Print after errors/warning
 3. Required unused tags are highlighted with ⚠
 4. Existing validation behavior (errors/warnings) is unchanged
 5. Output is clear enough for an AI agent to act on
+
+## Implementation Results
+
+### What was implemented
+
+All changes in `packages/jay-stack/stack-cli/lib/validate.ts`:
+
+- **Types**: `ContractCoverage`, `FileCoverage` (exported), `TagInfo`, `TagScope` (internal). Added `coverage: FileCoverage[]` to `ValidationResult`.
+- **`flattenContractTags(tags, prefix?)`**: Recursively flattens contract tags into `{path, required}` entries. Sub-contract children get dotted paths (e.g., `priceData.formatted.price`).
+- **`extractExpressions(text)`**: Extracts `{expr}` patterns from text/attribute values.
+- **`extractTagPath(expr)`**: Parses expressions and conditions (`!tag`, `tag === value`) into dotted tag paths.
+- **`collectUsedTags(jayHtml)`**: Walks DOM tree with scope tracking. Handles key-based (`key.tagPath`), instance-based (`<jay:contract-name>`), forEach, and with-data scoping. Returns `Map<importIndex, Set<tagPath>>`.
+- **`analyzeTagCoverage(jayHtml, file)`**: Orchestrates flatten → collect → compare. Marks parent sub-contract paths as implicitly used when children are used.
+- **Integration**: Called after successful parse, before generate. Coverage printed after errors/warnings. Included in `--json` output automatically.
+
+### Deviations from design
+
+- Used import index (`Map<number, Set<string>>`) instead of direct object references for tracking used tags per headless import — avoids Map identity issues.
+- `if` and `ref` attributes on elements resolve in the parent scope (before forEach), while text content and child elements resolve in the child scope (after forEach). This matches the semantic meaning: `if` conditions and `ref` bindings on an element apply to the element itself in its parent context.
+- Attributes on `<jay:*>` elements (props like `productId="{_id}"`) resolve in the parent scope, not the instance scope — correct since prop values come from the outer context.
+
+### Test results
+
+All existing tests pass: 61/61 (6 test files). Type checking passes.
