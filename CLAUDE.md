@@ -119,7 +119,7 @@ The project follows a rigorous design log methodology for all significant featur
 
 ### Before Making Changes
 
-1. **Check design logs** in `./design-log/` and `./design-log/index.md` for existing designs and implementation notes
+1. **Check design logs first** — Before searching the codebase or guessing at how things work, read `./design-log/index.md` to find relevant design logs. The design logs explain the architecture, patterns, and rationale. Use them as your starting point for understanding any feature area, not blind code searching.
 2. **For new features**: Create design log first, get approval, then implement
 3. **Read related design logs** to understand context and constraints
 
