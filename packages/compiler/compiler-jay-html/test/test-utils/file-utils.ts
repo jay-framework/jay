@@ -12,7 +12,12 @@ import {
 import { promises } from 'node:fs';
 import { parseJayFile } from '../../lib';
 import { JayHtmlSourceFile } from '../../lib';
-import { generateElementBridgeFile, generateElementFileReactTarget } from '../../lib';
+import {
+    generateElementBridgeFile,
+    generateElementFileReactTarget,
+    generateElementHydrateFile,
+    generateServerElementFile,
+} from '../../lib';
 import { generateElementFile } from '../../lib';
 import path from 'path';
 import { JayImportResolver } from '../../lib';
@@ -56,6 +61,35 @@ export async function readFixtureElementBridgeFile(folder) {
     return prettify(await readFixtureFileRaw(folder, 'generated-element-bridge.ts'));
 }
 
+export async function readFixtureElementHydrateFile(folder) {
+    return prettify(await readFixtureFileRaw(folder, 'generated-element-hydrate.ts'));
+}
+
+export async function readFixtureServerElementFile(folder) {
+    return prettify(await readFixtureFileRaw(folder, 'generated-server-element.ts'));
+}
+
+export async function readFileAndGenerateServerElementFile(
+    folder: string,
+    givenFile?: string,
+    resolver?: JayImportResolver,
+) {
+    const dirname = fixtureDir(folder);
+    const file = givenFile || getFileFromFolder(folder);
+    const jayFile = await readFixtureSourceJayFile(folder, file);
+    const parsedFile = checkValidationErrors(
+        await parseJayFile(
+            jayFile,
+            `${file}.jay-html`,
+            dirname,
+            {},
+            resolver || TEST_IMPORT_RESOLVER,
+            fixturesRoot(),
+        ),
+    );
+    return generateServerElementFile(parsedFile);
+}
+
 export async function readFixtureReactFile(folder, file) {
     return prettify(await readFixtureFileRaw(folder, `${file}.tsx`));
 }
@@ -96,6 +130,27 @@ export async function readFileAndGenerateElementBridgeFile(
         ),
     );
     return generateElementBridgeFile(parsedFile);
+}
+
+export async function readFileAndGenerateElementHydrateFile(
+    folder: string,
+    givenFile?: string,
+    resolver?: JayImportResolver,
+) {
+    const dirname = fixtureDir(folder);
+    const file = givenFile || getFileFromFolder(folder);
+    const jayFile = await readFixtureSourceJayFile(folder, file);
+    const parsedFile = checkValidationErrors(
+        await parseJayFile(
+            jayFile,
+            `${file}.jay-html`,
+            dirname,
+            {},
+            resolver || TEST_IMPORT_RESOLVER,
+            fixturesRoot(),
+        ),
+    );
+    return generateElementHydrateFile(parsedFile, RuntimeMode.MainTrusted);
 }
 
 export async function readAndParseJayFile(

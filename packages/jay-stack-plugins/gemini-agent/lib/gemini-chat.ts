@@ -7,7 +7,6 @@
 
 import { makeJayStackComponent, RenderPipeline, Signals } from '@jay-framework/fullstack-component';
 import { createDerivedArray, createMemo, createSignal } from '@jay-framework/component';
-import { createActionCaller } from '@jay-framework/stack-client-runtime';
 import type { AutomationAPI } from '@jay-framework/runtime-automation';
 import type { JayEvent } from '@jay-framework/runtime';
 import {
@@ -18,14 +17,17 @@ import {
     type MessageOfGeminiChatViewState,
     Role,
 } from './contracts/gemini-chat.jay-contract';
+import { compactPageState } from './agent/system-prompt';
+import {
+    sendMessage as sendMessageAction,
+    submitToolResults as submitToolResultsAction,
+    getToolDescriptions,
+} from './actions/handlers';
 import type {
     GeminiMessage,
     PendingToolCall,
-    SendMessageInput,
     SendMessageOutput,
     SerializedToolDef,
-    SubmitToolResultsInput,
-    SubmitToolResultsOutput,
     ToolCallResult,
 } from './types';
 
@@ -36,20 +38,6 @@ import type {
 export interface GeminiChatProps {}
 
 interface ChatCarryForward {}
-
-// ============================================================================
-// Action Callers (created once, used from interactive phase)
-// ============================================================================
-
-const callSendMessage = createActionCaller<SendMessageInput, SendMessageOutput>(
-    'geminiAgent.sendMessage',
-    'POST',
-);
-
-const callSubmitToolResults = createActionCaller<SubmitToolResultsInput, SubmitToolResultsOutput>(
-    'geminiAgent.submitToolResults',
-    'POST',
-);
 
 // ============================================================================
 // Tool Building (from AutomationAPI, aligned with webmcp semantic tools)
@@ -85,11 +73,19 @@ function getValueEventTypes(registeredEvents: string[]): string[] {
     return registeredEvents.length > 0 ? [registeredEvents[0]] : ['input'];
 }
 
-function buildSerializedTools(automation: AutomationAPI): SerializedToolDef[] {
+/** Ref names belonging to the chat widget itself — exclude from tool list. */
+const CHAT_WIDGET_REFS = new Set(['messageInput', 'sendMessage', 'toggleExpand']);
+
+function buildSerializedTools(
+    automation: AutomationAPI,
+    descriptionMap: Map<string, string>,
+): SerializedToolDef[] {
     const { interactions } = automation.getPageState();
     const tools: SerializedToolDef[] = [];
 
     for (const group of interactions) {
+        // Skip the chat widget's own interactive elements
+        if (CHAT_WIDGET_REFS.has(group.refName)) continue;
         const sample = group.items[0];
         if (!sample) continue;
 
@@ -104,6 +100,7 @@ function buildSerializedTools(automation: AutomationAPI): SerializedToolDef[] {
         const humanName = toHumanReadable(group.refName);
 
         const description =
+            descriptionMap.get(group.refName) ||
             group.description ||
             `${checkable ? 'Toggle' : isFillable ? 'Fill' : 'Click'} ${humanName}${isForEach ? ' for a specific item' : ''}`;
 
@@ -219,11 +216,14 @@ function executePageAutomationTool(
             item.element.click();
         }
 
-        // Get updated page state
+        // Return compact page state so the LLM sees what changed
         const newState = automation.getPageState();
         return {
             callId: call.id,
-            result: JSON.stringify({ success: true, pageState: newState.viewState }),
+            result: JSON.stringify({
+                success: true,
+                pageState: compactPageState(newState.viewState),
+            }),
         };
     } catch (error: any) {
         return {
@@ -303,6 +303,18 @@ function GeminiChatInteractive(
     }
     const getAutomation = (): AutomationAPI | null => automation;
 
+    // ── Tool descriptions (fetched once from contracts) ─────────────────
+    let toolDescriptionMap = new Map<string, string>();
+
+    // Fetch contract-based descriptions at init (fire-and-forget)
+    getToolDescriptions(undefined as any)
+        .then((descriptions: Array<{ refName: string; description: string }>) => {
+            toolDescriptionMap = new Map(descriptions.map((d) => [d.refName, d.description]));
+        })
+        .catch(() => {
+            // Silently ignore — auto-generated descriptions used as fallback
+        });
+
     function getToolsAndState(): {
         toolDefinitions: SerializedToolDef[];
         pageState: object;
@@ -312,7 +324,7 @@ function GeminiChatInteractive(
             return { toolDefinitions: [], pageState: {} };
         }
         return {
-            toolDefinitions: buildSerializedTools(automation),
+            toolDefinitions: buildSerializedTools(automation, toolDescriptionMap),
             pageState: automation.getPageState().viewState,
         };
     }
@@ -337,7 +349,7 @@ function GeminiChatInteractive(
             const { toolDefinitions, pageState } = getToolsAndState();
 
             // Submit results back to server
-            output = await callSubmitToolResults({
+            output = await submitToolResultsAction({
                 results,
                 history: output.history,
                 toolDefinitions,
@@ -375,7 +387,7 @@ function GeminiChatInteractive(
         try {
             const { toolDefinitions, pageState } = getToolsAndState();
 
-            const output = await callSendMessage({
+            const output = await sendMessageAction({
                 message,
                 history: getHistory(),
                 toolDefinitions,

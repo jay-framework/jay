@@ -75,7 +75,7 @@ export async function createViteServer(options: CreateViteServerOptions): Promis
  *
  * This is a convenience wrapper around createViteServer with CLI-appropriate defaults.
  * Disables dependency optimization and ignores the build/ folder to avoid errors
- * from stale build artifacts (e.g., build/client-scripts/ referencing build/slow-render-cache/).
+ * from stale build artifacts (e.g., build/debug/client-entry/ referencing build/pre-rendered/).
  */
 export async function createViteForCli(options: {
     projectRoot: string;

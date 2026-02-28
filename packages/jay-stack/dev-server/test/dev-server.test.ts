@@ -48,7 +48,7 @@ describe('dev server', () => {
     <title>Vite + TS</title>
   </head>
   <body>
-    <div id="target"></div>
+    <div id="target"><div jay-coordinate="0"><h1>Hello World</h1><p>This is a simple page without any code file</p></div></div>
     <script type="module" src="/@id/__x00__/index.html?html-proxy&index=0.js"></script>
   </body>
 </html>`);
@@ -56,21 +56,22 @@ describe('dev server', () => {
         const scriptForMatching = clearScriptForTest(script);
 
         expect(scriptForMatching).toEqual(`
-import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
+import {hydrateCompositeJayComponent} from "@jay-framework/stack-client-runtime";
 import { wrapWithAutomation, AUTOMATION_CONTEXT } from "@jay-framework/runtime-automation";
 import { registerGlobalContext } from "@jay-framework/runtime";
 
 
-import { render } from "/page.jay-html.ts";
+import { hydrate } from "/page.jay-html?import&jay-hydrate.ts";
 
 const viewState = {};
 const fastCarryForward = {};
 const trackByMap = {};
 
 const target = document.getElementById('target');
-const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, [], trackByMap)
+const rootElement = target.firstElementChild;
+const pageComp = hydrateCompositeJayComponent(hydrate, viewState, fastCarryForward, [], trackByMap, rootElement);
 
-const instance = pageComp({/* placeholder for page props */})
+const instance = pageComp({/* placeholder for page props */});
 
 // Wrap with automation for dev tooling
 const wrapped = wrapWithAutomation(instance);
@@ -78,7 +79,6 @@ registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
 window.__jay = window.__jay || {};
 window.__jay.automation = wrapped.automation;
 window.dispatchEvent(new Event('jay:automation-ready'));
-target.appendChild(wrapped.element.dom);
 
 // source-map`);
     });
@@ -95,6 +95,8 @@ target.appendChild(wrapped.element.dom);
         );
         await devServer.viteServer.close();
 
+        // SSR falls back to client-only rendering for pages with {{}} syntax
+        // (jay-html uses single-brace {expr} syntax; this test page uses {{}} which is invalid for SSR)
         expect(html).toEqual(`<!doctype html>
 <html lang="en">
   <head>
@@ -155,6 +157,7 @@ target.appendChild(wrapped.element.dom);
         );
         await devServer.viteServer.close();
 
+        // SSR falls back to client-only rendering (page body has multiple root elements)
         expect(html).toEqual(`<!doctype html>
 <html lang="en">
   <head>

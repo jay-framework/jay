@@ -251,7 +251,7 @@ async function runMaterialize(
         force?: boolean;
         verbose?: boolean;
     },
-    /** Relative path from project root, e.g. 'agent-kit/materialized-contracts' or 'build/materialized-contracts' */
+    /** Relative path from project root, e.g. 'agent-kit/materialized-contracts' */
     defaultOutputRelative: string,
     /** If true, keep the Vite server alive and return it (caller must close) */
     keepViteAlive = false,

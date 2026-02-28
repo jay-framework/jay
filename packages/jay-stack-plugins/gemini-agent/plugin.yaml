@@ -10,6 +10,7 @@ actions:
     action: send-message.jay-action
   - name: submitToolResults
     action: submit-tool-results.jay-action
+  - name: getToolDescriptions
 setup:
   handler: setupGeminiAgent
   description: Configure Gemini API key
