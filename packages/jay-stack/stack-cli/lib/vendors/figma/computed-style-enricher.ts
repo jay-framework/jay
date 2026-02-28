@@ -11,13 +11,15 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { createRequire } from 'module';
 import { join } from 'path';
 import type { HTMLElement } from 'node-html-parser';
-import type { Contract } from '@jay-framework/editor-protocol';
+import type { Contract, ContractTag } from '@jay-framework/editor-protocol';
 import type {
     ComputedStyleMap,
     ComputedStyleData,
     EnricherOptions,
+    EnricherResult,
     VariantScenario,
 } from './computed-style-types';
+import { tokenizeCondition } from './condition-tokenizer';
 
 /**
  * Check if Playwright is available in the current environment.
@@ -36,19 +38,26 @@ export function isPlaywrightAvailable(): boolean {
 /**
  * Enrich with computed styles using headless browser rendering.
  *
- * @param options - Enricher options (page route, dev server URL, scenarios)
- * @returns Map from element key to computed style data
+ * Returns an EnricherResult containing:
+ * - merged: all styles merged across scenarios (backward-compatible)
+ * - perScenario: per-scenario style maps for variant-specific style assignment
+ * - scenarios: the scenarios that were rendered
  *
- * If Playwright is unavailable or rendering fails, returns empty map.
+ * If Playwright is unavailable or rendering fails, returns empty result.
  * The IR builder will fall back to static resolution.
  */
 export async function enrichWithComputedStyles(
     options: EnricherOptions,
-): Promise<ComputedStyleMap> {
+): Promise<EnricherResult> {
+    const emptyResult: EnricherResult = {
+        merged: new Map(),
+        perScenario: new Map(),
+        scenarios: [],
+    };
     const startTime = Date.now();
 
     if (process.env.ENABLE_COMPUTED_STYLES === '0') {
-        return new Map();
+        return emptyResult;
     }
 
     if (!isPlaywrightAvailable()) {
@@ -56,7 +65,7 @@ export async function enrichWithComputedStyles(
             '[ComputedStyles] Computed style enrichment requires playwright. Please run: npm install -D playwright',
         );
         console.warn('[ComputedStyles] Falling back to static resolution');
-        return new Map();
+        return emptyResult;
     }
 
     // Check cache first (if enabled via env var)
@@ -67,7 +76,7 @@ export async function enrichWithComputedStyles(
             console.log(
                 `[ComputedStyles] ✓ Cache hit for ${options.pageRoute} (${cached.size} elements)`,
             );
-            return cached;
+            return { merged: cached, perScenario: new Map(), scenarios: [] };
         }
     }
 
@@ -95,9 +104,8 @@ export async function enrichWithComputedStyles(
                     : [{ id: 'default', contractValues: {}, queryString: '' }];
 
             const mergedStyleMap = new Map<string, ComputedStyleData>();
-            let totalElements = 0;
+            const perScenarioMaps = new Map<string, ComputedStyleMap>();
 
-            // Render each scenario
             for (const scenario of scenarios) {
                 const scenarioStart = Date.now();
                 const url = `${options.devServerUrl}${options.pageRoute}${scenario.queryString}`;
@@ -109,11 +117,10 @@ export async function enrichWithComputedStyles(
                         timeout,
                     });
 
-                    // Extract computed styles for this scenario
                     const scenarioStyleMap = await extractComputedStyles(page, scenario.id);
-                    totalElements = scenarioStyleMap.size;
 
-                    // Merge into main map
+                    perScenarioMaps.set(scenario.id, scenarioStyleMap);
+
                     for (const [key, data] of scenarioStyleMap) {
                         mergedStyleMap.set(key, data);
                     }
@@ -127,7 +134,6 @@ export async function enrichWithComputedStyles(
                     console.warn(
                         `[ComputedStyles] Scenario '${scenario.id}' failed: ${err.message}`,
                     );
-                    // Continue with other scenarios
                 }
             }
 
@@ -136,7 +142,6 @@ export async function enrichWithComputedStyles(
                 `[ComputedStyles] ✓ Enriched ${mergedStyleMap.size} total elements across ${scenarios.length} scenario(s) in ${totalDuration}ms`,
             );
 
-            // Warn if enrichment took too long
             if (totalDuration > 30000) {
                 console.warn(
                     `[ComputedStyles] ⚠ Enrichment took ${(totalDuration / 1000).toFixed(1)}s (budget: 30s for complex pages)`,
@@ -147,13 +152,12 @@ export async function enrichWithComputedStyles(
                 );
             }
 
-            // Write to cache if enabled
             if (enableCache) {
                 tryWriteCache(options.pageRoute, options.scenarios, mergedStyleMap);
             }
 
             await context.close();
-            return mergedStyleMap;
+            return { merged: mergedStyleMap, perScenario: perScenarioMaps, scenarios };
         } finally {
             await browser.close();
         }
@@ -168,7 +172,7 @@ export async function enrichWithComputedStyles(
         }
         console.warn(`[ComputedStyles] ✗ Enrichment failed after ${duration}ms: ${err.message}`);
         console.warn('[ComputedStyles] Falling back to static resolution');
-        return new Map();
+        return emptyResult;
     }
 }
 
@@ -466,30 +470,85 @@ async function extractComputedStyles(
 }
 
 /**
+ * Parse a dataType string from editor-protocol Contract into structured info.
+ * Handles: "string", "number", "boolean", "enum (val1 | val2 | ...)"
+ */
+export function parseDataTypeString(dataType: string | undefined): {
+    kind: 'boolean' | 'enum' | 'string' | 'number' | 'other';
+    enumValues?: string[];
+} {
+    if (!dataType) return { kind: 'other' };
+    const trimmed = dataType.trim().toLowerCase();
+    if (trimmed === 'boolean') return { kind: 'boolean' };
+    if (trimmed === 'string') return { kind: 'string' };
+    if (trimmed === 'number') return { kind: 'number' };
+
+    // "enum (val1 | val2 | val3)" or "enum(val1 | val2)"
+    const enumMatch = dataType.match(/^enum\s*\(([^)]+)\)/i);
+    if (enumMatch) {
+        const values = enumMatch[1]
+            .split('|')
+            .map((v) => v.trim())
+            .filter(Boolean);
+        if (values.length > 0) return { kind: 'enum', enumValues: values };
+    }
+    return { kind: 'other' };
+}
+
+/**
+ * Find a contract tag by path in the editor-protocol Contract.
+ * Uses case-insensitive comparison for tag names.
+ */
+function findEditorProtocolTag(
+    path: string[],
+    tags: ContractTag[] | undefined,
+): ContractTag | undefined {
+    if (!tags || path.length === 0) return undefined;
+
+    for (let i = 0; i < path.length; i++) {
+        const segment = path[i];
+        const matchingTag = tags.find(
+            (t) => t.tag.toLowerCase().replace(/\s+/g, '') === segment.toLowerCase(),
+        );
+        if (!matchingTag) return undefined;
+        if (i === path.length - 1) return matchingTag;
+        tags = matchingTag.tags;
+    }
+    return undefined;
+}
+
+/**
+ * Represents a variant dimension: a contract tag that can take discrete values
+ * and is used in `if` conditions in the template.
+ */
+interface VariantDimension {
+    tagPath: string;
+    dataType: ReturnType<typeof parseDataTypeString>;
+    values: string[];
+}
+
+/**
  * Generate variant scenarios from page contract and if conditions.
  *
- * Scans the page for `if` attributes and generates permutations of contract
- * values to render different variant states.
+ * Scans the page for `if` attributes, cross-references with contract tags,
+ * and generates one scenario per discrete value (linear, not combinatorial).
+ * Uses `vs.*` query param format from the viewstate-query-params feature
+ * so the dev server renders each scenario with the correct viewState.
  *
  * @param bodyDom - Parsed HTML body element
  * @param pageContract - Page contract with tag definitions
  * @param maxScenarios - Maximum number of scenarios to generate (default 12)
- * @returns Array of variant scenarios
+ * @returns Array of variant scenarios with vs.* query strings
  */
 export function generateVariantScenarios(
     bodyDom: HTMLElement,
     pageContract: Contract | undefined,
     maxScenarios: number = 12,
 ): VariantScenario[] {
-    // TODO: Implement full scenario generation in a follow-up
-    // For now, return empty array (only default scenario will be rendered)
-    // This requires parsing Contract dataType strings to extract enum values
-
     if (!pageContract || !pageContract.tags || pageContract.tags.length === 0) {
         return [];
     }
 
-    // Scan for if attributes to see if we need scenarios
     const ifConditions = new Set<string>();
     scanForIfAttributes(bodyDom, ifConditions);
 
@@ -497,11 +556,79 @@ export function generateVariantScenarios(
         return [];
     }
 
+    // Extract tag paths used in if conditions
+    const referencedPaths = new Set<string>();
+    for (const condition of ifConditions) {
+        const tokens = tokenizeCondition(condition);
+        for (const token of tokens) {
+            if (token.isComputed || token.path.length === 0) continue;
+            referencedPaths.add(token.path.join('.'));
+        }
+    }
+
+    if (referencedPaths.size === 0) {
+        return [];
+    }
+
+    // Build variant dimensions from referenced tags
+    const dimensions: VariantDimension[] = [];
+    for (const pathStr of referencedPaths) {
+        const pathParts = pathStr.split('.');
+        const tag = findEditorProtocolTag(pathParts, pageContract.tags);
+        if (!tag) continue;
+
+        const dataType = parseDataTypeString(tag.dataType);
+        const values: string[] = [];
+
+        if (dataType.kind === 'boolean') {
+            values.push('true', 'false');
+        } else if (dataType.kind === 'enum' && dataType.enumValues) {
+            values.push(...dataType.enumValues);
+        }
+
+        if (values.length > 0) {
+            dimensions.push({ tagPath: pathStr, dataType, values });
+        }
+    }
+
+    if (dimensions.length === 0) {
+        console.log(
+            `[ComputedStyles] Found ${ifConditions.size} if conditions but no boolean/enum tags to generate scenarios from`,
+        );
+        return [];
+    }
+
+    // Generate scenarios: one per value per dimension (linear, not combinatorial)
+    const scenarios: VariantScenario[] = [];
+
+    // Always include the default scenario first
+    scenarios.push({
+        id: 'default',
+        contractValues: {},
+        queryString: '',
+    });
+
+    for (const dim of dimensions) {
+        for (const value of dim.values) {
+            if (scenarios.length >= maxScenarios) break;
+
+            const scenarioId = `${dim.tagPath}=${value}`;
+            const queryString = `?vs.${dim.tagPath}=${encodeURIComponent(value)}`;
+
+            scenarios.push({
+                id: scenarioId,
+                contractValues: { [dim.tagPath]: value },
+                queryString,
+            });
+        }
+        if (scenarios.length >= maxScenarios) break;
+    }
+
     console.log(
-        `[ComputedStyles] Found ${ifConditions.size} if conditions, but scenario generation not yet implemented`,
+        `[ComputedStyles] Generated ${scenarios.length} variant scenarios from ${dimensions.length} dimension(s): ${dimensions.map((d) => d.tagPath).join(', ')}`,
     );
-    console.log(`[ComputedStyles] Will render default scenario only`);
-    return [];
+
+    return scenarios;
 }
 
 /**

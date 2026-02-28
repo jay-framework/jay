@@ -460,6 +460,8 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
     async convertFromJayHtml(parsedJayHtml, pageUrl, projectPage, plugins) {
         const debugDir = getDebugDir(projectPage);
         let computedStyleMap;
+        let perScenarioMaps;
+        let enricherScenarios: any[] = [];
 
         writeDebugFile(debugDir, 'import-input-body.html', parsedJayHtml.body.outerHTML);
         writeDebugFile(debugDir, 'import-input-css.json', parsedJayHtml.css || null);
@@ -477,8 +479,10 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
                 12,
             );
 
+            writeDebugFile(debugDir, 'import-variant-scenarios.json', scenarios);
+
             console.log('[Import] Computing styles via headless browser...');
-            computedStyleMap = await enrichWithComputedStyles({
+            const enricherResult = await enrichWithComputedStyles({
                 pageRoute: pageUrl,
                 devServerUrl,
                 scenarios,
@@ -486,11 +490,25 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
                 maxScenarios: 12,
             });
 
+            computedStyleMap = enricherResult.merged;
+            perScenarioMaps = enricherResult.perScenario;
+            enricherScenarios = enricherResult.scenarios;
+
             writeDebugFile(
                 debugDir,
                 'import-computed-styles.json',
                 computedStyleMap ? Object.fromEntries(computedStyleMap) : null,
             );
+            if (perScenarioMaps && perScenarioMaps.size > 0) {
+                const perScenarioDebug: Record<string, any> = {};
+                for (const [scenarioId, map] of perScenarioMaps) {
+                    perScenarioDebug[scenarioId] = {
+                        elementCount: map.size,
+                        keys: Array.from(map.keys()).slice(0, 20),
+                    };
+                }
+                writeDebugFile(debugDir, 'import-per-scenario-styles.json', perScenarioDebug);
+            }
         } catch (error) {
             console.warn('[Import] Computed style enrichment failed:', (error as Error).message);
             computedStyleMap = undefined;
@@ -506,6 +524,8 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
                 usedComponents: projectPage.usedComponents,
                 css: parsedJayHtml.css,
                 computedStyleMap,
+                perScenarioMaps,
+                scenarios: enricherScenarios,
             },
         );
 

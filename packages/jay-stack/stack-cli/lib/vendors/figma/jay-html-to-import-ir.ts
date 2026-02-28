@@ -11,7 +11,8 @@ import { extractBindingsFromElement, buildMergedContractTags } from './binding-r
 import type { ImportContractContext, HeadlessImportInfo } from './binding-reconstructor';
 import { detectVariantGroups, synthesizeVariant, synthesizeRepeater } from './variant-synthesizer';
 import type { PageContractPath } from './pageContractPath';
-import type { ComputedStyleMap } from './computed-style-types';
+import type { ComputedStyleMap, ScenarioStyleMaps, VariantScenario } from './computed-style-types';
+import { tokenizeCondition } from './condition-tokenizer';
 
 const BLOCK_LEVEL_TAGS = new Set([
     'div',
@@ -208,6 +209,8 @@ function buildNodeFromElement(
     contractContext?: ImportContractContext,
     cssClassMap?: CssClassMap,
     computedStyleMap?: ComputedStyleMap,
+    perScenarioMaps?: ScenarioStyleMaps,
+    scenarios?: VariantScenario[],
 ): BuildResult {
     const warnings: string[] = [];
     const componentSets: ImportIRNode[] = [];
@@ -401,6 +404,8 @@ function buildNodeFromElement(
                 contractContext,
                 cssClassMap,
                 computedStyleMap,
+                perScenarioMaps,
+                scenarios,
             );
             children.push(childResult.node);
             warnings.push(...childResult.warnings);
@@ -445,7 +450,15 @@ function buildNodeFromElement(
             const group = firstOfGroup.get(childEl);
             if (!group) continue; // not first in group → already handled
 
+            // Build variant children with per-scenario style maps.
+            // Each child element has an `if` condition — find the matching
+            // scenario and use its computed styles instead of the merged map.
             const buildChildNodeCb = (el: HTMLElement): ImportIRNode => {
+                const condition = el.getAttribute('if')?.trim();
+                const scenarioStyleMap = condition
+                    ? findScenarioForCondition(condition, perScenarioMaps, scenarios)
+                    : undefined;
+
                 const result = buildNodeFromElement(
                     el,
                     body,
@@ -455,7 +468,9 @@ function buildNodeFromElement(
                     repeaterContext,
                     contractContext,
                     cssClassMap,
-                    computedStyleMap,
+                    scenarioStyleMap ?? computedStyleMap,
+                    perScenarioMaps,
+                    scenarios,
                 );
                 warnings.push(...result.warnings);
                 componentSets.push(...result.componentSets);
@@ -491,6 +506,8 @@ function buildNodeFromElement(
             contractContext,
             cssClassMap,
             computedStyleMap,
+            perScenarioMaps,
+            scenarios,
         );
         children.push(childResult.node);
         warnings.push(...childResult.warnings);
@@ -512,6 +529,54 @@ function buildNodeFromElement(
     return { node, warnings, componentSets };
 }
 
+/**
+ * Find the best matching scenario for a given `if` condition.
+ * Returns the scenario's ComputedStyleMap, or undefined if no match.
+ *
+ * Matching rules:
+ * - Boolean truthy (e.g., `isSearching`): matches scenario `isSearching=true`
+ * - Boolean negated (e.g., `!isSearching`): matches scenario `isSearching=false`
+ * - Equality (e.g., `mediaType == IMAGE`): matches scenario `mediaType=IMAGE`
+ */
+function findScenarioForCondition(
+    condition: string,
+    perScenarioMaps?: ScenarioStyleMaps,
+    scenarios?: VariantScenario[],
+): ComputedStyleMap | undefined {
+    if (!perScenarioMaps || !scenarios || perScenarioMaps.size === 0) return undefined;
+
+    const tokens = tokenizeCondition(condition);
+    if (tokens.length === 0) return undefined;
+
+    // Use the first non-computed token to match
+    const token = tokens.find((t) => !t.isComputed && t.path.length > 0);
+    if (!token) return undefined;
+
+    const tagPath = token.path.join('.');
+
+    let targetScenarioId: string | undefined;
+
+    if (token.operator === '==' && token.comparedValue != null) {
+        // Equality: e.g. mediaType == IMAGE → scenario "mediaType=IMAGE"
+        targetScenarioId = `${tagPath}=${token.comparedValue}`;
+    } else if (token.operator === '!=' && token.comparedValue != null) {
+        // Inequality: find any scenario for this tagPath that ISN'T the negated value
+        const negatedId = `${tagPath}=${token.comparedValue}`;
+        const match = scenarios.find(
+            (s) => s.id !== 'default' && s.id !== negatedId && s.id.startsWith(`${tagPath}=`),
+        );
+        targetScenarioId = match?.id;
+    } else if (!token.operator) {
+        // Boolean truthy/negated: e.g. isSearching → scenario "isSearching=true"
+        targetScenarioId = token.isNegated ? `${tagPath}=false` : `${tagPath}=true`;
+    }
+
+    if (targetScenarioId) {
+        return perScenarioMaps.get(targetScenarioId);
+    }
+    return undefined;
+}
+
 export function buildImportIR(
     body: HTMLElement,
     pageUrl: string,
@@ -523,6 +588,8 @@ export function buildImportIR(
         css?: string;
         contentHash?: string;
         computedStyleMap?: ComputedStyleMap;
+        perScenarioMaps?: ScenarioStyleMaps;
+        scenarios?: VariantScenario[];
     },
 ): ImportIRDocument {
     const warnings: string[] = [];
@@ -565,6 +632,8 @@ export function buildImportIR(
             contractContext,
             cssClassMap,
             options?.computedStyleMap,
+            options?.perScenarioMaps,
+            options?.scenarios,
         );
         rootChildren = [node, ...componentSets];
         warnings.push(...nodeWarnings);

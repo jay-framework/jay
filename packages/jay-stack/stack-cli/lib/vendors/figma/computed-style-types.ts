@@ -58,6 +58,22 @@ export interface VariantScenario {
 }
 
 /**
+ * Maps scenario ID to the computed styles extracted for that scenario.
+ * Used to assign per-variant styles to COMPONENT nodes in the IR builder.
+ */
+export type ScenarioStyleMaps = Map<string, ComputedStyleMap>;
+
+/**
+ * Result of computed style enrichment, containing both a merged map
+ * (for general use) and per-scenario maps (for variant-specific styles).
+ */
+export interface EnricherResult {
+    merged: ComputedStyleMap;
+    perScenario: ScenarioStyleMaps;
+    scenarios: VariantScenario[];
+}
+
+/**
  * Options for computed style enrichment.
  */
 export interface EnricherOptions {
