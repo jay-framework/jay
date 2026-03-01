@@ -518,32 +518,107 @@ function findEditorProtocolTag(
 }
 
 /**
- * Represents a variant dimension: a contract tag that can take discrete values
- * and is used in `if` conditions in the template.
+ * Compute an integer that satisfies a comparison operator against a threshold.
+ * Returns the simplest integer that makes the expression true.
  */
-interface VariantDimension {
-    tagPath: string;
-    dataType: ReturnType<typeof parseDataTypeString>;
-    values: string[];
+function valueForComparison(op: string, threshold: number): number {
+    switch (op) {
+        case '>':
+            return threshold + 1;
+        case '>=':
+            return threshold;
+        case '<':
+            return threshold - 1;
+        case '<=':
+            return threshold;
+        default:
+            return threshold;
+    }
 }
 
 /**
- * Generate variant scenarios from page contract and if conditions.
+ * Determine the override value that makes a single condition token TRUE.
  *
- * Scans the page for `if` attributes, cross-references with contract tags,
- * and generates one scenario per discrete value (linear, not combinatorial).
- * Uses `vs.*` query param format from the viewstate-query-params feature
- * so the dev server renders each scenario with the correct viewState.
+ * Handles every condition pattern found in real jay-html templates:
+ * - Boolean truthy/negated:  `isSearching` → "true", `!isSearching` → "false"
+ * - String truthy/negated:   `brand.name` → "Sample", `!imageUrl` → "" (empty)
+ * - Number truthy:           `itemCount` → "1"
+ * - Equality:                `mediaType == IMAGE` → "IMAGE"
+ * - Inequality:              `mediaType != IMAGE` → first alternative enum value
+ * - Comparison:              `itemCount > 0` → "1", `count >= 5` → "5"
+ */
+function tokenToOverrideValue(
+    token: ReturnType<typeof tokenizeCondition>[number],
+    contractTags: ContractTag[] | undefined,
+): { tagPath: string; value: string } | undefined {
+    if (token.isComputed || token.path.length === 0) return undefined;
+
+    const tagPath = token.path.join('.');
+    const tag = findEditorProtocolTag(token.path, contractTags);
+    const dataType = parseDataTypeString(tag?.dataType);
+
+    if (token.operator === '==' && token.comparedValue != null) {
+        return { tagPath, value: token.comparedValue };
+    }
+
+    if (token.operator === '!=' && token.comparedValue != null) {
+        if (dataType.kind === 'enum' && dataType.enumValues) {
+            const other = dataType.enumValues.find((v) => v !== token.comparedValue);
+            if (other) return { tagPath, value: other };
+        }
+        if (dataType.kind === 'boolean') {
+            return { tagPath, value: token.comparedValue === 'true' ? 'false' : 'true' };
+        }
+        return undefined;
+    }
+
+    // Comparison operators: >, <, >=, <=
+    if (token.operator && token.comparedValue != null) {
+        const threshold = parseFloat(token.comparedValue);
+        if (!isNaN(threshold)) {
+            const val = valueForComparison(token.operator, threshold);
+            return { tagPath, value: String(val) };
+        }
+        return undefined;
+    }
+
+    // Truthy / negated (no operator)
+    if (!token.operator) {
+        if (dataType.kind === 'boolean') {
+            return { tagPath, value: token.isNegated ? 'false' : 'true' };
+        }
+        if (dataType.kind === 'number') {
+            return { tagPath, value: token.isNegated ? '0' : '1' };
+        }
+        if (dataType.kind === 'string') {
+            return { tagPath, value: token.isNegated ? '' : 'Sample' };
+        }
+        // Unknown type — assume truthy needs "true", negated needs "false"
+        // (best effort for tags not found in contract)
+        return { tagPath, value: token.isNegated ? '' : 'true' };
+    }
+
+    return undefined;
+}
+
+/**
+ * Generate variant scenarios driven by the actual `if` conditions in the template.
+ *
+ * Each `if` condition becomes exactly one scenario containing all the `vs.*`
+ * overrides needed to make that condition true. Compound conditions
+ * (e.g. `isSearching && hasResults`) produce a single scenario with multiple
+ * overrides. This is neither linear nor combinatorial — it's **condition-driven**:
+ * only the value combinations that the template actually checks are rendered.
  *
  * @param bodyDom - Parsed HTML body element
  * @param pageContract - Page contract with tag definitions
- * @param maxScenarios - Maximum number of scenarios to generate (default 12)
+ * @param maxScenarios - Maximum number of scenarios to generate (default 16)
  * @returns Array of variant scenarios with vs.* query strings
  */
 export function generateVariantScenarios(
     bodyDom: HTMLElement,
     pageContract: Contract | undefined,
-    maxScenarios: number = 12,
+    maxScenarios: number = 16,
 ): VariantScenario[] {
     if (!pageContract || !pageContract.tags || pageContract.tags.length === 0) {
         return [];
@@ -556,77 +631,71 @@ export function generateVariantScenarios(
         return [];
     }
 
-    // Extract tag paths used in if conditions
-    const referencedPaths = new Set<string>();
+    // Always include the default scenario
+    const scenarios: VariantScenario[] = [
+        { id: 'default', contractValues: {}, queryString: '' },
+    ];
+
+    // Dedup: avoid generating identical scenarios for the same override set
+    const seenIds = new Set<string>(['default']);
+
     for (const condition of ifConditions) {
-        const tokens = tokenizeCondition(condition);
-        for (const token of tokens) {
-            if (token.isComputed || token.path.length === 0) continue;
-            referencedPaths.add(token.path.join('.'));
-        }
-    }
-
-    if (referencedPaths.size === 0) {
-        return [];
-    }
-
-    // Build variant dimensions from referenced tags
-    const dimensions: VariantDimension[] = [];
-    for (const pathStr of referencedPaths) {
-        const pathParts = pathStr.split('.');
-        const tag = findEditorProtocolTag(pathParts, pageContract.tags);
-        if (!tag) continue;
-
-        const dataType = parseDataTypeString(tag.dataType);
-        const values: string[] = [];
-
-        if (dataType.kind === 'boolean') {
-            values.push('true', 'false');
-        } else if (dataType.kind === 'enum' && dataType.enumValues) {
-            values.push(...dataType.enumValues);
-        }
-
-        if (values.length > 0) {
-            dimensions.push({ tagPath: pathStr, dataType, values });
-        }
-    }
-
-    if (dimensions.length === 0) {
-        console.log(
-            `[ComputedStyles] Found ${ifConditions.size} if conditions but no boolean/enum tags to generate scenarios from`,
-        );
-        return [];
-    }
-
-    // Generate scenarios: one per value per dimension (linear, not combinatorial)
-    const scenarios: VariantScenario[] = [];
-
-    // Always include the default scenario first
-    scenarios.push({
-        id: 'default',
-        contractValues: {},
-        queryString: '',
-    });
-
-    for (const dim of dimensions) {
-        for (const value of dim.values) {
-            if (scenarios.length >= maxScenarios) break;
-
-            const scenarioId = `${dim.tagPath}=${value}`;
-            const queryString = `?vs.${dim.tagPath}=${encodeURIComponent(value)}`;
-
-            scenarios.push({
-                id: scenarioId,
-                contractValues: { [dim.tagPath]: value },
-                queryString,
-            });
-        }
         if (scenarios.length >= maxScenarios) break;
+
+        const tokens = tokenizeCondition(condition);
+        if (tokens.length === 0) continue;
+
+        // Build the set of overrides that make this condition true
+        const overrides: Record<string, string> = {};
+        let allResolved = true;
+
+        for (const token of tokens) {
+            const override = tokenToOverrideValue(token, pageContract.tags);
+            if (!override) {
+                allResolved = false;
+                continue;
+            }
+            overrides[override.tagPath] = override.value;
+        }
+
+        if (Object.keys(overrides).length === 0) continue;
+
+        // Build scenario ID from sorted overrides (deterministic)
+        const sortedEntries = Object.entries(overrides).sort(([a], [b]) => a.localeCompare(b));
+        const scenarioId = sortedEntries.map(([k, v]) => `${k}=${v}`).join('&');
+
+        if (seenIds.has(scenarioId)) continue;
+        seenIds.add(scenarioId);
+
+        const queryString =
+            '?' + sortedEntries.map(([k, v]) => `vs.${k}=${encodeURIComponent(v)}`).join('&');
+
+        const contractValues: Record<string, string | number | boolean> = {};
+        for (const [k, v] of sortedEntries) contractValues[k] = v;
+
+        scenarios.push({
+            id: scenarioId,
+            contractValues,
+            queryString,
+        });
+
+        if (!allResolved) {
+            console.log(
+                `[ComputedStyles] Condition "${condition}" partially resolved (some tokens are computed expressions)`,
+            );
+        }
     }
 
+    const conditionCount = ifConditions.size;
+    const scenarioCount = scenarios.length - 1; // exclude default
     console.log(
-        `[ComputedStyles] Generated ${scenarios.length} variant scenarios from ${dimensions.length} dimension(s): ${dimensions.map((d) => d.tagPath).join(', ')}`,
+        `[ComputedStyles] ${conditionCount} if condition(s) → ${scenarioCount} scenario(s) + default`,
     );
+    for (const s of scenarios) {
+        if (s.id !== 'default') {
+            console.log(`[ComputedStyles]   ${s.id}  →  ${s.queryString}`);
+        }
+    }
 
     return scenarios;
 }

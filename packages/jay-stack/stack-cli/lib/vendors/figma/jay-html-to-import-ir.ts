@@ -530,13 +530,17 @@ function buildNodeFromElement(
 }
 
 /**
- * Find the best matching scenario for a given `if` condition.
- * Returns the scenario's ComputedStyleMap, or undefined if no match.
+ * Find the scenario whose styles should apply to an element with a given `if` condition.
  *
- * Matching rules:
- * - Boolean truthy (e.g., `isSearching`): matches scenario `isSearching=true`
- * - Boolean negated (e.g., `!isSearching`): matches scenario `isSearching=false`
- * - Equality (e.g., `mediaType == IMAGE`): matches scenario `mediaType=IMAGE`
+ * Since scenarios are condition-driven (generated directly from each `if` condition),
+ * the scenario for a condition is the one whose tag paths match the tag paths in
+ * the condition. Uses a multi-strategy approach:
+ *
+ * 1. **Exact ID reconstruction** — for simple cases (==, truthy/negated) where we can
+ *    build the same deterministic ID the generator used.
+ * 2. **Tag-path matching** — for operators like !=, >, <, >=, <= where the exact
+ *    value depends on contract info we don't have here. Find the scenario whose
+ *    tag paths are a superset of this condition's tag paths.
  */
 function findScenarioForCondition(
     condition: string,
@@ -548,32 +552,78 @@ function findScenarioForCondition(
     const tokens = tokenizeCondition(condition);
     if (tokens.length === 0) return undefined;
 
-    // Use the first non-computed token to match
-    const token = tokens.find((t) => !t.isComputed && t.path.length > 0);
-    if (!token) return undefined;
+    // Strategy 1: Try to build the exact override map for simple operators
+    const overrides: Record<string, string> = {};
+    const tagPaths: string[] = [];
+    let allSimple = true;
 
-    const tagPath = token.path.join('.');
+    for (const token of tokens) {
+        if (token.isComputed || token.path.length === 0) continue;
+        const tagPath = token.path.join('.');
+        tagPaths.push(tagPath);
 
-    let targetScenarioId: string | undefined;
+        if (token.operator === '==' && token.comparedValue != null) {
+            overrides[tagPath] = token.comparedValue;
+        } else if (!token.operator) {
+            overrides[tagPath] = token.isNegated ? 'false' : 'true';
+        } else {
+            allSimple = false;
+        }
+    }
 
-    if (token.operator === '==' && token.comparedValue != null) {
-        // Equality: e.g. mediaType == IMAGE → scenario "mediaType=IMAGE"
-        targetScenarioId = `${tagPath}=${token.comparedValue}`;
-    } else if (token.operator === '!=' && token.comparedValue != null) {
-        // Inequality: find any scenario for this tagPath that ISN'T the negated value
-        const negatedId = `${tagPath}=${token.comparedValue}`;
-        const match = scenarios.find(
-            (s) => s.id !== 'default' && s.id !== negatedId && s.id.startsWith(`${tagPath}=`),
+    // If all tokens are simple, try exact match first
+    if (allSimple && Object.keys(overrides).length > 0) {
+        const exactId = Object.entries(overrides)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([k, v]) => `${k}=${v}`)
+            .join('&');
+
+        const exactMatch = perScenarioMaps.get(exactId);
+        if (exactMatch) return exactMatch;
+    }
+
+    if (tagPaths.length === 0) return undefined;
+
+    // Strategy 2: Find scenario whose tag paths match this condition's tag paths.
+    // Parse each scenario ID into its tag paths and find one that covers all of ours.
+    for (const scenario of scenarios) {
+        if (scenario.id === 'default') continue;
+
+        const scenarioTagPaths = new Set(
+            scenario.id.split('&').map((part) => part.split('=')[0]),
         );
-        targetScenarioId = match?.id;
-    } else if (!token.operator) {
-        // Boolean truthy/negated: e.g. isSearching → scenario "isSearching=true"
-        targetScenarioId = token.isNegated ? `${tagPath}=false` : `${tagPath}=true`;
+        const allCovered = tagPaths.every((tp) => scenarioTagPaths.has(tp));
+        if (allCovered && scenarioTagPaths.size === tagPaths.length) {
+            const map = perScenarioMaps.get(scenario.id);
+            if (map) return map;
+        }
     }
 
-    if (targetScenarioId) {
-        return perScenarioMaps.get(targetScenarioId);
+    // Strategy 3: Superset match (scenario covers our paths but may have more)
+    for (const scenario of scenarios) {
+        if (scenario.id === 'default') continue;
+
+        const scenarioTagPaths = new Set(
+            scenario.id.split('&').map((part) => part.split('=')[0]),
+        );
+        const allCovered = tagPaths.every((tp) => scenarioTagPaths.has(tp));
+        if (allCovered) {
+            const map = perScenarioMaps.get(scenario.id);
+            if (map) return map;
+        }
     }
+
+    // Strategy 4: Single-path fallback for the first tag path
+    if (tagPaths.length > 0) {
+        for (const scenario of scenarios) {
+            if (scenario.id === 'default') continue;
+            if (scenario.id.startsWith(`${tagPaths[0]}=`)) {
+                const map = perScenarioMaps.get(scenario.id);
+                if (map) return map;
+            }
+        }
+    }
+
     return undefined;
 }
 
