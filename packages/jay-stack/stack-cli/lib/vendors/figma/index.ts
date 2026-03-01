@@ -135,7 +135,7 @@ function convertRegularNode(
 
     // Build HTML attributes
     const tag = semanticHtml || 'div';
-    let htmlAttrs = `data-figma-id="${node.id}" data-figma-type="${type.toLowerCase()}" style="${styleAttr}"`;
+    let htmlAttrs = `data-jay-node-id="${node.id}" style="${styleAttr}"`;
 
     // Add ref attribute
     if (analysis.refPath) {
@@ -207,7 +207,7 @@ function convertNodeToJayHtml(node: FigmaVendorDocument, context: ConversionCont
 
     // Handle Jay Page sections (don't process bindings for top-level sections)
     if (type === 'SECTION' && isJPage) {
-        let html = `${indent}<section data-figma-id="${node.id}" data-page-url="${urlRoute || ''}">\n`;
+        let html = `${indent}<section data-jay-node-id="${node.id}" data-page-url="${urlRoute || ''}">\n`;
         html += `${indent}  <!-- Jay Page: ${name} -->\n`;
 
         if (children && children.length > 0) {
@@ -463,6 +463,33 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
         let perScenarioMaps;
         let enricherScenarios: any[] = [];
 
+        // Annotate elements with data-jay-node-id if missing.
+        // This ensures stable identity across source, rendered DOM, and vendor doc.
+        const { annotateJayNodeIds } = await import('./jay-node-id-annotator');
+        const idsAdded = annotateJayNodeIds(parsedJayHtml.body);
+        if (idsAdded) {
+            console.log('[Import] Added data-jay-node-id to jay-html elements');
+
+            // Write annotated source back to disk so the dev server picks up the IDs
+            if (projectPage.filePath) {
+                try {
+                    const jayHtmlContent = fs.readFileSync(projectPage.filePath, 'utf-8');
+                    const { parse: parseHtml } = await import('node-html-parser');
+                    const fullDoc = parseHtml(jayHtmlContent);
+                    const fileBody = fullDoc.querySelector('body');
+                    if (fileBody) {
+                        annotateJayNodeIds(fileBody);
+                        fs.writeFileSync(projectPage.filePath, fullDoc.toString(), 'utf-8');
+                        console.log(`[Import] Wrote data-jay-node-id annotations to ${projectPage.filePath}`);
+                        // Brief pause for dev server hot-reload to pick up the change
+                        await new Promise((resolve) => setTimeout(resolve, 1500));
+                    }
+                } catch (err) {
+                    console.warn('[Import] Could not write annotations back to file:', (err as Error).message);
+                }
+            }
+        }
+
         writeDebugFile(debugDir, 'import-input-body.html', parsedJayHtml.body.outerHTML);
         writeDebugFile(debugDir, 'import-input-css.json', parsedJayHtml.css || null);
         writeDebugFile(debugDir, 'import-input-contract.json', projectPage.contract || null);
@@ -476,7 +503,7 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
             const scenarios = generateVariantScenarios(
                 parsedJayHtml.body,
                 projectPage.contract,
-                12,
+                16,
             );
 
             writeDebugFile(debugDir, 'import-variant-scenarios.json', scenarios);
@@ -487,7 +514,7 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
                 devServerUrl,
                 scenarios,
                 timeout: 10000,
-                maxScenarios: 12,
+                maxScenarios: 16,
             });
 
             computedStyleMap = enricherResult.merged;

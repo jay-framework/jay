@@ -59,7 +59,7 @@ export function convertImageNodeToHtml(
     // Build the img tag
     const refAttribute = refAttr || '';
     const styleAttribute = styles ? ` style="${styles}"` : '';
-    const dataAttribute = ` data-figma-id="${id}"`;
+    const dataAttribute = ` data-jay-node-id="${id}"`;
 
     return `${indent}<img${dataAttribute}${refAttribute} src="${src}" alt="${alt}"${styleAttribute} />\n`;
 }

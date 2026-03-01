@@ -30,7 +30,7 @@ export interface ComputedStyleData {
 
 /**
  * Map from element key to computed style data.
- * Element key is data-figma-id attribute or DOM path.
+ * Element key is data-jay-node-id attribute or DOM path.
  */
 export type ComputedStyleMap = Map<string, ComputedStyleData>;
 

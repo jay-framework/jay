@@ -41,14 +41,14 @@
   </style>
 </head>
 <body>
-  <div data-figma-id="frame-1" data-figma-type="frame" style="width: 600px;height: 800px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
+  <div data-jay-node-id="frame-1" style="width: 600px;height: 800px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
     <!-- Content -->
-    <div id="repeater-frame" data-figma-id="repeater-frame" data-figma-type="frame-repeater" style="width: 600px;height: 600px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
+    <div id="repeater-frame" data-jay-node-id="repeater-frame" style="width: 600px;height: 600px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
       <div style="position: relative; width: 100%;" forEach="items" trackBy="id">
-        <div data-figma-id="item-template" data-figma-type="frame" style="width: 600px;height: 80px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: row;box-sizing: border-box;">
+        <div data-jay-node-id="item-template" style="width: 600px;height: 80px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: row;box-sizing: border-box;">
           <!-- Item -->
-          <div data-figma-id="item-title" style="width: 400px;height: 30px;font-family: 'Inter', sans-serif;font-size: 20px;font-weight: 600;color: #000000;text-align: left;">{title}</div>
-          <div data-figma-id="item-description" style="width: 400px;height: 40px;font-family: 'Inter', sans-serif;font-size: 14px;font-weight: 400;color: #000000;text-align: left;">{description}</div>
+          <div data-jay-node-id="item-title" style="width: 400px;height: 30px;font-family: 'Inter', sans-serif;font-size: 20px;font-weight: 600;color: #000000;text-align: left;">{title}</div>
+          <div data-jay-node-id="item-description" style="width: 400px;height: 40px;font-family: 'Inter', sans-serif;font-size: 14px;font-weight: 400;color: #000000;text-align: left;">{description}</div>
         </div>
       </div>
     </div>

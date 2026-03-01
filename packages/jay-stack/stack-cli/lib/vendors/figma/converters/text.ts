@@ -219,7 +219,7 @@ export function convertTextNodeToHtml(
     if (verticalAlignWrapperStyle) {
         // With vertical alignment wrapper
         return (
-            `${indent}<div data-figma-id="${id}"${refString}${attrsString} style="${styleAttr}${verticalAlignWrapperStyle}">\n` +
+            `${indent}<div data-jay-node-id="${id}"${refString}${attrsString} style="${styleAttr}${verticalAlignWrapperStyle}">\n` +
             `${childIndent}<div style="${textStyles}">\n` +
             `${innerIndent}${htmlContent}\n` +
             `${childIndent}</div>\n` +
@@ -227,6 +227,6 @@ export function convertTextNodeToHtml(
         );
     } else {
         // Simple text div
-        return `${indent}<div data-figma-id="${id}"${refString}${attrsString} style="${styleAttr}">${htmlContent}</div>\n`;
+        return `${indent}<div data-jay-node-id="${id}"${refString}${attrsString} style="${styleAttr}">${htmlContent}</div>\n`;
     }
 }

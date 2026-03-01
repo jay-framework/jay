@@ -216,18 +216,16 @@ function buildNodeFromElement(
     const componentSets: ImportIRNode[] = [];
     const tag = (element.rawTagName || 'div').toLowerCase();
 
+    const jayNodeId = element.getAttribute('data-jay-node-id') ?? undefined;
     const domPath = buildDomPath(element, body);
-    const figmaId = element.getAttribute('data-figma-id') ?? undefined;
     const anchors = getSemanticAnchors(element);
-    const nodeId = generateNodeId(domPath, anchors, figmaId);
+    const nodeId = jayNodeId || generateNodeId(domPath, anchors);
 
     const styleAttr = element.getAttribute('style') || '';
     const classAttr = element.getAttribute('class') || '';
     const classNames = classAttr ? classAttr.split(/\s+/).filter(Boolean) : undefined;
 
-    // Lookup computed styles for this element
-    const elementKey = figmaId || domPath;
-    const enrichedStyles = computedStyleMap?.get(elementKey);
+    const enrichedStyles = jayNodeId ? computedStyleMap?.get(jayNodeId) : undefined;
 
     const { style, warnings: styleWarnings } = resolveStyle(
         styleAttr,
@@ -248,7 +246,6 @@ function buildNodeFromElement(
     warnings.push(...bindingWarnings);
 
     const name =
-        element.getAttribute('data-figma-type') ||
         element.getAttribute('ref') ||
         element.getAttribute('id') ||
         tag;

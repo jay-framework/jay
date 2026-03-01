@@ -30,7 +30,7 @@ export function buildDomPath(element: HTMLElement, root: HTMLElement): string {
  * Generate a deterministic node ID for an imported DOM element.
  *
  * Priority:
- * 1. If figmaId is provided (from data-figma-id), use it as-is (roundtrip stability).
+ * 1. If figmaId is provided (from data-jay-node-id), use it as-is (roundtrip stability).
  * 2. Otherwise, hash the DOM path + semantic anchors to produce a stable 12-char hex ID.
  */
 export function generateNodeId(

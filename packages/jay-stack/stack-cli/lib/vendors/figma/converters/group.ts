@@ -39,7 +39,7 @@ export function convertGroupNode(
     }
 
     // Build HTML attributes
-    let htmlAttrs = `id="${node.id}" data-figma-id="${node.id}" data-figma-type="group"${refAttr} style="${styleAttr}"`;
+    let htmlAttrs = `id="${node.id}" data-jay-node-id="${node.id}"${refAttr} style="${styleAttr}"`;
 
     // Add other attributes (like data bindings)
     for (const [attr, tagPath] of analysis.attributes) {

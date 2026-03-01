@@ -76,7 +76,7 @@ export function convertRepeaterNode(
     }
 
     // Create outer container with Frame styling
-    let html = `${indent}<div id="${node.id}" data-figma-id="${node.id}" data-figma-type="frame-repeater" style="${outerStyleAttr}">\n`;
+    let html = `${indent}<div id="${node.id}" data-jay-node-id="${node.id}" style="${outerStyleAttr}">\n`;
 
     // Create inner forEach div with minimal positioning
     html += `${innerIndent}<div style="position: relative; ${innerDivSizeStyles}" forEach="${repeaterPath}" trackBy="${trackByKey}">\n`;

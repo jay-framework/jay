@@ -34,9 +34,8 @@ function normalizeHtml(html: string): string {
         .filter((line) => line.length > 0)
         .join('\n');
 
-    // N4: Remove data-figma-id and data-figma-type attributes
-    result = result.replace(/\s+data-figma-id="[^"]*"/g, '');
-    result = result.replace(/\s+data-figma-type="[^"]*"/g, '');
+    // N4: Remove data-jay-node-id attribute
+    result = result.replace(/\s+data-jay-node-id="[^"]*"/g, '');
 
     // N5: Remove id attributes matching Figma node ID pattern (\d+:\d+)
     result = result.replace(/\s+id="\d+:\d+"/g, '');

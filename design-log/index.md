@@ -215,6 +215,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 92  | pillar 1 compute styles                   | Query param rendering, developer playground UI, compute styles for Figma import (Pillar 1 master design)       |
 | 93  | import-export workflow pillar 2           | Change detection, sync status, conflict resolution UX, designer-AI roundtrip workflow (Pillar 2 master design) |
 | 101 | POC viewstate params in figma import      | Condition-driven scenario generation using vs.* query params for per-variant computed style extraction          |
+| 102 | jay-node-id stable element identity       | Vendor-agnostic data-jay-node-id for matching elements across source, rendered DOM, and vendor documents        |
 
 ---
 

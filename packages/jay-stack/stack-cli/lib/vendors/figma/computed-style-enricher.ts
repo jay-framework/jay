@@ -2,8 +2,8 @@
  * Computed style enricher using Playwright headless browser.
  *
  * Extracts getComputedStyle() + getBoundingClientRect() for all elements with
- * data-figma-id attributes. Closes CSS fidelity gaps that static parsing cannot
- * solve: cascade, inheritance, shorthand expansion, computed values.
+ * data-jay-node-id attributes. Closes CSS fidelity gaps that static parsing
+ * cannot solve: cascade, inheritance, shorthand expansion, computed values.
  */
 
 import { createHash } from 'crypto';
@@ -267,11 +267,9 @@ function tryWriteCache(
  */
 async function extractComputedStyles(
     page: any, // Playwright Page type
-    variantContext?: string,
+    _variantContext?: string,
 ): Promise<ComputedStyleMap> {
-    // Extract computed styles for all elements with data-figma-id
     const extractedData = await page.evaluate(() => {
-        // List of CSS properties to extract (relevant to Figma import)
         const properties = [
             'display',
             'position',
@@ -319,52 +317,18 @@ async function extractComputedStyles(
             'text-transform',
         ];
 
-        /**
-         * Generate deterministic DOM path for an element.
-         * Format: tag:nth-child(N) > tag:nth-child(M) > ...
-         */
-        function generateDomPath(element: any): string {
-            const segments: string[] = [];
-            let current: any = element;
-
-            while (current && current !== document.body) {
-                const parent = current.parentElement;
-                if (!parent) break;
-
-                const siblings = Array.from(parent.children);
-                const index = siblings.indexOf(current) + 1;
-                const tag = current.tagName.toLowerCase();
-
-                // Add semantic anchors if available
-                const id = current.getAttribute('id');
-                const ref = current.getAttribute('ref');
-
-                if (id) {
-                    segments.unshift(`${tag}#${id}`);
-                } else if (ref) {
-                    segments.unshift(`${tag}[ref="${ref}"]`);
-                } else {
-                    segments.unshift(`${tag}:nth-child(${index})`);
-                }
-
-                current = parent;
-            }
-
-            return segments.join(' > ');
-        }
-
         const result: Array<{
             key: string;
             styles: Record<string, string>;
             boundingRect: { x: number; y: number; width: number; height: number };
         }> = [];
 
-        // Query all elements with data-figma-id
-        const elementsWithFigmaId = document.querySelectorAll('[data-figma-id]');
+        // Single pass: all elements with data-jay-node-id
+        const elements = document.querySelectorAll('[data-jay-node-id]');
 
-        for (const element of Array.from(elementsWithFigmaId)) {
-            const figmaId = element.getAttribute('data-figma-id');
-            if (!figmaId) continue;
+        for (const element of Array.from(elements)) {
+            const jayNodeId = element.getAttribute('data-jay-node-id');
+            if (!jayNodeId) continue;
 
             const htmlElement = element as any;
             const computedStyle = window.getComputedStyle(htmlElement);
@@ -379,91 +343,21 @@ async function extractComputedStyles(
             }
 
             result.push({
-                key: figmaId,
+                key: jayNodeId,
                 styles,
-                boundingRect: {
-                    x: rect.x,
-                    y: rect.y,
-                    width: rect.width,
-                    height: rect.height,
-                },
-            });
-        }
-
-        // Also query elements without data-figma-id (developer-authored pages)
-        // Use DOM path as fallback key
-        const allElements = document.querySelectorAll('body *');
-
-        for (const element of Array.from(allElements)) {
-            if (element.getAttribute('data-figma-id')) continue; // Skip elements with figma-id
-
-            const htmlElement = element as any;
-            const computedStyle = window.getComputedStyle(htmlElement);
-            const rect = htmlElement.getBoundingClientRect();
-
-            const styles: Record<string, string> = {};
-            for (const prop of properties) {
-                const value = computedStyle.getPropertyValue(prop);
-                if (value && value !== 'none' && value !== 'normal' && value !== '0px') {
-                    styles[prop] = value;
-                }
-            }
-
-            const domPath = generateDomPath(element);
-
-            result.push({
-                key: domPath,
-                styles,
-                boundingRect: {
-                    x: rect.x,
-                    y: rect.y,
-                    width: rect.width,
-                    height: rect.height,
-                },
+                boundingRect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
             });
         }
 
         return result;
     });
 
-    // Build ComputedStyleMap from extracted data
     const styleMap = new Map<string, ComputedStyleData>();
     for (const item of extractedData) {
         styleMap.set(item.key, {
             styles: item.styles,
             boundingRect: item.boundingRect,
         });
-    }
-
-    // Normalize CSS-selector keys to index-based keys to match buildDomPath format.
-    // The browser wraps content in <div id="target">, so enricher keys look like
-    // "div#target > div:nth-child(1) > header:nth-child(1)" while the IR builder
-    // produces "body>0>0". Add index-based aliases so lookups succeed.
-    const targetPrefix = /^div#target\s*>\s*/;
-    for (const [key, data] of Array.from(styleMap.entries())) {
-        if (!targetPrefix.test(key)) continue;
-
-        const pathAfterTarget = key.replace(targetPrefix, '');
-        const segments = pathAfterTarget.split(/\s*>\s*/);
-        const indices: number[] = [];
-        let valid = true;
-
-        for (const segment of segments) {
-            const nthMatch = segment.match(/:nth-child\((\d+)\)/);
-            if (nthMatch) {
-                indices.push(parseInt(nthMatch[1], 10) - 1);
-            } else {
-                valid = false;
-                break;
-            }
-        }
-
-        if (valid && indices.length > 0) {
-            const indexKey = `body>${indices.join('>')}`;
-            if (!styleMap.has(indexKey)) {
-                styleMap.set(indexKey, data);
-            }
-        }
     }
 
     return styleMap;

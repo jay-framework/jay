@@ -31,7 +31,7 @@ export function convertVectorToHtml(node: FigmaVendorDocument, indent: string): 
     const childIndent = indent + '  ';
 
     return (
-        `${indent}<div data-figma-id="${id}" data-figma-type="vector" style="${allStyles}">\n` +
+        `${indent}<div data-jay-node-id="${id}" style="${allStyles}">\n` +
         `${childIndent}${finalSvgContent}\n` +
         `${indent}</div>\n`
     );

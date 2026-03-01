@@ -41,10 +41,17 @@
   </style>
 </head>
 <body>
-  <div data-jay-node-id="frame-1" style="width: 800px;height: 400px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
+  <div data-jay-node-id="frame-1" style="width: 600px;height: 800px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
     <!-- Content -->
-    <div data-jay-node-id="text-1" style="width: 600px;height: 60px;font-family: 'Inter', sans-serif;font-size: 48px;font-weight: 700;color: #1a1a1a;text-align: left;">Welcome to Jay Framework</div>
-    <div data-jay-node-id="text-2" style="width: 500px;height: 40px;font-family: 'Inter', sans-serif;font-size: 24px;font-weight: 400;color: #666666;text-align: left;">Build beautiful UIs with design tools</div>
+    <div id="repeater-frame" data-figma-id="repeater-frame" data-figma-type="frame-repeater" style="width: 600px;height: 600px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
+      <div style="position: relative; width: 100%;" forEach="items" trackBy="id">
+        <div data-jay-node-id="item-template" style="width: 600px;height: 80px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: row;box-sizing: border-box;">
+          <!-- Item -->
+          <div data-figma-id="item-title" style="width: 400px;height: 30px;font-family: 'Inter', sans-serif;font-size: 20px;font-weight: 600;color: #000000;text-align: left;">{title}</div>
+          <div data-figma-id="item-description" style="width: 400px;height: 40px;font-family: 'Inter', sans-serif;font-size: 14px;font-weight: 400;color: #000000;text-align: left;">{description}</div>
+        </div>
+      </div>
+    </div>
   </div>
 
 </body>

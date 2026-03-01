@@ -439,7 +439,7 @@ export function convertVariantNode(
 
     // 5. Wrap everything in the outer container with Frame styling
     return (
-        `${indent}<div id="${node.id}" data-figma-id="${node.id}" data-figma-type="variant-container"${refAttr} style="${wrapperStyleAttr}">\n` +
+        `${indent}<div id="${node.id}" data-jay-node-id="${node.id}"${refAttr} style="${wrapperStyleAttr}">\n` +
         variantHtml +
         `${indent}</div>\n`
     );
