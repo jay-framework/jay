@@ -5,6 +5,7 @@
 ## Background
 
 Two features developed in parallel:
+
 1. **ViewState Query Params** (`viewstate_query_params` branch, Design Log #96) — Dev server overrides viewState values via URL parameters (`?vs.name=Test+Product`), rendering the page with different contract values.
 2. **Figma Import Pipeline** (`import_from_jay_html` branch) — Converts jay-html to a FigmaVendorDocument via an Intermediate Representation (IR), using Playwright to extract computed CSS styles.
 
@@ -24,11 +25,11 @@ The template's `if` conditions **are** the variants that will become Figma compo
 
 ### Three Strategies Compared
 
-| Strategy | Scenarios for 3 booleans + 2 enums(3 values each) | Accuracy |
-|---|---|---|
-| **Linear** (one value per tag) | 2+2+2+3+3 = 12 | Missing compound conditions |
-| **Combinatorial** (all permutations) | 2×2×2×3×3 = 72 | Accurate but wasteful |
-| **Condition-driven** (one per `if`) | = number of distinct `if` conditions | Exact match to template needs |
+| Strategy                             | Scenarios for 3 booleans + 2 enums(3 values each) | Accuracy                      |
+| ------------------------------------ | ------------------------------------------------- | ----------------------------- |
+| **Linear** (one value per tag)       | 2+2+2+3+3 = 12                                    | Missing compound conditions   |
+| **Combinatorial** (all permutations) | 2×2×2×3×3 = 72                                    | Accurate but wasteful         |
+| **Condition-driven** (one per `if`)  | = number of distinct `if` conditions              | Exact match to template needs |
 
 ### How It Works
 
@@ -57,20 +58,20 @@ Jay-HTML Template                    Contract (tags + types)
 
 ### Condition → Scenario Mapping
 
-| Condition | Tokens | Scenario override |
-|---|---|---|
-| `if="isSearching"` | truthy(isSearching) → boolean:true | `?vs.isSearching=true` |
-| `if="!isSearching"` | negated(isSearching) → boolean:false | `?vs.isSearching=false` |
-| `if="mediaType == IMAGE"` | eq(mediaType, IMAGE) | `?vs.mediaType=IMAGE` |
-| `if="mediaType != IMAGE"` | neq → pick first non-IMAGE enum value | `?vs.mediaType=VIDEO` |
+| Condition                        | Tokens                                   | Scenario override                         |
+| -------------------------------- | ---------------------------------------- | ----------------------------------------- |
+| `if="isSearching"`               | truthy(isSearching) → boolean:true       | `?vs.isSearching=true`                    |
+| `if="!isSearching"`              | negated(isSearching) → boolean:false     | `?vs.isSearching=false`                   |
+| `if="mediaType == IMAGE"`        | eq(mediaType, IMAGE)                     | `?vs.mediaType=IMAGE`                     |
+| `if="mediaType != IMAGE"`        | neq → pick first non-IMAGE enum value    | `?vs.mediaType=VIDEO`                     |
 | `if="isSearching && hasResults"` | truthy(isSearching) + truthy(hasResults) | `?vs.isSearching=true&vs.hasResults=true` |
-| `if="brand.name"` | truthy(brand.name) → string:"Sample" | `?vs.brand.name=Sample` |
-| `if="!imageUrl"` | negated(imageUrl) → string:"" (empty) | `?vs.imageUrl=` |
-| `if="itemCount > 0"` | gt(itemCount, 0) → number:1 | `?vs.itemCount=1` |
-| `if="quantity >= 5"` | gte(quantity, 5) → number:5 | `?vs.quantity=5` |
-| `if="stock < 10"` | lt(stock, 10) → number:9 | `?vs.stock=9` |
-| `if="itemCount == 0"` | eq(itemCount, 0) | `?vs.itemCount=0` |
-| `if="itemCount"` | truthy(itemCount) → number:1 | `?vs.itemCount=1` |
+| `if="brand.name"`                | truthy(brand.name) → string:"Sample"     | `?vs.brand.name=Sample`                   |
+| `if="!imageUrl"`                 | negated(imageUrl) → string:"" (empty)    | `?vs.imageUrl=`                           |
+| `if="itemCount > 0"`             | gt(itemCount, 0) → number:1              | `?vs.itemCount=1`                         |
+| `if="quantity >= 5"`             | gte(quantity, 5) → number:5              | `?vs.quantity=5`                          |
+| `if="stock < 10"`                | lt(stock, 10) → number:9                 | `?vs.stock=9`                             |
+| `if="itemCount == 0"`            | eq(itemCount, 0)                         | `?vs.itemCount=0`                         |
+| `if="itemCount"`                 | truthy(itemCount) → number:1             | `?vs.itemCount=1`                         |
 
 All patterns found in real jay-html templates (store-light, whisky-store, cart-webmcp, fake-shop) are handled.
 
@@ -89,6 +90,7 @@ All patterns found in real jay-html templates (store-light, whisky-store, cart-w
 - **`tokenToOverrideValue(token, contractTags)`** — New function. Given a condition token and the contract, determines the `vs.*` value that makes the token evaluate to true. Handles: boolean truthy/negated, `==`, `!=` (picks alternative enum value). Skips: string truthy, expression operators (`>`, `<`).
 
 - **`generateVariantScenarios(bodyDom, pageContract, maxScenarios)`** — Refactored from dimension-based linear generation to condition-driven. Now:
+
   1. Scans all `if` attributes in the DOM
   2. Tokenizes each condition
   3. Resolves each token to an override value using the contract
@@ -172,14 +174,14 @@ No regressions to existing fixture tests, style resolution, variant synthesis, o
 
 ## Trade-offs
 
-| Decision | Benefit | Cost |
-|---|---|---|
-| Condition-driven | Precise, no waste | More parsing complexity |
-| String truthy → "Sample" | Covers `if="brand.name"` patterns | Placeholder value, not real data |
-| Comparison → simplest int | Covers `if="count > 0"` patterns | Doesn't test boundary behavior |
-| Single `!=` alternative | Simple | Not perfectly accurate if multiple alternatives differ |
-| Per-scenario style maps | Variant-accurate styles | More memory, more Playwright navigations |
-| Tag-path matching fallback | Works without contract info on match side | Less precise than exact ID for complex operators |
+| Decision                   | Benefit                                   | Cost                                                   |
+| -------------------------- | ----------------------------------------- | ------------------------------------------------------ |
+| Condition-driven           | Precise, no waste                         | More parsing complexity                                |
+| String truthy → "Sample"   | Covers `if="brand.name"` patterns         | Placeholder value, not real data                       |
+| Comparison → simplest int  | Covers `if="count > 0"` patterns          | Doesn't test boundary behavior                         |
+| Single `!=` alternative    | Simple                                    | Not perfectly accurate if multiple alternatives differ |
+| Per-scenario style maps    | Variant-accurate styles                   | More memory, more Playwright navigations               |
+| Tag-path matching fallback | Works without contract info on match side | Less precise than exact ID for complex operators       |
 
 ## What's Missing (Future Work)
 

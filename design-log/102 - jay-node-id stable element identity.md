@@ -5,11 +5,13 @@
 ## Background
 
 The Figma import pipeline needs to match elements across three contexts:
+
 1. **Source jay-html** — parsed by node-html-parser (server-side)
 2. **Rendered page** — served by the dev server, rendered by Playwright (browser)
 3. **Vendor document** — FigmaVendorDocument (or other vendor formats)
 
 Currently, each context generates its own keys independently:
+
 - IR builder: `body>0>2>1` (index-based DOM path from source)
 - Playwright: `div:nth-child(1) > div:nth-child(3)` (CSS selector from rendered DOM)
 - Figma export: `data-figma-id="2:1619"` (Figma's internal node ID)
@@ -192,26 +194,26 @@ No computation needed — IDs are already in the source from the previous export
 
 ### Summary: All Cases
 
-| Scenario | What happens |
-|---|---|
-| **First import** (no IDs) | Annotator generates IDs, writes to jay-html, then imports |
-| **Re-import** (has IDs) | IDs read from source, match rendered DOM directly |
-| **First export** (new Figma design) | Export generates new IDs, writes to jay-html |
-| **Re-export** (has IDs) | Preserves existing jayNodeId from pluginData |
-| **Developer adds element** | No ID on new element → annotator adds one on next import |
-| **Designer adds element** | No jayNodeId → export generates one |
-| **Developer deletes element** | ID disappears → Figma node orphaned |
-| **Designer deletes element** | Not in export → element removed from jay-html |
+| Scenario                            | What happens                                              |
+| ----------------------------------- | --------------------------------------------------------- |
+| **First import** (no IDs)           | Annotator generates IDs, writes to jay-html, then imports |
+| **Re-import** (has IDs)             | IDs read from source, match rendered DOM directly         |
+| **First export** (new Figma design) | Export generates new IDs, writes to jay-html              |
+| **Re-export** (has IDs)             | Preserves existing jayNodeId from pluginData              |
+| **Developer adds element**          | No ID on new element → annotator adds one on next import  |
+| **Designer adds element**           | No jayNodeId → export generates one                       |
+| **Developer deletes element**       | ID disappears → Figma node orphaned                       |
+| **Designer deletes element**        | Not in export → element removed from jay-html             |
 
 ## Dropping `data-figma-id`
 
-| Current | New |
-|---|---|
-| `data-figma-id` in exported jay-html | `data-jay-node-id` |
-| `data-figma-type` in exported jay-html | removed (vendor-specific) |
-| `data-figma-id` in IR builder lookup | `data-jay-node-id` |
-| `data-figma-id` in Playwright extraction | `data-jay-node-id` |
-| Figma node ID as element identity | `pluginData.jayNodeId` |
+| Current                                  | New                       |
+| ---------------------------------------- | ------------------------- |
+| `data-figma-id` in exported jay-html     | `data-jay-node-id`        |
+| `data-figma-type` in exported jay-html   | removed (vendor-specific) |
+| `data-figma-id` in IR builder lookup     | `data-jay-node-id`        |
+| `data-figma-id` in Playwright extraction | `data-jay-node-id`        |
+| Figma node ID as element identity        | `pluginData.jayNodeId`    |
 
 ## Implementation Plan
 
@@ -255,9 +257,9 @@ Replace the two-pass extraction + normalization hack with a single pass:
 // In browser (Playwright)
 const elements = document.querySelectorAll('[data-jay-node-id]');
 for (const el of elements) {
-    const id = el.getAttribute('data-jay-node-id');
-    const styles = window.getComputedStyle(el);
-    // ... extract styles keyed by id
+  const id = el.getAttribute('data-jay-node-id');
+  const styles = window.getComputedStyle(el);
+  // ... extract styles keyed by id
 }
 ```
 
@@ -286,12 +288,12 @@ Replace `data-figma-id` with `data-jay-node-id` in the Figma vendor export.
 
 ## Trade-offs
 
-| Decision | Benefit | Cost |
-|---|---|---|
-| IDs in jay-html source | Simple, reliable, no compiler changes | Adds attributes to source files |
-| Write-back on first import | One-time, then stable forever | Modifies developer's file (must be clean) |
-| Position-based IDs (j-0-1) | Human-readable, deterministic | Unstable if elements reordered |
-| Vendor-agnostic naming | Works for any design tool | Migration from data-figma-id |
+| Decision                   | Benefit                               | Cost                                      |
+| -------------------------- | ------------------------------------- | ----------------------------------------- |
+| IDs in jay-html source     | Simple, reliable, no compiler changes | Adds attributes to source files           |
+| Write-back on first import | One-time, then stable forever         | Modifies developer's file (must be clean) |
+| Position-based IDs (j-0-1) | Human-readable, deterministic         | Unstable if elements reordered            |
+| Vendor-agnostic naming     | Works for any design tool             | Migration from data-figma-id              |
 
 ---
 

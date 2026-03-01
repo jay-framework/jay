@@ -46,9 +46,7 @@ export function isPlaywrightAvailable(): boolean {
  * If Playwright is unavailable or rendering fails, returns empty result.
  * The IR builder will fall back to static resolution.
  */
-export async function enrichWithComputedStyles(
-    options: EnricherOptions,
-): Promise<EnricherResult> {
+export async function enrichWithComputedStyles(options: EnricherOptions): Promise<EnricherResult> {
     const emptyResult: EnricherResult = {
         merged: new Map(),
         perScenario: new Map(),
@@ -526,9 +524,7 @@ export function generateVariantScenarios(
     }
 
     // Always include the default scenario
-    const scenarios: VariantScenario[] = [
-        { id: 'default', contractValues: {}, queryString: '' },
-    ];
+    const scenarios: VariantScenario[] = [{ id: 'default', contractValues: {}, queryString: '' }];
 
     // Dedup: avoid generating identical scenarios for the same override set
     const seenIds = new Set<string>(['default']);

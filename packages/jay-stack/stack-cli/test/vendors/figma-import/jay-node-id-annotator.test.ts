@@ -8,9 +8,7 @@ describe('annotateJayNodeIds', () => {
     }
 
     it('assigns position-based IDs to all elements', () => {
-        const body = makeBody(
-            '<body><div><span>hello</span><p>world</p></div></body>',
-        );
+        const body = makeBody('<body><div><span>hello</span><p>world</p></div></body>');
         const changed = annotateJayNodeIds(body);
 
         expect(changed).toBe(true);
@@ -46,9 +44,7 @@ describe('annotateJayNodeIds', () => {
     });
 
     it('handles multiple top-level children', () => {
-        const body = makeBody(
-            '<body><header>h</header><main>m</main><footer>f</footer></body>',
-        );
+        const body = makeBody('<body><header>h</header><main>m</main><footer>f</footer></body>');
         annotateJayNodeIds(body);
 
         expect(body.querySelector('header')!.getAttribute('data-jay-node-id')).toBe('j-0');
@@ -78,9 +74,7 @@ describe('annotateJayNodeIds', () => {
     });
 
     it('handles deeply nested structure', () => {
-        const body = makeBody(
-            '<body><div><div><div><span>deep</span></div></div></div></body>',
-        );
+        const body = makeBody('<body><div><div><div><span>deep</span></div></div></div></body>');
         annotateJayNodeIds(body);
 
         const span = body.querySelector('span')!;
@@ -95,8 +89,12 @@ describe('annotateJayNodeIds', () => {
         annotateJayNodeIds(body1);
         annotateJayNodeIds(body2);
 
-        const allIds1 = body1.querySelectorAll('[data-jay-node-id]').map(el => el.getAttribute('data-jay-node-id'));
-        const allIds2 = body2.querySelectorAll('[data-jay-node-id]').map(el => el.getAttribute('data-jay-node-id'));
+        const allIds1 = body1
+            .querySelectorAll('[data-jay-node-id]')
+            .map((el) => el.getAttribute('data-jay-node-id'));
+        const allIds2 = body2
+            .querySelectorAll('[data-jay-node-id]')
+            .map((el) => el.getAttribute('data-jay-node-id'));
 
         expect(allIds1).toEqual(allIds2);
     });

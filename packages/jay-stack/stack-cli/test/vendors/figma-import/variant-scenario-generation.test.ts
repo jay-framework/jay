@@ -119,9 +119,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
     });
 
     it('handles != condition by picking alternative enum value', () => {
-        const body = makeBody(
-            '<body><div if="mediaType != IMAGE">Not an image</div></body>',
-        );
+        const body = makeBody('<body><div if="mediaType != IMAGE">Not an image</div></body>');
         const contract: Contract = {
             name: 'test',
             tags: [{ tag: 'mediaType', type: 'variant', dataType: 'enum (IMAGE | VIDEO | AUDIO)' }],
@@ -135,9 +133,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
     // --- String truthy conditions (real pattern: if="brand.name") ---
 
     it('generates scenario for string truthy condition', () => {
-        const body = makeBody(
-            '<body><p if="brand.name">{brand.name}</p></body>',
-        );
+        const body = makeBody('<body><p if="brand.name">{brand.name}</p></body>');
         const contract: Contract = {
             name: 'test',
             tags: [
@@ -159,9 +155,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
     });
 
     it('generates scenario for negated string condition', () => {
-        const body = makeBody(
-            '<body><span if="!imageUrl">No image</span></body>',
-        );
+        const body = makeBody('<body><span if="!imageUrl">No image</span></body>');
         const contract: Contract = {
             name: 'test',
             tags: [{ tag: 'imageUrl', type: 'data', dataType: 'string' }],
@@ -179,9 +173,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
     // --- Comparison operator conditions (real pattern: if="itemCount > 0") ---
 
     it('generates scenario for > comparison', () => {
-        const body = makeBody(
-            '<body><div if="itemCount > 0">Has items</div></body>',
-        );
+        const body = makeBody('<body><div if="itemCount > 0">Has items</div></body>');
         const contract: Contract = {
             name: 'test',
             tags: [{ tag: 'itemCount', type: 'data', dataType: 'number' }],
@@ -197,9 +189,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
     });
 
     it('generates scenario for >= comparison', () => {
-        const body = makeBody(
-            '<body><div if="quantity >= 5">Bulk pricing</div></body>',
-        );
+        const body = makeBody('<body><div if="quantity >= 5">Bulk pricing</div></body>');
         const contract: Contract = {
             name: 'test',
             tags: [{ tag: 'quantity', type: 'data', dataType: 'number' }],
@@ -215,9 +205,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
     });
 
     it('generates scenario for < comparison', () => {
-        const body = makeBody(
-            '<body><div if="stock < 10">Low stock</div></body>',
-        );
+        const body = makeBody('<body><div if="stock < 10">Low stock</div></body>');
         const contract: Contract = {
             name: 'test',
             tags: [{ tag: 'stock', type: 'data', dataType: 'number' }],
@@ -233,9 +221,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
     });
 
     it('generates scenario for <= comparison', () => {
-        const body = makeBody(
-            '<body><div if="rating <= 0">No rating</div></body>',
-        );
+        const body = makeBody('<body><div if="rating <= 0">No rating</div></body>');
         const contract: Contract = {
             name: 'test',
             tags: [{ tag: 'rating', type: 'data', dataType: 'number' }],
@@ -251,9 +237,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
     });
 
     it('generates scenario for == 0 comparison (itemCount == 0)', () => {
-        const body = makeBody(
-            '<body><div if="itemCount == 0">Empty cart</div></body>',
-        );
+        const body = makeBody('<body><div if="itemCount == 0">Empty cart</div></body>');
         const contract: Contract = {
             name: 'test',
             tags: [{ tag: 'itemCount', type: 'data', dataType: 'number' }],
@@ -271,9 +255,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
     // --- Number truthy ---
 
     it('generates scenario for number truthy condition', () => {
-        const body = makeBody(
-            '<body><span if="itemCount">({itemCount})</span></body>',
-        );
+        const body = makeBody('<body><span if="itemCount">({itemCount})</span></body>');
         const contract: Contract = {
             name: 'test',
             tags: [{ tag: 'itemCount', type: 'data', dataType: 'number' }],
@@ -291,9 +273,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
     // --- Compound conditions ---
 
     it('generates compound scenario for && condition', () => {
-        const body = makeBody(
-            '<body><div if="isSearching && hasResults">Results</div></body>',
-        );
+        const body = makeBody('<body><div if="isSearching && hasResults">Results</div></body>');
         const contract: Contract = {
             name: 'test',
             tags: [
@@ -318,12 +298,20 @@ describe('generateVariantScenarios (condition-driven)', () => {
         const contract: Contract = {
             name: 'test',
             tags: [
-                { tag: 'quickAddType', type: 'variant', dataType: 'enum (SIMPLE | SINGLE_OPTION | NEEDS_CONFIGURATION)' },
+                {
+                    tag: 'quickAddType',
+                    type: 'variant',
+                    dataType: 'enum (SIMPLE | SINGLE_OPTION | NEEDS_CONFIGURATION)',
+                },
                 {
                     tag: 'inventory',
                     type: 'data',
                     tags: [
-                        { tag: 'availabilityStatus', type: 'variant', dataType: 'enum (IN_STOCK | OUT_OF_STOCK)' },
+                        {
+                            tag: 'availabilityStatus',
+                            type: 'variant',
+                            dataType: 'enum (IN_STOCK | OUT_OF_STOCK)',
+                        },
                     ],
                 },
             ],
@@ -532,7 +520,11 @@ describe('generateVariantScenarios (condition-driven)', () => {
                     tag: 'inventory',
                     type: 'data',
                     tags: [
-                        { tag: 'availabilityStatus', type: 'variant', dataType: 'enum (IN_STOCK | OUT_OF_STOCK)' },
+                        {
+                            tag: 'availabilityStatus',
+                            type: 'variant',
+                            dataType: 'enum (IN_STOCK | OUT_OF_STOCK)',
+                        },
                     ],
                 },
                 {

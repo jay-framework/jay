@@ -480,12 +480,17 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
                     if (fileBody) {
                         annotateJayNodeIds(fileBody);
                         fs.writeFileSync(projectPage.filePath, fullDoc.toString(), 'utf-8');
-                        console.log(`[Import] Wrote data-jay-node-id annotations to ${projectPage.filePath}`);
+                        console.log(
+                            `[Import] Wrote data-jay-node-id annotations to ${projectPage.filePath}`,
+                        );
                         // Brief pause for dev server hot-reload to pick up the change
                         await new Promise((resolve) => setTimeout(resolve, 1500));
                     }
                 } catch (err) {
-                    console.warn('[Import] Could not write annotations back to file:', (err as Error).message);
+                    console.warn(
+                        '[Import] Could not write annotations back to file:',
+                        (err as Error).message,
+                    );
                 }
             }
         }

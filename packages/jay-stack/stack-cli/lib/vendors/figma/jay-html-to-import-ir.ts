@@ -245,10 +245,7 @@ function buildNodeFromElement(
     );
     warnings.push(...bindingWarnings);
 
-    const name =
-        element.getAttribute('ref') ||
-        element.getAttribute('id') ||
-        tag;
+    const name = element.getAttribute('ref') || element.getAttribute('id') || tag;
 
     if (tag === 'svg') {
         const viewBox = element.getAttribute('viewBox');
@@ -586,9 +583,7 @@ function findScenarioForCondition(
     for (const scenario of scenarios) {
         if (scenario.id === 'default') continue;
 
-        const scenarioTagPaths = new Set(
-            scenario.id.split('&').map((part) => part.split('=')[0]),
-        );
+        const scenarioTagPaths = new Set(scenario.id.split('&').map((part) => part.split('=')[0]));
         const allCovered = tagPaths.every((tp) => scenarioTagPaths.has(tp));
         if (allCovered && scenarioTagPaths.size === tagPaths.length) {
             const map = perScenarioMaps.get(scenario.id);
@@ -600,9 +595,7 @@ function findScenarioForCondition(
     for (const scenario of scenarios) {
         if (scenario.id === 'default') continue;
 
-        const scenarioTagPaths = new Set(
-            scenario.id.split('&').map((part) => part.split('=')[0]),
-        );
+        const scenarioTagPaths = new Set(scenario.id.split('&').map((part) => part.split('=')[0]));
         const allCovered = tagPaths.every((tp) => scenarioTagPaths.has(tp));
         if (allCovered) {
             const map = perScenarioMaps.get(scenario.id);
