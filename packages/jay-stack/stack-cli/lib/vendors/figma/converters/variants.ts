@@ -1,15 +1,5 @@
 import type { FigmaVendorDocument, ContractTag } from '@jay-framework/editor-protocol';
 import type { ConversionContext, BindingAnalysis } from '../types';
-import {
-    getPositionStyle,
-    getFrameSizeStyles,
-    getCommonStyles,
-    getBorderRadius,
-    getAutoLayoutStyles,
-    getOverflowStyles,
-    getBackgroundFillsStyle,
-    getStrokeStyles,
-} from '../utils';
 
 /**
  * Gets all variant values for a component set's properties
@@ -394,52 +384,22 @@ export function convertVariantNode(
         variantHtml += `${innerIndent}</div>\n`;
     }
 
-    // 4. Build styles for the outer wrapper (the instance node's Frame styling)
-    // This wrapper is positioned once and contains all variant permutations
-    const positionStyle = getPositionStyle(node);
-    let frameSizeStyles = getFrameSizeStyles(node);
-    const backgroundStyle = getBackgroundFillsStyle(node);
-    const borderRadius = getBorderRadius(node);
-    const strokeStyles = getStrokeStyles(node);
-    const flexStyles = getAutoLayoutStyles(node);
-    const overflowStyles = getOverflowStyles(node);
-    const commonStyles = getCommonStyles(node);
-
-    // Variant containers: use absoluteRenderBounds or max variant component height
-    // when the INSTANCE's logical height is smaller than its content
-    const renderHeight = node.absoluteRenderBounds?.height;
-    const nodeHeight = node.height ?? 0;
-    if (renderHeight && renderHeight > nodeHeight) {
-        frameSizeStyles = frameSizeStyles.replace(
-            /height:\s*[\d.]+px/,
-            `height: ${renderHeight}px`,
-        );
-    } else if (node.variants && node.variants.length > 0) {
-        let maxH = nodeHeight;
-        for (const v of node.variants) {
-            if (v.height !== undefined && v.height > maxH) maxH = v.height;
-        }
-        if (maxH > nodeHeight) {
-            frameSizeStyles = frameSizeStyles.replace(/height:\s*[\d.]+px/, `height: ${maxH}px`);
-        }
-    }
-
-    const wrapperStyleAttr = `${positionStyle}${frameSizeStyles}${backgroundStyle}${strokeStyles}${borderRadius}${overflowStyles}${commonStyles}${flexStyles}box-sizing: border-box;`;
-
-    // Determine ref attribute from analysis (checked in binding analysis phase)
+    // 4. Determine ref attribute from analysis
     let refAttr = '';
     if (analysis.refPath) {
         refAttr = ` ref="${analysis.refPath}"`;
     } else if (analysis.dualPath) {
         refAttr = ` ref="${analysis.dualPath}"`;
     } else if (analysis.interactiveVariantPath) {
-        // Variant property that is also interactive (type: [variant, interactive])
         refAttr = ` ref="${analysis.interactiveVariantPath}"`;
     }
 
-    // 5. Wrap everything in the outer container with Frame styling
+    // Variant wrappers are transparent containers for conditional content.
+    // Always use display:contents so children participate in the parent's
+    // layout flow directly -- fixed pixel sizes from Figma would break the
+    // responsive CSS layout.
     return (
-        `${indent}<div id="${node.id}" data-jay-node-id="${node.id}"${refAttr} style="${wrapperStyleAttr}">\n` +
+        `${indent}<div data-jay-node-id="${node.id}"${refAttr} style="display: contents;">\n` +
         variantHtml +
         `${indent}</div>\n`
     );

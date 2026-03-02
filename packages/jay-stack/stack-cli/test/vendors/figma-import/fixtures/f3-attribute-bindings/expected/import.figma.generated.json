@@ -2,10 +2,7 @@
   "type": "SECTION",
   "name": "test",
   "visible": true,
-  "pluginData": {
-    "jpage": "true",
-    "urlRoute": "/test"
-  },
+  "pluginData": { "jpage": "true", "urlRoute": "/test" },
   "children": [
     {
       "type": "FRAME",
@@ -20,25 +17,18 @@
       "paddingRight": 20,
       "paddingBottom": 20,
       "paddingLeft": 20,
-      "fills": [
-        {
-          "type": "SOLID",
-          "color": {
-            "r": 1,
-            "g": 1,
-            "b": 1
-          },
-          "opacity": 1
-        }
-      ],
+      "fills": [{ "type": "SOLID", "color": { "r": 1, "g": 1, "b": 1 }, "opacity": 1 }],
       "children": [
         {
           "type": "RECTANGLE",
           "name": "img",
           "visible": true,
           "pluginData": {
-            "semanticHtml": "img",
-            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"imageUrl\"],\"attribute\":\"src\"},{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"productName\"],\"attribute\":\"alt\"}]"
+            "htmlAttributes": "{\"src\":\"{imageUrl}\",\"alt\":\"{productName}\"}",
+            "imgAlt": "{productName}",
+            "imgSrc": "{imageUrl}",
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"imageUrl\"],\"attribute\":\"src\"},{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"productName\"],\"attribute\":\"alt\"}]",
+            "semanticHtml": "img"
           },
           "width": 460,
           "height": 300,
@@ -53,24 +43,13 @@
           "characters": "View Details",
           "fontSize": 20,
           "fontWeight": 600,
-          "fills": [
-            {
-              "type": "SOLID",
-              "color": {
-                "r": 0,
-                "g": 0.4,
-                "b": 0.8
-              },
-              "opacity": 1
-            }
-          ],
+          "fills": [{ "type": "SOLID", "color": { "r": 0, "g": 0.4, "b": 0.8 }, "opacity": 1 }],
           "pluginData": {
-            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"link\"],\"attribute\":\"href\"}]"
+            "htmlAttributes": "{\"href\":\"{link}\"}",
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"link\"],\"attribute\":\"href\"}]",
+            "semanticHtml": "a"
           },
-          "fontName": {
-            "family": "Inter",
-            "style": "Semi Bold"
-          },
+          "fontName": { "family": "Inter", "style": "Semi Bold" },
           "layoutSizingHorizontal": "FILL"
         },
         {
@@ -91,10 +70,7 @@
               "opacity": 1
             }
           ],
-          "fontName": {
-            "family": "Inter",
-            "style": "Regular"
-          },
+          "fontName": { "family": "Inter", "style": "Regular" },
           "layoutSizingHorizontal": "FILL"
         }
       ]

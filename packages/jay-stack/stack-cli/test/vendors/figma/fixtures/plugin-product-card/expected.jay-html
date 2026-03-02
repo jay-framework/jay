@@ -23,37 +23,18 @@
     a:hover { text-decoration: underline; }
     div { box-sizing: border-box; }
     
-    /* Scrollbar styling for Webkit browsers */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-    
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 4px;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(0, 0, 0, 0.5);
-    }
-    
-    /* Smooth scrolling */
-    * {
-      scroll-behavior: smooth;
-    }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.3); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.5); }
+    * { scroll-behavior: smooth; }
   </style>
 </head>
 <body>
   <div data-jay-node-id="frame-1" style="position: absolute;top: 100px;left: 100px;width: 100%;height: 400px;background-color: #ffffff;border-radius: 8px;overflow: visible;display: flex;flex-direction: column;justify-content: flex-start;align-items: flex-start;gap: 16px;padding-left: 20px;padding-right: 20px;padding-top: 20px;padding-bottom: 20px;box-sizing: border-box;">
-    <!-- Product Card -->
-    <img data-jay-node-id="product-image" src="{productCard.image}" alt="image" style="width: 260px;height: 200px;border-radius: 4px;" />
-    <div data-jay-node-id="product-name" style="width: 260px;height: 30px;font-family: 'Inter', sans-serif;font-size: 24px;font-weight: 700;color: #000000;text-align: left;">{productCard.name}</div>
-    <div data-jay-node-id="product-price" style="width: 260px;height: 24px;font-family: 'Inter', sans-serif;font-size: 18px;font-weight: 400;color: #4d4d4d;text-align: left;">{productCard.price}</div>
+    <img data-jay-node-id="product-image" src="{productCard.image}" alt="image" style="width: 100%; height: 100%; object-fit: cover;border-radius: 4px;" />
+    <div data-jay-node-id="product-name" style="font-family: 'Inter', sans-serif;font-size: 24px;font-weight: 700;color: #000000;text-align: left;">{productCard.name}</div>
+    <div data-jay-node-id="product-price" style="font-family: 'Inter', sans-serif;font-size: 18px;font-weight: 400;color: #4d4d4d;text-align: left;">{productCard.price}</div>
   </div>
 
 </body>

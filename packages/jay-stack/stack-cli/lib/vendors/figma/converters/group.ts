@@ -28,9 +28,10 @@ export function convertGroupNode(
     const sizeStyles = getNodeSizeStyles(node);
     const commonStyles = getCommonStyles(node);
 
-    const styleAttr = `${positionStyle}${sizeStyles}${commonStyles}box-sizing: border-box;`;
+    const fullStyleAttr = `${positionStyle}${sizeStyles}${commonStyles}box-sizing: border-box;`;
+    const cssClassName = node.pluginData?.['className'];
+    const effectiveStyle = cssClassName ? '' : fullStyleAttr;
 
-    // Determine ref attribute from analysis
     let refAttr = '';
     if (analysis.refPath) {
         refAttr = ` ref="${analysis.refPath}"`;
@@ -38,15 +39,15 @@ export function convertGroupNode(
         refAttr = ` ref="${analysis.dualPath}"`;
     }
 
-    // Build HTML attributes
-    let htmlAttrs = `id="${node.id}" data-jay-node-id="${node.id}"${refAttr} style="${styleAttr}"`;
+    let htmlAttrs = '';
+    if (cssClassName) htmlAttrs += `class="${cssClassName}" `;
+    htmlAttrs += `id="${node.id}" data-jay-node-id="${node.id}"${refAttr}`;
+    if (effectiveStyle) htmlAttrs += ` style="${effectiveStyle}"`;
 
-    // Add other attributes (like data bindings)
     for (const [attr, tagPath] of analysis.attributes) {
         htmlAttrs += ` ${attr}="{${tagPath}}"`;
     }
 
-    // Build group container
     let html = `${indent}<div ${htmlAttrs}>\n`;
 
     const childContext: ConversionContext = {

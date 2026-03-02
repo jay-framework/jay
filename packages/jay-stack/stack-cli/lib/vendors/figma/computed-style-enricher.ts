@@ -7,7 +7,7 @@
  */
 
 import { createHash } from 'crypto';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { createRequire } from 'module';
 import { join } from 'path';
 import type { HTMLElement } from 'node-html-parser';
@@ -51,6 +51,7 @@ export async function enrichWithComputedStyles(options: EnricherOptions): Promis
         merged: new Map(),
         perScenario: new Map(),
         scenarios: [],
+        screenshots: new Map(),
     };
     const startTime = Date.now();
 
@@ -74,7 +75,12 @@ export async function enrichWithComputedStyles(options: EnricherOptions): Promis
             console.log(
                 `[ComputedStyles] ✓ Cache hit for ${options.pageRoute} (${cached.size} elements)`,
             );
-            return { merged: cached, perScenario: new Map(), scenarios: [] };
+            return {
+                merged: cached,
+                perScenario: new Map(),
+                scenarios: [],
+                screenshots: new Map(),
+            };
         }
     }
 
@@ -85,15 +91,16 @@ export async function enrichWithComputedStyles(options: EnricherOptions): Promis
         // Launch headless browser
         const browser = await chromium.launch({
             headless: true,
-            timeout: options.timeout ?? 5000,
+            timeout: options.timeout ?? 30000,
         });
 
         try {
-            const context = await browser.newContext();
+            const context = await browser.newContext({
+                viewport: { width: 1280, height: 900 },
+            });
             const page = await context.newPage();
 
-            // Set timeout
-            const timeout = options.timeout ?? 5000;
+            const timeout = options.timeout ?? 30000;
             page.setDefaultTimeout(timeout);
 
             const scenarios =
@@ -103,6 +110,11 @@ export async function enrichWithComputedStyles(options: EnricherOptions): Promis
 
             const mergedStyleMap = new Map<string, ComputedStyleData>();
             const perScenarioMaps = new Map<string, ComputedStyleMap>();
+            const screenshots = new Map<string, string>();
+
+            if (options.screenshotDir) {
+                mkdirSync(options.screenshotDir, { recursive: true });
+            }
 
             for (const scenario of scenarios) {
                 const scenarioStart = Date.now();
@@ -111,9 +123,22 @@ export async function enrichWithComputedStyles(options: EnricherOptions): Promis
 
                 try {
                     await page.goto(url, {
-                        waitUntil: 'networkidle',
+                        waitUntil: 'domcontentloaded',
                         timeout,
                     });
+                    // Wait for client-side rendering to settle
+                    await page.waitForTimeout(3000);
+
+                    if (options.screenshotDir) {
+                        const safeName = scenario.id.replace(/[^a-zA-Z0-9_-]/g, '_');
+                        const screenshotPath = join(
+                            options.screenshotDir,
+                            `screenshot-${safeName}.png`,
+                        );
+                        await page.screenshot({ path: screenshotPath, fullPage: true });
+                        screenshots.set(scenario.id, screenshotPath);
+                        console.log(`[ComputedStyles] Screenshot saved: ${screenshotPath}`);
+                    }
 
                     const scenarioStyleMap = await extractComputedStyles(page, scenario.id);
 
@@ -155,7 +180,7 @@ export async function enrichWithComputedStyles(options: EnricherOptions): Promis
             }
 
             await context.close();
-            return { merged: mergedStyleMap, perScenario: perScenarioMaps, scenarios };
+            return { merged: mergedStyleMap, perScenario: perScenarioMaps, scenarios, screenshots };
         } finally {
             await browser.close();
         }

@@ -15,36 +15,17 @@
     a:hover { text-decoration: underline; }
     div { box-sizing: border-box; }
     
-    /* Scrollbar styling for Webkit browsers */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-    
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 4px;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(0, 0, 0, 0.5);
-    }
-    
-    /* Smooth scrolling */
-    * {
-      scroll-behavior: smooth;
-    }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.3); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.5); }
+    * { scroll-behavior: smooth; }
   </style>
 </head>
 <body>
   <div data-jay-node-id="frame-1" style="width: 800px;height: 400px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
-    <!-- Content -->
-    <div data-jay-node-id="text-1" style="width: 600px;height: 60px;font-family: 'Inter', sans-serif;font-size: 48px;font-weight: 700;color: #1a1a1a;text-align: left;">Welcome to Jay Framework</div>
-    <div data-jay-node-id="text-2" style="width: 500px;height: 40px;font-family: 'Inter', sans-serif;font-size: 24px;font-weight: 400;color: #666666;text-align: left;">Build beautiful UIs with design tools</div>
+    <div data-jay-node-id="text-1" style="font-family: 'Inter', sans-serif;font-size: 48px;font-weight: 700;color: #1a1a1a;text-align: left;">Welcome to Jay Framework</div>
+    <div data-jay-node-id="text-2" style="font-family: 'Inter', sans-serif;font-size: 24px;font-weight: 400;color: #666666;text-align: left;">Build beautiful UIs with design tools</div>
   </div>
 
 </body>

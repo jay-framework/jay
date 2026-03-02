@@ -85,6 +85,7 @@ export type ImportIRNode = {
     kind: ImportIRNodeKind;
     name?: string;
     tagName?: string;
+    className?: string;
     visible?: boolean;
     style?: ImportIRStyle;
     text?: {
@@ -96,6 +97,7 @@ export type ImportIRNode = {
         alt?: string;
         objectFit?: 'fill' | 'contain' | 'cover' | 'none' | 'scale-down';
     };
+    htmlAttributes?: Record<string, string>;
     bindings?: ImportIRBinding[];
     svgData?: string;
     warnings?: string[];

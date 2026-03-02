@@ -224,6 +224,7 @@ function buildNodeFromElement(
     const styleAttr = element.getAttribute('style') || '';
     const classAttr = element.getAttribute('class') || '';
     const classNames = classAttr ? classAttr.split(/\s+/).filter(Boolean) : undefined;
+    const className = classAttr.trim() || undefined;
 
     const enrichedStyles = jayNodeId ? computedStyleMap?.get(jayNodeId) : undefined;
 
@@ -244,6 +245,24 @@ function buildNodeFromElement(
         contractContext,
     );
     warnings.push(...bindingWarnings);
+
+    // Capture raw HTML attributes with binding expressions for round-trip fidelity
+    const htmlAttributes: Record<string, string> = {};
+    for (const attr of [
+        'href',
+        'src',
+        'alt',
+        'value',
+        'placeholder',
+        'title',
+        'disabled',
+        'type',
+        'loading',
+    ] as const) {
+        const val = element.getAttribute(attr);
+        if (val != null) htmlAttributes[attr] = val;
+    }
+    const hasHtmlAttributes = Object.keys(htmlAttributes).length > 0;
 
     const name = element.getAttribute('ref') || element.getAttribute('id') || tag;
 
@@ -277,6 +296,7 @@ function buildNodeFromElement(
             kind: 'VECTOR_PLACEHOLDER',
             name: name === 'svg' ? 'svg-icon' : name,
             tagName: 'svg',
+            className,
             visible: true,
             style: svgStyle,
             svgData: rawSvg,
@@ -302,9 +322,11 @@ function buildNodeFromElement(
             kind: 'IMAGE',
             name,
             tagName: tag,
+            className,
             visible: true,
             style,
             image: { src, alt, objectFit },
+            htmlAttributes: hasHtmlAttributes ? htmlAttributes : undefined,
             bindings: bindings.length > 0 ? bindings : undefined,
             warnings: warnings.length > 0 ? [...warnings] : undefined,
             children: [],
@@ -344,8 +366,10 @@ function buildNodeFromElement(
                 kind: 'FRAME',
                 name,
                 tagName: tag,
+                className,
                 visible: true,
                 style,
+                htmlAttributes: hasHtmlAttributes ? htmlAttributes : undefined,
                 bindings: bindings.length > 0 ? bindings : undefined,
                 warnings: warnings.length > 0 ? [...warnings] : undefined,
                 children: [textChild],
@@ -365,9 +389,11 @@ function buildNodeFromElement(
             kind: 'TEXT',
             name,
             tagName: tag,
+            className,
             visible: true,
             style,
             text: { characters },
+            htmlAttributes: hasHtmlAttributes ? htmlAttributes : undefined,
             bindings: bindings.length > 0 ? bindings : undefined,
             warnings: warnings.length > 0 ? [...warnings] : undefined,
             children: [],
@@ -412,8 +438,10 @@ function buildNodeFromElement(
             kind: 'FRAME',
             name,
             tagName: tag,
+            className,
             visible: true,
             style,
+            htmlAttributes: hasHtmlAttributes ? htmlAttributes : undefined,
             bindings: bindings.length > 0 ? bindings : undefined,
             warnings: warnings.length > 0 ? [...warnings] : undefined,
             children,
@@ -514,8 +542,10 @@ function buildNodeFromElement(
         kind: 'FRAME',
         name,
         tagName: tag,
+        className,
         visible: true,
         style,
+        htmlAttributes: hasHtmlAttributes ? htmlAttributes : undefined,
         bindings: bindings.length > 0 ? bindings : undefined,
         warnings: warnings.length > 0 ? [...warnings] : undefined,
         children,

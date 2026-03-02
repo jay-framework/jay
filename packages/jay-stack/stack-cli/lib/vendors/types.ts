@@ -72,5 +72,6 @@ export interface Vendor<TExportDoc = any, TImportDoc = TExportDoc> {
         pageUrl: string,
         projectPage: ProjectPage,
         plugins: Plugin[],
+        options?: { devServerUrl?: string },
     ): Promise<TImportDoc>;
 }

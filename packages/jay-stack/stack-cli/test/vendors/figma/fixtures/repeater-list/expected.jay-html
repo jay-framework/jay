@@ -15,40 +15,20 @@
     a:hover { text-decoration: underline; }
     div { box-sizing: border-box; }
     
-    /* Scrollbar styling for Webkit browsers */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-    
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 4px;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(0, 0, 0, 0.5);
-    }
-    
-    /* Smooth scrolling */
-    * {
-      scroll-behavior: smooth;
-    }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.3); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.5); }
+    * { scroll-behavior: smooth; }
   </style>
 </head>
 <body>
   <div data-jay-node-id="frame-1" style="width: 600px;height: 800px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
-    <!-- Content -->
     <div id="repeater-frame" data-jay-node-id="repeater-frame" style="width: 600px;height: 600px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
       <div style="position: relative; width: 100%;" forEach="items" trackBy="id">
         <div data-jay-node-id="item-template" style="width: 600px;height: 80px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: row;box-sizing: border-box;">
-          <!-- Item -->
-          <div data-jay-node-id="item-title" style="width: 400px;height: 30px;font-family: 'Inter', sans-serif;font-size: 20px;font-weight: 600;color: #000000;text-align: left;">{title}</div>
-          <div data-jay-node-id="item-description" style="width: 400px;height: 40px;font-family: 'Inter', sans-serif;font-size: 14px;font-weight: 400;color: #000000;text-align: left;">{description}</div>
+          <div data-jay-node-id="item-title" style="font-family: 'Inter', sans-serif;font-size: 20px;font-weight: 600;color: #000000;text-align: left;">{title}</div>
+          <div data-jay-node-id="item-description" style="font-family: 'Inter', sans-serif;font-size: 14px;font-weight: 400;color: #000000;text-align: left;">{description}</div>
         </div>
       </div>
     </div>

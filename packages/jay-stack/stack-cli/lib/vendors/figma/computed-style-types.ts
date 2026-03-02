@@ -71,6 +71,8 @@ export interface EnricherResult {
     merged: ComputedStyleMap;
     perScenario: ScenarioStyleMaps;
     scenarios: VariantScenario[];
+    /** Paths to screenshots taken per scenario (scenario ID → file path). */
+    screenshots: Map<string, string>;
 }
 
 /**
@@ -104,4 +106,10 @@ export interface EnricherOptions {
      * Default: 12
      */
     maxScenarios?: number;
+
+    /**
+     * Directory to save screenshots in. If set, a full-page screenshot is
+     * taken for each scenario after style extraction.
+     */
+    screenshotDir?: string;
 }

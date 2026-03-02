@@ -11,13 +11,48 @@ import {
     getStrokeStyles,
 } from '../utils';
 
+const SEMANTIC_TAGS = new Set([
+    'header',
+    'footer',
+    'nav',
+    'main',
+    'section',
+    'article',
+    'aside',
+    'a',
+    'button',
+    'ul',
+    'ol',
+    'li',
+    'dl',
+    'dt',
+    'dd',
+    'figure',
+    'figcaption',
+    'details',
+    'summary',
+]);
+
+function sanitizeClassName(raw: string | undefined): string | undefined {
+    if (!raw) return undefined;
+    return (
+        raw
+            .replace(/\{[^}]*\}/g, '')
+            .trim()
+            .replace(/\s+/g, ' ') || undefined
+    );
+}
+
 /**
- * Converts a repeater node to Jay HTML with forEach
+ * Converts a repeater node to Jay HTML with forEach.
  *
- * A repeater must be a FrameNode with auto-layout. The structure is:
- * 1. Outer container div - has Frame's position, size, layout, background styles
- * 2. Inner forEach div - minimal positioning, this is what wraps the repeated template
- * 3. Template child - the first child, which gets repeated
+ * When the repeater has CSS classes from the original jay-html, we emit a
+ * single element with both `class` and `forEach` to preserve the DOM structure
+ * (important for CSS grid/flex on parent containers whose selectors target
+ * direct children).
+ *
+ * When there are no CSS classes, we use the two-level structure:
+ *   outer container (styling) > inner forEach div > template child
  */
 export function convertRepeaterNode(
     node: FigmaVendorDocument,
@@ -27,9 +62,7 @@ export function convertRepeaterNode(
 ): string {
     const { repeaterPath, trackByKey } = analysis;
     const indent = '  '.repeat(context.indentLevel);
-    const innerIndent = '  '.repeat(context.indentLevel + 1);
 
-    // Validate that this is a Frame with auto-layout
     if (node.type !== 'FRAME') {
         throw new Error(`Repeater node "${node.name}" must be a FRAME (got: ${node.type})`);
     }
@@ -38,14 +71,79 @@ export function convertRepeaterNode(
         node = { ...node, layoutMode: 'VERTICAL' };
     }
 
-    // Build styles for the outer container
-    // This div has all the Frame's styling and is positioned once
+    const cssClassName = sanitizeClassName(node.pluginData?.['className']);
+    const semanticHtml = node.pluginData?.['semanticHtml'];
+    const tag = semanticHtml && SEMANTIC_TAGS.has(semanticHtml) ? semanticHtml : 'div';
+
+    if (cssClassName) {
+        return convertRepeaterFlat(
+            node,
+            analysis,
+            context,
+            convertNodeToJayHtml,
+            tag,
+            cssClassName,
+        );
+    }
+    return convertRepeaterWrapped(node, analysis, context, convertNodeToJayHtml);
+}
+
+/**
+ * Flat structure: single element with class + forEach.
+ * Preserves CSS parent-child relationships (e.g. CSS grid direct children).
+ */
+function convertRepeaterFlat(
+    node: FigmaVendorDocument,
+    analysis: BindingAnalysis,
+    context: ConversionContext,
+    convertNodeToJayHtml: (node: FigmaVendorDocument, context: ConversionContext) => string,
+    tag: string,
+    cssClassName: string,
+): string {
+    const { repeaterPath, trackByKey } = analysis;
+    const indent = '  '.repeat(context.indentLevel);
+
+    let html = `${indent}<${tag} class="${cssClassName}" data-jay-node-id="${node.id}" forEach="${repeaterPath}" trackBy="${trackByKey}">\n`;
+
+    const newContext: ConversionContext = {
+        ...context,
+        repeaterPathStack: [...context.repeaterPathStack, repeaterPath!.split('.')],
+        indentLevel: context.indentLevel + 1,
+    };
+
+    if (node.children && node.children.length > 0) {
+        let templateChild = node.children[0];
+        if (templateChild.type === 'FRAME') {
+            templateChild = applyStretchOverrides(node, templateChild);
+        }
+        html += convertNodeToJayHtml(templateChild, newContext);
+    } else {
+        throw new Error(
+            `Repeater node "${node.name}" has no children - repeater template is required`,
+        );
+    }
+
+    html += `${indent}</${tag}>\n`;
+    return html;
+}
+
+/**
+ * Wrapped structure (original behavior): outer container + inner forEach div.
+ * Used when there are no CSS classes to preserve.
+ */
+function convertRepeaterWrapped(
+    node: FigmaVendorDocument,
+    analysis: BindingAnalysis,
+    context: ConversionContext,
+    convertNodeToJayHtml: (node: FigmaVendorDocument, context: ConversionContext) => string,
+): string {
+    const { repeaterPath, trackByKey } = analysis;
+    const indent = '  '.repeat(context.indentLevel);
+    const innerIndent = '  '.repeat(context.indentLevel + 1);
+
     const positionStyle = getPositionStyle(node);
     let frameSizeStyles = getFrameSizeStyles(node);
 
-    // Repeater containers should fill available cross-axis space.
-    // In Figma, HUG sizing is based on a single template item with placeholder text,
-    // but at runtime the repeater has real content that should fill the parent.
     if (node.layoutMode === 'VERTICAL' && node.layoutSizingHorizontal === 'HUG') {
         frameSizeStyles = frameSizeStyles.replace('width: fit-content;', 'width: 100%;');
     }
@@ -62,51 +160,29 @@ export function convertRepeaterNode(
 
     const outerStyleAttr = `${positionStyle}${frameSizeStyles}${backgroundStyle}${strokeStyles}${borderRadius}${overflowStyles}${commonStyles}${flexStyles}box-sizing: border-box;`;
 
-    // Determine inner forEach div sizing based on layout direction
-    // The forEach div should fill the appropriate dimension to allow items to layout properly
     let innerDivSizeStyles = '';
     if (node.layoutWrap === 'WRAP') {
         innerDivSizeStyles = 'width: fit-content; height: fit-content;';
     } else if (node.layoutMode === 'HORIZONTAL') {
-        // For horizontal layout, forEach div should fill height
         innerDivSizeStyles = 'height: 100%;';
     } else if (node.layoutMode === 'VERTICAL') {
-        // For vertical layout, forEach div should fill width
         innerDivSizeStyles = 'width: 100%;';
     }
 
-    // Create outer container with Frame styling
     let html = `${indent}<div id="${node.id}" data-jay-node-id="${node.id}" style="${outerStyleAttr}">\n`;
-
-    // Create inner forEach div with minimal positioning
     html += `${innerIndent}<div style="position: relative; ${innerDivSizeStyles}" forEach="${repeaterPath}" trackBy="${trackByKey}">\n`;
 
-    // Push repeater path to context stack
     const newContext: ConversionContext = {
         ...context,
         repeaterPathStack: [...context.repeaterPathStack, repeaterPath!.split('.')],
-        indentLevel: context.indentLevel + 2, // +2 because we're inside both divs
+        indentLevel: context.indentLevel + 2,
     };
 
-    // Convert only the first child - it's the template that gets repeated.
-    // Override the template child's cross-axis HUG to FILL so items stretch
-    // to fill the repeater container (enabling layouts like space-between).
     if (node.children && node.children.length > 0) {
         let templateChild = node.children[0];
-
         if (templateChild.type === 'FRAME') {
-            const overrides: Partial<typeof templateChild> = {};
-            if (node.layoutMode === 'VERTICAL' && templateChild.layoutSizingHorizontal === 'HUG') {
-                overrides.layoutSizingHorizontal = 'FILL';
-            }
-            if (node.layoutMode === 'HORIZONTAL' && templateChild.layoutSizingVertical === 'HUG') {
-                overrides.layoutSizingVertical = 'FILL';
-            }
-            if (Object.keys(overrides).length > 0) {
-                templateChild = { ...templateChild, ...overrides };
-            }
+            templateChild = applyStretchOverrides(node, templateChild);
         }
-
         html += convertNodeToJayHtml(templateChild, newContext);
     } else {
         throw new Error(
@@ -114,11 +190,21 @@ export function convertRepeaterNode(
         );
     }
 
-    // Close inner forEach div
     html += `${innerIndent}</div>\n`;
-
-    // Close outer container div
     html += `${indent}</div>\n`;
-
     return html;
+}
+
+function applyStretchOverrides(
+    parent: FigmaVendorDocument,
+    child: FigmaVendorDocument,
+): FigmaVendorDocument {
+    const overrides: Partial<typeof child> = {};
+    if (parent.layoutMode === 'VERTICAL' && child.layoutSizingHorizontal === 'HUG') {
+        overrides.layoutSizingHorizontal = 'FILL';
+    }
+    if (parent.layoutMode === 'HORIZONTAL' && child.layoutSizingVertical === 'HUG') {
+        overrides.layoutSizingVertical = 'FILL';
+    }
+    return Object.keys(overrides).length > 0 ? { ...child, ...overrides } : child;
 }

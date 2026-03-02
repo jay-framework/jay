@@ -168,6 +168,12 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
                 base.layoutSizingHorizontal = node.style?.width !== undefined ? 'FIXED' : 'HUG';
                 base.layoutSizingVertical = node.style?.height !== undefined ? 'FIXED' : 'HUG';
             }
+
+            // Preserve semantic HTML tag name
+            if (node.tagName && node.tagName !== 'div') {
+                base.pluginData = base.pluginData || {};
+                base.pluginData['semanticHtml'] = node.tagName;
+            }
             break;
         }
         case 'TEXT': {
@@ -175,6 +181,11 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
             base.textAutoResize = 'WIDTH_AND_HEIGHT';
             if (node.text) {
                 base.characters = node.text.characters;
+            }
+            // Preserve semantic text tag (h1-h6, p, span, etc.)
+            if (node.tagName && node.tagName !== 'div' && node.tagName !== 'span') {
+                base.pluginData = base.pluginData || {};
+                base.pluginData['semanticHtml'] = node.tagName;
             }
             const family = node.style?.fontFamily || DEFAULT_FONT_FAMILY;
             const weight = node.style?.fontWeight;
@@ -209,6 +220,12 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
             base.type = 'RECTANGLE';
             base.pluginData = base.pluginData || {};
             base.pluginData['semanticHtml'] = 'img';
+            if (node.image?.src) {
+                base.pluginData['imgSrc'] = node.image.src;
+            }
+            if (node.image?.alt) {
+                base.pluginData['imgAlt'] = node.image.alt;
+            }
             const styleProps = mapStyleToFigmaProps(node.style);
             Object.assign(base, styleProps);
             break;
@@ -256,6 +273,18 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
             }
             break;
         }
+    }
+
+    // Preserve CSS class names
+    if (node.className) {
+        base.pluginData = base.pluginData || {};
+        base.pluginData['className'] = node.className;
+    }
+
+    // Preserve raw HTML attribute expressions for round-trip fidelity
+    if (node.htmlAttributes && Object.keys(node.htmlAttributes).length > 0) {
+        base.pluginData = base.pluginData || {};
+        base.pluginData['htmlAttributes'] = JSON.stringify(node.htmlAttributes);
     }
 
     // Map bindings to pluginData
