@@ -8,6 +8,8 @@ agent-kit
 examples/**/*.d.ts
 examples/**/lib/**/*.jay-html.ts
 **/coverage/
+**/__round-trip-results__/
+**/_debug/screenshots/
 .yarn/
 /.idea/prettier.xml
 /.idea/workspace.xml
