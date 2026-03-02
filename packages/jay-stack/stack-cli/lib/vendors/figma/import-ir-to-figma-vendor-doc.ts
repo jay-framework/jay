@@ -103,6 +103,19 @@ function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVe
     }
 
     if (style.borderRadius !== undefined) props.cornerRadius = style.borderRadius;
+    const hasCorners =
+        style.topLeftRadius !== undefined ||
+        style.topRightRadius !== undefined ||
+        style.bottomLeftRadius !== undefined ||
+        style.bottomRightRadius !== undefined;
+    if (hasCorners) {
+        props.topLeftRadius = style.topLeftRadius ?? 0;
+        props.topRightRadius = style.topRightRadius ?? 0;
+        props.bottomLeftRadius = style.bottomLeftRadius ?? 0;
+        props.bottomRightRadius = style.bottomRightRadius ?? 0;
+        if (props.cornerRadius === undefined) props.cornerRadius = 'MIXED';
+    }
+    if (style.clipsContent) props.clipsContent = true;
     if (style.opacity !== undefined) props.opacity = style.opacity;
     if (style.borderWidth !== undefined && style.borderWidth > 0) {
         props.strokeWeight = style.borderWidth;
@@ -139,6 +152,10 @@ function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVe
         });
     }
 
+    if (style.flexGrow !== undefined && style.flexGrow > 0) {
+        props.layoutGrow = style.flexGrow;
+    }
+
     return props;
 }
 
@@ -167,6 +184,13 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
             if (styleProps.layoutMode && styleProps.layoutMode !== 'NONE') {
                 base.layoutSizingHorizontal = node.style?.width !== undefined ? 'FIXED' : 'HUG';
                 base.layoutSizingVertical = node.style?.height !== undefined ? 'FIXED' : 'HUG';
+            }
+
+            // text-align on frames → Figma primaryAxisAlignItems for vertical layouts
+            if (node.style?.textAlignHorizontal === 'CENTER' && base.layoutMode === 'VERTICAL') {
+                if (!base.primaryAxisAlignItems) {
+                    base.counterAxisAlignItems = 'CENTER';
+                }
             }
 
             // Preserve semantic HTML tag name
@@ -207,6 +231,13 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
             }
             if (node.style?.letterSpacing !== undefined) {
                 base.letterSpacing = { value: node.style.letterSpacing, unit: 'PIXELS' };
+            }
+            if (node.style?.textAlignHorizontal) {
+                base.textAlignHorizontal = node.style.textAlignHorizontal;
+                if (node.style.textAlignHorizontal !== 'LEFT') {
+                    base.textAutoResize = 'HEIGHT';
+                    base.layoutSizingHorizontal = 'FILL';
+                }
             }
             if (node.style?.textDecoration) base.textDecoration = node.style.textDecoration;
             if (node.style?.textCase) base.textCase = node.style.textCase;
@@ -275,16 +306,21 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
         }
     }
 
-    // Preserve CSS class names
     if (node.className) {
         base.pluginData = base.pluginData || {};
         base.pluginData['className'] = node.className;
     }
-
-    // Preserve raw HTML attribute expressions for round-trip fidelity
     if (node.htmlAttributes && Object.keys(node.htmlAttributes).length > 0) {
         base.pluginData = base.pluginData || {};
         base.pluginData['htmlAttributes'] = JSON.stringify(node.htmlAttributes);
+    }
+    if (node.image?.src) {
+        base.pluginData = base.pluginData || {};
+        base.pluginData['imgSrc'] = node.image.src;
+    }
+    if (node.image?.alt) {
+        base.pluginData = base.pluginData || {};
+        base.pluginData['imgAlt'] = node.image.alt;
     }
 
     // Map bindings to pluginData
@@ -316,6 +352,17 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
                         child.layoutSizingVertical = 'FILL';
                     }
                 }
+            }
+        }
+    }
+
+    // Grid→WRAP: set children to fixed column width from grid-template-columns
+    if (base.layoutWrap === 'WRAP' && node.style?.gridColumnWidths && base.children) {
+        const colWidth = node.style.gridColumnWidths[0];
+        if (colWidth && colWidth > 0) {
+            for (const child of base.children) {
+                child.width = colWidth;
+                child.layoutSizingHorizontal = 'FIXED';
             }
         }
     }

@@ -3,6 +3,17 @@ import type { ComputedStyleData } from './computed-style-types';
 
 const DYNAMIC_PATTERN = /\{[^}]*\}/;
 
+const GRADIENT_PLACEHOLDER_COLOR = '#E8E4DD';
+
+function parseGridColumnWidths(value: string): number[] | undefined {
+    const cols: number[] = [];
+    for (const token of value.split(/\s+/)) {
+        const px = token.match(/^([\d.]+)px$/);
+        if (px) cols.push(parseFloat(px[1]));
+    }
+    return cols.length > 0 ? cols : undefined;
+}
+
 export function parseInlineStyle(styleAttr: string): {
     parsed: Record<string, string>;
     dynamicProperties: string[];
@@ -46,12 +57,9 @@ function parseUnitless(value: string): number | undefined {
 
 const RECOGNIZED_BUT_NOT_STORED = new Set([
     'box-sizing',
-    'overflow',
     'overflow-x',
     'overflow-y',
     'object-fit',
-    'text-align',
-    'flex-grow',
     'align-self',
     'border-style',
     'scrollbar-width',
@@ -61,7 +69,6 @@ const RECOGNIZED_BUT_NOT_STORED = new Set([
     'filter',
     'transform',
     'transform-origin',
-    'grid-template-columns',
     'grid-template-rows',
     'grid-auto-flow',
     'flex-shrink',
@@ -253,6 +260,10 @@ export function resolveStyle(
                 } else if (value === 'grid' || value === 'inline-grid') {
                     style.layoutMode = 'row';
                     style.layoutWrap = true;
+                    const gridCols = parsed['grid-template-columns'];
+                    if (gridCols) {
+                        style.gridColumnWidths = parseGridColumnWidths(gridCols);
+                    }
                 } else if (value === 'block' || value === 'flow-root') {
                     if (!style.layoutMode) style.layoutMode = 'column';
                 }
@@ -344,6 +355,7 @@ export function resolveStyle(
                 style.backgroundColor = value;
                 break;
             case 'background-image': {
+                if (value === 'none') break;
                 const solidGradient = value.match(
                     /^linear-gradient\(rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\),\s*rgba\(\1,\s*\2,\s*\3,\s*\4\)\)$/,
                 );
@@ -358,6 +370,10 @@ export function resolveStyle(
                         style.backgroundColor = `rgba(${r}, ${g}, ${b}, ${a})`;
                     } else {
                         style.backgroundColor = hex;
+                    }
+                } else if (value.includes('gradient')) {
+                    if (!style.backgroundColor || style.backgroundColor === 'rgba(0, 0, 0, 0)') {
+                        style.backgroundColor = GRADIENT_PLACEHOLDER_COLOR;
                     }
                 }
                 break;
@@ -437,6 +453,26 @@ export function resolveStyle(
                 if (px !== undefined) style.borderRadius = px;
                 break;
             }
+            case 'border-top-left-radius': {
+                const px = parsePx(value);
+                if (px !== undefined) style.topLeftRadius = px;
+                break;
+            }
+            case 'border-top-right-radius': {
+                const px = parsePx(value);
+                if (px !== undefined) style.topRightRadius = px;
+                break;
+            }
+            case 'border-bottom-left-radius': {
+                const px = parsePx(value);
+                if (px !== undefined) style.bottomLeftRadius = px;
+                break;
+            }
+            case 'border-bottom-right-radius': {
+                const px = parsePx(value);
+                if (px !== undefined) style.bottomRightRadius = px;
+                break;
+            }
             case 'opacity': {
                 const num = parseFloat(value);
                 if (!isNaN(num)) style.opacity = num;
@@ -448,11 +484,18 @@ export function resolveStyle(
                 break;
             case 'justify-content': {
                 const display = parsed['display'];
-                if (display !== 'flex' && display !== 'inline-flex') break;
+                const isLayout =
+                    display === 'flex' ||
+                    display === 'inline-flex' ||
+                    display === 'grid' ||
+                    display === 'inline-grid';
+                if (!isLayout) break;
                 const map: Record<string, ImportIRStyle['justifyContent']> = {
                     'flex-start': 'MIN',
+                    start: 'MIN',
                     center: 'CENTER',
                     'flex-end': 'MAX',
+                    end: 'MAX',
                     'space-between': 'SPACE_BETWEEN',
                 };
                 if (map[value]) style.justifyContent = map[value];
@@ -460,11 +503,18 @@ export function resolveStyle(
             }
             case 'align-items': {
                 const display = parsed['display'];
-                if (display !== 'flex' && display !== 'inline-flex') break;
+                const isLayout =
+                    display === 'flex' ||
+                    display === 'inline-flex' ||
+                    display === 'grid' ||
+                    display === 'inline-grid';
+                if (!isLayout) break;
                 const map: Record<string, ImportIRStyle['alignItems']> = {
                     'flex-start': 'MIN',
+                    start: 'MIN',
                     center: 'CENTER',
                     'flex-end': 'MAX',
+                    end: 'MAX',
                     stretch: 'STRETCH',
                 };
                 if (map[value]) style.alignItems = map[value];
@@ -497,6 +547,39 @@ export function resolveStyle(
             }
             case 'text-overflow': {
                 if (value === 'ellipsis') style.textTruncation = 'ENDING';
+                break;
+            }
+            case 'text-align': {
+                const alignMap: Record<string, ImportIRStyle['textAlignHorizontal']> = {
+                    left: 'LEFT',
+                    start: 'LEFT',
+                    center: 'CENTER',
+                    right: 'RIGHT',
+                    end: 'RIGHT',
+                    justify: 'JUSTIFIED',
+                };
+                if (alignMap[value]) style.textAlignHorizontal = alignMap[value];
+                break;
+            }
+            case 'overflow': {
+                if (
+                    value === 'hidden' ||
+                    value === 'clip' ||
+                    value === 'scroll' ||
+                    value === 'auto'
+                ) {
+                    style.clipsContent = true;
+                }
+                break;
+            }
+            case 'flex-grow': {
+                const num = parseFloat(value);
+                if (!isNaN(num) && num > 0) style.flexGrow = num;
+                break;
+            }
+            case 'grid-template-columns': {
+                const colWidths = parseGridColumnWidths(value);
+                if (colWidths) style.gridColumnWidths = colWidths;
                 break;
             }
             default:

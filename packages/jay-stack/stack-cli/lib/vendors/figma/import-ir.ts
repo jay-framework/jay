@@ -66,6 +66,10 @@ export type ImportIRStyle = {
     borderColor?: string;
     borderWidth?: number;
     borderRadius?: number;
+    topLeftRadius?: number;
+    topRightRadius?: number;
+    bottomLeftRadius?: number;
+    bottomRightRadius?: number;
     opacity?: number;
     textColor?: string;
     fontFamily?: string;
@@ -73,9 +77,14 @@ export type ImportIRStyle = {
     fontWeight?: number;
     lineHeight?: number;
     letterSpacing?: number;
+    textAlignHorizontal?: 'LEFT' | 'CENTER' | 'RIGHT' | 'JUSTIFIED';
     textDecoration?: 'UNDERLINE' | 'STRIKETHROUGH' | 'NONE';
     textCase?: 'UPPER' | 'LOWER' | 'TITLE' | 'ORIGINAL';
     textTruncation?: 'ENDING';
+    clipsContent?: boolean;
+    flexGrow?: number;
+    /** Column widths from CSS grid-template-columns, used to size WRAP children */
+    gridColumnWidths?: number[];
     effects?: ImportIREffect[];
 };
 

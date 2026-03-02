@@ -316,6 +316,9 @@ async function extractComputedStyles(
             'margin-bottom',
             'margin-left',
             'background-color',
+            'background-image',
+            'text-align',
+            'overflow',
             'color',
             'font-family',
             'font-size',
@@ -360,7 +363,7 @@ async function extractComputedStyles(
             const styles: Record<string, string> = {};
             for (const prop of properties) {
                 const value = computedStyle.getPropertyValue(prop);
-                if (value && value !== 'none' && value !== 'normal' && value !== '0px') {
+                if (value && value !== 'none' && value !== 'normal') {
                     styles[prop] = value;
                 }
             }

@@ -81,11 +81,25 @@ function getChildElements(element: HTMLElement): HTMLElement[] {
     return element.childNodes.filter((n) => n.nodeType === NodeType.ELEMENT_NODE) as HTMLElement[];
 }
 
+function isStructuralElement(child: HTMLElement): boolean {
+    if (child.getAttribute('class')) return true;
+    if (child.getAttribute('if')) return true;
+    if (child.getAttribute('ref')) return true;
+    if (child.getAttribute('forEach')) return true;
+    const childElements = child.childNodes.filter(
+        (n) => n.nodeType === NodeType.ELEMENT_NODE,
+    ) as HTMLElement[];
+    if (childElements.some((el) => isStructuralElement(el))) return true;
+    return false;
+}
+
 function hasBlockLevelChild(element: HTMLElement): boolean {
     const children = getChildElements(element);
     return children.some((child) => {
         const tag = (child.rawTagName || '').toLowerCase();
-        return BLOCK_LEVEL_TAGS.has(tag) && !INLINE_TAGS.has(tag);
+        if (BLOCK_LEVEL_TAGS.has(tag) && !INLINE_TAGS.has(tag)) return true;
+        if (INLINE_TAGS.has(tag) && isStructuralElement(child)) return true;
+        return false;
     });
 }
 
@@ -224,7 +238,30 @@ function buildNodeFromElement(
     const styleAttr = element.getAttribute('style') || '';
     const classAttr = element.getAttribute('class') || '';
     const classNames = classAttr ? classAttr.split(/\s+/).filter(Boolean) : undefined;
-    const className = classAttr.trim() || undefined;
+    const className = classAttr || undefined;
+
+    const HTML_ATTRS_TO_CAPTURE = [
+        'href',
+        'src',
+        'alt',
+        'value',
+        'placeholder',
+        'title',
+        'disabled',
+        'type',
+        'loading',
+        'target',
+        'rel',
+    ] as const;
+    const htmlAttributes: Record<string, string> = {};
+    let hasHtmlAttributes = false;
+    for (const attr of HTML_ATTRS_TO_CAPTURE) {
+        const val = element.getAttribute(attr);
+        if (val !== null && val !== undefined) {
+            htmlAttributes[attr] = val;
+            hasHtmlAttributes = true;
+        }
+    }
 
     const enrichedStyles = jayNodeId ? computedStyleMap?.get(jayNodeId) : undefined;
 
@@ -245,24 +282,6 @@ function buildNodeFromElement(
         contractContext,
     );
     warnings.push(...bindingWarnings);
-
-    // Capture raw HTML attributes with binding expressions for round-trip fidelity
-    const htmlAttributes: Record<string, string> = {};
-    for (const attr of [
-        'href',
-        'src',
-        'alt',
-        'value',
-        'placeholder',
-        'title',
-        'disabled',
-        'type',
-        'loading',
-    ] as const) {
-        const val = element.getAttribute(attr);
-        if (val != null) htmlAttributes[attr] = val;
-    }
-    const hasHtmlAttributes = Object.keys(htmlAttributes).length > 0;
 
     const name = element.getAttribute('ref') || element.getAttribute('id') || tag;
 
@@ -297,6 +316,7 @@ function buildNodeFromElement(
             name: name === 'svg' ? 'svg-icon' : name,
             tagName: 'svg',
             className,
+            htmlAttributes: hasHtmlAttributes ? htmlAttributes : undefined,
             visible: true,
             style: svgStyle,
             svgData: rawSvg,
@@ -354,6 +374,8 @@ function buildNodeFromElement(
                 kind: 'TEXT',
                 name: characters.substring(0, 20) || 'text',
                 tagName: 'span',
+                className: undefined,
+                htmlAttributes: undefined,
                 visible: true,
                 style: textStyle,
                 text: { characters },
@@ -464,7 +486,39 @@ function buildNodeFromElement(
 
     const children: ImportIRNode[] = [];
 
-    for (const childEl of childElements) {
+    // Process all child nodes in DOM order to preserve bare text nodes
+    for (const childNode of element.childNodes) {
+        if (childNode.nodeType === NodeType.TEXT_NODE) {
+            const raw = (childNode as any).rawText ?? (childNode as any).text ?? '';
+            const text = raw.trim();
+            if (text) {
+                const textId = generateNodeId(domPath + `/text-${children.length}`);
+                children.push({
+                    id: textId,
+                    sourcePath: domPath + `/text-${children.length}`,
+                    kind: 'TEXT',
+                    name: text.substring(0, 20),
+                    tagName: 'span',
+                    className: undefined,
+                    htmlAttributes: undefined,
+                    visible: true,
+                    style: {
+                        fontFamily: style.fontFamily,
+                        fontSize: style.fontSize,
+                        fontWeight: style.fontWeight,
+                        textColor: style.textColor,
+                        lineHeight: style.lineHeight,
+                        letterSpacing: style.letterSpacing,
+                    },
+                    text: { characters: text },
+                    children: [],
+                });
+            }
+            continue;
+        }
+
+        if (childNode.nodeType !== NodeType.ELEMENT_NODE) continue;
+        const childEl = childNode as HTMLElement;
         const childTag = (childEl.rawTagName || '').toLowerCase();
         if (childTag === 'script' || childTag === 'style' || childTag === 'link') continue;
 
