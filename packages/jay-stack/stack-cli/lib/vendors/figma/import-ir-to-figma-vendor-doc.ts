@@ -83,7 +83,12 @@ function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVe
         else props.layoutMode = 'NONE';
     }
     if (style.layoutWrap) {
-        props.layoutWrap = 'WRAP';
+        if (!props.layoutMode || props.layoutMode === 'NONE') {
+            props.layoutMode = 'HORIZONTAL';
+        }
+        if (props.layoutMode === 'HORIZONTAL') {
+            props.layoutWrap = 'WRAP';
+        }
     }
 
     if (style.gap !== undefined) props.itemSpacing = style.gap;
