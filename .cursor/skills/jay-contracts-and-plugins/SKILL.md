@@ -17,7 +17,7 @@ This writes to `agent-kit/materialized-contracts/`.
 
 ## Reading the Plugins Index
 
-**File:** `agent-kit/materialized-contracts/plugins-index.yaml`
+**File:** `agent-kit/plugins-index.yaml`
 
 ```yaml
 materialized_at: '2026-02-09T...'
@@ -41,26 +41,6 @@ plugins:
 - `contracts[].name` — contract name (use in `contract="..."` attributes)
 - `contracts[].type` — `static` (defined in source) or `dynamic` (generated at runtime)
 - `contracts[].path` — path to the `.jay-contract` file
-
-## Reading the Contracts Index
-
-**File:** `agent-kit/materialized-contracts/contracts-index.yaml`
-
-```yaml
-materialized_at: '2026-02-09T...'
-jay_stack_version: '1.0.0'
-contracts:
-  - plugin: wix-stores
-    name: product-page
-    type: static
-    path: ./node_modules/@wix/stores/lib/contracts/product-page.jay-contract
-  - plugin: wix-stores
-    name: product-search
-    type: static
-    path: ./node_modules/@wix/stores/lib/contracts/product-search.jay-contract
-```
-
-Use the `path` field to read the actual contract file.
 
 ## Reading a Plugin's plugin.yaml
 

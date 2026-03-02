@@ -103,19 +103,20 @@ export const JAY_IMPORT_RESOLVER: JayImportResolver = {
             const content = fs.readFileSync(materializedPath).toString();
             const contractResult = parseContract(content, materializedPath);
 
-            // Try to load metadata from contracts-index.yaml
+            // Try to load metadata from plugins-index.yaml (in agent-kit/ root)
             let metadata: Record<string, unknown> | undefined;
-            const indexPath = path.join(materializedDir, 'contracts-index.yaml');
+            const indexPath = path.join(projectRoot, 'agent-kit', 'plugins-index.yaml');
             if (fs.existsSync(indexPath)) {
                 try {
                     const indexContent = fs.readFileSync(indexPath, 'utf-8');
                     const index = YAML.parse(indexContent);
                     // Index stores short plugin name (e.g., "wix-data"), but pluginName might be
                     // the full npm package name (e.g., "@jay-framework/wix-data")
-                    const entry = index.contracts?.find(
-                        (c: { plugin: string; name: string }) =>
-                            (c.plugin === pluginName || c.plugin === pluginDir) &&
-                            c.name === contractName,
+                    const plugin = index.plugins?.find(
+                        (p: { name: string }) => p.name === pluginName || p.name === pluginDir,
+                    );
+                    const entry = plugin?.contracts?.find(
+                        (c: { name: string }) => c.name === contractName,
                     );
                     metadata = entry?.metadata;
                 } catch {

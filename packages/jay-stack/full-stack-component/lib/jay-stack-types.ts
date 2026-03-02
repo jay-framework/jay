@@ -25,6 +25,12 @@ export interface ServiceMarker<ServiceType> {}
  * ```
  */
 export function createJayService<ServiceType = unknown>(name?: string): ServiceMarker<ServiceType> {
+    // Use Symbol.for() with a namespace prefix so that the same service name
+    // always produces the same Symbol, even when Vite re-evaluates modules
+    // during SSR hot reload (which would create duplicate unique Symbols).
+    if (name) {
+        return Symbol.for(`jay:service:${name}`) as ServiceMarker<ServiceType>;
+    }
     return Symbol(name) as ServiceMarker<ServiceType>;
 }
 

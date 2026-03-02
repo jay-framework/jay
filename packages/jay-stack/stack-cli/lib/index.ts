@@ -8,8 +8,9 @@ export * from './vendors';
 export {
     materializeContracts,
     listContracts,
-    type ContractsIndex,
-    type ContractIndexEntry,
+    type PluginsIndex,
+    type PluginsIndexEntry,
+    type PluginContractEntry,
     type MaterializeContractsOptions,
     type MaterializeResult,
 } from '@jay-framework/stack-server-runtime';

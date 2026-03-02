@@ -97,12 +97,7 @@ export function loadToolDescriptions(projectRoot: string): ToolDescription[] {
     const log = getLogger();
     const descriptions: ToolDescription[] = [];
 
-    const indexPath = path.join(
-        projectRoot,
-        'agent-kit',
-        'materialized-contracts',
-        'plugins-index.yaml',
-    );
+    const indexPath = path.join(projectRoot, 'agent-kit', 'plugins-index.yaml');
 
     if (!fs.existsSync(indexPath)) {
         log.info('[gemini-agent] No plugins-index.yaml found, skipping tool descriptions');
