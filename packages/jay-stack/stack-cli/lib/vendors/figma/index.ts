@@ -81,13 +81,7 @@ const SEMANTIC_HTML_TAGS = new Set([
     'dialog',
 ]);
 
-const VOID_ELEMENTS = new Set([
-    'input',
-    'br',
-    'hr',
-    'meta',
-    'link',
-]);
+const VOID_ELEMENTS = new Set(['input', 'br', 'hr', 'meta', 'link']);
 
 const TEXT_CONTAINER_TAGS = new Set([
     'h1',
