@@ -24,6 +24,7 @@ import {
     WithValidations,
 } from '@jay-framework/compiler-shared';
 import { generateAllPhaseViewStateTypes } from '../contract/phase-type-generator';
+import { ContractProp } from '../contract';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
 import {
@@ -395,11 +396,19 @@ function renderElementRef(
     } else return RenderFragment.empty();
 }
 
-function renderChildCompProps(element: HTMLElement, { variables }: RenderContext): RenderFragment {
+function renderChildCompProps(
+    element: HTMLElement,
+    { variables }: RenderContext,
+    contractProps?: ContractProp[],
+): RenderFragment {
     let attributes = element.attributes;
     let props = [];
     let isPropsDirectAssignment: boolean = false;
     let imports = Imports.none();
+    // Build a lookup map for contract prop types (if available)
+    const propTypeMap = contractProps
+        ? new Map(contractProps.map((p) => [p.name, p.dataType]))
+        : undefined;
     Object.keys(attributes).forEach((attrName) => {
         let attrCanonical = attrName.toLowerCase();
         let attrKey = attrName.match(attributesRequiresQuotes) ? `"${attrName}"` : attrName;
@@ -412,6 +421,11 @@ function renderChildCompProps(element: HTMLElement, { variables }: RenderContext
             return;
         } else {
             let prop = parseComponentPropExpression(attributes[attrName], variables);
+            // If contract declares this prop as string but parser produced a number literal, wrap in quotes
+            const expectedType = propTypeMap?.get(attrName);
+            if (expectedType && expectedType.name === 'string' && /^\d+$/.test(prop.rendered)) {
+                prop = prop.map((_) => `'${_}'`);
+            }
             props.push(prop.map((_) => `${attrKey}: ${_}`));
         }
     });
@@ -910,7 +924,11 @@ const ${componentSymbol} = makeHeadlessInstanceComponent(
         });
 
         // Generate props getter (from parent ViewState to component props)
-        let propsGetterAndRefs = renderChildCompProps(htmlElement, newContext);
+        let propsGetterAndRefs = renderChildCompProps(
+            htmlElement,
+            newContext,
+            headlessImport.contract?.props,
+        );
         let getProps = `(${newContext.variables.currentVar}: ${newContext.variables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
 
         // Generate ref for the headless instance using contract types directly
