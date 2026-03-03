@@ -217,7 +217,7 @@ export function render(options?: RenderElementOptions): PageWithHeadlessMixedEle
                 e('h1', {}, [dt((vs) => vs.pageTitle)]),
                 childComp(
                     _HeadlessProductCard0,
-                    (vs: PageWithHeadlessMixedViewState) => ({ productId: 'prod-hero' }),
+                    (vs: PageWithHeadlessMixedViewState) => ({ productId: '123' }),
                     refHero(),
                 ),
                 c(

@@ -14,7 +14,7 @@ data:
 <body>
 <div>
     <h1>{pageTitle}</h1>
-    <jay:product-card productId="prod-hero" ref="hero">
+    <jay:product-card productId="123" ref="hero">
         <article class="hero-card">
             <h2>{name}</h2>
             <span class="price">{price}</span>
