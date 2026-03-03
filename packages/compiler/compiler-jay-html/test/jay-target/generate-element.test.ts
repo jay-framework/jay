@@ -406,10 +406,7 @@ describe('generate jay-html element', () => {
             expect(elementFile.validations).toEqual([]);
             expect(await prettify(elementFile.val)).toEqual(
                 await prettify(
-                    await readFixtureFileRaw(
-                        folder,
-                        'page-with-headless-mixed.jay-html.ts',
-                    ),
+                    await readFixtureFileRaw(folder, 'page-with-headless-mixed.jay-html.ts'),
                 ),
             );
         });

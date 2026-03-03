@@ -50,7 +50,10 @@ export function renderRefsType(
                 .filter((_) => !_.autoRef)
                 .map((ref) => {
                     let referenceType: string;
-                    if (isComponentCollectionRef(ref)) {
+                    if (ref.elementType instanceof JayTypeAlias) {
+                        // Contract type (headless instance) — use directly
+                        referenceType = ref.elementType.name;
+                    } else if (isComponentCollectionRef(ref)) {
                         if (ref.elementType instanceof JayUnionType) {
                             for (const t of ref.elementType.ofTypes) {
                                 componentRefs.set(t.name, RefsNeeded.REF_AND_REFS);
@@ -127,7 +130,7 @@ ${indent.lastLine}}`;
             if (refsNeeded === RefsNeeded.REF_AND_REFS) {
                 refTypes += `
 export type ${componentName}Refs<ParentVS> =
-    ComponentCollectionProxy<ParentVS, ${elementType}> &
+    ComponentCollectionProxy<ParentVS, ${componentName}Ref<ParentVS>> &
     OnlyEventEmitters<${componentName}Ref<ParentVS>>
 `;
                 imports = imports

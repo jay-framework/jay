@@ -2601,6 +2601,7 @@ Single-child inline templates are unaffected — no wrapping div is added.
 When multiple headless component instances inside a `slowForEach` share the same auto-ref name (e.g., `0`), the deduplication step in `optimizeRefs` merges their element types into a `JayUnionType`. The `isComponentRef` function only checked for `JayComponentType` and `JayTypeAlias` — not `JayUnionType` — so the merged ref was misclassified as an HTML element ref.
 
 This caused two issues in the generated `.jay-html.ts`:
+
 1. `ReferencesManager.for()` placed the ref in the 2nd array (element collection refs) instead of the 4th array (component collection refs)
 2. The type was generated as `HTMLElementCollectionProxy<VS, Widget0 | Widget1 | Widget2>` instead of `Widget0Refs<VS> | Widget1Refs<VS> | Widget2Refs<VS>`
 
@@ -2628,11 +2629,18 @@ This caused two issues in the generated `.jay-html.ts`:
 
 **`headless-instance-context.ts` (stack-client-runtime):**
 
-- `makeHeadlessInstanceComponent` now has an explicit return type: `(props: PropsT) => ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT>` — matching `makeJayComponent`'s return type. Previously the `as any` cast on `makeJayComponent` leaked to callers, making `ReturnType<typeof _HeadlessInstance>` resolve to `any`.
+- `makeHeadlessInstanceComponent` now has an explicit return type matching `makeJayComponent`'s. Previously the `as any` cast leaked to callers. Also removed the `as any` cast on the `makeJayComponent` call itself.
 
-**`ComponentCollectionProxy` type parameter fix:**
+**`ComponentCollectionProxy` type parameter — kept as `Ref` alias:**
 
-- Changed `Refs` type template: `ComponentCollectionProxy<ParentVS, ReturnType<typeof Component>>` instead of `ComponentCollectionProxy<ParentVS, ComponentRef<ParentVS>>`. `OnlyEventEmitters` still uses the `Ref` alias. This applies to all component collection refs (6 fixture files updated).
+- `ComponentCollectionProxy<ParentVS, ComponentRef<ParentVS>>` is correct (not `ReturnType<typeof Component>`). The `Ref` alias applies `MapEventEmitterViewState` which remaps event handler ViewState types to the parent's ViewState — needed for correct `map`/`find` signatures on the collection proxy.
+
+**Use contract types directly for headless instance refs:**
+
+- Headless instance refs now use the contract's `Refs`/`RepeatedRefs` types directly instead of generating per-instance wrapper types (`MapEventEmitterViewState`, `ComponentCollectionProxy`, `OnlyEventEmitters`). This matches the pattern used by key-based headless components (e.g., `page-using-named-counter`).
+- `jay-html-compiler.ts` — `renderHeadlessInstance` creates refs with `JayTypeAlias(contractRefType)` instead of `JayComponentType(componentSymbol)`. Uses `ProductCardRefs` for single refs and `ProductCardRepeatedRefs` for collection refs.
+- `jay-html-compile-refs.ts` — `renderRefsType` handles `JayTypeAlias` refs by using the type name directly (no wrapper types generated, no entry in `componentRefs` map).
+- This eliminates the union type problem entirely: multiple instances of the same contract produce the same `JayTypeAlias` name, so deduplication correctly merges them without creating a union.
 
 #### Verification
 

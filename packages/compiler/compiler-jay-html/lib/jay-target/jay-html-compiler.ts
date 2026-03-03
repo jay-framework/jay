@@ -9,6 +9,7 @@ import {
     JayErrorType,
     JayImportLink,
     JayType,
+    JayTypeAlias,
     JayUnknown,
     MainRuntimeModes,
     mergeRefsTrees,
@@ -912,8 +913,38 @@ const ${componentSymbol} = makeHeadlessInstanceComponent(
         let propsGetterAndRefs = renderChildCompProps(htmlElement, newContext);
         let getProps = `(${newContext.variables.currentVar}: ${newContext.variables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
 
-        // Generate ref for the headless instance (same as headful components)
-        let renderedRef = renderChildCompRef(htmlElement, newContext, componentSymbol);
+        // Generate ref for the headless instance using contract types directly
+        const refOriginalName =
+            htmlElement.attributes.ref || newContext.refNameGenerator.newAutoRefNameGenerator();
+        const refRefName = camelCase(refOriginalName);
+        const refConstName = newContext.refNameGenerator.newConstantName(
+            refRefName,
+            newContext.variables,
+        );
+        const isRepeated = newContext.dynamicRef;
+        const contractRefType = isRepeated ? `${pascal}RepeatedRefs` : `${pascal}Refs`;
+        // Ensure contract ref type is imported
+        for (const link of headlessImport.contractLinks) {
+            if (!link.names.some((n) => n.name === contractRefType)) {
+                link.names.push({ name: contractRefType, type: JayUnknown });
+            }
+        }
+        newContext.usedComponentImports.add(contractRefType);
+        const instanceRef = mkRef(
+            refRefName,
+            refOriginalName,
+            refConstName,
+            isRepeated,
+            !htmlElement.attributes.ref,
+            newContext.variables.currentType,
+            new JayTypeAlias(contractRefType),
+        );
+        let renderedRef = new RenderFragment(
+            `${refConstName}()`,
+            Imports.for(),
+            [],
+            mkRefsTree([instanceRef], {}),
+        );
         if (renderedRef.rendered !== '') renderedRef = renderedRef.map((_) => ', ' + _);
 
         // Return childComp call for the page render function

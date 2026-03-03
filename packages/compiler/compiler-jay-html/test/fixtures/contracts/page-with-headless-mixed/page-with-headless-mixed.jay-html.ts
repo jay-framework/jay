@@ -10,9 +10,6 @@ import {
     ConstructContext,
     childComp,
     RenderElementOptions,
-    MapEventEmitterViewState,
-    OnlyEventEmitters,
-    ComponentCollectionProxy,
     JayContract,
 } from '@jay-framework/runtime';
 import { makeHeadlessInstanceComponent } from '@jay-framework/stack-client-runtime';
@@ -20,6 +17,7 @@ import {
     ProductCardViewState,
     ProductCardRefs,
     ProductCardInteractiveViewState,
+    ProductCardRepeatedRefs,
 } from '../product-card/product-card.jay-contract';
 // @ts-ignore
 import { productCard } from '../product-card/product-card';
@@ -34,41 +32,11 @@ export interface PageWithHeadlessMixedViewState {
     products: Array<ProductOfPageWithHeadlessMixedViewState>;
 }
 
-export type _HeadlessProductCard0Ref<ParentVS> = MapEventEmitterViewState<
-    ParentVS,
-    ReturnType<typeof _HeadlessProductCard0>
->;
-export type _HeadlessProductCard1Ref<ParentVS> = MapEventEmitterViewState<
-    ParentVS,
-    ReturnType<typeof _HeadlessProductCard1>
->;
-export type _HeadlessProductCard2Ref<ParentVS> = MapEventEmitterViewState<
-    ParentVS,
-    ReturnType<typeof _HeadlessProductCard2>
->;
-export type _HeadlessProductCard2Refs<ParentVS> = ComponentCollectionProxy<
-    ParentVS,
-    ReturnType<typeof _HeadlessProductCard2>
-> &
-    OnlyEventEmitters<_HeadlessProductCard2Ref<ParentVS>>;
-
-export type _HeadlessProductCard3Ref<ParentVS> = MapEventEmitterViewState<
-    ParentVS,
-    ReturnType<typeof _HeadlessProductCard3>
->;
-export type _HeadlessProductCard3Refs<ParentVS> = ComponentCollectionProxy<
-    ParentVS,
-    ReturnType<typeof _HeadlessProductCard3>
-> &
-    OnlyEventEmitters<_HeadlessProductCard3Ref<ParentVS>>;
-
 export interface PageWithHeadlessMixedElementRefs {
-    hero: _HeadlessProductCard0Ref<PageWithHeadlessMixedViewState>;
-    promo: _HeadlessProductCard1Ref<PageWithHeadlessMixedViewState>;
+    hero: ProductCardRefs;
+    promo: ProductCardRefs;
     products: {
-        0:
-            | _HeadlessProductCard2Refs<ProductOfPageWithHeadlessMixedViewState>
-            | _HeadlessProductCard3Refs<ProductOfPageWithHeadlessMixedViewState>;
+        0: ProductCardRepeatedRefs;
     };
 }
 

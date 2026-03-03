@@ -135,7 +135,7 @@ describe('renderRefsType', () => {
             await prettify(`
             export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
             export type CounterRefs<ParentVS> =
-                ComponentCollectionProxy<ParentVS, ReturnType<typeof Counter>> &
+                ComponentCollectionProxy<ParentVS, CounterRef<ParentVS>> &
                 OnlyEventEmitters<CounterRef<ParentVS>>
             
             export interface TestRefs {
@@ -247,17 +247,17 @@ describe('renderRefsType', () => {
             await prettify(`
             export type _HeadlessWidget0Ref<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof _HeadlessWidget0>>;
             export type _HeadlessWidget0Refs<ParentVS> =
-                ComponentCollectionProxy<ParentVS, ReturnType<typeof _HeadlessWidget0>> &
+                ComponentCollectionProxy<ParentVS, _HeadlessWidget0Ref<ParentVS>> &
                 OnlyEventEmitters<_HeadlessWidget0Ref<ParentVS>>
 
             export type _HeadlessWidget1Ref<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof _HeadlessWidget1>>;
             export type _HeadlessWidget1Refs<ParentVS> =
-                ComponentCollectionProxy<ParentVS, ReturnType<typeof _HeadlessWidget1>> &
+                ComponentCollectionProxy<ParentVS, _HeadlessWidget1Ref<ParentVS>> &
                 OnlyEventEmitters<_HeadlessWidget1Ref<ParentVS>>
 
             export type _HeadlessWidget2Ref<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof _HeadlessWidget2>>;
             export type _HeadlessWidget2Refs<ParentVS> =
-                ComponentCollectionProxy<ParentVS, ReturnType<typeof _HeadlessWidget2>> &
+                ComponentCollectionProxy<ParentVS, _HeadlessWidget2Ref<ParentVS>> &
                 OnlyEventEmitters<_HeadlessWidget2Ref<ParentVS>>
 
             export interface TestRefs {

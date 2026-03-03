@@ -29,7 +29,7 @@ export interface DynamicComponentInComponentViewState {
 }
 
 export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
-export type CounterRefs<ParentVS> = ComponentCollectionProxy<ParentVS, ReturnType<typeof Counter>> &
+export type CounterRefs<ParentVS> = ComponentCollectionProxy<ParentVS, CounterRef<ParentVS>> &
     OnlyEventEmitters<CounterRef<ParentVS>>;
 
 export interface DynamicComponentInComponentElementRefs {
