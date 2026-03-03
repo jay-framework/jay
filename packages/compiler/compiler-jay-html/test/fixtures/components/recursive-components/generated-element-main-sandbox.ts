@@ -18,8 +18,7 @@ import { secureChildComp } from '@jay-framework/secure';
 import { TreeNode, Node } from './tree-node?jay-mainSandbox';
 
 export type TreeNodeRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof TreeNode>>;
-// @ts-ignore component type not defined because of import error above
-export type TreeNodeRefs<ParentVS> = ComponentCollectionProxy<ParentVS, TreeNodeRef<ParentVS>> &
+export type TreeNodeRefs<ParentVS> = ComponentCollectionProxy<ParentVS, ReturnType<typeof TreeNode>> &
     OnlyEventEmitters<TreeNodeRef<ParentVS>>;
 
 export interface RecursiveComponentsElementRefs {

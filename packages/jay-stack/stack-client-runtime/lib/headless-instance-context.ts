@@ -21,6 +21,7 @@ import {
 } from '@jay-framework/runtime';
 import {
     ComponentConstructor,
+    ConcreteJayComponent,
     JayComponentCore,
     makeJayComponent,
     createSignal,
@@ -77,7 +78,7 @@ export function makeHeadlessInstanceComponent<
     interactiveConstructor: ComponentConstructor<PropsT, Refs, ViewState, any, CompCore>,
     coordinateKey: string | ((dataIds: string[]) => string),
     pluginContexts: ContextMarkers<any> = [] as any,
-) {
+): (props: PropsT) => ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT> {
     // Wrap the interactive constructor to read instance data from the provided context
     // HEADLESS_INSTANCES is provided by makeCompositeJayComponent via provideContexts,
     // so we access it directly with useContext rather than passing it as a contextMarker
@@ -108,5 +109,5 @@ export function makeHeadlessInstanceComponent<
     };
 
     // Only pass plugin context markers — HEADLESS_INSTANCES is accessed via useContext directly
-    return (makeJayComponent as any)(preRender, wrappedConstructor, ...pluginContexts);
+    return makeJayComponent(preRender, wrappedConstructor, ...pluginContexts);
 }

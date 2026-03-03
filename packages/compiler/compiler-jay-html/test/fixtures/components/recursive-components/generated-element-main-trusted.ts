@@ -17,7 +17,7 @@ import {
 import { TreeNode, Node } from './tree-node';
 
 export type TreeNodeRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof TreeNode>>;
-export type TreeNodeRefs<ParentVS> = ComponentCollectionProxy<ParentVS, TreeNodeRef<ParentVS>> &
+export type TreeNodeRefs<ParentVS> = ComponentCollectionProxy<ParentVS, ReturnType<typeof TreeNode>> &
     OnlyEventEmitters<TreeNodeRef<ParentVS>>;
 
 export interface RecursiveComponentsElementRefs {

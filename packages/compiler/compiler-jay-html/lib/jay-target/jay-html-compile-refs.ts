@@ -22,8 +22,11 @@ import { Indent } from './indent';
 import { JayHeadlessImports } from './jay-html-source-file';
 import { Variables } from '../expressions/expression-compiler';
 
-const isComponentRef = (ref: Ref) =>
-    ref.elementType instanceof JayComponentType || ref.elementType instanceof JayTypeAlias;
+const isComponentType = (type: JayType): boolean =>
+    type instanceof JayComponentType ||
+    type instanceof JayTypeAlias ||
+    (type instanceof JayUnionType && type.ofTypes.every(isComponentType));
+const isComponentRef = (ref: Ref) => isComponentType(ref.elementType);
 const isCollectionRef = (ref: Ref) => ref.repeated;
 const isComponentCollectionRef = (ref: Ref) => isCollectionRef(ref) && isComponentRef(ref);
 
@@ -48,15 +51,34 @@ export function renderRefsType(
                 .map((ref) => {
                     let referenceType: string;
                     if (isComponentCollectionRef(ref)) {
-                        referenceType = `${ref.elementType.name}Refs<${ref.viewStateType.name}>`;
-                        componentRefs.set(ref.elementType.name, RefsNeeded.REF_AND_REFS);
+                        if (ref.elementType instanceof JayUnionType) {
+                            for (const t of ref.elementType.ofTypes) {
+                                componentRefs.set(t.name, RefsNeeded.REF_AND_REFS);
+                            }
+                            referenceType = ref.elementType.ofTypes
+                                .map((t) => `${t.name}Refs<${ref.viewStateType.name}>`)
+                                .join(' | ');
+                        } else {
+                            referenceType = `${ref.elementType.name}Refs<${ref.viewStateType.name}>`;
+                            componentRefs.set(ref.elementType.name, RefsNeeded.REF_AND_REFS);
+                        }
                     } else if (isCollectionRef(ref)) {
                         referenceType = `HTMLElementCollectionProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
                         imports = imports.plus(Import.HTMLElementCollectionProxy);
                     } else if (isComponentRef(ref)) {
-                        referenceType = `${ref.elementType.name}Ref<${ref.viewStateType.name}>`;
-                        if (!componentRefs.has(ref.elementType.name))
-                            componentRefs.set(ref.elementType.name, RefsNeeded.REF);
+                        if (ref.elementType instanceof JayUnionType) {
+                            for (const t of ref.elementType.ofTypes) {
+                                if (!componentRefs.has(t.name))
+                                    componentRefs.set(t.name, RefsNeeded.REF);
+                            }
+                            referenceType = ref.elementType.ofTypes
+                                .map((t) => `${t.name}Ref<${ref.viewStateType.name}>`)
+                                .join(' | ');
+                        } else {
+                            referenceType = `${ref.elementType.name}Ref<${ref.viewStateType.name}>`;
+                            if (!componentRefs.has(ref.elementType.name))
+                                componentRefs.set(ref.elementType.name, RefsNeeded.REF);
+                        }
                     } else {
                         referenceType = `HTMLElementProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
                         imports = imports.plus(Import.HTMLElementProxy);
@@ -105,7 +127,7 @@ ${indent.lastLine}}`;
             if (refsNeeded === RefsNeeded.REF_AND_REFS) {
                 refTypes += `
 export type ${componentName}Refs<ParentVS> =
-    ComponentCollectionProxy<ParentVS, ${componentName}Ref<ParentVS>> &
+    ComponentCollectionProxy<ParentVS, ${elementType}> &
     OnlyEventEmitters<${componentName}Ref<ParentVS>>
 `;
                 imports = imports
