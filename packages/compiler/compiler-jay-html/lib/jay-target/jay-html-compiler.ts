@@ -829,12 +829,26 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 headlessContractNames: new Set(),
             };
 
-            inlineBody = childNodes
+            const renderedChildren = childNodes
                 .map((_) => renderNode(_, childContext))
                 .reduce(
                     (prev, current) => RenderFragment.merge(prev, current, ',\n'),
                     RenderFragment.empty(),
                 );
+
+            // When the inline template has multiple children, wrap them in a div
+            // so the arrow function returns a single element expression
+            if (childNodes.length > 1) {
+                inlineBody = new RenderFragment(
+                    `${childIndent.firstLine}de('div', {}, [\n${renderedChildren.rendered}\n])`,
+                    renderedChildren.imports.plus(Import.dynamicElement),
+                    renderedChildren.validations,
+                    renderedChildren.refs,
+                    renderedChildren.recursiveRegions,
+                );
+            } else {
+                inlineBody = renderedChildren;
+            }
         }
 
         // Generate ReferencesManager from inline template refs

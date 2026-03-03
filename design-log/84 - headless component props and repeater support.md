@@ -2525,3 +2525,69 @@ Replaced `localIndexAmongSiblings` with a DFS-order scope counter per `(coordina
 - `jay-html-compiler.ts` — added `insideFastForEach: boolean` to `RenderContext`; `renderHeadlessInstance` emits validation error when `insideFastForEach` is true
 - `generate-element.test.ts` — updated `page-with-headless-in-foreach` test to expect the validation error
 - `fake-shop/page.jay-html` — removed `<jay:product-widget>` from fast forEach section
+
+### Bug Fix: Multi-Child Inline Templates
+
+**Date:** March 3, 2026
+
+#### Problem
+
+When a headless component instance has multiple sibling children in its inline template (no single root element), the compiled render function produces invalid JavaScript. The children were merged with commas inside the `ConstructContext.withRootContext` arrow callback, causing JavaScript's comma operator to return only the last expression.
+
+**Example template:**
+
+```html
+<jay:product-widget productId="3" ref="1">
+  <h3>Wireless Headphones</h3>
+  <div>Price: $149.99</div>
+  <div>SKU: HDP-003</div>
+  <span if="inStock">In Stock</span>
+  <span if="!inStock">Out of Stock</span>
+  <button ref="addToCart">Add to Cart</button>
+</jay:product-widget>
+```
+
+**Broken compiled output:**
+
+```typescript
+const render = (viewState) =>
+  ConstructContext.withRootContext(
+    viewState,
+    refManager,
+    () => e('h3', {}, ['Wireless Headphones']), // comma operator — only last value returned
+    e('div', {}, ['Price: $149.99']),
+    // ...
+  );
+```
+
+All existing test fixtures used single-root inline templates (e.g., `<article>...</article>`), so this was not caught.
+
+#### Fix
+
+When the inline template has multiple children, wrap them in a `de('div', {}, [...])` (dynamic element). Uses `de` (not `e`) because children may include conditionals (`c(vs => vs.inStock, ...)`), which require a dynamic element parent for proper update tracking.
+
+**Fixed compiled output:**
+
+```typescript
+const render = (viewState) =>
+  ConstructContext.withRootContext(viewState, refManager, () =>
+    de('div', {}, [
+      e('h3', {}, ['Wireless Headphones']),
+      e('div', {}, ['Price: $149.99']),
+      // ...all children rendered
+    ]),
+  );
+```
+
+Single-child inline templates are unaffected — no wrapping div is added.
+
+#### Files Changed
+
+- `jay-html-compiler.ts` — `renderHeadlessInstance`: wrap multi-child `inlineBody` in `de('div', {}, [...])`
+- `generate-element.test.ts` — new test: "headless component instance with multiple children"
+- New fixture: `test/fixtures/contracts/page-with-headless-multi-child/`
+
+#### Verification
+
+- compiler-jay-html: 562 passed, 4 skipped (566 total)
+- fake-shop: 6 passed
