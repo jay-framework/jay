@@ -183,6 +183,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 98  | route-based server-element output     | Server-element files follow route structure (consistent with DL96) |
 | 99  | hydration coordinate alignment bugs   | Fix forEach prefix, conditional+ref counter, containerCoordinate   |
 | 100 | hydrate conditional creation fallback | Level 3 hydration: create elements for false-at-SSR conditionals   |
+| 102 | headless instance SSR and hydration compilation | Server-element and hydrate targets for `<jay:xxx>` headless instances |
 
 ---
 
