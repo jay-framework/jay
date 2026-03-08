@@ -87,7 +87,7 @@ Input:
 Server-element output (within `renderToStream`):
 ```typescript
 // Headless instance: product-card (coordinate: product-card:0)
-const vs_pc0 = (vs as any).__headlessInstances?.['product-card:0'];
+const vs_pc0 = (vs as any).__headlessInstances?.['product-card:0'] as ProductCardViewState | undefined;
 if (vs_pc0) {
     w('<article');
     w(' class="hero-card"');
@@ -165,7 +165,7 @@ for (const vs1 of vs.products) {
     w(' class="grid"');
     w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '">');
     // Headless instance: product-card (coordinate: dynamic)
-    const vs_pc0 = (vs as any).__headlessInstances?.[vs1._id + ',product-card:0'];
+    const vs_pc0 = (vs as any).__headlessInstances?.[vs1._id + ',product-card:0'] as ProductCardViewState | undefined;
     if (vs_pc0) {
         w('<article');
         w(' class="product-tile"');
@@ -214,7 +214,7 @@ Input:
 Server-element output:
 ```typescript
 // slowForEach item: jayTrackBy="p1"
-const vs_pc0 = (vs as any).__headlessInstances?.['p1/product-card:0'];
+const vs_pc0 = (vs as any).__headlessInstances?.['p1/product-card:0'] as ProductCardViewState | undefined;
 if (vs_pc0) {
     w('<div');
     w(' jay-coordinate="p1">');
@@ -251,7 +251,7 @@ Input:
 Server-element output:
 ```typescript
 if (vs.showPromo) {
-    const vs_pc1 = (vs as any).__headlessInstances?.['product-card:promo'];
+    const vs_pc1 = (vs as any).__headlessInstances?.['product-card:promo'] as ProductCardViewState | undefined;
     if (vs_pc1) {
         w('<div');
         w(' class="promo"');
@@ -269,49 +269,79 @@ The `if` condition on the `<jay:xxx>` tag uses the page's ViewState (not the ins
 
 ### Hydrate Target Design
 
-The hydrate target mirrors the element target's structure. It needs:
+#### Design Principle: SSR and Hydration Must Be In Sync
 
-1. **Inline template hydrate functions** — same pattern as element target but using `adoptElement`/`adoptText`/`hydrateConditional`/`hydrateForEach` instead of `e`/`dt`/`c`/`forEach`
-2. **`makeHeadlessInstanceComponent` definitions** — identical to element target
-3. **`childComp()` calls** — identical to element target
+The SSR output and hydration script are compiled from the same jay-html source. The hydration script should match what SSR produced. If they disagree (e.g., SSR rendered a conditional but hydration expects it absent), that's an error — fail fast rather than silently producing broken DOM.
 
-#### Key Difference from Element Target
+To validate sync, the compiler can embed a version ID in both the SSR HTML (as a data attribute or comment) and the hydration script. On hydration startup, compare IDs; mismatch → error.
 
-The render function body uses hydrate APIs:
-- `e('article', ...)` → `adoptElement('coord', ...)`
-- `dt((vs) => vs.name)` → `adoptText('coord', (vs) => vs.name)`
-- `e('button', ...)` with ref → `adoptElement('addToCart', ...)` with ref
+**Hydration script compilation input**: The hydration script is compiled from the **slow-rendered** (pre-rendered) jay-html — the same input as the server-element target. It only needs the slow rendering ViewState to determine its structure. Fast-phase data arrives as runtime JSON, not as structural changes to the compiled script.
 
-The coordinate values inside the inline template use the same numbering as the server-element target, but WITHOUT the instance coordinate prefix (because the hydrate runs within the instance's component scope, which has its own coordinate map).
+#### Question Q6: Do headless instance inline templates need adopt APIs or element APIs?
 
-#### Question Q6: Coordinate prefix in hydrate — full prefix or relative?
+Headless instance inline templates must use **adopt APIs** (`adoptElement`, `adoptText`) to properly hydrate the SSR-rendered DOM. Creating fresh DOM via `e()` would waste the SSR content and cause a flash of replacement — that's not true hydration.
 
-In the element target, `childComp()` creates a new `ConstructContext` for the child component. The hydration equivalent would be `ConstructContext.withHydrationRootContext()` scoped to the instance's coordinate prefix in the DOM.
+The current `childComp` (element.ts:41-66) always creates fresh DOM because it calls `ConstructContext.withRootContext()` which creates a context without a coordinate map. We need a new `childCompHydrate` that scopes the coordinate context to the instance's coordinate prefix.
 
-Looking at how `component-in-component` hydration works: `childComp(Counter, ...)` — the Counter component's hydrate function receives its own root element and manages its own coordinates internally. The parent doesn't prefix coordinates for child components.
+**Answer**: adopt APIs for hydration. New runtime support needed.
 
-For headless instances, `makeHeadlessInstanceComponent` wraps the render function. When hydrating, the component's render function is called within a scoped coordinate context. So the inline template's coordinates should be **relative** (starting at 0), not prefixed.
+#### New Runtime: `childCompHydrate` and `withHydrationChildContext`
 
-**Answer**: relative coordinates in the hydrate inline template. The component scope handles the prefix.
+**`ConstructContext.withHydrationChildContext(viewState, refManager, fn)`** — like `withRootContext` but inherits `coordinateBase` and `coordinateMap` from the current (parent) context. This allows adopt calls inside the inline template to resolve coordinates scoped to the instance prefix.
+
+**`childCompHydrate(component, getProps, instanceCoordinate, ref)`** — like `childComp` but first extends the current context's `coordinateBase` with the instance coordinate (e.g., `'product-card:0'`), then calls the component factory within that scoped context.
+
+**Coordinate resolution flow:**
+1. Page hydrate → `withHydrationRootContext` → context has full coordinateMap
+2. `childCompHydrate(_HeadlessPC, getProps, 'product-card:0', ref)` → extends coordinateBase to `['product-card:0']`, shares coordinateMap
+3. Component factory calls hydratePreRender → `withHydrationChildContext` inherits scoped base
+4. `adoptElement('0')` → `resolveCoordinate('0')` → prepends base → `product-card:0/0` → finds SSR element ✓
+
+This works because `resolveCoordinate` (context.ts:221-228) prepends `coordinateBase.join('/')` to the key before looking up in the shared map.
+
+#### Question Q7: How many preRender functions per headless instance?
+
+**ONE preRender per component definition.** Each `makeHeadlessInstanceComponent` has one preRender.
+
+The SSR and hydration script must agree on what was rendered:
+- If SSR rendered the instance → hydrate has adopt version → coordinates match ✓
+- If SSR did not render the instance → hydrate has create version → no DOM to adopt ✓
+- If they disagree → error (detectable via sync ID)
+
+#### Slow vs Fast Conditionals
+
+**Slow conditionals** (condition uses a slow-phase property): Resolved at build time by the slow render transform. If true → the `if` attribute is removed (becomes unconditional). If false → the element is deleted from the pre-rendered jay-html. The hydrate script is compiled from the resolved jay-html, so it naturally has only one path. No special handling needed.
+
+**Fast conditionals** (condition uses a fast/interactive-phase property): Dynamic per request. The hydrate script is compiled once (statically) but must handle both outcomes — SSR may render the instance on one request and skip it on another. So the hydrate needs `hydrateConditional` with **both** adopt and create callbacks, requiring **two separate component definitions**.
+
+For **forEach**, which structurally needs both adopt (existing items) and create (new items), the same two-definition pattern applies.
+
+| Context          | Component Definitions                                       | Hydrate API                                              |
+|------------------|-------------------------------------------------------------|----------------------------------------------------------|
+| Unconditional    | 1 adopt                                                     | `childCompHydrate`                                       |
+| Slow conditional | 1 (resolved at build time: adopt if true, removed if false) | `childCompHydrate`                                       |
+| Fast conditional | 2: adopt + create                                           | `hydrateConditional` wraps both                          |
+| forEach          | 2: adopt + create                                           | `hydrateForEach` uses adopt for existing, create for new |
+| slowForEach      | 1 adopt                                                     | items pre-rendered, always adopt                         |
+
+#### Code Size Trade-off: Adopt + Create Duplication
+
+For forEach and fast conditionals, having both adopt and create component definitions increases client bundle size. In most cases, the adopt version is considerably smaller than the create version because it doesn't include static DOM nodes — it only wires up dynamic points. But in edge cases (templates with mostly dynamic content), the two versions can be similar in size.
+
+**Future optimization**: The create path can be downloaded dynamically (lazy import). If the data hasn't changed since SSR, the create path isn't needed until a reactive update adds new items (forEach) or toggles a condition. By that time, the create code can be loaded on demand. This defers the cost to when it's actually needed.
 
 #### Example: Simple Instance Hydrate
 
 ```typescript
-// Inline template for headless component: product-card #0
-// (type definitions identical to element target)
-
-function _headlessProductCard0Render(
+// Hydrate inline template — uses adopt APIs
+function _headlessProductCard0HydrateRender(
     options?: RenderElementOptions,
 ): _HeadlessProductCard0ElementPreRender {
     const [refManager, [refAddToCart]] = ReferencesManager.for(
-        options,
-        ['add to cart'],
-        [],
-        [],
-        [],
+        options, ['add to cart'], [], [], [],
     );
     const render = (viewState) =>
-        ConstructContext.withRootContext(viewState, refManager, () =>
+        ConstructContext.withHydrationChildContext(viewState, refManager, () =>
             adoptElement('0', { class: 'hero-card' }, [
                 adoptText('1', (vs) => vs.name),
                 adoptText('2', (vs) => vs.price),
@@ -321,51 +351,73 @@ function _headlessProductCard0Render(
 }
 
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
-    _headlessProductCard0Render,
-    productCard.comp,
-    'product-card:0',
-    productCard.contexts,
+    _headlessProductCard0HydrateRender, productCard.comp, 'product-card:0', productCard.contexts,
 );
 
-// In hydrate function:
-childComp(
-    _HeadlessProductCard0,
-    (vs: PageViewState) => ({ productId: 'prod-hero' }),
-    refAR1(),
-)
+// In page hydrate function:
+adoptElement('0', {}, [
+    adoptText('1', (vs) => vs.pageTitle),
+    childCompHydrate(
+        _HeadlessProductCard0,
+        (vs: PageViewState) => ({ productId: 'prod-hero' }),
+        'product-card:0',
+        refAR1(),
+    ),
+])
 ```
 
-#### Question Q7: Does the hydrate inline template use `adoptElement` or the full create-from-scratch pattern?
+#### Example: Slow Conditional Instance Hydrate
 
-The hydrate target assumes the DOM was server-rendered. The inline template in hydrate mode should use `adoptElement`/`adoptText` to walk and attach to existing DOM nodes.
+Slow conditionals are resolved at build time. If the condition was true, the `if` attribute is removed and the headless instance becomes unconditional — same as the simple instance example above. If false, the element is deleted from the pre-rendered jay-html.
 
-But — the headless instance's inline template might NOT have been rendered by SSR (e.g., condition was false at SSR time). In that case, the create fallback from `hydrateConditional` handles it. For the headless instance itself:
-- If the instance data exists in `__headlessInstances`, SSR rendered it → adopt
-- If not, SSR didn't render it → nothing to adopt, and `makeHeadlessInstanceComponent` handles the absence
+#### Example: Fast Conditional Instance Hydrate
 
-Wait — the `makeHeadlessInstanceComponent` constructor checks if ViewState exists (`if (fastVS)`) and creates signals. But the render function always runs. If SSR rendered the instance, the DOM nodes exist and need adoption. If SSR didn't render it, the DOM nodes don't exist.
+Fast conditionals are dynamic per request. The hydrate script needs both adopt and create paths:
 
-This is actually the same pattern as `hydrateConditional` — the instance itself is conditionally present in the DOM based on whether SSR had data for it. The hydrate inline template should use adopt APIs, and the conditional presence is handled by the component lifecycle.
+```typescript
+// TWO separate components: adopt for true-at-SSR, create for false-at-SSR
+const _HeadlessProductCard1Adopt = makeHeadlessInstanceComponent(
+    _headlessProductCard1HydrateRender, productCard.comp, 'product-card:promo', productCard.contexts,
+);
+const _HeadlessProductCard1Create = makeHeadlessInstanceComponent(
+    _headlessProductCard1Render, productCard.comp, 'product-card:promo', productCard.contexts,
+);
 
-Actually, looking more carefully: `childComp()` always renders the component. The component's render function creates DOM (in element target) or adopts DOM (in hydrate target). The `makeHeadlessInstanceComponent` wrapper ensures the ViewState is available.
-
-For hydration: if SSR rendered the instance, `childComp()` calls the hydrate render function which adopts. If SSR didn't render it... that's a problem — we'd need the create fallback.
-
-For now, let's handle the primary case: SSR rendered the instance (data was available). The fallback case (SSR didn't render, client needs to create) is a Level 3 hydration concern similar to DL#100, and can be deferred.
-
-**Answer**: use `adoptElement`/`adoptText` in the hydrate inline template. The primary case is adopting SSR-rendered DOM.
+// hydrateConditional handles both cases:
+hydrateConditional(
+    (vs) => vs.showPromo,
+    // adopt path: SSR rendered it
+    () => childCompHydrate(
+        _HeadlessProductCard1Adopt,
+        (vs: PageViewState) => ({ productId: 'prod-promo' }),
+        'product-card:promo',
+        refPromo(),
+    ),
+    // create path: SSR did not render it
+    () => childComp(
+        _HeadlessProductCard1Create,
+        (vs: PageViewState) => ({ productId: 'prod-promo' }),
+        refPromo(),
+    ),
+)
+```
 
 #### Example: forEach Instance Hydrate
 
 ```typescript
-const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
-    _headlessProductCard0Render,
-    productCard.comp,
+// TWO separate components: adopt for existing items, create for new items
+const _HeadlessProductCard0Adopt = makeHeadlessInstanceComponent(
+    _headlessProductCard0HydrateRender, productCard.comp,
+    (dataIds) => [...dataIds, 'product-card:0'].toString(),
+    productCard.contexts,
+);
+const _HeadlessProductCard0Create = makeHeadlessInstanceComponent(
+    _headlessProductCard0Render, productCard.comp,
     (dataIds) => [...dataIds, 'product-card:0'].toString(),
     productCard.contexts,
 );
 
-// In hydrate function:
+// In page hydrate function:
 adoptElement('0', {}, [
     adoptText('1', (vs) => vs.pageTitle),
     adoptElement('2', {}, [
@@ -374,16 +426,17 @@ adoptElement('0', {}, [
             (vs) => vs.products,
             '_id',
             () => [
-                childComp(
-                    _HeadlessProductCard0,
+                childCompHydrate(
+                    _HeadlessProductCard0Adopt,
                     (vs1) => ({ productId: vs1._id }),
+                    'product-card:0',
                     refAR1(),
                 ),
             ],
             (vs1) => {
                 return e('div', { class: 'grid' }, [
                     childComp(
-                        _HeadlessProductCard0,
+                        _HeadlessProductCard0Create,
                         (vs1) => ({ productId: vs1._id }),
                         refAR1(),
                     ),
@@ -396,25 +449,23 @@ adoptElement('0', {}, [
 
 #### Example: slowForEach Instance Hydrate
 
-For slowForEach, each item is a separate compilation unit with its own coordinate scope:
-
 ```typescript
-// Each slowForEach item has its own headless instance definition
-// (identical to element target: _HeadlessProductCard0 with coordinate 'p1/product-card:0')
+// ONE adopt component per slowForEach item (pre-rendered, always adopt)
+const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
+    _headlessProductCard0HydrateRender, productCard.comp, 'p1/product-card:0', productCard.contexts,
+);
 
-// In hydrate function:
+// In page hydrate function:
 adoptElement('0', {}, [
     adoptText('1', (vs) => vs.pageTitle),
     adoptElement('2', {}, [
-        // slowForEach items use the same pattern as element target
         slowForEachItem<PageViewState, ProductViewState>(
-            (vs) => vs.products,
-            0,
-            'p1',
+            (vs) => vs.products, 0, 'p1',
             () => adoptElement('p1', {}, [
-                childComp(
+                childCompHydrate(
                     _HeadlessProductCard0,
                     (vs1) => ({ productId: 'prod-123' }),
+                    'product-card:0',
                     refAR1(),
                 ),
             ]),
@@ -443,7 +494,7 @@ So page-level headless SSR+hydration needs:
 2. Add component detection (`getComponentName`) to `renderServerElement()`
 3. Implement `renderServerHeadlessInstance()`:
    - Compute coordinate key (static string or runtime expression for forEach)
-   - Create local variable: `const vs_pcN = (vs as any).__headlessInstances?.[key]`
+   - Create local variable: `const vs_pcN = (vs as any).__headlessInstances?.[key] as ContractViewState | undefined`
    - Guard with `if (vs_pcN)`
    - Set `coordinatePrefix` to instance coordinate key
    - Reset `coordinateCounter`
@@ -451,37 +502,58 @@ So page-level headless SSR+hydration needs:
 4. Handle `if` condition on `<jay:xxx>` — wrap in page-level condition first, then instance guard
 5. Import contract ViewState types as needed
 
-### Phase 2: Hydrate Target — Headless Instance Support
+### Phase 2: Runtime — Hydration Support for Child Components
+
+1. Add `ConstructContext.withHydrationChildContext(viewState, refManager, fn)` — inherits `coordinateBase` and `coordinateMap` from parent context
+2. Add `childCompHydrate(component, getProps, instanceCoordinate, ref)` — extends `coordinateBase` with instance coordinate, then calls component factory within scoped context
+3. Optional: sync ID validation between SSR and hydration script
+
+### Phase 3: Hydrate Target — Headless Instance Support
 
 1. Add `headlessImports`, `headlessInstanceDefs`, `headlessInstanceCounter` to `HydrateContext`
 2. Add headless-instance detection in `renderHydrateElement()` (check `componentMatch.kind`)
 3. Implement `renderHydrateHeadlessInstance()`:
-   - Same pattern as element target's `renderHeadlessInstance()`
-   - Inline template compiled with hydrate APIs (`adoptElement`, `adoptText`, etc.)
-   - Generate `_headlessXxxNRender` functions and `makeHeadlessInstanceComponent` definitions
-   - Return `childComp()` calls
-4. Handle conditional and forEach containers (same as element target)
+   - Compile inline template with adopt APIs (`adoptElement`, `adoptText`) and `withHydrationChildContext`
+   - Generate `_headlessXxxNHydrateRender` functions and `makeHeadlessInstanceComponent` definitions
+   - Return `childCompHydrate()` calls
+4. forEach and fast conditionals: generate TWO separate component definitions (adopt + create)
+5. Unconditional/slow conditional/slowForEach: ONE adopt component definition
 
-### Phase 3: Test Fixtures and Tests
+### Phase 4: Test Fixtures and Tests
 
 For each scenario, create expected output fixtures and add test cases:
 
-| Scenario | Fixture | Server-Element | Hydrate |
-|---|---|---|---|
-| Page-level headless | `page-using-counter` | exists ✓ | new fixture |
-| Simple instance | `page-with-headless-instance` | new fixture | new fixture |
-| Conditional instance | `page-with-headless-mixed` | new fixture | new fixture |
-| forEach instance | `page-with-headless-in-foreach` | new fixture | new fixture |
-| slowForEach instance | `page-with-headless-in-slow-foreach` | new fixture | new fixture |
+| Scenario             | Fixture                              | Server-Element   | Hydrate     |
+|----------------------|--------------------------------------|------------------|-------------|
+| Page-level headless  | `page-using-counter`                 | exists ✓         | new fixture |
+| Simple instance      | `page-with-headless-instance`        | new fixture      | new fixture |
+| Conditional instance | `page-with-headless-mixed`           | new fixture      | new fixture |
+| forEach instance     | `page-with-headless-in-foreach`      | new fixture      | new fixture |
+| slowForEach instance | `page-with-headless-in-slow-foreach` | new fixture      | new fixture |
 
 Add test cases to:
 - `generate-server-element.test.ts` — 4 new tests
 - `generate-element-hydrate.test.ts` — 5 new tests
+
+### Phase 5: Fake-Shop Integration and Dev-Server Tests
+
+Create dedicated pages in `examples/jay-stack/fake-shop/src/pages/` for each headless instance scenario:
+- Page with a single headless instance (unconditional)
+- Page with headless instance inside a fast conditional
+- Page with headless instance inside forEach
+- Page with headless instance inside slowForEach (pre-rendered)
+
+Extend the dev-server tests to cover these pages end-to-end:
+- Verify SSR produces correct HTML (no client-only fallback)
+- Verify hydration script loads and hydrates without errors
+- Verify interactive behavior works after hydration (e.g., button clicks trigger actions)
 
 ## Verification Criteria
 
 1. All existing tests pass (no regressions)
 2. New server-element fixtures match actual compiler output
 3. New hydrate fixtures match actual compiler output
-4. Coordinate alignment: server-element and hydrate produce compatible coordinates for all 5 scenarios
-5. The generated code type-checks (correct import paths and type references)
+4. Server-element coordinates align with hydrate adopt coordinates (same values, same order)
+5. `childCompHydrate` correctly scopes coordinate resolution (e.g., `adoptElement('0')` inside instance resolves to `product-card:0/0`)
+6. forEach hydrate uses adopt component for existing items, create component for new items
+7. The generated code type-checks (correct import paths and type references)
