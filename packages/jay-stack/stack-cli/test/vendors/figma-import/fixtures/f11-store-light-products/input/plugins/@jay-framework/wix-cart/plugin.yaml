@@ -1,0 +1,6 @@
+name: '@jay-framework/wix-cart'
+module: ./wix-cart
+contracts:
+  - name: cart-indicator
+    contract: ./contracts/cart-indicator.jay-contract
+    component: cartIndicator

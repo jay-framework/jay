@@ -1,0 +1,6 @@
+name: '@jay-framework/wix-stores'
+module: ./wix-stores
+contracts:
+  - name: product-search
+    contract: ./contracts/product-search.jay-contract
+    component: productSearch

@@ -1,0 +1,252 @@
+name: product-search
+tags:
+  # Search input (matches Wix searchProducts search.search parameter)
+  - tag: searchExpression
+    type: [data, interactive]
+    dataType: string
+    elementType: HTMLInputElement
+    description: Search term or expression
+    
+  - tag: searchFields
+    type: data
+    dataType: string
+    description: Comma-separated list of fields to search in (name, description, sku, etc.)
+    
+  - tag: fuzzySearch
+    type: data
+    dataType: boolean
+    description: Whether to enable fuzzy search for typos and declensions
+    
+  - tag: searchButton
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Search submit button
+    
+  - tag: clearSearchButton
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Clear search input button
+    
+  # Search state (fast+interactive for dynamic updates)
+  - tag: isSearching
+    type: variant
+    dataType: boolean
+    phase: fast+interactive
+    description: Whether search is in progress
+    
+  - tag: hasSearched
+    type: variant
+    dataType: boolean
+    phase: fast+interactive
+    description: Whether a search has been performed
+    
+  # Search results (fast+interactive for dynamic loading)
+  - tag: searchResults
+    type: sub-contract
+    repeated: true
+    trackBy: _id
+    phase: fast+interactive
+    description: Product search results (loaded dynamically)
+    link: ./product-card
+    
+  - tag: resultCount
+    type: data
+    dataType: number
+    phase: fast+interactive
+    description: Total number of search results
+    
+  - tag: hasResults
+    type: variant
+    dataType: boolean
+    phase: fast+interactive
+    description: Whether search returned any results
+    
+  # Empty state message
+  - tag: emptyStateMessage
+    type: data
+    dataType: string
+    description: Message to show when no results found
+    
+  # Search filters
+  - tag: filters
+    type: sub-contract
+    description: Search result filters
+    tags:
+      # Price range filter (fast+interactive)
+      - tag: priceRange
+        type: sub-contract
+        phase: fast+interactive
+        description: Price range filter
+        tags:
+          - tag: minPrice
+            type: [data, interactive]
+            dataType: number
+            elementType: HTMLInputElement
+            description: Current minimum price filter (works with number input or range slider)
+            
+          - tag: maxPrice
+            type: [data, interactive]
+            dataType: number
+            elementType: HTMLInputElement
+            description: Current maximum price filter (works with number input or range slider)
+            
+          - tag: minBound
+            type: data
+            dataType: number
+            description: Absolute minimum price from product catalog (for slider min attribute)
+            
+          - tag: maxBound
+            type: data
+            dataType: number
+            description: Absolute maximum price from product catalog (for slider max attribute)
+            
+          - tag: ranges
+            type: sub-contract
+            repeated: true
+            trackBy: rangeId
+            description: Predefined price range options with product counts
+            tags:
+              - tag: rangeId
+                type: data
+                dataType: string
+                description: Unique range identifier
+                
+              - tag: label
+                type: data
+                dataType: string
+                description: Display label (e.g., "$0 - $100")
+                
+              - tag: minValue
+                type: data
+                dataType: number
+                description: Range minimum (null for "Show all")
+                
+              - tag: maxValue
+                type: data
+                dataType: number
+                description: Range maximum (null for open-ended like "$400+")
+                
+              - tag: productCount
+                type: data
+                dataType: number
+                description: Number of products in this price range
+                
+              - tag: isSelected
+                type: [data, interactive]
+                dataType: boolean
+                elementType: HTMLInputElement
+                description: Radio button for this range
+      
+      # Category filter (slow for category list, fast+interactive for selection)
+      - tag: categoryFilter
+        type: sub-contract
+        description: Filter by category
+        tags:
+          - tag: categories
+            type: sub-contract
+            repeated: true
+            trackBy: categoryId
+            description: Available categories for filtering
+            tags:
+              - tag: categoryId
+                type: data
+                dataType: string
+                description: Category GUID
+                
+              - tag: categoryName
+                type: data
+                dataType: string
+                description: Category name
+                
+              - tag: categorySlug
+                type: data
+                dataType: string
+                description: Category slug for URL
+                
+              - tag: isSelected
+                type: [data, interactive]
+                dataType: boolean
+                elementType: HTMLInputElement
+                description: Category checkbox
+      
+      # Availability filter (fast+interactive)
+      - tag: inStockOnly
+        type: [data, interactive]
+        dataType: boolean
+        elementType: HTMLInputElement
+        description: Show only in-stock products checkbox
+        
+      - tag: clearFilters
+        type: interactive
+        elementType: HTMLButtonElement
+        description: Clear all filters button
+  
+  # Sorting (fast+interactive)
+  - tag: sortBy
+    type: sub-contract
+    phase: fast+interactive
+    description: Sort search results
+    tags:
+      - tag: currentSort
+        type: data
+        dataType: enum (relevance | priceAsc | priceDesc | newest | nameAsc | nameDesc)
+        description: Current sort option
+        
+      - tag: sortDropdown
+        type: interactive
+        elementType: HTMLSelectElement
+        description: Dropdown to select sort option
+  
+  # Load more (replaces pagination)
+  - tag: hasMore
+    type: variant
+    dataType: boolean
+    phase: fast+interactive
+    description: Whether there are more products to load
+    
+  - tag: loadMoreButton
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Button to load more products
+    
+  - tag: loadedCount
+    type: data
+    dataType: number
+    phase: fast+interactive
+    description: Number of products currently loaded
+    
+  - tag: totalCount
+    type: data
+    dataType: number
+    phase: fast+interactive
+    description: Total number of products matching search
+  
+  # Search suggestions (fast+interactive)
+  - tag: hasSuggestions
+    type: variant
+    dataType: boolean
+    phase: fast+interactive
+    description: Whether search suggestions are available
+    
+  - tag: suggestions
+    type: sub-contract
+    repeated: true
+    trackBy: suggestionId
+    phase: fast+interactive
+    description: Search term suggestions
+    tags:
+      - tag: suggestionId
+        type: data
+        dataType: string
+        description: Suggested id
+
+      - tag: suggestionText
+        type: data
+        dataType: string
+        description: Suggested search term
+        
+      - tag: suggestionButton
+        type: interactive
+        elementType: HTMLButtonElement
+        description: Button to use this suggestion
+

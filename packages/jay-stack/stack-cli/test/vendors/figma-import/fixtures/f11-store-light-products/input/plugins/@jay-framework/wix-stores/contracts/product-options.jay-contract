@@ -1,0 +1,66 @@
+name: product-options
+description: Shared product option structure for quick selection and full product page
+
+tags:
+  - tag: _id
+    type: data
+    dataType: string
+    description: Option GUID
+
+  - tag: name
+    type: data
+    dataType: string
+    description: "Option name (e.g., \"Size\", \"Color\")"
+
+  - tag: optionRenderType
+    type: variant
+    dataType: enum (TEXT_CHOICES | COLOR_SWATCH_CHOICES)
+    description: How the option should be rendered
+
+  - tag: choices
+    type: sub-contract
+    repeated: true
+    trackBy: choiceId
+    description: Available choices for this option
+    tags:
+      - tag: choiceId
+        type: data
+        dataType: string
+        description: Choice GUID
+
+      - tag: name
+        type: data
+        dataType: string
+        description: "Choice display name (e.g., \"XL\", \"Red\")"
+
+      - tag: choiceType
+        type: variant
+        dataType: enum (CHOICE_TEXT | ONE_COLOR)
+        description: Type of choice (text or color swatch)
+
+      - tag: colorCode
+        type: data
+        dataType: string
+        description: Color code in HEX format (for color swatches)
+
+      - tag: inStock
+        type: variant
+        dataType: boolean
+        phase: fast+interactive
+        description: Whether this choice has available stock
+
+      - tag: variantId
+        type: data
+        dataType: string
+        description: The variant ID to use when adding to cart (for single-option products)
+
+      - tag: isSelected
+        type: variant
+        dataType: boolean
+        phase: fast+interactive
+        description: Whether this choice is currently selected
+
+      - tag: choiceButton
+        type: interactive
+        elementType: HTMLButtonElement
+        description: Button to select this choice (click adds to cart for quick-add)

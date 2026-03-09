@@ -1,0 +1,569 @@
+<html>
+  <head>
+    <script type="application/jay-headless"
+            plugin="@jay-framework/wix-stores"
+            contract="product-search"
+            key="productSearch"
+    ></script>
+    <script type="application/jay-headless"
+            plugin="@jay-framework/wix-cart"
+            contract="cart-indicator"
+            key="cartIndicator"
+    ></script>
+    <script type="application/jay-data">
+      data:
+    </script>
+    <!-- External stylesheet omitted for fixture test -->
+    <style>
+      /* =====================================================
+         ATELIER PRODUCTS PAGE - HORIZONTAL FILTER LAYOUT
+         Full-width grid with top filter bar (no sidebar)
+         ===================================================== */
+      
+      .collection-page {
+        min-height: 100vh;
+      }
+
+      /* Hero Section - Full Width */
+      .collection-hero {
+        background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-primary) 100%);
+        padding: 80px var(--page-padding) 60px;
+        text-align: center;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .collection-hero .page-title {
+        margin-bottom: 16px;
+      }
+
+      .collection-hero .page-subtitle {
+        margin: 0 auto 40px;
+        max-width: 560px;
+      }
+
+      /* Search in Hero */
+      .hero-search {
+        max-width: 600px;
+        margin: 0 auto;
+      }
+
+      .hero-search .search-box {
+        box-shadow: var(--shadow-lg);
+      }
+
+      /* Horizontal Filter Bar */
+      .filter-bar {
+        background: var(--bg-card);
+        border-bottom: 1px solid var(--border);
+        padding: 16px var(--page-padding);
+        position: sticky;
+        top: 73px; /* Below header */
+        z-index: 50;
+        box-shadow: var(--shadow-sm);
+      }
+
+      .filter-bar-inner {
+        max-width: var(--container-max);
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        flex-wrap: wrap;
+      }
+
+      .filter-group-inline {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .filter-group-inline .label {
+        margin: 0;
+        white-space: nowrap;
+      }
+
+      .filter-group-inline .input,
+      .filter-group-inline .select {
+        min-width: 100px;
+      }
+
+      .filter-price-range {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .filter-price-range .input {
+        width: 90px;
+        padding: 10px 14px;
+      }
+
+      .filter-price-range span {
+        color: var(--text-muted);
+      }
+
+      .filter-categories {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .category-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-full);
+        font-size: 13px;
+        color: var(--text-secondary);
+        cursor: pointer;
+        transition: all var(--transition-fast);
+      }
+
+      .category-chip:hover {
+        border-color: var(--text-primary);
+        color: var(--text-primary);
+      }
+
+      .category-chip.selected {
+        background: var(--text-primary);
+        border-color: var(--text-primary);
+        color: var(--text-inverse);
+      }
+
+      .category-chip input {
+        display: none;
+      }
+
+      .filter-bar-actions {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .filter-toggle {
+        display: none;
+        padding: 10px 16px;
+        background: var(--bg-secondary);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-primary);
+        cursor: pointer;
+      }
+
+      /* Results Bar */
+      .results-bar {
+        max-width: var(--container-max);
+        margin: 0 auto;
+        padding: 24px var(--page-padding);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .results-count {
+        font-size: 14px;
+        color: var(--text-secondary);
+      }
+
+      .results-count strong {
+        color: var(--text-primary);
+        font-weight: 600;
+      }
+
+      /* Products Grid - Full Width, Larger Cards */
+      .products-container {
+        max-width: var(--container-max);
+        margin: 0 auto;
+        padding: 0 var(--page-padding) 80px;
+      }
+
+      .products-grid-large {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 32px;
+      }
+
+      /* Featured First Item - Spans 2 Columns */
+      .products-grid-large .product-card:first-child {
+        grid-column: span 2;
+        grid-row: span 2;
+      }
+
+      .products-grid-large .product-card:first-child .product-card-image {
+        aspect-ratio: 3/4;
+      }
+
+      .products-grid-large .product-card:first-child .product-card-name {
+        font-size: 26px;
+      }
+
+      .products-grid-large .product-card:first-child .current-price {
+        font-size: 24px;
+      }
+
+      /* Pagination - Centered */
+      .pagination-section {
+        max-width: var(--container-max);
+        margin: 0 auto;
+        padding: 48px var(--page-padding);
+        text-align: center;
+      }
+
+      .pagination {
+        margin-top: 0;
+        margin-bottom: 24px;
+      }
+
+      /* Empty State - Centered */
+      .empty-container {
+        max-width: var(--container-max);
+        margin: 0 auto;
+        padding: 0 var(--page-padding);
+      }
+
+      /* Suggestions - Below Search */
+      .hero-suggestions {
+        margin-top: 20px;
+      }
+
+      /* Product Image Hover Overlay */
+      .product-image-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 24px 20px;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0.4) 60%, transparent 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        opacity: 0;
+        transform: translateY(8px);
+        transition: all var(--transition-base);
+        pointer-events: none;
+      }
+
+      .product-card:hover .product-image-overlay {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .overlay-name {
+        font-family: var(--font-serif);
+        font-size: 18px;
+        font-weight: 500;
+        color: #fff;
+        margin: 0 0 6px 0;
+        line-height: 1.3;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+      }
+
+      .overlay-price {
+        font-size: 16px;
+        font-weight: 600;
+        color: rgba(255, 255, 255, 0.9);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+      }
+
+      /* Featured card overlay adjustments */
+      .products-grid-large .product-card:first-child .overlay-name {
+        font-size: 24px;
+      }
+
+      .products-grid-large .product-card:first-child .overlay-price {
+        font-size: 20px;
+      }
+
+      /* Loading */
+      .loading-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(250, 248, 245, 0.92);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        backdrop-filter: blur(8px);
+      }
+
+      /* Responsive */
+      @media (max-width: 1200px) {
+        .products-grid-large {
+          grid-template-columns: repeat(3, 1fr);
+        }
+        
+        .products-grid-large .product-card:first-child {
+          grid-column: span 2;
+          grid-row: span 1;
+        }
+      }
+
+      @media (max-width: 900px) {
+        .products-grid-large {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 24px;
+        }
+        
+        .products-grid-large .product-card:first-child {
+          grid-column: span 2;
+        }
+
+        .filter-bar-inner {
+          display: none;
+        }
+
+        .filter-toggle {
+          display: flex;
+        }
+
+        .filter-bar.expanded .filter-bar-inner {
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+          gap: 16px;
+          margin-top: 16px;
+        }
+
+        .filter-bar.expanded .filter-group-inline {
+          width: 100%;
+        }
+
+        .filter-bar.expanded .filter-categories {
+          flex-wrap: wrap;
+        }
+
+        .filter-bar.expanded .filter-bar-actions {
+          margin-left: 0;
+          width: 100%;
+        }
+      }
+
+      @media (max-width: 600px) {
+        .products-grid-large {
+          grid-template-columns: 1fr;
+        }
+        
+        .products-grid-large .product-card:first-child {
+          grid-column: span 1;
+        }
+
+        .collection-hero {
+          padding: 48px var(--page-padding) 40px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="collection-page" data-jay-node-id="j-0">
+      
+      <header class="site-header" data-jay-node-id="j-0-0">
+        <a href="/products" class="site-logo" data-jay-node-id="j-0-0-0">Atelier<span data-jay-node-id="j-0-0-0-0">.</span></a>
+        <nav class="site-nav" data-jay-node-id="j-0-0-1">
+          <a href="/products" data-jay-node-id="j-0-0-1-0">Collection</a>
+          <a href="/cart" class="cart-indicator {cartIndicator.hasItems ? has-items} {cartIndicator.isLoading ? is-loading} {cartIndicator.justAdded ? just-added}" ref="cartIndicator.cartLink" data-jay-node-id="j-0-0-1-1">
+            <span class="cart-indicator-icon" data-jay-node-id="j-0-0-1-1-0">🛒</span>
+            <span class="cart-indicator-count" if="cartIndicator.hasItems" data-jay-node-id="j-0-0-1-1-1">{cartIndicator.itemCount}</span>
+          </a>
+        </nav>
+      </header>
+
+      
+      <div class="loading-overlay" if="productSearch.isSearching" data-jay-node-id="j-0-1">
+        <div class="loading-spinner" data-jay-node-id="j-0-1-0"></div>
+      </div>
+
+      
+      <section class="collection-hero" data-jay-node-id="j-0-2">
+        <h1 class="page-title" data-jay-node-id="j-0-2-0">The Collection</h1>
+        <p class="page-subtitle" data-jay-node-id="j-0-2-1">
+          Curated pieces crafted with intention. Each item selected for quality, design, and purpose.
+        </p>
+        
+        <div class="hero-search" data-jay-node-id="j-0-2-2">
+          <div class="search-box" data-jay-node-id="j-0-2-2-0">
+            <input class="input input-lg" type="text" placeholder="Search our collection..." value="{productSearch.searchExpression}" ref="productSearch.searchExpression" data-jay-node-id="j-0-2-2-0-0">
+            <button class="btn btn-ghost" ref="productSearch.clearSearchButton" title="Clear" data-jay-node-id="j-0-2-2-0-1">
+              ✕
+            </button>
+            <button class="btn btn-primary" ref="productSearch.searchButton" data-jay-node-id="j-0-2-2-0-2">
+              Search
+            </button>
+          </div>
+          
+          
+          <div class="hero-suggestions suggestions" if="productSearch.hasSuggestions" data-jay-node-id="j-0-2-2-1">
+            <button class="suggestion-btn" forEach="productSearch.suggestions" trackBy="suggestionId" ref="productSearch.suggestions.suggestionButton" data-jay-node-id="j-0-2-2-1-0">
+              {suggestionText}
+            </button>
+          </div>
+        </div>
+      </section>
+
+      
+      <div class="filter-bar" data-jay-node-id="j-0-3">
+        <button class="filter-toggle" data-jay-node-id="j-0-3-0">
+          ☰ Filters & Sort
+        </button>
+        
+        <div class="filter-bar-inner" data-jay-node-id="j-0-3-1">
+          
+          <div class="filter-group-inline" data-jay-node-id="j-0-3-1-0">
+            <span class="label" data-jay-node-id="j-0-3-1-0-0">Price</span>
+            <div class="filter-price-range" data-jay-node-id="j-0-3-1-0-1">
+              <input class="input" type="number" placeholder="Min" value="{productSearch.filters.priceRange.minPrice}" ref="productSearch.filters.priceRange.minPrice" data-jay-node-id="j-0-3-1-0-1-0">
+              <span data-jay-node-id="j-0-3-1-0-1-1">–</span>
+              <input class="input" type="number" placeholder="Max" value="{productSearch.filters.priceRange.maxPrice}" ref="productSearch.filters.priceRange.maxPrice" data-jay-node-id="j-0-3-1-0-1-2">
+            </div>
+          </div>
+
+          
+          <div class="filter-group-inline" data-jay-node-id="j-0-3-1-1">
+            <span class="label" data-jay-node-id="j-0-3-1-1-0">Category</span>
+            <div class="filter-categories" data-jay-node-id="j-0-3-1-1-1">
+              <label class="category-chip {isSelected ? selected}" forEach="productSearch.filters.categoryFilter.categories" trackBy="categoryId" data-jay-node-id="j-0-3-1-1-1-0">
+                <input type="checkbox" ref="productSearch.filters.categoryFilter.categories.isSelected" data-jay-node-id="j-0-3-1-1-1-0-0">
+                {categoryName}
+              </label>
+            </div>
+          </div>
+
+          
+          <div class="filter-group-inline" data-jay-node-id="j-0-3-1-2">
+            <label class="category-chip {productSearch.filters.inStockOnly ? selected}" data-jay-node-id="j-0-3-1-2-0">
+              <input type="checkbox" ref="productSearch.filters.inStockOnly" data-jay-node-id="j-0-3-1-2-0-0">
+              Available Now
+            </label>
+          </div>
+
+          
+          <div class="filter-bar-actions" data-jay-node-id="j-0-3-1-3">
+            <button class="btn btn-ghost btn-sm" ref="productSearch.filters.clearFilters" data-jay-node-id="j-0-3-1-3-0">
+              Clear
+            </button>
+          </div>
+        </div>
+      </div>
+
+      
+      <div class="results-bar" data-jay-node-id="j-0-4">
+        <p class="results-count" data-jay-node-id="j-0-4-0">
+          Showing <strong data-jay-node-id="j-0-4-0-0">{productSearch.resultCount}</strong> pieces
+        </p>
+        <select class="select" ref="productSearch.sortBy.sortDropdown" data-jay-node-id="j-0-4-1">
+          <option value="relevance" data-jay-node-id="j-0-4-1-0">Featured</option>
+          <option value="newest" data-jay-node-id="j-0-4-1-1">New Arrivals</option>
+          <option value="priceAsc" data-jay-node-id="j-0-4-1-2">Price: Low to High</option>
+          <option value="priceDesc" data-jay-node-id="j-0-4-1-3">Price: High to Low</option>
+          <option value="nameAsc" data-jay-node-id="j-0-4-1-4">A to Z</option>
+          <option value="nameDesc" data-jay-node-id="j-0-4-1-5">Z to A</option>
+        </select>
+      </div>
+
+      
+      <div class="empty-container" if="!productSearch.hasResults" data-jay-node-id="j-0-5">
+        <div class="empty-state" data-jay-node-id="j-0-5-0">
+          <div class="empty-state-icon" data-jay-node-id="j-0-5-0-0">✨</div>
+          <h3 class="empty-state-title" data-jay-node-id="j-0-5-0-1">No pieces found</h3>
+          <p class="empty-state-message" data-jay-node-id="j-0-5-0-2">{productSearch.emptyStateMessage}</p>
+        </div>
+      </div>
+
+      
+      <div class="products-container" if="productSearch.hasResults" data-jay-node-id="j-0-6">
+        <div class="products-grid-large" data-jay-node-id="j-0-6-0">
+          <article class="product-card {isAddingToCart ? is-adding}" forEach="productSearch.searchResults" trackBy="_id" data-jay-node-id="j-0-6-0-0">
+            <a href="{productUrl}" class="product-card-image" data-jay-node-id="j-0-6-0-0-0">
+              <img src="{thumbnail.url}" alt="{thumbnail.altText}" loading="lazy" data-jay-node-id="j-0-6-0-0-0-0">
+              
+              
+              <div class="product-image-overlay" data-jay-node-id="j-0-6-0-0-0-1">
+                <h4 class="overlay-name" data-jay-node-id="j-0-6-0-0-0-1-0">{name}</h4>
+                <span class="overlay-price" data-jay-node-id="j-0-6-0-0-0-1-1">{price}</span>
+              </div>
+              
+              
+              <span class="badge badge-accent ribbon" if="hasRibbon" data-jay-node-id="j-0-6-0-0-0-2">{ribbon.name}</span>
+              <span class="badge badge-success stock-badge" if="inventory.availabilityStatus === IN_STOCK" data-jay-node-id="j-0-6-0-0-0-3">
+                In Stock
+              </span>
+              <span class="badge badge-error stock-badge" if="inventory.availabilityStatus === OUT_OF_STOCK" data-jay-node-id="j-0-6-0-0-0-4">
+                Sold Out
+              </span>
+            </a>
+            <div class="product-card-content" data-jay-node-id="j-0-6-0-0-1">
+              <p class="product-card-brand" if="brand.name" data-jay-node-id="j-0-6-0-0-1-0">{brand.name}</p>
+              <h3 class="product-card-name" data-jay-node-id="j-0-6-0-0-1-1">
+                <a href="{productUrl}" ref="productSearch.searchResults.productLink" data-jay-node-id="j-0-6-0-0-1-1-0">{name}</a>
+              </h3>
+              <div class="product-card-price" data-jay-node-id="j-0-6-0-0-1-2">
+                <span class="current-price" data-jay-node-id="j-0-6-0-0-1-2-0">{price}</span>
+                <span class="original-price" if="hasDiscount" data-jay-node-id="j-0-6-0-0-1-2-1">
+                  {strikethroughPrice}
+                </span>
+                <span class="badge badge-error" if="hasDiscount" data-jay-node-id="j-0-6-0-0-1-2-2">Sale</span>
+              </div>
+              
+              
+              <button class="btn btn-secondary btn-block" ref="productSearch.searchResults.addToCartButton" if="quickAddType === SIMPLE && inventory.availabilityStatus === IN_STOCK" data-jay-node-id="j-0-6-0-0-1-3">
+                Add to Cart
+              </button>
+              
+              
+              <div class="quick-options-area" if="quickAddType === SINGLE_OPTION && inventory.availabilityStatus !== OUT_OF_STOCK" data-jay-node-id="j-0-6-0-0-1-4">
+                <span class="select-option-hint" data-jay-node-id="j-0-6-0-0-1-4-0">
+                  Select {quickOption.name}
+                </span>
+                <div class="quick-options-buttons" data-jay-node-id="j-0-6-0-0-1-4-1">
+                  <button class="quick-option-btn {!inStock ? out-of-stock}" forEach="quickOption.choices" trackBy="choiceId" ref="productSearch.searchResults.quickOption.choices.choiceButton" disabled="!inStock" data-jay-node-id="j-0-6-0-0-1-4-1-0">
+                    {name}
+                  </button>
+                </div>
+              </div>
+              
+              
+              <a href="{productUrl}" class="btn btn-secondary btn-block" ref="productSearch.searchResults.viewOptionsButton" if="quickAddType === NEEDS_CONFIGURATION && inventory.availabilityStatus !== OUT_OF_STOCK" data-jay-node-id="j-0-6-0-0-1-5">
+                View Options
+              </a>
+              
+              
+              <button class="btn btn-ghost btn-block" disabled if="inventory.availabilityStatus === OUT_OF_STOCK" data-jay-node-id="j-0-6-0-0-1-6">
+                Sold Out
+              </button>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      
+      <div class="pagination-section" if="productSearch.hasResults" data-jay-node-id="j-0-7">
+        <div class="pagination" data-jay-node-id="j-0-7-0">
+          <span class="pagination-info" data-jay-node-id="j-0-7-0-0">
+            Showing {productSearch.loadedCount} of {productSearch.totalCount} pieces
+          </span>
+        </div>
+
+        <div class="loading-indicator" if="productSearch.isSearching" data-jay-node-id="j-0-7-1">
+          <div class="loading-spinner" data-jay-node-id="j-0-7-1-0"></div>
+        </div>
+
+        <button class="btn btn-secondary" ref="productSearch.loadMoreButton" if="productSearch.hasMore && !productSearch.isSearching" data-jay-node-id="j-0-7-2">
+          Load More Pieces
+        </button>
+        
+        <span class="pagination-info" if="!productSearch.hasMore && productSearch.totalCount > 0" data-jay-node-id="j-0-7-3">
+          All pieces loaded
+        </span>
+      </div>
+    </div>
+  </body>
+</html>

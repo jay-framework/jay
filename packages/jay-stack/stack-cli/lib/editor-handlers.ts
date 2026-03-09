@@ -436,11 +436,26 @@ async function scanLocalPluginNames(projectRoot: string): Promise<string[]> {
 
         for (const entry of entries) {
             if (entry.isDirectory()) {
-                const pluginDir = path.join(localPluginsDir, entry.name);
-                const pluginYamlPath = path.join(pluginDir, 'plugin.yaml');
-
-                if (fs.existsSync(pluginYamlPath)) {
-                    plugins.push(entry.name);
+                if (entry.name.startsWith('@')) {
+                    const scopeDir = path.join(localPluginsDir, entry.name);
+                    const scopeEntries = await fs.promises.readdir(scopeDir, {
+                        withFileTypes: true,
+                    });
+                    for (const scopeEntry of scopeEntries) {
+                        if (scopeEntry.isDirectory()) {
+                            const pluginDir = path.join(scopeDir, scopeEntry.name);
+                            const pluginYamlPath = path.join(pluginDir, 'plugin.yaml');
+                            if (fs.existsSync(pluginYamlPath)) {
+                                plugins.push(`${entry.name}/${scopeEntry.name}`);
+                            }
+                        }
+                    }
+                } else {
+                    const pluginDir = path.join(localPluginsDir, entry.name);
+                    const pluginYamlPath = path.join(pluginDir, 'plugin.yaml');
+                    if (fs.existsSync(pluginYamlPath)) {
+                        plugins.push(entry.name);
+                    }
                 }
             }
         }

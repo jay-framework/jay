@@ -1,0 +1,24 @@
+{
+  "requiredNodes": [
+    { "type": "SECTION" },
+    { "type": "FRAME", "name": "collection-page" },
+    { "type": "FRAME", "name": "site-header" },
+    { "type": "FRAME", "name": "collection-hero" },
+    { "type": "FRAME", "name": "filter-bar" },
+    { "type": "FRAME", "name": "products-container" },
+    { "type": "FRAME", "name": "products-grid-large" },
+    { "type": "FRAME", "name": "product-card" },
+    { "type": "TEXT", "name": "page-title" },
+    { "type": "COMPONENT_SET" },
+    { "type": "COMPONENT" },
+    { "type": "INSTANCE" }
+  ],
+  "requiredBindings": [
+    { "tagPath": ["productSearch", "searchExpression"] },
+    { "tagPath": ["productSearch", "searchButton"] },
+    { "tagPath": ["productSearch", "clearSearchButton"] },
+    { "tagPath": ["productSearch", "sortBy", "sortDropdown"] },
+    { "tagPath": ["productSearch", "loadMoreButton"] },
+    { "tagPath": ["cartIndicator", "cartLink"] }
+  ]
+}

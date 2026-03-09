@@ -1,0 +1,43 @@
+name: cart-indicator
+description: Cart indicator component showing item count, typically used in site header/navigation
+
+tags:
+  # Cart count
+  - tag: itemCount
+    type: data
+    dataType: number
+    phase: fast+interactive
+    description: Total number of items in cart
+    
+  - tag: hasItems
+    type: variant
+    dataType: boolean
+    phase: fast+interactive
+    description: Whether cart has any items
+
+  # Interactive elements
+  - tag: cartButton
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Button to open cart (mini-cart or navigate to cart page)
+    
+  - tag: cartLink
+    type: interactive
+    elementType: HTMLAnchorElement
+    description: Link to cart page
+    
+  # Loading state
+  - tag: isLoading
+    type: variant
+    dataType: boolean
+    phase: fast+interactive
+    description: Whether cart data is loading
+    
+  # Animation trigger for when item is added
+  - tag: justAdded
+    type: variant
+    dataType: boolean
+    phase: fast+interactive
+    description: Briefly true after an item is added (for animation)
+
+
