@@ -49,8 +49,13 @@ export class Variables {
     readonly parent: Variables;
     private readonly children: Record<string, Variables> = {};
     private readonly depth;
-    constructor(currentTypes: JayType, parent: Variables = undefined, depth: number = 0) {
-        this.currentVar = depth === 0 ? 'vs' : 'vs' + depth;
+    constructor(
+        currentTypes: JayType,
+        parent: Variables = undefined,
+        depth: number = 0,
+        customVarName?: string,
+    ) {
+        this.currentVar = customVarName || (depth === 0 ? 'vs' : 'vs' + depth);
         this.currentContext = depth === 0 ? 'context' : 'cx' + depth;
         this.depth = depth;
         this.parent = parent;

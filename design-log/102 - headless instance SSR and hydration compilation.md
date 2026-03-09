@@ -557,3 +557,25 @@ Extend the dev-server tests to cover these pages end-to-end:
 5. `childCompHydrate` correctly scopes coordinate resolution (e.g., `adoptElement('0')` inside instance resolves to `product-card:0/0`)
 6. forEach hydrate uses adopt component for existing items, create component for new items
 7. The generated code type-checks (correct import paths and type references)
+
+## Implementation Results
+
+### Phase 1: Server-Element Target — Completed
+
+**Files changed:**
+- `packages/compiler/compiler-jay-html/lib/expressions/expression-compiler.ts` — Added optional `customVarName` parameter to `Variables` constructor
+- `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts` — Extended `ServerContext`, added `renderServerHeadlessInstance()`, updated `renderServerElement()` and `generateServerElementFile()`
+- `packages/compiler/compiler-jay-html/test/jay-target/generate-server-element.test.ts` — 4 new tests
+
+**New fixture files:**
+- `test/fixtures/contracts/page-with-headless-instance/generated-server-element.ts`
+- `test/fixtures/contracts/page-with-headless-in-foreach/generated-server-element.ts`
+- `test/fixtures/contracts/page-with-headless-in-slow-foreach/generated-server-element.ts`
+- `test/fixtures/contracts/page-with-headless-mixed/generated-server-element.ts`
+
+**Deviations from design:**
+- Added `customVarName` to `Variables` constructor — design didn't specify how to scope the variable name for inline template children. Without this, expressions resolved to `vs.name` (page ViewState) instead of `vs_product_card0.name` (instance ViewState).
+- Added `headlessCoordinateCounters: Map<string, number>` to `ServerContext` — design didn't specify per-scope counters for coordinate refs. Without this, the second slowForEach instance got `product-card:1` instead of `product-card:0` (each scope should reset).
+- Headless instance detection moved BEFORE conditional check in `renderServerElement()` — design didn't specify ordering. A `<jay:xxx if="...">` must be handled by `renderServerHeadlessInstance()` (which handles the `if` internally) rather than by the conditional handler (which would treat the tag as literal HTML).
+
+**Tests: 568/568 passing (4 new + 564 existing, 4 skipped)**

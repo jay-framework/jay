@@ -2700,6 +2700,14 @@ interface ServerContext {
     /** Runtime expression for coordinate prefix inside forEach items (e.g., `vs1.id`).
      *  When set, child coordinates are emitted as `{prefix}/{coordinate}`. */
     coordinatePrefix?: string;
+    /** Contract names from headless imports (for <jay:contract-name> detection) */
+    headlessContractNames: Set<string>;
+    /** Full headless imports (for headless instance compilation) */
+    headlessImports: JayHeadlessImports[];
+    /** Counter for unique headless instance variable names */
+    headlessInstanceCounter: { count: number };
+    /** Per-scope counters for headless instance coordinate refs (contractName -> count) */
+    headlessCoordinateCounters: Map<string, number>;
 }
 
 /** Helper: create a single-line w() statement as a RenderFragment */
@@ -2734,6 +2742,18 @@ function renderServerNode(node: Node, context: ServerContext): RenderFragment {
 
 function renderServerElement(element: HTMLElement, context: ServerContext): RenderFragment {
     const { variables, indent } = context;
+
+    // --- Headless component instance (<jay:contract-name>) ---
+    // Must be checked BEFORE conditional, since a headless instance may have if= attribute
+    // and renderServerHeadlessInstance handles the if= internally.
+    const componentMatch = getComponentName(
+        element.rawTagName,
+        new Set(), // No headful component imports in server-element target
+        context.headlessContractNames,
+    );
+    if (componentMatch !== null && componentMatch.kind === 'headless-instance') {
+        return renderServerHeadlessInstance(element, context, componentMatch.name);
+    }
 
     // --- Conditional (if=) ---
     if (isConditional(element)) {
@@ -2849,6 +2869,134 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
 
     // --- Regular element ---
     return renderServerElementContent(element, context);
+}
+
+/**
+ * Render a headless component instance for the server-element target.
+ * The inline template children are rendered directly (no wrapper element for <jay:xxx>)
+ * using the instance's ViewState from `vs.__headlessInstances[coordinateKey]`.
+ */
+function renderServerHeadlessInstance(
+    element: HTMLElement,
+    context: ServerContext,
+    contractName: string,
+): RenderFragment {
+    const { indent } = context;
+
+    // Find the matching headless import
+    const headlessImport = context.headlessImports.find((h) => h.contractName === contractName);
+    if (!headlessImport) {
+        return new RenderFragment('', Imports.none(), [
+            `No headless import found for contract "${contractName}"`,
+        ]);
+    }
+
+    // Generate unique variable name for this instance's ViewState
+    const idx = context.headlessInstanceCounter.count++;
+    const varName = `vs_${contractName.replace(/-/g, '_')}${idx}`;
+    const viewStateTypeName = headlessImport.rootType.name;
+
+    // Compute coordinate key (same logic as element target's renderHeadlessInstance)
+    const explicitRef = element.attributes.ref;
+    let coordinateRef: string;
+    if (explicitRef) {
+        coordinateRef = explicitRef;
+    } else {
+        // Use per-scope counter keyed by contract name (matches element target's coordinateCounters)
+        const counterKey = contractName;
+        const localIndex = context.headlessCoordinateCounters.get(counterKey) ?? 0;
+        context.headlessCoordinateCounters.set(counterKey, localIndex + 1);
+        coordinateRef = String(localIndex);
+    }
+    const coordinateSuffix = `${contractName}:${coordinateRef}`;
+
+    // Build the __headlessInstances lookup key.
+    // For static instances: 'product-card:0' or 'p1/product-card:0' (with slowForEach prefix)
+    // For forEach instances: runtime expression using comma separator (e.g., vs1._id + ',product-card:0')
+    let instanceKeyExpr: string;
+    let instanceCoordPrefix: string; // For jay-coordinate attributes (slash-separated)
+
+    if (context.coordinatePrefix) {
+        // Inside a forEach or slowForEach — coordinatePrefix is a JS expression
+        // Check if coordinatePrefix is a literal string (slowForEach) or dynamic expression (forEach)
+        const isLiteralPrefix = context.coordinatePrefix.startsWith("'");
+
+        if (isLiteralPrefix) {
+            // slowForEach: coordinatePrefix is like "'p1'" — use slash-separated key
+            const literalValue = context.coordinatePrefix.slice(1, -1); // strip quotes
+            instanceKeyExpr = `'${literalValue}/${coordinateSuffix}'`;
+            instanceCoordPrefix = `'${literalValue}/${coordinateSuffix}'`;
+        } else {
+            // forEach: coordinatePrefix is a dynamic expression — use comma for __headlessInstances key
+            instanceKeyExpr = `${context.coordinatePrefix} + ',${coordinateSuffix}'`;
+            instanceCoordPrefix = `${context.coordinatePrefix} + '/${coordinateSuffix}'`;
+        }
+    } else {
+        // Top-level static instance
+        instanceKeyExpr = `'${coordinateSuffix}'`;
+        instanceCoordPrefix = `'${coordinateSuffix}'`;
+    }
+
+    // Handle `if` condition on the <jay:xxx> tag — uses page ViewState (not instance's)
+    const ifCondition = element.attributes.if;
+
+    // Compile inline template children against the component's ViewState,
+    // using the instance variable name so expressions resolve to vs_product_card0.name etc.
+    const componentVariables = new Variables(headlessImport.rootType, undefined, 0, varName);
+    const childNodes = element.childNodes.filter(
+        (_) => _.nodeType !== NodeType.TEXT_NODE || (_.innerText || '').trim() !== '',
+    );
+
+    if (childNodes.length === 0) {
+        return new RenderFragment('', Imports.none(), [
+            `Headless component instance <jay:${contractName}> must have inline template content`,
+        ]);
+    }
+
+    // Create a context for the inline template with the instance's ViewState and coordinate scope
+    const bodyIndent = ifCondition
+        ? new Indent(indent.curr + '        ') // Inside if + if guard
+        : new Indent(indent.curr + '    '); // Inside if guard only
+    const instanceContext: ServerContext = {
+        ...context,
+        variables: componentVariables,
+        indent: bodyIndent,
+        coordinateCounter: { count: 0 },
+        coordinatePrefix: instanceCoordPrefix,
+        // Don't detect nested headless instances inside headless instances (for now)
+        headlessContractNames: new Set(),
+    };
+
+    // Render inline template children
+    const renderedChildren = mergeServerFragments(
+        childNodes.map((child) => renderServerNode(child, instanceContext)),
+    );
+
+    // Build the guarded block:
+    //   const vs_pc0 = (vs as any).__headlessInstances?.[key] as Type | undefined;
+    //   if (vs_pc0) { ... rendered children ... }
+    const guardIndent = ifCondition ? new Indent(indent.curr + '    ') : indent;
+    const guardedBlock = [
+        `${guardIndent.firstLine}const ${varName} = (vs as any).__headlessInstances?.[${instanceKeyExpr}] as ${viewStateTypeName} | undefined;`,
+        `${guardIndent.firstLine}if (${varName}) {`,
+        renderedChildren.rendered,
+        `${guardIndent.firstLine}}`,
+    ].join('\n');
+
+    // If there's an `if` condition, wrap in the page-level condition first
+    let result: string;
+    if (ifCondition) {
+        const renderedCondition = parseServerCondition(ifCondition, context.variables);
+        result = [
+            `${indent.firstLine}if (${renderedCondition.rendered}) {`,
+            guardedBlock,
+            `${indent.firstLine}}`,
+        ].join('\n');
+    } else {
+        result = guardedBlock;
+    }
+
+    return new RenderFragment(result, renderedChildren.imports, renderedChildren.validations);
 }
 
 /** Merge multiple server fragments, filtering out empty ones. */
@@ -3544,10 +3692,17 @@ export function generateServerElementFile(jayFile: JayHtmlSourceFile): WithValid
         return new WithValidations('', rootElement.validations);
     }
 
+    const headlessImports = jayFile.headlessImports?.filter((h) => !h.key) ?? [];
+    const headlessContractNames = new Set(headlessImports.map((h) => h.contractName));
+
     const context: ServerContext = {
         variables,
         indent: new Indent('    '),
         coordinateCounter: { count: 0 },
+        headlessContractNames,
+        headlessImports,
+        headlessInstanceCounter: { count: 0 },
+        headlessCoordinateCounters: new Map(),
     };
 
     // Render root element with forced coordinate (matches hydrate forceAdopt)
