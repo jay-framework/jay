@@ -425,6 +425,11 @@ describe('Figma Import Fixtures', () => {
             const response2 = (await handlers.onImport(
                 importMsg,
             )) as ImportResponse<FigmaVendorDocument>;
+            if (!response2.success || !response2.vendorDoc) {
+                throw new Error(
+                    `Second import failed for fixture "${fixtureName}": success=${response2.success}, error=${response2.error ?? 'none'}`,
+                );
+            }
             expect(response2.vendorDoc).toEqual(vendorDoc);
 
             // 11. Roundtrip: export and compare semantic equivalence (when meta.mode === 'roundtrip')
