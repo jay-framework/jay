@@ -87,7 +87,7 @@ function _headlessProductCard0Render(
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('article', { class: 'hero-card' }, [
-                e('h2', {}, [dt((vs) => vs.name)]),
+                e('h2', {}, ['Hero Product']),
                 e('span', { class: 'price' }, [dt((vs) => vs.price)]),
                 e('button', {}, ['Add to Cart'], refAddToCart()),
             ]),
@@ -118,7 +118,7 @@ function _headlessProductCard1Render(
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', { class: 'promo' }, [
-                e('h3', {}, [dt((vs) => vs.name)]),
+                e('h3', {}, ['Promo Product']),
                 e('span', { class: 'price' }, [dt((vs) => vs.price)]),
             ]),
         ) as _HeadlessProductCard1Element;

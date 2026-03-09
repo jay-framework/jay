@@ -16,14 +16,14 @@ data:
     <h1>{pageTitle}</h1>
     <jay:product-card productId="123" ref="hero">
         <article class="hero-card">
-            <h2>{name}</h2>
+            <h2>Hero Product</h2>
             <span class="price">{price}</span>
             <button ref="addToCart">Add to Cart</button>
         </article>
     </jay:product-card>
     <jay:product-card productId="prod-promo" ref="promo" if="showPromo">
         <div class="promo">
-            <h3>{name}</h3>
+            <h3>Promo Product</h3>
             <span class="price">{price}</span>
         </div>
     </jay:product-card>

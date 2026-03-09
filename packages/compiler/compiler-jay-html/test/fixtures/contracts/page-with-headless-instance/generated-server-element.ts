@@ -25,12 +25,12 @@ export function renderToStream(
         w(' class="hero-card"');
         w('>');
         w('<h2');
-        w(' jay-coordinate="' + 'product-card:0' + '/0">');
-        w(escapeHtml(String(vs_product_card0.name)));
+        w('>');
+        w('Hero Product');
         w('</h2>');
         w('<span');
         w(' class="price"');
-        w(' jay-coordinate="' + 'product-card:0' + '/1">');
+        w(' jay-coordinate="' + 'product-card:0' + '/0">');
         w(escapeHtml(String(vs_product_card0.price)));
         w('</span>');
         w('<button');
