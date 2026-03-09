@@ -38,6 +38,14 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
         configResolved(_config) {
             config = _config;
             isVite = true;
+            // Auto-enable source ID injection in Vite dev mode unless explicitly configured
+            if (
+                jayContext.jayOptions.injectSourceIds === undefined &&
+                'command' in _config &&
+                _config.command === 'serve'
+            ) {
+                jayContext.jayOptions.injectSourceIds = true;
+            }
         },
         buildStart(opts) {
             // Vite adds additional properties to the plugin context

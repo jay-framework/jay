@@ -50,6 +50,7 @@ export async function generateCodeFromStructure(
     const generationTarget: GenerateTarget =
         jayContext.jayOptions.generationTarget || GenerateTarget.jay;
     const isHydrate = parseJayModuleSpecifier(id).isHydrate === true;
+    const injectSourceIds = jayContext.jayOptions.injectSourceIds ?? false;
     const tsCode =
         format === SourceFileFormat.JayHtml
             ? generateCodeFromJayHtmlFile(
@@ -57,6 +58,7 @@ export async function generateCodeFromStructure(
                   jayFile as JayHtmlSourceFile,
                   generationTarget,
                   isHydrate,
+                  { injectSourceIds },
               )
             : generateCodeFromTsFile(jayContext, mode, jayFile, id, code);
     await writeGeneratedFile(jayContext, context, id, tsCode);
@@ -68,6 +70,7 @@ export function generateCodeFromJayHtmlFile(
     jayFile: JayHtmlSourceFile,
     generationTarget: GenerateTarget,
     isHydrate: boolean = false,
+    compilerOptions?: { injectSourceIds?: boolean },
 ): string {
     switch (mode) {
         case RuntimeMode.MainTrusted:
@@ -75,7 +78,9 @@ export function generateCodeFromJayHtmlFile(
             if (isHydrate) {
                 return checkValidationErrors(generateElementHydrateFile(jayFile, mode));
             }
-            return checkValidationErrors(generateElementFile(jayFile, mode, generationTarget));
+            return checkValidationErrors(
+                generateElementFile(jayFile, mode, generationTarget, compilerOptions),
+            );
         case RuntimeMode.WorkerSandbox:
             return generateElementBridgeFile(jayFile);
         case RuntimeMode.WorkerTrusted:

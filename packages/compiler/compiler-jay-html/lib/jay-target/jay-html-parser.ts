@@ -968,6 +968,7 @@ export async function parseJayFile(
             namespaces,
             headlessImports,
             headLinks,
+            sourceHtml: html,
             css: cssResult.val?.css,
             linkedCssFiles:
                 cssResult.val?.linkedCssFiles.length > 0 ? cssResult.val.linkedCssFiles : undefined,

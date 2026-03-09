@@ -177,6 +177,7 @@ export interface ReadFileAndGenerateElementFileOptions {
     givenFile?: string;
     generateTarget?: GenerateTarget;
     resolver?: JayImportResolver;
+    injectSourceIds?: boolean;
 }
 
 export async function readFileAndGenerateElementFile(
@@ -201,5 +202,8 @@ export async function readFileAndGenerateElementFile(
     );
     if (options?.generateTarget === GenerateTarget.react)
         return generateElementFileReactTarget(parsedFile, importerMode);
-    else return generateElementFile(parsedFile, importerMode);
+    else
+        return generateElementFile(parsedFile, importerMode, {
+            injectSourceIds: options?.injectSourceIds,
+        });
 }
