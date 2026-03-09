@@ -23,14 +23,14 @@ export function renderToStream(
     if (vs_product_card0) {
         w('<article');
         w(' class="hero-card"');
-        w('>');
+        w(' jay-coordinate="' + 'product-card:0' + '/0">');
         w('<h2');
         w('>');
         w('Hero Product');
         w('</h2>');
         w('<span');
         w(' class="price"');
-        w(' jay-coordinate="' + 'product-card:0' + '/0">');
+        w(' jay-coordinate="' + 'product-card:0' + '/1">');
         w(escapeHtml(String(vs_product_card0.price)));
         w('</span>');
         w('<button');

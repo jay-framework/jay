@@ -296,6 +296,11 @@ export const Import = {
     ),
     adoptText: importStatementFragment(JAY_RUNTIME, 'adoptText', ImportsFor.implementation),
     adoptElement: importStatementFragment(JAY_RUNTIME, 'adoptElement', ImportsFor.implementation),
+    childCompHydrate: importStatementFragment(
+        JAY_RUNTIME,
+        'childCompHydrate',
+        ImportsFor.implementation,
+    ),
     hydrateConditional: importStatementFragment(
         JAY_RUNTIME,
         'hydrateConditional',

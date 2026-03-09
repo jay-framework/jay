@@ -32,14 +32,14 @@ export function renderToStream(
         if (vs_product_card0) {
             w('<article');
             w(' class="product-tile"');
-            w('>');
-            w('<h2');
             w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '/product-card:0' + '/0">');
+            w('<h2');
+            w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '/product-card:0' + '/1">');
             w(escapeHtml(String(vs_product_card0.name)));
             w('</h2>');
             w('<span');
             w(' class="price"');
-            w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '/product-card:0' + '/1">');
+            w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '/product-card:0' + '/2">');
             w(escapeHtml(String(vs_product_card0.price)));
             w('</span>');
             w('<button');

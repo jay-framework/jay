@@ -26,14 +26,14 @@ export function renderToStream(vs: PageWithHeadlessMixedViewState, ctx: ServerRe
     if (vs_product_card0) {
         w('<article');
         w(' class="hero-card"');
-        w('>');
+        w(' jay-coordinate="' + 'product-card:hero' + '/0">');
         w('<h2');
         w('>');
         w('Hero Product');
         w('</h2>');
         w('<span');
         w(' class="price"');
-        w(' jay-coordinate="' + 'product-card:hero' + '/0">');
+        w(' jay-coordinate="' + 'product-card:hero' + '/1">');
         w(escapeHtml(String(vs_product_card0.price)));
         w('</span>');
         w('<button');
@@ -49,14 +49,14 @@ export function renderToStream(vs: PageWithHeadlessMixedViewState, ctx: ServerRe
         if (vs_product_card1) {
             w('<div');
             w(' class="promo"');
-            w('>');
+            w(' jay-coordinate="' + 'product-card:promo' + '/0">');
             w('<h3');
             w('>');
             w('Promo Product');
             w('</h3>');
             w('<span');
             w(' class="price"');
-            w(' jay-coordinate="' + 'product-card:promo' + '/0">');
+            w(' jay-coordinate="' + 'product-card:promo' + '/1">');
             w(escapeHtml(String(vs_product_card1.price)));
             w('</span>');
             w('</div>');
@@ -73,14 +73,14 @@ export function renderToStream(vs: PageWithHeadlessMixedViewState, ctx: ServerRe
     if (vs_product_card2) {
         w('<article');
         w(' class="card-a"');
-        w('>');
+        w(' jay-coordinate="' + 'p1/product-card:0' + '/0">');
         w('<h2');
         w('>');
         w('Product A');
         w('</h2>');
         w('<span');
         w(' class="price"');
-        w(' jay-coordinate="' + 'p1/product-card:0' + '/0">');
+        w(' jay-coordinate="' + 'p1/product-card:0' + '/1">');
         w(escapeHtml(String(vs_product_card2.price)));
         w('</span>');
         w('<button');
@@ -98,14 +98,14 @@ export function renderToStream(vs: PageWithHeadlessMixedViewState, ctx: ServerRe
     if (vs_product_card3) {
         w('<article');
         w(' class="card-b"');
-        w('>');
+        w(' jay-coordinate="' + 'p2/product-card:0' + '/0">');
         w('<h3');
         w('>');
         w('Product B');
         w('</h3>');
         w('<span');
         w(' class="price"');
-        w(' jay-coordinate="' + 'p2/product-card:0' + '/0">');
+        w(' jay-coordinate="' + 'p2/product-card:0' + '/1">');
         w(escapeHtml(String(vs_product_card3.price)));
         w('</span>');
         w('</article>');

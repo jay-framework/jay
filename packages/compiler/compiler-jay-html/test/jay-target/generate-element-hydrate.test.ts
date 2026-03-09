@@ -4,6 +4,7 @@ import {
     readFixtureElementHydrateFile,
 } from '../test-utils/file-utils';
 
+
 describe('generate jay-html element hydrate', () => {
     describe('basics', () => {
         it('for simple file with dynamic text', async () => {
@@ -106,6 +107,53 @@ describe('generate jay-html element hydrate', () => {
 
         it('for component in component', async () => {
             const folder = 'components/component-in-component';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+    });
+
+    describe('headless instances', () => {
+it('for page-level headless component', async () => {
+            const folder = 'contracts/page-using-counter';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
+        it('for simple headless instance', async () => {
+            const folder = 'contracts/page-with-headless-instance';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
+        it('for headless instance inside forEach', async () => {
+            const folder = 'contracts/page-with-headless-in-foreach';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
+        it('for headless instance inside slowForEach', async () => {
+            const folder = 'contracts/page-with-headless-in-slow-foreach';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
+        it('for headless instance mixed (child, conditional, slowForEach)', async () => {
+            const folder = 'contracts/page-with-headless-mixed';
             const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
             expect(hydrateFile.validations).toEqual([]);
             expect(await prettify(hydrateFile.val)).toEqual(
