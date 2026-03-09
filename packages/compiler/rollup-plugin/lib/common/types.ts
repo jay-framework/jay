@@ -8,4 +8,5 @@ export interface JayRollupConfig {
     isWorker?: boolean; // only applicable for rollup, vite detects it from worker import
     compilerPatternFiles?: string[];
     generationTarget?: GenerateTarget;
+    injectSourceIds?: boolean;
 }

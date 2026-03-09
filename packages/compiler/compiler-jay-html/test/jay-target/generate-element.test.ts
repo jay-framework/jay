@@ -112,6 +112,23 @@ describe('generate jay-html element', () => {
             expect(elementFile.validations).toEqual([]);
             expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
         });
+
+        it('source ids injection (injectSourceIds: true)', async () => {
+            const folder = 'basics/source-ids';
+            const elementFile = await readFileAndGenerateElementFile(folder, {
+                injectSourceIds: true,
+            });
+            expect(elementFile.validations).toEqual([]);
+            expect(await prettify(elementFile.val)).toEqual(await readFixtureElementFile(folder));
+        });
+
+        it('source ids NOT injected by default', async () => {
+            const folder = 'basics/source-ids';
+            const elementFile = await readFileAndGenerateElementFile(folder);
+            expect(elementFile.validations).toEqual([]);
+            const output = await prettify(elementFile.val);
+            expect(output).not.toContain('data-jay-sid');
+        });
     });
 
     describe('conditions', () => {

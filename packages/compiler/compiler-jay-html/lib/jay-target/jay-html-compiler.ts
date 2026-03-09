@@ -78,6 +78,24 @@ import {
 import { processImportedComponents, renderImports } from './jay-html-compile-imports';
 import { tagToNamespace } from './tag-to-namespace';
 
+export interface JayHtmlCompilerOptions {
+    injectSourceIds?: boolean;
+}
+
+function computeSourceId(charOffset: number, sourceHtml: string): string {
+    let line = 1;
+    let col = 1;
+    for (let i = 0; i < charOffset && i < sourceHtml.length; i++) {
+        if (sourceHtml[i] === '\n') {
+            line++;
+            col = 1;
+        } else {
+            col++;
+        }
+    }
+    return `${line}:${col}`;
+}
+
 interface RecursiveRegionInfo {
     refName: string;
     hasRecurse: boolean;
@@ -122,6 +140,8 @@ interface RenderContext {
     headlessInstanceCounter: { count: number }; // Shared counter for unique naming
     coordinatePrefix: string[]; // Accumulated jayTrackBy values from ancestor slowForEach elements
     coordinateCounters: Map<string, number>; // Scope-level counter per prefix+contractName for unique coordinates
+    injectSourceIds: boolean;
+    sourceHtml: string;
 }
 
 function renderFunctionDeclaration(preRenderType: string): string {
@@ -199,7 +219,8 @@ function renderStyleAttribute(styleString: string, variables: Variables): Render
         .map((_: string) => `style: {${_}}`);
 }
 
-function renderAttributes(element: HTMLElement, { variables }: RenderContext): RenderFragment {
+function renderAttributes(element: HTMLElement, context: RenderContext): RenderFragment {
+    let { variables, injectSourceIds, sourceHtml } = context;
     let attributes = element.attributes;
     let renderedAttributes = [];
     Object.keys(attributes).forEach((attrName) => {
@@ -246,6 +267,13 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
             renderedAttributes.push(attributeExpression.map((_) => `${attrKey}: ${_}`));
         }
     });
+
+    if (injectSourceIds && element.range) {
+        const sourceId = computeSourceId(element.range[0], sourceHtml);
+        renderedAttributes.push(
+            new RenderFragment(`'data-jay-sid': '${sourceId}'`, Imports.none()),
+        );
+    }
 
     return renderedAttributes
         .reduce(
@@ -1350,7 +1378,9 @@ function renderFunctionImplementation(
     namespaces: JayHtmlNamespace[],
     headlessImports: JayHeadlessImports[],
     importerMode: RuntimeMode,
-    headLinks: JayHtmlHeadLink[] = [],
+    headLinks: JayHtmlHeadLink[],
+    sourceHtml: string,
+    compilerOptions?: JayHtmlCompilerOptions,
 ): {
     renderedRefs: string;
     renderedElement: string;
@@ -1402,6 +1432,8 @@ function renderFunctionImplementation(
             headlessInstanceCounter, // Counter for unique naming
             coordinatePrefix: [], // Root has empty coordinate prefix
             coordinateCounters: new Map(), // Scope-level counter for unique coordinates
+            injectSourceIds: compilerOptions?.injectSourceIds ?? false,
+            sourceHtml,
         });
 
         if (needsWrapper) {
@@ -1685,6 +1717,8 @@ function renderBridge(
         headlessInstanceCounter: { count: 0 },
         coordinatePrefix: [],
         coordinateCounters: new Map(),
+        injectSourceIds: false,
+        sourceHtml: '',
     });
     renderedBridge = optimizeRefs(renderedBridge, headlessImports);
 
@@ -1740,6 +1774,8 @@ function renderSandboxRoot(
         headlessInstanceCounter: { count: 0 },
         coordinatePrefix: [],
         coordinateCounters: new Map(),
+        injectSourceIds: false,
+        sourceHtml: '',
     });
     let refsPart =
         renderedBridge.rendered.length > 0
@@ -1836,6 +1872,7 @@ export function generateElementDefinitionFile(
                 jayFile.headlessImports,
                 RuntimeMode.WorkerTrusted,
                 jayFile.headLinks,
+                jayFile.sourceHtml,
             );
         const cssImport = generateCssImport(jayFile);
         const phaseTypes = generatePhaseSpecificTypes(jayFile);
@@ -1875,6 +1912,7 @@ export function generateElementDefinitionFile(
 export function generateElementFile(
     jayFile: JayHtmlSourceFile,
     importerMode: MainRuntimeModes,
+    options?: JayHtmlCompilerOptions,
 ): WithValidations<string> {
     const types = generateTypes(jayFile.types);
     let { renderedRefs, renderedElement, renderedImplementation, usedComponentImports } =
@@ -1887,6 +1925,8 @@ export function generateElementFile(
             jayFile.headlessImports,
             importerMode,
             jayFile.headLinks,
+            jayFile.sourceHtml,
+            options,
         );
     const cssImport = generateCssImport(jayFile);
     const phaseTypes = generatePhaseSpecificTypes(jayFile);
@@ -1989,6 +2029,7 @@ export function generateElementBridgeFile(jayFile: JayHtmlSourceFile): string {
         jayFile.headlessImports,
         RuntimeMode.WorkerSandbox,
         jayFile.headLinks,
+        jayFile.sourceHtml,
     );
     let renderedBridge = renderBridge(
         jayFile.types,
@@ -2102,6 +2143,8 @@ function buildRenderContext(context: HydrateContext): RenderContext {
         headlessInstanceCounter: { count: 0 },
         coordinatePrefix: [],
         coordinateCounters: new Map(),
+        injectSourceIds: false,
+        sourceHtml: '',
     };
 }
 
@@ -2627,6 +2670,7 @@ export function generateElementHydrateFile(
         jayFile.headlessImports,
         importerMode,
         jayFile.headLinks,
+        jayFile.sourceHtml,
     );
     const phaseTypes = generatePhaseSpecificTypes(jayFile);
     const renderedHydrate = renderHydrate(
