@@ -22,8 +22,11 @@ import { Indent } from './indent';
 import { JayHeadlessImports } from './jay-html-source-file';
 import { Variables } from '../expressions/expression-compiler';
 
-const isComponentRef = (ref: Ref) =>
-    ref.elementType instanceof JayComponentType || ref.elementType instanceof JayTypeAlias;
+const isComponentType = (type: JayType): boolean =>
+    type instanceof JayComponentType ||
+    type instanceof JayTypeAlias ||
+    (type instanceof JayUnionType && type.ofTypes.every(isComponentType));
+const isComponentRef = (ref: Ref) => isComponentType(ref.elementType);
 const isCollectionRef = (ref: Ref) => ref.repeated;
 const isComponentCollectionRef = (ref: Ref) => isCollectionRef(ref) && isComponentRef(ref);
 
@@ -47,16 +50,38 @@ export function renderRefsType(
                 .filter((_) => !_.autoRef)
                 .map((ref) => {
                     let referenceType: string;
-                    if (isComponentCollectionRef(ref)) {
-                        referenceType = `${ref.elementType.name}Refs<${ref.viewStateType.name}>`;
-                        componentRefs.set(ref.elementType.name, RefsNeeded.REF_AND_REFS);
+                    if (ref.elementType instanceof JayTypeAlias) {
+                        // Contract type (headless instance) — use directly
+                        referenceType = ref.elementType.name;
+                    } else if (isComponentCollectionRef(ref)) {
+                        if (ref.elementType instanceof JayUnionType) {
+                            for (const t of ref.elementType.ofTypes) {
+                                componentRefs.set(t.name, RefsNeeded.REF_AND_REFS);
+                            }
+                            referenceType = ref.elementType.ofTypes
+                                .map((t) => `${t.name}Refs<${ref.viewStateType.name}>`)
+                                .join(' | ');
+                        } else {
+                            referenceType = `${ref.elementType.name}Refs<${ref.viewStateType.name}>`;
+                            componentRefs.set(ref.elementType.name, RefsNeeded.REF_AND_REFS);
+                        }
                     } else if (isCollectionRef(ref)) {
                         referenceType = `HTMLElementCollectionProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
                         imports = imports.plus(Import.HTMLElementCollectionProxy);
                     } else if (isComponentRef(ref)) {
-                        referenceType = `${ref.elementType.name}Ref<${ref.viewStateType.name}>`;
-                        if (!componentRefs.has(ref.elementType.name))
-                            componentRefs.set(ref.elementType.name, RefsNeeded.REF);
+                        if (ref.elementType instanceof JayUnionType) {
+                            for (const t of ref.elementType.ofTypes) {
+                                if (!componentRefs.has(t.name))
+                                    componentRefs.set(t.name, RefsNeeded.REF);
+                            }
+                            referenceType = ref.elementType.ofTypes
+                                .map((t) => `${t.name}Ref<${ref.viewStateType.name}>`)
+                                .join(' | ');
+                        } else {
+                            referenceType = `${ref.elementType.name}Ref<${ref.viewStateType.name}>`;
+                            if (!componentRefs.has(ref.elementType.name))
+                                componentRefs.set(ref.elementType.name, RefsNeeded.REF);
+                        }
                     } else {
                         referenceType = `HTMLElementProxy<${ref.viewStateType.name}, ${ref.elementType.name}>`;
                         imports = imports.plus(Import.HTMLElementProxy);
@@ -314,36 +339,44 @@ export function optimizeRefs(
     headlessImports: JayHeadlessImports[] = [],
 ): RenderFragment {
     const deDuplicateRefsTree = (refs: RefsTree): RefsTree => {
-        const mergedRefsMap = refs.refs.reduce((refsMap, ref) => {
-            if (refsMap[ref.ref] === ref.ref) {
-                const firstRef: Ref = refsMap[ref.ref];
-                if (!equalJayTypes(firstRef.viewStateType, ref.viewStateType))
+        // Deduplicate refs with the same name at the same tree level.
+        // Same name + different `repeated` → keep both (forEach ref + single ref are separate slots).
+        // Same name + same `repeated` → merge (keep first, union element types).
+        const mergedRefs: Ref[] = [];
+        const seen = new Map<string, Ref>();
+        for (const ref of refs.refs) {
+            const key = `${ref.ref}:${ref.repeated}`;
+            const existing = seen.get(key);
+            if (existing) {
+                if (
+                    existing.viewStateType &&
+                    ref.viewStateType &&
+                    !equalJayTypes(existing.viewStateType, ref.viewStateType)
+                )
                     validations.push(
-                        `invalid usage of refs: the ref [${ref.ref}] is used with two different view types [${firstRef.viewStateType.name}, ${ref.viewStateType.name}]`,
+                        `invalid usage of refs: the ref [${ref.ref}] is used with two different view types [${existing.viewStateType.name}, ${ref.viewStateType.name}]`,
                     );
-                else if (firstRef.repeated !== ref.repeated)
-                    validations.push(
-                        `invalid usage of refs: the ref [${ref.ref}] is used once with forEach and second time without`,
-                    );
-                else {
-                    if (!equalJayTypes(firstRef.elementType, ref.elementType)) {
-                        if (firstRef.elementType instanceof JayUnionType) {
-                            if (!firstRef.elementType.hasType(ref.elementType))
-                                firstRef.elementType = new JayUnionType([
-                                    ...firstRef.elementType.ofTypes,
+                else if (existing.elementType && ref.elementType) {
+                    // Same name + same repeated — merge element types into a union
+                    if (!equalJayTypes(existing.elementType, ref.elementType)) {
+                        if (existing.elementType instanceof JayUnionType) {
+                            if (!existing.elementType.hasType(ref.elementType))
+                                existing.elementType = new JayUnionType([
+                                    ...existing.elementType.ofTypes,
                                     ref.elementType,
                                 ]);
                         } else
-                            firstRef.elementType = new JayUnionType([
-                                firstRef.elementType,
+                            existing.elementType = new JayUnionType([
+                                existing.elementType,
                                 ref.elementType,
                             ]);
                     }
                 }
-            } else refsMap[ref.ref] = ref;
-            return refsMap;
-        }, {});
-        const mergedRefs: Ref[] = Object.values(mergedRefsMap);
+            } else {
+                seen.set(key, ref);
+                mergedRefs.push(ref);
+            }
+        }
         const optimizedChildren = Object.fromEntries(
             Object.entries(refs.children).map(([key, child]) => [key, deDuplicateRefsTree(child)]),
         );

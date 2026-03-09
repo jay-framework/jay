@@ -34,7 +34,7 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
 
     const jayOptions = {
         tsConfigFilePath: './tsconfig.json',
-        outputDir: 'build/jay-runtime',
+        outputDir: 'build',
     };
 
     // Create http server

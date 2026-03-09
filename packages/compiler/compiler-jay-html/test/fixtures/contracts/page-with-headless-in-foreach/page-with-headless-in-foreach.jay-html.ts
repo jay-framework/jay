@@ -16,6 +16,7 @@ import {
     ProductCardViewState,
     ProductCardRefs,
     ProductCardInteractiveViewState,
+    ProductCardRepeatedRefs,
 } from '../product-card/product-card.jay-contract';
 // @ts-ignore
 import { productCard } from '../product-card/product-card';

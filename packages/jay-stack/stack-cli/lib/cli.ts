@@ -7,7 +7,7 @@ import { validateJayFiles, printJayValidationResult } from './validate';
 import {
     materializeContracts,
     listContracts,
-    type ContractsIndex,
+    type PluginsIndex,
 } from '@jay-framework/stack-server-runtime';
 import { createViteForCli } from '@jay-framework/dev-server';
 import { setDevLogger, createDevLogger, getLogger, type LogLevel } from '@jay-framework/logger';
@@ -251,7 +251,7 @@ async function runMaterialize(
         force?: boolean;
         verbose?: boolean;
     },
-    /** Relative path from project root, e.g. 'agent-kit/materialized-contracts' or 'build/materialized-contracts' */
+    /** Relative path from project root, e.g. 'agent-kit/materialized-contracts' */
     defaultOutputRelative: string,
     /** If true, keep the Vite server alive and return it (caller must close) */
     keepViteAlive = false,
@@ -302,11 +302,13 @@ async function runMaterialize(
         );
 
         if (options.yaml) {
-            getLogger().important(YAML.stringify(result.index));
+            getLogger().important(YAML.stringify(result.pluginsIndex));
         } else {
-            getLogger().important(
-                chalk.green(`\n✅ Materialized ${result.index.contracts.length} contracts`),
+            const totalContracts = result.pluginsIndex.plugins.reduce(
+                (sum, p) => sum + p.contracts.length,
+                0,
             );
+            getLogger().important(chalk.green(`\n✅ Materialized ${totalContracts} contracts`));
             getLogger().important(`   Static: ${result.staticCount}`);
             getLogger().important(`   Dynamic: ${result.dynamicCount}`);
             getLogger().important(`   Output: ${result.outputDir}`);
@@ -467,28 +469,20 @@ function printValidationResult(result: ValidationResult, verbose: boolean): void
 /**
  * Pretty prints contract list
  */
-function printContractList(index: ContractsIndex): void {
+function printContractList(index: PluginsIndex): void {
     const logger = getLogger();
     logger.important('\nAvailable Contracts:\n');
 
-    // Group contracts by plugin
-    const byPlugin = new Map<string, typeof index.contracts>();
-    for (const contract of index.contracts) {
-        const existing = byPlugin.get(contract.plugin) || [];
-        existing.push(contract);
-        byPlugin.set(contract.plugin, existing);
-    }
-
-    for (const [plugin, contracts] of byPlugin) {
-        logger.important(chalk.bold(`📦 ${plugin}`));
-        for (const contract of contracts) {
+    for (const plugin of index.plugins) {
+        logger.important(chalk.bold(`📦 ${plugin.name}`));
+        for (const contract of plugin.contracts) {
             const typeIcon = contract.type === 'static' ? '📄' : '⚡';
             logger.important(`   ${typeIcon} ${contract.name}`);
         }
         logger.important('');
     }
 
-    if (index.contracts.length === 0) {
+    if (index.plugins.length === 0) {
         logger.important(chalk.gray('No contracts found.'));
     }
 }

@@ -27,7 +27,6 @@ export interface DynamicComponentInComponentViewState {
 }
 
 export type CounterRef<ParentVS> = MapEventEmitterViewState<ParentVS, ReturnType<typeof Counter>>;
-// @ts-ignore component type not defined because of import error above
 export type CounterRefs<ParentVS> = ComponentCollectionProxy<ParentVS, CounterRef<ParentVS>> &
     OnlyEventEmitters<CounterRef<ParentVS>>;
 

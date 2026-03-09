@@ -27,20 +27,6 @@ const require = createRequire(import.meta.url);
 // Types
 // ============================================================================
 
-export interface ContractIndexEntry {
-    plugin: string;
-    name: string;
-    type: 'static' | 'dynamic';
-    path: string;
-    metadata?: Record<string, unknown>;
-}
-
-export interface ContractsIndex {
-    materialized_at: string;
-    jay_stack_version: string;
-    contracts: ContractIndexEntry[];
-}
-
 /** Action metadata entry in plugins-index.yaml */
 export interface ActionIndexEntry {
     name: string;
@@ -49,24 +35,31 @@ export interface ActionIndexEntry {
     path: string;
 }
 
+/** Contract entry within a plugin in plugins-index.yaml */
+export interface PluginContractEntry {
+    name: string;
+    type: 'static' | 'dynamic';
+    path: string;
+    metadata?: Record<string, unknown>;
+}
+
 /** Entry for plugins-index.yaml (Design Log #85) */
 export interface PluginsIndexEntry {
     name: string;
     path: string;
-    contracts: Array<{ name: string; type: 'static' | 'dynamic'; path: string }>;
+    contracts: PluginContractEntry[];
     /** Actions with .jay-action metadata (exposed to AI agents) */
     actions?: ActionIndexEntry[];
 }
 
 export interface PluginsIndex {
-    materialized_at: string;
     jay_stack_version: string;
     plugins: PluginsIndexEntry[];
 }
 
 export interface MaterializeContractsOptions {
     projectRoot: string;
-    outputDir?: string; // defaults to build/materialized-contracts
+    outputDir?: string; // defaults to agent-kit/materialized-contracts
     force?: boolean;
     dynamicOnly?: boolean;
     pluginFilter?: string;
@@ -76,7 +69,7 @@ export interface MaterializeContractsOptions {
 }
 
 export interface MaterializeResult {
-    index: ContractsIndex;
+    pluginsIndex: PluginsIndex;
     staticCount: number;
     dynamicCount: number;
     outputDir: string;
@@ -324,20 +317,19 @@ export async function materializeContracts(
 ): Promise<MaterializeResult> {
     const {
         projectRoot,
-        outputDir = path.join(projectRoot, 'build', 'materialized-contracts'),
+        outputDir = path.join(projectRoot, 'agent-kit', 'materialized-contracts'),
         dynamicOnly = false,
         pluginFilter,
         verbose = false,
         viteServer,
     } = options;
 
-    const contracts: ContractIndexEntry[] = [];
     /** Per-plugin data for plugins-index.yaml (Design Log #85) */
     const pluginsIndexMap = new Map<
         string,
         {
             path: string;
-            contracts: Array<{ name: string; type: 'static' | 'dynamic'; path: string }>;
+            contracts: PluginContractEntry[];
             actions: ActionIndexEntry[];
         }
     >();
@@ -368,6 +360,16 @@ export async function materializeContracts(
 
         const { manifest } = plugin;
 
+        // Ensure plugin entry exists in plugins index
+        const pluginRelPath = path.relative(projectRoot, plugin.pluginPath);
+        if (!pluginsIndexMap.has(plugin.name)) {
+            pluginsIndexMap.set(plugin.name, {
+                path: './' + pluginRelPath.replace(/\\/g, '/'),
+                contracts: [],
+                actions: [],
+            });
+        }
+
         // Add static contracts to index
         if (!dynamicOnly && manifest.contracts) {
             for (const contract of manifest.contracts) {
@@ -379,29 +381,12 @@ export async function materializeContracts(
 
                 // Make path relative to project root for portability
                 const relativePath = path.relative(projectRoot, contractPath);
-                const entry: ContractIndexEntry = {
-                    plugin: plugin.name,
-                    name: contract.name,
-                    type: 'static',
-                    path: './' + relativePath,
-                };
-                contracts.push(entry);
-                staticCount++;
-
-                // Collect for plugins index
-                const pluginRelPath = path.relative(projectRoot, plugin.pluginPath);
-                if (!pluginsIndexMap.has(plugin.name)) {
-                    pluginsIndexMap.set(plugin.name, {
-                        path: './' + pluginRelPath.replace(/\\/g, '/'),
-                        contracts: [],
-                        actions: [],
-                    });
-                }
                 pluginsIndexMap.get(plugin.name)!.contracts.push({
                     name: contract.name,
                     type: 'static',
                     path: './' + relativePath,
                 });
+                staticCount++;
 
                 if (verbose) {
                     getLogger().info(`   📄 Static: ${contract.name}`);
@@ -448,30 +433,14 @@ export async function materializeContracts(
                         // Make path relative to project root
                         const relativePath = path.relative(projectRoot, filePath);
 
-                        const dynEntry: ContractIndexEntry = {
-                            plugin: plugin.name,
+                        const contractEntry: PluginContractEntry = {
                             name: fullName,
                             type: 'dynamic',
                             path: './' + relativePath,
-                            metadata: generated.metadata,
+                            ...(generated.metadata && { metadata: generated.metadata }),
                         };
-                        contracts.push(dynEntry);
+                        pluginsIndexMap.get(plugin.name)!.contracts.push(contractEntry);
                         dynamicCount++;
-
-                        // Collect for plugins index
-                        const pluginRelPath = path.relative(projectRoot, plugin.pluginPath);
-                        if (!pluginsIndexMap.has(plugin.name)) {
-                            pluginsIndexMap.set(plugin.name, {
-                                path: './' + pluginRelPath.replace(/\\/g, '/'),
-                                contracts: [],
-                                actions: [],
-                            });
-                        }
-                        pluginsIndexMap.get(plugin.name)!.contracts.push({
-                            name: fullName,
-                            type: 'dynamic',
-                            path: './' + relativePath,
-                        });
 
                         if (verbose) {
                             getLogger().info(`   ⚡ Materialized: ${fullName}`);
@@ -503,16 +472,6 @@ export async function materializeContracts(
                 const metadata = loadActionMetadata(metadataFilePath);
                 if (!metadata) continue;
 
-                // Ensure plugin entry exists in plugins index
-                const pluginRelPath = path.relative(projectRoot, plugin.pluginPath);
-                if (!pluginsIndexMap.has(plugin.name)) {
-                    pluginsIndexMap.set(plugin.name, {
-                        path: './' + pluginRelPath.replace(/\\/g, '/'),
-                        contracts: [],
-                        actions: [],
-                    });
-                }
-
                 const actionRelPath = path.relative(projectRoot, metadataFilePath);
                 pluginsIndexMap.get(plugin.name)!.actions.push({
                     name: metadata.name,
@@ -527,21 +486,9 @@ export async function materializeContracts(
         }
     }
 
-    // Write index file (YAML format)
-    const index: ContractsIndex = {
-        materialized_at: new Date().toISOString(),
-        jay_stack_version: getJayStackVersion(),
-        contracts,
-    };
-
-    fs.mkdirSync(outputDir, { recursive: true });
-    const indexPath = path.join(outputDir, 'contracts-index.yaml');
-    fs.writeFileSync(indexPath, YAML.stringify(index), 'utf-8');
-
-    // Write plugins-index.yaml (Design Log #85 - agent kit)
+    // Write plugins-index.yaml (single index file — Design Log #85)
     const pluginsIndex: PluginsIndex = {
-        materialized_at: index.materialized_at,
-        jay_stack_version: index.jay_stack_version,
+        jay_stack_version: getJayStackVersion(),
         plugins: Array.from(pluginsIndexMap.entries()).map(([name, data]) => ({
             name,
             path: data.path,
@@ -549,16 +496,19 @@ export async function materializeContracts(
             ...(data.actions.length > 0 && { actions: data.actions }),
         })),
     };
-    const pluginsIndexPath = path.join(outputDir, 'plugins-index.yaml');
+
+    fs.mkdirSync(outputDir, { recursive: true });
+    // Write plugins-index.yaml to agent-kit/ root (parent of materialized-contracts/)
+    const agentKitDir = path.dirname(outputDir);
+    const pluginsIndexPath = path.join(agentKitDir, 'plugins-index.yaml');
     fs.writeFileSync(pluginsIndexPath, YAML.stringify(pluginsIndex), 'utf-8');
 
     if (verbose) {
-        getLogger().info(`\n✅ Contracts index written to: ${indexPath}`);
-        getLogger().info(`✅ Plugins index written to: ${pluginsIndexPath}`);
+        getLogger().info(`\n✅ Plugins index written to: ${pluginsIndexPath}`);
     }
 
     return {
-        index,
+        pluginsIndex,
         staticCount,
         dynamicCount,
         outputDir,
@@ -568,10 +518,10 @@ export async function materializeContracts(
 /**
  * Lists contracts without writing files (for --list mode)
  */
-export async function listContracts(options: MaterializeContractsOptions): Promise<ContractsIndex> {
+export async function listContracts(options: MaterializeContractsOptions): Promise<PluginsIndex> {
     const { projectRoot, dynamicOnly = false, pluginFilter } = options;
 
-    const contracts: ContractIndexEntry[] = [];
+    const pluginsMap = new Map<string, { path: string; contracts: PluginContractEntry[] }>();
 
     // Scan for plugins using shared scanner
     const plugins = await scanPlugins({
@@ -583,6 +533,13 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
         if (pluginFilter && plugin.name !== pluginFilter && pluginKey !== pluginFilter) continue;
 
         const { manifest } = plugin;
+        const pluginRelPath = path.relative(projectRoot, plugin.pluginPath);
+        if (!pluginsMap.has(plugin.name)) {
+            pluginsMap.set(plugin.name, {
+                path: './' + pluginRelPath.replace(/\\/g, '/'),
+                contracts: [],
+            });
+        }
 
         // Add static contracts
         if (!dynamicOnly && manifest.contracts) {
@@ -595,8 +552,7 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
 
                 const relativePath = path.relative(projectRoot, contractPath);
 
-                contracts.push({
-                    plugin: plugin.name,
+                pluginsMap.get(plugin.name)!.contracts.push({
                     name: contract.name,
                     type: 'static',
                     path: './' + relativePath,
@@ -614,8 +570,7 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
                 : [manifest.dynamic_contracts];
 
             for (const config of dynamicConfigs) {
-                contracts.push({
-                    plugin: plugin.name,
+                pluginsMap.get(plugin.name)!.contracts.push({
                     name: `${config.prefix}/*`,
                     type: 'dynamic',
                     path: '(run materialization to generate)',
@@ -625,8 +580,11 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
     }
 
     return {
-        materialized_at: new Date().toISOString(),
         jay_stack_version: getJayStackVersion(),
-        contracts,
+        plugins: Array.from(pluginsMap.entries()).map(([name, data]) => ({
+            name,
+            path: data.path,
+            contracts: data.contracts,
+        })),
     };
 }

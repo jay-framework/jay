@@ -2,19 +2,57 @@
  * Tool Bridge — converts jay-stack tool descriptors and action metadata
  * to Gemini FunctionDeclarations.
  *
- * Only actions with .jay-action metadata are exposed to the AI agent.
- * Page automation tools (from AutomationAPI) are always included.
+ * Slim declarations (name + description, empty params) are sent so
+ * Gemini knows the exact tool names. When the LLM calls a tool that
+ * hasn't been discovered via get_tool_details, it gets an error
+ * response telling it to discover first. After discovery, the full
+ * declaration replaces the slim one for subsequent calls.
  */
 
 import type { ActionMetadata } from '@jay-framework/stack-server-runtime';
 import type { SerializedToolDef, GeminiFunctionDeclaration } from '../types';
 
 /**
- * Converts page automation tools and server actions into Gemini function declarations.
- *
- * - Client tools are included directly (already have schema).
- * - Server actions are only included if they have .jay-action metadata.
- *   Actions without metadata are silently skipped (opt-in mechanism).
+ * The `get_page_state` meta-tool declaration.
+ * Returns the full untruncated page state on demand. The system prompt
+ * includes a compact (truncated) version; this tool provides the full data
+ * when the LLM needs it (e.g., listing all products).
+ */
+export const PAGE_STATE_TOOL: GeminiFunctionDeclaration = {
+    name: 'get_page_state',
+    description:
+        'Get the full current page state. Use when the compact state in context is insufficient (e.g., to see all items in a truncated list).',
+    parameters: {
+        type: 'object',
+        properties: {},
+    },
+};
+
+/**
+ * The `get_tool_details` meta-tool declaration.
+ * Added to every Gemini call so the LLM can discover full parameter
+ * schemas on demand instead of receiving them all upfront.
+ */
+export const DISCOVERY_TOOL: GeminiFunctionDeclaration = {
+    name: 'get_tool_details',
+    description:
+        'Get full parameter schemas for tools. Call before using tools that need coordinates or specific values.',
+    parameters: {
+        type: 'object',
+        properties: {
+            tool_names: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Names of tools to get details for',
+            },
+        },
+        required: ['tool_names'],
+    },
+};
+
+/**
+ * Converts page automation tools and server actions into full Gemini
+ * function declarations (with complete parameter schemas).
  */
 export function toGeminiTools(
     clientTools: SerializedToolDef[],
@@ -39,6 +77,63 @@ export function toGeminiTools(
     }
 
     return tools;
+}
+
+/**
+ * Converts page automation tools and server actions into slim Gemini
+ * function declarations — name + description only, empty parameters.
+ * Ensures Gemini uses correct tool names. The LLM must call
+ * get_tool_details before using any tool.
+ */
+export function toSlimGeminiTools(
+    clientTools: SerializedToolDef[],
+    serverActions: Array<{ actionName: string; metadata: ActionMetadata }>,
+): GeminiFunctionDeclaration[] {
+    const tools: GeminiFunctionDeclaration[] = [];
+
+    for (const tool of clientTools) {
+        tools.push({
+            name: tool.name,
+            description: tool.description,
+            parameters: { type: 'object', properties: {} },
+        });
+    }
+
+    for (const { actionName, metadata } of serverActions) {
+        tools.push({
+            name: `action_${actionName.replace(/\./g, '_')}`,
+            description: metadata.description,
+            parameters: { type: 'object', properties: {} },
+        });
+    }
+
+    return tools;
+}
+
+/**
+ * Builds a compact text summary of all available tools for the system prompt.
+ * Lists tool names and descriptions, with param names where applicable.
+ */
+export function buildToolSummary(
+    clientTools: SerializedToolDef[],
+    serverActions: Array<{ actionName: string; metadata: ActionMetadata }>,
+): string {
+    const lines: string[] = [];
+
+    for (const tool of clientTools) {
+        const paramNames = Object.keys(tool.inputSchema.properties || {});
+        const paramSuffix = paramNames.length > 0 ? ` (params: ${paramNames.join(', ')})` : '';
+        lines.push(`- ${tool.name}: ${tool.description}${paramSuffix}`);
+    }
+
+    for (const { actionName, metadata } of serverActions) {
+        const toolName = `action_${actionName.replace(/\./g, '_')}`;
+        const paramNames = Object.keys(metadata.inputSchema?.properties || {});
+        const paramSuffix = paramNames.length > 0 ? ` (params: ${paramNames.join(', ')})` : '';
+        lines.push(`- ${toolName}: ${metadata.description}${paramSuffix}`);
+    }
+
+    return lines.join('\n');
 }
 
 /**

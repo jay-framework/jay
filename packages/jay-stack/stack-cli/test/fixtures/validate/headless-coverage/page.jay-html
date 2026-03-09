@@ -1,0 +1,23 @@
+<html>
+<head>
+    <script type="application/jay-headless"
+            plugin="test-widget"
+            contract="test-widget"
+            key="widget"></script>
+    <script type="application/jay-data">
+data:
+    pageTitle: string
+    </script>
+</head>
+<body>
+<div>
+    <h1>{pageTitle}</h1>
+    <h2>{widget.title}</h2>
+    <div>{widget.price}</div>
+    <div forEach="widget.items" trackBy="_id">
+        <span>{name}</span>
+    </div>
+    <button ref="widget.addToCart">Add</button>
+</div>
+</body>
+</html>

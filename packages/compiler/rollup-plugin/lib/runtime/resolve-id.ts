@@ -7,6 +7,7 @@ import {
     GenerateTarget,
     hasExtension,
     JAY_EXTENSION,
+    JAY_QUERY_HYDRATE,
     JAY_QUERY_MAIN_SANDBOX,
     JAY_QUERY_WORKER_TRUSTED_TS,
     parseJayModuleSpecifier,
@@ -215,7 +216,8 @@ export function hasCssImportedByJayHtml(source: string, importer: string | undef
         hasExtension(source, CSS_EXTENSION) &&
         importer &&
         (hasExtension(importer, JAY_EXTENSION, { withTs: true }) ||
-            hasExtension(importer, JAY_EXTENSION + JAY_QUERY_MAIN_SANDBOX, { withTs: true }))
+            hasExtension(importer, JAY_EXTENSION + JAY_QUERY_MAIN_SANDBOX, { withTs: true }) ||
+            hasExtension(importer, JAY_EXTENSION + JAY_QUERY_HYDRATE, { withTs: true }))
     );
 }
 

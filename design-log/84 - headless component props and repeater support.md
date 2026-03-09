@@ -2525,3 +2525,124 @@ Replaced `localIndexAmongSiblings` with a DFS-order scope counter per `(coordina
 - `jay-html-compiler.ts` — added `insideFastForEach: boolean` to `RenderContext`; `renderHeadlessInstance` emits validation error when `insideFastForEach` is true
 - `generate-element.test.ts` — updated `page-with-headless-in-foreach` test to expect the validation error
 - `fake-shop/page.jay-html` — removed `<jay:product-widget>` from fast forEach section
+
+### Bug Fix: Multi-Child Inline Templates
+
+**Date:** March 3, 2026
+
+#### Problem
+
+When a headless component instance has multiple sibling children in its inline template (no single root element), the compiled render function produces invalid JavaScript. The children were merged with commas inside the `ConstructContext.withRootContext` arrow callback, causing JavaScript's comma operator to return only the last expression.
+
+**Example template:**
+
+```html
+<jay:product-widget productId="3" ref="1">
+  <h3>Wireless Headphones</h3>
+  <div>Price: $149.99</div>
+  <div>SKU: HDP-003</div>
+  <span if="inStock">In Stock</span>
+  <span if="!inStock">Out of Stock</span>
+  <button ref="addToCart">Add to Cart</button>
+</jay:product-widget>
+```
+
+**Broken compiled output:**
+
+```typescript
+const render = (viewState) =>
+  ConstructContext.withRootContext(
+    viewState,
+    refManager,
+    () => e('h3', {}, ['Wireless Headphones']), // comma operator — only last value returned
+    e('div', {}, ['Price: $149.99']),
+    // ...
+  );
+```
+
+All existing test fixtures used single-root inline templates (e.g., `<article>...</article>`), so this was not caught.
+
+#### Fix
+
+When the inline template has multiple children, wrap them in a `de('div', {}, [...])` (dynamic element). Uses `de` (not `e`) because children may include conditionals (`c(vs => vs.inStock, ...)`), which require a dynamic element parent for proper update tracking.
+
+**Fixed compiled output:**
+
+```typescript
+const render = (viewState) =>
+  ConstructContext.withRootContext(viewState, refManager, () =>
+    de('div', {}, [
+      e('h3', {}, ['Wireless Headphones']),
+      e('div', {}, ['Price: $149.99']),
+      // ...all children rendered
+    ]),
+  );
+```
+
+Single-child inline templates are unaffected — no wrapping div is added.
+
+#### Files Changed
+
+- `jay-html-compiler.ts` — `renderHeadlessInstance`: wrap multi-child `inlineBody` in `de('div', {}, [...])`
+- `generate-element.test.ts` — new test: "headless component instance with multiple children"
+- New fixture: `test/fixtures/contracts/page-with-headless-multi-child/`
+
+#### Verification
+
+- compiler-jay-html: 562 passed, 4 skipped (566 total)
+- fake-shop: 6 passed
+
+### Bug Fix: Union Component Refs Misclassified as HTML Element Refs
+
+**Date:** March 3, 2026
+
+#### Problem
+
+When multiple headless component instances inside a `slowForEach` share the same auto-ref name (e.g., `0`), the deduplication step in `optimizeRefs` merges their element types into a `JayUnionType`. The `isComponentRef` function only checked for `JayComponentType` and `JayTypeAlias` — not `JayUnionType` — so the merged ref was misclassified as an HTML element ref.
+
+This caused two issues in the generated `.jay-html.ts`:
+
+1. `ReferencesManager.for()` placed the ref in the 2nd array (element collection refs) instead of the 4th array (component collection refs)
+2. The type was generated as `HTMLElementCollectionProxy<VS, Widget0 | Widget1 | Widget2>` instead of `Widget0Refs<VS> | Widget1Refs<VS> | Widget2Refs<VS>`
+
+#### Fix
+
+**`jay-html-compile-refs.ts`:**
+
+- Extracted `isComponentType` helper that recursively handles `JayUnionType` — a union is a component type if all its members are component types
+- `isComponentRef` now delegates to `isComponentType`
+- `renderRefsType`: when generating types for component collection refs with union element types, registers each member component individually and generates a union of their `Refs` types
+- Same handling added for non-collection component refs with union types
+
+**`jay-html-compile-refs.test.ts`:**
+
+- New unit test: "should render component collection refs with union element type"
+
+**New fixture: `test/fixtures/contracts/page-with-headless-mixed/`:**
+
+- Covers all three headless instance placements: direct child, conditional (`if`), and `slowForEach` with shared ref name
+- The `slowForEach` case exercises the union type path: two instances with `ref="0"` get deduplicated into one ref with `JayUnionType`, correctly classified as component collection ref
+
+**`generate-element.test.ts`:**
+
+- New test: "generate element file with headless component instances mixed: child, conditional, slowForEach"
+
+**`headless-instance-context.ts` (stack-client-runtime):**
+
+- `makeHeadlessInstanceComponent` now has an explicit return type matching `makeJayComponent`'s. Previously the `as any` cast leaked to callers. Also removed the `as any` cast on the `makeJayComponent` call itself.
+
+**`ComponentCollectionProxy` type parameter — kept as `Ref` alias:**
+
+- `ComponentCollectionProxy<ParentVS, ComponentRef<ParentVS>>` is correct (not `ReturnType<typeof Component>`). The `Ref` alias applies `MapEventEmitterViewState` which remaps event handler ViewState types to the parent's ViewState — needed for correct `map`/`find` signatures on the collection proxy.
+
+**Use contract types directly for headless instance refs:**
+
+- Headless instance refs now use the contract's `Refs`/`RepeatedRefs` types directly instead of generating per-instance wrapper types (`MapEventEmitterViewState`, `ComponentCollectionProxy`, `OnlyEventEmitters`). This matches the pattern used by key-based headless components (e.g., `page-using-named-counter`).
+- `jay-html-compiler.ts` — `renderHeadlessInstance` creates refs with `JayTypeAlias(contractRefType)` instead of `JayComponentType(componentSymbol)`. Uses `ProductCardRefs` for single refs and `ProductCardRepeatedRefs` for collection refs.
+- `jay-html-compile-refs.ts` — `renderRefsType` handles `JayTypeAlias` refs by using the type name directly (no wrapper types generated, no entry in `componentRefs` map).
+- This eliminates the union type problem entirely: multiple instances of the same contract produce the same `JayTypeAlias` name, so deduplication correctly merges them without creating a union.
+
+#### Verification
+
+- compiler-jay-html: 564 passed, 4 skipped (568 total)
+- stack-client-runtime: 19 passed, builds cleanly with correct types

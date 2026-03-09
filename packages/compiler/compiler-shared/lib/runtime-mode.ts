@@ -14,6 +14,7 @@ export const JAY_QUERY_PREFIX = '?jay-';
 export const JAY_QUERY_MAIN_SANDBOX = `${JAY_QUERY_PREFIX}${RuntimeMode.MainSandbox}`;
 export const JAY_QUERY_WORKER_TRUSTED = `${JAY_QUERY_PREFIX}${RuntimeMode.WorkerTrusted}`;
 export const JAY_QUERY_WORKER_SANDBOX = `${JAY_QUERY_PREFIX}${RuntimeMode.WorkerSandbox}`;
+export const JAY_QUERY_HYDRATE = `${JAY_QUERY_PREFIX}hydrate`;
 
 export const JAY_QUERY_MAIN_SANDBOX_TS = `${JAY_QUERY_PREFIX}${RuntimeMode.MainSandbox}${TS_EXTENSION}`;
 export const JAY_QUERY_WORKER_TRUSTED_TS = `${JAY_QUERY_PREFIX}${RuntimeMode.WorkerTrusted}${TS_EXTENSION}`;

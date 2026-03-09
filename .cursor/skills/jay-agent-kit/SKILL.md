@@ -32,7 +32,7 @@ Read these as needed:
 | Skill                                                              | When to Read                                                                                       |
 | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
 | [jay-html-authoring](../jay-html-authoring/SKILL.md)               | Creating or editing `.jay-html` pages, understanding routing, template syntax, headless components |
-| [jay-contracts-and-plugins](../jay-contracts-and-plugins/SKILL.md) | Reading plugin.yaml, materialized contracts, contracts-index, plugins-index                        |
+| [jay-contracts-and-plugins](../jay-contracts-and-plugins/SKILL.md) | Reading plugin.yaml, materialized contracts, plugins-index                                         |
 | [jay-cli-commands](../jay-cli-commands/SKILL.md)                   | Running `jay-stack params`, `validate`, or `action` commands                                       |
 | [jay-dev-server-test](../jay-dev-server-test/SKILL.md)             | Starting dev server in test mode, smoke testing                                                    |
 

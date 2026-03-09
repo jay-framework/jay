@@ -1,0 +1,25 @@
+import { escapeHtml, type ServerRenderContext } from '@jay-framework/ssr-runtime';
+
+export interface CompositeViewState {
+    text: string;
+    text2: string;
+}
+
+export function renderToStream(vs: CompositeViewState, ctx: ServerRenderContext): void {
+    const { write: w } = ctx;
+    w('<div');
+    w(' jay-coordinate="0">');
+    w('<div');
+    w(' jay-coordinate="1">');
+    w(escapeHtml(String(vs.text)));
+    w('</div>');
+    w('<div');
+    w('>');
+    w('static');
+    w('</div>');
+    w('<div');
+    w(' jay-coordinate="2">');
+    w(escapeHtml(String(vs.text2)));
+    w('</div>');
+    w('</div>');
+}

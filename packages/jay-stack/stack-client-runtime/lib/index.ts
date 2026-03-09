@@ -1,4 +1,5 @@
 export * from './composite-component';
+export * from './hydrate-composite-component';
 export * from './composite-part';
 export * from './headless-instance-context';
 export * from './action-caller';
