@@ -199,6 +199,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 80  | materializing dynamic contracts for agentic generation | CLI and dev server contract materialization for AI agents                             |
 | 81  | dev server test mode                                   | Health/shutdown endpoints and timeout for smoke testing                               |
 | 83  | dev server logging and timing                          | Clean output, verbose mode, timing for render phases                                  |
+| 96  | viewstate query params in dev server                   | Override ViewState via `vs.*` URL query params for design preview                     |
 | 85  | rendering phases and agent kit for agentic generation  | Agent-kit folder: instructions, contracts, markdown content with headless annotations |
 | 91  | WebMCP plugin for jay-stack                            | Generic WebMCP support: automation→tools/resources/prompts, plugin packaging          |
 | 92  | Gemini agent plugin for jay-stack                      | Embedded AI agent: Gemini API, .jay-action metadata, chat contract, page automation   |
@@ -213,6 +214,8 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 88  | variant style extraction for figma import | Dev server variant mode, scenario generation, class-path key matching                                          |
 | 92  | pillar 1 compute styles                   | Query param rendering, developer playground UI, compute styles for Figma import (Pillar 1 master design)       |
 | 93  | import-export workflow pillar 2           | Change detection, sync status, conflict resolution UX, designer-AI roundtrip workflow (Pillar 2 master design) |
+| 101 | POC viewstate params in figma import      | Condition-driven scenario generation using vs.\* query params for per-variant computed style extraction        |
+| 102 | jay-node-id stable element identity       | Vendor-agnostic data-jay-node-id for matching elements across source, rendered DOM, and vendor documents       |
 
 ---
 
@@ -252,7 +255,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ### "I'm working on the dev server"
 
-→ See #26 (jay start), #74 (file watching), #77 (automation integration), #81 (test mode)
+→ See #26 (jay start), #74 (file watching), #77 (automation integration), #81 (test mode), #96 (viewstate query params)
 
 ### "I need to understand security model"
 
@@ -265,7 +268,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ### "I'm working on the Figma import pipeline"
 
-→ See #88 (variant style extraction, scenario generation, key matching), #92 (Pillar 1: query param rendering, playground, compute styles), #93 (Pillar 2: import-export workflow, conflict resolution)
+→ See #88 (variant style extraction, scenario generation, key matching), #92 (Pillar 1: query param rendering, playground, compute styles), #93 (Pillar 2: import-export workflow, conflict resolution), #101 (POC: condition-driven scenarios using vs.\* query params)
 → Also see jay-desktop-poc design logs: `figma-jay-two-way-sync-system-design.md`, `conditional-visibility-in-figma.md`
 
 ### "I need to understand the full workflow lifecycle"

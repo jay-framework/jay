@@ -30,7 +30,7 @@ export interface ComputedStyleData {
 
 /**
  * Map from element key to computed style data.
- * Element key is data-figma-id attribute or DOM path.
+ * Element key is data-jay-node-id attribute or DOM path.
  */
 export type ComputedStyleMap = Map<string, ComputedStyleData>;
 
@@ -55,6 +55,24 @@ export interface VariantScenario {
      * Format: ?tag1=value1&tag2=value2
      */
     queryString: string;
+}
+
+/**
+ * Maps scenario ID to the computed styles extracted for that scenario.
+ * Used to assign per-variant styles to COMPONENT nodes in the IR builder.
+ */
+export type ScenarioStyleMaps = Map<string, ComputedStyleMap>;
+
+/**
+ * Result of computed style enrichment, containing both a merged map
+ * (for general use) and per-scenario maps (for variant-specific styles).
+ */
+export interface EnricherResult {
+    merged: ComputedStyleMap;
+    perScenario: ScenarioStyleMaps;
+    scenarios: VariantScenario[];
+    /** Paths to screenshots taken per scenario (scenario ID → file path). */
+    screenshots: Map<string, string>;
 }
 
 /**
@@ -88,4 +106,10 @@ export interface EnricherOptions {
      * Default: 12
      */
     maxScenarios?: number;
+
+    /**
+     * Directory to save screenshots in. If set, a full-page screenshot is
+     * taken for each scenario after style extraction.
+     */
+    screenshotDir?: string;
 }

@@ -908,6 +908,7 @@ export function createEditorHandlers(
     config: Required<JayConfig>,
     tsConfigPath: string,
     projectRoot: string,
+    devServerUrl?: string,
 ) {
     const onPublish = async (params: PublishMessage): Promise<PublishResponse> => {
         const status: PublishStatus[] = [];
@@ -1248,6 +1249,7 @@ export function createEditorHandlers(
                 pageUrl,
                 projectPage,
                 plugins,
+                { devServerUrl },
             );
 
             getLogger().info(`📥 Imported ${vendorId} document from Jay-HTML: ${jayHtmlPath}`);

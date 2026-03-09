@@ -2,10 +2,7 @@
   "type": "SECTION",
   "name": "test",
   "visible": true,
-  "pluginData": {
-    "jpage": "true",
-    "urlRoute": "/test"
-  },
+  "pluginData": { "jpage": "true", "urlRoute": "/test" },
   "children": [
     {
       "type": "FRAME",
@@ -18,17 +15,7 @@
       "paddingRight": 24,
       "paddingBottom": 24,
       "paddingLeft": 24,
-      "fills": [
-        {
-          "type": "SOLID",
-          "color": {
-            "r": 1,
-            "g": 1,
-            "b": 1
-          },
-          "opacity": 1
-        }
-      ],
+      "fills": [{ "type": "SOLID", "color": { "r": 1, "g": 1, "b": 1 }, "opacity": 1 }],
       "cornerRadius": 12,
       "layoutSizingHorizontal": "FIXED",
       "layoutSizingVertical": "HUG",
@@ -55,10 +42,7 @@
           "pluginData": {
             "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"name\"]}]"
           },
-          "fontName": {
-            "family": "Inter",
-            "style": "Bold"
-          },
+          "fontName": { "family": "Inter", "style": "Bold" },
           "layoutSizingHorizontal": "FILL"
         },
         {
@@ -68,24 +52,11 @@
           "textAutoResize": "WIDTH_AND_HEIGHT",
           "characters": "{product.price}",
           "fontSize": 18,
-          "fills": [
-            {
-              "type": "SOLID",
-              "color": {
-                "r": 0.4,
-                "g": 0.4,
-                "b": 0.4
-              },
-              "opacity": 1
-            }
-          ],
+          "fills": [{ "type": "SOLID", "color": { "r": 0.4, "g": 0.4, "b": 0.4 }, "opacity": 1 }],
           "pluginData": {
             "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"price\"]}]"
           },
-          "fontName": {
-            "family": "Inter",
-            "style": "Regular"
-          },
+          "fontName": { "family": "Inter", "style": "Regular" },
           "layoutSizingHorizontal": "FILL"
         },
         {
@@ -93,8 +64,11 @@
           "name": "img",
           "visible": true,
           "pluginData": {
-            "semanticHtml": "img",
-            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"imageUrl\"],\"attribute\":\"src\"},{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"name\"],\"attribute\":\"alt\"}]"
+            "htmlAttributes": "{\"src\":\"{product.imageUrl}\",\"alt\":\"{product.name}\"}",
+            "imgAlt": "{product.name}",
+            "imgSrc": "{product.imageUrl}",
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"imageUrl\"],\"attribute\":\"src\"},{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"name\"],\"attribute\":\"alt\"}]",
+            "semanticHtml": "img"
           },
           "width": 452,
           "height": 300,
@@ -149,10 +123,7 @@
                   "pluginData": {
                     "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"options\",\"label\"]}]"
                   },
-                  "fontName": {
-                    "family": "Inter",
-                    "style": "Semi Bold"
-                  },
+                  "fontName": { "family": "Inter", "style": "Semi Bold" },
                   "layoutSizingVertical": "FILL"
                 },
                 {
@@ -176,10 +147,7 @@
                   "pluginData": {
                     "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"options\",\"value\"]}]"
                   },
-                  "fontName": {
-                    "family": "Inter",
-                    "style": "Regular"
-                  },
+                  "fontName": { "family": "Inter", "style": "Regular" },
                   "layoutSizingVertical": "FILL"
                 }
               ]

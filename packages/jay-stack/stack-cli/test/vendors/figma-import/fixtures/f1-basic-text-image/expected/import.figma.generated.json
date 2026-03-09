@@ -2,10 +2,7 @@
   "type": "SECTION",
   "name": "test",
   "visible": true,
-  "pluginData": {
-    "jpage": "true",
-    "urlRoute": "/test"
-  },
+  "pluginData": { "jpage": "true", "urlRoute": "/test" },
   "children": [
     {
       "type": "FRAME",
@@ -23,11 +20,7 @@
       "fills": [
         {
           "type": "SOLID",
-          "color": {
-            "r": 0.9607843137254902,
-            "g": 0.9607843137254902,
-            "b": 0.9607843137254902
-          },
+          "color": { "r": 0.9607843137254902, "g": 0.9607843137254902, "b": 0.9607843137254902 },
           "opacity": 1
         }
       ],
@@ -41,21 +34,8 @@
           "characters": "Welcome to Our Store",
           "fontSize": 32,
           "fontWeight": 700,
-          "fills": [
-            {
-              "type": "SOLID",
-              "color": {
-                "r": 0,
-                "g": 0,
-                "b": 0
-              },
-              "opacity": 1
-            }
-          ],
-          "fontName": {
-            "family": "Inter",
-            "style": "Bold"
-          },
+          "fills": [{ "type": "SOLID", "color": { "r": 0, "g": 0, "b": 0 }, "opacity": 1 }],
+          "fontName": { "family": "Inter", "style": "Bold" },
           "layoutSizingHorizontal": "FILL"
         },
         {
@@ -76,14 +56,8 @@
               "opacity": 1
             }
           ],
-          "lineHeight": {
-            "value": 24,
-            "unit": "PIXELS"
-          },
-          "fontName": {
-            "family": "Inter",
-            "style": "Regular"
-          },
+          "lineHeight": { "value": 24, "unit": "PIXELS" },
+          "fontName": { "family": "Inter", "style": "Regular" },
           "layoutSizingHorizontal": "FILL"
         },
         {
@@ -91,6 +65,9 @@
           "name": "img",
           "visible": true,
           "pluginData": {
+            "htmlAttributes": "{\"src\":\"https://placeholder.com/hero.jpg\",\"alt\":\"Hero image\"}",
+            "imgAlt": "Hero image",
+            "imgSrc": "https://placeholder.com/hero.jpg",
             "semanticHtml": "img"
           },
           "width": 536,

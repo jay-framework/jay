@@ -49,6 +49,17 @@ export interface JayHtmlBuildOptions {
      * Page title (defaults to directory name)
      */
     title?: string;
+
+    /**
+     * Original `<style>` content to preserve from the source page.
+     * When set, these styles are emitted in addition to the basic reset.
+     */
+    originalStyles?: string;
+
+    /**
+     * Original `<link>` tags to preserve from the source page (stylesheets, etc.)
+     */
+    originalLinkTags?: string[];
 }
 
 /**
@@ -72,7 +83,10 @@ function generateGoogleFontsLinks(fontFamilies: Set<string>): string {
         return '';
     }
 
-    const families = Array.from(fontFamilies);
+    const families = Array.from(fontFamilies).filter(
+        (f) => !f.startsWith('var(') && !f.startsWith('--'),
+    );
+    if (families.length === 0) return '';
     const googleFontsUrl = `https://fonts.googleapis.com/css2?${families
         .map((family) => {
             const encodedFamily = encodeURIComponent(family).replace(/%20/g, '+');
@@ -141,53 +155,41 @@ export function buildJayHtml(options: JayHtmlBuildOptions): string {
         contractReference,
         headlessComponents = [],
         title = 'Page',
+        originalStyles,
+        originalLinkTags = [],
     } = options;
 
-    // Generate head content
     const fontLinks = generateGoogleFontsLinks(fontFamilies);
     const headlessScripts = generateHeadlessComponentScripts(headlessComponents);
     const jayDataScript = generateJayDataScript(contractData, contractReference);
+    const linkTagsBlock =
+        originalLinkTags.length > 0 ? '\n' + originalLinkTags.map((t) => `  ${t}`).join('\n') : '';
 
-    // Construct the full Jay HTML document
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-${fontLinks}${headlessScripts}
-${jayDataScript}
-  <title>${escapeHtml(title)}</title>
-  <style>
+    const styleBlock = originalStyles
+        ? `  <style>\n${originalStyles}\n  </style>`
+        : `  <style>
     /* Basic reset */
     body { margin: 0; font-family: sans-serif; }
     a { color: inherit; text-decoration: none; }
     a:hover { text-decoration: underline; }
     div { box-sizing: border-box; }
     
-    /* Scrollbar styling for Webkit browsers */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-    
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 4px;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(0, 0, 0, 0.5);
-    }
-    
-    /* Smooth scrolling */
-    * {
-      scroll-behavior: smooth;
-    }
-  </style>
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.3); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.5); }
+    * { scroll-behavior: smooth; }
+  </style>`;
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+${fontLinks}${headlessScripts}
+${jayDataScript}${linkTagsBlock}
+  <title>${escapeHtml(title)}</title>
+${styleBlock}
 </head>
 <body>
 ${bodyHtml}
@@ -247,6 +249,34 @@ export async function buildJayHtmlFromVendorResult(
     const contractFilePath = path.join(pageDirectory, 'page.jay-contract');
     const contractReference = fs.existsSync(contractFilePath) ? './page.jay-contract' : undefined;
 
+    // Preserve original <style> and <link> content from existing page.jay-html
+    let originalStyles: string | undefined;
+    let originalLinkTags: string[] = [];
+    const existingJayHtml = path.join(pageDirectory, 'page.jay-html');
+    if (fs.existsSync(existingJayHtml)) {
+        try {
+            const content = fs.readFileSync(existingJayHtml, 'utf-8');
+            const styleBlocks: string[] = [];
+            const styleRegex = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+            let match;
+            while ((match = styleRegex.exec(content)) !== null) {
+                const inner = match[1].trim();
+                if (inner) styleBlocks.push(inner);
+            }
+            if (styleBlocks.length > 0) {
+                originalStyles = styleBlocks.join('\n\n');
+            }
+
+            const linkRegex = /<link\s+[^>]*rel=["']stylesheet["'][^>]*\/?>/gi;
+            let linkMatch;
+            while ((linkMatch = linkRegex.exec(content)) !== null) {
+                originalLinkTags.push(linkMatch[0].trim());
+            }
+        } catch {
+            // ignore read errors
+        }
+    }
+
     return buildJayHtml({
         bodyHtml: conversionResult.bodyHtml,
         fontFamilies: conversionResult.fontFamilies,
@@ -254,5 +284,7 @@ export async function buildJayHtmlFromVendorResult(
         contractReference,
         headlessComponents,
         title,
+        originalStyles,
+        originalLinkTags,
     });
 }

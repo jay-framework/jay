@@ -35,6 +35,116 @@ import { adaptIRToFigmaVendorDoc } from './import-ir-to-figma-vendor-doc';
  * which is the single source of truth for the vendor document structure.
  */
 
+const SEMANTIC_HTML_TAGS = new Set([
+    'header',
+    'footer',
+    'nav',
+    'main',
+    'section',
+    'article',
+    'aside',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'p',
+    'span',
+    'a',
+    'button',
+    'input',
+    'select',
+    'textarea',
+    'form',
+    'label',
+    'ul',
+    'ol',
+    'li',
+    'dl',
+    'dt',
+    'dd',
+    'table',
+    'thead',
+    'tbody',
+    'tfoot',
+    'tr',
+    'th',
+    'td',
+    'figure',
+    'figcaption',
+    'blockquote',
+    'pre',
+    'code',
+    'details',
+    'summary',
+    'dialog',
+]);
+
+const VOID_ELEMENTS = new Set(['input', 'br', 'hr', 'meta', 'link']);
+
+const TEXT_CONTAINER_TAGS = new Set([
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'p',
+    'span',
+    'label',
+    'a',
+    'button',
+    'li',
+    'dt',
+    'dd',
+    'th',
+    'td',
+    'figcaption',
+    'blockquote',
+    'summary',
+]);
+
+/** Strip dynamic class expressions ({...}) from className to avoid compile errors outside forEach scope */
+function sanitizeClassName(className: string | undefined): string | undefined {
+    if (!className) return undefined;
+    const cleaned = className
+        .replace(/\{[^}]*\}/g, '')
+        .trim()
+        .replace(/\s+/g, ' ');
+    return cleaned || undefined;
+}
+
+/** Recursively extract text from a node tree (for <option> etc.) */
+function extractTextContent(node: FigmaVendorDocument): string {
+    if (node.type === 'TEXT' && node.characters) {
+        return node.characters.trim();
+    }
+    if (node.children) {
+        return node.children.map(extractTextContent).filter(Boolean).join(' ');
+    }
+    return '';
+}
+
+function analyzeTextChildBindings(
+    textNode: FigmaVendorDocument,
+    context: ConversionContext,
+): string | undefined {
+    const bindingsData = getBindingsData(textNode);
+    if (!bindingsData || bindingsData.length === 0) return undefined;
+    const childAnalysis = analyzeBindings(bindingsData, context);
+    if (childAnalysis.dynamicContentPath) return `{${childAnalysis.dynamicContentPath}}`;
+    if (childAnalysis.dualPath) return `{${childAnalysis.dualPath}}`;
+    return undefined;
+}
+
+function resolveHtmlTag(semanticHtml: string | undefined, nodeName: string | undefined): string {
+    if (semanticHtml) return semanticHtml;
+    const name = nodeName?.toLowerCase();
+    if (name && SEMANTIC_HTML_TAGS.has(name)) return name;
+    return 'div';
+}
+
 /**
  * Converts a regular node (non-repeater, non-variant) to Jay HTML
  */
@@ -79,7 +189,6 @@ function convertRegularNode(
 
     // For image semantic nodes, handle specially
     if (semanticHtml === 'img') {
-        // Extract src and alt bindings
         let srcBinding: string | undefined;
         let altBinding: string | undefined;
 
@@ -91,7 +200,14 @@ function convertRegularNode(
             }
         }
 
-        // Check for static image (no src binding)
+        // Fall back to pluginData entries stored during import
+        if (!srcBinding && pluginData?.['imgSrc']) {
+            srcBinding = pluginData['imgSrc'];
+        }
+        if (!altBinding && pluginData?.['imgAlt']) {
+            altBinding = pluginData['imgAlt'];
+        }
+
         let staticImageUrl: string | undefined;
         if (!srcBinding) {
             staticImageUrl = extractStaticImageUrl(node);
@@ -133,9 +249,25 @@ function convertRegularNode(
         styleAttr = `${positionStyle}${sizeStyles}${commonStyles}`;
     }
 
+    // Determine HTML tag: prefer semanticHtml from pluginData, then node.name if it's a known semantic tag
+    const tag = resolveHtmlTag(semanticHtml, node.name);
+    const cssClassName = sanitizeClassName(pluginData?.['className']);
+
+    // When CSS classes are present, they already define layout/styling from the
+    // original stylesheet. Inline styles from computed values would override them
+    // and break the layout (e.g. display:grid → display:flex). Skip inline styles
+    // for elements with classes to preserve the original visual appearance.
+    const effectiveStyle = cssClassName ? '' : styleAttr;
+
     // Build HTML attributes
-    const tag = semanticHtml || 'div';
-    let htmlAttrs = `data-figma-id="${node.id}" data-figma-type="${type.toLowerCase()}" style="${styleAttr}"`;
+    let htmlAttrs = '';
+    if (cssClassName) {
+        htmlAttrs += `class="${cssClassName}" `;
+    }
+    htmlAttrs += `data-jay-node-id="${node.id}"`;
+    if (effectiveStyle) {
+        htmlAttrs += ` style="${effectiveStyle}"`;
+    }
 
     // Add ref attribute
     if (analysis.refPath) {
@@ -149,13 +281,26 @@ function convertRegularNode(
         htmlAttrs += ` ${attr}="{${tagPath}}"`;
     }
 
+    // Fall back to raw HTML attributes stored during import (for bindings that
+    // didn't resolve against the contract but should still be preserved)
+    const rawHtmlAttrs = pluginData?.['htmlAttributes']
+        ? (JSON.parse(pluginData['htmlAttributes']) as Record<string, string>)
+        : undefined;
+    if (rawHtmlAttrs) {
+        const alreadyEmitted = new Set(Array.from(analysis.attributes.keys()));
+        for (const [attr, val] of Object.entries(rawHtmlAttrs)) {
+            if (!alreadyEmitted.has(attr) && attr !== 'style' && attr !== 'class') {
+                htmlAttrs += ` ${attr}="${val}"`;
+            }
+        }
+    }
+
     // Handle based on node type
     if (type === 'RECTANGLE') {
         return convertRectangleToHtml(node, indent);
     } else if (type === 'ELLIPSE') {
         return convertEllipseToHtml(node, indent);
     } else if (type === 'GROUP') {
-        // Groups need special handling for layout
         return convertGroupNode(node, analysis, context, convertNodeToJayHtml);
     } else if (
         type === 'VECTOR' ||
@@ -165,10 +310,32 @@ function convertRegularNode(
         type === 'BOOLEAN_OPERATION'
     ) {
         return convertVectorToHtml(node, indent);
-    } else if (children && children.length > 0) {
-        // Container with children
+    }
+
+    // Void HTML elements (input, br, hr) are self-closing and can't have children
+    if (VOID_ELEMENTS.has(tag)) {
+        return `${indent}<${tag} ${htmlAttrs} />\n`;
+    }
+
+    // <option> elements should emit plain text content, not nested divs
+    if (tag === 'option') {
+        const textContent = extractTextContent(node);
+        return `${indent}<${tag} ${htmlAttrs}>${textContent}</${tag}>\n`;
+    }
+
+    if (children && children.length > 0) {
+        // When a semantic text element (h1-h6, p, span, etc.) with CSS classes
+        // has a single TEXT child, emit the text content directly inside the tag
+        const isTextContainer = TEXT_CONTAINER_TAGS.has(tag) && cssClassName;
+        if (isTextContainer && children.length === 1 && children[0].type === 'TEXT') {
+            const textChild = children[0];
+            const textContent = textChild.characters || '';
+            const childAnalysis = analyzeTextChildBindings(textChild, context);
+            const content = childAnalysis || textContent;
+            return `${indent}<${tag} ${htmlAttrs}>${content}</${tag}>\n`;
+        }
+
         let html = `${indent}<${tag} ${htmlAttrs}>\n`;
-        html += `${indent}  <!-- ${node.name} -->\n`;
 
         const childContext: ConversionContext = {
             ...context,
@@ -181,10 +348,10 @@ function convertRegularNode(
 
         html += `${indent}</${tag}>\n`;
         return html;
-    } else {
-        // Leaf node
-        return `${indent}<!-- ${node.name} (${type}) -->\n`;
     }
+
+    // Leaf nodes with no children and no content - skip
+    return '';
 }
 /**
  * Main converter for Figma nodes to Jay HTML
@@ -207,8 +374,7 @@ function convertNodeToJayHtml(node: FigmaVendorDocument, context: ConversionCont
 
     // Handle Jay Page sections (don't process bindings for top-level sections)
     if (type === 'SECTION' && isJPage) {
-        let html = `${indent}<section data-figma-id="${node.id}" data-page-url="${urlRoute || ''}">\n`;
-        html += `${indent}  <!-- Jay Page: ${name} -->\n`;
+        let html = `${indent}<section data-jay-node-id="${node.id}" data-page-url="${urlRoute || ''}">\n`;
 
         if (children && children.length > 0) {
             const childContext: ConversionContext = {
@@ -298,13 +464,15 @@ function getDebugDir(projectPage: ProjectPage): string | null {
 
 function writeDebugFile(dir: string | null, filename: string, data: unknown): void {
     if (!dir) return;
+    if (data === null || data === undefined) return;
     try {
         const debugDir = path.join(dir, '_debug');
         fs.mkdirSync(debugDir, { recursive: true });
         const filePath = path.join(debugDir, filename);
-        const json = JSON.stringify(data, null, 2);
-        fs.writeFileSync(filePath, json, 'utf-8');
-        console.log(`[Debug] Wrote ${filePath} (${(json.length / 1024).toFixed(1)}KB)`);
+        const isHtml = filename.endsWith('.html');
+        const content = isHtml ? String(data) : JSON.stringify(data, null, 2);
+        fs.writeFileSync(filePath, content, 'utf-8');
+        console.log(`[Debug] Wrote ${filePath} (${(content.length / 1024).toFixed(1)}KB)`);
     } catch (e) {
         console.warn(`[Debug] Failed to write ${filename}:`, (e as Error).message);
     }
@@ -457,9 +625,43 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
         };
     },
 
-    async convertFromJayHtml(parsedJayHtml, pageUrl, projectPage, plugins) {
+    async convertFromJayHtml(parsedJayHtml, pageUrl, projectPage, plugins, options) {
         const debugDir = getDebugDir(projectPage);
         let computedStyleMap;
+        let perScenarioMaps;
+        let enricherScenarios: any[] = [];
+
+        // Annotate elements with data-jay-node-id if missing.
+        // This ensures stable identity across source, rendered DOM, and vendor doc.
+        const { annotateJayNodeIds } = await import('./jay-node-id-annotator');
+        const idsAdded = annotateJayNodeIds(parsedJayHtml.body);
+        if (idsAdded) {
+            console.log('[Import] Added data-jay-node-id to jay-html elements');
+
+            // Write annotated source back to disk so the dev server picks up the IDs
+            if (projectPage.filePath) {
+                try {
+                    const jayHtmlContent = fs.readFileSync(projectPage.filePath, 'utf-8');
+                    const { parse: parseHtml } = await import('node-html-parser');
+                    const fullDoc = parseHtml(jayHtmlContent);
+                    const fileBody = fullDoc.querySelector('body');
+                    if (fileBody) {
+                        annotateJayNodeIds(fileBody);
+                        fs.writeFileSync(projectPage.filePath, fullDoc.toString(), 'utf-8');
+                        console.log(
+                            `[Import] Wrote data-jay-node-id annotations to ${projectPage.filePath}`,
+                        );
+                        // Wait for dev server HMR to detect the file change and recompile
+                        await new Promise((resolve) => setTimeout(resolve, 4000));
+                    }
+                } catch (err) {
+                    console.warn(
+                        '[Import] Could not write annotations back to file:',
+                        (err as Error).message,
+                    );
+                }
+            }
+        }
 
         writeDebugFile(debugDir, 'import-input-body.html', parsedJayHtml.body.outerHTML);
         writeDebugFile(debugDir, 'import-input-css.json', parsedJayHtml.css || null);
@@ -470,27 +672,50 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
                 './computed-style-enricher'
             );
 
-            const devServerUrl = process.env.DEV_SERVER_URL || 'http://localhost:3000';
+            const devServerUrl =
+                options?.devServerUrl || process.env.DEV_SERVER_URL || 'http://localhost:3000';
+            console.log(`[Import] Using dev server URL: ${devServerUrl}`);
             const scenarios = generateVariantScenarios(
                 parsedJayHtml.body,
                 projectPage.contract,
-                12,
+                16,
             );
 
+            writeDebugFile(debugDir, 'import-variant-scenarios.json', scenarios);
+
+            const screenshotDir = debugDir
+                ? path.join(debugDir, '_debug', 'screenshots')
+                : undefined;
+
             console.log('[Import] Computing styles via headless browser...');
-            computedStyleMap = await enrichWithComputedStyles({
+            const enricherResult = await enrichWithComputedStyles({
                 pageRoute: pageUrl,
                 devServerUrl,
                 scenarios,
-                timeout: 10000,
-                maxScenarios: 12,
+                timeout: 30000,
+                maxScenarios: 16,
+                screenshotDir,
             });
+
+            computedStyleMap = enricherResult.merged;
+            perScenarioMaps = enricherResult.perScenario;
+            enricherScenarios = enricherResult.scenarios;
 
             writeDebugFile(
                 debugDir,
                 'import-computed-styles.json',
                 computedStyleMap ? Object.fromEntries(computedStyleMap) : null,
             );
+            if (perScenarioMaps && perScenarioMaps.size > 0) {
+                const perScenarioDebug: Record<string, any> = {};
+                for (const [scenarioId, map] of perScenarioMaps) {
+                    perScenarioDebug[scenarioId] = {
+                        elementCount: map.size,
+                        keys: Array.from(map.keys()).slice(0, 20),
+                    };
+                }
+                writeDebugFile(debugDir, 'import-per-scenario-styles.json', perScenarioDebug);
+            }
         } catch (error) {
             console.warn('[Import] Computed style enrichment failed:', (error as Error).message);
             computedStyleMap = undefined;
@@ -506,6 +731,8 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
                 usedComponents: projectPage.usedComponents,
                 css: parsedJayHtml.css,
                 computedStyleMap,
+                perScenarioMaps,
+                scenarios: enricherScenarios,
             },
         );
 

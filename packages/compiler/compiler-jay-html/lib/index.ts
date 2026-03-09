@@ -16,6 +16,7 @@ export { parseJayFile, getJayHtmlImports } from './jay-target/jay-html-parser';
 export { renderRefsType } from './jay-target/jay-html-compile-refs';
 export { generateTypes } from './jay-target/jay-html-compile-types';
 export { parseIsEnum, parseEnumValues } from './expressions/expression-compiler';
+export { camelCase } from './case-utils';
 export * from './contract';
 export * from './action';
 export { type JayImportResolver } from './jay-target/jay-import-resolver';

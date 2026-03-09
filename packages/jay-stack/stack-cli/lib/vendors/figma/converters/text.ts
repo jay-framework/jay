@@ -1,6 +1,5 @@
-import type { FigmaVendorDocument, Plugin, ProjectPage } from '@jay-framework/editor-protocol';
-import { getPositionStyle, getNodeSizeStyles, getCommonStyles, rgbToHex } from '../utils';
-import type { PageContractPath } from '../pageContractPath';
+import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
+import { getCommonStyles, rgbToHex } from '../utils';
 
 /**
  * Escapes HTML special characters
@@ -31,6 +30,16 @@ export function convertTextNodeToHtml(
     refAttr?: string,
     attributesHtml?: string,
 ): string {
+    const semanticTag = node.pluginData?.['semanticHtml'];
+    const rawClassName = node.pluginData?.['className'];
+    const cssClassName = rawClassName
+        ? rawClassName
+              .replace(/\{[^}]*\}/g, '')
+              .trim()
+              .replace(/\s+/g, ' ') || undefined
+        : undefined;
+    const tag = semanticTag || 'div';
+
     const {
         name,
         id,
@@ -40,7 +49,6 @@ export function convertTextNodeToHtml(
         fontWeight,
         fills,
         textAlignHorizontal,
-        textAlignVertical,
         letterSpacing,
         lineHeight,
         textDecoration,
@@ -48,7 +56,6 @@ export function convertTextNodeToHtml(
         textTruncation,
         maxLines,
         maxWidth,
-        textAutoResize,
         hasMissingFont,
         hyperlinks,
     } = node;
@@ -91,23 +98,6 @@ export function convertTextNodeToHtml(
     // Text alignment
     const textAlign = textAlignHorizontal ? textAlignHorizontal.toLowerCase() : 'left';
     const textAlignStyle = `text-align: ${textAlign};`;
-
-    // Vertical alignment wrapper
-    let verticalAlignWrapperStyle = '';
-    if (textAlignVertical) {
-        verticalAlignWrapperStyle = 'display: flex; flex-direction: column;';
-        switch (textAlignVertical) {
-            case 'TOP':
-                verticalAlignWrapperStyle += 'justify-content: flex-start;';
-                break;
-            case 'CENTER':
-                verticalAlignWrapperStyle += 'justify-content: center;';
-                break;
-            case 'BOTTOM':
-                verticalAlignWrapperStyle += 'justify-content: flex-end;';
-                break;
-        }
-    }
 
     // Letter spacing
     let letterSpacingStyle = '';
@@ -166,16 +156,7 @@ export function convertTextNodeToHtml(
         truncationStyle += `max-width: ${maxWidth}px;`;
     }
 
-    // Position, size, and common styles
-    const positionStyle = getPositionStyle(node);
-    let sizeStyles = getNodeSizeStyles(node);
     const commonStyles = getCommonStyles(node);
-
-    // For text nodes, handle auto-resize height specially
-    if (textAutoResize === 'HEIGHT') {
-        // Override height for auto-resize text
-        sizeStyles = sizeStyles.replace(/height: [^;]+;/, 'height: auto;');
-    }
 
     // Combine all text styles
     const textStyles = `${fontFamilyStyle}${fontSizeStyle}${fontWeightStyle}${colorStyle}${textAlignStyle}${letterSpacingStyle}${lineHeightStyle}${textDecorationStyle}${textTransformStyle}${truncationStyle}`;
@@ -208,25 +189,11 @@ export function convertTextNodeToHtml(
         htmlContent = escapeHtmlContent(characters).replace(/\n/g, '<br>');
     }
 
-    // Build HTML with proper indentation
-    const childIndent = indent + '  ';
-    const innerIndent = indent + '    ';
-
-    const styleAttr = `${positionStyle}${sizeStyles}${commonStyles}${textStyles}`;
     const refString = refAttr || '';
     const attrsString = attributesHtml || '';
+    const classAttr = cssClassName ? ` class="${cssClassName}"` : '';
+    const effectiveStyle = cssClassName ? '' : `${commonStyles}${textStyles}`;
+    const styleStr = effectiveStyle ? ` style="${effectiveStyle}"` : '';
 
-    if (verticalAlignWrapperStyle) {
-        // With vertical alignment wrapper
-        return (
-            `${indent}<div data-figma-id="${id}"${refString}${attrsString} style="${styleAttr}${verticalAlignWrapperStyle}">\n` +
-            `${childIndent}<div style="${textStyles}">\n` +
-            `${innerIndent}${htmlContent}\n` +
-            `${childIndent}</div>\n` +
-            `${indent}</div>\n`
-        );
-    } else {
-        // Simple text div
-        return `${indent}<div data-figma-id="${id}"${refString}${attrsString} style="${styleAttr}">${htmlContent}</div>\n`;
-    }
+    return `${indent}<${tag}${classAttr} data-jay-node-id="${id}"${refString}${attrsString}${styleStr}>${htmlContent}</${tag}>\n`;
 }

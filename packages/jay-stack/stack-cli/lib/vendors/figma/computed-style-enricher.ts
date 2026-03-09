@@ -2,22 +2,24 @@
  * Computed style enricher using Playwright headless browser.
  *
  * Extracts getComputedStyle() + getBoundingClientRect() for all elements with
- * data-figma-id attributes. Closes CSS fidelity gaps that static parsing cannot
- * solve: cascade, inheritance, shorthand expansion, computed values.
+ * data-jay-node-id attributes. Closes CSS fidelity gaps that static parsing
+ * cannot solve: cascade, inheritance, shorthand expansion, computed values.
  */
 
 import { createHash } from 'crypto';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { createRequire } from 'module';
 import { join } from 'path';
 import type { HTMLElement } from 'node-html-parser';
-import type { Contract } from '@jay-framework/editor-protocol';
+import type { Contract, ContractTag } from '@jay-framework/editor-protocol';
 import type {
     ComputedStyleMap,
     ComputedStyleData,
     EnricherOptions,
+    EnricherResult,
     VariantScenario,
 } from './computed-style-types';
+import { tokenizeCondition } from './condition-tokenizer';
 
 /**
  * Check if Playwright is available in the current environment.
@@ -36,19 +38,25 @@ export function isPlaywrightAvailable(): boolean {
 /**
  * Enrich with computed styles using headless browser rendering.
  *
- * @param options - Enricher options (page route, dev server URL, scenarios)
- * @returns Map from element key to computed style data
+ * Returns an EnricherResult containing:
+ * - merged: all styles merged across scenarios (backward-compatible)
+ * - perScenario: per-scenario style maps for variant-specific style assignment
+ * - scenarios: the scenarios that were rendered
  *
- * If Playwright is unavailable or rendering fails, returns empty map.
+ * If Playwright is unavailable or rendering fails, returns empty result.
  * The IR builder will fall back to static resolution.
  */
-export async function enrichWithComputedStyles(
-    options: EnricherOptions,
-): Promise<ComputedStyleMap> {
+export async function enrichWithComputedStyles(options: EnricherOptions): Promise<EnricherResult> {
+    const emptyResult: EnricherResult = {
+        merged: new Map(),
+        perScenario: new Map(),
+        scenarios: [],
+        screenshots: new Map(),
+    };
     const startTime = Date.now();
 
     if (process.env.ENABLE_COMPUTED_STYLES === '0') {
-        return new Map();
+        return emptyResult;
     }
 
     if (!isPlaywrightAvailable()) {
@@ -56,7 +64,7 @@ export async function enrichWithComputedStyles(
             '[ComputedStyles] Computed style enrichment requires playwright. Please run: npm install -D playwright',
         );
         console.warn('[ComputedStyles] Falling back to static resolution');
-        return new Map();
+        return emptyResult;
     }
 
     // Check cache first (if enabled via env var)
@@ -67,7 +75,12 @@ export async function enrichWithComputedStyles(
             console.log(
                 `[ComputedStyles] ✓ Cache hit for ${options.pageRoute} (${cached.size} elements)`,
             );
-            return cached;
+            return {
+                merged: cached,
+                perScenario: new Map(),
+                scenarios: [],
+                screenshots: new Map(),
+            };
         }
     }
 
@@ -78,15 +91,16 @@ export async function enrichWithComputedStyles(
         // Launch headless browser
         const browser = await chromium.launch({
             headless: true,
-            timeout: options.timeout ?? 5000,
+            timeout: options.timeout ?? 30000,
         });
 
         try {
-            const context = await browser.newContext();
+            const context = await browser.newContext({
+                viewport: { width: 1280, height: 900 },
+            });
             const page = await context.newPage();
 
-            // Set timeout
-            const timeout = options.timeout ?? 5000;
+            const timeout = options.timeout ?? 30000;
             page.setDefaultTimeout(timeout);
 
             const scenarios =
@@ -95,9 +109,13 @@ export async function enrichWithComputedStyles(
                     : [{ id: 'default', contractValues: {}, queryString: '' }];
 
             const mergedStyleMap = new Map<string, ComputedStyleData>();
-            let totalElements = 0;
+            const perScenarioMaps = new Map<string, ComputedStyleMap>();
+            const screenshots = new Map<string, string>();
 
-            // Render each scenario
+            if (options.screenshotDir) {
+                mkdirSync(options.screenshotDir, { recursive: true });
+            }
+
             for (const scenario of scenarios) {
                 const scenarioStart = Date.now();
                 const url = `${options.devServerUrl}${options.pageRoute}${scenario.queryString}`;
@@ -105,15 +123,27 @@ export async function enrichWithComputedStyles(
 
                 try {
                     await page.goto(url, {
-                        waitUntil: 'networkidle',
+                        waitUntil: 'domcontentloaded',
                         timeout,
                     });
+                    // Wait for client-side rendering to settle
+                    await page.waitForTimeout(3000);
 
-                    // Extract computed styles for this scenario
+                    if (options.screenshotDir) {
+                        const safeName = scenario.id.replace(/[^a-zA-Z0-9_-]/g, '_');
+                        const screenshotPath = join(
+                            options.screenshotDir,
+                            `screenshot-${safeName}.png`,
+                        );
+                        await page.screenshot({ path: screenshotPath, fullPage: true });
+                        screenshots.set(scenario.id, screenshotPath);
+                        console.log(`[ComputedStyles] Screenshot saved: ${screenshotPath}`);
+                    }
+
                     const scenarioStyleMap = await extractComputedStyles(page, scenario.id);
-                    totalElements = scenarioStyleMap.size;
 
-                    // Merge into main map
+                    perScenarioMaps.set(scenario.id, scenarioStyleMap);
+
                     for (const [key, data] of scenarioStyleMap) {
                         mergedStyleMap.set(key, data);
                     }
@@ -127,7 +157,6 @@ export async function enrichWithComputedStyles(
                     console.warn(
                         `[ComputedStyles] Scenario '${scenario.id}' failed: ${err.message}`,
                     );
-                    // Continue with other scenarios
                 }
             }
 
@@ -136,7 +165,6 @@ export async function enrichWithComputedStyles(
                 `[ComputedStyles] ✓ Enriched ${mergedStyleMap.size} total elements across ${scenarios.length} scenario(s) in ${totalDuration}ms`,
             );
 
-            // Warn if enrichment took too long
             if (totalDuration > 30000) {
                 console.warn(
                     `[ComputedStyles] ⚠ Enrichment took ${(totalDuration / 1000).toFixed(1)}s (budget: 30s for complex pages)`,
@@ -147,13 +175,12 @@ export async function enrichWithComputedStyles(
                 );
             }
 
-            // Write to cache if enabled
             if (enableCache) {
                 tryWriteCache(options.pageRoute, options.scenarios, mergedStyleMap);
             }
 
             await context.close();
-            return mergedStyleMap;
+            return { merged: mergedStyleMap, perScenario: perScenarioMaps, scenarios, screenshots };
         } finally {
             await browser.close();
         }
@@ -168,7 +195,7 @@ export async function enrichWithComputedStyles(
         }
         console.warn(`[ComputedStyles] ✗ Enrichment failed after ${duration}ms: ${err.message}`);
         console.warn('[ComputedStyles] Falling back to static resolution');
-        return new Map();
+        return emptyResult;
     }
 }
 
@@ -263,11 +290,9 @@ function tryWriteCache(
  */
 async function extractComputedStyles(
     page: any, // Playwright Page type
-    variantContext?: string,
+    _variantContext?: string,
 ): Promise<ComputedStyleMap> {
-    // Extract computed styles for all elements with data-figma-id
     const extractedData = await page.evaluate(() => {
-        // List of CSS properties to extract (relevant to Figma import)
         const properties = [
             'display',
             'position',
@@ -291,6 +316,9 @@ async function extractComputedStyles(
             'margin-bottom',
             'margin-left',
             'background-color',
+            'background-image',
+            'text-align',
+            'overflow',
             'color',
             'font-family',
             'font-size',
@@ -315,83 +343,18 @@ async function extractComputedStyles(
             'text-transform',
         ];
 
-        /**
-         * Generate deterministic DOM path for an element.
-         * Format: tag:nth-child(N) > tag:nth-child(M) > ...
-         */
-        function generateDomPath(element: any): string {
-            const segments: string[] = [];
-            let current: any = element;
-
-            while (current && current !== document.body) {
-                const parent = current.parentElement;
-                if (!parent) break;
-
-                const siblings = Array.from(parent.children);
-                const index = siblings.indexOf(current) + 1;
-                const tag = current.tagName.toLowerCase();
-
-                // Add semantic anchors if available
-                const id = current.getAttribute('id');
-                const ref = current.getAttribute('ref');
-
-                if (id) {
-                    segments.unshift(`${tag}#${id}`);
-                } else if (ref) {
-                    segments.unshift(`${tag}[ref="${ref}"]`);
-                } else {
-                    segments.unshift(`${tag}:nth-child(${index})`);
-                }
-
-                current = parent;
-            }
-
-            return segments.join(' > ');
-        }
-
         const result: Array<{
             key: string;
             styles: Record<string, string>;
             boundingRect: { x: number; y: number; width: number; height: number };
         }> = [];
 
-        // Query all elements with data-figma-id
-        const elementsWithFigmaId = document.querySelectorAll('[data-figma-id]');
+        // Single pass: all elements with data-jay-node-id
+        const elements = document.querySelectorAll('[data-jay-node-id]');
 
-        for (const element of Array.from(elementsWithFigmaId)) {
-            const figmaId = element.getAttribute('data-figma-id');
-            if (!figmaId) continue;
-
-            const htmlElement = element as any;
-            const computedStyle = window.getComputedStyle(htmlElement);
-            const rect = htmlElement.getBoundingClientRect();
-
-            const styles: Record<string, string> = {};
-            for (const prop of properties) {
-                const value = computedStyle.getPropertyValue(prop);
-                if (value && value !== 'none' && value !== 'normal' && value !== '0px') {
-                    styles[prop] = value;
-                }
-            }
-
-            result.push({
-                key: figmaId,
-                styles,
-                boundingRect: {
-                    x: rect.x,
-                    y: rect.y,
-                    width: rect.width,
-                    height: rect.height,
-                },
-            });
-        }
-
-        // Also query elements without data-figma-id (developer-authored pages)
-        // Use DOM path as fallback key
-        const allElements = document.querySelectorAll('body *');
-
-        for (const element of Array.from(allElements)) {
-            if (element.getAttribute('data-figma-id')) continue; // Skip elements with figma-id
+        for (const element of Array.from(elements)) {
+            const jayNodeId = element.getAttribute('data-jay-node-id');
+            if (!jayNodeId) continue;
 
             const htmlElement = element as any;
             const computedStyle = window.getComputedStyle(htmlElement);
@@ -400,29 +363,21 @@ async function extractComputedStyles(
             const styles: Record<string, string> = {};
             for (const prop of properties) {
                 const value = computedStyle.getPropertyValue(prop);
-                if (value && value !== 'none' && value !== 'normal' && value !== '0px') {
+                if (value && value !== 'none' && value !== 'normal') {
                     styles[prop] = value;
                 }
             }
 
-            const domPath = generateDomPath(element);
-
             result.push({
-                key: domPath,
+                key: jayNodeId,
                 styles,
-                boundingRect: {
-                    x: rect.x,
-                    y: rect.y,
-                    width: rect.width,
-                    height: rect.height,
-                },
+                boundingRect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
             });
         }
 
         return result;
     });
 
-    // Build ComputedStyleMap from extracted data
     const styleMap = new Map<string, ComputedStyleData>();
     for (const item of extractedData) {
         styleMap.set(item.key, {
@@ -431,65 +386,164 @@ async function extractComputedStyles(
         });
     }
 
-    // Normalize CSS-selector keys to index-based keys to match buildDomPath format.
-    // The browser wraps content in <div id="target">, so enricher keys look like
-    // "div#target > div:nth-child(1) > header:nth-child(1)" while the IR builder
-    // produces "body>0>0". Add index-based aliases so lookups succeed.
-    const targetPrefix = /^div#target\s*>\s*/;
-    for (const [key, data] of Array.from(styleMap.entries())) {
-        if (!targetPrefix.test(key)) continue;
-
-        const pathAfterTarget = key.replace(targetPrefix, '');
-        const segments = pathAfterTarget.split(/\s*>\s*/);
-        const indices: number[] = [];
-        let valid = true;
-
-        for (const segment of segments) {
-            const nthMatch = segment.match(/:nth-child\((\d+)\)/);
-            if (nthMatch) {
-                indices.push(parseInt(nthMatch[1], 10) - 1);
-            } else {
-                valid = false;
-                break;
-            }
-        }
-
-        if (valid && indices.length > 0) {
-            const indexKey = `body>${indices.join('>')}`;
-            if (!styleMap.has(indexKey)) {
-                styleMap.set(indexKey, data);
-            }
-        }
-    }
-
     return styleMap;
 }
 
 /**
- * Generate variant scenarios from page contract and if conditions.
+ * Parse a dataType string from editor-protocol Contract into structured info.
+ * Handles: "string", "number", "boolean", "enum (val1 | val2 | ...)"
+ */
+export function parseDataTypeString(dataType: string | undefined): {
+    kind: 'boolean' | 'enum' | 'string' | 'number' | 'other';
+    enumValues?: string[];
+} {
+    if (!dataType) return { kind: 'other' };
+    const trimmed = dataType.trim().toLowerCase();
+    if (trimmed === 'boolean') return { kind: 'boolean' };
+    if (trimmed === 'string') return { kind: 'string' };
+    if (trimmed === 'number') return { kind: 'number' };
+
+    // "enum (val1 | val2 | val3)" or "enum(val1 | val2)"
+    const enumMatch = dataType.match(/^enum\s*\(([^)]+)\)/i);
+    if (enumMatch) {
+        const values = enumMatch[1]
+            .split('|')
+            .map((v) => v.trim())
+            .filter(Boolean);
+        if (values.length > 0) return { kind: 'enum', enumValues: values };
+    }
+    return { kind: 'other' };
+}
+
+/**
+ * Find a contract tag by path in the editor-protocol Contract.
+ * Uses case-insensitive comparison for tag names.
+ */
+function findEditorProtocolTag(
+    path: string[],
+    tags: ContractTag[] | undefined,
+): ContractTag | undefined {
+    if (!tags || path.length === 0) return undefined;
+
+    for (let i = 0; i < path.length; i++) {
+        const segment = path[i];
+        const matchingTag = tags.find(
+            (t) => t.tag.toLowerCase().replace(/\s+/g, '') === segment.toLowerCase(),
+        );
+        if (!matchingTag) return undefined;
+        if (i === path.length - 1) return matchingTag;
+        tags = matchingTag.tags;
+    }
+    return undefined;
+}
+
+/**
+ * Compute an integer that satisfies a comparison operator against a threshold.
+ * Returns the simplest integer that makes the expression true.
+ */
+function valueForComparison(op: string, threshold: number): number {
+    switch (op) {
+        case '>':
+            return threshold + 1;
+        case '>=':
+            return threshold;
+        case '<':
+            return threshold - 1;
+        case '<=':
+            return threshold;
+        default:
+            return threshold;
+    }
+}
+
+/**
+ * Determine the override value that makes a single condition token TRUE.
  *
- * Scans the page for `if` attributes and generates permutations of contract
- * values to render different variant states.
+ * Handles every condition pattern found in real jay-html templates:
+ * - Boolean truthy/negated:  `isSearching` → "true", `!isSearching` → "false"
+ * - String truthy/negated:   `brand.name` → "Sample", `!imageUrl` → "" (empty)
+ * - Number truthy:           `itemCount` → "1"
+ * - Equality:                `mediaType == IMAGE` → "IMAGE"
+ * - Inequality:              `mediaType != IMAGE` → first alternative enum value
+ * - Comparison:              `itemCount > 0` → "1", `count >= 5` → "5"
+ */
+function tokenToOverrideValue(
+    token: ReturnType<typeof tokenizeCondition>[number],
+    contractTags: ContractTag[] | undefined,
+): { tagPath: string; value: string } | undefined {
+    if (token.isComputed || token.path.length === 0) return undefined;
+
+    const tagPath = token.path.join('.');
+    const tag = findEditorProtocolTag(token.path, contractTags);
+    const dataType = parseDataTypeString(tag?.dataType);
+
+    if (token.operator === '==' && token.comparedValue != null) {
+        return { tagPath, value: token.comparedValue };
+    }
+
+    if (token.operator === '!=' && token.comparedValue != null) {
+        if (dataType.kind === 'enum' && dataType.enumValues) {
+            const other = dataType.enumValues.find((v) => v !== token.comparedValue);
+            if (other) return { tagPath, value: other };
+        }
+        if (dataType.kind === 'boolean') {
+            return { tagPath, value: token.comparedValue === 'true' ? 'false' : 'true' };
+        }
+        return undefined;
+    }
+
+    // Comparison operators: >, <, >=, <=
+    if (token.operator && token.comparedValue != null) {
+        const threshold = parseFloat(token.comparedValue);
+        if (!isNaN(threshold)) {
+            const val = valueForComparison(token.operator, threshold);
+            return { tagPath, value: String(val) };
+        }
+        return undefined;
+    }
+
+    // Truthy / negated (no operator)
+    if (!token.operator) {
+        if (dataType.kind === 'boolean') {
+            return { tagPath, value: token.isNegated ? 'false' : 'true' };
+        }
+        if (dataType.kind === 'number') {
+            return { tagPath, value: token.isNegated ? '0' : '1' };
+        }
+        if (dataType.kind === 'string') {
+            return { tagPath, value: token.isNegated ? '' : 'Sample' };
+        }
+        // Unknown type — assume truthy needs "true", negated needs "false"
+        // (best effort for tags not found in contract)
+        return { tagPath, value: token.isNegated ? '' : 'true' };
+    }
+
+    return undefined;
+}
+
+/**
+ * Generate variant scenarios driven by the actual `if` conditions in the template.
+ *
+ * Each `if` condition becomes exactly one scenario containing all the `vs.*`
+ * overrides needed to make that condition true. Compound conditions
+ * (e.g. `isSearching && hasResults`) produce a single scenario with multiple
+ * overrides. This is neither linear nor combinatorial — it's **condition-driven**:
+ * only the value combinations that the template actually checks are rendered.
  *
  * @param bodyDom - Parsed HTML body element
  * @param pageContract - Page contract with tag definitions
- * @param maxScenarios - Maximum number of scenarios to generate (default 12)
- * @returns Array of variant scenarios
+ * @param maxScenarios - Maximum number of scenarios to generate (default 16)
+ * @returns Array of variant scenarios with vs.* query strings
  */
 export function generateVariantScenarios(
     bodyDom: HTMLElement,
     pageContract: Contract | undefined,
-    maxScenarios: number = 12,
+    maxScenarios: number = 16,
 ): VariantScenario[] {
-    // TODO: Implement full scenario generation in a follow-up
-    // For now, return empty array (only default scenario will be rendered)
-    // This requires parsing Contract dataType strings to extract enum values
-
     if (!pageContract || !pageContract.tags || pageContract.tags.length === 0) {
         return [];
     }
 
-    // Scan for if attributes to see if we need scenarios
     const ifConditions = new Set<string>();
     scanForIfAttributes(bodyDom, ifConditions);
 
@@ -497,11 +551,71 @@ export function generateVariantScenarios(
         return [];
     }
 
+    // Always include the default scenario
+    const scenarios: VariantScenario[] = [{ id: 'default', contractValues: {}, queryString: '' }];
+
+    // Dedup: avoid generating identical scenarios for the same override set
+    const seenIds = new Set<string>(['default']);
+
+    for (const condition of ifConditions) {
+        if (scenarios.length >= maxScenarios) break;
+
+        const tokens = tokenizeCondition(condition);
+        if (tokens.length === 0) continue;
+
+        // Build the set of overrides that make this condition true
+        const overrides: Record<string, string> = {};
+        let allResolved = true;
+
+        for (const token of tokens) {
+            const override = tokenToOverrideValue(token, pageContract.tags);
+            if (!override) {
+                allResolved = false;
+                continue;
+            }
+            overrides[override.tagPath] = override.value;
+        }
+
+        if (Object.keys(overrides).length === 0) continue;
+
+        // Build scenario ID from sorted overrides (deterministic)
+        const sortedEntries = Object.entries(overrides).sort(([a], [b]) => a.localeCompare(b));
+        const scenarioId = sortedEntries.map(([k, v]) => `${k}=${v}`).join('&');
+
+        if (seenIds.has(scenarioId)) continue;
+        seenIds.add(scenarioId);
+
+        const queryString =
+            '?' + sortedEntries.map(([k, v]) => `vs.${k}=${encodeURIComponent(v)}`).join('&');
+
+        const contractValues: Record<string, string | number | boolean> = {};
+        for (const [k, v] of sortedEntries) contractValues[k] = v;
+
+        scenarios.push({
+            id: scenarioId,
+            contractValues,
+            queryString,
+        });
+
+        if (!allResolved) {
+            console.log(
+                `[ComputedStyles] Condition "${condition}" partially resolved (some tokens are computed expressions)`,
+            );
+        }
+    }
+
+    const conditionCount = ifConditions.size;
+    const scenarioCount = scenarios.length - 1; // exclude default
     console.log(
-        `[ComputedStyles] Found ${ifConditions.size} if conditions, but scenario generation not yet implemented`,
+        `[ComputedStyles] ${conditionCount} if condition(s) → ${scenarioCount} scenario(s) + default`,
     );
-    console.log(`[ComputedStyles] Will render default scenario only`);
-    return [];
+    for (const s of scenarios) {
+        if (s.id !== 'default') {
+            console.log(`[ComputedStyles]   ${s.id}  →  ${s.queryString}`);
+        }
+    }
+
+    return scenarios;
 }
 
 /**

@@ -70,10 +70,12 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
     }
 
     // Set up editor server callbacks
+    const devServerUrl = `http://localhost:${devServerPort}`;
     const handlers = createEditorHandlers(
         resolvedConfig,
         jayOptions.tsConfigFilePath,
         process.cwd(),
+        devServerUrl,
     );
     editorServer.onPublish(handlers.onPublish);
     editorServer.onSaveImage(handlers.onSaveImage);

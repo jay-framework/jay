@@ -15,43 +15,22 @@
     a:hover { text-decoration: underline; }
     div { box-sizing: border-box; }
     
-    /* Scrollbar styling for Webkit browsers */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
-    }
-    
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    
-    ::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.3);
-      border-radius: 4px;
-    }
-    
-    ::-webkit-scrollbar-thumb:hover {
-      background: rgba(0, 0, 0, 0.5);
-    }
-    
-    /* Smooth scrolling */
-    * {
-      scroll-behavior: smooth;
-    }
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.3); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(0, 0, 0, 0.5); }
+    * { scroll-behavior: smooth; }
   </style>
 </head>
 <body>
-  <div data-figma-id="page-frame" data-figma-type="frame" style="width: 1200px;height: 800px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
-    <!-- Product Page -->
-    <!-- Hero Image (FRAME) -->
-    <div data-figma-id="product-title" style="width: 1000px;height: 60px;font-family: 'Roboto', sans-serif;font-size: 48px;font-weight: 700;color: #000000;text-align: left;">{product.name}</div>
-    <div data-figma-id="product-price" style="width: 200px;height: 40px;font-family: 'Roboto', sans-serif;font-size: 32px;font-weight: 500;color: #000000;text-align: left;">{product.price}</div>
-    <div id="reviews-repeater" data-figma-id="reviews-repeater" data-figma-type="frame-repeater" style="width: 1200px;height: 200px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
+  <div data-jay-node-id="page-frame" style="width: 1200px;height: 800px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
+    <div data-jay-node-id="product-title" style="font-family: 'Roboto', sans-serif;font-size: 48px;font-weight: 700;color: #000000;text-align: left;">{product.name}</div>
+    <div data-jay-node-id="product-price" style="font-family: 'Roboto', sans-serif;font-size: 32px;font-weight: 500;color: #000000;text-align: left;">{product.price}</div>
+    <div id="reviews-repeater" data-jay-node-id="reviews-repeater" style="width: 1200px;height: 200px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
       <div style="position: relative; width: 100%;" forEach="product.reviews" trackBy="id">
-        <div data-figma-id="review-card" data-figma-type="frame" style="width: 1200px;height: 80px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
-          <!-- Review -->
-          <div data-figma-id="reviewer-name" style="width: 300px;height: 24px;font-family: 'Roboto', sans-serif;font-size: 18px;font-weight: 600;color: #000000;text-align: left;">{author}</div>
-          <div data-figma-id="review-text" style="width: 1000px;height: 40px;font-family: 'Roboto', sans-serif;font-size: 14px;font-weight: 400;color: #000000;text-align: left;">{comment}</div>
+        <div data-jay-node-id="review-card" style="width: 1200px;height: 80px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
+          <div data-jay-node-id="reviewer-name" style="font-family: 'Roboto', sans-serif;font-size: 18px;font-weight: 600;color: #000000;text-align: left;">{author}</div>
+          <div data-jay-node-id="review-text" style="font-family: 'Roboto', sans-serif;font-size: 14px;font-weight: 400;color: #000000;text-align: left;">{comment}</div>
         </div>
       </div>
     </div>
