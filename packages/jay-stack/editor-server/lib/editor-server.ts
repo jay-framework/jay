@@ -102,6 +102,8 @@ export class EditorServer implements DevServerProtocol {
         });
 
         // Create Socket.io server
+        // Generous ping settings to survive long-running import operations
+        // (Playwright computed style extraction + IR building can take 15-30s)
         this.io = new SocketIOServer(this.httpServer, {
             cors: {
                 origin: ALLOWED_ORIGINS,
@@ -110,6 +112,8 @@ export class EditorServer implements DevServerProtocol {
             },
             allowEIO3: true,
             maxHttpBufferSize: this.maxBufferSize,
+            pingTimeout: 120_000,
+            pingInterval: 30_000,
         });
 
         // Setup Socket.io event handlers
