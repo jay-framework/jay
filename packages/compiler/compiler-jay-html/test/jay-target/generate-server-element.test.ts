@@ -92,7 +92,7 @@ it('for simple headless instance', async () => {
                 await readFixtureServerElementFile(folder),
             );
         });
-        
+
         it('for headless instance inside slowForEach', async () => {
             const folder = 'contracts/page-with-headless-in-slow-foreach';
             const serverFile = await readFileAndGenerateServerElementFile(folder);

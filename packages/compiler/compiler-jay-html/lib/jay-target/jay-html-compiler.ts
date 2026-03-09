@@ -2697,9 +2697,14 @@ interface ServerContext {
     variables: Variables;
     indent: Indent;
     coordinateCounter: { count: number };
-    /** Runtime expression for coordinate prefix inside forEach items (e.g., `vs1.id`).
-     *  When set, child coordinates are emitted as `{prefix}/{coordinate}`. */
+    /** Runtime expression for coordinate prefix inside forEach items (e.g., `escapeAttr(String(vs1.id))`).
+     *  When set, child coordinates are emitted as `{prefix}/{coordinate}`.
+     *  Uses escapeAttr for HTML attribute safety in jay-coordinate values. */
     coordinatePrefix?: string;
+    /** Runtime expression for raw (unescaped) coordinate prefix inside forEach items.
+     *  Used for __headlessInstances key lookups which use raw values, not HTML-escaped ones.
+     *  For slowForEach (literal prefix), this equals coordinatePrefix. */
+    rawCoordinatePrefix?: string;
     /** Contract names from headless imports (for <jay:contract-name> detection) */
     headlessContractNames: Set<string>;
     /** Full headless imports (for headless instance compilation) */
@@ -2799,15 +2804,20 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
         // For nested forEach, chain: `outerPrefix + '/' + escapeAttr(String(innerTrackBy))`.
         const trackByExpr = `${forEachVariables.currentVar}.${trackBy}`;
         const itemPrefixExpr = `escapeAttr(String(${trackByExpr}))`;
+        const rawItemPrefixExpr = `String(${trackByExpr})`;
         const coordinatePrefix = context.coordinatePrefix
             ? `${context.coordinatePrefix} + '/' + ${itemPrefixExpr}`
             : itemPrefixExpr;
+        const rawCoordinatePrefix = context.rawCoordinatePrefix
+            ? `${context.rawCoordinatePrefix} + '/' + ${rawItemPrefixExpr}`
+            : rawItemPrefixExpr;
         const itemContext: ServerContext = {
             ...context,
             variables: forEachVariables,
             indent: itemIndent,
             coordinateCounter: { count: 0 },
             coordinatePrefix,
+            rawCoordinatePrefix,
         };
         const openTag = renderServerOpenTag(element, itemContext, null);
         // Item root coordinate: for nested forEach, prefix with parent scope.
@@ -2858,6 +2868,8 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
                 variables: slowForEachVariables,
                 indent,
                 coordinatePrefix,
+                rawCoordinatePrefix: coordinatePrefix, // For literal prefix, raw === escaped
+                headlessCoordinateCounters: new Map(), // Reset per slowForEach item
             };
             return renderServerElementContent(element, itemContext);
         }
@@ -2927,8 +2939,10 @@ function renderServerHeadlessInstance(
             instanceKeyExpr = `'${literalValue}/${coordinateSuffix}'`;
             instanceCoordPrefix = `'${literalValue}/${coordinateSuffix}'`;
         } else {
-            // forEach: coordinatePrefix is a dynamic expression — use comma for __headlessInstances key
-            instanceKeyExpr = `${context.coordinatePrefix} + ',${coordinateSuffix}'`;
+            // forEach: use raw (unescaped) prefix for __headlessInstances key lookup,
+            // escaped prefix for jay-coordinate attributes
+            const rawPrefix = context.rawCoordinatePrefix || context.coordinatePrefix;
+            instanceKeyExpr = `${rawPrefix} + ',${coordinateSuffix}'`;
             instanceCoordPrefix = `${context.coordinatePrefix} + '/${coordinateSuffix}'`;
         }
     } else {

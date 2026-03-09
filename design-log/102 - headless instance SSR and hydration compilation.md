@@ -578,4 +578,9 @@ Extend the dev-server tests to cover these pages end-to-end:
 - Added `headlessCoordinateCounters: Map<string, number>` to `ServerContext` — design didn't specify per-scope counters for coordinate refs. Without this, the second slowForEach instance got `product-card:1` instead of `product-card:0` (each scope should reset).
 - Headless instance detection moved BEFORE conditional check in `renderServerElement()` — design didn't specify ordering. A `<jay:xxx if="...">` must be handled by `renderServerHeadlessInstance()` (which handles the `if` internally) rather than by the conditional handler (which would treat the tag as literal HTML).
 
+**Phase 1 review fixes:**
+- **Bug fix**: forEach `__headlessInstances` key now uses raw `String(vs1._id)` instead of `escapeAttr(String(vs1._id))`. Added `rawCoordinatePrefix` to `ServerContext` to track unescaped prefix separately from the HTML-escaped `coordinatePrefix`.
+- **Bug fix**: slowForEach `headlessCoordinateCounters` now reset per item (`new Map()` in slowForEach itemContext). Second item correctly uses `p2/product-card:0` instead of `p2/product-card:1`.
+- **Fixture accuracy**: Updated jay-html fixtures to reflect post-slow-render state — `{name}` (phase:slow) resolved to literals ("Hero Product", "Promo Product"). Updated both jay-html source files and element target fixture files.
+
 **Tests: 568/568 passing (4 new + 564 existing, 4 skipped)**

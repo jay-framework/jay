@@ -52,7 +52,7 @@ export function renderToStream(
     w('</div>');
     w('<div');
     w('>');
-    const vs_product_card1 = (vs as any).__headlessInstances?.['p2/product-card:1'] as
+    const vs_product_card1 = (vs as any).__headlessInstances?.['p2/product-card:0'] as
         | ProductCardViewState
         | undefined;
     if (vs_product_card1) {
@@ -65,7 +65,7 @@ export function renderToStream(
         w('</h3>');
         w('<span');
         w(' class="price"');
-        w(' jay-coordinate="' + 'p2/product-card:1' + '/0">');
+        w(' jay-coordinate="' + 'p2/product-card:0' + '/0">');
         w(escapeHtml(String(vs_product_card1.price)));
         w('</span>');
         w('</article>');

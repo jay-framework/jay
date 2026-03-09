@@ -27,7 +27,7 @@ export function renderToStream(
         w(' class="grid"');
         w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '">');
         const vs_product_card0 = (vs as any).__headlessInstances?.[
-            escapeAttr(String(vs1._id)) + ',product-card:0'
+            String(vs1._id) + ',product-card:0'
         ] as ProductCardViewState | undefined;
         if (vs_product_card0) {
             w('<article');
