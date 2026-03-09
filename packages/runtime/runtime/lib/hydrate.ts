@@ -9,7 +9,15 @@ import {
     withContext,
     wrapWithModifiedCheck,
 } from './context';
-import { BaseJayElement, MountFunc, updateFunc, noopMount, noopUpdate } from './element-types';
+import {
+    BaseJayElement,
+    JayComponent,
+    JayComponentConstructor,
+    MountFunc,
+    updateFunc,
+    noopMount,
+    noopUpdate,
+} from './element-types';
 import { normalizeMount, normalizeUpdates, type Attributes } from './element';
 import type { PrivateRef } from './node-reference';
 
@@ -456,6 +464,66 @@ export function hydrateForEach<ViewState, Item>(
         mount,
         unmount,
     };
+}
+
+// ============================================================================
+// childCompHydrate
+// ============================================================================
+
+/**
+ * Hydration-aware child component instantiation.
+ *
+ * Like childComp, but extends the current ConstructContext's coordinateBase
+ * with the instance's coordinate key before calling the component factory.
+ * This scopes coordinate resolution so that adoptElement('0') inside the
+ * child's inline template resolves to '{instanceCoordinate}/0' in the
+ * page's coordinate map.
+ *
+ * Used for headless component instances during hydration. The child
+ * component's preRender calls ConstructContext.withHydrationChildContext()
+ * which inherits the scoped coordinateBase.
+ *
+ * @param compCreator - Component factory (from makeHeadlessInstanceComponent)
+ * @param getProps - Extracts component props from parent ViewState
+ * @param instanceCoordinate - The instance's coordinate key (e.g., 'product-card:0')
+ * @param ref - Optional ref for the component instance
+ */
+export function childCompHydrate<
+    ParentVS,
+    Props,
+    ChildT,
+    ChildElement extends BaseJayElement<ChildT>,
+    ChildComp extends JayComponent<Props, ChildT, ChildElement>,
+>(
+    compCreator: JayComponentConstructor<Props>,
+    getProps: (t: ParentVS) => Props,
+    instanceCoordinate: string,
+    ref?: PrivateRef<ParentVS, ChildComp>,
+): BaseJayElement<ParentVS> {
+    const context = currentConstructionContext();
+    const childContext = context.forInstance(instanceCoordinate);
+
+    // Run the component factory within the scoped context
+    return withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => {
+        const childComp = compCreator(getProps(context.currData as ParentVS));
+        const updates: updateFunc<ParentVS>[] = [
+            (t: ParentVS) => childComp.update(getProps(t)),
+        ];
+        const mounts: MountFunc[] = [childComp.mount];
+        const unmounts: MountFunc[] = [childComp.unmount];
+        if (ref) {
+            updates.push(ref.update);
+            ref.set(childComp as any);
+            mounts.push(ref.mount);
+            unmounts.push(ref.unmount);
+        }
+        return {
+            dom: childComp.element.dom,
+            update: normalizeUpdates(updates),
+            mount: normalizeMount(mounts),
+            unmount: normalizeMount(unmounts),
+        };
+    });
 }
 
 /**

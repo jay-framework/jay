@@ -190,6 +190,25 @@ export class ConstructContext<ViewState> {
             this._rootElement,
         );
     }
+
+    /**
+     * Create a child context scoped to a headless instance's coordinate prefix.
+     * Extends coordinateBase with the instance segments (e.g., 'product-card:0'
+     * splits into ['product-card:0']), sharing the parent's coordinateMap.
+     *
+     * Used by childCompHydrate to scope coordinate resolution before calling
+     * the component factory.
+     */
+    forInstance(instanceCoordinate: string) {
+        const segments = instanceCoordinate.split('/');
+        return new ConstructContext(
+            this.data,
+            false,
+            [...this.coordinateBase, ...segments],
+            this._coordinateMap,
+            this._rootElement,
+        );
+    }
     forAsync<ChildViewState>(childViewState: ChildViewState) {
         return new ConstructContext(
             childViewState,
@@ -249,6 +268,37 @@ export class ConstructContext<ViewState> {
     ): JayElement<ViewState, Refs> {
         let context = new ConstructContext(viewState);
         let element = withContext(CONSTRUCTION_CONTEXT_MARKER, context, () =>
+            wrapWithModifiedCheck(currentConstructionContext().currData, elementConstructor()),
+        );
+        element.mount();
+        return refManager.applyToElement(element);
+    }
+
+    /**
+     * Hydrate a child component's inline template within the parent's coordinate scope.
+     *
+     * Like withRootContext, but inherits the coordinateBase and coordinateMap from
+     * the current (parent) ConstructContext. This allows adoptElement/adoptText calls
+     * inside the child to resolve coordinates scoped to the child's prefix.
+     *
+     * Used by headless component instances during hydration: the parent pushes a
+     * scoped context (via childCompHydrate), and the child's preRender calls this
+     * method which inherits the scoped coordinateBase.
+     */
+    static withHydrationChildContext<ViewState, Refs>(
+        viewState: ViewState,
+        refManager: ReferencesManager,
+        elementConstructor: () => BaseJayElement<ViewState>,
+    ): JayElement<ViewState, Refs> {
+        const parentContext = currentConstructionContext();
+        const context = new ConstructContext(
+            viewState,
+            false,
+            parentContext?.coordinateBase || [],
+            parentContext?._coordinateMap,
+            parentContext?._rootElement,
+        );
+        const element = withContext(CONSTRUCTION_CONTEXT_MARKER, context, () =>
             wrapWithModifiedCheck(currentConstructionContext().currData, elementConstructor()),
         );
         element.mount();

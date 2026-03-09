@@ -584,3 +584,20 @@ Extend the dev-server tests to cover these pages end-to-end:
 - **Fixture accuracy**: Updated jay-html fixtures to reflect post-slow-render state — `{name}` (phase:slow) resolved to literals ("Hero Product", "Promo Product"). Updated both jay-html source files and element target fixture files.
 
 **Tests: 568/568 passing (4 new + 564 existing, 4 skipped)**
+
+### Phase 2: Runtime — Completed
+
+**Files changed:**
+- `packages/runtime/runtime/lib/context.ts` — Added `forInstance(instanceCoordinate)` method on `ConstructContext` (extends coordinateBase with instance segments, shares coordinateMap). Added `withHydrationChildContext` static method (inherits coordinateBase and coordinateMap from parent context).
+- `packages/runtime/runtime/lib/hydrate.ts` — Added `childCompHydrate(compCreator, getProps, instanceCoordinate, ref)` function. Uses `context.forInstance()` to scope coordinate resolution before calling the component factory.
+- `packages/runtime/runtime/lib/index.ts` — Exported `childCompHydrate`.
+
+**New test file:**
+- `packages/runtime/runtime/test/lib/hydration/child-comp-hydrate.test.ts` — 3 tests:
+  - Scopes coordinate resolution to instance prefix (`product-card:0/0` via `adoptElement('0')`)
+  - Multi-segment coordinate prefix (`p1/product-card:0/0` for slowForEach)
+  - Does not interfere with parent coordinate resolution (elements before and after `childCompHydrate` adopt correctly)
+
+**No deviations from design.**
+
+**Tests: 240/240 passing (3 new + 237 existing, 3 skipped)**
