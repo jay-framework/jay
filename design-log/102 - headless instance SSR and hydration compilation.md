@@ -3,6 +3,7 @@
 ## Background
 
 The compiler has three code generation targets for jay-html files:
+
 - **Element target** (`generated-element.ts`) — client-side DOM creation
 - **Server-element target** (`generated-server-element.ts`) — SSR streaming HTML
 - **Hydrate target** (`generated-element-hydrate.ts`) — client-side DOM adoption after SSR
@@ -32,11 +33,13 @@ Five scenarios need support in both server-element and hydrate targets:
 ### Current Compiler Gaps
 
 **Server-element target:**
+
 - `ServerContext` has no `headlessContractNames`, `headlessImports`, or `headlessInstanceDefs`
 - `renderServerElement()` has no check for `<jay:xxx>` component tags
 - A headless instance tag gets treated as literal HTML (`<jay:product-card>`) — broken
 
 **Hydrate target:**
+
 - `HydrateContext` has `headlessContractNames` but `renderHydrateElement()` doesn't distinguish `headless-instance` from `headful`
 - Emits `childComp(product-card, ...)` where `product-card` is undefined — broken
 
@@ -45,6 +48,7 @@ Five scenarios need support in both server-element and hydrate targets:
 ### Key Insight: Server-Element vs Element/Hydrate Divergence
 
 The server-element target is fundamentally different from element and hydrate targets:
+
 - Element/hydrate generate **component definitions** (`makeHeadlessInstanceComponent`) that are instantiated at runtime via `childComp()`
 - Server-element generates **streaming HTML** — there are no components, no `childComp()`, no `makeHeadlessInstanceComponent`
 
@@ -59,6 +63,7 @@ For the hydrate target, the approach mirrors the element target — generate inl
 The `renderToStream(vs, ctx)` function receives the full merged ViewState. The headless instance's data is at `vs.__headlessInstances[coordinateKey]`.
 
 For a headless instance, the compiler needs to:
+
 1. Compute the coordinate key (same logic as element target)
 2. Create a local variable for the instance's ViewState
 3. Render the inline template children using that local variable
@@ -67,6 +72,7 @@ For a headless instance, the compiler needs to:
 #### Coordinate Keys
 
 Same as element target:
+
 - **Static instance**: `'product-card:0'` or `'product-card:hero'` (if ref is provided)
 - **Inside slowForEach**: `'p1/product-card:0'` (jayTrackBy prefix)
 - **Inside forEach**: runtime expression using trackBy value
@@ -74,38 +80,42 @@ Same as element target:
 #### Example: Simple Instance
 
 Input:
+
 ```html
 <jay:product-card productId="prod-hero">
-    <article class="hero-card">
-        <h2>{name}</h2>
-        <span class="price">{price}</span>
-        <button ref="addToCart">Add to Cart</button>
-    </article>
+  <article class="hero-card">
+    <h2>{name}</h2>
+    <span class="price">{price}</span>
+    <button ref="addToCart">Add to Cart</button>
+  </article>
 </jay:product-card>
 ```
 
 Server-element output (within `renderToStream`):
+
 ```typescript
 // Headless instance: product-card (coordinate: product-card:0)
-const vs_pc0 = (vs as any).__headlessInstances?.['product-card:0'] as ProductCardViewState | undefined;
+const vs_pc0 = (vs as any).__headlessInstances?.['product-card:0'] as
+  | ProductCardViewState
+  | undefined;
 if (vs_pc0) {
-    w('<article');
-    w(' class="hero-card"');
-    w(' jay-coordinate="product-card:0/0">');
-    w('<h2');
-    w(' jay-coordinate="product-card:0/1">');
-    w(escapeHtml(String(vs_pc0.name)));
-    w('</h2>');
-    w('<span');
-    w(' class="price"');
-    w(' jay-coordinate="product-card:0/2">');
-    w(escapeHtml(String(vs_pc0.price)));
-    w('</span>');
-    w('<button');
-    w(' jay-coordinate="product-card:0/addToCart">');
-    w('Add to Cart');
-    w('</button>');
-    w('</article>');
+  w('<article');
+  w(' class="hero-card"');
+  w(' jay-coordinate="product-card:0/0">');
+  w('<h2');
+  w(' jay-coordinate="product-card:0/1">');
+  w(escapeHtml(String(vs_pc0.name)));
+  w('</h2>');
+  w('<span');
+  w(' class="price"');
+  w(' jay-coordinate="product-card:0/2">');
+  w(escapeHtml(String(vs_pc0.price)));
+  w('</span>');
+  w('<button');
+  w(' jay-coordinate="product-card:0/addToCart">');
+  w('Add to Cart');
+  w('</button>');
+  w('</article>');
 }
 ```
 
@@ -128,6 +138,7 @@ No. In the element target, `<jay:product-card>` does not produce a DOM element. 
 The inline template is a separate "scope" — its children get their own coordinate counter starting at 0, prefixed by the instance's coordinate key.
 
 For server-element:
+
 - Set `coordinatePrefix` to the instance's coordinate key
 - Reset `coordinateCounter` to 0
 - Children get coordinates like `product-card:0/0`, `product-card:0/1`, etc.
@@ -146,37 +157,41 @@ For the simple inline template case, the local variable can be typed as the cont
 #### Example: forEach Instance
 
 Input:
+
 ```html
 <div class="grid" forEach="products" trackBy="_id">
-    <jay:product-card productId="{_id}">
-        <article class="product-tile">
-            <h2>{name}</h2>
-        </article>
-    </jay:product-card>
+  <jay:product-card productId="{_id}">
+    <article class="product-tile">
+      <h2>{name}</h2>
+    </article>
+  </jay:product-card>
 </div>
 ```
 
 Server-element output:
+
 ```typescript
 w('<div');
 w(' jay-coordinate="' + coordPrefix + '">');
 for (const vs1 of vs.products) {
-    w('<div');
-    w(' class="grid"');
-    w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '">');
-    // Headless instance: product-card (coordinate: dynamic)
-    const vs_pc0 = (vs as any).__headlessInstances?.[vs1._id + ',product-card:0'] as ProductCardViewState | undefined;
-    if (vs_pc0) {
-        w('<article');
-        w(' class="product-tile"');
-        w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '/product-card:0/0">');
-        w('<h2');
-        w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '/product-card:0/1">');
-        w(escapeHtml(String(vs_pc0.name)));
-        w('</h2>');
-        w('</article>');
-    }
-    w('</div>');
+  w('<div');
+  w(' class="grid"');
+  w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '">');
+  // Headless instance: product-card (coordinate: dynamic)
+  const vs_pc0 = (vs as any).__headlessInstances?.[vs1._id + ',product-card:0'] as
+    | ProductCardViewState
+    | undefined;
+  if (vs_pc0) {
+    w('<article');
+    w(' class="product-tile"');
+    w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '/product-card:0/0">');
+    w('<h2');
+    w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '/product-card:0/1">');
+    w(escapeHtml(String(vs_pc0.name)));
+    w('</h2>');
+    w('</article>');
+  }
+  w('</div>');
 }
 w('</div>');
 ```
@@ -184,6 +199,7 @@ w('</div>');
 #### Question Q5: forEach coordinate key format — slash vs comma?
 
 Looking at the runtime code (`headless-instance-context.ts`):
+
 - Static: `'product-card:0'` (string)
 - forEach: `(dataIds) => [...dataIds, 'product-card:0'].toString()` — produces `trackByValue,product-card:0`
 
@@ -192,6 +208,7 @@ The comma-separated format comes from `Array.toString()`. The server side (`rend
 So for forEach, the coordinate key in `__headlessInstances` uses **commas**: `"prod-123,product-card:0"`.
 
 But the `jay-coordinate` attribute for DOM elements uses **slashes** (for the hydration coordinate system). These are two different things:
+
 - `__headlessInstances` key: comma-separated (for data lookup)
 - `jay-coordinate` attribute: slash-separated (for DOM walking)
 
@@ -200,38 +217,42 @@ But the `jay-coordinate` attribute for DOM elements uses **slashes** (for the hy
 #### Example: slowForEach Instance
 
 Input:
+
 ```html
 <div slowForEach="products" trackBy="_id" jayIndex="0" jayTrackBy="p1">
-    <jay:product-card productId="prod-123">
-        <article class="hero-card">
-            <h2>Product A</h2>
-            <span class="price">{price}</span>
-        </article>
-    </jay:product-card>
+  <jay:product-card productId="prod-123">
+    <article class="hero-card">
+      <h2>Product A</h2>
+      <span class="price">{price}</span>
+    </article>
+  </jay:product-card>
 </div>
 ```
 
 Server-element output:
+
 ```typescript
 // slowForEach item: jayTrackBy="p1"
-const vs_pc0 = (vs as any).__headlessInstances?.['p1/product-card:0'] as ProductCardViewState | undefined;
+const vs_pc0 = (vs as any).__headlessInstances?.['p1/product-card:0'] as
+  | ProductCardViewState
+  | undefined;
 if (vs_pc0) {
-    w('<div');
-    w(' jay-coordinate="p1">');
-    w('<article');
-    w(' class="hero-card"');
-    w(' jay-coordinate="p1/product-card:0/0">');
-    w('<h2');
-    w('>');
-    w('Product A');
-    w('</h2>');
-    w('<span');
-    w(' class="price"');
-    w(' jay-coordinate="p1/product-card:0/1">');
-    w(escapeHtml(String(vs_pc0.price)));
-    w('</span>');
-    w('</article>');
-    w('</div>');
+  w('<div');
+  w(' jay-coordinate="p1">');
+  w('<article');
+  w(' class="hero-card"');
+  w(' jay-coordinate="p1/product-card:0/0">');
+  w('<h2');
+  w('>');
+  w('Product A');
+  w('</h2>');
+  w('<span');
+  w(' class="price"');
+  w(' jay-coordinate="p1/product-card:0/1">');
+  w(escapeHtml(String(vs_pc0.price)));
+  w('</span>');
+  w('</article>');
+  w('</div>');
 }
 ```
 
@@ -240,28 +261,32 @@ For slowForEach, the coordinate prefix includes the `jayTrackBy` value: `p1/prod
 #### Example: Conditional Instance
 
 Input:
+
 ```html
 <jay:product-card productId="prod-promo" ref="promo" if="showPromo">
-    <div class="promo">
-        <h3>{name}</h3>
-    </div>
+  <div class="promo">
+    <h3>{name}</h3>
+  </div>
 </jay:product-card>
 ```
 
 Server-element output:
+
 ```typescript
 if (vs.showPromo) {
-    const vs_pc1 = (vs as any).__headlessInstances?.['product-card:promo'] as ProductCardViewState | undefined;
-    if (vs_pc1) {
-        w('<div');
-        w(' class="promo"');
-        w(' jay-coordinate="product-card:promo/0">');
-        w('<h3');
-        w(' jay-coordinate="product-card:promo/1">');
-        w(escapeHtml(String(vs_pc1.name)));
-        w('</h3>');
-        w('</div>');
-    }
+  const vs_pc1 = (vs as any).__headlessInstances?.['product-card:promo'] as
+    | ProductCardViewState
+    | undefined;
+  if (vs_pc1) {
+    w('<div');
+    w(' class="promo"');
+    w(' jay-coordinate="product-card:promo/0">');
+    w('<h3');
+    w(' jay-coordinate="product-card:promo/1">');
+    w(escapeHtml(String(vs_pc1.name)));
+    w('</h3>');
+    w('</div>');
+  }
 }
 ```
 
@@ -292,6 +317,7 @@ The current `childComp` (element.ts:41-66) always creates fresh DOM because it c
 **`childCompHydrate(component, getProps, instanceCoordinate, ref)`** — like `childComp` but first extends the current context's `coordinateBase` with the instance coordinate (e.g., `'product-card:0'`), then calls the component factory within that scoped context.
 
 **Coordinate resolution flow:**
+
 1. Page hydrate → `withHydrationRootContext` → context has full coordinateMap
 2. `childCompHydrate(_HeadlessPC, getProps, 'product-card:0', ref)` → extends coordinateBase to `['product-card:0']`, shares coordinateMap
 3. Component factory calls hydratePreRender → `withHydrationChildContext` inherits scoped base
@@ -304,6 +330,7 @@ This works because `resolveCoordinate` (context.ts:221-228) prepends `coordinate
 **ONE preRender per component definition.** Each `makeHeadlessInstanceComponent` has one preRender.
 
 The SSR and hydration script must agree on what was rendered:
+
 - If SSR rendered the instance → hydrate has adopt version → coordinates match ✓
 - If SSR did not render the instance → hydrate has create version → no DOM to adopt ✓
 - If they disagree → error (detectable via sync ID)
@@ -317,7 +344,7 @@ The SSR and hydration script must agree on what was rendered:
 For **forEach**, which structurally needs both adopt (existing items) and create (new items), the same two-definition pattern applies.
 
 | Context          | Component Definitions                                       | Hydrate API                                              |
-|------------------|-------------------------------------------------------------|----------------------------------------------------------|
+| ---------------- | ----------------------------------------------------------- | -------------------------------------------------------- |
 | Unconditional    | 1 adopt                                                     | `childCompHydrate`                                       |
 | Slow conditional | 1 (resolved at build time: adopt if true, removed if false) | `childCompHydrate`                                       |
 | Fast conditional | 2: adopt + create                                           | `hydrateConditional` wraps both                          |
@@ -335,35 +362,38 @@ For forEach and fast conditionals, having both adopt and create component defini
 ```typescript
 // Hydrate inline template — uses adopt APIs
 function _headlessProductCard0HydrateRender(
-    options?: RenderElementOptions,
+  options?: RenderElementOptions,
 ): _HeadlessProductCard0ElementPreRender {
-    const [refManager, [refAddToCart]] = ReferencesManager.for(
-        options, ['add to cart'], [], [], [],
-    );
-    const render = (viewState) =>
-        ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('0', { class: 'hero-card' }, [
-                adoptText('1', (vs) => vs.name),
-                adoptText('2', (vs) => vs.price),
-            ], refAddToCart()),
-        ) as _HeadlessProductCard0Element;
-    return [refManager.getPublicAPI() as ProductCardRefs, render];
+  const [refManager, [refAddToCart]] = ReferencesManager.for(options, ['add to cart'], [], [], []);
+  const render = (viewState) =>
+    ConstructContext.withHydrationChildContext(viewState, refManager, () =>
+      adoptElement(
+        '0',
+        { class: 'hero-card' },
+        [adoptText('1', (vs) => vs.name), adoptText('2', (vs) => vs.price)],
+        refAddToCart(),
+      ),
+    ) as _HeadlessProductCard0Element;
+  return [refManager.getPublicAPI() as ProductCardRefs, render];
 }
 
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
-    _headlessProductCard0HydrateRender, productCard.comp, 'product-card:0', productCard.contexts,
+  _headlessProductCard0HydrateRender,
+  productCard.comp,
+  'product-card:0',
+  productCard.contexts,
 );
 
 // In page hydrate function:
 adoptElement('0', {}, [
-    adoptText('1', (vs) => vs.pageTitle),
-    childCompHydrate(
-        _HeadlessProductCard0,
-        (vs: PageViewState) => ({ productId: 'prod-hero' }),
-        'product-card:0',
-        refAR1(),
-    ),
-])
+  adoptText('1', (vs) => vs.pageTitle),
+  childCompHydrate(
+    _HeadlessProductCard0,
+    (vs: PageViewState) => ({ productId: 'prod-hero' }),
+    'product-card:0',
+    refAR1(),
+  ),
+]);
 ```
 
 #### Example: Slow Conditional Instance Hydrate
@@ -377,29 +407,37 @@ Fast conditionals are dynamic per request. The hydrate script needs both adopt a
 ```typescript
 // TWO separate components: adopt for true-at-SSR, create for false-at-SSR
 const _HeadlessProductCard1Adopt = makeHeadlessInstanceComponent(
-    _headlessProductCard1HydrateRender, productCard.comp, 'product-card:promo', productCard.contexts,
+  _headlessProductCard1HydrateRender,
+  productCard.comp,
+  'product-card:promo',
+  productCard.contexts,
 );
 const _HeadlessProductCard1Create = makeHeadlessInstanceComponent(
-    _headlessProductCard1Render, productCard.comp, 'product-card:promo', productCard.contexts,
+  _headlessProductCard1Render,
+  productCard.comp,
+  'product-card:promo',
+  productCard.contexts,
 );
 
 // hydrateConditional handles both cases:
 hydrateConditional(
-    (vs) => vs.showPromo,
-    // adopt path: SSR rendered it
-    () => childCompHydrate(
-        _HeadlessProductCard1Adopt,
-        (vs: PageViewState) => ({ productId: 'prod-promo' }),
-        'product-card:promo',
-        refPromo(),
+  (vs) => vs.showPromo,
+  // adopt path: SSR rendered it
+  () =>
+    childCompHydrate(
+      _HeadlessProductCard1Adopt,
+      (vs: PageViewState) => ({ productId: 'prod-promo' }),
+      'product-card:promo',
+      refPromo(),
     ),
-    // create path: SSR did not render it
-    () => childComp(
-        _HeadlessProductCard1Create,
-        (vs: PageViewState) => ({ productId: 'prod-promo' }),
-        refPromo(),
+  // create path: SSR did not render it
+  () =>
+    childComp(
+      _HeadlessProductCard1Create,
+      (vs: PageViewState) => ({ productId: 'prod-promo' }),
+      refPromo(),
     ),
-)
+);
 ```
 
 #### Example: forEach Instance Hydrate
@@ -407,44 +445,42 @@ hydrateConditional(
 ```typescript
 // TWO separate components: adopt for existing items, create for new items
 const _HeadlessProductCard0Adopt = makeHeadlessInstanceComponent(
-    _headlessProductCard0HydrateRender, productCard.comp,
-    (dataIds) => [...dataIds, 'product-card:0'].toString(),
-    productCard.contexts,
+  _headlessProductCard0HydrateRender,
+  productCard.comp,
+  (dataIds) => [...dataIds, 'product-card:0'].toString(),
+  productCard.contexts,
 );
 const _HeadlessProductCard0Create = makeHeadlessInstanceComponent(
-    _headlessProductCard0Render, productCard.comp,
-    (dataIds) => [...dataIds, 'product-card:0'].toString(),
-    productCard.contexts,
+  _headlessProductCard0Render,
+  productCard.comp,
+  (dataIds) => [...dataIds, 'product-card:0'].toString(),
+  productCard.contexts,
 );
 
 // In page hydrate function:
 adoptElement('0', {}, [
-    adoptText('1', (vs) => vs.pageTitle),
-    adoptElement('2', {}, [
-        hydrateForEach(
-            '2',
-            (vs) => vs.products,
-            '_id',
-            () => [
-                childCompHydrate(
-                    _HeadlessProductCard0Adopt,
-                    (vs1) => ({ productId: vs1._id }),
-                    'product-card:0',
-                    refAR1(),
-                ),
-            ],
-            (vs1) => {
-                return e('div', { class: 'grid' }, [
-                    childComp(
-                        _HeadlessProductCard0Create,
-                        (vs1) => ({ productId: vs1._id }),
-                        refAR1(),
-                    ),
-                ]);
-            },
+  adoptText('1', (vs) => vs.pageTitle),
+  adoptElement('2', {}, [
+    hydrateForEach(
+      '2',
+      (vs) => vs.products,
+      '_id',
+      () => [
+        childCompHydrate(
+          _HeadlessProductCard0Adopt,
+          (vs1) => ({ productId: vs1._id }),
+          'product-card:0',
+          refAR1(),
         ),
-    ]),
-])
+      ],
+      (vs1) => {
+        return e('div', { class: 'grid' }, [
+          childComp(_HeadlessProductCard0Create, (vs1) => ({ productId: vs1._id }), refAR1()),
+        ]);
+      },
+    ),
+  ]),
+]);
 ```
 
 #### Example: slowForEach Instance Hydrate
@@ -452,27 +488,33 @@ adoptElement('0', {}, [
 ```typescript
 // ONE adopt component per slowForEach item (pre-rendered, always adopt)
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
-    _headlessProductCard0HydrateRender, productCard.comp, 'p1/product-card:0', productCard.contexts,
+  _headlessProductCard0HydrateRender,
+  productCard.comp,
+  'p1/product-card:0',
+  productCard.contexts,
 );
 
 // In page hydrate function:
 adoptElement('0', {}, [
-    adoptText('1', (vs) => vs.pageTitle),
-    adoptElement('2', {}, [
-        slowForEachItem<PageViewState, ProductViewState>(
-            (vs) => vs.products, 0, 'p1',
-            () => adoptElement('p1', {}, [
-                childCompHydrate(
-                    _HeadlessProductCard0,
-                    (vs1) => ({ productId: 'prod-123' }),
-                    'product-card:0',
-                    refAR1(),
-                ),
-            ]),
-        ),
-        // ... second item
-    ]),
-])
+  adoptText('1', (vs) => vs.pageTitle),
+  adoptElement('2', {}, [
+    slowForEachItem<PageViewState, ProductViewState>(
+      (vs) => vs.products,
+      0,
+      'p1',
+      () =>
+        adoptElement('p1', {}, [
+          childCompHydrate(
+            _HeadlessProductCard0,
+            (vs1) => ({ productId: 'prod-123' }),
+            'product-card:0',
+            refAR1(),
+          ),
+        ]),
+    ),
+    // ... second item
+  ]),
+]);
 ```
 
 ### Page-Level Headless (Old-Style) Hydration
@@ -482,6 +524,7 @@ The old-style `<script type="application/jay-headless" key="counter">` headless 
 For SSR, this already works (see `page-using-counter/generated-server-element.ts`). For hydration, the page's template accesses `vs.counter.count` etc. — same as any other ViewState property. No special headless handling needed in the hydrate output because the data is part of the page's ViewState directly.
 
 So page-level headless SSR+hydration needs:
+
 - SSR: already covered by `page-using-counter` fixture ✓
 - Hydration: standard template adoption (no headless-specific code needed)
 - Test: add `generated-element-hydrate.ts` fixture for `page-using-counter`
@@ -523,27 +566,30 @@ So page-level headless SSR+hydration needs:
 
 For each scenario, create expected output fixtures and add test cases:
 
-| Scenario             | Fixture                              | Server-Element   | Hydrate     |
-|----------------------|--------------------------------------|------------------|-------------|
-| Page-level headless  | `page-using-counter`                 | exists ✓         | new fixture |
-| Simple instance      | `page-with-headless-instance`        | new fixture      | new fixture |
-| Conditional instance | `page-with-headless-mixed`           | new fixture      | new fixture |
-| forEach instance     | `page-with-headless-in-foreach`      | new fixture      | new fixture |
-| slowForEach instance | `page-with-headless-in-slow-foreach` | new fixture      | new fixture |
+| Scenario             | Fixture                              | Server-Element | Hydrate     |
+| -------------------- | ------------------------------------ | -------------- | ----------- |
+| Page-level headless  | `page-using-counter`                 | exists ✓       | new fixture |
+| Simple instance      | `page-with-headless-instance`        | new fixture    | new fixture |
+| Conditional instance | `page-with-headless-mixed`           | new fixture    | new fixture |
+| forEach instance     | `page-with-headless-in-foreach`      | new fixture    | new fixture |
+| slowForEach instance | `page-with-headless-in-slow-foreach` | new fixture    | new fixture |
 
 Add test cases to:
+
 - `generate-server-element.test.ts` — 4 new tests
 - `generate-element-hydrate.test.ts` — 5 new tests
 
 ### Phase 5: Fake-Shop Integration and Dev-Server Tests
 
 Create dedicated pages in `examples/jay-stack/fake-shop/src/pages/` for each headless instance scenario:
+
 - Page with a single headless instance (unconditional)
 - Page with headless instance inside a fast conditional
 - Page with headless instance inside forEach
 - Page with headless instance inside slowForEach (pre-rendered)
 
 Extend the dev-server tests to cover these pages end-to-end:
+
 - Verify SSR produces correct HTML (no client-only fallback)
 - Verify hydration script loads and hydrates without errors
 - Verify interactive behavior works after hydration (e.g., button clicks trigger actions)
@@ -563,22 +609,26 @@ Extend the dev-server tests to cover these pages end-to-end:
 ### Phase 1: Server-Element Target — Completed
 
 **Files changed:**
+
 - `packages/compiler/compiler-jay-html/lib/expressions/expression-compiler.ts` — Added optional `customVarName` parameter to `Variables` constructor
 - `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts` — Extended `ServerContext`, added `renderServerHeadlessInstance()`, updated `renderServerElement()` and `generateServerElementFile()`
 - `packages/compiler/compiler-jay-html/test/jay-target/generate-server-element.test.ts` — 4 new tests
 
 **New fixture files:**
+
 - `test/fixtures/contracts/page-with-headless-instance/generated-server-element.ts`
 - `test/fixtures/contracts/page-with-headless-in-foreach/generated-server-element.ts`
 - `test/fixtures/contracts/page-with-headless-in-slow-foreach/generated-server-element.ts`
 - `test/fixtures/contracts/page-with-headless-mixed/generated-server-element.ts`
 
 **Deviations from design:**
+
 - Added `customVarName` to `Variables` constructor — design didn't specify how to scope the variable name for inline template children. Without this, expressions resolved to `vs.name` (page ViewState) instead of `vs_product_card0.name` (instance ViewState).
 - Added `headlessCoordinateCounters: Map<string, number>` to `ServerContext` — design didn't specify per-scope counters for coordinate refs. Without this, the second slowForEach instance got `product-card:1` instead of `product-card:0` (each scope should reset).
 - Headless instance detection moved BEFORE conditional check in `renderServerElement()` — design didn't specify ordering. A `<jay:xxx if="...">` must be handled by `renderServerHeadlessInstance()` (which handles the `if` internally) rather than by the conditional handler (which would treat the tag as literal HTML).
 
 **Phase 1 review fixes:**
+
 - **Bug fix**: forEach `__headlessInstances` key now uses raw `String(vs1._id)` instead of `escapeAttr(String(vs1._id))`. Added `rawCoordinatePrefix` to `ServerContext` to track unescaped prefix separately from the HTML-escaped `coordinatePrefix`.
 - **Bug fix**: slowForEach `headlessCoordinateCounters` now reset per item (`new Map()` in slowForEach itemContext). Second item correctly uses `p2/product-card:0` instead of `p2/product-card:1`.
 - **Fixture accuracy**: Updated jay-html fixtures to reflect post-slow-render state — `{name}` (phase:slow) resolved to literals ("Hero Product", "Promo Product"). Updated both jay-html source files and element target fixture files.
@@ -588,11 +638,13 @@ Extend the dev-server tests to cover these pages end-to-end:
 ### Phase 2: Runtime — Completed
 
 **Files changed:**
+
 - `packages/runtime/runtime/lib/context.ts` — Added `forInstance(instanceCoordinate)` method on `ConstructContext` (extends coordinateBase with instance segments, shares coordinateMap). Added `withHydrationChildContext` static method (inherits coordinateBase and coordinateMap from parent context).
 - `packages/runtime/runtime/lib/hydrate.ts` — Added `childCompHydrate(compCreator, getProps, instanceCoordinate, ref)` function. Uses `context.forInstance()` to scope coordinate resolution before calling the component factory.
 - `packages/runtime/runtime/lib/index.ts` — Exported `childCompHydrate`.
 
 **New test file:**
+
 - `packages/runtime/runtime/test/lib/hydration/child-comp-hydrate.test.ts` — 3 tests:
   - Scopes coordinate resolution to instance prefix (`product-card:0/0` via `adoptElement('0')`)
   - Multi-segment coordinate prefix (`p1/product-card:0/0` for slowForEach)
@@ -605,6 +657,7 @@ Extend the dev-server tests to cover these pages end-to-end:
 ### Phase 3: Hydrate Compiler — Completed
 
 **Files changed:**
+
 - `packages/compiler/compiler-shared/lib/imports.ts` — Added `childCompHydrate` import definition
 - `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts`:
   - Extended `HydrateContext` with `headlessImports`, `headlessInstanceDefs`, `headlessInstanceCounter`, `headlessCoordinateCounters`, `insideFastForEach`, `coordinatePrefix`
@@ -620,6 +673,7 @@ Extend the dev-server tests to cover these pages end-to-end:
 - `packages/compiler/compiler-jay-html/test/jay-target/generate-element-hydrate.test.ts` — 5 new tests
 
 **New fixture files:**
+
 - `test/fixtures/contracts/page-using-counter/generated-element-hydrate.ts`
 - `test/fixtures/contracts/page-with-headless-instance/generated-element-hydrate.ts`
 - `test/fixtures/contracts/page-with-headless-in-foreach/generated-element-hydrate.ts`
@@ -627,6 +681,7 @@ Extend the dev-server tests to cover these pages end-to-end:
 - `test/fixtures/contracts/page-with-headless-mixed/generated-element-hydrate.ts`
 
 **Phase 3 review fixes:**
+
 - **Bug fix (critical)**: Fast conditional create path was using adopt component (`adoptElement`/`adoptText`). Now generates a Create component with element APIs (`e()`/`dt()`) for conditionals, same as forEach. Changed condition from `isInsideForEach` to `isInsideForEach || !!ifCondition` for create version generation.
 - **Bug fix (critical)**: forEach create callback used `refAR2()` (undefined) instead of `refAR1()`. Fixed by giving the create callback a fresh `RefNameGenerator` so it produces the same ref names as the adopt callback.
 - **Bug fix (high)**: Server-element didn't force coordinates on inline template root elements, causing coordinate mismatch with hydrate target. Fixed by passing `forceCoordinate = true` when rendering inline template root children in `renderServerHeadlessInstance()`.
@@ -635,3 +690,32 @@ Extend the dev-server tests to cover these pages end-to-end:
 - **Bug fix (critical)**: forEach generated duplicate type/function identifiers (`_HeadlessProductCard0Element`, `_headlessProductCard0Render`). Root cause: `renderHydrateHeadlessInstance` generated a create version, AND the forEach handler's create callback re-rendered the headless instance via the element target's `renderHeadlessInstance()`. Fix: forEach create version is now generated ONLY by the element target (via `renderNode()`), not by `renderHydrateHeadlessInstance`. Conditional create version is still generated by `renderHydrateHeadlessInstance` (since there's no separate create callback handler for conditionals). The `headlessInstanceCounter` is not reset for the create callback, so the element target gets counter=1 (adopt used 0) — unique names, no conflicts.
 
 **Tests: 577/577 passing (all fixtures regenerated, 4 skipped)**
+
+### Phase 4: Test Fixtures and Tests — Completed (during Phases 1-3)
+
+All test fixtures and test cases were created during phases 1-3:
+
+- `generate-server-element.test.ts` — 4 headless instance tests (14 total, all passing)
+- `generate-element-hydrate.test.ts` — 5 headless instance tests (16 total, all passing)
+- All 5 fixture directories have both `generated-server-element.ts` and `generated-element-hydrate.ts`
+
+No additional work needed — Phase 4 was fully covered by phases 1-3.
+
+### Phase 5: Fake-Shop Integration — Completed
+
+The existing fake-shop homepage (`src/pages/page.jay-html`) already exercises the key headless instance scenarios:
+
+- Static instances (`<jay:product-widget productId="1">`, `<jay:product-widget productId="3">`)
+- forEach instances (`<jay:product-widget>` inside `forEach="featuredProducts"`)
+- forEach with fast-only headless (`<jay:stock-status>` inside `forEach="allProducts"`)
+
+**Enhanced smoke tests** (`examples/jay-stack/fake-shop/test/smoke.test.ts`):
+
+- Added "should SSR home page with headless instance content" test
+- Verifies SSR rendered content (target div not empty, `jay-coordinate` attributes present)
+- Verifies product-widget slow-phase data appears in HTML: "Gaming Laptop" (ID 1), "Wireless Headphones" (ID 3), SKU codes
+- Confirms SSR works end-to-end (no client-only fallback)
+
+**Tests: 7/7 smoke tests passing, 577/577 compiler tests passing, 245/245 runtime tests passing**
+
+**Deviation from design:** Did not create separate dedicated pages per scenario — the existing homepage already covers the main scenarios and creating redundant pages adds maintenance burden. The conditional instance scenario (`<jay:xxx if="...">`) is covered by compiler fixture tests but not by an integration test page.

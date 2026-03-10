@@ -219,6 +219,27 @@ describe('Fake Shop Smoke Tests', () => {
         expect(body).not.toContain('server error');
     });
 
+    it('should SSR home page with headless instance content', async () => {
+        const { status, body } = await fetchPage('/');
+
+        expect(status).toBe(200);
+
+        // Verify SSR rendered content (not empty client-only target)
+        // Client-only fallback: <div id="target"></div>
+        // SSR: <div id="target"><div jay-coordinate="0">...</div></div>
+        expect(body).not.toMatch(/<div id="target"><\/div>/);
+        expect(body).toContain('jay-coordinate');
+
+        // Verify headless instance slow-phase data is rendered in SSR HTML.
+        // Product ID "1" → "Gaming Laptop" with SKU "LAP-001"
+        expect(body).toContain('Gaming Laptop');
+        expect(body).toContain('LAP-001');
+
+        // Product ID "3" → "Wireless Headphones" with SKU "HDP-003"
+        expect(body).toContain('Wireless Headphones');
+        expect(body).toContain('HDP-003');
+    });
+
     it('should render products list page successfully', async () => {
         const { status, body } = await fetchPage('/products/');
 
