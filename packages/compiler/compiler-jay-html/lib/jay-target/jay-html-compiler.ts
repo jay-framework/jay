@@ -2830,8 +2830,16 @@ function renderHydrateElementContent(
     // If this element has interactive children (conditionals/forEach), render them.
     // Pass the current element's coordinate as parentCoordinate so that forEach
     // children can use it as their containerCoordinate (same element, peek mode).
+    // Pass coordinatePrefix so child coordinates are hierarchical (e.g. "1/2", "1/3")
+    // and avoid collision with sibling sections (e.g. forEach item with trackBy "3").
     if (hasInteractiveChildren) {
-        const childContext = { ...context, parentCoordinate: coordinate };
+        const childContext = {
+            ...context,
+            parentCoordinate: coordinate,
+            coordinatePrefix: context.coordinatePrefix
+                ? [...context.coordinatePrefix, baseCoord]
+                : [baseCoord],
+        };
         const childFragments = mergeHydrateFragments(
             childNodes.map((child) => renderHydrateNode(child, childContext)),
             ',\n',
@@ -3949,7 +3957,19 @@ function renderServerElementContent(
             ),
         );
     } else {
-        const childContext = { ...context, indent: new Indent(indent.curr + '    ') };
+        // Pass coordinatePrefix when this element has a coordinate, we're not at root ("0"),
+        // and we're not already inside forEach. Ensures conditional children get hierarchical
+        // coordinates (e.g. "1/2") and avoid collision with sibling forEach trackBy values.
+        const childContext: ServerContext = {
+            ...context,
+            indent: new Indent(indent.curr + '    '),
+            coordinatePrefix:
+                coordinate !== null &&
+                coordinate !== '0' &&
+                context.coordinatePrefix === undefined
+                    ? `'${coordinate}'`
+                    : context.coordinatePrefix,
+        };
         // Collect async groups for this element's children
         const asyncGroups = collectAsyncGroups(childNodes);
         const processedAsyncProps = new Set<string>();

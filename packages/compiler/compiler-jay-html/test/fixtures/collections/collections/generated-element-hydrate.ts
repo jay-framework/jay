@@ -60,9 +60,9 @@ export function hydrate(
                         (vs: CollectionsViewState) => vs.things,
                         'id',
                         () => [
-                            adoptText('0', (vs1) => vs1.name),
-                            adoptText('1', (vs1) => vs1.completed),
-                            adoptText('2', (vs1) => vs1.cost),
+                            adoptText('2/0', (vs1) => vs1.name),
+                            adoptText('2/1', (vs1) => vs1.completed),
+                            adoptText('2/2', (vs1) => vs1.cost),
                         ],
                         (vs1: ThingOfCollectionsViewState) => {
                             return e('div', {}, [

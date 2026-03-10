@@ -142,7 +142,7 @@ export function hydrate(
     const render = (viewState: PageWithHeadlessInForeachViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('0', {}, [
-                adoptText('1', (vs) => vs.pageTitle),
+                adoptText('0/1', (vs) => vs.pageTitle),
                 hydrateForEach(
                     '0',
                     (vs: PageWithHeadlessInForeachViewState) => vs.products,

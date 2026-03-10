@@ -97,7 +97,7 @@ function _headlessProductCard0HydrateRender(
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0HydrateRender,
     productCard.comp,
-    'product-card:hero',
+    '0/product-card:hero',
     productCard.contexts,
 );
 
@@ -123,7 +123,7 @@ function _headlessProductCard1HydrateRender(
 const _HeadlessProductCard1 = makeHeadlessInstanceComponent(
     _headlessProductCard1HydrateRender,
     productCard.comp,
-    'product-card:promo',
+    '0/product-card:promo',
     productCard.contexts,
 );
 
@@ -144,7 +144,7 @@ function _headlessProductCard1Render(
 const _HeadlessProductCard1Create = makeHeadlessInstanceComponent(
     _headlessProductCard1Render,
     productCard.comp,
-    'product-card:promo',
+    '0/product-card:promo',
     productCard.contexts,
 );
 
@@ -179,7 +179,7 @@ function _headlessProductCard2HydrateRender(
 const _HeadlessProductCard2 = makeHeadlessInstanceComponent(
     _headlessProductCard2HydrateRender,
     productCard.comp,
-    'p1/product-card:0',
+    '0/p1/product-card:0',
     productCard.contexts,
 );
 
@@ -205,7 +205,7 @@ function _headlessProductCard3HydrateRender(
 const _HeadlessProductCard3 = makeHeadlessInstanceComponent(
     _headlessProductCard3HydrateRender,
     productCard.comp,
-    'p2/product-card:0',
+    '0/p2/product-card:0',
     productCard.contexts,
 );
 
@@ -227,11 +227,11 @@ export function hydrate(
     const render = (viewState: PageWithHeadlessMixedViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('0', {}, [
-                adoptText('1', (vs) => vs.pageTitle),
+                adoptText('0/1', (vs) => vs.pageTitle),
                 childCompHydrate(
                     _HeadlessProductCard0,
                     (vs: PageWithHeadlessMixedViewState) => ({ productId: '123' }),
-                    'product-card:hero',
+                    '0/product-card:hero',
                     refHero(),
                 ),
                 hydrateConditional(
@@ -240,7 +240,7 @@ export function hydrate(
                         childCompHydrate(
                             _HeadlessProductCard1,
                             (vs: PageWithHeadlessMixedViewState) => ({ productId: 'prod-promo' }),
-                            'product-card:promo',
+                            '0/product-card:promo',
                             refPromo(),
                         ),
                     () =>
@@ -263,7 +263,7 @@ export function hydrate(
                             (vs1: ProductOfPageWithHeadlessMixedViewState) => ({
                                 productId: 'prod-a',
                             }),
-                            'p1/product-card:0',
+                            '0/p1/product-card:0',
                             ref_0(),
                         ),
                 ),
@@ -280,7 +280,7 @@ export function hydrate(
                             (vs1: ProductOfPageWithHeadlessMixedViewState) => ({
                                 productId: 'prod-b',
                             }),
-                            'p2/product-card:0',
+                            '0/p2/product-card:0',
                             ref_0(),
                         ),
                 ),

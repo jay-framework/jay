@@ -24,20 +24,20 @@ export function renderToStream(vs: CollectionsViewState, ctx: ServerRenderContex
     w(' jay-coordinate="2">');
     for (const vs1 of vs.things) {
         w('<div');
-        w(' jay-coordinate="' + escapeAttr(String(vs1.id)) + '">');
+        w(' jay-coordinate="' + '2' + '/' + escapeAttr(String(vs1.id)) + '">');
         w('<span');
         w(' style="color:green; width: 100px; display: inline-block;"');
-        w(' jay-coordinate="' + escapeAttr(String(vs1.id)) + '/0">');
+        w(' jay-coordinate="' + '2' + '/' + escapeAttr(String(vs1.id)) + '/0">');
         w(escapeHtml(String(vs1.name)));
         w('</span>');
         w('<span');
         w(' style="color:red; width: 100px; display: inline-block;"');
-        w(' jay-coordinate="' + escapeAttr(String(vs1.id)) + '/1">');
+        w(' jay-coordinate="' + '2' + '/' + escapeAttr(String(vs1.id)) + '/1">');
         w(escapeHtml(String(vs1.completed)));
         w('</span>');
         w('<span');
         w(' style="color:blue; width: 100px; display: inline-block;"');
-        w(' jay-coordinate="' + escapeAttr(String(vs1.id)) + '/2">');
+        w(' jay-coordinate="' + '2' + '/' + escapeAttr(String(vs1.id)) + '/2">');
         w(escapeHtml(String(vs1.cost)));
         w('</span>');
         w('</div>');

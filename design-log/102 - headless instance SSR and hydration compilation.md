@@ -802,3 +802,59 @@ Server expects `'1,stock-status:0'`, so the ViewState lookup fails → `fastVS` 
 2. **Hydration:** All inline template children (including conditionals) are adopted and composed correctly.
 3. **Server/hydrate alignment:** Server wraps multiple children in a div; hydrate adopts that div and its children.
 4. **Tests:** Update fixtures and add/update tests for multi-child headless adopt path.
+
+---
+
+## Mood Tracker (Key-Based Headless) — Analysis (No Fix)
+
+**Context:** In the fake-shop example, the top-level mood tracker (`key="mt"`) works (buttons respond), but:
+1. Numbers (`mt.happy`, `mt.sad`, `mt.neutral`) do not update in the UI.
+2. Sad and neutral conditionals (false at SSR) do not appear when the condition turns true.
+
+### Problem 1: Numbers Not Updating
+
+**Root cause:** Missing `adoptText` for dynamic expressions in mixed-content elements.
+
+**Structure:**
+```html
+<div>Happy: {mt.happy} <button ref="mt.happy">more happy</button></div>
+```
+
+- The ref is on the **button**, so the button gets coordinate `mtHappy` (camelCase of `mt.happy`).
+- The hydrate compiler emits `adoptElement("mtHappy", {}, [], refHappy())` — adopting the **button**.
+- The dynamic text `{mt.happy}` lives in a **sibling text node** of the button, not inside it.
+
+**Compiler logic:**
+- `renderHydrateElementContent` only sets `textFragment` when `childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE` (single text child).
+- For mixed content (text + expression + element with ref), `textFragment` is null.
+- `renderHydrateNode` returns `RenderFragment.empty()` for text nodes — they are never emitted.
+- The parent div has no ref, no single dynamic text, no interactive children → `needsAdoption` is false → we recurse and merge children.
+- Merge yields: empty (text), empty (text), empty (text), `adoptElement(button)`. The dynamic text is lost.
+
+**Server-element:** The div has no coordinate. Only the button gets `jay-coordinate="mtHappy"`. The dynamic value is rendered inline as text; there is no element wrapping it for `adoptText` to target.
+
+**Result:** No `adoptText` is emitted for `{mt.happy}`, `{mt.sad}`, or `{mt.neutral}`. The numbers stay at their SSR values.
+
+### Problem 2: Sad and Neutral Conditionals Not Appearing
+
+**Expected flow:** When `vs.mt?.currentMood === CurrentMood.sad` becomes true, `hydrateConditionalFalse` should call `createFallback`, create the span, and insert it before its anchor.
+
+**Plausible causes (to verify with debugging):**
+1. **Reactive tracking:** `createReaction` in `makeJayComponent` should re-run when the mood tracker’s signals change (via `materializeViewState(instance.render())`). If the reaction does not re-run, `element.update(viewState)` is never called and the conditionals never re-evaluate.
+2. **ViewState merge:** `vs.mt` might not receive the latest values from the headless instance when it updates.
+3. **Condition semantics:** `vs.mt?.currentMood === CurrentMood.sad` — if `vs.mt` is undefined or the enum comparison is wrong, the condition would stay false.
+
+**Files to inspect:**
+- `packages/runtime/component/lib/component.ts` — `createReaction` and viewState flow
+- `packages/jay-stack/stack-client-runtime/lib/hydrate-composite-component.ts` — key-based headless merge
+- `packages/runtime/runtime/lib/hydrate.ts` — `hydrateConditionalFalse` update path
+
+### Fix: Coordinate Collision (Sad/Neutral Conditionals)
+
+**Root cause:** The mood tracker's sad conditional used `adoptElement("3", {}, [])`, but the forEach section's item with `trackBy="_id"` and `_id="3"` also got coordinate `"3"` (top-level forEach uses trackBy value as item coordinate). So `resolveCoordinate("3")` found the forEach item div instead of the (non-existent) mood span.
+
+**Fix:** Use hierarchical coordinates for conditional children. When an element has interactive children (conditionals/forEach), pass `coordinatePrefix` so child coordinates become e.g. `"1/2"`, `"1/3"`, `"1/4"` instead of `"2"`, `"3"`, `"4"`.
+
+- **Hydrate** (`renderHydrateElementContent`): Add `coordinatePrefix: [baseCoord]` to childContext when `hasInteractiveChildren`.
+- **Server** (`renderServerElementContent`): Add `coordinatePrefix: '${coordinate}'` to childContext when element has coordinate and is not root (`"0"`).
+- **Fixtures:** Updated to match new hierarchical coordinate output.

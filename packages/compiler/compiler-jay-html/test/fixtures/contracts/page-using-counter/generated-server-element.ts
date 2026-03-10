@@ -1,4 +1,4 @@
-import { escapeHtml, type ServerRenderContext } from '@jay-framework/ssr-runtime';
+import { escapeHtml, escapeAttr, type ServerRenderContext } from '@jay-framework/ssr-runtime';
 
 import { CounterViewState, IsPositive } from '../counter/counter.jay-contract';
 
@@ -28,13 +28,13 @@ export function renderToStream(vs: PageUsingCounterViewState, ctx: ServerRenderC
         w('<img');
         w(' src="positive.jpg"');
         w(' alt="positive"');
-        w(' jay-coordinate="3">');
+        w(' jay-coordinate="' + '2' + '/3">');
     }
     if (vs.counter?.isPositive === IsPositive.negative) {
         w('<img');
         w(' src="negative.jpg"');
         w(' alt="negative"');
-        w(' jay-coordinate="4">');
+        w(' jay-coordinate="' + '2' + '/4">');
     }
     w('</div>');
     w('</div>');

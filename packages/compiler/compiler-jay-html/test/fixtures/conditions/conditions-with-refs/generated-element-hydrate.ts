@@ -65,12 +65,15 @@ export function hydrate(
             adoptElement('0', {}, [
                 hydrateConditional(
                     (vs) => vs.cond,
-                    () => adoptText('text1', (vs) => vs.text1, refText1()),
+                    () => adoptText('0/text1', (vs) => vs.text1, refText1()),
                     () => e('div', { style: { cssText: 'color:red' } }, [dt((vs) => vs.text1)]),
                 ),
                 hydrateConditional(
                     (vs) => !vs.cond,
-                    () => adoptElement('1', {}, [adoptText('text2', (vs) => vs.text2, refText2())]),
+                    () =>
+                        adoptElement('0/1', {}, [
+                            adoptText('0/text2', (vs) => vs.text2, refText2()),
+                        ]),
                     () =>
                         e('div', { style: { cssText: 'color:green' } }, [
                             e('span', {}, [dt((vs) => vs.text2)], refText2()),

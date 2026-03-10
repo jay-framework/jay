@@ -68,12 +68,12 @@ export function hydrate(
                 adoptElement('2', {}, [
                     hydrateConditional(
                         (vs) => vs.counter?.isPositive === IsPositive.positive,
-                        () => adoptElement('3', {}, []),
+                        () => adoptElement('2/3', {}, []),
                         () => e('img', { src: 'positive.jpg', alt: 'positive' }, []),
                     ),
                     hydrateConditional(
                         (vs) => vs.counter?.isPositive === IsPositive.negative,
-                        () => adoptElement('4', {}, []),
+                        () => adoptElement('2/4', {}, []),
                         () => e('img', { src: 'negative.jpg', alt: 'negative' }, []),
                     ),
                 ]),
