@@ -81,6 +81,20 @@ function getChildElements(element: HTMLElement): HTMLElement[] {
     return element.childNodes.filter((n) => n.nodeType === NodeType.ELEMENT_NODE) as HTMLElement[];
 }
 
+function collectSelectOptions(
+    selectElement: HTMLElement,
+): Array<{ value: string; text: string; selected?: boolean }> {
+    const options: Array<{ value: string; text: string; selected?: boolean }> = [];
+    const optionElements = selectElement.querySelectorAll('option');
+    for (const opt of optionElements) {
+        const value = opt.getAttribute('value') ?? '';
+        const text = opt.textContent?.trim() ?? '';
+        const selected = opt.hasAttribute('selected') || undefined;
+        options.push({ value, text, selected });
+    }
+    return options;
+}
+
 function isStructuralElement(child: HTMLElement): boolean {
     if (child.getAttribute('class')) return true;
     if (child.getAttribute('if')) return true;
@@ -326,7 +340,19 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
     );
     warnings.push(...bindingWarnings);
 
-    const name = element.getAttribute('ref') || element.getAttribute('id') || tag;
+    let name = element.getAttribute('ref') || element.getAttribute('id') || tag;
+
+    // Descriptive naming for form elements
+    if (tag === 'button') {
+        const btnText = element.textContent?.trim().substring(0, 30);
+        if (btnText) name = `button: ${btnText}`;
+    } else if (tag === 'label') {
+        const forAttr = element.getAttribute('for');
+        if (forAttr) name = `label: ${forAttr}`;
+    } else if (tag === 'textarea') {
+        const taName = htmlAttributes['name'];
+        if (taName) name = `textarea: ${taName}`;
+    }
 
     if (tag === 'svg') {
         const viewBox = element.getAttribute('viewBox');
@@ -503,6 +529,82 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
             bindings: bindings.length > 0 ? bindings : undefined,
             warnings: warnings.length > 0 ? [...warnings] : undefined,
             children,
+        };
+        return { node, warnings, componentSets };
+    }
+
+    // <select> — collect <option> children into selectOptions, don't recurse
+    if (tag === 'select') {
+        const options = collectSelectOptions(element);
+        const selectedText =
+            options.find((o) => o.selected)?.text || options[0]?.text || '';
+        const selectName = htmlAttributes['name'] || name;
+
+        const textChild: ImportIRNode = {
+            id: generateNodeId(domPath + '/selected-text'),
+            sourcePath: domPath + '/selected-text',
+            kind: 'TEXT',
+            name: selectedText.substring(0, 20) || 'select',
+            tagName: 'span',
+            visible: true,
+            style: { ...style, width: undefined, height: undefined },
+            text: { characters: selectedText },
+        };
+
+        const node: ImportIRNode = {
+            id: nodeId,
+            sourcePath: domPath,
+            kind: 'FRAME',
+            name: `select: ${selectName}`,
+            tagName: 'select',
+            className,
+            visible: true,
+            style,
+            htmlAttributes: hasHtmlAttributes ? htmlAttributes : undefined,
+            selectOptions: options,
+            bindings: bindings.length > 0 ? bindings : undefined,
+            warnings: warnings.length > 0 ? [...warnings] : undefined,
+            children: [textChild],
+        };
+        return { node, warnings, componentSets };
+    }
+
+    // <input> — void element, add text child with value/placeholder
+    if (tag === 'input') {
+        const inputType = htmlAttributes['type'] || 'text';
+        const inputName = htmlAttributes['name'] || name;
+        const displayText = htmlAttributes['value'] || htmlAttributes['placeholder'] || '';
+        const inputChildren: ImportIRNode[] = [];
+
+        if (displayText) {
+            inputChildren.push({
+                id: generateNodeId(domPath + '/input-text'),
+                sourcePath: domPath + '/input-text',
+                kind: 'TEXT',
+                name: displayText.substring(0, 20),
+                tagName: 'span',
+                visible: true,
+                style: {
+                    ...(htmlAttributes['value'] ? {} : { opacity: 0.5 }),
+                },
+                text: { characters: displayText },
+            });
+        }
+
+        const node: ImportIRNode = {
+            id: nodeId,
+            sourcePath: domPath,
+            kind: 'FRAME',
+            name: `input[${inputType}]: ${inputName}`,
+            tagName: 'input',
+            className,
+            visible: true,
+            style,
+            htmlAttributes: hasHtmlAttributes ? htmlAttributes : undefined,
+            unsupportedCss: Object.keys(unsupportedCss).length > 0 ? unsupportedCss : undefined,
+            bindings: bindings.length > 0 ? bindings : undefined,
+            warnings: warnings.length > 0 ? [...warnings] : undefined,
+            children: inputChildren,
         };
         return { node, warnings, componentSets };
     }

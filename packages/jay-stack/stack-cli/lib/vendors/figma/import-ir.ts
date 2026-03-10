@@ -128,6 +128,7 @@ export type ImportIRNode = {
         objectFit?: 'fill' | 'contain' | 'cover' | 'none' | 'scale-down';
     };
     htmlAttributes?: Record<string, string>;
+    selectOptions?: Array<{ value: string; text: string; selected?: boolean }>;
     unsupportedCss?: Record<string, string>;
     bindings?: ImportIRBinding[];
     svgData?: string;

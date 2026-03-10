@@ -539,6 +539,10 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
         base.pluginData = base.pluginData || {};
         base.pluginData['htmlAttributes'] = JSON.stringify(node.htmlAttributes);
     }
+    if (node.selectOptions && node.selectOptions.length > 0) {
+        base.pluginData = base.pluginData || {};
+        base.pluginData['jay-select-options'] = JSON.stringify(node.selectOptions);
+    }
     if (node.image?.src) {
         base.pluginData = base.pluginData || {};
         base.pluginData['imgSrc'] = node.image.src;

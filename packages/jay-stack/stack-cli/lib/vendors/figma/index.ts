@@ -94,6 +94,7 @@ const TEXT_CONTAINER_TAGS = new Set([
     'label',
     'a',
     'button',
+    'textarea',
     'li',
     'dt',
     'dd',
@@ -314,6 +315,27 @@ function convertRegularNode(
     // Void HTML elements (input, br, hr) are self-closing and can't have children
     if (VOID_ELEMENTS.has(tag)) {
         return `${indent}<${tag} ${htmlAttrs} />\n`;
+    }
+
+    // <select> — reconstruct <option> children from jay-select-options pluginData
+    if (tag === 'select' && pluginData?.['jay-select-options']) {
+        try {
+            const options = JSON.parse(pluginData['jay-select-options']) as Array<{
+                value: string;
+                text: string;
+                selected?: boolean;
+            }>;
+            const childIndent = '  '.repeat(context.indentLevel + 1);
+            let html = `${indent}<${tag} ${htmlAttrs}>\n`;
+            for (const opt of options) {
+                const selectedAttr = opt.selected ? ' selected' : '';
+                html += `${childIndent}<option value="${opt.value}"${selectedAttr}>${opt.text}</option>\n`;
+            }
+            html += `${indent}</${tag}>\n`;
+            return html;
+        } catch {
+            // Fall through to normal processing if JSON is invalid
+        }
     }
 
     // <option> elements should emit plain text content, not nested divs
