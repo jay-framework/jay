@@ -536,8 +536,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
     // <select> — collect <option> children into selectOptions, don't recurse
     if (tag === 'select') {
         const options = collectSelectOptions(element);
-        const selectedText =
-            options.find((o) => o.selected)?.text || options[0]?.text || '';
+        const selectedText = options.find((o) => o.selected)?.text || options[0]?.text || '';
         const selectName = htmlAttributes['name'] || name;
 
         const textChild: ImportIRNode = {
