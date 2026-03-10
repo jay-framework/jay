@@ -28,6 +28,18 @@ export interface ComputedStyleData {
     };
 
     /**
+     * Rendered text content from the browser DOM (textContent.trim()).
+     * Used to replace template expressions with actual rendered values.
+     */
+    textContent?: string;
+
+    /**
+     * Rendered input value from the browser DOM (element.value).
+     * Used to replace template expressions in input value/placeholder.
+     */
+    inputValue?: string;
+
+    /**
      * Resolved image data extracted from rendered DOM.
      * For `<img>` elements: the browser-resolved `currentSrc`/`src`.
      * For background images: parsed `url(...)` values from computed `background-image`.

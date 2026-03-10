@@ -34,6 +34,9 @@ const BLOCK_LEVEL_TAGS = new Set([
     'canvas',
     'select',
     'textarea',
+    'input',
+    'button',
+    'label',
     'h1',
     'h2',
     'h3',
@@ -445,7 +448,8 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
     }
 
     if (isTextElement(element)) {
-        const characters = flattenTextContent(element);
+        const sourceText = flattenTextContent(element);
+        const characters = enrichedStyles?.textContent || sourceText;
         const hasContainer = !!(style.backgroundColor || style.padding || style.layoutMode);
 
         if (hasContainer) {
@@ -593,7 +597,10 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
     if (tag === 'input') {
         const inputType = htmlAttributes['type'] || 'text';
         const inputName = htmlAttributes['name'] || name;
-        const displayText = htmlAttributes['value'] || htmlAttributes['placeholder'] || '';
+        const renderedValue = enrichedStyles?.inputValue;
+        const sourceValue = htmlAttributes['value'];
+        const displayText = renderedValue || sourceValue || htmlAttributes['placeholder'] || '';
+        const isPlaceholder = !renderedValue && !sourceValue;
         const inputChildren: ImportIRNode[] = [];
 
         if (displayText) {
@@ -605,7 +612,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
                 tagName: 'span',
                 visible: true,
                 style: {
-                    ...(htmlAttributes['value'] ? {} : { opacity: 0.5 }),
+                    ...(isPlaceholder ? { opacity: 0.5 } : {}),
                 },
                 text: { characters: displayText },
             });

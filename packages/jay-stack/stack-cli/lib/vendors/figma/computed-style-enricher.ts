@@ -369,6 +369,8 @@ async function extractComputedStyles(
             key: string;
             styles: Record<string, string>;
             boundingRect: { x: number; y: number; width: number; height: number };
+            textContent?: string;
+            inputValue?: string;
             image?: {
                 renderedSrc?: string;
                 backgroundImageUrls?: string[];
@@ -427,10 +429,25 @@ async function extractComputedStyles(
                 }
             }
 
+            // Capture rendered text content and input values for template expression resolution
+            let textContent: string | undefined;
+            let inputValue: string | undefined;
+
+            const tagName = htmlElement.tagName?.toLowerCase();
+            if (tagName === 'input' || tagName === 'textarea') {
+                const val = htmlElement.value;
+                if (val != null && val !== '') inputValue = String(val);
+            } else {
+                const tc = htmlElement.textContent?.trim();
+                if (tc) textContent = tc;
+            }
+
             result.push({
                 key: jaySid,
                 styles,
                 boundingRect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+                textContent: textContent || undefined,
+                inputValue: inputValue || undefined,
                 image: image || undefined,
             });
         }
@@ -443,6 +460,8 @@ async function extractComputedStyles(
         styleMap.set(item.key, {
             styles: item.styles,
             boundingRect: item.boundingRect,
+            textContent: item.textContent,
+            inputValue: item.inputValue,
             image: item.image,
         });
     }
