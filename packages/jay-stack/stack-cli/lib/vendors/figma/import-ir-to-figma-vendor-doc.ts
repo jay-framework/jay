@@ -76,7 +76,7 @@ function parseColor(cssColor: string): { r: number; g: number; b: number; a: num
         };
     }
 
-    // rgb(r, g, b)
+    // rgb(r, g, b) — comma-separated
     const rgbMatch = cssColor.match(/^rgb\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)$/);
     if (rgbMatch) {
         return {
@@ -87,7 +87,7 @@ function parseColor(cssColor: string): { r: number; g: number; b: number; a: num
         };
     }
 
-    // rgba(r, g, b, a)
+    // rgba(r, g, b, a) — comma-separated
     const rgbaMatch = cssColor.match(
         /^rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)$/,
     );
@@ -100,8 +100,32 @@ function parseColor(cssColor: string): { r: number; g: number; b: number; a: num
         };
     }
 
-    // Fallback for unrecognized color formats
-    return { r: 0.9, g: 0.9, b: 0.9, a: 1 };
+    // rgb(r g b) — modern space-separated syntax
+    const rgbSpaceMatch = cssColor.match(/^rgb\(\s*(\d+)\s+(\d+)\s+(\d+)\s*\)$/);
+    if (rgbSpaceMatch) {
+        return {
+            r: parseInt(rgbSpaceMatch[1], 10) / 255,
+            g: parseInt(rgbSpaceMatch[2], 10) / 255,
+            b: parseInt(rgbSpaceMatch[3], 10) / 255,
+            a: 1,
+        };
+    }
+
+    // rgb(r g b / a) — modern space-separated with alpha
+    const rgbSlashMatch = cssColor.match(
+        /^rgba?\(\s*(\d+)\s+(\d+)\s+(\d+)\s*\/\s*([\d.]+)\s*\)$/,
+    );
+    if (rgbSlashMatch) {
+        return {
+            r: parseInt(rgbSlashMatch[1], 10) / 255,
+            g: parseInt(rgbSlashMatch[2], 10) / 255,
+            b: parseInt(rgbSlashMatch[3], 10) / 255,
+            a: parseFloat(rgbSlashMatch[4]),
+        };
+    }
+
+    // Fallback — default to near-black so text is always readable
+    return { r: 0.13, g: 0.13, b: 0.13, a: 1 };
 }
 
 function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVendorDocument> {
@@ -340,8 +364,10 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
             };
             if (node.style?.fontSize) base.fontSize = node.style.fontSize;
             if (weight) base.fontWeight = weight;
-            if (node.style?.textColor) {
-                const color = parseColor(node.style.textColor);
+            {
+                const color = node.style?.textColor
+                    ? parseColor(node.style.textColor)
+                    : { r: 0.13, g: 0.13, b: 0.13, a: 1 };
                 base.fills = [
                     {
                         type: 'SOLID',
@@ -366,9 +392,6 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
             if (node.style?.textDecoration) base.textDecoration = node.style.textDecoration;
             if (node.style?.textCase) base.textCase = node.style.textCase;
             if (node.style?.textTruncation) base.textTruncation = node.style.textTruncation;
-            const sizeProps = mapStyleToFigmaProps(node.style);
-            if (sizeProps.width) base.width = sizeProps.width;
-            if (sizeProps.height) base.height = sizeProps.height;
             break;
         }
         case 'IMAGE': {
@@ -510,6 +533,37 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
                     }
                 }
             }
+        }
+    }
+
+    // Auto-layout sizing: ensure parent is large enough to contain children.
+    // getBoundingClientRect() reports the element's CSS box, not its content overflow.
+    // If children need more space than the parent's bounding rect, expand the parent.
+    if (base.layoutMode && base.layoutMode !== 'NONE' && base.children && base.children.length > 0) {
+        const padL = base.paddingLeft ?? 0;
+        const padR = base.paddingRight ?? 0;
+        const padT = base.paddingTop ?? 0;
+        const padB = base.paddingBottom ?? 0;
+        const gap = base.itemSpacing ?? 0;
+
+        if (base.layoutMode === 'HORIZONTAL') {
+            const neededW =
+                padL +
+                padR +
+                base.children.reduce((sum, c) => sum + (c.width ?? 0), 0) +
+                (base.children.length - 1) * gap;
+            if (base.width && neededW > base.width) base.width = neededW;
+        } else if (base.layoutMode === 'VERTICAL') {
+            const maxChildW = Math.max(...base.children.map((c) => c.width ?? 0));
+            const neededW = padL + padR + maxChildW;
+            if (base.width && neededW > base.width) base.width = neededW;
+
+            const neededH =
+                padT +
+                padB +
+                base.children.reduce((sum, c) => sum + (c.height ?? 0), 0) +
+                (base.children.length - 1) * gap;
+            if (base.height && neededH > base.height) base.height = neededH;
         }
     }
 

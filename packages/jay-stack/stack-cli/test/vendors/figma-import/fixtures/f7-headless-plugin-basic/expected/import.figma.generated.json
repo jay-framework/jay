@@ -153,6 +153,17 @@
                   "characters": "{label}",
                   "fontSize": 14,
                   "fontWeight": 600,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.13,
+                        "g": 0.13,
+                        "b": 0.13
+                      },
+                      "opacity": 1
+                    }
+                  ],
                   "pluginData": {
                     "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\",\"pluginName\":\"product-data\",\"componentName\":\"product\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"options\",\"label\"]}]"
                   },
@@ -295,6 +306,17 @@
                   "visible": true,
                   "textAutoResize": "WIDTH_AND_HEIGHT",
                   "characters": "Image placeholder",
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.13,
+                        "g": 0.13,
+                        "b": 0.13
+                      },
+                      "opacity": 1
+                    }
+                  ],
                   "fontName": {
                     "family": "Inter",
                     "style": "Regular"
@@ -340,6 +362,17 @@
                   "visible": true,
                   "textAutoResize": "WIDTH_AND_HEIGHT",
                   "characters": "Video placeholder",
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.13,
+                        "g": 0.13,
+                        "b": 0.13
+                      },
+                      "opacity": 1
+                    }
+                  ],
                   "fontName": {
                     "family": "Inter",
                     "style": "Regular"

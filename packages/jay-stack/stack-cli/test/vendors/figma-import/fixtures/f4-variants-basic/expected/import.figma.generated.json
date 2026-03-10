@@ -119,6 +119,17 @@
                   "visible": true,
                   "textAutoResize": "WIDTH_AND_HEIGHT",
                   "characters": "Image Media",
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.13,
+                        "g": 0.13,
+                        "b": 0.13
+                      },
+                      "opacity": 1
+                    }
+                  ],
                   "fontName": {
                     "family": "Inter",
                     "style": "Regular"

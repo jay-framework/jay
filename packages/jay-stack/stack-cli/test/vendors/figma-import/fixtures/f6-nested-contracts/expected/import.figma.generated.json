@@ -127,6 +127,17 @@
                   "characters": "{label}",
                   "fontSize": 14,
                   "fontWeight": 600,
+                  "fills": [
+                    {
+                      "type": "SOLID",
+                      "color": {
+                        "r": 0.13,
+                        "g": 0.13,
+                        "b": 0.13
+                      },
+                      "opacity": 1
+                    }
+                  ],
                   "pluginData": {
                     "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"product\",\"options\",\"label\"]}]"
                   },
