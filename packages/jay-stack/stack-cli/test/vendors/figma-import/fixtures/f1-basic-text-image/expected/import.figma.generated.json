@@ -62,7 +62,7 @@
         },
         {
           "type": "RECTANGLE",
-          "name": "img",
+          "name": "[img] Hero image",
           "visible": true,
           "pluginData": {
             "htmlAttributes": "{\"src\":\"https://placeholder.com/hero.jpg\",\"alt\":\"Hero image\"}",
@@ -73,6 +73,13 @@
           "width": 536,
           "height": 280,
           "cornerRadius": 4,
+          "fills": [
+            { "type": "SOLID", "color": { "r": 0.91, "g": 0.89, "b": 0.87 }, "opacity": 1 }
+          ],
+          "strokes": [
+            { "type": "SOLID", "color": { "r": 0.75, "g": 0.73, "b": 0.71 }, "opacity": 1 }
+          ],
+          "strokeWeight": 1,
           "layoutSizingHorizontal": "FILL"
         }
       ]

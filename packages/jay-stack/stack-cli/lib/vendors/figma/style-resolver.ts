@@ -1,4 +1,4 @@
-import type { ImportIRLayoutMode, ImportIRStyle, ImportIREffect } from './import-ir';
+import type { ImportIRLayoutMode, ImportIRStyle, ImportIREffect, ImportIRFill } from './import-ir';
 import type { ComputedStyleData } from './computed-style-types';
 
 const DYNAMIC_PATTERN = /\{[^}]*\}/;
@@ -65,33 +65,127 @@ const RECOGNIZED_BUT_NOT_STORED = new Set([
     'scrollbar-width',
     'scrollbar-color',
     '-webkit-backdrop-filter',
-    'backdrop-filter',
-    'filter',
     'transform',
     'transform-origin',
     'grid-auto-flow',
     'flex-shrink',
     'flex-basis',
-    'border-right-color',
-    'border-bottom-color',
-    'border-left-color',
-    'border-right-width',
-    'border-bottom-width',
-    'border-left-width',
+    'margin-top',
+    'margin-right',
+    'margin-bottom',
+    'margin-left',
 ]);
 
-function parseBoxShadow(value: string): ImportIREffect | undefined {
-    // Parse: offsetX offsetY blurRadius [spreadRadius] color
-    const match = value.match(/^([\d.]+)px\s+([\d.]+)px\s+([\d.]+)px\s*(?:([\d.]+)px\s+)?(.+)$/);
+function parseBoxShadow(value: string): ImportIREffect[] {
+    const effects: ImportIREffect[] = [];
+    // Split multiple shadows on commas not inside parentheses
+    const shadows = splitOutsideParens(value, ',');
+    for (const shadow of shadows) {
+        const trimmed = shadow.trim();
+        if (trimmed === 'none') continue;
+        const isInset = trimmed.startsWith('inset ');
+        const shadowStr = isInset ? trimmed.slice(6).trim() : trimmed;
+        const match = shadowStr.match(
+            /^([\d.]+)px\s+([\d.]+)px\s+([\d.]+)px\s*(?:([\d.]+)px\s+)?(.+)$/,
+        );
+        if (!match) continue;
+        const [, xStr, yStr, blurStr, spreadStr, colorStr] = match;
+        effects.push({
+            type: isInset ? 'INNER_SHADOW' : 'DROP_SHADOW',
+            offset: { x: parseFloat(xStr), y: parseFloat(yStr) },
+            radius: parseFloat(blurStr),
+            spread: spreadStr ? parseFloat(spreadStr) : undefined,
+            color: colorStr.trim(),
+        });
+    }
+    return effects;
+}
+
+function splitOutsideParens(str: string, delimiter: string): string[] {
+    const parts: string[] = [];
+    let depth = 0;
+    let current = '';
+    for (let i = 0; i < str.length; i++) {
+        const ch = str[i];
+        if (ch === '(') depth++;
+        else if (ch === ')') depth--;
+        else if (ch === delimiter && depth === 0) {
+            parts.push(current);
+            current = '';
+            continue;
+        }
+        current += ch;
+    }
+    if (current) parts.push(current);
+    return parts;
+}
+
+function parseLinearGradient(value: string): ImportIRFill | undefined {
+    const match = value.match(/^linear-gradient\((.+)\)$/);
     if (!match) return undefined;
-    const [, xStr, yStr, blurStr, spreadStr, colorStr] = match;
-    return {
-        type: 'DROP_SHADOW',
-        offset: { x: parseFloat(xStr), y: parseFloat(yStr) },
-        radius: parseFloat(blurStr),
-        spread: spreadStr ? parseFloat(spreadStr) : undefined,
-        color: colorStr.trim(),
-    };
+
+    const inner = match[1];
+    const parts = splitOutsideParens(inner, ',');
+    if (parts.length < 2) return undefined;
+
+    let angle = 180; // default: to bottom
+    let stopStart = 0;
+    const firstPart = parts[0].trim();
+
+    // Parse angle
+    const degMatch = firstPart.match(/^([\d.]+)deg$/);
+    if (degMatch) {
+        angle = parseFloat(degMatch[1]);
+        stopStart = 1;
+    } else if (firstPart === 'to bottom') {
+        angle = 180;
+        stopStart = 1;
+    } else if (firstPart === 'to top') {
+        angle = 0;
+        stopStart = 1;
+    } else if (firstPart === 'to right') {
+        angle = 90;
+        stopStart = 1;
+    } else if (firstPart === 'to left') {
+        angle = 270;
+        stopStart = 1;
+    } else if (firstPart === 'to bottom right') {
+        angle = 135;
+        stopStart = 1;
+    } else if (firstPart === 'to bottom left') {
+        angle = 225;
+        stopStart = 1;
+    } else if (firstPart === 'to top right') {
+        angle = 45;
+        stopStart = 1;
+    } else if (firstPart === 'to top left') {
+        angle = 315;
+        stopStart = 1;
+    }
+
+    const stops: Array<{ position: number; color: string }> = [];
+    for (let i = stopStart; i < parts.length; i++) {
+        const stopStr = parts[i].trim();
+        const posMatch = stopStr.match(/^(.+?)\s+([\d.]+)%$/);
+        if (posMatch) {
+            stops.push({ color: posMatch[1].trim(), position: parseFloat(posMatch[2]) / 100 });
+        } else {
+            // Evenly distribute stops without explicit positions
+            const pos =
+                parts.length - stopStart <= 1
+                    ? 0
+                    : (i - stopStart) / (parts.length - stopStart - 1);
+            stops.push({ color: stopStr, position: pos });
+        }
+    }
+
+    if (stops.length < 2) return undefined;
+    return { type: 'GRADIENT_LINEAR', angle, stops };
+}
+
+function parseBlurRadius(value: string): number | undefined {
+    const match = value.match(/blur\(([\d.]+)px\)/);
+    return match ? parseFloat(match[1]) : undefined;
 }
 
 export type CssClassMap = Map<string, Record<string, string>>;
@@ -183,9 +277,10 @@ export function resolveStyle(
     classNames?: string[],
     cssClassMap?: CssClassMap,
     enrichedStyles?: ComputedStyleData,
-): { style: ImportIRStyle; warnings: string[] } {
+): { style: ImportIRStyle; warnings: string[]; unsupportedCss: Record<string, string> } {
     const warnings: string[] = [];
     const style: ImportIRStyle = {};
+    const unsupportedCss: Record<string, string> = {};
 
     // Build merged style: class properties first, then inline overrides
     let mergedStyleStr = '';
@@ -371,6 +466,7 @@ export function resolveStyle(
                 break;
             case 'background-image': {
                 if (value === 'none') break;
+                // Single-color gradient (e.g., CSS resolves solid bg to gradient form)
                 const solidGradient = value.match(
                     /^linear-gradient\(rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\),\s*rgba\(\1,\s*\2,\s*\3,\s*\4\)\)$/,
                 );
@@ -386,6 +482,13 @@ export function resolveStyle(
                     } else {
                         style.backgroundColor = hex;
                     }
+                    break;
+                }
+                // Real gradient
+                const gradient = parseLinearGradient(value);
+                if (gradient) {
+                    style.fills = style.fills || [];
+                    style.fills.push(gradient);
                 } else if (value.includes('gradient')) {
                     if (!style.backgroundColor || style.backgroundColor === 'rgba(0, 0, 0, 0)') {
                         style.backgroundColor = GRADIENT_PLACEHOLDER_COLOR;
@@ -451,14 +554,37 @@ export function resolveStyle(
             }
             case 'border-top-width': {
                 const px = parsePx(value);
-                if (px !== undefined && px > 0 && style.borderWidth === undefined) {
-                    style.borderWidth = px;
+                if (px !== undefined) {
+                    style.borderTopWidth = px;
+                    if (px > 0 && style.borderWidth === undefined) style.borderWidth = px;
                 }
                 break;
             }
+            case 'border-right-width': {
+                const px = parsePx(value);
+                if (px !== undefined) style.borderRightWidth = px;
+                break;
+            }
+            case 'border-bottom-width': {
+                const px = parsePx(value);
+                if (px !== undefined) style.borderBottomWidth = px;
+                break;
+            }
+            case 'border-left-width': {
+                const px = parsePx(value);
+                if (px !== undefined) style.borderLeftWidth = px;
+                break;
+            }
             case 'border-top-color': {
-                const hasBorder = style.borderWidth !== undefined && style.borderWidth > 0;
-                if (hasBorder && (!style.borderColor || style.borderColor.startsWith('var('))) {
+                if (!style.borderColor || style.borderColor.startsWith('var(')) {
+                    style.borderColor = value;
+                }
+                break;
+            }
+            case 'border-right-color':
+            case 'border-bottom-color':
+            case 'border-left-color': {
+                if (!style.borderColor || style.borderColor === 'transparent') {
                     style.borderColor = value;
                 }
                 break;
@@ -536,10 +662,10 @@ export function resolveStyle(
                 break;
             }
             case 'box-shadow': {
-                const effect = parseBoxShadow(value);
-                if (effect) {
+                const effects = parseBoxShadow(value);
+                if (effects.length > 0) {
                     style.effects = style.effects || [];
-                    style.effects.push(effect);
+                    style.effects.push(...effects);
                 }
                 break;
             }
@@ -587,6 +713,29 @@ export function resolveStyle(
                 }
                 break;
             }
+            case 'font-style': {
+                if (value === 'italic' || value === 'oblique') style.fontStyle = 'italic';
+                else style.fontStyle = 'normal';
+                break;
+            }
+            case 'filter': {
+                if (value === 'none') break;
+                const blur = parseBlurRadius(value);
+                if (blur !== undefined && blur > 0) {
+                    style.effects = style.effects || [];
+                    style.effects.push({ type: 'LAYER_BLUR', radius: blur });
+                }
+                break;
+            }
+            case 'backdrop-filter': {
+                if (value === 'none') break;
+                const blur = parseBlurRadius(value);
+                if (blur !== undefined && blur > 0) {
+                    style.effects = style.effects || [];
+                    style.effects.push({ type: 'BACKGROUND_BLUR', radius: blur });
+                }
+                break;
+            }
             case 'flex-grow': {
                 const num = parseFloat(value);
                 if (!isNaN(num) && num > 0) style.flexGrow = num;
@@ -604,6 +753,7 @@ export function resolveStyle(
             }
             default:
                 if (RECOGNIZED_BUT_NOT_STORED.has(prop)) break;
+                unsupportedCss[prop] = value;
                 warnings.push(`CSS_UNSUPPORTED_PROPERTY: ${prop}`);
         }
     }
@@ -626,5 +776,5 @@ export function resolveStyle(
         }
     }
 
-    return { style, warnings };
+    return { style, warnings, unsupportedCss };
 }

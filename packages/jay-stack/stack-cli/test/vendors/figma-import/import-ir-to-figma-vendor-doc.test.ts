@@ -157,6 +157,235 @@ describe('adaptIRToFigmaVendorDoc', () => {
         });
     });
 
+    describe('Phase 3: visual property mappings', () => {
+        it('gradient fill maps to GRADIENT_LINEAR paint', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: {
+                            fills: [
+                                {
+                                    type: 'GRADIENT_LINEAR',
+                                    angle: 180,
+                                    stops: [
+                                        { position: 0, color: 'rgba(245, 240, 233, 1)' },
+                                        { position: 1, color: 'rgba(245, 240, 233, 0)' },
+                                    ],
+                                },
+                            ],
+                        },
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const frame = result.children![0];
+            expect(frame.fills).toHaveLength(1);
+            expect(frame.fills![0].type).toBe('GRADIENT_LINEAR');
+            expect(frame.fills![0].gradientStops).toHaveLength(2);
+            expect(frame.fills![0].gradientTransform).toBeDefined();
+        });
+
+        it('gradient fill preserves color stops with alpha', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: {
+                            fills: [
+                                {
+                                    type: 'GRADIENT_LINEAR',
+                                    angle: 90,
+                                    stops: [
+                                        { position: 0, color: 'rgba(0, 0, 0, 0.5)' },
+                                        { position: 1, color: 'rgba(255, 255, 255, 1)' },
+                                    ],
+                                },
+                            ],
+                        },
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const stops = result.children![0].fills![0].gradientStops;
+            expect(stops[0].color.a).toBe(0.5);
+            expect(stops[1].color.a).toBe(1);
+        });
+
+        it('backgroundColor + gradient → solid fill + gradient fill', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: {
+                            backgroundColor: '#f5f0e9',
+                            fills: [
+                                {
+                                    type: 'GRADIENT_LINEAR',
+                                    angle: 180,
+                                    stops: [
+                                        { position: 0, color: 'rgba(0,0,0,0.1)' },
+                                        { position: 1, color: 'rgba(0,0,0,0)' },
+                                    ],
+                                },
+                            ],
+                        },
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const fills = result.children![0].fills!;
+            expect(fills).toHaveLength(2);
+            expect(fills[0].type).toBe('SOLID');
+            expect(fills[1].type).toBe('GRADIENT_LINEAR');
+        });
+
+        it('per-side border widths → individual strokeWeights', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: {
+                            borderTopWidth: 0,
+                            borderRightWidth: 0,
+                            borderBottomWidth: 2,
+                            borderLeftWidth: 0,
+                            borderColor: '#cccccc',
+                        },
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const frame = result.children![0];
+            expect(frame.strokeTopWeight).toBe(0);
+            expect(frame.strokeBottomWeight).toBe(2);
+            expect(frame.strokes).toHaveLength(1);
+        });
+
+        it('uniform per-side borders use single strokeWeight', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: {
+                            borderTopWidth: 1,
+                            borderRightWidth: 1,
+                            borderBottomWidth: 1,
+                            borderLeftWidth: 1,
+                            borderColor: '#000000',
+                        },
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const frame = result.children![0];
+            expect(frame.strokeWeight).toBe(1);
+            expect(frame.strokeTopWeight).toBeUndefined();
+        });
+
+        it('INNER_SHADOW effect mapped correctly', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: {
+                            effects: [
+                                {
+                                    type: 'INNER_SHADOW',
+                                    color: 'rgba(0,0,0,0.2)',
+                                    offset: { x: 0, y: 2 },
+                                    radius: 4,
+                                },
+                            ],
+                        },
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const effects = result.children![0].effects!;
+            expect(effects).toHaveLength(1);
+            expect(effects[0].type).toBe('INNER_SHADOW');
+            expect(effects[0].offset).toEqual({ x: 0, y: 2 });
+        });
+
+        it('LAYER_BLUR effect mapped correctly', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: {
+                            effects: [{ type: 'LAYER_BLUR', radius: 10 }],
+                        },
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const effects = result.children![0].effects!;
+            expect(effects).toHaveLength(1);
+            expect(effects[0]).toEqual({ type: 'LAYER_BLUR', radius: 10, visible: true });
+        });
+
+        it('BACKGROUND_BLUR effect mapped correctly', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: {
+                            effects: [{ type: 'BACKGROUND_BLUR', radius: 20 }],
+                        },
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const effects = result.children![0].effects!;
+            expect(effects).toHaveLength(1);
+            expect(effects[0]).toEqual({ type: 'BACKGROUND_BLUR', radius: 20, visible: true });
+        });
+
+        it('italic fontStyle → fontName with Italic suffix', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    {
+                        id: 'text-1',
+                        sourcePath: '/p',
+                        kind: 'TEXT' as const,
+                        text: { characters: 'Hello' },
+                        style: {
+                            fontFamily: 'Inter',
+                            fontWeight: 400,
+                            fontStyle: 'italic' as const,
+                        },
+                    },
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const textNode = result.children![0];
+            expect(textNode.fontName).toEqual({ family: 'Inter', style: 'Regular Italic' });
+        });
+
+        it('non-italic fontStyle → fontName without Italic suffix', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    {
+                        id: 'text-1',
+                        sourcePath: '/p',
+                        kind: 'TEXT' as const,
+                        text: { characters: 'Hello' },
+                        style: {
+                            fontFamily: 'Inter',
+                            fontWeight: 700,
+                        },
+                    },
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const textNode = result.children![0];
+            expect(textNode.fontName).toEqual({ family: 'Inter', style: 'Bold' });
+        });
+    });
+
     describe('absolute positioning', () => {
         it('isAbsolute maps to layoutPositioning ABSOLUTE', () => {
             const root = makeFrame({

@@ -242,7 +242,11 @@ describe('style-resolver', () => {
         it('box-shadow with spread → DROP_SHADOW effect', () => {
             const { style } = resolveStyle('box-shadow: 0px 2px 10px 1px #00000020');
             expect(style.effects).toHaveLength(1);
-            expect(style.effects![0].spread).toBe(1);
+            const effect = style.effects![0];
+            expect(effect.type).toBe('DROP_SHADOW');
+            if (effect.type === 'DROP_SHADOW' || effect.type === 'INNER_SHADOW') {
+                expect(effect.spread).toBe(1);
+            }
         });
 
         it('text-decoration: underline', () => {
@@ -362,6 +366,152 @@ describe('style-resolver', () => {
             expect(relStyle.y).toBeUndefined();
             expect(relStyle.width).toBe(200);
             expect(relStyle.height).toBe(80);
+        });
+    });
+
+    describe('Phase 3: gradient fills', () => {
+        it('linear-gradient(180deg, ...) → fills array', () => {
+            const { style } = resolveStyle(
+                'background-image: linear-gradient(180deg, rgba(245, 240, 233, 1) 0%, rgba(245, 240, 233, 0) 100%)',
+            );
+            expect(style.fills).toHaveLength(1);
+            expect(style.fills![0]).toEqual({
+                type: 'GRADIENT_LINEAR',
+                angle: 180,
+                stops: [
+                    { color: 'rgba(245, 240, 233, 1)', position: 0 },
+                    { color: 'rgba(245, 240, 233, 0)', position: 1 },
+                ],
+            });
+        });
+
+        it('linear-gradient with "to right" direction', () => {
+            const { style } = resolveStyle(
+                'background-image: linear-gradient(to right, #ff0000 0%, #0000ff 100%)',
+            );
+            expect(style.fills).toHaveLength(1);
+            expect(style.fills![0]).toMatchObject({ type: 'GRADIENT_LINEAR', angle: 90 });
+        });
+
+        it('linear-gradient with "to top" direction', () => {
+            const { style } = resolveStyle(
+                'background-image: linear-gradient(to top, #000 0%, #fff 100%)',
+            );
+            expect(style.fills![0]).toMatchObject({ type: 'GRADIENT_LINEAR', angle: 0 });
+        });
+
+        it('linear-gradient with 3 color stops', () => {
+            const { style } = resolveStyle(
+                'background-image: linear-gradient(90deg, red 0%, green 50%, blue 100%)',
+            );
+            expect(style.fills![0]).toMatchObject({
+                type: 'GRADIENT_LINEAR',
+                angle: 90,
+                stops: [
+                    { color: 'red', position: 0 },
+                    { color: 'green', position: 0.5 },
+                    { color: 'blue', position: 1 },
+                ],
+            });
+        });
+
+        it('gradient + background-color → fills with solid + gradient', () => {
+            const { style } = resolveStyle(
+                'background-color: #f5f0e9; background-image: linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0) 100%)',
+            );
+            expect(style.backgroundColor).toBe('#f5f0e9');
+            expect(style.fills).toHaveLength(1);
+            expect(style.fills![0].type).toBe('GRADIENT_LINEAR');
+        });
+    });
+
+    describe('Phase 3: inset box-shadow', () => {
+        it('inset box-shadow → INNER_SHADOW effect', () => {
+            const { style } = resolveStyle('box-shadow: inset 0px 2px 4px rgba(0,0,0,0.15)');
+            expect(style.effects).toHaveLength(1);
+            expect(style.effects![0]).toMatchObject({
+                type: 'INNER_SHADOW',
+                offset: { x: 0, y: 2 },
+                radius: 4,
+                color: 'rgba(0,0,0,0.15)',
+            });
+        });
+
+        it('multiple shadows: drop + inset', () => {
+            const { style } = resolveStyle(
+                'box-shadow: 2px 4px 8px rgba(0,0,0,0.1), inset 0px 1px 3px rgba(0,0,0,0.2)',
+            );
+            expect(style.effects).toHaveLength(2);
+            expect(style.effects![0].type).toBe('DROP_SHADOW');
+            expect(style.effects![1].type).toBe('INNER_SHADOW');
+        });
+
+        it('box-shadow: none → no effects', () => {
+            const { style } = resolveStyle('box-shadow: none');
+            expect(style.effects).toBeUndefined();
+        });
+    });
+
+    describe('Phase 3: per-side borders', () => {
+        it('per-side border widths are captured individually', () => {
+            const { style } = resolveStyle(
+                'border-top-width: 0px; border-right-width: 0px; border-bottom-width: 2px; border-left-width: 0px',
+            );
+            expect(style.borderTopWidth).toBe(0);
+            expect(style.borderRightWidth).toBe(0);
+            expect(style.borderBottomWidth).toBe(2);
+            expect(style.borderLeftWidth).toBe(0);
+        });
+
+        it('per-side border colors set borderColor from first non-transparent', () => {
+            const { style } = resolveStyle(
+                'border-bottom-width: 1px; border-bottom-color: rgb(200, 200, 200)',
+            );
+            expect(style.borderBottomWidth).toBe(1);
+            expect(style.borderColor).toBe('rgb(200, 200, 200)');
+        });
+
+        it('per-side border widths do not generate unsupported property warnings', () => {
+            const { warnings } = resolveStyle(
+                'border-right-width: 1px; border-bottom-width: 1px; border-left-width: 1px; border-right-color: #ccc; border-bottom-color: #ccc; border-left-color: #ccc',
+            );
+            expect(warnings.filter((w) => w.includes('CSS_UNSUPPORTED'))).toEqual([]);
+        });
+    });
+
+    describe('Phase 3: blur effects', () => {
+        it('filter: blur(10px) → LAYER_BLUR effect', () => {
+            const { style } = resolveStyle('filter: blur(10px)');
+            expect(style.effects).toHaveLength(1);
+            expect(style.effects![0]).toEqual({ type: 'LAYER_BLUR', radius: 10 });
+        });
+
+        it('backdrop-filter: blur(20px) → BACKGROUND_BLUR effect', () => {
+            const { style } = resolveStyle('backdrop-filter: blur(20px)');
+            expect(style.effects).toHaveLength(1);
+            expect(style.effects![0]).toEqual({ type: 'BACKGROUND_BLUR', radius: 20 });
+        });
+
+        it('filter: none → no effects', () => {
+            const { style } = resolveStyle('filter: none');
+            expect(style.effects).toBeUndefined();
+        });
+    });
+
+    describe('Phase 3: font style', () => {
+        it('font-style: italic', () => {
+            const { style } = resolveStyle('font-style: italic');
+            expect(style.fontStyle).toBe('italic');
+        });
+
+        it('font-style: oblique treated as italic', () => {
+            const { style } = resolveStyle('font-style: oblique');
+            expect(style.fontStyle).toBe('italic');
+        });
+
+        it('font-style: normal', () => {
+            const { style } = resolveStyle('font-style: normal');
+            expect(style.fontStyle).toBe('normal');
         });
     });
 

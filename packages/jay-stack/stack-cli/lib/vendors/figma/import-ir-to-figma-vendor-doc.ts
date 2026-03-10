@@ -1,5 +1,5 @@
 import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
-import type { ImportIRDocument, ImportIRNode, ImportIRStyle } from './import-ir';
+import type { ImportIRDocument, ImportIRNode, ImportIRStyle, ImportIRFill } from './import-ir';
 
 const DEFAULT_FONT_FAMILY = 'Inter';
 
@@ -14,6 +14,41 @@ function fontWeightToStyle(weight: number | undefined): string {
     if (weight < 750) return 'Bold';
     if (weight < 850) return 'Extra Bold';
     return 'Black';
+}
+
+function cssAngleToFigmaTransform(
+    cssDeg: number,
+): [[number, number, number], [number, number, number]] {
+    const rad = ((cssDeg - 90) * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    const tx = 0.5 - 0.5 * cos + 0.5 * sin;
+    const ty = 0.5 - 0.5 * sin - 0.5 * cos;
+    return [
+        [cos, -sin, tx],
+        [sin, cos, ty],
+    ];
+}
+
+function mapFillToFigma(fill: ImportIRFill): any {
+    if (fill.type === 'SOLID') {
+        const color = parseColor(fill.color);
+        return { type: 'SOLID', color: { r: color.r, g: color.g, b: color.b }, opacity: color.a };
+    }
+    if (fill.type === 'GRADIENT_LINEAR') {
+        return {
+            type: 'GRADIENT_LINEAR',
+            gradientTransform: cssAngleToFigmaTransform(fill.angle),
+            gradientStops: fill.stops.map((s) => {
+                const color = parseColor(s.color);
+                return {
+                    position: s.position,
+                    color: { r: color.r, g: color.g, b: color.b, a: color.a },
+                };
+            }),
+        };
+    }
+    return { type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 }, opacity: 1 };
 }
 
 function parseColor(cssColor: string): { r: number; g: number; b: number; a: number } {
@@ -130,11 +165,32 @@ function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVe
         props.paddingLeft = style.padding.left;
     }
 
-    if (style.backgroundColor) {
+    // Build fills: explicit fills array takes priority, then backgroundColor fallback
+    // Skip fully transparent backgrounds (a === 0) — they add noise in Figma
+    if (style.fills && style.fills.length > 0) {
+        const figmaFills = style.fills.map(mapFillToFigma);
+        if (style.backgroundColor) {
+            const bgColor = parseColor(style.backgroundColor);
+            if (bgColor.a > 0) {
+                figmaFills.unshift({
+                    type: 'SOLID',
+                    color: { r: bgColor.r, g: bgColor.g, b: bgColor.b },
+                    opacity: bgColor.a,
+                });
+            }
+        }
+        props.fills = figmaFills;
+    } else if (style.backgroundColor) {
         const color = parseColor(style.backgroundColor);
-        props.fills = [
-            { type: 'SOLID', color: { r: color.r, g: color.g, b: color.b }, opacity: color.a },
-        ];
+        if (color.a > 0) {
+            props.fills = [
+                {
+                    type: 'SOLID',
+                    color: { r: color.r, g: color.g, b: color.b },
+                    opacity: color.a,
+                },
+            ];
+        }
     }
 
     if (style.borderRadius !== undefined) props.cornerRadius = style.borderRadius;
@@ -152,8 +208,31 @@ function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVe
     }
     if (style.clipsContent) props.clipsContent = true;
     if (style.opacity !== undefined) props.opacity = style.opacity;
-    if (style.borderWidth !== undefined && style.borderWidth > 0) {
-        props.strokeWeight = style.borderWidth;
+    // Borders: check for per-side widths first, then uniform
+    const hasPerSide =
+        style.borderTopWidth !== undefined ||
+        style.borderRightWidth !== undefined ||
+        style.borderBottomWidth !== undefined ||
+        style.borderLeftWidth !== undefined;
+    const topW = style.borderTopWidth ?? 0;
+    const rightW = style.borderRightWidth ?? 0;
+    const bottomW = style.borderBottomWidth ?? 0;
+    const leftW = style.borderLeftWidth ?? 0;
+    const anyBorder = hasPerSide
+        ? topW > 0 || rightW > 0 || bottomW > 0 || leftW > 0
+        : style.borderWidth !== undefined && style.borderWidth > 0;
+
+    if (anyBorder) {
+        if (hasPerSide && !(topW === rightW && rightW === bottomW && bottomW === leftW)) {
+            // Per-side stroke weights (Figma supports individual stroke weights)
+            props.strokeWeight = Math.max(topW, rightW, bottomW, leftW);
+            props.strokeTopWeight = topW;
+            props.strokeRightWeight = rightW;
+            props.strokeBottomWeight = bottomW;
+            props.strokeLeftWeight = leftW;
+        } else {
+            props.strokeWeight = style.borderWidth ?? topW;
+        }
         if (style.borderColor) {
             const color = parseColor(style.borderColor);
             props.strokes = [
@@ -175,13 +254,18 @@ function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVe
 
     if (style.effects && style.effects.length > 0) {
         props.effects = style.effects.map((e) => {
-            const color = parseColor(e.color);
+            if (e.type === 'LAYER_BLUR' || e.type === 'BACKGROUND_BLUR') {
+                return { type: e.type, radius: e.radius, visible: true };
+            }
+            // e is now narrowed to DROP_SHADOW | INNER_SHADOW
+            const shadow = e as Extract<typeof e, { color: string }>;
+            const color = parseColor(shadow.color);
             return {
-                type: e.type,
+                type: shadow.type,
                 color: { r: color.r, g: color.g, b: color.b, a: color.a },
-                offset: e.offset,
-                radius: e.radius,
-                spread: e.spread ?? 0,
+                offset: shadow.offset,
+                radius: shadow.radius,
+                spread: shadow.spread ?? 0,
                 visible: true,
             };
         });
@@ -248,7 +332,12 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
             }
             const family = node.style?.fontFamily || DEFAULT_FONT_FAMILY;
             const weight = node.style?.fontWeight;
-            base.fontName = { family, style: fontWeightToStyle(weight) };
+            const isItalic = node.style?.fontStyle === 'italic';
+            const weightStyle = fontWeightToStyle(weight);
+            base.fontName = {
+                family,
+                style: isItalic ? `${weightStyle} Italic` : weightStyle,
+            };
             if (node.style?.fontSize) base.fontSize = node.style.fontSize;
             if (weight) base.fontWeight = weight;
             if (node.style?.textColor) {
@@ -294,6 +383,35 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
             }
             const styleProps = mapStyleToFigmaProps(node.style);
             Object.assign(base, styleProps);
+
+            // Visible placeholder: gray fill + border so images are identifiable
+            if (!base.fills || base.fills.length === 0) {
+                base.fills = [
+                    {
+                        type: 'SOLID',
+                        color: { r: 0.91, g: 0.89, b: 0.87 },
+                        opacity: 1,
+                    },
+                ];
+            }
+            if (!base.strokes || base.strokes.length === 0) {
+                base.strokes = [
+                    {
+                        type: 'SOLID',
+                        color: { r: 0.75, g: 0.73, b: 0.71 },
+                        opacity: 1,
+                    },
+                ];
+                base.strokeWeight = 1;
+            }
+
+            // Name includes truncated src for easy identification
+            if (node.image?.src) {
+                const srcName = node.image.src.split('/').pop()?.split('?')[0] || 'image';
+                base.name = `[img] ${node.image.alt || srcName}`;
+            } else {
+                base.name = `[img] ${node.image?.alt || name}`;
+            }
             break;
         }
         case 'COMPONENT': {
@@ -357,6 +475,10 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
         base.pluginData = base.pluginData || {};
         base.pluginData['imgAlt'] = node.image.alt;
     }
+    if (node.unsupportedCss && Object.keys(node.unsupportedCss).length > 0) {
+        base.pluginData = base.pluginData || {};
+        base.pluginData['jay-unsupported-css'] = JSON.stringify(node.unsupportedCss);
+    }
 
     // Map bindings to pluginData
     if (node.bindings && node.bindings.length > 0) {
@@ -405,6 +527,72 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
     return base;
 }
 
+export interface ImportReportWarning {
+    elementId: string;
+    elementName: string;
+    feature: string;
+    action: 'mapped' | 'approximated' | 'stored' | 'ignored';
+    message: string;
+}
+
+export interface ImportReport {
+    totalElements: number;
+    importedElements: number;
+    warnings: ImportReportWarning[];
+    unsupportedCssCount: number;
+}
+
+function collectImportReport(irRoot: ImportIRNode): ImportReport {
+    const warnings: ImportReportWarning[] = [];
+    let totalElements = 0;
+    let unsupportedCssCount = 0;
+
+    function walk(node: ImportIRNode) {
+        totalElements++;
+
+        if (node.unsupportedCss) {
+            const keys = Object.keys(node.unsupportedCss);
+            unsupportedCssCount += keys.length;
+            for (const prop of keys) {
+                warnings.push({
+                    elementId: node.id,
+                    elementName: node.name || node.tagName || node.kind,
+                    feature: prop,
+                    action: 'stored',
+                    message: `${prop}: ${node.unsupportedCss[prop]} stored in pluginData`,
+                });
+            }
+        }
+
+        if (node.warnings) {
+            for (const w of node.warnings) {
+                if (w.startsWith('CSS_DYNAMIC_VALUE:')) {
+                    warnings.push({
+                        elementId: node.id,
+                        elementName: node.name || node.tagName || node.kind,
+                        feature: w.replace('CSS_DYNAMIC_VALUE: ', ''),
+                        action: 'ignored',
+                        message: `Dynamic CSS value — resolved at runtime`,
+                    });
+                }
+            }
+        }
+
+        if (node.children) {
+            for (const child of node.children) walk(child);
+        }
+    }
+
+    walk(irRoot);
+
+    return {
+        totalElements,
+        importedElements: totalElements,
+        warnings,
+        unsupportedCssCount,
+    };
+}
+
 /**
  * Adapt an ImportIRDocument to a FigmaVendorDocument.
  * The output is suitable for the Figma plugin deserializer.
@@ -419,6 +607,10 @@ export function adaptIRToFigmaVendorDoc(ir: ImportIRDocument): FigmaVendorDocume
         if (ir.route) {
             root.pluginData['urlRoute'] = ir.route;
         }
+
+        // Generate and attach ImportReport
+        const report = collectImportReport(ir.root);
+        root.pluginData['jay-import-report'] = JSON.stringify(report);
     }
 
     return root;

@@ -392,14 +392,22 @@ describe('Figma Import Fixtures', () => {
             try {
                 const expectedJson = JSON.parse(await fs.readFile(expectedPath, 'utf-8'));
 
-                // Strip IDs for structural comparison (IDs are deterministic but depend on hashing)
+                // Strip IDs and import report for structural comparison
                 const stripIds = (obj: any): any => {
                     if (Array.isArray(obj)) return obj.map(stripIds);
                     if (obj && typeof obj === 'object') {
                         const { id, ...rest } = obj;
                         const result: any = {};
                         for (const [k, v] of Object.entries(rest)) {
-                            result[k] = stripIds(v);
+                            if (k === 'pluginData' && v && typeof v === 'object') {
+                                const { 'jay-import-report': _, ...pdRest } = v as Record<
+                                    string,
+                                    any
+                                >;
+                                result[k] = stripIds(pdRest);
+                            } else {
+                                result[k] = stripIds(v);
+                            }
                         }
                         return result;
                     }

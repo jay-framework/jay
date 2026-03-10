@@ -351,6 +351,9 @@ async function extractComputedStyles(
             'box-shadow',
             'text-decoration',
             'text-transform',
+            'font-style',
+            'filter',
+            'backdrop-filter',
         ];
 
         const result: Array<{

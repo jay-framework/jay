@@ -291,12 +291,11 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
 
     const enrichedStyles = sourceId ? computedStyleMap?.get(sourceId) : undefined;
 
-    const { style, warnings: styleWarnings } = resolveStyle(
-        styleAttr,
-        classNames,
-        cssClassMap,
-        enrichedStyles,
-    );
+    const {
+        style,
+        warnings: styleWarnings,
+        unsupportedCss,
+    } = resolveStyle(styleAttr, classNames, cssClassMap, enrichedStyles);
     warnings.push(...styleWarnings);
 
     const { bindings, warnings: bindingWarnings } = extractBindingsFromElement(
@@ -586,6 +585,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
         componentSets.push(...childResult.componentSets);
     }
 
+    const hasUnsupported = Object.keys(unsupportedCss).length > 0;
     const node: ImportIRNode = {
         id: nodeId,
         sourcePath: domPath,
@@ -596,6 +596,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
         visible: true,
         style,
         htmlAttributes: hasHtmlAttributes ? htmlAttributes : undefined,
+        unsupportedCss: hasUnsupported ? unsupportedCss : undefined,
         bindings: bindings.length > 0 ? bindings : undefined,
         warnings: warnings.length > 0 ? [...warnings] : undefined,
         children,

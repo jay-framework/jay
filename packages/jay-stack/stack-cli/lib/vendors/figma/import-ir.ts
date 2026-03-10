@@ -39,13 +39,26 @@ export type ImportIRBinding =
     | { kind: 'layer'; binding: LayerBinding }
     | { kind: 'variant'; binding: VariantExpressionBinding | PseudoVariantBinding };
 
-export type ImportIREffect = {
-    type: 'DROP_SHADOW';
-    color: string;
-    offset: { x: number; y: number };
-    radius: number;
-    spread?: number;
-};
+export type ImportIRFill =
+    | { type: 'SOLID'; color: string }
+    | {
+          type: 'GRADIENT_LINEAR';
+          angle: number;
+          stops: Array<{ position: number; color: string }>;
+      };
+
+export type ImportIREffect =
+    | {
+          type: 'DROP_SHADOW' | 'INNER_SHADOW';
+          color: string;
+          offset: { x: number; y: number };
+          radius: number;
+          spread?: number;
+      }
+    | {
+          type: 'LAYER_BLUR' | 'BACKGROUND_BLUR';
+          radius: number;
+      };
 
 export type ImportIRStyle = {
     width?: number;
@@ -62,9 +75,14 @@ export type ImportIRStyle = {
     padding?: { top: number; right: number; bottom: number; left: number };
     alignItems?: 'MIN' | 'CENTER' | 'MAX' | 'STRETCH';
     justifyContent?: 'MIN' | 'CENTER' | 'MAX' | 'SPACE_BETWEEN';
+    fills?: ImportIRFill[];
     backgroundColor?: string;
     borderColor?: string;
     borderWidth?: number;
+    borderTopWidth?: number;
+    borderRightWidth?: number;
+    borderBottomWidth?: number;
+    borderLeftWidth?: number;
     borderRadius?: number;
     topLeftRadius?: number;
     topRightRadius?: number;
@@ -78,6 +96,7 @@ export type ImportIRStyle = {
     lineHeight?: number;
     letterSpacing?: number;
     textAlignHorizontal?: 'LEFT' | 'CENTER' | 'RIGHT' | 'JUSTIFIED';
+    fontStyle?: 'normal' | 'italic';
     textDecoration?: 'UNDERLINE' | 'STRIKETHROUGH' | 'NONE';
     textCase?: 'UPPER' | 'LOWER' | 'TITLE' | 'ORIGINAL';
     textTruncation?: 'ENDING';
@@ -109,6 +128,7 @@ export type ImportIRNode = {
         objectFit?: 'fill' | 'contain' | 'cover' | 'none' | 'scale-down';
     };
     htmlAttributes?: Record<string, string>;
+    unsupportedCss?: Record<string, string>;
     bindings?: ImportIRBinding[];
     svgData?: string;
     warnings?: string[];

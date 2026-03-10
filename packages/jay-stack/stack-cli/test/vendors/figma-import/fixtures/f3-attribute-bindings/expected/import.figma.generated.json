@@ -21,7 +21,7 @@
       "children": [
         {
           "type": "RECTANGLE",
-          "name": "img",
+          "name": "[img] {productName}",
           "visible": true,
           "pluginData": {
             "htmlAttributes": "{\"src\":\"{imageUrl}\",\"alt\":\"{productName}\"}",
@@ -33,6 +33,13 @@
           "width": 460,
           "height": 300,
           "cornerRadius": 8,
+          "fills": [
+            { "type": "SOLID", "color": { "r": 0.91, "g": 0.89, "b": 0.87 }, "opacity": 1 }
+          ],
+          "strokes": [
+            { "type": "SOLID", "color": { "r": 0.75, "g": 0.73, "b": 0.71 }, "opacity": 1 }
+          ],
+          "strokeWeight": 1,
           "layoutSizingHorizontal": "FILL"
         },
         {
