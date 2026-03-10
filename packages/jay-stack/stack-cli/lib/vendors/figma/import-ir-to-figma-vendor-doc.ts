@@ -300,7 +300,7 @@ function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVe
     return props;
 }
 
-export const HIDDEN_VARIANT_MARKER = 'jay-hidden-variant';
+const HIDDEN_VARIANT_MARKER = 'jay-hidden-variant';
 
 /**
  * Pick a collision-safe hidden value for a variant dimension.
