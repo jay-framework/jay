@@ -2532,12 +2532,24 @@ function renderHydrateHeadlessInstance(
             true, // forceAdopt
         );
     } else {
-        // Multiple children — wrap in adoptElement for the first one
+        // Multiple children — wrap in adoptElement("0", {}, [children]) so the callback
+        // returns a single element (comma expression would return only the last).
+        // Children get coordinates "0/0", "0/1", etc. to match server wrapper structure.
+        const adoptChildContext: HydrateContext = {
+            ...adoptItemContext,
+            coordinatePrefix: ['0'],
+            coordinateCounter: { count: 0 },
+        };
         const adoptChildren = mergeHydrateFragments(
-            childNodes.map((child) => renderHydrateNode(child, adoptItemContext)),
+            childNodes.map((child) => renderHydrateNode(child, adoptChildContext)),
             ',\n',
         );
-        adoptInlineBody = adoptChildren;
+        adoptInlineBody = new RenderFragment(
+            `${adoptChildIndent.firstLine}adoptElement("0", {}, [\n${adoptChildren.rendered}\n${adoptChildIndent.firstLine}])`,
+            adoptChildren.imports.plus(Import.adoptElement),
+            adoptChildren.validations,
+            adoptChildren.refs,
+        );
     }
 
     // Generate ReferencesManager for the adopt inline template
@@ -2803,11 +2815,15 @@ function renderHydrateElementContent(
         );
     }
 
-    // Assign coordinate
-    const coordinate =
+    // Assign coordinate (prepend coordinatePrefix when inside a wrapper, e.g. "0/0", "0/1")
+    const baseCoord =
         coordinateOverride !== null
             ? coordinateOverride
             : refName || String(context.coordinateCounter.count++);
+    const coordinate =
+        context.coordinatePrefix?.length
+            ? context.coordinatePrefix.join('/') + '/' + baseCoord
+            : baseCoord;
 
     // Build the ref argument if present
     const renderedRef = renderElementRef(element, renderContext);
@@ -3359,14 +3375,38 @@ function renderServerHeadlessInstance(
     // Render inline template children.
     // Force coordinate on the root child element(s) to match the hydrate target's
     // forceAdopt behavior — without a coordinate, the hydrate can't find the element to adopt.
+    // When multiple children, use a child context with prefix /0 so children get coordinates
+    // inside the wrapper (e.g. product-card:0/0/0, product-card:0/0/1).
+    const renderContext =
+        childNodes.length > 1
+            ? [
+                  {
+                      ...instanceContext,
+                      coordinatePrefix: `${instanceCoordPrefix} + '/0'`,
+                      coordinateCounter: { count: 0 },
+                  },
+              ][0]
+            : instanceContext;
     const renderedChildren = mergeServerFragments(
         childNodes.map((child) => {
             if (child.nodeType === NodeType.ELEMENT_NODE) {
-                return renderServerElementContent(child as HTMLElement, instanceContext, true);
+                return renderServerElementContent(child as HTMLElement, renderContext, true);
             }
-            return renderServerNode(child, instanceContext);
+            return renderServerNode(child, renderContext);
         }),
     );
+
+    // When multiple children, wrap in a div so server/hydrate structure matches.
+    // Hydrate target uses adoptElement("0", {}, [children]); server must render the wrapper.
+    const wrappedChildren =
+        childNodes.length > 1
+            ? [
+                  `${bodyIndent.firstLine}w('<div');`,
+                  `${bodyIndent.firstLine}w(' jay-coordinate="' + ${instanceCoordPrefix} + '/0">');`,
+                  renderedChildren.rendered,
+                  `${bodyIndent.firstLine}w('</div>');`,
+              ].join('\n')
+            : renderedChildren.rendered;
 
     // Build the guarded block:
     //   const vs_pc0 = (vs as any).__headlessInstances?.[key] as Type | undefined;
@@ -3375,7 +3415,7 @@ function renderServerHeadlessInstance(
     const guardedBlock = [
         `${guardIndent.firstLine}const ${varName} = (vs as any).__headlessInstances?.[${instanceKeyExpr}] as ${viewStateTypeName} | undefined;`,
         `${guardIndent.firstLine}if (${varName}) {`,
-        renderedChildren.rendered,
+        wrappedChildren,
         `${guardIndent.firstLine}}`,
     ].join('\n');
 

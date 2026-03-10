@@ -262,7 +262,9 @@ function hydrateConditionalFalse<ViewState>(
 
     // Check condition with current state — it may already be true
     // if data arrived between SSR and hydration (e.g., client init).
-    const initialResult = condition(context.currData as ViewState);
+    // Guard: currData can be undefined before headless instance receives viewState.
+    const currData = context.currData as ViewState;
+    const initialResult = currData != null && condition(currData);
     if (initialResult) {
         created = wrapWithModifiedCheck(context.currData, createElement());
         visible = true;

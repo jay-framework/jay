@@ -719,3 +719,69 @@ The existing fake-shop homepage (`src/pages/page.jay-html`) already exercises th
 **Tests: 7/7 smoke tests passing, 577/577 compiler tests passing, 245/245 runtime tests passing**
 
 **Deviation from design:** Did not create separate dedicated pages per scenario — the existing homepage already covers the main scenarios and creating redundant pages adds maintenance burden. The conditional instance scenario (`<jay:xxx if="...">`) is covered by compiler fixture tests but not by an integration test page.
+
+---
+
+## Production Errors (March 2026)
+
+### Issue 1: Runtime Error — `Cannot read properties of undefined (reading 'inStock')`
+
+**Location:** `page.jay-html?import&jay-hydrate.ts` line 68 (in `_headlessProductWidget0HydrateRender`)
+
+**Stack:**
+```
+at hydrateConditionalFalse (index.js:1299:25)
+at hydrateConditional (index.js:1258:14)
+```
+
+**Cause:** `hydrateConditionalFalse` calls `condition(context.currData as ViewState)` at line 264 of `hydrate.ts`. When `context.currData` is undefined (e.g. before the headless instance has received its viewState from `HEADLESS_INSTANCES`, or during initial mount before data is ready), the condition `vs => vs.inStock` throws when accessing `vs.inStock` because `vs` is undefined.
+
+**Fix:** Add a guard in `hydrateConditionalFalse` — if `context.currData` is null/undefined, treat the condition as false and skip creation until the first update:
+
+```ts
+// hydrate.ts hydrateConditionalFalse
+const currData = context.currData as ViewState;
+const initialResult = currData != null && condition(currData);
+```
+
+### Issue 2: Multi-Element Return — Comma Expression Returns Only Last Element
+
+**Location:** `withHydrationChildContext` callback in headless hydrate inline templates
+
+**Problem:** When the inline template has multiple children (e.g. product-widget: h3, div, two conditional spans, button), the compiler emits:
+
+```ts
+() => (
+    hydrateConditional(vs => vs.inStock, ...),
+    hydrateConditional(vs => !vs.inStock, ...),
+    adoptElement("addToCart", {}, [], ref())
+)
+```
+
+The comma operator evaluates all expressions but **returns only the last**. So `withHydrationChildContext` receives only the last element (addToCart button). The conditional spans are evaluated but never composed into the parent — the DOM structure is wrong and hydration fails.
+
+**SSR pattern:** Design Log #84: when the inline template has multiple children, wrap in `de('div', {}, [...])` for the element target's create path. The server-element target does **not** wrap — it renders siblings directly.
+
+**Fix:** Mirror the element target's create path. For the adopt hydrate path:
+
+1. **When multiple children:** Wrap in `adoptElement("0", {}, [child1, child2, ...])` where coordinate `"0"` is a wrapper div.
+2. **Server-element:** Must also wrap multiple children in a div so coordinates align. The wrapper gets coordinate `product-widget:0/0`, children get `product-widget:0/0/0`, `product-widget:0/0/1`, etc.
+
+This matches: create = `de('div', {}, [...])`, adopt = `adoptElement("0", {}, [...])`, server = `<div jay-coordinate=".../0">...</div>`.
+
+**Files to change:**
+- `jay-html-compiler.ts` — `renderHydrateHeadlessInstance`: when `childNodes.length > 1`, wrap `adoptInlineBody` in `adoptElement("0", {}, [\n${adoptChildren.rendered}\n])` instead of comma-merge.
+- `jay-html-compiler.ts` — `renderServerHeadlessInstance`: when `childNodes.length > 1`, wrap rendered children in a div with the instance's coordinate prefix.
+
+### Issue 3: TSC Error in Build Output
+
+**Location:** `examples/jay-stack/fake-shop/build/pre-rendered/page.jay-html?jay-hydrate.ts`
+
+The user reported TSC errors in this file. The build output may not be included in the main `tsconfig` or may have different import paths. `yarn build:check-types` passed at repo root — the error may be IDE-specific or in a different build context. Needs verification.
+
+### Verification Criteria
+
+1. **Runtime:** No `Cannot read properties of undefined` when hydrating headless instances with conditionals.
+2. **Hydration:** All inline template children (including conditionals) are adopted and composed correctly.
+3. **Server/hydrate alignment:** Server wraps multiple children in a div; hydrate adopts that div and its children.
+4. **Tests:** Update fixtures and add/update tests for multi-child headless adopt path.
