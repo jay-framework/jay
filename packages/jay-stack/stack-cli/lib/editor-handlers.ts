@@ -1316,6 +1316,22 @@ export function createEditorHandlers(
 
             getLogger().info(`📥 Imported ${vendorId} document from Jay-HTML: ${jayHtmlPath}`);
 
+            // Debug: dump vendorDoc to file for inspection
+            try {
+                const debugDir = path.join(dirname, '_debug');
+                await fs.promises.mkdir(debugDir, { recursive: true });
+                await fs.promises.writeFile(
+                    path.join(debugDir, 'import-vendor-doc.json'),
+                    JSON.stringify(importResult.vendorDoc, null, 2),
+                    'utf-8',
+                );
+                getLogger().info(
+                    `[Debug] Import vendor doc written to ${debugDir}/import-vendor-doc.json`,
+                );
+            } catch (debugErr) {
+                getLogger().warn('[Debug] Failed to write import debug files:', debugErr);
+            }
+
             return {
                 type: 'import',
                 success: true,

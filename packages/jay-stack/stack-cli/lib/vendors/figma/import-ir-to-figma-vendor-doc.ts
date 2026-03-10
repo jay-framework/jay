@@ -478,9 +478,13 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
             Object.assign(base, styleProps);
 
             const imageRef = node.image?.imageRef;
+            console.log(
+                `[Adapter:IMAGE] node=${node.id} src=${node.image?.src} resolvedSrc=${node.image?.resolvedSrc} imageRef=${JSON.stringify(imageRef)}`,
+            );
             if (imageRef?.importImageId) {
-                // Image data is available on the dev server — emit an IMAGE fill
-                // that the plugin will hydrate asynchronously
+                console.log(
+                    `[Adapter:IMAGE] Emitting IMAGE fill with jayImportImageId=${imageRef.importImageId}`,
+                );
                 base.fills = [
                     {
                         type: 'IMAGE',
