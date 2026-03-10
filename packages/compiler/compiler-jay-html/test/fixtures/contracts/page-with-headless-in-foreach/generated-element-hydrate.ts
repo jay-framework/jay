@@ -90,7 +90,7 @@ function _headlessProductCard0HydrateRender(
 const _HeadlessProductCard0Adopt = makeHeadlessInstanceComponent(
     _headlessProductCard0HydrateRender,
     productCard.comp,
-    (dataIds) => [...dataIds, 'product-card:0'].toString(),
+    (dataIds) => dataIds.join(','),
     productCard.contexts,
 );
 

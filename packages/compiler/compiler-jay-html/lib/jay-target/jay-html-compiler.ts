@@ -2579,7 +2579,7 @@ ${adoptInlineBody.rendered}
     let adoptComponentDef: string;
     if (isInsideForEach) {
         adoptComponentSymbol = `_Headless${pascal}${idx}Adopt`;
-        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName}.comp,\n    (dataIds) => [...dataIds, '${coordinateSuffix}'].toString(),\n    ${pluginComponentName}.contexts,\n);`;
+        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName}.comp,\n    (dataIds) => dataIds.join(','),\n    ${pluginComponentName}.contexts,\n);`;
     } else {
         adoptComponentSymbol = `_Headless${pascal}${idx}`;
         adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName}.comp,\n    '${coordinateKey}',\n    ${pluginComponentName}.contexts,\n);`;
@@ -2820,10 +2820,9 @@ function renderHydrateElementContent(
         coordinateOverride !== null
             ? coordinateOverride
             : refName || String(context.coordinateCounter.count++);
-    const coordinate =
-        context.coordinatePrefix?.length
-            ? context.coordinatePrefix.join('/') + '/' + baseCoord
-            : baseCoord;
+    const coordinate = context.coordinatePrefix?.length
+        ? context.coordinatePrefix.join('/') + '/' + baseCoord
+        : baseCoord;
 
     // Build the ref argument if present
     const renderedRef = renderElementRef(element, renderContext);
