@@ -515,12 +515,21 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
         base.children = node.children.map((child, i) => adaptNode(child, i));
     }
 
-    // CSS flexbox default: children stretch on cross-axis (align-items: stretch)
+    // CSS flexbox defaults applied to auto-layout children
     if (base.layoutMode && base.layoutMode !== 'NONE' && base.children) {
         const explicitAlign =
             base.counterAxisAlignItems === 'CENTER' || base.counterAxisAlignItems === 'MAX';
-        if (!explicitAlign) {
-            for (const child of base.children) {
+        for (const child of base.children) {
+            // flex-grow > 0 → FILL on the primary axis (modern Figma API, replaces deprecated layoutGrow)
+            if (child.layoutGrow && child.layoutGrow > 0) {
+                if (base.layoutMode === 'HORIZONTAL') {
+                    child.layoutSizingHorizontal = 'FILL';
+                } else if (base.layoutMode === 'VERTICAL') {
+                    child.layoutSizingVertical = 'FILL';
+                }
+            }
+            // Cross-axis stretch (align-items: stretch is CSS default)
+            if (!explicitAlign) {
                 if (base.layoutMode === 'VERTICAL') {
                     if (!child.layoutSizingHorizontal || child.layoutSizingHorizontal === 'HUG') {
                         child.layoutSizingHorizontal = 'FILL';
@@ -550,12 +559,14 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
         const gap = base.itemSpacing ?? 0;
 
         if (base.layoutMode === 'HORIZONTAL') {
-            const neededW =
-                padL +
-                padR +
-                base.children.reduce((sum, c) => sum + (c.width ?? 0), 0) +
-                (base.children.length - 1) * gap;
-            if (base.width && neededW > base.width) base.width = neededW;
+            const childWidthSum = base.children.reduce((sum, c) => sum + (c.width ?? 0), 0);
+            const neededW = padL + padR + childWidthSum + (base.children.length - 1) * gap;
+            if (base.width && neededW > base.width) {
+                console.log(
+                    `[Adapter] Expanding ${base.name}: ${base.width} → ${neededW} (children: ${base.children.map((c) => `${c.name}:${c.width ?? '?'}`).join(', ')})`,
+                );
+                base.width = neededW;
+            }
         } else if (base.layoutMode === 'VERTICAL') {
             const maxChildW = Math.max(...base.children.map((c) => c.width ?? 0));
             const neededW = padL + padR + maxChildW;

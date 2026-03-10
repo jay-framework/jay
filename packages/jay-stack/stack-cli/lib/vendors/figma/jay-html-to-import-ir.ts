@@ -291,6 +291,20 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
 
     const enrichedStyles = sourceId ? computedStyleMap?.get(sourceId) : undefined;
 
+    if (sourceId && enrichedStyles?.boundingRect) {
+        const r = enrichedStyles.boundingRect;
+        const d = enrichedStyles.styles['display'];
+        if (d === 'flex' || tag === 'input' || tag === 'button') {
+            console.log(
+                `[IR] ${tag} sid=${sourceId}: enriched w=${r.width} h=${r.height} display=${d || 'n/a'} bg=${enrichedStyles.styles['background-color'] || 'n/a'}`,
+            );
+        }
+    } else if (sourceId && !enrichedStyles) {
+        if (tag === 'input' || tag === 'button') {
+            console.log(`[IR] ${tag} sid=${sourceId}: NO enrichment found`);
+        }
+    }
+
     const {
         style,
         warnings: styleWarnings,

@@ -135,6 +135,13 @@ export async function enrichWithComputedStyles(options: EnricherOptions): Promis
                             `[ComputedStyles] No [data-jay-sid] elements found after 10s — page may not have source IDs enabled`,
                         );
                     }
+                    // Wait for stylesheets to load and apply (CSS affects flex layout, bounding rects)
+                    try {
+                        await page.waitForLoadState('networkidle', { timeout: 5000 });
+                    } catch {
+                        // networkidle timeout is non-fatal; styles may still be loaded
+                        await page.waitForTimeout(500);
+                    }
 
                     if (options.screenshotDir) {
                         const safeName = scenario.id.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -397,6 +404,17 @@ async function extractComputedStyles(
             styles: item.styles,
             boundingRect: item.boundingRect,
         });
+    }
+
+    // Diagnostic: log flex containers to verify CSS is loaded at extraction time
+    let flexCount = 0;
+    for (const [, data] of styleMap) {
+        if (data.styles['display'] === 'flex' || data.styles['display'] === 'inline-flex') {
+            flexCount++;
+        }
+    }
+    if (flexCount > 0) {
+        console.log(`[ComputedStyles] ${flexCount} flex containers detected (CSS loaded)`);
     }
 
     return styleMap;
