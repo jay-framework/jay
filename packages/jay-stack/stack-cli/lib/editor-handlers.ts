@@ -10,11 +10,13 @@ import type {
     PublishStatus,
     SaveImageMessage,
     HasImageMessage,
+    GetImageDataMessage,
     GetProjectInfoMessage,
     ExportMessage,
     ImportMessage,
     SaveImageResponse,
     HasImageResponse,
+    GetImageDataResponse,
     GetProjectInfoResponse,
     ExportResponse,
     ImportResponse,
@@ -1033,6 +1035,51 @@ export function createEditorHandlers(
         }
     };
 
+    const onGetImageData = async (params: GetImageDataMessage): Promise<GetImageDataResponse> => {
+        try {
+            const imagesDir = path.join(path.resolve(config.devServer.publicFolder), 'images');
+            const pngPath = path.join(imagesDir, `${params.imageId}.png`);
+            const jpgPath = path.join(imagesDir, `${params.imageId}.jpg`);
+
+            let imagePath: string | undefined;
+            let mimeType: string | undefined;
+            if (fs.existsSync(pngPath)) {
+                imagePath = pngPath;
+                mimeType = 'image/png';
+            } else if (fs.existsSync(jpgPath)) {
+                imagePath = jpgPath;
+                mimeType = 'image/jpeg';
+            }
+
+            if (!imagePath) {
+                return {
+                    type: 'getImageData',
+                    success: false,
+                    error: `Image not found: ${params.imageId}`,
+                };
+            }
+
+            const bytes = await fs.promises.readFile(imagePath);
+            const imageData = bytes.toString('base64');
+
+            getLogger().info(`🖼️  Serving image data: ${imagePath} (${bytes.length} bytes)`);
+
+            return {
+                type: 'getImageData',
+                success: true,
+                imageData,
+                mimeType,
+            };
+        } catch (error) {
+            getLogger().error('Failed to get image data:', error);
+            return {
+                type: 'getImageData',
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error',
+            };
+        }
+    };
+
     const onGetProjectInfo = async (
         params: GetProjectInfoMessage,
     ): Promise<GetProjectInfoResponse> => {
@@ -1259,12 +1306,12 @@ export function createEditorHandlers(
                 };
             }
 
-            const vendorDoc = await vendor.convertFromJayHtml(
+            const importResult = await vendor.convertFromJayHtml(
                 parsedResult.val,
                 pageUrl,
                 projectPage,
                 plugins,
-                { devServerUrl },
+                { devServerUrl, publicFolder: config.devServer.publicFolder },
             );
 
             getLogger().info(`📥 Imported ${vendorId} document from Jay-HTML: ${jayHtmlPath}`);
@@ -1272,9 +1319,10 @@ export function createEditorHandlers(
             return {
                 type: 'import',
                 success: true,
-                vendorDoc: vendorDoc as TVendorDoc,
+                vendorDoc: importResult.vendorDoc as TVendorDoc,
                 source: 'jay-html-reconstructed',
                 warnings,
+                imageManifest: importResult.imageManifest,
             };
         } catch (error) {
             getLogger().error('Failed to import from Jay-HTML:', error);
@@ -1290,6 +1338,7 @@ export function createEditorHandlers(
         onPublish,
         onSaveImage,
         onHasImage,
+        onGetImageData,
         onGetProjectInfo,
         onExport,
         onImport,

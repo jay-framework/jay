@@ -39,6 +39,13 @@ export type ImportIRBinding =
     | { kind: 'layer'; binding: LayerBinding }
     | { kind: 'variant'; binding: VariantExpressionBinding | PseudoVariantBinding };
 
+export type ImportIRImageRef = {
+    importImageId?: string;
+    sourceUrl: string;
+    kind: 'img-src' | 'background-image';
+    scaleMode: 'FILL' | 'FIT' | 'TILE';
+};
+
 export type ImportIRFill =
     | { type: 'SOLID'; color: string }
     | {
@@ -107,6 +114,7 @@ export type ImportIRStyle = {
     gridRowHeights?: number[];
     rowGap?: number;
     effects?: ImportIREffect[];
+    backgroundImageRef?: ImportIRImageRef;
 };
 
 export type ImportIRNode = {
@@ -124,8 +132,10 @@ export type ImportIRNode = {
     };
     image?: {
         src?: string;
+        resolvedSrc?: string;
         alt?: string;
         objectFit?: 'fill' | 'contain' | 'cover' | 'none' | 'scale-down';
+        imageRef?: ImportIRImageRef;
     };
     htmlAttributes?: Record<string, string>;
     selectOptions?: Array<{ value: string; text: string; selected?: boolean }>;

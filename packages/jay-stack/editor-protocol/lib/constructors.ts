@@ -4,12 +4,14 @@ import type {
     PublishMessage,
     SaveImageMessage,
     HasImageMessage,
+    GetImageDataMessage,
     GetProjectInfoMessage,
     ExportMessage,
     ImportMessage,
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
+    GetImageDataResponse,
     GetProjectInfoResponse,
     ExportResponse,
     ImportResponse,
@@ -41,6 +43,13 @@ export function createSaveImageMessage(imageId: string, imageData: string): Save
 export function createHasImageMessage(imageId: string): HasImageMessage {
     return {
         type: 'hasImage',
+        imageId,
+    };
+}
+
+export function createGetImageDataMessage(imageId: string): GetImageDataMessage {
+    return {
+        type: 'getImageData',
         imageId,
     };
 }
@@ -103,6 +112,21 @@ export function createHasImageResponse(exists: boolean, imageUrl?: string): HasI
         success: true,
         exists,
         imageUrl,
+    };
+}
+
+export function createGetImageDataResponse(
+    success: boolean,
+    imageData?: string,
+    mimeType?: string,
+    error?: string,
+): GetImageDataResponse {
+    return {
+        type: 'getImageData',
+        success,
+        imageData,
+        mimeType,
+        error,
     };
 }
 

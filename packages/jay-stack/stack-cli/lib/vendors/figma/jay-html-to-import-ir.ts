@@ -330,6 +330,14 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
     } = resolveStyle(styleAttr, classNames, cssClassMap, enrichedStyles);
     warnings.push(...styleWarnings);
 
+    // Populate background-image ref from enriched data (first URL only in MVP)
+    if (enrichedStyles?.image?.backgroundImageUrls?.length) {
+        const bgUrl = enrichedStyles.image.backgroundImageUrls[0];
+        const bgSize = enrichedStyles.image.backgroundSize;
+        const scaleMode = bgSize === 'contain' ? ('FIT' as const) : ('FILL' as const);
+        style.backgroundImageRef = { sourceUrl: bgUrl, kind: 'background-image', scaleMode };
+    }
+
     const { bindings, warnings: bindingWarnings } = extractBindingsFromElement(
         element,
         contractTags,
@@ -401,9 +409,14 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
         const alt = element.getAttribute('alt') ?? undefined;
         const { parsed: rawParsed } = parseInlineStyle(styleAttr);
         const objectFitRaw = rawParsed['object-fit'];
+        const enrichedObjectFit = enrichedStyles?.image?.objectFit;
         const objectFit = (['fill', 'contain', 'cover', 'none', 'scale-down'] as const).find(
-            (v) => v === objectFitRaw,
+            (v) => v === (enrichedObjectFit || objectFitRaw),
         );
+
+        const resolvedSrc = enrichedStyles?.image?.renderedSrc;
+        const imageUrl = resolvedSrc || src;
+        const scaleMode = objectFit === 'contain' ? ('FIT' as const) : ('FILL' as const);
 
         const node: ImportIRNode = {
             id: nodeId,
@@ -414,7 +427,15 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
             className,
             visible: true,
             style,
-            image: { src, alt, objectFit },
+            image: {
+                src,
+                resolvedSrc,
+                alt,
+                objectFit,
+                imageRef: imageUrl
+                    ? { sourceUrl: imageUrl, kind: 'img-src', scaleMode }
+                    : undefined,
+            },
             htmlAttributes: hasHtmlAttributes ? htmlAttributes : undefined,
             bindings: bindings.length > 0 ? bindings : undefined,
             warnings: warnings.length > 0 ? [...warnings] : undefined,

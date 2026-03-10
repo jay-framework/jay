@@ -80,6 +80,7 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
     editorServer.onPublish(handlers.onPublish);
     editorServer.onSaveImage(handlers.onSaveImage);
     editorServer.onHasImage(handlers.onHasImage);
+    editorServer.onGetImageData(handlers.onGetImageData);
     editorServer.onGetProjectInfo(handlers.onGetProjectInfo);
     editorServer.onExport(handlers.onExport);
     editorServer.onImport(handlers.onImport);

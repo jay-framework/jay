@@ -3,12 +3,14 @@ import {
     PublishMessage,
     SaveImageMessage,
     HasImageMessage,
+    GetImageDataMessage,
     GetProjectInfoMessage,
     ExportMessage,
     ImportMessage,
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
+    GetImageDataResponse,
     GetProjectInfoResponse,
     ExportResponse,
     ImportResponse,
@@ -60,6 +62,10 @@ export class EditorClient implements EditorProtocol {
 
     async hasImage(params: HasImageMessage): Promise<HasImageResponse> {
         return this.connectionManager.sendMessage<HasImageMessage>(params);
+    }
+
+    async getImageData(params: GetImageDataMessage): Promise<GetImageDataResponse> {
+        return this.connectionManager.sendMessage<GetImageDataMessage>(params);
     }
 
     async getProjectInfo(params: GetProjectInfoMessage): Promise<GetProjectInfoResponse> {

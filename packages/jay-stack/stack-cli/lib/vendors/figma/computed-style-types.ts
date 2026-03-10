@@ -26,6 +26,18 @@ export interface ComputedStyleData {
         width: number;
         height: number;
     };
+
+    /**
+     * Resolved image data extracted from rendered DOM.
+     * For `<img>` elements: the browser-resolved `currentSrc`/`src`.
+     * For background images: parsed `url(...)` values from computed `background-image`.
+     */
+    image?: {
+        renderedSrc?: string;
+        backgroundImageUrls?: string[];
+        objectFit?: string;
+        backgroundSize?: string;
+    };
 }
 
 /**

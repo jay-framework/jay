@@ -62,6 +62,11 @@ export interface HasImageMessage extends BaseMessage<HasImageResponse> {
     imageId: string;
 }
 
+export interface GetImageDataMessage extends BaseMessage<GetImageDataResponse> {
+    type: 'getImageData';
+    imageId: string;
+}
+
 export interface GetProjectInfoMessage extends BaseMessage<GetProjectInfoResponse> {
     type: 'getProjectInfo';
 }
@@ -103,6 +108,12 @@ export interface HasImageResponse extends BaseResponse {
     type: 'hasImage';
     exists: boolean;
     imageUrl?: string;
+}
+
+export interface GetImageDataResponse extends BaseResponse {
+    type: 'getImageData';
+    imageData?: string;
+    mimeType?: string;
 }
 
 export interface ProjectPage {
@@ -176,6 +187,7 @@ export interface ImportResponse<TVendorDoc> extends BaseResponse {
         bindings: number;
         variantExpressions: number;
     };
+    imageManifest?: Array<{ nodeId: string; imageId: string; scaleMode?: string }>;
 }
 
 // Union types for all messages and responses
@@ -183,6 +195,7 @@ export type EditorProtocolMessageTypes<TVendorDoc> =
     | PublishMessage
     | SaveImageMessage
     | HasImageMessage
+    | GetImageDataMessage
     | GetProjectInfoMessage
     | ExportMessage<TVendorDoc>
     | ImportMessage<TVendorDoc>;
@@ -191,6 +204,7 @@ export type EditorProtocolResponseTypes<TVendorDoc> =
     | PublishResponse
     | SaveImageResponse
     | HasImageResponse
+    | GetImageDataResponse
     | GetProjectInfoResponse
     | ExportResponse
     | ImportResponse<TVendorDoc>;
@@ -217,6 +231,9 @@ export interface EditorProtocol {
 
     // Check if a previously saved image exists
     hasImage(params: HasImageMessage): Promise<HasImageResponse>;
+
+    // Get image bytes from the dev server (for import image hydration)
+    getImageData(params: GetImageDataMessage): Promise<GetImageDataResponse>;
 
     // Get comprehensive project information including configuration and contracts
     getProjectInfo(params: GetProjectInfoMessage): Promise<GetProjectInfoResponse>;

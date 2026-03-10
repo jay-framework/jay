@@ -361,12 +361,20 @@ async function extractComputedStyles(
             'font-style',
             'filter',
             'backdrop-filter',
+            'object-fit',
+            'background-size',
         ];
 
         const result: Array<{
             key: string;
             styles: Record<string, string>;
             boundingRect: { x: number; y: number; width: number; height: number };
+            image?: {
+                renderedSrc?: string;
+                backgroundImageUrls?: string[];
+                objectFit?: string;
+                backgroundSize?: string;
+            };
         }> = [];
 
         // Single pass: all elements with data-jay-sid (compiler-injected source IDs)
@@ -391,10 +399,39 @@ async function extractComputedStyles(
                 }
             }
 
+            // Extract resolved image data for <img> and background-image elements
+            let image: (typeof result)[0]['image'] | undefined;
+
+            if (htmlElement.tagName === 'IMG') {
+                const imgEl = htmlElement as any;
+                const renderedSrc = imgEl.currentSrc || imgEl.src;
+                if (renderedSrc) {
+                    image = {
+                        renderedSrc,
+                        objectFit: computedStyle.getPropertyValue('object-fit') || undefined,
+                    };
+                }
+            }
+
+            const bgImage = computedStyle.getPropertyValue('background-image');
+            if (bgImage && bgImage !== 'none') {
+                const urlMatches = [...bgImage.matchAll(/url\(["']?([^"')]+)["']?\)/g)];
+                const bgUrls = urlMatches
+                    .map((m) => m[1])
+                    .filter((u) => !u.startsWith('data:image/svg')); // skip inline SVG data URIs
+                if (bgUrls.length > 0) {
+                    image = image || {};
+                    image.backgroundImageUrls = bgUrls;
+                    image.backgroundSize =
+                        computedStyle.getPropertyValue('background-size') || undefined;
+                }
+            }
+
             result.push({
                 key: jaySid,
                 styles,
                 boundingRect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+                image: image || undefined,
             });
         }
 
@@ -406,6 +443,7 @@ async function extractComputedStyles(
         styleMap.set(item.key, {
             styles: item.styles,
             boundingRect: item.boundingRect,
+            image: item.image,
         });
     }
 

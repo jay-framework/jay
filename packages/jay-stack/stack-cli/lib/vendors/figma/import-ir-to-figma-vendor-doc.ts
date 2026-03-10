@@ -187,9 +187,30 @@ function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVe
         props.paddingLeft = style.padding.left;
     }
 
-    // Build fills: explicit fills array takes priority, then backgroundColor fallback
+    // Build fills: IMAGE ref > explicit fills array > backgroundColor fallback
     // Skip fully transparent backgrounds (a === 0) — they add noise in Figma
-    if (style.fills && style.fills.length > 0) {
+    if (style.backgroundImageRef?.importImageId) {
+        // Background image with resolved import ID
+        const bgRef = style.backgroundImageRef;
+        const bgFills: any[] = [
+            {
+                type: 'IMAGE',
+                jayImportImageId: bgRef.importImageId,
+                scaleMode: bgRef.scaleMode || 'FILL',
+            },
+        ];
+        if (style.backgroundColor) {
+            const bgColor = parseColor(style.backgroundColor);
+            if (bgColor.a > 0) {
+                bgFills.unshift({
+                    type: 'SOLID',
+                    color: { r: bgColor.r, g: bgColor.g, b: bgColor.b },
+                    opacity: bgColor.a,
+                });
+            }
+        }
+        props.fills = bgFills;
+    } else if (style.fills && style.fills.length > 0) {
         const figmaFills = style.fills.map(mapFillToFigma);
         if (style.backgroundColor) {
             const bgColor = parseColor(style.backgroundColor);
@@ -456,25 +477,38 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
             const styleProps = mapStyleToFigmaProps(node.style);
             Object.assign(base, styleProps);
 
-            // Visible placeholder: gray fill + border so images are identifiable
-            if (!base.fills || base.fills.length === 0) {
+            const imageRef = node.image?.imageRef;
+            if (imageRef?.importImageId) {
+                // Image data is available on the dev server — emit an IMAGE fill
+                // that the plugin will hydrate asynchronously
                 base.fills = [
                     {
-                        type: 'SOLID',
-                        color: { r: 0.91, g: 0.89, b: 0.87 },
-                        opacity: 1,
-                    },
+                        type: 'IMAGE',
+                        jayImportImageId: imageRef.importImageId,
+                        scaleMode: imageRef.scaleMode || 'FILL',
+                    } as any,
                 ];
-            }
-            if (!base.strokes || base.strokes.length === 0) {
-                base.strokes = [
-                    {
-                        type: 'SOLID',
-                        color: { r: 0.75, g: 0.73, b: 0.71 },
-                        opacity: 1,
-                    },
-                ];
-                base.strokeWeight = 1;
+            } else {
+                // No image data — gray placeholder fill + border
+                if (!base.fills || base.fills.length === 0) {
+                    base.fills = [
+                        {
+                            type: 'SOLID',
+                            color: { r: 0.91, g: 0.89, b: 0.87 },
+                            opacity: 1,
+                        },
+                    ];
+                }
+                if (!base.strokes || base.strokes.length === 0) {
+                    base.strokes = [
+                        {
+                            type: 'SOLID',
+                            color: { r: 0.75, g: 0.73, b: 0.71 },
+                            opacity: 1,
+                        },
+                    ];
+                    base.strokeWeight = 1;
+                }
             }
 
             // Name includes truncated src for easy identification

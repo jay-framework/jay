@@ -606,8 +606,31 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
             },
         );
 
+        // Fetch and save images to disk (if publicFolder is available)
+        let imageManifest: Array<{ nodeId: string; imageId: string; scaleMode: string }> = [];
+        if (options?.publicFolder) {
+            try {
+                const { fetchAndSaveImages } = await import('./image-asset-fetcher');
+                const devServerUrl =
+                    options?.devServerUrl || process.env.DEV_SERVER_URL || 'http://localhost:3000';
+                const fetchResult = await fetchAndSaveImages(ir, {
+                    devServerUrl,
+                    publicFolder: options.publicFolder,
+                });
+                imageManifest = fetchResult.imageManifest;
+                if (fetchResult.warnings.length > 0) {
+                    console.warn('[Import] Image warnings:', fetchResult.warnings.join('; '));
+                }
+            } catch (error) {
+                console.warn('[Import] Image fetch failed:', (error as Error).message);
+            }
+        }
+
         const vendorDoc = adaptIRToFigmaVendorDoc(ir);
 
-        return vendorDoc;
+        return {
+            vendorDoc,
+            imageManifest: imageManifest.length > 0 ? imageManifest : undefined,
+        };
     },
 };

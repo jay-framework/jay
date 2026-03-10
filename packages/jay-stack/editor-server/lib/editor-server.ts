@@ -10,12 +10,14 @@ import type {
     PublishMessage,
     SaveImageMessage,
     HasImageMessage,
+    GetImageDataMessage,
     GetProjectInfoMessage,
     ExportMessage,
     ImportMessage,
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
+    GetImageDataResponse,
     GetProjectInfoResponse,
     ExportResponse,
     ImportResponse,
@@ -49,6 +51,7 @@ export class EditorServer implements DevServerProtocol {
         publish?: (params: PublishMessage) => Promise<PublishResponse>;
         saveImage?: (params: SaveImageMessage) => Promise<SaveImageResponse>;
         hasImage?: (params: HasImageMessage) => Promise<HasImageResponse>;
+        getImageData?: (params: GetImageDataMessage) => Promise<GetImageDataResponse>;
         getProjectInfo?: (params: GetProjectInfoMessage) => Promise<GetProjectInfoResponse>;
         export?: (params: ExportMessage<any>) => Promise<ExportResponse>;
         import?: (params: ImportMessage<any>) => Promise<ImportResponse<any>>;
@@ -150,6 +153,10 @@ export class EditorServer implements DevServerProtocol {
 
     onHasImage(callback: (params: HasImageMessage) => Promise<HasImageResponse>): void {
         this.handlers.hasImage = callback;
+    }
+
+    onGetImageData(callback: (params: GetImageDataMessage) => Promise<GetImageDataResponse>): void {
+        this.handlers.getImageData = callback;
     }
 
     onGetProjectInfo(
@@ -266,6 +273,15 @@ export class EditorServer implements DevServerProtocol {
                 }
                 const hasResult = await this.handlers.hasImage(payload as HasImageMessage);
                 return createProtocolResponse(id, hasResult);
+
+            case 'getImageData':
+                if (!this.handlers.getImageData) {
+                    throw new Error('Get image data handler not registered');
+                }
+                const imageDataResult = await this.handlers.getImageData(
+                    payload as GetImageDataMessage,
+                );
+                return createProtocolResponse(id, imageDataResult);
 
             case 'getProjectInfo':
                 if (!this.handlers.getProjectInfo) {
