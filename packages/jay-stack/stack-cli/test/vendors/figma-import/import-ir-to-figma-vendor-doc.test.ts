@@ -144,10 +144,7 @@ describe('adaptIRToFigmaVendorDoc', () => {
                             layoutMode: 'grid',
                             gridColumnWidths: [200, 200, 200],
                         },
-                        children: [
-                            makeFrame({ id: 'child-1' }),
-                            makeFrame({ id: 'child-2' }),
-                        ],
+                        children: [makeFrame({ id: 'child-1' }), makeFrame({ id: 'child-2' })],
                     }),
                 ],
             });

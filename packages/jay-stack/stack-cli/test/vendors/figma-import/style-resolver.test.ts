@@ -311,9 +311,7 @@ describe('style-resolver', () => {
         });
 
         it('display: grid with column-gap overrides gap for column spacing', () => {
-            const { style } = resolveStyle(
-                'display: grid; gap: 10px; column-gap: 20px',
-            );
+            const { style } = resolveStyle('display: grid; gap: 10px; column-gap: 20px');
             expect(style.gap).toBe(20);
             expect(style.rowGap).toBe(10);
         });

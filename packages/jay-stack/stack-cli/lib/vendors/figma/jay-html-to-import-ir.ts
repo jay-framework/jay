@@ -240,8 +240,17 @@ interface BuildNodeContext {
 
 function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): BuildResult {
     const {
-        body, contractTags, jayPageSectionId, pageContractPath, repeaterContext,
-        contractContext, cssClassMap, computedStyleMap, perScenarioMaps, scenarios, sourceHtml,
+        body,
+        contractTags,
+        jayPageSectionId,
+        pageContractPath,
+        repeaterContext,
+        contractContext,
+        cssClassMap,
+        computedStyleMap,
+        perScenarioMaps,
+        scenarios,
+        sourceHtml,
     } = ctx;
     const warnings: string[] = [];
     const componentSets: ImportIRNode[] = [];
