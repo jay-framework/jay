@@ -112,9 +112,7 @@ function parseColor(cssColor: string): { r: number; g: number; b: number; a: num
     }
 
     // rgb(r g b / a) — modern space-separated with alpha
-    const rgbSlashMatch = cssColor.match(
-        /^rgba?\(\s*(\d+)\s+(\d+)\s+(\d+)\s*\/\s*([\d.]+)\s*\)$/,
-    );
+    const rgbSlashMatch = cssColor.match(/^rgba?\(\s*(\d+)\s+(\d+)\s+(\d+)\s*\/\s*([\d.]+)\s*\)$/);
     if (rgbSlashMatch) {
         return {
             r: parseInt(rgbSlashMatch[1], 10) / 255,
@@ -539,7 +537,12 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
     // Auto-layout sizing: ensure parent is large enough to contain children.
     // getBoundingClientRect() reports the element's CSS box, not its content overflow.
     // If children need more space than the parent's bounding rect, expand the parent.
-    if (base.layoutMode && base.layoutMode !== 'NONE' && base.children && base.children.length > 0) {
+    if (
+        base.layoutMode &&
+        base.layoutMode !== 'NONE' &&
+        base.children &&
+        base.children.length > 0
+    ) {
         const padL = base.paddingLeft ?? 0;
         const padR = base.paddingRight ?? 0;
         const padT = base.paddingTop ?? 0;
