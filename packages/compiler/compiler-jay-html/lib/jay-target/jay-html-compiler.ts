@@ -2368,15 +2368,17 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             coordinatePrefix: [...context.coordinatePrefix, jayTrackBy],
         };
         const renderContext2 = buildRenderContext(itemContext);
-        // Don't force adoption — let renderHydrateElementContent decide naturally.
-        // The slowForEach element root typically has no ref/dynamic attrs of its own;
-        // only its children need adoption (e.g., input refs, dynamic text).
         const childContent = renderHydrateElementContent(
             element,
             itemContext,
             renderContext2,
             null,
         );
+
+        // Drop fully static items — nothing to adopt, coordinates allow wiring to non-static items
+        if (childContent.rendered.trim().length === 0) {
+            return RenderFragment.empty();
+        }
 
         const slowForEachFragment = new RenderFragment(
             `${indent.firstLine}slowForEachItem<${parentTypeName}, ${itemTypeName}>(${getItemsFragment.rendered}, ${jayIndex}, '${jayTrackBy}',\n${indent.firstLine}() => ${childContent.rendered.trim()}\n${indent.firstLine})`,
