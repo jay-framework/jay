@@ -266,7 +266,7 @@
       "componentPropertyDefinitions": {
         "mediaType": {
           "type": "VARIANT",
-          "variantOptions": ["IMAGE", "VIDEO"]
+          "variantOptions": ["IMAGE", "VIDEO", "_hidden_"]
         }
       },
       "children": [
@@ -381,6 +381,19 @@
               ]
             }
           ]
+        },
+        {
+          "id": "hidden-variant-mediaType=_hidden_",
+          "type": "COMPONENT",
+          "name": "mediaType=_hidden_",
+          "variantProperties": {
+            "mediaType": "_hidden_"
+          },
+          "width": 1,
+          "height": 1,
+          "pluginData": {
+            "jay-hidden-variant": "true"
+          }
         }
       ]
     }

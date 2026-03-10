@@ -300,6 +300,57 @@ function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVe
     return props;
 }
 
+export const HIDDEN_VARIANT_MARKER = 'jay-hidden-variant';
+
+/**
+ * Pick a collision-safe hidden value for a variant dimension.
+ * Starts with `_hidden_`, wrapping in extra underscores if it collides
+ * with an actual variant option.
+ */
+function pickHiddenValue(existingValues: Set<string>): string {
+    let value = '_hidden_';
+    while (existingValues.has(value)) {
+        value = `_${value}_`;
+    }
+    return value;
+}
+
+/**
+ * Inject a _hidden_ dummy COMPONENT into a COMPONENT_SET so designers
+ * can visualize the default (not-shown) state of conditional content.
+ * The hidden component is marked with pluginData so export can skip it.
+ */
+function injectHiddenVariant(componentSet: FigmaVendorDocument): void {
+    const defs = componentSet.componentPropertyDefinitions;
+    if (!defs || !componentSet.children) return;
+
+    const hiddenProps: Record<string, string> = {};
+
+    for (const [dimName, def] of Object.entries(defs)) {
+        const existingValues = new Set(def.variantOptions);
+        const hiddenValue = pickHiddenValue(existingValues);
+        hiddenProps[dimName] = hiddenValue;
+        def.variantOptions.push(hiddenValue);
+    }
+
+    const variantKey = Object.entries(hiddenProps)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([k, v]) => `${k}=${v}`)
+        .join(', ');
+
+    const hiddenComponent: FigmaVendorDocument = {
+        id: `hidden-variant-${variantKey}`,
+        type: 'COMPONENT',
+        name: variantKey,
+        variantProperties: hiddenProps,
+        width: 1,
+        height: 1,
+        pluginData: { [HIDDEN_VARIANT_MARKER]: 'true' },
+    };
+
+    componentSet.children.push(hiddenComponent);
+}
+
 function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
     const name = node.name || `${node.kind.toLowerCase()}-${index}`;
     const base: FigmaVendorDocument = {
@@ -513,6 +564,13 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
     // Recursively adapt children
     if (node.children && node.children.length > 0) {
         base.children = node.children.map((child, i) => adaptNode(child, i));
+    }
+
+    // Figma-only: inject _hidden_ dummy variant into component sets so designers
+    // can see the default (hidden) state alongside real variant(s).
+    // Skipped on export via the 'jay-hidden-variant' pluginData marker.
+    if (base.type === 'COMPONENT_SET' && base.componentPropertyDefinitions && base.children) {
+        injectHiddenVariant(base);
     }
 
     // CSS flexbox defaults applied to auto-layout children

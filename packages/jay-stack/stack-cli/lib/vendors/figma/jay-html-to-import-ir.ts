@@ -238,7 +238,7 @@ interface BuildNodeContext {
     sourceHtml?: string;
 }
 
-function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): BuildResult {
+function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): BuildResult | null {
     const {
         body,
         contractTags,
@@ -290,6 +290,10 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
     }
 
     const enrichedStyles = sourceId ? computedStyleMap?.get(sourceId) : undefined;
+
+    if (enrichedStyles?.styles['display'] === 'none') {
+        return null;
+    }
 
     if (sourceId && enrichedStyles?.boundingRect) {
         const r = enrichedStyles.boundingRect;
@@ -479,9 +483,11 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
                 ...ctx,
                 repeaterContext: newRepeaterContext,
             });
-            children.push(childResult.node);
-            warnings.push(...childResult.warnings);
-            componentSets.push(...childResult.componentSets);
+            if (childResult) {
+                children.push(childResult.node);
+                warnings.push(...childResult.warnings);
+                componentSets.push(...childResult.componentSets);
+            }
         }
 
         const node: ImportIRNode = {
@@ -569,6 +575,9 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
                     ...ctx,
                     computedStyleMap: scenarioStyleMap ?? computedStyleMap,
                 });
+                if (!result) {
+                    return { id: '', kind: 'FRAME', sourcePath: '', children: [] };
+                }
                 warnings.push(...result.warnings);
                 componentSets.push(...result.componentSets);
                 return result.node;
@@ -594,9 +603,11 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
         }
 
         const childResult = buildNodeFromElement(childEl, ctx);
-        children.push(childResult.node);
-        warnings.push(...childResult.warnings);
-        componentSets.push(...childResult.componentSets);
+        if (childResult) {
+            children.push(childResult.node);
+            warnings.push(...childResult.warnings);
+            componentSets.push(...childResult.componentSets);
+        }
     }
 
     const hasUnsupported = Object.keys(unsupportedCss).length > 0;
@@ -754,11 +765,7 @@ export function buildImportIR(
     let rootChildren: ImportIRNode[] = [];
 
     if (contentElement) {
-        const {
-            node,
-            warnings: nodeWarnings,
-            componentSets,
-        } = buildNodeFromElement(contentElement, {
+        const result = buildNodeFromElement(contentElement, {
             body,
             contractTags,
             jayPageSectionId: sectionId,
@@ -771,8 +778,10 @@ export function buildImportIR(
             scenarios: options?.scenarios,
             sourceHtml: options?.sourceHtml,
         });
-        rootChildren = [node, ...componentSets];
-        warnings.push(...nodeWarnings);
+        if (result) {
+            rootChildren = [result.node, ...result.componentSets];
+            warnings.push(...result.warnings);
+        }
     } else {
         warnings.push('IMPORT_EMPTY_BODY: No block-level content found in <body>');
     }

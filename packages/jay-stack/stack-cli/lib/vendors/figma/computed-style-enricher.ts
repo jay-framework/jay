@@ -383,7 +383,10 @@ async function extractComputedStyles(
             const styles: Record<string, string> = {};
             for (const prop of properties) {
                 const value = computedStyle.getPropertyValue(prop);
-                if (value && value !== 'none' && value !== 'normal') {
+                if (value && value !== 'normal') {
+                    // Keep 'none' for display (needed to detect hidden elements)
+                    // but skip 'none' for other properties (background-image, border, etc.)
+                    if (value === 'none' && prop !== 'display') continue;
                     styles[prop] = value;
                 }
             }
