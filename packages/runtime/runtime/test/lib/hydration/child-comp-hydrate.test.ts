@@ -66,11 +66,7 @@ describe('childCompHydrate', () => {
             () =>
                 adoptElement<PageViewState>('0', {}, [
                     adoptText<PageViewState>('1', (vs) => vs.pageTitle),
-                    childCompHydrate(
-                        ProductComp,
-                        (_vs: PageViewState) => ({}),
-                        'product-card:0',
-                    ),
+                    childCompHydrate(ProductComp, (_vs: PageViewState) => ({}), 'product-card:0'),
                 ]),
         );
 
@@ -186,26 +182,21 @@ describe('childCompHydrate', () => {
 
         const ProductComp = makeHydrateComponent('product-card:0');
 
-        const { root } = hydrate<ListViewState>(
-            html,
-            { items: [{ id: 'a' }, { id: 'b' }] },
-            () =>
-                hydrateForEach<ListViewState, { id: string }>(
-                    '0',
-                    (vs) => vs.items,
-                    'id',
-                    () => [
-                        childCompHydrate(
-                            ProductComp,
-                            (_item: { id: string }) => ({}),
-                            'product-card:0',
-                        ),
-                    ],
-                    (_item, _id) =>
-                        e('li', {}, [
-                            e('article', {}, [dt((_i: { id: string }) => 'new')]),
-                        ]),
-                ),
+        const { root } = hydrate<ListViewState>(html, { items: [{ id: 'a' }, { id: 'b' }] }, () =>
+            hydrateForEach<ListViewState, { id: string }>(
+                '0',
+                (vs) => vs.items,
+                'id',
+                () => [
+                    childCompHydrate(
+                        ProductComp,
+                        (_item: { id: string }) => ({}),
+                        'product-card:0',
+                    ),
+                ],
+                (_item, _id) =>
+                    e('li', {}, [e('article', {}, [dt((_i: { id: string }) => 'new')])]),
+            ),
         );
 
         // Each item's headless instance should adopt the correct elements
@@ -255,9 +246,9 @@ describe('childCompHydrate', () => {
 
         // Should adopt the SSR element
         expect(container.querySelector('[jay-coordinate="product-card:0/1"]')).toBeTruthy();
-        expect(
-            container.querySelector('[jay-coordinate="product-card:0/1"]')!.textContent,
-        ).toBe('Visible');
+        expect(container.querySelector('[jay-coordinate="product-card:0/1"]')!.textContent).toBe(
+            'Visible',
+        );
 
         // Toggle condition to false — element should be removed from container
         jayElement.update({ showProduct: false });

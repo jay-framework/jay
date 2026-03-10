@@ -506,9 +506,7 @@ export function childCompHydrate<
     // Run the component factory within the scoped context
     return withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => {
         const childComp = compCreator(getProps(context.currData as ParentVS));
-        const updates: updateFunc<ParentVS>[] = [
-            (t: ParentVS) => childComp.update(getProps(t)),
-        ];
+        const updates: updateFunc<ParentVS>[] = [(t: ParentVS) => childComp.update(getProps(t))];
         const mounts: MountFunc[] = [childComp.mount];
         const unmounts: MountFunc[] = [childComp.unmount];
         if (ref) {

@@ -4,7 +4,6 @@ import {
     readFixtureElementHydrateFile,
 } from '../test-utils/file-utils';
 
-
 describe('generate jay-html element hydrate', () => {
     describe('basics', () => {
         it('for simple file with dynamic text', async () => {
@@ -116,7 +115,7 @@ describe('generate jay-html element hydrate', () => {
     });
 
     describe('headless instances', () => {
-it('for page-level headless component', async () => {
+        it('for page-level headless component', async () => {
             const folder = 'contracts/page-using-counter';
             const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
             expect(hydrateFile.validations).toEqual([]);

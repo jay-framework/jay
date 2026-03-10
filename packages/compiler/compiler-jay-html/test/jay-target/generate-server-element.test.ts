@@ -75,7 +75,7 @@ describe('generate jay-html server element', () => {
     });
 
     describe('headless instances', () => {
-it('for simple headless instance', async () => {
+        it('for simple headless instance', async () => {
             const folder = 'contracts/page-with-headless-instance';
             const serverFile = await readFileAndGenerateServerElementFile(folder);
             expect(serverFile.validations).toEqual([]);

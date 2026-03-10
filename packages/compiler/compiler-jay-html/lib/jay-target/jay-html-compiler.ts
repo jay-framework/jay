@@ -2652,17 +2652,26 @@ const ${createComponentSymbol} = makeHeadlessInstanceComponent(
     context.headlessInstanceDefs.push({
         componentSymbol: adoptComponentSymbol,
         renderFnName,
-        renderFnCode: adoptRenderFnCode + '\n' + adoptComponentDef + (createRenderFnCode ? '\n' + createRenderFnCode : ''),
+        renderFnCode:
+            adoptRenderFnCode +
+            '\n' +
+            adoptComponentDef +
+            (createRenderFnCode ? '\n' + createRenderFnCode : ''),
         pluginComponentName,
         imports: adoptImports.plus(createImports),
     });
 
     // --- Generate props getter ---
-    const propsGetterAndRefs = renderChildCompProps(element, renderContext, headlessImport.contract?.props);
+    const propsGetterAndRefs = renderChildCompProps(
+        element,
+        renderContext,
+        headlessImport.contract?.props,
+    );
     const getProps = `(${context.variables.currentVar}: ${context.variables.currentType.name}) => ${propsGetterAndRefs.rendered}`;
 
     // --- Generate ref ---
-    const refOriginalName = element.attributes.ref || context.refNameGenerator.newAutoRefNameGenerator();
+    const refOriginalName =
+        element.attributes.ref || context.refNameGenerator.newAutoRefNameGenerator();
     const refRefName = camelCase(refOriginalName);
     const refConstName = context.refNameGenerator.newConstantName(refRefName, context.variables);
     const isRepeated = context.dynamicRef;
@@ -2944,9 +2953,7 @@ function renderHydrate(
         : `() => ({ dom: rootElement, update: () => {}, mount: () => {}, unmount: () => {} })`;
 
     // Collect headless instance definitions and their imports
-    const headlessDefsCode = context.headlessInstanceDefs
-        .map((def) => def.renderFnCode)
-        .join('\n');
+    const headlessDefsCode = context.headlessInstanceDefs.map((def) => def.renderFnCode).join('\n');
     let headlessImportsAll = Imports.none();
     for (const def of context.headlessInstanceDefs) {
         headlessImportsAll = headlessImportsAll.plus(def.imports);
