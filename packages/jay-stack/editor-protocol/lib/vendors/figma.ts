@@ -115,6 +115,9 @@ export type FigmaVendorDocument = {
     layoutGrow?: number;
     layoutAlign?: 'MIN' | 'CENTER' | 'MAX' | 'STRETCH';
     layoutWrap?: 'NO_WRAP' | 'WRAP';
+    counterAxisSpacing?: number;
+    gridColumnsSizes?: Array<{ type: 'FIXED' | 'FLEX' | 'RELATIVE'; value: number }>;
+    gridRowsSizes?: Array<{ type: 'FIXED' | 'FLEX' | 'RELATIVE'; value: number }>;
     clipsContent?: boolean;
     overflowDirection?: 'NONE' | 'HORIZONTAL' | 'VERTICAL' | 'BOTH';
     scrollBehavior?: 'SCROLLS' | 'FIXED';

@@ -1,5 +1,6 @@
 export { type JayHtmlSourceFile } from './jay-target/jay-html-source-file';
 export {
+    computeSourceId,
     generateElementDefinitionFile,
     generateElementFile,
     type JayHtmlCompilerOptions,

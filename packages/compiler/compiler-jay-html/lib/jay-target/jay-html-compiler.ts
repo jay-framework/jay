@@ -82,7 +82,7 @@ export interface JayHtmlCompilerOptions {
     injectSourceIds?: boolean;
 }
 
-function computeSourceId(charOffset: number, sourceHtml: string): string {
+export function computeSourceId(charOffset: number, sourceHtml: string): string {
     let line = 1;
     let col = 1;
     for (let i = 0; i < charOffset && i < sourceHtml.length; i++) {

@@ -18,7 +18,7 @@ describe('style-resolver', () => {
             const { style, warnings } = resolveStyle(
                 'display: flex; flex-direction: row; gap: 16px',
             );
-            expect(style).toEqual({ layoutMode: 'row', gap: 16 });
+            expect(style).toEqual({ layoutMode: 'row', gap: 16, rowGap: 16 });
             expect(warnings).toEqual([]);
         });
 
@@ -118,7 +118,7 @@ describe('style-resolver', () => {
 
         it('position absolute with top and left', () => {
             const { style } = resolveStyle('position: absolute; top: 10px; left: 20px');
-            expect(style).toEqual({ x: 20, y: 10 });
+            expect(style).toEqual({ isAbsolute: true, x: 20, y: 10 });
         });
 
         it('min/max dimensions', () => {
@@ -273,6 +273,97 @@ describe('style-resolver', () => {
         it('text-overflow: ellipsis → ENDING', () => {
             const { style } = resolveStyle('text-overflow: ellipsis');
             expect(style.textTruncation).toBe('ENDING');
+        });
+    });
+
+    describe('CSS Grid mapping', () => {
+        it('display: grid with columns and gap', () => {
+            const { style } = resolveStyle(
+                'display: grid; grid-template-columns: 200px 200px 200px; gap: 16px',
+            );
+            expect(style.layoutMode).toBe('grid');
+            expect(style.gridColumnWidths).toEqual([200, 200, 200]);
+            expect(style.gap).toBe(16);
+            expect(style.rowGap).toBe(16);
+        });
+
+        it('display: grid with separate column-gap and row-gap', () => {
+            const { style } = resolveStyle(
+                'display: grid; grid-template-columns: 100px 200px; column-gap: 10px; row-gap: 20px',
+            );
+            expect(style.layoutMode).toBe('grid');
+            expect(style.gap).toBe(10);
+            expect(style.rowGap).toBe(20);
+        });
+
+        it('display: grid with only gap shorthand sets both column and row spacing', () => {
+            const { style } = resolveStyle('display: grid; gap: 24px');
+            expect(style.gap).toBe(24);
+            expect(style.rowGap).toBe(24);
+        });
+
+        it('display: grid with grid-template-rows', () => {
+            const { style } = resolveStyle(
+                'display: grid; grid-template-columns: 100px 100px; grid-template-rows: 50px 80px',
+            );
+            expect(style.gridColumnWidths).toEqual([100, 100]);
+            expect(style.gridRowHeights).toEqual([50, 80]);
+        });
+
+        it('display: grid with column-gap overrides gap for column spacing', () => {
+            const { style } = resolveStyle(
+                'display: grid; gap: 10px; column-gap: 20px',
+            );
+            expect(style.gap).toBe(20);
+            expect(style.rowGap).toBe(10);
+        });
+    });
+
+    describe('absolute positioning', () => {
+        it('position: absolute sets isAbsolute flag', () => {
+            const { style } = resolveStyle('position: absolute');
+            expect(style.isAbsolute).toBe(true);
+        });
+
+        it('position: relative does NOT set isAbsolute', () => {
+            const { style } = resolveStyle('position: relative; top: 10px; left: 20px');
+            expect(style.isAbsolute).toBeUndefined();
+            expect(style.x).toBeUndefined();
+            expect(style.y).toBeUndefined();
+        });
+
+        it('computed styles provide position: absolute (no static CSS)', () => {
+            const { style } = resolveStyle('', undefined, undefined, {
+                styles: { position: 'absolute', top: '30px', left: '40px' },
+                boundingRect: { x: 40, y: 30, width: 150, height: 60 },
+            });
+            expect(style.isAbsolute).toBe(true);
+            expect(style.x).toBe(40);
+            expect(style.y).toBe(30);
+            expect(style.width).toBe(150);
+            expect(style.height).toBe(60);
+        });
+
+        it('bounding rect applies x/y only for absolute elements', () => {
+            const { style: absStyle } = resolveStyle('position: absolute', undefined, undefined, {
+                styles: {},
+                boundingRect: { x: 50, y: 100, width: 200, height: 80 },
+            });
+            expect(absStyle.isAbsolute).toBe(true);
+            expect(absStyle.x).toBe(50);
+            expect(absStyle.y).toBe(100);
+            expect(absStyle.width).toBe(200);
+            expect(absStyle.height).toBe(80);
+
+            const { style: relStyle } = resolveStyle('', undefined, undefined, {
+                styles: {},
+                boundingRect: { x: 50, y: 100, width: 200, height: 80 },
+            });
+            expect(relStyle.isAbsolute).toBeUndefined();
+            expect(relStyle.x).toBeUndefined();
+            expect(relStyle.y).toBeUndefined();
+            expect(relStyle.width).toBe(200);
+            expect(relStyle.height).toBe(80);
         });
     });
 

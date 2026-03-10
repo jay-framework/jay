@@ -69,7 +69,6 @@ const RECOGNIZED_BUT_NOT_STORED = new Set([
     'filter',
     'transform',
     'transform-origin',
-    'grid-template-rows',
     'grid-auto-flow',
     'flex-shrink',
     'flex-basis',
@@ -258,11 +257,14 @@ export function resolveStyle(
                 if (value === 'flex' || value === 'inline-flex') {
                     if (!style.layoutMode) style.layoutMode = 'row';
                 } else if (value === 'grid' || value === 'inline-grid') {
-                    style.layoutMode = 'row';
-                    style.layoutWrap = true;
+                    style.layoutMode = 'grid';
                     const gridCols = parsed['grid-template-columns'];
                     if (gridCols) {
                         style.gridColumnWidths = parseGridColumnWidths(gridCols);
+                    }
+                    const gridRows = parsed['grid-template-rows'];
+                    if (gridRows) {
+                        style.gridRowHeights = parseGridColumnWidths(gridRows);
                     }
                 } else if (value === 'block' || value === 'flow-root') {
                     if (!style.layoutMode) style.layoutMode = 'column';
@@ -283,7 +285,20 @@ export function resolveStyle(
                 break;
             case 'gap': {
                 const px = parsePx(value);
+                if (px !== undefined) {
+                    style.gap = px;
+                    style.rowGap = px;
+                }
+                break;
+            }
+            case 'column-gap': {
+                const px = parsePx(value);
                 if (px !== undefined) style.gap = px;
+                break;
+            }
+            case 'row-gap': {
+                const px = parsePx(value);
+                if (px !== undefined) style.rowGap = px;
                 break;
             }
             case 'padding': {
@@ -582,6 +597,11 @@ export function resolveStyle(
                 if (colWidths) style.gridColumnWidths = colWidths;
                 break;
             }
+            case 'grid-template-rows': {
+                const rowHeights = parseGridColumnWidths(value);
+                if (rowHeights) style.gridRowHeights = rowHeights;
+                break;
+            }
             default:
                 if (RECOGNIZED_BUT_NOT_STORED.has(prop)) break;
                 warnings.push(`CSS_UNSUPPORTED_PROPERTY: ${prop}`);
@@ -589,19 +609,21 @@ export function resolveStyle(
     }
 
     if (parsed['position'] === 'absolute') {
+        style.isAbsolute = true;
         const topPx = parsePx(parsed['top'] ?? '');
         const leftPx = parsePx(parsed['left'] ?? '');
         if (topPx !== undefined) style.y = topPx;
         if (leftPx !== undefined) style.x = leftPx;
     }
 
-    // Apply computed bounding rect dimensions (always use computed layout)
     if (enrichedStyles?.boundingRect) {
         const rect = enrichedStyles.boundingRect;
         if (rect.width > 0) style.width = rect.width;
         if (rect.height > 0) style.height = rect.height;
-        style.x = rect.x;
-        style.y = rect.y;
+        if (style.isAbsolute) {
+            style.x = rect.x;
+            style.y = rect.y;
+        }
     }
 
     return { style, warnings };

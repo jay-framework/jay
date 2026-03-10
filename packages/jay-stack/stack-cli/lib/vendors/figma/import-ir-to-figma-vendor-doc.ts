@@ -76,11 +76,41 @@ function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVe
 
     if (style.width !== undefined) props.width = style.width;
     if (style.height !== undefined) props.height = style.height;
+    if (style.isAbsolute) {
+        props.layoutPositioning = 'ABSOLUTE';
+        if (style.x !== undefined) props.x = style.x;
+        if (style.y !== undefined) props.y = style.y;
+    }
 
     if (style.layoutMode) {
-        if (style.layoutMode === 'row') props.layoutMode = 'HORIZONTAL';
-        else if (style.layoutMode === 'column') props.layoutMode = 'VERTICAL';
-        else props.layoutMode = 'NONE';
+        if (style.layoutMode === 'grid') {
+            props.layoutMode = 'GRID';
+            if (style.gridColumnWidths && style.gridColumnWidths.length > 0) {
+                const allEqual = style.gridColumnWidths.every(
+                    (w) => Math.abs(w - style.gridColumnWidths![0]) < 1,
+                );
+                props.gridColumnsSizes = style.gridColumnWidths.map((w) =>
+                    allEqual
+                        ? { type: 'FLEX' as const, value: 1 }
+                        : { type: 'FIXED' as const, value: w },
+                );
+            }
+            if (style.gridRowHeights && style.gridRowHeights.length > 0) {
+                props.gridRowsSizes = style.gridRowHeights.map((h) => ({
+                    type: 'FIXED' as const,
+                    value: h,
+                }));
+            }
+            if (style.rowGap !== undefined) {
+                props.counterAxisSpacing = style.rowGap;
+            }
+        } else if (style.layoutMode === 'row') {
+            props.layoutMode = 'HORIZONTAL';
+        } else if (style.layoutMode === 'column') {
+            props.layoutMode = 'VERTICAL';
+        } else {
+            props.layoutMode = 'NONE';
+        }
     }
     if (style.layoutWrap) {
         if (!props.layoutMode || props.layoutMode === 'NONE') {
@@ -361,12 +391,12 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
         }
     }
 
-    // Grid→WRAP: set children to fixed column width from grid-template-columns
-    if (base.layoutWrap === 'WRAP' && node.style?.gridColumnWidths && base.children) {
+    // Grid children: set fixed column widths from grid-template-columns
+    if (base.layoutMode === 'GRID' && node.style?.gridColumnWidths && base.children) {
         const colWidth = node.style.gridColumnWidths[0];
         if (colWidth && colWidth > 0) {
             for (const child of base.children) {
-                child.width = colWidth;
+                if (!child.width) child.width = colWidth;
                 child.layoutSizingHorizontal = 'FIXED';
             }
         }

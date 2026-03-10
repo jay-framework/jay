@@ -631,38 +631,6 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
         let perScenarioMaps;
         let enricherScenarios: any[] = [];
 
-        // Annotate elements with data-jay-node-id if missing.
-        // This ensures stable identity across source, rendered DOM, and vendor doc.
-        const { annotateJayNodeIds } = await import('./jay-node-id-annotator');
-        const idsAdded = annotateJayNodeIds(parsedJayHtml.body);
-        if (idsAdded) {
-            console.log('[Import] Added data-jay-node-id to jay-html elements');
-
-            // Write annotated source back to disk so the dev server picks up the IDs
-            if (projectPage.filePath) {
-                try {
-                    const jayHtmlContent = fs.readFileSync(projectPage.filePath, 'utf-8');
-                    const { parse: parseHtml } = await import('node-html-parser');
-                    const fullDoc = parseHtml(jayHtmlContent);
-                    const fileBody = fullDoc.querySelector('body');
-                    if (fileBody) {
-                        annotateJayNodeIds(fileBody);
-                        fs.writeFileSync(projectPage.filePath, fullDoc.toString(), 'utf-8');
-                        console.log(
-                            `[Import] Wrote data-jay-node-id annotations to ${projectPage.filePath}`,
-                        );
-                        // Wait for dev server HMR to detect the file change and recompile
-                        await new Promise((resolve) => setTimeout(resolve, 4000));
-                    }
-                } catch (err) {
-                    console.warn(
-                        '[Import] Could not write annotations back to file:',
-                        (err as Error).message,
-                    );
-                }
-            }
-        }
-
         writeDebugFile(debugDir, 'import-input-body.html', parsedJayHtml.body.outerHTML);
         writeDebugFile(debugDir, 'import-input-css.json', parsedJayHtml.css || null);
         writeDebugFile(debugDir, 'import-input-contract.json', projectPage.contract || null);
@@ -730,6 +698,7 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
                 headlessImports: parsedJayHtml.headlessImports,
                 usedComponents: projectPage.usedComponents,
                 css: parsedJayHtml.css,
+                sourceHtml: parsedJayHtml.sourceHtml,
                 computedStyleMap,
                 perScenarioMaps,
                 scenarios: enricherScenarios,

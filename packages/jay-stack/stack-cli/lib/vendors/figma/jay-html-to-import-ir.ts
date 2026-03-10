@@ -2,7 +2,7 @@ import { createHash } from 'crypto';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import type { Contract, ContractTag, Plugin, ProjectPage } from '@jay-framework/editor-protocol';
 import type { JayHeadlessImports } from '@jay-framework/compiler-jay-html';
-import { ContractTagType } from '@jay-framework/compiler-jay-html';
+import { ContractTagType, computeSourceId } from '@jay-framework/compiler-jay-html';
 import type { ImportIRDocument, ImportIRNode, ImportIRStyle, ImportIRBinding } from './import-ir';
 import { generateNodeId, buildDomPath, getSemanticAnchors } from './id-generator';
 import { resolveStyle, parseInlineStyle, parseCssToClassMap } from './style-resolver';
@@ -213,27 +213,44 @@ interface BuildResult {
     componentSets: ImportIRNode[];
 }
 
-function buildNodeFromElement(
-    element: HTMLElement,
-    body: HTMLElement,
-    contractTags: ContractTag[],
-    jayPageSectionId: string,
-    pageContractPath: PageContractPath,
-    repeaterContext: string[][],
-    contractContext?: ImportContractContext,
-    cssClassMap?: CssClassMap,
-    computedStyleMap?: ComputedStyleMap,
-    perScenarioMaps?: ScenarioStyleMaps,
-    scenarios?: VariantScenario[],
-): BuildResult {
+type HTMLElementWithRange = HTMLElement & { range: [number, number] };
+
+function hasRange(element: HTMLElement): element is HTMLElementWithRange {
+    return Array.isArray((element as any).range) && (element as any).range.length >= 2;
+}
+
+function elementSourceId(element: HTMLElement, sourceHtml?: string): string | undefined {
+    if (!sourceHtml || !hasRange(element)) return undefined;
+    return computeSourceId(element.range[0], sourceHtml);
+}
+
+interface BuildNodeContext {
+    body: HTMLElement;
+    contractTags: ContractTag[];
+    jayPageSectionId: string;
+    pageContractPath: PageContractPath;
+    repeaterContext: string[][];
+    contractContext?: ImportContractContext;
+    cssClassMap?: CssClassMap;
+    computedStyleMap?: ComputedStyleMap;
+    perScenarioMaps?: ScenarioStyleMaps;
+    scenarios?: VariantScenario[];
+    sourceHtml?: string;
+}
+
+function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): BuildResult {
+    const {
+        body, contractTags, jayPageSectionId, pageContractPath, repeaterContext,
+        contractContext, cssClassMap, computedStyleMap, perScenarioMaps, scenarios, sourceHtml,
+    } = ctx;
     const warnings: string[] = [];
     const componentSets: ImportIRNode[] = [];
     const tag = (element.rawTagName || 'div').toLowerCase();
 
-    const jayNodeId = element.getAttribute('data-jay-node-id') ?? undefined;
+    const sourceId = elementSourceId(element, sourceHtml);
     const domPath = buildDomPath(element, body);
     const anchors = getSemanticAnchors(element);
-    const nodeId = jayNodeId || generateNodeId(domPath, anchors);
+    const nodeId = sourceId || generateNodeId(domPath, anchors);
 
     const styleAttr = element.getAttribute('style') || '';
     const classAttr = element.getAttribute('class') || '';
@@ -263,7 +280,7 @@ function buildNodeFromElement(
         }
     }
 
-    const enrichedStyles = jayNodeId ? computedStyleMap?.get(jayNodeId) : undefined;
+    const enrichedStyles = sourceId ? computedStyleMap?.get(sourceId) : undefined;
 
     const { style, warnings: styleWarnings } = resolveStyle(
         styleAttr,
@@ -436,19 +453,10 @@ function buildNodeFromElement(
 
         const children: ImportIRNode[] = [];
         if (firstChild) {
-            const childResult = buildNodeFromElement(
-                firstChild,
-                body,
-                contractTags,
-                jayPageSectionId,
-                pageContractPath,
-                newRepeaterContext,
-                contractContext,
-                cssClassMap,
-                computedStyleMap,
-                perScenarioMaps,
-                scenarios,
-            );
+            const childResult = buildNodeFromElement(firstChild, {
+                ...ctx,
+                repeaterContext: newRepeaterContext,
+            });
             children.push(childResult.node);
             warnings.push(...childResult.warnings);
             componentSets.push(...childResult.componentSets);
@@ -535,19 +543,10 @@ function buildNodeFromElement(
                     ? findScenarioForCondition(condition, perScenarioMaps, scenarios)
                     : undefined;
 
-                const result = buildNodeFromElement(
-                    el,
-                    body,
-                    contractTags,
-                    jayPageSectionId,
-                    pageContractPath,
-                    repeaterContext,
-                    contractContext,
-                    cssClassMap,
-                    scenarioStyleMap ?? computedStyleMap,
-                    perScenarioMaps,
-                    scenarios,
-                );
+                const result = buildNodeFromElement(el, {
+                    ...ctx,
+                    computedStyleMap: scenarioStyleMap ?? computedStyleMap,
+                });
                 warnings.push(...result.warnings);
                 componentSets.push(...result.componentSets);
                 return result.node;
@@ -572,19 +571,7 @@ function buildNodeFromElement(
             continue;
         }
 
-        const childResult = buildNodeFromElement(
-            childEl,
-            body,
-            contractTags,
-            jayPageSectionId,
-            pageContractPath,
-            repeaterContext,
-            contractContext,
-            cssClassMap,
-            computedStyleMap,
-            perScenarioMaps,
-            scenarios,
-        );
+        const childResult = buildNodeFromElement(childEl, ctx);
         children.push(childResult.node);
         warnings.push(...childResult.warnings);
         componentSets.push(...childResult.componentSets);
@@ -710,6 +697,7 @@ export function buildImportIR(
         headlessImports?: JayHeadlessImports[];
         usedComponents?: ProjectPage['usedComponents'];
         css?: string;
+        sourceHtml?: string;
         contentHash?: string;
         computedStyleMap?: ComputedStyleMap;
         perScenarioMaps?: ScenarioStyleMaps;
@@ -746,19 +734,19 @@ export function buildImportIR(
             node,
             warnings: nodeWarnings,
             componentSets,
-        } = buildNodeFromElement(
-            contentElement,
+        } = buildNodeFromElement(contentElement, {
             body,
             contractTags,
-            sectionId,
+            jayPageSectionId: sectionId,
             pageContractPath,
-            [],
+            repeaterContext: [],
             contractContext,
             cssClassMap,
-            options?.computedStyleMap,
-            options?.perScenarioMaps,
-            options?.scenarios,
-        );
+            computedStyleMap: options?.computedStyleMap,
+            perScenarioMaps: options?.perScenarioMaps,
+            scenarios: options?.scenarios,
+            sourceHtml: options?.sourceHtml,
+        });
         rootChildren = [node, ...componentSets];
         warnings.push(...nodeWarnings);
     } else {

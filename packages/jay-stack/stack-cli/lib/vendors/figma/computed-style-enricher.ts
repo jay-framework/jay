@@ -2,8 +2,9 @@
  * Computed style enricher using Playwright headless browser.
  *
  * Extracts getComputedStyle() + getBoundingClientRect() for all elements with
- * data-jay-node-id attributes. Closes CSS fidelity gaps that static parsing
- * cannot solve: cascade, inheritance, shorthand expansion, computed values.
+ * data-jay-sid attributes (compiler-injected source IDs, format "line:col").
+ * Closes CSS fidelity gaps that static parsing cannot solve: cascade,
+ * inheritance, shorthand expansion, computed values.
  */
 
 import { createHash } from 'crypto';
@@ -126,8 +127,14 @@ export async function enrichWithComputedStyles(options: EnricherOptions): Promis
                         waitUntil: 'domcontentloaded',
                         timeout,
                     });
-                    // Wait for client-side rendering to settle
-                    await page.waitForTimeout(3000);
+                    // Wait for compiler-injected source IDs to appear (indicates rendering is complete)
+                    try {
+                        await page.waitForSelector('[data-jay-sid]', { timeout: 10000 });
+                    } catch {
+                        console.warn(
+                            `[ComputedStyles] No [data-jay-sid] elements found after 10s — page may not have source IDs enabled`,
+                        );
+                    }
 
                     if (options.screenshotDir) {
                         const safeName = scenario.id.replace(/[^a-zA-Z0-9_-]/g, '_');
@@ -305,7 +312,10 @@ async function extractComputedStyles(
             'justify-content',
             'align-items',
             'gap',
+            'column-gap',
+            'row-gap',
             'grid-template-columns',
+            'grid-template-rows',
             'flex-wrap',
             'padding-top',
             'padding-right',
@@ -349,12 +359,12 @@ async function extractComputedStyles(
             boundingRect: { x: number; y: number; width: number; height: number };
         }> = [];
 
-        // Single pass: all elements with data-jay-node-id
-        const elements = document.querySelectorAll('[data-jay-node-id]');
+        // Single pass: all elements with data-jay-sid (compiler-injected source IDs)
+        const elements = document.querySelectorAll('[data-jay-sid]');
 
         for (const element of Array.from(elements)) {
-            const jayNodeId = element.getAttribute('data-jay-node-id');
-            if (!jayNodeId) continue;
+            const jaySid = element.getAttribute('data-jay-sid');
+            if (!jaySid) continue;
 
             const htmlElement = element as any;
             const computedStyle = window.getComputedStyle(htmlElement);
@@ -369,7 +379,7 @@ async function extractComputedStyles(
             }
 
             result.push({
-                key: jayNodeId,
+                key: jaySid,
                 styles,
                 boundingRect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
             });

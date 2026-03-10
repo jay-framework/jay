@@ -13,7 +13,7 @@ export type ImportIRNodeKind =
     | 'COMPONENT'
     | 'COMPONENT_SET';
 
-export type ImportIRLayoutMode = 'none' | 'row' | 'column';
+export type ImportIRLayoutMode = 'none' | 'row' | 'column' | 'grid';
 
 export interface VariantExpressionRef {
     alias: string;
@@ -83,8 +83,10 @@ export type ImportIRStyle = {
     textTruncation?: 'ENDING';
     clipsContent?: boolean;
     flexGrow?: number;
-    /** Column widths from CSS grid-template-columns, used to size WRAP children */
+    isAbsolute?: boolean;
     gridColumnWidths?: number[];
+    gridRowHeights?: number[];
+    rowGap?: number;
     effects?: ImportIREffect[];
 };
 
