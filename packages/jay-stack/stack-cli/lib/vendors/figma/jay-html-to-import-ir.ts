@@ -881,6 +881,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
                 buildChildNodeCb,
                 contractContext,
                 visibilityChecker,
+                repeaterContext,
             );
             componentSets.push(componentSet);
             children.push(instance);

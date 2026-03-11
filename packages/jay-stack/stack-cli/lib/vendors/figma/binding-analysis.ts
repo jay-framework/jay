@@ -112,6 +112,24 @@ export function applyRepeaterContext(path: string, repeaterStack: string[][]): s
 }
 
 /**
+ * When inside a repeater, resolve the item-level contract tags to search in
+ * and the repeater path prefix for building full tag paths.
+ * Returns undefined when not inside a repeater.
+ */
+export function getRepeaterItemTags(
+    contractTags: ContractTag[],
+    repeaterContext: string[][],
+): { itemTags: ContractTag[]; repeaterPath: string[] } | undefined {
+    if (repeaterContext.length === 0) return undefined;
+    const repeaterPath = repeaterContext[repeaterContext.length - 1]!;
+    const repeaterTag = findContractTag(contractTags, repeaterPath);
+    if (repeaterTag?.tags) {
+        return { itemTags: repeaterTag.tags, repeaterPath };
+    }
+    return undefined;
+}
+
+/**
  * Resolves a binding to a full tag path with plugin key and contract tag
  */
 function resolveBinding(

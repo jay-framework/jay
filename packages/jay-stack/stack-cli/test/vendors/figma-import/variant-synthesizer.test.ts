@@ -806,6 +806,156 @@ describe('variant-synthesizer', () => {
     });
 });
 
+    describe('variants inside repeater (repeaterContext)', () => {
+        const repeaterContractTags: ContractTag[] = [
+            {
+                tag: 'productSearch',
+                type: 'subContract' as any,
+                tags: [
+                    {
+                        tag: 'searchResults',
+                        type: 'subContract',
+                        repeated: true,
+                        tags: [
+                            { tag: 'hasRibbon', type: 'variant', dataType: 'boolean' } as any,
+                            { tag: 'hasDiscount', type: 'variant', dataType: 'boolean' } as any,
+                            {
+                                tag: 'inventory',
+                                type: 'subContract' as any,
+                                tags: [
+                                    {
+                                        tag: 'availabilityStatus',
+                                        type: 'variant',
+                                        dataType: 'enum',
+                                    } as any,
+                                ],
+                            } as any,
+                        ],
+                    } as any,
+                ],
+            } as any,
+        ];
+
+        it('INSTANCE bindings get full tag path with repeater prefix', () => {
+            const doc = parse(`
+                <body>
+                    <div>
+                        <span if="hasRibbon" data-test-id="ribbon"></span>
+                        <span if="hasDiscount" data-test-id="discount"></span>
+                    </div>
+                </body>
+            `);
+            const body = doc.querySelector('body')!;
+            const parent = doc.querySelector('div')!;
+            const groups = detectVariantGroups(parent);
+            expect(groups).toHaveLength(1);
+
+            const result = synthesizeVariant(
+                groups[0]!,
+                body,
+                repeaterContractTags,
+                jayPageSectionId,
+                pageContractPath,
+                (el) => mockBuildChildNode(el),
+                undefined,
+                undefined,
+                [['productSearch', 'searchResults']],
+            );
+
+            expect(result.instance.bindings).toBeDefined();
+            expect(result.instance.bindings!.length).toBe(2);
+
+            const layerBindings = result.instance.bindings!
+                .filter((b) => b.kind === 'layer')
+                .map((b) => (b as any).binding);
+
+            const ribbonBinding = layerBindings.find((b: any) => b.property === 'hasRibbon');
+            expect(ribbonBinding).toBeDefined();
+            expect(ribbonBinding.tagPath).toEqual([
+                'productSearch',
+                'searchResults',
+                'hasRibbon',
+            ]);
+
+            const discountBinding = layerBindings.find((b: any) => b.property === 'hasDiscount');
+            expect(discountBinding).toBeDefined();
+            expect(discountBinding.tagPath).toEqual([
+                'productSearch',
+                'searchResults',
+                'hasDiscount',
+            ]);
+        });
+
+        it('nested subContract path inside repeater gets full prefix', () => {
+            const doc = parse(`
+                <body>
+                    <div>
+                        <span if="inventory.availabilityStatus === IN_STOCK" data-test-id="in-stock"></span>
+                        <span if="inventory.availabilityStatus === OUT_OF_STOCK" data-test-id="out-stock"></span>
+                    </div>
+                </body>
+            `);
+            const body = doc.querySelector('body')!;
+            const parent = doc.querySelector('div')!;
+            const groups = detectVariantGroups(parent);
+
+            const result = synthesizeVariant(
+                groups[0]!,
+                body,
+                repeaterContractTags,
+                jayPageSectionId,
+                pageContractPath,
+                (el) => mockBuildChildNode(el),
+                undefined,
+                undefined,
+                [['productSearch', 'searchResults']],
+            );
+
+            expect(result.instance.bindings).toBeDefined();
+            const layerBindings = result.instance.bindings!
+                .filter((b) => b.kind === 'layer')
+                .map((b) => (b as any).binding);
+
+            const statusBinding = layerBindings.find(
+                (b: any) => b.property === 'availabilityStatus',
+            );
+            expect(statusBinding).toBeDefined();
+            expect(statusBinding.tagPath).toEqual([
+                'productSearch',
+                'searchResults',
+                'inventory',
+                'availabilityStatus',
+            ]);
+        });
+
+        it('without repeaterContext, same variants produce no bindings (tags not at page level)', () => {
+            const doc = parse(`
+                <body>
+                    <div>
+                        <span if="hasRibbon" data-test-id="ribbon"></span>
+                    </div>
+                </body>
+            `);
+            const body = doc.querySelector('body')!;
+            const parent = doc.querySelector('div')!;
+            const groups = detectVariantGroups(parent);
+
+            const result = synthesizeVariant(
+                groups[0]!,
+                body,
+                repeaterContractTags,
+                jayPageSectionId,
+                pageContractPath,
+                (el) => mockBuildChildNode(el),
+            );
+
+            const layerBindings = (result.instance.bindings ?? []).filter(
+                (b) => b.kind === 'layer',
+            );
+            expect(layerBindings).toHaveLength(0);
+        });
+    });
+
 describe('buildVariantCondition (export: Figma → HTML)', () => {
     it('enum value → tagPath == value', () => {
         const result = buildVariantCondition([

@@ -5,7 +5,7 @@ import type { ImportIRNode } from './import-ir';
 import type { PageContractPath } from './pageContractPath';
 import type { LayerBinding } from './types';
 import { tokenizeCondition } from './condition-tokenizer';
-import { findContractTag } from './binding-analysis';
+import { findContractTag, getRepeaterItemTags } from './binding-analysis';
 import { generateNodeId, buildDomPath, getSemanticAnchors } from './id-generator';
 import { extractBindingsFromElement } from './binding-reconstructor';
 import type { ImportContractContext } from './binding-reconstructor';
@@ -241,8 +241,12 @@ export function synthesizeVariant(
     buildChildNode: (element: HTMLElement) => ImportIRNode,
     contractContext?: ImportContractContext,
     isVisibleInDefault?: ElementVisibilityChecker,
+    repeaterContext?: string[][],
 ): SynthesizedVariant {
     const warnings: string[] = [];
+    const repeaterInfo = repeaterContext
+        ? getRepeaterItemTags(contractTags, repeaterContext)
+        : undefined;
     const { dimensions, warnings: dimWarnings } = classifyDimensions(
         [{ elements: group.elements, conditions: group.conditions }],
         contractTags,
@@ -353,12 +357,16 @@ export function synthesizeVariant(
     const defaultComponentId = defaultComponent?.id ?? components[0]!.id;
 
     const instanceBindings: ImportIRNode['bindings'] = [];
+    const tagsToSearch = repeaterInfo?.itemTags ?? contractTags;
     for (const dim of dimensions) {
-        const tag = findContractTag(contractTags, dim.tagPath);
+        const tag = findContractTag(tagsToSearch, dim.tagPath);
         if (tag) {
+            const fullTagPath = repeaterInfo
+                ? [...repeaterInfo.repeaterPath, ...dim.tagPath]
+                : dim.tagPath;
             let resolvedPath = pageContractPath;
-            if (contractContext && dim.tagPath.length > 0) {
-                const rootSegment = dim.tagPath[0];
+            if (contractContext && fullTagPath.length > 0) {
+                const rootSegment = fullTagPath[0];
                 const headlessImport = contractContext.headlessImports.find(
                     (hi) => hi.key === rootSegment,
                 );
@@ -369,7 +377,7 @@ export function synthesizeVariant(
             const binding: LayerBinding = {
                 pageContractPath: resolvedPath,
                 jayPageSectionId,
-                tagPath: dim.tagPath,
+                tagPath: fullTagPath,
                 property: dim.name,
             };
             instanceBindings.push({ kind: 'layer', binding });
