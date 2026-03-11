@@ -17,6 +17,11 @@ export interface AssignCoordinatesOptions {
     headlessContractNames: Set<string>;
 }
 
+export interface AssignCoordinatesResult {
+    /** Serialized DOM with jay-coordinate-base attributes, for debug output */
+    debugHtml: string;
+}
+
 /**
  * Scope state tracks counters for coordinate assignment within a scope.
  * Each scope (page root, headless instance, forEach item) has its own counters.
@@ -41,18 +46,18 @@ function newScope(): ScopeState {
  * Must run after slow-render (which resolves slow conditions, unrolls slowForEach,
  * and wraps multi-child headless inline templates).
  *
- * Mutates the DOM in place.
+ * Mutates the DOM in place. Returns the serialized DOM for debug output.
  */
 export function assignCoordinates(
     body: HTMLElement,
     options: AssignCoordinatesOptions,
-): void {
+): AssignCoordinatesResult {
     // Find the single root content element inside <body>
     const rootChildren = body.childNodes.filter(
         (n) => n.nodeType === NodeType.ELEMENT_NODE,
     ) as HTMLElement[];
 
-    if (rootChildren.length === 0) return;
+    if (rootChildren.length === 0) return { debugHtml: body.toString() };
 
     // The body should have a single root element (e.g., <div>)
     const rootElement = rootChildren[0];
@@ -60,6 +65,8 @@ export function assignCoordinates(
 
     // Walk root element's children
     walkChildren(rootElement, '0', options, newScope());
+
+    return { debugHtml: body.toString() };
 }
 
 /**

@@ -57,7 +57,7 @@ import {
     type InstancePhaseData,
     type ForEachHeadlessInstance,
 } from '@jay-framework/stack-server-runtime';
-import { WithValidations } from '@jay-framework/compiler-shared';
+import { WithValidations, computeForEachInstanceKey } from '@jay-framework/compiler-shared';
 import { getLogger, getDevLogger, type RequestTiming } from '@jay-framework/logger';
 
 async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
@@ -1110,8 +1110,7 @@ async function renderFastChangingDataForForEachInstances(
                 const fastResult = await comp.compDefinition.fastRender(props, ...services);
 
                 if (fastResult.kind === 'PhaseOutput') {
-                    // Coordinate: [trackByValue, coordinateSuffix] → "trackByValue,coordinateSuffix"
-                    const coord = [trackByValue, instance.coordinateSuffix].toString();
+                    const coord = computeForEachInstanceKey(trackByValue, instance.coordinateSuffix);
                     viewStates[coord] = fastResult.rendered;
                     hasResults = true;
                 }

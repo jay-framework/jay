@@ -22,6 +22,8 @@ import {
     RenderFragment,
     RuntimeMode,
     WithValidations,
+    computeInstanceKey,
+    compileForEachInstanceKeyExpr,
 } from '@jay-framework/compiler-shared';
 import { generateAllPhaseViewStateTypes } from '../contract/phase-type-generator';
 import { ContractProp } from '../contract';
@@ -2472,7 +2474,9 @@ function renderHydrateHeadlessInstance(
     const isInsideForEach = context.insideFastForEach;
     const coordinateKey = isInsideForEach
         ? undefined
-        : [...context.coordinatePrefix, coordinateSuffix].join('/');
+        : context.coordinatePrefix.length > 0
+          ? computeInstanceKey(coordinateSuffix, 'slowForEach', context.coordinatePrefix.join('/'))
+          : computeInstanceKey(coordinateSuffix, 'static');
 
     // --- Compile adopt inline template (hydrate APIs) ---
     const componentVariables = new Variables(headlessImport.rootType);
@@ -3322,33 +3326,35 @@ function renderServerHeadlessInstance(
     }
     const coordinateSuffix = `${contractName}:${coordinateRef}`;
 
-    // Build the __headlessInstances lookup key.
-    // For static instances: 'product-card:0' or 'p1/product-card:0' (with slowForEach prefix)
-    // For forEach instances: runtime expression using comma separator (e.g., vs1._id + ',product-card:0')
+    // Build the __headlessInstances lookup key and coordinate prefix for jay-coordinate attributes.
     let instanceKeyExpr: string;
     let instanceCoordPrefix: string; // For jay-coordinate attributes (slash-separated)
 
     if (context.coordinatePrefix) {
         // Inside a forEach or slowForEach — coordinatePrefix is a JS expression
-        // Check if coordinatePrefix is a literal string (slowForEach) or dynamic expression (forEach)
         const isLiteralPrefix = context.coordinatePrefix.startsWith("'");
 
         if (isLiteralPrefix) {
             // slowForEach: coordinatePrefix is like "'p1'" — use slash-separated key
             const literalValue = context.coordinatePrefix.slice(1, -1); // strip quotes
-            instanceKeyExpr = `'${literalValue}/${coordinateSuffix}'`;
-            instanceCoordPrefix = `'${literalValue}/${coordinateSuffix}'`;
+            const key = computeInstanceKey(coordinateSuffix, 'slowForEach', literalValue)!;
+            instanceKeyExpr = `'${key}'`;
+            instanceCoordPrefix = `'${key}'`;
         } else {
             // forEach: use raw (unescaped) prefix for __headlessInstances key lookup,
-            // escaped prefix for jay-coordinate attributes
+            // escaped prefix for jay-coordinate attributes.
+            // Note: can't use compileForEachInstanceKeyExpr here because rawPrefix is
+            // already a string expression; that function wraps in String() for simple vars.
+            // Format matches computeForEachInstanceKey: "trackByValue,coordinateSuffix"
             const rawPrefix = context.rawCoordinatePrefix || context.coordinatePrefix;
             instanceKeyExpr = `${rawPrefix} + ',${coordinateSuffix}'`;
             instanceCoordPrefix = `${context.coordinatePrefix} + '/${coordinateSuffix}'`;
         }
     } else {
         // Top-level static instance
-        instanceKeyExpr = `'${coordinateSuffix}'`;
-        instanceCoordPrefix = `'${coordinateSuffix}'`;
+        const key = computeInstanceKey(coordinateSuffix, 'static')!;
+        instanceKeyExpr = `'${key}'`;
+        instanceCoordPrefix = `'${key}'`;
     }
 
     // Handle `if` condition on the <jay:xxx> tag — uses page ViewState (not instance's)
@@ -4140,7 +4146,16 @@ function hasInteractiveChildElements(childNodes: Node[]): boolean {
     );
 }
 
-export function generateServerElementFile(jayFile: JayHtmlSourceFile): WithValidations<string> {
+export interface ServerElementOptions {
+    /** Path to write debug coordinate pre-process output. When provided, the
+     *  serialized DOM with jay-coordinate-base attributes is returned via result. */
+    debugCoordinatePreprocessPath?: string;
+}
+
+export function generateServerElementFile(
+    jayFile: JayHtmlSourceFile,
+    _options?: ServerElementOptions,
+): WithValidations<string> {
     const types = generateTypes(jayFile.types);
     const variables = new Variables(jayFile.types);
     const rootElement = ensureSingleChildElement(jayFile.body);

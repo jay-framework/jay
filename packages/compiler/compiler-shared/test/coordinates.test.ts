@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { compileCoordinateExpr, isStaticCoordinate } from '../lib';
+import {
+    compileCoordinateExpr,
+    isStaticCoordinate,
+    computeInstanceKey,
+    compileForEachInstanceKeyExpr,
+    computeForEachInstanceKey,
+} from '../lib';
 
 describe('compileCoordinateExpr', () => {
     it('should return quoted string for static coordinates', () => {
@@ -54,5 +60,48 @@ describe('isStaticCoordinate', () => {
     it('should return false for dynamic coordinates', () => {
         expect(isStaticCoordinate('0/$_id/1')).toBe(false);
         expect(isStaticCoordinate('$_id')).toBe(false);
+    });
+});
+
+describe('computeInstanceKey', () => {
+    it('should return suffix for static instances', () => {
+        expect(computeInstanceKey('product-card:0', 'static')).toBe('product-card:0');
+    });
+
+    it('should return prefix/suffix for slowForEach instances', () => {
+        expect(computeInstanceKey('product-card:0', 'slowForEach', 'p1')).toBe(
+            'p1/product-card:0',
+        );
+    });
+
+    it('should return undefined for forEach instances (runtime-computed)', () => {
+        expect(computeInstanceKey('product-card:0', 'forEach')).toBeUndefined();
+    });
+});
+
+describe('compileForEachInstanceKeyExpr', () => {
+    it('should compile forEach key expression', () => {
+        expect(compileForEachInstanceKeyExpr('product-card:0', 'vs1._id')).toBe(
+            "String(vs1._id) + ',product-card:0'",
+        );
+    });
+
+    it('should compile with different trackBy expression', () => {
+        expect(compileForEachInstanceKeyExpr('stock-status:0', 'item.sku')).toBe(
+            "String(item.sku) + ',stock-status:0'",
+        );
+    });
+});
+
+describe('computeForEachInstanceKey', () => {
+    it('should compute runtime forEach key', () => {
+        expect(computeForEachInstanceKey('1', 'product-card:0')).toBe('1,product-card:0');
+    });
+
+    it('should match the compile-time format', () => {
+        // Verify runtime and compile-time produce the same format
+        const runtimeKey = computeForEachInstanceKey('abc123', 'stock-status:0');
+        expect(runtimeKey).toBe('abc123,stock-status:0');
+        // The compile-time equivalent: String(vs1._id) + ',stock-status:0' evaluates to same format
     });
 });

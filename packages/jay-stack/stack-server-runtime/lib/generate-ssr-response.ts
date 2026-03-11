@@ -2,6 +2,7 @@ import {
     parseJayFile,
     generateServerElementFile,
     JAY_IMPORT_RESOLVER,
+    type ServerElementOptions,
 } from '@jay-framework/compiler-jay-html';
 import { checkValidationErrors, JAY_QUERY_HYDRATE } from '@jay-framework/compiler-shared';
 import type { ServerRenderContext } from '@jay-framework/ssr-runtime';
@@ -220,7 +221,23 @@ async function compileAndLoadServerElement(
         projectRoot,
     );
     const parsedJayFile = checkValidationErrors(jayFile);
-    const serverElementCode = checkValidationErrors(generateServerElementFile(parsedJayFile));
+
+    // Construct debug path for coordinate pre-process output
+    const pageName = jayHtmlFilename.replace('.jay-html', '');
+    const debugCoordinatePreprocessPath = path.join(
+        buildFolder,
+        'debug',
+        routeDir,
+        `${pageName}.coordinate-preprocess.jay-html`,
+    );
+
+    const serverElementOptions: ServerElementOptions = {
+        debugCoordinatePreprocessPath,
+    };
+
+    const serverElementCode = checkValidationErrors(
+        generateServerElementFile(parsedJayFile, serverElementOptions),
+    );
 
     const serverElementDir = path.join(buildFolder, 'pre-rendered', routeDir);
     await fs.mkdir(serverElementDir, { recursive: true });
