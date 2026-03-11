@@ -62,18 +62,18 @@ export function hydrate(
     const render = (viewState: PageUsingCounterViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('0', {}, [
-                adoptText('1', (vs) => `value: ${vs.counter?.count}`),
-                adoptElement('counterAdd', {}, [], refAdd()),
-                adoptElement('counterSubtract', {}, [], refSubtract()),
-                adoptElement('2', {}, [
+                adoptText('0/0', (vs) => `value: ${vs.counter?.count}`),
+                adoptElement('0/1', {}, [], refAdd()),
+                adoptElement('0/2', {}, [], refSubtract()),
+                adoptElement('0/3', {}, [
                     hydrateConditional(
                         (vs) => vs.counter?.isPositive === IsPositive.positive,
-                        () => adoptElement('2/3', {}, []),
+                        () => adoptElement('0/3/0', {}, []),
                         () => e('img', { src: 'positive.jpg', alt: 'positive' }, []),
                     ),
                     hydrateConditional(
                         (vs) => vs.counter?.isPositive === IsPositive.negative,
-                        () => adoptElement('2/4', {}, []),
+                        () => adoptElement('0/3/1', {}, []),
                         () => e('img', { src: 'negative.jpg', alt: 'negative' }, []),
                     ),
                 ]),

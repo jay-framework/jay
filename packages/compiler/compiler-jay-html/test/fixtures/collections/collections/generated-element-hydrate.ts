@@ -53,16 +53,16 @@ export function hydrate(
     const render = (viewState: CollectionsViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('0', {}, [
-                adoptText('1', (vs) => vs.title),
-                adoptElement('2', {}, [
+                adoptText('0/0', (vs) => vs.title),
+                adoptElement('0/1', {}, [
                     hydrateForEach(
-                        '2',
+                        '0/1',
                         (vs: CollectionsViewState) => vs.things,
                         'id',
                         () => [
-                            adoptText('2/0', (vs1) => vs1.name),
-                            adoptText('2/1', (vs1) => vs1.completed),
-                            adoptText('2/2', (vs1) => vs1.cost),
+                            adoptText('$id/0', (vs1) => vs1.name),
+                            adoptText('$id/1', (vs1) => vs1.completed),
+                            adoptText('$id/2', (vs1) => vs1.cost),
                         ],
                         (vs1: ThingOfCollectionsViewState) => {
                             return e('div', {}, [

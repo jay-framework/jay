@@ -24,7 +24,10 @@ import {
     WithValidations,
     computeInstanceKey,
     compileForEachInstanceKeyExpr,
+    compileCoordinateExpr,
+    isStaticCoordinate,
 } from '@jay-framework/compiler-shared';
+import { assignCoordinates } from './assign-coordinates';
 import { generateAllPhaseViewStateTypes } from '../contract/phase-type-generator';
 import { ContractProp } from '../contract';
 import { HTMLElement, NodeType } from 'node-html-parser';
@@ -217,6 +220,7 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
             attrCanonical === 'slowforeach' ||
             attrCanonical === 'jayindex' ||
             attrCanonical === 'jaytrackby' ||
+            attrCanonical === 'jay-coordinate-base' ||
             attrCanonical === AsyncDirectiveTypes.loading.directive ||
             attrCanonical === AsyncDirectiveTypes.resolved.directive ||
             attrCanonical === AsyncDirectiveTypes.rejected.directive
@@ -281,6 +285,7 @@ function renderDynamicAttributes(
             attrCanonical === 'slowforeach' ||
             attrCanonical === 'jayindex' ||
             attrCanonical === 'jaytrackby' ||
+            attrCanonical === 'jay-coordinate-base' ||
             attrCanonical === AsyncDirectiveTypes.loading.directive ||
             attrCanonical === AsyncDirectiveTypes.resolved.directive ||
             attrCanonical === AsyncDirectiveTypes.rejected.directive
@@ -414,7 +419,12 @@ function renderChildCompProps(
     Object.keys(attributes).forEach((attrName) => {
         let attrCanonical = attrName.toLowerCase();
         let attrKey = attrName.match(attributesRequiresQuotes) ? `"${attrName}"` : attrName;
-        if (attrCanonical === 'if' || attrCanonical === 'foreach' || attrCanonical === 'trackby')
+        if (
+            attrCanonical === 'if' ||
+            attrCanonical === 'foreach' ||
+            attrCanonical === 'trackby' ||
+            attrCanonical === 'jay-coordinate-base'
+        )
             return;
         if (attrCanonical === 'props') {
             isPropsDirectAssignment = true;
@@ -2051,7 +2061,6 @@ export function generateElementBridgeFile(jayFile: JayHtmlSourceFile): string {
 interface HydrateContext {
     variables: Variables;
     indent: Indent;
-    coordinateCounter: { count: number };
     dynamicRef: boolean;
     refNameGenerator: RefNameGenerator;
     importedRefNameToRef: Map<string, Ref>;
@@ -2063,12 +2072,12 @@ interface HydrateContext {
     headlessInstanceDefs: HeadlessInstanceDefinition[];
     /** Counter for unique headless instance names */
     headlessInstanceCounter: { count: number };
-    /** Per-scope counters for headless instance coordinate refs */
-    headlessCoordinateCounters: Map<string, number>;
     /** Whether we're inside a forEach (affects coordinate key format) */
     insideFastForEach: boolean;
-    /** Coordinate prefix segments (for headless coordinate key computation) */
-    coordinatePrefix: string[];
+    /** Whether we're inside a slowForEach (affects instance key computation) */
+    insideSlowForEach: boolean;
+    /** Variable mappings for compiling $placeholder coordinates inside forEach */
+    varMappings: Record<string, string>;
     /** Coordinate of the enclosing adopted element, used by forEach as containerCoordinate. */
     parentCoordinate?: string;
 }
@@ -2114,8 +2123,9 @@ function buildRenderContext(context: HydrateContext): RenderContext {
         headlessImports: context.headlessImports,
         headlessInstanceDefs: context.headlessInstanceDefs,
         headlessInstanceCounter: context.headlessInstanceCounter,
-        coordinatePrefix: context.coordinatePrefix,
-        coordinateCounters: context.headlessCoordinateCounters,
+        // Element target still uses its own coordinate logic (DL#103: out of scope)
+        coordinatePrefix: [],
+        coordinateCounters: new Map(),
     };
 }
 
@@ -2137,11 +2147,8 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
     if (isConditional(element)) {
         const condition = element.getAttribute('if');
         const renderedCondition = parseCondition(condition, context.variables);
-        // Use ref name when available to match server element compiler behavior
-        // (which uses refName || counter++). Only increment counter when no ref.
-        const refAttr = element.attributes.ref;
-        const refName = refAttr ? camelCase(refAttr) : null;
-        const coordinate = refName || String(context.coordinateCounter.count++);
+        // Read coordinate from jay-coordinate-base (DL#103)
+        const coordinate = element.getAttribute(COORD_ATTR) || '0';
         // Render the element content as the adopt callback.
         // forceAdopt=true ensures the element is always adopted even if its
         // content is purely static (e.g., <div if="cond">static text</div>).
@@ -2231,10 +2238,9 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
                 `forEach directive - resolved forEach type is not an array [forEach=${forEach}]`,
             ]);
 
-        // Use parent element's coordinate as container (same element, resolved via peek).
-        // Don't increment counter — the server element doesn't emit a separate coordinate.
+        // Container coordinate from jay-coordinate-base or parent
         const containerCoordinate =
-            context.parentCoordinate || String(context.coordinateCounter.count++);
+            context.parentCoordinate || element.getAttribute(COORD_ATTR) || '0';
         const paramName = forEachAccessor.rootVar;
         const paramType = variables.currentType.name;
         const forEachFragment = forEachAccessor
@@ -2247,14 +2253,14 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         const itemChildNodes = element.childNodes.filter(
             (_) => _.nodeType !== NodeType.TEXT_NODE || (_.innerText || '').trim() !== '',
         );
+        const trackByExpr = `${forEachVariables.currentVar}.${trackBy}`;
         const itemContext: HydrateContext = {
             ...context,
             variables: forEachVariables,
             indent: indent.child().child(),
-            coordinateCounter: { count: 0 },
             dynamicRef: true, // Refs inside forEach are collection refs
             insideFastForEach: true,
-            headlessCoordinateCounters: new Map(),
+            varMappings: { ...context.varMappings, [trackBy]: trackByExpr },
         };
         const itemContent = mergeHydrateFragments(
             itemChildNodes.map((child) => renderHydrateNode(child, itemContext)),
@@ -2360,14 +2366,14 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             .render()
             .map((_) => `(${paramName}: ${parentTypeName}) => ${_}`);
 
-        // Render element content in the item's variable scope
+        // Render element content in the item's variable scope.
+        // Children read their own jay-coordinate-base (pre-assigned with jayTrackBy prefix).
         const itemContext: HydrateContext = {
             ...context,
             variables: slowForEachVariables,
             indent: indent.child().child(),
             dynamicRef: true,
-            headlessCoordinateCounters: new Map(), // Reset per slowForEach item
-            coordinatePrefix: [...context.coordinatePrefix, jayTrackBy],
+            insideSlowForEach: true,
         };
         const renderContext2 = buildRenderContext(itemContext);
         const childContent = renderHydrateElementContent(
@@ -2459,24 +2465,30 @@ function renderHydrateHeadlessInstance(
         }
     }
 
-    // Coordinate key computation (same as element target and server-element target)
-    const explicitRef = element.attributes.ref;
-    let coordinateRef: string;
-    if (explicitRef) {
-        coordinateRef = explicitRef;
-    } else {
-        const counterKey = [...context.coordinatePrefix, contractName].join('/');
-        const localIndex = context.headlessCoordinateCounters.get(counterKey) ?? 0;
-        context.headlessCoordinateCounters.set(counterKey, localIndex + 1);
-        coordinateRef = String(localIndex);
+    // Read instance coordinate from pre-assigned jay-coordinate-base (DL#103)
+    const instanceCoord = element.getAttribute(COORD_ATTR);
+    if (!instanceCoord) {
+        return new RenderFragment('', Imports.none(), [
+            `Headless instance <jay:${contractName}> missing jay-coordinate-base — run assignCoordinates first`,
+        ]);
     }
-    const coordinateSuffix = `${contractName}:${coordinateRef}`;
+    // Extract coordinateSuffix from the full coordinate (last contractName:N segment)
+    const coordSegments = instanceCoord.split('/');
+    const coordinateSuffix = coordSegments.find((s) => s.startsWith(contractName + ':')) || `${contractName}:0`;
     const isInsideForEach = context.insideFastForEach;
-    const coordinateKey = isInsideForEach
-        ? undefined
-        : context.coordinatePrefix.length > 0
-          ? computeInstanceKey(coordinateSuffix, 'slowForEach', context.coordinatePrefix.join('/'))
-          : computeInstanceKey(coordinateSuffix, 'static');
+
+    // Compute instance key for __headlessInstances lookup (same logic as server target)
+    let coordinateKey: string | undefined;
+    if (isInsideForEach) {
+        coordinateKey = undefined; // forEach: key computed at runtime
+    } else if (context.insideSlowForEach) {
+        const suffixIndex = coordSegments.indexOf(coordinateSuffix);
+        const prefix = coordSegments.slice(0, suffixIndex).join('/');
+        coordinateKey = computeInstanceKey(coordinateSuffix, 'slowForEach', prefix);
+    } else {
+        // Static instance: key is just the suffix
+        coordinateKey = computeInstanceKey(coordinateSuffix, 'static');
+    }
 
     // --- Compile adopt inline template (hydrate APIs) ---
     const componentVariables = new Variables(headlessImport.rootType);
@@ -2516,14 +2528,12 @@ function renderHydrateHeadlessInstance(
         ...context,
         variables: componentVariables,
         indent: adoptChildIndent,
-        coordinateCounter: { count: 0 },
         importedRefNameToRef: instanceRefMap,
         dynamicRef: false,
         insideFastForEach: false,
         headlessContractNames: new Set(),
         headlessImports: [],
-        coordinatePrefix: [],
-        headlessCoordinateCounters: new Map(),
+        varMappings: {},
     };
     const adoptRenderContext = buildRenderContext(adoptItemContext);
 
@@ -2543,8 +2553,6 @@ function renderHydrateHeadlessInstance(
         // Children get coordinates "0/0", "0/1", etc. to match server wrapper structure.
         const adoptChildContext: HydrateContext = {
             ...adoptItemContext,
-            coordinatePrefix: ['0'],
-            coordinateCounter: { count: 0 },
         };
         const adoptChildren = mergeHydrateFragments(
             childNodes.map((child) => renderHydrateNode(child, adoptChildContext)),
@@ -2821,14 +2829,9 @@ function renderHydrateElementContent(
         );
     }
 
-    // Assign coordinate (prepend coordinatePrefix when inside a wrapper, e.g. "0/0", "0/1")
-    const baseCoord =
-        coordinateOverride !== null
-            ? coordinateOverride
-            : refName || String(context.coordinateCounter.count++);
-    const coordinate = context.coordinatePrefix?.length
-        ? context.coordinatePrefix.join('/') + '/' + baseCoord
-        : baseCoord;
+    // Read pre-assigned coordinate from jay-coordinate-base (DL#103)
+    const coordTemplate = element.getAttribute(COORD_ATTR);
+    const coordinate = coordTemplate || coordinateOverride || '0';
 
     // Build the ref argument if present
     const renderedRef = renderElementRef(element, renderContext);
@@ -2842,9 +2845,6 @@ function renderHydrateElementContent(
         const childContext = {
             ...context,
             parentCoordinate: coordinate,
-            coordinatePrefix: context.coordinatePrefix
-                ? [...context.coordinatePrefix, baseCoord]
-                : [baseCoord],
         };
         const childFragments = mergeHydrateFragments(
             childNodes.map((child) => renderHydrateNode(child, childContext)),
@@ -2935,10 +2935,12 @@ function renderHydrate(
     const { importedSymbols } = processImportedComponents(importStatements);
     const instanceHeadlessImports = headlessImports.filter((h) => !h.key);
     const headlessContractNames = new Set(instanceHeadlessImports.map((h) => h.contractName));
+    // Pre-process: assign coordinates to all elements (DL#103)
+    assignCoordinates(body, { headlessContractNames });
+
     const context: HydrateContext = {
         variables,
         indent: new Indent('        '),
-        coordinateCounter: { count: 0 },
         dynamicRef: false,
         refNameGenerator: new RefNameGenerator(),
         importedRefNameToRef,
@@ -2947,9 +2949,9 @@ function renderHydrate(
         headlessImports: instanceHeadlessImports,
         headlessInstanceDefs: [],
         headlessInstanceCounter: { count: 0 },
-        headlessCoordinateCounters: new Map(),
         insideFastForEach: false,
-        coordinatePrefix: [],
+        insideSlowForEach: false,
+        varMappings: {},
     };
 
     // Use ensureSingleChildElement to skip the <body> wrapper and get the
@@ -3100,23 +3102,36 @@ export function generateElementHydrateFile(
 interface ServerContext {
     variables: Variables;
     indent: Indent;
-    coordinateCounter: { count: number };
-    /** Runtime expression for coordinate prefix inside forEach items (e.g., `escapeAttr(String(vs1.id))`).
-     *  When set, child coordinates are emitted as `{prefix}/{coordinate}`.
-     *  Uses escapeAttr for HTML attribute safety in jay-coordinate values. */
-    coordinatePrefix?: string;
-    /** Runtime expression for raw (unescaped) coordinate prefix inside forEach items.
-     *  Used for __headlessInstances key lookups which use raw values, not HTML-escaped ones.
-     *  For slowForEach (literal prefix), this equals coordinatePrefix. */
-    rawCoordinatePrefix?: string;
     /** Contract names from headless imports (for <jay:contract-name> detection) */
     headlessContractNames: Set<string>;
     /** Full headless imports (for headless instance compilation) */
     headlessImports: JayHeadlessImports[];
     /** Counter for unique headless instance variable names */
     headlessInstanceCounter: { count: number };
-    /** Per-scope counters for headless instance coordinate refs (contractName -> count) */
-    headlessCoordinateCounters: Map<string, number>;
+    /** Variable mappings for compiling $placeholder coordinates inside forEach.
+     *  Maps placeholder names to JS expressions, e.g. { _id: "vs1._id" }. */
+    varMappings: Record<string, string>;
+    /** Whether we're inside a forEach (affects instance key computation) */
+    insideForEach: boolean;
+    /** Whether we're inside a slowForEach (affects instance key computation) */
+    insideSlowForEach: boolean;
+}
+
+const COORD_ATTR = 'jay-coordinate-base';
+
+/**
+ * Read pre-assigned coordinate from jay-coordinate-base attribute.
+ * Returns a JS expression string for the coordinate value, or null if no coordinate.
+ * Static coordinates return a quoted string literal.
+ * Dynamic coordinates (with $placeholder) are compiled to string concatenation expressions.
+ */
+function getCoordinateExpr(element: HTMLElement, context: ServerContext): string | null {
+    const template = element.getAttribute(COORD_ATTR);
+    if (!template) return null;
+    if (isStaticCoordinate(template)) {
+        return `'${template}'`;
+    }
+    return compileCoordinateExpr(template, context.varMappings);
 }
 
 /** Helper: create a single-line w() statement as a RenderFragment */
@@ -3176,7 +3191,6 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
         const body = renderServerElementContent(
             element,
             { ...context, indent: new Indent(indent.curr + '    ') },
-            true,
         );
         return new RenderFragment(
             `${indent.firstLine}if (${renderedCondition.rendered}) {\n${body.rendered}\n${indent.firstLine}}`,
@@ -3203,33 +3217,21 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
         const forEachVariables = variables.childVariableFor(forEachAccessor);
         const arrayExpr = forEachAccessor.render().rendered;
         const itemIndent = new Indent(indent.curr + '    ');
-        // Build trackBy expression for item coordinate and child prefix.
-        // coordinatePrefix is a complete JS expression producing the escaped prefix string.
-        // For nested forEach, chain: `outerPrefix + '/' + escapeAttr(String(innerTrackBy))`.
+        // Add trackBy variable mapping for $placeholder compilation in child coordinates.
+        // Children inside forEach have jay-coordinate-base with $trackBy placeholders
+        // (e.g. "$_id/0") that get compiled to runtime expressions using varMappings.
         const trackByExpr = `${forEachVariables.currentVar}.${trackBy}`;
-        const itemPrefixExpr = `escapeAttr(String(${trackByExpr}))`;
-        const rawItemPrefixExpr = `String(${trackByExpr})`;
-        const coordinatePrefix = context.coordinatePrefix
-            ? `${context.coordinatePrefix} + '/' + ${itemPrefixExpr}`
-            : itemPrefixExpr;
-        const rawCoordinatePrefix = context.rawCoordinatePrefix
-            ? `${context.rawCoordinatePrefix} + '/' + ${rawItemPrefixExpr}`
-            : rawItemPrefixExpr;
         const itemContext: ServerContext = {
             ...context,
             variables: forEachVariables,
             indent: itemIndent,
-            coordinateCounter: { count: 0 },
-            coordinatePrefix,
-            rawCoordinatePrefix,
+            varMappings: { ...context.varMappings, [trackBy]: trackByExpr },
+            insideForEach: true,
         };
         const openTag = renderServerOpenTag(element, itemContext, null);
-        // Item root coordinate: for nested forEach, prefix with parent scope.
-        // Top-level: jay-coordinate="{trackById}"
-        // Nested:    jay-coordinate="{outerTrackById}/{innerTrackById}"
-        const itemRootCoordExpr = context.coordinatePrefix
-            ? `${context.coordinatePrefix} + '/' + escapeAttr(String(${trackByExpr}))`
-            : `escapeAttr(String(${trackByExpr}))`;
+        // Item root coordinate: the forEach element itself gets jay-coordinate with the
+        // trackBy value per iteration (not from jay-coordinate-base, which is the container).
+        const itemRootCoordExpr = `escapeAttr(String(${trackByExpr}))`;
         const coordinateW = w(
             itemIndent,
             `' jay-coordinate="' + ${itemRootCoordExpr} + '">'`,
@@ -3262,18 +3264,13 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
             const slowForEachVariables = variables.childVariableFor(
                 parseAccessor(slowForEachInfo.arrayName, variables),
             );
-            // Set coordinate prefix for children using the literal jayTrackBy value
-            const itemPrefixExpr = `'${jayTrackBy}'`;
-            const coordinatePrefix = context.coordinatePrefix
-                ? `${context.coordinatePrefix} + '/' + ${itemPrefixExpr}`
-                : itemPrefixExpr;
+            // Children inside slowForEach read their coordinates from jay-coordinate-base
+            // (pre-assigned by assignCoordinates with jayTrackBy prefix, e.g. "p1/0")
             const itemContext: ServerContext = {
                 ...context,
                 variables: slowForEachVariables,
                 indent,
-                coordinatePrefix,
-                rawCoordinatePrefix: coordinatePrefix, // For literal prefix, raw === escaped
-                headlessCoordinateCounters: new Map(), // Reset per slowForEach item
+                insideSlowForEach: true,
             };
             return renderServerElementContent(element, itemContext);
         }
@@ -3312,49 +3309,40 @@ function renderServerHeadlessInstance(
     const varName = `vs_${contractName.replace(/-/g, '_')}${idx}`;
     const viewStateTypeName = headlessImport.rootType.name;
 
-    // Compute coordinate key (same logic as element target's renderHeadlessInstance)
-    const explicitRef = element.attributes.ref;
-    let coordinateRef: string;
-    if (explicitRef) {
-        coordinateRef = explicitRef;
-    } else {
-        // Use per-scope counter keyed by contract name (matches element target's coordinateCounters)
-        const counterKey = contractName;
-        const localIndex = context.headlessCoordinateCounters.get(counterKey) ?? 0;
-        context.headlessCoordinateCounters.set(counterKey, localIndex + 1);
-        coordinateRef = String(localIndex);
+    // Read instance coordinate from pre-assigned jay-coordinate-base (DL#103)
+    const instanceCoord = element.getAttribute(COORD_ATTR);
+    if (!instanceCoord) {
+        return new RenderFragment('', Imports.none(), [
+            `Headless instance <jay:${contractName}> missing jay-coordinate-base — run assignCoordinates first`,
+        ]);
     }
-    const coordinateSuffix = `${contractName}:${coordinateRef}`;
 
-    // Build the __headlessInstances lookup key and coordinate prefix for jay-coordinate attributes.
+    // Extract coordinateSuffix from the full coordinate (last contractName:N segment)
+    const coordSegments = instanceCoord.split('/');
+    const coordinateSuffix = coordSegments.find((s) => s.startsWith(contractName + ':')) || `${contractName}:0`;
+
+    // Compute __headlessInstances lookup key.
+    // The key format depends on the context:
+    //   static: just the suffix (e.g., "product-card:0")
+    //   slowForEach: prefix/suffix (e.g., "p1/product-card:0")
+    //   forEach: trackByValue,suffix (e.g., "1,product-card:0") — runtime expression
     let instanceKeyExpr: string;
-    let instanceCoordPrefix: string; // For jay-coordinate attributes (slash-separated)
 
-    if (context.coordinatePrefix) {
-        // Inside a forEach or slowForEach — coordinatePrefix is a JS expression
-        const isLiteralPrefix = context.coordinatePrefix.startsWith("'");
-
-        if (isLiteralPrefix) {
-            // slowForEach: coordinatePrefix is like "'p1'" — use slash-separated key
-            const literalValue = context.coordinatePrefix.slice(1, -1); // strip quotes
-            const key = computeInstanceKey(coordinateSuffix, 'slowForEach', literalValue)!;
-            instanceKeyExpr = `'${key}'`;
-            instanceCoordPrefix = `'${key}'`;
-        } else {
-            // forEach: use raw (unescaped) prefix for __headlessInstances key lookup,
-            // escaped prefix for jay-coordinate attributes.
-            // Note: can't use compileForEachInstanceKeyExpr here because rawPrefix is
-            // already a string expression; that function wraps in String() for simple vars.
-            // Format matches computeForEachInstanceKey: "trackByValue,coordinateSuffix"
-            const rawPrefix = context.rawCoordinatePrefix || context.coordinatePrefix;
-            instanceKeyExpr = `${rawPrefix} + ',${coordinateSuffix}'`;
-            instanceCoordPrefix = `${context.coordinatePrefix} + '/${coordinateSuffix}'`;
-        }
+    if (context.insideForEach) {
+        // forEach: need trackBy expression from varMappings for comma-separated key.
+        const trackByKeys = Object.keys(context.varMappings);
+        const trackByExpr = trackByKeys.length > 0
+            ? context.varMappings[trackByKeys[trackByKeys.length - 1]]
+            : 'undefined';
+        instanceKeyExpr = `String(${trackByExpr}) + ',${coordinateSuffix}'`;
+    } else if (context.insideSlowForEach) {
+        // slowForEach: key includes jayTrackBy prefix from the coordinate
+        const suffixIndex = coordSegments.indexOf(coordinateSuffix);
+        const prefix = coordSegments.slice(0, suffixIndex).join('/');
+        instanceKeyExpr = `'${computeInstanceKey(coordinateSuffix, 'slowForEach', prefix)}'`;
     } else {
-        // Top-level static instance
-        const key = computeInstanceKey(coordinateSuffix, 'static')!;
-        instanceKeyExpr = `'${key}'`;
-        instanceCoordPrefix = `'${key}'`;
+        // Static instance: key is just the suffix, regardless of DOM nesting depth
+        instanceKeyExpr = `'${computeInstanceKey(coordinateSuffix, 'static')}'`;
     }
 
     // Handle `if` condition on the <jay:xxx> tag — uses page ViewState (not instance's)
@@ -3373,7 +3361,8 @@ function renderServerHeadlessInstance(
         ]);
     }
 
-    // Create a context for the inline template with the instance's ViewState and coordinate scope
+    // Create a context for the inline template with the instance's ViewState.
+    // Children read their own jay-coordinate-base — no coordinatePrefix needed.
     const bodyIndent = ifCondition
         ? new Indent(indent.curr + '        ') // Inside if + if guard
         : new Indent(indent.curr + '    '); // Inside if guard only
@@ -3381,47 +3370,16 @@ function renderServerHeadlessInstance(
         ...context,
         variables: componentVariables,
         indent: bodyIndent,
-        coordinateCounter: { count: 0 },
-        coordinatePrefix: instanceCoordPrefix,
         // Don't detect nested headless instances inside headless instances (for now)
         headlessContractNames: new Set(),
     };
 
     // Render inline template children.
-    // Force coordinate on the root child element(s) to match the hydrate target's
-    // forceAdopt behavior — without a coordinate, the hydrate can't find the element to adopt.
-    // When multiple children, use a child context with prefix /0 so children get coordinates
-    // inside the wrapper (e.g. product-card:0/0/0, product-card:0/0/1).
-    const renderContext =
-        childNodes.length > 1
-            ? [
-                  {
-                      ...instanceContext,
-                      coordinatePrefix: `${instanceCoordPrefix} + '/0'`,
-                      coordinateCounter: { count: 0 },
-                  },
-              ][0]
-            : instanceContext;
+    // Children have pre-assigned jay-coordinate-base from the pre-processor.
+    // Multi-child wrapping was done by slow rendering or assignCoordinates.
     const renderedChildren = mergeServerFragments(
-        childNodes.map((child) => {
-            if (child.nodeType === NodeType.ELEMENT_NODE) {
-                return renderServerElementContent(child as HTMLElement, renderContext, true);
-            }
-            return renderServerNode(child, renderContext);
-        }),
+        childNodes.map((child) => renderServerNode(child, instanceContext)),
     );
-
-    // When multiple children, wrap in a div so server/hydrate structure matches.
-    // Hydrate target uses adoptElement("0", {}, [children]); server must render the wrapper.
-    const wrappedChildren =
-        childNodes.length > 1
-            ? [
-                  `${bodyIndent.firstLine}w('<div');`,
-                  `${bodyIndent.firstLine}w(' jay-coordinate="' + ${instanceCoordPrefix} + '/0">');`,
-                  renderedChildren.rendered,
-                  `${bodyIndent.firstLine}w('</div>');`,
-              ].join('\n')
-            : renderedChildren.rendered;
 
     // Build the guarded block:
     //   const vs_pc0 = (vs as any).__headlessInstances?.[key] as Type | undefined;
@@ -3430,7 +3388,7 @@ function renderServerHeadlessInstance(
     const guardedBlock = [
         `${guardIndent.firstLine}const ${varName} = (vs as any).__headlessInstances?.[${instanceKeyExpr}] as ${viewStateTypeName} | undefined;`,
         `${guardIndent.firstLine}if (${varName}) {`,
-        wrappedChildren,
+        renderedChildren.rendered,
         `${guardIndent.firstLine}}`,
     ].join('\n');
 
@@ -3499,6 +3457,7 @@ function renderServerAttributes(element: HTMLElement, context: ServerContext): R
             attrCanonical === 'slowforeach' ||
             attrCanonical === 'jayindex' ||
             attrCanonical === 'jaytrackby' ||
+            attrCanonical === COORD_ATTR ||
             attrCanonical === AsyncDirectiveTypes.loading.directive ||
             attrCanonical === AsyncDirectiveTypes.resolved.directive ||
             attrCanonical === AsyncDirectiveTypes.rejected.directive
@@ -3649,7 +3608,6 @@ function renderServerForEachAsString(element: HTMLElement, context: ServerContex
     const itemContext: ServerContext = {
         ...context,
         variables: forEachVariables,
-        coordinateCounter: { count: 0 },
     };
 
     // Render the element content (not the forEach wrapper) as a string
@@ -3699,10 +3657,9 @@ function renderServerElementAsString(
         hasDynamicAttributeBindings(element, variables) ||
         hasInteractiveChildElements(childNodes);
 
-    let coordinate: string | null = null;
-    if (needsCoordinate) {
-        coordinate = overrideCoordinate || refName || String(context.coordinateCounter.count++);
-    }
+    // Read pre-assigned coordinate from jay-coordinate-base
+    const coordTemplate = element.getAttribute(COORD_ATTR);
+    const coordinate = coordTemplate || (needsCoordinate ? overrideCoordinate || null : null);
 
     const isVoid = voidElements.has(element.rawTagName.toLowerCase());
     const stringParts: RenderFragment[] = [];
@@ -3779,6 +3736,7 @@ function renderServerAttributesAsString(
             attrCanonical === 'slowforeach' ||
             attrCanonical === 'jayindex' ||
             attrCanonical === 'jaytrackby' ||
+            attrCanonical === COORD_ATTR ||
             attrCanonical === AsyncDirectiveTypes.loading.directive ||
             attrCanonical === AsyncDirectiveTypes.resolved.directive ||
             attrCanonical === AsyncDirectiveTypes.rejected.directive
@@ -3891,11 +3849,8 @@ function collectAsyncGroups(childNodes: Node[]): Map<string, AsyncGroup> {
 function renderServerElementContent(
     element: HTMLElement,
     context: ServerContext,
-    forceCoordinate: boolean = false,
 ): RenderFragment {
     const { variables, indent } = context;
-    const refAttr = element.attributes.ref;
-    const refName = refAttr ? camelCase(refAttr) : null;
 
     // Check if this element has a single dynamic text child
     const childNodes =
@@ -3914,18 +3869,8 @@ function renderServerElementContent(
         }
     }
 
-    // Determine coordinate
-    const needsCoordinate =
-        forceCoordinate ||
-        dynamicTextFragment !== null ||
-        refName !== null ||
-        hasDynamicAttributeBindings(element, variables) ||
-        hasInteractiveChildElements(childNodes);
-
-    let coordinate: string | null = null;
-    if (needsCoordinate) {
-        coordinate = refName || String(context.coordinateCounter.count++);
-    }
+    // Read pre-assigned coordinate from jay-coordinate-base (DL#103)
+    const coordExpr = getCoordinateExpr(element, context);
 
     const isVoid = voidElements.has(element.rawTagName.toLowerCase());
     const parts: RenderFragment[] = [];
@@ -3936,18 +3881,14 @@ function renderServerElementContent(
     if (attrs.rendered.trim()) {
         parts.push(attrs);
     }
-    if (coordinate !== null) {
-        if (context.coordinatePrefix) {
-            // coordinatePrefix is a JS expression producing the escaped prefix string
-            parts.push(
-                w(
-                    indent,
-                    `' jay-coordinate="' + ${context.coordinatePrefix} + '/${coordinate}">'`,
-                    Imports.for(Import.escapeAttr),
-                ),
-            );
+    if (coordExpr !== null) {
+        const coordTemplate = element.getAttribute(COORD_ATTR)!;
+        if (isStaticCoordinate(coordTemplate)) {
+            parts.push(w(indent, `' jay-coordinate="${coordTemplate}">'`));
         } else {
-            parts.push(w(indent, `' jay-coordinate="${coordinate}">'`));
+            parts.push(
+                w(indent, `' jay-coordinate="' + ${coordExpr} + '">'`, Imports.for(Import.escapeAttr)),
+            );
         }
     } else {
         parts.push(w(indent, `'>'`));
@@ -3965,18 +3906,9 @@ function renderServerElementContent(
             ),
         );
     } else {
-        // Pass coordinatePrefix when this element has a coordinate, we're not at root ("0"),
-        // and we're not already inside forEach. Ensures conditional children get hierarchical
-        // coordinates (e.g. "1/2") and avoid collision with sibling forEach trackBy values.
         const childContext: ServerContext = {
             ...context,
             indent: new Indent(indent.curr + '    '),
-            coordinatePrefix:
-                coordinate !== null &&
-                coordinate !== '0' &&
-                context.coordinatePrefix === undefined
-                    ? `'${coordinate}'`
-                    : context.coordinatePrefix,
         };
         // Collect async groups for this element's children
         const asyncGroups = collectAsyncGroups(childNodes);
@@ -4064,7 +3996,6 @@ function renderServerAsyncGroup(group: AsyncGroup, context: ServerContext): Rend
         const resolvedContext: ServerContext = {
             ...context,
             variables: resolvedVariables,
-            coordinateCounter: { count: 0 },
         };
         const resolvedString = renderServerElementAsString(
             group.resolvedElement,
@@ -4083,7 +4014,6 @@ function renderServerAsyncGroup(group: AsyncGroup, context: ServerContext): Rend
         const rejectedContext: ServerContext = {
             ...context,
             variables: rejectedVariables,
-            coordinateCounter: { count: 0 },
         };
         const rejectedString = renderServerElementAsString(
             group.rejectedElement,
@@ -4167,18 +4097,22 @@ export function generateServerElementFile(
     const headlessImports = jayFile.headlessImports?.filter((h) => !h.key) ?? [];
     const headlessContractNames = new Set(headlessImports.map((h) => h.contractName));
 
+    // Pre-process: assign coordinates to all elements (DL#103)
+    assignCoordinates(jayFile.body, { headlessContractNames });
+
     const context: ServerContext = {
         variables,
         indent: new Indent('    '),
-        coordinateCounter: { count: 0 },
         headlessContractNames,
         headlessImports,
         headlessInstanceCounter: { count: 0 },
-        headlessCoordinateCounters: new Map(),
+        varMappings: {},
+        insideForEach: false,
+        insideSlowForEach: false,
     };
 
-    // Render root element with forced coordinate (matches hydrate forceAdopt)
-    const rendered = renderServerElementContent(rootElement.val as HTMLElement, context, true);
+    // Render root element — coordinate comes from jay-coordinate-base
+    const rendered = renderServerElementContent(rootElement.val as HTMLElement, context);
 
     const viewStateType = jayFile.types.name;
 

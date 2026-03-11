@@ -19,7 +19,7 @@ export function renderToStream(
     w('<div');
     w(' jay-coordinate="0">');
     w('<h1');
-    w(' jay-coordinate="1">');
+    w(' jay-coordinate="0/0">');
     w(escapeHtml(String(vs.pageTitle)));
     w('</h1>');
     for (const vs1 of vs.products) {
@@ -32,23 +32,18 @@ export function renderToStream(
         if (vs_product_card0) {
             w('<article');
             w(' class="product-tile"');
-            w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '/product-card:0' + '/0">');
+            w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '/product-card:0/0' + '">');
             w('<h2');
-            w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '/product-card:0' + '/1">');
+            w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '/product-card:0/0/0' + '">');
             w(escapeHtml(String(vs_product_card0.name)));
             w('</h2>');
             w('<span');
             w(' class="price"');
-            w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '/product-card:0' + '/2">');
+            w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '/product-card:0/0/1' + '">');
             w(escapeHtml(String(vs_product_card0.price)));
             w('</span>');
             w('<button');
-            w(
-                ' jay-coordinate="' +
-                    escapeAttr(String(vs1._id)) +
-                    '/product-card:0' +
-                    '/addToCart">',
-            );
+            w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '/product-card:0/0/2' + '">');
             w('Add to Cart');
             w('</button>');
             w('</article>');

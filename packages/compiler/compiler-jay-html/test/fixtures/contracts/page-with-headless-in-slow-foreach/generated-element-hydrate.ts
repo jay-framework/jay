@@ -78,9 +78,9 @@ function _headlessProductCard0HydrateRender(
     );
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('0', {}, [
-                adoptText('1', (vs) => vs.price),
-                adoptElement('addToCart', {}, [], refAddToCart()),
+            adoptElement('p1/product-card:0/0', {}, [
+                adoptText('p1/product-card:0/0/1', (vs) => vs.price),
+                adoptElement('p1/product-card:0/0/2', {}, [], refAddToCart()),
             ]),
         ) as _HeadlessProductCard0Element;
     return [refManager.getPublicAPI() as ProductCardRefs, render];
@@ -107,7 +107,9 @@ function _headlessProductCard1HydrateRender(
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('0', {}, [adoptText('1', (vs) => vs.price)]),
+            adoptElement('p2/product-card:0/0', {}, [
+                adoptText('p2/product-card:0/0/1', (vs) => vs.price),
+            ]),
         ) as _HeadlessProductCard1Element;
     return [refManager.getPublicAPI() as ProductCardRefs, render];
 }
@@ -135,7 +137,7 @@ export function hydrate(
     const render = (viewState: PageWithHeadlessInSlowForeachViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('0', {}, [
-                adoptText('1', (vs) => vs.pageTitle),
+                adoptText('0/0', (vs) => vs.pageTitle),
                 slowForEachItem<
                     PageWithHeadlessInSlowForeachViewState,
                     ProductOfPageWithHeadlessInSlowForeachViewState

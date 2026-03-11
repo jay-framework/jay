@@ -90,15 +90,15 @@ export function hydrate(
     const render = (viewState: DuplicateRefDifferentBranchesViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('0', {}, [
-                adoptText('0/1', (vs) => vs.title),
-                adoptElement('0/2', {}, [
+                adoptText('0/0', (vs) => vs.title),
+                adoptElement('0/1', {}, [
                     hydrateForEach(
-                        '0/2',
+                        '0/1',
                         (vs: DuplicateRefDifferentBranchesViewState) => vs.items,
                         'id',
                         () => [
-                            adoptText('0/2/name', (vs1) => vs1.name, refName()),
-                            adoptElement('0/2/deleteButton', {}, [], refDeleteButton()),
+                            adoptText('$id/0', (vs1) => vs1.name, refName()),
+                            adoptElement('$id/1', {}, [], refDeleteButton()),
                         ],
                         (vs1: ItemOfDuplicateRefDifferentBranchesViewState) => {
                             return e('div', {}, [
@@ -111,8 +111,8 @@ export function hydrate(
                 hydrateConditional(
                     (vs) => vs.showGlobalDelete,
                     () =>
-                        adoptElement('0/3', {}, [
-                            adoptElement('0/deleteButton', {}, [], refDeleteButton2()),
+                        adoptElement('0/2', {}, [
+                            adoptElement('0/2/0', {}, [], refDeleteButton2()),
                         ]),
                     () => e('div', {}, [e('button', {}, ['Delete All'], refDeleteButton2())]),
                 ),

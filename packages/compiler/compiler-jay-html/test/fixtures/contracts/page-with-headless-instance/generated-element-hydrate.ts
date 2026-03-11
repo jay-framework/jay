@@ -70,9 +70,9 @@ function _headlessProductCard0HydrateRender(
     );
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('0', {}, [
-                adoptText('1', (vs) => vs.price),
-                adoptElement('addToCart', {}, [], refAddToCart()),
+            adoptElement('0/product-card:0/0', {}, [
+                adoptText('0/product-card:0/0/1', (vs) => vs.price),
+                adoptElement('0/product-card:0/0/2', {}, [], refAddToCart()),
             ]),
         ) as _HeadlessProductCard0Element;
     return [refManager.getPublicAPI() as ProductCardRefs, render];
@@ -92,7 +92,7 @@ export function hydrate(
     const render = (viewState: PageWithHeadlessInstanceViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('0', {}, [
-                adoptText('1', (vs) => vs.pageTitle),
+                adoptText('0/0', (vs) => vs.pageTitle),
                 childCompHydrate(
                     _HeadlessProductCard0,
                     (vs: PageWithHeadlessInstanceViewState) => ({ productId: 'prod-hero' }),

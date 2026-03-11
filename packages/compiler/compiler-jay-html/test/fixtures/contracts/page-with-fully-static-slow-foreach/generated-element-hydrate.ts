@@ -54,7 +54,7 @@ export function hydrate(
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState: PageWithFullyStaticSlowForeachViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [adoptText('1', (vs) => vs.pageTitle)]),
+            adoptElement('0', {}, [adoptText('0/0', (vs) => vs.pageTitle)]),
         ) as PageWithFullyStaticSlowForeachElement;
     return [refManager.getPublicAPI() as PageWithFullyStaticSlowForeachElementRefs, render];
 }
