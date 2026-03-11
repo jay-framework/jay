@@ -16,7 +16,9 @@ Recent fix (product page duplicate add-to-cart): Server emitted flat coordinates
 
 ## Proposed Approach: Pre-Processing Step
 
-Assign coordinates to **all elements** in a **single pre-processing step** before either compiler runs. Add a `jay-coordinate-base` attribute to each element. Both server and hydrate compilers **read** this attribute instead of computing coordinates.
+Assign coordinates to **all elements** in a **single pre-processing step** before rendering logic runs. Add a `jay-coordinate-base` attribute to each element. Both server and hydrate compilers **read** this attribute instead of computing coordinates.
+
+Each generator (`generateServerElementFile`, `generateElementHydrateFile`) receives its own parsed `JayHtmlSourceFile` from the same source file. `assignCoordinates` runs at the **start of each generator**, mutating `jayFile.body` before any render logic. Since both parse the same source, the pre-processed structure is identical.
 
 ```mermaid
 flowchart LR
@@ -29,10 +31,9 @@ flowchart LR
 
     subgraph after [Proposed]
         A2[jay-html] --> S[Slow render + multi-child wrap]
-        S --> P[Coordinate pre-process]
-        P --> A3[jay-html + jay-coordinate-base]
-        A3 --> B2[Server compiler]
-        A3 --> C2[Hydrate compiler]
+        S --> A3[pre-rendered jay-html]
+        A3 --> B2[assignCoordinates + Server compiler]
+        A3 --> C2[assignCoordinates + Hydrate compiler]
         B2 --> D2[generated-server-element.ts]
         C2 --> E2[generated-element-hydrate.ts]
     end
@@ -42,7 +43,8 @@ flowchart LR
 
 ### When to Run
 
-- **After slow-render** — The slow-render transform (DL75) unrolls `forEach` into `slowForEach` items, evaluates slow conditions, and wraps multi-child headless inline templates in a `<div>` (see "Multi-Child Wrapper" section below). Coordinates should be assigned on the **final DOM structure** that both targets compile. So: parse → slow-render (including multi-child wrap) → **coordinate pre-process** → server + hydrate compilation.
+- **At the start of each generator** — Both `generateServerElementFile` and `generateElementHydrateFile` call `assignCoordinates(jayFile.body, headlessImports)` as their first step, before any render logic. Since both parse the same source file (pre-rendered when slow phase exists, original otherwise), the pre-processed structure is identical.
+- **After slow-render** — The slow-render transform (DL75) unrolls `forEach` into `slowForEach` items, evaluates slow conditions, and wraps multi-child headless inline templates in a `<div>` (see "Multi-Child Wrapper" section). The pre-rendered output is the source file that both generators parse. So the full pipeline is: parse → slow-render (including multi-child wrap) → serialize → re-parse by each generator → **assignCoordinates** → target-specific compilation.
 
 ### Attribute Name
 
@@ -87,7 +89,15 @@ The pre-process needs headless import metadata to identify `<jay:xxx>` tags and 
 
 When a headless instance's inline template has multiple root-level children, the element, server, and hydrate targets all need a wrapper `<div>` for consistency. Currently, this wrapping is done independently in each compiler target (DL102 Issue 2).
 
-**New approach:** Integrate the wrapping into the **slow rendering phase** itself. As slow rendering processes `<jay:xxx>` tags (resolving conditions, unrolling slowForEach), it also checks inline template children: if `childNodes.length > 1`, insert a `<div>` wrapper around the children. This ensures:
+**New approach:** Integrate the wrapping into the **slow rendering phase**, specifically in `resolveHeadlessInstances()` (`slow-render-transform.ts`), inside `walkAndResolve` when processing a `<jay:xxx>` element:
+
+- After `transformChildren(element, ...)` returns `result.val`
+- Before `element.innerHTML = ''` and `result.val.forEach((child) => element.appendChild(child))`
+- If `result.val.length > 1`: create a wrapper `<div>`, append all children to it, then append the wrapper as the single child
+
+For pages **without a slow phase**, headless instance inline templates are not resolved by slow rendering. In this case, `assignCoordinates` handles the wrapping as a normalization step: when it encounters a `<jay:xxx>` tag with multiple children, it inserts the wrapper `<div>` before assigning coordinates. This ensures consistency regardless of whether slow rendering ran.
+
+This ensures:
 
 - The parsed DOM already has the wrapper before coordinate assignment
 - The pre-process assigns coordinates naturally (wrapper gets `product-card:0/0`, children get `product-card:0/0/0`, etc.)
@@ -159,54 +169,64 @@ The element target's coordinates are used at runtime for the security package (s
 
 ### Debug Output
 
-The dev server always writes the pre-processed DOM to a debug file after coordinate assignment:
+The compiler writes the pre-processed DOM to a debug file after coordinate assignment:
 
 - **Location**: `build/debug/<route-or-page>.coordinate-preprocess.jay-html`
 - **Content**: Serialized HTML with `jay-coordinate-base` attributes visible. Enables diffing before/after, verifying hierarchy.
-- **Always emitted** in dev mode (no env var gating needed). Cheap to produce and valuable for debugging.
+- **Always emitted** in dev mode. Cheap to produce and valuable for debugging.
+- **Mechanism**: `generateServerElementFile` accepts an optional `debugCoordinatePreprocessPath?: string` in its options. When provided, it writes the serialized DOM after `assignCoordinates`. The dev server passes `path.join(buildFolder, 'debug', ...)` through `generateSSRPageHtml` → `compileAndLoadServerElement` → compiler options. Only the server target writes the debug file (hydrate produces identical output).
 
 ## Implementation Plan
 
-### Phase 1: Multi-child wrapper in slow rendering + coordinate pre-process + build-time template utility
+### Phase 1: Multi-child wrapper + coordinate pre-process + build-time template utility
 
-**Multi-child wrapper:**
-- Add multi-child headless inline template wrapping to the slow rendering phase
-- During slow render, when processing `<jay:xxx>` tags: if inline template has multiple root-level children, wrap them in a `<div>`
-- Remove the per-target wrapping logic from `renderServerHeadlessInstance` and `renderHydrateHeadlessInstance`
+**Multi-child wrapper in slow rendering:**
+- In `resolveHeadlessInstances()` (`packages/compiler/compiler-jay-html/lib/slow-render/slow-render-transform.ts`), inside `walkAndResolve` when processing `<jay:xxx>`:
+  - After `transformChildren` returns `result.val`, before appending children
+  - If `result.val.length > 1`: create wrapper `<div>`, append children to it, use wrapper as sole child
+- Remove per-target wrapping logic from `renderServerHeadlessInstance` and `renderHydrateHeadlessInstance` in `jay-html-compiler.ts`
 
 **Coordinate pre-process:**
-
-- Create `assignCoordinates(dom, headlessImports, options?)` in `compiler-jay-html`
+- Create `assignCoordinates(dom, headlessImports, options?)` in `packages/compiler/compiler-jay-html/lib/jay-target/assign-coordinates.ts`
 - Walks DOM, assigns `jay-coordinate-base` to each element using the coordinate scheme
 - Handles: root, children, refs, conditionals, forEach, slowForEach, headless instances (with scoped children)
-- Create `compileCoordinateExpr(template, varMappings)` in `compiler-shared` — build-time utility that compiles `$placeholder` templates to JS expression strings
+- For non-slow pages: also wraps multi-child headless inline templates (normalization fallback)
 - Returns void (mutates DOM)
+
+**Build-time template utility:**
+- Create `compileCoordinateExpr(template, varMappings)` in `packages/compiler/compiler-shared/lib/coordinates.ts`
+- Compiles `$placeholder` templates to JS string concatenation expressions at build time
+- No runtime dependency in the browser bundle
 
 ### Phase 1b: `__headlessInstances` key utility
 
-- Create `computeInstanceKey(coordinateSuffix, context, prefix?)` in `compiler-shared`
+- Create `computeInstanceKey(coordinateSuffix, context, prefix?)` in `packages/compiler/compiler-shared/lib/coordinates.ts`
 - Server runtime and client compiler both use this to ensure key format consistency
-- Update `renderFastChangingDataForForEachInstances` and compiler's `makeHeadlessInstanceComponent` coordinate key generation to use the shared function
+- Update `renderFastChangingDataForForEachInstances` (stack-server-runtime) and compiler's `makeHeadlessInstanceComponent` coordinate key generation to use the shared function
 
 ### Phase 1c: Debug file output
 
-- After `assignCoordinates()`, write the pre-processed DOM to `build/debug/<path>.coordinate-preprocess.jay-html`
-- Always emitted by the dev server
-- Serialize DOM with `jay-coordinate-base` attributes for inspection
+- Add optional `debugCoordinatePreprocessPath?: string` to `generateServerElementFile` options
+- When provided, serialize DOM after `assignCoordinates` and write to the path
+- Dev server passes `path.join(buildFolder, 'debug', pageName + '.coordinate-preprocess.jay-html')` through `generateSSRPageHtml` → `compileAndLoadServerElement` → compiler options
+- Only server target writes debug file (hydrate produces identical output)
 
 ### Phase 2: Integrate and remove old logic — Server target
 
-- Before `renderServerNode`, run `assignCoordinates(body, headlessImports)`
+- At the start of `generateServerElementFile` (`jay-html-compiler.ts`), call `assignCoordinates(jayFile.body, headlessImports)`
 - In `renderServerElementContent`, read `element.getAttribute('jay-coordinate-base')` instead of computing
+- For forEach placeholders, use `compileCoordinateExpr` to emit runtime expressions
 - Delete `coordinateCounter`, `coordinatePrefix`, `rawCoordinatePrefix` from `ServerContext`
 - Remove `isLiteralPrefix` and related logic
-- Filter `jay-coordinate-base` from attribute rendering
+- Filter `jay-coordinate-base` from attribute rendering (same as `ref`, `if`, etc.)
 - Update server-element fixtures and tests
 
 ### Phase 3: Integrate and remove old logic — Hydrate target
 
-- Same integration as Phase 2 but for `renderHydrateElementContent`
-- Delete coordinate computation from `HydrateContext`
+- At the start of `generateElementHydrateFile`, call `assignCoordinates(jayFile.body, headlessImports)`
+- In `renderHydrateElementContent`, read `element.getAttribute('jay-coordinate-base')` instead of computing
+- For forEach placeholders, use same `compileCoordinateExpr` utility
+- Delete coordinate computation from `HydrateContext` (`coordinateCounter`, `coordinatePrefix`, `headlessCoordinateCounters`)
 - Filter `jay-coordinate-base` from attribute rendering
 - Update hydrate fixtures and tests
 
@@ -214,10 +234,10 @@ The dev server always writes the pre-processed DOM to a debug file after coordin
 
 Create a dedicated test file for the coordinate pre-processing step:
 
-- **`coordinate-preprocess.test.ts`** — Tests that:
+- **`packages/compiler/compiler-jay-html/test/jay-target/coordinate-preprocess.test.ts`**:
   - Run `assignCoordinates()` on fixture jay-html files
   - Assert expected `jay-coordinate-base` attributes on elements
-  - Cover: root, children, refs, conditionals, forEach, slowForEach, headless instances, headless inline template children, nested headless
+  - Cover: root, children, refs, conditionals, forEach, slowForEach, headless instances, headless inline template children, nested headless, multi-child wrapper normalization
 - **Fixture-based**: Store expected pre-process output in `test/fixtures/<feature>/preprocessed-coordinates.json` — map of element path → expected `jay-coordinate-base` value
 - Run fake-shop smoke test, verify home page and product page
 
@@ -320,7 +340,7 @@ Pre-process is more invasive but eliminates the class of bugs. Shared module red
 A: Yes — to resolve ref names, forEach trackBy, headless instance coordinates. It runs as a pass over the parsed `JayHtmlSourceFile` (which has body + metadata), not raw HTML. It also needs `headlessImports` to identify `<jay:xxx>` tags.
 
 **Q: What about async/loading content — coordinates for placeholders?**
-A: Placeholders (e.g. `when-loading`) are static structure. Pre-process assigns coordinates based on position. When resolved content replaces placeholder, the coordinate map may need to be rebuilt — or the placeholder keeps its coordinate and resolved content is adopted under it. TBD.
+A: `when-loading` / `when-resolved` are conditionals. The pre-process handles them the same as any other conditional — assign coordinates based on position, use ref when present, else index.
 
 **Q: Performance — extra DOM walk?**
 A: One additional walk over the parsed DOM. Compilation is already multi-pass. Negligible for typical page size.
@@ -346,53 +366,31 @@ A: Instance keys use a different format (comma-separated for forEach) from DOM c
 
 ## Implementation Readiness (Codebase Exploration)
 
-### Pipeline Verification
+### Pipeline — Verified ✓
 
-The jay-stack pipeline **already passes pre-rendered content** when slow phase exists:
+Both server and hydrate compile from the same content (pre-rendered when slow phase exists, original otherwise). No pipeline changes needed. Key path: `sendResponse` → `generateSSRPageHtml` → `compileAndLoadServerElement` → `generateServerElementFile`. Hydration: Vite resolves `${jayHtmlPath}${JAY_QUERY_HYDRATE}` → `generateElementHydrateFile`. Both parse the same source file.
 
-- `handleCachedRequest` and `handlePreRenderRequest` pass `preRenderedPath` (or `cachedEntry.preRenderedPath`) as `jayHtmlPath` to `sendResponse`
-- `sendResponse` reads `fs.readFile(jayHtmlPath)` and passes that content to `generateSSRPageHtml`
-- `compileAndLoadServerElement` parses this content and calls `generateServerElementFile`
-- The hydration script imports `hydrate` from `${jayHtmlPath}${JAY_QUERY_HYDRATE}` — so when `jayHtmlPath` is the pre-rendered path, Vite loads the pre-rendered file for the hydrate target too
+### DOM Structure — Verified ✓
 
-**Conclusion:** Both server and hydrate compile from the same content (pre-rendered when slow phase exists, original otherwise). No pipeline changes needed for coordinate pre-processing.
+- `parseJayFile` uses `node-html-parser` (`HTMLElement`)
+- `assignCoordinates` operates on `HTMLElement`: `setAttribute`, `getAttribute`, `childNodes`, `appendChild`
+- Slow-render uses same parser; `root.toString()` serializes
 
-### DOM Structure
+### Entry Points — Incorporated into Design ✓
 
-- **Parser:** `parseJayFile` uses `node-html-parser` (`parse()`, `HTMLElement`)
-- **JayHtmlSourceFile:** `body: HTMLElement` — the root content element
-- **Slow-render:** Uses same `node-html-parser`; `slowRenderTransform` parses, transforms, and serializes via `root.toString()`
-- **assignCoordinates:** Will operate on `HTMLElement` from node-html-parser; can use `setAttribute`, `getAttribute`, `childNodes`, `appendChild`, etc.
+| Caller | Function |
+|--------|----------|
+| `generate-ssr-response.ts` | `generateServerElementFile(parsedJayFile)` |
+| Rollup plugin (`generate-code-from-structure.ts`) | `generateElementHydrateFile(jayFile, mode)` |
 
-### Entry Points
+### Multi-Child Wrapper — Incorporated into Phase 1 ✓
 
-| Caller | Function | Input |
-|--------|----------|-------|
-| `generate-ssr-response.ts` | `generateServerElementFile(parsedJayFile)` | Parsed from jay-html at `jayHtmlPath` (pre-rendered or original) |
-| Rollup plugin (`generate-code-from-structure.ts`) | `generateElementHydrateFile(jayFile, mode)` | Parsed when Vite resolves `page.jay-html?jay-hydrate` |
+Location: `resolveHeadlessInstances()` in `slow-render-transform.ts`, inside `walkAndResolve`. Use `parse('<div></div>')` to create wrapper element.
 
-Each generator receives a `JayHtmlSourceFile` with its own parsed DOM. **assignCoordinates** should run at the start of both `generateServerElementFile` and `generateElementHydrateFile`, mutating `jayFile.body` before any render logic. Since they parse the same source file, the structure is identical.
+### Debug File Output — Incorporated into Phase 1c ✓
 
-### Multi-Child Wrapper Location
+`debugCoordinatePreprocessPath?: string` in compiler options. Dev server passes path through `generateSSRPageHtml` → `compileAndLoadServerElement` → compiler.
 
-The multi-child wrap should be added in **resolveHeadlessInstances** (`slow-render-transform.ts`), inside `walkAndResolve` when processing a `<jay:xxx>` element:
+### Open Questions — None
 
-- After `transformChildren(element, ...)` returns `result.val`
-- Before `element.innerHTML = ''` and `result.val.forEach((child) => element.appendChild(child))`
-- If `result.val.length > 1`: create a wrapper `<div>`, append all children to it, then append the wrapper as the single child
-
-The node-html-parser API allows creating elements (e.g. `parse('<div></div>')` and use the root's first child, or check for an equivalent constructor). The wrapper must be inserted so the serialized output contains it.
-
-### Debug File Output Location
-
-Phase 1c says "Always emitted by the dev server". The dev server does not call the compiler directly for server/hydrate — it's the stack-server-runtime (`compileAndLoadServerElement`) and Vite plugin. Options:
-
-1. **Compiler:** Add optional `onCoordinatePreprocess?(dom: string)` callback to `generateServerElementFile`; dev server passes a callback that writes to `build/debug/`
-2. **Compiler:** Accept `debugOutputPath?: string`; when set, compiler writes the serialized DOM after `assignCoordinates`
-3. **Dev server:** After `compileAndLoadServerElement`, read the pre-rendered file, run a minimal parse → assignCoordinates → serialize, write to debug path
-
-Option 2 keeps the logic in the compiler and avoids a callback. The dev server would need to pass the debug path when calling the compiler — but `compileAndLoadServerElement` is in stack-server-runtime, which doesn't have direct access to the dev server's build folder. The stack-server-runtime receives `buildFolder` from `generateSSRPageHtml`. So we can pass `path.join(buildFolder, 'debug', ...)` from the dev server through `generateSSRPageHtml` to the compiler. **Recommendation:** Add optional `debugCoordinatePreprocessPath?: string` to the compile options; when provided, the compiler writes the pre-processed DOM there.
-
-### Open Question
-
-**Async/loading content (Q&A):** The design log marks "TBD" for placeholders. If `when-loading` / `when-resolved` structure affects coordinates, Phase 1 can skip or use a minimal strategy (e.g. assign coordinates to the placeholder container only) and iterate in a follow-up.
+All questions resolved. Async/loading content handled as regular conditionals.
