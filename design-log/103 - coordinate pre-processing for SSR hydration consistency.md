@@ -108,6 +108,18 @@ Write the pre-processed DOM (with `jay-coordinate-base` on each element) to a de
 - Handles: root, children, refs, conditionals, forEach, slowForEach, headless instances
 - Returns void (mutates DOM) or new DOM
 
+### Phase 1b: Shared coordinate template utility
+
+- Create `renderCoordinateTemplate(template, placeholders, ctx)` — runtime function used by both server (Node) and hydrate (browser)
+- Package: `@jay-framework/runtime` or `@jay-framework/compiler-shared` (depending on whether it's runtime or build-time)
+- Server and hydrate generated code both call this when the template has placeholders (e.g. `{_id}`)
+
+### Phase 1c: Debug file output
+
+- After `assignCoordinates()`, optionally write the pre-processed DOM to `build/debug/coordinate-preprocess/<path>.html`
+- Gated by `JAY_DEBUG_COORDINATES=1` or dev mode
+- Serialize DOM with `jay-coordinate-base` attributes for inspection
+
 ### Phase 2: Integrate into compilation pipeline
 
 - **Server-element**: Before `renderServerNode`, run `assignCoordinates(body)`. In `renderServerElementContent`, read `element.getAttribute('jay-coordinate-base')` instead of computing.
@@ -125,6 +137,21 @@ Write the pre-processed DOM (with `jay-coordinate-base` on each element) to a de
 - Update compiler fixtures (server + hydrate) to reflect new output
 - Add/update SSR+hydration integration test (DL99 Phase 5)
 - Run fake-shop smoke test, verify home page and product page
+
+### Phase 5: Pre-processing tests
+
+Add tests for the coordinate pre-processing step to both test suites:
+
+- **`generate-server-element.test.ts`** — Add `describe('coordinate pre-processing')` with tests that:
+  - Run `assignCoordinates()` on fixture jay-html
+  - Assert expected `jay-coordinate-base` attributes on elements (by selector or structure)
+  - Cover: root, children, refs, conditionals, forEach, slowForEach, headless instances
+
+- **`generate-element-hydrate.test.ts`** — Same `describe('coordinate pre-processing')` block (or shared test file):
+  - Reuse the same fixtures and assertions
+  - Ensures pre-process output is identical regardless of which target runs first
+
+- **Fixture-based**: Store expected pre-process output in `test/fixtures/<feature>/preprocessed-coordinates.json` (or similar) — map of selector → expected `jay-coordinate-base` value. Tests compare actual vs expected.
 
 ## Examples
 
@@ -159,10 +186,23 @@ if (coord) adoptElement(coord, ...);
 ### ForEach / slowForEach
 
 Pre-process runs **after** slow-render. So forEach is either:
-- Still `forEach` (dynamic) — pre-process assigns `"0/{trackByExpr}"` for item root, `"0/{trackByExpr}/0"` for children
-- Unrolled to `slowForEach` — pre-process sees literal `jayTrackBy` values, assigns `"0/p1"`, `"0/p1/0"`, etc.
+- Still `forEach` (dynamic) — pre-process assigns `"0/{_id}"` for item root, `"0/{_id}/0"` for children (placeholder syntax)
+- Unrolled to `slowForEach` — pre-process sees literal `jayTrackBy` values, assigns `"0/p1"`, `"0/p1/0"`, etc. (no placeholders)
 
 The pre-process needs access to variable context (forEach item var, trackBy) for dynamic expressions. It may need to run in two passes or receive metadata from the parser.
+
+### Coordinate template rendering (shared util)
+
+```typescript
+// Pre-process assigns: jay-coordinate-base="0/{_id}/0"
+// Server emits (inside forEach loop):
+w(' jay-coordinate="' + renderCoordinateTemplate('0/{_id}/0', { _id: vs1._id }) + '">');
+// Output at runtime: jay-coordinate="0/abc123/0"
+
+// Hydrate emits (generated code):
+adoptElement(renderCoordinateTemplate('0/{_id}/0', { _id: (vs1) => vs1._id })(vs1), ...);
+// At runtime: adoptElement("0/abc123/0", ...)
+```
 
 ## Trade-offs
 
@@ -188,8 +228,10 @@ A: One additional walk over the parsed DOM. Compilation is already multi-pass. N
 ## Verification Criteria
 
 1. All compiler tests pass (server-element, hydrate)
-2. Runtime hydration tests pass
-3. SSR+hydration integration test passes (if implemented)
-4. fake-shop smoke test passes (home page, product page)
-5. No duplicate elements after hydration (product page add-to-cart)
-6. Rating stars and submit button work (product page)
+2. Pre-processing tests pass (new `describe` in both test files)
+3. Runtime hydration tests pass
+4. SSR+hydration integration test passes (if implemented)
+5. fake-shop smoke test passes (home page, product page)
+6. No duplicate elements after hydration (product page add-to-cart)
+7. Rating stars and submit button work (product page)
+8. **Output does not contain `jay-coordinate-base`** — grep SSR HTML and hydration script; attribute must not appear
