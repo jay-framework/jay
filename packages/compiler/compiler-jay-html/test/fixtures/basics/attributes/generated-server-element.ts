@@ -11,7 +11,7 @@ export interface AttributesViewState {
 export function renderToStream(vs: AttributesViewState, ctx: ServerRenderContext): void {
     const { write: w } = ctx;
     w('<div');
-    w(' jay-coordinate="0">');
+    w('>');
     w('<div');
     w(' style="background: red;"');
     w(' jay-coordinate="0/0">');
@@ -19,12 +19,12 @@ export function renderToStream(vs: AttributesViewState, ctx: ServerRenderContext
     w('</div>');
     w('<div');
     w(' data-attribute="a value"');
-    w(' jay-coordinate="0/1">');
+    w('>');
     w('static');
     w('</div>');
     w('<input');
     w(' value="some value"');
-    w(' jay-coordinate="0/2">');
+    w('>');
     w('<input');
     w(' id="abc"');
     w(' value="' + escapeAttr(String(vs.text2)) + '"');
@@ -36,7 +36,7 @@ export function renderToStream(vs: AttributesViewState, ctx: ServerRenderContext
     w(' jay-coordinate="0/4">');
     w('<label');
     w(' for="abc"');
-    w(' jay-coordinate="0/5">');
+    w('>');
     w('</label>');
     w('<div');
     w(' class="main second"');
@@ -96,11 +96,11 @@ export function renderToStream(vs: AttributesViewState, ctx: ServerRenderContext
     w('</button>');
     w('<button');
     w(' disabled');
-    w(' jay-coordinate="0/16">');
+    w('>');
     w('</button>');
     w('<img');
     w(' src="/image.jpg"');
     w(' alt="Peat\'s Beast- PX finish- 54.1%"');
-    w(' jay-coordinate="0/17">');
+    w('>');
     w('</div>');
 }

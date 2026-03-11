@@ -9,7 +9,7 @@ export interface PageUsingCounterViewState {
 export function renderToStream(vs: PageUsingCounterViewState, ctx: ServerRenderContext): void {
     const { write: w } = ctx;
     w('<div');
-    w(' jay-coordinate="0">');
+    w('>');
     w('<div');
     w(' jay-coordinate="0/0">');
     w(escapeHtml(String(`value: ${vs.counter?.count}`)));
@@ -28,13 +28,13 @@ export function renderToStream(vs: PageUsingCounterViewState, ctx: ServerRenderC
         w('<img');
         w(' src="positive.jpg"');
         w(' alt="positive"');
-        w(' jay-coordinate="0/3/0">');
+        w('>');
     }
     if (vs.counter?.isPositive === IsPositive.negative) {
         w('<img');
         w(' src="negative.jpg"');
         w(' alt="negative"');
-        w(' jay-coordinate="0/3/1">');
+        w('>');
     }
     w('</div>');
     w('</div>');

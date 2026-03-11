@@ -3869,8 +3869,17 @@ function renderServerElementContent(
         }
     }
 
-    // Read pre-assigned coordinate from jay-coordinate-base (DL#103)
-    const coordExpr = getCoordinateExpr(element, context);
+    // Determine if this element needs a jay-coordinate attribute.
+    // Only emit for elements that the hydrate target needs to adopt.
+    const refName = element.attributes.ref ? camelCase(element.attributes.ref) : null;
+    const needsCoordinate =
+        dynamicTextFragment !== null ||
+        refName !== null ||
+        hasDynamicAttributeBindings(element, variables) ||
+        hasInteractiveChildElements(childNodes);
+
+    // Read pre-assigned coordinate value from jay-coordinate-base (DL#103)
+    const coordTemplate = needsCoordinate ? element.getAttribute(COORD_ATTR) : null;
 
     const isVoid = voidElements.has(element.rawTagName.toLowerCase());
     const parts: RenderFragment[] = [];
@@ -3881,11 +3890,11 @@ function renderServerElementContent(
     if (attrs.rendered.trim()) {
         parts.push(attrs);
     }
-    if (coordExpr !== null) {
-        const coordTemplate = element.getAttribute(COORD_ATTR)!;
+    if (coordTemplate !== null) {
         if (isStaticCoordinate(coordTemplate)) {
             parts.push(w(indent, `' jay-coordinate="${coordTemplate}">'`));
         } else {
+            const coordExpr = compileCoordinateExpr(coordTemplate, context.varMappings);
             parts.push(
                 w(indent, `' jay-coordinate="' + ${coordExpr} + '">'`, Imports.for(Import.escapeAttr)),
             );

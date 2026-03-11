@@ -12,7 +12,7 @@ export function renderToStream(
 ): void {
     const { write: w } = ctx;
     w('<div');
-    w(' jay-coordinate="0">');
+    w('>');
     w('<h1');
     w(' jay-coordinate="0/0">');
     w(escapeHtml(String(vs.pageTitle)));
@@ -23,9 +23,9 @@ export function renderToStream(
     if (vs_product_card0) {
         w('<article');
         w(' class="hero-card"');
-        w(' jay-coordinate="0/product-card:0/0">');
+        w('>');
         w('<h2');
-        w(' jay-coordinate="0/product-card:0/0/0">');
+        w('>');
         w('Hero Product');
         w('</h2>');
         w('<span');

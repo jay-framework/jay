@@ -17,25 +17,25 @@ export function renderToStream(
 ): void {
     const { write: w } = ctx;
     w('<div');
-    w(' jay-coordinate="0">');
+    w('>');
     w('<h1');
     w(' jay-coordinate="0/0">');
     w(escapeHtml(String(vs.pageTitle)));
     w('</h1>');
     w('<div');
     w(' class="grid"');
-    w(' jay-coordinate="0/1">');
+    w('>');
     w('<div');
-    w(' jay-coordinate="p1">');
+    w('>');
     const vs_product_card0 = (vs as any).__headlessInstances?.['p1/product-card:0'] as
         | ProductCardViewState
         | undefined;
     if (vs_product_card0) {
         w('<article');
         w(' class="hero-card"');
-        w(' jay-coordinate="p1/product-card:0/0">');
+        w('>');
         w('<h2');
-        w(' jay-coordinate="p1/product-card:0/0/0">');
+        w('>');
         w('Product A');
         w('</h2>');
         w('<span');
@@ -51,16 +51,16 @@ export function renderToStream(
     }
     w('</div>');
     w('<div');
-    w(' jay-coordinate="p2">');
+    w('>');
     const vs_product_card1 = (vs as any).__headlessInstances?.['p2/product-card:0'] as
         | ProductCardViewState
         | undefined;
     if (vs_product_card1) {
         w('<article');
         w(' class="compact-card"');
-        w(' jay-coordinate="p2/product-card:0/0">');
+        w('>');
         w('<h3');
-        w(' jay-coordinate="p2/product-card:0/0/0">');
+        w('>');
         w('Product B');
         w('</h3>');
         w('<span');

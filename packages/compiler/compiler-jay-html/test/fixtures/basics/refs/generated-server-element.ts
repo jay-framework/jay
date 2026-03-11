@@ -7,7 +7,7 @@ export interface RefsViewState {
 export function renderToStream(vs: RefsViewState, ctx: ServerRenderContext): void {
     const { write: w } = ctx;
     w('<div');
-    w(' jay-coordinate="0">');
+    w('>');
     w('<div');
     w(' jay-coordinate="0/0">');
     w(escapeHtml(String(vs.text)));
@@ -17,7 +17,7 @@ export function renderToStream(vs: RefsViewState, ctx: ServerRenderContext): voi
     w(escapeHtml(String(vs.text)));
     w('</div>');
     w('<div');
-    w(' jay-coordinate="0/2">');
+    w('>');
     w('<div');
     w(' jay-coordinate="0/2/0">');
     w(escapeHtml(String(vs.text)));

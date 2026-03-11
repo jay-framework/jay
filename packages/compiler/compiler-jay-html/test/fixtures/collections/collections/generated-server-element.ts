@@ -15,7 +15,7 @@ export interface CollectionsViewState {
 export function renderToStream(vs: CollectionsViewState, ctx: ServerRenderContext): void {
     const { write: w } = ctx;
     w('<div');
-    w(' jay-coordinate="0">');
+    w('>');
     w('<h1');
     w(' jay-coordinate="0/0">');
     w(escapeHtml(String(vs.title)));

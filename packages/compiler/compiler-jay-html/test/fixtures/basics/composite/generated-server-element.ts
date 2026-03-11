@@ -8,13 +8,13 @@ export interface CompositeViewState {
 export function renderToStream(vs: CompositeViewState, ctx: ServerRenderContext): void {
     const { write: w } = ctx;
     w('<div');
-    w(' jay-coordinate="0">');
+    w('>');
     w('<div');
     w(' jay-coordinate="0/0">');
     w(escapeHtml(String(vs.text)));
     w('</div>');
     w('<div');
-    w(' jay-coordinate="0/1">');
+    w('>');
     w('static');
     w('</div>');
     w('<div');

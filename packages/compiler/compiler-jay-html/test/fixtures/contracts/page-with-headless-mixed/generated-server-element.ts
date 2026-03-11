@@ -26,9 +26,9 @@ export function renderToStream(vs: PageWithHeadlessMixedViewState, ctx: ServerRe
     if (vs_product_card0) {
         w('<article');
         w(' class="hero-card"');
-        w(' jay-coordinate="0/product-card:0/0">');
+        w('>');
         w('<h2');
-        w(' jay-coordinate="0/product-card:0/0/0">');
+        w('>');
         w('Hero Product');
         w('</h2>');
         w('<span');
@@ -49,9 +49,9 @@ export function renderToStream(vs: PageWithHeadlessMixedViewState, ctx: ServerRe
         if (vs_product_card1) {
             w('<div');
             w(' class="promo"');
-            w(' jay-coordinate="0/product-card:1/0">');
+            w('>');
             w('<h3');
-            w(' jay-coordinate="0/product-card:1/0/0">');
+            w('>');
             w('Promo Product');
             w('</h3>');
             w('<span');
@@ -64,18 +64,18 @@ export function renderToStream(vs: PageWithHeadlessMixedViewState, ctx: ServerRe
     }
     w('<div');
     w(' class="grid"');
-    w(' jay-coordinate="0/1">');
+    w('>');
     w('<div');
-    w(' jay-coordinate="p1">');
+    w('>');
     const vs_product_card2 = (vs as any).__headlessInstances?.['p1/product-card:0'] as
         | ProductCardViewState
         | undefined;
     if (vs_product_card2) {
         w('<article');
         w(' class="card-a"');
-        w(' jay-coordinate="p1/product-card:0/0">');
+        w('>');
         w('<h2');
-        w(' jay-coordinate="p1/product-card:0/0/0">');
+        w('>');
         w('Product A');
         w('</h2>');
         w('<span');
@@ -91,16 +91,16 @@ export function renderToStream(vs: PageWithHeadlessMixedViewState, ctx: ServerRe
     }
     w('</div>');
     w('<div');
-    w(' jay-coordinate="p2">');
+    w('>');
     const vs_product_card3 = (vs as any).__headlessInstances?.['p2/product-card:0'] as
         | ProductCardViewState
         | undefined;
     if (vs_product_card3) {
         w('<article');
         w(' class="card-b"');
-        w(' jay-coordinate="p2/product-card:0/0">');
+        w('>');
         w('<h3');
-        w(' jay-coordinate="p2/product-card:0/0/0">');
+        w('>');
         w('Product B');
         w('</h3>');
         w('<span');
