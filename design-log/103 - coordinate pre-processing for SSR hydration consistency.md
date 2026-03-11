@@ -341,3 +341,58 @@ A: Instance keys use a different format (comma-separated for forEach) from DOM c
 6. No duplicate elements after hydration (product page add-to-cart)
 7. Rating stars and submit button work (product page)
 8. **Output does not contain `jay-coordinate-base`** — grep SSR HTML and hydration script; attribute must not appear
+
+---
+
+## Implementation Readiness (Codebase Exploration)
+
+### Pipeline Verification
+
+The jay-stack pipeline **already passes pre-rendered content** when slow phase exists:
+
+- `handleCachedRequest` and `handlePreRenderRequest` pass `preRenderedPath` (or `cachedEntry.preRenderedPath`) as `jayHtmlPath` to `sendResponse`
+- `sendResponse` reads `fs.readFile(jayHtmlPath)` and passes that content to `generateSSRPageHtml`
+- `compileAndLoadServerElement` parses this content and calls `generateServerElementFile`
+- The hydration script imports `hydrate` from `${jayHtmlPath}${JAY_QUERY_HYDRATE}` — so when `jayHtmlPath` is the pre-rendered path, Vite loads the pre-rendered file for the hydrate target too
+
+**Conclusion:** Both server and hydrate compile from the same content (pre-rendered when slow phase exists, original otherwise). No pipeline changes needed for coordinate pre-processing.
+
+### DOM Structure
+
+- **Parser:** `parseJayFile` uses `node-html-parser` (`parse()`, `HTMLElement`)
+- **JayHtmlSourceFile:** `body: HTMLElement` — the root content element
+- **Slow-render:** Uses same `node-html-parser`; `slowRenderTransform` parses, transforms, and serializes via `root.toString()`
+- **assignCoordinates:** Will operate on `HTMLElement` from node-html-parser; can use `setAttribute`, `getAttribute`, `childNodes`, `appendChild`, etc.
+
+### Entry Points
+
+| Caller | Function | Input |
+|--------|----------|-------|
+| `generate-ssr-response.ts` | `generateServerElementFile(parsedJayFile)` | Parsed from jay-html at `jayHtmlPath` (pre-rendered or original) |
+| Rollup plugin (`generate-code-from-structure.ts`) | `generateElementHydrateFile(jayFile, mode)` | Parsed when Vite resolves `page.jay-html?jay-hydrate` |
+
+Each generator receives a `JayHtmlSourceFile` with its own parsed DOM. **assignCoordinates** should run at the start of both `generateServerElementFile` and `generateElementHydrateFile`, mutating `jayFile.body` before any render logic. Since they parse the same source file, the structure is identical.
+
+### Multi-Child Wrapper Location
+
+The multi-child wrap should be added in **resolveHeadlessInstances** (`slow-render-transform.ts`), inside `walkAndResolve` when processing a `<jay:xxx>` element:
+
+- After `transformChildren(element, ...)` returns `result.val`
+- Before `element.innerHTML = ''` and `result.val.forEach((child) => element.appendChild(child))`
+- If `result.val.length > 1`: create a wrapper `<div>`, append all children to it, then append the wrapper as the single child
+
+The node-html-parser API allows creating elements (e.g. `parse('<div></div>')` and use the root's first child, or check for an equivalent constructor). The wrapper must be inserted so the serialized output contains it.
+
+### Debug File Output Location
+
+Phase 1c says "Always emitted by the dev server". The dev server does not call the compiler directly for server/hydrate — it's the stack-server-runtime (`compileAndLoadServerElement`) and Vite plugin. Options:
+
+1. **Compiler:** Add optional `onCoordinatePreprocess?(dom: string)` callback to `generateServerElementFile`; dev server passes a callback that writes to `build/debug/`
+2. **Compiler:** Accept `debugOutputPath?: string`; when set, compiler writes the serialized DOM after `assignCoordinates`
+3. **Dev server:** After `compileAndLoadServerElement`, read the pre-rendered file, run a minimal parse → assignCoordinates → serialize, write to debug path
+
+Option 2 keeps the logic in the compiler and avoids a callback. The dev server would need to pass the debug path when calling the compiler — but `compileAndLoadServerElement` is in stack-server-runtime, which doesn't have direct access to the dev server's build folder. The stack-server-runtime receives `buildFolder` from `generateSSRPageHtml`. So we can pass `path.join(buildFolder, 'debug', ...)` from the dev server through `generateSSRPageHtml` to the compiler. **Recommendation:** Add optional `debugCoordinatePreprocessPath?: string` to the compile options; when provided, the compiler writes the pre-processed DOM there.
+
+### Open Question
+
+**Async/loading content (Q&A):** The design log marks "TBD" for placeholders. If `when-loading` / `when-resolved` structure affects coordinates, Phase 1 can skip or use a minimal strategy (e.g. assign coordinates to the placeholder container only) and iterate in a follow-up.
