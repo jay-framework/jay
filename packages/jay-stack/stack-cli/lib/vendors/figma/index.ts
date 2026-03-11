@@ -27,7 +27,11 @@ import { convertRepeaterNode } from './converters/repeater';
 import { convertGroupNode } from './converters/group';
 import type { ConversionContext, BindingAnalysis } from './types';
 import { getBindingsData, analyzeBindings, validateBindings } from './binding-analysis';
-import { buildImportIR } from './jay-html-to-import-ir';
+import {
+    buildImportIR,
+    resolveContractTagLinks,
+    normalizeCompilerTags,
+} from './jay-html-to-import-ir';
 import { adaptIRToFigmaVendorDoc } from './import-ir-to-figma-vendor-doc';
 
 /**
@@ -605,10 +609,19 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
             if (parsedJayHtml.headlessImports) {
                 for (const hi of parsedJayHtml.headlessImports) {
                     if (hi.key && hi.contract?.tags) {
+                        const contractDir = hi.contractPath
+                            ? path.dirname(hi.contractPath)
+                            : undefined;
+                        const resolvedTags = contractDir
+                            ? resolveContractTagLinks(
+                                  hi.contract.tags as unknown[],
+                                  contractDir,
+                              )
+                            : (hi.contract.tags as unknown[]);
                         mergedTags.push({
                             tag: hi.key,
                             type: 'subContract',
-                            tags: hi.contract.tags,
+                            tags: normalizeCompilerTags(resolvedTags),
                         });
                     }
                 }

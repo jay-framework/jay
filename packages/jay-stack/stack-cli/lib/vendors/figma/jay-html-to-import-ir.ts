@@ -1,8 +1,10 @@
 import { createHash } from 'crypto';
+import { readFileSync } from 'fs';
+import path from 'path';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import type { Contract, ContractTag, Plugin, ProjectPage } from '@jay-framework/editor-protocol';
 import type { JayHeadlessImports } from '@jay-framework/compiler-jay-html';
-import { ContractTagType, computeSourceId } from '@jay-framework/compiler-jay-html';
+import { ContractTagType, computeSourceId, parseContract } from '@jay-framework/compiler-jay-html';
 import type { ImportIRDocument, ImportIRNode, ImportIRStyle, ImportIRBinding } from './import-ir';
 import { generateNodeId, buildDomPath, getSemanticAnchors } from './id-generator';
 import { resolveStyle, parseInlineStyle, parseCssToClassMap } from './style-resolver';
@@ -184,7 +186,7 @@ function findFirstBlockChild(body: HTMLElement): HTMLElement | null {
     return children[0] ?? null;
 }
 
-function normalizeCompilerTags(tags: unknown[]): ContractTag[] {
+export function normalizeCompilerTags(tags: unknown[]): ContractTag[] {
     return (tags as any[]).map((tag) => {
         const typeVal = tag.type;
         let typeStr: string | string[];
@@ -206,6 +208,36 @@ function normalizeCompilerTags(tags: unknown[]): ContractTag[] {
     });
 }
 
+/**
+ * Recursively resolve `link` directives in contract tags by loading the
+ * linked contract files and inlining their tags.
+ * Needed because the compiler stores links as references without inlining
+ * the linked contract's tags into the parent.
+ */
+export function resolveContractTagLinks(tags: unknown[], contractDir: string): unknown[] {
+    return (tags as any[]).map((rawTag) => {
+        const tag = { ...rawTag };
+        if (tag.link && (!tag.tags || tag.tags.length === 0)) {
+            const linkPath = tag.link.endsWith('.jay-contract')
+                ? tag.link
+                : tag.link + '.jay-contract';
+            try {
+                const absolutePath = path.resolve(contractDir, linkPath);
+                const yamlContent = readFileSync(absolutePath, 'utf-8');
+                const parsed = parseContract(yamlContent, path.basename(absolutePath));
+                if (parsed.val?.tags) {
+                    tag.tags = resolveContractTagLinks(parsed.val.tags, path.dirname(absolutePath));
+                }
+            } catch {
+                // Linked contract not found or parse error — leave as-is
+            }
+        } else if (tag.tags && tag.tags.length > 0) {
+            tag.tags = resolveContractTagLinks(tag.tags, contractDir);
+        }
+        return tag;
+    });
+}
+
 function buildHeadlessImportInfos(
     headlessImports: JayHeadlessImports[] | undefined,
     usedComponents: ProjectPage['usedComponents'],
@@ -223,7 +255,11 @@ function buildHeadlessImportInfos(
                   componentName: usedComponent.componentName,
               }
             : { pageUrl };
-        const normalizedTags = normalizeCompilerTags(hi.contract.tags);
+        const contractDir = hi.contractPath ? path.dirname(hi.contractPath) : undefined;
+        const resolvedTags = contractDir
+            ? resolveContractTagLinks(hi.contract.tags as unknown[], contractDir)
+            : (hi.contract.tags as unknown[]);
+        const normalizedTags = normalizeCompilerTags(resolvedTags);
         result.push({ key: hi.key, tags: normalizedTags, pageContractPath });
     }
     return result;
