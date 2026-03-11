@@ -152,6 +152,7 @@ export type ImportIRNode = {
     variantProperties?: Record<string, string>; // For COMPONENT nodes
     componentPropertyDefinitions?: Record<string, { type: 'VARIANT'; variantOptions: string[] }>; // For COMPONENT_SET
     mainComponentId?: string; // For INSTANCE nodes
+    preferHiddenDefault?: boolean; // INSTANCE should default to _hidden_ variant
 };
 
 export type ImportIRDocument = {

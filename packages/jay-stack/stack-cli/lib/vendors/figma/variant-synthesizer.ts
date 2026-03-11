@@ -189,6 +189,47 @@ function getVariantPropertiesForCondition(
 }
 
 /**
+ * Checks whether an element is visible in the default scenario.
+ * Returns true if visible, false if hidden, undefined if unknown.
+ */
+export type ElementVisibilityChecker = (element: HTMLElement) => boolean | undefined;
+
+/**
+ * Determine which component should be the default for the instance in the main frame.
+ *
+ * Uses a visibility checker (backed by the default scenario's computed styles)
+ * to find the element that is visible in the page's natural state.
+ * Returns null if no element is visible (instance should use _hidden_ variant).
+ */
+function pickDefaultComponent(
+    group: VariantGroup,
+    components: ImportIRNode[],
+    dimensions: DimensionInfo[],
+    isVisibleInDefault?: ElementVisibilityChecker,
+): ImportIRNode | null {
+    if (!isVisibleInDefault) {
+        return components[0]!;
+    }
+
+    for (let i = 0; i < group.elements.length; i++) {
+        const el = group.elements[i]!;
+        const visible = isVisibleInDefault(el);
+        if (visible !== true) continue;
+
+        const condition = group.conditions[i]!;
+        const variantProps = getVariantPropertiesForCondition(condition, dimensions);
+        const variantKey = Object.entries(variantProps)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([k, v]) => `${k}=${v}`)
+            .join(', ');
+        const match = components.find((c) => c.name === variantKey);
+        if (match) return match;
+    }
+
+    return null;
+}
+
+/**
  * Synthesize COMPONENT_SET + INSTANCE from a variant group.
  */
 export function synthesizeVariant(
@@ -199,6 +240,7 @@ export function synthesizeVariant(
     pageContractPath: PageContractPath,
     buildChildNode: (element: HTMLElement) => ImportIRNode,
     contractContext?: ImportContractContext,
+    isVisibleInDefault?: ElementVisibilityChecker,
 ): SynthesizedVariant {
     const warnings: string[] = [];
     const { dimensions, warnings: dimWarnings } = classifyDimensions(
@@ -301,7 +343,15 @@ export function synthesizeVariant(
         children: components,
     };
 
-    const firstComponentId = components[0]!.id;
+    const defaultComponent = pickDefaultComponent(
+        group,
+        components,
+        dimensions,
+        isVisibleInDefault,
+    );
+    const preferHiddenDefault = defaultComponent === null;
+    const defaultComponentId = defaultComponent?.id ?? components[0]!.id;
+
     const instanceBindings: ImportIRNode['bindings'] = [];
     for (const dim of dimensions) {
         const tag = findContractTag(contractTags, dim.tagPath);
@@ -347,7 +397,8 @@ export function synthesizeVariant(
         sourcePath: 'variant-synthesizer',
         kind: 'INSTANCE',
         name: componentSetName,
-        mainComponentId: firstComponentId,
+        mainComponentId: defaultComponentId,
+        preferHiddenDefault,
         bindings: instanceBindings,
         style:
             maxWidth > 0 || maxHeight > 0

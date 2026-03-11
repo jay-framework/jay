@@ -322,6 +322,7 @@ function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVe
 }
 
 const HIDDEN_VARIANT_MARKER = 'jay-hidden-variant';
+const PREFER_HIDDEN_MARKER = 'jay-prefer-hidden-default';
 
 /**
  * Pick a collision-safe hidden value for a variant dimension.
@@ -641,6 +642,10 @@ function adaptNode(
             if (node.mainComponentId) {
                 base.mainComponentId = node.mainComponentId;
             }
+            if (node.preferHiddenDefault) {
+                base.pluginData = base.pluginData || {};
+                base.pluginData[PREFER_HIDDEN_MARKER] = 'true';
+            }
             const styleProps = mapStyleToFigmaProps(node.style);
             Object.assign(base, styleProps);
             break;
@@ -857,6 +862,52 @@ function collectImportReport(irRoot: ImportIRNode): ImportReport {
     };
 }
 
+/**
+ * Post-process: wire INSTANCE nodes marked with preferHiddenDefault
+ * to point at the _hidden_ COMPONENT in their COMPONENT_SET.
+ *
+ * The _hidden_ variant is injected during adaptNode, but the INSTANCE's
+ * mainComponentId was set before that. This pass fixes the reference.
+ */
+function fixHiddenDefaultInstances(root: FigmaVendorDocument): void {
+    const componentToParentSet = new Map<string, FigmaVendorDocument>();
+    const hiddenComponents = new Map<string, FigmaVendorDocument>();
+    const pendingInstances: FigmaVendorDocument[] = [];
+
+    function collect(node: FigmaVendorDocument): void {
+        if (node.type === 'COMPONENT_SET' && node.children) {
+            for (const child of node.children) {
+                if (child.type === 'COMPONENT') {
+                    componentToParentSet.set(child.id!, node);
+                    if (child.pluginData?.[HIDDEN_VARIANT_MARKER]) {
+                        hiddenComponents.set(node.id!, child);
+                    }
+                }
+            }
+        }
+        if (node.type === 'INSTANCE' && node.pluginData?.[PREFER_HIDDEN_MARKER]) {
+            pendingInstances.push(node);
+        }
+        if (node.children) {
+            for (const child of node.children) collect(child);
+        }
+    }
+
+    collect(root);
+
+    for (const inst of pendingInstances) {
+        const currentMain = inst.mainComponentId;
+        if (!currentMain) continue;
+        const parentSet = componentToParentSet.get(currentMain);
+        if (!parentSet) continue;
+        const hidden = hiddenComponents.get(parentSet.id!);
+        if (hidden) {
+            inst.mainComponentId = hidden.id;
+        }
+        delete inst.pluginData![PREFER_HIDDEN_MARKER];
+    }
+}
+
 export interface AdaptOptions {
     imageUrlToId?: Map<string, string>;
 }
@@ -874,6 +925,8 @@ export function adaptIRToFigmaVendorDoc(
         : undefined;
 
     const root = adaptNode(ir.root, 0, fetcher);
+
+    fixHiddenDefaultInstances(root);
 
     // Ensure SECTION has required pluginData
     if (root.type === 'SECTION') {

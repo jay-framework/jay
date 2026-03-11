@@ -195,5 +195,5 @@ export function convertTextNodeToHtml(
     const effectiveStyle = cssClassName ? '' : `${commonStyles}${textStyles}`;
     const styleStr = effectiveStyle ? ` style="${effectiveStyle}"` : '';
 
-    return `${indent}<${tag}${classAttr} data-jay-node-id="${id}"${refString}${attrsString}${styleStr}>${htmlContent}</${tag}>\n`;
+    return `${indent}<${tag}${classAttr}${refString}${attrsString}${styleStr}>${htmlContent}</${tag}>\n`;
 }

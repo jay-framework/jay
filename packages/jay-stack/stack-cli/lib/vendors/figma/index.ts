@@ -1,6 +1,11 @@
 import path from 'path';
 import { Vendor, VendorConversionResult } from '../types';
-import type { FigmaVendorDocument, ProjectPage, Plugin } from '@jay-framework/editor-protocol';
+import type {
+    FigmaVendorDocument,
+    ProjectPage,
+    Plugin,
+    ContractTag,
+} from '@jay-framework/editor-protocol';
 import {
     getPositionStyle,
     getNodeSizeStyles,
@@ -264,7 +269,6 @@ function convertRegularNode(
     if (cssClassName) {
         htmlAttrs += `class="${cssClassName}" `;
     }
-    htmlAttrs += `data-jay-node-id="${node.id}"`;
     if (effectiveStyle) {
         htmlAttrs += ` style="${effectiveStyle}"`;
     }
@@ -395,7 +399,7 @@ function convertNodeToJayHtml(node: FigmaVendorDocument, context: ConversionCont
 
     // Handle Jay Page sections (don't process bindings for top-level sections)
     if (type === 'SECTION' && isJPage) {
-        let html = `${indent}<section data-jay-node-id="${node.id}" data-page-url="${urlRoute || ''}">\n`;
+        let html = `${indent}<section data-page-url="${urlRoute || ''}">\n`;
 
         if (children && children.length > 0) {
             const childContext: ConversionContext = {
@@ -568,10 +572,23 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
             const devServerUrl =
                 options?.devServerUrl || process.env.DEV_SERVER_URL || 'http://localhost:3000';
             console.log(`[Import] Using dev server URL: ${devServerUrl}`);
-            const scenarios = generateVariantScenarios(
-                parsedJayHtml.body,
-                projectPage.contract,
-                16,
+
+            const mergedTags: ContractTag[] = [...(projectPage.contract?.tags ?? [])];
+            if (parsedJayHtml.headlessImports) {
+                for (const hi of parsedJayHtml.headlessImports) {
+                    if (hi.key && hi.contract?.tags) {
+                        mergedTags.push({
+                            tag: hi.key,
+                            type: 'subContract',
+                            tags: hi.contract.tags,
+                        });
+                    }
+                }
+            }
+
+            const scenarios = generateVariantScenarios(parsedJayHtml.body, mergedTags, 16);
+            console.log(
+                `[Import] Generated ${scenarios.length - 1} variant scenario(s) from ${mergedTags.length} merged contract tags`,
             );
 
             console.log('[Import] Computing styles via headless browser...');

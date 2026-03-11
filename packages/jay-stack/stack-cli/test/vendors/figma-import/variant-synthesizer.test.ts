@@ -7,6 +7,7 @@ import {
     detectVariantGroups,
     synthesizeVariant,
     synthesizeRepeater,
+    type ElementVisibilityChecker,
 } from '../../../lib/vendors/figma/variant-synthesizer';
 import { buildVariantCondition } from '../../../lib/vendors/figma/converters/variants';
 
@@ -280,7 +281,7 @@ describe('variant-synthesizer', () => {
     });
 
     describe('INSTANCE structure', () => {
-        it('has mainComponentId pointing to first COMPONENT', () => {
+        it('has mainComponentId pointing to first COMPONENT when no computed styles', () => {
             const doc = parse(`
                 <body>
                     <div>
@@ -303,6 +304,150 @@ describe('variant-synthesizer', () => {
 
             const firstComponent = result.componentSet.children![0]!;
             expect(result.instance.mainComponentId).toBe(firstComponent.id);
+            expect(result.instance.preferHiddenDefault).toBeFalsy();
+        });
+    });
+
+    describe('default variant selection (using ElementVisibilityChecker)', () => {
+        function makeVisibilityChecker(entries: Record<string, boolean>): ElementVisibilityChecker {
+            return (el) => {
+                const sid = el.getAttribute('data-jay-sid');
+                if (!sid) return undefined;
+                return entries[sid];
+            };
+        }
+
+        it('boolean pair: picks visible element as default (hasResults=true visible → default)', () => {
+            const doc = parse(`
+                <body>
+                    <div>
+                        <div if="!isOnSale" data-jay-sid="10:1" data-test-id="off"></div>
+                        <div if="isOnSale" data-jay-sid="20:1" data-test-id="on"></div>
+                    </div>
+                </body>
+            `);
+            const body = doc.querySelector('body')!;
+            const parent = doc.querySelector('div')!;
+            const groups = detectVariantGroups(parent);
+
+            const checker = makeVisibilityChecker({
+                '10:1': false,
+                '20:1': true,
+            });
+
+            const result = synthesizeVariant(
+                groups[0]!,
+                body,
+                mockContractTags,
+                jayPageSectionId,
+                pageContractPath,
+                (el) => mockBuildChildNode(el),
+                undefined,
+                checker,
+            );
+
+            const trueComp = result.componentSet.children!.find(
+                (c) => c.variantProperties?.isOnSale === 'true',
+            );
+            expect(result.instance.mainComponentId).toBe(trueComp!.id);
+            expect(result.instance.preferHiddenDefault).toBeFalsy();
+        });
+
+        it('boolean pair: picks first visible when negated element is the one visible', () => {
+            const doc = parse(`
+                <body>
+                    <div>
+                        <div if="!isOnSale" data-jay-sid="10:1" data-test-id="off"></div>
+                        <div if="isOnSale" data-jay-sid="20:1" data-test-id="on"></div>
+                    </div>
+                </body>
+            `);
+            const body = doc.querySelector('body')!;
+            const parent = doc.querySelector('div')!;
+            const groups = detectVariantGroups(parent);
+
+            const checker = makeVisibilityChecker({
+                '10:1': true,
+                '20:1': false,
+            });
+
+            const result = synthesizeVariant(
+                groups[0]!,
+                body,
+                mockContractTags,
+                jayPageSectionId,
+                pageContractPath,
+                (el) => mockBuildChildNode(el),
+                undefined,
+                checker,
+            );
+
+            const falseComp = result.componentSet.children!.find(
+                (c) => c.variantProperties?.isOnSale === 'false',
+            );
+            expect(result.instance.mainComponentId).toBe(falseComp!.id);
+        });
+
+        it('solo variant: preferHiddenDefault when element is unknown to checker', () => {
+            const doc = parse(`
+                <body>
+                    <div>
+                        <div>plain</div>
+                        <div if="isOnSale" data-jay-sid="10:1" data-test-id="sale"></div>
+                        <div>more plain</div>
+                    </div>
+                </body>
+            `);
+            const body = doc.querySelector('body')!;
+            const parent = doc.querySelector('div')!;
+            const groups = detectVariantGroups(parent);
+
+            const checker = makeVisibilityChecker({});
+
+            const result = synthesizeVariant(
+                groups[0]!,
+                body,
+                mockContractTags,
+                jayPageSectionId,
+                pageContractPath,
+                (el) => mockBuildChildNode(el),
+                undefined,
+                checker,
+            );
+
+            expect(result.instance.preferHiddenDefault).toBe(true);
+        });
+
+        it('solo variant: preferHiddenDefault when element is hidden in default', () => {
+            const doc = parse(`
+                <body>
+                    <div>
+                        <div>plain</div>
+                        <div if="isOnSale" data-jay-sid="10:1" data-test-id="sale"></div>
+                        <div>more plain</div>
+                    </div>
+                </body>
+            `);
+            const body = doc.querySelector('body')!;
+            const parent = doc.querySelector('div')!;
+            const groups = detectVariantGroups(parent);
+
+            const checker = makeVisibilityChecker({
+                '10:1': false,
+            });
+
+            const result = synthesizeVariant(
+                groups[0]!,
+                body,
+                mockContractTags,
+                jayPageSectionId,
+                pageContractPath,
+                (el) => mockBuildChildNode(el),
+                undefined,
+                checker,
+            );
+
+            expect(result.instance.preferHiddenDefault).toBe(true);
         });
     });
 

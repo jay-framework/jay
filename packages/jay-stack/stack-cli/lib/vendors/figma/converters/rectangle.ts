@@ -27,5 +27,5 @@ export function convertRectangleToHtml(node: FigmaVendorDocument, indent: string
     // Combine all styles with box-sizing
     const allStyles = `${positionStyle}${sizeStyles}${backgroundStyle}${strokeStyles}${borderRadius}${commonStyles}box-sizing: border-box;`;
 
-    return `${indent}<div data-jay-node-id="${id}" style="${allStyles}"></div>\n`;
+    return `${indent}<div style="${allStyles}"></div>\n`;
 }

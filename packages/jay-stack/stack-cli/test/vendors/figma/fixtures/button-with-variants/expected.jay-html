@@ -23,19 +23,19 @@
   </style>
 </head>
 <body>
-  <div data-jay-node-id="frame-1" style="position: absolute;top: 100px;left: 100px;width: 100%;height: 200px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;justify-content: flex-start;align-items: flex-start;gap: 20px;padding-left: 20px;padding-right: 20px;padding-top: 20px;padding-bottom: 20px;box-sizing: border-box;">
-    <div data-jay-node-id="button-instance" style="display: contents;">
+  <div style="position: absolute;top: 100px;left: 100px;width: 100%;height: 200px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;justify-content: flex-start;align-items: flex-start;gap: 20px;padding-left: 20px;padding-right: 20px;padding-top: 20px;padding-bottom: 20px;box-sizing: border-box;">
+    <div style="display: contents;">
       <div if="buttonVariant == primary && !isDisabled">
-        <div data-jay-node-id="text-primary" style="font-family: 'Inter', sans-serif;font-size: 16px;font-weight: 500;color: #000000;text-align: left;">Click Me</div>
+        <div style="font-family: 'Inter', sans-serif;font-size: 16px;font-weight: 500;color: #000000;text-align: left;">Click Me</div>
       </div>
       <div if="buttonVariant == primary && isDisabled">
-        <div data-jay-node-id="text-disabled" style="font-family: 'Inter', sans-serif;font-size: 16px;font-weight: 500;color: #000000;text-align: left;">Click Me</div>
+        <div style="font-family: 'Inter', sans-serif;font-size: 16px;font-weight: 500;color: #000000;text-align: left;">Click Me</div>
       </div>
       <div if="buttonVariant == secondary && !isDisabled">
-        <div data-jay-node-id="text-secondary" style="font-family: 'Inter', sans-serif;font-size: 16px;font-weight: 500;color: #000000;text-align: left;">Click Me</div>
+        <div style="font-family: 'Inter', sans-serif;font-size: 16px;font-weight: 500;color: #000000;text-align: left;">Click Me</div>
       </div>
       <div if="buttonVariant == secondary && isDisabled">
-        <div data-jay-node-id="text-secondary-disabled" style="font-family: 'Inter', sans-serif;font-size: 16px;font-weight: 500;color: #000000;text-align: left;">Click Me</div>
+        <div style="font-family: 'Inter', sans-serif;font-size: 16px;font-weight: 500;color: #000000;text-align: left;">Click Me</div>
       </div>
     </div>
   </div>

@@ -41,7 +41,7 @@ export function convertGroupNode(
 
     let htmlAttrs = '';
     if (cssClassName) htmlAttrs += `class="${cssClassName}" `;
-    htmlAttrs += `id="${node.id}" data-jay-node-id="${node.id}"${refAttr}`;
+    htmlAttrs += `id="${node.id}"${refAttr}`;
     if (effectiveStyle) htmlAttrs += ` style="${effectiveStyle}"`;
 
     for (const [attr, tagPath] of analysis.attributes) {

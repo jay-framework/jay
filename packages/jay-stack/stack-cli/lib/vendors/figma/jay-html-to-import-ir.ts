@@ -694,8 +694,10 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
         const inputName = htmlAttributes['name'] || name;
         const renderedValue = enrichedStyles?.inputValue;
         const sourceValue = htmlAttributes['value'];
-        const displayText = renderedValue || sourceValue || htmlAttributes['placeholder'] || '';
-        const isPlaceholder = !renderedValue && !sourceValue;
+        const isSourceTemplate = sourceValue != null && /\{[^}]+\}/.test(sourceValue);
+        const effectiveSource = isSourceTemplate ? undefined : sourceValue;
+        const displayText = renderedValue || effectiveSource || htmlAttributes['placeholder'] || '';
+        const isPlaceholder = !renderedValue && !effectiveSource;
         const inputChildren: ImportIRNode[] = [];
 
         if (displayText) {
@@ -807,6 +809,17 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
                 return result.node;
             };
 
+            const defaultStyleMap = perScenarioMaps?.get('default');
+            const visibilityChecker = defaultStyleMap
+                ? (el: HTMLElement) => {
+                      const sid = elementSourceId(el, sourceHtml);
+                      if (!sid) return undefined;
+                      const data = defaultStyleMap.get(sid);
+                      if (!data) return undefined;
+                      return data.styles?.display !== 'none';
+                  }
+                : undefined;
+
             const {
                 componentSet,
                 instance,
@@ -819,6 +832,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
                 pageContractPath,
                 buildChildNodeCb,
                 contractContext,
+                visibilityChecker,
             );
             componentSets.push(componentSet);
             children.push(instance);

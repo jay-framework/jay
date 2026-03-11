@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parse } from 'node-html-parser';
-import type { Contract } from '@jay-framework/editor-protocol';
+import type { Contract, ContractTag } from '@jay-framework/editor-protocol';
 import {
     generateVariantScenarios,
     parseDataTypeString,
@@ -40,6 +40,23 @@ describe('parseDataTypeString', () => {
     it('returns other for undefined', () => {
         expect(parseDataTypeString(undefined)).toEqual({ kind: 'other' });
     });
+
+    it('handles JayType objects (compiler format)', () => {
+        expect(parseDataTypeString({ name: 'boolean', kind: 0 })).toEqual({ kind: 'boolean' });
+        expect(parseDataTypeString({ name: 'string', kind: 0 })).toEqual({ kind: 'string' });
+        expect(parseDataTypeString({ name: 'number', kind: 0 })).toEqual({ kind: 'number' });
+        expect(
+            parseDataTypeString({
+                name: 'AvailabilityStatus',
+                kind: 2,
+                values: ['IN_STOCK', 'OUT_OF_STOCK'],
+            }),
+        ).toEqual({
+            kind: 'enum',
+            enumValues: ['IN_STOCK', 'OUT_OF_STOCK'],
+        });
+        expect(parseDataTypeString({ name: 'Unknown', kind: 0 })).toEqual({ kind: 'other' });
+    });
 });
 
 describe('generateVariantScenarios (condition-driven)', () => {
@@ -47,24 +64,15 @@ describe('generateVariantScenarios (condition-driven)', () => {
         return parse(html).querySelector('body')!;
     }
 
-    it('returns empty for no contract', () => {
+    it('returns empty for no contract tags', () => {
         const body = makeBody('<body><div if="flag">hello</div></body>');
-        expect(generateVariantScenarios(body, undefined)).toEqual([]);
-    });
-
-    it('returns empty for contract with no tags', () => {
-        const body = makeBody('<body><div if="flag">hello</div></body>');
-        const contract: Contract = { name: 'test', tags: [] };
-        expect(generateVariantScenarios(body, contract)).toEqual([]);
+        expect(generateVariantScenarios(body, [])).toEqual([]);
     });
 
     it('returns empty for no if conditions', () => {
         const body = makeBody('<body><div>hello</div></body>');
-        const contract: Contract = {
-            name: 'test',
-            tags: [{ tag: 'title', type: 'data', dataType: 'string' }],
-        };
-        expect(generateVariantScenarios(body, contract)).toEqual([]);
+        const tags: ContractTag[] = [{ tag: 'title', type: 'data', dataType: 'string' }];
+        expect(generateVariantScenarios(body, tags)).toEqual([]);
     });
 
     // --- Boolean conditions ---
@@ -77,7 +85,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
             name: 'test',
             tags: [{ tag: 'isLoading', type: 'variant', dataType: 'boolean' }],
         };
-        const scenarios = generateVariantScenarios(body, contract);
+        const scenarios = generateVariantScenarios(body, contract.tags);
 
         expect(scenarios).toHaveLength(3);
         expect(scenarios[0].id).toBe('default');
@@ -103,7 +111,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
             name: 'test',
             tags: [{ tag: 'mediaType', type: 'variant', dataType: 'enum (IMAGE | VIDEO)' }],
         };
-        const scenarios = generateVariantScenarios(body, contract);
+        const scenarios = generateVariantScenarios(body, contract.tags);
 
         expect(scenarios).toHaveLength(3);
         expect(scenarios[1]).toEqual({
@@ -124,7 +132,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
             name: 'test',
             tags: [{ tag: 'mediaType', type: 'variant', dataType: 'enum (IMAGE | VIDEO | AUDIO)' }],
         };
-        const scenarios = generateVariantScenarios(body, contract);
+        const scenarios = generateVariantScenarios(body, contract.tags);
 
         expect(scenarios).toHaveLength(2);
         expect(scenarios[1].id).toBe('mediaType=VIDEO');
@@ -144,7 +152,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
                 },
             ],
         };
-        const scenarios = generateVariantScenarios(body, contract);
+        const scenarios = generateVariantScenarios(body, contract.tags);
 
         expect(scenarios).toHaveLength(2);
         expect(scenarios[1]).toEqual({
@@ -160,7 +168,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
             name: 'test',
             tags: [{ tag: 'imageUrl', type: 'data', dataType: 'string' }],
         };
-        const scenarios = generateVariantScenarios(body, contract);
+        const scenarios = generateVariantScenarios(body, contract.tags);
 
         expect(scenarios).toHaveLength(2);
         expect(scenarios[1]).toEqual({
@@ -178,7 +186,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
             name: 'test',
             tags: [{ tag: 'itemCount', type: 'data', dataType: 'number' }],
         };
-        const scenarios = generateVariantScenarios(body, contract);
+        const scenarios = generateVariantScenarios(body, contract.tags);
 
         expect(scenarios).toHaveLength(2);
         expect(scenarios[1]).toEqual({
@@ -194,7 +202,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
             name: 'test',
             tags: [{ tag: 'quantity', type: 'data', dataType: 'number' }],
         };
-        const scenarios = generateVariantScenarios(body, contract);
+        const scenarios = generateVariantScenarios(body, contract.tags);
 
         expect(scenarios).toHaveLength(2);
         expect(scenarios[1]).toEqual({
@@ -210,7 +218,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
             name: 'test',
             tags: [{ tag: 'stock', type: 'data', dataType: 'number' }],
         };
-        const scenarios = generateVariantScenarios(body, contract);
+        const scenarios = generateVariantScenarios(body, contract.tags);
 
         expect(scenarios).toHaveLength(2);
         expect(scenarios[1]).toEqual({
@@ -226,7 +234,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
             name: 'test',
             tags: [{ tag: 'rating', type: 'data', dataType: 'number' }],
         };
-        const scenarios = generateVariantScenarios(body, contract);
+        const scenarios = generateVariantScenarios(body, contract.tags);
 
         expect(scenarios).toHaveLength(2);
         expect(scenarios[1]).toEqual({
@@ -242,7 +250,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
             name: 'test',
             tags: [{ tag: 'itemCount', type: 'data', dataType: 'number' }],
         };
-        const scenarios = generateVariantScenarios(body, contract);
+        const scenarios = generateVariantScenarios(body, contract.tags);
 
         expect(scenarios).toHaveLength(2);
         expect(scenarios[1]).toEqual({
@@ -260,7 +268,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
             name: 'test',
             tags: [{ tag: 'itemCount', type: 'data', dataType: 'number' }],
         };
-        const scenarios = generateVariantScenarios(body, contract);
+        const scenarios = generateVariantScenarios(body, contract.tags);
 
         expect(scenarios).toHaveLength(2);
         expect(scenarios[1]).toEqual({
@@ -281,7 +289,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
                 { tag: 'hasResults', type: 'variant', dataType: 'boolean' },
             ],
         };
-        const scenarios = generateVariantScenarios(body, contract);
+        const scenarios = generateVariantScenarios(body, contract.tags);
 
         expect(scenarios).toHaveLength(2);
         expect(scenarios[1]).toEqual({
@@ -316,7 +324,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
                 },
             ],
         };
-        const scenarios = generateVariantScenarios(body, contract);
+        const scenarios = generateVariantScenarios(body, contract.tags);
 
         expect(scenarios).toHaveLength(2);
         expect(scenarios[1]).toEqual({
@@ -343,7 +351,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
                 },
             ],
         };
-        const scenarios = generateVariantScenarios(body, contract);
+        const scenarios = generateVariantScenarios(body, contract.tags);
 
         expect(scenarios).toHaveLength(2);
         expect(scenarios[1]).toEqual({
@@ -373,7 +381,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
                 },
             ],
         };
-        const scenarios = generateVariantScenarios(body, contract);
+        const scenarios = generateVariantScenarios(body, contract.tags);
 
         expect(scenarios).toHaveLength(2);
         expect(scenarios[1]).toEqual({
@@ -396,7 +404,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
             name: 'test',
             tags: [{ tag: 'inStock', type: 'variant', dataType: 'boolean' }],
         };
-        const scenarios = generateVariantScenarios(body, contract);
+        const scenarios = generateVariantScenarios(body, contract.tags);
 
         expect(scenarios).toHaveLength(2);
         expect(scenarios[1].id).toBe('inStock=true');
@@ -420,7 +428,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
                 { tag: 'mediaType', type: 'variant', dataType: 'enum (IMAGE | VIDEO)' },
             ],
         };
-        const scenarios = generateVariantScenarios(body, contract);
+        const scenarios = generateVariantScenarios(body, contract.tags);
         const ids = scenarios.map((s) => s.id);
 
         expect(scenarios).toHaveLength(5);
@@ -444,7 +452,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
                 { tag: 'c', type: 'variant', dataType: 'boolean' },
             ],
         };
-        const scenarios = generateVariantScenarios(body, contract, 3);
+        const scenarios = generateVariantScenarios(body, contract.tags, 3);
         expect(scenarios).toHaveLength(3); // default + 2 (capped)
         expect(scenarios[0].id).toBe('default');
     });
@@ -463,7 +471,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
                 },
             ],
         };
-        const scenarios = generateVariantScenarios(body, contract);
+        const scenarios = generateVariantScenarios(body, contract.tags);
 
         expect(scenarios).toHaveLength(2);
         expect(scenarios[1]).toEqual({
@@ -540,7 +548,7 @@ describe('generateVariantScenarios (condition-driven)', () => {
                 },
             ],
         };
-        const scenarios = generateVariantScenarios(body, contract);
+        const scenarios = generateVariantScenarios(body, contract.tags);
         const ids = scenarios.map((s) => s.id);
 
         // Verify key patterns all generate scenarios

@@ -43,9 +43,7 @@ export function convertImageNodeToHtml(
     const classAttr = cssClassName ? ` class="${cssClassName}"` : '';
     const refAttribute = refAttr || '';
     const styleAttribute = effectiveStyle ? ` style="${effectiveStyle}"` : '';
-    const dataAttribute = ` data-jay-node-id="${id}"`;
-
-    return `${indent}<img${classAttr}${dataAttribute}${refAttribute} src="${src}" alt="${alt}"${styleAttribute} />\n`;
+    return `${indent}<img${classAttr}${refAttribute} src="${src}" alt="${alt}"${styleAttribute} />\n`;
 }
 
 export function extractStaticImageUrl(node: FigmaVendorDocument): string | undefined {

@@ -23,14 +23,14 @@
   </style>
 </head>
 <body>
-  <div data-jay-node-id="page-frame" style="width: 1200px;height: 800px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
-    <div data-jay-node-id="product-title" style="font-family: 'Roboto', sans-serif;font-size: 48px;font-weight: 700;color: #000000;text-align: left;">{product.name}</div>
-    <div data-jay-node-id="product-price" style="font-family: 'Roboto', sans-serif;font-size: 32px;font-weight: 500;color: #000000;text-align: left;">{product.price}</div>
-    <div id="reviews-repeater" data-jay-node-id="reviews-repeater" style="width: 1200px;height: 200px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
+  <div style="width: 1200px;height: 800px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
+    <div style="font-family: 'Roboto', sans-serif;font-size: 48px;font-weight: 700;color: #000000;text-align: left;">{product.name}</div>
+    <div style="font-family: 'Roboto', sans-serif;font-size: 32px;font-weight: 500;color: #000000;text-align: left;">{product.price}</div>
+    <div id="reviews-repeater" style="width: 1200px;height: 200px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
       <div style="position: relative; width: 100%;" forEach="product.reviews" trackBy="id">
-        <div data-jay-node-id="review-card" style="width: 1200px;height: 80px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
-          <div data-jay-node-id="reviewer-name" style="font-family: 'Roboto', sans-serif;font-size: 18px;font-weight: 600;color: #000000;text-align: left;">{author}</div>
-          <div data-jay-node-id="review-text" style="font-family: 'Roboto', sans-serif;font-size: 14px;font-weight: 400;color: #000000;text-align: left;">{comment}</div>
+        <div style="width: 1200px;height: 80px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
+          <div style="font-family: 'Roboto', sans-serif;font-size: 18px;font-weight: 600;color: #000000;text-align: left;">{author}</div>
+          <div style="font-family: 'Roboto', sans-serif;font-size: 14px;font-weight: 400;color: #000000;text-align: left;">{comment}</div>
         </div>
       </div>
     </div>

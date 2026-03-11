@@ -399,8 +399,6 @@ export function convertVariantNode(
     // layout flow directly -- fixed pixel sizes from Figma would break the
     // responsive CSS layout.
     return (
-        `${indent}<div data-jay-node-id="${node.id}"${refAttr} style="display: contents;">\n` +
-        variantHtml +
-        `${indent}</div>\n`
+        `${indent}<div${refAttr} style="display: contents;">\n` + variantHtml + `${indent}</div>\n`
     );
 }

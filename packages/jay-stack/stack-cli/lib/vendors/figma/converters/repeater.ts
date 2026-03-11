@@ -103,7 +103,7 @@ function convertRepeaterFlat(
     const { repeaterPath, trackByKey } = analysis;
     const indent = '  '.repeat(context.indentLevel);
 
-    let html = `${indent}<${tag} class="${cssClassName}" data-jay-node-id="${node.id}" forEach="${repeaterPath}" trackBy="${trackByKey}">\n`;
+    let html = `${indent}<${tag} class="${cssClassName}" forEach="${repeaterPath}" trackBy="${trackByKey}">\n`;
 
     const newContext: ConversionContext = {
         ...context,
@@ -169,7 +169,7 @@ function convertRepeaterWrapped(
         innerDivSizeStyles = 'width: 100%;';
     }
 
-    let html = `${indent}<div id="${node.id}" data-jay-node-id="${node.id}" style="${outerStyleAttr}">\n`;
+    let html = `${indent}<div id="${node.id}" style="${outerStyleAttr}">\n`;
     html += `${innerIndent}<div style="position: relative; ${innerDivSizeStyles}" forEach="${repeaterPath}" trackBy="${trackByKey}">\n`;
 
     const newContext: ConversionContext = {

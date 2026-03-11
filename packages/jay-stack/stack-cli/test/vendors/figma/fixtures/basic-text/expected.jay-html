@@ -23,9 +23,9 @@
   </style>
 </head>
 <body>
-  <div data-jay-node-id="frame-1" style="width: 800px;height: 400px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
-    <div data-jay-node-id="text-1" style="font-family: 'Inter', sans-serif;font-size: 48px;font-weight: 700;color: #1a1a1a;text-align: left;">Welcome to Jay Framework</div>
-    <div data-jay-node-id="text-2" style="font-family: 'Inter', sans-serif;font-size: 24px;font-weight: 400;color: #666666;text-align: left;">Build beautiful UIs with design tools</div>
+  <div style="width: 800px;height: 400px;background: transparent;border-radius: 0px;overflow: visible;display: flex;flex-direction: column;box-sizing: border-box;">
+    <div style="font-family: 'Inter', sans-serif;font-size: 48px;font-weight: 700;color: #1a1a1a;text-align: left;">Welcome to Jay Framework</div>
+    <div style="font-family: 'Inter', sans-serif;font-size: 24px;font-weight: 400;color: #666666;text-align: left;">Build beautiful UIs with design tools</div>
   </div>
 
 </body>

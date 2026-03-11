@@ -12,7 +12,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs';
 import { createRequire } from 'module';
 import { join } from 'path';
 import type { HTMLElement } from 'node-html-parser';
-import type { Contract, ContractTag } from '@jay-framework/editor-protocol';
+import type { ContractTag } from '@jay-framework/editor-protocol';
 import type {
     ComputedStyleMap,
     ComputedStyleData,
@@ -517,11 +517,28 @@ async function extractComputedStyles(
  * Parse a dataType string from editor-protocol Contract into structured info.
  * Handles: "string", "number", "boolean", "enum (val1 | val2 | ...)"
  */
-export function parseDataTypeString(dataType: string | undefined): {
+export function parseDataTypeString(dataType: unknown): {
     kind: 'boolean' | 'enum' | 'string' | 'number' | 'other';
     enumValues?: string[];
 } {
     if (!dataType) return { kind: 'other' };
+
+    // Handle JayType objects (compiler stores dataType as JayType, not string)
+    if (typeof dataType === 'object') {
+        const jayType = dataType as { kind?: number; name?: string; values?: string[] };
+        const name = jayType.name?.toLowerCase();
+        if (name === 'boolean') return { kind: 'boolean' };
+        if (name === 'string') return { kind: 'string' };
+        if (name === 'number') return { kind: 'number' };
+        // JayEnumType: kind=2 (enum), has values array
+        if (jayType.values && Array.isArray(jayType.values) && jayType.values.length > 0) {
+            return { kind: 'enum', enumValues: jayType.values };
+        }
+        return { kind: 'other' };
+    }
+
+    if (typeof dataType !== 'string') return { kind: 'other' };
+
     const trimmed = dataType.trim().toLowerCase();
     if (trimmed === 'boolean') return { kind: 'boolean' };
     if (trimmed === 'string') return { kind: 'string' };
@@ -661,10 +678,10 @@ function tokenToOverrideValue(
  */
 export function generateVariantScenarios(
     bodyDom: HTMLElement,
-    pageContract: Contract | undefined,
+    contractTags: ContractTag[],
     maxScenarios: number = 16,
 ): VariantScenario[] {
-    if (!pageContract || !pageContract.tags || pageContract.tags.length === 0) {
+    if (contractTags.length === 0) {
         return [];
     }
 
@@ -692,7 +709,7 @@ export function generateVariantScenarios(
         let allResolved = true;
 
         for (const token of tokens) {
-            const override = tokenToOverrideValue(token, pageContract.tags);
+            const override = tokenToOverrideValue(token, contractTags);
             if (!override) {
                 allResolved = false;
                 continue;
