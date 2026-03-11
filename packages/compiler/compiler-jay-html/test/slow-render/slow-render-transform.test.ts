@@ -1067,8 +1067,7 @@ tags:
 </head>
 <body>
     <jay:product-card productId="prod-123" ref="0">
-        <h2>Widget A</h2>
-        <span class="price">$29.99</span>
+        <div><h2>Widget A</h2><span class="price">$29.99</span></div>
     </jay:product-card>
 </body>
 </html>`),
@@ -1102,8 +1101,7 @@ tags:
 <head></head>
 <body>
     <jay:product-card productId="prod-123" ref="0">
-        <h2>Widget A</h2>
-        <span class="stock">{stockCount}</span>
+        <div><h2>Widget A</h2><span class="stock">{stockCount}</span></div>
     </jay:product-card>
 </body>
 </html>`),
@@ -1196,14 +1194,12 @@ tags:
 <body>
     <div slowForEach="products" jayIndex="0" jayTrackBy="p1">
         <jay:product-card productId="prod-123" ref="0">
-            <h2>Widget A</h2>
-            <span>$29.99</span>
+            <div><h2>Widget A</h2><span>$29.99</span></div>
         </jay:product-card>
     </div>
     <div slowForEach="products" jayIndex="1" jayTrackBy="p2">
         <jay:product-card productId="prod-456" ref="0">
-            <h2>Widget B</h2>
-            <span>$49.99</span>
+            <div><h2>Widget B</h2><span>$49.99</span></div>
         </jay:product-card>
     </div>
 </body>

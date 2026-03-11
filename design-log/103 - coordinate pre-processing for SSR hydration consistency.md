@@ -64,22 +64,21 @@ Inside `forEach`, coordinates contain dynamic segments (the trackBy value). The 
 Hierarchical, position-based:
 
 - Root content element: `"0"`
-- Children: `"0/1"`, `"0/2"`, `"0/3"` (sibling index)
-- With ref: use ref name (camelCase) instead of index: `"0/addToCart"`, `"0/5"`
-- Inside forEach item (trackBy `_id`): `"0/$_id"`, `"0/$_id/0"`, `"0/$_id/1"`
-- Inside slowForEach (jayTrackBy `p1`): `"0/p1"`, `"0/p1/0"`, `"0/p1/product-card:0"`
-- Headless instance: `"product-card:0"` or `"p1/product-card:0"` (existing convention)
-- Headless instance children: `"product-card:0/0"`, `"product-card:0/1"`, `"product-card:0/addToCart"` (own scope, counter resets)
+- Children: `"0/0"`, `"0/1"`, `"0/2"` (positional counter)
+- Inside forEach item (trackBy `_id`): `"$_id/0"`, `"$_id/1"`
+- Inside slowForEach (jayTrackBy `p1`): `"p1/0"`, `"p1/1"`
+- Headless instance: `"0/product-card:0"`, `"0/product-card:1"` (per-scope, per-contract counter)
+- Headless instance children: `"0/product-card:0/0"`, `"0/product-card:0/1"` (own scope, counter resets)
 
-Refs take precedence over auto-index. Conditionals use ref when present, else index.
+**All coordinates are fully positional.** Ref attributes (`ref="addToCart"`, `ref="hero"`) are used for the refs API only — they do NOT affect coordinate values. Every element (regular or headless) gets a counter-based coordinate. This eliminates special-case logic and guarantees uniqueness. Repeated refs on regular elements (valid in Jay — both elements receive events) don't cause coordinate collisions.
 
 ### Headless Instance Inline Template Coordinates
 
 When the pre-process encounters a `<jay:contract-name>` tag, it enters a new coordinate scope:
 
-1. The instance itself gets a coordinate like `"product-card:0"` (using ref or auto-counter with `contractName:N` format)
+1. The instance gets a coordinate like `"0/product-card:0"` (per-scope, per-contract positional counter)
 2. Inside the inline template, the counter resets to 0 and the prefix becomes the instance coordinate
-3. Children get: `"product-card:0/0"`, `"product-card:0/1"`, `"product-card:0/addToCart"`, etc.
+3. Children get: `"0/product-card:0/0"`, `"0/product-card:0/1"`, etc. (fully positional)
 4. For forEach headless instances, the instance coordinate includes the dynamic prefix: `"$_id/product-card:0"`, children: `"$_id/product-card:0/0"`
 5. For slowForEach headless instances, literal prefix: `"p1/product-card:0"`, children: `"p1/product-card:0/0"`
 
@@ -299,11 +298,11 @@ adoptElement('0/' + escapeAttr(String(vs1._id)) + '/0', ...);
 </jay:product-card>
 ```
 
-Pre-process assigns:
-- `<jay:product-card>` → (no coordinate on the tag itself — it's a compiler directive)
-- `<article>` → `jay-coordinate-base="product-card:0/0"`
-- `<h2>` → `jay-coordinate-base="product-card:0/1"`
-- `<button ref="addToCart">` → `jay-coordinate-base="product-card:0/addToCart"`
+Pre-process assigns (assuming this is inside root element `"0"`):
+- `<jay:product-card>` → `jay-coordinate-base="0/product-card:0"` (instance coordinate)
+- `<article>` → `jay-coordinate-base="0/product-card:0/0"`
+- `<h2>` → `jay-coordinate-base="0/product-card:0/0/0"`
+- `<button ref="addToCart">` → `jay-coordinate-base="0/product-card:0/0/1"` (positional, ref ignored)
 
 ### slowForEach Headless Instance
 
@@ -320,9 +319,10 @@ Pre-process assigns:
 
 Pre-process assigns:
 - `<div>` (slowForEach container) → `jay-coordinate-base="p1"`
+- `<jay:product-card>` → `jay-coordinate-base="p1/product-card:0"`
 - `<article>` → `jay-coordinate-base="p1/product-card:0/0"`
-- `<h2>` → (static text, no dynamic content — may or may not get coordinate)
-- `<span>` → `jay-coordinate-base="p1/product-card:0/1"`
+- `<h2>` → `jay-coordinate-base="p1/product-card:0/0/0"`
+- `<span>` → `jay-coordinate-base="p1/product-card:0/0/1"`
 
 ## Trade-offs
 

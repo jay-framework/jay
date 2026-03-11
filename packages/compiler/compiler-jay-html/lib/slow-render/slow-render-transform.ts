@@ -876,8 +876,23 @@ export function resolveHeadlessInstances(
                     const result = transformChildren(element, phaseMap, '', data.slowViewState);
                     allValidations.push(...result.validations);
                     if (result.val) {
+                        // Filter whitespace-only text nodes to count significant children
+                        const significantChildren = result.val.filter(
+                            (child) =>
+                                child.nodeType !== NodeType.TEXT_NODE ||
+                                (child.innerText || '').trim() !== '',
+                        );
+
                         element.innerHTML = '';
-                        result.val.forEach((child) => element.appendChild(child as any));
+                        if (significantChildren.length > 1) {
+                            // Multiple children — wrap in a <div> so all targets
+                            // (element, server, hydrate) see a single root element.
+                            const wrapper = parse('<div></div>').querySelector('div')!;
+                            result.val.forEach((child) => wrapper.appendChild(child as any));
+                            element.appendChild(wrapper as any);
+                        } else {
+                            result.val.forEach((child) => element.appendChild(child as any));
+                        }
                     }
                 }
             }
