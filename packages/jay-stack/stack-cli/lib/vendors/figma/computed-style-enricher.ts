@@ -16,6 +16,7 @@ import type { Contract, ContractTag } from '@jay-framework/editor-protocol';
 import type {
     ComputedStyleMap,
     ComputedStyleData,
+    RepeaterDataMap,
     EnricherOptions,
     EnricherResult,
     VariantScenario,
@@ -53,6 +54,7 @@ export async function enrichWithComputedStyles(options: EnricherOptions): Promis
         perScenario: new Map(),
         scenarios: [],
         screenshots: new Map(),
+        repeaterDataMap: new Map(),
     };
     const startTime = Date.now();
 
@@ -81,6 +83,7 @@ export async function enrichWithComputedStyles(options: EnricherOptions): Promis
                 perScenario: new Map(),
                 scenarios: [],
                 screenshots: new Map(),
+                repeaterDataMap: new Map(),
             };
         }
     }
@@ -110,6 +113,7 @@ export async function enrichWithComputedStyles(options: EnricherOptions): Promis
                     : [{ id: 'default', contractValues: {}, queryString: '' }];
 
             const mergedStyleMap = new Map<string, ComputedStyleData>();
+            const mergedRepeaterDataMap: RepeaterDataMap = new Map();
             const perScenarioMaps = new Map<string, ComputedStyleMap>();
             const screenshots = new Map<string, string>();
 
@@ -154,12 +158,22 @@ export async function enrichWithComputedStyles(options: EnricherOptions): Promis
                         console.log(`[ComputedStyles] Screenshot saved: ${screenshotPath}`);
                     }
 
-                    const scenarioStyleMap = await extractComputedStyles(page, scenario.id);
+                    const { styleMap: scenarioStyleMap, repeaterDataMap: scenarioRepeaterMap } =
+                        await extractComputedStyles(page, scenario.id);
 
                     perScenarioMaps.set(scenario.id, scenarioStyleMap);
 
                     for (const [key, data] of scenarioStyleMap) {
-                        mergedStyleMap.set(key, data);
+                        if (!mergedStyleMap.has(key)) {
+                            mergedStyleMap.set(key, data);
+                        }
+                    }
+
+                    // Merge repeater data (default scenario only — repeaters don't vary by variant)
+                    if (scenario.id === 'default') {
+                        for (const [key, list] of scenarioRepeaterMap) {
+                            mergedRepeaterDataMap.set(key, list);
+                        }
                     }
 
                     const scenarioDuration = Date.now() - scenarioStart;
@@ -194,7 +208,13 @@ export async function enrichWithComputedStyles(options: EnricherOptions): Promis
             }
 
             await context.close();
-            return { merged: mergedStyleMap, perScenario: perScenarioMaps, scenarios, screenshots };
+            return {
+                merged: mergedStyleMap,
+                perScenario: perScenarioMaps,
+                scenarios,
+                screenshots,
+                repeaterDataMap: mergedRepeaterDataMap,
+            };
         } finally {
             await browser.close();
         }
@@ -305,7 +325,7 @@ function tryWriteCache(
 async function extractComputedStyles(
     page: any, // Playwright Page type
     _variantContext?: string,
-): Promise<ComputedStyleMap> {
+): Promise<{ styleMap: ComputedStyleMap; repeaterDataMap: RepeaterDataMap }> {
     const extractedData = await page.evaluate(() => {
         const properties = [
             'display',
@@ -456,14 +476,27 @@ async function extractComputedStyles(
     });
 
     const styleMap = new Map<string, ComputedStyleData>();
+    const repeaterDataMap: RepeaterDataMap = new Map();
+
     for (const item of extractedData) {
-        styleMap.set(item.key, {
+        const data: ComputedStyleData = {
             styles: item.styles,
             boundingRect: item.boundingRect,
             textContent: item.textContent,
             inputValue: item.inputValue,
             image: item.image,
-        });
+        };
+
+        if (!styleMap.has(item.key)) {
+            styleMap.set(item.key, data);
+        }
+
+        let list = repeaterDataMap.get(item.key);
+        if (!list) {
+            list = [];
+            repeaterDataMap.set(item.key, list);
+        }
+        list.push(data);
     }
 
     // Diagnostic: log flex containers to verify CSS is loaded at extraction time
@@ -477,7 +510,7 @@ async function extractComputedStyles(
         console.log(`[ComputedStyles] ${flexCount} flex containers detected (CSS loaded)`);
     }
 
-    return styleMap;
+    return { styleMap, repeaterDataMap };
 }
 
 /**

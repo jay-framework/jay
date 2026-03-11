@@ -11,7 +11,12 @@ import { extractBindingsFromElement, buildMergedContractTags } from './binding-r
 import type { ImportContractContext, HeadlessImportInfo } from './binding-reconstructor';
 import { detectVariantGroups, synthesizeVariant, synthesizeRepeater } from './variant-synthesizer';
 import type { PageContractPath } from './pageContractPath';
-import type { ComputedStyleMap, ScenarioStyleMaps, VariantScenario } from './computed-style-types';
+import type {
+    ComputedStyleMap,
+    RepeaterDataMap,
+    ScenarioStyleMaps,
+    VariantScenario,
+} from './computed-style-types';
 import { tokenizeCondition } from './condition-tokenizer';
 
 const BLOCK_LEVEL_TAGS = new Set([
@@ -250,9 +255,94 @@ interface BuildNodeContext {
     contractContext?: ImportContractContext;
     cssClassMap?: CssClassMap;
     computedStyleMap?: ComputedStyleMap;
+    repeaterDataMap?: RepeaterDataMap;
     perScenarioMaps?: ScenarioStyleMaps;
     scenarios?: VariantScenario[];
     sourceHtml?: string;
+}
+
+const MAX_DEMO_ITEMS = 4;
+
+type DemoItem = {
+    textOverrides: Record<string, string>;
+    imageOverrides: Record<string, string>;
+};
+
+function collectTemplateLeafNodes(
+    node: ImportIRNode,
+): Array<{ id: string; kind: 'TEXT' | 'IMAGE'; text?: string; imageSrc?: string }> {
+    const leaves: Array<{
+        id: string;
+        kind: 'TEXT' | 'IMAGE';
+        text?: string;
+        imageSrc?: string;
+    }> = [];
+
+    function walk(n: ImportIRNode) {
+        if (n.kind === 'TEXT' && n.text) {
+            leaves.push({ id: n.id, kind: 'TEXT', text: n.text.characters });
+        } else if (n.kind === 'IMAGE') {
+            leaves.push({
+                id: n.id,
+                kind: 'IMAGE',
+                imageSrc: n.image?.resolvedSrc || n.image?.src,
+            });
+        }
+        if (n.children) {
+            for (const child of n.children) walk(child);
+        }
+    }
+
+    walk(node);
+    return leaves;
+}
+
+function extractDemoItems(
+    templateNode: ImportIRNode,
+    repeaterDataMap: RepeaterDataMap | undefined,
+): DemoItem[] {
+    if (!repeaterDataMap || repeaterDataMap.size === 0) return [];
+
+    const leaves = collectTemplateLeafNodes(templateNode);
+    if (leaves.length === 0) return [];
+
+    // Find how many additional rendered instances exist by looking at the
+    // first leaf's sid in the repeaterDataMap (all repeater children have the same count).
+    const firstLeafInstances = repeaterDataMap.get(leaves[0].id);
+    if (!firstLeafInstances || firstLeafInstances.length <= 1) return [];
+
+    const instanceCount = Math.min(firstLeafInstances.length - 1, MAX_DEMO_ITEMS);
+    const demoItems: DemoItem[] = [];
+
+    for (let i = 0; i < instanceCount; i++) {
+        const textOverrides: Record<string, string> = {};
+        const imageOverrides: Record<string, string> = {};
+
+        for (const leaf of leaves) {
+            const instances = repeaterDataMap.get(leaf.id);
+            if (!instances || instances.length <= i + 1) continue;
+
+            const demoData = instances[i + 1]; // index 0 is the template
+
+            if (leaf.kind === 'TEXT') {
+                const demoText = demoData.textContent;
+                if (demoText && demoText !== leaf.text) {
+                    textOverrides[leaf.id] = demoText;
+                }
+            } else if (leaf.kind === 'IMAGE') {
+                const demoSrc = demoData.image?.renderedSrc;
+                if (demoSrc && demoSrc !== leaf.imageSrc) {
+                    imageOverrides[leaf.id] = demoSrc;
+                }
+            }
+        }
+
+        if (Object.keys(textOverrides).length > 0 || Object.keys(imageOverrides).length > 0) {
+            demoItems.push({ textOverrides, imageOverrides });
+        }
+    }
+
+    return demoItems;
 }
 
 function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): BuildResult | null {
@@ -265,6 +355,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
         contractContext,
         cssClassMap,
         computedStyleMap,
+        repeaterDataMap,
         perScenarioMaps,
         scenarios,
         sourceHtml,
@@ -529,6 +620,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
         });
 
         const children: ImportIRNode[] = [];
+        let demoItems: DemoItem[] | undefined;
         if (firstChild) {
             const childResult = buildNodeFromElement(firstChild, {
                 ...ctx,
@@ -538,6 +630,8 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
                 children.push(childResult.node);
                 warnings.push(...childResult.warnings);
                 componentSets.push(...childResult.componentSets);
+
+                demoItems = extractDemoItems(childResult.node, repeaterDataMap);
             }
         }
 
@@ -554,6 +648,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
             bindings: bindings.length > 0 ? bindings : undefined,
             warnings: warnings.length > 0 ? [...warnings] : undefined,
             children,
+            demoItems: demoItems && demoItems.length > 0 ? demoItems : undefined,
         };
         return { node, warnings, componentSets };
     }
@@ -864,6 +959,7 @@ export function buildImportIR(
         sourceHtml?: string;
         contentHash?: string;
         computedStyleMap?: ComputedStyleMap;
+        repeaterDataMap?: RepeaterDataMap;
         perScenarioMaps?: ScenarioStyleMaps;
         scenarios?: VariantScenario[];
     },
@@ -903,6 +999,7 @@ export function buildImportIR(
             contractContext,
             cssClassMap,
             computedStyleMap: options?.computedStyleMap,
+            repeaterDataMap: options?.repeaterDataMap,
             perScenarioMaps: options?.perScenarioMaps,
             scenarios: options?.scenarios,
             sourceHtml: options?.sourceHtml,

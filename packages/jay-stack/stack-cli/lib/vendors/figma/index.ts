@@ -558,6 +558,7 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
         let computedStyleMap;
         let perScenarioMaps;
         let enricherScenarios: any[] = [];
+        let repeaterDataMap;
 
         try {
             const { enrichWithComputedStyles, generateVariantScenarios } = await import(
@@ -585,6 +586,7 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
             computedStyleMap = enricherResult.merged;
             perScenarioMaps = enricherResult.perScenario;
             enricherScenarios = enricherResult.scenarios;
+            repeaterDataMap = enricherResult.repeaterDataMap;
         } catch (error) {
             console.warn('[Import] Computed style enrichment failed:', (error as Error).message);
             computedStyleMap = undefined;
@@ -603,11 +605,13 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
                 computedStyleMap,
                 perScenarioMaps,
                 scenarios: enricherScenarios,
+                repeaterDataMap,
             },
         );
 
         // Fetch and save images to disk (if publicFolder is available)
         let imageManifest: Array<{ nodeId: string; imageId: string; scaleMode: string }> = [];
+        let imageUrlToId: Map<string, string> | undefined;
         if (options?.publicFolder) {
             try {
                 const { fetchAndSaveImages } = await import('./image-asset-fetcher');
@@ -618,6 +622,7 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
                     publicFolder: options.publicFolder,
                 });
                 imageManifest = fetchResult.imageManifest;
+                imageUrlToId = fetchResult.urlToImageId;
                 if (fetchResult.warnings.length > 0) {
                     console.warn('[Import] Image warnings:', fetchResult.warnings.join('; '));
                 }
@@ -626,7 +631,7 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
             }
         }
 
-        const vendorDoc = adaptIRToFigmaVendorDoc(ir);
+        const vendorDoc = adaptIRToFigmaVendorDoc(ir, { imageUrlToId });
 
         return {
             vendorDoc,

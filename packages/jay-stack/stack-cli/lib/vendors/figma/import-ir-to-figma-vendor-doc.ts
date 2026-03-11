@@ -372,7 +372,96 @@ function injectHiddenVariant(componentSet: FigmaVendorDocument): void {
     componentSet.children.push(hiddenComponent);
 }
 
-function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
+const DEMO_INSTANCE_MARKER = 'jay-demo-instance';
+
+function deepCloneVendorDoc(doc: FigmaVendorDocument): FigmaVendorDocument {
+    const clone: FigmaVendorDocument = { ...doc };
+    if (doc.pluginData) {
+        clone.pluginData = { ...doc.pluginData };
+    }
+    if (doc.fills) {
+        clone.fills = doc.fills.map((f: any) => ({ ...f }));
+    }
+    if (doc.children) {
+        clone.children = doc.children.map((c) => deepCloneVendorDoc(c));
+    }
+    return clone;
+}
+
+function stripBindingPluginData(doc: FigmaVendorDocument): void {
+    if (doc.pluginData) {
+        delete doc.pluginData['jay-layer-bindings'];
+    }
+    if (doc.children) {
+        for (const child of doc.children) stripBindingPluginData(child);
+    }
+}
+
+function applyDemoOverrides(
+    doc: FigmaVendorDocument,
+    textOverrides: Record<string, string>,
+    imageOverrides: Record<string, string>,
+    imageAssetFetcher?: (url: string) => string | undefined,
+): void {
+    if (doc.id && textOverrides[doc.id] !== undefined) {
+        doc.characters = textOverrides[doc.id];
+        const truncated = doc.characters.substring(0, 20);
+        if (doc.type === 'TEXT') doc.name = truncated || doc.name;
+    }
+
+    if (doc.id && imageOverrides[doc.id] !== undefined) {
+        const newSrc = imageOverrides[doc.id];
+        if (doc.pluginData) doc.pluginData['imgSrc'] = newSrc;
+
+        if (imageAssetFetcher) {
+            const importImageId = imageAssetFetcher(newSrc);
+            if (importImageId && doc.fills) {
+                for (const fill of doc.fills) {
+                    if ((fill as any).type === 'IMAGE' && (fill as any).jayImportImageId) {
+                        (fill as any).jayImportImageId = importImageId;
+                    }
+                }
+            }
+        }
+    }
+
+    if (doc.children) {
+        for (const child of doc.children) {
+            applyDemoOverrides(child, textOverrides, imageOverrides, imageAssetFetcher);
+        }
+    }
+}
+
+function createDemoSiblings(
+    templateDoc: FigmaVendorDocument,
+    demoItems: Array<{
+        textOverrides: Record<string, string>;
+        imageOverrides: Record<string, string>;
+    }>,
+    imageAssetFetcher?: (url: string) => string | undefined,
+): FigmaVendorDocument[] {
+    return demoItems.map((item, i) => {
+        const clone = deepCloneVendorDoc(templateDoc);
+        clone.id = `${templateDoc.id}-demo-${i}`;
+        clone.name = `${templateDoc.name || 'item'} (demo ${i + 2})`;
+
+        stripBindingPluginData(clone);
+        applyDemoOverrides(clone, item.textOverrides, item.imageOverrides, imageAssetFetcher);
+
+        clone.pluginData = clone.pluginData || {};
+        clone.pluginData[DEMO_INSTANCE_MARKER] = 'true';
+
+        return clone;
+    });
+}
+
+type ImageAssetFetcher = (url: string) => string | undefined;
+
+function adaptNode(
+    node: ImportIRNode,
+    index: number,
+    imageAssetFetcher?: ImageAssetFetcher,
+): FigmaVendorDocument {
     const name = node.name || `${node.kind.toLowerCase()}-${index}`;
     const base: FigmaVendorDocument = {
         id: node.id,
@@ -605,7 +694,14 @@ function adaptNode(node: ImportIRNode, index: number): FigmaVendorDocument {
 
     // Recursively adapt children
     if (node.children && node.children.length > 0) {
-        base.children = node.children.map((child, i) => adaptNode(child, i));
+        base.children = node.children.map((child, i) => adaptNode(child, i, imageAssetFetcher));
+    }
+
+    // Repeater demo items: duplicate template child for visual fidelity
+    if (node.demoItems && node.demoItems.length > 0 && base.children && base.children.length > 0) {
+        const templateDoc = base.children[0];
+        const siblings = createDemoSiblings(templateDoc, node.demoItems, imageAssetFetcher);
+        base.children.push(...siblings);
     }
 
     // Figma-only: inject _hidden_ dummy variant into component sets so designers
@@ -761,12 +857,23 @@ function collectImportReport(irRoot: ImportIRNode): ImportReport {
     };
 }
 
+export interface AdaptOptions {
+    imageUrlToId?: Map<string, string>;
+}
+
 /**
  * Adapt an ImportIRDocument to a FigmaVendorDocument.
  * The output is suitable for the Figma plugin deserializer.
  */
-export function adaptIRToFigmaVendorDoc(ir: ImportIRDocument): FigmaVendorDocument {
-    const root = adaptNode(ir.root, 0);
+export function adaptIRToFigmaVendorDoc(
+    ir: ImportIRDocument,
+    options?: AdaptOptions,
+): FigmaVendorDocument {
+    const fetcher: ImageAssetFetcher | undefined = options?.imageUrlToId
+        ? (url: string) => options.imageUrlToId!.get(url)
+        : undefined;
+
+    const root = adaptNode(ir.root, 0, fetcher);
 
     // Ensure SECTION has required pluginData
     if (root.type === 'SECTION') {

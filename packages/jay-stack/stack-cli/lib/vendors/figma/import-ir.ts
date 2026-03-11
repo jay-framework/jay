@@ -144,6 +144,10 @@ export type ImportIRNode = {
     svgData?: string;
     warnings?: string[];
     children?: ImportIRNode[];
+    demoItems?: Array<{
+        textOverrides: Record<string, string>;
+        imageOverrides: Record<string, string>;
+    }>;
     // Variant-related fields for COMPONENT_SET / COMPONENT / INSTANCE
     variantProperties?: Record<string, string>; // For COMPONENT nodes
     componentPropertyDefinitions?: Record<string, { type: 'VARIANT'; variantOptions: string[] }>; // For COMPONENT_SET

@@ -23,6 +23,7 @@ export interface ImageFetchResult {
     imageManifest: ImageManifestEntry[];
     warnings: string[];
     totalBytesSaved: number;
+    urlToImageId: Map<string, string>;
 }
 
 const SUPPORTED_MIMES = new Set([
@@ -45,6 +46,19 @@ function collectImageRefs(
     }
     for (const child of node.children || []) {
         collectImageRefs(child, refs);
+    }
+}
+
+function collectDemoImageUrls(node: ImportIRNode, urls: Set<string>): void {
+    if (node.demoItems) {
+        for (const item of node.demoItems) {
+            for (const url of Object.values(item.imageOverrides)) {
+                if (url) urls.add(url);
+            }
+        }
+    }
+    for (const child of node.children || []) {
+        collectDemoImageUrls(child, urls);
     }
 }
 
@@ -113,8 +127,12 @@ export async function fetchAndSaveImages(
     const allRefs: Array<{ nodeId: string; ref: ImportIRImageRef }> = [];
     collectImageRefs(ir.root, allRefs);
 
-    if (allRefs.length === 0) {
-        return { imageManifest: [], warnings: [], totalBytesSaved: 0 };
+    // Also collect demo image URLs (repeater demo item overrides)
+    const demoImageUrls = new Set<string>();
+    collectDemoImageUrls(ir.root, demoImageUrls);
+
+    if (allRefs.length === 0 && demoImageUrls.size === 0) {
+        return { imageManifest: [], warnings: [], totalBytesSaved: 0, urlToImageId: new Map() };
     }
 
     // Deduplicate by resolved URL
@@ -124,6 +142,14 @@ export async function fetchAndSaveImages(
         const existing = urlToRefs.get(resolved) || [];
         existing.push(entry);
         urlToRefs.set(resolved, existing);
+    }
+
+    // Include demo image URLs in the fetch pool (no IR ref to write back to)
+    for (const demoUrl of demoImageUrls) {
+        const resolved = resolveUrl(demoUrl, options.devServerUrl);
+        if (!urlToRefs.has(resolved)) {
+            urlToRefs.set(resolved, []);
+        }
     }
 
     const imagesDir = path.join(path.resolve(options.publicFolder), 'images');
@@ -136,6 +162,8 @@ export async function fetchAndSaveImages(
 
     // Content hash → imageId cache for dedup
     const hashToImageId = new Map<string, string>();
+    // Resolved URL → imageId (for demo image lookups)
+    const urlToImageIdMap = new Map<string, string>();
 
     const uniqueUrls = [...urlToRefs.keys()];
     console.log(
@@ -158,7 +186,7 @@ export async function fetchAndSaveImages(
         );
 
         for (const { resolvedUrl, result } of results) {
-            const refs = urlToRefs.get(resolvedUrl)!;
+            const refs = urlToRefs.get(resolvedUrl) || [];
 
             if ('error' in result) {
                 warnings.push(`IMAGE_FETCH_FAILED: ${resolvedUrl} — ${result.error}`);
@@ -195,6 +223,9 @@ export async function fetchAndSaveImages(
                 assetCount++;
             }
 
+            // Map resolved URL → imageId (for demo image lookups and general use)
+            urlToImageIdMap.set(resolvedUrl, imageId);
+
             // Update all IR refs pointing to this URL
             for (const { nodeId, ref } of refs) {
                 ref.importImageId = imageId;
@@ -209,8 +240,8 @@ export async function fetchAndSaveImages(
     }
 
     console.log(
-        `[ImageFetcher] Done: ${assetCount} assets saved, ${imageManifest.length} refs, ${totalBytes} bytes total`,
+        `[ImageFetcher] Done: ${assetCount} assets saved, ${imageManifest.length} refs, ${totalBytes} bytes total, ${urlToImageIdMap.size} URL mappings`,
     );
 
-    return { imageManifest, warnings, totalBytesSaved: totalBytes };
+    return { imageManifest, warnings, totalBytesSaved: totalBytes, urlToImageId: urlToImageIdMap };
 }

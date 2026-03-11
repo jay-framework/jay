@@ -59,6 +59,14 @@ export interface ComputedStyleData {
 export type ComputedStyleMap = Map<string, ComputedStyleData>;
 
 /**
+ * Map from element key to an ordered array of computed style data
+ * for each rendered instance sharing that key. Used for repeaters
+ * where multiple DOM elements share the same data-jay-sid.
+ * Index 0 = first rendered item (template), index 1+ = additional items.
+ */
+export type RepeaterDataMap = Map<string, ComputedStyleData[]>;
+
+/**
  * Variant scenario for multi-scenario rendering.
  * Used to render pages with different contract values (e.g., if conditions).
  */
@@ -97,6 +105,8 @@ export interface EnricherResult {
     scenarios: VariantScenario[];
     /** Paths to screenshots taken per scenario (scenario ID → file path). */
     screenshots: Map<string, string>;
+    /** All rendered instances per sid, for repeater demo item extraction. */
+    repeaterDataMap: RepeaterDataMap;
 }
 
 /**
