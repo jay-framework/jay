@@ -175,6 +175,8 @@ export interface ExportResponse extends BaseResponse {
     jayHtmlPath?: string;
     contractPath?: string;
     warnings?: string[];
+    /** True when the jay-html file on disk changed since last import */
+    diskDiverged?: boolean;
 }
 
 export interface ImportResponse<TVendorDoc> extends BaseResponse {

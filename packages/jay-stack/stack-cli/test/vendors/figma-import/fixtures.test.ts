@@ -400,10 +400,12 @@ describe('Figma Import Fixtures', () => {
                         const result: any = {};
                         for (const [k, v] of Object.entries(rest)) {
                             if (k === 'pluginData' && v && typeof v === 'object') {
-                                const { 'jay-import-report': _, ...pdRest } = v as Record<
-                                    string,
-                                    any
-                                >;
+                                const {
+                                    'jay-import-report': _r,
+                                    'jay-import-content-hash': _h,
+                                    'jay-import-timestamp': _t,
+                                    ...pdRest
+                                } = v as Record<string, any>;
                                 result[k] = stripIds(pdRest);
                             } else {
                                 result[k] = stripIds(v);
@@ -438,7 +440,15 @@ describe('Figma Import Fixtures', () => {
                     `Second import failed for fixture "${fixtureName}": success=${response2.success}, error=${response2.error ?? 'none'}`,
                 );
             }
-            expect(response2.vendorDoc).toEqual(vendorDoc);
+            // Strip timestamp from both (it changes between runs); hash should be identical
+            const stripTimestamp = (doc: any) => {
+                const clone = JSON.parse(JSON.stringify(doc));
+                if (clone.pluginData?.['jay-import-timestamp']) {
+                    delete clone.pluginData['jay-import-timestamp'];
+                }
+                return clone;
+            };
+            expect(stripTimestamp(response2.vendorDoc)).toEqual(stripTimestamp(vendorDoc));
 
             // 11. Roundtrip: export and compare semantic equivalence (when meta.mode === 'roundtrip')
             if (meta.mode === 'roundtrip') {

@@ -262,7 +262,25 @@ function convertRegularNode(
     // original stylesheet. Inline styles from computed values would override them
     // and break the layout (e.g. display:grid → display:flex). Skip inline styles
     // for elements with classes to preserve the original visual appearance.
-    const effectiveStyle = cssClassName ? '' : styleAttr;
+    let effectiveStyle = cssClassName ? '' : styleAttr;
+
+    // Merge unsupported CSS stored during import (properties Figma can't represent).
+    // Only needed for inline-styled nodes; class-based nodes already have these in the stylesheet.
+    if (!cssClassName && pluginData?.['jay-unsupported-css']) {
+        try {
+            const unsupported = JSON.parse(pluginData['jay-unsupported-css']) as Record<string, string>;
+            const existingProps = new Set<string>();
+            for (const part of effectiveStyle.split(';')) {
+                const colonIdx = part.indexOf(':');
+                if (colonIdx > 0) existingProps.add(part.substring(0, colonIdx).trim());
+            }
+            for (const [prop, value] of Object.entries(unsupported)) {
+                if (!existingProps.has(prop)) effectiveStyle += `${prop}: ${value};`;
+            }
+        } catch {
+            // Invalid JSON — skip silently
+        }
+    }
 
     // Build HTML attributes
     let htmlAttrs = '';
@@ -649,6 +667,15 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
         }
 
         const vendorDoc = adaptIRToFigmaVendorDoc(ir, { imageUrlToId });
+
+        // Store content hash and timestamp for sync state tracking (Task 5.2)
+        if (vendorDoc.type === 'SECTION' && parsedJayHtml.sourceHtml) {
+            const { computeContentHash } = await import('./content-hash');
+            vendorDoc.pluginData = vendorDoc.pluginData || {};
+            vendorDoc.pluginData['jay-import-content-hash'] =
+                computeContentHash(parsedJayHtml.sourceHtml);
+            vendorDoc.pluginData['jay-import-timestamp'] = new Date().toISOString();
+        }
 
         return {
             vendorDoc,

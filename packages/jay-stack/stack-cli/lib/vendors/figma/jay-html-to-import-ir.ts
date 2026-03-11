@@ -386,6 +386,19 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
         'loading',
         'target',
         'rel',
+        'name',
+        'min',
+        'max',
+        'step',
+        'checked',
+        'required',
+        'for',
+        'autocomplete',
+        'maxlength',
+        'minlength',
+        'pattern',
+        'readonly',
+        'multiple',
     ] as const;
     const htmlAttributes: Record<string, string> = {};
     let hasHtmlAttributes = false;

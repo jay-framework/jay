@@ -1175,8 +1175,31 @@ export function createEditorHandlers(
                         projectPage.usedComponents,
                     );
 
-                    // Write Jay HTML file
+                    // Check for disk divergence before writing
                     const jayHtmlPath = path.join(dirname, 'page.jay-html');
+                    let diskDiverged: boolean | undefined;
+                    const storedHash = (vendorDoc as any)?.pluginData?.[
+                        'jay-import-content-hash'
+                    ] as string | undefined;
+
+                    if (storedHash && fs.existsSync(jayHtmlPath)) {
+                        try {
+                            const { hasContentDiverged } = await import(
+                                './vendors/figma/content-hash'
+                            );
+                            const currentContent = await fs.promises.readFile(jayHtmlPath, 'utf-8');
+                            diskDiverged = hasContentDiverged(storedHash, currentContent);
+                            if (diskDiverged) {
+                                getLogger().warn(
+                                    `⚠️  jay-html on disk has changed since last import`,
+                                );
+                            }
+                        } catch {
+                            // Can't check divergence — proceed without flag
+                        }
+                    }
+
+                    // Write Jay HTML file
                     await fs.promises.writeFile(jayHtmlPath, fullJayHtml, 'utf-8');
 
                     // Debug: dump export pipeline artifacts
@@ -1214,6 +1237,7 @@ export function createEditorHandlers(
                         success: true,
                         vendorSourcePath: vendorFilePath,
                         jayHtmlPath,
+                        diskDiverged,
                     };
                 } catch (conversionError) {
                     getLogger().error('❌ Vendor conversion threw an error:', conversionError);
