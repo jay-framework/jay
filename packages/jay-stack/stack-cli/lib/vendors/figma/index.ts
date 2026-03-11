@@ -268,7 +268,10 @@ function convertRegularNode(
     // Only needed for inline-styled nodes; class-based nodes already have these in the stylesheet.
     if (!cssClassName && pluginData?.['jay-unsupported-css']) {
         try {
-            const unsupported = JSON.parse(pluginData['jay-unsupported-css']) as Record<string, string>;
+            const unsupported = JSON.parse(pluginData['jay-unsupported-css']) as Record<
+                string,
+                string
+            >;
             const existingProps = new Set<string>();
             for (const part of effectiveStyle.split(';')) {
                 const colonIdx = part.indexOf(':');
@@ -368,13 +371,20 @@ function convertRegularNode(
 
     if (children && children.length > 0) {
         // When a semantic text element (h1-h6, p, span, etc.) with CSS classes
-        // has a single TEXT child, emit the text content directly inside the tag
+        // has a single TEXT child, emit the text content directly inside the tag.
+        // During import, text content bindings (e.g. {name}) are stored on the
+        // parent FRAME, not the TEXT child.  Check both.
         const isTextContainer = TEXT_CONTAINER_TAGS.has(tag) && cssClassName;
         if (isTextContainer && children.length === 1 && children[0].type === 'TEXT') {
             const textChild = children[0];
             const textContent = textChild.characters || '';
             const childAnalysis = analyzeTextChildBindings(textChild, context);
-            const content = childAnalysis || textContent;
+            const parentDynamic = analysis.dynamicContentPath
+                ? `{${analysis.dynamicContentPath}}`
+                : analysis.dualPath
+                  ? `{${analysis.dualPath}}`
+                  : undefined;
+            const content = childAnalysis || parentDynamic || textContent;
             return `${indent}<${tag} ${htmlAttrs}>${content}</${tag}>\n`;
         }
 
@@ -672,8 +682,9 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
         if (vendorDoc.type === 'SECTION' && parsedJayHtml.sourceHtml) {
             const { computeContentHash } = await import('./content-hash');
             vendorDoc.pluginData = vendorDoc.pluginData || {};
-            vendorDoc.pluginData['jay-import-content-hash'] =
-                computeContentHash(parsedJayHtml.sourceHtml);
+            vendorDoc.pluginData['jay-import-content-hash'] = computeContentHash(
+                parsedJayHtml.sourceHtml,
+            );
             vendorDoc.pluginData['jay-import-timestamp'] = new Date().toISOString();
         }
 

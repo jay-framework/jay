@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeForHash, computeContentHash, hasContentDiverged } from '../../../lib/vendors/figma/content-hash';
+import {
+    normalizeForHash,
+    computeContentHash,
+    hasContentDiverged,
+} from '../../../lib/vendors/figma/content-hash';
 
 describe('Content Hash', () => {
     describe('normalizeForHash', () => {

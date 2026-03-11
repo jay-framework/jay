@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { figmaVendor } from '../../../lib/vendors/figma/index';
-import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
+import type { FigmaVendorDocument, ProjectPage } from '@jay-framework/editor-protocol';
 
 function makeSection(children: FigmaVendorDocument[]): FigmaVendorDocument {
     return {
@@ -29,7 +29,7 @@ function makeSection(children: FigmaVendorDocument[]): FigmaVendorDocument {
     } as FigmaVendorDocument;
 }
 
-const emptyPage = { contractYaml: '', confYaml: '' };
+const emptyPage: ProjectPage = { name: 'test', url: '/', filePath: '/test', usedComponents: [] };
 
 describe('Form Elements Export', () => {
     it('exports <input> as self-closing with stored attributes', async () => {

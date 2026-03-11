@@ -1,16 +1,33 @@
 import type { FigmaVendorDocument, ContractTag } from '@jay-framework/editor-protocol';
 import type { ConversionContext, BindingAnalysis } from '../types';
+import { parseDataTypeString } from '../computed-style-enricher';
 
 /**
- * Gets all variant values for a component set's properties
- * Returns a map of property name to array of possible values
- *
- * Works with both:
- * - Component nodes (componentPropertyDefinitions on the node itself)
- * - Instance nodes (componentPropertyDefinitions + variants array serialized from component set)
- *
- * Filters out pseudo-CSS class variants (values containing ':') as these are handled
- * via CSS display toggling, not Jay-HTML if conditions.
+ * Returns the set of valid variant values for a contract tag, or null if the
+ * type cannot be enumerated (e.g. string, number).  The contract is the source
+ * of truth — only values defined in the contract should appear in exported
+ * jay-html conditions.
+ */
+function getValidContractValues(contractTag: ContractTag): Set<string> | null {
+    const dt = parseDataTypeString(contractTag.dataType);
+    if (dt.kind === 'boolean') return new Set(['true', 'false']);
+    if (dt.kind === 'enum' && dt.enumValues) return new Set(dt.enumValues);
+    return null;
+}
+
+/**
+ * Check whether a Figma variant value is valid for export: it must either
+ * exist in the contract's valid value set, or (when the type is not
+ * enumerable) it must not be a pseudo-CSS selector (contains ':').
+ */
+function isValidVariantValue(value: string, validValues: Set<string> | null): boolean {
+    if (validValues) return validValues.has(value);
+    return !value.includes(':');
+}
+
+/**
+ * Gets all variant values for a component set's properties.
+ * Only values defined in the contract tag are included.
  */
 export function getComponentVariantValues(
     node: FigmaVendorDocument,
@@ -19,8 +36,14 @@ export function getComponentVariantValues(
 ): Map<string, string[]> {
     const values = new Map<string, string[]>();
 
-    const filterPseudoVariants = (variantValues: string[]): string[] => {
-        return variantValues.filter((value) => !value.includes(':'));
+    const validValuesByProperty = new Map<string, Set<string> | null>();
+    for (const binding of propertyBindings) {
+        validValuesByProperty.set(binding.property, getValidContractValues(binding.contractTag));
+    }
+
+    const filterValues = (propName: string, variantValues: string[]): string[] => {
+        const valid = validValuesByProperty.get(propName);
+        return variantValues.filter((v) => isValidVariantValue(v, valid));
     };
 
     // For INSTANCE nodes without inline variant data, resolve via componentSetIndex
@@ -41,7 +64,7 @@ export function getComponentVariantValues(
         for (const binding of propertyBindings) {
             const propDef = resolvedNode.componentPropertyDefinitions[binding.property];
             if (propDef && propDef.type === 'VARIANT' && propDef.variantOptions) {
-                const filtered = filterPseudoVariants(propDef.variantOptions);
+                const filtered = filterValues(binding.property, propDef.variantOptions);
                 if (filtered.length > 0) {
                     values.set(binding.property, filtered);
                 }
@@ -51,51 +74,42 @@ export function getComponentVariantValues(
 
     if (values.size === 0 && resolvedNode.variants && resolvedNode.variants.length > 0) {
         const propertyValuesMap = new Map<string, Set<string>>();
-
         for (const variant of resolvedNode.variants) {
-            if (variant.variantProperties) {
-                for (const binding of propertyBindings) {
-                    const propValue = variant.variantProperties[binding.property];
-                    if (propValue && !propValue.includes(':')) {
-                        if (!propertyValuesMap.has(binding.property)) {
-                            propertyValuesMap.set(binding.property, new Set());
-                        }
-                        propertyValuesMap.get(binding.property)!.add(propValue);
-                    }
+            if (!variant.variantProperties) continue;
+            for (const binding of propertyBindings) {
+                const propValue = variant.variantProperties[binding.property];
+                if (!propValue) continue;
+                const valid = validValuesByProperty.get(binding.property);
+                if (!isValidVariantValue(propValue, valid)) continue;
+                if (!propertyValuesMap.has(binding.property)) {
+                    propertyValuesMap.set(binding.property, new Set());
                 }
+                propertyValuesMap.get(binding.property)!.add(propValue);
             }
         }
-
         for (const [prop, valueSet] of propertyValuesMap) {
-            if (valueSet.size > 0) {
-                values.set(prop, Array.from(valueSet));
-            }
+            if (valueSet.size > 0) values.set(prop, Array.from(valueSet));
         }
     }
 
-    // If resolvedNode is COMPONENT_SET (from index lookup) and we need variants,
-    // build them from children
+    // If resolvedNode is COMPONENT_SET (from index lookup), build from children
     if (values.size === 0 && resolvedNode.children && resolvedNode.type === 'COMPONENT_SET') {
         const propertyValuesMap = new Map<string, Set<string>>();
-
         for (const child of resolvedNode.children) {
-            if (child.type === 'COMPONENT' && child.variantProperties) {
-                for (const binding of propertyBindings) {
-                    const propValue = child.variantProperties[binding.property];
-                    if (propValue && !propValue.includes(':')) {
-                        if (!propertyValuesMap.has(binding.property)) {
-                            propertyValuesMap.set(binding.property, new Set());
-                        }
-                        propertyValuesMap.get(binding.property)!.add(propValue);
-                    }
+            if (child.type !== 'COMPONENT' || !child.variantProperties) continue;
+            for (const binding of propertyBindings) {
+                const propValue = child.variantProperties[binding.property];
+                if (!propValue) continue;
+                const valid = validValuesByProperty.get(binding.property);
+                if (!isValidVariantValue(propValue, valid)) continue;
+                if (!propertyValuesMap.has(binding.property)) {
+                    propertyValuesMap.set(binding.property, new Set());
                 }
+                propertyValuesMap.get(binding.property)!.add(propValue);
             }
         }
-
         for (const [prop, valueSet] of propertyValuesMap) {
-            if (valueSet.size > 0) {
-                values.set(prop, Array.from(valueSet));
-            }
+            if (valueSet.size > 0) values.set(prop, Array.from(valueSet));
         }
     }
 
@@ -328,10 +342,27 @@ export function convertVariantNode(
             ? resolvedNode.variants
             : resolvedNode.children?.filter((c) => c.type === 'COMPONENT') ?? [];
 
+    // Build per-property valid value sets from the contract
+    const validValuesByProperty = new Map<string, Set<string> | null>();
+    for (const binding of analysis.propertyBindings) {
+        validValuesByProperty.set(binding.property, getValidContractValues(binding.contractTag));
+    }
+
+    // Keep only variants whose property values are all valid per the contract.
+    // Synthetic variants (_hidden_, pseudo-CSS) are excluded because their
+    // values don't exist in the contract.  Wildcard '*' means "unconstrained"
+    // and is always allowed (buildVariantCondition skips it when building the
+    // if-expression).
     const realVariants = variantComponents.filter((v) => {
         const props = resolveVariantProperties(v);
         if (!props) return false;
-        return !Object.values(props).some((val) => val.includes(':'));
+        for (const binding of analysis.propertyBindings) {
+            const val = props[binding.property];
+            if (!val || val === '*') continue;
+            const valid = validValuesByProperty.get(binding.property);
+            if (!isValidVariantValue(val, valid)) return false;
+        }
+        return true;
     });
 
     if (realVariants.length === 0) {

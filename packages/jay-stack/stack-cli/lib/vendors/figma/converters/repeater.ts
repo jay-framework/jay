@@ -111,16 +111,18 @@ function convertRepeaterFlat(
         indentLevel: context.indentLevel + 1,
     };
 
-    if (node.children && node.children.length > 0) {
-        let templateChild = node.children[0];
-        if (templateChild.type === 'FRAME') {
-            templateChild = applyStretchOverrides(node, templateChild);
-        }
-        html += convertNodeToJayHtml(templateChild, newContext);
-    } else {
+    if (!node.children || node.children.length === 0) {
         throw new Error(
-            `Repeater node "${node.name}" has no children - repeater template is required`,
+            `Repeater node "${node.name}" has no children — repeater template is required`,
         );
+    }
+
+    // In the flat repeater structure, the node IS the forEach element.
+    // All its children are template content (not demo copies — those live
+    // as siblings at the parent level).
+    for (const child of node.children) {
+        const effective = child.type === 'FRAME' ? applyStretchOverrides(node, child) : child;
+        html += convertNodeToJayHtml(effective, newContext);
     }
 
     html += `${indent}</${tag}>\n`;
@@ -178,17 +180,17 @@ function convertRepeaterWrapped(
         indentLevel: context.indentLevel + 2,
     };
 
-    if (node.children && node.children.length > 0) {
-        let templateChild = node.children[0];
-        if (templateChild.type === 'FRAME') {
-            templateChild = applyStretchOverrides(node, templateChild);
-        }
-        html += convertNodeToJayHtml(templateChild, newContext);
-    } else {
+    if (!node.children || node.children.length === 0) {
         throw new Error(
-            `Repeater node "${node.name}" has no children - repeater template is required`,
+            `Repeater node "${node.name}" has no children — repeater template is required`,
         );
     }
+
+    let templateChild = node.children[0];
+    if (templateChild.type === 'FRAME') {
+        templateChild = applyStretchOverrides(node, templateChild);
+    }
+    html += convertNodeToJayHtml(templateChild, newContext);
 
     html += `${innerIndent}</div>\n`;
     html += `${indent}</div>\n`;

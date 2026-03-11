@@ -621,21 +621,50 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
         return { node, warnings, componentSets };
     }
 
-    // forEach (repeater) — process only first child with updated repeater context
+    // forEach (repeater) — all children under the forEach element form the item template.
     const forEachAttr = element.getAttribute('forEach');
     if (forEachAttr != null && forEachAttr.trim()) {
         const forEachPath = forEachAttr.trim().split('.');
         const newRepeaterContext = [...repeaterContext, forEachPath];
-        const childElements = getChildElements(element);
-        const firstChild = childElements.find((el) => {
-            const t = (el.rawTagName || '').toLowerCase();
-            return t !== 'script' && t !== 'style' && t !== 'link';
-        });
 
         const children: ImportIRNode[] = [];
-        let demoItems: DemoItem[] | undefined;
-        if (firstChild) {
-            const childResult = buildNodeFromElement(firstChild, {
+
+        for (const childNode of element.childNodes) {
+            if (childNode.nodeType === NodeType.TEXT_NODE) {
+                const raw = (childNode as any).rawText ?? (childNode as any).text ?? '';
+                const text = raw.trim();
+                if (text) {
+                    const textId = generateNodeId(domPath + `/text-${children.length}`);
+                    children.push({
+                        id: textId,
+                        sourcePath: domPath + `/text-${children.length}`,
+                        kind: 'TEXT',
+                        name: text.substring(0, 20),
+                        tagName: 'span',
+                        className: undefined,
+                        htmlAttributes: undefined,
+                        visible: true,
+                        style: {
+                            fontFamily: style.fontFamily,
+                            fontSize: style.fontSize,
+                            fontWeight: style.fontWeight,
+                            textColor: style.textColor,
+                            lineHeight: style.lineHeight,
+                            letterSpacing: style.letterSpacing,
+                        },
+                        text: { characters: text },
+                        children: [],
+                    });
+                }
+                continue;
+            }
+
+            if (childNode.nodeType !== NodeType.ELEMENT_NODE) continue;
+            const childEl = childNode as HTMLElement;
+            const childTag = (childEl.rawTagName || '').toLowerCase();
+            if (childTag === 'script' || childTag === 'style' || childTag === 'link') continue;
+
+            const childResult = buildNodeFromElement(childEl, {
                 ...ctx,
                 repeaterContext: newRepeaterContext,
             });
@@ -643,10 +672,16 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
                 children.push(childResult.node);
                 warnings.push(...childResult.warnings);
                 componentSets.push(...childResult.componentSets);
-
-                demoItems = extractDemoItems(childResult.node, repeaterDataMap);
             }
         }
+
+        const templateWrapper: ImportIRNode = {
+            id: nodeId,
+            kind: 'FRAME',
+            sourcePath: domPath,
+            children,
+        };
+        const demoItems = extractDemoItems(templateWrapper, repeaterDataMap);
 
         const node: ImportIRNode = {
             id: nodeId,
@@ -661,7 +696,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
             bindings: bindings.length > 0 ? bindings : undefined,
             warnings: warnings.length > 0 ? [...warnings] : undefined,
             children,
-            demoItems: demoItems && demoItems.length > 0 ? demoItems : undefined,
+            demoItems: demoItems.length > 0 ? demoItems : undefined,
         };
         return { node, warnings, componentSets };
     }

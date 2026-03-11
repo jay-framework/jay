@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { figmaVendor } from '../../../lib/vendors/figma/index';
-import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
+import type { FigmaVendorDocument, ProjectPage } from '@jay-framework/editor-protocol';
 
 function makeTextNode(id: string, text: string): FigmaVendorDocument {
     return {
@@ -47,7 +47,7 @@ function makeSection(children: FigmaVendorDocument[]): FigmaVendorDocument {
     } as FigmaVendorDocument;
 }
 
-const emptyPage = { contractYaml: '', confYaml: '' };
+const emptyPage: ProjectPage = { name: 'test', url: '/', filePath: '/test', usedComponents: [] };
 
 describe('Unsupported CSS Merge on Export', () => {
     it('appends unsupported CSS to inline-styled nodes', async () => {
