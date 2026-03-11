@@ -16,7 +16,7 @@ Recent fix (product page duplicate add-to-cart): Server emitted flat coordinates
 
 ## Proposed Approach: Pre-Processing Step
 
-Assign coordinates to **all elements** in a **single pre-processing step** before either compiler runs. Add a `jay-coordinate-base` (or similar) attribute to each element. Both server and hydrate compilers **read** this attribute instead of computing coordinates.
+Assign coordinates to **all elements** in a **single pre-processing step** before either compiler runs. Add a `jay-coordinate-base` attribute to each element. Both server and hydrate compilers **read** this attribute instead of computing coordinates.
 
 ```mermaid
 flowchart LR
@@ -28,7 +28,8 @@ flowchart LR
     end
 
     subgraph after [Proposed]
-        A2[jay-html] --> P[Coordinate pre-process]
+        A2[jay-html] --> S[Slow render + multi-child wrap]
+        S --> P[Coordinate pre-process]
         P --> A3[jay-html + jay-coordinate-base]
         A3 --> B2[Server compiler]
         A3 --> C2[Hydrate compiler]
@@ -41,11 +42,20 @@ flowchart LR
 
 ### When to Run
 
-- **After slow-render** — The slow-render transform (DL75) unrolls `forEach` into `slowForEach` items and evaluates slow conditions. Coordinates should be assigned on the **final DOM structure** that both targets compile. So: parse → slow-render (if SSG) → **coordinate pre-process** → server + hydrate compilation.
+- **After slow-render** — The slow-render transform (DL75) unrolls `forEach` into `slowForEach` items, evaluates slow conditions, and wraps multi-child headless inline templates in a `<div>` (see "Multi-Child Wrapper" section below). Coordinates should be assigned on the **final DOM structure** that both targets compile. So: parse → slow-render (including multi-child wrap) → **coordinate pre-process** → server + hydrate compilation.
 
 ### Attribute Name
 
 - `jay-coordinate-base` — Distinguishes from the runtime `jay-coordinate` in output HTML. The pre-process writes to the parsed DOM; compilers read it. Server outputs `jay-coordinate` (same value) in HTML; hydrate uses the value in `adoptElement("...", ...)`.
+- **Compiler handling** — The `jay-coordinate-base` attribute must be ignored by attribute rendering in both targets (not emitted as an HTML attribute, not treated as a dynamic binding). Both compilers should filter it out when processing element attributes, similar to how `ref`, `if`, `forEach`, etc. are handled.
+
+### Placeholder Syntax for Dynamic Coordinates
+
+Inside `forEach`, coordinates contain dynamic segments (the trackBy value). The pre-process uses a distinct placeholder syntax to avoid collision with jay-html expression syntax `{expr}`:
+
+- **Placeholder**: `$trackBy` — e.g., `"0/$_id/1"`, `"0/$_id/product-card:0"`
+- Compilers recognize `$varName` placeholders and emit the appropriate runtime expression (string concatenation for server, JS expression for hydrate)
+- This avoids ambiguity with `{_id}` which is already the jay-html data binding syntax
 
 ### Coordinate Scheme
 
@@ -54,11 +64,34 @@ Hierarchical, position-based:
 - Root content element: `"0"`
 - Children: `"0/1"`, `"0/2"`, `"0/3"` (sibling index)
 - With ref: use ref name (camelCase) instead of index: `"0/addToCart"`, `"0/5"`
-- Inside forEach item (trackBy `_id`): `"0/{_id}"`, `"0/{_id}/0"`, `"0/{_id}/1"`
+- Inside forEach item (trackBy `_id`): `"0/$_id"`, `"0/$_id/0"`, `"0/$_id/1"`
 - Inside slowForEach (jayTrackBy `p1`): `"0/p1"`, `"0/p1/0"`, `"0/p1/product-card:0"`
 - Headless instance: `"product-card:0"` or `"p1/product-card:0"` (existing convention)
+- Headless instance children: `"product-card:0/0"`, `"product-card:0/1"`, `"product-card:0/addToCart"` (own scope, counter resets)
 
 Refs take precedence over auto-index. Conditionals use ref when present, else index.
+
+### Headless Instance Inline Template Coordinates
+
+When the pre-process encounters a `<jay:contract-name>` tag, it enters a new coordinate scope:
+
+1. The instance itself gets a coordinate like `"product-card:0"` (using ref or auto-counter with `contractName:N` format)
+2. Inside the inline template, the counter resets to 0 and the prefix becomes the instance coordinate
+3. Children get: `"product-card:0/0"`, `"product-card:0/1"`, `"product-card:0/addToCart"`, etc.
+4. For forEach headless instances, the instance coordinate includes the dynamic prefix: `"$_id/product-card:0"`, children: `"$_id/product-card:0/0"`
+5. For slowForEach headless instances, literal prefix: `"p1/product-card:0"`, children: `"p1/product-card:0/0"`
+
+The pre-process needs headless import metadata to identify `<jay:xxx>` tags and their contract names.
+
+### Multi-Child Wrapper (Part of Slow Rendering)
+
+When a headless instance's inline template has multiple root-level children, the element, server, and hydrate targets all need a wrapper `<div>` for consistency. Currently, this wrapping is done independently in each compiler target (DL102 Issue 2).
+
+**New approach:** Integrate the wrapping into the **slow rendering phase** itself. As slow rendering processes `<jay:xxx>` tags (resolving conditions, unrolling slowForEach), it also checks inline template children: if `childNodes.length > 1`, insert a `<div>` wrapper around the children. This ensures:
+
+- The parsed DOM already has the wrapper before coordinate assignment
+- The pre-process assigns coordinates naturally (wrapper gets `product-card:0/0`, children get `product-card:0/0/0`, etc.)
+- Both compilers see the same DOM structure — no per-target wrapping logic needed
 
 ### Scope
 
@@ -74,84 +107,119 @@ The pre-process mutates the parsed DOM (or produces a new DOM) with `element.set
 - **Hydration script** — `adoptElement("0/abc123/0", ...)` uses the coordinate string. The script never references or contains `jay-coordinate-base`. For dynamic coordinates (forEach), the script emits a runtime expression that produces the final string.
 - **Rationale** — `jay-coordinate-base` is a compile-time artifact for consistency between targets. It must not leak into user-facing output or increase bundle size.
 
-### Shared utilities for coordinate rendering
+### Coordinate template compilation (build-time only)
 
-For coordinates with placeholders (e.g. `"0/{_id}/0"`, `"0/{trackBy}/product-card:0"`), both server and hydrate compilers need to produce the **final coordinate string** at runtime. Extract shared utility functions:
+For coordinates with placeholders (e.g. `"0/$_id/0"`), both server and hydrate compilers need to produce the **final coordinate string** at runtime. Extract a **build-time** shared utility that compiles a coordinate template into a code expression:
 
 ```typescript
 // compiler-shared or compiler-jay-html
-export function renderCoordinateTemplate(
+// Build-time: compiles template to a JS expression string
+export function compileCoordinateExpr(
   template: string,
-  placeholders: Record<string, string | ((ctx: any) => string)>,
-  ctx: any
+  varMappings: Record<string, string>, // e.g. { _id: 'vs1._id' }
 ): string;
+// Example:
+// compileCoordinateExpr("0/$_id/0", { _id: "vs1._id" })
+// → "'0/' + escapeAttr(String(vs1._id)) + '/0'"
 ```
 
-- **Server**: Uses `renderCoordinateTemplate` when emitting `jay-coordinate` for forEach items. Template from `jay-coordinate-base`, placeholders from trackBy expression.
-- **Hydrate**: Uses same util when emitting `adoptElement(coordExpr, ...)` — the `coordExpr` is a JS expression that calls the shared util.
-- **Single source**: Both targets import from the same module. No duplication of placeholder substitution logic.
+- **Server**: Uses `compileCoordinateExpr` to emit `w(' jay-coordinate="' + <expr> + '">');`
+- **Hydrate**: Uses same util to emit `adoptElement(<expr>, ...)`
+- **No runtime dependency** — the function runs at compile time and outputs a JS string concatenation expression. No `renderCoordinateTemplate` function in the browser bundle.
+- **Single source**: Both targets call the same build-time function, eliminating duplication of placeholder substitution logic.
 
-### Debug saved file after pre-processing
+### `__headlessInstances` Key — Shared Utility
 
-Write the pre-processed DOM (with `jay-coordinate-base` on each element) to a debug file for inspection. Useful when debugging coordinate mismatches or verifying the pre-process output.
+The `__headlessInstances` map uses keys with a **different format** from DOM coordinates:
+- Static: `"product-card:0"` (same as DOM coordinate)
+- forEach: `"1,stock-status:0"` (comma-separated, not slash-separated)
+- slowForEach: `"p1/product-card:0"` (slash-separated, same as DOM)
 
-- **Location**: `build/debug/coordinate-preprocess/<route-or-page>.html` (or `.jay-html` if it preserves jay-html structure)
-- **When**: Only in dev/debug mode or when `JAY_DEBUG_COORDINATES=1` (or similar env)
+The DOM coordinate and instance key diverge only for forEach (slash in DOM, comma in instance key). This is a **runtime concern** — the server puts data in `__headlessInstances[key]` and the client looks it up with the same key format.
+
+Extract a shared utility for computing instance keys, usable by both server runtime and client compiler:
+
+```typescript
+// compiler-shared
+export function computeInstanceKey(
+  coordinateSuffix: string,  // e.g. "stock-status:0"
+  context: 'static' | 'forEach' | 'slowForEach',
+  prefix?: string,  // e.g. "p1" for slowForEach, or variable expr for forEach
+): string;
+// Static: "stock-status:0"
+// forEach: compiles to expression like `String(vs1._id) + ',stock-status:0'`
+// slowForEach: "p1/stock-status:0"
+```
+
+This ensures the server-side key computation (in `renderFastChangingDataForForEachInstances`) and the client-side key function (in `makeHeadlessInstanceComponent`) use the same logic.
+
+### Element Target — Out of Scope
+
+The element target's coordinates are used at runtime for the security package (sandbox isolation). They have no dependency on SSR or hydration coordinates. Changing them risks breaking the security package for no benefit. The element target's coordinate logic is **not** modified in this design.
+
+### Debug Output
+
+The dev server always writes the pre-processed DOM to a debug file after coordinate assignment:
+
+- **Location**: `build/debug/<route-or-page>.coordinate-preprocess.jay-html`
 - **Content**: Serialized HTML with `jay-coordinate-base` attributes visible. Enables diffing before/after, verifying hierarchy.
+- **Always emitted** in dev mode (no env var gating needed). Cheap to produce and valuable for debugging.
 
 ## Implementation Plan
 
-### Phase 1: Extract coordinate assignment to shared module
+### Phase 1: Multi-child wrapper in slow rendering + coordinate pre-process + build-time template utility
 
-- Create `assignCoordinates(dom: HTMLElement, options?)` in `compiler-jay-html` (or `compiler-shared`)
-- Walks DOM, assigns `jay-coordinate-base` to each element using the scheme above
-- Handles: root, children, refs, conditionals, forEach, slowForEach, headless instances
-- Returns void (mutates DOM) or new DOM
+**Multi-child wrapper:**
+- Add multi-child headless inline template wrapping to the slow rendering phase
+- During slow render, when processing `<jay:xxx>` tags: if inline template has multiple root-level children, wrap them in a `<div>`
+- Remove the per-target wrapping logic from `renderServerHeadlessInstance` and `renderHydrateHeadlessInstance`
 
-### Phase 1b: Shared coordinate template utility
+**Coordinate pre-process:**
 
-- Create `renderCoordinateTemplate(template, placeholders, ctx)` — runtime function used by both server (Node) and hydrate (browser)
-- Package: `@jay-framework/runtime` or `@jay-framework/compiler-shared` (depending on whether it's runtime or build-time)
-- Server and hydrate generated code both call this when the template has placeholders (e.g. `{_id}`)
+- Create `assignCoordinates(dom, headlessImports, options?)` in `compiler-jay-html`
+- Walks DOM, assigns `jay-coordinate-base` to each element using the coordinate scheme
+- Handles: root, children, refs, conditionals, forEach, slowForEach, headless instances (with scoped children)
+- Create `compileCoordinateExpr(template, varMappings)` in `compiler-shared` — build-time utility that compiles `$placeholder` templates to JS expression strings
+- Returns void (mutates DOM)
+
+### Phase 1b: `__headlessInstances` key utility
+
+- Create `computeInstanceKey(coordinateSuffix, context, prefix?)` in `compiler-shared`
+- Server runtime and client compiler both use this to ensure key format consistency
+- Update `renderFastChangingDataForForEachInstances` and compiler's `makeHeadlessInstanceComponent` coordinate key generation to use the shared function
 
 ### Phase 1c: Debug file output
 
-- After `assignCoordinates()`, optionally write the pre-processed DOM to `build/debug/coordinate-preprocess/<path>.html`
-- Gated by `JAY_DEBUG_COORDINATES=1` or dev mode
+- After `assignCoordinates()`, write the pre-processed DOM to `build/debug/<path>.coordinate-preprocess.jay-html`
+- Always emitted by the dev server
 - Serialize DOM with `jay-coordinate-base` attributes for inspection
 
-### Phase 2: Integrate into compilation pipeline
+### Phase 2: Integrate and remove old logic — Server target
 
-- **Server-element**: Before `renderServerNode`, run `assignCoordinates(body)`. In `renderServerElementContent`, read `element.getAttribute('jay-coordinate-base')` instead of computing.
-- **Hydrate**: Same — run pre-process, then read attribute in `renderHydrateElementContent`.
-- Ensure both receive the **same** DOM (after slow-render, before target-specific compilation).
+- Before `renderServerNode`, run `assignCoordinates(body, headlessImports)`
+- In `renderServerElementContent`, read `element.getAttribute('jay-coordinate-base')` instead of computing
+- Delete `coordinateCounter`, `coordinatePrefix`, `rawCoordinatePrefix` from `ServerContext`
+- Remove `isLiteralPrefix` and related logic
+- Filter `jay-coordinate-base` from attribute rendering
+- Update server-element fixtures and tests
 
-### Phase 3: Remove coordinate logic from targets
+### Phase 3: Integrate and remove old logic — Hydrate target
 
-- Delete `coordinateCounter`, `coordinatePrefix` from `ServerContext` and `HydrateContext` (or reduce to minimal)
-- Replace all coordinate computation with attribute read
-- Update `isLiteralPrefix` and related logic — no longer needed if coordinates are pre-assigned
+- Same integration as Phase 2 but for `renderHydrateElementContent`
+- Delete coordinate computation from `HydrateContext`
+- Filter `jay-coordinate-base` from attribute rendering
+- Update hydrate fixtures and tests
 
-### Phase 4: Tests and verification
+### Phase 4: Pre-processing tests
 
-- Update compiler fixtures (server + hydrate) to reflect new output
-- Add/update SSR+hydration integration test (DL99 Phase 5)
+Create a dedicated test file for the coordinate pre-processing step:
+
+- **`coordinate-preprocess.test.ts`** — Tests that:
+  - Run `assignCoordinates()` on fixture jay-html files
+  - Assert expected `jay-coordinate-base` attributes on elements
+  - Cover: root, children, refs, conditionals, forEach, slowForEach, headless instances, headless inline template children, nested headless
+- **Fixture-based**: Store expected pre-process output in `test/fixtures/<feature>/preprocessed-coordinates.json` — map of element path → expected `jay-coordinate-base` value
 - Run fake-shop smoke test, verify home page and product page
-
-### Phase 5: Pre-processing tests
-
-Add tests for the coordinate pre-processing step to both test suites:
-
-- **`generate-server-element.test.ts`** — Add `describe('coordinate pre-processing')` with tests that:
-  - Run `assignCoordinates()` on fixture jay-html
-  - Assert expected `jay-coordinate-base` attributes on elements (by selector or structure)
-  - Cover: root, children, refs, conditionals, forEach, slowForEach, headless instances
-
-- **`generate-element-hydrate.test.ts`** — Same `describe('coordinate pre-processing')` block (or shared test file):
-  - Reuse the same fixtures and assertions
-  - Ensures pre-process output is identical regardless of which target runs first
-
-- **Fixture-based**: Store expected pre-process output in `test/fixtures/<feature>/preprocessed-coordinates.json` (or similar) — map of selector → expected `jay-coordinate-base` value. Tests compare actual vs expected.
 
 ## Examples
 
@@ -172,37 +240,69 @@ adoptElement(coordinate, ...);
 
 ```typescript
 // Pre-process (once):
-assignCoordinates(rootElement);
+assignCoordinates(rootElement, headlessImports);
 
-// Server: read
+// Server: read and emit
 const coord = element.getAttribute('jay-coordinate-base');
 if (coord) w(' jay-coordinate="' + coord + '">');
 
-// Hydrate: read
+// Hydrate: read and emit
 const coord = element.getAttribute('jay-coordinate-base');
 if (coord) adoptElement(coord, ...);
 ```
 
-### ForEach / slowForEach
-
-Pre-process runs **after** slow-render. So forEach is either:
-- Still `forEach` (dynamic) — pre-process assigns `"0/{_id}"` for item root, `"0/{_id}/0"` for children (placeholder syntax)
-- Unrolled to `slowForEach` — pre-process sees literal `jayTrackBy` values, assigns `"0/p1"`, `"0/p1/0"`, etc. (no placeholders)
-
-The pre-process needs access to variable context (forEach item var, trackBy) for dynamic expressions. It may need to run in two passes or receive metadata from the parser.
-
-### Coordinate template rendering (shared util)
+### ForEach with placeholder
 
 ```typescript
-// Pre-process assigns: jay-coordinate-base="0/{_id}/0"
+// Pre-process assigns: jay-coordinate-base="0/$_id/0"
+// compileCoordinateExpr("0/$_id/0", { _id: "vs1._id" })
+// → "'0/' + escapeAttr(String(vs1._id)) + '/0'"
+
 // Server emits (inside forEach loop):
-w(' jay-coordinate="' + renderCoordinateTemplate('0/{_id}/0', { _id: vs1._id }) + '">');
+w(' jay-coordinate="' + '0/' + escapeAttr(String(vs1._id)) + '/0' + '">');
 // Output at runtime: jay-coordinate="0/abc123/0"
 
 // Hydrate emits (generated code):
-adoptElement(renderCoordinateTemplate('0/{_id}/0', { _id: (vs1) => vs1._id })(vs1), ...);
+adoptElement('0/' + escapeAttr(String(vs1._id)) + '/0', ...);
 // At runtime: adoptElement("0/abc123/0", ...)
 ```
+
+### Headless Instance Inline Template
+
+```html
+<!-- jay-html source -->
+<jay:product-card productId="prod-hero">
+  <article class="hero-card">
+    <h2>{name}</h2>
+    <button ref="addToCart">Add to Cart</button>
+  </article>
+</jay:product-card>
+```
+
+Pre-process assigns:
+- `<jay:product-card>` → (no coordinate on the tag itself — it's a compiler directive)
+- `<article>` → `jay-coordinate-base="product-card:0/0"`
+- `<h2>` → `jay-coordinate-base="product-card:0/1"`
+- `<button ref="addToCart">` → `jay-coordinate-base="product-card:0/addToCart"`
+
+### slowForEach Headless Instance
+
+```html
+<div slowForEach="products" trackBy="_id" jayIndex="0" jayTrackBy="p1">
+  <jay:product-card productId="prod-123">
+    <article class="hero-card">
+      <h2>Product A</h2>
+      <span class="price">{price}</span>
+    </article>
+  </jay:product-card>
+</div>
+```
+
+Pre-process assigns:
+- `<div>` (slowForEach container) → `jay-coordinate-base="p1"`
+- `<article>` → `jay-coordinate-base="p1/product-card:0/0"`
+- `<h2>` → (static text, no dynamic content — may or may not get coordinate)
+- `<span>` → `jay-coordinate-base="p1/product-card:0/1"`
 
 ## Trade-offs
 
@@ -216,19 +316,25 @@ Pre-process is more invasive but eliminates the class of bugs. Shared module red
 
 ## Questions and Answers
 
-**Q: Does the pre-process need the full parse result (variables, contract refs)?**  
-A: Yes — to resolve ref names, forEach trackBy, headless instance coordinates. It likely runs as a pass over the parsed `JayHtmlSourceFile` (which has body + metadata), not raw HTML.
+**Q: Does the pre-process need the full parse result (variables, contract refs)?**
+A: Yes — to resolve ref names, forEach trackBy, headless instance coordinates. It runs as a pass over the parsed `JayHtmlSourceFile` (which has body + metadata), not raw HTML. It also needs `headlessImports` to identify `<jay:xxx>` tags.
 
-**Q: What about async/loading content — coordinates for placeholders?**  
+**Q: What about async/loading content — coordinates for placeholders?**
 A: Placeholders (e.g. `when-loading`) are static structure. Pre-process assigns coordinates based on position. When resolved content replaces placeholder, the coordinate map may need to be rebuilt — or the placeholder keeps its coordinate and resolved content is adopted under it. TBD.
 
-**Q: Performance — extra DOM walk?**  
+**Q: Performance — extra DOM walk?**
 A: One additional walk over the parsed DOM. Compilation is already multi-pass. Negligible for typical page size.
+
+**Q: Does the element target change?**
+A: No. The element target's coordinates are used at runtime for the security package. They have no dependency on SSR/hydration and are not modified.
+
+**Q: What about `__headlessInstances` keys?**
+A: Instance keys use a different format (comma-separated for forEach) from DOM coordinates. A shared `computeInstanceKey` utility ensures server and client compute the same keys. This is separate from the coordinate pre-process but part of the same consistency effort.
 
 ## Verification Criteria
 
 1. All compiler tests pass (server-element, hydrate)
-2. Pre-processing tests pass (new `describe` in both test files)
+2. Pre-processing tests pass (new `coordinate-preprocess.test.ts`)
 3. Runtime hydration tests pass
 4. SSR+hydration integration test passes (if implemented)
 5. fake-shop smoke test passes (home page, product page)
