@@ -1,5 +1,6 @@
 import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
 import type { ImportIRDocument, ImportIRNode, ImportIRStyle, ImportIRFill } from './import-ir';
+import { CLASS_STYLE_BASELINE_KEY, buildClassStyleBaseline } from './class-style-baseline';
 
 const DEFAULT_FONT_FAMILY = 'Inter';
 
@@ -694,6 +695,20 @@ function adaptNode(
         const layerBindings = node.bindings.filter((b) => b.kind === 'layer').map((b) => b.binding);
         if (layerBindings.length > 0) {
             base.pluginData['jay-layer-bindings'] = JSON.stringify(layerBindings);
+        }
+    }
+
+    // Capture class-style baseline for class-based nodes so the export
+    // pipeline can later diff and emit only changed safe visual overrides.
+    if (node.className && base.type === 'FRAME') {
+        try {
+            base.pluginData = base.pluginData || {};
+            base.pluginData[CLASS_STYLE_BASELINE_KEY] = buildClassStyleBaseline(
+                base,
+                'computed-style',
+            );
+        } catch {
+            // Non-fatal: import continues without baseline
         }
     }
 

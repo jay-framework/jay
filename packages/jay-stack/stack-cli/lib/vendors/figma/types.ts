@@ -58,22 +58,21 @@ export interface BindingAnalysis {
 /**
  * Conversion context passed through the recursion
  */
+export interface ExportDiagnostic {
+    type: 'blocked-override' | 'missing-baseline';
+    nodeId: string;
+    nodeName?: string;
+    className?: string;
+    property?: string;
+    message: string;
+}
+
 export interface ConversionContext {
-    // Current path prefix stack for repeaters
     repeaterPathStack: string[][];
-
-    // Current indent level
     indentLevel: number;
-
-    // Font families collected during conversion
     fontFamilies: Set<string>;
-
-    // Project page data
-    projectPage: any; // ProjectPage type from editor-protocol
-
-    // Available plugins
-    plugins: any[]; // Plugin[] type from editor-protocol
-
-    // Map from component ID → parent COMPONENT_SET node (for resolving INSTANCE variant data)
+    projectPage: any;
+    plugins: any[];
     componentSetIndex?: Map<string, FigmaVendorDocument>;
+    diagnostics?: ExportDiagnostic[];
 }

@@ -33,6 +33,11 @@ import {
     normalizeCompilerTags,
 } from './jay-html-to-import-ir';
 import { adaptIRToFigmaVendorDoc } from './import-ir-to-figma-vendor-doc';
+import {
+    CLASS_STYLE_BASELINE_KEY,
+    diffClassStyleOverrides,
+    overridesToStyleString,
+} from './class-style-baseline';
 
 /**
  * Figma Vendor Implementation
@@ -262,30 +267,58 @@ function convertRegularNode(
     const tag = resolveHtmlTag(semanticHtml, node.name);
     const cssClassName = sanitizeClassName(pluginData?.['className']);
 
-    // When CSS classes are present, they already define layout/styling from the
-    // original stylesheet. Inline styles from computed values would override them
-    // and break the layout (e.g. display:grid → display:flex). Skip inline styles
-    // for elements with classes to preserve the original visual appearance.
-    let effectiveStyle = cssClassName ? '' : styleAttr;
+    let effectiveStyle: string;
+    if (cssClassName) {
+        // Class-based nodes: emit only changed safe visual overrides by
+        // diffing current Figma properties against the import-time baseline.
+        const baselineJson = pluginData?.[CLASS_STYLE_BASELINE_KEY];
+        if (baselineJson) {
+            const { overrides, blocked } = diffClassStyleOverrides(baselineJson, node);
+            effectiveStyle = overridesToStyleString(overrides);
+            if (blocked.length > 0) {
+                context.diagnostics?.push(
+                    ...blocked.map((b) => ({
+                        type: 'blocked-override' as const,
+                        nodeId: node.id,
+                        nodeName: node.name,
+                        className: cssClassName,
+                        property: b.property,
+                        message: `Blocked layout override on .${cssClassName}: ${b.property}`,
+                    })),
+                );
+            }
+        } else {
+            // No baseline — cannot safely diff. Emit nothing and warn.
+            effectiveStyle = '';
+            context.diagnostics?.push({
+                type: 'missing-baseline' as const,
+                nodeId: node.id,
+                nodeName: node.name,
+                className: cssClassName,
+                message: `No class-style baseline for .${cssClassName} — safe overrides skipped`,
+            });
+        }
+    } else {
+        effectiveStyle = styleAttr;
 
-    // Merge unsupported CSS stored during import (properties Figma can't represent).
-    // Only needed for inline-styled nodes; class-based nodes already have these in the stylesheet.
-    if (!cssClassName && pluginData?.['jay-unsupported-css']) {
-        try {
-            const unsupported = JSON.parse(pluginData['jay-unsupported-css']) as Record<
-                string,
-                string
-            >;
-            const existingProps = new Set<string>();
-            for (const part of effectiveStyle.split(';')) {
-                const colonIdx = part.indexOf(':');
-                if (colonIdx > 0) existingProps.add(part.substring(0, colonIdx).trim());
+        // Merge unsupported CSS stored during import (properties Figma can't represent).
+        if (pluginData?.['jay-unsupported-css']) {
+            try {
+                const unsupported = JSON.parse(pluginData['jay-unsupported-css']) as Record<
+                    string,
+                    string
+                >;
+                const existingProps = new Set<string>();
+                for (const part of effectiveStyle.split(';')) {
+                    const colonIdx = part.indexOf(':');
+                    if (colonIdx > 0) existingProps.add(part.substring(0, colonIdx).trim());
+                }
+                for (const [prop, value] of Object.entries(unsupported)) {
+                    if (!existingProps.has(prop)) effectiveStyle += `${prop}: ${value};`;
+                }
+            } catch {
+                // Invalid JSON — skip silently
             }
-            for (const [prop, value] of Object.entries(unsupported)) {
-                if (!existingProps.has(prop)) effectiveStyle += `${prop}: ${value};`;
-            }
-        } catch {
-            // Invalid JSON — skip silently
         }
     }
 
@@ -565,13 +598,15 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
         indexComponentSets(vendorDoc);
 
         // Create conversion context
+        const diagnostics: import('./types').ExportDiagnostic[] = [];
         const context: ConversionContext = {
             repeaterPathStack: [],
-            indentLevel: 1, // Start at 1 for body content
+            indentLevel: 1,
             fontFamilies,
             projectPage,
             plugins,
             componentSetIndex,
+            diagnostics,
         };
 
         // Convert the content frame to body HTML (fontFamilies will be populated during conversion)
@@ -581,6 +616,12 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
             console.log(
                 `   Found ${fontFamilies.size} font families: ${Array.from(fontFamilies).join(', ')}`,
             );
+        }
+
+        if (diagnostics.length > 0) {
+            for (const d of diagnostics) {
+                console.log(`   [export-diagnostic] ${d.message}`);
+            }
         }
 
         return {
