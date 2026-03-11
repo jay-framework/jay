@@ -613,10 +613,7 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
                             ? path.dirname(hi.contractPath)
                             : undefined;
                         const resolvedTags = contractDir
-                            ? resolveContractTagLinks(
-                                  hi.contract.tags as unknown[],
-                                  contractDir,
-                              )
+                            ? resolveContractTagLinks(hi.contract.tags as unknown[], contractDir)
                             : (hi.contract.tags as unknown[]);
                         mergedTags.push({
                             tag: hi.key,
