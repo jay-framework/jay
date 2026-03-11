@@ -1,6 +1,7 @@
 import type { FigmaVendorDocument, ContractTag } from '@jay-framework/editor-protocol';
 import type { ConversionContext, BindingAnalysis } from '../types';
 import { parseDataTypeString } from '../computed-style-enricher';
+import { HIDDEN_VARIANT_MARKER } from '../import-ir-to-figma-vendor-doc';
 
 /**
  * Returns the set of valid variant values for a contract tag, or null if the
@@ -23,6 +24,24 @@ function getValidContractValues(contractTag: ContractTag): Set<string> | null {
 function isValidVariantValue(value: string, validValues: Set<string> | null): boolean {
     if (validValues) return validValues.has(value);
     return !value.includes(':');
+}
+
+function isHiddenVariant(node: FigmaVendorDocument): boolean {
+    return node.pluginData?.[HIDDEN_VARIANT_MARKER] === 'true';
+}
+
+/**
+ * Collect variant component nodes from a resolved node, excluding any
+ * that were marked as hidden during import.
+ */
+function collectNonHiddenVariantNodes(node: FigmaVendorDocument): FigmaVendorDocument[] {
+    if (node.variants && node.variants.length > 0) {
+        return node.variants.filter((v) => !isHiddenVariant(v));
+    }
+    if (node.children) {
+        return node.children.filter((c) => c.type === 'COMPONENT' && !isHiddenVariant(c));
+    }
+    return [];
 }
 
 /**
@@ -60,7 +79,36 @@ export function getComponentVariantValues(
         }
     }
 
-    if (resolvedNode.componentPropertyDefinitions) {
+    // Collect values from non-hidden variant components. This ensures
+    // synthetic hidden values (injected during import) are excluded without
+    // relying on magic value strings — hidden components carry a pluginData marker.
+    const variantNodes = collectNonHiddenVariantNodes(resolvedNode);
+
+    if (variantNodes.length > 0) {
+        const propertyValuesMap = new Map<string, Set<string>>();
+        for (const variant of variantNodes) {
+            const props = variant.variantProperties;
+            if (!props) continue;
+            for (const binding of propertyBindings) {
+                const propValue = props[binding.property];
+                if (!propValue) continue;
+                const valid = validValuesByProperty.get(binding.property);
+                if (!isValidVariantValue(propValue, valid)) continue;
+                if (!propertyValuesMap.has(binding.property)) {
+                    propertyValuesMap.set(binding.property, new Set());
+                }
+                propertyValuesMap.get(binding.property)!.add(propValue);
+            }
+        }
+        for (const [prop, valueSet] of propertyValuesMap) {
+            if (valueSet.size > 0) values.set(prop, Array.from(valueSet));
+        }
+    }
+
+    // Fallback: use variantOptions from componentPropertyDefinitions when
+    // no variant component nodes are available (e.g. INSTANCE without
+    // componentSetIndex resolution).
+    if (values.size === 0 && resolvedNode.componentPropertyDefinitions) {
         for (const binding of propertyBindings) {
             const propDef = resolvedNode.componentPropertyDefinitions[binding.property];
             if (propDef && propDef.type === 'VARIANT' && propDef.variantOptions) {
@@ -72,64 +120,25 @@ export function getComponentVariantValues(
         }
     }
 
-    if (values.size === 0 && resolvedNode.variants && resolvedNode.variants.length > 0) {
-        const propertyValuesMap = new Map<string, Set<string>>();
-        for (const variant of resolvedNode.variants) {
-            if (!variant.variantProperties) continue;
-            for (const binding of propertyBindings) {
-                const propValue = variant.variantProperties[binding.property];
-                if (!propValue) continue;
-                const valid = validValuesByProperty.get(binding.property);
-                if (!isValidVariantValue(propValue, valid)) continue;
-                if (!propertyValuesMap.has(binding.property)) {
-                    propertyValuesMap.set(binding.property, new Set());
-                }
-                propertyValuesMap.get(binding.property)!.add(propValue);
-            }
-        }
-        for (const [prop, valueSet] of propertyValuesMap) {
-            if (valueSet.size > 0) values.set(prop, Array.from(valueSet));
-        }
-    }
-
-    // If resolvedNode is COMPONENT_SET (from index lookup), build from children
-    if (values.size === 0 && resolvedNode.children && resolvedNode.type === 'COMPONENT_SET') {
-        const propertyValuesMap = new Map<string, Set<string>>();
-        for (const child of resolvedNode.children) {
-            if (child.type !== 'COMPONENT' || !child.variantProperties) continue;
-            for (const binding of propertyBindings) {
-                const propValue = child.variantProperties[binding.property];
-                if (!propValue) continue;
-                const valid = validValuesByProperty.get(binding.property);
-                if (!isValidVariantValue(propValue, valid)) continue;
-                if (!propertyValuesMap.has(binding.property)) {
-                    propertyValuesMap.set(binding.property, new Set());
-                }
-                propertyValuesMap.get(binding.property)!.add(propValue);
-            }
-        }
-        for (const [prop, valueSet] of propertyValuesMap) {
-            if (valueSet.size > 0) values.set(prop, Array.from(valueSet));
-        }
-    }
-
     return values;
 }
 
 /**
- * Checks if a variant property is boolean based on:
- * 1. Contract tag dataType is "boolean"
- * 2. Figma variant values are exactly "true" and "false"
+ * Checks if a variant property should use boolean syntax (if="prop" / if="!prop").
  *
- * This dual check ensures we only use boolean syntax when the contract
- * explicitly declares the property as boolean AND Figma values match.
+ * Returns true when all variant values (excluding wildcards) are "true" and/or
+ * "false".  This covers both:
+ * - Explicit boolean contract properties (dataType: boolean)
+ * - Truthy checks on non-boolean properties (e.g. if="brand.name" imported as name=true)
+ *
+ * Hidden variant values are already excluded by getComponentVariantValues.
+ * When no non-wildcard values remain, falls back to contract dataType.
  */
 function isBooleanVariant(values: string[], contractTag: ContractTag): boolean {
-    if (contractTag.dataType !== 'boolean') {
-        return false;
-    }
     const nonWildcard = values.filter((v) => v !== '*');
-    return nonWildcard.length === 0 || nonWildcard.every((v) => v === 'true' || v === 'false');
+    if (nonWildcard.length === 0) return contractTag.dataType === 'boolean';
+    if (nonWildcard.every((v) => v === 'true' || v === 'false')) return true;
+    return false;
 }
 
 /**
@@ -348,12 +357,12 @@ export function convertVariantNode(
         validValuesByProperty.set(binding.property, getValidContractValues(binding.contractTag));
     }
 
-    // Keep only variants whose property values are all valid per the contract.
-    // Synthetic variants (_hidden_, pseudo-CSS) are excluded because their
-    // values don't exist in the contract.  Wildcard '*' means "unconstrained"
-    // and is always allowed (buildVariantCondition skips it when building the
-    // if-expression).
+    // Keep only non-hidden variants whose property values are all valid per
+    // the contract.  Hidden variants carry a pluginData marker from import.
+    // Wildcard '*' means "unconstrained" and is always allowed
+    // (buildVariantCondition skips it when building the if-expression).
     const realVariants = variantComponents.filter((v) => {
+        if (isHiddenVariant(v)) return false;
         const props = resolveVariantProperties(v);
         if (!props) return false;
         for (const binding of analysis.propertyBindings) {
