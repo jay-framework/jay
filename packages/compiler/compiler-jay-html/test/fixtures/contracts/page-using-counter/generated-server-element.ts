@@ -9,7 +9,7 @@ export interface PageUsingCounterViewState {
 export function renderToStream(vs: PageUsingCounterViewState, ctx: ServerRenderContext): void {
     const { write: w } = ctx;
     w('<div');
-    w('>');
+    w(' jay-coordinate="0">');
     w('<div');
     w(' jay-coordinate="0/0">');
     w(escapeHtml(String(`value: ${vs.counter?.count}`)));

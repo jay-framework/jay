@@ -11,7 +11,7 @@ export interface AttributesViewState {
 export function renderToStream(vs: AttributesViewState, ctx: ServerRenderContext): void {
     const { write: w } = ctx;
     w('<div');
-    w('>');
+    w(' jay-coordinate="0">');
     w('<div');
     w(' style="background: red;"');
     w(' jay-coordinate="0/0">');

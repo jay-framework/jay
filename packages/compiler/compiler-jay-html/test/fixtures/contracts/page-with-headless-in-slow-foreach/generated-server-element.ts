@@ -17,7 +17,7 @@ export function renderToStream(
 ): void {
     const { write: w } = ctx;
     w('<div');
-    w('>');
+    w(' jay-coordinate="0">');
     w('<h1');
     w(' jay-coordinate="0/0">');
     w(escapeHtml(String(vs.pageTitle)));

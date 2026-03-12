@@ -3849,6 +3849,7 @@ function collectAsyncGroups(childNodes: Node[]): Map<string, AsyncGroup> {
 function renderServerElementContent(
     element: HTMLElement,
     context: ServerContext,
+    options?: { isRoot?: boolean },
 ): RenderFragment {
     const { variables, indent } = context;
 
@@ -3871,8 +3872,10 @@ function renderServerElementContent(
 
     // Determine if this element needs a jay-coordinate attribute.
     // Only emit for elements that the hydrate target needs to adopt.
+    // Root must always emit: hydrate needs adoptElement("0", ...) to resolve.
     const refName = element.attributes.ref ? camelCase(element.attributes.ref) : null;
     const needsCoordinate =
+        options?.isRoot === true ||
         dynamicTextFragment !== null ||
         refName !== null ||
         hasDynamicAttributeBindings(element, variables) ||
@@ -4120,8 +4123,11 @@ export function generateServerElementFile(
         insideSlowForEach: false,
     };
 
-    // Render root element — coordinate comes from jay-coordinate-base
-    const rendered = renderServerElementContent(rootElement.val as HTMLElement, context);
+    // Render root element — coordinate comes from jay-coordinate-base.
+    // Root must emit jay-coordinate="0" so hydrate can resolve adoptElement("0", ...).
+    const rendered = renderServerElementContent(rootElement.val as HTMLElement, context, {
+        isRoot: true,
+    });
 
     const viewStateType = jayFile.types.name;
 
