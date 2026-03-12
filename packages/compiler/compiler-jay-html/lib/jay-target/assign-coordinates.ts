@@ -59,11 +59,9 @@ export function assignCoordinates(
 
     if (rootChildren.length === 0) return { debugHtml: body.toString() };
 
-    // The body should have a single root element (e.g., <div>)
     const rootElement = rootChildren[0];
     rootElement.setAttribute(COORD_ATTR, '0');
 
-    // Walk root element's children
     walkChildren(rootElement, '0', options, newScope());
 
     return { debugHtml: body.toString() };
@@ -89,13 +87,7 @@ function walkChildren(
             if (options.headlessContractNames.has(contractName)) {
                 const instanceIndex = scope.headlessCounters.get(contractName) ?? 0;
                 scope.headlessCounters.set(contractName, instanceIndex + 1);
-                assignHeadlessInstance(
-                    element,
-                    contractName,
-                    instanceIndex,
-                    parentCoord,
-                    options,
-                );
+                assignHeadlessInstance(element, contractName, instanceIndex, parentCoord, options);
                 // Don't increment childCounter — jay:xxx is a directive, not a DOM element
                 continue;
             }

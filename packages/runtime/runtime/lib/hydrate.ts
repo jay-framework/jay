@@ -28,22 +28,45 @@ const STYLE = 'style';
 // ============================================================================
 
 /**
+ * Get the index-th significant child of an element.
+ * Matches compiler filtering: when element has multiple children, skip whitespace-only text nodes.
+ */
+function getSignificantChild(element: Element, index: number): ChildNode | undefined {
+    const nodes = element.childNodes;
+    if (nodes.length <= 1) return nodes[index] as ChildNode | undefined;
+    let i = 0;
+    for (let j = 0; j < nodes.length; j++) {
+        const node = nodes[j];
+        if (node.nodeType !== Node.TEXT_NODE || (node.textContent || '').trim() !== '') {
+            if (i === index) return node;
+            i++;
+        }
+    }
+    return undefined;
+}
+
+/**
  * Adopt an existing text node inside the element at the given coordinate.
  *
  * Reads the current ConstructContext from the stack (via currentConstructionContext())
- * to resolve the coordinate to an existing DOM element. Finds the first text child
- * of that element and connects a dynamic text updater to it.
+ * to resolve the coordinate to an existing DOM element. Finds the text child at
+ * the given index (by significant-child position) and connects a dynamic text updater.
  *
- * This is the hydration counterpart to dynamicText() — instead of creating a new
- * text node, it adopts an existing one from server-rendered HTML.
+ * - coordinate: element containing the text (or parent in mixed content)
+ * - accessor: (vs) => string | number | boolean
+ * - ref?: optional ref for the element
+ * - childIndex?: index among significant children (default 0). Use when parent has
+ *   mixed content (text + elements); matches element target's positional dynamicText.
  */
 export function adoptText<ViewState>(
     coordinate: string,
     accessor: (vs: ViewState) => string | number | boolean,
     ref?: PrivateRef<ViewState, BaseJayElement<ViewState>>,
+    childIndex?: number,
 ): BaseJayElement<ViewState> {
     const context = currentConstructionContext();
-    const element = context.resolveCoordinate(coordinate);
+    // Use peekCoordinate so we don't consume — adoptElement (parent) may need the same coordinate
+    const element = context.peekCoordinate(coordinate);
 
     if (!element) {
         if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
@@ -52,7 +75,17 @@ export function adoptText<ViewState>(
         return { dom: undefined as any, update: noopUpdate, mount: noopMount, unmount: noopMount };
     }
 
-    const textNode = element.firstChild as Text;
+    const index = childIndex ?? 0;
+    const textNode = getSignificantChild(element, index);
+    if (!textNode || textNode.nodeType !== Node.TEXT_NODE) {
+        if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
+            console.warn(
+                `[jay hydration] adoptText(${coordinate}, childIndex=${index}): expected text node`,
+            );
+        }
+        return { dom: undefined as any, update: noopUpdate, mount: noopMount, unmount: noopMount };
+    }
+
     let content = accessor(context.currData as ViewState);
 
     const updates: updateFunc<ViewState>[] = [];
@@ -62,7 +95,7 @@ export function adoptText<ViewState>(
     updates.push((newData: ViewState) => {
         const newContent = accessor(newData);
         if (newContent !== content) {
-            textNode.textContent = newContent as string;
+            textNode.textContent = String(newContent);
         }
         content = newContent;
     });

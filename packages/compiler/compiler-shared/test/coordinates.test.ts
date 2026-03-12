@@ -23,9 +23,9 @@ describe('compileCoordinateExpr', () => {
     });
 
     it('should compile placeholder at start', () => {
-        expect(
-            compileCoordinateExpr('$_id/product-card:0/0', { _id: 'vs1._id' }),
-        ).toBe("escapeAttr(String(vs1._id)) + '/product-card:0/0'");
+        expect(compileCoordinateExpr('$_id/product-card:0/0', { _id: 'vs1._id' })).toBe(
+            "escapeAttr(String(vs1._id)) + '/product-card:0/0'",
+        );
     });
 
     it('should compile placeholder at end', () => {
@@ -69,9 +69,7 @@ describe('computeInstanceKey', () => {
     });
 
     it('should return prefix/suffix for slowForEach instances', () => {
-        expect(computeInstanceKey('product-card:0', 'slowForEach', 'p1')).toBe(
-            'p1/product-card:0',
-        );
+        expect(computeInstanceKey('product-card:0', 'slowForEach', 'p1')).toBe('p1/product-card:0');
     });
 
     it('should return undefined for forEach instances (runtime-computed)', () => {

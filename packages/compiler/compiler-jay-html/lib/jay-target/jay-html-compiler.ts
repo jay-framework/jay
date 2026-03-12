@@ -2480,7 +2480,8 @@ function renderHydrateHeadlessInstance(
     }
     // Extract coordinateSuffix from the full coordinate (last contractName:N segment)
     const coordSegments = instanceCoord.split('/');
-    const coordinateSuffix = coordSegments.find((s) => s.startsWith(contractName + ':')) || `${contractName}:0`;
+    const coordinateSuffix =
+        coordSegments.find((s) => s.startsWith(contractName + ':')) || `${contractName}:0`;
     const isInsideForEach = context.insideFastForEach;
 
     // Compute instance key for __headlessInstances lookup (same logic as server target)
@@ -2814,9 +2815,15 @@ function renderHydrateElementContent(
               )
             : element.childNodes;
 
-    // Check if this element has a single dynamic text child
+    // Check if this element has a single dynamic text child, or data-jay-dynamic (from wrap in slow render)
     let textFragment: RenderFragment | null = null;
-    if (childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE) {
+    const dataJayDynamic = element.getAttribute('data-jay-dynamic');
+    if (dataJayDynamic) {
+        const rendered = parseTextExpression(textEscape(dataJayDynamic), variables);
+        if (rendered.imports.has(Import.dynamicText)) {
+            textFragment = rendered;
+        }
+    } else if (childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE) {
         const text = childNodes[0].innerText || '';
         const rendered = parseTextExpression(textEscape(text), variables);
         if (rendered.imports.has(Import.dynamicText)) {
@@ -2831,12 +2838,21 @@ function renderHydrateElementContent(
             (isConditional(child as HTMLElement) || isForEach(child as HTMLElement)),
     );
 
+    // Mixed content: text with binding + element siblings (DL#102 — adoptText by position)
+    const hasTextWithBinding = (n: Node) =>
+        n.nodeType === NodeType.TEXT_NODE &&
+        /\{[^}]+\}/.test((n as Node & { innerText?: string }).innerText || '');
+    const hasMixedContentDynamicText =
+        childNodes.some(hasTextWithBinding) &&
+        childNodes.some((n) => n.nodeType === NodeType.ELEMENT_NODE);
+
     // Determine if this element itself needs adoption
     const needsAdoption =
         hasDynamicAttrs ||
         textFragment !== null ||
         refName !== null ||
         hasInteractiveChildren ||
+        hasMixedContentDynamicText ||
         forceAdopt;
 
     if (!needsAdoption) {
@@ -2851,7 +2867,10 @@ function renderHydrateElementContent(
     // When inside headless adopt (instanceCoordPrefix set), use relative coord for forInstance resolution.
     const coordTemplate = element.getAttribute(COORD_ATTR);
     let coordinate = coordTemplate || coordinateOverride || '0';
-    if (context.instanceCoordPrefix && coordTemplate?.startsWith(context.instanceCoordPrefix + '/')) {
+    if (
+        context.instanceCoordPrefix &&
+        coordTemplate?.startsWith(context.instanceCoordPrefix + '/')
+    ) {
         coordinate = coordTemplate.slice(context.instanceCoordPrefix.length + 1);
     }
 
@@ -2882,6 +2901,58 @@ function renderHydrateElementContent(
                 .plus(renderedRef.imports),
             [...attributes.validations, ...childFragments.validations, ...renderedRef.validations],
             mergeRefsTrees(childFragments.refs, renderedRef.refs),
+        );
+    }
+
+    // Mixed content: adoptText by position (DL#102 — no wrapper span)
+    // Emit adoptElement for elements first, then adoptText — so refs (buttons) are adopted
+    // before adoptText peeks the parent coordinate (avoids any consumption ordering issues).
+    if (hasMixedContentDynamicText && !hasDynamicAttrs) {
+        const childParts: string[] = [];
+        let childImports = Imports.none();
+        const childValidations: string[] = [];
+        const childRefs: RefsTree[] = [];
+        // First pass: elements (including refs)
+        childNodes.forEach((child, index) => {
+            if (child.nodeType === NodeType.ELEMENT_NODE) {
+                const frag = renderHydrateNode(child, context);
+                if (frag.rendered.trim()) {
+                    childParts.push(frag.rendered);
+                    childImports = childImports.plus(frag.imports);
+                    childValidations.push(...frag.validations);
+                    if (frag.refs) childRefs.push(frag.refs);
+                }
+            }
+        });
+        // Second pass: text nodes with bindings
+        childNodes.forEach((child, index) => {
+            if (child.nodeType === NodeType.TEXT_NODE) {
+                const text = (child as Node & { innerText?: string }).innerText || '';
+                if (/\{[^}]+\}/.test(text)) {
+                    const rendered = parseTextExpression(textEscape(text), variables);
+                    if (rendered.imports.has(Import.dynamicText)) {
+                        const accessor = rendered.rendered.replace(/^dt\(/, '').replace(/\)$/, '');
+                        childParts.push(
+                            `${indent.firstLine}adoptText("${coordinate}", ${accessor}, undefined, ${index})`,
+                        );
+                        childImports = childImports
+                            .plus(Import.adoptText)
+                            .plus(rendered.imports.minus(Import.dynamicText));
+                        childValidations.push(...rendered.validations);
+                    }
+                }
+            }
+        });
+        const refSuffix = renderedRef.rendered ? `, ${renderedRef.rendered}` : '';
+        const childrenArr = childParts.length ? `[${childParts.join(',\n')}]` : '[]';
+        return new RenderFragment(
+            `${indent.firstLine}adoptElement("${coordinate}", ${attributes.rendered}, ${childrenArr}${refSuffix})`,
+            Imports.for(Import.adoptElement)
+                .plus(attributes.imports)
+                .plus(childImports)
+                .plus(renderedRef.imports),
+            [...attributes.validations, ...childValidations, ...renderedRef.validations],
+            mergeRefsTrees(...childRefs, renderedRef.refs),
         );
     }
 
@@ -3210,10 +3281,10 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
         // counter aligned with the hydrate target (which always assigns coordinates
         // to conditionals). Without this, coordinates diverge after the first
         // conditional and hydration fails to adopt the correct elements.
-        const body = renderServerElementContent(
-            element,
-            { ...context, indent: new Indent(indent.curr + '    ') },
-        );
+        const body = renderServerElementContent(element, {
+            ...context,
+            indent: new Indent(indent.curr + '    '),
+        });
         return new RenderFragment(
             `${indent.firstLine}if (${renderedCondition.rendered}) {\n${body.rendered}\n${indent.firstLine}}`,
             body.imports,
@@ -3341,7 +3412,8 @@ function renderServerHeadlessInstance(
 
     // Extract coordinateSuffix from the full coordinate (last contractName:N segment)
     const coordSegments = instanceCoord.split('/');
-    const coordinateSuffix = coordSegments.find((s) => s.startsWith(contractName + ':')) || `${contractName}:0`;
+    const coordinateSuffix =
+        coordSegments.find((s) => s.startsWith(contractName + ':')) || `${contractName}:0`;
 
     // Compute __headlessInstances lookup key.
     // The key format depends on the context:
@@ -3353,9 +3425,10 @@ function renderServerHeadlessInstance(
     if (context.insideForEach) {
         // forEach: need trackBy expression from varMappings for comma-separated key.
         const trackByKeys = Object.keys(context.varMappings);
-        const trackByExpr = trackByKeys.length > 0
-            ? context.varMappings[trackByKeys[trackByKeys.length - 1]]
-            : 'undefined';
+        const trackByExpr =
+            trackByKeys.length > 0
+                ? context.varMappings[trackByKeys[trackByKeys.length - 1]]
+                : 'undefined';
         instanceKeyExpr = `String(${trackByExpr}) + ',${coordinateSuffix}'`;
     } else if (context.insideSlowForEach) {
         // slowForEach: key includes jayTrackBy prefix from the coordinate
@@ -3480,6 +3553,7 @@ function renderServerAttributes(element: HTMLElement, context: ServerContext): R
             attrCanonical === 'jayindex' ||
             attrCanonical === 'jaytrackby' ||
             attrCanonical === COORD_ATTR ||
+            attrCanonical === 'data-jay-dynamic' || // compile-time only (DL#102)
             attrCanonical === AsyncDirectiveTypes.loading.directive ||
             attrCanonical === AsyncDirectiveTypes.resolved.directive ||
             attrCanonical === AsyncDirectiveTypes.rejected.directive
@@ -3677,7 +3751,8 @@ function renderServerElementAsString(
         dynamicTextFragment !== null ||
         refName !== null ||
         hasDynamicAttributeBindings(element, variables) ||
-        hasInteractiveChildElements(childNodes);
+        hasInteractiveChildElements(childNodes) ||
+        hasMixedContentDynamicText(childNodes);
 
     // Read pre-assigned coordinate from jay-coordinate-base
     const coordTemplate = element.getAttribute(COORD_ATTR);
@@ -3759,6 +3834,7 @@ function renderServerAttributesAsString(
             attrCanonical === 'jayindex' ||
             attrCanonical === 'jaytrackby' ||
             attrCanonical === COORD_ATTR ||
+            attrCanonical === 'data-jay-dynamic' || // compile-time only (DL#102)
             attrCanonical === AsyncDirectiveTypes.loading.directive ||
             attrCanonical === AsyncDirectiveTypes.resolved.directive ||
             attrCanonical === AsyncDirectiveTypes.rejected.directive
@@ -3884,7 +3960,16 @@ function renderServerElementContent(
             : element.childNodes;
 
     let dynamicTextFragment: RenderFragment | null = null;
-    if (childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE) {
+    const dataJayDynamic = element.getAttribute('data-jay-dynamic');
+    if (dataJayDynamic) {
+        const [fragment, isDynamic] = parseServerTemplateExpression(
+            textEscape(dataJayDynamic),
+            variables,
+        );
+        if (isDynamic) {
+            dynamicTextFragment = fragment;
+        }
+    } else if (childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE) {
         const text = childNodes[0].innerText || '';
         const [fragment, isDynamic] = parseServerTemplateExpression(textEscape(text), variables);
         if (isDynamic) {
@@ -3904,7 +3989,8 @@ function renderServerElementContent(
         dynamicTextFragment !== null ||
         refName !== null ||
         hasDynamicAttributeBindings(element, variables) ||
-        hasInteractiveChildElements(childNodes);
+        hasInteractiveChildElements(childNodes) ||
+        hasMixedContentDynamicText(childNodes);
 
     // Read pre-assigned coordinate value from jay-coordinate-base (DL#103)
     const coordTemplate = needsCoordinate ? element.getAttribute(COORD_ATTR) : null;
@@ -3924,7 +4010,11 @@ function renderServerElementContent(
         } else {
             const coordExpr = compileCoordinateExpr(coordTemplate, context.varMappings);
             parts.push(
-                w(indent, `' jay-coordinate="' + ${coordExpr} + '">'`, Imports.for(Import.escapeAttr)),
+                w(
+                    indent,
+                    `' jay-coordinate="' + ${coordExpr} + '">'`,
+                    Imports.for(Import.escapeAttr),
+                ),
             );
         }
     } else {
@@ -4110,6 +4200,17 @@ function hasInteractiveChildElements(childNodes: Node[]): boolean {
             (isConditional(child as HTMLElement) ||
                 isForEach(child as HTMLElement) ||
                 checkAsync(child as HTMLElement).isAsync),
+    );
+}
+
+/** Mixed content: text with binding + element siblings (DL#102). Parent needs jay-coordinate for adoptText. */
+function hasMixedContentDynamicText(childNodes: Node[]): boolean {
+    const hasTextWithBinding = (n: Node) =>
+        n.nodeType === NodeType.TEXT_NODE &&
+        /\{[^}]+\}/.test((n as Node & { innerText?: string }).innerText || '');
+    return (
+        childNodes.some(hasTextWithBinding) &&
+        childNodes.some((n) => n.nodeType === NodeType.ELEMENT_NODE)
     );
 }
 

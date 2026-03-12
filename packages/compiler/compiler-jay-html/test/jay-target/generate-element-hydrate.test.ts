@@ -41,6 +41,15 @@ describe('generate jay-html element hydrate', () => {
                 await readFixtureElementHydrateFile(folder),
             );
         });
+
+        it('for mixed content dynamic text (adoptText by position, DL#102)', async () => {
+            const folder = 'basics/mixed-content-dynamic-text';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
     });
 
     describe('conditions', () => {

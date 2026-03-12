@@ -64,6 +64,10 @@ describe('Slow Render Transform', () => {
         it('should handle mixed text with multiple bindings', async () => {
             await runSlowRenderTest('mixed-text-bindings');
         });
+
+        it('should resolve slow bindings in mixed content (wrap is in assignCoordinates, not slow render)', async () => {
+            await runSlowRenderTest('mixed-content-dynamic-text');
+        });
     });
 
     describe('Attribute Binding Resolution', () => {

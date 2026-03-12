@@ -158,9 +158,6 @@ export function compileForEachInstanceKeyExpr(
  * @param trackByValue - The resolved trackBy value for the current item
  * @param coordinateSuffix - e.g. "product-card:0"
  */
-export function computeForEachInstanceKey(
-    trackByValue: string,
-    coordinateSuffix: string,
-): string {
+export function computeForEachInstanceKey(trackByValue: string, coordinateSuffix: string): string {
     return [trackByValue, coordinateSuffix].toString();
 }

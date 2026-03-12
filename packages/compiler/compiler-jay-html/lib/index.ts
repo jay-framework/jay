@@ -8,7 +8,11 @@ export {
     generateSandboxRootFile,
     type ServerElementOptions,
 } from './jay-target/jay-html-compiler';
-export { assignCoordinates, type AssignCoordinatesOptions, type AssignCoordinatesResult } from './jay-target/assign-coordinates';
+export {
+    assignCoordinates,
+    type AssignCoordinatesOptions,
+    type AssignCoordinatesResult,
+} from './jay-target/assign-coordinates';
 export { parseJayFile, getJayHtmlImports } from './jay-target/jay-html-parser';
 
 export { renderRefsType } from './jay-target/jay-html-compile-refs';
