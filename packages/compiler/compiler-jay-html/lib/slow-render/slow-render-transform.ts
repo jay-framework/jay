@@ -589,21 +589,41 @@ export interface HeadlessInstanceResolvedData {
  */
 /**
  * Build the coordinate prefix from ancestor slowForEach jayTrackBy values.
- * Walks up the DOM tree collecting trackBy IDs.
+ * Walks up the DOM tree collecting trackBy IDs and child indices so the
+ * coordinate matches assignCoordinates (used by server/hydrate compilers).
+ *
+ * assignCoordinates gives "1/0/product-widget:0" when jay:product-widget is
+ * inside div.product-card (index 0) inside slowForEach div (jayTrackBy=1).
+ * We must produce the same prefix ["1", "0"] for __headlessInstances lookup.
  */
 export function buildCoordinatePrefix(element: HTMLElement): string[] {
     const parts: string[] = [];
+    let child: Node | null = element;
     let current = element.parentNode as HTMLElement | null;
 
     while (current) {
         const jayTrackBy = current.getAttribute?.('jayTrackBy');
         if (jayTrackBy != null) {
+            // Add child index so prefix matches assignCoordinates (e.g. "1/0" not just "1")
+            const childIndex = getElementChildIndex(child, current);
+            parts.unshift(String(childIndex));
             parts.unshift(jayTrackBy);
         }
+        child = current;
         current = current.parentNode as HTMLElement | null;
     }
 
     return parts;
+}
+
+function getElementChildIndex(child: Node | null, parent: HTMLElement): number {
+    if (!child) return 0;
+    let index = 0;
+    for (const sibling of parent.childNodes) {
+        if (sibling === child) return index;
+        if (sibling.nodeType === NodeType.ELEMENT_NODE) index++;
+    }
+    return index;
 }
 
 /**
