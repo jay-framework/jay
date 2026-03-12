@@ -1,4 +1,7 @@
-import { diffClassStyleOverrides, buildClassStyleBaseline } from './packages/jay-stack/stack-cli/lib/vendors/figma/class-style-baseline.js';
+import {
+    diffClassStyleOverrides,
+    buildClassStyleBaseline,
+} from './packages/jay-stack/stack-cli/lib/vendors/figma/class-style-baseline.js';
 
 const nodeWithGradient = {
     id: 'test',

@@ -489,7 +489,8 @@ function figmaColorToCss(color: { r: number; g: number; b: number; a?: number })
     const r = Math.round(color.r * 255);
     const g = Math.round(color.g * 255);
     const b = Math.round(color.b * 255);
-    const a = color.a !== undefined ? color.a : 1;
+    const rawA = color.a !== undefined ? color.a : 1;
+    const a = Math.round(rawA * 100) / 100;
     if (a < 1) return `rgba(${r}, ${g}, ${b}, ${a})`;
     return rgbToHex({ r: color.r, g: color.g, b: color.b });
 }
@@ -497,9 +498,7 @@ function figmaColorToCss(color: { r: number; g: number; b: number; a?: number })
 function serializeLinearGradient(fill: any): string | null {
     if (!fill.gradientStops || fill.gradientStops.length < 2) return null;
 
-    const angle = fill.gradientTransform
-        ? figmaTransformToCssAngle(fill.gradientTransform)
-        : 180;
+    const angle = fill.gradientTransform ? figmaTransformToCssAngle(fill.gradientTransform) : 180;
 
     const stops = fill.gradientStops
         .map((s: any) => {
@@ -531,7 +530,8 @@ export function getBackgroundFillsStyle(node: FigmaVendorDocument): string {
         const opacity = visibleFills[0].opacity !== undefined ? visibleFills[0].opacity : 1;
         const hex = rgbToHex({ r, g, b });
         if (opacity < 1) {
-            return `background-color: rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${opacity});`;
+            const roundedOpacity = Math.round(opacity * 100) / 100;
+            return `background-color: rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${roundedOpacity});`;
         }
         return `background-color: ${hex};`;
     }
@@ -551,7 +551,8 @@ export function getBackgroundFillsStyle(node: FigmaVendorDocument): string {
     for (const fill of visibleFills) {
         if (fill.type === 'SOLID' && fill.color) {
             const { r, g, b } = fill.color;
-            const opacity = fill.opacity !== undefined ? fill.opacity : 1;
+            const rawOpacity = fill.opacity !== undefined ? fill.opacity : 1;
+            const opacity = Math.round(rawOpacity * 100) / 100;
             backgrounds.push(
                 `linear-gradient(rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${opacity}), rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${opacity}))`,
             );

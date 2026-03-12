@@ -86,6 +86,11 @@ const BLOCKED_LAYOUT_PROPERTIES = new Set([
     'overflow',
 ]);
 
+/** Round a float to 2 decimal places to avoid IEEE 754 artifacts like 0.800000011920929 */
+function roundFloat(n: number): number {
+    return Math.round(n * 100) / 100;
+}
+
 // ── Normalization helpers ───────────────────────────────────────────
 
 /**
@@ -212,7 +217,7 @@ export function extractSafeProperties(node: FigmaVendorDocument): Record<string,
     copyIfSafe(radiusProps, props);
 
     if (node.opacity !== undefined) {
-        props['opacity'] = String(node.opacity);
+        props['opacity'] = String(roundFloat(node.opacity));
     } else {
         props['opacity'] = '1';
     }
@@ -336,10 +341,7 @@ export function diffClassStyleOverrides(
     const blocked: OverrideDiffResult['blocked'] = [];
 
     // Bidirectional diff: check all safe properties from either baseline or current
-    const allSafeProps = new Set([
-        ...Object.keys(baseline.safe),
-        ...Object.keys(currentRaw),
-    ]);
+    const allSafeProps = new Set([...Object.keys(baseline.safe), ...Object.keys(currentRaw)]);
 
     for (const prop of allSafeProps) {
         if (!SAFE_OVERRIDE_PROPERTIES.has(prop)) continue;
