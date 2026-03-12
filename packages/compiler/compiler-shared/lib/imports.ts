@@ -294,6 +294,17 @@ export const Import = {
         'makeHeadlessInstanceComponent',
         ImportsFor.implementation,
     ),
+    HEADLESS_INSTANCES: importStatementFragment(
+        JAY_STACK_CLIENT_RUNTIME,
+        'HEADLESS_INSTANCES',
+        ImportsFor.implementation,
+    ),
+    useContext: importStatementFragment(JAY_RUNTIME, 'useContext', ImportsFor.implementation),
+    currentConstructionContext: importStatementFragment(
+        JAY_RUNTIME,
+        'currentConstructionContext',
+        ImportsFor.implementation,
+    ),
     adoptText: importStatementFragment(JAY_RUNTIME, 'adoptText', ImportsFor.implementation),
     adoptElement: importStatementFragment(JAY_RUNTIME, 'adoptElement', ImportsFor.implementation),
     childCompHydrate: importStatementFragment(

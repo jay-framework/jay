@@ -863,3 +863,26 @@ Server expects `'1,stock-status:0'`, so the ViewState lookup fails → `fastVS` 
 - **Hydrate** (`renderHydrateElementContent`): Add `coordinatePrefix: [baseCoord]` to childContext when `hasInteractiveChildren`.
 - **Server** (`renderServerElementContent`): Add `coordinatePrefix: '${coordinate}'` to childContext when element has coordinate and is not root (`"0"`).
 - **Fixtures:** Updated to match new hierarchical coordinate output.
+
+---
+
+## Implementation: Instance ViewState for Hydrate Condition Evaluation (Mar 2025)
+
+**Problem:** In slowForEach with headless instances (e.g. fake-shop Featured Products), the 2nd product (Out of Stock) incorrectly showed both "Out of Stock" and "In Stock". Conditions like `if="inStock"` were evaluated against the merged page ViewState instead of the instance ViewState.
+
+**Root cause:** `adoptRenderFnCode` passed `viewState` (from the plugin's renderViewState) to `withHydrationChildContext`. Due to merge order, the merged page ViewState's `inStock` came from the last instance, so `hydrateConditional` for earlier instances saw the wrong value.
+
+**Fix:** Use `HEADLESS_INSTANCES` context to look up the instance ViewState by coordinate key and pass that to `withHydrationChildContext`:
+
+1. **compiler-shared/imports.ts:** Added `HEADLESS_INSTANCES`, `useContext`, `currentConstructionContext`.
+2. **jay-html-compiler.ts (adoptRenderFnCode):** Generate:
+   ```js
+   const instanceData = useContext(HEADLESS_INSTANCES);
+   const instanceKey = 'p2/product-card:0';  // or runtime expr for forEach
+   const instanceVs = instanceData?.viewStates?.[instanceKey] ?? viewState;
+   return ConstructContext.withHydrationChildContext(instanceVs, refManager, () => ...);
+   ```
+3. **Instance key:** Static: `coordinateSuffix`; slowForEach: `prefix/suffix`; forEach: `(dataIds).join(',') + ',' + suffix`.
+4. **Fixtures:** Updated page-with-headless-instance, page-with-headless-in-foreach, page-with-headless-in-slow-foreach, page-with-headless-mixed, page-with-mixed-static-slow-foreach.
+
+**Tests:** generate-element-hydrate.test.ts — 19/19 passing.

@@ -2581,6 +2581,18 @@ function renderHydrateHeadlessInstance(
         ReferenceManagerTarget.element,
     );
 
+    // Build instanceVs expression: use __headlessInstances from HEADLESS_INSTANCES context
+    // so hydrateConditional and adoptText evaluate conditions against the instance ViewState,
+    // not the merged page ViewState (which would use the last instance's values).
+    const instanceKeyExpr =
+        coordinateKey != null
+            ? `'${coordinateKey}'`
+            : `(currentConstructionContext()?.dataIds ?? []).join(',') + ',${coordinateSuffix}'`;
+    const instanceVsBlock = `
+        const instanceData = useContext(HEADLESS_INSTANCES);
+        const instanceKey = ${instanceKeyExpr};
+        const instanceVs = instanceData?.viewStates?.[instanceKey] ?? viewState;`;
+
     // Adopt render function code
     const adoptRenderFnCode = `
 // Hydrate inline template for headless component: ${contractName} #${idx}
@@ -2590,10 +2602,11 @@ type ${preRenderType} = [${refsTypeName}, ${renderType}];
 
 function ${renderFnName}(options?: RenderElementOptions): ${preRenderType} {
     ${renderedRefsManager}
-    const render = (viewState) =>
-        ConstructContext.withHydrationChildContext(viewState, refManager, () =>
+    const render = (viewState) => {${instanceVsBlock}
+        return ConstructContext.withHydrationChildContext(instanceVs, refManager, () =>
 ${adoptInlineBody.rendered}
         ) as ${elementType};
+    };
     return [refManager.getPublicAPI() as ${refsTypeName}, render];
 }`;
 
@@ -2612,7 +2625,12 @@ ${adoptInlineBody.rendered}
     let adoptImports = adoptInlineBody.imports
         .plus(refsManagerImport)
         .plus(Import.ConstructContext)
-        .plus(Import.makeHeadlessInstanceComponent);
+        .plus(Import.makeHeadlessInstanceComponent)
+        .plus(Import.HEADLESS_INSTANCES)
+        .plus(Import.useContext);
+    if (coordinateKey == null) {
+        adoptImports = adoptImports.plus(Import.currentConstructionContext);
+    }
 
     // --- For fast conditionals: also generate create inline template (element APIs) ---
     // forEach doesn't need a create version here — the forEach handler's create callback
