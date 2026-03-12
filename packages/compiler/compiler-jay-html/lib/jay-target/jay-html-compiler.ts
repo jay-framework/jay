@@ -2737,10 +2737,12 @@ const ${createComponentSymbol} = makeHeadlessInstanceComponent(
     // childCompHydrate's forInstance(coord) sets coordinateBase for child adoptElement resolution.
     // Static instances need full instanceCoord (e.g. "0/2/1/product-widget:0"); coordinateKey
     // ("product-widget:0") would make both instances share the same coordBase and break.
+    // slowForEach: parent (slowForEachItem) has jayTrackBy in coordinateBase. Pass the rest of
+    // the instance coord (e.g. "0/product-widget:0" when jay:xxx is inside div at index 0).
     const coordKeyArg = isInsideForEach
         ? `'${coordinateSuffix}'`
         : context.insideSlowForEach
-          ? `'${coordinateKey}'`
+          ? `'${coordSegments.slice(1).join('/')}'`
           : `'${instanceCoord}'`;
 
     if (ifCondition) {

@@ -263,7 +263,7 @@ export function hydrate(
                             (vs1: ProductOfPageWithHeadlessMixedViewState) => ({
                                 productId: 'prod-a',
                             }),
-                            'p1/product-card:0',
+                            'product-card:0',
                             ref_0(),
                         ),
                 ),
@@ -280,7 +280,7 @@ export function hydrate(
                             (vs1: ProductOfPageWithHeadlessMixedViewState) => ({
                                 productId: 'prod-b',
                             }),
-                            'p2/product-card:0',
+                            'product-card:0',
                             ref_0(),
                         ),
                 ),

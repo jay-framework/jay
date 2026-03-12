@@ -117,7 +117,7 @@ export function hydrate(
                             (vs1: ProductOfPageWithMixedStaticSlowForeachViewState) => ({
                                 productId: 'prod-c',
                             }),
-                            'p3/product-card:0',
+                            'product-card:0',
                             refAR1(),
                         ),
                 ),

@@ -149,7 +149,7 @@ export function hydrate(
                             (vs1: ProductOfPageWithHeadlessInSlowForeachViewState) => ({
                                 productId: 'prod-123',
                             }),
-                            'p1/product-card:0',
+                            'product-card:0',
                             refAR1(),
                         ),
                 ),
@@ -166,7 +166,7 @@ export function hydrate(
                             (vs1: ProductOfPageWithHeadlessInSlowForeachViewState) => ({
                                 productId: 'prod-456',
                             }),
-                            'p2/product-card:0',
+                            'product-card:0',
                             refAR2(),
                         ),
                 ),
