@@ -2080,6 +2080,12 @@ interface HydrateContext {
     varMappings: Record<string, string>;
     /** Coordinate of the enclosing adopted element, used by forEach as containerCoordinate. */
     parentCoordinate?: string;
+    /**
+     * When compiling a headless instance's adopt inline template, the instance's full coordinate
+     * (e.g. "0/2/1/product-widget:0"). Child adoptElement calls use relative coordinates so
+     * childCompHydrate's forInstance(instanceCoord) can resolve them correctly.
+     */
+    instanceCoordPrefix?: string;
 }
 
 /**
@@ -2522,7 +2528,8 @@ function renderHydrateHeadlessInstance(
     };
     collectContractRefs(headlessImport.refs);
 
-    // Compile adopt inline template using HydrateContext with component's ViewState
+    // Compile adopt inline template using HydrateContext with component's ViewState.
+    // instanceCoordPrefix: child adoptElement uses relative coords so forInstance(instanceCoord) resolves.
     const adoptChildIndent = new Indent('            ');
     const adoptItemContext: HydrateContext = {
         ...context,
@@ -2534,6 +2541,7 @@ function renderHydrateHeadlessInstance(
         headlessContractNames: new Set(),
         headlessImports: [],
         varMappings: {},
+        instanceCoordPrefix: instanceCoord,
     };
     const adoptRenderContext = buildRenderContext(adoptItemContext);
 
@@ -2596,7 +2604,8 @@ ${adoptInlineBody.rendered}
         adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName}.comp,\n    (dataIds) => dataIds.join(','),\n    ${pluginComponentName}.contexts,\n);`;
     } else {
         adoptComponentSymbol = `_Headless${pascal}${idx}`;
-        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName}.comp,\n    '${coordinateKey}',\n    ${pluginComponentName}.contexts,\n);`;
+        // Static: use full instanceCoord for __headlessInstances lookup (dev server keys by full coord)
+        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName}.comp,\n    '${instanceCoord}',\n    ${pluginComponentName}.contexts,\n);`;
     }
 
     let adoptImports = adoptInlineBody.imports
@@ -2725,7 +2734,14 @@ const ${createComponentSymbol} = makeHeadlessInstanceComponent(
     if (renderedRef.rendered !== '') renderedRef = renderedRef.map((_) => ', ' + _);
 
     // --- Build the call expression ---
-    const coordKeyArg = isInsideForEach ? `'${coordinateSuffix}'` : `'${coordinateKey}'`;
+    // childCompHydrate's forInstance(coord) sets coordinateBase for child adoptElement resolution.
+    // Static instances need full instanceCoord (e.g. "0/2/1/product-widget:0"); coordinateKey
+    // ("product-widget:0") would make both instances share the same coordBase and break.
+    const coordKeyArg = isInsideForEach
+        ? `'${coordinateSuffix}'`
+        : context.insideSlowForEach
+          ? `'${coordinateKey}'`
+          : `'${instanceCoord}'`;
 
     if (ifCondition) {
         // Fast conditional: wrap in hydrateConditional with adopt and create callbacks.
@@ -2829,9 +2845,13 @@ function renderHydrateElementContent(
         );
     }
 
-    // Read pre-assigned coordinate from jay-coordinate-base (DL#103)
+    // Read pre-assigned coordinate from jay-coordinate-base (DL#103).
+    // When inside headless adopt (instanceCoordPrefix set), use relative coord for forInstance resolution.
     const coordTemplate = element.getAttribute(COORD_ATTR);
-    const coordinate = coordTemplate || coordinateOverride || '0';
+    let coordinate = coordTemplate || coordinateOverride || '0';
+    if (context.instanceCoordPrefix && coordTemplate?.startsWith(context.instanceCoordPrefix + '/')) {
+        coordinate = coordTemplate.slice(context.instanceCoordPrefix.length + 1);
+    }
 
     // Build the ref argument if present
     const renderedRef = renderElementRef(element, renderContext);

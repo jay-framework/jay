@@ -87,9 +87,9 @@ function _headlessProductCard0HydrateRender(
     );
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('0/product-card:0/0', {}, [
-                adoptText('0/product-card:0/0/1', (vs) => vs.price),
-                adoptElement('0/product-card:0/0/2', {}, [], refAddToCart()),
+            adoptElement('0', {}, [
+                adoptText('0/1', (vs) => vs.price),
+                adoptElement('0/2', {}, [], refAddToCart()),
             ]),
         ) as _HeadlessProductCard0Element;
     return [refManager.getPublicAPI() as ProductCardRefs, render];
@@ -97,7 +97,7 @@ function _headlessProductCard0HydrateRender(
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0HydrateRender,
     productCard.comp,
-    'product-card:0',
+    '0/product-card:0',
     productCard.contexts,
 );
 
@@ -116,16 +116,14 @@ function _headlessProductCard1HydrateRender(
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('0/product-card:1/0', {}, [
-                adoptText('0/product-card:1/0/1', (vs) => vs.price),
-            ]),
+            adoptElement('0', {}, [adoptText('0/1', (vs) => vs.price)]),
         ) as _HeadlessProductCard1Element;
     return [refManager.getPublicAPI() as ProductCardRefs, render];
 }
 const _HeadlessProductCard1 = makeHeadlessInstanceComponent(
     _headlessProductCard1HydrateRender,
     productCard.comp,
-    'product-card:1',
+    '0/product-card:1',
     productCard.contexts,
 );
 
@@ -171,9 +169,9 @@ function _headlessProductCard2HydrateRender(
     );
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('p1/product-card:0/0', {}, [
-                adoptText('p1/product-card:0/0/1', (vs) => vs.price),
-                adoptElement('p1/product-card:0/0/2', {}, [], refAddToCart2()),
+            adoptElement('0', {}, [
+                adoptText('0/1', (vs) => vs.price),
+                adoptElement('0/2', {}, [], refAddToCart2()),
             ]),
         ) as _HeadlessProductCard2Element;
     return [refManager.getPublicAPI() as ProductCardRefs, render];
@@ -200,9 +198,7 @@ function _headlessProductCard3HydrateRender(
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('p2/product-card:0/0', {}, [
-                adoptText('p2/product-card:0/0/1', (vs) => vs.price),
-            ]),
+            adoptElement('0', {}, [adoptText('0/1', (vs) => vs.price)]),
         ) as _HeadlessProductCard3Element;
     return [refManager.getPublicAPI() as ProductCardRefs, render];
 }
@@ -235,7 +231,7 @@ export function hydrate(
                 childCompHydrate(
                     _HeadlessProductCard0,
                     (vs: PageWithHeadlessMixedViewState) => ({ productId: '123' }),
-                    'product-card:0',
+                    '0/product-card:0',
                     refHero(),
                 ),
                 hydrateConditional(
@@ -244,7 +240,7 @@ export function hydrate(
                         childCompHydrate(
                             _HeadlessProductCard1,
                             (vs: PageWithHeadlessMixedViewState) => ({ productId: 'prod-promo' }),
-                            'product-card:1',
+                            '0/product-card:1',
                             refPromo(),
                         ),
                     () =>

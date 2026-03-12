@@ -79,10 +79,10 @@ function _headlessProductCard0HydrateRender(
     );
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('$_id/product-card:0/0', {}, [
-                adoptText('$_id/product-card:0/0/0', (vs) => vs.name),
-                adoptText('$_id/product-card:0/0/1', (vs) => vs.price),
-                adoptElement('$_id/product-card:0/0/2', {}, [], refAddToCart()),
+            adoptElement('0', {}, [
+                adoptText('0/0', (vs) => vs.name),
+                adoptText('0/1', (vs) => vs.price),
+                adoptElement('0/2', {}, [], refAddToCart()),
             ]),
         ) as _HeadlessProductCard0Element;
     return [refManager.getPublicAPI() as ProductCardRefs, render];
