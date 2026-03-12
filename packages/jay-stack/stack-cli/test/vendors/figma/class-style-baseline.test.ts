@@ -4,6 +4,7 @@ import {
     normalizeNumber,
     normalizePropertyValue,
     extractSafeProperties,
+    extractLayoutProperties,
     buildClassStyleBaseline,
     parseClassStyleBaseline,
     diffClassStyleOverrides,
@@ -11,6 +12,7 @@ import {
     overridesToStyleString,
     CLASS_STYLE_BASELINE_KEY,
 } from '../../../lib/vendors/figma/class-style-baseline';
+import { getBackgroundFillsStyle } from '../../../lib/vendors/figma/utils';
 import { figmaVendor } from '../../../lib/vendors/figma/index';
 import type { FigmaVendorDocument, ProjectPage } from '@jay-framework/editor-protocol';
 
@@ -282,9 +284,7 @@ function findClassLine(html: string, className: string): string | undefined {
 
 describe('Export integration: class-based override diffing', () => {
     it('emits background override when background changed from baseline', async () => {
-        const originalFills = [
-            { type: 'SOLID', color: { r: 1, g: 1, b: 1 } },
-        ];
+        const originalFills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }];
         const baseline = buildClassStyleBaseline(
             makeFrame({ fills: originalFills }),
             'computed-style',
@@ -316,10 +316,7 @@ describe('Export integration: class-based override diffing', () => {
 
     it('emits nothing when class-based node is unchanged from baseline', async () => {
         const fills = [{ type: 'SOLID', color: { r: 0.5, g: 0.5, b: 0.5 } }];
-        const baseline = buildClassStyleBaseline(
-            makeFrame({ fills }),
-            'computed-style',
-        );
+        const baseline = buildClassStyleBaseline(makeFrame({ fills }), 'computed-style');
 
         const doc = makeSection([
             {
@@ -402,5 +399,292 @@ describe('Export integration: class-based override diffing', () => {
         const classLine = findClassLine(result.bodyHtml, 'responsive-grid');
         expect(classLine).toBeDefined();
         expect(classLine).not.toContain('style=');
+    });
+});
+
+// ── Gradient serialization ──────────────────────────────────────────
+
+function makeGradientFill(
+    angle: number,
+    stops: Array<{ pos: number; r: number; g: number; b: number; a?: number }>,
+) {
+    const rad = ((angle - 90) * Math.PI) / 180;
+    const cos = Math.cos(rad);
+    const sin = Math.sin(rad);
+    const tx = 0.5 - 0.5 * cos + 0.5 * sin;
+    const ty = 0.5 - 0.5 * sin - 0.5 * cos;
+    return {
+        type: 'GRADIENT_LINEAR',
+        visible: true,
+        gradientTransform: [
+            [cos, -sin, tx],
+            [sin, cos, ty],
+        ],
+        gradientStops: stops.map((s) => ({
+            position: s.pos,
+            color: { r: s.r, g: s.g, b: s.b, a: s.a ?? 1 },
+        })),
+    };
+}
+
+describe('getBackgroundFillsStyle — gradient serialization', () => {
+    it('serializes single GRADIENT_LINEAR to background-image', () => {
+        const node = makeFrame({
+            fills: [
+                makeGradientFill(135, [
+                    { pos: 0, r: 0.96, g: 0.93, b: 0.87 },
+                    { pos: 1, r: 0.98, g: 0.97, b: 0.96 },
+                ]),
+            ],
+        });
+        const css = getBackgroundFillsStyle(node);
+        expect(css).toContain('background-image:');
+        expect(css).toContain('linear-gradient(135deg');
+        expect(css).toContain('0%');
+        expect(css).toContain('100%');
+    });
+
+    it('serializes gradient in multi-fill scenario', () => {
+        const node = makeFrame({
+            fills: [
+                { type: 'SOLID', color: { r: 1, g: 0, b: 0 }, opacity: 0.5 },
+                makeGradientFill(180, [
+                    { pos: 0, r: 0, g: 0, b: 0 },
+                    { pos: 1, r: 1, g: 1, b: 1 },
+                ]),
+            ],
+        });
+        const css = getBackgroundFillsStyle(node);
+        expect(css).toContain('background-image:');
+        expect(css).toContain('linear-gradient(180deg');
+    });
+
+    it('produces correct angle from gradient transform', () => {
+        for (const angle of [0, 45, 90, 135, 180, 270]) {
+            const node = makeFrame({
+                fills: [
+                    makeGradientFill(angle, [
+                        { pos: 0, r: 0, g: 0, b: 0 },
+                        { pos: 1, r: 1, g: 1, b: 1 },
+                    ]),
+                ],
+            });
+            const css = getBackgroundFillsStyle(node);
+            expect(css).toContain(`${angle}deg`);
+        }
+    });
+});
+
+// ── Gradient baseline → solid diff ──────────────────────────────────
+
+describe('diffClassStyleOverrides — gradient→solid transitions', () => {
+    it('detects gradient-to-solid change with both background-color and background-image: none', () => {
+        const gradientNode = makeFrame({
+            fills: [
+                makeGradientFill(135, [
+                    { pos: 0, r: 0.96, g: 0.93, b: 0.87 },
+                    { pos: 1, r: 0.98, g: 0.97, b: 0.96 },
+                ]),
+            ],
+        });
+        const baseline = buildClassStyleBaseline(gradientNode, 'computed-style');
+
+        const solidNode = makeFrame({
+            fills: [{ type: 'SOLID', color: { r: 0.42, g: 0.84, b: 0.98 } }],
+        });
+        const { overrides } = diffClassStyleOverrides(baseline, solidNode);
+
+        expect(overrides['background-color']).toBeDefined();
+        expect(overrides['background-image']).toBe('none');
+    });
+
+    it('detects solid-to-gradient change with background-image override', () => {
+        const solidNode = makeFrame({
+            fills: [{ type: 'SOLID', color: { r: 1, g: 0, b: 0 } }],
+        });
+        const baseline = buildClassStyleBaseline(solidNode, 'computed-style');
+
+        const gradientNode = makeFrame({
+            fills: [
+                makeGradientFill(180, [
+                    { pos: 0, r: 0, g: 0, b: 0 },
+                    { pos: 1, r: 1, g: 1, b: 1 },
+                ]),
+            ],
+        });
+        const { overrides } = diffClassStyleOverrides(baseline, gradientNode);
+
+        expect(overrides['background-image']).toContain('linear-gradient');
+        expect(overrides['background-color']).toBe('transparent');
+    });
+
+    it('returns no overrides when gradient is unchanged', () => {
+        const gradientNode = makeFrame({
+            fills: [
+                makeGradientFill(135, [
+                    { pos: 0, r: 0, g: 0, b: 0 },
+                    { pos: 1, r: 1, g: 1, b: 1 },
+                ]),
+            ],
+        });
+        const baseline = buildClassStyleBaseline(gradientNode, 'computed-style');
+        const { overrides } = diffClassStyleOverrides(baseline, gradientNode);
+        expect(Object.keys(overrides)).toHaveLength(0);
+    });
+});
+
+// ── Blocked override detection ──────────────────────────────────────
+
+describe('diffClassStyleOverrides — blocked layout detection', () => {
+    it('reports padding change as blocked', () => {
+        const originalNode = makeFrame({
+            fills: [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }],
+            paddingTop: 80,
+            paddingRight: 48,
+            paddingBottom: 60,
+            paddingLeft: 48,
+        });
+        const baseline = buildClassStyleBaseline(originalNode, 'computed-style');
+
+        const editedNode = makeFrame({
+            fills: [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }],
+            paddingTop: 120,
+            paddingRight: 48,
+            paddingBottom: 60,
+            paddingLeft: 48,
+        });
+        const { overrides, blocked } = diffClassStyleOverrides(baseline, editedNode);
+
+        expect(Object.keys(overrides)).toHaveLength(0);
+        expect(blocked.length).toBeGreaterThan(0);
+        expect(blocked.some((b) => b.property === 'padding-top')).toBe(true);
+    });
+
+    it('emits background override and blocks padding change simultaneously', () => {
+        const originalNode = makeFrame({
+            fills: [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }],
+            paddingTop: 80,
+            paddingRight: 48,
+            paddingBottom: 60,
+            paddingLeft: 48,
+        });
+        const baseline = buildClassStyleBaseline(originalNode, 'computed-style');
+
+        const editedNode = makeFrame({
+            fills: [{ type: 'SOLID', color: { r: 0.42, g: 0.84, b: 0.98 } }],
+            paddingTop: 120,
+            paddingRight: 48,
+            paddingBottom: 60,
+            paddingLeft: 48,
+        });
+        const { overrides, blocked } = diffClassStyleOverrides(baseline, editedNode);
+
+        expect(overrides['background-color']).toBeDefined();
+        expect(blocked.some((b) => b.property === 'padding-top')).toBe(true);
+    });
+
+    it('reports no blocked items when layout is unchanged', () => {
+        const node = makeFrame({
+            fills: [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 } }],
+            paddingTop: 10,
+            width: 300,
+            height: 200,
+        });
+        const baseline = buildClassStyleBaseline(node, 'computed-style');
+        const { blocked } = diffClassStyleOverrides(baseline, node);
+        expect(blocked).toHaveLength(0);
+    });
+});
+
+// ── Multi-fill deterministic canonicalization ────────────────────────
+
+describe('baseline — multi-fill deterministic canonicalization', () => {
+    it('produces identical baseline for same multi-fill input', () => {
+        const fills = [
+            { type: 'SOLID', color: { r: 1, g: 0, b: 0 }, opacity: 0.5 },
+            makeGradientFill(180, [
+                { pos: 0, r: 0, g: 0, b: 0 },
+                { pos: 1, r: 1, g: 1, b: 1 },
+            ]),
+        ];
+        const node1 = makeFrame({ fills });
+        const node2 = makeFrame({ fills });
+
+        const baseline1 = buildClassStyleBaseline(node1, 'computed-style');
+        const baseline2 = buildClassStyleBaseline(node2, 'computed-style');
+        expect(baseline1).toBe(baseline2);
+    });
+});
+
+// ── Roundtrip stability ─────────────────────────────────────────────
+
+describe('baseline — roundtrip stability', () => {
+    it('build → diff produces no overrides (idempotent)', () => {
+        const node = makeFrame({
+            fills: [{ type: 'SOLID', color: { r: 0.5, g: 0.3, b: 0.1 } }],
+            cornerRadius: 12,
+            opacity: 0.8,
+            paddingTop: 20,
+            paddingBottom: 40,
+        });
+        const baseline = buildClassStyleBaseline(node, 'computed-style');
+        const { overrides, blocked } = diffClassStyleOverrides(baseline, node);
+        expect(Object.keys(overrides)).toHaveLength(0);
+        expect(blocked).toHaveLength(0);
+    });
+
+    it('gradient fill roundtrips without false positives', () => {
+        const node = makeFrame({
+            fills: [
+                makeGradientFill(135, [
+                    { pos: 0, r: 0.96, g: 0.93, b: 0.87 },
+                    { pos: 1, r: 0.98, g: 0.97, b: 0.96 },
+                ]),
+            ],
+        });
+        const baseline = buildClassStyleBaseline(node, 'computed-style');
+        const { overrides } = diffClassStyleOverrides(baseline, node);
+        expect(Object.keys(overrides)).toHaveLength(0);
+    });
+
+    it('baseline captures layout properties for blocked detection', () => {
+        const node = makeFrame({
+            fills: [],
+            paddingTop: 20,
+            paddingRight: 40,
+            paddingBottom: 20,
+            paddingLeft: 40,
+            width: 800,
+            height: 400,
+        });
+        const json = buildClassStyleBaseline(node, 'computed-style');
+        const parsed = parseClassStyleBaseline(json);
+        expect(parsed!.layout).toBeDefined();
+        expect(parsed!.layout!['padding-top']).toBe('20px');
+        expect(parsed!.layout!['width']).toBe('800px');
+    });
+});
+
+// ── extractLayoutProperties ─────────────────────────────────────────
+
+describe('extractLayoutProperties', () => {
+    it('extracts padding, gap, width, height', () => {
+        const node = makeFrame({
+            paddingTop: 10,
+            paddingRight: 20,
+            paddingBottom: 30,
+            paddingLeft: 40,
+            itemSpacing: 8,
+            width: 500,
+            height: 300,
+        });
+        const layout = extractLayoutProperties(node);
+        expect(layout['padding-top']).toBe('10px');
+        expect(layout['padding-right']).toBe('20px');
+        expect(layout['padding-bottom']).toBe('30px');
+        expect(layout['padding-left']).toBe('40px');
+        expect(layout['gap']).toBe('8px');
+        expect(layout['width']).toBe('500px');
+        expect(layout['height']).toBe('300px');
     });
 });

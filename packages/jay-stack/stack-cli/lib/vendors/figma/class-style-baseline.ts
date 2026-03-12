@@ -5,6 +5,7 @@ export const CLASS_STYLE_BASELINE_KEY = 'jay-class-style-baseline-v1';
 
 export interface ClassStyleBaseline {
     safe: Record<string, string>;
+    layout?: Record<string, string>;
     meta: { source: 'computed-style' | 'static'; version: 1 };
 }
 
@@ -141,10 +142,7 @@ export function normalizePropertyValue(property: string, value: string): string 
     const trimmed = value.trim();
     if (!trimmed) return '';
 
-    if (
-        property.includes('color') ||
-        property === 'background-color'
-    ) {
+    if (property.includes('color') || property === 'background-color') {
         return normalizeColor(trimmed);
     }
 
@@ -156,7 +154,19 @@ export function normalizePropertyValue(property: string, value: string): string 
         return trimmed.replace(/\.0+px$/, 'px');
     }
 
+    if (property === 'border-radius') {
+        return normalizeBorderRadius(trimmed);
+    }
+
     return trimmed.replace(/\s+/g, ' ');
+}
+
+function normalizeBorderRadius(value: string): string {
+    const parts = value.trim().split(/\s+/);
+    if (parts.length === 4 && parts.every((p) => p === parts[0])) {
+        return parts[0];
+    }
+    return parts.join(' ');
 }
 
 // ── Extraction: Figma node → safe CSS properties ────────────────────
@@ -169,9 +179,20 @@ export function normalizePropertyValue(property: string, value: string): string 
 export function extractSafeProperties(node: FigmaVendorDocument): Record<string, string> {
     const props: Record<string, string> = {};
 
+    // Background: always populate both background-color and background-image
+    // so the diff can detect gradient → solid transitions and emit both.
     const bgCss = getBackgroundFillsStyle(node);
     const bgProps = parseCssDeclarations(bgCss);
-    copyIfSafe(bgProps, props);
+    if (bgProps['background-color']) {
+        props['background-color'] = bgProps['background-color'];
+        props['background-image'] = 'none';
+    } else if (bgProps['background-image']) {
+        props['background-image'] = bgProps['background-image'];
+        props['background-color'] = 'transparent';
+    } else {
+        props['background-color'] = 'transparent';
+        props['background-image'] = 'none';
+    }
 
     const strokeCss = getStrokeStyles(node);
     const strokeProps = parseCssDeclarations(strokeCss);
@@ -195,6 +216,26 @@ export function extractSafeProperties(node: FigmaVendorDocument): Record<string,
     } else {
         props['opacity'] = '1';
     }
+
+    return props;
+}
+
+/**
+ * Extract layout properties from a Figma vendor doc node for blocked-change detection.
+ * These are never emitted as inline overrides but we track them so we can warn
+ * when a designer accidentally edits them.
+ */
+export function extractLayoutProperties(node: FigmaVendorDocument): Record<string, string> {
+    const props: Record<string, string> = {};
+    const n = node as any;
+
+    if (n.paddingTop !== undefined) props['padding-top'] = `${n.paddingTop}px`;
+    if (n.paddingRight !== undefined) props['padding-right'] = `${n.paddingRight}px`;
+    if (n.paddingBottom !== undefined) props['padding-bottom'] = `${n.paddingBottom}px`;
+    if (n.paddingLeft !== undefined) props['padding-left'] = `${n.paddingLeft}px`;
+    if (n.itemSpacing !== undefined) props['gap'] = `${n.itemSpacing}px`;
+    if (n.width !== undefined) props['width'] = `${n.width}px`;
+    if (n.height !== undefined) props['height'] = `${n.height}px`;
 
     return props;
 }
@@ -252,7 +293,14 @@ export function buildClassStyleBaseline(
     for (const [prop, value] of Object.entries(raw)) {
         safe[prop] = normalizePropertyValue(prop, value);
     }
-    const baseline: ClassStyleBaseline = { safe, meta: { source, version: 1 } };
+
+    const layout: Record<string, string> = {};
+    const rawLayout = extractLayoutProperties(node);
+    for (const [prop, value] of Object.entries(rawLayout)) {
+        layout[prop] = value;
+    }
+
+    const baseline: ClassStyleBaseline = { safe, layout, meta: { source, version: 1 } };
     return JSON.stringify(baseline);
 }
 
@@ -287,13 +335,38 @@ export function diffClassStyleOverrides(
     const overrides: Record<string, string> = {};
     const blocked: OverrideDiffResult['blocked'] = [];
 
-    for (const [prop, rawValue] of Object.entries(currentRaw)) {
-        const normalizedCurrent = normalizePropertyValue(prop, rawValue);
-        const normalizedBaseline = baseline.safe[prop] ?? '';
+    // Bidirectional diff: check all safe properties from either baseline or current
+    const allSafeProps = new Set([
+        ...Object.keys(baseline.safe),
+        ...Object.keys(currentRaw),
+    ]);
 
-        if (normalizedCurrent !== normalizedBaseline) {
-            if (SAFE_OVERRIDE_PROPERTIES.has(prop)) {
-                overrides[prop] = rawValue;
+    for (const prop of allSafeProps) {
+        if (!SAFE_OVERRIDE_PROPERTIES.has(prop)) continue;
+
+        const rawBaseline = baseline.safe[prop] ?? '';
+        const rawCurrent = currentRaw[prop] ?? '';
+        const normalizedBaseline = rawBaseline ? normalizePropertyValue(prop, rawBaseline) : '';
+        const normalizedCurrent = rawCurrent ? normalizePropertyValue(prop, rawCurrent) : '';
+
+        if (normalizedCurrent === normalizedBaseline) continue;
+
+        if (rawCurrent) {
+            overrides[prop] = rawCurrent;
+        } else {
+            overrides[prop] = getCssResetValue(prop);
+        }
+    }
+
+    // Detect blocked layout property changes
+    if (baseline.layout) {
+        const currentLayout = extractLayoutProperties(currentNode);
+        for (const prop of Object.keys(baseline.layout)) {
+            if (!BLOCKED_LAYOUT_PROPERTIES.has(prop)) continue;
+            const baseVal = baseline.layout[prop] ?? '';
+            const curVal = currentLayout[prop] ?? '';
+            if (baseVal !== curVal) {
+                blocked.push({ property: prop, baseline: baseVal, current: curVal });
             }
         }
     }
@@ -301,27 +374,15 @@ export function diffClassStyleOverrides(
     return { overrides, blocked };
 }
 
-/**
- * Check all CSS properties generated by the export pipeline and report
- * any blocked layout property changes that will not be emitted.
- */
-export function detectBlockedOverrides(
-    baselineJson: string,
-    fullExportStyle: string,
-): Array<{ property: string; value: string }> {
-    const baseline = parseClassStyleBaseline(baselineJson);
-    if (!baseline) return [];
-
-    const currentProps = parseCssDeclarations(fullExportStyle);
-    const blocked: Array<{ property: string; value: string }> = [];
-
-    for (const [prop, value] of Object.entries(currentProps)) {
-        if (BLOCKED_LAYOUT_PROPERTIES.has(prop) && value) {
-            blocked.push({ property: prop, value });
-        }
-    }
-
-    return blocked;
+function getCssResetValue(prop: string): string {
+    if (prop === 'background-image') return 'none';
+    if (prop === 'background-color') return 'transparent';
+    if (prop === 'opacity') return '1';
+    if (prop.includes('width')) return '0';
+    if (prop.includes('color')) return 'inherit';
+    if (prop.includes('style')) return 'none';
+    if (prop === 'border-radius') return '0';
+    return 'initial';
 }
 
 // ── CSS string parsing ──────────────────────────────────────────────

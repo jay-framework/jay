@@ -472,6 +472,47 @@ export function getOverflowStyles(node: FigmaVendorDocument): string {
 }
 
 /**
+ * Convert Figma's 2x3 gradient transform matrix back to a CSS angle (degrees).
+ * Reverses the operation in cssAngleToFigmaTransform from import-ir-to-figma-vendor-doc.
+ */
+function figmaTransformToCssAngle(
+    transform: [[number, number, number], [number, number, number]],
+): number {
+    const cos = transform[0][0];
+    const sin = transform[1][0];
+    const rad = Math.atan2(sin, cos);
+    const deg = (rad * 180) / Math.PI + 90;
+    return Math.round(((deg % 360) + 360) % 360);
+}
+
+function figmaColorToCss(color: { r: number; g: number; b: number; a?: number }): string {
+    const r = Math.round(color.r * 255);
+    const g = Math.round(color.g * 255);
+    const b = Math.round(color.b * 255);
+    const a = color.a !== undefined ? color.a : 1;
+    if (a < 1) return `rgba(${r}, ${g}, ${b}, ${a})`;
+    return rgbToHex({ r: color.r, g: color.g, b: color.b });
+}
+
+function serializeLinearGradient(fill: any): string | null {
+    if (!fill.gradientStops || fill.gradientStops.length < 2) return null;
+
+    const angle = fill.gradientTransform
+        ? figmaTransformToCssAngle(fill.gradientTransform)
+        : 180;
+
+    const stops = fill.gradientStops
+        .map((s: any) => {
+            const color = figmaColorToCss(s.color);
+            const pos = Math.round(s.position * 100);
+            return `${color} ${pos}%`;
+        })
+        .join(', ');
+
+    return `linear-gradient(${angle}deg, ${stops})`;
+}
+
+/**
  * Gets background fill styles (solid colors, gradients, images)
  */
 export function getBackgroundFillsStyle(node: FigmaVendorDocument): string {
@@ -495,6 +536,12 @@ export function getBackgroundFillsStyle(node: FigmaVendorDocument): string {
         return `background-color: ${hex};`;
     }
 
+    // Single gradient fill → emit clean background-image for roundtrip fidelity
+    if (visibleFills.length === 1 && visibleFills[0].type === 'GRADIENT_LINEAR') {
+        const css = serializeLinearGradient(visibleFills[0]);
+        if (css) return `background-image: ${css};`;
+    }
+
     // Multiple fills or non-solid → use background-image layers
     const backgrounds: string[] = [];
     const backgroundSizes: string[] = [];
@@ -511,6 +558,14 @@ export function getBackgroundFillsStyle(node: FigmaVendorDocument): string {
             backgroundSizes.push('100% 100%');
             backgroundPositions.push('center');
             backgroundRepeats.push('no-repeat');
+        } else if (fill.type === 'GRADIENT_LINEAR') {
+            const css = serializeLinearGradient(fill);
+            if (css) {
+                backgrounds.push(css);
+                backgroundSizes.push('100% 100%');
+                backgroundPositions.push('center');
+                backgroundRepeats.push('no-repeat');
+            }
         } else if (fill.type === 'IMAGE') {
             console.warn('Image fills are not yet supported in vendor conversion');
         }
