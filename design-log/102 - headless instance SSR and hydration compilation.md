@@ -808,6 +808,7 @@ Server expects `'1,stock-status:0'`, so the ViewState lookup fails → `fastVS` 
 ## Mood Tracker (Key-Based Headless) — Analysis (No Fix)
 
 **Context:** In the fake-shop example, the top-level mood tracker (`key="mt"`) works (buttons respond), but:
+
 1. Numbers (`mt.happy`, `mt.sad`, `mt.neutral`) do not update in the UI.
 2. Sad and neutral conditionals (false at SSR) do not appear when the condition turns true.
 
@@ -816,6 +817,7 @@ Server expects `'1,stock-status:0'`, so the ViewState lookup fails → `fastVS` 
 **Root cause:** Missing `adoptText` for dynamic expressions in mixed-content elements.
 
 **Structure:**
+
 ```html
 <div>Happy: {mt.happy} <button ref="mt.happy">more happy</button></div>
 ```
@@ -825,6 +827,7 @@ Server expects `'1,stock-status:0'`, so the ViewState lookup fails → `fastVS` 
 - The dynamic text `{mt.happy}` lives in a **sibling text node** of the button, not inside it.
 
 **Compiler logic:**
+
 - `renderHydrateElementContent` only sets `textFragment` when `childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE` (single text child).
 - For mixed content (text + expression + element with ref), `textFragment` is null.
 - `renderHydrateNode` returns `RenderFragment.empty()` for text nodes — they are never emitted.
@@ -840,11 +843,13 @@ Server expects `'1,stock-status:0'`, so the ViewState lookup fails → `fastVS` 
 **Expected flow:** When `vs.mt?.currentMood === CurrentMood.sad` becomes true, `hydrateConditionalFalse` should call `createFallback`, create the span, and insert it before its anchor.
 
 **Plausible causes (to verify with debugging):**
+
 1. **Reactive tracking:** `createReaction` in `makeJayComponent` should re-run when the mood tracker’s signals change (via `materializeViewState(instance.render())`). If the reaction does not re-run, `element.update(viewState)` is never called and the conditionals never re-evaluate.
 2. **ViewState merge:** `vs.mt` might not receive the latest values from the headless instance when it updates.
 3. **Condition semantics:** `vs.mt?.currentMood === CurrentMood.sad` — if `vs.mt` is undefined or the enum comparison is wrong, the condition would stay false.
 
 **Files to inspect:**
+
 - `packages/runtime/component/lib/component.ts` — `createReaction` and viewState flow
 - `packages/jay-stack/stack-client-runtime/lib/hydrate-composite-component.ts` — key-based headless merge
 - `packages/runtime/runtime/lib/hydrate.ts` — `hydrateConditionalFalse` update path

@@ -140,6 +140,7 @@ export function compileCoordinateExpr(
 ### `__headlessInstances` Key — Shared Utility
 
 The `__headlessInstances` map uses keys with a **different format** from DOM coordinates:
+
 - Static: `"product-card:0"` (same as DOM coordinate)
 - forEach: `"1,stock-status:0"` (comma-separated, not slash-separated)
 - slowForEach: `"p1/product-card:0"` (slash-separated, same as DOM)
@@ -151,9 +152,9 @@ Extract a shared utility for computing instance keys, usable by both server runt
 ```typescript
 // compiler-shared
 export function computeInstanceKey(
-  coordinateSuffix: string,  // e.g. "stock-status:0"
+  coordinateSuffix: string, // e.g. "stock-status:0"
   context: 'static' | 'forEach' | 'slowForEach',
-  prefix?: string,  // e.g. "p1" for slowForEach, or variable expr for forEach
+  prefix?: string, // e.g. "p1" for slowForEach, or variable expr for forEach
 ): string;
 // Static: "stock-status:0"
 // forEach: compiles to expression like `String(vs1._id) + ',stock-status:0'`
@@ -180,12 +181,14 @@ The compiler writes the pre-processed DOM to a debug file after coordinate assig
 ### Phase 1: Multi-child wrapper + coordinate pre-process + build-time template utility
 
 **Multi-child wrapper in slow rendering:**
+
 - In `resolveHeadlessInstances()` (`packages/compiler/compiler-jay-html/lib/slow-render/slow-render-transform.ts`), inside `walkAndResolve` when processing `<jay:xxx>`:
   - After `transformChildren` returns `result.val`, before appending children
   - If `result.val.length > 1`: create wrapper `<div>`, append children to it, use wrapper as sole child
 - Remove per-target wrapping logic from `renderServerHeadlessInstance` and `renderHydrateHeadlessInstance` in `jay-html-compiler.ts`
 
 **Coordinate pre-process:**
+
 - Create `assignCoordinates(dom, headlessImports, options?)` in `packages/compiler/compiler-jay-html/lib/jay-target/assign-coordinates.ts`
 - Walks DOM, assigns `jay-coordinate-base` to each element using the coordinate scheme
 - Handles: root, children, refs, conditionals, forEach, slowForEach, headless instances (with scoped children)
@@ -193,6 +196,7 @@ The compiler writes the pre-processed DOM to a debug file after coordinate assig
 - Returns void (mutates DOM)
 
 **Build-time template utility:**
+
 - Create `compileCoordinateExpr(template, varMappings)` in `packages/compiler/compiler-shared/lib/coordinates.ts`
 - Compiles `$placeholder` templates to JS string concatenation expressions at build time
 - No runtime dependency in the browser bundle
@@ -299,6 +303,7 @@ adoptElement('0/' + escapeAttr(String(vs1._id)) + '/0', ...);
 ```
 
 Pre-process assigns (assuming this is inside root element `"0"`):
+
 - `<jay:product-card>` → `jay-coordinate-base="0/product-card:0"` (instance coordinate)
 - `<article>` → `jay-coordinate-base="0/product-card:0/0"`
 - `<h2>` → `jay-coordinate-base="0/product-card:0/0/0"`
@@ -318,6 +323,7 @@ Pre-process assigns (assuming this is inside root element `"0"`):
 ```
 
 Pre-process assigns:
+
 - `<div>` (slowForEach container) → `jay-coordinate-base="p1"`
 - `<jay:product-card>` → `jay-coordinate-base="p1/product-card:0"`
 - `<article>` → `jay-coordinate-base="p1/product-card:0/0"`
@@ -326,11 +332,11 @@ Pre-process assigns:
 
 ## Trade-offs
 
-| Approach | Pros | Cons |
-| -------- | ---- | ---- |
-| **Pre-process** | Single source of truth, no divergence | New pipeline step, pre-process must handle all cases |
-| **Shared module** (DL99 Phase 1) | Less duplication | Both targets still "compute" — must call shared fn at right time with right context |
-| **Status quo** | No new infra | Repeated bugs, manual sync |
+| Approach                         | Pros                                  | Cons                                                                                |
+| -------------------------------- | ------------------------------------- | ----------------------------------------------------------------------------------- |
+| **Pre-process**                  | Single source of truth, no divergence | New pipeline step, pre-process must handle all cases                                |
+| **Shared module** (DL99 Phase 1) | Less duplication                      | Both targets still "compute" — must call shared fn at right time with right context |
+| **Status quo**                   | No new infra                          | Repeated bugs, manual sync                                                          |
 
 Pre-process is more invasive but eliminates the class of bugs. Shared module reduces duplication but both targets still need correct context (prefix, counter) — easier to get wrong.
 
@@ -378,9 +384,9 @@ Both server and hydrate compile from the same content (pre-rendered when slow ph
 
 ### Entry Points — Incorporated into Design ✓
 
-| Caller | Function |
-|--------|----------|
-| `generate-ssr-response.ts` | `generateServerElementFile(parsedJayFile)` |
+| Caller                                            | Function                                    |
+| ------------------------------------------------- | ------------------------------------------- |
+| `generate-ssr-response.ts`                        | `generateServerElementFile(parsedJayFile)`  |
 | Rollup plugin (`generate-code-from-structure.ts`) | `generateElementHydrateFile(jayFile, mode)` |
 
 ### Multi-Child Wrapper — Incorporated into Phase 1 ✓

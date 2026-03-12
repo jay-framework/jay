@@ -24,18 +24,18 @@ export function renderToStream(vs: PageUsingCounterViewState, ctx: ServerRenderC
     w('</button>');
     w('<div');
     w(' jay-coordinate="0/3">');
-      if (vs.counter?.isPositive === IsPositive.positive) {
-          w('<img');
-          w(' src="positive.jpg"');
-          w(' alt="positive"');
-          w(' jay-coordinate="0/3/0">');
-      }
-      if (vs.counter?.isPositive === IsPositive.negative) {
-          w('<img');
-          w(' src="negative.jpg"');
-          w(' alt="negative"');
-          w(' jay-coordinate="0/3/1">');
-      }
+    if (vs.counter?.isPositive === IsPositive.positive) {
+        w('<img');
+        w(' src="positive.jpg"');
+        w(' alt="positive"');
+        w(' jay-coordinate="0/3/0">');
+    }
+    if (vs.counter?.isPositive === IsPositive.negative) {
+        w('<img');
+        w(' src="negative.jpg"');
+        w(' alt="negative"');
+        w(' jay-coordinate="0/3/1">');
+    }
     w('</div>');
     w('</div>');
 }

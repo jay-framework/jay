@@ -172,18 +172,18 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Server-Side Rendering (SSR) & Hydration
 
-| #   | Title                                           | Description                                                           |
-| --- | ----------------------------------------------- | --------------------------------------------------------------------- |
-| 11  | server side rendering                           | SSR design                                                            |
-| 23  | JSON compare and patch                          | JSON diffing for SSR hydration                                        |
-| 48  | Jay Stack Services                              | Service injection for SSR                                             |
-| 50  | jay stack - headless configuration              | Headless SSR configuration                                            |
-| 93  | client hydration                                | Hydrate server-rendered DOM: skip static HTML, adopt dynamic nodes    |
-| 94  | SSR streaming renderer                          | Compile jay-html to streaming server render, no DOM APIs              |
-| 98  | route-based server-element output               | Server-element files follow route structure (consistent with DL96)    |
-| 99  | hydration coordinate alignment bugs             | Fix forEach prefix, conditional+ref counter, containerCoordinate      |
-| 100 | hydrate conditional creation fallback           | Level 3 hydration: create elements for false-at-SSR conditionals      |
-| 102 | headless instance SSR and hydration compilation | Server-element and hydrate targets for `<jay:xxx>` headless instances |
+| #   | Title                                                   | Description                                                             |
+| --- | ------------------------------------------------------- | ----------------------------------------------------------------------- |
+| 11  | server side rendering                                   | SSR design                                                              |
+| 23  | JSON compare and patch                                  | JSON diffing for SSR hydration                                          |
+| 48  | Jay Stack Services                                      | Service injection for SSR                                               |
+| 50  | jay stack - headless configuration                      | Headless SSR configuration                                              |
+| 93  | client hydration                                        | Hydrate server-rendered DOM: skip static HTML, adopt dynamic nodes      |
+| 94  | SSR streaming renderer                                  | Compile jay-html to streaming server render, no DOM APIs                |
+| 98  | route-based server-element output                       | Server-element files follow route structure (consistent with DL96)      |
+| 99  | hydration coordinate alignment bugs                     | Fix forEach prefix, conditional+ref counter, containerCoordinate        |
+| 100 | hydrate conditional creation fallback                   | Level 3 hydration: create elements for false-at-SSR conditionals        |
+| 102 | headless instance SSR and hydration compilation         | Server-element and hydrate targets for `<jay:xxx>` headless instances   |
 | 103 | coordinate pre-processing for SSR hydration consistency | Pre-assign jay-coordinate-base to all nodes; server and hydrate read it |
 
 ---

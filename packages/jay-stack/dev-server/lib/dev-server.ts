@@ -1110,7 +1110,10 @@ async function renderFastChangingDataForForEachInstances(
                 const fastResult = await comp.compDefinition.fastRender(props, ...services);
 
                 if (fastResult.kind === 'PhaseOutput') {
-                    const coord = computeForEachInstanceKey(trackByValue, instance.coordinateSuffix);
+                    const coord = computeForEachInstanceKey(
+                        trackByValue,
+                        instance.coordinateSuffix,
+                    );
                     viewStates[coord] = fastResult.rendered;
                     hasResults = true;
                 }
