@@ -23,6 +23,25 @@ export interface AssignCoordinatesResult {
 }
 
 /**
+ * Assign coordinates to a full jay-html string and return the result.
+ * Used by the pre-render pipeline so discoverHeadlessInstances gets elements
+ * with jay-coordinate-base, matching the hydrate compiler's coordinate format.
+ */
+export function assignCoordinatesToJayHtml(
+    jayHtml: string,
+    headlessContractNames: Set<string>,
+): string {
+    const root = parse(jayHtml, {
+        comment: true,
+        blockTextElements: { script: true, style: true },
+    });
+    const body = root.querySelector('body');
+    if (!body) return jayHtml;
+    assignCoordinates(body, { headlessContractNames });
+    return root.toString();
+}
+
+/**
  * Scope state tracks counters for coordinate assignment within a scope.
  * Each scope (page root, headless instance, forEach item) has its own counters.
  *

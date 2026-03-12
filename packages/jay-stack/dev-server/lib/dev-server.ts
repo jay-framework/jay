@@ -1093,6 +1093,11 @@ async function renderFastChangingDataForForEachInstances(
         const items = resolvePathValue(mergedViewState, instance.forEachPath);
         if (!Array.isArray(items)) continue;
 
+        // Normalize prop names to match contract (case-insensitive)
+        const contractProps = comp.contract?.props ?? [];
+        const normalizePropName = (key: string) =>
+            contractProps.find((p) => p.name.toLowerCase() === key.toLowerCase())?.name ?? key;
+
         for (const item of items) {
             const trackByValue = String(item[instance.trackBy]);
 
@@ -1100,7 +1105,7 @@ async function renderFastChangingDataForForEachInstances(
             const props: Record<string, string> = {};
             for (const [propName, binding] of Object.entries(instance.propBindings)) {
                 // Resolve bindings like "{_id}" → item._id
-                props[propName] = resolveBinding(String(binding), item);
+                props[normalizePropName(propName)] = resolveBinding(String(binding), item);
             }
 
             if (comp.compDefinition.fastRender) {

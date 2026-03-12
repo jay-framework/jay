@@ -886,3 +886,31 @@ Server expects `'1,stock-status:0'`, so the ViewState lookup fails → `fastVS` 
 4. **Fixtures:** Updated page-with-headless-instance, page-with-headless-in-foreach, page-with-headless-in-slow-foreach, page-with-headless-mixed, page-with-mixed-static-slow-foreach.
 
 **Tests:** generate-element-hydrate.test.ts — 19/19 passing.
+
+---
+
+## Deviations from Original Design
+
+Summary of all implementation choices that differ from the design as originally specified.
+
+### Phase 1: Server-Element Target
+
+1. **`customVarName` in Variables constructor** — Design did not specify how to scope the variable name for inline template children. Added optional `customVarName` so expressions resolve to `vs_product_card0.name` (instance ViewState) instead of `vs.name` (page ViewState).
+
+2. **`headlessCoordinateCounters: Map<string, number>` in ServerContext** — Design did not specify per-scope counters for coordinate refs. Without this, the second slowForEach instance would get `product-card:1` instead of `product-card:0`; each scope must reset its counter.
+
+3. **Headless instance detection before conditional check** — Design did not specify ordering in `renderServerElement()`. A `<jay:xxx if="...">` must be handled by `renderServerHeadlessInstance()` (which handles the `if` internally) rather than by the conditional handler, which would treat the tag as literal HTML.
+
+### Phase 2: Runtime
+
+No deviations.
+
+### Phase 3: Hydrate Target
+
+4. **Instance ViewState source (Mar 2025 fix)** — Original design assumed `withHydrationChildContext(viewState, ...)` would receive the correct instance ViewState from the plugin's `renderViewState()`. In practice, the merged page ViewState was passed (or timing caused wrong data), so conditions like `if="inStock"` evaluated against the wrong instance. **Deviation:** Use `useContext(HEADLESS_INSTANCES)` to look up the instance ViewState by coordinate key and pass that to `withHydrationChildContext`, instead of relying on the plugin's viewState parameter. Fallback to `viewState` when instance data is unavailable.
+
+5. **forEach adopt component coordinate key** — Design (Q5, Example: forEach Instance Hydrate) specified `(dataIds) => [...dataIds, 'product-card:0'].toString()`. **Deviation:** Adopt component uses `(dataIds) => dataIds.join(',')` because `childCompHydrate`'s `forInstance` already extends `coordinateBase` with the instance suffix, so `dataIds` already contains it. Appending again produced `'1,stock-status:0,stock-status:0'` and broke the ViewState lookup. Create component (element target) keeps the original pattern.
+
+### Phase 5: Fake-Shop Integration
+
+6. **No dedicated pages per scenario** — Design specified creating separate pages for single instance, conditional, forEach, slowForEach. **Deviation:** Did not create them; the existing homepage already covers the main scenarios. Creating redundant pages adds maintenance burden. Conditional instance is covered by compiler fixture tests but not by an integration test page.

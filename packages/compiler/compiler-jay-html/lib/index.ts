@@ -10,6 +10,7 @@ export {
 } from './jay-target/jay-html-compiler';
 export {
     assignCoordinates,
+    assignCoordinatesToJayHtml,
     type AssignCoordinatesOptions,
     type AssignCoordinatesResult,
 } from './jay-target/assign-coordinates';

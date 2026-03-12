@@ -36,6 +36,7 @@
   },
   "devDependencies": {
     "@jay-framework/dev-environment": "workspace:^",
+    "jsdom": "^23.2.0",
     "@jay-framework/jay-cli": "workspace:^",
     "@jay-framework/stack-client-runtime": "workspace:^",
     "@types/express": "^5.0.2",

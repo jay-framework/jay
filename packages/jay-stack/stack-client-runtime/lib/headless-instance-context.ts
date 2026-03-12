@@ -97,9 +97,20 @@ export function makeHeadlessInstanceComponent<
                 ? coordinateKey(currentConstructionContext()?.dataIds ?? [])
                 : coordinateKey;
 
+        // Fallback: server keys by suffix (e.g. "product-widget:0") while hydrate uses full path
+        // (e.g. "0/2/1/product-widget:0"); try suffix when full key not found
+        const suffixKey =
+            resolvedKey.includes('/') && resolvedKey.includes(':')
+                ? resolvedKey.split('/').find((s) => s.includes(':')) ?? resolvedKey
+                : resolvedKey;
+
         // Look up this instance's fast ViewState and carryForward by coordinate
-        const fastVS = instanceData?.viewStates?.[resolvedKey];
-        const cf = instanceData?.carryForwards?.[resolvedKey] || {};
+        const fastVS =
+            instanceData?.viewStates?.[resolvedKey] ?? instanceData?.viewStates?.[suffixKey];
+        const cf =
+            instanceData?.carryForwards?.[resolvedKey] ??
+            instanceData?.carryForwards?.[suffixKey] ??
+            {};
 
         // Create signals from fast ViewState (like makeCompositeJayComponent does for key-based parts)
         const signalVS = fastVS ? makeSignals(fastVS) : makeSignals({} as any);

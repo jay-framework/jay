@@ -185,6 +185,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 100 | hydrate conditional creation fallback                   | Level 3 hydration: create elements for false-at-SSR conditionals        |
 | 102 | headless instance SSR and hydration compilation         | Server-element and hydrate targets for `<jay:xxx>` headless instances   |
 | 103 | coordinate pre-processing for SSR hydration consistency | Pre-assign jay-coordinate-base to all nodes; server and hydrate read it |
+| 104 | hydration test plan                                      | Test plan: static, conditionals, forEach, slowForEach, headless (a–d)   |
 
 ---
 
