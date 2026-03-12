@@ -3873,9 +3873,12 @@ function renderServerElementContent(
     // Determine if this element needs a jay-coordinate attribute.
     // Only emit for elements that the hydrate target needs to adopt.
     // Root must always emit: hydrate needs adoptElement("0", ...) to resolve.
+    // Conditional elements (if=) must emit: hydrate adoptElement fails otherwise,
+    // causing createFallback to create duplicates (SSR content + client-created).
     const refName = element.attributes.ref ? camelCase(element.attributes.ref) : null;
     const needsCoordinate =
         options?.isRoot === true ||
+        isConditional(element) ||
         dynamicTextFragment !== null ||
         refName !== null ||
         hasDynamicAttributeBindings(element, variables) ||
