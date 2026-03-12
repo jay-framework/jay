@@ -1,0 +1,11 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+   count: number
+    </script>
+</head>
+<body>
+    <div>Count: {count} <button>+</button></div>
+</body>
+</html>
