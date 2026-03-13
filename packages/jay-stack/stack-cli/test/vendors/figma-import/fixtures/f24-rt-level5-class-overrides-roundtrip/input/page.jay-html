@@ -1,23 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script type="application/jay-data" contract="./page.jay-contract">
-    data:
-      title: "Featured Collection"
-      hasItems: true
-      emptyMessage: "No products available"
-      items:
-        - id: "1"
-          name: "Ceramic Vase"
-          price: "$45.00"
-          hasDiscount: true
-          discountLabel: "SALE"
-        - id: "2"
-          name: "Wooden Bowl"
-          price: "$32.00"
-          hasDiscount: false
-          discountLabel: ""
-  </script>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
   <style>
     .page { max-width: 960px; margin: 0 auto; padding: 40px 20px; }
     .hero-banner { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 48px 24px; border-radius: 8px; text-align: center; margin-bottom: 48px; }

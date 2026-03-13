@@ -19,3 +19,4 @@ tags:
         dataType: string
       - tag: itemLink
         type: interactive
+        elementType: HTMLAnchorElement

@@ -192,6 +192,167 @@ export interface ImportResponse<TVendorDoc> extends BaseResponse {
     imageManifest?: Array<{ nodeId: string; imageId: string; scaleMode?: string }>;
 }
 
+// ─── Iterative Sync Types (v1) ─────────────────────────────────────
+
+export type MergeConfidence = 'high' | 'medium' | 'low';
+
+export type MergeDecision = 'applyIncoming' | 'preserveDesigner' | 'needsDecision' | 'skip';
+
+export type ConflictSeverity = 'info' | 'warning' | 'action_required';
+
+export type ConflictAction = 'keepMine' | 'applyIncoming' | 'rebind';
+
+export type PropertyClass = 'visual' | 'layout' | 'semantic';
+
+export interface SyncStateV1 {
+    schemaVersion: 1;
+    pageUrl: string;
+    sectionSyncId: string;
+    baselineImportHash: string;
+    baselineImportedAt: string;
+    lastMergeSessionId?: string;
+    lastMergeAppliedAt?: string;
+    unresolvedConflictCount: number;
+}
+
+export interface BaselineNodeSnapshot {
+    nodeKey: string;
+    properties: Record<string, unknown>;
+}
+
+export interface SyncBaselineV1 {
+    schemaVersion: 1;
+    pageUrl: string;
+    nodes: BaselineNodeSnapshot[];
+}
+
+export interface MergeOperation {
+    nodeKey: string;
+    property: string;
+    propertyClass: PropertyClass;
+    decision: MergeDecision;
+    confidence: MergeConfidence;
+    rationale: string;
+    baselineValue?: unknown;
+    designerValue?: unknown;
+    incomingValue?: unknown;
+}
+
+export interface StructuralOperation {
+    type: 'add' | 'remove' | 'reorder';
+    nodeKey: string;
+    confidence: MergeConfidence;
+    decision: MergeDecision;
+    rationale: string;
+    hasDesignerOverride: boolean;
+}
+
+export interface ConflictItem {
+    nodeKey: string;
+    nodeName: string;
+    property: string;
+    propertyClass: PropertyClass;
+    severity: ConflictSeverity;
+    reason: string;
+    designerValue?: unknown;
+    incomingValue?: unknown;
+    suggestedActions: ConflictAction[];
+    resolved?: boolean;
+    resolution?: ConflictAction;
+}
+
+export interface ImportReportV2 {
+    schemaVersion: 2;
+    sessionId: string;
+    timestamp: string;
+    summary: {
+        added: number;
+        updated: number;
+        removed: number;
+        preserved: number;
+        conflicted: number;
+        skipped: number;
+    };
+    applied: Array<{
+        nodeKey: string;
+        property: string;
+        rationale: string;
+    }>;
+    preservedOverrides: Array<{
+        nodeKey: string;
+        property: string;
+        reason: string;
+    }>;
+    conflicts: ConflictItem[];
+    warnings: Array<{
+        nodeKey: string;
+        message: string;
+        confidence: MergeConfidence;
+    }>;
+    optimizations: Array<{
+        type: string;
+        nodeKey: string;
+        detail: string;
+    }>;
+    metrics: {
+        autoMergeRatio: number;
+        conflictCount: number;
+        matchConfidenceDistribution: Record<MergeConfidence, number>;
+    };
+}
+
+export interface MergePreviewRequest<TVendorDoc> extends BaseMessage<MergePreviewResponse> {
+    type: 'mergePreview';
+    vendorId: string;
+    pageUrl: string;
+    existingSectionData?: TVendorDoc;
+}
+
+export interface MergePreviewResponse extends BaseResponse {
+    type: 'mergePreview';
+    report?: ImportReportV2;
+}
+
+export interface MergeApplyRequest<TVendorDoc> extends BaseMessage<MergeApplyResponse<TVendorDoc>> {
+    type: 'mergeApply';
+    vendorId: string;
+    pageUrl: string;
+    existingSectionData?: TVendorDoc;
+    conflictResolutions?: Array<{
+        nodeKey: string;
+        property: string;
+        action: ConflictAction;
+        rebindTarget?: string;
+    }>;
+}
+
+export interface MergeApplyResponse<TVendorDoc> extends BaseResponse {
+    type: 'mergeApply';
+    vendorDoc?: TVendorDoc;
+    report?: ImportReportV2;
+    syncState?: SyncStateV1;
+}
+
+export interface CaptureSnapshotRequest extends BaseMessage<CaptureSnapshotResponse> {
+    type: 'captureSnapshot';
+    sectionSyncId: string;
+}
+
+export interface CaptureSnapshotResponse extends BaseResponse {
+    type: 'captureSnapshot';
+    snapshotData?: string;
+}
+
+export interface RestoreSnapshotRequest extends BaseMessage<RestoreSnapshotResponse> {
+    type: 'restoreSnapshot';
+    sectionSyncId: string;
+    snapshotData: string;
+}
+
+export interface RestoreSnapshotResponse extends BaseResponse {
+    type: 'restoreSnapshot';
+}
+
 // Union types for all messages and responses
 export type EditorProtocolMessageTypes<TVendorDoc> =
     | PublishMessage

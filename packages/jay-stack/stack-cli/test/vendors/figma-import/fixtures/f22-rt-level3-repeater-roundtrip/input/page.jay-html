@@ -1,20 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script type="application/jay-data" contract="./page.jay-contract">
-    data:
-      title: "Our Products"
-      items:
-        - id: "1"
-          name: "Ceramic Vase"
-          price: "$45.00"
-        - id: "2"
-          name: "Wooden Bowl"
-          price: "$32.00"
-        - id: "3"
-          name: "Glass Lamp"
-          price: "$78.00"
-  </script>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
   <style>
     .page { max-width: 960px; margin: 0 auto; padding: 40px 20px; }
     .page-title { font-size: 28px; font-weight: 700; margin: 0 0 24px; color: #1a1a1a; }
@@ -28,9 +15,9 @@
   <div class="page">
     <h1 class="page-title">{title}</h1>
     <div class="items-grid" forEach="items" trackBy="id">
-      <a class="item-card" ref="item.itemLink">
-        <h3 class="item-name">{item.name}</h3>
-        <span class="item-price">{item.price}</span>
+      <a class="item-card" ref="itemLink">
+        <h3 class="item-name">{name}</h3>
+        <span class="item-price">{price}</span>
       </a>
     </div>
   </div>

@@ -1,23 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script type="application/jay-data" contract="./page.jay-contract">
-    data:
-      title: "Shop"
-      hasItems: true
-      emptyMessage: "No products available"
-      items:
-        - id: "1"
-          name: "Ceramic Vase"
-          price: "$45.00"
-          hasDiscount: true
-          discountLabel: "20% OFF"
-        - id: "2"
-          name: "Wooden Bowl"
-          price: "$32.00"
-          hasDiscount: false
-          discountLabel: ""
-  </script>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
   <style>
     .page { max-width: 960px; margin: 0 auto; padding: 40px 20px; }
     .page-title { font-size: 28px; font-weight: 700; margin: 0 0 24px; color: #1a1a1a; }

@@ -1,5 +1,5 @@
 {
   "requiredRefs": [],
-  "requiredTextBindings": ["{product.name}", "{product.price}", "{label}", "{value}"],
+  "requiredTextBindings": ["product.name", "product.price", "label", "value"],
   "warningsMustNotContain": ["IMPORT_PARSE_FAILED", "BINDING_UNRESOLVED"]
 }

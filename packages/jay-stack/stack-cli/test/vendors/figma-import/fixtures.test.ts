@@ -37,6 +37,12 @@ interface RoundtripInvariants {
     maxNestingDepthDelta?: number;
     requiredRefs?: string[];
     requiredTextBindings?: string[];
+    requiredTextContent?: string[];
+    requiredTags?: string[];
+    requiredConditions?: string[];
+    requiredForEach?: string[];
+    requiredTrackBy?: string[];
+    requiredInlineOverrides?: Array<{ selector: string; property: string }>;
     warningsMustNotContain?: string[];
 }
 
@@ -537,16 +543,97 @@ describe('Figma Import Fixtures', () => {
                             const roundtripInvariants: RoundtripInvariants = JSON.parse(
                                 await fs.readFile(roundtripInvariantsPath, 'utf-8'),
                             );
+                            const rtErrors: string[] = [];
+                            const exported = exportedBodyHtml!;
+
                             if (roundtripInvariants.warningsMustNotContain && response.warnings) {
                                 for (const forbidden of roundtripInvariants.warningsMustNotContain) {
-                                    expect(
-                                        response.warnings.some((w) => w.includes(forbidden)),
-                                        `warningsMustNotContain: "${forbidden}" found in warnings`,
-                                    ).toBe(false);
+                                    if (response.warnings.some((w) => w.includes(forbidden))) {
+                                        rtErrors.push(`warningsMustNotContain: "${forbidden}" found in warnings`);
+                                    }
                                 }
                             }
-                        } catch {
-                            // No roundtrip invariants file
+
+                            if (roundtripInvariants.requiredRefs) {
+                                for (const ref of roundtripInvariants.requiredRefs) {
+                                    if (!exported.includes(`ref="${ref}"`)) {
+                                        rtErrors.push(`requiredRef: ref="${ref}" not found in exported HTML`);
+                                    }
+                                }
+                            }
+
+                            if (roundtripInvariants.requiredTextBindings) {
+                                for (const binding of roundtripInvariants.requiredTextBindings) {
+                                    if (!exported.includes(`{${binding}}`)) {
+                                        rtErrors.push(`requiredTextBinding: {${binding}} not found in exported HTML`);
+                                    }
+                                }
+                            }
+
+                            if (roundtripInvariants.requiredTextContent) {
+                                for (const text of roundtripInvariants.requiredTextContent) {
+                                    if (!exported.includes(text)) {
+                                        rtErrors.push(`requiredTextContent: "${text}" not found in exported HTML`);
+                                    }
+                                }
+                            }
+
+                            if (roundtripInvariants.requiredTags) {
+                                for (const tag of roundtripInvariants.requiredTags) {
+                                    if (!new RegExp(`<${tag}[\\s>]`).test(exported)) {
+                                        rtErrors.push(`requiredTag: <${tag}> not found in exported HTML`);
+                                    }
+                                }
+                            }
+
+                            if (roundtripInvariants.requiredConditions) {
+                                for (const condition of roundtripInvariants.requiredConditions) {
+                                    if (!exported.includes(`if="${condition}"`)) {
+                                        rtErrors.push(`requiredCondition: if="${condition}" not found in exported HTML`);
+                                    }
+                                }
+                            }
+
+                            if (roundtripInvariants.requiredForEach) {
+                                for (const forEach of roundtripInvariants.requiredForEach) {
+                                    if (!exported.includes(`forEach="${forEach}"`)) {
+                                        rtErrors.push(`requiredForEach: forEach="${forEach}" not found in exported HTML`);
+                                    }
+                                }
+                            }
+
+                            if (roundtripInvariants.requiredTrackBy) {
+                                for (const trackBy of roundtripInvariants.requiredTrackBy) {
+                                    if (!exported.includes(`trackBy="${trackBy}"`)) {
+                                        rtErrors.push(`requiredTrackBy: trackBy="${trackBy}" not found in exported HTML`);
+                                    }
+                                }
+                            }
+
+                            if (roundtripInvariants.requiredInlineOverrides) {
+                                for (const override of roundtripInvariants.requiredInlineOverrides) {
+                                    const selectorRe = new RegExp(
+                                        `class="[^"]*${override.selector.replace('.', '')}[^"]*"[^>]*style="[^"]*${override.property}\\s*:[^"]*"`,
+                                    );
+                                    const altRe = new RegExp(
+                                        `style="[^"]*${override.property}\\s*:[^"]*"[^>]*class="[^"]*${override.selector.replace('.', '')}[^"]*"`,
+                                    );
+                                    if (!selectorRe.test(exported) && !altRe.test(exported)) {
+                                        rtErrors.push(`requiredInlineOverride: ${override.selector} { ${override.property} } not found in exported HTML`);
+                                    }
+                                }
+                            }
+
+                            expect(
+                                rtErrors,
+                                `Roundtrip invariant check failed:\n${rtErrors.join('\n')}`,
+                            ).toEqual([]);
+                        } catch (e: any) {
+                            if (e.code === 'ENOENT') {
+                                // No roundtrip invariants file — skip
+                            } else {
+                                throw e;
+                            }
                         }
 
                         const debugDir = path.join(fixturePath, 'debug');
