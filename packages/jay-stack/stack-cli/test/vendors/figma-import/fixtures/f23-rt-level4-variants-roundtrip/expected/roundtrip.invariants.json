@@ -6,7 +6,7 @@
     "item.price",
     "item.discountLabel"
   ],
-  "requiredConditions": ["hasItems === false", "hasItems", "item.hasDiscount"],
+  "requiredConditions": ["!hasItems", "hasItems", "item.hasDiscount"],
   "requiredForEach": ["items"],
   "requiredTrackBy": ["id"],
   "warningsMustNotContain": ["IMPORT_PARSE_FAILED", "TIER2_FALLBACK"]

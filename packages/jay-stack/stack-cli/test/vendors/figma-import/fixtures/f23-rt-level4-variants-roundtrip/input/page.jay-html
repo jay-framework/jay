@@ -16,7 +16,7 @@
 <body>
   <div class="page">
     <h1 class="page-title">{title}</h1>
-    <div class="empty-state" if="hasItems === false">
+    <div class="empty-state" if="!hasItems">
       <p>{emptyMessage}</p>
     </div>
     <div class="items-grid" if="hasItems" forEach="items" trackBy="id">

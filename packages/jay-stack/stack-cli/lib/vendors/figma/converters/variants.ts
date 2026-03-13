@@ -288,7 +288,7 @@ export function buildVariantCondition(
             if (value === 'true') {
                 conditions.push(tagPath);
             } else {
-                conditions.push(`${tagPath} === false`);
+                conditions.push(`!${tagPath}`);
             }
         } else if (value.startsWith('!')) {
             conditions.push(`${tagPath} != ${value.slice(1)}`);
