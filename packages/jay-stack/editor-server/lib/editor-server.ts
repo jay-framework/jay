@@ -14,6 +14,8 @@ import type {
     GetProjectInfoMessage,
     ExportMessage,
     ImportMessage,
+    MergePreviewRequest,
+    MergeApplyRequest,
     PublishResponse,
     SaveImageResponse,
     HasImageResponse,
@@ -21,6 +23,8 @@ import type {
     GetProjectInfoResponse,
     ExportResponse,
     ImportResponse,
+    MergePreviewResponse,
+    MergeApplyResponse,
 } from '@jay-framework/editor-protocol';
 import { createProtocolResponse } from '@jay-framework/editor-protocol';
 
@@ -55,6 +59,8 @@ export class EditorServer implements DevServerProtocol {
         getProjectInfo?: (params: GetProjectInfoMessage) => Promise<GetProjectInfoResponse>;
         export?: (params: ExportMessage<any>) => Promise<ExportResponse>;
         import?: (params: ImportMessage<any>) => Promise<ImportResponse<any>>;
+        mergePreview?: (params: MergePreviewRequest<any>) => Promise<MergePreviewResponse>;
+        mergeApply?: (params: MergeApplyRequest<any>) => Promise<MergeApplyResponse<any>>;
     } = {};
 
     constructor(options: EditorServerOptions) {
@@ -175,6 +181,18 @@ export class EditorServer implements DevServerProtocol {
         callback: (params: ImportMessage<TVendorDoc>) => Promise<ImportResponse<TVendorDoc>>,
     ): void {
         this.handlers.import = callback;
+    }
+
+    onMergePreview<TVendorDoc>(
+        callback: (params: MergePreviewRequest<TVendorDoc>) => Promise<MergePreviewResponse>,
+    ): void {
+        this.handlers.mergePreview = callback;
+    }
+
+    onMergeApply<TVendorDoc>(
+        callback: (params: MergeApplyRequest<TVendorDoc>) => Promise<MergeApplyResponse<TVendorDoc>>,
+    ): void {
+        this.handlers.mergeApply = callback;
     }
 
     private handlePortDiscovery(req: any, res: any): void {
@@ -305,6 +323,24 @@ export class EditorServer implements DevServerProtocol {
                 }
                 const importResult = await this.handlers.import(payload as ImportMessage<any>);
                 return createProtocolResponse(id, importResult);
+
+            case 'mergePreview':
+                if (!this.handlers.mergePreview) {
+                    throw new Error('Merge preview handler not registered');
+                }
+                const previewResult = await this.handlers.mergePreview(
+                    payload as MergePreviewRequest<any>,
+                );
+                return createProtocolResponse(id, previewResult);
+
+            case 'mergeApply':
+                if (!this.handlers.mergeApply) {
+                    throw new Error('Merge apply handler not registered');
+                }
+                const applyResult = await this.handlers.mergeApply(
+                    payload as MergeApplyRequest<any>,
+                );
+                return createProtocolResponse(id, applyResult);
 
             default:
                 throw new Error(`Unknown message type: ${(payload as any).type}`);

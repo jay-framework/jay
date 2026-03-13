@@ -7,8 +7,9 @@ import type { JayHeadlessImports } from '@jay-framework/compiler-jay-html';
 import { ContractTagType, computeSourceId, parseContract } from '@jay-framework/compiler-jay-html';
 import type { ImportIRDocument, ImportIRNode, ImportIRStyle } from './import-ir';
 import { generateNodeId, buildDomPath, getSemanticAnchors } from './id-generator';
-import { resolveStyle, parseInlineStyle, parseCssToClassMap } from './style-resolver';
+import { resolveStyle, parseInlineStyle, parseCssToClassMap, resolveClassStyles } from './style-resolver';
 import type { CssClassMap } from './style-resolver';
+import { extractStaticClassOnlySafeProps } from './class-style-baseline';
 import { extractBindingsFromElement, buildMergedContractTags } from './binding-reconstructor';
 import type { ImportContractContext, HeadlessImportInfo } from './binding-reconstructor';
 import { detectVariantGroups, synthesizeVariant, synthesizeRepeater } from './variant-synthesizer';
@@ -607,6 +608,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
         'pattern',
         'readonly',
         'multiple',
+        'if',
     ] as const;
     const htmlAttributes: Record<string, string> = {};
     let hasHtmlAttributes = false;
@@ -663,21 +665,23 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
         }
     }
 
-    const classOnlyBaselineInput =
+    let classOnlyBaselineInput =
         className && effectiveEnrichedStyles?.classOnlyStyles
             ? effectiveEnrichedStyles.classOnlyStyles
             : undefined;
 
     if (
+        !classOnlyBaselineInput &&
         classAttr &&
         styleAttr &&
         styleAttr.trim().length > 0 &&
-        !classOnlyBaselineInput &&
-        sourceId
+        cssClassMap &&
+        cssClassMap.size > 0
     ) {
-        warnings.push(
-            `BASELINE_CLASS_ONLY_MISSING: sid=${sourceId} has class+inline but no class-only baseline (re-import may drop overrides)`,
-        );
+        const staticClassStyles = resolveClassStyles(classAttr, cssClassMap);
+        if (Object.keys(staticClassStyles).length > 0) {
+            classOnlyBaselineInput = extractStaticClassOnlySafeProps(staticClassStyles);
+        }
     }
 
     if (sourceId && effectiveEnrichedStyles?.boundingRect) {

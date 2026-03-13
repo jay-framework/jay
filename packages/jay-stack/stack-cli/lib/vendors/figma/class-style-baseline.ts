@@ -417,6 +417,82 @@ function getCssResetValue(prop: string): string {
     return 'initial';
 }
 
+// ── Static class-only baseline from CSS class map ───────────────────
+
+/**
+ * Build class-only safe properties from raw CSS declarations (as returned
+ * by `resolveClassStyles`).  Decomposes common shorthands (`background`,
+ * `border`) into individual safe properties and adds defaults for missing
+ * ones — mirroring what the headless browser enricher does.
+ *
+ * Used as a static fallback when the computed-style enricher is disabled.
+ */
+export function extractStaticClassOnlySafeProps(
+    classStyles: Record<string, string>,
+): Record<string, string> {
+    const safe: Record<string, string> = {};
+
+    for (const [prop, value] of Object.entries(classStyles)) {
+        if (SAFE_OVERRIDE_PROPERTIES.has(prop)) {
+            safe[prop] = value;
+            continue;
+        }
+
+        if (prop === 'background') {
+            if (value.includes('gradient') || value.includes('url(')) {
+                safe['background-image'] = value;
+                safe['background-color'] = 'transparent';
+            } else {
+                safe['background-color'] = value;
+                safe['background-image'] = 'none';
+            }
+            continue;
+        }
+
+        if (prop === 'border') {
+            const parts = value.split(/\s+/);
+            let width: string | undefined;
+            let style: string | undefined;
+            let color: string | undefined;
+            for (const p of parts) {
+                if (/^\d/.test(p)) width = p;
+                else if (['solid', 'dashed', 'dotted', 'double', 'groove', 'ridge', 'inset', 'outset', 'none'].includes(p)) style = p;
+                else color = p;
+            }
+            const sides = ['top', 'right', 'bottom', 'left'] as const;
+            if (color) for (const s of sides) safe[`border-${s}-color`] = color;
+            if (width) for (const s of sides) safe[`border-${s}-width`] = width;
+            if (style) for (const s of sides) safe[`border-${s}-style`] = style;
+            continue;
+        }
+
+        if (prop === 'border-color') {
+            const sides = ['top', 'right', 'bottom', 'left'] as const;
+            for (const s of sides) safe[`border-${s}-color`] = value;
+        }
+        if (prop === 'border-width') {
+            const sides = ['top', 'right', 'bottom', 'left'] as const;
+            for (const s of sides) safe[`border-${s}-width`] = value;
+        }
+        if (prop === 'border-style') {
+            const sides = ['top', 'right', 'bottom', 'left'] as const;
+            for (const s of sides) safe[`border-${s}-style`] = value;
+        }
+    }
+
+    if (!safe['background-color'] && !safe['background-image']) {
+        safe['background-color'] = 'transparent';
+        safe['background-image'] = 'none';
+    } else if (!safe['background-color']) {
+        safe['background-color'] = 'transparent';
+    } else if (!safe['background-image']) {
+        safe['background-image'] = 'none';
+    }
+    if (!safe['opacity']) safe['opacity'] = '1';
+
+    return safe;
+}
+
 // ── CSS string parsing ──────────────────────────────────────────────
 
 /**
@@ -439,9 +515,37 @@ export function parseCssDeclarations(css: string): Record<string, string> {
 
 /**
  * Serialize an overrides map back to a CSS style string for inline emission.
+ * Collapses identical per-side border properties into shorthand form.
  */
 export function overridesToStyleString(overrides: Record<string, string>): string {
-    return Object.entries(overrides)
+    const collapsed = collapseBorderShorthands({ ...overrides });
+    return Object.entries(collapsed)
         .map(([prop, value]) => `${prop}: ${value}`)
         .join('; ');
+}
+
+const BORDER_SHORTHAND_GROUPS: Array<{ shorthand: string; sides: string[] }> = [
+    {
+        shorthand: 'border-color',
+        sides: ['border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color'],
+    },
+    {
+        shorthand: 'border-width',
+        sides: ['border-top-width', 'border-right-width', 'border-bottom-width', 'border-left-width'],
+    },
+    {
+        shorthand: 'border-style',
+        sides: ['border-top-style', 'border-right-style', 'border-bottom-style', 'border-left-style'],
+    },
+];
+
+function collapseBorderShorthands(overrides: Record<string, string>): Record<string, string> {
+    for (const { shorthand, sides } of BORDER_SHORTHAND_GROUPS) {
+        const values = sides.map((s) => overrides[s]);
+        if (values.every((v) => v !== undefined) && values.every((v) => v === values[0])) {
+            for (const s of sides) delete overrides[s];
+            overrides[shorthand] = values[0];
+        }
+    }
+    return overrides;
 }

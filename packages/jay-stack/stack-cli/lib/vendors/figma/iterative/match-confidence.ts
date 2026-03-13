@@ -16,7 +16,7 @@ const MEDIUM_THRESHOLD = 0.6;
 
 // ─── Identity Extraction ─────────────────────────────────────────
 
-interface FlatNode {
+export interface FlatNode {
     key: string;
     pluginData?: Record<string, string>;
     name?: string;

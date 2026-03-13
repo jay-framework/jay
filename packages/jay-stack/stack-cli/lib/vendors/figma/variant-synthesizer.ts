@@ -359,10 +359,15 @@ export function synthesizeVariant(
     const instanceBindings: ImportIRNode['bindings'] = [];
     const tagsToSearch = repeaterInfo?.itemTags ?? contractTags;
     for (const dim of dimensions) {
-        const tag = findContractTag(tagsToSearch, dim.tagPath);
+        // Strip repeater item prefix (e.g. 'item.hasDiscount' → 'hasDiscount')
+        // when searching in repeater item tags
+        const searchPath = repeaterInfo && dim.tagPath.length > 1
+            ? dim.tagPath.slice(1)
+            : dim.tagPath;
+        const tag = findContractTag(tagsToSearch, searchPath);
         if (tag) {
             const fullTagPath = repeaterInfo
-                ? [...repeaterInfo.repeaterPath, ...dim.tagPath]
+                ? [...repeaterInfo.repeaterPath, ...searchPath]
                 : dim.tagPath;
             let resolvedPath = pageContractPath;
             if (contractContext && fullTagPath.length > 0) {

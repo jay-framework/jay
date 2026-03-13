@@ -14,17 +14,22 @@ import type {
     GetProjectInfoMessage,
     ExportMessage,
     ImportMessage,
+    MergePreviewRequest,
+    MergeApplyRequest,
     SaveImageResponse,
     HasImageResponse,
     GetImageDataResponse,
     GetProjectInfoResponse,
     ExportResponse,
     ImportResponse,
+    MergePreviewResponse,
+    MergeApplyResponse,
     ProjectInfo,
     ProjectPage,
     ProjectComponent,
     Contract,
     Plugin,
+    FigmaVendorDocument,
 } from '@jay-framework/editor-protocol';
 import type { JayConfig } from './config';
 import { getVendor, hasVendor } from './vendors';
@@ -1130,6 +1135,27 @@ export function createEditorHandlers(
             const pagesBasePath = path.resolve(config.devServer.pagesBase);
             const { vendorId, pageUrl, vendorDoc } = params;
 
+            // N6.1: Block export when unresolved action_required conflicts exist
+            const pluginData = (vendorDoc as any)?.pluginData;
+            if (pluginData) {
+                const { parseSyncState: parseSS } = await import('./vendors/figma/types');
+                const syncState = parseSS(pluginData['jay-sync-state-v1']);
+                if (syncState && syncState.unresolvedConflictCount > 0) {
+                    getLogger().warn(
+                        `🚫 Export blocked for "${pageUrl}": ${syncState.unresolvedConflictCount} unresolved conflict(s)`,
+                    );
+                    return {
+                        type: 'export',
+                        success: false,
+                        error: `Export blocked: ${syncState.unresolvedConflictCount} unresolved conflict(s)`,
+                        blocked: true,
+                        blockedReason: 'Unresolved conflicts',
+                        unresolvedConflictCount: syncState.unresolvedConflictCount,
+                        actionHint: 'Resolve conflicts before exporting',
+                    };
+                }
+            }
+
             // Convert route to file path
             const dirname = pageUrlToDirectoryPath(pageUrl, pagesBasePath);
             const vendorFilename = `page.${vendorId}.json`;
@@ -1374,6 +1400,215 @@ export function createEditorHandlers(
         }
     };
 
+    /**
+     * Shared helper: builds the incoming vendor doc from jay-html on disk.
+     * Reused by onImport, onMergePreview, and onMergeApply.
+     */
+    async function buildIncomingVendorDoc(vendorId: string, pageUrl: string) {
+        const pagesBasePath = path.resolve(config.devServer.pagesBase);
+        const dirname = pageUrlToDirectoryPath(pageUrl, pagesBasePath);
+        const jayHtmlPath = path.join(dirname, PAGE_FILENAME);
+
+        if (!fs.existsSync(jayHtmlPath)) {
+            return { error: `IMPORT_FILE_NOT_FOUND: No Jay-HTML file found at ${jayHtmlPath}` };
+        }
+
+        const jayHtmlContent = await fs.promises.readFile(jayHtmlPath, 'utf-8');
+        const warnings: string[] = [];
+        const parsedResult = await parseJayFile(
+            jayHtmlContent,
+            'page.jay-html',
+            dirname,
+            { relativePath: tsConfigPath },
+            JAY_IMPORT_RESOLVER,
+            projectRoot,
+        );
+        warnings.push(...(parsedResult.validations || []));
+
+        if (!parsedResult.val) {
+            return {
+                error: `IMPORT_PARSE_FAILED: parseJayFile returned validation errors: ${parsedResult.validations.join('; ')}`,
+            };
+        }
+
+        const { projectPage, plugins } = await loadPageContracts(dirname, pageUrl, projectRoot);
+
+        if (!hasVendor(vendorId)) {
+            return { error: `No vendor found for '${vendorId}'` };
+        }
+        const vendor = getVendor(vendorId)!;
+        if (!vendor.convertFromJayHtml) {
+            return { error: `Vendor '${vendorId}' does not support Jay-HTML import` };
+        }
+
+        const importResult = await vendor.convertFromJayHtml(
+            parsedResult.val,
+            pageUrl,
+            projectPage,
+            plugins,
+            { devServerUrl, publicFolder: config.devServer.publicFolder },
+        );
+
+        return {
+            vendorDoc: importResult.vendorDoc as FigmaVendorDocument,
+            warnings,
+            imageManifest: importResult.imageManifest,
+        };
+    }
+
+    const onMergePreview = async <TVendorDoc>(
+        params: MergePreviewRequest<TVendorDoc>,
+    ): Promise<MergePreviewResponse> => {
+        try {
+            const { vendorId, pageUrl, existingSectionData } = params;
+
+            if (!existingSectionData) {
+                return {
+                    type: 'mergePreview',
+                    success: false,
+                    error: 'No existing section data provided — use standard import for fresh imports',
+                };
+            }
+
+            const buildResult = await buildIncomingVendorDoc(vendorId, pageUrl);
+            if (buildResult.error) {
+                return { type: 'mergePreview', success: false, error: buildResult.error };
+            }
+
+            const { flattenVendorDoc, buildPlannerInputs, buildStructuralChanges, baselineToPropertyIndex } =
+                await import('./vendors/figma/iterative/vendor-doc-flatten');
+            const { matchNodes } = await import('./vendors/figma/iterative/match-confidence');
+            const { createMergePlan } = await import('./vendors/figma/iterative/merge-planner');
+            const { generateReport } = await import('./vendors/figma/iterative/sync-report');
+            const { parseSyncBaseline } = await import('./vendors/figma/types');
+
+            const existingDoc = existingSectionData as unknown as FigmaVendorDocument;
+            const incomingDoc = buildResult.vendorDoc!;
+
+            const currentFlat = flattenVendorDoc(existingDoc);
+            const incomingFlat = flattenVendorDoc(incomingDoc);
+            const matchResult = matchNodes(currentFlat, incomingFlat);
+
+            const baselineRaw = existingDoc.pluginData?.['jay-sync-baseline-v1'];
+            const baseline = parseSyncBaseline(baselineRaw);
+            const baselineIndex = baseline
+                ? baselineToPropertyIndex(baseline.nodes)
+                : new Map();
+
+            const plannerInputs = buildPlannerInputs(
+                matchResult.matches, baselineIndex, existingDoc, incomingDoc,
+            );
+            const structChanges = buildStructuralChanges(
+                matchResult.unmatchedCurrent, matchResult.unmatchedIncoming,
+                existingDoc, incomingDoc, 'medium', new Set(),
+            );
+
+            const plan = createMergePlan(plannerInputs, structChanges);
+            const sessionId = `preview-${Date.now()}`;
+            const report = generateReport(plan, sessionId);
+
+            getLogger().info(`📋 Merge preview for ${pageUrl}: ${report.summary.updated} updates, ${report.summary.conflicted} conflicts`);
+
+            return { type: 'mergePreview', success: true, report };
+        } catch (error) {
+            getLogger().error('Failed merge preview:', error);
+            return {
+                type: 'mergePreview',
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error',
+            };
+        }
+    };
+
+    const onMergeApply = async <TVendorDoc>(
+        params: MergeApplyRequest<TVendorDoc>,
+    ): Promise<MergeApplyResponse<TVendorDoc>> => {
+        try {
+            const { vendorId, pageUrl, existingSectionData, conflictResolutions } = params;
+
+            if (!existingSectionData) {
+                return {
+                    type: 'mergeApply',
+                    success: false,
+                    error: 'No existing section data — use standard import for fresh imports',
+                };
+            }
+
+            const buildResult = await buildIncomingVendorDoc(vendorId, pageUrl);
+            if (buildResult.error) {
+                return { type: 'mergeApply', success: false, error: buildResult.error };
+            }
+
+            const { flattenVendorDoc, buildPlannerInputs, buildStructuralChanges, baselineToPropertyIndex } =
+                await import('./vendors/figma/iterative/vendor-doc-flatten');
+            const { matchNodes } = await import('./vendors/figma/iterative/match-confidence');
+            const { createMergePlan } = await import('./vendors/figma/iterative/merge-planner');
+            const { applyMergePlan } = await import('./vendors/figma/iterative/merge-applier');
+            const { parseSyncBaseline, parseSyncState } = await import('./vendors/figma/types');
+
+            const existingDoc = existingSectionData as unknown as FigmaVendorDocument;
+            const incomingDoc = buildResult.vendorDoc!;
+
+            // Match existing nodes to incoming
+            const currentFlat = flattenVendorDoc(existingDoc);
+            const incomingFlat = flattenVendorDoc(incomingDoc);
+            const matchResult = matchNodes(currentFlat, incomingFlat);
+
+            // Build baseline lookup
+            const baselineRaw = existingDoc.pluginData?.['jay-sync-baseline-v1'];
+            const baseline = parseSyncBaseline(baselineRaw);
+            const baselineIndex = baseline
+                ? baselineToPropertyIndex(baseline.nodes)
+                : new Map();
+
+            // Plan merges
+            const plannerInputs = buildPlannerInputs(
+                matchResult.matches, baselineIndex, existingDoc, incomingDoc,
+            );
+            const structChanges = buildStructuralChanges(
+                matchResult.unmatchedCurrent, matchResult.unmatchedIncoming,
+                existingDoc, incomingDoc, 'medium', new Set(),
+            );
+            const plan = createMergePlan(plannerInputs, structChanges);
+
+            // Determine sectionSyncId
+            const existingSyncState = parseSyncState(existingDoc.pluginData?.['jay-sync-state-v1']);
+            const sectionSyncId = existingSyncState?.sectionSyncId ?? `sync-${Date.now()}`;
+            const sessionId = `merge-${Date.now()}`;
+
+            // Apply merge plan (pure — clones existingDoc internally)
+            const applyResult = applyMergePlan({
+                existingDoc,
+                incomingDoc,
+                plan,
+                conflictResolutions: conflictResolutions as any,
+                pageUrl,
+                sessionId,
+                sectionSyncId,
+            });
+
+            getLogger().info(
+                `✅ Merge applied for ${pageUrl}: ${applyResult.appliedOps.length} applied, ` +
+                `${applyResult.unresolvedConflicts.length} unresolved`,
+            );
+
+            return {
+                type: 'mergeApply',
+                success: true,
+                vendorDoc: applyResult.mergedDoc as unknown as TVendorDoc,
+                report: applyResult.report,
+                syncState: applyResult.newSyncState,
+            };
+        } catch (error) {
+            getLogger().error('Failed merge apply:', error);
+            return {
+                type: 'mergeApply',
+                success: false,
+                error: error instanceof Error ? error.message : 'Unknown error',
+            };
+        }
+    };
+
     return {
         onPublish,
         onSaveImage,
@@ -1382,5 +1617,7 @@ export function createEditorHandlers(
         onGetProjectInfo,
         onExport,
         onImport,
+        onMergePreview,
+        onMergeApply,
     };
 }

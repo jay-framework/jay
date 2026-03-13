@@ -177,6 +177,11 @@ export interface ExportResponse extends BaseResponse {
     warnings?: string[];
     /** True when the jay-html file on disk changed since last import */
     diskDiverged?: boolean;
+    /** True when export is blocked by unresolved conflicts */
+    blocked?: boolean;
+    blockedReason?: string;
+    unresolvedConflictCount?: number;
+    actionHint?: string;
 }
 
 export interface ImportResponse<TVendorDoc> extends BaseResponse {
@@ -361,7 +366,9 @@ export type EditorProtocolMessageTypes<TVendorDoc> =
     | GetImageDataMessage
     | GetProjectInfoMessage
     | ExportMessage<TVendorDoc>
-    | ImportMessage<TVendorDoc>;
+    | ImportMessage<TVendorDoc>
+    | MergePreviewRequest<TVendorDoc>
+    | MergeApplyRequest<TVendorDoc>;
 
 export type EditorProtocolResponseTypes<TVendorDoc> =
     | PublishResponse
@@ -370,7 +377,9 @@ export type EditorProtocolResponseTypes<TVendorDoc> =
     | GetImageDataResponse
     | GetProjectInfoResponse
     | ExportResponse
-    | ImportResponse<TVendorDoc>;
+    | ImportResponse<TVendorDoc>
+    | MergePreviewResponse
+    | MergeApplyResponse<TVendorDoc>;
 
 export interface ProtocolMessage<TVendorDoc> {
     id: string;

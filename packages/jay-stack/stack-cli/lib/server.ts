@@ -84,6 +84,8 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
     editorServer.onGetProjectInfo(handlers.onGetProjectInfo);
     editorServer.onExport(handlers.onExport);
     editorServer.onImport(handlers.onImport);
+    editorServer.onMergePreview(handlers.onMergePreview);
+    editorServer.onMergeApply(handlers.onMergeApply);
 
     // Start dev server
     const { server, viteServer, routes } = await mkDevServer({

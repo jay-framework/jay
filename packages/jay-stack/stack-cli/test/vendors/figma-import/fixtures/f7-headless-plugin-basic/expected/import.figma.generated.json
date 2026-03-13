@@ -297,7 +297,9 @@
                   "opacity": 1
                 }
               ],
-              "pluginData": {},
+              "pluginData": {
+                "htmlAttributes": "{\"if\":\"product.mediaType == IMAGE\"}"
+              },
               "children": [
                 {
                   "id": "7fe22bd5170f",
@@ -353,7 +355,9 @@
                   "opacity": 1
                 }
               ],
-              "pluginData": {},
+              "pluginData": {
+                "htmlAttributes": "{\"if\":\"product.mediaType == VIDEO\"}"
+              },
               "children": [
                 {
                   "id": "0720df4fc376",
