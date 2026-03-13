@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script type="application/jay-data" contract="./page.jay-contract">
+    data:
+      title: "Shop"
+      hasItems: true
+      emptyMessage: "No products available"
+      items:
+        - id: "1"
+          name: "Ceramic Vase"
+          price: "$45.00"
+          hasDiscount: true
+          discountLabel: "20% OFF"
+        - id: "2"
+          name: "Wooden Bowl"
+          price: "$32.00"
+          hasDiscount: false
+          discountLabel: ""
+  </script>
+  <style>
+    .page { max-width: 960px; margin: 0 auto; padding: 40px 20px; }
+    .page-title { font-size: 28px; font-weight: 700; margin: 0 0 24px; color: #1a1a1a; }
+    .items-grid { display: flex; flex-wrap: wrap; gap: 24px; }
+    .item-card { background: #f8f8f8; border: 1px solid #e8e8e8; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 12px; width: 240px; }
+    .item-name { font-size: 18px; font-weight: 600; margin: 0; }
+    .item-price { font-size: 16px; color: #666666; }
+    .discount-badge { background: #22c55e; color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 700; align-self: flex-start; }
+    .empty-state { text-align: center; padding: 60px 20px; color: #666666; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1 class="page-title">{title}</h1>
+    <div class="empty-state" if="hasItems === false">
+      <p>{emptyMessage}</p>
+    </div>
+    <div class="items-grid" if="hasItems" forEach="items" trackBy="id">
+      <div class="item-card">
+        <div class="discount-badge" if="item.hasDiscount">
+          <span>{item.discountLabel}</span>
+        </div>
+        <h3 class="item-name">{item.name}</h3>
+        <span class="item-price">{item.price}</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

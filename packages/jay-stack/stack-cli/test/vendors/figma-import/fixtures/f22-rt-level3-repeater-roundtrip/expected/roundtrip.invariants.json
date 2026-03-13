@@ -1,0 +1,7 @@
+{
+  "requiredRefs": ["item.itemLink"],
+  "requiredTextBindings": ["title", "item.name", "item.price"],
+  "requiredForEach": ["items"],
+  "requiredTrackBy": ["id"],
+  "warningsMustNotContain": ["IMPORT_PARSE_FAILED", "TIER2_FALLBACK"]
+}

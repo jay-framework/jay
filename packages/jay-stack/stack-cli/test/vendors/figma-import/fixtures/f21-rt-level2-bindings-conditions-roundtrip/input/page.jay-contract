@@ -1,0 +1,17 @@
+name: bindings-page
+tags:
+  - tag: title
+    type: data
+    dataType: string
+  - tag: subtitle
+    type: data
+    dataType: string
+  - tag: hasPromo
+    type: variant
+    dataType: boolean
+  - tag: promoText
+    type: data
+    dataType: string
+  - tag: submitButton
+    type: interactive
+    elementType: HTMLButtonElement

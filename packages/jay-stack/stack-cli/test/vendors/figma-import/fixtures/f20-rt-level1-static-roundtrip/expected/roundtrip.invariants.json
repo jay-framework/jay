@@ -1,0 +1,5 @@
+{
+  "requiredTextContent": ["Welcome", "A simple static page for roundtrip testing.", "Featured Item", "This is a description of the featured item.", "Roundtrip Lab"],
+  "requiredTags": ["header", "h1", "p", "main", "h2", "footer"],
+  "warningsMustNotContain": ["IMPORT_PARSE_FAILED", "TIER2_FALLBACK"]
+}

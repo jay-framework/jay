@@ -1,0 +1,6 @@
+{
+  "id": "f20-rt-level1-static-roundtrip",
+  "feature": "level1-static-structure-roundtrip",
+  "milestone": 6,
+  "mode": "roundtrip"
+}

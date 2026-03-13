@@ -1,0 +1,6 @@
+{
+  "requiredRefs": ["submitButton"],
+  "requiredTextBindings": ["title", "subtitle", "promoText"],
+  "requiredConditions": ["hasPromo"],
+  "warningsMustNotContain": ["IMPORT_PARSE_FAILED", "TIER2_FALLBACK"]
+}

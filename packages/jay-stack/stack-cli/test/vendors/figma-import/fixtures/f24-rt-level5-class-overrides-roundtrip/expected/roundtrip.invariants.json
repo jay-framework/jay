@@ -1,0 +1,13 @@
+{
+  "requiredTextBindings": ["title", "emptyMessage", "item.name", "item.price", "item.discountLabel"],
+  "requiredConditions": ["hasItems === false", "hasItems", "item.hasDiscount"],
+  "requiredForEach": ["items"],
+  "requiredTrackBy": ["id"],
+  "requiredInlineOverrides": [
+    { "selector": ".hero-banner", "property": "background-color" },
+    { "selector": ".hero-banner", "property": "opacity" },
+    { "selector": ".item-card", "property": "border-color" },
+    { "selector": ".discount-badge", "property": "background-color" }
+  ],
+  "warningsMustNotContain": ["IMPORT_PARSE_FAILED", "TIER2_FALLBACK"]
+}

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script type="application/jay-data" contract="./page.jay-contract">
+    data:
+      title: "Welcome Back"
+      subtitle: "Check out what's new"
+      hasPromo: true
+      promoText: "20% off this week!"
+  </script>
+  <style>
+    .page { max-width: 960px; margin: 0 auto; padding: 40px 20px; }
+    .hero { text-align: center; margin-bottom: 48px; }
+    .hero-title { font-size: 36px; font-weight: 700; margin: 0 0 12px; color: #1a1a1a; }
+    .hero-subtitle { font-size: 18px; color: #666666; margin: 0; }
+    .promo-banner { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 16px; text-align: center; margin-bottom: 32px; }
+    .promo-text { font-weight: 600; color: #856404; margin: 0; }
+    .btn-primary { background: #2563eb; color: white; border: none; padding: 12px 24px; border-radius: 8px; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <h1 class="hero-title">{title}</h1>
+      <p class="hero-subtitle">{subtitle}</p>
+    </header>
+    <div class="promo-banner" if="hasPromo">
+      <p class="promo-text">{promoText}</p>
+    </div>
+    <main>
+      <button ref="submitButton" class="btn-primary">Get Started</button>
+    </main>
+  </div>
+</body>
+</html>

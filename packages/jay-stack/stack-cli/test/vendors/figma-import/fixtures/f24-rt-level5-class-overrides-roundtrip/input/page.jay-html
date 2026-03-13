@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script type="application/jay-data" contract="./page.jay-contract">
+    data:
+      title: "Featured Collection"
+      hasItems: true
+      emptyMessage: "No products available"
+      items:
+        - id: "1"
+          name: "Ceramic Vase"
+          price: "$45.00"
+          hasDiscount: true
+          discountLabel: "SALE"
+        - id: "2"
+          name: "Wooden Bowl"
+          price: "$32.00"
+          hasDiscount: false
+          discountLabel: ""
+  </script>
+  <style>
+    .page { max-width: 960px; margin: 0 auto; padding: 40px 20px; }
+    .hero-banner { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 48px 24px; border-radius: 8px; text-align: center; margin-bottom: 48px; }
+    .hero-title { font-size: 36px; font-weight: 700; margin: 0; }
+    .items-grid { display: flex; flex-wrap: wrap; gap: 24px; }
+    .item-card { background: #f8f8f8; border: 1px solid #e8e8e8; border-radius: 8px; padding: 20px; display: flex; flex-direction: column; gap: 12px; width: 240px; }
+    .item-name { font-size: 18px; font-weight: 600; margin: 0; }
+    .item-price { font-size: 16px; color: #666666; }
+    .discount-badge { background: #22c55e; color: white; padding: 4px 10px; border-radius: 4px; font-size: 12px; font-weight: 700; align-self: flex-start; }
+    .empty-state { text-align: center; padding: 60px 20px; color: #666666; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="hero-banner" style="background-color: #a9ecff; opacity: 0.9;">
+      <h1 class="hero-title">{title}</h1>
+    </header>
+    <div class="empty-state" if="hasItems === false">
+      <p>{emptyMessage}</p>
+    </div>
+    <div class="items-grid" if="hasItems" forEach="items" trackBy="id">
+      <div class="item-card" style="border-color: #cccccc;">
+        <div class="discount-badge" if="item.hasDiscount" style="background-color: #ff4444;">
+          <span>{item.discountLabel}</span>
+        </div>
+        <h3 class="item-name">{item.name}</h3>
+        <span class="item-price">{item.price}</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

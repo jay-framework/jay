@@ -1,0 +1,31 @@
+name: overrides-page
+tags:
+  - tag: title
+    type: data
+    dataType: string
+  - tag: hasItems
+    type: variant
+    dataType: boolean
+  - tag: emptyMessage
+    type: data
+    dataType: string
+  - tag: items
+    type: sub-contract
+    repeated: true
+    trackBy: id
+    tags:
+      - tag: id
+        type: data
+        dataType: string
+      - tag: name
+        type: data
+        dataType: string
+      - tag: price
+        type: data
+        dataType: string
+      - tag: hasDiscount
+        type: variant
+        dataType: boolean
+      - tag: discountLabel
+        type: data
+        dataType: string
