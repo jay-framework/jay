@@ -190,7 +190,9 @@ export class EditorServer implements DevServerProtocol {
     }
 
     onMergeApply<TVendorDoc>(
-        callback: (params: MergeApplyRequest<TVendorDoc>) => Promise<MergeApplyResponse<TVendorDoc>>,
+        callback: (
+            params: MergeApplyRequest<TVendorDoc>,
+        ) => Promise<MergeApplyResponse<TVendorDoc>>,
     ): void {
         this.handlers.mergeApply = callback;
     }

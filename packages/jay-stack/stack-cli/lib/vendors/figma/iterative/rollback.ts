@@ -74,9 +74,7 @@ export function validateSnapshot(data: unknown): SnapshotValidation {
     const obj = data as Record<string, unknown>;
 
     if (obj.schemaVersion !== ROLLBACK_SCHEMA_VERSION) {
-        errors.push(
-            `expected schemaVersion ${ROLLBACK_SCHEMA_VERSION}, got ${obj.schemaVersion}`,
-        );
+        errors.push(`expected schemaVersion ${ROLLBACK_SCHEMA_VERSION}, got ${obj.schemaVersion}`);
     }
 
     if (!obj.capturedAt || typeof obj.capturedAt !== 'string') {
@@ -149,7 +147,7 @@ export function estimateSnapshotSize(snapshot: RollbackSnapshotV1): number {
 // snapshots grow unbounded. These are initial estimates — the enforcement
 // mechanism is the key deliverable.
 
-export const ROLLBACK_BUDGET_BYTES = 512 * 1024;    // 512 KB per section
+export const ROLLBACK_BUDGET_BYTES = 512 * 1024; // 512 KB per section
 export const SYNC_METADATA_BUDGET_BYTES = 64 * 1024; // 64 KB per node
 
 export interface BudgetCheckResult {

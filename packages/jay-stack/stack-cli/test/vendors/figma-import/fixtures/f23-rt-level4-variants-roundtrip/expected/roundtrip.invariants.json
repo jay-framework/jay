@@ -1,5 +1,11 @@
 {
-  "requiredTextBindings": ["title", "emptyMessage", "item.name", "item.price", "item.discountLabel"],
+  "requiredTextBindings": [
+    "title",
+    "emptyMessage",
+    "item.name",
+    "item.price",
+    "item.discountLabel"
+  ],
   "requiredConditions": ["hasItems === false", "hasItems", "item.hasDiscount"],
   "requiredForEach": ["items"],
   "requiredTrackBy": ["id"],

@@ -34,11 +34,16 @@ export function extractIdentity(node: FlatNode): NodeIdentity {
             const bindings = JSON.parse(pd['jay-layer-bindings']);
             if (Array.isArray(bindings)) {
                 bindingSignature = bindings
-                    .map((b: any) => `${(b.tagPath ?? []).join('.')}:${b.attribute ?? b.property ?? 'content'}`)
+                    .map(
+                        (b: any) =>
+                            `${(b.tagPath ?? []).join('.')}:${b.attribute ?? b.property ?? 'content'}`,
+                    )
                     .sort()
                     .join('|');
             }
-        } catch { /* malformed — skip */ }
+        } catch {
+            /* malformed — skip */
+        }
     }
 
     const semanticHtml = pd['semanticHtml'];
@@ -67,7 +72,10 @@ export function extractIdentity(node: FlatNode): NodeIdentity {
 
 // ─── Scoring ─────────────────────────────────────────────────────
 
-function scoreMatch(current: NodeIdentity, incoming: NodeIdentity): { score: number; reason: string } {
+function scoreMatch(
+    current: NodeIdentity,
+    incoming: NodeIdentity,
+): { score: number; reason: string } {
     if (current.jaySid && current.jaySid === incoming.jaySid) {
         return { score: 1.0, reason: 'exact data-jay-sid match' };
     }
@@ -94,7 +102,8 @@ function scoreMatch(current: NodeIdentity, incoming: NodeIdentity): { score: num
     if (current.classes.length > 0 && incoming.classes.length > 0) {
         const overlap = current.classes.filter((c) => incoming.classes.includes(c));
         if (overlap.length > 0) {
-            neighborhoodScore += 0.1 * (overlap.length / Math.max(current.classes.length, incoming.classes.length));
+            neighborhoodScore +=
+                0.1 * (overlap.length / Math.max(current.classes.length, incoming.classes.length));
             reasons.push(`class overlap: ${overlap.join(', ')}`);
         }
     }
@@ -125,16 +134,14 @@ function toConfidence(score: number): MergeConfidence {
 
 function tieBreakOrder(a: MatchCandidate, b: MatchCandidate): number {
     if (a.score !== b.score) return b.score - a.score;
-    if (a.identity.treeDepth !== b.identity.treeDepth) return a.identity.treeDepth - b.identity.treeDepth;
+    if (a.identity.treeDepth !== b.identity.treeDepth)
+        return a.identity.treeDepth - b.identity.treeDepth;
     return a.identity.parentIndex - b.identity.parentIndex;
 }
 
 // ─── Match Engine ────────────────────────────────────────────────
 
-export function matchNodes(
-    currentNodes: FlatNode[],
-    incomingNodes: FlatNode[],
-): MatchEngineResult {
+export function matchNodes(currentNodes: FlatNode[], incomingNodes: FlatNode[]): MatchEngineResult {
     const currentIdentities = currentNodes.map((n) => ({
         key: n.key,
         identity: extractIdentity(n),

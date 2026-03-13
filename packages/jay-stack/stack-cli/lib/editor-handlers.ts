@@ -1456,6 +1456,35 @@ export function createEditorHandlers(
         };
     }
 
+    function detectDesignerOverrides(
+        unmatchedCurrentKeys: string[],
+        baselineIndex: Map<string, Record<string, unknown>>,
+        designerDoc: FigmaVendorDocument,
+        extractPropertySnapshot: (node: FigmaVendorDocument) => Record<string, unknown>,
+    ): Set<string> {
+        const overrides = new Set<string>();
+        const designerIdx = new Map<string, FigmaVendorDocument>();
+        (function walk(node: FigmaVendorDocument) {
+            designerIdx.set(node.id, node);
+            if (node.children) for (const c of node.children) walk(c);
+        })(designerDoc);
+
+        for (const nodeKey of unmatchedCurrentKeys) {
+            const baselineProps = baselineIndex.get(nodeKey);
+            if (!baselineProps) continue;
+            const designerNode = designerIdx.get(nodeKey);
+            if (!designerNode) continue;
+            const designerProps = extractPropertySnapshot(designerNode);
+            for (const key of Object.keys(designerProps)) {
+                if (JSON.stringify(designerProps[key]) !== JSON.stringify(baselineProps[key])) {
+                    overrides.add(nodeKey);
+                    break;
+                }
+            }
+        }
+        return overrides;
+    }
+
     const onMergePreview = async <TVendorDoc>(
         params: MergePreviewRequest<TVendorDoc>,
     ): Promise<MergePreviewResponse> => {
@@ -1475,8 +1504,13 @@ export function createEditorHandlers(
                 return { type: 'mergePreview', success: false, error: buildResult.error };
             }
 
-            const { flattenVendorDoc, buildPlannerInputs, buildStructuralChanges, baselineToPropertyIndex } =
-                await import('./vendors/figma/iterative/vendor-doc-flatten');
+            const {
+                flattenVendorDoc,
+                buildPlannerInputs,
+                buildStructuralChanges,
+                baselineToPropertyIndex,
+                extractPropertySnapshot,
+            } = await import('./vendors/figma/iterative/vendor-doc-flatten');
             const { matchNodes } = await import('./vendors/figma/iterative/match-confidence');
             const { createMergePlan } = await import('./vendors/figma/iterative/merge-planner');
             const { generateReport } = await import('./vendors/figma/iterative/sync-report');
@@ -1491,23 +1525,42 @@ export function createEditorHandlers(
 
             const baselineRaw = existingDoc.pluginData?.['jay-sync-baseline-v1'];
             const baseline = parseSyncBaseline(baselineRaw);
-            const baselineIndex = baseline
-                ? baselineToPropertyIndex(baseline.nodes)
-                : new Map();
+            const baselineIndex = baseline ? baselineToPropertyIndex(baseline.nodes) : new Map();
+
+            const designerOverrides = detectDesignerOverrides(
+                matchResult.unmatchedCurrent,
+                baselineIndex,
+                existingDoc,
+                extractPropertySnapshot,
+            );
 
             const plannerInputs = buildPlannerInputs(
-                matchResult.matches, baselineIndex, existingDoc, incomingDoc,
+                matchResult.matches,
+                baselineIndex,
+                existingDoc,
+                incomingDoc,
             );
+            // Structural confidence: 'low' for unmatched nodes is intentional.
+            // Unmatched nodes have no match to score against, so no confidence signal exists.
+            // 'low' ensures destructive ops (removes) always require explicit confirmation
+            // per locked policy. Adds are unaffected (always auto-applied regardless of confidence).
+            // Future: contextual confidence from sibling match quality could promote to 'medium'.
             const structChanges = buildStructuralChanges(
-                matchResult.unmatchedCurrent, matchResult.unmatchedIncoming,
-                existingDoc, incomingDoc, 'medium', new Set(),
+                matchResult.unmatchedCurrent,
+                matchResult.unmatchedIncoming,
+                existingDoc,
+                incomingDoc,
+                'low',
+                designerOverrides,
             );
 
             const plan = createMergePlan(plannerInputs, structChanges);
             const sessionId = `preview-${Date.now()}`;
             const report = generateReport(plan, sessionId);
 
-            getLogger().info(`📋 Merge preview for ${pageUrl}: ${report.summary.updated} updates, ${report.summary.conflicted} conflicts`);
+            getLogger().info(
+                `📋 Merge preview for ${pageUrl}: ${report.summary.updated} updates, ${report.summary.conflicted} conflicts`,
+            );
 
             return { type: 'mergePreview', success: true, report };
         } catch (error) {
@@ -1539,8 +1592,13 @@ export function createEditorHandlers(
                 return { type: 'mergeApply', success: false, error: buildResult.error };
             }
 
-            const { flattenVendorDoc, buildPlannerInputs, buildStructuralChanges, baselineToPropertyIndex } =
-                await import('./vendors/figma/iterative/vendor-doc-flatten');
+            const {
+                flattenVendorDoc,
+                buildPlannerInputs,
+                buildStructuralChanges,
+                baselineToPropertyIndex,
+                extractPropertySnapshot,
+            } = await import('./vendors/figma/iterative/vendor-doc-flatten');
             const { matchNodes } = await import('./vendors/figma/iterative/match-confidence');
             const { createMergePlan } = await import('./vendors/figma/iterative/merge-planner');
             const { applyMergePlan } = await import('./vendors/figma/iterative/merge-applier');
@@ -1549,25 +1607,35 @@ export function createEditorHandlers(
             const existingDoc = existingSectionData as unknown as FigmaVendorDocument;
             const incomingDoc = buildResult.vendorDoc!;
 
-            // Match existing nodes to incoming
             const currentFlat = flattenVendorDoc(existingDoc);
             const incomingFlat = flattenVendorDoc(incomingDoc);
             const matchResult = matchNodes(currentFlat, incomingFlat);
 
-            // Build baseline lookup
             const baselineRaw = existingDoc.pluginData?.['jay-sync-baseline-v1'];
             const baseline = parseSyncBaseline(baselineRaw);
-            const baselineIndex = baseline
-                ? baselineToPropertyIndex(baseline.nodes)
-                : new Map();
+            const baselineIndex = baseline ? baselineToPropertyIndex(baseline.nodes) : new Map();
 
-            // Plan merges
-            const plannerInputs = buildPlannerInputs(
-                matchResult.matches, baselineIndex, existingDoc, incomingDoc,
+            const designerOverrides = detectDesignerOverrides(
+                matchResult.unmatchedCurrent,
+                baselineIndex,
+                existingDoc,
+                extractPropertySnapshot,
             );
+
+            const plannerInputs = buildPlannerInputs(
+                matchResult.matches,
+                baselineIndex,
+                existingDoc,
+                incomingDoc,
+            );
+            // See confidence rationale in onMergePreview above.
             const structChanges = buildStructuralChanges(
-                matchResult.unmatchedCurrent, matchResult.unmatchedIncoming,
-                existingDoc, incomingDoc, 'medium', new Set(),
+                matchResult.unmatchedCurrent,
+                matchResult.unmatchedIncoming,
+                existingDoc,
+                incomingDoc,
+                'low',
+                designerOverrides,
             );
             const plan = createMergePlan(plannerInputs, structChanges);
 
@@ -1589,7 +1657,7 @@ export function createEditorHandlers(
 
             getLogger().info(
                 `✅ Merge applied for ${pageUrl}: ${applyResult.appliedOps.length} applied, ` +
-                `${applyResult.unresolvedConflicts.length} unresolved`,
+                    `${applyResult.unresolvedConflicts.length} unresolved`,
             );
 
             return {
@@ -1598,6 +1666,7 @@ export function createEditorHandlers(
                 vendorDoc: applyResult.mergedDoc as unknown as TVendorDoc,
                 report: applyResult.report,
                 syncState: applyResult.newSyncState,
+                baseline: applyResult.newBaseline,
             };
         } catch (error) {
             getLogger().error('Failed merge apply:', error);

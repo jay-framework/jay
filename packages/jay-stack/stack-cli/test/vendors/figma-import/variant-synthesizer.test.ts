@@ -959,11 +959,11 @@ describe('buildVariantCondition (export: Figma → HTML)', () => {
         expect(result).toBe('isOnSale');
     });
 
-    it('boolean false → !tagPath', () => {
+    it('boolean false → tagPath === false', () => {
         const result = buildVariantCondition([
             { property: 'isOnSale', tagPath: 'isOnSale', value: 'false', isBoolean: true },
         ]);
-        expect(result).toBe('!isOnSale');
+        expect(result).toBe('isOnSale === false');
     });
 
     it('! prefixed value → tagPath != value', () => {

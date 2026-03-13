@@ -456,7 +456,20 @@ export function extractStaticClassOnlySafeProps(
             let color: string | undefined;
             for (const p of parts) {
                 if (/^\d/.test(p)) width = p;
-                else if (['solid', 'dashed', 'dotted', 'double', 'groove', 'ridge', 'inset', 'outset', 'none'].includes(p)) style = p;
+                else if (
+                    [
+                        'solid',
+                        'dashed',
+                        'dotted',
+                        'double',
+                        'groove',
+                        'ridge',
+                        'inset',
+                        'outset',
+                        'none',
+                    ].includes(p)
+                )
+                    style = p;
                 else color = p;
             }
             const sides = ['top', 'right', 'bottom', 'left'] as const;
@@ -527,15 +540,30 @@ export function overridesToStyleString(overrides: Record<string, string>): strin
 const BORDER_SHORTHAND_GROUPS: Array<{ shorthand: string; sides: string[] }> = [
     {
         shorthand: 'border-color',
-        sides: ['border-top-color', 'border-right-color', 'border-bottom-color', 'border-left-color'],
+        sides: [
+            'border-top-color',
+            'border-right-color',
+            'border-bottom-color',
+            'border-left-color',
+        ],
     },
     {
         shorthand: 'border-width',
-        sides: ['border-top-width', 'border-right-width', 'border-bottom-width', 'border-left-width'],
+        sides: [
+            'border-top-width',
+            'border-right-width',
+            'border-bottom-width',
+            'border-left-width',
+        ],
     },
     {
         shorthand: 'border-style',
-        sides: ['border-top-style', 'border-right-style', 'border-bottom-style', 'border-left-style'],
+        sides: [
+            'border-top-style',
+            'border-right-style',
+            'border-bottom-style',
+            'border-left-style',
+        ],
     },
 ];
 

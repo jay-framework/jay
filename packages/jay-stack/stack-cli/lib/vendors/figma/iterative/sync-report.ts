@@ -13,7 +13,12 @@ export function generateReport(plan: MergePlan, sessionId: string): ImportReport
     const warnings: ImportReportV2['warnings'] = [];
     const optimizations: ImportReportV2['optimizations'] = [];
 
-    let added = 0, updated = 0, removed = 0, preserved = 0, conflicted = 0, skipped = 0;
+    let added = 0,
+        updated = 0,
+        removed = 0,
+        preserved = 0,
+        conflicted = 0,
+        skipped = 0;
     const confidenceDist: Record<MergeConfidence, number> = { high: 0, medium: 0, low: 0 };
 
     for (const op of plan.propertyOperations) {
@@ -22,11 +27,19 @@ export function generateReport(plan: MergePlan, sessionId: string): ImportReport
         switch (op.decision) {
             case 'applyIncoming':
                 updated++;
-                applied.push({ nodeKey: op.nodeKey, property: op.property, rationale: op.rationale });
+                applied.push({
+                    nodeKey: op.nodeKey,
+                    property: op.property,
+                    rationale: op.rationale,
+                });
                 break;
             case 'preserveDesigner':
                 preserved++;
-                preservedOverrides.push({ nodeKey: op.nodeKey, property: op.property, reason: op.rationale });
+                preservedOverrides.push({
+                    nodeKey: op.nodeKey,
+                    property: op.property,
+                    reason: op.rationale,
+                });
                 break;
             case 'needsDecision':
                 conflicted++;
@@ -64,9 +77,8 @@ export function generateReport(plan: MergePlan, sessionId: string): ImportReport
     }
 
     const totalDecisions = applied.length + preserved + conflicted + skipped;
-    const autoMergeRatio = totalDecisions > 0
-        ? (applied.length + preserved + skipped) / totalDecisions
-        : 1;
+    const autoMergeRatio =
+        totalDecisions > 0 ? (applied.length + preserved + skipped) / totalDecisions : 1;
 
     return {
         schemaVersion: 2,

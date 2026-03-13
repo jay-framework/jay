@@ -1,7 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { extractIdentity, matchNodes } from '../../../../lib/vendors/figma/iterative/match-confidence';
+import {
+    extractIdentity,
+    matchNodes,
+} from '../../../../lib/vendors/figma/iterative/match-confidence';
 
-function makeNode(key: string, pluginData: Record<string, string> = {}, overrides: { parentIndex?: number; treeDepth?: number; name?: string } = {}) {
+function makeNode(
+    key: string,
+    pluginData: Record<string, string> = {},
+    overrides: { parentIndex?: number; treeDepth?: number; name?: string } = {},
+) {
     return {
         key,
         pluginData,
@@ -44,7 +51,11 @@ describe('Match Confidence Engine', () => {
         });
 
         it('returns deterministic output for same input', () => {
-            const node = makeNode('n1', { 'data-jay-sid': 'sid-1', 'semanticHtml': 'div' }, { parentIndex: 2, treeDepth: 3 });
+            const node = makeNode(
+                'n1',
+                { 'data-jay-sid': 'sid-1', semanticHtml: 'div' },
+                { parentIndex: 2, treeDepth: 3 },
+            );
             const id1 = extractIdentity(node);
             const id2 = extractIdentity(node);
             expect(id1).toEqual(id2);
@@ -81,8 +92,12 @@ describe('Match Confidence Engine', () => {
         });
 
         it('neighborhood heuristic only → low confidence', () => {
-            const current = [makeNode('c1', { 'semanticHtml': 'h1' }, { parentIndex: 0, treeDepth: 2 })];
-            const incoming = [makeNode('i1', { 'semanticHtml': 'h1' }, { parentIndex: 0, treeDepth: 2 })];
+            const current = [
+                makeNode('c1', { semanticHtml: 'h1' }, { parentIndex: 0, treeDepth: 2 }),
+            ];
+            const incoming = [
+                makeNode('i1', { semanticHtml: 'h1' }, { parentIndex: 0, treeDepth: 2 }),
+            ];
             const result = matchNodes(current, incoming);
             expect(result.matches).toHaveLength(1);
             expect(result.matches[0].confidence).toBe('low');
@@ -92,8 +107,20 @@ describe('Match Confidence Engine', () => {
 
     describe('no-match case', () => {
         it('reports unmatched nodes when no signals overlap', () => {
-            const current = [makeNode('c1', { 'data-jay-sid': 'sid-a', 'semanticHtml': 'h1' }, { parentIndex: 0, treeDepth: 1 })];
-            const incoming = [makeNode('i1', { 'data-jay-sid': 'sid-b', 'semanticHtml': 'span' }, { parentIndex: 5, treeDepth: 3 })];
+            const current = [
+                makeNode(
+                    'c1',
+                    { 'data-jay-sid': 'sid-a', semanticHtml: 'h1' },
+                    { parentIndex: 0, treeDepth: 1 },
+                ),
+            ];
+            const incoming = [
+                makeNode(
+                    'i1',
+                    { 'data-jay-sid': 'sid-b', semanticHtml: 'span' },
+                    { parentIndex: 5, treeDepth: 3 },
+                ),
+            ];
             const result = matchNodes(current, incoming);
             expect(result.matches).toHaveLength(0);
             expect(result.unmatchedCurrent).toContain('c1');
@@ -103,10 +130,10 @@ describe('Match Confidence Engine', () => {
 
     describe('ambiguous low-confidence match → diagnostics', () => {
         it('emits diagnostics for ties', () => {
-            const current = [makeNode('c1', { 'semanticHtml': 'div' }, { parentIndex: 0 })];
+            const current = [makeNode('c1', { semanticHtml: 'div' }, { parentIndex: 0 })];
             const incoming = [
-                makeNode('i1', { 'semanticHtml': 'div' }, { parentIndex: 0, treeDepth: 0 }),
-                makeNode('i2', { 'semanticHtml': 'div' }, { parentIndex: 0, treeDepth: 1 }),
+                makeNode('i1', { semanticHtml: 'div' }, { parentIndex: 0, treeDepth: 0 }),
+                makeNode('i2', { semanticHtml: 'div' }, { parentIndex: 0, treeDepth: 1 }),
             ];
             const result = matchNodes(current, incoming);
             expect(result.diagnostics.length).toBeGreaterThanOrEqual(1);
@@ -118,12 +145,12 @@ describe('Match Confidence Engine', () => {
     describe('tie-break determinism', () => {
         it('produces identical results across 3 runs', () => {
             const current = [
-                makeNode('c1', { 'semanticHtml': 'p' }, { parentIndex: 0, treeDepth: 1 }),
-                makeNode('c2', { 'semanticHtml': 'p' }, { parentIndex: 1, treeDepth: 1 }),
+                makeNode('c1', { semanticHtml: 'p' }, { parentIndex: 0, treeDepth: 1 }),
+                makeNode('c2', { semanticHtml: 'p' }, { parentIndex: 1, treeDepth: 1 }),
             ];
             const incoming = [
-                makeNode('i1', { 'semanticHtml': 'p' }, { parentIndex: 0, treeDepth: 1 }),
-                makeNode('i2', { 'semanticHtml': 'p' }, { parentIndex: 1, treeDepth: 1 }),
+                makeNode('i1', { semanticHtml: 'p' }, { parentIndex: 0, treeDepth: 1 }),
+                makeNode('i2', { semanticHtml: 'p' }, { parentIndex: 1, treeDepth: 1 }),
             ];
 
             const r1 = matchNodes(current, incoming);
@@ -141,10 +168,12 @@ describe('Match Confidence Engine', () => {
     describe('priority enforcement', () => {
         it('high confidence sid match wins over medium binding match', () => {
             const bindings = JSON.stringify([{ tagPath: ['title'], attribute: undefined }]);
-            const current = [makeNode('c1', {
-                'data-jay-sid': 'sid-exact',
-                'jay-layer-bindings': bindings,
-            })];
+            const current = [
+                makeNode('c1', {
+                    'data-jay-sid': 'sid-exact',
+                    'jay-layer-bindings': bindings,
+                }),
+            ];
             const incoming = [
                 makeNode('i1', { 'jay-layer-bindings': bindings }),
                 makeNode('i2', { 'data-jay-sid': 'sid-exact' }),

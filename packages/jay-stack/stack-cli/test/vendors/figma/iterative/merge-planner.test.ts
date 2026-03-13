@@ -4,8 +4,14 @@ import {
     planStructuralChanges,
     createMergePlan,
 } from '../../../../lib/vendors/figma/iterative/merge-planner';
-import type { PlannerInput, StructuralChange } from '../../../../lib/vendors/figma/iterative/merge-planner';
-import { classifyProperty, getPropertyPolicy } from '../../../../lib/vendors/figma/iterative/policy';
+import type {
+    PlannerInput,
+    StructuralChange,
+} from '../../../../lib/vendors/figma/iterative/merge-planner';
+import {
+    classifyProperty,
+    getPropertyPolicy,
+} from '../../../../lib/vendors/figma/iterative/policy';
 import { generateReport } from '../../../../lib/vendors/figma/iterative/sync-report';
 
 describe('Property Policy Matrix', () => {
@@ -144,13 +150,15 @@ describe('3-Way Merge Planner — B/D/N Permutations', () => {
 
 describe('Structural Operations — Confidence Gating', () => {
     it('remove with designer override → action_required', () => {
-        const changes: StructuralChange[] = [{
-            type: 'remove',
-            nodeKey: 'n1',
-            nodeName: 'Card',
-            confidence: 'high',
-            hasDesignerOverride: true,
-        }];
+        const changes: StructuralChange[] = [
+            {
+                type: 'remove',
+                nodeKey: 'n1',
+                nodeName: 'Card',
+                confidence: 'high',
+                hasDesignerOverride: true,
+            },
+        ];
         const { operations, conflicts } = planStructuralChanges(changes);
         expect(operations[0].decision).toBe('needsDecision');
         expect(conflicts).toHaveLength(1);
@@ -158,26 +166,30 @@ describe('Structural Operations — Confidence Gating', () => {
     });
 
     it('remove without override, high confidence → auto-remove', () => {
-        const changes: StructuralChange[] = [{
-            type: 'remove',
-            nodeKey: 'n1',
-            nodeName: 'Card',
-            confidence: 'high',
-            hasDesignerOverride: false,
-        }];
+        const changes: StructuralChange[] = [
+            {
+                type: 'remove',
+                nodeKey: 'n1',
+                nodeName: 'Card',
+                confidence: 'high',
+                hasDesignerOverride: false,
+            },
+        ];
         const { operations, conflicts } = planStructuralChanges(changes);
         expect(operations[0].decision).toBe('applyIncoming');
         expect(conflicts).toHaveLength(0);
     });
 
     it('remove without override, low confidence → action_required (LOCKED POLICY)', () => {
-        const changes: StructuralChange[] = [{
-            type: 'remove',
-            nodeKey: 'n1',
-            nodeName: 'Card',
-            confidence: 'low',
-            hasDesignerOverride: false,
-        }];
+        const changes: StructuralChange[] = [
+            {
+                type: 'remove',
+                nodeKey: 'n1',
+                nodeName: 'Card',
+                confidence: 'low',
+                hasDesignerOverride: false,
+            },
+        ];
         const { operations, conflicts } = planStructuralChanges(changes);
         expect(operations[0].decision).toBe('needsDecision');
         expect(conflicts).toHaveLength(1);
@@ -185,39 +197,45 @@ describe('Structural Operations — Confidence Gating', () => {
     });
 
     it('add → always auto-apply', () => {
-        const changes: StructuralChange[] = [{
-            type: 'add',
-            nodeKey: 'n-new',
-            nodeName: 'NewCard',
-            confidence: 'medium',
-            hasDesignerOverride: false,
-        }];
+        const changes: StructuralChange[] = [
+            {
+                type: 'add',
+                nodeKey: 'n-new',
+                nodeName: 'NewCard',
+                confidence: 'medium',
+                hasDesignerOverride: false,
+            },
+        ];
         const { operations, conflicts } = planStructuralChanges(changes);
         expect(operations[0].decision).toBe('applyIncoming');
         expect(conflicts).toHaveLength(0);
     });
 
     it('reorder with low confidence → action_required (LOCKED POLICY)', () => {
-        const changes: StructuralChange[] = [{
-            type: 'reorder',
-            nodeKey: 'n1',
-            nodeName: 'Item',
-            confidence: 'low',
-            hasDesignerOverride: false,
-        }];
+        const changes: StructuralChange[] = [
+            {
+                type: 'reorder',
+                nodeKey: 'n1',
+                nodeName: 'Item',
+                confidence: 'low',
+                hasDesignerOverride: false,
+            },
+        ];
         const { operations, conflicts } = planStructuralChanges(changes);
         expect(operations[0].decision).toBe('needsDecision');
         expect(conflicts).toHaveLength(1);
     });
 
     it('reorder with high confidence → auto-apply', () => {
-        const changes: StructuralChange[] = [{
-            type: 'reorder',
-            nodeKey: 'n1',
-            nodeName: 'Item',
-            confidence: 'high',
-            hasDesignerOverride: false,
-        }];
+        const changes: StructuralChange[] = [
+            {
+                type: 'reorder',
+                nodeKey: 'n1',
+                nodeName: 'Item',
+                confidence: 'high',
+                hasDesignerOverride: false,
+            },
+        ];
         const { operations, conflicts } = planStructuralChanges(changes);
         expect(operations[0].decision).toBe('applyIncoming');
         expect(conflicts).toHaveLength(0);
@@ -227,21 +245,25 @@ describe('Structural Operations — Confidence Gating', () => {
 describe('Sync Report Generation', () => {
     it('generates report with correct section counts', () => {
         const plan = createMergePlan(
-            [{
-                nodeKey: 'n1',
-                nodeName: 'TestNode',
-                baseline: { fill: '#ff0000', characters: 'old' },
-                designer: { fill: '#ff0000', characters: 'old' },
-                incoming: { fill: '#00ff00', characters: 'new' },
-                confidence: 'high',
-            }],
-            [{
-                type: 'add',
-                nodeKey: 'n-new',
-                nodeName: 'NewNode',
-                confidence: 'high',
-                hasDesignerOverride: false,
-            }],
+            [
+                {
+                    nodeKey: 'n1',
+                    nodeName: 'TestNode',
+                    baseline: { fill: '#ff0000', characters: 'old' },
+                    designer: { fill: '#ff0000', characters: 'old' },
+                    incoming: { fill: '#00ff00', characters: 'new' },
+                    confidence: 'high',
+                },
+            ],
+            [
+                {
+                    type: 'add',
+                    nodeKey: 'n-new',
+                    nodeName: 'NewNode',
+                    confidence: 'high',
+                    hasDesignerOverride: false,
+                },
+            ],
         );
 
         const report = generateReport(plan, 'test-session-1');
@@ -257,14 +279,16 @@ describe('Sync Report Generation', () => {
 
     it('reports conflicts with correct count', () => {
         const plan = createMergePlan(
-            [{
-                nodeKey: 'n1',
-                nodeName: 'TestNode',
-                baseline: { fill: '#ff0000' },
-                designer: { fill: '#0000ff' },
-                incoming: { fill: '#00ff00' },
-                confidence: 'high',
-            }],
+            [
+                {
+                    nodeKey: 'n1',
+                    nodeName: 'TestNode',
+                    baseline: { fill: '#ff0000' },
+                    designer: { fill: '#0000ff' },
+                    incoming: { fill: '#00ff00' },
+                    confidence: 'high',
+                },
+            ],
             [],
         );
 

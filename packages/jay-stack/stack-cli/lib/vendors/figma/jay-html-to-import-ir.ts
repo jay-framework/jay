@@ -7,7 +7,12 @@ import type { JayHeadlessImports } from '@jay-framework/compiler-jay-html';
 import { ContractTagType, computeSourceId, parseContract } from '@jay-framework/compiler-jay-html';
 import type { ImportIRDocument, ImportIRNode, ImportIRStyle } from './import-ir';
 import { generateNodeId, buildDomPath, getSemanticAnchors } from './id-generator';
-import { resolveStyle, parseInlineStyle, parseCssToClassMap, resolveClassStyles } from './style-resolver';
+import {
+    resolveStyle,
+    parseInlineStyle,
+    parseCssToClassMap,
+    resolveClassStyles,
+} from './style-resolver';
 import type { CssClassMap } from './style-resolver';
 import { extractStaticClassOnlySafeProps } from './class-style-baseline';
 import { extractBindingsFromElement, buildMergedContractTags } from './binding-reconstructor';

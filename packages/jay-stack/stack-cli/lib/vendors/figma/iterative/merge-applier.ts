@@ -61,10 +61,38 @@ function indexNodesByKey(doc: FigmaVendorDocument): Map<string, FigmaVendorDocum
     return index;
 }
 
+function buildParentAndDepthMaps(doc: FigmaVendorDocument): {
+    parentMap: Map<string, string>;
+    depthMap: Map<string, number>;
+} {
+    const parentMap = new Map<string, string>();
+    const depthMap = new Map<string, number>();
+    function walk(node: FigmaVendorDocument, depth: number) {
+        depthMap.set(node.id, depth);
+        if (node.children) {
+            for (const child of node.children) {
+                parentMap.set(child.id, node.id);
+                walk(child, depth + 1);
+            }
+        }
+    }
+    walk(doc, 0);
+    return { parentMap, depthMap };
+}
+
 const PLUGIN_DATA_PROPERTIES = new Set([
-    'jay-layer-bindings', 'jay-ref', 'jay-id', 'data-jay-sid', 'data-figma-id',
-    'jay-import-report', 'jay-import-content-hash', 'jay-import-timestamp',
-    'semanticHtml', 'jay-sync-state-v1', 'jay-sync-baseline-v1', 'jay-sync-rollback-v1',
+    'jay-layer-bindings',
+    'jay-ref',
+    'jay-id',
+    'data-jay-sid',
+    'data-figma-id',
+    'jay-import-report',
+    'jay-import-content-hash',
+    'jay-import-timestamp',
+    'semanticHtml',
+    'jay-sync-state-v1',
+    'jay-sync-baseline-v1',
+    'jay-sync-rollback-v1',
 ]);
 
 function setNodeProperty(node: FigmaVendorDocument, property: string, value: unknown): void {
@@ -107,22 +135,29 @@ function sortPropertyOps(ops: MergeOperation[]): MergeOperation[] {
 
 /**
  * Sort structural operations: add first (safe), reorder second, remove last (destructive).
- * Within same type, sort by nodeKey for determinism.
+ * Within adds, sort by tree depth (parents before children) to ensure correct placement.
+ * nodeDepths provides depth information from the incoming tree for add ordering.
  */
-function sortStructuralOps(ops: StructuralOperation[]): StructuralOperation[] {
+function sortStructuralOps(
+    ops: StructuralOperation[],
+    nodeDepths: Map<string, number>,
+): StructuralOperation[] {
     const typeOrder: Record<string, number> = { add: 0, reorder: 1, remove: 2 };
     return [...ops].sort((a, b) => {
         const ta = typeOrder[a.type] ?? 1;
         const tb = typeOrder[b.type] ?? 1;
         if (ta !== tb) return ta - tb;
+        if (a.type === 'add' && b.type === 'add') {
+            const da = nodeDepths.get(a.nodeKey) ?? 0;
+            const db = nodeDepths.get(b.nodeKey) ?? 0;
+            if (da !== db) return da - db;
+        }
         return a.nodeKey.localeCompare(b.nodeKey);
     });
 }
 
 function computeDocHash(doc: FigmaVendorDocument): string {
-    return createHash('sha256')
-        .update(JSON.stringify(doc), 'utf8')
-        .digest('hex');
+    return createHash('sha256').update(JSON.stringify(doc), 'utf8').digest('hex');
 }
 
 /**
@@ -164,6 +199,9 @@ export function applyMergePlan(input: ApplyInput): ApplyResult {
     const mergedDoc = cloneDoc(input.existingDoc);
     const mergedIndex = indexNodesByKey(mergedDoc);
     const incomingIndex = indexNodesByKey(input.incomingDoc);
+    const { parentMap: incomingParentMap, depthMap: incomingDepthMap } = buildParentAndDepthMaps(
+        input.incomingDoc,
+    );
 
     const appliedOps: MergeOperation[] = [];
     const skippedOps: MergeOperation[] = [];
@@ -230,15 +268,25 @@ export function applyMergePlan(input: ApplyInput): ApplyResult {
     }
 
     // Phase 2: Structural changes in deterministic order (add → reorder → remove)
-    const sortedStructOps = sortStructuralOps(input.plan.structuralOperations);
+    // Adds sorted by depth so parents are processed before children.
+    const sortedStructOps = sortStructuralOps(input.plan.structuralOperations, incomingDepthMap);
 
     for (const op of sortedStructOps) {
         if (op.decision === 'applyIncoming') {
             if (op.type === 'add') {
+                if (mergedIndex.has(op.nodeKey)) {
+                    appliedStructuralOps.push(op);
+                    continue;
+                }
                 const incomingNode = incomingIndex.get(op.nodeKey);
                 if (incomingNode) {
-                    if (!mergedDoc.children) mergedDoc.children = [];
-                    mergedDoc.children.push(cloneDoc(incomingNode));
+                    const parentKey = incomingParentMap.get(op.nodeKey);
+                    const parentNode = parentKey ? mergedIndex.get(parentKey) : mergedDoc;
+                    const target = parentNode ?? mergedDoc;
+                    if (!target.children) target.children = [];
+                    const cloned = cloneDoc(incomingNode);
+                    target.children.push(cloned);
+                    indexNodesByKey(cloned).forEach((node, key) => mergedIndex.set(key, node));
                 }
             } else if (op.type === 'remove') {
                 removeNodeFromTree(mergedDoc, op.nodeKey);
@@ -247,9 +295,8 @@ export function applyMergePlan(input: ApplyInput): ApplyResult {
             // The plugin handles actual reorder using child indices.
             appliedStructuralOps.push(op);
         } else if (op.decision === 'needsDecision') {
-            const resKey = op.type === 'reorder'
-                ? `${op.nodeKey}::_order`
-                : `${op.nodeKey}::_structure`;
+            const resKey =
+                op.type === 'reorder' ? `${op.nodeKey}::_order` : `${op.nodeKey}::_structure`;
             const resolution = resolutionLookup.get(resKey);
 
             if (resolution) {

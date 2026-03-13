@@ -549,7 +549,9 @@ describe('Figma Import Fixtures', () => {
                             if (roundtripInvariants.warningsMustNotContain && response.warnings) {
                                 for (const forbidden of roundtripInvariants.warningsMustNotContain) {
                                     if (response.warnings.some((w) => w.includes(forbidden))) {
-                                        rtErrors.push(`warningsMustNotContain: "${forbidden}" found in warnings`);
+                                        rtErrors.push(
+                                            `warningsMustNotContain: "${forbidden}" found in warnings`,
+                                        );
                                     }
                                 }
                             }
@@ -557,7 +559,9 @@ describe('Figma Import Fixtures', () => {
                             if (roundtripInvariants.requiredRefs) {
                                 for (const ref of roundtripInvariants.requiredRefs) {
                                     if (!exported.includes(`ref="${ref}"`)) {
-                                        rtErrors.push(`requiredRef: ref="${ref}" not found in exported HTML`);
+                                        rtErrors.push(
+                                            `requiredRef: ref="${ref}" not found in exported HTML`,
+                                        );
                                     }
                                 }
                             }
@@ -565,7 +569,9 @@ describe('Figma Import Fixtures', () => {
                             if (roundtripInvariants.requiredTextBindings) {
                                 for (const binding of roundtripInvariants.requiredTextBindings) {
                                     if (!exported.includes(`{${binding}}`)) {
-                                        rtErrors.push(`requiredTextBinding: {${binding}} not found in exported HTML`);
+                                        rtErrors.push(
+                                            `requiredTextBinding: {${binding}} not found in exported HTML`,
+                                        );
                                     }
                                 }
                             }
@@ -573,7 +579,9 @@ describe('Figma Import Fixtures', () => {
                             if (roundtripInvariants.requiredTextContent) {
                                 for (const text of roundtripInvariants.requiredTextContent) {
                                     if (!exported.includes(text)) {
-                                        rtErrors.push(`requiredTextContent: "${text}" not found in exported HTML`);
+                                        rtErrors.push(
+                                            `requiredTextContent: "${text}" not found in exported HTML`,
+                                        );
                                     }
                                 }
                             }
@@ -581,7 +589,9 @@ describe('Figma Import Fixtures', () => {
                             if (roundtripInvariants.requiredTags) {
                                 for (const tag of roundtripInvariants.requiredTags) {
                                     if (!new RegExp(`<${tag}[\\s>]`).test(exported)) {
-                                        rtErrors.push(`requiredTag: <${tag}> not found in exported HTML`);
+                                        rtErrors.push(
+                                            `requiredTag: <${tag}> not found in exported HTML`,
+                                        );
                                     }
                                 }
                             }
@@ -589,7 +599,9 @@ describe('Figma Import Fixtures', () => {
                             if (roundtripInvariants.requiredConditions) {
                                 for (const condition of roundtripInvariants.requiredConditions) {
                                     if (!exported.includes(`if="${condition}"`)) {
-                                        rtErrors.push(`requiredCondition: if="${condition}" not found in exported HTML`);
+                                        rtErrors.push(
+                                            `requiredCondition: if="${condition}" not found in exported HTML`,
+                                        );
                                     }
                                 }
                             }
@@ -597,7 +609,9 @@ describe('Figma Import Fixtures', () => {
                             if (roundtripInvariants.requiredForEach) {
                                 for (const forEach of roundtripInvariants.requiredForEach) {
                                     if (!exported.includes(`forEach="${forEach}"`)) {
-                                        rtErrors.push(`requiredForEach: forEach="${forEach}" not found in exported HTML`);
+                                        rtErrors.push(
+                                            `requiredForEach: forEach="${forEach}" not found in exported HTML`,
+                                        );
                                     }
                                 }
                             }
@@ -605,7 +619,9 @@ describe('Figma Import Fixtures', () => {
                             if (roundtripInvariants.requiredTrackBy) {
                                 for (const trackBy of roundtripInvariants.requiredTrackBy) {
                                     if (!exported.includes(`trackBy="${trackBy}"`)) {
-                                        rtErrors.push(`requiredTrackBy: trackBy="${trackBy}" not found in exported HTML`);
+                                        rtErrors.push(
+                                            `requiredTrackBy: trackBy="${trackBy}" not found in exported HTML`,
+                                        );
                                     }
                                 }
                             }
@@ -619,7 +635,9 @@ describe('Figma Import Fixtures', () => {
                                         `style="[^"]*${override.property}\\s*:[^"]*"[^>]*class="[^"]*${override.selector.replace('.', '')}[^"]*"`,
                                     );
                                     if (!selectorRe.test(exported) && !altRe.test(exported)) {
-                                        rtErrors.push(`requiredInlineOverride: ${override.selector} { ${override.property} } not found in exported HTML`);
+                                        rtErrors.push(
+                                            `requiredInlineOverride: ${override.selector} { ${override.property} } not found in exported HTML`,
+                                        );
                                     }
                                 }
                             }

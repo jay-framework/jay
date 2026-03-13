@@ -336,6 +336,7 @@ export interface MergeApplyResponse<TVendorDoc> extends BaseResponse {
     vendorDoc?: TVendorDoc;
     report?: ImportReportV2;
     syncState?: SyncStateV1;
+    baseline?: SyncBaselineV1;
 }
 
 export interface CaptureSnapshotRequest extends BaseMessage<CaptureSnapshotResponse> {

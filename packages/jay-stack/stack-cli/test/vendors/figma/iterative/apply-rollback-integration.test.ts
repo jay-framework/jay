@@ -1,20 +1,36 @@
 import { describe, it, expect } from 'vitest';
-import type { FigmaVendorDocument } from '@jay-framework/editor-protocol/vendors/figma';
+import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
 import type { SyncStateV1, SyncBaselineV1 } from '@jay-framework/editor-protocol';
-import { flattenVendorDoc, buildPlannerInputs, buildStructuralChanges, baselineToPropertyIndex } from '../../../../lib/vendors/figma/iterative/vendor-doc-flatten';
+import {
+    flattenVendorDoc,
+    buildPlannerInputs,
+    buildStructuralChanges,
+    baselineToPropertyIndex,
+} from '../../../../lib/vendors/figma/iterative/vendor-doc-flatten';
 import { matchNodes } from '../../../../lib/vendors/figma/iterative/match-confidence';
 import { createMergePlan } from '../../../../lib/vendors/figma/iterative/merge-planner';
-import { applyMergePlan, buildBaseline } from '../../../../lib/vendors/figma/iterative/merge-applier';
-import { captureSnapshot, serializeSnapshot, deserializeSnapshot, checkBudget } from '../../../../lib/vendors/figma/iterative/rollback';
+import {
+    applyMergePlan,
+    buildBaseline,
+} from '../../../../lib/vendors/figma/iterative/merge-applier';
+import {
+    captureSnapshot,
+    serializeSnapshot,
+    deserializeSnapshot,
+    checkBudget,
+} from '../../../../lib/vendors/figma/iterative/rollback';
 
 // ─── Test Helpers ────────────────────────────────────────────────
 
-function makeSection(children: FigmaVendorDocument[], pluginData?: Record<string, string>): FigmaVendorDocument {
+function makeSection(
+    children: FigmaVendorDocument[],
+    pluginData?: Record<string, string>,
+): FigmaVendorDocument {
     return {
         id: 'section-1',
         name: 'TestPage',
         type: 'SECTION',
-        pluginData: { 'jpage': 'true', 'urlRoute': '/test', ...pluginData },
+        pluginData: { jpage: 'true', urlRoute: '/test', ...pluginData },
         children,
     };
 }
@@ -48,11 +64,13 @@ describe('Apply + Rollback Integration', () => {
         // === Setup: existing section with baseline ===
         const existing = makeSection([
             makeFrame('header', { fills: '#red', width: 800 }),
-            makeText('title', 'Welcome', JSON.stringify([{ tagPath: ['content', 'title'], attribute: 'content' }])),
+            makeText(
+                'title',
+                'Welcome',
+                JSON.stringify([{ tagPath: ['content', 'title'], attribute: 'content' }]),
+            ),
             makeFrame('card', {
-                children: [
-                    makeText('desc', 'Description text'),
-                ],
+                children: [makeText('desc', 'Description text')],
             }),
         ]);
 
@@ -67,11 +85,13 @@ describe('Apply + Rollback Integration', () => {
         // === Incoming changes (code update on disk) ===
         const incoming = makeSection([
             makeFrame('header', { fills: '#blue', width: 800 }),
-            makeText('title', 'Hello World', JSON.stringify([{ tagPath: ['content', 'title'], attribute: 'content' }])),
+            makeText(
+                'title',
+                'Hello World',
+                JSON.stringify([{ tagPath: ['content', 'title'], attribute: 'content' }]),
+            ),
             makeFrame('card', {
-                children: [
-                    makeText('desc', 'Updated description'),
-                ],
+                children: [makeText('desc', 'Updated description')],
             }),
             makeFrame('footer', { fills: '#gray' }), // new node
         ]);
@@ -84,11 +104,18 @@ describe('Apply + Rollback Integration', () => {
         expect(matchResult.matches.length).toBeGreaterThan(0);
 
         const plannerInputs = buildPlannerInputs(
-            matchResult.matches, baselineIndex, existing, incoming,
+            matchResult.matches,
+            baselineIndex,
+            existing,
+            incoming,
         );
         const structChanges = buildStructuralChanges(
-            matchResult.unmatchedCurrent, matchResult.unmatchedIncoming,
-            existing, incoming, 'high', new Set(),
+            matchResult.unmatchedCurrent,
+            matchResult.unmatchedIncoming,
+            existing,
+            incoming,
+            'high',
+            new Set(),
         );
 
         const plan = createMergePlan(plannerInputs, structChanges);
@@ -104,7 +131,7 @@ describe('Apply + Rollback Integration', () => {
         });
 
         // Verify merged doc has changes
-        const mergedTitle = result.mergedDoc.children?.find(c => c.id === 'title');
+        const mergedTitle = result.mergedDoc.children?.find((c) => c.id === 'title');
         expect(mergedTitle?.characters).toBe('Hello World');
 
         // Verify report
@@ -119,11 +146,11 @@ describe('Apply + Rollback Integration', () => {
         expect(restored!.nodeTree.id).toBe('section-1');
 
         // Verify rollback tree matches original
-        const restoredTitle = restored!.nodeTree.children?.find(c => c.id === 'title');
+        const restoredTitle = restored!.nodeTree.children?.find((c) => c.id === 'title');
         expect(restoredTitle?.characters).toBe('Welcome');
 
         // Original doc should not have been mutated
-        const originalTitle = existing.children?.find(c => c.id === 'title');
+        const originalTitle = existing.children?.find((c) => c.id === 'title');
         expect(originalTitle?.characters).toBe('Welcome');
     });
 
@@ -148,11 +175,18 @@ describe('Apply + Rollback Integration', () => {
         const matchResult = matchNodes(currentFlat, incomingFlat);
 
         const plannerInputs = buildPlannerInputs(
-            matchResult.matches, baselineIndex, existing, incoming,
+            matchResult.matches,
+            baselineIndex,
+            existing,
+            incoming,
         );
         const structChanges = buildStructuralChanges(
-            matchResult.unmatchedCurrent, matchResult.unmatchedIncoming,
-            existing, incoming, 'high', new Set(),
+            matchResult.unmatchedCurrent,
+            matchResult.unmatchedIncoming,
+            existing,
+            incoming,
+            'high',
+            new Set(),
         );
 
         const plan = createMergePlan(plannerInputs, structChanges);
@@ -167,29 +201,37 @@ describe('Apply + Rollback Integration', () => {
         });
 
         // Style change applied
-        const card1 = result.mergedDoc.children?.find(c => c.id === 'card-1');
+        const card1 = result.mergedDoc.children?.find((c) => c.id === 'card-1');
         expect(card1?.fills).toBe('#green');
 
         // New card added
-        const card2 = result.mergedDoc.children?.find(c => c.id === 'card-2');
+        const card2 = result.mergedDoc.children?.find((c) => c.id === 'card-2');
         expect(card2).toBeDefined();
         expect(card2?.fills).toBe('#blue');
 
         // Metadata updated
         expect(result.newSyncState.lastMergeSessionId).toBe('sess-mixed');
-        expect(result.newBaseline.nodes.some(n => n.nodeKey === 'card-2')).toBe(true);
+        expect(result.newBaseline.nodes.some((n) => n.nodeKey === 'card-2')).toBe(true);
     });
 
     it('success path: apply operations and verify new baseline', () => {
         const existing = makeSection([
-            makeText('t1', 'old text', JSON.stringify([{ tagPath: ['content', 'body'], attribute: 'content' }])),
+            makeText(
+                't1',
+                'old text',
+                JSON.stringify([{ tagPath: ['content', 'body'], attribute: 'content' }]),
+            ),
         ]);
 
         const baseline = buildBaseline(existing, '/test');
         const baselineIndex = baselineToPropertyIndex(baseline.nodes);
 
         const incoming = makeSection([
-            makeText('t1', 'new text', JSON.stringify([{ tagPath: ['content', 'body'], attribute: 'content' }])),
+            makeText(
+                't1',
+                'new text',
+                JSON.stringify([{ tagPath: ['content', 'body'], attribute: 'content' }]),
+            ),
         ]);
 
         const currentFlat = flattenVendorDoc(existing);
@@ -197,7 +239,10 @@ describe('Apply + Rollback Integration', () => {
         const matchResult = matchNodes(currentFlat, incomingFlat);
 
         const plannerInputs = buildPlannerInputs(
-            matchResult.matches, baselineIndex, existing, incoming,
+            matchResult.matches,
+            baselineIndex,
+            existing,
+            incoming,
         );
 
         const plan = createMergePlan(plannerInputs, []);
@@ -212,7 +257,7 @@ describe('Apply + Rollback Integration', () => {
         });
 
         // New baseline should reflect applied state
-        const t1Base = result.newBaseline.nodes.find(n => n.nodeKey === 't1');
+        const t1Base = result.newBaseline.nodes.find((n) => n.nodeKey === 't1');
         expect(t1Base?.properties.characters).toBe('new text');
 
         // Sync state reflects clean merge
@@ -269,10 +314,7 @@ describe('Apply + Rollback Integration', () => {
             ],
         };
 
-        const existing = makeSection([
-            makeFrame('n1', { fills: '#red' }),
-            makeText('n2', 'Hello'),
-        ]);
+        const existing = makeSection([makeFrame('n1', { fills: '#red' }), makeText('n2', 'Hello')]);
 
         const snapshot = captureSnapshot(existing, '/test', 'sync-1', syncState, baselineV1);
         const serialized = serializeSnapshot(snapshot);
@@ -291,10 +333,7 @@ describe('Vendor Doc Flatten', () => {
     it('flattens a nested tree into FlatNode array', () => {
         const doc = makeSection([
             makeFrame('f1', {
-                children: [
-                    makeText('t1', 'nested text'),
-                    makeFrame('f2'),
-                ],
+                children: [makeText('t1', 'nested text'), makeFrame('f2')],
             }),
         ]);
 
@@ -317,7 +356,72 @@ describe('Vendor Doc Flatten', () => {
         ]);
 
         const flat = flattenVendorDoc(doc);
-        const t1 = flat.find(n => n.key === 't1');
+        const t1 = flat.find((n) => n.key === 't1');
         expect(t1?.pluginData?.['jay-layer-bindings']).toBeDefined();
+    });
+});
+
+describe('buildStructuralChanges — descendant filtering', () => {
+    it('emits add only for top-level unmatched nodes, not descendants', () => {
+        const designerDoc = makeSection([makeFrame('existing')]);
+        const incomingDoc = makeSection([
+            makeFrame('existing'),
+            makeFrame('new-parent', {
+                children: [makeFrame('new-child-a'), makeFrame('new-child-b')],
+            }),
+        ]);
+
+        const changes = buildStructuralChanges(
+            [],
+            ['new-parent', 'new-child-a', 'new-child-b'],
+            designerDoc,
+            incomingDoc,
+            'low',
+            new Set(),
+        );
+
+        const adds = changes.filter((c) => c.type === 'add');
+        expect(adds).toHaveLength(1);
+        expect(adds[0].nodeKey).toBe('new-parent');
+    });
+
+    it('emits separate adds for unrelated unmatched nodes at same depth', () => {
+        const designerDoc = makeSection([]);
+        const incomingDoc = makeSection([makeFrame('sibling-a'), makeFrame('sibling-b')]);
+
+        const changes = buildStructuralChanges(
+            [],
+            ['sibling-a', 'sibling-b'],
+            designerDoc,
+            incomingDoc,
+            'low',
+            new Set(),
+        );
+
+        const adds = changes.filter((c) => c.type === 'add');
+        expect(adds).toHaveLength(2);
+    });
+
+    it('emits add for deeply nested node whose parent IS matched', () => {
+        const designerDoc = makeSection([makeFrame('matched-parent')]);
+        const incomingDoc = makeSection([
+            makeFrame('matched-parent', {
+                children: [makeFrame('new-deep-child')],
+            }),
+        ]);
+
+        // matched-parent is matched, only new-deep-child is unmatched
+        const changes = buildStructuralChanges(
+            [],
+            ['new-deep-child'],
+            designerDoc,
+            incomingDoc,
+            'low',
+            new Set(),
+        );
+
+        const adds = changes.filter((c) => c.type === 'add');
+        expect(adds).toHaveLength(1);
+        expect(adds[0].nodeKey).toBe('new-deep-child');
     });
 });

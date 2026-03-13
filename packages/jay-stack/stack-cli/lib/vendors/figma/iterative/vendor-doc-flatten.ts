@@ -106,8 +106,42 @@ export function buildPlannerInputs(
 }
 
 /**
+ * Build parent map for a vendor doc tree: child key → parent key.
+ */
+function buildParentMap(doc: FigmaVendorDocument): Map<string, string> {
+    const map = new Map<string, string>();
+    function walk(node: FigmaVendorDocument) {
+        if (node.children) {
+            for (const child of node.children) {
+                map.set(child.id, node.id);
+                walk(child);
+            }
+        }
+    }
+    walk(doc);
+    return map;
+}
+
+/**
+ * Checks whether any ancestor of nodeKey is in the given set.
+ */
+function hasAncestorInSet(
+    nodeKey: string,
+    nodeSet: Set<string>,
+    parentMap: Map<string, string>,
+): boolean {
+    let current = parentMap.get(nodeKey);
+    while (current) {
+        if (nodeSet.has(current)) return true;
+        current = parentMap.get(current);
+    }
+    return false;
+}
+
+/**
  * Builds StructuralChange[] from unmatched nodes.
- * - Unmatched in incoming → add
+ * - Unmatched in incoming → add (only top-level: excludes nodes whose ancestor is also unmatched,
+ *   since cloneDoc on the ancestor already includes descendants)
  * - Unmatched in current (designer) → remove
  */
 export function buildStructuralChanges(
@@ -120,9 +154,12 @@ export function buildStructuralChanges(
 ): StructuralChange[] {
     const designerIdx = indexDocById(designerDoc);
     const incomingIdx = indexDocById(incomingDoc);
+    const incomingParentMap = buildParentMap(incomingDoc);
+    const unmatchedIncomingSet = new Set(unmatchedIncoming);
     const changes: StructuralChange[] = [];
 
     for (const nodeKey of unmatchedIncoming) {
+        if (hasAncestorInSet(nodeKey, unmatchedIncomingSet, incomingParentMap)) continue;
         const node = incomingIdx.get(nodeKey);
         changes.push({
             type: 'add',

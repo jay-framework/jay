@@ -107,7 +107,8 @@ function resolvePropertyDecision(
     if (confidence === 'high') {
         return {
             decision: 'needsDecision',
-            rationale: 'both changed layout property — high confidence match but conflicting values',
+            rationale:
+                'both changed layout property — high confidence match but conflicting values',
             severity: 'warning',
         };
     }
@@ -140,7 +141,11 @@ export function planPropertyMerges(input: PlannerInput): {
         const incVal = input.incoming[prop];
 
         const { decision, rationale, severity } = resolvePropertyDecision(
-            prop, baseVal, desVal, incVal, input.confidence,
+            prop,
+            baseVal,
+            desVal,
+            incVal,
+            input.confidence,
         );
 
         const propertyClass = classifyProperty(prop);
@@ -210,7 +215,8 @@ export function planStructuralChanges(changes: StructuralChange[]): {
                     nodeKey: change.nodeKey,
                     confidence: change.confidence,
                     decision: 'needsDecision',
-                    rationale: 'node removed in code but designer has overrides — requires decision',
+                    rationale:
+                        'node removed in code but designer has overrides — requires decision',
                     hasDesignerOverride: true,
                 });
                 conflicts.push({
@@ -309,7 +315,8 @@ export function createMergePlan(
         allConflicts.push(...conflicts);
     }
 
-    const { operations: structOps, conflicts: structConflicts } = planStructuralChanges(structuralChanges);
+    const { operations: structOps, conflicts: structConflicts } =
+        planStructuralChanges(structuralChanges);
     allConflicts.push(...structConflicts);
 
     return {

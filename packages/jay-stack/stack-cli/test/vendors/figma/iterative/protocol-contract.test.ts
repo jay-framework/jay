@@ -9,8 +9,14 @@ import type {
 } from '@jay-framework/editor-protocol';
 import { generateReport } from '../../../../lib/vendors/figma/iterative/sync-report';
 import { createMergePlan } from '../../../../lib/vendors/figma/iterative/merge-planner';
-import type { PlannerInput, StructuralChange } from '../../../../lib/vendors/figma/iterative/merge-planner';
-import { applyMergePlan, buildBaseline } from '../../../../lib/vendors/figma/iterative/merge-applier';
+import type {
+    PlannerInput,
+    StructuralChange,
+} from '../../../../lib/vendors/figma/iterative/merge-planner';
+import {
+    applyMergePlan,
+    buildBaseline,
+} from '../../../../lib/vendors/figma/iterative/merge-applier';
 
 // ─── Helpers ─────────────────────────────────────────────────────
 
@@ -98,13 +104,16 @@ describe('ImportReportV2 Schema Contract', () => {
     });
 
     it('preservedOverrides items have nodeKey, property, reason', () => {
-        const plan = createMergePlan([
-            makePlannerInput({
-                baseline: { fills: '#red' },
-                designer: { fills: '#green' },
-                incoming: { fills: '#red' },
-            }),
-        ], []);
+        const plan = createMergePlan(
+            [
+                makePlannerInput({
+                    baseline: { fills: '#red' },
+                    designer: { fills: '#green' },
+                    incoming: { fills: '#red' },
+                }),
+            ],
+            [],
+        );
         const report = generateReport(plan, 'sess-1');
 
         expect(report.preservedOverrides.length).toBeGreaterThan(0);
@@ -116,13 +125,16 @@ describe('ImportReportV2 Schema Contract', () => {
     });
 
     it('conflicts have required ConflictItem fields', () => {
-        const plan = createMergePlan([
-            makePlannerInput({
-                baseline: { fills: '#red' },
-                designer: { fills: '#green' },
-                incoming: { fills: '#blue' },
-            }),
-        ], []);
+        const plan = createMergePlan(
+            [
+                makePlannerInput({
+                    baseline: { fills: '#red' },
+                    designer: { fills: '#green' },
+                    incoming: { fills: '#blue' },
+                }),
+            ],
+            [],
+        );
         const report = generateReport(plan, 'sess-1');
 
         expect(report.conflicts.length).toBeGreaterThan(0);
@@ -139,9 +151,18 @@ describe('ImportReportV2 Schema Contract', () => {
     });
 
     it('warnings have nodeKey, message, confidence', () => {
-        const plan = createMergePlan([], [
-            { type: 'remove', nodeKey: 'n-low', nodeName: 'LowNode', confidence: 'low', hasDesignerOverride: false },
-        ]);
+        const plan = createMergePlan(
+            [],
+            [
+                {
+                    type: 'remove',
+                    nodeKey: 'n-low',
+                    nodeName: 'LowNode',
+                    confidence: 'low',
+                    hasDesignerOverride: false,
+                },
+            ],
+        );
         const report = generateReport(plan, 'sess-1');
 
         expect(report.warnings.length).toBeGreaterThan(0);
@@ -207,10 +228,7 @@ describe('MergeApplyResponse Schema Contract', () => {
     it('successful apply has vendorDoc, report, syncState', () => {
         const existing = makeDoc([makeNode('n1', { fills: '#red' })]);
         const incoming = makeDoc([makeNode('n1', { fills: '#blue' })]);
-        const plan = createMergePlan(
-            [makePlannerInput()],
-            [],
-        );
+        const plan = createMergePlan([makePlannerInput()], []);
 
         const result = applyMergePlan({
             existingDoc: existing,
@@ -295,7 +313,13 @@ describe('Payload serialization roundtrip', () => {
                 }),
             ],
             [
-                { type: 'add', nodeKey: 'n3', nodeName: 'NewNode', confidence: 'high', hasDesignerOverride: false },
+                {
+                    type: 'add',
+                    nodeKey: 'n3',
+                    nodeName: 'NewNode',
+                    confidence: 'high',
+                    hasDesignerOverride: false,
+                },
             ],
         );
         const report = generateReport(plan, 'roundtrip-sess');
@@ -335,7 +359,9 @@ describe('Payload serialization roundtrip', () => {
         expect(deserialized.pageUrl).toBe(result.newSyncState.pageUrl);
         expect(deserialized.sectionSyncId).toBe(result.newSyncState.sectionSyncId);
         expect(deserialized.baselineImportHash).toBe(result.newSyncState.baselineImportHash);
-        expect(deserialized.unresolvedConflictCount).toBe(result.newSyncState.unresolvedConflictCount);
+        expect(deserialized.unresolvedConflictCount).toBe(
+            result.newSyncState.unresolvedConflictCount,
+        );
     });
 
     it('MergePreviewResponse survives protocol boundary (JSON roundtrip)', () => {
@@ -358,6 +384,153 @@ describe('Payload serialization roundtrip', () => {
     });
 });
 
+// ─── Merge Apply Persistence Contract ────────────────────────────
+
+describe('Merge apply persistence contract', () => {
+    it('applyMergePlan response includes baseline alongside syncState', () => {
+        const existing = makeDoc([makeNode('n1', { fills: '#red' })]);
+        const incoming = makeDoc([makeNode('n1', { fills: '#blue' })]);
+        const plan = createMergePlan(
+            [
+                {
+                    nodeKey: 'n1',
+                    nodeName: 'N1',
+                    baseline: { fills: '#red' },
+                    designer: { fills: '#red' },
+                    incoming: { fills: '#blue' },
+                    confidence: 'high',
+                },
+            ],
+            [],
+        );
+
+        const result = applyMergePlan({
+            existingDoc: existing,
+            incomingDoc: incoming,
+            plan,
+            pageUrl: '/test',
+            sessionId: 'persist-1',
+            sectionSyncId: 'sync-1',
+        });
+
+        expect(result.newBaseline).toBeDefined();
+        expect(result.newSyncState).toBeDefined();
+        expect(result.newBaseline.schemaVersion).toBe(1);
+        expect(result.newBaseline.pageUrl).toBe('/test');
+        expect(result.newBaseline.nodes.length).toBeGreaterThan(0);
+    });
+
+    it('baseline reflects merged state, not stale input state', () => {
+        const existing = makeDoc([makeNode('n1', { fills: '#red' })]);
+        const incoming = makeDoc([makeNode('n1', { fills: '#blue' })]);
+        const plan = createMergePlan(
+            [
+                {
+                    nodeKey: 'n1',
+                    nodeName: 'N1',
+                    baseline: { fills: '#red' },
+                    designer: { fills: '#red' },
+                    incoming: { fills: '#blue' },
+                    confidence: 'high',
+                },
+            ],
+            [],
+        );
+
+        const result = applyMergePlan({
+            existingDoc: existing,
+            incomingDoc: incoming,
+            plan,
+            pageUrl: '/test',
+            sessionId: 'persist-2',
+            sectionSyncId: 'sync-1',
+        });
+
+        const n1Baseline = result.newBaseline.nodes.find((n) => n.nodeKey === 'n1');
+        expect(n1Baseline).toBeDefined();
+        expect(n1Baseline!.properties.fills).toBe('#blue');
+    });
+
+    it('baseline + syncState both survive JSON roundtrip for plugin persistence', () => {
+        const existing = makeDoc([makeNode('n1', { fills: '#red', characters: 'hello' })]);
+        const incoming = makeDoc([makeNode('n1', { fills: '#blue', characters: 'hello' })]);
+        const plan = createMergePlan(
+            [
+                {
+                    nodeKey: 'n1',
+                    nodeName: 'N1',
+                    baseline: { fills: '#red', characters: 'hello' },
+                    designer: { fills: '#red', characters: 'hello' },
+                    incoming: { fills: '#blue', characters: 'hello' },
+                    confidence: 'high',
+                },
+            ],
+            [],
+        );
+
+        const result = applyMergePlan({
+            existingDoc: existing,
+            incomingDoc: incoming,
+            plan,
+            pageUrl: '/test',
+            sessionId: 'persist-3',
+            sectionSyncId: 'sync-1',
+        });
+
+        const baselineJson = JSON.stringify(result.newBaseline);
+        const syncStateJson = JSON.stringify(result.newSyncState);
+        const parsedBaseline = JSON.parse(baselineJson);
+        const parsedSyncState = JSON.parse(syncStateJson);
+
+        expect(parsedBaseline.schemaVersion).toBe(1);
+        expect(parsedBaseline.nodes).toHaveLength(result.newBaseline.nodes.length);
+        expect(parsedSyncState.schemaVersion).toBe(1);
+        expect(parsedSyncState.baselineImportHash).toBe(result.newSyncState.baselineImportHash);
+    });
+
+    it('MergeApplyResponse includes baseline field for persistence', () => {
+        const existing = makeDoc([makeNode('n1', { fills: '#red' })]);
+        const incoming = makeDoc([makeNode('n1', { fills: '#blue' })]);
+        const plan = createMergePlan(
+            [
+                {
+                    nodeKey: 'n1',
+                    nodeName: 'N1',
+                    baseline: { fills: '#red' },
+                    designer: { fills: '#red' },
+                    incoming: { fills: '#blue' },
+                    confidence: 'high',
+                },
+            ],
+            [],
+        );
+
+        const result = applyMergePlan({
+            existingDoc: existing,
+            incomingDoc: incoming,
+            plan,
+            pageUrl: '/test',
+            sessionId: 'persist-4',
+            sectionSyncId: 'sync-1',
+        });
+
+        const response: MergeApplyResponse<FigmaVendorDocument> = {
+            type: 'mergeApply',
+            success: true,
+            vendorDoc: result.mergedDoc,
+            report: result.report,
+            syncState: result.newSyncState,
+            baseline: result.newBaseline,
+        };
+
+        const serialized = JSON.stringify(response);
+        const deserialized = JSON.parse(serialized) as MergeApplyResponse<FigmaVendorDocument>;
+        expect(deserialized.baseline).toBeDefined();
+        expect(deserialized.baseline!.schemaVersion).toBe(1);
+        expect(deserialized.baseline!.nodes.length).toBeGreaterThan(0);
+    });
+});
+
 // ─── Backward Compatibility ──────────────────────────────────────
 
 describe('Backward compatibility', () => {
@@ -372,16 +545,19 @@ describe('Backward compatibility', () => {
                 pluginData: { 'jay-import-report': '{"new":"report"}' },
             }),
         ]);
-        const plan = createMergePlan([
-            {
-                nodeKey: 'n1',
-                nodeName: 'Node-n1',
-                baseline: { 'jay-import-report': '{"old":"report"}' },
-                designer: { 'jay-import-report': '{"old":"report"}' },
-                incoming: { 'jay-import-report': '{"new":"report"}' },
-                confidence: 'high',
-            },
-        ], []);
+        const plan = createMergePlan(
+            [
+                {
+                    nodeKey: 'n1',
+                    nodeName: 'Node-n1',
+                    baseline: { 'jay-import-report': '{"old":"report"}' },
+                    designer: { 'jay-import-report': '{"old":"report"}' },
+                    incoming: { 'jay-import-report': '{"new":"report"}' },
+                    confidence: 'high',
+                },
+            ],
+            [],
+        );
 
         const result = applyMergePlan({
             existingDoc: existing,
@@ -392,7 +568,7 @@ describe('Backward compatibility', () => {
             sectionSyncId: 'sync-1',
         });
 
-        const n1 = result.mergedDoc.children?.find(c => c.id === 'n1');
+        const n1 = result.mergedDoc.children?.find((c) => c.id === 'n1');
         expect(n1?.pluginData?.['jay-import-report']).toBe('{"new":"report"}');
     });
 });
