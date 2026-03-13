@@ -1,0 +1,10 @@
+name: Page
+tags:
+  - tag: title
+    type: data
+    dataType: string
+    phase: slow
+  - tag: showWidget
+    type: variant
+    dataType: boolean
+    phase: fast+interactive

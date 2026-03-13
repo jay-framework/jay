@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data">
+        data:
+            title: string
+            products:
+                - _id: string
+                  name: string
+                  price: number
+    </script>
+</head>
+<body>
+    <div>
+        <h1>{title}</h1>
+        <div class="grid" forEach="products" trackBy="_id">
+            <div class="card">
+                <h2>{name}</h2>
+                <span>{price}</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

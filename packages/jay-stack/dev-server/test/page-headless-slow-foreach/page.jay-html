@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-headless"
+            plugin="test-widget"
+            contract="widget"></script>
+    <script type="application/jay-data" contract="./page.jay-contract">
+    </script>
+</head>
+<body>
+    <div>
+        <h1>{title}</h1>
+        <div class="list">
+            <div slowForEach="items" trackBy="_id" jayIndex="0" jayTrackBy="1">
+                <jay:widget itemId="1">
+                    <div class="widget">
+                        <span class="label">{label}</span>
+                        <span class="value">{value}</span>
+                    </div>
+                </jay:widget>
+            </div>
+            <div slowForEach="items" trackBy="_id" jayIndex="1" jayTrackBy="2">
+                <jay:widget itemId="2">
+                    <div class="widget">
+                        <span class="label">{label}</span>
+                        <span class="value">{value}</span>
+                    </div>
+                </jay:widget>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

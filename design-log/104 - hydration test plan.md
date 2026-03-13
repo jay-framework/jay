@@ -156,35 +156,55 @@ For cases with interactive behavior:
 
 ## Implementation Notes
 
+### Why Playwright over JSDOM
+
+Initial implementation used `runHydrateScriptInJsdom` which manually loaded modules via Vite's `ssrLoadModule`. This approach hit multiple issues:
+
+1. **Missing browser globals**: Had to manually set `global.Node`, `global.Comment`, etc.
+2. **Module resolution failures**: Vite's SSR module loader couldn't resolve headless component imports (`./widget` from the hydrate module)
+3. **Parts loading**: Had to parse the client script for component imports and manually load them — fragile regex-based extraction
+4. **Not a real test**: JSDOM doesn't execute `<script>` tags, so the actual client script (which wires hydration) was never tested
+
+Playwright solves all of these by running a real browser that loads the page as a user would. The dev server serves the page, Vite compiles and serves the scripts, and the browser executes them. The `jay:automation-ready` event signals that hydration completed, and `window.__jay.automation` provides the automation API for validation.
+
 ### Test infrastructure
 
-- Use `runHydrateScriptInJsdom` for hydrate-based pages (SSR)
-- Extend for `makeCompositeJayComponent` pages (client-only) if needed
-- Fixtures live in `packages/jay-stack/dev-server/test/fixtures/hydration/`
+- **Playwright** for browser-based hydration and interactivity validation
+- **HTTP fetch** for SSR HTML and hydrate script fixture comparison (no browser needed)
+- Dev server started with `--test-mode` (health/shutdown endpoints)
+- Fixtures live in `packages/jay-stack/dev-server/test/page-*/`
 
 ### Fixture structure
 
+Each fixture page has:
 ```
-fixtures/hydration/
-├── page-static-only/
-├── page-conditional-true/
-├── page-foreach-static/
-├── page-slow-foreach/
-├── page-headless-static-slow/
-├── page-headless-static-fast/
-├── page-headless-static-interactive/
-├── page-headless-conditional/
-├── page-headless-foreach/
-├── page-headless-slow-foreach/
-└── page-headless-mixed/
+page-<name>/
+├── page.jay-html               # Page template
+├── page.ts                     # Page component (optional)
+├── page.jay-contract           # Contract (optional)
+├── expected-ssr.html           # Expected SSR target innerHTML (prettified)
+├── expected-hydrate.ts         # Expected hydrate module source (prettified)
+├── tsconfig.json               # Extends dev-server tsconfig (for Vite plugin)
+├── agent-kit/plugins-index.yaml
+└── src/plugins/...             # Headless plugins (if needed)
 ```
+
+### Test layers
+
+| Layer | Tool | What it validates |
+|-------|------|-------------------|
+| SSR HTML | HTTP fetch + `toEqual` | Server-rendered HTML matches fixture |
+| Hydrate script | HTTP fetch + `toEqual` | Compiled hydrate module matches fixture |
+| Hydration | Playwright | Page loads, hydration completes, DOM correct |
+| Interactivity | Playwright + automation API | Signals, conditionals, forEach, refs work |
 
 ### Execution order
 
-1. Implement fixtures (jay-html + contracts)
-2. Add unit tests per category (1 → 5)
-3. Add rendering assertions (6e)
-4. Add interactivity assertions (6f) where applicable
+1. Start dev server (shared across all tests in suite)
+2. For each fixture: HTTP fetch SSR HTML → compare with `toEqual`
+3. For each fixture: HTTP fetch hydrate module → compare with `toEqual`
+4. For each fixture: Playwright navigate → wait `jay:automation-ready` → validate DOM
+5. For interactive fixtures: use `window.__jay.automation` to trigger events and verify updates
 
 ---
 
@@ -194,3 +214,4 @@ fixtures/hydration/
 - No regressions in existing dev-server tests
 - Coverage for: static, conditional, forEach, slowForEach, headless (a–d)
 - Both rendering and interactivity validated where relevant
+- SSR and hydrate script fixtures use `toEqual` with prettification for readable diffs

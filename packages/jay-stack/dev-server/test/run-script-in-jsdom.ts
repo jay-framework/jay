@@ -10,6 +10,7 @@ import { JSDOM } from 'jsdom';
 import path from 'node:path';
 import type { ViteDevServer } from 'vite';
 import { hydrateCompositeJayComponent } from '@jay-framework/stack-client-runtime';
+import {TrackByMap} from "@jay-framework/view-state-merge/lib";
 
 export interface RunScriptResult {
     /** The hydrated component instance (or rendered element for makeComposite) */
@@ -18,12 +19,20 @@ export interface RunScriptResult {
     document: Document;
 }
 
+export interface ParsedPart {
+    name: string;
+    modulePath: string;
+    key?: string;
+}
+
 export interface ParsedScript {
     viewState: object;
     fastCarryForward: object;
-    trackByMap: object;
+    trackByMap: TrackByMap;
     isHydrate: boolean;
     hydrateModulePath: string;
+    /** Component parts extracted from the script (page, headless components) */
+    parts: ParsedPart[];
 }
 
 /**
@@ -45,7 +54,23 @@ export function parseScriptData(script: string): ParsedScript {
         ? hydrateMatch[1].replace(/\?import&jay-hydrate\.ts$/, '?import&jay-hydrate')
         : '';
 
-    return { viewState, fastCarryForward, trackByMap, isHydrate, hydrateModulePath };
+    // Extract component parts from the parts array in the script.
+    // Pattern: {comp: name.comp, contextMarkers: name.contexts || [], key: 'key'}
+    const parts: ParsedPart[] = [];
+    const partPattern = /\{comp:\s*(\w+)\.comp,\s*contextMarkers:\s*\w+\.contexts\s*\|\|\s*\[\](?:,\s*key:\s*'([^']*)')?\}/g;
+    let partMatch;
+    while ((partMatch = partPattern.exec(script)) !== null) {
+        const name = partMatch[1];
+        const key = partMatch[2];
+        // Find the import for this name
+        const importPattern = new RegExp(`import\\s*\\{\\s*${name}\\s*\\}\\s*from\\s*["']([^"']+)["']`);
+        const importMatch = script.match(importPattern);
+        if (importMatch) {
+            parts.push({ name, modulePath: importMatch[1], key });
+        }
+    }
+
+    return { viewState, fastCarryForward, trackByMap, isHydrate, hydrateModulePath, parts };
 }
 
 /**
@@ -63,16 +88,35 @@ export async function runHydrateScriptInJsdom(
         throw new Error('Script is not a hydrate script (expected hydrateCompositeJayComponent)');
     }
 
-    const hydrateModuleId = path.resolve(pagesRoot, 'page.jay-html') + '?import&jay-hydrate';
+    const hydrateModuleId = path.resolve(pagesRoot, 'page.jay-html') + '?jay-hydrate';
     const { hydrate } = await viteServer.ssrLoadModule(hydrateModuleId);
+
+    // Load component parts (page component, headless components)
+    const loadedParts: Array<{ comp: any; contextMarkers: any[]; key?: string }> = [];
+    for (const part of parsed.parts) {
+        const moduleId = path.resolve(pagesRoot, part.modulePath.replace(/^\//, ''));
+        const mod = await viteServer.ssrLoadModule(moduleId);
+        const comp = mod[part.name];
+        if (comp) {
+            loadedParts.push({
+                comp: comp.comp,
+                contextMarkers: comp.contexts || [],
+                ...(part.key ? { key: part.key } : {}),
+            });
+        }
+    }
 
     const dom = new JSDOM(html, { runScripts: 'outside-only' });
     const doc = dom.window.document;
 
     const prevDocument = (global as any).document;
     const prevWindow = (global as any).window;
+    const prevNode = (global as any).Node;
+    const prevComment = (global as any).Comment;
     (global as any).document = doc;
     (global as any).window = dom.window;
+    (global as any).Node = dom.window.Node;
+    (global as any).Comment = dom.window.Comment;
 
     try {
         const target = doc.getElementById('target');
@@ -84,7 +128,7 @@ export async function runHydrateScriptInJsdom(
             hydrate,
             parsed.viewState,
             parsed.fastCarryForward,
-            [],
+            loadedParts,
             parsed.trackByMap,
             rootElement,
         );
@@ -95,5 +139,7 @@ export async function runHydrateScriptInJsdom(
     } finally {
         (global as any).document = prevDocument;
         (global as any).window = prevWindow;
+        (global as any).Node = prevNode;
+        (global as any).Comment = prevComment;
     }
 }

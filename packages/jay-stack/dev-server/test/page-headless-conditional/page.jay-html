@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-headless"
+            plugin="test-widget"
+            contract="widget"></script>
+    <script type="application/jay-data" contract="./page.jay-contract">
+    </script>
+</head>
+<body>
+    <div>
+        <h1>{title}</h1>
+        <jay:widget itemId="1" if="showWidget">
+            <div class="widget">
+                <span class="label">{label}</span>
+                <span class="value">{value}</span>
+            </div>
+        </jay:widget>
+        <p if="!showWidget">Widget hidden</p>
+    </div>
+</body>
+</html>
