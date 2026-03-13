@@ -11,7 +11,7 @@ import { mkDevServer, type DevServer } from '../lib';
 import { JayRollupConfig } from '@jay-framework/vite-plugin';
 import path from 'path';
 import fs from 'fs';
-import { prettifyHtml } from '@jay-framework/compiler-shared';
+import { prettifyHtml, prettify } from '@jay-framework/compiler-shared';
 import { chromium, type Browser, type Page } from 'playwright';
 
 // @vitest-environment node
@@ -105,6 +105,34 @@ function testFixture(
         const expected = normalizeHtml(readFixture(dirName, 'expected-ssr.html'));
         expect(ssrContent).toEqual(expected);
     });
+
+    // Only test hydrate script fixture if the file exists
+    const hydrateFixturePath = path.join(__dirname, dirName, 'expected-hydrate.ts');
+    if (fs.existsSync(hydrateFixturePath)) {
+        it('hydrate script matches fixture', async () => {
+            const dirPath = path.resolve(__dirname, dirName);
+            // Try ?jay-hydrate first (proper hydrate target), fall back to
+            // ?import&jay-hydrate.ts (element target — what the browser loads
+            // when the hydrate compilation fails for headless pages)
+            let transformResult = await devServer.viteServer
+                .transformRequest(path.resolve(dirPath, 'page.jay-html') + '?jay-hydrate')
+                .catch(() => null);
+            if (!transformResult?.code) {
+                transformResult = await devServer.viteServer.transformRequest(
+                    path.resolve(dirPath, 'page.jay-html') + '?import&jay-hydrate.ts',
+                );
+            }
+            expect(transformResult?.code).toBeTruthy();
+
+            let actual = transformResult!.code
+                .replace(new RegExp(dirPath.replace(/[/\\]/g, '[/\\\\]'), 'g'), '.')
+                .replace(/\/\/# sourceMappingURL=.*/, '');
+            actual = await prettify(actual);
+
+            const expected = readFixture(dirName, 'expected-hydrate.ts');
+            expect(actual).toEqual(expected);
+        });
+    }
 
     it('page loads without errors', async () => {
         const page = await browser.newPage();
