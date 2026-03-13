@@ -385,6 +385,25 @@ async function extractComputedStyles(
             'background-size',
         ];
 
+        const SAFE_BASELINE_PROPS = [
+            'background-color',
+            'background-image',
+            'color',
+            'border-top-color',
+            'border-right-color',
+            'border-bottom-color',
+            'border-left-color',
+            'border-top-width',
+            'border-right-width',
+            'border-bottom-width',
+            'border-left-width',
+            'border-top-style',
+            'border-right-style',
+            'border-bottom-style',
+            'border-left-style',
+            'opacity',
+        ];
+
         const result: Array<{
             key: string;
             styles: Record<string, string>;
@@ -397,9 +416,10 @@ async function extractComputedStyles(
                 objectFit?: string;
                 backgroundSize?: string;
             };
+            candidateIdentity?: { tagName: string; classNameTokens: string; textSignal?: string };
+            classOnlyStyles?: Record<string, string>;
         }> = [];
 
-        // Single pass: all elements with data-jay-sid (compiler-injected source IDs)
         const elements = document.querySelectorAll('[data-jay-sid]');
 
         for (const element of Array.from(elements)) {
@@ -414,14 +434,11 @@ async function extractComputedStyles(
             for (const prop of properties) {
                 const value = computedStyle.getPropertyValue(prop);
                 if (value && value !== 'normal') {
-                    // Keep 'none' for display (needed to detect hidden elements)
-                    // but skip 'none' for other properties (background-image, border, etc.)
                     if (value === 'none' && prop !== 'display') continue;
                     styles[prop] = value;
                 }
             }
 
-            // Extract resolved image data for <img> and background-image elements
             let image: (typeof result)[0]['image'] | undefined;
 
             if (htmlElement.tagName === 'IMG') {
@@ -440,7 +457,7 @@ async function extractComputedStyles(
                 const urlMatches = [...bgImage.matchAll(/url\(["']?([^"')]+)["']?\)/g)];
                 const bgUrls = urlMatches
                     .map((m) => m[1])
-                    .filter((u) => !u.startsWith('data:image/svg')); // skip inline SVG data URIs
+                    .filter((u) => !u.startsWith('data:image/svg'));
                 if (bgUrls.length > 0) {
                     image = image || {};
                     image.backgroundImageUrls = bgUrls;
@@ -449,17 +466,67 @@ async function extractComputedStyles(
                 }
             }
 
-            // Capture rendered text content and input values for template expression resolution
             let textContent: string | undefined;
             let inputValue: string | undefined;
 
-            const tagName = htmlElement.tagName?.toLowerCase();
+            const tagName = htmlElement.tagName?.toLowerCase() || 'div';
             if (tagName === 'input' || tagName === 'textarea') {
                 const val = htmlElement.value;
                 if (val != null && val !== '') inputValue = String(val);
             } else {
                 const tc = htmlElement.textContent?.trim();
                 if (tc) textContent = tc;
+            }
+
+            const classAttr = htmlElement.getAttribute('class') || '';
+            const classNameTokens = classAttr.split(/\s+/).filter(Boolean).sort().join(' ');
+
+            const candidateIdentity = {
+                tagName,
+                classNameTokens,
+                textSignal: textContent ? textContent.slice(0, 80) : undefined,
+            };
+
+            let classOnlyStyles: Record<string, string> | undefined;
+            const styleAttr = htmlElement.getAttribute('style');
+            const hasClass = classAttr.trim().length > 0;
+            const hasInline = styleAttr && styleAttr.trim().length > 0;
+
+            if (hasClass && hasInline) {
+                const origStyle = htmlElement.getAttribute('style');
+                htmlElement.removeAttribute('style');
+                const classOnlyComputed = window.getComputedStyle(htmlElement);
+                if (origStyle != null) htmlElement.setAttribute('style', origStyle);
+
+                classOnlyStyles = {};
+                for (const prop of SAFE_BASELINE_PROPS) {
+                    const v = classOnlyComputed.getPropertyValue(prop);
+                    if (v && v !== 'normal' && (v !== 'none' || prop === 'background-image')) {
+                        classOnlyStyles[prop] = v;
+                    }
+                }
+
+                const tl = classOnlyComputed.getPropertyValue('border-top-left-radius');
+                const tr = classOnlyComputed.getPropertyValue('border-top-right-radius');
+                const br = classOnlyComputed.getPropertyValue('border-bottom-right-radius');
+                const bl = classOnlyComputed.getPropertyValue('border-bottom-left-radius');
+                if (tl || tr || br || bl) {
+                    if (tl === tr && tr === br && br === bl) {
+                        classOnlyStyles['border-radius'] = tl;
+                    } else {
+                        classOnlyStyles['border-radius'] = [tl, tr, br, bl].join(' ');
+                    }
+                }
+
+                if (!classOnlyStyles['background-color'] && !classOnlyStyles['background-image']) {
+                    classOnlyStyles['background-color'] = 'transparent';
+                    classOnlyStyles['background-image'] = 'none';
+                } else if (!classOnlyStyles['background-color']) {
+                    classOnlyStyles['background-color'] = 'transparent';
+                } else if (!classOnlyStyles['background-image']) {
+                    classOnlyStyles['background-image'] = 'none';
+                }
+                if (!classOnlyStyles['opacity']) classOnlyStyles['opacity'] = '1';
             }
 
             result.push({
@@ -469,6 +536,8 @@ async function extractComputedStyles(
                 textContent: textContent || undefined,
                 inputValue: inputValue || undefined,
                 image: image || undefined,
+                candidateIdentity,
+                classOnlyStyles: classOnlyStyles || undefined,
             });
         }
 
@@ -485,6 +554,8 @@ async function extractComputedStyles(
             textContent: item.textContent,
             inputValue: item.inputValue,
             image: item.image,
+            candidateIdentity: item.candidateIdentity,
+            classOnlyStyles: item.classOnlyStyles,
         };
 
         if (!styleMap.has(item.key)) {

@@ -153,6 +153,9 @@ export type ImportIRNode = {
     componentPropertyDefinitions?: Record<string, { type: 'VARIANT'; variantOptions: string[] }>; // For COMPONENT_SET
     mainComponentId?: string; // For INSTANCE nodes
     preferHiddenDefault?: boolean; // INSTANCE should default to _hidden_ variant
+
+    /** Class-only safe baseline for class-based diff. Built from browser extraction, not rendered state. */
+    classOnlyBaselineInput?: Record<string, string>;
 };
 
 export type ImportIRDocument = {

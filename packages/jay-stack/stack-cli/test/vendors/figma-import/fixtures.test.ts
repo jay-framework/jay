@@ -232,6 +232,9 @@ function checkInvariants(
 }
 
 describe('Figma Import Fixtures', () => {
+    // Fixture tests start dev server + headless browser; first tests have cold-start overhead
+    const FIXTURE_TEST_TIMEOUT = 20000;
+
     const originalEnableComputedStyles = process.env.ENABLE_COMPUTED_STYLES;
     const config: Required<JayConfig> = {
         devServer: {
@@ -282,268 +285,285 @@ describe('Figma Import Fixtures', () => {
     });
 
     for (const fixtureName of fixtures) {
-        it(`should correctly import: ${fixtureName}`, async () => {
-            const fixturePath = path.join(fixturesDir, fixtureName);
+        it(
+            `should correctly import: ${fixtureName}`,
+            async () => {
+                const fixturePath = path.join(fixturesDir, fixtureName);
 
-            // 1. Load meta
-            const metaPath = path.join(fixturePath, 'meta.json');
-            const meta: FixtureMeta = JSON.parse(await fs.readFile(metaPath, 'utf-8'));
+                // 1. Load meta
+                const metaPath = path.join(fixturePath, 'meta.json');
+                const meta: FixtureMeta = JSON.parse(await fs.readFile(metaPath, 'utf-8'));
 
-            // 2. Read input files
-            const jayHtmlPath = path.join(fixturePath, 'input', 'page.jay-html');
-            const jayHtml = await fs.readFile(jayHtmlPath, 'utf-8');
+                // 2. Read input files
+                const jayHtmlPath = path.join(fixturePath, 'input', 'page.jay-html');
+                const jayHtml = await fs.readFile(jayHtmlPath, 'utf-8');
 
-            const contractPath = path.join(fixturePath, 'input', 'page.jay-contract');
-            let contractYaml = '';
-            let hasContract = false;
-            try {
-                contractYaml = await fs.readFile(contractPath, 'utf-8');
-                hasContract = true;
-            } catch {
-                // No contract file
-            }
-
-            const confPath = path.join(fixturePath, 'input', 'page.conf.yaml');
-            let confYaml = '';
-            let hasConf = false;
-            try {
-                confYaml = await fs.readFile(confPath, 'utf-8');
-                hasConf = true;
-            } catch {
-                // No conf file
-            }
-
-            // 3. Set up temp directory — write jay-html into the page directory
-            const pageUrl = '/test';
-            const pagePath = path.join(config.devServer.pagesBase, 'test');
-            await fs.mkdir(pagePath, { recursive: true });
-            await fs.writeFile(path.join(pagePath, 'page.jay-html'), jayHtml);
-
-            if (hasContract) {
-                await fs.writeFile(path.join(pagePath, 'page.jay-contract'), contractYaml);
-            }
-            if (hasConf) {
-                await fs.writeFile(path.join(pagePath, 'page.conf.yaml'), confYaml);
-            }
-
-            // 4. Copy plugins if present
-            const fixturePluginsDir = path.join(fixturePath, 'input', 'plugins');
-            try {
-                await fs.access(fixturePluginsDir);
-                const testPluginsDir = path.join(testDir, 'src', 'plugins');
-                await fs.mkdir(testPluginsDir, { recursive: true });
-                const pluginNames = await fs.readdir(fixturePluginsDir);
-                for (const pluginName of pluginNames) {
-                    await fs.cp(
-                        path.join(fixturePluginsDir, pluginName),
-                        path.join(testPluginsDir, pluginName),
-                        { recursive: true },
-                    );
+                const contractPath = path.join(fixturePath, 'input', 'page.jay-contract');
+                let contractYaml = '';
+                let hasContract = false;
+                try {
+                    contractYaml = await fs.readFile(contractPath, 'utf-8');
+                    hasContract = true;
+                } catch {
+                    // No contract file
                 }
-            } catch {
-                // No plugins
-            }
 
-            // 5. Create editor handlers and run import
-            const handlers = createEditorHandlers(config, './tsconfig.json', testDir);
+                const confPath = path.join(fixturePath, 'input', 'page.conf.yaml');
+                let confYaml = '';
+                let hasConf = false;
+                try {
+                    confYaml = await fs.readFile(confPath, 'utf-8');
+                    hasConf = true;
+                } catch {
+                    // No conf file
+                }
 
-            const importMsg: ImportMessage<FigmaVendorDocument> = {
-                type: 'import',
-                vendorId: 'figma',
-                pageUrl,
-            };
+                // 3. Set up temp directory — write jay-html into the page directory
+                const pageUrl = '/test';
+                const pagePath = path.join(config.devServer.pagesBase, 'test');
+                await fs.mkdir(pagePath, { recursive: true });
+                await fs.writeFile(path.join(pagePath, 'page.jay-html'), jayHtml);
 
-            const response = (await handlers.onImport(
-                importMsg,
-            )) as ImportResponse<FigmaVendorDocument>;
+                if (hasContract) {
+                    await fs.writeFile(path.join(pagePath, 'page.jay-contract'), contractYaml);
+                }
+                if (hasConf) {
+                    await fs.writeFile(path.join(pagePath, 'page.conf.yaml'), confYaml);
+                }
 
-            // 6. Verify import succeeded
-            if (!response.success) {
-                throw new Error(`Import failed for fixture "${fixtureName}": ${response.error}`);
-            }
-
-            expect(response.vendorDoc).toBeDefined();
-            const vendorDoc = response.vendorDoc!;
-
-            // 7. Adapter validation gate (runs on every fixture)
-            const validationErrors = validateAdapterOutputForDeserializer(vendorDoc);
-            expect(
-                validationErrors,
-                `Adapter validation failed:\n${validationErrors.join('\n')}`,
-            ).toEqual([]);
-
-            // 8. Check invariants if present
-            const invariantsPath = path.join(fixturePath, 'expected', 'invariants.json');
-            try {
-                const invariants: Invariants = JSON.parse(
-                    await fs.readFile(invariantsPath, 'utf-8'),
-                );
-                const invariantErrors = checkInvariants(vendorDoc, response.warnings, invariants);
-                expect(
-                    invariantErrors,
-                    `Invariant check failed:\n${invariantErrors.join('\n')}`,
-                ).toEqual([]);
-            } catch {
-                // No invariants file — skip
-            }
-
-            // 9. Compare against expected output if present
-            const expectedPath = path.join(fixturePath, 'expected', 'import.figma.generated.json');
-            try {
-                const expectedJson = JSON.parse(await fs.readFile(expectedPath, 'utf-8'));
-
-                // Strip IDs and import report for structural comparison
-                const stripIds = (obj: any): any => {
-                    if (Array.isArray(obj)) return obj.map(stripIds);
-                    if (obj && typeof obj === 'object') {
-                        const { id, ...rest } = obj;
-                        const result: any = {};
-                        for (const [k, v] of Object.entries(rest)) {
-                            if (k === 'pluginData' && v && typeof v === 'object') {
-                                const {
-                                    'jay-import-report': _r,
-                                    'jay-import-content-hash': _h,
-                                    'jay-import-timestamp': _t,
-                                    ...pdRest
-                                } = v as Record<string, any>;
-                                result[k] = stripIds(pdRest);
-                            } else {
-                                result[k] = stripIds(v);
-                            }
-                        }
-                        return result;
+                // 4. Copy plugins if present
+                const fixturePluginsDir = path.join(fixturePath, 'input', 'plugins');
+                try {
+                    await fs.access(fixturePluginsDir);
+                    const testPluginsDir = path.join(testDir, 'src', 'plugins');
+                    await fs.mkdir(testPluginsDir, { recursive: true });
+                    const pluginNames = await fs.readdir(fixturePluginsDir);
+                    for (const pluginName of pluginNames) {
+                        await fs.cp(
+                            path.join(fixturePluginsDir, pluginName),
+                            path.join(testPluginsDir, pluginName),
+                            { recursive: true },
+                        );
                     }
-                    return obj;
+                } catch {
+                    // No plugins
+                }
+
+                // 5. Create editor handlers and run import
+                const handlers = createEditorHandlers(config, './tsconfig.json', testDir);
+
+                const importMsg: ImportMessage<FigmaVendorDocument> = {
+                    type: 'import',
+                    vendorId: 'figma',
+                    pageUrl,
                 };
 
-                expect(stripIds(vendorDoc)).toEqual(stripIds(expectedJson));
-            } catch (e: any) {
-                if (e.code === 'ENOENT') {
-                    // No expected file — write actual for bootstrapping
-                    const debugDir = path.join(fixturePath, 'debug');
-                    await fs.mkdir(debugDir, { recursive: true });
-                    await fs.writeFile(
-                        path.join(debugDir, 'actual.import.figma.generated.json'),
-                        JSON.stringify(vendorDoc, null, 2),
+                const response = (await handlers.onImport(
+                    importMsg,
+                )) as ImportResponse<FigmaVendorDocument>;
+
+                // 6. Verify import succeeded
+                if (!response.success) {
+                    throw new Error(
+                        `Import failed for fixture "${fixtureName}": ${response.error}`,
                     );
-                } else {
-                    throw e;
                 }
-            }
 
-            // 10. Verify IDs are deterministic (run import a second time)
-            const response2 = (await handlers.onImport(
-                importMsg,
-            )) as ImportResponse<FigmaVendorDocument>;
-            if (!response2.success || !response2.vendorDoc) {
-                throw new Error(
-                    `Second import failed for fixture "${fixtureName}": success=${response2.success}, error=${response2.error ?? 'none'}`,
-                );
-            }
-            // Strip timestamp from both (it changes between runs); hash should be identical
-            const stripTimestamp = (doc: any) => {
-                const clone = JSON.parse(JSON.stringify(doc));
-                if (clone.pluginData?.['jay-import-timestamp']) {
-                    delete clone.pluginData['jay-import-timestamp'];
-                }
-                return clone;
-            };
-            expect(stripTimestamp(response2.vendorDoc)).toEqual(stripTimestamp(vendorDoc));
+                expect(response.vendorDoc).toBeDefined();
+                const vendorDoc = response.vendorDoc!;
 
-            // 11. Roundtrip: export and compare semantic equivalence (when meta.mode === 'roundtrip')
-            if (meta.mode === 'roundtrip') {
-                let exportedBodyHtml: string | null = null;
-                let exportError: string | null = null;
+                // 7. Adapter validation gate (runs on every fixture)
+                const validationErrors = validateAdapterOutputForDeserializer(vendorDoc);
+                expect(
+                    validationErrors,
+                    `Adapter validation failed:\n${validationErrors.join('\n')}`,
+                ).toEqual([]);
 
+                // 8. Check invariants if present
+                const invariantsPath = path.join(fixturePath, 'expected', 'invariants.json');
                 try {
-                    // Use onGetProjectInfo to get the full project page with plugins
-                    // This ensures usedComponents and plugin contracts are properly resolved
-                    const projectInfoResponse = await handlers.onGetProjectInfo({
-                        type: 'getProjectInfo',
-                    });
-                    const realProjectPage = projectInfoResponse.info?.pages?.find(
-                        (p: ProjectPage) => p.url === pageUrl,
+                    const invariants: Invariants = JSON.parse(
+                        await fs.readFile(invariantsPath, 'utf-8'),
                     );
-                    const plugins = projectInfoResponse.info?.plugins ?? [];
-
-                    const projectPage =
-                        realProjectPage ??
-                        buildProjectPageFromContract(
-                            pagePath,
-                            pageUrl,
-                            meta.id,
-                            hasContract ? contractYaml : 'name: default\ntags: []',
-                        );
-                    const result = await figmaVendor.convertToBodyHtml(
+                    const invariantErrors = checkInvariants(
                         vendorDoc,
-                        pageUrl,
-                        projectPage,
-                        plugins,
-                    );
-                    exportedBodyHtml = result.bodyHtml;
-                } catch (err) {
-                    exportError = err instanceof Error ? err.message : String(err);
-                }
-
-                if (exportError) {
-                    console.warn(
-                        `[${fixtureName}] Roundtrip export failed (import still passed): ${exportError}`,
-                    );
-                    // Write debug file for inspection
-                    const debugDir = path.join(fixturePath, 'debug');
-                    await fs.mkdir(debugDir, { recursive: true });
-                    await fs.writeFile(
-                        path.join(debugDir, 'actual.export.page.jay-html'),
-                        `<!-- Export failed: ${exportError} -->\n`,
-                    );
-                } else {
-                    const bodyMatch = jayHtml.match(/<body>([\s\S]*)<\/body>/i);
-                    const sourceBody = bodyMatch ? bodyMatch[1].trim() : jayHtml;
-
-                    const comparison = compareSemanticEquivalence(sourceBody, exportedBodyHtml!);
-
-                    const hardFails = comparison.invariantResults.filter(
-                        (r) => r.severity === 'HARD_FAIL' && !r.passed,
+                        response.warnings,
+                        invariants,
                     );
                     expect(
-                        hardFails,
-                        `Roundtrip semantic invariants failed:\n${hardFails.map((r) => `  ${r.name}: ${r.details ?? 'failed'}`).join('\n')}`,
+                        invariantErrors,
+                        `Invariant check failed:\n${invariantErrors.join('\n')}`,
                     ).toEqual([]);
+                } catch {
+                    // No invariants file — skip
+                }
 
-                    const roundtripInvariantsPath = path.join(
-                        fixturePath,
-                        'expected',
-                        'roundtrip.invariants.json',
-                    );
-                    try {
-                        const roundtripInvariants: RoundtripInvariants = JSON.parse(
-                            await fs.readFile(roundtripInvariantsPath, 'utf-8'),
-                        );
-                        if (roundtripInvariants.warningsMustNotContain && response.warnings) {
-                            for (const forbidden of roundtripInvariants.warningsMustNotContain) {
-                                expect(
-                                    response.warnings.some((w) => w.includes(forbidden)),
-                                    `warningsMustNotContain: "${forbidden}" found in warnings`,
-                                ).toBe(false);
+                // 9. Compare against expected output if present
+                const expectedPath = path.join(
+                    fixturePath,
+                    'expected',
+                    'import.figma.generated.json',
+                );
+                try {
+                    const expectedJson = JSON.parse(await fs.readFile(expectedPath, 'utf-8'));
+
+                    // Strip IDs and import report for structural comparison
+                    const stripIds = (obj: any): any => {
+                        if (Array.isArray(obj)) return obj.map(stripIds);
+                        if (obj && typeof obj === 'object') {
+                            const { id, ...rest } = obj;
+                            const result: any = {};
+                            for (const [k, v] of Object.entries(rest)) {
+                                if (k === 'pluginData' && v && typeof v === 'object') {
+                                    const {
+                                        'jay-import-report': _r,
+                                        'jay-import-content-hash': _h,
+                                        'jay-import-timestamp': _t,
+                                        ...pdRest
+                                    } = v as Record<string, any>;
+                                    result[k] = stripIds(pdRest);
+                                } else {
+                                    result[k] = stripIds(v);
+                                }
                             }
+                            return result;
                         }
-                    } catch {
-                        // No roundtrip invariants file
-                    }
+                        return obj;
+                    };
 
-                    const debugDir = path.join(fixturePath, 'debug');
-                    await fs.mkdir(debugDir, { recursive: true });
-                    await fs.writeFile(
-                        path.join(debugDir, 'actual.export.page.jay-html'),
-                        exportedBodyHtml!,
+                    expect(stripIds(vendorDoc)).toEqual(stripIds(expectedJson));
+                } catch (e: any) {
+                    if (e.code === 'ENOENT') {
+                        // No expected file — write actual for bootstrapping
+                        const debugDir = path.join(fixturePath, 'debug');
+                        await fs.mkdir(debugDir, { recursive: true });
+                        await fs.writeFile(
+                            path.join(debugDir, 'actual.import.figma.generated.json'),
+                            JSON.stringify(vendorDoc, null, 2),
+                        );
+                    } else {
+                        throw e;
+                    }
+                }
+
+                // 10. Verify IDs are deterministic (run import a second time)
+                const response2 = (await handlers.onImport(
+                    importMsg,
+                )) as ImportResponse<FigmaVendorDocument>;
+                if (!response2.success || !response2.vendorDoc) {
+                    throw new Error(
+                        `Second import failed for fixture "${fixtureName}": success=${response2.success}, error=${response2.error ?? 'none'}`,
                     );
                 }
-            }
+                // Strip timestamp from both (it changes between runs); hash should be identical
+                const stripTimestamp = (doc: any) => {
+                    const clone = JSON.parse(JSON.stringify(doc));
+                    if (clone.pluginData?.['jay-import-timestamp']) {
+                        delete clone.pluginData['jay-import-timestamp'];
+                    }
+                    return clone;
+                };
+                expect(stripTimestamp(response2.vendorDoc)).toEqual(stripTimestamp(vendorDoc));
 
-            // 12. Clean up debug directory if test passed (all assertions above succeeded)
-            const debugDir = path.join(fixturePath, 'debug');
-            await fs.rm(debugDir, { recursive: true, force: true });
-        });
+                // 11. Roundtrip: export and compare semantic equivalence (when meta.mode === 'roundtrip')
+                if (meta.mode === 'roundtrip') {
+                    let exportedBodyHtml: string | null = null;
+                    let exportError: string | null = null;
+
+                    try {
+                        // Use onGetProjectInfo to get the full project page with plugins
+                        // This ensures usedComponents and plugin contracts are properly resolved
+                        const projectInfoResponse = await handlers.onGetProjectInfo({
+                            type: 'getProjectInfo',
+                        });
+                        const realProjectPage = projectInfoResponse.info?.pages?.find(
+                            (p: ProjectPage) => p.url === pageUrl,
+                        );
+                        const plugins = projectInfoResponse.info?.plugins ?? [];
+
+                        const projectPage =
+                            realProjectPage ??
+                            buildProjectPageFromContract(
+                                pagePath,
+                                pageUrl,
+                                meta.id,
+                                hasContract ? contractYaml : 'name: default\ntags: []',
+                            );
+                        const result = await figmaVendor.convertToBodyHtml(
+                            vendorDoc,
+                            pageUrl,
+                            projectPage,
+                            plugins,
+                        );
+                        exportedBodyHtml = result.bodyHtml;
+                    } catch (err) {
+                        exportError = err instanceof Error ? err.message : String(err);
+                    }
+
+                    if (exportError) {
+                        console.warn(
+                            `[${fixtureName}] Roundtrip export failed (import still passed): ${exportError}`,
+                        );
+                        // Write debug file for inspection
+                        const debugDir = path.join(fixturePath, 'debug');
+                        await fs.mkdir(debugDir, { recursive: true });
+                        await fs.writeFile(
+                            path.join(debugDir, 'actual.export.page.jay-html'),
+                            `<!-- Export failed: ${exportError} -->\n`,
+                        );
+                    } else {
+                        const bodyMatch = jayHtml.match(/<body>([\s\S]*)<\/body>/i);
+                        const sourceBody = bodyMatch ? bodyMatch[1].trim() : jayHtml;
+
+                        const comparison = compareSemanticEquivalence(
+                            sourceBody,
+                            exportedBodyHtml!,
+                        );
+
+                        const hardFails = comparison.invariantResults.filter(
+                            (r) => r.severity === 'HARD_FAIL' && !r.passed,
+                        );
+                        expect(
+                            hardFails,
+                            `Roundtrip semantic invariants failed:\n${hardFails.map((r) => `  ${r.name}: ${r.details ?? 'failed'}`).join('\n')}`,
+                        ).toEqual([]);
+
+                        const roundtripInvariantsPath = path.join(
+                            fixturePath,
+                            'expected',
+                            'roundtrip.invariants.json',
+                        );
+                        try {
+                            const roundtripInvariants: RoundtripInvariants = JSON.parse(
+                                await fs.readFile(roundtripInvariantsPath, 'utf-8'),
+                            );
+                            if (roundtripInvariants.warningsMustNotContain && response.warnings) {
+                                for (const forbidden of roundtripInvariants.warningsMustNotContain) {
+                                    expect(
+                                        response.warnings.some((w) => w.includes(forbidden)),
+                                        `warningsMustNotContain: "${forbidden}" found in warnings`,
+                                    ).toBe(false);
+                                }
+                            }
+                        } catch {
+                            // No roundtrip invariants file
+                        }
+
+                        const debugDir = path.join(fixturePath, 'debug');
+                        await fs.mkdir(debugDir, { recursive: true });
+                        await fs.writeFile(
+                            path.join(debugDir, 'actual.export.page.jay-html'),
+                            exportedBodyHtml!,
+                        );
+                    }
+                }
+
+                // 12. Clean up debug directory if test passed (all assertions above succeeded)
+                const debugDir = path.join(fixturePath, 'debug');
+                await fs.rm(debugDir, { recursive: true, force: true });
+            },
+            FIXTURE_TEST_TIMEOUT,
+        );
     }
 
     it('should have fixture directories available', async () => {

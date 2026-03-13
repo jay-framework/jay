@@ -268,7 +268,7 @@ function renderAttributes(element: HTMLElement, context: RenderContext): RenderF
         }
     });
 
-    if (injectSourceIds && element.range) {
+    if (injectSourceIds && element.range && element.range[0] >= 0) {
         const sourceId = computeSourceId(element.range[0], sourceHtml);
         renderedAttributes.push(
             new RenderFragment(`'data-jay-sid': '${sourceId}'`, Imports.none()),

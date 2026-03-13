@@ -286,6 +286,36 @@ function copyIfSafe(
 // ── Baseline capture and diff ───────────────────────────────────────
 
 /**
+ * Build a class-style baseline from class-only CSS values (browser extraction).
+ * Use when import has class+inline nodes so baseline reflects stylesheet state,
+ * not rendered class+inline state. Layout still comes from the Figma node.
+ */
+export function buildClassStyleBaselineFromClassOnlyInput(
+    classOnlySafeProps: Record<string, string>,
+    node: FigmaVendorDocument,
+): string {
+    const safe: Record<string, string> = {};
+    for (const [prop, value] of Object.entries(classOnlySafeProps)) {
+        if (SAFE_OVERRIDE_PROPERTIES.has(prop)) {
+            safe[prop] = normalizePropertyValue(prop, value);
+        }
+    }
+
+    const layout: Record<string, string> = {};
+    const rawLayout = extractLayoutProperties(node);
+    for (const [prop, value] of Object.entries(rawLayout)) {
+        layout[prop] = value;
+    }
+
+    const baseline: ClassStyleBaseline = {
+        safe,
+        layout,
+        meta: { source: 'computed-style', version: 1 },
+    };
+    return JSON.stringify(baseline);
+}
+
+/**
  * Build a class-style baseline from a Figma vendor doc node.
  * Returns the JSON string to store in pluginData.
  */

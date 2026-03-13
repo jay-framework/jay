@@ -5,7 +5,7 @@ import { HTMLElement, NodeType } from 'node-html-parser';
 import type { Contract, ContractTag, Plugin, ProjectPage } from '@jay-framework/editor-protocol';
 import type { JayHeadlessImports } from '@jay-framework/compiler-jay-html';
 import { ContractTagType, computeSourceId, parseContract } from '@jay-framework/compiler-jay-html';
-import type { ImportIRDocument, ImportIRNode, ImportIRStyle, ImportIRBinding } from './import-ir';
+import type { ImportIRDocument, ImportIRNode, ImportIRStyle } from './import-ir';
 import { generateNodeId, buildDomPath, getSemanticAnchors } from './id-generator';
 import { resolveStyle, parseInlineStyle, parseCssToClassMap } from './style-resolver';
 import type { CssClassMap } from './style-resolver';
@@ -15,11 +15,97 @@ import { detectVariantGroups, synthesizeVariant, synthesizeRepeater } from './va
 import type { PageContractPath } from './pageContractPath';
 import type {
     ComputedStyleMap,
+    ComputedStyleData,
     RepeaterDataMap,
     ScenarioStyleMaps,
     VariantScenario,
 } from './computed-style-types';
 import { tokenizeCondition } from './condition-tokenizer';
+
+export interface EnrichmentResult {
+    data: ComputedStyleData | undefined;
+    confidence: 'high' | 'low' | 'none';
+    ambiguityWarning?: string;
+}
+
+function selectBestEnrichmentCandidate(
+    element: HTMLElement,
+    sourceId: string,
+    computedStyleMap: ComputedStyleMap | undefined,
+    repeaterDataMap: RepeaterDataMap | undefined,
+): EnrichmentResult {
+    if (!computedStyleMap && !repeaterDataMap) {
+        return { data: undefined, confidence: 'none' };
+    }
+
+    const candidates = repeaterDataMap?.get(sourceId) ?? [];
+    const singleFromMap = computedStyleMap?.get(sourceId);
+
+    if (candidates.length === 0 && !singleFromMap) {
+        return { data: undefined, confidence: 'none' };
+    }
+
+    if (candidates.length <= 1 && singleFromMap) {
+        return { data: singleFromMap, confidence: 'high' };
+    }
+
+    if (candidates.length === 0) {
+        return { data: singleFromMap, confidence: 'high' };
+    }
+
+    const sourceTag = (element.rawTagName || 'div').toLowerCase();
+    const sourceClassTokens = (element.getAttribute('class') || '')
+        .split(/\s+/)
+        .filter(Boolean)
+        .sort()
+        .join(' ');
+    const sourceText = flattenTextContent(element).slice(0, 80);
+
+    const scored = candidates.map((c, idx) => {
+        let score = 0;
+        const id = c.candidateIdentity;
+        if (id?.tagName === sourceTag) score += 10;
+        if (id?.classNameTokens && sourceClassTokens) {
+            const srcSet = new Set(sourceClassTokens.split(/\s+/));
+            const candSet = new Set(id.classNameTokens.split(/\s+/));
+            const overlap = [...srcSet].filter((t) => candSet.has(t)).length;
+            if (overlap === srcSet.size && overlap === candSet.size) score += 5;
+            else if (overlap > 0) score += 2;
+        } else if (!id?.classNameTokens && !sourceClassTokens) score += 3;
+        if (id?.textSignal && sourceText) {
+            const norm = (s: string) => s.replace(/\s+/g, ' ').trim();
+            if (norm(id.textSignal) === norm(sourceText)) score += 8;
+            else if (
+                norm(id.textSignal).includes(norm(sourceText)) ||
+                norm(sourceText).includes(norm(id.textSignal))
+            )
+                score += 2;
+        }
+        return { candidate: c, score, idx };
+    });
+
+    scored.sort((a, b) => b.score - a.score || a.idx - b.idx);
+    const best = scored[0];
+    const next = scored[1];
+
+    if (!best || best.score === 0) {
+        return {
+            data: singleFromMap ?? candidates[0],
+            confidence: 'low',
+            ambiguityWarning: `sid=${sourceId}: no confident match among ${candidates.length} candidates`,
+        };
+    }
+
+    if (next && next.score === best.score) {
+        return {
+            data: singleFromMap ?? best.candidate,
+            confidence: 'low',
+            ambiguityWarning: `sid=${sourceId}: tie between ${candidates.length} candidates (score=${best.score})`,
+        };
+    }
+
+    return { data: best.candidate, confidence: 'high' };
+}
 
 const BLOCK_LEVEL_TAGS = new Set([
     'div',
@@ -148,9 +234,39 @@ function hasTextContent(element: HTMLElement): boolean {
 function isTextElement(element: HTMLElement): boolean {
     if (isImageElement(element)) return false;
     const tag = (element.rawTagName || '').toLowerCase();
-    if (HEADING_TAGS[tag]) return true;
     if (hasBlockLevelChild(element)) return false;
+    // When child inline elements carry bindings, refs, or binding-bearing
+    // attributes, treat the parent as a FRAME so each child becomes a
+    // separate Figma node with its own editable bindings. Flattening to
+    // a single TEXT would lose the nested structure and prevent designers
+    // from editing bindings on child elements via the plugin.
+    if (hasBindingBearingChildren(element)) return false;
+    if (HEADING_TAGS[tag]) return true;
     return hasTextContent(element);
+}
+
+/**
+ * Returns true when an element has descendant inline elements that carry
+ * bindings, refs, or binding-bearing attributes (e.g. href="{...}").
+ * Such children must remain as separate Figma nodes to preserve
+ * designer-editable binding metadata across roundtrips.
+ */
+function hasBindingBearingChildren(element: HTMLElement): boolean {
+    for (const child of element.childNodes) {
+        if (child.nodeType !== NodeType.ELEMENT_NODE) continue;
+        const el = child as HTMLElement;
+        const tag = (el.rawTagName || '').toLowerCase();
+        if (!INLINE_TAGS.has(tag)) continue;
+        if (el.getAttribute('ref')) return true;
+        if (el.getAttribute('forEach')) return true;
+        if (el.getAttribute('if')) return true;
+        for (const attr of ['href', 'src', 'value'] as const) {
+            const val = el.getAttribute(attr);
+            if (val && /\{[^}]+\}/.test(val)) return true;
+        }
+        if (hasBindingBearingChildren(el)) return true;
+    }
+    return false;
 }
 
 function flattenTextContent(element: HTMLElement): string {
@@ -177,6 +293,59 @@ function flattenTextContent(element: HTMLElement): string {
     }
 
     return parts.join(' ').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Detect and inline-replace `<div style="display: contents;">` wrappers.
+ * These wrappers are emitted by the export pipeline for conditionals but add
+ * no semantic or visual meaning. Flattening them before IR building keeps the
+ * tree shape stable across roundtrips and avoids wrapper inflation.
+ */
+function flattenDisplayContentsWrappers(element: HTMLElement): void {
+    const origChildren = [...element.childNodes];
+    let needsRewrite = false;
+    for (const child of origChildren) {
+        if (
+            child.nodeType === NodeType.ELEMENT_NODE &&
+            isDisplayContentsWrapper(child as HTMLElement)
+        ) {
+            needsRewrite = true;
+            break;
+        }
+    }
+    if (!needsRewrite) return;
+
+    const newChildren: typeof origChildren = [];
+    for (const child of origChildren) {
+        if (
+            child.nodeType === NodeType.ELEMENT_NODE &&
+            isDisplayContentsWrapper(child as HTMLElement)
+        ) {
+            for (const grandchild of (child as HTMLElement).childNodes) {
+                newChildren.push(grandchild);
+            }
+        } else {
+            newChildren.push(child);
+        }
+    }
+
+    // Replace children in-place, preserving order
+    (element as any).set_content('');
+    for (const child of newChildren) {
+        element.appendChild(child);
+    }
+}
+
+function isDisplayContentsWrapper(el: HTMLElement): boolean {
+    const tag = (el.rawTagName || '').toLowerCase();
+    if (tag !== 'div') return false;
+    if (el.getAttribute('class')) return false;
+    if (el.getAttribute('ref')) return false;
+    if (el.getAttribute('id')) return false;
+    if (el.getAttribute('forEach')) return false;
+    if (el.getAttribute('if')) return false;
+    const style = el.getAttribute('style') || '';
+    return /display\s*:\s*contents/i.test(style);
 }
 
 function findFirstBlockChild(body: HTMLElement): HTMLElement | null {
@@ -274,7 +443,8 @@ interface BuildResult {
 type HTMLElementWithRange = HTMLElement & { range: [number, number] };
 
 function hasRange(element: HTMLElement): element is HTMLElementWithRange {
-    return Array.isArray((element as any).range) && (element as any).range.length >= 2;
+    const r = (element as any).range;
+    return Array.isArray(r) && r.length >= 2 && typeof r[0] === 'number' && r[0] >= 0;
 }
 
 function elementSourceId(element: HTMLElement, sourceHtml?: string): string | undefined {
@@ -295,6 +465,8 @@ interface BuildNodeContext {
     perScenarioMaps?: ScenarioStyleMaps;
     scenarios?: VariantScenario[];
     sourceHtml?: string;
+    /** When false, skip repeater-based candidate disambiguation (variant scenario). */
+    isDefaultScenario?: boolean;
 }
 
 const MAX_DEMO_ITEMS = 4;
@@ -446,18 +618,74 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
         }
     }
 
-    const enrichedStyles = sourceId ? computedStyleMap?.get(sourceId) : undefined;
+    const repeaterForDisambiguation = ctx.isDefaultScenario !== false ? repeaterDataMap : undefined;
+    const enrichment = sourceId
+        ? selectBestEnrichmentCandidate(
+              element,
+              sourceId,
+              computedStyleMap,
+              repeaterForDisambiguation,
+          )
+        : { data: undefined, confidence: 'none' as const };
+    const enrichedStyles = enrichment.data;
+
+    if (enrichment.ambiguityWarning) {
+        warnings.push(`SID_AMBIGUITY: ${enrichment.ambiguityWarning}`);
+    }
 
     if (enrichedStyles?.styles['display'] === 'none') {
         return null;
     }
 
-    if (sourceId && enrichedStyles?.boundingRect) {
-        const r = enrichedStyles.boundingRect;
-        const d = enrichedStyles.styles['display'];
+    // Re-import guard: for text elements with static source content, prefer source over enrichment.
+    // Wrong sid mapping on re-import can assign sibling text (e.g. "✕Search") to page-title.
+    // When source has static text (no { binding), trust it — reject enrichment for text and dimensions.
+    let effectiveEnrichedStyles = enrichedStyles;
+    if (isTextElement(element)) {
+        const sourceText = flattenTextContent(element);
+        const sourceNorm = sourceText.replace(/\s+/g, ' ').trim();
+        const hasStaticSource = sourceNorm.length > 0 && !sourceNorm.includes('{');
+        const enrichedNorm = enrichedStyles?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
+
+        if (hasStaticSource) {
+            // Source has static text — check for mismatch (wrong enrichment candidate)
+            if (
+                enrichedNorm &&
+                sourceNorm !== enrichedNorm &&
+                !sourceNorm.includes(enrichedNorm) &&
+                !enrichedNorm.includes(sourceNorm)
+            ) {
+                effectiveEnrichedStyles = undefined;
+                warnings.push(
+                    `TEXT_MISMATCH_GUARD: sid=${sourceId} enriched="${enrichedNorm.slice(0, 40)}" != source="${sourceNorm.slice(0, 40)}", rejecting enrichment (re-import sid drift)`,
+                );
+            }
+        }
+    }
+
+    const classOnlyBaselineInput =
+        className && effectiveEnrichedStyles?.classOnlyStyles
+            ? effectiveEnrichedStyles.classOnlyStyles
+            : undefined;
+
+    if (
+        classAttr &&
+        styleAttr &&
+        styleAttr.trim().length > 0 &&
+        !classOnlyBaselineInput &&
+        sourceId
+    ) {
+        warnings.push(
+            `BASELINE_CLASS_ONLY_MISSING: sid=${sourceId} has class+inline but no class-only baseline (re-import may drop overrides)`,
+        );
+    }
+
+    if (sourceId && effectiveEnrichedStyles?.boundingRect) {
+        const r = effectiveEnrichedStyles.boundingRect;
+        const d = effectiveEnrichedStyles.styles['display'];
         if (d === 'flex' || tag === 'input' || tag === 'button') {
             console.log(
-                `[IR] ${tag} sid=${sourceId}: enriched w=${r.width} h=${r.height} display=${d || 'n/a'} bg=${enrichedStyles.styles['background-color'] || 'n/a'}`,
+                `[IR] ${tag} sid=${sourceId}: enriched w=${r.width} h=${r.height} display=${d || 'n/a'} bg=${effectiveEnrichedStyles.styles['background-color'] || 'n/a'}`,
             );
         }
     } else if (sourceId && !enrichedStyles) {
@@ -470,13 +698,13 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
         style,
         warnings: styleWarnings,
         unsupportedCss,
-    } = resolveStyle(styleAttr, classNames, cssClassMap, enrichedStyles);
+    } = resolveStyle(styleAttr, classNames, cssClassMap, effectiveEnrichedStyles);
     warnings.push(...styleWarnings);
 
     // Populate background-image ref from enriched data (first URL only in MVP)
-    if (enrichedStyles?.image?.backgroundImageUrls?.length) {
-        const bgUrl = enrichedStyles.image.backgroundImageUrls[0];
-        const bgSize = enrichedStyles.image.backgroundSize;
+    if (effectiveEnrichedStyles?.image?.backgroundImageUrls?.length) {
+        const bgUrl = effectiveEnrichedStyles.image.backgroundImageUrls[0];
+        const bgSize = effectiveEnrichedStyles.image.backgroundSize;
         const scaleMode = bgSize === 'contain' ? ('FIT' as const) : ('FILL' as const);
         style.backgroundImageRef = { sourceUrl: bgUrl, kind: 'background-image', scaleMode };
     }
@@ -589,7 +817,32 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
 
     if (isTextElement(element)) {
         const sourceText = flattenTextContent(element);
-        const characters = enrichedStyles?.textContent || sourceText;
+        const enrichedText = effectiveEnrichedStyles?.textContent?.trim();
+        const norm = (s: string) => s.replace(/\s+/g, ' ').trim();
+        const sourceNorm = norm(sourceText);
+        const enrichedNorm = enrichedText ? norm(enrichedText) : '';
+
+        // Use enriched only when we have it and it matches source (or source is empty).
+        // When effectiveEnrichedStyles was rejected above (TEXT_MISMATCH_GUARD), use source.
+        const textsMatch =
+            !sourceNorm ||
+            sourceNorm === enrichedNorm ||
+            sourceNorm.includes(enrichedNorm) ||
+            enrichedNorm.includes(sourceNorm);
+        const useEnriched =
+            enrichment.confidence === 'high' &&
+            enrichedNorm &&
+            textsMatch &&
+            effectiveEnrichedStyles != null;
+
+        const characters = useEnriched ? effectiveEnrichedStyles!.textContent! : sourceText;
+
+        if (enrichment.confidence !== 'high' && enrichedText && enrichedText !== sourceText) {
+            warnings.push(
+                `TEXT_OVERRIDE_SKIPPED: sid=${sourceId} enrichment confidence low, using source text`,
+            );
+        }
+
         const hasContainer = !!(style.backgroundColor || style.padding || style.layoutMode);
 
         if (hasContainer) {
@@ -629,6 +882,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
                 bindings: bindings.length > 0 ? bindings : undefined,
                 warnings: warnings.length > 0 ? [...warnings] : undefined,
                 children: [textChild],
+                classOnlyBaselineInput,
             };
             return { node, warnings, componentSets };
         }
@@ -733,6 +987,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
             warnings: warnings.length > 0 ? [...warnings] : undefined,
             children,
             demoItems: demoItems.length > 0 ? demoItems : undefined,
+            classOnlyBaselineInput,
         };
         return { node, warnings, componentSets };
     }
@@ -768,6 +1023,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
             bindings: bindings.length > 0 ? bindings : undefined,
             warnings: warnings.length > 0 ? [...warnings] : undefined,
             children: [textChild],
+            classOnlyBaselineInput,
         };
         return { node, warnings, componentSets };
     }
@@ -813,11 +1069,15 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
             bindings: bindings.length > 0 ? bindings : undefined,
             warnings: warnings.length > 0 ? [...warnings] : undefined,
             children: inputChildren,
+            classOnlyBaselineInput,
         };
         return { node, warnings, componentSets };
     }
 
     // FRAME — recurse into children, detecting variant groups
+    // Pre-flatten display:contents wrappers so the variant detector
+    // and child processing see the logical children, not the wrapper divs.
+    flattenDisplayContentsWrappers(element);
     const childElements = getChildElements(element);
     const variantGroups = detectVariantGroups(element);
 
@@ -884,6 +1144,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
                 const result = buildNodeFromElement(el, {
                     ...ctx,
                     computedStyleMap: scenarioStyleMap ?? computedStyleMap,
+                    isDefaultScenario: !scenarioStyleMap,
                 });
                 if (!result) {
                     return { id: '', kind: 'FRAME', sourcePath: '', children: [] };
@@ -948,6 +1209,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
         bindings: bindings.length > 0 ? bindings : undefined,
         warnings: warnings.length > 0 ? [...warnings] : undefined,
         children,
+        classOnlyBaselineInput,
     };
     return { node, warnings, componentSets };
 }

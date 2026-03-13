@@ -7,6 +7,17 @@
  */
 
 /**
+ * Identity metadata for candidate disambiguation when multiple elements share a sid.
+ */
+export interface CandidateIdentity {
+    tagName: string;
+    /** Normalized class tokens (sorted, deduplicated). */
+    classNameTokens: string;
+    /** First 80 chars of textContent for text elements. */
+    textSignal?: string;
+}
+
+/**
  * Computed styles and layout dimensions for a single element.
  * Extracted from browser via getComputedStyle() + getBoundingClientRect().
  */
@@ -50,6 +61,17 @@ export interface ComputedStyleData {
         objectFit?: string;
         backgroundSize?: string;
     };
+
+    /**
+     * Identity metadata for sid collision disambiguation.
+     */
+    candidateIdentity?: CandidateIdentity;
+
+    /**
+     * Class-only safe baseline input (computed with inline style temporarily excluded).
+     * Used for class-based diff baseline so export diff detects inline overrides.
+     */
+    classOnlyStyles?: Record<string, string>;
 }
 
 /**

@@ -1,6 +1,10 @@
 import type { FigmaVendorDocument } from '@jay-framework/editor-protocol';
 import type { ImportIRDocument, ImportIRNode, ImportIRStyle, ImportIRFill } from './import-ir';
-import { CLASS_STYLE_BASELINE_KEY, buildClassStyleBaseline } from './class-style-baseline';
+import {
+    CLASS_STYLE_BASELINE_KEY,
+    buildClassStyleBaseline,
+    buildClassStyleBaselineFromClassOnlyInput,
+} from './class-style-baseline';
 
 const DEFAULT_FONT_FAMILY = 'Inter';
 
@@ -700,13 +704,23 @@ function adaptNode(
 
     // Capture class-style baseline for class-based nodes so the export
     // pipeline can later diff and emit only changed safe visual overrides.
+    // Use class-only baseline when available (class+inline nodes) so export
+    // diff detects inline overrides; otherwise use rendered-state baseline.
     if (node.className && base.type === 'FRAME') {
         try {
             base.pluginData = base.pluginData || {};
-            base.pluginData[CLASS_STYLE_BASELINE_KEY] = buildClassStyleBaseline(
-                base,
-                'computed-style',
-            );
+            if (
+                node.classOnlyBaselineInput &&
+                Object.keys(node.classOnlyBaselineInput).length > 0
+            ) {
+                base.pluginData[CLASS_STYLE_BASELINE_KEY] =
+                    buildClassStyleBaselineFromClassOnlyInput(node.classOnlyBaselineInput, base);
+            } else {
+                base.pluginData[CLASS_STYLE_BASELINE_KEY] = buildClassStyleBaseline(
+                    base,
+                    'computed-style',
+                );
+            }
         } catch {
             // Non-fatal: import continues without baseline
         }
@@ -857,6 +871,30 @@ function collectImportReport(irRoot: ImportIRNode): ImportReport {
                         feature: w.replace('CSS_DYNAMIC_VALUE: ', ''),
                         action: 'ignored',
                         message: `Dynamic CSS value — resolved at runtime`,
+                    });
+                } else if (w.startsWith('SID_AMBIGUITY:')) {
+                    warnings.push({
+                        elementId: node.id,
+                        elementName: node.name || node.tagName || node.kind,
+                        feature: 'enrichment',
+                        action: 'approximated',
+                        message: w.replace('SID_AMBIGUITY: ', ''),
+                    });
+                } else if (w.startsWith('TEXT_OVERRIDE_SKIPPED:')) {
+                    warnings.push({
+                        elementId: node.id,
+                        elementName: node.name || node.tagName || node.kind,
+                        feature: 'text',
+                        action: 'stored',
+                        message: w.replace('TEXT_OVERRIDE_SKIPPED: ', ''),
+                    });
+                } else if (w.startsWith('BASELINE_CLASS_ONLY_MISSING:')) {
+                    warnings.push({
+                        elementId: node.id,
+                        elementName: node.name || node.tagName || node.kind,
+                        feature: 'baseline',
+                        action: 'ignored',
+                        message: w.replace('BASELINE_CLASS_ONLY_MISSING: ', ''),
                     });
                 }
             }
