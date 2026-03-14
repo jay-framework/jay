@@ -220,7 +220,9 @@ async function compileAndLoadServerElement(
         projectRoot,
     );
     const parsedJayFile = checkValidationErrors(jayFile);
-    const serverElementCode = checkValidationErrors(generateServerElementFile(parsedJayFile));
+    const serverElementCode = checkValidationErrors(
+        generateServerElementFile(parsedJayFile, { injectSourceIds: true }),
+    );
 
     const serverElementDir = path.join(buildFolder, 'pre-rendered', routeDir);
     await fs.mkdir(serverElementDir, { recursive: true });

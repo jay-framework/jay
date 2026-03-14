@@ -2744,6 +2744,8 @@ interface ServerContext {
     /** Runtime expression for coordinate prefix inside forEach items (e.g., `vs1.id`).
      *  When set, child coordinates are emitted as `{prefix}/{coordinate}`. */
     coordinatePrefix?: string;
+    injectSourceIds?: boolean;
+    sourceHtml?: string;
 }
 
 /** Helper: create a single-line w() statement as a RenderFragment */
@@ -3019,6 +3021,11 @@ function renderServerAttributes(element: HTMLElement, context: ServerContext): R
             }
         }
     });
+
+    if (context.injectSourceIds && context.sourceHtml && element.range && element.range[0] >= 0) {
+        const sourceId = computeSourceId(element.range[0], context.sourceHtml);
+        parts.push(w(indent, `' data-jay-sid="${sourceId}"'`));
+    }
 
     return mergeServerFragments(parts);
 }
@@ -3579,7 +3586,10 @@ function hasInteractiveChildElements(childNodes: Node[]): boolean {
     );
 }
 
-export function generateServerElementFile(jayFile: JayHtmlSourceFile): WithValidations<string> {
+export function generateServerElementFile(
+    jayFile: JayHtmlSourceFile,
+    options?: JayHtmlCompilerOptions,
+): WithValidations<string> {
     const types = generateTypes(jayFile.types);
     const variables = new Variables(jayFile.types);
     const rootElement = ensureSingleChildElement(jayFile.body);
@@ -3592,6 +3602,8 @@ export function generateServerElementFile(jayFile: JayHtmlSourceFile): WithValid
         variables,
         indent: new Indent('    '),
         coordinateCounter: { count: 0 },
+        injectSourceIds: options?.injectSourceIds ?? false,
+        sourceHtml: jayFile.sourceHtml,
     };
 
     // Render root element with forced coordinate (matches hydrate forceAdopt)
