@@ -796,6 +796,46 @@ Server expects `'1,stock-status:0'`, so the ViewState lookup fails → `fastVS` 
 - `jay-html-compiler.ts` line 2582 — adopt component key in `renderHydrateHeadlessInstance`
 - `test/fixtures/contracts/page-with-headless-in-foreach/generated-element-hydrate.ts` — updated fixture
 
+### Issue 5: `getComponentName` — Headless Detected as Headful
+
+**Location:** `getComponentName` in `jay-html-helpers.ts`
+
+**Problem:** When a headless component's code link (e.g., `widget` from `widget.ts`) was added to the jay-html's `imports` array, `processImportedComponents` included it in `importedSymbols`. Then `getComponentName` checked headful imports BEFORE headless contract names. Since `widget` was in both sets, `<jay:widget>` was classified as a headful component (`childComp(widget, ...)`) instead of a headless instance (`makeHeadlessInstanceComponent(..., widget.comp, ...)`).
+
+**Symptom:** Runtime error `compCreator is not a function` — `childComp` tried to call the full `JayStackComponentDefinition` object as a function.
+
+**Fix:** Reversed the check order in `getComponentName`: check headless contract names FIRST, then headful imports. A headless import's contract name always takes precedence because the code link is only in `importedSymbols` as a side effect of the import wiring.
+
+**Files changed:**
+- `jay-html-helpers.ts` — `getComponentName`: check headless before headful
+
+### Issue 6: Hydrate `makeHeadlessInstanceComponent` Key Mismatch
+
+**Location:** `renderHydrateHeadlessInstance` in `jay-html-compiler.ts`
+
+**Problem:** For static headless instances, `makeHeadlessInstanceComponent` received the full DOM coordinate (e.g., `'0/widget:0'`) as its `coordinateKey`. But the server stores data in `__headlessInstances` with just the suffix (e.g., `'widget:0'`). The `wrappedConstructor` looked up `instanceData.viewStates['0/widget:0']` — key not found → `fastVS` undefined → signals initialized with empty object.
+
+**Symptom:** Headless instance renders SSR content but interactive phase has no data. Button clicks don't update the DOM because signals are empty.
+
+**Fix:** Changed `makeHeadlessInstanceComponent`'s `coordinateKey` parameter from `instanceCoord` (DOM coordinate) to `coordinateKey` (instance key from `computeInstanceKey`). Static: `'widget:0'`, slowForEach: `'p1/widget:0'`.
+
+**Files changed:**
+- `jay-html-compiler.ts` — `renderHydrateHeadlessInstance`: use `coordinateKey` not `instanceCoord`
+- `test/fixtures/contracts/page-with-headless-instance/generated-element-hydrate.ts` — updated fixture
+- `test/fixtures/contracts/page-with-headless-mixed/generated-element-hydrate.ts` — updated fixture
+
+### Issue 7 (Open): Headless Instance Ref onclick Not Firing After Hydration
+
+**Location:** Hydration runtime — headless instance ref wiring
+
+**Problem:** After hydration, button clicks inside headless instance inline templates don't trigger `refs.increment.onclick(...)`. The button is adopted from SSR DOM (`adoptElement('0/2', {}, [], refIncrement())`), hydration completes without errors, but the event handler is not bound.
+
+**Symptom:** Clicking a headless instance button has no effect. Value stays unchanged. Confirmed via Playwright test: automation API is available, DOM is correct, but `onclick` handler doesn't fire.
+
+**Scope:** Affects all headless placements (static, conditional, forEach, slowForEach). The fake-shop's product-widget add-to-cart button may have the same issue (smoke tests don't test interactivity).
+
+**Status:** Open — documented by DL#104 hydration test suite (7 failing interactivity tests).
+
 ### Verification Criteria
 
 1. **Runtime:** No `Cannot read properties of undefined` when hydrating headless instances with conditionals.

@@ -16,6 +16,7 @@
                     <div class="widget">
                         <span class="label">{label}</span>
                         <span class="value">{value}</span>
+                <button ref="increment">+1</button>
                     </div>
                 </jay:widget>
             </div>
@@ -24,6 +25,7 @@
                     <div class="widget">
                         <span class="label">{label}</span>
                         <span class="value">{value}</span>
+                <button ref="increment">+1</button>
                     </div>
                 </jay:widget>
             </div>

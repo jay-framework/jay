@@ -4,7 +4,7 @@ import {
     RenderPipeline,
     type Signals,
 } from '@jay-framework/fullstack-component';
-import type { Props } from '@jay-framework/component';
+import { createSignal, type Props } from '@jay-framework/component';
 import type {
     WidgetContract,
     WidgetProps,
@@ -40,9 +40,15 @@ export const widget = builder.withInteractive(
         fastViewState: Signals<WidgetFastViewState>,
         carryForward: WidgetCarryForward,
     ) => {
+        const [value, setValue] = createSignal(fastViewState.value[0]);
+
+        refs.increment.onclick(() => {
+            setValue(value() + 1);
+        });
+
         return {
             render: () => ({
-                value: fastViewState.value[0],
+                value: value(),
             }),
         };
     },

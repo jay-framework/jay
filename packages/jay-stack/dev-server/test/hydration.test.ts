@@ -48,6 +48,7 @@ function testFixture(
         expectedViewState?: object;
         ssrChecks?: (targetHtml: string) => void;
         hydrationChecks?: (page: Page) => Promise<void>;
+        interactivityChecks?: (page: Page) => Promise<void>;
     } = {},
 ) {
     let devServer: DevServer;
@@ -182,6 +183,18 @@ function testFixture(
             }
         });
     }
+
+    if (opts.interactivityChecks) {
+        it('interactivity works after hydration', async () => {
+            const page = await browser.newPage();
+            try {
+                await page.goto(`${devServerUrl}/`, { waitUntil: 'networkidle' });
+                await opts.interactivityChecks!(page);
+            } finally {
+                await page.close();
+            }
+        });
+    }
 }
 
 // ============================================================================
@@ -257,6 +270,17 @@ describe('hydration', () => {
                 expect(await page.textContent('#target .label')).toEqual('Item 1');
                 expect(await page.textContent('#target .value')).toEqual('10');
             },
+            interactivityChecks: async (page) => {
+                // Initial value
+                expect(await page.textContent('#target .value')).toEqual('10');
+                // Click increment button
+                await page.click('#target button');
+                // Value should increase
+                await page.waitForFunction(() => {
+                    return document.querySelector('#target .value')?.textContent === '11';
+                }, { timeout: 2000 });
+                expect(await page.textContent('#target .value')).toEqual('11');
+            },
         });
     });
 
@@ -264,9 +288,16 @@ describe('hydration', () => {
         testFixture('page-headless-conditional', {
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Conditional Headless');
-                // showWidget=true → widget should be visible
                 expect(await page.textContent('#target .label')).toEqual('Item 1');
                 expect(await page.textContent('#target .value')).toEqual('10');
+            },
+            interactivityChecks: async (page) => {
+                expect(await page.textContent('#target .value')).toEqual('10');
+                await page.click('#target button');
+                await page.waitForFunction(() => {
+                    return document.querySelector('#target .value')?.textContent === '11';
+                }, { timeout: 2000 });
+                expect(await page.textContent('#target .value')).toEqual('11');
             },
         });
     });
@@ -284,6 +315,21 @@ describe('hydration', () => {
                 expect(await page.textContent('#target .widget:nth-child(3) .label')).toEqual('Item 3');
                 expect(await page.textContent('#target .widget:nth-child(3) .value')).toEqual('30');
             },
+            interactivityChecks: async (page) => {
+                // Click the second widget's increment button
+                const buttons = await page.$$('#target .widget button');
+                expect(buttons).toHaveLength(3);
+                await buttons[1].click();
+                // Second widget's value should change from 20 to 21
+                await page.waitForFunction(() => {
+                    const values = document.querySelectorAll('#target .widget .value');
+                    return values[1]?.textContent === '21';
+                }, { timeout: 2000 });
+                const values = await page.$$('#target .widget .value');
+                expect(await values[0].textContent()).toEqual('10'); // unchanged
+                expect(await values[1].textContent()).toEqual('21'); // incremented
+                expect(await values[2].textContent()).toEqual('30'); // unchanged
+            },
         });
     });
 
@@ -293,11 +339,19 @@ describe('hydration', () => {
                 expect(await page.textContent('#target h1')).toEqual('SlowForEach Headless');
                 const widgets = await page.$$('#target .widget');
                 expect(widgets).toHaveLength(2);
-                // slowForEach items have headless instance data from slow phase
                 expect(await page.textContent('#target .widget:nth-child(1) .label')).toEqual('Item 1');
                 expect(await page.textContent('#target .widget:nth-child(1) .value')).toEqual('10');
                 expect(await page.textContent('#target .widget:nth-child(2) .label')).toEqual('Item 2');
                 expect(await page.textContent('#target .widget:nth-child(2) .value')).toEqual('20');
+            },
+            interactivityChecks: async (page) => {
+                expect(await page.textContent('#target .widget:nth-child(1) .value')).toEqual('10');
+                await page.click('#target .widget:nth-child(1) button');
+                await page.waitForFunction(() => {
+                    const values = document.querySelectorAll('#target .widget .value');
+                    return values[0]?.textContent === '11';
+                }, { timeout: 2000 });
+                expect(await page.textContent('#target .widget:nth-child(1) .value')).toEqual('11');
             },
         });
     });

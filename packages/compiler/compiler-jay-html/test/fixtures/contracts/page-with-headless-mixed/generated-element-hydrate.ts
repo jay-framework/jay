@@ -105,7 +105,7 @@ function _headlessProductCard0HydrateRender(
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0HydrateRender,
     productCard.comp,
-    '0/product-card:0',
+    'product-card:0',
     productCard.contexts,
 );
 
@@ -135,7 +135,7 @@ function _headlessProductCard1HydrateRender(
 const _HeadlessProductCard1 = makeHeadlessInstanceComponent(
     _headlessProductCard1HydrateRender,
     productCard.comp,
-    '0/product-card:1',
+    'product-card:1',
     productCard.contexts,
 );
 

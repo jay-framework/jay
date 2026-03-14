@@ -2623,8 +2623,9 @@ ${adoptInlineBody.rendered}
         adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName}.comp,\n    (dataIds) => dataIds.join(','),\n    ${pluginComponentName}.contexts,\n);`;
     } else {
         adoptComponentSymbol = `_Headless${pascal}${idx}`;
-        // Static: use full instanceCoord for __headlessInstances lookup (dev server keys by full coord)
-        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName}.comp,\n    '${instanceCoord}',\n    ${pluginComponentName}.contexts,\n);`;
+        // Use the __headlessInstances key (not full DOM coordinate) for data lookup.
+        // Static: 'widget:0', slowForEach: 'p1/widget:0'
+        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName}.comp,\n    '${coordinateKey}',\n    ${pluginComponentName}.contexts,\n);`;
     }
 
     let adoptImports = adoptInlineBody.imports

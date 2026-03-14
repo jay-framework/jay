@@ -12,3 +12,6 @@ tags:
     type: data
     dataType: number
     phase: fast+interactive
+  - tag: increment
+    type: interactive
+    elementType: HTMLButtonElement

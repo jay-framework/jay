@@ -17,7 +17,7 @@ import {
 } from '/@fs/Users/yoav/work/jay/main/packages/jay-stack/stack-client-runtime/dist/index.js';
 import { widget } from '/widget.ts';
 function _headlessWidget0HydrateRender(options) {
-    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
     const render = (viewState) => {
         const instanceData = useContext(HEADLESS_INSTANCES);
         const instanceKey = (currentConstructionContext()?.dataIds ?? []).join(',') + ',widget:0';
@@ -26,6 +26,7 @@ function _headlessWidget0HydrateRender(options) {
             adoptElement('0', {}, [
                 adoptText('0/0', (vs) => vs.label),
                 adoptText('0/1', (vs) => vs.value),
+                adoptElement('0/2', {}, [], refIncrement()),
             ]),
         );
     };
@@ -38,12 +39,13 @@ const _HeadlessWidget0Adopt = makeHeadlessInstanceComponent(
     widget.contexts,
 );
 function _headlessWidget1Render(options) {
-    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', { class: 'widget' }, [
                 e('span', { class: 'label' }, [dt((vs) => vs.label)]),
                 e('span', { class: 'value' }, [dt((vs) => vs.value)]),
+                e('button', {}, ['+1'], refIncrement()),
             ]),
         );
     return [refManager.getPublicAPI(), render];

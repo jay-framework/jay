@@ -2,25 +2,54 @@ import {
     makeJayStackComponent,
     phaseOutput,
     RenderPipeline,
+    type Signals,
 } from '@jay-framework/fullstack-component';
+import { createSignal, type Props } from '@jay-framework/component';
+import type {
+    WidgetContract,
+    WidgetProps,
+    WidgetRefs,
+    WidgetSlowViewState,
+    WidgetFastViewState,
+} from './widget.jay-contract';
 
-interface WidgetProps {
+interface WidgetCarryForward {
     itemId: string;
 }
 
-const builder = makeJayStackComponent()
+const builder = makeJayStackComponent<WidgetContract>()
     .withProps<WidgetProps>()
     .withSlowlyRender(async (props: WidgetProps) =>
-        phaseOutput({ label: `Item ${props.itemId}` }, { itemId: props.itemId }),
+        phaseOutput<WidgetSlowViewState, WidgetCarryForward>(
+            { label: `Item ${props.itemId}` },
+            { itemId: props.itemId },
+        ),
     )
-    .withFastRender(async (props: WidgetProps, carryForward: { itemId: string }) => {
-        const Pipeline = RenderPipeline.for();
+    .withFastRender(async (props: WidgetProps, carryForward: WidgetCarryForward) => {
+        const Pipeline = RenderPipeline.for<WidgetFastViewState, WidgetCarryForward>();
         return Pipeline.ok({}).toPhaseOutput(() => ({
             viewState: { value: parseInt(carryForward.itemId) * 10 || 0 },
             carryForward,
         }));
     });
 
-export const widget = builder.withInteractive((props, refs, fastViewState, carryForward) => {
-    return { render: () => ({}) };
-});
+export const widget = builder.withInteractive(
+    (
+        props: Props<WidgetProps>,
+        refs: WidgetRefs,
+        fastViewState: Signals<WidgetFastViewState>,
+        carryForward: WidgetCarryForward,
+    ) => {
+        const [value, setValue] = createSignal(fastViewState.value[0]);
+
+        refs.increment.onclick(() => {
+            setValue(value() + 1);
+        });
+
+        return {
+            render: () => ({
+                value: value(),
+            }),
+        };
+    },
+);

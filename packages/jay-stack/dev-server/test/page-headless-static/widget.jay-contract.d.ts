@@ -1,4 +1,6 @@
 import {
+    HTMLElementProxy,
+    HTMLElementCollectionProxy,
     JayContract,
     JayElement,
     RenderElement,
@@ -14,9 +16,13 @@ export interface WidgetViewState {
     value: number;
 }
 
-export interface WidgetRefs {}
+export interface WidgetRefs {
+    increment: HTMLElementProxy<WidgetViewState, HTMLButtonElement>;
+}
 
-export interface WidgetRepeatedRefs {}
+export interface WidgetRepeatedRefs {
+    increment: HTMLElementCollectionProxy<WidgetViewState, HTMLButtonElement>;
+}
 
 export type WidgetSlowViewState = Pick<WidgetViewState, 'label'>;
 export type WidgetFastViewState = Pick<WidgetViewState, 'value'>;

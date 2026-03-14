@@ -88,7 +88,7 @@ function _headlessProductCard0HydrateRender(
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0HydrateRender,
     productCard.comp,
-    '0/product-card:0',
+    'product-card:0',
     productCard.contexts,
 );
 

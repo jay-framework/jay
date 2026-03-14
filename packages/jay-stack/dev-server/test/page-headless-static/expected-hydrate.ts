@@ -12,7 +12,7 @@ import {
 } from '/@fs/Users/yoav/work/jay/main/packages/jay-stack/stack-client-runtime/dist/index.js';
 import { widget } from '/widget.ts';
 function _headlessWidget0HydrateRender(options) {
-    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
     const render = (viewState) => {
         const instanceData = useContext(HEADLESS_INSTANCES);
         const instanceKey = 'widget:0';
@@ -21,6 +21,7 @@ function _headlessWidget0HydrateRender(options) {
             adoptElement('0', {}, [
                 adoptText('0/0', (vs) => vs.label),
                 adoptText('0/1', (vs) => vs.value),
+                adoptElement('0/2', {}, [], refIncrement()),
             ]),
         );
     };
@@ -29,7 +30,7 @@ function _headlessWidget0HydrateRender(options) {
 const _HeadlessWidget0 = makeHeadlessInstanceComponent(
     _headlessWidget0HydrateRender,
     widget.comp,
-    '0/widget:0',
+    'widget:0',
     widget.contexts,
 );
 export function hydrate(rootElement, options) {
