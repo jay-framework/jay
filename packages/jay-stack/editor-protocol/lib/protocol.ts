@@ -195,6 +195,7 @@ export interface ImportResponse<TVendorDoc> extends BaseResponse {
         variantExpressions: number;
     };
     imageManifest?: Array<{ nodeId: string; imageId: string; scaleMode?: string }>;
+    baseline?: SyncBaselineV1;
 }
 
 // ─── Iterative Sync Types (v1) ─────────────────────────────────────

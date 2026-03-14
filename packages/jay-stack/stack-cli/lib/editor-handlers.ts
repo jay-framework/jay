@@ -1382,6 +1382,12 @@ export function createEditorHandlers(
                 getLogger().warn('[Debug] Failed to write import debug files:', debugErr);
             }
 
+            const { buildBaseline } = await import('./vendors/figma/iterative/merge-applier');
+            const importBaseline = buildBaseline(
+                importResult.vendorDoc as FigmaVendorDocument,
+                pageUrl,
+            );
+
             return {
                 type: 'import',
                 success: true,
@@ -1389,6 +1395,7 @@ export function createEditorHandlers(
                 source: 'jay-html-reconstructed',
                 warnings,
                 imageManifest: importResult.imageManifest,
+                baseline: importBaseline,
             };
         } catch (error) {
             getLogger().error('Failed to import from Jay-HTML:', error);
@@ -1653,6 +1660,7 @@ export function createEditorHandlers(
                 pageUrl,
                 sessionId,
                 sectionSyncId,
+                matches: matchResult.matches,
             });
 
             getLogger().info(

@@ -43,9 +43,14 @@ export interface MergePlan {
 
 // ─── 3-Way Merge Per Property ────────────────────────────────────
 
+const NUMERIC_TOLERANCE = 0.5;
+
 function valuesEqual(a: unknown, b: unknown): boolean {
     if (a === b) return true;
     if (a == null && b == null) return true;
+    if (typeof a === 'number' && typeof b === 'number') {
+        return Math.abs(a - b) < NUMERIC_TOLERANCE;
+    }
     return JSON.stringify(a) === JSON.stringify(b);
 }
 
@@ -139,6 +144,24 @@ export function planPropertyMerges(input: PlannerInput): {
         const baseVal = input.baseline[prop];
         const desVal = input.designer[prop];
         const incVal = input.incoming[prop];
+
+        // If a property exists only on the Figma (designer) side but not in the
+        // incoming code doc, the code has no opinion about it. Auto-preserve the
+        // designer value without conflict (e.g., parentId, absoluteRenderBounds).
+        if (!(prop in input.incoming) && prop in input.designer) {
+            operations.push({
+                nodeKey: input.nodeKey,
+                property: prop,
+                propertyClass: classifyProperty(prop),
+                decision: 'preserveDesigner',
+                confidence: input.confidence,
+                rationale: 'property not set by code — preserving designer value',
+                baselineValue: baseVal,
+                designerValue: desVal,
+                incomingValue: incVal,
+            });
+            continue;
+        }
 
         const { decision, rationale, severity } = resolvePropertyDecision(
             prop,

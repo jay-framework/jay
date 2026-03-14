@@ -12,6 +12,7 @@ import type {
 } from '@jay-framework/editor-protocol';
 import type { MergePlan } from './merge-planner';
 import { generateReport } from './sync-report';
+import { EXCLUDED_PLUGIN_DATA_KEYS } from './vendor-doc-flatten';
 
 // ─── Public Types ────────────────────────────────────────────────
 
@@ -30,6 +31,9 @@ export interface ApplyInput {
     pageUrl: string;
     sessionId: string;
     sectionSyncId: string;
+    /** Match results for building baseline with stable keys.
+     *  Maps currentNodeKey (Figma ID) → incomingNodeKey (source-based, stable across re-imports). */
+    matches?: Array<{ currentNodeKey: string; incomingNodeKey: string }>;
 }
 
 export interface ApplyResult {
@@ -163,17 +167,33 @@ function computeDocHash(doc: FigmaVendorDocument): string {
 /**
  * Build a baseline snapshot from the merged doc for the next merge cycle.
  * Captures all non-structural properties per node.
+ *
+ * Uses stable keys (incoming/source IDs) instead of Figma node IDs when a
+ * stableKeyMap is provided, so the baseline survives node replacement in
+ * the plugin's applyMergeResult (which creates new Figma nodes with new IDs).
  */
-export function buildBaseline(doc: FigmaVendorDocument, pageUrl: string): SyncBaselineV1 {
+export function buildBaseline(
+    doc: FigmaVendorDocument,
+    pageUrl: string,
+    stableKeyMap?: Map<string, string>,
+): SyncBaselineV1 {
     const nodes: BaselineNodeSnapshot[] = [];
 
     function walk(node: FigmaVendorDocument) {
         const properties: Record<string, unknown> = {};
         for (const [key, value] of Object.entries(node)) {
-            if (key === 'children') continue;
+            if (key === 'children' || key === 'id' || key === 'name' || key === 'type') continue;
+            if (key === 'pluginData') {
+                for (const [pdKey, pdValue] of Object.entries(value as Record<string, string>)) {
+                    if (EXCLUDED_PLUGIN_DATA_KEYS.has(pdKey)) continue;
+                    properties[pdKey] = pdValue;
+                }
+                continue;
+            }
             properties[key] = value;
         }
-        nodes.push({ nodeKey: node.id, properties });
+        const stableKey = stableKeyMap?.get(node.id) ?? node.id;
+        nodes.push({ nodeKey: stableKey, properties });
 
         if (node.children) {
             for (const child of node.children) walk(child);
@@ -316,8 +336,19 @@ export function applyMergePlan(input: ApplyInput): ApplyResult {
         }
     }
 
-    // Phase 3: Build new baseline from merged state
-    const newBaseline = buildBaseline(mergedDoc, input.pageUrl);
+    // Phase 3: Build new baseline from merged state.
+    // Use incoming (source-based) keys so the baseline survives Figma node replacement.
+    const stableKeyMap = new Map<string, string>();
+    if (input.matches) {
+        for (const m of input.matches) {
+            stableKeyMap.set(m.currentNodeKey, m.incomingNodeKey);
+        }
+    }
+    const newBaseline = buildBaseline(
+        mergedDoc,
+        input.pageUrl,
+        stableKeyMap.size > 0 ? stableKeyMap : undefined,
+    );
 
     // Phase 4: Compute new sync state
     const now = new Date().toISOString();

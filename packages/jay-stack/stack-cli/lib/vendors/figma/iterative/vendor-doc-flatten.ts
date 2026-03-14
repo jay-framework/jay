@@ -37,6 +37,14 @@ export function flattenVendorDoc(doc: FigmaVendorDocument): FlatNode[] {
  * Extracts a property snapshot from a FigmaVendorDocument node.
  * Captures layout, visual, and semantic properties (excludes children and tree structure).
  */
+export const EXCLUDED_PLUGIN_DATA_KEYS = new Set([
+    'jay-sync-baseline-v1',
+    'jay-sync-state-v1',
+    'jay-import-timestamp',
+    'jay-class-style-baseline-v1',
+    'jay-unsupported-css',
+]);
+
 export function extractPropertySnapshot(node: FigmaVendorDocument): PropertySnapshot {
     const snapshot: PropertySnapshot = {};
 
@@ -44,6 +52,7 @@ export function extractPropertySnapshot(node: FigmaVendorDocument): PropertySnap
         if (key === 'children' || key === 'id' || key === 'name' || key === 'type') continue;
         if (key === 'pluginData') {
             for (const [pdKey, pdValue] of Object.entries(value as Record<string, string>)) {
+                if (EXCLUDED_PLUGIN_DATA_KEYS.has(pdKey)) continue;
                 snapshot[pdKey] = pdValue;
             }
             continue;
@@ -88,7 +97,10 @@ export function buildPlannerInputs(
         const incomingNode = incomingIdx.get(match.incomingNodeKey);
         if (!designerNode || !incomingNode) continue;
 
-        const baseline = baselineIndex.get(match.currentNodeKey) ?? {};
+        const baseline =
+            baselineIndex.get(match.incomingNodeKey) ??
+            baselineIndex.get(match.currentNodeKey) ??
+            {};
         const designer = extractPropertySnapshot(designerNode);
         const incoming = extractPropertySnapshot(incomingNode);
 
