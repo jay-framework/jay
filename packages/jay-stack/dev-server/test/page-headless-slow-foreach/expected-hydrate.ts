@@ -2,11 +2,58 @@ import {
     ReferencesManager,
     slowForEachItem,
     ConstructContext,
-    childComp,
+    useContext,
     adoptText,
     adoptElement,
+    childCompHydrate,
 } from '/@fs/Users/yoav/work/jay/main/packages/runtime/runtime/dist/index.js';
+import {
+    makeHeadlessInstanceComponent,
+    HEADLESS_INSTANCES,
+} from '/@fs/Users/yoav/work/jay/main/packages/jay-stack/stack-client-runtime/dist/index.js';
 import { widget } from '/widget.ts';
+function _headlessWidget0HydrateRender(options) {
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const render = (viewState) => {
+        const instanceData = useContext(HEADLESS_INSTANCES);
+        const instanceKey = '1/widget:0';
+        const instanceVs = instanceData?.viewStates?.[instanceKey] ?? viewState;
+        return ConstructContext.withHydrationChildContext(instanceVs, refManager, () =>
+            adoptElement('0', {}, [
+                adoptText('0/0', (vs) => vs.label),
+                adoptText('0/1', (vs) => vs.value),
+            ]),
+        );
+    };
+    return [refManager.getPublicAPI(), render];
+}
+const _HeadlessWidget0 = makeHeadlessInstanceComponent(
+    _headlessWidget0HydrateRender,
+    widget.comp,
+    '1/widget:0',
+    widget.contexts,
+);
+function _headlessWidget1HydrateRender(options) {
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const render = (viewState) => {
+        const instanceData = useContext(HEADLESS_INSTANCES);
+        const instanceKey = '2/widget:0';
+        const instanceVs = instanceData?.viewStates?.[instanceKey] ?? viewState;
+        return ConstructContext.withHydrationChildContext(instanceVs, refManager, () =>
+            adoptElement('0', {}, [
+                adoptText('0/0', (vs) => vs.label),
+                adoptText('0/1', (vs) => vs.value),
+            ]),
+        );
+    };
+    return [refManager.getPublicAPI(), render];
+}
+const _HeadlessWidget1 = makeHeadlessInstanceComponent(
+    _headlessWidget1HydrateRender,
+    widget.comp,
+    '2/widget:0',
+    widget.contexts,
+);
 export function hydrate(rootElement, options) {
     const [itemsRefManager, [refAR1, refAR2]] = ReferencesManager.for(
         options,
@@ -26,13 +73,25 @@ export function hydrate(rootElement, options) {
                     (vs) => vs.items,
                     0,
                     '1',
-                    () => childComp(widget, (vs1) => ({ itemId: 1 }), refAR1()),
+                    () =>
+                        childCompHydrate(
+                            _HeadlessWidget0,
+                            (vs1) => ({ itemId: '1' }),
+                            'widget:0',
+                            refAR1(),
+                        ),
                 ),
                 slowForEachItem(
                     (vs) => vs.items,
                     1,
                     '2',
-                    () => childComp(widget, (vs1) => ({ itemId: 2 }), refAR2()),
+                    () =>
+                        childCompHydrate(
+                            _HeadlessWidget1,
+                            (vs1) => ({ itemId: '2' }),
+                            'widget:0',
+                            refAR2(),
+                        ),
                 ),
             ]),
         );

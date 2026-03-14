@@ -164,8 +164,8 @@ export interface ComponentMatch {
  * 2. Being in the importedSymbols set (legacy syntax): <Counter>
  *
  * For jay: prefixed elements:
+ * - If the name matches a headless import contract name → headless instance (checked first)
  * - If the name matches an imported symbol → headful component
- * - If the name matches a headless import contract name → headless instance
  * - Otherwise → unknown (will be an error)
  *
  * Returns the component match info if it's a component, null otherwise.
@@ -178,13 +178,15 @@ export function getComponentName(
     // Check for jay: prefix first (new syntax)
     if (hasJayPrefix(tagName)) {
         const componentName = extractComponentName(tagName);
-        // Check headful first (imported symbols)
-        if (importedSymbols.has(componentName)) {
-            return { name: componentName, kind: 'headful' };
-        }
-        // Check headless instance (matches a headless import's contract name)
+        // Check headless instance FIRST — a headless import's contract name
+        // takes precedence over a headful import with the same name, since
+        // the headless code link also appears in importedSymbols.
         if (headlessContractNames?.has(componentName)) {
             return { name: componentName, kind: 'headless-instance' };
+        }
+        // Check headful (imported symbols)
+        if (importedSymbols.has(componentName)) {
+            return { name: componentName, kind: 'headful' };
         }
         // Jay-prefixed but not matched - this will be an error
         // For now, still return the name so the compiler can report the error
