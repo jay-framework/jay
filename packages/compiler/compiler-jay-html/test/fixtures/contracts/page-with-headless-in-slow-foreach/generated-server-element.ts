@@ -33,7 +33,7 @@ export function renderToStream(
     if (vs_product_card0) {
         w('<article');
         w(' class="hero-card"');
-        w('>');
+        w(' jay-coordinate="p1/product-card:0/0">');
         w('<h2');
         w('>');
         w('Product A');
@@ -58,7 +58,7 @@ export function renderToStream(
     if (vs_product_card1) {
         w('<article');
         w(' class="compact-card"');
-        w('>');
+        w(' jay-coordinate="p2/product-card:0/0">');
         w('<h3');
         w('>');
         w('Product B');

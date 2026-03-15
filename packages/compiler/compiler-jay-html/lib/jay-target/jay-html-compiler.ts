@@ -3496,8 +3496,17 @@ function renderServerHeadlessInstance(
     // Render inline template children.
     // Children have pre-assigned jay-coordinate-base from the pre-processor.
     // Multi-child wrapping was done by slow rendering or assignCoordinates.
+    // The root child element must always emit jay-coordinate so the hydrate
+    // target's adoptElement can find it and wire children (including refs).
     const renderedChildren = mergeServerFragments(
-        childNodes.map((child) => renderServerNode(child, instanceContext)),
+        childNodes.map((child) => {
+            if (child.nodeType === NodeType.ELEMENT_NODE) {
+                return renderServerElementContent(child as HTMLElement, instanceContext, {
+                    isRoot: true,
+                });
+            }
+            return renderServerNode(child, instanceContext);
+        }),
     );
 
     // Build the guarded block:

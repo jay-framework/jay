@@ -23,7 +23,7 @@ export function renderToStream(
     if (vs_product_card0) {
         w('<article');
         w(' class="hero-card"');
-        w('>');
+        w(' jay-coordinate="0/product-card:0/0">');
         w('<h2');
         w('>');
         w('Hero Product');

@@ -26,7 +26,7 @@ export function renderToStream(vs: PageWithHeadlessMixedViewState, ctx: ServerRe
     if (vs_product_card0) {
         w('<article');
         w(' class="hero-card"');
-        w('>');
+        w(' jay-coordinate="0/product-card:0/0">');
         w('<h2');
         w('>');
         w('Hero Product');
@@ -49,7 +49,7 @@ export function renderToStream(vs: PageWithHeadlessMixedViewState, ctx: ServerRe
         if (vs_product_card1) {
             w('<div');
             w(' class="promo"');
-            w('>');
+            w(' jay-coordinate="0/product-card:1/0">');
             w('<h3');
             w('>');
             w('Promo Product');
@@ -73,7 +73,7 @@ export function renderToStream(vs: PageWithHeadlessMixedViewState, ctx: ServerRe
     if (vs_product_card2) {
         w('<article');
         w(' class="card-a"');
-        w('>');
+        w(' jay-coordinate="p1/product-card:0/0">');
         w('<h2');
         w('>');
         w('Product A');
@@ -98,7 +98,7 @@ export function renderToStream(vs: PageWithHeadlessMixedViewState, ctx: ServerRe
     if (vs_product_card3) {
         w('<article');
         w(' class="card-b"');
-        w('>');
+        w(' jay-coordinate="p2/product-card:0/0">');
         w('<h3');
         w('>');
         w('Product B');

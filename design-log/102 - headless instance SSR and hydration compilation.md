@@ -832,9 +832,15 @@ Server expects `'1,stock-status:0'`, so the ViewState lookup fails → `fastVS` 
 
 **Symptom:** Clicking a headless instance button has no effect. Value stays unchanged. Confirmed via Playwright test: automation API is available, DOM is correct, but `onclick` handler doesn't fire.
 
-**Scope:** Affects all headless placements (static, conditional, forEach, slowForEach). The fake-shop's product-widget add-to-cart button may have the same issue (smoke tests don't test interactivity).
+**Root cause:** The headless instance root element (e.g., `<div class="widget">`) had no `jay-coordinate` in the SSR HTML. The hydrate target's `adoptElement('0', {}, [children])` looked for an element with that coordinate, couldn't find it, and returned a fallback that didn't delegate `update`/`mount` to children. The `refIncrement()` was never mounted, so `onclick` never fired.
 
-**Status:** Open — documented by DL#104 hydration test suite (7 failing interactivity tests).
+**Fix:** In `renderServerHeadlessInstance`, render the root child element with `isRoot: true` to force coordinate emission. The `jay-coordinate` attribute is always emitted on the headless instance's root child element, so `adoptElement` can find and adopt it.
+
+**Files changed:**
+- `jay-html-compiler.ts` — `renderServerHeadlessInstance`: pass `{ isRoot: true }` when rendering root child
+- All headless server-element fixtures updated
+
+**Status:** Fixed for static, conditional, and forEach placements. slowForEach headless remains broken (separate pre-rendering pipeline issue).
 
 ### Verification Criteria
 
