@@ -18,6 +18,7 @@
             </div>
         </jay:widget>
         <p if="!showWidget">Widget hidden</p>
+        <button ref="toggleButton">Toggle</button>
     </div>
 </body>
 </html>

@@ -2,9 +2,11 @@ import {
     makeJayStackComponent,
     phaseOutput,
     RenderPipeline,
+    type Signals,
 } from '@jay-framework/fullstack-component';
+import { createSignal } from '@jay-framework/component';
 
-export const page = makeJayStackComponent()
+const builder = makeJayStackComponent()
     .withProps<{}>()
     .withSlowlyRender(async () => phaseOutput({ title: 'Conditional Headless' }, {}))
     .withFastRender(async () => {
@@ -14,3 +16,19 @@ export const page = makeJayStackComponent()
             carryForward: {},
         }));
     });
+
+export const page = builder.withInteractive(
+    (props, refs, fastViewState: Signals<{ showWidget: boolean }>) => {
+        const [showWidget, setShowWidget] = createSignal(fastViewState.showWidget[0]);
+
+        refs.toggleButton.onclick(() => {
+            setShowWidget(!showWidget());
+        });
+
+        return {
+            render: () => ({
+                showWidget: showWidget(),
+            }),
+        };
+    },
+);

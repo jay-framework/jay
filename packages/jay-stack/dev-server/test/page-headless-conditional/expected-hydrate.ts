@@ -55,7 +55,13 @@ const _HeadlessWidget0Create = makeHeadlessInstanceComponent(
     widget.contexts,
 );
 export function hydrate(rootElement, options) {
-    const [refManager, [ref_0]] = ReferencesManager.for(options, [], [], ['0'], []);
+    const [refManager, [refToggleButton, ref_0]] = ReferencesManager.for(
+        options,
+        ['toggleButton'],
+        [],
+        ['0'],
+        [],
+    );
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('0', {}, [
@@ -75,6 +81,7 @@ export function hydrate(rootElement, options) {
                     () => adoptElement('0/1', {}, []),
                     () => e('p', {}, ['Widget hidden']),
                 ),
+                adoptElement('0/2', {}, [], refToggleButton()),
             ]),
         );
     return [refManager.getPublicAPI(), render];

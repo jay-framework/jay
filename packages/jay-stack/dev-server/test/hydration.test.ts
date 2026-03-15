@@ -302,16 +302,35 @@ describe('hydration', () => {
             useSlowRenderCache: true,
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Conditional Headless');
+                // showWidget=true initially → widget visible
                 expect(await page.textContent('#target .label')).toEqual('Item 1');
                 expect(await page.textContent('#target .value')).toEqual('10');
+                // "Widget hidden" text should NOT be visible
+                expect(await page.$('#target p')).toBeNull();
             },
             interactivityChecks: async (page) => {
+                // Widget increment button works
                 expect(await page.textContent('#target .value')).toEqual('10');
-                await page.click('#target button');
+                await page.click('#target .widget button');
                 await page.waitForFunction(() => {
                     return document.querySelector('#target .value')?.textContent === '11';
                 }, { timeout: 2000 });
                 expect(await page.textContent('#target .value')).toEqual('11');
+
+                // Toggle: hide widget
+                await page.click('button:text("Toggle")');
+                await page.waitForFunction(() => {
+                    return document.querySelector('#target p')?.textContent === 'Widget hidden';
+                }, { timeout: 2000 });
+                expect(await page.$('#target .widget')).toBeNull();
+                expect(await page.textContent('#target p')).toEqual('Widget hidden');
+
+                // Toggle: show widget again
+                await page.click('button:text("Toggle")');
+                await page.waitForFunction(() => {
+                    return document.querySelector('#target .widget') !== null;
+                }, { timeout: 2000 });
+                expect(await page.$('#target .widget')).toBeTruthy();
             },
         });
     });

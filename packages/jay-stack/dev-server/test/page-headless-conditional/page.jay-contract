@@ -8,3 +8,6 @@ tags:
     type: variant
     dataType: boolean
     phase: fast+interactive
+  - tag: toggleButton
+    type: interactive
+    elementType: HTMLButtonElement
