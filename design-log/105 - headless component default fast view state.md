@@ -1,4 +1,4 @@
-# Design Log #105 — Headless Component Default Fast ViewState
+# Design Log #105 — Headless Component Client Defaults
 
 ## Background
 
@@ -18,14 +18,17 @@ When a headless component instance is created **client-side** (not from SSR):
 
 This affects:
 - forEach "add item" — new items have no server data
-- Conditional toggle — showing a previously-hidden headless instance that wasn't SSR'd
+- Conditional toggle — showing a previously-hidden headless instance that wasn't SSR'd (condition was false at SSR time)
 - Any dynamic headless instance creation after initial page load
+
+Does NOT affect:
+- Conditional true→false→true toggle — the DOM instance and component are preserved, no new creation needed
 
 ## Design
 
-### New lifecycle: `withDefaultFastViewState`
+### New lifecycle: `withClientDefaults`
 
-Add an optional lifecycle function to the full-stack component builder that provides default fast ViewState values from props. The framework calls it automatically when server data is missing.
+Add an optional lifecycle function to the full-stack component builder that provides default ViewState and carryForward values from props. Called on the **client only** when server data is missing.
 
 ```typescript
 export const widget = makeJayStackComponent<WidgetContract>()
@@ -38,11 +41,10 @@ export const widget = makeJayStackComponent<WidgetContract>()
             carryForward: { productId: product.id },
         }));
     })
-    .withDefaultFastViewState((props) => ({
+    .withClientDefaults((props) => ({
         // Client-side fallback: pure computation from props, no server APIs
-        name: '',
-        price: 0,
-        inStock: false,
+        viewState: { name: props.name, price: props.price, inStock: true },
+        carryForward: { productId: props.productId },
     }))
     .withInteractive((props, refs, fastViewState, carryForward) => {
         // fastViewState is ALWAYS Signals<FastVS> — never undefined
@@ -51,135 +53,171 @@ export const widget = makeJayStackComponent<WidgetContract>()
     });
 ```
 
+Note: The props are the same on server and client. On the server, the page's fast render does the query and passes product data as props to each widget. On the client, the page passes the same props when adding new items. `clientDefaults` uses these props to compute initial values.
+
+### Synchronous only
+
+`clientDefaults` is synchronous — `(props: Props) => { viewState, carryForward }`. No `Promise` support.
+
+Individual ViewState members can be async (Jay supports async rendering via `when-loading`/`when-resolved`). If the component needs to fetch data for a new item, it should use an async ViewState member, not an async `clientDefaults`.
+
 ### Runtime behavior
 
 In `makeHeadlessInstanceComponent`'s `wrappedConstructor`:
 
 ```typescript
 const fastVS = instanceData?.viewStates?.[resolvedKey];
-const resolvedFastVS = fastVS
-    ?? defaultFastViewState?.(props)
-    ?? {};
+const cf = instanceData?.carryForwards?.[resolvedKey];
+
+let resolvedFastVS: object;
+let resolvedCf: object;
+
+if (fastVS) {
+    // Server data available (existing SSR items)
+    resolvedFastVS = fastVS;
+    resolvedCf = cf || {};
+} else if (clientDefaults) {
+    // No server data, use client-side defaults
+    const defaults = clientDefaults(props);
+    resolvedFastVS = defaults.viewState;
+    resolvedCf = defaults.carryForward ?? {};
+} else {
+    // No server data, no defaults — warn and use empty
+    console.warn(`Headless component instance has no server data and no clientDefaults`);
+    resolvedFastVS = {};
+    resolvedCf = {};
+}
+
 const signalVS = makeSignals(resolvedFastVS);
+return interactiveConstructor(props, refs, signalVS, resolvedCf, ...pluginResolvedContexts);
 ```
 
-- **Existing items (from SSR)**: Server fast ViewState used. `defaultFastViewState` never called.
-- **New client-side items**: `defaultFastViewState(props)` provides initial signal values.
-- **No default defined**: Falls back to `{}` — component author's responsibility. Consider logging a warning.
-
 ### Builder chain position
-
-`withDefaultFastViewState` is optional and comes after `withFastRender`, before `withInteractive`:
 
 ```
 makeJayStackComponent()
     .withProps<P>()
-    .withSlowlyRender(...)        // optional
-    .withFastRender(...)          // optional
-    .withDefaultFastViewState(...)  // NEW, optional
-    .withInteractive(...)         // optional
+    .withSlowlyRender(...)              // optional
+    .withFastRender(...)                // optional
+    .withClientDefaults(...)  // NEW, optional, client-only
+    .withInteractive(...)               // optional
 ```
 
 ### Type signature
 
 ```typescript
-withDefaultFastViewState(
-    fn: (props: Props) => FastViewState
+withClientDefaults(
+    fn: (props: Props) => { viewState: FastViewState; carryForward?: CarryForward }
 ): Builder<...>
 ```
 
-The return type must match `FastViewState` — the same type that `withFastRender` produces. This ensures the signals created from defaults have the same shape as signals from server data.
+Return type must match the shape of `withFastRender`'s output — `viewState` has the same type as `FastViewState`, `carryForward` has the same type as the carry-forward from the fast phase.
 
-### Async support
+### Compiler interaction
 
-Should `defaultFastViewState` support `Promise<FastViewState>`?
-
-**Arguments for**: Some defaults might need a client-side fetch (e.g., calling a query action).
-**Arguments against**: Adds complexity to `wrappedConstructor` (needs async handling). The interactive constructor expects synchronous component creation. Query actions should be called by the page, not the component.
-
-**Decision**: TBD — start with synchronous, add async if needed.
-
-## Questions
-
-**Q1: Should `defaultFastViewState` also provide default `carryForward`?**
-
-Currently `carryForward` defaults to `{}` when missing. But some interactive constructors depend on carryForward values. Should the default factory return both?
+`makeHeadlessInstanceComponent` receives the whole component definition object instead of individual properties:
 
 ```typescript
-.withDefaultFastViewState((props) => ({
-    viewState: { name: '', price: 0 },
-    carryForward: { productId: props.productId },
-}))
+// Current (4 separate params):
+makeHeadlessInstanceComponent(preRender, widget.comp, key, widget.contexts)
+
+// Proposed (component object):
+makeHeadlessInstanceComponent(preRender, widget, key)
 ```
 
-Or keep it simple — just ViewState, carryForward stays `{}`.
+`makeHeadlessInstanceComponent` reads from `widget`:
+- `widget.comp` — interactive constructor
+- `widget.contexts` — context markers
+- `widget.clientDefaults` — default factory (may be undefined)
+
+This simplifies the compiler output and makes adding future properties non-breaking.
+
+### Client-only code
+
+`clientDefaults` is client-only — it must NOT be included in server bundles. The compiler's existing code-splitting for `makeJayStackComponent` erases client-only functions from server builds. `clientDefaults` follows the same pattern: it's stored on the component definition object (alongside `comp`) which is already client-only.
+
+### Conditional headless instances
+
+- **SSR condition = false → client toggles to true**: The create path runs. No server data exists → `clientDefaults` is called.
+- **SSR condition = true → client toggles false → true**: The `hydrateConditional` preserve-on-toggle behavior keeps the DOM instance alive. No new creation. `clientDefaults` is NOT called.
+
+## Questions and Answers
+
+**Q1: Should `clientDefaults` also provide default `carryForward`?**
+A: Yes. The function returns `{ viewState, carryForward }`. CarryForward is optional and defaults to `{}`.
 
 **Q2: What happens for conditional headless instances?**
-
-When `showWidget` toggles from false→true, the create path runs. If the component had SSR data (showWidget was true at SSR time), does the data persist? Or does the create path use `defaultFastViewState`?
-
-Currently, `hydrateConditional` has both adopt (SSR content exists) and create (SSR content doesn't exist) paths. The create path creates a fresh component instance. If the condition was true at SSR but is toggled off→on, the create path runs without server data.
-
-Should the framework cache the original `__headlessInstances` data for conditional instances so it survives toggles? Or should `defaultFastViewState` handle it?
+A: SSR false → toggle true: `clientDefaults` called. Toggle true→false→true: DOM preserved, no call needed.
 
 **Q3: How does this interact with the compiler?**
+A: Pass the whole `widget` object to `makeHeadlessInstanceComponent` instead of `widget.comp` + `widget.contexts` separately. Simplifies compiler output and is future-proof.
 
-The compiler generates `makeHeadlessInstanceComponent(preRender, widget.comp, key, widget.contexts)`. Should it also pass `widget.defaultFastViewState`?
-
-```typescript
-makeHeadlessInstanceComponent(
-    preRender,
-    widget.comp,
-    key,
-    widget.contexts,
-    widget.defaultFastViewState,  // NEW parameter
-)
-```
-
-This means:
-- The full-stack component definition needs `defaultFastViewState` property
-- The compiler emits `widget.defaultFastViewState` (may be undefined)
-- `makeHeadlessInstanceComponent` accepts it as optional 5th parameter
-
-**Q4: Should missing `defaultFastViewState` be an error or a warning?**
-
-When `fastVS` is undefined AND `defaultFastViewState` is not defined:
-- **Error**: Crash with a clear message ("headless component X has no server data and no defaultFastViewState")
-- **Warning**: Log warning, pass `{}`, let the interactive constructor handle it (may crash with a less clear error)
-- **Silent**: Just pass `{}` (current behavior, minus the crash)
+**Q4: Should missing `clientDefaults` be an error or a warning?**
+A: Warning for now. Log a console warning, pass `{}`. The interactive constructor may crash with a clearer error (destructuring undefined).
 
 **Q5: For the product search example, where does the product data come from?**
-
-The page calls a query action to get products. The response includes product data (name, price, etc.). This data is passed as props to the widget. But `withFastRender` on the server also computes this data.
-
-Should `defaultFastViewState` duplicate the logic of `withFastRender`? Or should the page pass the data via a different mechanism (e.g., extended props)?
-
-If the page already has the product data from the query action, and the widget just displays it, maybe the widget's fast phase is redundant for new items — the data is already available via props.
+A: Props are the same on server and client. The page's fast render does the query, passes product data as props. On the client, the page passes the same props when adding new items. `clientDefaults` uses these props — no duplication.
 
 ## Implementation Plan
 
 ### Phase 1: Runtime support
 
-1. Add `defaultFastViewState?: (props: Props) => FastVS` to `JayStackComponentDefinition`
-2. Add `withDefaultFastViewState(fn)` to `jay-stack-builder.ts`
-3. Update `makeHeadlessInstanceComponent` to accept and use `defaultFastViewState`
-4. When `fastVS` is undefined and `defaultFastViewState` exists: call it with props, use result for `makeSignals`
+1. Add `clientDefaults?: (props: Props) => { viewState: FastVS; carryForward?: CF }` to `JayStackComponentDefinition`
+2. Add `withClientDefaults(fn)` to `jay-stack-builder.ts`
+3. Update `makeHeadlessInstanceComponent` signature: receive component object instead of `comp` + `contexts`
+4. In `wrappedConstructor`: when `fastVS` is undefined, call `clientDefaults(props)` if available, else warn and use `{}`
 
 ### Phase 2: Compiler support
 
-1. Update `makeHeadlessInstanceComponent` call sites to pass `widget.defaultFastViewState`
-2. Both element target and hydrate target
+1. Update all `makeHeadlessInstanceComponent` call sites to pass `widget` (whole object) instead of `widget.comp, key, widget.contexts`
+2. Element target, hydrate target, server-element target
+3. Verify `clientDefaults` is client-only (not in server bundle)
 
-### Phase 3: Test
+### Phase 3: Tests
 
-1. Update test widget with `withDefaultFastViewState`
-2. Verify 6c forEach "Add Item" creates widget with correct default values
-3. Verify existing SSR items still use server data
+#### Runtime tests (`packages/jay-stack/stack-client-runtime` or `packages/runtime/runtime`)
+
+1. `makeHeadlessInstanceComponent` with `clientDefaults`:
+   - Server data available → uses server data, `clientDefaults` NOT called
+   - Server data missing, `clientDefaults` defined → calls `clientDefaults(props)`, creates correct signals
+   - Server data missing, `clientDefaults` undefined → warns, passes `{}` (graceful degradation)
+   - `clientDefaults` receives correct props
+   - CarryForward from `clientDefaults` is passed to interactive constructor
+
+2. `makeHeadlessInstanceComponent` with whole component object:
+   - Reads `widget.comp`, `widget.contexts`, `widget.clientDefaults` correctly
+   - Works when `clientDefaults` is undefined (backward compatible)
+
+#### Compiler tests (`packages/compiler/compiler-jay-html`)
+
+1. Element target: `makeHeadlessInstanceComponent` call emits `widget` (whole object) instead of `widget.comp, key, widget.contexts`
+2. Hydrate target: same — `makeHeadlessInstanceComponent` call passes whole object
+3. Update all headless instance fixtures (element + hydrate) to match new call signature
+4. Verify `clientDefaults` property is NOT referenced in server-element target output
+
+#### Builder tests (`packages/jay-stack/full-stack-component`)
+
+1. `withClientDefaults` in builder chain: sets `clientDefaults` on component definition
+2. `withClientDefaults` is optional: omitting it → `clientDefaults` is undefined
+3. Chain order: `withFastRender` → `withClientDefaults` → `withInteractive` works
+4. Chain without `withFastRender`: `withClientDefaults` → `withInteractive` works
+
+#### Integration tests (`packages/jay-stack/dev-server/test/hydration.test.ts`)
+
+1. 6c forEach: "Add Item" creates widget with default values from `clientDefaults` (no crash)
+2. 6c forEach: existing SSR items still use server data (not defaults)
+3. 6c forEach: increment on new item works (signals from defaults are reactive)
+4. 6c forEach: remove item works (no orphan state)
+5. 6b conditional: false→true toggle uses `clientDefaults` when SSR condition was false
+6. Label text preserved after button click (slow data not overwritten by interactive update)
 
 ## Verification Criteria
 
 1. New forEach items render with default values (no crash)
 2. Existing SSR items still use server fast ViewState (not defaults)
 3. Interactive constructor always receives valid `Signals<FastVS>` (never undefined)
-4. `withDefaultFastViewState` is optional — components without it behave as before
-5. 6c forEach interactivity test passes (add item, increment, remove)
+4. `withClientDefaults` is optional — components without it behave as before (warning logged)
+5. `clientDefaults` is not included in server bundles
+6. 6c forEach interactivity test passes (add item, increment, remove)
+7. All existing compiler fixture tests pass (updated for new call signature)
+8. All existing hydration tests pass (no regressions)
