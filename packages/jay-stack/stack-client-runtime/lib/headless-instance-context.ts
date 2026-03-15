@@ -158,7 +158,17 @@ export function makeHeadlessInstanceComponent<
         }
 
         const signalVS = makeSignals(resolvedFastVS);
-        return interactiveConstructor(signalProps, refs, signalVS, resolvedCf, ...pluginResolvedContexts);
+        const compCore = interactiveConstructor(signalProps, refs, signalVS, resolvedCf, ...pluginResolvedContexts);
+
+        // Merge render() output with full fast ViewState signals.
+        // The interactive render() only returns interactive-phase properties (e.g., { value }).
+        // Slow/fast-only properties (e.g., label) must persist from the initial ViewState.
+        const originalRender = compCore.render;
+        compCore.render = () => {
+            return {...resolvedFastVS, ...originalRender()};
+        };
+
+        return compCore;
     };
 
     // Only pass plugin context markers — HEADLESS_INSTANCES is accessed via useContext directly
