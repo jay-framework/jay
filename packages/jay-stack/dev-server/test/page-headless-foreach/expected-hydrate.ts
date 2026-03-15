@@ -67,7 +67,6 @@ export function hydrate(rootElement, options) {
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('0', {}, [
-                adoptText('0/0', (vs) => vs.title),
                 hydrateForEach(
                     '0',
                     (vs) => vs.items,
