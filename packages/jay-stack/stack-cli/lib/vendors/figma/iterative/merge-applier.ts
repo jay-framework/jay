@@ -413,8 +413,42 @@ export function applyMergePlan(input: ApplyInput): ApplyResult {
         unresolvedConflictCount: unresolvedConflicts.length,
     };
 
-    // Phase 5: Generate report
+    // Phase 5: Generate report and reconcile with actual resolution outcomes.
+    // The plan-based report reflects what was DETECTED, not what was RESOLVED.
     const report = generateReport(input.plan, input.sessionId);
+
+    const resolvedAsApplied = appliedOps.filter((op) => op.decision === 'needsDecision').length;
+    const resolvedAsKept = keepMineOps.length;
+    if (resolvedAsApplied + resolvedAsKept > 0) {
+        report.summary.updated += resolvedAsApplied;
+        report.summary.preserved += resolvedAsKept;
+        report.summary.conflicted = unresolvedConflicts.length;
+        report.conflicts = unresolvedConflicts;
+        report.metrics.conflictCount = unresolvedConflicts.length;
+
+        for (const op of appliedOps) {
+            if (op.decision === 'needsDecision') {
+                report.applied.push({
+                    nodeKey: op.nodeKey,
+                    property: op.property,
+                    rationale: op.rationale,
+                });
+            }
+        }
+        for (const op of keepMineOps) {
+            report.preservedOverrides.push({
+                nodeKey: op.nodeKey,
+                property: op.property,
+                reason: `conflict resolved as keepMine: ${op.rationale}`,
+            });
+        }
+
+        const total = report.applied.length + report.summary.preserved +
+            report.summary.conflicted + report.summary.skipped;
+        report.metrics.autoMergeRatio = total > 0
+            ? (report.applied.length + report.summary.preserved + report.summary.skipped) / total
+            : 1;
+    }
 
     return {
         mergedDoc,
