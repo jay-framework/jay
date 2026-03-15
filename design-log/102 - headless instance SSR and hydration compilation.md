@@ -842,6 +842,18 @@ Server expects `'1,stock-status:0'`, so the ViewState lookup fails → `fastVS` 
 
 **Status:** Fixed for static, conditional, and forEach placements. slowForEach headless remains broken (separate pre-rendering pipeline issue).
 
+### Issue 8 (Open): forEach Add Item Inserts at Wrong DOM Position
+
+**Location:** `hydrateForEach` in `hydrate.ts`
+
+**Problem:** When a parent element has mixed content (static children + forEach items + buttons), `hydrateForEach` creates a `Kindergarten` directly on the parent with a single group at index 0. It doesn't account for static siblings before the forEach group (e.g., `<h1>`). When a new item is added, `getOffsetFor(group)` returns 0, so the item is inserted before the `<h1>` instead of after existing forEach items.
+
+**Root cause:** `adoptElement` doesn't use Kindergarten — it treats children as a flat list. Only `hydrateForEach` creates a Kindergarten, but without awareness of its position among siblings.
+
+**Fix:** See DL#106 — `adoptElement` should create a Kindergarten when children include dynamic groups (forEach/conditional). Each child gets its own KindergartenGroup, and offsets are computed correctly.
+
+**Status:** Open. Design in DL#106.
+
 ### Verification Criteria
 
 1. **Runtime:** No `Cannot read properties of undefined` when hydrating headless instances with conditionals.
