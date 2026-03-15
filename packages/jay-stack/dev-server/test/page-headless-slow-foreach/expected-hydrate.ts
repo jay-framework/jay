@@ -20,7 +20,6 @@ function _headlessWidget0HydrateRender(options) {
         const instanceVs = instanceData?.viewStates?.[instanceKey] ?? viewState;
         return ConstructContext.withHydrationChildContext(instanceVs, refManager, () =>
             adoptElement('0', {}, [
-                adoptText('0/0', (vs) => vs.label),
                 adoptText('0/1', (vs) => vs.value),
                 adoptElement('0/2', {}, [], refIncrement()),
             ]),
@@ -42,7 +41,6 @@ function _headlessWidget1HydrateRender(options) {
         const instanceVs = instanceData?.viewStates?.[instanceKey] ?? viewState;
         return ConstructContext.withHydrationChildContext(instanceVs, refManager, () =>
             adoptElement('0', {}, [
-                adoptText('0/0', (vs) => vs.label),
                 adoptText('0/1', (vs) => vs.value),
                 adoptElement('0/2', {}, [], refIncrement2()),
             ]),
@@ -57,20 +55,13 @@ const _HeadlessWidget1 = makeHeadlessInstanceComponent(
     widget.contexts,
 );
 export function hydrate(rootElement, options) {
-    const [itemsRefManager, [refAR1, refAR2]] = ReferencesManager.for(
-        options,
-        [],
-        [],
-        [],
-        ['aR1', 'aR2'],
-    );
+    const [itemsRefManager, [ref_0]] = ReferencesManager.for(options, [], [], [], ['0']);
     const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
         items: itemsRefManager,
     });
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('0', {}, [
-                adoptText('0/0', (vs) => vs.title),
                 slowForEachItem(
                     (vs) => vs.items,
                     0,
@@ -80,7 +71,7 @@ export function hydrate(rootElement, options) {
                             _HeadlessWidget0,
                             (vs1) => ({ itemId: '1' }),
                             'widget:0',
-                            refAR1(),
+                            ref_0(),
                         ),
                 ),
                 slowForEachItem(
@@ -92,7 +83,7 @@ export function hydrate(rootElement, options) {
                             _HeadlessWidget1,
                             (vs1) => ({ itemId: '2' }),
                             'widget:0',
-                            refAR2(),
+                            ref_0(),
                         ),
                 ),
             ]),

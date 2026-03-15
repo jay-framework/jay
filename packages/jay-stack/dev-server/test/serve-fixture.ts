@@ -59,7 +59,7 @@ async function start() {
         jayRollupConfig: {
             tsConfigFilePath: path.join(dirPath, 'tsconfig.json'),
         } as JayRollupConfig,
-        dontCacheSlowly: true,
+        dontCacheSlowly: false,
     });
 
     const app = express();

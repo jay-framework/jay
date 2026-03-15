@@ -23,7 +23,6 @@ function _headlessWidget0HydrateRender(options) {
         const instanceVs = instanceData?.viewStates?.[instanceKey] ?? viewState;
         return ConstructContext.withHydrationChildContext(instanceVs, refManager, () =>
             adoptElement('0', {}, [
-                adoptText('0/0', (vs) => vs.label),
                 adoptText('0/1', (vs) => vs.value),
                 adoptElement('0/2', {}, [], refIncrement()),
             ]),
@@ -42,7 +41,7 @@ function _headlessWidget0Render(options) {
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', { class: 'widget' }, [
-                e('span', { class: 'label' }, [dt((vs) => vs.label)]),
+                e('span', { class: 'label' }, ['Item 1']),
                 e('span', { class: 'value' }, [dt((vs) => vs.value)]),
                 e('button', {}, ['+1'], refIncrement()),
             ]),
@@ -56,11 +55,10 @@ const _HeadlessWidget0Create = makeHeadlessInstanceComponent(
     widget.contexts,
 );
 export function hydrate(rootElement, options) {
-    const [refManager, [refAR1]] = ReferencesManager.for(options, [], [], ['aR1'], []);
+    const [refManager, [ref_0]] = ReferencesManager.for(options, [], [], ['0'], []);
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('0', {}, [
-                adoptText('0/0', (vs) => vs.title),
                 hydrateConditional(
                     (vs) => vs.showWidget,
                     () =>
@@ -68,9 +66,9 @@ export function hydrate(rootElement, options) {
                             _HeadlessWidget0,
                             (vs) => ({ itemId: '1' }),
                             '0/widget:0',
-                            refAR1(),
+                            ref_0(),
                         ),
-                    () => childComp(_HeadlessWidget0Create, (vs) => ({ itemId: '1' }), refAR1()),
+                    () => childComp(_HeadlessWidget0Create, (vs) => ({ itemId: '1' }), ref_0()),
                 ),
                 hydrateConditional(
                     (vs) => !vs.showWidget,

@@ -19,7 +19,6 @@ function _headlessWidget0HydrateRender(options) {
         const instanceVs = instanceData?.viewStates?.[instanceKey] ?? viewState;
         return ConstructContext.withHydrationChildContext(instanceVs, refManager, () =>
             adoptElement('0', {}, [
-                adoptText('0/0', (vs) => vs.label),
                 adoptText('0/1', (vs) => vs.value),
                 adoptElement('0/2', {}, [], refIncrement()),
             ]),
@@ -34,16 +33,15 @@ const _HeadlessWidget0 = makeHeadlessInstanceComponent(
     widget.contexts,
 );
 export function hydrate(rootElement, options) {
-    const [refManager, [refAR1]] = ReferencesManager.for(options, [], [], ['aR1'], []);
+    const [refManager, [ref_0]] = ReferencesManager.for(options, [], [], ['0'], []);
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('0', {}, [
-                adoptText('0/0', (vs) => vs.pageTitle),
                 childCompHydrate(
                     _HeadlessWidget0,
                     (vs) => ({ itemId: '1' }),
                     '0/widget:0',
-                    refAR1(),
+                    ref_0(),
                 ),
             ]),
         );

@@ -11,14 +11,18 @@ import { mkDevServer, type DevServer } from '../lib';
 import { JayRollupConfig } from '@jay-framework/vite-plugin';
 import path from 'path';
 import fs from 'fs';
-import { prettifyHtml, prettify } from '@jay-framework/compiler-shared';
+import { prettify } from '@jay-framework/compiler-shared';
+import jsBeautify from 'js-beautify';
 import { chromium, type Browser, type Page } from 'playwright';
 
 // @vitest-environment node
 
-/** Normalize HTML for stable comparison */
+/** Normalize HTML for stable comparison — one element per line */
 function normalizeHtml(html: string): string {
-    return prettifyHtml(html.replace(/\s+/g, ' ').trim());
+    return jsBeautify.html(
+        html.split('\n').map((l) => l.trim()).join(''),
+        { indent_size: 2, inline: [] },
+    );
 }
 
 /** Extract the inner HTML of <div id="target">...</div> */
@@ -49,6 +53,10 @@ function testFixture(
         ssrChecks?: (targetHtml: string) => void;
         hydrationChecks?: (page: Page) => Promise<void>;
         interactivityChecks?: (page: Page) => Promise<void>;
+        /** Enable slow render caching so the hydrate module compiles from
+         *  pre-rendered jay-html (slow bindings resolved). Required for
+         *  headless instances to avoid adopting slow-phase text. */
+        useSlowRenderCache?: boolean;
     } = {},
 ) {
     let devServer: DevServer;
@@ -63,7 +71,7 @@ function testFixture(
             jayRollupConfig: {
                 tsConfigFilePath: path.join(dirPath, 'tsconfig.json'),
             } as JayRollupConfig,
-            dontCacheSlowly: true,
+            dontCacheSlowly: !opts.useSlowRenderCache,
         });
 
         // Create Express app with routes + Vite middleware
@@ -112,15 +120,19 @@ function testFixture(
     if (fs.existsSync(hydrateFixturePath)) {
         it('hydrate script matches fixture', async () => {
             const dirPath = path.resolve(__dirname, dirName);
-            // Try ?jay-hydrate first (proper hydrate target), fall back to
-            // ?import&jay-hydrate.ts (element target — what the browser loads
-            // when the hydrate compilation fails for headless pages)
+            // Use pre-rendered path if available (slow-rendered pages have
+            // slow bindings resolved — hydrate script should not adopt them)
+            const preRenderedPath = path.join(dirPath, 'build/pre-rendered/page.jay-html');
+            const hydrateSourcePath = fs.existsSync(preRenderedPath)
+                ? preRenderedPath
+                : path.resolve(dirPath, 'page.jay-html');
+
             let transformResult = await devServer.viteServer
-                .transformRequest(path.resolve(dirPath, 'page.jay-html') + '?jay-hydrate')
+                .transformRequest(hydrateSourcePath + '?jay-hydrate')
                 .catch(() => null);
             if (!transformResult?.code) {
                 transformResult = await devServer.viteServer.transformRequest(
-                    path.resolve(dirPath, 'page.jay-html') + '?import&jay-hydrate.ts',
+                    hydrateSourcePath + '?import&jay-hydrate.ts',
                 );
             }
             expect(transformResult?.code).toBeTruthy();
@@ -265,6 +277,7 @@ describe('hydration', () => {
 
     describe('6a. Headless — static placement', () => {
         testFixture('page-headless-static', {
+            useSlowRenderCache: true,
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Headless Test');
                 expect(await page.textContent('#target .label')).toEqual('Item 1');
@@ -286,6 +299,7 @@ describe('hydration', () => {
 
     describe('6b. Headless — under condition', () => {
         testFixture('page-headless-conditional', {
+            useSlowRenderCache: true,
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Conditional Headless');
                 expect(await page.textContent('#target .label')).toEqual('Item 1');
@@ -304,6 +318,7 @@ describe('hydration', () => {
 
     describe('6c. Headless — under forEach', () => {
         testFixture('page-headless-foreach', {
+            useSlowRenderCache: true,
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('ForEach Headless');
                 const widgets = await page.$$('#target .widget');
@@ -335,6 +350,7 @@ describe('hydration', () => {
 
     describe('6d. Headless — under slowForEach', () => {
         testFixture('page-headless-slow-foreach', {
+            useSlowRenderCache: true,
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('SlowForEach Headless');
                 const widgets = await page.$$('#target .widget');
