@@ -4,6 +4,7 @@ import type { Contract, ContractTag } from '@jay-framework/editor-protocol';
 import {
     generateVariantScenarios,
     parseDataTypeString,
+    buildPreviewScenarioUrl,
 } from '../../../lib/vendors/figma/computed-style-enricher';
 
 describe('parseDataTypeString', () => {
@@ -56,6 +57,33 @@ describe('parseDataTypeString', () => {
             enumValues: ['IN_STOCK', 'OUT_OF_STOCK'],
         });
         expect(parseDataTypeString({ name: 'Unknown', kind: 0 })).toEqual({ kind: 'other' });
+    });
+});
+
+describe('buildPreviewScenarioUrl', () => {
+    it('adds preview=1 to default scenario URL', () => {
+        const url = buildPreviewScenarioUrl('http://localhost:3000', '/products', '');
+        expect(url).toBe('http://localhost:3000/products?preview=1');
+    });
+
+    it('preserves vs.* params and appends preview=1', () => {
+        const url = buildPreviewScenarioUrl(
+            'http://localhost:3000',
+            '/products',
+            '?vs.hasResults=true&vs.searchTerm=shoes',
+        );
+        expect(url).toBe(
+            'http://localhost:3000/products?vs.hasResults=true&vs.searchTerm=shoes&preview=1',
+        );
+    });
+
+    it('forces preview=1 when preview already exists in scenario params', () => {
+        const url = buildPreviewScenarioUrl(
+            'http://localhost:3000',
+            '/products',
+            '?vs.hasResults=true&preview=0',
+        );
+        expect(url).toBe('http://localhost:3000/products?vs.hasResults=true&preview=1');
     });
 });
 

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
     extractViewStateParams,
+    extractPreviewMode,
     isPathSafe,
     setNestedValue,
     coerceValue,
@@ -49,6 +50,30 @@ describe('extractViewStateParams', () => {
             other: 'value',
         };
         expect(extractViewStateParams(query)).toEqual({ title: 'Test', price: '99' });
+    });
+});
+
+describe('extractPreviewMode', () => {
+    it('returns false when query is undefined', () => {
+        expect(extractPreviewMode(undefined)).toBe(false);
+    });
+
+    it('returns false when preview param is missing', () => {
+        expect(extractPreviewMode({ foo: 'bar' })).toBe(false);
+    });
+
+    it('returns true when preview=1', () => {
+        expect(extractPreviewMode({ preview: '1' })).toBe(true);
+    });
+
+    it('returns false for preview values other than 1', () => {
+        expect(extractPreviewMode({ preview: '0' })).toBe(false);
+        expect(extractPreviewMode({ preview: 'true' })).toBe(false);
+    });
+
+    it('uses last value for repeated preview params', () => {
+        expect(extractPreviewMode({ preview: ['0', '1'] })).toBe(true);
+        expect(extractPreviewMode({ preview: ['1', '0'] })).toBe(false);
     });
 });
 

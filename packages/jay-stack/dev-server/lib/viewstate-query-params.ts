@@ -47,6 +47,28 @@ export function extractViewStateParams(
 }
 
 /**
+ * Extract preview mode flag from query string.
+ * Returns true only when `preview=1` is present.
+ *
+ * Accepts any query object (Record or ParsedQs from Express).
+ */
+export function extractPreviewMode(query: Record<string, any> | undefined): boolean {
+    if (!query) return false;
+
+    const value = query.preview;
+    if (typeof value === 'string') {
+        return value === '1';
+    }
+
+    if (Array.isArray(value)) {
+        const lastValue = value[value.length - 1];
+        return typeof lastValue === 'string' && lastValue === '1';
+    }
+
+    return false;
+}
+
+/**
  * Check if a path segment array is safe to use for object property access.
  * Blocks prototype pollution vectors: __proto__, constructor, prototype.
  */

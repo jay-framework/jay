@@ -123,7 +123,11 @@ export async function enrichWithComputedStyles(options: EnricherOptions): Promis
 
             for (const scenario of scenarios) {
                 const scenarioStart = Date.now();
-                const url = `${options.devServerUrl}${options.pageRoute}${scenario.queryString}`;
+                const url = buildPreviewScenarioUrl(
+                    options.devServerUrl,
+                    options.pageRoute,
+                    scenario.queryString,
+                );
                 console.log(`[ComputedStyles] Navigating to ${url} (scenario: ${scenario.id})`);
 
                 try {
@@ -231,6 +235,31 @@ export async function enrichWithComputedStyles(options: EnricherOptions): Promis
         console.warn('[ComputedStyles] Falling back to static resolution');
         return emptyResult;
     }
+}
+
+/**
+ * Build a scenario URL that always enables preview mode.
+ *
+ * Preview mode forces the dev server to bypass slow-render cache so Playwright
+ * always sees the latest render output from disk.
+ */
+export function buildPreviewScenarioUrl(
+    devServerUrl: string,
+    pageRoute: string,
+    scenarioQueryString: string,
+): string {
+    const normalizedBase = devServerUrl.endsWith('/') ? devServerUrl : `${devServerUrl}/`;
+    const url = new URL(pageRoute, normalizedBase);
+
+    const scenarioParams = new URLSearchParams(
+        scenarioQueryString.startsWith('?') ? scenarioQueryString.slice(1) : scenarioQueryString,
+    );
+    for (const [key, value] of scenarioParams.entries()) {
+        url.searchParams.set(key, value);
+    }
+
+    url.searchParams.set('preview', '1');
+    return url.toString();
 }
 
 /**

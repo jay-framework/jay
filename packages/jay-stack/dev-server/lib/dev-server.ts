@@ -59,7 +59,11 @@ import {
 } from '@jay-framework/stack-server-runtime';
 import { WithValidations } from '@jay-framework/compiler-shared';
 import { getLogger, getDevLogger, type RequestTiming } from '@jay-framework/logger';
-import { extractViewStateParams, applyViewStateOverrides } from './viewstate-query-params';
+import {
+    extractViewStateParams,
+    extractPreviewMode,
+    applyViewStateOverrides,
+} from './viewstate-query-params';
 
 async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
     return await scanRoutes(pagesBaseFolder, {
@@ -191,9 +195,11 @@ function mkRoute(
 
             // Extract ViewState override params
             const vsParams = extractViewStateParams(req.query);
+            const previewMode = extractPreviewMode(req.query) || !!vsParams;
 
-            // If vs params are present, force direct request path (bypass cache)
-            if (vsParams) {
+            // Preview requests bypass slow cache to always render latest state.
+            // This includes both explicit preview=1 and ViewState override URLs.
+            if (previewMode) {
                 await handleDirectRequest(
                     vite,
                     route,
@@ -208,6 +214,7 @@ function mkRoute(
                     url,
                     timing,
                     vsParams,
+                    previewMode,
                 );
                 return;
             }
@@ -636,6 +643,7 @@ async function handleDirectRequest(
     url: string,
     timing?: RequestTiming,
     vsParams?: Record<string, string>,
+    previewMode?: boolean,
 ): Promise<void> {
     const loadStart = Date.now();
     const pagePartsResult = await loadPageParts(
@@ -823,7 +831,7 @@ async function handleDirectRequest(
         options,
         undefined,
         timing,
-        !!vsParams,
+        previewMode,
     );
 }
 
