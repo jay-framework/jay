@@ -991,17 +991,17 @@ tags:
 
             const { instances } = discoverHeadlessInstances(jayHtml);
 
-            // Coordinates include parent slowForEach jayTrackBy + child index (matches assignCoordinates)
+            // Coordinates use jayTrackBy as coordinate base (matches assignCoordinates — no child index)
             expect(instances).toEqual([
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-123' },
-                    coordinate: ['p1', '0', 'product-card:0'],
+                    coordinate: ['p1', 'product-card:0'],
                 },
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-456' },
-                    coordinate: ['p2', '0', 'product-card:0'],
+                    coordinate: ['p2', 'product-card:0'],
                 },
             ]);
         });
@@ -1179,12 +1179,12 @@ tags:
 
             const result = discoverAndResolve(jayHtml, [
                 {
-                    coordinate: ['p1', '0', 'product-card:0'],
+                    coordinate: ['p1', 'product-card:0'],
                     contract: productCardContract,
                     slowViewState: { name: 'Widget A', price: '$29.99' },
                 },
                 {
-                    coordinate: ['p2', '0', 'product-card:0'],
+                    coordinate: ['p2', 'product-card:0'],
                     contract: productCardContract,
                     slowViewState: { name: 'Widget B', price: '$49.99' },
                 },
@@ -1392,12 +1392,12 @@ tags:
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-123' },
-                    coordinate: ['prod-123', '0', 'product-card:0'],
+                    coordinate: ['prod-123', 'product-card:0'],
                 },
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-456' },
-                    coordinate: ['prod-456', '0', 'product-card:0'],
+                    coordinate: ['prod-456', 'product-card:0'],
                 },
             ]);
 

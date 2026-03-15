@@ -598,18 +598,15 @@ export interface HeadlessInstanceResolvedData {
  */
 export function buildCoordinatePrefix(element: HTMLElement): string[] {
     const parts: string[] = [];
-    let child: Node | null = element;
     let current = element.parentNode as HTMLElement | null;
 
     while (current) {
         const jayTrackBy = current.getAttribute?.('jayTrackBy');
         if (jayTrackBy != null) {
-            // Add child index so prefix matches assignCoordinates (e.g. "1/0" not just "1")
-            const childIndex = getElementChildIndex(child, current);
-            parts.unshift(String(childIndex));
+            // assignCoordinates uses jayTrackBy as the coordinate base for slowForEach items
+            // (no child index — the jayTrackBy value IS the full coordinate for the item scope)
             parts.unshift(jayTrackBy);
         }
-        child = current;
         current = current.parentNode as HTMLElement | null;
     }
 

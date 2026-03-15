@@ -83,9 +83,14 @@ async function waitForHydration(page: Page) {
     }
 }
 
+/** Strip `// @ts-ignore` lines (used in fixtures to suppress import errors) */
+function stripTsDirectives(code: string): string {
+    return code.replace(/\/\/ @ts-ignore\n/g, '');
+}
+
 /** Read expected fixture file */
 function readFixture(dirName: string, fileName: string): string {
-    return fs.readFileSync(path.join(__dirname, dirName, fileName), 'utf-8');
+    return stripTsDirectives(fs.readFileSync(path.join(__dirname, dirName, fileName), 'utf-8'));
 }
 
 // ============================================================================
