@@ -10,7 +10,7 @@ import { JSDOM } from 'jsdom';
 import path from 'node:path';
 import type { ViteDevServer } from 'vite';
 import { hydrateCompositeJayComponent } from '@jay-framework/stack-client-runtime';
-import {TrackByMap} from "@jay-framework/view-state-merge/lib";
+import { TrackByMap } from '@jay-framework/view-state-merge/lib';
 
 export interface RunScriptResult {
     /** The hydrated component instance (or rendered element for makeComposite) */
@@ -45,7 +45,9 @@ export function parseScriptData(script: string): ParsedScript {
     const trackByMapMatch = script.match(/const trackByMap = ([^;]+);/);
 
     const viewState = viewStateMatch ? JSON.parse(viewStateMatch[1].trim()) : {};
-    const fastCarryForward = fastCarryForwardMatch ? JSON.parse(fastCarryForwardMatch[1].trim()) : {};
+    const fastCarryForward = fastCarryForwardMatch
+        ? JSON.parse(fastCarryForwardMatch[1].trim())
+        : {};
     const trackByMap = trackByMapMatch ? JSON.parse(trackByMapMatch[1].trim()) : {};
 
     const isHydrate = script.includes('hydrateCompositeJayComponent');
@@ -57,13 +59,16 @@ export function parseScriptData(script: string): ParsedScript {
     // Extract component parts from the parts array in the script.
     // Pattern: {comp: name.comp, contextMarkers: name.contexts || [], key: 'key'}
     const parts: ParsedPart[] = [];
-    const partPattern = /\{comp:\s*(\w+)\.comp,\s*contextMarkers:\s*\w+\.contexts\s*\|\|\s*\[\](?:,\s*key:\s*'([^']*)')?\}/g;
+    const partPattern =
+        /\{comp:\s*(\w+)\.comp,\s*contextMarkers:\s*\w+\.contexts\s*\|\|\s*\[\](?:,\s*key:\s*'([^']*)')?\}/g;
     let partMatch;
     while ((partMatch = partPattern.exec(script)) !== null) {
         const name = partMatch[1];
         const key = partMatch[2];
         // Find the import for this name
-        const importPattern = new RegExp(`import\\s*\\{\\s*${name}\\s*\\}\\s*from\\s*["']([^"']+)["']`);
+        const importPattern = new RegExp(
+            `import\\s*\\{\\s*${name}\\s*\\}\\s*from\\s*["']([^"']+)["']`,
+        );
         const importMatch = script.match(importPattern);
         if (importMatch) {
             parts.push({ name, modulePath: importMatch[1], key });

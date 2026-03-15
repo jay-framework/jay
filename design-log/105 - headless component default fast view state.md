@@ -12,16 +12,19 @@ Headless component instances inside `forEach` can be added dynamically on the cl
 ## Problem
 
 When a headless component instance is created **client-side** (not from SSR):
+
 1. No `__headlessInstances` entry exists for the new instance's coordinate key
 2. `fastVS` is `undefined` → `makeSignals({})` → empty signals
 3. Interactive constructor receives empty `Signals<FastVS>` → crash on destructure
 
 This affects:
+
 - forEach "add item" — new items have no server data
 - Conditional toggle — showing a previously-hidden headless instance that wasn't SSR'd (condition was false at SSR time)
 - Any dynamic headless instance creation after initial page load
 
 Does NOT affect:
+
 - Conditional true→false→true toggle — the DOM instance and component are preserved, no new creation needed
 
 ## Design
@@ -32,25 +35,25 @@ Add an optional lifecycle function to the full-stack component builder that prov
 
 ```typescript
 export const widget = makeJayStackComponent<WidgetContract>()
-    .withProps<WidgetProps>()
-    .withFastRender(async (props) => {
-        // Server-side: may use database, services, etc.
-        const product = await db.getProduct(props.productId);
-        return Pipeline.ok({}).toPhaseOutput(() => ({
-            viewState: { name: product.name, price: product.price, inStock: product.inStock },
-            carryForward: { productId: product.id },
-        }));
-    })
-    .withClientDefaults((props) => ({
-        // Client-side fallback: pure computation from props, no server APIs
-        viewState: { name: props.name, price: props.price, inStock: true },
-        carryForward: { productId: props.productId },
-    }))
-    .withInteractive((props, refs, fastViewState, carryForward) => {
-        // fastViewState is ALWAYS Signals<FastVS> — never undefined
-        const [inStock] = fastViewState.inStock;
-        // ...
-    });
+  .withProps<WidgetProps>()
+  .withFastRender(async (props) => {
+    // Server-side: may use database, services, etc.
+    const product = await db.getProduct(props.productId);
+    return Pipeline.ok({}).toPhaseOutput(() => ({
+      viewState: { name: product.name, price: product.price, inStock: product.inStock },
+      carryForward: { productId: product.id },
+    }));
+  })
+  .withClientDefaults((props) => ({
+    // Client-side fallback: pure computation from props, no server APIs
+    viewState: { name: props.name, price: props.price, inStock: true },
+    carryForward: { productId: props.productId },
+  }))
+  .withInteractive((props, refs, fastViewState, carryForward) => {
+    // fastViewState is ALWAYS Signals<FastVS> — never undefined
+    const [inStock] = fastViewState.inStock;
+    // ...
+  });
 ```
 
 Note: The props are the same on server and client. On the server, the page's fast render does the query and passes product data as props to each widget. On the client, the page passes the same props when adding new items. `clientDefaults` uses these props to compute initial values.
@@ -73,19 +76,19 @@ let resolvedFastVS: object;
 let resolvedCf: object;
 
 if (fastVS) {
-    // Server data available (existing SSR items)
-    resolvedFastVS = fastVS;
-    resolvedCf = cf || {};
+  // Server data available (existing SSR items)
+  resolvedFastVS = fastVS;
+  resolvedCf = cf || {};
 } else if (clientDefaults) {
-    // No server data, use client-side defaults
-    const defaults = clientDefaults(props);
-    resolvedFastVS = defaults.viewState;
-    resolvedCf = defaults.carryForward ?? {};
+  // No server data, use client-side defaults
+  const defaults = clientDefaults(props);
+  resolvedFastVS = defaults.viewState;
+  resolvedCf = defaults.carryForward ?? {};
 } else {
-    // No server data, no defaults — warn and use empty
-    console.warn(`Headless component instance has no server data and no clientDefaults`);
-    resolvedFastVS = {};
-    resolvedCf = {};
+  // No server data, no defaults — warn and use empty
+  console.warn(`Headless component instance has no server data and no clientDefaults`);
+  resolvedFastVS = {};
+  resolvedCf = {};
 }
 
 const signalVS = makeSignals(resolvedFastVS);
@@ -119,13 +122,14 @@ Return type must match the shape of `withFastRender`'s output — `viewState` ha
 
 ```typescript
 // Current (4 separate params):
-makeHeadlessInstanceComponent(preRender, widget.comp, key, widget.contexts)
+makeHeadlessInstanceComponent(preRender, widget.comp, key, widget.contexts);
 
 // Proposed (component object):
-makeHeadlessInstanceComponent(preRender, widget, key)
+makeHeadlessInstanceComponent(preRender, widget, key);
 ```
 
 `makeHeadlessInstanceComponent` reads from `widget`:
+
 - `widget.comp` — interactive constructor
 - `widget.contexts` — context markers
 - `widget.clientDefaults` — default factory (may be undefined)
@@ -178,6 +182,7 @@ A: Props are the same on server and client. The page's fast render does the quer
 #### Runtime tests (`packages/jay-stack/stack-client-runtime` or `packages/runtime/runtime`)
 
 1. `makeHeadlessInstanceComponent` with `clientDefaults`:
+
    - Server data available → uses server data, `clientDefaults` NOT called
    - Server data missing, `clientDefaults` defined → calls `clientDefaults(props)`, creates correct signals
    - Server data missing, `clientDefaults` undefined → warns, passes `{}` (graceful degradation)

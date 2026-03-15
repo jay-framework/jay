@@ -90,18 +90,33 @@ export function makeHeadlessInstanceComponent<
     CompCore extends JayComponentCore<PropsT, ViewState>,
 >(
     preRender: PreRenderElement<ViewState, Refs, JayElementT>,
-    componentOrConstructor: HeadlessComponentDef | ComponentConstructor<PropsT, Refs, ViewState, any, CompCore>,
+    componentOrConstructor:
+        | HeadlessComponentDef
+        | ComponentConstructor<PropsT, Refs, ViewState, any, CompCore>,
     coordinateKey: string | ((dataIds: string[]) => string),
     pluginContexts?: ContextMarkers<any>,
 ): (props: PropsT) => ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT> {
     // Support both new (component object) and legacy (separate params) calling conventions
-    const isComponentObject = typeof componentOrConstructor === 'object' && componentOrConstructor !== null && 'comp' in componentOrConstructor;
-    const interactiveConstructor: ComponentConstructor<PropsT, Refs, ViewState, any, CompCore> = isComponentObject
-        ? (componentOrConstructor as HeadlessComponentDef).comp
-        : componentOrConstructor as ComponentConstructor<PropsT, Refs, ViewState, any, CompCore>;
-    const resolvedContexts: ContextMarkers<any> = pluginContexts
-        ?? (isComponentObject ? (componentOrConstructor as HeadlessComponentDef).contexts : undefined)
-        ?? ([] as any);
+    const isComponentObject =
+        typeof componentOrConstructor === 'object' &&
+        componentOrConstructor !== null &&
+        'comp' in componentOrConstructor;
+    const interactiveConstructor: ComponentConstructor<PropsT, Refs, ViewState, any, CompCore> =
+        isComponentObject
+            ? (componentOrConstructor as HeadlessComponentDef).comp
+            : (componentOrConstructor as ComponentConstructor<
+                  PropsT,
+                  Refs,
+                  ViewState,
+                  any,
+                  CompCore
+              >);
+    const resolvedContexts: ContextMarkers<any> =
+        pluginContexts ??
+        (isComponentObject
+            ? (componentOrConstructor as HeadlessComponentDef).contexts
+            : undefined) ??
+        ([] as any);
     const clientDefaults = isComponentObject
         ? (componentOrConstructor as HeadlessComponentDef).clientDefaults
         : undefined;
@@ -132,8 +147,7 @@ export function makeHeadlessInstanceComponent<
         const fastVS =
             instanceData?.viewStates?.[resolvedKey] ?? instanceData?.viewStates?.[suffixKey];
         const cf =
-            instanceData?.carryForwards?.[resolvedKey] ??
-            instanceData?.carryForwards?.[suffixKey];
+            instanceData?.carryForwards?.[resolvedKey] ?? instanceData?.carryForwards?.[suffixKey];
 
         // Resolve ViewState and carryForward: server data > clientDefaults > empty
         let resolvedFastVS: object;
@@ -151,21 +165,27 @@ export function makeHeadlessInstanceComponent<
         } else {
             console.warn(
                 `[Jay] Headless instance "${resolvedKey}" has no server data and no clientDefaults. ` +
-                `Add .withClientDefaults() to the component definition to provide fallback values.`
+                    `Add .withClientDefaults() to the component definition to provide fallback values.`,
             );
             resolvedFastVS = {};
             resolvedCf = {};
         }
 
         const signalVS = makeSignals(resolvedFastVS);
-        const compCore = interactiveConstructor(signalProps, refs, signalVS, resolvedCf, ...pluginResolvedContexts);
+        const compCore = interactiveConstructor(
+            signalProps,
+            refs,
+            signalVS,
+            resolvedCf,
+            ...pluginResolvedContexts,
+        );
 
         // Merge render() output with full fast ViewState signals.
         // The interactive render() only returns interactive-phase properties (e.g., { value }).
         // Slow/fast-only properties (e.g., label) must persist from the initial ViewState.
         const originalRender = compCore.render;
         compCore.render = () => {
-            return {...resolvedFastVS, ...originalRender()};
+            return { ...resolvedFastVS, ...originalRender() };
         };
 
         return compCore;

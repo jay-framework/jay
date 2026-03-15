@@ -20,7 +20,10 @@ import { chromium, type Browser, type Page } from 'playwright';
 /** Normalize HTML for stable comparison — one element per line */
 function normalizeHtml(html: string): string {
     return jsBeautify.html(
-        html.split('\n').map((l) => l.trim()).join(''),
+        html
+            .split('\n')
+            .map((l) => l.trim())
+            .join(''),
         { indent_size: 2, inline: [] },
     );
 }
@@ -160,6 +163,10 @@ function testFixture(
             (devServer as any)?._httpServer?.close(() => resolve());
         }).catch(() => {});
         await devServer?.viteServer?.close();
+
+        // Clean up build directories created during the test
+        const buildDir = path.join(__dirname, dirName, 'build');
+        fs.rmSync(buildDir, { recursive: true, force: true });
     });
 
     it('SSR output matches fixture', async () => {
@@ -352,9 +359,12 @@ describe('hydration', () => {
                 // Click increment button
                 await page.click('#target button');
                 // Value should increase
-                await page.waitForFunction(() => {
-                    return document.querySelector('#target .value')?.textContent === '11';
-                }, { timeout: 2000 });
+                await page.waitForFunction(
+                    () => {
+                        return document.querySelector('#target .value')?.textContent === '11';
+                    },
+                    { timeout: 2000 },
+                );
                 expect(await page.textContent('#target .value')).toEqual('11');
             },
         });
@@ -375,24 +385,33 @@ describe('hydration', () => {
                 // Widget increment button works
                 expect(await page.textContent('#target .value')).toEqual('10');
                 await page.click('#target .widget button');
-                await page.waitForFunction(() => {
-                    return document.querySelector('#target .value')?.textContent === '11';
-                }, { timeout: 2000 });
+                await page.waitForFunction(
+                    () => {
+                        return document.querySelector('#target .value')?.textContent === '11';
+                    },
+                    { timeout: 2000 },
+                );
                 expect(await page.textContent('#target .value')).toEqual('11');
 
                 // Toggle: hide widget
                 await page.click('button:text("Toggle")');
-                await page.waitForFunction(() => {
-                    return document.querySelector('#target p')?.textContent === 'Widget hidden';
-                }, { timeout: 2000 });
+                await page.waitForFunction(
+                    () => {
+                        return document.querySelector('#target p')?.textContent === 'Widget hidden';
+                    },
+                    { timeout: 2000 },
+                );
                 expect(await page.$('#target .widget')).toBeNull();
                 expect(await page.textContent('#target p')).toEqual('Widget hidden');
 
                 // Toggle: show widget again
                 await page.click('button:text("Toggle")');
-                await page.waitForFunction(() => {
-                    return document.querySelector('#target .widget') !== null;
-                }, { timeout: 2000 });
+                await page.waitForFunction(
+                    () => {
+                        return document.querySelector('#target .widget') !== null;
+                    },
+                    { timeout: 2000 },
+                );
                 expect(await page.$('#target .widget')).toBeTruthy();
             },
         });
@@ -419,10 +438,13 @@ describe('hydration', () => {
                 expect(buttons).toHaveLength(3);
                 await buttons[1].click();
                 // Second widget's value should change from 20 to 21
-                await page.waitForFunction(() => {
-                    const values = document.querySelectorAll('#target .widget .value');
-                    return values[1]?.textContent === '21';
-                }, { timeout: 2000 });
+                await page.waitForFunction(
+                    () => {
+                        const values = document.querySelectorAll('#target .widget .value');
+                        return values[1]?.textContent === '21';
+                    },
+                    { timeout: 2000 },
+                );
                 let values = await page.$$('#target .widget .value');
                 expect(await values[0].textContent()).toEqual('10'); // unchanged
                 expect(await values[1].textContent()).toEqual('21'); // incremented
@@ -430,9 +452,12 @@ describe('hydration', () => {
 
                 // Add a new item
                 await page.click('button:text("Add Item")');
-                await page.waitForFunction(() => {
-                    return document.querySelectorAll('#target .widget').length === 4;
-                }, { timeout: 2000 });
+                await page.waitForFunction(
+                    () => {
+                        return document.querySelectorAll('#target .widget').length === 4;
+                    },
+                    { timeout: 2000 },
+                );
                 let widgets = await page.$$('#target .widget');
                 expect(widgets).toHaveLength(4);
                 // New item should have label "Item 4" and value 40
@@ -441,9 +466,12 @@ describe('hydration', () => {
 
                 // Remove last item
                 await page.click('button:text("Remove Last")');
-                await page.waitForFunction(() => {
-                    return document.querySelectorAll('#target .widget').length === 3;
-                }, { timeout: 2000 });
+                await page.waitForFunction(
+                    () => {
+                        return document.querySelectorAll('#target .widget').length === 3;
+                    },
+                    { timeout: 2000 },
+                );
                 widgets = await page.$$('#target .widget');
                 expect(widgets).toHaveLength(3);
 
@@ -470,10 +498,13 @@ describe('hydration', () => {
                 const widgets = await page.$$('#target .widget');
                 expect(await widgets[0].textContent()).toContain('10');
                 await page.click('#target .widget button');
-                await page.waitForFunction(() => {
-                    const values = document.querySelectorAll('#target .widget .value');
-                    return values[0]?.textContent === '11';
-                }, { timeout: 2000 });
+                await page.waitForFunction(
+                    () => {
+                        const values = document.querySelectorAll('#target .widget .value');
+                        return values[0]?.textContent === '11';
+                    },
+                    { timeout: 2000 },
+                );
                 const updatedWidgets = await page.$$('#target .widget');
                 expect(await updatedWidgets[0].textContent()).toContain('11');
             },

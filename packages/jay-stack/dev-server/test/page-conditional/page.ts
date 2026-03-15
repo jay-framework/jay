@@ -2,6 +2,4 @@ import { makeJayStackComponent, phaseOutput } from '@jay-framework/fullstack-com
 
 export const page = makeJayStackComponent()
     .withProps<{}>()
-    .withSlowlyRender(async () =>
-        phaseOutput({ isActive: true, message: 'Conditional Test' }, {}),
-    );
+    .withSlowlyRender(async () => phaseOutput({ isActive: true, message: 'Conditional Test' }, {}));

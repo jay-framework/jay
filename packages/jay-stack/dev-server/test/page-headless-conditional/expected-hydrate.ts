@@ -11,15 +11,15 @@ import {
     hydrateConditional,
     adoptDynamicElement,
     STATIC,
-// @ts-ignore
+    // @ts-ignore
 } from '/@fs/Users/yoav/work/jay/main/packages/runtime/runtime/dist/index.js';
 import {
     makeHeadlessInstanceComponent,
     HEADLESS_INSTANCES,
-// @ts-ignore
+    // @ts-ignore
 } from '/@fs/Users/yoav/work/jay/main/packages/jay-stack/stack-client-runtime/dist/index.js';
 // @ts-ignore
-import { widget } from '/widget.ts';
+import { widget } from '/widget';
 function _headlessWidget0HydrateRender(options) {
     const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
     const render = (viewState) => {

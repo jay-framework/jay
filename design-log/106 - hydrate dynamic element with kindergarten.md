@@ -14,25 +14,34 @@ The hydrate target's `adoptElement` does NOT use Kindergarten. It collects child
 ## Problem
 
 Page structure:
+
 ```html
-<div jay-coordinate="0">           <!-- parent with mixed content -->
-  <h1>ForEach Headless</h1>        <!-- static child (group 0) -->
-  <div class="list">...</div>      <!-- forEach item 1 (group 1) -->
-  <div class="list">...</div>      <!-- forEach item 2 (group 1) -->
-  <div class="list">...</div>      <!-- forEach item 3 (group 1) -->
-  <button>Add Item</button>        <!-- static child (group 2) -->
-  <button>Remove Last</button>     <!-- static child (group 3) -->
+<div jay-coordinate="0">
+  <!-- parent with mixed content -->
+  <h1>ForEach Headless</h1>
+  <!-- static child (group 0) -->
+  <div class="list">...</div>
+  <!-- forEach item 1 (group 1) -->
+  <div class="list">...</div>
+  <!-- forEach item 2 (group 1) -->
+  <div class="list">...</div>
+  <!-- forEach item 3 (group 1) -->
+  <button>Add Item</button>
+  <!-- static child (group 2) -->
+  <button>Remove Last</button>
+  <!-- static child (group 3) -->
 </div>
 ```
 
 Current hydrate code:
+
 ```typescript
 adoptElement('0', {}, [
-    adoptText('0/0', (vs) => vs.title),
-    hydrateForEach('0', (vs) => vs.items, '_id', adoptItem, createItem),
-    adoptElement('0/2', {}, [], refAddButton()),
-    adoptElement('0/3', {}, [], refRemoveButton()),
-])
+  adoptText('0/0', (vs) => vs.title),
+  hydrateForEach('0', (vs) => vs.items, '_id', adoptItem, createItem),
+  adoptElement('0/2', {}, [], refAddButton()),
+  adoptElement('0/3', {}, [], refRemoveButton()),
+]);
 ```
 
 `hydrateForEach` creates a `Kindergarten` on the container element (`<div jay-coordinate="0">`), but with `newGroup()` at index 0. It doesn't account for the `<h1>` before it. When a new item is added, `getOffsetFor(group)` returns 0 (no preceding groups), so the item is inserted before the `<h1>` instead of after the existing forEach items.
@@ -53,12 +62,18 @@ The SSR DOM may contain static children that have no corresponding hydrate code.
 
 ```html
 <div jay-coordinate="0">
-  <h1>Title</h1>                     <!-- static, no hydrate code -->
-  <p>Description</p>                 <!-- static, no hydrate code -->
-  <div class="list">...</div>        <!-- forEach item 1 -->
-  <div class="list">...</div>        <!-- forEach item 2 -->
-  <span jay-coordinate="0/4">count</span>  <!-- dynamic text -->
-  <button jay-coordinate="0/5">Add</button>  <!-- ref -->
+  <h1>Title</h1>
+  <!-- static, no hydrate code -->
+  <p>Description</p>
+  <!-- static, no hydrate code -->
+  <div class="list">...</div>
+  <!-- forEach item 1 -->
+  <div class="list">...</div>
+  <!-- forEach item 2 -->
+  <span jay-coordinate="0/4">count</span>
+  <!-- dynamic text -->
+  <button jay-coordinate="0/5">Add</button>
+  <!-- ref -->
 </div>
 ```
 
@@ -87,6 +102,7 @@ Groups:             [g0:1]  [g1:1]  [g2:2]      [g3:1]    [g4:1]
 ```
 
 Each group type:
+
 - `STATIC` → group with 1 node, consumed from DOM in order
 - `hydrateForEach` → group with N nodes (N = initial items array length)
 - `hydrateConditional` → group with 0 or 1 nodes (based on SSR condition)
@@ -95,14 +111,17 @@ Each group type:
 ### How it works — example
 
 When forEach adds item3:
+
 - `getOffsetFor(g2)` = g0.size(1) + g1.size(1) = 2
 - Insert at position 2 + 2 = 4 (after item2, before span) ✓
 
 When forEach removes item2:
+
 - `g2.removeNode(item2)` → g2.size becomes 1
 - `getOffsetFor(g3)` recalculates: 1 + 1 + 1 = 3 → span stays at correct position ✓
 
 When conditional toggles false→true:
+
 - `g_cond.ensureNode(dom, 0)` → g_cond.size becomes 1
 - Subsequent groups' offsets shift by +1 ✓
 
@@ -113,19 +132,23 @@ When conditional toggles false→true:
 ```typescript
 /** Sentinel value representing a static DOM child that doesn't need hydration */
 export const STATIC: BaseJayElement<any> = {
-    dom: null, update: noopUpdate, mount: noopMount, unmount: noopMount,
-    __static: true,
+  dom: null,
+  update: noopUpdate,
+  mount: noopMount,
+  unmount: noopMount,
+  __static: true,
 };
 
 export function adoptDynamicElement<ViewState>(
-    coordinate: string,
-    attributes: Attributes<ViewState>,
-    children: BaseJayElement<ViewState>[],  // may include STATIC markers
-    ref?: PrivateRef<ViewState, BaseJayElement<ViewState>>,
-): BaseJayElement<ViewState>
+  coordinate: string,
+  attributes: Attributes<ViewState>,
+  children: BaseJayElement<ViewState>[], // may include STATIC markers
+  ref?: PrivateRef<ViewState, BaseJayElement<ViewState>>,
+): BaseJayElement<ViewState>;
 ```
 
 Implementation:
+
 1. Resolve element by coordinate (same as `adoptElement`)
 2. Create `Kindergarten` on the element
 3. Walk `children` array and the parent's actual DOM children in parallel:
@@ -141,12 +164,12 @@ Instead of creating its own Kindergarten, it receives the group from the parent:
 
 ```typescript
 export function hydrateForEach<ViewState, Item>(
-    accessor: (vs: ViewState) => Item[],
-    trackBy: string,
-    adoptItem: () => BaseJayElement<Item>[],
-    createItem: (item: Item, id: string) => BaseJayElement<Item>,
-    group: KindergartenGroup,  // from parent's Kindergarten
-): BaseJayElement<ViewState>
+  accessor: (vs: ViewState) => Item[],
+  trackBy: string,
+  adoptItem: () => BaseJayElement<Item>[],
+  createItem: (item: Item, id: string) => BaseJayElement<Item>,
+  group: KindergartenGroup, // from parent's Kindergarten
+): BaseJayElement<ViewState>;
 ```
 
 `containerCoordinate` parameter removed — the parent `adoptDynamicElement` already resolved the container and created the group.
@@ -155,11 +178,11 @@ export function hydrateForEach<ViewState, Item>(
 
 ```typescript
 export function hydrateConditional<ViewState>(
-    condition: (vs: ViewState) => boolean,
-    adoptExisting: () => BaseJayElement<ViewState>,
-    createFallback: () => BaseJayElement<ViewState>,
-    group: KindergartenGroup,
-): BaseJayElement<ViewState>
+  condition: (vs: ViewState) => boolean,
+  adoptExisting: () => BaseJayElement<ViewState>,
+  createFallback: () => BaseJayElement<ViewState>,
+  group: KindergartenGroup,
+): BaseJayElement<ViewState>;
 ```
 
 - True at SSR: group has 1 child (the adopted element)

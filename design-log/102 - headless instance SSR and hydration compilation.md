@@ -807,6 +807,7 @@ Server expects `'1,stock-status:0'`, so the ViewState lookup fails → `fastVS` 
 **Fix:** Reversed the check order in `getComponentName`: check headless contract names FIRST, then headful imports. A headless import's contract name always takes precedence because the code link is only in `importedSymbols` as a side effect of the import wiring.
 
 **Files changed:**
+
 - `jay-html-helpers.ts` — `getComponentName`: check headless before headful
 
 ### Issue 6: Hydrate `makeHeadlessInstanceComponent` Key Mismatch
@@ -820,6 +821,7 @@ Server expects `'1,stock-status:0'`, so the ViewState lookup fails → `fastVS` 
 **Fix:** Changed `makeHeadlessInstanceComponent`'s `coordinateKey` parameter from `instanceCoord` (DOM coordinate) to `coordinateKey` (instance key from `computeInstanceKey`). Static: `'widget:0'`, slowForEach: `'p1/widget:0'`.
 
 **Files changed:**
+
 - `jay-html-compiler.ts` — `renderHydrateHeadlessInstance`: use `coordinateKey` not `instanceCoord`
 - `test/fixtures/contracts/page-with-headless-instance/generated-element-hydrate.ts` — updated fixture
 - `test/fixtures/contracts/page-with-headless-mixed/generated-element-hydrate.ts` — updated fixture
@@ -837,6 +839,7 @@ Server expects `'1,stock-status:0'`, so the ViewState lookup fails → `fastVS` 
 **Fix:** In `renderServerHeadlessInstance`, render the root child element with `isRoot: true` to force coordinate emission. The `jay-coordinate` attribute is always emitted on the headless instance's root child element, so `adoptElement` can find and adopt it.
 
 **Files changed:**
+
 - `jay-html-compiler.ts` — `renderServerHeadlessInstance`: pass `{ isRoot: true }` when rendering root child
 - All headless server-element fixtures updated
 

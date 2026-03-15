@@ -6,10 +6,7 @@ export const page = makeJayStackComponent()
         phaseOutput(
             {
                 title: 'SlowForEach Headless',
-                items: [
-                    { _id: '1' },
-                    { _id: '2' },
-                ],
+                items: [{ _id: '1' }, { _id: '2' }],
             },
             {},
         ),

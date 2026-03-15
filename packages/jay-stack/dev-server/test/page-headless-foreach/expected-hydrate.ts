@@ -11,16 +11,15 @@ import {
     childCompHydrate,
     hydrateForEach,
     adoptDynamicElement,
-    STATIC,
-// @ts-ignore
+    // @ts-ignore
 } from '/@fs/Users/yoav/work/jay/main/packages/runtime/runtime/dist/index.js';
 import {
     makeHeadlessInstanceComponent,
     HEADLESS_INSTANCES,
-// @ts-ignore
+    // @ts-ignore
 } from '/@fs/Users/yoav/work/jay/main/packages/jay-stack/stack-client-runtime/dist/index.js';
 // @ts-ignore
-import { widget } from '/widget.ts';
+import { widget } from '/widget';
 function _headlessWidget0HydrateRender(options) {
     const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
     const render = (viewState) => {
@@ -72,7 +71,7 @@ export function hydrate(rootElement, options) {
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptDynamicElement('0', {}, [
-                STATIC,
+                adoptText('0/0', (vs) => vs.title),
                 hydrateForEach(
                     (vs) => vs.items,
                     '_id',

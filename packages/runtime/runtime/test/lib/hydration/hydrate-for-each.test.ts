@@ -340,9 +340,7 @@ describe('hydrateConditional + forEach + STATIC (mixed children)', () => {
             items: [{ id: 'a', name: 'Alice' }],
         });
 
-        elements = Array.from(container.childNodes).filter(
-            (n) => n.nodeType === Node.ELEMENT_NODE,
-        );
+        elements = Array.from(container.childNodes).filter((n) => n.nodeType === Node.ELEMENT_NODE);
         expect(elements[0].nodeName).toBe('H1');
         expect(elements[1].textContent).toBe('Conditional');
         expect(elements[2].textContent).toBe('Alice');
@@ -403,9 +401,7 @@ describe('hydrateConditional + forEach + STATIC (mixed children)', () => {
             ],
         });
 
-        elements = Array.from(container.childNodes).filter(
-            (n) => n.nodeType === Node.ELEMENT_NODE,
-        );
+        elements = Array.from(container.childNodes).filter((n) => n.nodeType === Node.ELEMENT_NODE);
         expect(elements.length).toBe(3);
         expect(elements[0].textContent).toBe('Back');
         expect(elements[1].textContent).toBe('Alice');

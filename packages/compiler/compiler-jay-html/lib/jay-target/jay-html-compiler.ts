@@ -436,8 +436,7 @@ function renderChildCompProps(
             // Use contract prop name when available (case-insensitive match) so that
             // HTML-parser lowercased attributes (e.g. productid) map to contract names (e.g. productId)
             const outputKey =
-                contractProps?.find((p) => p.name.toLowerCase() === attrCanonical)?.name ??
-                attrKey;
+                contractProps?.find((p) => p.name.toLowerCase() === attrCanonical)?.name ?? attrKey;
             // If contract declares this prop as string but parser produced a number literal, wrap in quotes
             const expectedType = propTypeMap?.get(attrName) ?? propTypeMap?.get(outputKey);
             if (expectedType && expectedType.name === 'string' && /^\d+$/.test(prop.rendered)) {
