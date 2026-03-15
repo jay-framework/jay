@@ -108,7 +108,7 @@ export function makeHeadlessInstanceComponent<
 
     // Wrap the interactive constructor to read instance data from the provided context
     const wrappedConstructor: ComponentConstructor<PropsT, Refs, ViewState, any, CompCore> = (
-        props,
+        signalProps,
         refs,
         ...pluginResolvedContexts: any[]
     ) => {
@@ -143,7 +143,9 @@ export function makeHeadlessInstanceComponent<
             resolvedFastVS = fastVS;
             resolvedCf = cf || {};
         } else if (clientDefaults) {
-            const defaults = clientDefaults(props);
+            // Access raw props via the proxy's .props getter (avoids signal unwrapping)
+            const rawProps = signalProps.props();
+            const defaults = clientDefaults(rawProps);
             resolvedFastVS = defaults.viewState;
             resolvedCf = defaults.carryForward ?? {};
         } else {
@@ -156,7 +158,7 @@ export function makeHeadlessInstanceComponent<
         }
 
         const signalVS = makeSignals(resolvedFastVS);
-        return interactiveConstructor(props, refs, signalVS, resolvedCf, ...pluginResolvedContexts);
+        return interactiveConstructor(signalProps, refs, signalVS, resolvedCf, ...pluginResolvedContexts);
     };
 
     // Only pass plugin context markers — HEADLESS_INSTANCES is accessed via useContext directly
