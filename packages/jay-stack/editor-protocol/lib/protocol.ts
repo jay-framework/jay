@@ -326,6 +326,7 @@ export interface MergeApplyRequest<TVendorDoc> extends BaseMessage<MergeApplyRes
     existingSectionData?: TVendorDoc;
     conflictResolutions?: Array<{
         nodeKey: string;
+        nodeName?: string;
         property: string;
         action: ConflictAction;
         rebindTarget?: string;

@@ -18,6 +18,7 @@ import { EXCLUDED_PLUGIN_DATA_KEYS, normalizeFillsForComparison } from './vendor
 
 export interface ConflictResolution {
     nodeKey: string;
+    nodeName?: string;
     property: string;
     action: ConflictAction;
     rebindTarget?: string;
@@ -231,11 +232,16 @@ export function applyMergePlan(input: ApplyInput): ApplyResult {
     const skippedOps: MergeOperation[] = [];
     const appliedStructuralOps: StructuralOperation[] = [];
     const unresolvedConflicts: ConflictItem[] = [];
+    const keepMineOps: MergeOperation[] = [];
 
     const resolutionLookup = new Map<string, ConflictResolution>();
+    const resolutionByName = new Map<string, ConflictResolution>();
     if (input.conflictResolutions) {
         for (const res of input.conflictResolutions) {
             resolutionLookup.set(`${res.nodeKey}::${res.property}`, res);
+            if (res.nodeName) {
+                resolutionByName.set(`${res.nodeName}::${res.property}`, res);
+            }
         }
     }
 
@@ -261,7 +267,14 @@ export function applyMergePlan(input: ApplyInput): ApplyResult {
                 break;
 
             case 'needsDecision': {
-                const resolution = resolutionLookup.get(`${op.nodeKey}::${op.property}`);
+                const conflict = input.plan.conflicts.find(
+                    (c) => c.nodeKey === op.nodeKey && c.property === op.property,
+                );
+                const resolution =
+                    resolutionLookup.get(`${op.nodeKey}::${op.property}`) ??
+                    (conflict?.nodeName
+                        ? resolutionByName.get(`${conflict.nodeName}::${op.property}`)
+                        : undefined);
 
                 if (resolution) {
                     switch (resolution.action) {
@@ -271,6 +284,7 @@ export function applyMergePlan(input: ApplyInput): ApplyResult {
                             break;
                         case 'keepMine':
                             skippedOps.push(op);
+                            keepMineOps.push(op);
                             break;
                         case 'rebind':
                             if (resolution.rebindTarget) {
@@ -281,9 +295,6 @@ export function applyMergePlan(input: ApplyInput): ApplyResult {
                     }
                 } else {
                     skippedOps.push(op);
-                    const conflict = input.plan.conflicts.find(
-                        (c) => c.nodeKey === op.nodeKey && c.property === op.property,
-                    );
                     if (conflict) unresolvedConflicts.push(conflict);
                 }
                 break;
@@ -319,23 +330,26 @@ export function applyMergePlan(input: ApplyInput): ApplyResult {
             // The plugin handles actual reorder using child indices.
             appliedStructuralOps.push(op);
         } else if (op.decision === 'needsDecision') {
-            const resKey =
-                op.type === 'reorder' ? `${op.nodeKey}::_order` : `${op.nodeKey}::_structure`;
-            const resolution = resolutionLookup.get(resKey);
+            const resProp = op.type === 'reorder' ? '_order' : '_structure';
+            const resKey = `${op.nodeKey}::${resProp}`;
+            const structConflict = input.plan.conflicts.find(
+                (c) =>
+                    c.nodeKey === op.nodeKey &&
+                    (c.property === '_structure' || c.property === '_order'),
+            );
+            const resolution =
+                resolutionLookup.get(resKey) ??
+                (structConflict?.nodeName
+                    ? resolutionByName.get(`${structConflict.nodeName}::${resProp}`)
+                    : undefined);
 
             if (resolution) {
                 if (resolution.action === 'applyIncoming') {
                     if (op.type === 'remove') removeNodeFromTree(mergedDoc, op.nodeKey);
                     appliedStructuralOps.push(op);
                 }
-                // keepMine → do nothing, node stays
             } else {
-                const conflict = input.plan.conflicts.find(
-                    (c) =>
-                        c.nodeKey === op.nodeKey &&
-                        (c.property === '_structure' || c.property === '_order'),
-                );
-                if (conflict) unresolvedConflicts.push(conflict);
+                if (structConflict) unresolvedConflicts.push(structConflict);
             }
         }
     }
@@ -353,6 +367,38 @@ export function applyMergePlan(input: ApplyInput): ApplyResult {
         input.pageUrl,
         stableKeyMap.size > 0 ? stableKeyMap : undefined,
     );
+
+    // Phase 3b: Omit unresolved conflict properties from the baseline.
+    // If we record the designer's value for unresolved properties, the next
+    // merge sees baseline===designer and auto-applies incoming — silently
+    // overriding the designer's change. By omitting the property, the next
+    // merge re-detects it as "both changed" and presents it as a conflict again.
+    if (unresolvedConflicts.length > 0) {
+        for (const conflict of unresolvedConflicts) {
+            const stableKey = stableKeyMap.get(conflict.nodeKey) ?? conflict.nodeKey;
+            const baselineNode = newBaseline.nodes.find((n) => n.nodeKey === stableKey);
+            if (baselineNode) {
+                delete baselineNode.properties[conflict.property];
+            }
+        }
+    }
+
+    // Phase 3c: For "keepMine" resolutions, record the INCOMING value in the baseline.
+    // The merged doc retains the designer's value (what the user wanted), but the
+    // baseline must reflect what the code intended. This way the next merge sees
+    // baseline===incoming (code unchanged) and designer!==baseline (designer changed)
+    // → preserveDesigner, which correctly keeps the designer's override without
+    // re-prompting.
+    for (const op of keepMineOps) {
+        const stableKey = stableKeyMap.get(op.nodeKey) ?? op.nodeKey;
+        const baselineNode = newBaseline.nodes.find((n) => n.nodeKey === stableKey);
+        if (baselineNode && op.incomingValue !== undefined) {
+            baselineNode.properties[op.property] =
+                op.property === 'fills' && Array.isArray(op.incomingValue)
+                    ? normalizeFillsForComparison(op.incomingValue)
+                    : op.incomingValue;
+        }
+    }
 
     // Phase 4: Compute new sync state
     const now = new Date().toISOString();
