@@ -443,11 +443,16 @@ export function applyMergePlan(input: ApplyInput): ApplyResult {
             });
         }
 
-        const total = report.applied.length + report.summary.preserved +
-            report.summary.conflicted + report.summary.skipped;
-        report.metrics.autoMergeRatio = total > 0
-            ? (report.applied.length + report.summary.preserved + report.summary.skipped) / total
-            : 1;
+        const total =
+            report.applied.length +
+            report.summary.preserved +
+            report.summary.conflicted +
+            report.summary.skipped;
+        report.metrics.autoMergeRatio =
+            total > 0
+                ? (report.applied.length + report.summary.preserved + report.summary.skipped) /
+                  total
+                : 1;
     }
 
     return {
