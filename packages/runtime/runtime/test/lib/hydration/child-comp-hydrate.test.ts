@@ -2,6 +2,7 @@ import {
     ConstructContext,
     ReferencesManager,
     adoptElement,
+    adoptDynamicElement,
     adoptText,
     childCompHydrate,
     hydrateForEach,
@@ -183,20 +184,21 @@ describe('childCompHydrate', () => {
         const ProductComp = makeHydrateComponent('product-card:0');
 
         const { root } = hydrate<ListViewState>(html, { items: [{ id: 'a' }, { id: 'b' }] }, () =>
-            hydrateForEach<ListViewState, { id: string }>(
-                '0',
-                (vs) => vs.items,
-                'id',
-                () => [
-                    childCompHydrate(
-                        ProductComp,
-                        (_item: { id: string }) => ({}),
-                        'product-card:0',
-                    ),
-                ],
-                (_item, _id) =>
-                    e('li', {}, [e('article', {}, [dt((_i: { id: string }) => 'new')])]),
-            ),
+            adoptDynamicElement<ListViewState>('0', {}, [
+                hydrateForEach<ListViewState, { id: string }>(
+                    (vs) => vs.items,
+                    'id',
+                    () => [
+                        childCompHydrate(
+                            ProductComp,
+                            (_item: { id: string }) => ({}),
+                            'product-card:0',
+                        ),
+                    ],
+                    (_item, _id) =>
+                        e('li', {}, [e('article', {}, [dt((_i: { id: string }) => 'new')])]),
+                ),
+            ]),
         );
 
         // Each item's headless instance should adopt the correct elements
@@ -229,7 +231,7 @@ describe('childCompHydrate', () => {
             html,
             { showProduct: true },
             () =>
-                adoptElement<ConditionalViewState>('0', {}, [
+                adoptDynamicElement<ConditionalViewState>('0', {}, [
                     hydrateConditional<ConditionalViewState>(
                         (vs) => vs.showProduct,
                         () =>

@@ -2082,8 +2082,6 @@ interface HydrateContext {
     insideSlowForEach: boolean;
     /** Variable mappings for compiling $placeholder coordinates inside forEach */
     varMappings: Record<string, string>;
-    /** Coordinate of the enclosing adopted element, used by forEach as containerCoordinate. */
-    parentCoordinate?: string;
     /**
      * When compiling a headless instance's adopt inline template, the instance's full coordinate
      * (e.g. "0/2/1/product-widget:0"). Child adoptElement calls use relative coordinates so
@@ -2248,9 +2246,6 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
                 `forEach directive - resolved forEach type is not an array [forEach=${forEach}]`,
             ]);
 
-        // Container coordinate from jay-coordinate-base or parent
-        const containerCoordinate =
-            context.parentCoordinate || element.getAttribute(COORD_ATTR) || '0';
         const paramName = forEachAccessor.rootVar;
         const paramType = variables.currentType.name;
         const forEachFragment = forEachAccessor
@@ -2328,7 +2323,7 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         const createBody = `(${forEachVariables.currentVar}: ${forEachVariables.currentType.name}) => {\n${indent.firstLine}    return ${forEachElementFunc}('${element.rawTagName}', ${createAttributes.rendered}, [${createChildren.rendered}]);\n${indent.firstLine}    }`;
 
         const hydrateForEachFragment = new RenderFragment(
-            `${indent.firstLine}hydrateForEach("${containerCoordinate}", ${forEachFragment.rendered}, '${trackBy}',\n${indent.firstLine}    ${adoptBody},\n${indent.firstLine}    ${createBody},\n${indent.firstLine})`,
+            `${indent.firstLine}hydrateForEach(${forEachFragment.rendered}, '${trackBy}',\n${indent.firstLine}    ${adoptBody},\n${indent.firstLine}    ${createBody},\n${indent.firstLine})`,
             Imports.for(Import.hydrateForEach)
                 .plus(forEachElementImport)
                 .plus(forEachFragment.imports)
@@ -2899,30 +2894,54 @@ function renderHydrateElementContent(
     // Build the ref argument if present
     const renderedRef = renderElementRef(element, renderContext);
 
-    // If this element has interactive children (conditionals/forEach), render them.
-    // Pass the current element's coordinate as parentCoordinate so that forEach
-    // children can use it as their containerCoordinate (same element, peek mode).
-    // Pass coordinatePrefix so child coordinates are hierarchical (e.g. "1/2", "1/3")
-    // and avoid collision with sibling sections (e.g. forEach item with trackBy "3").
+    // If this element has interactive children (conditionals/forEach), use adoptDynamicElement
+    // which creates a Kindergarten with one group per child position. Static children that
+    // produce no hydrate code are represented by the STATIC sentinel.
     if (hasInteractiveChildren) {
-        const childContext = {
-            ...context,
-            parentCoordinate: coordinate,
-        };
-        const childFragments = mergeHydrateFragments(
-            childNodes.map((child) => renderHydrateNode(child, childContext)),
-            ',\n',
-        );
+        const childParts: string[] = [];
+        let childImports = Imports.none();
+        const childValidations: string[] = [];
+        const childRefs: RefsTree[] = [];
+
+        for (const child of childNodes) {
+            if (child.nodeType !== NodeType.ELEMENT_NODE) continue;
+            const htmlChild = child as HTMLElement;
+            if (isConditional(htmlChild) || isForEach(htmlChild)) {
+                // Dynamic child: render normally (produces hydrateForEach/hydrateConditional)
+                const frag = renderHydrateNode(child, context);
+                if (frag.rendered.trim()) {
+                    childParts.push(frag.rendered);
+                    childImports = childImports.plus(frag.imports);
+                    childValidations.push(...frag.validations);
+                    if (frag.refs) childRefs.push(frag.refs);
+                }
+            } else {
+                // Static or adopted child: check if it produces hydrate code
+                const frag = renderHydrateNode(child, context);
+                if (frag.rendered.trim()) {
+                    // Has hydrate code (e.g. dynamic text, refs) — render as regular child
+                    childParts.push(frag.rendered);
+                    childImports = childImports.plus(frag.imports);
+                    childValidations.push(...frag.validations);
+                    if (frag.refs) childRefs.push(frag.refs);
+                } else {
+                    // No hydrate code — emit STATIC sentinel
+                    childParts.push(`${indent.firstLine}STATIC`);
+                    childImports = childImports.plus(Import.STATIC);
+                }
+            }
+        }
+
         const refSuffix = renderedRef.rendered ? `, ${renderedRef.rendered}` : '';
-        const childrenArr = childFragments.rendered.trim() ? `[${childFragments.rendered}]` : '[]';
+        const childrenArr = childParts.length ? `[${childParts.join(',\n')}]` : '[]';
         return new RenderFragment(
-            `${indent.firstLine}adoptElement("${coordinate}", ${attributes.rendered}, ${childrenArr}${refSuffix})`,
-            Imports.for(Import.adoptElement)
+            `${indent.firstLine}adoptDynamicElement("${coordinate}", ${attributes.rendered}, ${childrenArr}${refSuffix})`,
+            Imports.for(Import.adoptDynamicElement)
                 .plus(attributes.imports)
-                .plus(childFragments.imports)
+                .plus(childImports)
                 .plus(renderedRef.imports),
-            [...attributes.validations, ...childFragments.validations, ...renderedRef.validations],
-            mergeRefsTrees(childFragments.refs, renderedRef.refs),
+            [...attributes.validations, ...childValidations, ...renderedRef.validations],
+            mergeRefsTrees(...childRefs, renderedRef.refs),
         );
     }
 

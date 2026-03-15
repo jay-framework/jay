@@ -9,6 +9,8 @@ import {
     adoptElement,
     childCompHydrate,
     hydrateConditional,
+    adoptDynamicElement,
+    STATIC,
 } from '/@fs/Users/yoav/work/jay/main/packages/runtime/runtime/dist/index.js';
 import {
     makeHeadlessInstanceComponent,
@@ -62,7 +64,8 @@ export function hydrate(rootElement, options) {
     );
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [
+            adoptDynamicElement('0', {}, [
+                STATIC,
                 hydrateConditional(
                     (vs) => vs.showWidget,
                     () =>

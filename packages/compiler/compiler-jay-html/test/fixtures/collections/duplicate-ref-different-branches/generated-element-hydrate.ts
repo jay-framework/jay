@@ -13,6 +13,7 @@ import {
     adoptElement,
     hydrateConditional,
     hydrateForEach,
+    adoptDynamicElement,
 } from '@jay-framework/runtime';
 
 export interface ItemOfDuplicateRefDifferentBranchesViewState {
@@ -89,11 +90,10 @@ export function hydrate(
     );
     const render = (viewState: DuplicateRefDifferentBranchesViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [
+            adoptDynamicElement('0', {}, [
                 adoptText('0/0', (vs) => vs.title),
-                adoptElement('0/1', {}, [
+                adoptDynamicElement('0/1', {}, [
                     hydrateForEach(
-                        '0/1',
                         (vs: DuplicateRefDifferentBranchesViewState) => vs.items,
                         'id',
                         () => [

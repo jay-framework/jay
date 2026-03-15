@@ -1,6 +1,8 @@
 import {
     adoptText,
     adoptElement,
+    adoptDynamicElement,
+    STATIC,
     hydrateConditional,
     element as e,
     dynamicText as dt,
@@ -20,7 +22,7 @@ describe('hydrateConditional (if=true at SSR)', () => {
 
     function hydrateConditionalTest(text: string, show: boolean) {
         return hydrate<ViewState>(conditionalHTML.replace('$TEXT', text), { show, text }, () =>
-            adoptElement<ViewState>('container', {}, [
+            adoptDynamicElement<ViewState>('container', {}, [
                 hydrateConditional(
                     (vs) => vs.show,
                     () => adoptText<ViewState>('container/0', (vs) => vs.text),
@@ -88,11 +90,13 @@ describe('hydrateConditional (if=true at SSR)', () => {
                 '</div>',
             { show: true, text: 'Conditional' },
             () =>
-                adoptElement<ViewState>('container', {}, [
+                adoptDynamicElement<ViewState>('container', {}, [
+                    STATIC,
                     hydrateConditional(
                         (vs) => vs.show,
                         () => adoptText<ViewState>('container/0', (vs) => vs.text),
                     ),
+                    STATIC,
                 ]),
         );
 
@@ -102,7 +106,7 @@ describe('hydrateConditional (if=true at SSR)', () => {
         jayElement.update({ show: false, text: 'Conditional' });
         jayElement.update({ show: true, text: 'Conditional' });
 
-        // Verify order: Before, Conditional, [comment], After
+        // Verify order: Before, Conditional, After
         const children = Array.from(container.childNodes).filter(
             (n) => n.nodeType === Node.ELEMENT_NODE,
         );
@@ -147,7 +151,7 @@ describe('hydrateConditional with createFallback (if=false at SSR)', () => {
 
     function hydrateWithFallback(show: boolean, text: string) {
         return hydrate<ViewState>(emptyContainerHTML, { show, text }, () =>
-            adoptElement<ViewState>('container', {}, [
+            adoptDynamicElement<ViewState>('container', {}, [
                 hydrateConditional(
                     (vs) => vs.show,
                     // Adopt callback — will fail since element not in DOM
@@ -264,7 +268,7 @@ describe('hydrateConditional true at SSR, false at hydration', () => {
             withElementHTML,
             { show: false, text: 'ServerText' },
             () =>
-                adoptElement<ViewState>('container', {}, [
+                adoptDynamicElement<ViewState>('container', {}, [
                     hydrateConditional(
                         (vs) => vs.show,
                         () => adoptText<ViewState>('container/0', (vs) => vs.text),
@@ -288,7 +292,7 @@ describe('hydrateConditional true at SSR, false at hydration', () => {
             withElementHTML,
             { show: false, text: 'ServerText' },
             () =>
-                adoptElement<ViewState>('container', {}, [
+                adoptDynamicElement<ViewState>('container', {}, [
                     hydrateConditional(
                         (vs) => vs.show,
                         () => adoptText<ViewState>('container/0', (vs) => vs.text),

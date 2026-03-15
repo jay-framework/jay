@@ -14,6 +14,7 @@ import {
     adoptElement,
     childCompHydrate,
     hydrateConditional,
+    adoptDynamicElement,
 } from '@jay-framework/runtime';
 import {
     makeHeadlessInstanceComponent,
@@ -241,7 +242,7 @@ export function hydrate(
     );
     const render = (viewState: PageWithHeadlessMixedViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [
+            adoptDynamicElement('0', {}, [
                 adoptText('0/0', (vs) => vs.pageTitle),
                 childCompHydrate(
                     _HeadlessProductCard0,

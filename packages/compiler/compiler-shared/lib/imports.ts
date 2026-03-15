@@ -322,6 +322,12 @@ export const Import = {
         'hydrateForEach',
         ImportsFor.implementation,
     ),
+    adoptDynamicElement: importStatementFragment(
+        JAY_RUNTIME,
+        'adoptDynamicElement',
+        ImportsFor.implementation,
+    ),
+    STATIC: importStatementFragment(JAY_RUNTIME, 'STATIC', ImportsFor.implementation),
     escapeHtml: importStatementFragment(JAY_SSR_RUNTIME, 'escapeHtml', ImportsFor.implementation),
     escapeAttr: importStatementFragment(JAY_SSR_RUNTIME, 'escapeAttr', ImportsFor.implementation),
     ServerRenderContext: importStatementFragment(

@@ -9,6 +9,7 @@ import {
     adoptText,
     adoptElement,
     hydrateConditional,
+    adoptDynamicElement,
 } from '@jay-framework/runtime';
 import { CounterViewState, CounterRefs, IsPositive } from '../counter/counter.jay-contract';
 
@@ -65,7 +66,7 @@ export function hydrate(
                 adoptText('0/0', (vs) => `value: ${vs.counter?.count}`),
                 adoptElement('0/1', {}, [], refAdd()),
                 adoptElement('0/2', {}, [], refSubtract()),
-                adoptElement('0/3', {}, [
+                adoptDynamicElement('0/3', {}, [
                     hydrateConditional(
                         (vs) => vs.counter?.isPositive === IsPositive.positive,
                         () => adoptElement('0/3/0', {}, []),

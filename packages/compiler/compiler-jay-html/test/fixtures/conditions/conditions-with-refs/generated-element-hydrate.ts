@@ -11,6 +11,7 @@ import {
     adoptText,
     adoptElement,
     hydrateConditional,
+    adoptDynamicElement,
 } from '@jay-framework/runtime';
 
 export interface ConditionsWithRefsViewState {
@@ -62,7 +63,7 @@ export function hydrate(
     );
     const render = (viewState: ConditionsWithRefsViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [
+            adoptDynamicElement('0', {}, [
                 hydrateConditional(
                     (vs) => vs.cond,
                     () => adoptText('0/0', (vs) => vs.text1, refText1()),

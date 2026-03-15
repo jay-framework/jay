@@ -36,6 +36,8 @@ export { type HeadLink, injectHeadLinks } from './element';
 export {
     adoptText,
     adoptElement,
+    adoptDynamicElement,
+    STATIC,
     hydrateConditional,
     hydrateForEach,
     childCompHydrate,

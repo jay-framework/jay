@@ -10,6 +10,7 @@ import {
     adoptText,
     adoptElement,
     hydrateForEach,
+    adoptDynamicElement,
 } from '@jay-framework/runtime';
 
 export interface ThingOfCollectionsViewState {
@@ -54,9 +55,8 @@ export function hydrate(
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('0', {}, [
                 adoptText('0/0', (vs) => vs.title),
-                adoptElement('0/1', {}, [
+                adoptDynamicElement('0/1', {}, [
                     hydrateForEach(
-                        '0/1',
                         (vs: CollectionsViewState) => vs.things,
                         'id',
                         () => [
