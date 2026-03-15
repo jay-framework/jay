@@ -45,6 +45,23 @@ export const EXCLUDED_PLUGIN_DATA_KEYS = new Set([
     'jay-unsupported-css',
 ]);
 
+/**
+ * IMAGE fills are managed by the hydration pipeline (plugin-side), not the
+ * merge pipeline. The import produces minimal fills ({type, jayImportImageId,
+ * scaleMode}) while Figma serializes rich fills ({type, imageHash, scaleMode,
+ * visible, opacity, blendMode, imageTransform, ...}). These are semantically
+ * equivalent but structurally incomparable, so we reduce IMAGE fills to just
+ * their type marker for comparison purposes.
+ */
+export function normalizeFillsForComparison(fills: unknown[]): unknown[] {
+    return fills.map((fill: any) => {
+        if (fill?.type === 'IMAGE') {
+            return { type: 'IMAGE' };
+        }
+        return fill;
+    });
+}
+
 export function extractPropertySnapshot(node: FigmaVendorDocument): PropertySnapshot {
     const snapshot: PropertySnapshot = {};
 
@@ -55,6 +72,10 @@ export function extractPropertySnapshot(node: FigmaVendorDocument): PropertySnap
                 if (EXCLUDED_PLUGIN_DATA_KEYS.has(pdKey)) continue;
                 snapshot[pdKey] = pdValue;
             }
+            continue;
+        }
+        if (key === 'fills' && Array.isArray(value)) {
+            snapshot[key] = normalizeFillsForComparison(value);
             continue;
         }
         snapshot[key] = value;
@@ -198,13 +219,19 @@ export function buildStructuralChanges(
 
 /**
  * Converts a SyncBaselineV1 nodes array into a lookup map for the planner.
+ * Re-normalizes fills on read to stay consistent with extractPropertySnapshot,
+ * even if the baseline was stored by an older version of the normalization logic.
  */
 export function baselineToPropertyIndex(
     nodes: Array<{ nodeKey: string; properties: Record<string, unknown> }>,
 ): Map<string, PropertySnapshot> {
     const index = new Map<string, PropertySnapshot>();
     for (const node of nodes) {
-        index.set(node.nodeKey, node.properties as PropertySnapshot);
+        const props = { ...node.properties };
+        if (props.fills && Array.isArray(props.fills)) {
+            props.fills = normalizeFillsForComparison(props.fills);
+        }
+        index.set(node.nodeKey, props as PropertySnapshot);
     }
     return index;
 }

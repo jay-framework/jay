@@ -12,7 +12,7 @@ import type {
 } from '@jay-framework/editor-protocol';
 import type { MergePlan } from './merge-planner';
 import { generateReport } from './sync-report';
-import { EXCLUDED_PLUGIN_DATA_KEYS } from './vendor-doc-flatten';
+import { EXCLUDED_PLUGIN_DATA_KEYS, normalizeFillsForComparison } from './vendor-doc-flatten';
 
 // ─── Public Types ────────────────────────────────────────────────
 
@@ -188,6 +188,10 @@ export function buildBaseline(
                     if (EXCLUDED_PLUGIN_DATA_KEYS.has(pdKey)) continue;
                     properties[pdKey] = pdValue;
                 }
+                continue;
+            }
+            if (key === 'fills' && Array.isArray(value)) {
+                properties[key] = normalizeFillsForComparison(value);
                 continue;
             }
             properties[key] = value;
