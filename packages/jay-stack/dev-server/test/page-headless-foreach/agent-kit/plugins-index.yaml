@@ -1,4 +1,4 @@
-jay_stack_version: 0.13.0
+jay_stack_version: 0.0.0
 plugins:
   - name: test-widget
     path: ./src/plugins/test-widget
