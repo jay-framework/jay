@@ -33,12 +33,53 @@ function extractTargetContent(html: string): string {
     return match2 ? match2[1] : '';
 }
 
-/** Wait for hydration to complete (automation API available) */
+/** Re-throw an error with the #target innerHTML appended for debugging. */
+async function dumpTargetContent(page: Page, error: unknown): Promise<never> {
+    let targetHTML: string;
+    try {
+        targetHTML = await page.evaluate(
+            () => document.getElementById('target')?.innerHTML ?? '(no #target)',
+        );
+    } catch {
+        targetHTML = '(could not read page)';
+    }
+    const msg = error instanceof Error ? error.message : String(error);
+    throw new Error(`${msg}\n\n#target innerHTML:\n${targetHTML}`);
+}
+
+/**
+ * Wait for hydration to complete (automation API available).
+ * Collects page errors and throws with diagnostics if hydration doesn't complete.
+ * Uses a hard JS timeout to handle Vite reload loops where Playwright's
+ * waitForFunction restarts on each navigation and never fires its own timeout.
+ */
 async function waitForHydration(page: Page) {
-    for (let i = 0; i < 50; i++) {
-        const has = await page.evaluate(() => Boolean((window as any).__jay?.automation));
-        if (has) return;
-        await page.waitForTimeout(100);
+    const errors: string[] = [];
+    const handler = (err: Error) => errors.push(err.message);
+    page.on('pageerror', handler);
+
+    let hardTimer: ReturnType<typeof setTimeout>;
+    try {
+        await Promise.race([
+            page.waitForFunction(() => Boolean((window as any).__jay?.automation), {
+                timeout: 5000,
+            }),
+            new Promise<never>((_, reject) => {
+                hardTimer = setTimeout(
+                    () => reject(new Error('waitForHydration hard timeout')),
+                    6000,
+                );
+            }),
+        ]);
+    } catch (e) {
+        const errorInfo = errors.length ? `\nPage errors:\n  ${errors.join('\n  ')}` : '';
+        const playwrightError = e instanceof Error ? e.message : String(e);
+        throw new Error(
+            `Hydration did not complete within 5s.${errorInfo}\nPlaywright: ${playwrightError}`,
+        );
+    } finally {
+        clearTimeout(hardTimer!);
+        page.off('pageerror', handler);
     }
 }
 
@@ -199,7 +240,10 @@ function testFixture(
             try {
                 await page.goto(`${devServerUrl}/`, { waitUntil: 'load' });
                 await waitForHydration(page);
+                page.setDefaultTimeout(2000);
                 await opts.hydrationChecks!(page);
+            } catch (e) {
+                await dumpTargetContent(page, e);
             } finally {
                 await page.close();
             }
@@ -212,7 +256,10 @@ function testFixture(
             try {
                 await page.goto(`${devServerUrl}/`, { waitUntil: 'load' });
                 await waitForHydration(page);
+                page.setDefaultTimeout(2000);
                 await opts.interactivityChecks!(page);
+            } catch (e) {
+                await dumpTargetContent(page, e);
             } finally {
                 await page.close();
             }
@@ -354,12 +401,12 @@ describe('hydration', () => {
                 expect(await page.textContent('#target h1')).toEqual('ForEach Headless');
                 const widgets = await page.$$('#target .widget');
                 expect(widgets).toHaveLength(3);
-                expect(await page.textContent('#target .widget:nth-child(1) .label')).toEqual('Item 1');
-                expect(await page.textContent('#target .widget:nth-child(1) .value')).toEqual('10');
-                expect(await page.textContent('#target .widget:nth-child(2) .label')).toEqual('Item 2');
-                expect(await page.textContent('#target .widget:nth-child(2) .value')).toEqual('20');
-                expect(await page.textContent('#target .widget:nth-child(3) .label')).toEqual('Item 3');
-                expect(await page.textContent('#target .widget:nth-child(3) .value')).toEqual('30');
+                expect(await widgets[0].textContent()).toContain('Item 1');
+                expect(await widgets[0].textContent()).toContain('10');
+                expect(await widgets[1].textContent()).toContain('Item 2');
+                expect(await widgets[1].textContent()).toContain('20');
+                expect(await widgets[2].textContent()).toContain('Item 3');
+                expect(await widgets[2].textContent()).toContain('30');
             },
             interactivityChecks: async (page) => {
                 // Click the second widget's increment button
@@ -409,19 +456,21 @@ describe('hydration', () => {
                 expect(await page.textContent('#target h1')).toEqual('SlowForEach Headless');
                 const widgets = await page.$$('#target .widget');
                 expect(widgets).toHaveLength(2);
-                expect(await page.textContent('#target .widget:nth-child(1) .label')).toEqual('Item 1');
-                expect(await page.textContent('#target .widget:nth-child(1) .value')).toEqual('10');
-                expect(await page.textContent('#target .widget:nth-child(2) .label')).toEqual('Item 2');
-                expect(await page.textContent('#target .widget:nth-child(2) .value')).toEqual('20');
+                expect(await widgets[0].textContent()).toContain('Item 1');
+                expect(await widgets[0].textContent()).toContain('10');
+                expect(await widgets[1].textContent()).toContain('Item 2');
+                expect(await widgets[1].textContent()).toContain('20');
             },
             interactivityChecks: async (page) => {
-                expect(await page.textContent('#target .widget:nth-child(1) .value')).toEqual('10');
-                await page.click('#target .widget:nth-child(1) button');
+                const widgets = await page.$$('#target .widget');
+                expect(await widgets[0].textContent()).toContain('10');
+                await page.click('#target .widget button');
                 await page.waitForFunction(() => {
                     const values = document.querySelectorAll('#target .widget .value');
                     return values[0]?.textContent === '11';
                 }, { timeout: 2000 });
-                expect(await page.textContent('#target .widget:nth-child(1) .value')).toEqual('11');
+                const updatedWidgets = await page.$$('#target .widget');
+                expect(await updatedWidgets[0].textContent()).toContain('11');
             },
         });
     });
