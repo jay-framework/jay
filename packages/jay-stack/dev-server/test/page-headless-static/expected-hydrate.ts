@@ -28,9 +28,8 @@ function _headlessWidget0HydrateRender(options) {
 }
 const _HeadlessWidget0 = makeHeadlessInstanceComponent(
     _headlessWidget0HydrateRender,
-    widget.comp,
+    widget,
     'widget:0',
-    widget.contexts,
 );
 export function hydrate(rootElement, options) {
     const [refManager, [ref_0]] = ReferencesManager.for(options, [], [], ['0'], []);

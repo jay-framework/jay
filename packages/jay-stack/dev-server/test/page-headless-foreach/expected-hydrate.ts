@@ -34,9 +34,8 @@ function _headlessWidget0HydrateRender(options) {
 }
 const _HeadlessWidget0Adopt = makeHeadlessInstanceComponent(
     _headlessWidget0HydrateRender,
-    widget.comp,
+    widget,
     (dataIds) => dataIds.join(','),
-    widget.contexts,
 );
 function _headlessWidget1Render(options) {
     const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
@@ -50,11 +49,8 @@ function _headlessWidget1Render(options) {
         );
     return [refManager.getPublicAPI(), render];
 }
-const _HeadlessWidget1 = makeHeadlessInstanceComponent(
-    _headlessWidget1Render,
-    widget.comp,
-    (dataIds) => [...dataIds, 'widget:0'].toString(),
-    widget.contexts,
+const _HeadlessWidget1 = makeHeadlessInstanceComponent(_headlessWidget1Render, widget, (dataIds) =>
+    [...dataIds, 'widget:0'].toString(),
 );
 export function hydrate(rootElement, options) {
     const [itemsRefManager, [refAR1]] = ReferencesManager.for(options, [], [], [], ['aR1']);

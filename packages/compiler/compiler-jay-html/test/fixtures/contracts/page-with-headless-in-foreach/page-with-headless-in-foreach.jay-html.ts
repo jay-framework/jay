@@ -18,7 +18,6 @@ import {
     ProductCardInteractiveViewState,
     ProductCardRepeatedRefs,
 } from '../product-card/product-card.jay-contract';
-// @ts-ignore
 import { productCard } from '../product-card/product-card';
 
 export interface ProductOfPageWithHeadlessInForeachViewState {
@@ -89,9 +88,8 @@ function _headlessProductCard0Render(
 
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0Render,
-    productCard.comp,
+    productCard,
     (dataIds) => [...dataIds, 'product-card:0'].toString(),
-    productCard.contexts,
 );
 
 export function render(options?: RenderElementOptions): PageWithHeadlessInForeachElementPreRender {

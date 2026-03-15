@@ -439,6 +439,20 @@ export type Builder<
                       Params,
                       CompCore
                   > & {
+                      withClientDefaults(
+                          fn: (props: PropsT) => { viewState: FastVS; carryForward?: any },
+                      ): Builder<
+                          'InteractiveRender',
+                          Refs,
+                          SlowVS,
+                          FastVS,
+                          InteractiveVS,
+                          Services,
+                          Contexts,
+                          PropsT,
+                          Params,
+                          CompCore
+                      >;
                       withInteractive(
                           comp: ComponentConstructor<
                               PropsT,
@@ -502,6 +516,7 @@ class BuilderImplementation<
     slowlyRender: RenderSlowly<Services, PropsT, SlowVS, CarryForward>;
     fastRender: RenderFast<Services, PropsT, FastVS, CarryForward>;
     comp: ComponentConstructor<PropsT & CarryForward, Refs, InteractiveVS, Contexts, CompCore>;
+    clientDefaults?: (props: PropsT) => { viewState: FastVS; carryForward?: any };
     constructor() {}
 
     withProps<NewPropsT extends object>(): Builder<
@@ -679,6 +694,35 @@ class BuilderImplementation<
             InteractiveVS,
             Services,
             [Signals<FastVS>, NewCarryForward, ...Contexts],
+            PropsT,
+            Params,
+            CompCore
+        >;
+    }
+
+    withClientDefaults(
+        fn: (props: PropsT) => { viewState: FastVS; carryForward?: any },
+    ): Builder<
+        'InteractiveRender',
+        Refs,
+        SlowVS,
+        FastVS,
+        InteractiveVS,
+        Services,
+        Contexts,
+        PropsT,
+        Params,
+        CompCore
+    > {
+        this.clientDefaults = fn;
+        return this as unknown as Builder<
+            'InteractiveRender',
+            Refs,
+            SlowVS,
+            FastVS,
+            InteractiveVS,
+            Services,
+            Contexts,
             PropsT,
             Params,
             CompCore

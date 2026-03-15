@@ -23,7 +23,14 @@ const builder = makeJayStackComponent<WidgetContract>()
             },
             carryForward: {},
         }));
-    });
+    })
+    .withClientDefaults((props: WidgetProps) => ({
+        viewState: {
+            label: `Item ${props.itemId}`,
+            value: parseInt(props.itemId) * 10 || 0,
+        },
+        carryForward: {},
+    }));
 
 export const widget = builder.withInteractive(
     (

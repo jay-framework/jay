@@ -32,9 +32,8 @@ function _headlessWidget0HydrateRender(options) {
 }
 const _HeadlessWidget0 = makeHeadlessInstanceComponent(
     _headlessWidget0HydrateRender,
-    widget.comp,
+    widget,
     'widget:0',
-    widget.contexts,
 );
 function _headlessWidget0Render(options) {
     const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
@@ -50,9 +49,8 @@ function _headlessWidget0Render(options) {
 }
 const _HeadlessWidget0Create = makeHeadlessInstanceComponent(
     _headlessWidget0Render,
-    widget.comp,
+    widget,
     'widget:0',
-    widget.contexts,
 );
 export function hydrate(rootElement, options) {
     const [refManager, [refToggleButton, ref_0]] = ReferencesManager.for(

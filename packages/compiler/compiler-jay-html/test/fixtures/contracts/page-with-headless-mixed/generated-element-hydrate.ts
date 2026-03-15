@@ -104,9 +104,8 @@ function _headlessProductCard0HydrateRender(
 }
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0HydrateRender,
-    productCard.comp,
+    productCard,
     'product-card:0',
-    productCard.contexts,
 );
 
 // Hydrate inline template for headless component: product-card #1
@@ -134,9 +133,8 @@ function _headlessProductCard1HydrateRender(
 }
 const _HeadlessProductCard1 = makeHeadlessInstanceComponent(
     _headlessProductCard1HydrateRender,
-    productCard.comp,
+    productCard,
     'product-card:1',
-    productCard.contexts,
 );
 
 function _headlessProductCard1Render(
@@ -155,9 +153,8 @@ function _headlessProductCard1Render(
 
 const _HeadlessProductCard1Create = makeHeadlessInstanceComponent(
     _headlessProductCard1Render,
-    productCard.comp,
+    productCard,
     'product-card:1',
-    productCard.contexts,
 );
 
 // Hydrate inline template for headless component: product-card #2
@@ -194,9 +191,8 @@ function _headlessProductCard2HydrateRender(
 }
 const _HeadlessProductCard2 = makeHeadlessInstanceComponent(
     _headlessProductCard2HydrateRender,
-    productCard.comp,
+    productCard,
     'p1/product-card:0',
-    productCard.contexts,
 );
 
 // Hydrate inline template for headless component: product-card #3
@@ -224,9 +220,8 @@ function _headlessProductCard3HydrateRender(
 }
 const _HeadlessProductCard3 = makeHeadlessInstanceComponent(
     _headlessProductCard3HydrateRender,
-    productCard.comp,
+    productCard,
     'p2/product-card:0',
-    productCard.contexts,
 );
 
 export function hydrate(

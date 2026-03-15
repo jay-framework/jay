@@ -926,9 +926,8 @@ ${inlineBody.rendered}
 
 const ${componentSymbol} = makeHeadlessInstanceComponent(
     ${renderFnName},
-    ${pluginComponentName}.comp,
+    ${pluginComponentName},
     ${isInsideForEach ? `(dataIds) => [...dataIds, '${coordinateSuffix}'].toString()` : `'${coordinateKey}'`},
-    ${pluginComponentName}.contexts,
 );`;
 
         // Accumulate the definition
@@ -2620,12 +2619,12 @@ ${adoptInlineBody.rendered}
     let adoptComponentDef: string;
     if (isInsideForEach) {
         adoptComponentSymbol = `_Headless${pascal}${idx}Adopt`;
-        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName}.comp,\n    (dataIds) => dataIds.join(','),\n    ${pluginComponentName}.contexts,\n);`;
+        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName},\n    (dataIds) => dataIds.join(','),\n);`;
     } else {
         adoptComponentSymbol = `_Headless${pascal}${idx}`;
         // Use the __headlessInstances key (not full DOM coordinate) for data lookup.
         // Static: 'widget:0', slowForEach: 'p1/widget:0'
-        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName}.comp,\n    '${coordinateKey}',\n    ${pluginComponentName}.contexts,\n);`;
+        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName},\n    '${coordinateKey}',\n);`;
     }
 
     let adoptImports = adoptInlineBody.imports
@@ -2701,9 +2700,8 @@ ${createInlineBody.rendered}
 
 const ${createComponentSymbol} = makeHeadlessInstanceComponent(
     ${createRenderFnName},
-    ${pluginComponentName}.comp,
+    ${pluginComponentName},
     ${isInsideForEach ? `(dataIds) => [...dataIds, '${coordinateSuffix}'].toString()` : `'${coordinateKey}'`},
-    ${pluginComponentName}.contexts,
 );`;
         createImports = createInlineBody.imports.plus(createRefsImport);
     }

@@ -67,6 +67,21 @@ function makeSignals<T extends object>(obj: T): Signals<T> {
  *   (accumulated trackBy values from ancestor forEach loops) and returns the key.
  * @param pluginContexts - Additional context markers from the plugin (if any)
  */
+/**
+ * Component definition shape expected by makeHeadlessInstanceComponent.
+ * Can be a full JayStackComponentDefinition or a minimal object with the required fields.
+ */
+/**
+ * Component definition shape expected by makeHeadlessInstanceComponent.
+ * `clientDefaults` receives raw props (not signal-wrapped) since it's called
+ * before the component construction context is set up.
+ */
+interface HeadlessComponentDef {
+    comp: ComponentConstructor<any, any, any, any, any>;
+    contexts?: ContextMarkers<any>;
+    clientDefaults?: (props: any) => { viewState: any; carryForward?: any };
+}
+
 export function makeHeadlessInstanceComponent<
     PropsT extends object,
     ViewState extends object,
@@ -75,14 +90,23 @@ export function makeHeadlessInstanceComponent<
     CompCore extends JayComponentCore<PropsT, ViewState>,
 >(
     preRender: PreRenderElement<ViewState, Refs, JayElementT>,
-    interactiveConstructor: ComponentConstructor<PropsT, Refs, ViewState, any, CompCore>,
+    componentOrConstructor: HeadlessComponentDef | ComponentConstructor<PropsT, Refs, ViewState, any, CompCore>,
     coordinateKey: string | ((dataIds: string[]) => string),
-    pluginContexts: ContextMarkers<any> = [] as any,
+    pluginContexts?: ContextMarkers<any>,
 ): (props: PropsT) => ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT> {
+    // Support both new (component object) and legacy (separate params) calling conventions
+    const isComponentObject = typeof componentOrConstructor === 'object' && componentOrConstructor !== null && 'comp' in componentOrConstructor;
+    const interactiveConstructor: ComponentConstructor<PropsT, Refs, ViewState, any, CompCore> = isComponentObject
+        ? (componentOrConstructor as HeadlessComponentDef).comp
+        : componentOrConstructor as ComponentConstructor<PropsT, Refs, ViewState, any, CompCore>;
+    const resolvedContexts: ContextMarkers<any> = pluginContexts
+        ?? (isComponentObject ? (componentOrConstructor as HeadlessComponentDef).contexts : undefined)
+        ?? ([] as any);
+    const clientDefaults = isComponentObject
+        ? (componentOrConstructor as HeadlessComponentDef).clientDefaults
+        : undefined;
+
     // Wrap the interactive constructor to read instance data from the provided context
-    // HEADLESS_INSTANCES is provided by makeCompositeJayComponent via provideContexts,
-    // so we access it directly with useContext rather than passing it as a contextMarker
-    // (context markers require reactive pairing, which plain data doesn't support)
     const wrappedConstructor: ComponentConstructor<PropsT, Refs, ViewState, any, CompCore> = (
         props,
         refs,
@@ -109,16 +133,32 @@ export function makeHeadlessInstanceComponent<
             instanceData?.viewStates?.[resolvedKey] ?? instanceData?.viewStates?.[suffixKey];
         const cf =
             instanceData?.carryForwards?.[resolvedKey] ??
-            instanceData?.carryForwards?.[suffixKey] ??
-            {};
+            instanceData?.carryForwards?.[suffixKey];
 
-        // Create signals from fast ViewState (like makeCompositeJayComponent does for key-based parts)
-        const signalVS = fastVS ? makeSignals(fastVS) : makeSignals({} as any);
+        // Resolve ViewState and carryForward: server data > clientDefaults > empty
+        let resolvedFastVS: object;
+        let resolvedCf: object;
 
-        // Call the original constructor with fast data injected before plugin contexts
-        return interactiveConstructor(props, refs, signalVS, cf, ...pluginResolvedContexts);
+        if (fastVS) {
+            resolvedFastVS = fastVS;
+            resolvedCf = cf || {};
+        } else if (clientDefaults) {
+            const defaults = clientDefaults(props);
+            resolvedFastVS = defaults.viewState;
+            resolvedCf = defaults.carryForward ?? {};
+        } else {
+            console.warn(
+                `[Jay] Headless instance "${resolvedKey}" has no server data and no clientDefaults. ` +
+                `Add .withClientDefaults() to the component definition to provide fallback values.`
+            );
+            resolvedFastVS = {};
+            resolvedCf = {};
+        }
+
+        const signalVS = makeSignals(resolvedFastVS);
+        return interactiveConstructor(props, refs, signalVS, resolvedCf, ...pluginResolvedContexts);
     };
 
     // Only pass plugin context markers — HEADLESS_INSTANCES is accessed via useContext directly
-    return makeJayComponent(preRender, wrappedConstructor, ...pluginContexts);
+    return makeJayComponent(preRender, wrappedConstructor, ...resolvedContexts);
 }
