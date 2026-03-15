@@ -7,9 +7,15 @@ tags:
   - tag: items
     type: sub-contract
     repeated: true
-    phase: fast
+    phase: fast+interactive
     trackBy: _id
     tags:
       - tag: _id
         type: data
         dataType: string
+  - tag: addButton
+    type: interactive
+    elementType: HTMLButtonElement
+  - tag: removeButton
+    type: interactive
+    elementType: HTMLButtonElement

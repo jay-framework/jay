@@ -58,12 +58,20 @@ const _HeadlessWidget1 = makeHeadlessInstanceComponent(
 );
 export function hydrate(rootElement, options) {
     const [itemsRefManager, [refAR1]] = ReferencesManager.for(options, [], [], [], ['aR1']);
-    const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
-        items: itemsRefManager,
-    });
+    const [refManager, [refAddButton, refRemoveButton]] = ReferencesManager.for(
+        options,
+        ['addButton', 'removeButton'],
+        [],
+        [],
+        [],
+        {
+            items: itemsRefManager,
+        },
+    );
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('0', {}, [
+                adoptText('0/0', (vs) => vs.title),
                 hydrateForEach(
                     '0',
                     (vs) => vs.items,
@@ -82,6 +90,8 @@ export function hydrate(rootElement, options) {
                         ]);
                     },
                 ),
+                adoptElement('0/2', {}, [], refAddButton()),
+                adoptElement('0/3', {}, [], refRemoveButton()),
             ]),
         );
     return [refManager.getPublicAPI(), render];

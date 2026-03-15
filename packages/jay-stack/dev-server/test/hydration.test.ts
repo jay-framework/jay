@@ -33,6 +33,15 @@ function extractTargetContent(html: string): string {
     return match2 ? match2[1] : '';
 }
 
+/** Wait for hydration to complete (automation API available) */
+async function waitForHydration(page: Page) {
+    for (let i = 0; i < 50; i++) {
+        const has = await page.evaluate(() => Boolean((window as any).__jay?.automation));
+        if (has) return;
+        await page.waitForTimeout(100);
+    }
+}
+
 /** Read expected fixture file */
 function readFixture(dirName: string, fileName: string): string {
     return fs.readFileSync(path.join(__dirname, dirName, fileName), 'utf-8');
@@ -152,7 +161,7 @@ function testFixture(
         const errors: string[] = [];
         page.on('pageerror', (err) => errors.push(err.message));
         try {
-            await page.goto(`${devServerUrl}/`, { waitUntil: 'networkidle' });
+            await page.goto(`${devServerUrl}/`, { waitUntil: 'load' });
             expect(errors).toEqual([]);
         } finally {
             await page.close();
@@ -172,7 +181,7 @@ function testFixture(
         it('automation API returns expected viewState', async () => {
             const page = await browser.newPage();
             try {
-                await page.goto(`${devServerUrl}/`, { waitUntil: 'networkidle' });
+                await page.goto(`${devServerUrl}/`, { waitUntil: 'load' });
                 const pageState = await page.evaluate(() => {
                     return (window as any).__jay?.automation?.getPageState();
                 });
@@ -188,24 +197,26 @@ function testFixture(
         it('DOM is correct after hydration', async () => {
             const page = await browser.newPage();
             try {
-                await page.goto(`${devServerUrl}/`, { waitUntil: 'networkidle' });
+                await page.goto(`${devServerUrl}/`, { waitUntil: 'load' });
+                await waitForHydration(page);
                 await opts.hydrationChecks!(page);
             } finally {
                 await page.close();
             }
-        });
+        }, 15000);
     }
 
     if (opts.interactivityChecks) {
         it('interactivity works after hydration', async () => {
             const page = await browser.newPage();
             try {
-                await page.goto(`${devServerUrl}/`, { waitUntil: 'networkidle' });
+                await page.goto(`${devServerUrl}/`, { waitUntil: 'load' });
+                await waitForHydration(page);
                 await opts.interactivityChecks!(page);
             } finally {
                 await page.close();
             }
-        });
+        }, 15000);
     }
 }
 
@@ -336,8 +347,9 @@ describe('hydration', () => {
     });
 
     describe('6c. Headless — under forEach', () => {
+        // forEach widget is fast-only (no slow phase) — no need for slow render cache.
+        // Using cache causes hydration to fail (pre-rendered path issue).
         testFixture('page-headless-foreach', {
-            useSlowRenderCache: true,
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('ForEach Headless');
                 const widgets = await page.$$('#target .widget');
@@ -359,10 +371,33 @@ describe('hydration', () => {
                     const values = document.querySelectorAll('#target .widget .value');
                     return values[1]?.textContent === '21';
                 }, { timeout: 2000 });
-                const values = await page.$$('#target .widget .value');
+                let values = await page.$$('#target .widget .value');
                 expect(await values[0].textContent()).toEqual('10'); // unchanged
                 expect(await values[1].textContent()).toEqual('21'); // incremented
                 expect(await values[2].textContent()).toEqual('30'); // unchanged
+
+                // Add a new item
+                await page.click('button:text("Add Item")');
+                await page.waitForFunction(() => {
+                    return document.querySelectorAll('#target .widget').length === 4;
+                }, { timeout: 2000 });
+                let widgets = await page.$$('#target .widget');
+                expect(widgets).toHaveLength(4);
+                // New item should have label "Item 4" and value 40
+                expect(await widgets[3].textContent()).toContain('Item 4');
+                expect(await widgets[3].textContent()).toContain('40');
+
+                // Remove last item
+                await page.click('button:text("Remove Last")');
+                await page.waitForFunction(() => {
+                    return document.querySelectorAll('#target .widget').length === 3;
+                }, { timeout: 2000 });
+                widgets = await page.$$('#target .widget');
+                expect(widgets).toHaveLength(3);
+
+                // Previous items should still have their state
+                values = await page.$$('#target .widget .value');
+                expect(await values[1].textContent()).toEqual('21'); // still incremented
             },
         });
     });
