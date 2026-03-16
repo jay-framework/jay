@@ -1006,6 +1006,48 @@ tags:
             ]);
         });
 
+        it('should include wrapper element index when jay:xxx is inside an intermediate element', () => {
+            // jay:product-card is inside a <div class="product-card"> wrapper,
+            // not a direct child of the slowForEach div. The wrapper's positional
+            // index must be included to match assignCoordinates.
+            const jayHtml = `<!DOCTYPE html>
+<html>
+<head></head>
+<body>
+    <div slowForEach="products" jayIndex="0" jayTrackBy="p1">
+        <div class="product-card">
+            <jay:product-card productId="prod-123">
+                <h2>{name}</h2>
+            </jay:product-card>
+        </div>
+    </div>
+    <div slowForEach="products" jayIndex="1" jayTrackBy="p2">
+        <div class="product-card">
+            <jay:product-card productId="prod-456">
+                <h2>{name}</h2>
+            </jay:product-card>
+        </div>
+    </div>
+</body>
+</html>`;
+
+            const { instances } = discoverHeadlessInstances(jayHtml);
+
+            // Coordinate includes "0" for the wrapper div position within the slowForEach item
+            expect(instances).toEqual([
+                {
+                    contractName: 'product-card',
+                    props: { productId: 'prod-123' },
+                    coordinate: ['p1', '0', 'product-card:0'],
+                },
+                {
+                    contractName: 'product-card',
+                    props: { productId: 'prod-456' },
+                    coordinate: ['p2', '0', 'product-card:0'],
+                },
+            ]);
+        });
+
         it('should camelCase prop names', () => {
             const jayHtml = `<!DOCTYPE html>
 <html>

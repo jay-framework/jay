@@ -21,13 +21,15 @@
                 </jay:widget>
             </div>
             <div slowForEach="items" trackBy="_id" jayIndex="1" jayTrackBy="2">
-                <jay:widget itemId="2">
-                    <div class="widget">
-                        <span class="label">{label}</span>
-                        <span class="value">{value}</span>
-                <button ref="increment">+1</button>
-                    </div>
-                </jay:widget>
+                <div class="card">
+                    <jay:widget itemId="2">
+                        <div class="widget">
+                            <span class="label">{label}</span>
+                            <span class="value">{value}</span>
+                            <button ref="increment">+1</button>
+                        </div>
+                    </jay:widget>
+                </div>
             </div>
         </div>
     </div>

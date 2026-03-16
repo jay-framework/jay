@@ -598,27 +598,44 @@ export interface HeadlessInstanceResolvedData {
  */
 export function buildCoordinatePrefix(element: HTMLElement): string[] {
     const parts: string[] = [];
+    let child: Node | null = element;
     let current = element.parentNode as HTMLElement | null;
 
     while (current) {
         const jayTrackBy = current.getAttribute?.('jayTrackBy');
         if (jayTrackBy != null) {
-            // assignCoordinates uses jayTrackBy as the coordinate base for slowForEach items
-            // (no child index — the jayTrackBy value IS the full coordinate for the item scope)
+            // slowForEach scope: add jayTrackBy, then child's position within
+            // the slowForEach div (matching assignCoordinates childCounter).
+            // If child is a jay:xxx element, it's a directive that doesn't
+            // participate in childCounter — skip the index.
+            const childTag = (child as HTMLElement)?.tagName?.toLowerCase?.();
+            if (!childTag?.startsWith('jay:')) {
+                const childIndex = getElementChildIndex(child, current);
+                parts.unshift(String(childIndex));
+            }
             parts.unshift(jayTrackBy);
         }
+        child = current;
         current = current.parentNode as HTMLElement | null;
     }
 
     return parts;
 }
 
+/**
+ * Count position of a child among its parent's element children,
+ * skipping jay:xxx elements (which are directives, not DOM elements —
+ * matching assignCoordinates childCounter behavior).
+ */
 function getElementChildIndex(child: Node | null, parent: HTMLElement): number {
     if (!child) return 0;
     let index = 0;
     for (const sibling of parent.childNodes) {
         if (sibling === child) return index;
-        if (sibling.nodeType === NodeType.ELEMENT_NODE) index++;
+        if (sibling.nodeType === NodeType.ELEMENT_NODE) {
+            const tag = (sibling as HTMLElement).tagName?.toLowerCase?.();
+            if (!tag?.startsWith('jay:')) index++;
+        }
     }
     return index;
 }

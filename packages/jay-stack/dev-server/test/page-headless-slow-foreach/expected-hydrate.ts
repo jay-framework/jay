@@ -14,7 +14,7 @@ import {
     // @ts-ignore
 } from '/@fs/Users/yoav/work/jay/main/packages/jay-stack/stack-client-runtime/dist/index.js';
 // @ts-ignore
-import { widget } from '/widget';
+import { widget } from '/widget.ts';
 function _headlessWidget0HydrateRender(options) {
     const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
     const render = (viewState) => {
@@ -39,7 +39,7 @@ function _headlessWidget1HydrateRender(options) {
     const [refManager, [refIncrement2]] = ReferencesManager.for(options, ['increment'], [], [], []);
     const render = (viewState) => {
         const instanceData = useContext(HEADLESS_INSTANCES);
-        const instanceKey = '2/widget:0';
+        const instanceKey = '2/0/widget:0';
         const instanceVs = instanceData?.viewStates?.[instanceKey] ?? viewState;
         return ConstructContext.withHydrationChildContext(instanceVs, refManager, () =>
             adoptElement('0', {}, [
@@ -53,7 +53,7 @@ function _headlessWidget1HydrateRender(options) {
 const _HeadlessWidget1 = makeHeadlessInstanceComponent(
     _headlessWidget1HydrateRender,
     widget,
-    '2/widget:0',
+    '2/0/widget:0',
 );
 export function hydrate(rootElement, options) {
     const [itemsRefManager, [ref_0]] = ReferencesManager.for(options, [], [], [], ['0']);
@@ -83,7 +83,7 @@ export function hydrate(rootElement, options) {
                         childCompHydrate(
                             _HeadlessWidget1,
                             (vs1) => ({ itemId: '2' }),
-                            'widget:0',
+                            '0/widget:0',
                             ref_0(),
                         ),
                 ),

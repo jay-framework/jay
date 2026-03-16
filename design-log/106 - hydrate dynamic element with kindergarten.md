@@ -235,3 +235,45 @@ A: A forEach item containing a conditional creates nested Kindergartens. Each le
 4. Nested dynamic elements work (forEach item with conditional)
 5. Static-only adoptElement unchanged (no Kindergarten overhead)
 6. All existing hydration tests pass
+
+## Implementation Results
+
+### Deviations from design
+
+**Deferred group assignment via `_setGroup` callback** — The design proposed passing `KindergartenGroup` as a parameter to `hydrateForEach`/`hydrateConditional`. This doesn't work because JS argument evaluation order means these calls execute _before_ `adoptDynamicElement` can create groups. Solution: `hydrateForEach` and `hydrateConditional` return a `DynamicChild<ViewState>` (extends `BaseJayElement` with a `_setGroup` callback). `adoptDynamicElement` creates groups and calls `_setGroup` on each dynamic child.
+
+**`STATIC` is a Symbol, not an object** — The design proposed a `BaseJayElement` with `__static: true`. Implementation uses `Symbol('STATIC')` which is simpler and allows `child === STATIC` identity check instead of property access.
+
+**Code size reduction via `adoptBase` / `collectChild` helpers** — `adoptElement` and `adoptDynamicElement` share coordinate resolution, ref wiring, and dynamic attribute binding via extracted `adoptBase()`. Child update/mount/unmount collection extracted into `collectChild()`.
+
+### Additional bug fix: `buildCoordinatePrefix` coordinate mismatch
+
+During integration testing with the `fake-shop` example, discovered that `buildCoordinatePrefix` (used by `discoverHeadlessInstances` to compute `__headlessInstances` keys) produced coordinates that didn't match `assignCoordinates` (used by server-element and hydrate targets for lookup).
+
+**Root cause:** `buildCoordinatePrefix` computed child indices incorrectly:
+
+- It counted `jay:xxx` elements as DOM children, but `assignCoordinates` skips them (`childCounter` is not incremented for headless directives)
+- When the headless instance was a direct child of a slowForEach div, this produced a spurious `/0` index (`"1/0/widget:0"` instead of `"1/widget:0"`)
+- When intermediate wrapper elements existed (e.g., `<div class="product-card">`), the child index was needed but relative to the wrapper's real DOM siblings
+
+**Fix:** `buildCoordinatePrefix` now:
+
+1. Walks up from the element, stopping at the first `jayTrackBy` ancestor
+2. For intermediate elements between the instance and the jayTrackBy scope, adds their positional index (matching `assignCoordinates childCounter`)
+3. Skips `jay:xxx` elements when computing sibling position (they're directives, not DOM elements)
+4. Uses `jayTrackBy` value as the coordinate base (not a positional index)
+
+### Test improvements
+
+- **`waitForHydration` with diagnostics** — Uses `Promise.race` with a 6s hard timeout to handle Vite reload loops. Collects page errors and reports them on failure.
+- **`page.setDefaultTimeout(2000)`** — Playwright selector calls fail fast (2s) instead of auto-waiting 30s, preventing test timeouts from masking assertion failures.
+- **`dumpTargetContent` on failure** — Catches check/interactivity errors, reads `#target` innerHTML via `page.evaluate`, and re-throws with DOM content for debugging.
+- **`afterAll` cleanup** — Removes `build/` directories created during tests.
+- **`// @ts-ignore` in fixtures** — Before `} from '...'` lines to suppress tsc errors on Vite-style import paths. `stripTsDirectives` removes them before comparison.
+
+### Test results
+
+- Runtime: 249 passed (252 total, 3 skipped)
+- Compiler: 592 passed (596 total, 4 skipped)
+- Dev-server: 42 passed (including all 6a–6d headless tests)
+- Full suite: 68 packages, all passing
