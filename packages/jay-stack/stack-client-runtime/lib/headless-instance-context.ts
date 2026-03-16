@@ -69,14 +69,10 @@ function makeSignals<T extends object>(obj: T): Signals<T> {
  */
 /**
  * Component definition shape expected by makeHeadlessInstanceComponent.
- * Can be a full JayStackComponentDefinition or a minimal object with the required fields.
- */
-/**
- * Component definition shape expected by makeHeadlessInstanceComponent.
  * `clientDefaults` receives raw props (not signal-wrapped) since it's called
  * before the component construction context is set up.
  */
-interface HeadlessComponentDef {
+export interface HeadlessComponentDef {
     comp: ComponentConstructor<any, any, any, any, any>;
     contexts?: ContextMarkers<any>;
     clientDefaults?: (props: any) => { viewState: any; carryForward?: any };
@@ -90,36 +86,18 @@ export function makeHeadlessInstanceComponent<
     CompCore extends JayComponentCore<PropsT, ViewState>,
 >(
     preRender: PreRenderElement<ViewState, Refs, JayElementT>,
-    componentOrConstructor:
-        | HeadlessComponentDef
-        | ComponentConstructor<PropsT, Refs, ViewState, any, CompCore>,
+    componentDef: HeadlessComponentDef,
     coordinateKey: string | ((dataIds: string[]) => string),
-    pluginContexts?: ContextMarkers<any>,
 ): (props: PropsT) => ConcreteJayComponent<PropsT, ViewState, Refs, CompCore, JayElementT> {
-    // Support both new (component object) and legacy (separate params) calling conventions
-    const isComponentObject =
-        typeof componentOrConstructor === 'object' &&
-        componentOrConstructor !== null &&
-        'comp' in componentOrConstructor;
-    const interactiveConstructor: ComponentConstructor<PropsT, Refs, ViewState, any, CompCore> =
-        isComponentObject
-            ? (componentOrConstructor as HeadlessComponentDef).comp
-            : (componentOrConstructor as ComponentConstructor<
-                  PropsT,
-                  Refs,
-                  ViewState,
-                  any,
-                  CompCore
-              >);
-    const resolvedContexts: ContextMarkers<any> =
-        pluginContexts ??
-        (isComponentObject
-            ? (componentOrConstructor as HeadlessComponentDef).contexts
-            : undefined) ??
-        ([] as any);
-    const clientDefaults = isComponentObject
-        ? (componentOrConstructor as HeadlessComponentDef).clientDefaults
-        : undefined;
+    const interactiveConstructor = componentDef.comp as ComponentConstructor<
+        PropsT,
+        Refs,
+        ViewState,
+        any,
+        CompCore
+    >;
+    const resolvedContexts: ContextMarkers<any> = componentDef.contexts ?? ([] as any);
+    const clientDefaults = componentDef.clientDefaults;
 
     // Wrap the interactive constructor to read instance data from the provided context
     const wrappedConstructor: ComponentConstructor<PropsT, Refs, ViewState, any, CompCore> = (
