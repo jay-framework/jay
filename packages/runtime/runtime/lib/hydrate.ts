@@ -81,20 +81,16 @@ export function adoptText<ViewState>(
     const element = context.peekCoordinate(coordinate);
 
     if (!element) {
-        if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
-            console.warn(`[jay hydration] coordinate "${coordinate}" not found in DOM`);
-        }
+        console.warn(`[jay hydration] coordinate "${coordinate}" not found in DOM`);
         return { dom: undefined as any, update: noopUpdate, mount: noopMount, unmount: noopMount };
     }
 
     const index = childIndex ?? 0;
     const textNode = getSignificantChild(element, index);
     if (!textNode || textNode.nodeType !== Node.TEXT_NODE) {
-        if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
-            console.warn(
-                `[jay hydration] adoptText(${coordinate}, childIndex=${index}): expected text node`,
-            );
-        }
+        console.warn(
+            `[jay hydration] adoptText(${coordinate}, childIndex=${index}): expected text node`,
+        );
         return { dom: undefined as any, update: noopUpdate, mount: noopMount, unmount: noopMount };
     }
 
@@ -153,9 +149,7 @@ function adoptBase<ViewState>(
     const element = context.resolveCoordinate(coordinate);
 
     if (!element) {
-        if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
-            console.warn(`[jay hydration] coordinate "${coordinate}" not found in DOM`);
-        }
+        console.warn(`[jay hydration] coordinate "${coordinate}" not found in DOM`);
         return null;
     }
 
