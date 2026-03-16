@@ -81,7 +81,7 @@ export function adoptText<ViewState>(
     const element = context.peekCoordinate(coordinate);
 
     if (!element) {
-        console.warn(`[jay hydration] coordinate "${coordinate}" not found in DOM`);
+        console.warn(`[jay hydration] adoptText coordinate "${coordinate}" not found in DOM`);
         return { dom: undefined as any, update: noopUpdate, mount: noopMount, unmount: noopMount };
     }
 
@@ -149,7 +149,7 @@ function adoptBase<ViewState>(
     const element = context.resolveCoordinate(coordinate);
 
     if (!element) {
-        console.warn(`[jay hydration] coordinate "${coordinate}" not found in DOM`);
+        console.warn(`[jay hydration] adoptBase coordinate "${coordinate}" not found in DOM`);
         return null;
     }
 
