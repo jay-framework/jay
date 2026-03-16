@@ -309,3 +309,15 @@ Discovered via `fake-shop` example: headless instances inside a forEach with int
 **Fix in `coordKeyArg`:** Unified forEach and slowForEach — both use `coordSegments.slice(1).join('/')` to strip the first segment (`$trackBy` or `jayTrackBy`). The remaining path includes intermediate wrapper elements (e.g., `"$_id/0/widget:0"` → `"0/widget:0"`).
 
 **Test:** Updated 6c dev-server test (`page-headless-foreach`) to wrap the headless instance in `<div class="card"><strong>{name}</strong><jay:widget>` — the same pattern as the fake-shop. Verifies both hydration DOM correctness and interactivity (button click updates widget value).
+
+### Fix: `dataIds` polluted by `forInstance` segments
+
+`ConstructContext.dataIds` (used by `makeHeadlessInstanceComponent` to compute `__headlessInstances` lookup keys) returned `coordinateBase`, which serves double duty: coordinate resolution AND forEach trackBy tracking. When `forInstance("0/widget:0")` extended `coordinateBase` for resolution, it also polluted `dataIds` — producing keys like `"1,0,widget:0"` instead of `"1,widget:0"`.
+
+**Fix:** Separated `_dataIds` from `coordinateBase` in `ConstructContext`. `forItem` adds to both (trackBy values). `forInstance` only adds to `coordinateBase` (instance coordinate segments are not trackBy values).
+
+### Fix: hydrate target missing `coordinateSuffix` in forEach key function
+
+The hydrate target generated `(dataIds) => dataIds.join(',')` for the `makeHeadlessInstanceComponent` coordinate key function — missing the `coordinateSuffix`. The element target correctly used `(dataIds) => [...dataIds, '${coordinateSuffix}'].toString()`. Fixed hydrate target to match.
+
+**Test:** Added new 6e test (`page-headless-foreach-nested`) — forEach with headless instance inside wrapper div + preceding static sections + no `clientDefaults`. Reproduces the exact fake-shop pattern where key mismatch caused `"undefined is not iterable"` crash.

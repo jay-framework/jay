@@ -156,6 +156,7 @@ export function wrapWithModifiedCheck<T extends object>(
 export class ConstructContext<ViewState> {
     private readonly _coordinateMap?: Map<string, Element[]>;
     private readonly _rootElement?: Element;
+    private readonly _dataIds: Coordinate;
 
     constructor(
         private readonly data: ViewState,
@@ -163,18 +164,20 @@ export class ConstructContext<ViewState> {
         private readonly coordinateBase: Coordinate = [],
         coordinateMap?: Map<string, Element[]>,
         rootElement?: Element,
+        dataIds?: Coordinate,
     ) {
         this._coordinateMap = coordinateMap;
         this._rootElement = rootElement;
+        this._dataIds = dataIds ?? coordinateBase;
     }
 
     get currData() {
         return this.data;
     }
 
-    /** The accumulated coordinate base (trackBy values from ancestor forEach loops) */
+    /** The accumulated trackBy values from ancestor forEach loops (for __headlessInstances key lookup) */
     get dataIds(): Coordinate {
-        return this.coordinateBase;
+        return this._dataIds;
     }
 
     coordinate = (refName: string): Coordinate => {
@@ -188,16 +191,14 @@ export class ConstructContext<ViewState> {
             [...this.coordinateBase, id],
             this._coordinateMap,
             this._rootElement,
+            [...this._dataIds, id],
         );
     }
 
     /**
      * Create a child context scoped to a headless instance's coordinate prefix.
-     * Extends coordinateBase with the instance segments (e.g., 'product-card:0'
-     * splits into ['product-card:0']), sharing the parent's coordinateMap.
-     *
-     * Used by childCompHydrate to scope coordinate resolution before calling
-     * the component factory.
+     * Extends coordinateBase for coordinate resolution but does NOT add to dataIds
+     * (instance segments are not trackBy values).
      */
     forInstance(instanceCoordinate: string) {
         const segments = instanceCoordinate.split('/');
@@ -207,6 +208,7 @@ export class ConstructContext<ViewState> {
             [...this.coordinateBase, ...segments],
             this._coordinateMap,
             this._rootElement,
+            this._dataIds,
         );
     }
     forAsync<ChildViewState>(childViewState: ChildViewState) {
@@ -216,6 +218,7 @@ export class ConstructContext<ViewState> {
             [...this.coordinateBase],
             this._coordinateMap,
             this._rootElement,
+            this._dataIds,
         );
     }
 

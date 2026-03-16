@@ -91,7 +91,7 @@ function _headlessProductCard0HydrateRender(
 const _HeadlessProductCard0Adopt = makeHeadlessInstanceComponent(
     _headlessProductCard0HydrateRender,
     productCard,
-    (dataIds) => dataIds.join(','),
+    (dataIds) => [...dataIds, 'product-card:0'].toString(),
 );
 
 // Inline template for headless component: product-card #1

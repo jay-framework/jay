@@ -2603,7 +2603,7 @@ ${adoptInlineBody.rendered}
     let adoptComponentDef: string;
     if (isInsideForEach) {
         adoptComponentSymbol = `_Headless${pascal}${idx}Adopt`;
-        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName},\n    (dataIds) => dataIds.join(','),\n);`;
+        adoptComponentDef = `const ${adoptComponentSymbol} = makeHeadlessInstanceComponent(\n    ${renderFnName},\n    ${pluginComponentName},\n    (dataIds) => [...dataIds, '${coordinateSuffix}'].toString(),\n);`;
     } else {
         adoptComponentSymbol = `_Headless${pascal}${idx}`;
         // Use the __headlessInstances key (not full DOM coordinate) for data lookup.

@@ -30,7 +30,7 @@ function _headlessWidget0HydrateRender(options) {
 const _HeadlessWidget0Adopt = makeHeadlessInstanceComponent(
     _headlessWidget0HydrateRender,
     widget,
-    (dataIds) => dataIds.join(','),
+    (dataIds) => [...dataIds, 'widget:0'].toString(),
 );
 function _headlessWidget1Render(options) {
     const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
