@@ -488,6 +488,45 @@ describe('hydration', () => {
         });
     });
 
+    describe('6e. Headless — under forEach with wrapper + preceding sections', () => {
+        // Reproduces fake-shop pattern: multiple sections before the forEach,
+        // headless instance inside <div class="card"><strong>{name}</strong><jay:widget>.
+        // Tests that coordinates are correct when forEach is not the first child.
+        testFixture('page-headless-foreach-nested', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Nested ForEach Test');
+                // Static section should be present
+                expect(await page.textContent('#target .section h2')).toEqual('Static Section');
+                // Widgets inside forEach cards
+                const widgets = await page.$$('#target .widget');
+                expect(widgets).toHaveLength(2);
+                expect(await widgets[0].textContent()).toContain('10');
+                expect(await widgets[1].textContent()).toContain('20');
+                // Item names in <strong> tags
+                const names = await page.$$('#target .card strong');
+                expect(names).toHaveLength(2);
+                expect(await names[0].textContent()).toEqual('Alpha');
+                expect(await names[1].textContent()).toEqual('Beta');
+            },
+            interactivityChecks: async (page) => {
+                // Click the first widget's increment button
+                const buttons = await page.$$('#target .widget button');
+                expect(buttons).toHaveLength(2);
+                await buttons[0].click();
+                await page.waitForFunction(
+                    () => {
+                        const values = document.querySelectorAll('#target .widget .value');
+                        return values[0]?.textContent === '11';
+                    },
+                    { timeout: 2000 },
+                );
+                const values = await page.$$('#target .widget .value');
+                expect(await values[0].textContent()).toEqual('11');
+                expect(await values[1].textContent()).toEqual('20');
+            },
+        });
+    });
+
     describe('6d. Headless — under slowForEach', () => {
         testFixture('page-headless-slow-foreach', {
             useSlowRenderCache: true,
