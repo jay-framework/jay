@@ -532,7 +532,9 @@ describe('hydration', () => {
         // Reproduces fake-shop pattern: multiple sections before the forEach,
         // headless instance inside <div class="card"><strong>{name}</strong><jay:widget>.
         // Tests that coordinates are correct when forEach is not the first child.
+        // Also verifies forEach carry forward reaches the interactive constructor.
         testFixture('page-headless-foreach-nested', {
+            useSlowRenderCache: true,
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Nested ForEach Test');
                 // Static section should be present
@@ -549,7 +551,7 @@ describe('hydration', () => {
                 expect(await names[1].textContent()).toEqual('Beta');
             },
             interactivityChecks: async (page) => {
-                // Click the first widget's increment button
+                // Click the first widget's increment button (itemId="1" → step=1)
                 const buttons = await page.$$('#target .widget button');
                 expect(buttons).toHaveLength(2);
                 await buttons[0].click();
@@ -560,9 +562,24 @@ describe('hydration', () => {
                     },
                     { timeout: 2000 },
                 );
-                const values = await page.$$('#target .widget .value');
-                expect(await values[0].textContent()).toEqual('11');
-                expect(await values[1].textContent()).toEqual('20');
+                let values = await page.$$('#target .widget .value');
+                expect(await values[0].textContent()).toEqual('11'); // 10 + step 1
+                expect(await values[1].textContent()).toEqual('20'); // unchanged
+
+                // Click the second widget's increment button (itemId="2" → step=2)
+                // This verifies carry forward reaches the correct instance:
+                // if carry forward is missing, step defaults to 1 and value becomes 21.
+                // With correct carry forward (itemId="2"), step=2 and value becomes 22.
+                await buttons[1].click();
+                await page.waitForFunction(
+                    () => {
+                        const values = document.querySelectorAll('#target .widget .value');
+                        return values[1]?.textContent === '22';
+                    },
+                    { timeout: 2000 },
+                );
+                values = await page.$$('#target .widget .value');
+                expect(await values[1].textContent()).toEqual('22'); // 20 + step 2
             },
         });
     });

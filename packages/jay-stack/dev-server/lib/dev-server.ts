@@ -364,10 +364,15 @@ async function handleCachedRequest(
                 fastViewState,
             );
             if (forEachResult) {
-                const existingHeadless = (fastViewState as any).__headlessInstances || {};
+                const existingVS = (fastViewState as any).__headlessInstances || {};
                 fastViewState = {
                     ...fastViewState,
-                    __headlessInstances: { ...existingHeadless, ...forEachResult },
+                    __headlessInstances: { ...existingVS, ...forEachResult.viewStates },
+                };
+                const existingCF = (fastCarryForward as any).__headlessInstances || {};
+                fastCarryForward = {
+                    ...fastCarryForward,
+                    __headlessInstances: { ...existingCF, ...forEachResult.carryForwards },
                 };
             }
         }
@@ -564,10 +569,15 @@ async function handlePreRenderRequest(
                 fastViewState,
             );
             if (forEachResult) {
-                const existingHeadless = (fastViewState as any).__headlessInstances || {};
+                const existingVS = (fastViewState as any).__headlessInstances || {};
                 fastViewState = {
                     ...fastViewState,
-                    __headlessInstances: { ...existingHeadless, ...forEachResult },
+                    __headlessInstances: { ...existingVS, ...forEachResult.viewStates },
+                };
+                const existingCF = (fastCarryForward as any).__headlessInstances || {};
+                fastCarryForward = {
+                    ...fastCarryForward,
+                    __headlessInstances: { ...existingCF, ...forEachResult.carryForwards },
                 };
             }
         }
@@ -657,6 +667,7 @@ async function handleDirectRequest(
 
     // Run slow phase for headless instances
     let instanceViewStates: Record<string, object> | undefined;
+    let instanceCarryForwards: Record<string, object> | undefined;
     let instancePhaseDataForFast: InstancePhaseData | undefined;
     let forEachInstancesForFast: ForEachHeadlessInstance[] | undefined;
     const headlessInstanceComponents = pagePartsResult.val.headlessInstanceComponents ?? [];
@@ -729,8 +740,12 @@ async function handleDirectRequest(
         );
         if (forEachResult) {
             if (!instanceViewStates) instanceViewStates = {};
-            for (const [coordKey, fastVS] of Object.entries(forEachResult)) {
+            for (const [coordKey, fastVS] of Object.entries(forEachResult.viewStates)) {
                 instanceViewStates[coordKey] = fastVS;
+            }
+            if (!instanceCarryForwards) instanceCarryForwards = {};
+            for (const [coordKey, cf] of Object.entries(forEachResult.carryForwards)) {
+                instanceCarryForwards[coordKey] = cf;
             }
         }
     }
@@ -754,11 +769,18 @@ async function handleDirectRequest(
         viewState = { ...renderedSlowly.rendered, ...renderedFast.rendered };
     }
 
-    // Add headless instance viewStates if any
+    // Add headless instance viewStates/carryForwards if any
     if (instanceViewStates && Object.keys(instanceViewStates).length > 0) {
         viewState = {
             ...viewState,
             __headlessInstances: instanceViewStates,
+        };
+    }
+    let fastCF = renderedFast.carryForward;
+    if (instanceCarryForwards && Object.keys(instanceCarryForwards).length > 0) {
+        fastCF = {
+            ...fastCF,
+            __headlessInstances: instanceCarryForwards,
         };
     }
 
@@ -771,7 +793,7 @@ async function handleDirectRequest(
         route.jayHtmlPath,
         pageParts,
         viewState,
-        renderedFast.carryForward,
+        fastCF,
         clientTrackByMap,
         projectInit,
         pluginsForPage,
@@ -1076,13 +1098,14 @@ async function renderFastChangingDataForForEachInstances(
     forEachInstances: ForEachHeadlessInstance[],
     headlessInstanceComponents: HeadlessInstanceComponent[],
     mergedViewState: object,
-): Promise<Record<string, object> | undefined> {
+): Promise<{ viewStates: Record<string, object>; carryForwards: Record<string, object> } | undefined> {
     const componentByContractName = new Map<string, HeadlessInstanceComponent>();
     for (const comp of headlessInstanceComponents) {
         componentByContractName.set(comp.contractName, comp);
     }
 
     const viewStates: Record<string, object> = {};
+    const carryForwards: Record<string, object> = {};
     let hasResults = false;
 
     for (const instance of forEachInstances) {
@@ -1120,13 +1143,16 @@ async function renderFastChangingDataForForEachInstances(
                         instance.coordinateSuffix,
                     );
                     viewStates[coord] = fastResult.rendered;
+                    if (fastResult.carryForward) {
+                        carryForwards[coord] = fastResult.carryForward;
+                    }
                     hasResults = true;
                 }
             }
         }
     }
 
-    return hasResults ? viewStates : undefined;
+    return hasResults ? { viewStates, carryForwards } : undefined;
 }
 
 /**
