@@ -9,17 +9,13 @@ import {
     childComp,
     RenderElementOptions,
     JayContract,
-    useContext,
     adoptText,
     adoptElement,
     childCompHydrate,
     hydrateConditional,
     adoptDynamicElement,
 } from '@jay-framework/runtime';
-import {
-    makeHeadlessInstanceComponent,
-    HEADLESS_INSTANCES,
-} from '@jay-framework/stack-client-runtime';
+import { makeHeadlessInstanceComponent } from '@jay-framework/stack-client-runtime';
 import {
     ProductCardViewState,
     ProductCardRefs,
@@ -90,17 +86,13 @@ function _headlessProductCard0HydrateRender(
         [],
         [],
     );
-    const render = (viewState) => {
-        const instanceData = useContext(HEADLESS_INSTANCES);
-        const instanceKey = 'product-card:0';
-        const instanceVs = instanceData?.viewStates?.[instanceKey] ?? viewState;
-        return ConstructContext.withHydrationChildContext(instanceVs, refManager, () =>
+    const render = (viewState) =>
+        ConstructContext.withHydrationChildContext(viewState, refManager, () =>
             adoptElement('0', {}, [
                 adoptText('0/1', (vs) => vs.price),
                 adoptElement('0/2', {}, [], refAddToCart()),
             ]),
         ) as _HeadlessProductCard0Element;
-    };
     return [refManager.getPublicAPI() as ProductCardRefs, render];
 }
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
@@ -122,14 +114,10 @@ function _headlessProductCard1HydrateRender(
     options?: RenderElementOptions,
 ): _HeadlessProductCard1ElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
-    const render = (viewState) => {
-        const instanceData = useContext(HEADLESS_INSTANCES);
-        const instanceKey = 'product-card:1';
-        const instanceVs = instanceData?.viewStates?.[instanceKey] ?? viewState;
-        return ConstructContext.withHydrationChildContext(instanceVs, refManager, () =>
+    const render = (viewState) =>
+        ConstructContext.withHydrationChildContext(viewState, refManager, () =>
             adoptElement('0', {}, [adoptText('0/1', (vs) => vs.price)]),
         ) as _HeadlessProductCard1Element;
-    };
     return [refManager.getPublicAPI() as ProductCardRefs, render];
 }
 const _HeadlessProductCard1 = makeHeadlessInstanceComponent(
@@ -177,17 +165,13 @@ function _headlessProductCard2HydrateRender(
         [],
         [],
     );
-    const render = (viewState) => {
-        const instanceData = useContext(HEADLESS_INSTANCES);
-        const instanceKey = 'p1/product-card:0';
-        const instanceVs = instanceData?.viewStates?.[instanceKey] ?? viewState;
-        return ConstructContext.withHydrationChildContext(instanceVs, refManager, () =>
+    const render = (viewState) =>
+        ConstructContext.withHydrationChildContext(viewState, refManager, () =>
             adoptElement('0', {}, [
                 adoptText('0/1', (vs) => vs.price),
                 adoptElement('0/2', {}, [], refAddToCart2()),
             ]),
         ) as _HeadlessProductCard2Element;
-    };
     return [refManager.getPublicAPI() as ProductCardRefs, render];
 }
 const _HeadlessProductCard2 = makeHeadlessInstanceComponent(
@@ -209,14 +193,10 @@ function _headlessProductCard3HydrateRender(
     options?: RenderElementOptions,
 ): _HeadlessProductCard3ElementPreRender {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
-    const render = (viewState) => {
-        const instanceData = useContext(HEADLESS_INSTANCES);
-        const instanceKey = 'p2/product-card:0';
-        const instanceVs = instanceData?.viewStates?.[instanceKey] ?? viewState;
-        return ConstructContext.withHydrationChildContext(instanceVs, refManager, () =>
+    const render = (viewState) =>
+        ConstructContext.withHydrationChildContext(viewState, refManager, () =>
             adoptElement('0', {}, [adoptText('0/1', (vs) => vs.price)]),
         ) as _HeadlessProductCard3Element;
-    };
     return [refManager.getPublicAPI() as ProductCardRefs, render];
 }
 const _HeadlessProductCard3 = makeHeadlessInstanceComponent(

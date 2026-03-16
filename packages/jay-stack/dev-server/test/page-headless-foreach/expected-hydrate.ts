@@ -4,8 +4,6 @@ import {
     ReferencesManager,
     ConstructContext,
     childComp,
-    useContext,
-    currentConstructionContext,
     adoptText,
     adoptElement,
     childCompHydrate,
@@ -13,27 +11,20 @@ import {
     adoptDynamicElement,
     // @ts-ignore
 } from '/@fs/Users/yoav/work/jay/main/packages/runtime/runtime/dist/index.js';
-import {
-    makeHeadlessInstanceComponent,
-    HEADLESS_INSTANCES,
-    // @ts-ignore
-} from '/@fs/Users/yoav/work/jay/main/packages/jay-stack/stack-client-runtime/dist/index.js';
+// @ts-ignore
+import { makeHeadlessInstanceComponent } from '/@fs/Users/yoav/work/jay/main/packages/jay-stack/stack-client-runtime/dist/index.js';
 // @ts-ignore
 import { widget } from '/widget.ts';
 function _headlessWidget0HydrateRender(options) {
     const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
-    const render = (viewState) => {
-        const instanceData = useContext(HEADLESS_INSTANCES);
-        const instanceKey = (currentConstructionContext()?.dataIds ?? []).join(',') + ',widget:0';
-        const instanceVs = instanceData?.viewStates?.[instanceKey] ?? viewState;
-        return ConstructContext.withHydrationChildContext(instanceVs, refManager, () =>
+    const render = (viewState) =>
+        ConstructContext.withHydrationChildContext(viewState, refManager, () =>
             adoptElement('0', {}, [
                 adoptText('0/0', (vs) => vs.label),
                 adoptText('0/1', (vs) => vs.value),
                 adoptElement('0/2', {}, [], refIncrement()),
             ]),
         );
-    };
     return [refManager.getPublicAPI(), render];
 }
 const _HeadlessWidget0Adopt = makeHeadlessInstanceComponent(

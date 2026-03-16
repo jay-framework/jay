@@ -8,18 +8,13 @@ import {
     childComp,
     RenderElementOptions,
     JayContract,
-    useContext,
-    currentConstructionContext,
     adoptText,
     adoptElement,
     childCompHydrate,
     hydrateForEach,
     adoptDynamicElement,
 } from '@jay-framework/runtime';
-import {
-    makeHeadlessInstanceComponent,
-    HEADLESS_INSTANCES,
-} from '@jay-framework/stack-client-runtime';
+import { makeHeadlessInstanceComponent } from '@jay-framework/stack-client-runtime';
 import {
     ProductCardViewState,
     ProductCardRefs,
@@ -83,19 +78,14 @@ function _headlessProductCard0HydrateRender(
         [],
         [],
     );
-    const render = (viewState) => {
-        const instanceData = useContext(HEADLESS_INSTANCES);
-        const instanceKey =
-            (currentConstructionContext()?.dataIds ?? []).join(',') + ',product-card:0';
-        const instanceVs = instanceData?.viewStates?.[instanceKey] ?? viewState;
-        return ConstructContext.withHydrationChildContext(instanceVs, refManager, () =>
+    const render = (viewState) =>
+        ConstructContext.withHydrationChildContext(viewState, refManager, () =>
             adoptElement('0', {}, [
                 adoptText('0/0', (vs) => vs.name),
                 adoptText('0/1', (vs) => vs.price),
                 adoptElement('0/2', {}, [], refAddToCart()),
             ]),
         ) as _HeadlessProductCard0Element;
-    };
     return [refManager.getPublicAPI() as ProductCardRefs, render];
 }
 const _HeadlessProductCard0Adopt = makeHeadlessInstanceComponent(
