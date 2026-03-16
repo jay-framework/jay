@@ -584,6 +584,113 @@ describe('hydration', () => {
         });
     });
 
+    describe('7a. Headless — forEach without slow cache', () => {
+        // Same as 6e but WITHOUT useSlowRenderCache.
+        // Tests that headless instances inside forEach work even when
+        // the slow render pipeline doesn't run.
+        testFixture('page-headless-foreach-nested', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Nested ForEach Test');
+                const widgets = await page.$$('#target .widget');
+                expect(widgets).toHaveLength(2);
+                expect(await widgets[0].textContent()).toContain('10');
+                expect(await widgets[1].textContent()).toContain('20');
+            },
+            interactivityChecks: async (page) => {
+                const buttons = await page.$$('#target .widget button');
+                expect(buttons).toHaveLength(2);
+                await buttons[0].click();
+                await page.waitForFunction(
+                    () => {
+                        const values = document.querySelectorAll('#target .widget .value');
+                        return values[0]?.textContent === '11';
+                    },
+                    { timeout: 2000 },
+                );
+                const values = await page.$$('#target .widget .value');
+                expect(await values[0].textContent()).toEqual('11');
+            },
+        });
+    });
+
+    describe('7b. Headless — two static instances without slow cache', () => {
+        // Same as 6e-2 but WITHOUT useSlowRenderCache.
+        // Tests that multiple instances of the same contract get unique keys
+        // even without the slow render pipeline.
+        testFixture('page-headless-two-instances', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Two Instances Test');
+                const widgets = await page.$$('#target .widget');
+                expect(widgets).toHaveLength(2);
+                expect(await widgets[0].textContent()).toContain('10');
+                expect(await widgets[1].textContent()).toContain('30');
+            },
+            interactivityChecks: async (page) => {
+                const buttons = await page.$$('#target .widget button');
+                expect(buttons).toHaveLength(2);
+                await buttons[1].click();
+                await page.waitForFunction(
+                    () => {
+                        const values = document.querySelectorAll('#target .widget .value');
+                        return values[1]?.textContent === '31';
+                    },
+                    { timeout: 2000 },
+                );
+                const values = await page.$$('#target .widget .value');
+                expect(await values[0].textContent()).toEqual('10');
+                expect(await values[1].textContent()).toEqual('31');
+            },
+        });
+    });
+
+    describe('7c. Fast-only page with headless instance', () => {
+        // Page has withFastRender + withInteractive but NO withSlowlyRender.
+        // Tests that headless instances work without any slow phase.
+        testFixture('page-fast-only', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Fast Only Page');
+                const widgets = await page.$$('#target .widget');
+                expect(widgets).toHaveLength(1);
+                expect(await widgets[0].textContent()).toContain('10');
+            },
+            interactivityChecks: async (page) => {
+                const buttons = await page.$$('#target .widget button');
+                expect(buttons).toHaveLength(1);
+                await buttons[0].click();
+                await page.waitForFunction(
+                    () => {
+                        const values = document.querySelectorAll('#target .widget .value');
+                        return values[0]?.textContent === '11';
+                    },
+                    { timeout: 2000 },
+                );
+                const values = await page.$$('#target .widget .value');
+                expect(await values[0].textContent()).toEqual('11');
+            },
+        });
+    });
+
+    describe('7d. Interactive-only page (no slow, no fast)', () => {
+        // Page has only withInteractive — no server phases at all.
+        // Tests that the simplest possible interactive page works.
+        testFixture('page-interactive-only', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Interactive Only');
+                expect(await page.textContent('#target p')).toContain('Count: 0');
+            },
+            interactivityChecks: async (page) => {
+                await page.click('#target button');
+                await page.waitForFunction(
+                    () => {
+                        return document.querySelector('#target p')?.textContent === 'Count: 1';
+                    },
+                    { timeout: 2000 },
+                );
+                expect(await page.textContent('#target p')).toEqual('Count: 1');
+            },
+        });
+    });
+
     describe('6d. Headless — under slowForEach', () => {
         testFixture('page-headless-slow-foreach', {
             useSlowRenderCache: true,
