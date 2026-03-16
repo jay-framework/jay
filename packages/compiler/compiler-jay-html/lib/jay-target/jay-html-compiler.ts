@@ -2741,9 +2741,10 @@ const ${createComponentSymbol} = makeHeadlessInstanceComponent(
     // forEach/slowForEach: strip the first segment ($trackBy or jayTrackBy) — forItem already
     // scopes by trackBy value. Remaining path includes intermediate wrapper elements.
     // e.g. "$_id/0/stock-status:0" → "0/stock-status:0"
-    const coordKeyArg = isInsideForEach || context.insideSlowForEach
-        ? `'${coordSegments.slice(1).join('/')}'`
-        : `'${instanceCoord}'`;
+    const coordKeyArg =
+        isInsideForEach || context.insideSlowForEach
+            ? `'${coordSegments.slice(1).join('/')}'`
+            : `'${instanceCoord}'`;
 
     if (ifCondition) {
         // Fast conditional: wrap in hydrateConditional with adopt and create callbacks.

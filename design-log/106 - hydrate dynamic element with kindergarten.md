@@ -335,6 +335,7 @@ The hydrate target generated `(dataIds) => dataIds.join(',')` for the `makeHeadl
 The `contractName:` prefix is kept because auto-generated refs are `"0"`, `"1"`, etc. — without the prefix, they'd collide with positional child indices in the coordinate map.
 
 Changes:
+
 - `assignCoordinates`: read `ref` from element attribute, use `contractName:ref` as suffix. Remove `headlessCounters` from `ScopeState`.
 - `discoverHeadlessInstances`: no change (already uses ref for coordinate suffix).
 - `computeInstanceKey`, hydrate compiler: no change (already receive/extract the suffix as-is).

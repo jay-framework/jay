@@ -15,6 +15,7 @@ The dev server has a `dontCacheSlowly` option. When the slow render cache is ena
 ### 2. Component phases are optional but the pipeline assumes specific combinations
 
 A full-stack component can have any combination of phases:
+
 - Slow only: `withSlowlyRender()`
 - Fast only: `withFastRender()`
 - Slow + fast: `withSlowlyRender().withFastRender()`
@@ -22,6 +23,7 @@ A full-stack component can have any combination of phases:
 - Fast + interactive: `withFastRender().withInteractive()`
 
 Current issues:
+
 - A fast-only component (no slow phase) inside a forEach is never discovered because discovery runs on the slow-rendered HTML and only finds instances whose slow bindings were resolved.
 - If no fast phase, the carry forward for the interactive phase should be empty (`{}`), but some code paths don't handle this.
 - If no slow phase, `fastRender` receives `(props, ...services)` instead of `(props, carryForward, ...services)` — this is correct but fragile and inconsistent with the slow+fast case.
@@ -29,6 +31,7 @@ Current issues:
 ### 3. Client script should work with or without fast/slow parts
 
 A component with an interactive phase should work on the client regardless of whether it has slow or fast server phases. Currently:
+
 - Without `withInteractive()`, no client code is needed — this works.
 - With `withInteractive()` but without `withFastRender()`, the composite component's `hasFastRendering` is false, so it doesn't pass `fastViewState` signals to parts. The interactive constructor then receives wrong parameters.
 - The `HEADLESS_INSTANCES` context is only provided when `__headlessInstances` data exists in the viewState. If the server didn't produce it (e.g., no slow cache), the context is missing and `useContext` throws.
@@ -38,6 +41,7 @@ A component with an interactive phase should work on the client regardless of wh
 For development, it would be useful to disable SSR entirely and only serve client scripts without hydration. The page would render entirely on the client via the element target (not the hydrate target). This simplifies debugging when SSR/hydration issues are blocking development.
 
 **Proposed:** A global dev server setting `ssr: false` that:
+
 - Serves an empty `<div id="target"></div>` instead of SSR HTML
 - Uses the element target (not hydrate target) for the client script
 - Skips all server rendering phases
@@ -57,18 +61,22 @@ The `loadParams` function (which resolves route parameters) is called on every r
 ## Implementation Plan
 
 ### Phase 1: Build folder cleanup
+
 - Clear `build/` directory on `mkDevServer()` startup
 - Low risk, immediate value
 
 ### Phase 2: loadParams caching
+
 - Cache in the dev server instance
 - Invalidate on route file changes
 
 ### Phase 3: SSR disable option
+
 - Add `ssr: boolean` to dev server options (default `true`)
 - When `false`: empty target div, element target script, skip server rendering
 
 ### Phase 4: Phase optionality consistency
+
 - Ensure `HEADLESS_INSTANCES` context is always provided (even if empty)
 - Handle missing fast/slow phases gracefully in all code paths
 - Test matrix: all phase combinations × static/forEach/slowForEach instances
@@ -86,10 +94,12 @@ Currently `assignCoordinates` runs inside `generateServerElementFile` and `rende
 5. **Both compiler targets read it** — server-element and hydrate compile from the pre-processed file, never running `assignCoordinates` themselves
 
 This subsumes phases 4 and 5:
+
 - **Phase 4 (phase optionality):** pre-processing runs for all pages, so headless instances are always discovered even without slow cache
 - **Phase 5 (slow cache parity):** one pipeline, one output — both cached and uncached paths are identical
 
 The pipeline becomes:
+
 ```
 jay-html → [pre-process: refs + coordinates] → pre-processed.jay-html
                                                     ↓

@@ -1098,7 +1098,9 @@ async function renderFastChangingDataForForEachInstances(
     forEachInstances: ForEachHeadlessInstance[],
     headlessInstanceComponents: HeadlessInstanceComponent[],
     mergedViewState: object,
-): Promise<{ viewStates: Record<string, object>; carryForwards: Record<string, object> } | undefined> {
+): Promise<
+    { viewStates: Record<string, object>; carryForwards: Record<string, object> } | undefined
+> {
     const componentByContractName = new Map<string, HeadlessInstanceComponent>();
     for (const comp of headlessInstanceComponents) {
         componentByContractName.set(comp.contractName, comp);
