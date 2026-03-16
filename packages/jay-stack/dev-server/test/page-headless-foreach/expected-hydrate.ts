@@ -9,7 +9,7 @@ import {
     childCompHydrate,
     hydrateForEach,
     adoptDynamicElement,
-    // @ts-ignore
+// @ts-ignore
 } from '/@fs/Users/yoav/work/jay/main/packages/runtime/runtime/dist/index.js';
 // @ts-ignore
 import { makeHeadlessInstanceComponent } from '/@fs/Users/yoav/work/jay/main/packages/jay-stack/stack-client-runtime/dist/index.js';
@@ -67,16 +67,24 @@ export function hydrate(rootElement, options) {
                     (vs) => vs.items,
                     '_id',
                     () => [
+                        adoptText('0/0', (vs1) => vs1.name),
                         childCompHydrate(
                             _HeadlessWidget0Adopt,
                             (vs1) => ({ itemId: vs1._id }),
-                            'widget:0',
+                            '0/widget:0',
                             refAR1(),
                         ),
                     ],
                     (vs1) => {
                         return e('div', { class: 'list' }, [
-                            childComp(_HeadlessWidget1, (vs12) => ({ itemId: vs12._id }), refAR1()),
+                            e('div', { class: 'card' }, [
+                                e('strong', {}, [dt((vs12) => vs12.name)]),
+                                childComp(
+                                    _HeadlessWidget1,
+                                    (vs12) => ({ itemId: vs12._id }),
+                                    refAR1(),
+                                ),
+                            ]),
                         ]);
                     },
                 ),

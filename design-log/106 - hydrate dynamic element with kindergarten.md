@@ -277,3 +277,35 @@ During integration testing with the `fake-shop` example, discovered that `buildC
 - Compiler: 592 passed (596 total, 4 skipped)
 - Dev-server: 42 passed (including all 6a–6d headless tests)
 - Full suite: 68 packages, all passing
+
+### Removed redundant `instanceVs` lookup from hydrate render functions
+
+The generated hydrate code had 3 lines per headless instance that looked up `HEADLESS_INSTANCES` context to override the viewState:
+
+```js
+const instanceData = useContext(HEADLESS_INSTANCES);
+const instanceKey = '1/widget:0';
+const instanceVs = instanceData?.viewStates?.[instanceKey] ?? viewState;
+```
+
+This was redundant — `makeHeadlessInstanceComponent`'s wrapped constructor already resolves the fast ViewState from `HEADLESS_INSTANCES` and merges it into `compCore.render()`. By the time the hydrate render function is called (step 3 in `makeJayComponent`: `render(compCore.render())`), the `viewState` parameter already has the correct instance data.
+
+The redundancy also caused a bug for forEach instances: `dataIds` already contained the instance suffix (added by `forInstance` in `childCompHydrate`), and appending it again produced duplicated keys like `"3,stock-status:0,stock-status:0"`.
+
+Also simplified `makeHeadlessInstanceComponent` — removed old `ComponentConstructor` parameter support, now only accepts `HeadlessComponentDef`.
+
+### Fix: forEach coordinate `$trackBy` prefix not stripped in hydrate target
+
+Discovered via `fake-shop` example: headless instances inside a forEach with intermediate wrapper elements (e.g., `<div class="card"><jay:widget>`) failed to hydrate — coordinate resolution produced "not found" errors.
+
+**Two related issues:**
+
+1. **Element coordinates emitted with `$trackBy` prefix** — `assignCoordinates` assigns coordinates like `"$_id/0/0"` inside forEach items. The server-element target compiles these via `compileCoordinateExpr` which resolves the `$` placeholder to a runtime expression. But the hydrate target emitted the `$_id/0/0` string literally. At runtime, `forItem("1")` sets coordinateBase to `["1"]`, then `resolveCoordinate("$_id/0/0")` looked up `"1/$_id/0/0"` — wrong.
+
+2. **`childCompHydrate` coordinate missing intermediate elements** — For forEach, `coordKeyArg` was just `coordinateSuffix` (e.g., `"widget:0"`). `forInstance("widget:0")` extended the base to `["1", "widget:0"]`, so `adoptElement("0")` resolved to `"1/widget:0/0"`. But the DOM element was at `"1/0/widget:0/0"` — the `/0/` from the wrapper `<div class="card">` was missing.
+
+**Fix in `renderHydrateElementContent`:** When inside a forEach and the coordinate starts with `$`, strip the `$trackBy/` prefix. `forItem` already scopes by trackBy value, so `resolveCoordinate("0/0")` correctly resolves to `"1/0/0"`.
+
+**Fix in `coordKeyArg`:** Unified forEach and slowForEach — both use `coordSegments.slice(1).join('/')` to strip the first segment (`$trackBy` or `jayTrackBy`). The remaining path includes intermediate wrapper elements (e.g., `"$_id/0/widget:0"` → `"0/widget:0"`).
+
+**Test:** Updated 6c dev-server test (`page-headless-foreach`) to wrap the headless instance in `<div class="card"><strong>{name}</strong><jay:widget>` — the same pattern as the fake-shop. Verifies both hydration DOM correctness and interactivity (button click updates widget value).

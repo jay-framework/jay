@@ -6,7 +6,7 @@ import {
     adoptText,
     hydrateForEach,
     adoptDynamicElement,
-    // @ts-ignore
+// @ts-ignore
 } from '/@fs/Users/yoav/work/jay/main/packages/runtime/runtime/dist/index.js';
 export function hydrate(rootElement, options) {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
@@ -18,8 +18,8 @@ export function hydrate(rootElement, options) {
                     (vs) => vs.products,
                     '_id',
                     () => [
-                        adoptText('$_id/0/0', (vs1) => vs1.name),
-                        adoptText('$_id/0/1', (vs1) => vs1.price),
+                        adoptText('0/0', (vs1) => vs1.name),
+                        adoptText('0/1', (vs1) => vs1.price),
                     ],
                     (vs1) => {
                         return e('div', { class: 'grid' }, [

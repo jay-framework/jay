@@ -97,8 +97,8 @@ export function hydrate(
                         (vs: DuplicateRefDifferentBranchesViewState) => vs.items,
                         'id',
                         () => [
-                            adoptText('$id/0', (vs1) => vs1.name, refName()),
-                            adoptElement('$id/1', {}, [], refDeleteButton()),
+                            adoptText('0', (vs1) => vs1.name, refName()),
+                            adoptElement('1', {}, [], refDeleteButton()),
                         ],
                         (vs1: ItemOfDuplicateRefDifferentBranchesViewState) => {
                             return e('div', {}, [
