@@ -11,13 +11,16 @@
     <div>
         <h1>{title}</h1>
         <div class="list" forEach="items" trackBy="_id">
-            <jay:widget itemId="{_id}">
-                <div class="widget">
-                    <span class="label">{label}</span>
-                    <span class="value">{value}</span>
-                    <button ref="increment">+1</button>
-                </div>
-            </jay:widget>
+            <div class="card">
+                <strong>{name}</strong>
+                <jay:widget itemId="{_id}">
+                    <div class="widget">
+                        <span class="label">{label}</span>
+                        <span class="value">{value}</span>
+                        <button ref="increment">+1</button>
+                    </div>
+                </jay:widget>
+            </div>
         </div>
         <button ref="addButton">Add Item</button>
         <button ref="removeButton">Remove Last</button>

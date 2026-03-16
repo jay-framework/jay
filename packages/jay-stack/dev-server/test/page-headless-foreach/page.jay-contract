@@ -13,6 +13,9 @@ tags:
       - tag: _id
         type: data
         dataType: string
+      - tag: name
+        type: data
+        dataType: string
   - tag: addButton
     type: interactive
     elementType: HTMLButtonElement

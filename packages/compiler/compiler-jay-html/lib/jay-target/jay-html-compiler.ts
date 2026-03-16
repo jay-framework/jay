@@ -2737,15 +2737,13 @@ const ${createComponentSymbol} = makeHeadlessInstanceComponent(
 
     // --- Build the call expression ---
     // childCompHydrate's forInstance(coord) sets coordinateBase for child adoptElement resolution.
-    // Static instances need full instanceCoord (e.g. "0/2/1/product-widget:0"); coordinateKey
-    // ("product-widget:0") would make both instances share the same coordBase and break.
-    // slowForEach: parent (slowForEachItem) has jayTrackBy in coordinateBase. Pass the rest of
-    // the instance coord (e.g. "0/product-widget:0" when jay:xxx is inside div at index 0).
-    const coordKeyArg = isInsideForEach
-        ? `'${coordinateSuffix}'`
-        : context.insideSlowForEach
-          ? `'${coordSegments.slice(1).join('/')}'`
-          : `'${instanceCoord}'`;
+    // Static: full instanceCoord (e.g. "0/2/1/product-widget:0").
+    // forEach/slowForEach: strip the first segment ($trackBy or jayTrackBy) — forItem already
+    // scopes by trackBy value. Remaining path includes intermediate wrapper elements.
+    // e.g. "$_id/0/stock-status:0" → "0/stock-status:0"
+    const coordKeyArg = isInsideForEach || context.insideSlowForEach
+        ? `'${coordSegments.slice(1).join('/')}'`
+        : `'${instanceCoord}'`;
 
     if (ifCondition) {
         // Fast conditional: wrap in hydrateConditional with adopt and create callbacks.
@@ -2865,14 +2863,21 @@ function renderHydrateElementContent(
     }
 
     // Read pre-assigned coordinate from jay-coordinate-base (DL#103).
-    // When inside headless adopt (instanceCoordPrefix set), use relative coord for forInstance resolution.
     const coordTemplate = element.getAttribute(COORD_ATTR);
     let coordinate = coordTemplate || coordinateOverride || '0';
+    // When inside headless adopt (instanceCoordPrefix set), use relative coord for forInstance resolution.
     if (
         context.instanceCoordPrefix &&
         coordTemplate?.startsWith(context.instanceCoordPrefix + '/')
     ) {
         coordinate = coordTemplate.slice(context.instanceCoordPrefix.length + 1);
+    }
+    // When inside forEach, strip the $trackBy prefix (e.g. "$_id/0/0" → "0/0").
+    // hydrateForEach's forItem(id) already sets coordinateBase to [id], so
+    // resolveCoordinate("0/0") correctly resolves to "1/0/0" at runtime.
+    if (context.insideFastForEach && coordinate.startsWith('$')) {
+        const slashIndex = coordinate.indexOf('/');
+        coordinate = slashIndex >= 0 ? coordinate.slice(slashIndex + 1) : '0';
     }
 
     // Build the ref argument if present

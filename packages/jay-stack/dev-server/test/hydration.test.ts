@@ -417,19 +417,25 @@ describe('hydration', () => {
         });
     });
 
-    describe('6c. Headless — under forEach', () => {
+    describe('6c. Headless — under forEach (nested in wrapper div)', () => {
         // forEach widget is fast-only (no slow phase) — no need for slow render cache.
-        // Using cache causes hydration to fail (pre-rendered path issue).
+        // Widget is inside <div class="card"><strong>{name}</strong><jay:widget>...
+        // This tests coordinate resolution when headless instance has intermediate
+        // wrapper elements between the forEach item root and the jay:xxx tag.
         testFixture('page-headless-foreach', {
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('ForEach Headless');
+                // Each card has a <strong> with the item name and a .widget div
+                const cards = await page.$$('#target .card');
+                expect(cards).toHaveLength(3);
+                expect(await cards[0].textContent()).toContain('Item 1');
+                expect(await cards[1].textContent()).toContain('Item 2');
+                expect(await cards[2].textContent()).toContain('Item 3');
+                // Widget values from fast phase
                 const widgets = await page.$$('#target .widget');
                 expect(widgets).toHaveLength(3);
-                expect(await widgets[0].textContent()).toContain('Item 1');
                 expect(await widgets[0].textContent()).toContain('10');
-                expect(await widgets[1].textContent()).toContain('Item 2');
                 expect(await widgets[1].textContent()).toContain('20');
-                expect(await widgets[2].textContent()).toContain('Item 3');
                 expect(await widgets[2].textContent()).toContain('30');
             },
             interactivityChecks: async (page) => {
