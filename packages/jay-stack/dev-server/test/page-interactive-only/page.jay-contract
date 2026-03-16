@@ -1,0 +1,13 @@
+name: Page
+tags:
+  - tag: title
+    type: data
+    dataType: string
+    phase: fast+interactive
+  - tag: count
+    type: data
+    dataType: number
+    phase: fast+interactive
+  - tag: incrementButton
+    type: interactive
+    elementType: HTMLButtonElement
