@@ -488,6 +488,43 @@ describe('hydration', () => {
         });
     });
 
+    describe('6e-2. Headless — two static instances with different props', () => {
+        // Two <jay:widget> instances in different parent scopes with different props.
+        // Both must get their own fast ViewState and carryForward —
+        // the __headlessInstances key must be unique per instance.
+        testFixture('page-headless-two-instances', {
+            useSlowRenderCache: true,
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Two Instances Test');
+                const widgets = await page.$$('#target .widget');
+                expect(widgets).toHaveLength(2);
+                // First widget: itemId="1" → label "Item 1", value 10
+                expect(await widgets[0].textContent()).toContain('Item 1');
+                expect(await widgets[0].textContent()).toContain('10');
+                // Second widget: itemId="3" → label "Item 3", value 30
+                expect(await widgets[1].textContent()).toContain('Item 3');
+                expect(await widgets[1].textContent()).toContain('30');
+            },
+            interactivityChecks: async (page) => {
+                // Click the second widget's increment button
+                const buttons = await page.$$('#target .widget button');
+                expect(buttons).toHaveLength(2);
+                await buttons[1].click();
+                // Second widget's value should change from 30 to 31
+                await page.waitForFunction(
+                    () => {
+                        const values = document.querySelectorAll('#target .widget .value');
+                        return values[1]?.textContent === '31';
+                    },
+                    { timeout: 2000 },
+                );
+                const values = await page.$$('#target .widget .value');
+                expect(await values[0].textContent()).toEqual('10'); // first unchanged
+                expect(await values[1].textContent()).toEqual('31'); // second incremented
+            },
+        });
+    });
+
     describe('6e. Headless — under forEach with wrapper + preceding sections', () => {
         // Reproduces fake-shop pattern: multiple sections before the forEach,
         // headless instance inside <div class="card"><strong>{name}</strong><jay:widget>.
