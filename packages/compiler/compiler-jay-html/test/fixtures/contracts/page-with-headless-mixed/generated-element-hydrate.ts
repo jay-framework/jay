@@ -98,7 +98,7 @@ function _headlessProductCard0HydrateRender(
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0HydrateRender,
     productCard,
-    'product-card:0',
+    'product-card:hero',
 );
 
 // Hydrate inline template for headless component: product-card #1
@@ -123,7 +123,7 @@ function _headlessProductCard1HydrateRender(
 const _HeadlessProductCard1 = makeHeadlessInstanceComponent(
     _headlessProductCard1HydrateRender,
     productCard,
-    'product-card:1',
+    'product-card:promo',
 );
 
 function _headlessProductCard1Render(
@@ -143,7 +143,7 @@ function _headlessProductCard1Render(
 const _HeadlessProductCard1Create = makeHeadlessInstanceComponent(
     _headlessProductCard1Render,
     productCard,
-    'product-card:1',
+    'product-card:promo',
 );
 
 // Hydrate inline template for headless component: product-card #2
@@ -227,7 +227,7 @@ export function hydrate(
                 childCompHydrate(
                     _HeadlessProductCard0,
                     (vs: PageWithHeadlessMixedViewState) => ({ productId: '123' }),
-                    '0/product-card:0',
+                    '0/product-card:hero',
                     refHero(),
                 ),
                 hydrateConditional(
@@ -236,7 +236,7 @@ export function hydrate(
                         childCompHydrate(
                             _HeadlessProductCard1,
                             (vs: PageWithHeadlessMixedViewState) => ({ productId: 'prod-promo' }),
-                            '0/product-card:1',
+                            '0/product-card:promo',
                             refPromo(),
                         ),
                     () =>

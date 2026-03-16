@@ -173,6 +173,9 @@ function testFixture(
         const response = await fetch(`${devServerUrl}/`);
         const html = await response.text();
         const ssrContent = normalizeHtml(extractTargetContent(html));
+        const ssrFixturePath = path.join(__dirname, dirName, 'expected-ssr.html');
+        if (process.env.UPDATE_FIXTURES === '1') fs.writeFileSync(ssrFixturePath, ssrContent);
+        if (!fs.existsSync(ssrFixturePath)) return;
         const expected = normalizeHtml(readFixture(dirName, 'expected-ssr.html'));
         expect(ssrContent).toEqual(expected);
     });

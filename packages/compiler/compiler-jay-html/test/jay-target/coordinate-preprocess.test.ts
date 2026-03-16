@@ -137,7 +137,7 @@ describe('assignCoordinates', () => {
             expect(article2.getAttribute(COORD)).toBe('0/product-card:1/0');
         });
 
-        it('should use counter regardless of explicit ref', () => {
+        it('should use ref attribute for coordinate suffix', () => {
             const body = getBody(`<body><div>
                 <jay:product-card productId="123" ref="hero">
                     <article class="card">
@@ -147,12 +147,12 @@ describe('assignCoordinates', () => {
             </div></body>`);
             assignCoordinates(body, { headlessContractNames: headlessNames });
 
-            // Coordinate uses per-scope counter, not ref name
+            // Coordinate uses ref attribute, not a counter
             const jayTag = body.querySelector('jay\\:product-card')!;
-            expect(jayTag.getAttribute(COORD)).toBe('0/product-card:0');
+            expect(jayTag.getAttribute(COORD)).toBe('0/product-card:hero');
 
             const article = jayTag.querySelector('article')!;
-            expect(article.getAttribute(COORD)).toBe('0/product-card:0/0');
+            expect(article.getAttribute(COORD)).toBe('0/product-card:hero/0');
         });
 
         it('should use positional counter for inline template refs', () => {
