@@ -21,11 +21,11 @@
     </div>
     <div class="items-grid" if="hasItems" forEach="items" trackBy="id">
       <div class="item-card">
-        <div class="discount-badge" if="item.hasDiscount">
-          <span>{item.discountLabel}</span>
+        <div class="discount-badge" if="hasDiscount">
+          <span>{discountLabel}</span>
         </div>
-        <h3 class="item-name">{item.name}</h3>
-        <span class="item-price">{item.price}</span>
+        <h3 class="item-name">{name}</h3>
+        <span class="item-price">{price}</span>
       </div>
     </div>
   </div>

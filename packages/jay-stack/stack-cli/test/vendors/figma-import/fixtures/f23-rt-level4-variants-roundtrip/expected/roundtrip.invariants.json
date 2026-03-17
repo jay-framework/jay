@@ -2,11 +2,11 @@
   "requiredTextBindings": [
     "title",
     "emptyMessage",
-    "item.name",
-    "item.price",
-    "item.discountLabel"
+    "name",
+    "price",
+    "discountLabel"
   ],
-  "requiredConditions": ["!hasItems", "hasItems", "item.hasDiscount"],
+  "requiredConditions": ["!hasItems", "hasItems", "hasDiscount"],
   "requiredForEach": ["items"],
   "requiredTrackBy": ["id"],
   "warningsMustNotContain": ["IMPORT_PARSE_FAILED", "TIER2_FALLBACK"]
