@@ -77,7 +77,7 @@ function getPositionType(
  * Gets the position style for a node
  */
 export function getPositionStyle(node: FigmaVendorDocument): string {
-    if (node.type === 'COMPONENT') {
+    if (node.type === 'COMPONENT' || node.parentType === 'COMPONENT') {
         return '';
     }
 
@@ -438,6 +438,10 @@ export function getAutoLayoutStyles(node: FigmaVendorDocument): string {
  * Gets overflow and clipping styles
  */
 export function getOverflowStyles(node: FigmaVendorDocument): string {
+    if (node.parentType === 'COMPONENT') {
+        return '';
+    }
+
     let overflowStyles = '';
 
     const shouldClip = node.clipsContent;
@@ -667,6 +671,11 @@ export function getStrokeStyles(node: FigmaVendorDocument): string {
  * Gets frame size styles (width/height based on layout mode)
  */
 export function getFrameSizeStyles(node: FigmaVendorDocument): string {
+    if (node.parentType === 'COMPONENT') {
+        const width = node.width !== undefined && node.width > 0 ? node.width : 0;
+        return width > 0 ? `width: ${width}px;` : '';
+    }
+
     const isTopLevel = node.parentType === 'SECTION';
 
     // Top-level frames (direct children of SECTION)

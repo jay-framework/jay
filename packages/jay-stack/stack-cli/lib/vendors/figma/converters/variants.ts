@@ -417,7 +417,8 @@ export function convertVariantNode(
 
         if (variantNode.children && variantNode.children.length > 0) {
             for (const child of variantNode.children) {
-                variantHtml += convertNodeToJayHtml(child, variantContext);
+                const annotated = child.parentType ? child : { ...child, parentType: 'COMPONENT' };
+                variantHtml += convertNodeToJayHtml(annotated, variantContext);
             }
         }
 
