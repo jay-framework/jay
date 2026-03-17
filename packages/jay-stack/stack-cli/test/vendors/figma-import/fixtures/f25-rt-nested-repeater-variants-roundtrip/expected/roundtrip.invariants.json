@@ -1,0 +1,7 @@
+{
+  "requiredTextBindings": ["title", "categoryName", "productName", "price", "salePrice"],
+  "requiredConditions": ["!isExpanded", "isExpanded", "onSale"],
+  "requiredForEach": ["categories", "products"],
+  "requiredTrackBy": ["id"],
+  "warningsMustNotContain": ["IMPORT_PARSE_FAILED", "TIER2_FALLBACK"]
+}

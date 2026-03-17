@@ -1,0 +1,6 @@
+{
+  "id": "f25-rt-nested-repeater-variants-roundtrip",
+  "feature": "nested-repeater-variants-roundtrip",
+  "milestone": 6,
+  "mode": "roundtrip"
+}

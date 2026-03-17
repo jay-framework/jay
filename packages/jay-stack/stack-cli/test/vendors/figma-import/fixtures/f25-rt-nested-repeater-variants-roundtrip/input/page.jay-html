@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script type="application/jay-data" contract="./page.jay-contract"></script>
+  <style>
+    .page { max-width: 960px; margin: 0 auto; padding: 40px 20px; }
+    .page-title { font-size: 28px; font-weight: 700; margin: 0 0 24px; color: #1a1a1a; }
+    .category { margin-bottom: 32px; }
+    .category-name { font-size: 22px; font-weight: 600; margin: 0 0 16px; }
+    .product-grid { display: flex; flex-wrap: wrap; gap: 16px; }
+    .product-card { background: #f8f8f8; border: 1px solid #e8e8e8; border-radius: 8px; padding: 16px; width: 200px; }
+    .product-name { font-size: 16px; font-weight: 600; margin: 0 0 8px; }
+    .product-price { font-size: 14px; color: #666666; }
+    .sale-badge { background: #ef4444; color: white; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 700; }
+    .collapsed-msg { color: #999999; font-style: italic; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <h1 class="page-title">{title}</h1>
+    <div forEach="categories" trackBy="id">
+      <div class="category">
+        <h2 class="category-name">{categoryName}</h2>
+        <p class="collapsed-msg" if="!isExpanded">Category collapsed</p>
+        <div class="product-grid" if="isExpanded" forEach="products" trackBy="id">
+          <div class="product-card">
+            <div class="sale-badge" if="onSale">
+              <span>{salePrice}</span>
+            </div>
+            <h3 class="product-name">{productName}</h3>
+            <span class="product-price">{price}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

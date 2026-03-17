@@ -1,0 +1,39 @@
+name: nested-repeaters-page
+tags:
+  - tag: title
+    type: data
+    dataType: string
+  - tag: categories
+    type: sub-contract
+    repeated: true
+    trackBy: id
+    tags:
+      - tag: id
+        type: data
+        dataType: string
+      - tag: categoryName
+        type: data
+        dataType: string
+      - tag: isExpanded
+        type: variant
+        dataType: boolean
+      - tag: products
+        type: sub-contract
+        repeated: true
+        trackBy: id
+        tags:
+          - tag: id
+            type: data
+            dataType: string
+          - tag: productName
+            type: data
+            dataType: string
+          - tag: price
+            type: data
+            dataType: string
+          - tag: onSale
+            type: variant
+            dataType: boolean
+          - tag: salePrice
+            type: data
+            dataType: string

@@ -112,34 +112,32 @@ export function applyRepeaterContext(path: string, repeaterStack: string[][]): s
 }
 
 /**
- * Derives the jay-html item alias for the innermost repeater.
- * In jay-html, `forEach="items"` makes each element accessible as `item`
- * (naive singularization: drop trailing 's').
- * Returns undefined when not inside a repeater.
- */
-export function getRepeaterItemAlias(repeaterPathStack: string[][]): string | undefined {
-    if (repeaterPathStack.length === 0) return undefined;
-    const innerRepeater = repeaterPathStack[repeaterPathStack.length - 1]!;
-    const lastSegment = innerRepeater[innerRepeater.length - 1]!;
-    return lastSegment.endsWith('s') ? lastSegment.slice(0, -1) : lastSegment;
-}
-
-/**
  * When inside a repeater, resolve the item-level contract tags to search in
  * and the repeater path prefix for building full tag paths.
- * Returns undefined when not inside a repeater.
+ *
+ * For nested repeaters (e.g. categories → products), walks through each
+ * level of the repeater context, drilling into sub-contract tags at each
+ * step.  Returns the innermost repeater's item tags and the full flattened
+ * repeater path for building complete tag paths from the contract root.
+ *
+ * Returns undefined when not inside a repeater or when the contract
+ * structure doesn't match the repeater nesting.
  */
 export function getRepeaterItemTags(
     contractTags: ContractTag[],
     repeaterContext: string[][],
 ): { itemTags: ContractTag[]; repeaterPath: string[] } | undefined {
     if (repeaterContext.length === 0) return undefined;
-    const repeaterPath = repeaterContext[repeaterContext.length - 1]!;
-    const repeaterTag = findContractTag(contractTags, repeaterPath);
-    if (repeaterTag?.tags) {
-        return { itemTags: repeaterTag.tags, repeaterPath };
+
+    let currentTags = contractTags;
+    for (const pathSegments of repeaterContext) {
+        const repeaterTag = findContractTag(currentTags, pathSegments);
+        if (!repeaterTag?.tags) return undefined;
+        currentTags = repeaterTag.tags;
     }
-    return undefined;
+
+    const repeaterPath = repeaterContext.flat();
+    return { itemTags: currentTags, repeaterPath };
 }
 
 /**
