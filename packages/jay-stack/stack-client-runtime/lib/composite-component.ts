@@ -49,15 +49,13 @@ export function makeCompositeJayComponent<
     if (headlessInstanceCarryForwards) delete (fastCarryForward as any).__headlessInstances;
 
     const comp = (props: Props<any>, refs, ...contexts): CompCore => {
-        // Provide headless instance data as a context for makeHeadlessInstanceComponent
-        if (headlessInstanceViewStates || headlessInstanceCarryForwards) {
-            const componentContext = useContext(COMPONENT_CONTEXT);
-            const instancesData: HeadlessInstancesData = {
-                viewStates: headlessInstanceViewStates || {},
-                carryForwards: headlessInstanceCarryForwards || {},
-            };
-            componentContext.provideContexts.push([HEADLESS_INSTANCES, instancesData]);
-        }
+        // Always provide HEADLESS_INSTANCES context — even if empty.
+        const componentContext = useContext(COMPONENT_CONTEXT);
+        const instancesData: HeadlessInstancesData = {
+            viewStates: headlessInstanceViewStates || {},
+            carryForwards: headlessInstanceCarryForwards || {},
+        };
+        componentContext.provideContexts.push([HEADLESS_INSTANCES, instancesData]);
 
         const instances: Array<[string, JayComponentCore<any, any>]> = interactiveParts.map(
             (part) => {

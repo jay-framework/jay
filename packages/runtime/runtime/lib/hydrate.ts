@@ -94,7 +94,9 @@ export function adoptText<ViewState>(
         return { dom: undefined as any, update: noopUpdate, mount: noopMount, unmount: noopMount };
     }
 
-    let content = accessor(context.currData as ViewState);
+    // Initialize content from the DOM text (not the accessor) so the first
+    // update detects if the ViewState differs from the SSR-rendered text.
+    let content: string | number | boolean = textNode.textContent ?? '';
 
     const updates: updateFunc<ViewState>[] = [];
     const mounts: MountFunc[] = [];

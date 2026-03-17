@@ -115,6 +115,9 @@ function testFixture(
          *  pre-rendered jay-html (slow bindings resolved). Required for
          *  headless instances to avoid adopting slow-phase text. */
         useSlowRenderCache?: boolean;
+        /** Skip SSR and hydrate fixture comparison tests.
+         *  Used for phase-optionality tests that share fixture dirs. */
+        skipFixtures?: boolean;
     } = {},
 ) {
     let devServer: DevServer;
@@ -169,20 +172,19 @@ function testFixture(
         fs.rmSync(buildDir, { recursive: true, force: true });
     });
 
-    it('SSR output matches fixture', async () => {
-        const response = await fetch(`${devServerUrl}/`);
-        const html = await response.text();
-        const ssrContent = normalizeHtml(extractTargetContent(html));
-        const ssrFixturePath = path.join(__dirname, dirName, 'expected-ssr.html');
-        if (process.env.UPDATE_FIXTURES === '1') fs.writeFileSync(ssrFixturePath, ssrContent);
-        if (!fs.existsSync(ssrFixturePath)) return;
-        const expected = normalizeHtml(readFixture(dirName, 'expected-ssr.html'));
-        expect(ssrContent).toEqual(expected);
-    });
+    if (!opts.skipFixtures) {
+        it('SSR output matches fixture', async () => {
+            const response = await fetch(`${devServerUrl}/`);
+            const html = await response.text();
+            const ssrContent = normalizeHtml(extractTargetContent(html));
+            const expected = normalizeHtml(readFixture(dirName, 'expected-ssr.html'));
+            expect(ssrContent).toEqual(expected);
+        });
+    }
 
-    // Only test hydrate script fixture if the file exists
+    // Only test hydrate script fixture if the file exists and skipFixtures is not set
     const hydrateFixturePath = path.join(__dirname, dirName, 'expected-hydrate.ts');
-    if (fs.existsSync(hydrateFixturePath)) {
+    if (!opts.skipFixtures && fs.existsSync(hydrateFixturePath)) {
         it('hydrate script matches fixture', async () => {
             const dirPath = path.resolve(__dirname, dirName);
             // Use pre-rendered path if available (slow-rendered pages have
@@ -589,6 +591,7 @@ describe('hydration', () => {
         // Tests that headless instances inside forEach work even when
         // the slow render pipeline doesn't run.
         testFixture('page-headless-foreach-nested', {
+            skipFixtures: true,
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Nested ForEach Test');
                 const widgets = await page.$$('#target .widget');
@@ -618,6 +621,7 @@ describe('hydration', () => {
         // Tests that multiple instances of the same contract get unique keys
         // even without the slow render pipeline.
         testFixture('page-headless-two-instances', {
+            skipFixtures: true,
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Two Instances Test');
                 const widgets = await page.$$('#target .widget');
@@ -647,6 +651,7 @@ describe('hydration', () => {
         // Page has withFastRender + withInteractive but NO withSlowlyRender.
         // Tests that headless instances work without any slow phase.
         testFixture('page-fast-only', {
+            skipFixtures: true,
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Fast Only Page');
                 const widgets = await page.$$('#target .widget');
@@ -673,8 +678,16 @@ describe('hydration', () => {
     describe('7d. Interactive-only page (no slow, no fast)', () => {
         // Page has only withInteractive — no server phases at all.
         // Tests that the simplest possible interactive page works.
+        // SSR renders with empty viewState (undefined values), but after hydration
+        // the interactive constructor provides the initial values.
         testFixture('page-interactive-only', {
+            skipFixtures: true,
             hydrationChecks: async (page) => {
+                // Wait for the interactive constructor's first render to update the DOM
+                await page.waitForFunction(
+                    () => document.querySelector('#target h1')?.textContent === 'Interactive Only',
+                    { timeout: 2000 },
+                );
                 expect(await page.textContent('#target h1')).toEqual('Interactive Only');
                 expect(await page.textContent('#target p')).toContain('Count: 0');
             },

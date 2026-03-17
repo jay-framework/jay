@@ -14,12 +14,10 @@ export const page = makeJayStackComponent()
             carryForward: {},
         }));
     })
-    .withInteractive(
-        (props, refs, fastViewState: Signals<{ title: string }>) => {
-            return {
-                render: () => ({
-                    title: fastViewState.title[0],
-                }),
-            };
-        },
-    );
+    .withInteractive((props, refs, fastViewState: Signals<{ title: string }>) => {
+        return {
+            render: () => ({
+                title: fastViewState.title[0],
+            }),
+        };
+    });
