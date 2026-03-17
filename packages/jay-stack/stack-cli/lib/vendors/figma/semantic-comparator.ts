@@ -309,9 +309,7 @@ export function compareSemanticEquivalence(
             name: `if="${condition}"`,
             passed: semanticMatch,
             severity: 'HARD_FAIL',
-            details: semanticMatch
-                ? undefined
-                : `if="${condition}" not found in exported HTML`,
+            details: semanticMatch ? undefined : `if="${condition}" not found in exported HTML`,
         });
         if (!semanticMatch) equivalent = false;
     }
