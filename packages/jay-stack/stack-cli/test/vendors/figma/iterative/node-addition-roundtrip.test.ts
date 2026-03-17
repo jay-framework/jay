@@ -46,10 +46,7 @@ function makeDoc(overrides: Partial<FigmaVendorDocument> = {}): FigmaVendorDocum
     };
 }
 
-function makeNode(
-    id: string,
-    props: Record<string, unknown> = {},
-): FigmaVendorDocument {
+function makeNode(id: string, props: Record<string, unknown> = {}): FigmaVendorDocument {
     return {
         id,
         name: `Node-${id}`,
@@ -193,10 +190,7 @@ function buildIncomingDocWithSpan(): FigmaVendorDocument {
  * Simulates Figma reassigning IDs to all nodes after merge-apply.
  * The plugin creates new Figma nodes with new IDs. pluginData is preserved.
  */
-function reassignFigmaIds(
-    doc: FigmaVendorDocument,
-    prefix: string,
-): FigmaVendorDocument {
+function reassignFigmaIds(doc: FigmaVendorDocument, prefix: string): FigmaVendorDocument {
     let counter = 0;
     function walk(node: FigmaVendorDocument): FigmaVendorDocument {
         const newId = `${prefix}:${counter++}`;
@@ -276,12 +270,15 @@ describe.skip('No false property conflicts when designer made no changes', () =>
         const incomingFlat = flattenVendorDoc(incomingDoc);
         const matchResult = matchNodes(currentFlat, incomingFlat);
 
-        const inputs = buildPlannerInputs(matchResult.matches, baselineIndex, designerDoc, incomingDoc);
+        const inputs = buildPlannerInputs(
+            matchResult.matches,
+            baselineIndex,
+            designerDoc,
+            incomingDoc,
+        );
 
         // Find the planner input for the p node
-        const pInput = inputs.find((i) =>
-            i.nodeName?.includes('card-description'),
-        );
+        const pInput = inputs.find((i) => i.nodeName?.includes('card-description'));
         expect(pInput).toBeDefined();
 
         // The baseline should contain p's properties (cornerRadius: 0, etc.).
@@ -306,7 +303,12 @@ describe.skip('No false property conflicts when designer made no changes', () =>
         const incomingFlat = flattenVendorDoc(incomingDoc);
         const matchResult = matchNodes(currentFlat, incomingFlat);
 
-        const inputs = buildPlannerInputs(matchResult.matches, baselineIndex, designerDoc, incomingDoc);
+        const inputs = buildPlannerInputs(
+            matchResult.matches,
+            baselineIndex,
+            designerDoc,
+            incomingDoc,
+        );
         const structChanges = buildStructuralChanges(
             matchResult.unmatchedCurrent,
             matchResult.unmatchedIncoming,
@@ -341,7 +343,12 @@ describe.skip('Span addition should be detected and applied correctly', () => {
         const incomingFlat = flattenVendorDoc(incomingDoc);
         const matchResult = matchNodes(currentFlat, incomingFlat);
 
-        const inputs = buildPlannerInputs(matchResult.matches, baselineIndex, designerDoc, incomingDoc);
+        const inputs = buildPlannerInputs(
+            matchResult.matches,
+            baselineIndex,
+            designerDoc,
+            incomingDoc,
+        );
         const structChanges = buildStructuralChanges(
             matchResult.unmatchedCurrent,
             matchResult.unmatchedIncoming,
@@ -374,7 +381,12 @@ describe.skip('Span addition should be detected and applied correctly', () => {
         const incomingFlat = flattenVendorDoc(incomingDoc);
         const matchResult = matchNodes(currentFlat, incomingFlat);
 
-        const inputs = buildPlannerInputs(matchResult.matches, baselineIndex, designerDoc, incomingDoc);
+        const inputs = buildPlannerInputs(
+            matchResult.matches,
+            baselineIndex,
+            designerDoc,
+            incomingDoc,
+        );
         const structChanges = buildStructuralChanges(
             matchResult.unmatchedCurrent,
             matchResult.unmatchedIncoming,
@@ -402,21 +414,21 @@ describe.skip('Span addition should be detected and applied correctly', () => {
         expect(card?.children).toHaveLength(4);
 
         // The span should be present with its text child
-        const span = card?.children?.find(
-            (c: FigmaVendorDocument) => c.name?.includes('card-badge'),
+        const span = card?.children?.find((c: FigmaVendorDocument) =>
+            c.name?.includes('card-badge'),
         );
         expect(span).toBeDefined();
         expect(span?.children?.[0]?.characters).toBe('New');
 
         // The p and footer should still be present (not corrupted)
-        const p = card?.children?.find(
-            (c: FigmaVendorDocument) => c.name?.includes('card-description'),
+        const p = card?.children?.find((c: FigmaVendorDocument) =>
+            c.name?.includes('card-description'),
         );
         expect(p).toBeDefined();
         expect(p?.characters).toBe('This is a description of the featured item...');
 
-        const footer = card?.children?.find(
-            (c: FigmaVendorDocument) => c.name?.includes('card-footer'),
+        const footer = card?.children?.find((c: FigmaVendorDocument) =>
+            c.name?.includes('card-footer'),
         );
         expect(footer).toBeDefined();
     });
@@ -437,7 +449,12 @@ describe.skip('Re-import stability after node addition', () => {
         const incomingFlat = flattenVendorDoc(incomingDoc);
         const matchResult = matchNodes(currentFlat, incomingFlat);
 
-        const inputs = buildPlannerInputs(matchResult.matches, baselineIndex, designerDoc, incomingDoc);
+        const inputs = buildPlannerInputs(
+            matchResult.matches,
+            baselineIndex,
+            designerDoc,
+            incomingDoc,
+        );
         const structChanges = buildStructuralChanges(
             matchResult.unmatchedCurrent,
             matchResult.unmatchedIncoming,
@@ -470,7 +487,12 @@ describe.skip('Re-import stability after node addition', () => {
         const reMatch = matchNodes(reFlat, reIncFlat);
 
         const reBaselineIndex = baselineToPropertyIndex(firstResult.newBaseline.nodes);
-        const reInputs = buildPlannerInputs(reMatch.matches, reBaselineIndex, figmaDoc, incomingDoc);
+        const reInputs = buildPlannerInputs(
+            reMatch.matches,
+            reBaselineIndex,
+            figmaDoc,
+            incomingDoc,
+        );
         const reStructChanges = buildStructuralChanges(
             reMatch.unmatchedCurrent,
             reMatch.unmatchedIncoming,
@@ -500,7 +522,12 @@ describe.skip('Re-import stability after node addition', () => {
         const incomingFlat = flattenVendorDoc(incomingDoc);
         const matchResult = matchNodes(currentFlat, incomingFlat);
 
-        const inputs = buildPlannerInputs(matchResult.matches, baselineIndex, designerDoc, incomingDoc);
+        const inputs = buildPlannerInputs(
+            matchResult.matches,
+            baselineIndex,
+            designerDoc,
+            incomingDoc,
+        );
         const structChanges = buildStructuralChanges(
             matchResult.unmatchedCurrent,
             matchResult.unmatchedIncoming,
