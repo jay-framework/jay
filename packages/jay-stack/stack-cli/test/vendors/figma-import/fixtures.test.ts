@@ -616,9 +616,7 @@ describe('Figma Import Fixtures', () => {
                                     const exactMatch = exported.includes(`if="${condition}"`);
                                     const semanticMatch =
                                         exactMatch ||
-                                        normalizedExported.includes(
-                                            normalizeCondition(condition),
-                                        );
+                                        normalizedExported.includes(normalizeCondition(condition));
                                     if (!semanticMatch) {
                                         rtErrors.push(
                                             `requiredCondition: if="${condition}" not found in exported HTML`,
