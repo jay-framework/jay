@@ -88,14 +88,14 @@ function _headlessProductCard0HydrateRender(
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0HydrateRender,
     productCard,
-    'p3/product-card:0',
+    'p3/product-card:AR0',
 );
 
 export function hydrate(
     rootElement: Element,
     options?: RenderElementOptions,
 ): PageWithMixedStaticSlowForeachElementPreRender {
-    const [productsRefManager, [refAR1]] = ReferencesManager.for(options, [], [], [], ['aR1']);
+    const [productsRefManager, [refAr0]] = ReferencesManager.for(options, [], [], [], ['ar0']);
     const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
         products: productsRefManager,
     });
@@ -116,8 +116,8 @@ export function hydrate(
                             (vs1: ProductOfPageWithMixedStaticSlowForeachViewState) => ({
                                 productId: 'prod-c',
                             }),
-                            'product-card:0',
-                            refAR1(),
+                            'product-card:AR0',
+                            refAr0(),
                         ),
                 ),
             ]),

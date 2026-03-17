@@ -121,3 +121,32 @@ jay-html → [pre-process: refs + coordinates] → pre-processed.jay-html
 4. Dev server starts with clean build directory
 5. `loadParams` called once per dev server lifecycle
 6. Compiler targets never call `assignCoordinates` — they read pre-assigned coordinates from the input HTML
+
+## Implementation Progress
+
+### Completed
+
+**`HEADLESS_INSTANCES` context always provided** — Both `hydrateCompositeJayComponent` and `makeCompositeJayComponent` now always push the `HEADLESS_INSTANCES` context to `provideContexts`, even when `__headlessInstances` is empty. Previously, `useContext(HEADLESS_INSTANCES)` would throw when no server data existed (e.g., no slow cache, fast-only page). Now headless instance constructors gracefully fall back to `clientDefaults` or empty data.
+
+**`adoptText` DOM reconciliation** — `adoptText` now initializes `content` from the DOM text (not the accessor) so the first update detects SSR-to-hydration ViewState mismatches. Fixes interactive-only pages where SSR renders "undefined" but the interactive constructor provides real values.
+
+**`assignCoordinates` auto-generates refs** — When a `<jay:xxx>` element has no `ref` attribute, `assignCoordinates` auto-generates one using an `AR` prefix with a global counter per contract (e.g., `AR0`, `AR1`). This matches `discoverHeadlessInstances`'s counter scoping and ensures both systems produce the same refs. Eliminates the counter synchronization bug for the non-cached code path.
+
+**`fixtureVariant` option for test infrastructure** — Replaced `skipFixtures` with `fixtureVariant` (e.g., `'no-cache'`) which looks for alternate fixture files like `expected-ssr-no-cache.html`. Allows the same fixture directory to be tested with different configurations.
+
+**forEach carry forward** — `renderFastChangingDataForForEachInstances` now returns `{ viewStates, carryForwards }` (matching the static instance function). All call sites updated to merge carry forwards into `fastCarryForward.__headlessInstances`.
+
+### New tests added
+
+- **7a**: forEach without slow cache — **passes**
+- **7b**: Two static instances without slow cache — **passes**
+- **7c**: Fast-only page with headless instance — **fails** (page has no slow phase → dev server doesn't run slow render → no instance discovery)
+- **7d**: Interactive-only page (no slow, no fast) — **fails** (SSR renders "undefined" → DOM update timing issue)
+
+### Remaining work (not yet implemented)
+
+- **Build folder cleanup on startup** — reverted because it interfered with slow render cache timing. Needs smarter approach (clear stale artifacts without breaking active caches).
+- **7c fix** — fast-only page needs the pre-render pipeline to discover headless instances even without a slow phase.
+- **7d fix** — interactive-only page needs the adoptText reconciliation to fire before the first DOM check.
+- **AR prefix fixture cascade** — changing auto-ref naming from `"0"` to `"AR0"` requires updating all slow-render, server-element, and hydrate fixtures.
+- **Phase 5 pre-processing extraction** — the full DL#107 structural fix (single pre-processing stage) is not yet implemented.

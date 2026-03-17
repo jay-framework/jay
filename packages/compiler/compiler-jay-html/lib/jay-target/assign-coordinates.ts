@@ -15,6 +15,9 @@ const COORD_ATTR = 'jay-coordinate-base';
 export interface AssignCoordinatesOptions {
     /** Set of headless contract names (for detecting <jay:xxx> tags) */
     headlessContractNames: Set<string>;
+    /** @internal Auto-generated ref counters for headless instances without explicit refs.
+     *  Created automatically if not provided. */
+    _refCounters?: Map<string, number>;
 }
 
 export interface AssignCoordinatesResult {
@@ -66,6 +69,8 @@ export function assignCoordinates(
     body: HTMLElement,
     options: AssignCoordinatesOptions,
 ): AssignCoordinatesResult {
+    if (!options._refCounters) options._refCounters = new Map();
+
     // Find the single root content element inside <body>
     const rootChildren = body.childNodes.filter(
         (n) => n.nodeType === NodeType.ELEMENT_NODE,
@@ -102,7 +107,15 @@ function walkChildren(
         if (tagName?.startsWith('jay:')) {
             const contractName = tagName.substring(4);
             if (options.headlessContractNames.has(contractName)) {
-                const ref = element.getAttribute('ref') ?? '0';
+                let ref = element.getAttribute('ref');
+                if (!ref) {
+                    // Auto-generate ref with AR prefix + global counter per contract
+                    // (matches discoverHeadlessInstances which uses the same naming)
+                    const idx = options._refCounters!.get(contractName) ?? 0;
+                    options._refCounters!.set(contractName, idx + 1);
+                    ref = `AR${idx}`;
+                    element.setAttribute('ref', ref);
+                }
                 assignHeadlessInstance(element, contractName, ref, parentCoord, options);
                 // Don't increment childCounter — jay:xxx is a directive, not a DOM element
                 continue;
@@ -198,7 +211,14 @@ function walkForEachChildren(
         if (tagName?.startsWith('jay:')) {
             const contractName = tagName.substring(4);
             if (options.headlessContractNames.has(contractName)) {
-                const ref = element.getAttribute('ref') ?? '0';
+                let ref = element.getAttribute('ref');
+                if (!ref) {
+                    const counterKey = `forEach/${contractName}`;
+                    const idx = options._refCounters!.get(counterKey) ?? 0;
+                    options._refCounters!.set(counterKey, idx + 1);
+                    ref = `AR${idx}`;
+                    element.setAttribute('ref', ref);
+                }
                 const instanceCoord = `${itemPrefix}/${contractName}:${ref}`;
                 element.setAttribute(COORD_ATTR, instanceCoord);
                 walkChildren(element, instanceCoord, options, newScope());

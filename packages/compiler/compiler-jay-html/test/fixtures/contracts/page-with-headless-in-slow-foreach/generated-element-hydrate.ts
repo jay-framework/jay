@@ -88,7 +88,7 @@ function _headlessProductCard0HydrateRender(
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0HydrateRender,
     productCard,
-    'p1/product-card:0',
+    'p1/product-card:AR0',
 );
 
 // Hydrate inline template for headless component: product-card #1
@@ -113,19 +113,19 @@ function _headlessProductCard1HydrateRender(
 const _HeadlessProductCard1 = makeHeadlessInstanceComponent(
     _headlessProductCard1HydrateRender,
     productCard,
-    'p2/product-card:0',
+    'p2/product-card:AR1',
 );
 
 export function hydrate(
     rootElement: Element,
     options?: RenderElementOptions,
 ): PageWithHeadlessInSlowForeachElementPreRender {
-    const [productsRefManager, [refAR1, refAR2]] = ReferencesManager.for(
+    const [productsRefManager, [refAr0, refAr1]] = ReferencesManager.for(
         options,
         [],
         [],
         [],
-        ['aR1', 'aR2'],
+        ['ar0', 'ar1'],
     );
     const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
         products: productsRefManager,
@@ -147,8 +147,8 @@ export function hydrate(
                             (vs1: ProductOfPageWithHeadlessInSlowForeachViewState) => ({
                                 productId: 'prod-123',
                             }),
-                            'product-card:0',
-                            refAR1(),
+                            'product-card:AR0',
+                            refAr0(),
                         ),
                 ),
                 slowForEachItem<
@@ -164,8 +164,8 @@ export function hydrate(
                             (vs1: ProductOfPageWithHeadlessInSlowForeachViewState) => ({
                                 productId: 'prod-456',
                             }),
-                            'product-card:0',
-                            refAR2(),
+                            'product-card:AR1',
+                            refAr1(),
                         ),
                 ),
             ]),

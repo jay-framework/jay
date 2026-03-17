@@ -115,9 +115,10 @@ function testFixture(
          *  pre-rendered jay-html (slow bindings resolved). Required for
          *  headless instances to avoid adopting slow-phase text. */
         useSlowRenderCache?: boolean;
-        /** Skip SSR and hydrate fixture comparison tests.
-         *  Used for phase-optionality tests that share fixture dirs. */
-        skipFixtures?: boolean;
+        /** Variant name for fixture files (e.g. "no-cache" → expected-ssr-no-cache.html).
+         *  Allows multiple test groups to share the same fixture directory with
+         *  different expected outputs. */
+        fixtureVariant?: string;
     } = {},
 ) {
     let devServer: DevServer;
@@ -172,19 +173,26 @@ function testFixture(
         fs.rmSync(buildDir, { recursive: true, force: true });
     });
 
-    if (!opts.skipFixtures) {
+    const variantSuffix = opts.fixtureVariant ? `-${opts.fixtureVariant}` : '';
+    const ssrFixtureName = `expected-ssr${variantSuffix}.html`;
+    const hydrateFixtureName = `expected-hydrate${variantSuffix}.ts`;
+
+    const ssrFixturePath = path.join(__dirname, dirName, ssrFixtureName);
+    if (fs.existsSync(ssrFixturePath) || process.env.UPDATE_FIXTURES === '1') {
         it('SSR output matches fixture', async () => {
             const response = await fetch(`${devServerUrl}/`);
             const html = await response.text();
             const ssrContent = normalizeHtml(extractTargetContent(html));
-            const expected = normalizeHtml(readFixture(dirName, 'expected-ssr.html'));
+            if (process.env.UPDATE_FIXTURES === '1') {
+                fs.writeFileSync(ssrFixturePath, ssrContent);
+            }
+            const expected = normalizeHtml(readFixture(dirName, ssrFixtureName));
             expect(ssrContent).toEqual(expected);
         });
     }
 
-    // Only test hydrate script fixture if the file exists and skipFixtures is not set
-    const hydrateFixturePath = path.join(__dirname, dirName, 'expected-hydrate.ts');
-    if (!opts.skipFixtures && fs.existsSync(hydrateFixturePath)) {
+    const hydrateFixturePath = path.join(__dirname, dirName, hydrateFixtureName);
+    if (fs.existsSync(hydrateFixturePath) || process.env.UPDATE_FIXTURES === '1') {
         it('hydrate script matches fixture', async () => {
             const dirPath = path.resolve(__dirname, dirName);
             // Use pre-rendered path if available (slow-rendered pages have
@@ -209,7 +217,16 @@ function testFixture(
                 .replace(/\/\/# sourceMappingURL=.*/, '');
             actual = await prettify(actual);
 
-            const expected = readFixture(dirName, 'expected-hydrate.ts');
+            if (process.env.UPDATE_FIXTURES === '1') {
+                const lines = actual.split('\n');
+                const result: string[] = [];
+                for (const line of lines) {
+                    if (line.startsWith('} from \'') || (line.startsWith('import ') && line.includes(' from \''))) result.push('// @ts-ignore');
+                    result.push(line);
+                }
+                fs.writeFileSync(hydrateFixturePath, result.join('\n'));
+            }
+            const expected = readFixture(dirName, hydrateFixtureName);
             expect(actual).toEqual(expected);
         });
     }
@@ -591,7 +608,7 @@ describe('hydration', () => {
         // Tests that headless instances inside forEach work even when
         // the slow render pipeline doesn't run.
         testFixture('page-headless-foreach-nested', {
-            skipFixtures: true,
+            fixtureVariant: 'no-cache',
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Nested ForEach Test');
                 const widgets = await page.$$('#target .widget');
@@ -621,7 +638,7 @@ describe('hydration', () => {
         // Tests that multiple instances of the same contract get unique keys
         // even without the slow render pipeline.
         testFixture('page-headless-two-instances', {
-            skipFixtures: true,
+            fixtureVariant: 'no-cache',
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Two Instances Test');
                 const widgets = await page.$$('#target .widget');
@@ -651,7 +668,7 @@ describe('hydration', () => {
         // Page has withFastRender + withInteractive but NO withSlowlyRender.
         // Tests that headless instances work without any slow phase.
         testFixture('page-fast-only', {
-            skipFixtures: true,
+            fixtureVariant: 'no-cache',
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Fast Only Page');
                 const widgets = await page.$$('#target .widget');
@@ -681,7 +698,7 @@ describe('hydration', () => {
         // SSR renders with empty viewState (undefined values), but after hydration
         // the interactive constructor provides the initial values.
         testFixture('page-interactive-only', {
-            skipFixtures: true,
+            fixtureVariant: 'no-cache',
             hydrationChecks: async (page) => {
                 // Wait for the interactive constructor's first render to update the DOM
                 await page.waitForFunction(

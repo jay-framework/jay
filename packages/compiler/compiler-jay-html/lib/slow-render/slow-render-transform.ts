@@ -766,13 +766,13 @@ export function discoverHeadlessInstances(
                 if (!hasUnresolvedProps) {
                     const prefix = buildCoordinatePrefix(element);
 
-                    // Use explicit ref or auto-generate one
+                    // Use explicit ref or auto-generate one with AR prefix
                     let ref = element.getAttribute('ref');
                     if (!ref) {
                         const counterKey = [...prefix, contractName].join('/');
                         const localIndex = coordinateCounters.get(counterKey) ?? 0;
                         coordinateCounters.set(counterKey, localIndex + 1);
-                        ref = String(localIndex);
+                        ref = `AR${localIndex}`;
                         element.setAttribute('ref', ref);
                     }
 
@@ -795,7 +795,7 @@ export function discoverHeadlessInstances(
                         const counterKey = ['forEach', contractName].join('/');
                         const localIndex = coordinateCounters.get(counterKey) ?? 0;
                         coordinateCounters.set(counterKey, localIndex + 1);
-                        ref = String(localIndex);
+                        ref = `AR${localIndex}`;
                     }
 
                     forEachInstances.push({

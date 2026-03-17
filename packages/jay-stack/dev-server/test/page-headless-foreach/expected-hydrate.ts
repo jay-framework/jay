@@ -9,7 +9,7 @@ import {
     childCompHydrate,
     hydrateForEach,
     adoptDynamicElement,
-    // @ts-ignore
+// @ts-ignore
 } from '/@fs/Users/yoav/work/jay/main/packages/runtime/runtime/dist/index.js';
 // @ts-ignore
 import { makeHeadlessInstanceComponent } from '/@fs/Users/yoav/work/jay/main/packages/jay-stack/stack-client-runtime/dist/index.js';
@@ -48,7 +48,7 @@ const _HeadlessWidget1 = makeHeadlessInstanceComponent(_headlessWidget1Render, w
     [...dataIds, 'widget:0'].toString(),
 );
 export function hydrate(rootElement, options) {
-    const [itemsRefManager, [refAR1]] = ReferencesManager.for(options, [], [], [], ['aR1']);
+    const [itemsRefManager, [ref_0]] = ReferencesManager.for(options, [], [], [], ['0']);
     const [refManager, [refAddButton, refRemoveButton]] = ReferencesManager.for(
         options,
         ['addButton', 'removeButton'],
@@ -72,7 +72,7 @@ export function hydrate(rootElement, options) {
                             _HeadlessWidget0Adopt,
                             (vs1) => ({ itemId: vs1._id }),
                             '0/widget:0',
-                            refAR1(),
+                            ref_0(),
                         ),
                     ],
                     (vs1) => {
@@ -82,7 +82,7 @@ export function hydrate(rootElement, options) {
                                 childComp(
                                     _HeadlessWidget1,
                                     (vs12) => ({ itemId: vs12._id }),
-                                    refAR1(),
+                                    ref_0(),
                                 ),
                             ]),
                         ]);
