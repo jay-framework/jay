@@ -1135,27 +1135,6 @@ export function createEditorHandlers(
             const pagesBasePath = path.resolve(config.devServer.pagesBase);
             const { vendorId, pageUrl, vendorDoc } = params;
 
-            // N6.1: Block export when unresolved action_required conflicts exist
-            const pluginData = (vendorDoc as any)?.pluginData;
-            if (pluginData) {
-                const { parseSyncState: parseSS } = await import('./vendors/figma/types');
-                const syncState = parseSS(pluginData['jay-sync-state-v1']);
-                if (syncState && syncState.unresolvedConflictCount > 0) {
-                    getLogger().warn(
-                        `🚫 Export blocked for "${pageUrl}": ${syncState.unresolvedConflictCount} unresolved conflict(s)`,
-                    );
-                    return {
-                        type: 'export',
-                        success: false,
-                        error: `Export blocked: ${syncState.unresolvedConflictCount} unresolved conflict(s)`,
-                        blocked: true,
-                        blockedReason: 'Unresolved conflicts',
-                        unresolvedConflictCount: syncState.unresolvedConflictCount,
-                        actionHint: 'Resolve conflicts before exporting',
-                    };
-                }
-            }
-
             // Convert route to file path
             const dirname = pageUrlToDirectoryPath(pageUrl, pagesBasePath);
             const vendorFilename = `page.${vendorId}.json`;
