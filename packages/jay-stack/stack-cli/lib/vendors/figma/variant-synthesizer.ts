@@ -398,16 +398,28 @@ export function synthesizeVariant(
     const instanceDomPath = buildDomPath(group.containerParent, body);
     const instanceId = generateNodeId(instanceDomPath, ['variant-instance', ...group.conditions]);
 
-    // Compute INSTANCE dimensions from the max of all COMPONENT children
+    // Compute INSTANCE dimensions from the max of all COMPONENT children.
+    // Walk down single-child chains to find the first node with explicit
+    // dimensions — on roundtrip the export wraps variant content in a
+    // `<div if="...">` that has no styles, so the first child may be a
+    // dimensionless wrapper (Issue #03).
     let maxWidth = 0;
     let maxHeight = 0;
     for (const comp of components) {
-        const child = comp.children?.[0];
-        if (child?.style) {
-            if (child.style.width !== undefined && child.style.width > maxWidth)
-                maxWidth = child.style.width;
-            if (child.style.height !== undefined && child.style.height > maxHeight)
-                maxHeight = child.style.height;
+        let node = comp.children?.[0];
+        while (
+            node &&
+            node.style?.width === undefined &&
+            node.style?.height === undefined &&
+            node.children?.length === 1
+        ) {
+            node = node.children[0];
+        }
+        if (node?.style) {
+            if (node.style.width !== undefined && node.style.width > maxWidth)
+                maxWidth = node.style.width;
+            if (node.style.height !== undefined && node.style.height > maxHeight)
+                maxHeight = node.style.height;
         }
     }
 

@@ -10,7 +10,7 @@
   "requiredForEach": ["items"],
   "requiredTrackBy": ["id"],
   "requiredInlineOverrides": [
-    { "selector": ".hero-banner", "property": "background-color" },
+    { "selector": ".hero-banner", "property": "background-image" },
     { "selector": ".hero-banner", "property": "opacity" },
     { "selector": ".item-card", "property": "border-color" },
     { "selector": ".discount-badge", "property": "background-color" }

@@ -111,9 +111,7 @@
                 }
               ],
               "cornerRadius": 8,
-              "pluginData": {
-                "htmlAttributes": "{\"if\":\"mediaType == IMAGE\"}"
-              },
+              "pluginData": {},
               "children": [
                 {
                   "type": "TEXT",
@@ -167,9 +165,7 @@
                 }
               ],
               "cornerRadius": 8,
-              "pluginData": {
-                "htmlAttributes": "{\"if\":\"mediaType == VIDEO\"}"
-              },
+              "pluginData": {},
               "children": [
                 {
                   "type": "TEXT",

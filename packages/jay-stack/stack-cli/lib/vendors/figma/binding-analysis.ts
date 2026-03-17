@@ -112,6 +112,19 @@ export function applyRepeaterContext(path: string, repeaterStack: string[][]): s
 }
 
 /**
+ * Derives the jay-html item alias for the innermost repeater.
+ * In jay-html, `forEach="items"` makes each element accessible as `item`
+ * (naive singularization: drop trailing 's').
+ * Returns undefined when not inside a repeater.
+ */
+export function getRepeaterItemAlias(repeaterPathStack: string[][]): string | undefined {
+    if (repeaterPathStack.length === 0) return undefined;
+    const innerRepeater = repeaterPathStack[repeaterPathStack.length - 1]!;
+    const lastSegment = innerRepeater[innerRepeater.length - 1]!;
+    return lastSegment.endsWith('s') ? lastSegment.slice(0, -1) : lastSegment;
+}
+
+/**
  * When inside a repeater, resolve the item-level contract tags to search in
  * and the repeater path prefix for building full tag paths.
  * Returns undefined when not inside a repeater.

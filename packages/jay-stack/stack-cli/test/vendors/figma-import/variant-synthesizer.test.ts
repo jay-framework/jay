@@ -306,6 +306,97 @@ describe('variant-synthesizer', () => {
             expect(result.instance.mainComponentId).toBe(firstComponent.id);
             expect(result.instance.preferHiddenDefault).toBeFalsy();
         });
+
+        it('Issue #03 regression: INSTANCE dimensions walk through dimensionless wrapper divs', () => {
+            const doc = parse(`
+                <body>
+                    <div>
+                        <div if="mediaType == IMAGE" data-test-id="img"></div>
+                        <div if="mediaType == VIDEO" data-test-id="vid"></div>
+                    </div>
+                </body>
+            `);
+            const body = doc.querySelector('body')!;
+            const parent = doc.querySelector('div')!;
+            const groups = detectVariantGroups(parent);
+
+            // Simulate roundtrip: each variant child is a dimensionless wrapper
+            // with a single child that has the real dimensions.
+            const mockBuildWithWrapper = (element: {
+                getAttribute: (name: string) => string | undefined;
+                rawTagName?: string;
+            }): ImportIRNode => ({
+                id: 'wrapper-' + (element.getAttribute('data-test-id') || 'unknown'),
+                sourcePath: 'test',
+                kind: 'FRAME',
+                name: 'div',
+                visible: true,
+                children: [
+                    {
+                        id: 'real-' + (element.getAttribute('data-test-id') || 'unknown'),
+                        sourcePath: 'test',
+                        kind: 'FRAME',
+                        name: 'div',
+                        visible: true,
+                        style: { width: 368, height: 300 },
+                        children: [],
+                    },
+                ],
+            });
+
+            const result = synthesizeVariant(
+                groups[0]!,
+                body,
+                mockContractTags,
+                jayPageSectionId,
+                pageContractPath,
+                (el) => mockBuildWithWrapper(el),
+            );
+
+            expect(result.instance.style).toBeDefined();
+            expect(result.instance.style!.width).toBe(368);
+            expect(result.instance.style!.height).toBe(300);
+        });
+
+        it('Issue #03 regression: INSTANCE gets dimensions from direct child when no wrapper', () => {
+            const doc = parse(`
+                <body>
+                    <div>
+                        <div if="mediaType == IMAGE" data-test-id="img"></div>
+                        <div if="mediaType == VIDEO" data-test-id="vid"></div>
+                    </div>
+                </body>
+            `);
+            const body = doc.querySelector('body')!;
+            const parent = doc.querySelector('div')!;
+            const groups = detectVariantGroups(parent);
+
+            const mockBuildWithStyle = (element: {
+                getAttribute: (name: string) => string | undefined;
+                rawTagName?: string;
+            }): ImportIRNode => ({
+                id: 'child-' + (element.getAttribute('data-test-id') || 'unknown'),
+                sourcePath: 'test',
+                kind: 'FRAME',
+                name: 'div',
+                visible: true,
+                style: { width: 400, height: 250 },
+                children: [],
+            });
+
+            const result = synthesizeVariant(
+                groups[0]!,
+                body,
+                mockContractTags,
+                jayPageSectionId,
+                pageContractPath,
+                (el) => mockBuildWithStyle(el),
+            );
+
+            expect(result.instance.style).toBeDefined();
+            expect(result.instance.style!.width).toBe(400);
+            expect(result.instance.style!.height).toBe(250);
+        });
     });
 
     describe('default variant selection (using ElementVisibilityChecker)', () => {

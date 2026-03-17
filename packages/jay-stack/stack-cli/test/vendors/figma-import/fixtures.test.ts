@@ -12,7 +12,10 @@ import type {
 } from '@jay-framework/editor-protocol';
 import type { JayConfig } from '../../../lib/config';
 import { figmaVendor } from '../../../lib/vendors/figma/index';
-import { compareSemanticEquivalence } from '../../../lib/vendors/figma/semantic-comparator';
+import {
+    compareSemanticEquivalence,
+    normalizeCondition,
+} from '../../../lib/vendors/figma/semantic-comparator';
 import type { ContractTag as CompilerContractTag } from '@jay-framework/compiler-jay-html';
 import { parseContract, ContractTagType } from '@jay-framework/compiler-jay-html';
 
@@ -521,6 +524,13 @@ describe('Figma Import Fixtures', () => {
                         const bodyMatch = jayHtml.match(/<body>([\s\S]*)<\/body>/i);
                         const sourceBody = bodyMatch ? bodyMatch[1].trim() : jayHtml;
 
+                        const debugExportDir = path.join(fixturePath, 'debug');
+                        await fs.mkdir(debugExportDir, { recursive: true });
+                        await fs.writeFile(
+                            path.join(debugExportDir, 'actual.export.page.jay-html'),
+                            exportedBodyHtml!,
+                        );
+
                         const comparison = compareSemanticEquivalence(
                             sourceBody,
                             exportedBodyHtml!,
@@ -597,8 +607,19 @@ describe('Figma Import Fixtures', () => {
                             }
 
                             if (roundtripInvariants.requiredConditions) {
+                                const exportedConditions = [
+                                    ...exported.matchAll(/if="([^"]+)"/g),
+                                ].map((m) => m[1].trim());
+                                const normalizedExported =
+                                    exportedConditions.map(normalizeCondition);
                                 for (const condition of roundtripInvariants.requiredConditions) {
-                                    if (!exported.includes(`if="${condition}"`)) {
+                                    const exactMatch = exported.includes(`if="${condition}"`);
+                                    const semanticMatch =
+                                        exactMatch ||
+                                        normalizedExported.includes(
+                                            normalizeCondition(condition),
+                                        );
+                                    if (!semanticMatch) {
                                         rtErrors.push(
                                             `requiredCondition: if="${condition}" not found in exported HTML`,
                                         );

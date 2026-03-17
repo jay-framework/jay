@@ -2,6 +2,7 @@ import type { FigmaVendorDocument, ContractTag } from '@jay-framework/editor-pro
 import type { ConversionContext, BindingAnalysis } from '../types';
 import { parseDataTypeString } from '../computed-style-enricher';
 import { HIDDEN_VARIANT_MARKER } from '../import-ir-to-figma-vendor-doc';
+import { getRepeaterItemAlias } from '../binding-analysis';
 
 /**
  * Returns the set of valid variant values for a contract tag, or null if the
@@ -380,6 +381,10 @@ export function convertVariantNode(
         );
     }
 
+    // Inside a repeater, variant conditions use the singular item alias
+    // (e.g. `item.hasDiscount` inside `forEach="items"`).
+    const itemAlias = getRepeaterItemAlias(context.repeaterPathStack);
+
     // 3. Build the variant if divs from actual components
     let variantHtml = '';
     for (const variantNode of realVariants) {
@@ -397,9 +402,10 @@ export function convertVariantNode(
             if (!value) continue;
             const allValues = propertyValues.get(binding.property) || [];
             const isBoolean = isBooleanVariant(allValues, binding.contractTag);
+            const tagPath = itemAlias ? `${itemAlias}.${binding.tagPath}` : binding.tagPath;
             permutation.push({
                 property: binding.property,
-                tagPath: binding.tagPath,
+                tagPath,
                 value,
                 isBoolean,
             });

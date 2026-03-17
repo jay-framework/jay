@@ -175,6 +175,23 @@ function extractIfConditions(html: string): string[] {
 }
 
 /**
+ * Normalizes a boolean condition to a canonical form for equivalence comparison.
+ * Handles: `X === false` ↔ `!X`, `X === true` ↔ `X`, `X == false` ↔ `!X`, etc.
+ */
+export function normalizeCondition(cond: string): string {
+    const trimmed = cond.trim();
+    const eqFalse = trimmed.match(/^(.+?)\s*={2,3}\s*false$/);
+    if (eqFalse) return `!${eqFalse[1].trim()}`;
+    const falseEq = trimmed.match(/^false\s*={2,3}\s*(.+)$/);
+    if (falseEq) return `!${falseEq[1].trim()}`;
+    const eqTrue = trimmed.match(/^(.+?)\s*={2,3}\s*true$/);
+    if (eqTrue) return eqTrue[1].trim();
+    const trueEq = trimmed.match(/^true\s*={2,3}\s*(.+)$/);
+    if (trueEq) return trueEq[1].trim();
+    return trimmed;
+}
+
+/**
  * Extracts forEach="collection" trackBy="key" pairs from HTML.
  * Returns array of { forEach, trackBy } objects.
  */
@@ -279,17 +296,24 @@ export function compareSemanticEquivalence(
     }
 
     // SI-5: Every if="condition" semantically preserved
+    // Normalize boolean forms: `X === false` ↔ `!X`, `X === true` ↔ `X`
     const sourceIfConditions = extractIfConditions(normalizedSource);
+    const actualIfConditions = extractIfConditions(normalizedActual);
+    const normalizedActualConditions = actualIfConditions.map(normalizeCondition);
     for (const condition of sourceIfConditions) {
-        const inOutput = normalizedActual.includes(`if="${condition}"`);
+        const exactMatch = normalizedActual.includes(`if="${condition}"`);
+        const semanticMatch =
+            exactMatch || normalizedActualConditions.includes(normalizeCondition(condition));
         invariantResults.push({
             id: 'SI-5',
             name: `if="${condition}"`,
-            passed: inOutput,
+            passed: semanticMatch,
             severity: 'HARD_FAIL',
-            details: inOutput ? undefined : `if="${condition}" not found in exported HTML`,
+            details: semanticMatch
+                ? undefined
+                : `if="${condition}" not found in exported HTML`,
         });
-        if (!inOutput) equivalent = false;
+        if (!semanticMatch) equivalent = false;
     }
 
     // SI-6: Every forEach + trackBy preserved

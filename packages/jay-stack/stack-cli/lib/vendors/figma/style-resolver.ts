@@ -188,6 +188,48 @@ function parseBlurRadius(value: string): number | undefined {
     return match ? parseFloat(match[1]) : undefined;
 }
 
+const CSS_NAMED_COLORS = new Set([
+    'transparent', 'black', 'white', 'red', 'green', 'blue', 'yellow', 'orange',
+    'purple', 'pink', 'gray', 'grey', 'brown', 'cyan', 'magenta', 'lime',
+    'navy', 'teal', 'aqua', 'maroon', 'olive', 'silver', 'fuchsia',
+    'aliceblue', 'antiquewhite', 'aquamarine', 'azure', 'beige', 'bisque',
+    'blanchedalmond', 'blueviolet', 'burlywood', 'cadetblue', 'chartreuse',
+    'chocolate', 'coral', 'cornflowerblue', 'cornsilk', 'crimson', 'darkblue',
+    'darkcyan', 'darkgoldenrod', 'darkgray', 'darkgreen', 'darkgrey',
+    'darkkhaki', 'darkmagenta', 'darkolivegreen', 'darkorange', 'darkorchid',
+    'darkred', 'darksalmon', 'darkseagreen', 'darkslateblue', 'darkslategray',
+    'darkslategrey', 'darkturquoise', 'darkviolet', 'deeppink', 'deepskyblue',
+    'dimgray', 'dimgrey', 'dodgerblue', 'firebrick', 'floralwhite',
+    'forestgreen', 'gainsboro', 'ghostwhite', 'gold', 'goldenrod', 'greenyellow',
+    'honeydew', 'hotpink', 'indianred', 'indigo', 'ivory', 'khaki', 'lavender',
+    'lavenderblush', 'lawngreen', 'lemonchiffon', 'lightblue', 'lightcoral',
+    'lightcyan', 'lightgoldenrodyellow', 'lightgray', 'lightgreen', 'lightgrey',
+    'lightpink', 'lightsalmon', 'lightseagreen', 'lightskyblue', 'lightslategray',
+    'lightslategrey', 'lightsteelblue', 'lightyellow', 'limegreen', 'linen',
+    'mediumaquamarine', 'mediumblue', 'mediumorchid', 'mediumpurple',
+    'mediumseagreen', 'mediumslateblue', 'mediumspringgreen', 'mediumturquoise',
+    'mediumvioletred', 'midnightblue', 'mintcream', 'mistyrose', 'moccasin',
+    'navajowhite', 'oldlace', 'olivedrab', 'orangered', 'orchid', 'palegoldenrod',
+    'palegreen', 'paleturquoise', 'palevioletred', 'papayawhip', 'peachpuff',
+    'peru', 'plum', 'powderblue', 'rosybrown', 'royalblue', 'saddlebrown',
+    'salmon', 'sandybrown', 'seagreen', 'seashell', 'sienna', 'skyblue',
+    'slateblue', 'slategray', 'slategrey', 'snow', 'springgreen', 'steelblue',
+    'tan', 'thistle', 'tomato', 'turquoise', 'violet', 'wheat', 'whitesmoke',
+    'yellowgreen',
+]);
+
+function extractColorFromBackground(value: string): string | undefined {
+    const v = value.trim();
+    if (v.startsWith('#')) return v.split(/\s/)[0];
+    if (v.startsWith('rgb(') || v.startsWith('rgba(') || v.startsWith('hsl(') || v.startsWith('hsla(')) {
+        const end = v.indexOf(')');
+        if (end !== -1) return v.slice(0, end + 1);
+    }
+    const lower = v.split(/\s/)[0].toLowerCase();
+    if (CSS_NAMED_COLORS.has(lower)) return lower;
+    return undefined;
+}
+
 export type CssClassMap = Map<string, Record<string, string>>;
 
 export function parseCssToClassMap(cssText: string): { classMap: CssClassMap; warnings: string[] } {
@@ -197,6 +239,24 @@ export function parseCssToClassMap(cssText: string): { classMap: CssClassMap; wa
 
     // Remove comments
     const cleaned = cssText.replace(/\/\*[\s\S]*?\*\//g, '');
+
+    // First pass: collect CSS custom properties from :root / html / body
+    const customProperties = new Map<string, string>();
+    const rootRuleRegex = /(?::root|html|body)\s*\{([^{}]*)\}/g;
+    let rootMatch: RegExpExecArray | null;
+    while ((rootMatch = rootRuleRegex.exec(cleaned)) !== null) {
+        for (const decl of rootMatch[1].split(';')) {
+            const trimmed = decl.trim();
+            if (!trimmed) continue;
+            const colonIdx = trimmed.indexOf(':');
+            if (colonIdx === -1) continue;
+            const prop = trimmed.slice(0, colonIdx).trim();
+            const val = trimmed.slice(colonIdx + 1).trim();
+            if (prop.startsWith('--') && val) {
+                customProperties.set(prop, val);
+            }
+        }
+    }
 
     // Match rule blocks: selector { declarations }
     const ruleRegex = /([^{}]+)\{([^{}]*)\}/g;
@@ -241,8 +301,19 @@ export function parseCssToClassMap(cssText: string): { classMap: CssClassMap; wa
                 const colonIdx = trimmed.indexOf(':');
                 if (colonIdx === -1) continue;
                 const prop = trimmed.slice(0, colonIdx).trim();
-                const val = trimmed.slice(colonIdx + 1).trim();
-                if (prop && val) props[prop] = val;
+                let val = trimmed.slice(colonIdx + 1).trim();
+                if (!prop || !val) continue;
+
+                // Resolve CSS custom properties: var(--name) → resolved value
+                if (val.includes('var(') && customProperties.size > 0) {
+                    val = val.replace(
+                        /var\(\s*(--[\w-]+)\s*(?:,\s*([^)]+))?\)/g,
+                        (_, varName, fallback) =>
+                            customProperties.get(varName) ?? fallback?.trim() ?? val,
+                    );
+                }
+
+                props[prop] = val;
             }
             classMap.set(key, props);
         }
@@ -499,8 +570,30 @@ export function resolveStyle(
             case 'background-size':
             case 'background-position':
             case 'background-repeat':
-            case 'background':
                 break;
+            case 'background': {
+                // Extract color/gradient from the shorthand.
+                // Delegate to the same logic as background-color / background-image.
+                if (value.includes('gradient')) {
+                    const gradient = parseLinearGradient(value);
+                    if (gradient) {
+                        style.fills = style.fills || [];
+                        style.fills.push(gradient);
+                    } else if (!style.backgroundColor || style.backgroundColor === 'rgba(0, 0, 0, 0)') {
+                        style.backgroundColor = GRADIENT_PLACEHOLDER_COLOR;
+                    }
+                } else if (value.includes('url(')) {
+                    // url() in background shorthand — skip for now
+                } else {
+                    // Likely a plain color value (possibly with extra tokens like `none`).
+                    // Extract the first color-like token.
+                    const colorToken = extractColorFromBackground(value);
+                    if (colorToken) {
+                        style.backgroundColor = colorToken;
+                    }
+                }
+                break;
+            }
             case 'color':
                 style.textColor = value;
                 break;

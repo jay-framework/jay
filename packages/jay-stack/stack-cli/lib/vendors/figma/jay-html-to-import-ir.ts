@@ -1158,6 +1158,14 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
                 if (!result) {
                     return { id: '', kind: 'FRAME', sourcePath: '', children: [] };
                 }
+                // The `if` attribute is consumed by the variant synthesizer to
+                // build COMPONENT_SET variant properties.  Keeping it in
+                // htmlAttributes causes the export to re-emit it, producing
+                // duplicate `if` attributes on roundtrip (Issue #01).
+                if (result.node.htmlAttributes?.if) {
+                    const { if: _, ...rest } = result.node.htmlAttributes;
+                    result.node.htmlAttributes = Object.keys(rest).length > 0 ? rest : undefined;
+                }
                 warnings.push(...result.warnings);
                 componentSets.push(...result.componentSets);
                 return result.node;

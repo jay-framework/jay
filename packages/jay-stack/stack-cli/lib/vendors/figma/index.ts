@@ -350,8 +350,9 @@ function convertRegularNode(
         : undefined;
     if (rawHtmlAttrs) {
         const alreadyEmitted = new Set(Array.from(analysis.attributes.keys()));
+        const STRUCTURAL_ATTRS = new Set(['style', 'class']);
         for (const [attr, val] of Object.entries(rawHtmlAttrs)) {
-            if (!alreadyEmitted.has(attr) && attr !== 'style' && attr !== 'class') {
+            if (!alreadyEmitted.has(attr) && !STRUCTURAL_ATTRS.has(attr)) {
                 htmlAttrs += ` ${attr}="${val}"`;
             }
         }

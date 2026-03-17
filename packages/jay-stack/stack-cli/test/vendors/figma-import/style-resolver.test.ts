@@ -567,4 +567,86 @@ describe('style-resolver', () => {
             expect(classMap.get('foo')).toEqual({ color: 'red' });
         });
     });
+
+    describe('Issue #04 regression: CSS custom property resolution', () => {
+        it('parseCssToClassMap resolves var(--X) from :root declarations', () => {
+            const css = `
+                :root { --primary: #336699; --spacing: 16px; }
+                .card { background-color: var(--primary); padding: var(--spacing); }
+            `;
+            const { classMap } = parseCssToClassMap(css);
+            expect(classMap.get('card')).toEqual({
+                'background-color': '#336699',
+                padding: '16px',
+            });
+        });
+
+        it('parseCssToClassMap resolves var() with fallback when variable is missing', () => {
+            const css = `
+                :root { --known: blue; }
+                .btn { color: var(--unknown, red); background-color: var(--known); }
+            `;
+            const { classMap } = parseCssToClassMap(css);
+            expect(classMap.get('btn')!['color']).toBe('red');
+            expect(classMap.get('btn')!['background-color']).toBe('blue');
+        });
+
+        it('parseCssToClassMap resolves var() from html and body selectors', () => {
+            const css = `
+                html { --font-color: #111; }
+                body { --bg-color: #fafafa; }
+                .text { color: var(--font-color); background-color: var(--bg-color); }
+            `;
+            const { classMap } = parseCssToClassMap(css);
+            expect(classMap.get('text')!['color']).toBe('#111');
+            expect(classMap.get('text')!['background-color']).toBe('#fafafa');
+        });
+
+        it('class with resolved var() feeds into resolveStyle correctly', () => {
+            const css = `
+                :root { --hero-bg: #f5f0e9; --hero-text: #1a1a1a; }
+                .hero { background-color: var(--hero-bg); color: var(--hero-text); width: 400px; }
+            `;
+            const { classMap } = parseCssToClassMap(css);
+            const { style } = resolveStyle('', ['hero'], classMap);
+            expect(style.backgroundColor).toBe('#f5f0e9');
+            expect(style.textColor).toBe('#1a1a1a');
+            expect(style.width).toBe(400);
+        });
+    });
+
+    describe('Issue #04 regression: background shorthand handling', () => {
+        it('background: <hex color> sets backgroundColor', () => {
+            const { style } = resolveStyle('background: #f5f0e9');
+            expect(style.backgroundColor).toBe('#f5f0e9');
+        });
+
+        it('background: <named color> sets backgroundColor', () => {
+            const { style } = resolveStyle('background: white');
+            expect(style.backgroundColor).toBe('white');
+        });
+
+        it('background: rgb(...) sets backgroundColor', () => {
+            const { style } = resolveStyle('background: rgb(245, 240, 233)');
+            expect(style.backgroundColor).toBe('rgb(245, 240, 233)');
+        });
+
+        it('background: rgba(...) sets backgroundColor', () => {
+            const { style } = resolveStyle('background: rgba(0, 0, 0, 0.5)');
+            expect(style.backgroundColor).toBe('rgba(0, 0, 0, 0.5)');
+        });
+
+        it('background: linear-gradient(...) parses gradient fill', () => {
+            const { style } = resolveStyle(
+                'background: linear-gradient(180deg, rgba(245, 240, 233, 1) 0%, rgba(245, 240, 233, 0) 100%)',
+            );
+            expect(style.fills).toHaveLength(1);
+            expect(style.fills![0].type).toBe('GRADIENT_LINEAR');
+        });
+
+        it('background shorthand does not produce CSS_UNSUPPORTED warning', () => {
+            const { warnings } = resolveStyle('background: #ff0000');
+            expect(warnings.filter((w) => w.includes('CSS_UNSUPPORTED'))).toEqual([]);
+        });
+    });
 });
