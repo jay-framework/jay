@@ -336,7 +336,7 @@ function testFixtureMode(
 
 describe('hydration', () => {
     describe('1. Static elements', () => {
-        testFixture('page-static-only', {
+        testFixture('1-page-static-only', {
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Static Page');
                 expect(await page.textContent('#target p')).toEqual('No dynamic content here');

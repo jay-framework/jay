@@ -3,6 +3,7 @@ import {
     ConstructContext,
     adoptText,
     adoptElement,
+// @ts-ignore
 } from '/@fs/Users/yoav/work/jay/main/packages/runtime/runtime/dist/index.js';
 export function hydrate(rootElement, options) {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
