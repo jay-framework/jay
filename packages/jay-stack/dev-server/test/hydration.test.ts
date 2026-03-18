@@ -346,7 +346,7 @@ describe('hydration', () => {
         });
     });
 
-    describe('2a. Dynamic text', () => {
+    describe('2a. Phase-aware Dynamic text', () => {
         testFixture('2a-page-dynamic-text', {
             expectedViewState: {
                 title: 'Hello Dynamic',
@@ -373,8 +373,54 @@ describe('hydration', () => {
         });
     });
 
-    describe('3. Conditionals', () => {
-        testFixture('page-conditional', {
+    describe('3a. Phase-aware conditionals', () => {
+        testFixture('3a-page-conditional-phases', {
+            expectedViewState: {
+                title: 'Phase Conditionals',
+                slowVisible: true,
+                slowHidden: false,
+                fastVisible: true,
+                fastHidden: false,
+                interactiveVisible: true,
+                interactiveHidden: false,
+            },
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Phase Conditionals');
+                // Slow conditionals: resolved at build time, baked into HTML
+                expect(await page.$('#target .slow-true')).toBeTruthy();
+                expect(await page.$('#target .slow-false')).toBeNull();
+                // Fast conditionals: resolved at SSR, static on client
+                expect(await page.$('#target .fast-true')).toBeTruthy();
+                expect(await page.$('#target .fast-false')).toBeNull();
+                // Interactive conditionals: resolved at SSR, reactive on client
+                expect(await page.$('#target .interactive-true')).toBeTruthy();
+                expect(await page.$('#target .interactive-hidden')).toBeNull();
+            },
+            interactivityChecks: async (page) => {
+                // Before toggle: interactiveVisible=true, interactiveHidden=false
+                expect(await page.$('#target .interactive-true')).toBeTruthy();
+                expect(await page.$('#target .interactive-hidden')).toBeNull();
+
+                // Toggle: interactiveVisible→false, interactiveHidden→true
+                await page.click('#target button');
+                await page.waitForFunction(
+                    () => document.querySelector('#target .interactive-hidden') !== null,
+                    { timeout: 2000 },
+                );
+                expect(await page.$('#target .interactive-true')).toBeNull();
+                expect(await page.$('#target .interactive-hidden')).toBeTruthy();
+
+                // Slow and fast conditionals should be unchanged (static)
+                expect(await page.$('#target .slow-true')).toBeTruthy();
+                expect(await page.$('#target .slow-false')).toBeNull();
+                expect(await page.$('#target .fast-true')).toBeTruthy();
+                expect(await page.$('#target .fast-false')).toBeNull();
+            },
+        });
+    });
+
+    describe('3b. Conditionals without contract', () => {
+        testFixture('3b-page-conditional', {
             expectedViewState: { isActive: true, message: 'Conditional Test' },
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Conditional Test');

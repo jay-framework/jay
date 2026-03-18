@@ -1,0 +1,33 @@
+name: Page
+tags:
+  - tag: title
+    type: data
+    dataType: string
+    phase: slow
+  - tag: slow-visible
+    type: data
+    dataType: boolean
+    phase: slow
+  - tag: slow-hidden
+    type: data
+    dataType: boolean
+    phase: slow
+  - tag: fast-visible
+    type: data
+    dataType: boolean
+    phase: fast
+  - tag: fast-hidden
+    type: data
+    dataType: boolean
+    phase: fast
+  - tag: interactive-visible
+    type: data
+    dataType: boolean
+    phase: fast+interactive
+  - tag: interactive-hidden
+    type: data
+    dataType: boolean
+    phase: fast+interactive
+  - tag: toggle-button
+    type: interactive
+    elementType: HTMLButtonElement
