@@ -2,7 +2,7 @@
   "type": "SECTION",
   "name": "test",
   "visible": true,
-  "fills": [{"type": "SOLID", "color": {"r": 0.96, "g": 0.96, "b": 0.96}, "opacity": 1}],
+  "fills": [{ "type": "SOLID", "color": { "r": 0.96, "g": 0.96, "b": 0.96 }, "opacity": 1 }],
   "pluginData": { "jpage": "true", "urlRoute": "/test" },
   "children": [
     {

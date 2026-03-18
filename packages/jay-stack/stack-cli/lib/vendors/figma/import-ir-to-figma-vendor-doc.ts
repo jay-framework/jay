@@ -1106,9 +1106,7 @@ export function adaptIRToFigmaVendorDoc(
             }
         }
         if (!root.fills) {
-            root.fills = [
-                { type: 'SOLID', color: SECTION_CONTRAST_GREY, opacity: 1 },
-            ];
+            root.fills = [{ type: 'SOLID', color: SECTION_CONTRAST_GREY, opacity: 1 }];
         }
 
         // Viewport-width fallback for direct FRAME children without explicit width
