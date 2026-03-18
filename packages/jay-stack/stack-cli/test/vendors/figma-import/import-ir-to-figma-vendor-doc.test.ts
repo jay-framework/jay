@@ -947,7 +947,7 @@ describe('adaptIRToFigmaVendorDoc', () => {
     });
 
     describe('SECTION background fills', () => {
-        it('SECTION gets contrast grey default fills when no pageBackgroundColor', () => {
+        it('SECTION always gets fixed #F5F5F5 fill', () => {
             const root = makeFrame({ kind: 'SECTION', children: [makeFrame()] });
             const result = adaptIRToFigmaVendorDoc(makeDoc(root));
             expect(result.fills).toEqual([
@@ -955,12 +955,23 @@ describe('adaptIRToFigmaVendorDoc', () => {
             ]);
         });
 
-        it('SECTION gets page background color when provided', () => {
+        it('SECTION stays #F5F5F5 even with dark page background', () => {
+            const root = makeFrame({ kind: 'SECTION', children: [makeFrame()] });
+            const doc = makeDoc(root);
+            doc.pageBackgroundColor = 'rgb(30, 30, 30)';
+            const result = adaptIRToFigmaVendorDoc(doc);
+            expect(result.fills).toEqual([
+                { type: 'SOLID', color: { r: 0.96, g: 0.96, b: 0.96 }, opacity: 1 },
+            ]);
+        });
+
+        it('content frame gets page background color', () => {
             const root = makeFrame({ kind: 'SECTION', children: [makeFrame()] });
             const doc = makeDoc(root);
             doc.pageBackgroundColor = 'rgb(240, 240, 240)';
             const result = adaptIRToFigmaVendorDoc(doc);
-            expect(result.fills).toEqual([
+            const content = result.children![0];
+            expect(content.fills).toEqual([
                 {
                     type: 'SOLID',
                     color: {
@@ -973,35 +984,40 @@ describe('adaptIRToFigmaVendorDoc', () => {
             ]);
         });
 
-        it('SECTION gets contrast grey fills when body background is transparent', () => {
+        it('content frame defaults to white when body is transparent', () => {
             const root = makeFrame({ kind: 'SECTION', children: [makeFrame()] });
             const doc = makeDoc(root);
             doc.pageBackgroundColor = 'rgba(0, 0, 0, 0)';
             const result = adaptIRToFigmaVendorDoc(doc);
-            expect(result.fills).toEqual([
-                { type: 'SOLID', color: { r: 0.96, g: 0.96, b: 0.96 }, opacity: 1 },
+            const content = result.children![0];
+            expect(content.fills).toEqual([
+                { type: 'SOLID', color: { r: 1, g: 1, b: 1 }, opacity: 1 },
             ]);
         });
 
-        it('SECTION gets contrast grey when body is pure white', () => {
+        it('content frame defaults to white when no pageBackgroundColor', () => {
             const root = makeFrame({ kind: 'SECTION', children: [makeFrame()] });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const content = result.children![0];
+            expect(content.fills).toEqual([
+                { type: 'SOLID', color: { r: 1, g: 1, b: 1 }, opacity: 1 },
+            ]);
+        });
+
+        it('content frame keeps existing fills untouched', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: { backgroundColor: 'rgb(200, 100, 50)' },
+                    }),
+                ],
+            });
             const doc = makeDoc(root);
             doc.pageBackgroundColor = 'rgb(255, 255, 255)';
             const result = adaptIRToFigmaVendorDoc(doc);
-            expect(result.fills).toEqual([
-                { type: 'SOLID', color: { r: 0.96, g: 0.96, b: 0.96 }, opacity: 1 },
-            ]);
-        });
-
-        it('SECTION keeps dark background color as-is', () => {
-            const root = makeFrame({ kind: 'SECTION', children: [makeFrame()] });
-            const doc = makeDoc(root);
-            doc.pageBackgroundColor = 'rgb(30, 30, 30)';
-            const result = adaptIRToFigmaVendorDoc(doc);
-            const fill = result.fills![0];
-            expect(fill.color!.r).toBeLessThan(0.15);
-            expect(fill.color!.g).toBeLessThan(0.15);
-            expect(fill.color!.b).toBeLessThan(0.15);
+            const content = result.children![0];
+            expect(content.fills![0].color!.r).toBeCloseTo(200 / 255, 2);
         });
     });
 });

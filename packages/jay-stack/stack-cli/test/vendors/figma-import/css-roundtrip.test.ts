@@ -151,10 +151,10 @@ describe('CSS Roundtrip Fidelity', () => {
             expect(css).toBe('background-color: #f7f7f7;');
         });
 
-        it('transparent node (no fills) exports as transparent', () => {
+        it('content frame with no background gets white fill (two-layer model)', () => {
             const frame = importAndGetFigmaFrame('width: 100px');
             const css = getBackgroundFillsStyle(frame);
-            expect(css).toBe('background: transparent;');
+            expect(css).toBe('background-color: #ffffff;');
         });
     });
 
@@ -379,7 +379,7 @@ describe('CSS Roundtrip Fidelity', () => {
     });
 
     describe('Phase 1 visual fidelity', () => {
-        it('full page import: contrast grey section, vertical layout, 960px width', () => {
+        it('full page import: #F5F5F5 section, white content frame, vertical layout, 960px width', () => {
             const child1: ImportIRNode = {
                 id: 'c1',
                 sourcePath: '/div/div1',
@@ -421,6 +421,9 @@ describe('CSS Roundtrip Fidelity', () => {
                 { type: 'SOLID', color: { r: 0.96, g: 0.96, b: 0.96 }, opacity: 1 },
             ]);
             const contentFrame = result.children![0];
+            expect(contentFrame.fills).toEqual([
+                { type: 'SOLID', color: { r: 1, g: 1, b: 1 }, opacity: 1 },
+            ]);
             expect(contentFrame.layoutMode).toBe('VERTICAL');
             expect(contentFrame.width).toBe(960);
             for (const child of contentFrame.children!) {
@@ -428,7 +431,7 @@ describe('CSS Roundtrip Fidelity', () => {
             }
         });
 
-        it('page with custom background: section inherits body color', () => {
+        it('page with custom background: content frame gets body color, section stays #F5F5F5', () => {
             const content: ImportIRNode = {
                 id: 'content',
                 sourcePath: '/body/div',
@@ -454,8 +457,15 @@ describe('CSS Roundtrip Fidelity', () => {
                 warnings: [],
             };
             const result = adaptIRToFigmaVendorDoc(ir);
-            const fill = result.fills![0] as { color: { r: number; g: number; b: number } };
-            expect(fill.color.r).toBeCloseTo(34 / 255, 2);
+            // SECTION always #F5F5F5
+            expect(result.fills).toEqual([
+                { type: 'SOLID', color: { r: 0.96, g: 0.96, b: 0.96 }, opacity: 1 },
+            ]);
+            // Content frame gets the page's body color
+            const contentFill = result.children![0].fills![0] as {
+                color: { r: number; g: number; b: number };
+            };
+            expect(contentFill.color.r).toBeCloseTo(34 / 255, 2);
         });
 
         it('flex-direction: row stays HORIZONTAL (no regression)', () => {
@@ -534,7 +544,9 @@ describe('CSS Roundtrip Fidelity', () => {
             const result = adaptIRToFigmaVendorDoc(ir);
             const contentsFrame = result.children![0];
             expect(contentsFrame.layoutMode).toBe('VERTICAL');
-            expect(contentsFrame.fills).toBeUndefined();
+            expect(contentsFrame.fills).toEqual([
+                { type: 'SOLID', color: { r: 1, g: 1, b: 1 }, opacity: 1 },
+            ]);
         });
     });
 });

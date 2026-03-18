@@ -12,6 +12,7 @@
       "type": "FRAME",
       "name": "div",
       "visible": true,
+      "fills": [{ "type": "SOLID", "color": { "r": 1, "g": 1, "b": 1 }, "opacity": 1 }],
       "width": 400,
       "layoutMode": "VERTICAL",
       "itemSpacing": 8,
