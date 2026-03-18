@@ -672,8 +672,7 @@ export function getStrokeStyles(node: FigmaVendorDocument): string {
  */
 export function getFrameSizeStyles(node: FigmaVendorDocument): string {
     if (node.parentType === 'COMPONENT') {
-        const width = node.width !== undefined && node.width > 0 ? node.width : 0;
-        return width > 0 ? `width: ${width}px;` : '';
+        return '';
     }
 
     const isTopLevel = node.parentType === 'SECTION';

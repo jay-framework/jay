@@ -63,29 +63,29 @@ describe('Variant content wrapper normalization (parentType=COMPONENT)', () => {
     });
 
     describe('getFrameSizeStyles', () => {
-        it('should emit only width for COMPONENT children with valid dimensions', () => {
-            const node = makeNode({
-                parentType: 'COMPONENT',
-                width: 960,
-                height: 0.00009999,
-            });
-            expect(getFrameSizeStyles(node)).toBe('width: 960px;');
-        });
-
-        it('should emit only width even when height is non-zero', () => {
+        it('should return empty for COMPONENT children regardless of dimensions', () => {
             const node = makeNode({
                 parentType: 'COMPONENT',
                 width: 960,
                 height: 400,
             });
-            expect(getFrameSizeStyles(node)).toBe('width: 960px;');
+            expect(getFrameSizeStyles(node)).toBe('');
         });
 
-        it('should return empty when width is zero or missing', () => {
+        it('should return empty for COMPONENT children with default 100x100 dimensions', () => {
+            const node = makeNode({
+                parentType: 'COMPONENT',
+                width: 100,
+                height: 100,
+            });
+            expect(getFrameSizeStyles(node)).toBe('');
+        });
+
+        it('should return empty for COMPONENT children with zero dimensions', () => {
             const node = makeNode({
                 parentType: 'COMPONENT',
                 width: 0,
-                height: 100,
+                height: 0,
             });
             expect(getFrameSizeStyles(node)).toBe('');
         });
