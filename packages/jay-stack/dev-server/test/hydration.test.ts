@@ -448,9 +448,13 @@ describe('hydration', () => {
                     { _id: 'f1', label: 'Fast A' },
                     { _id: 'f2', label: 'Fast B' },
                 ],
+                fastMixedItems: [
+                    { _id: 'm1', label: 'Mixed A', count: 10 },
+                    { _id: 'm2', label: 'Mixed B', count: 20 },
+                ],
                 interactiveItems: [
-                    { _id: 'i1', label: 'Interactive A' },
-                    { _id: 'i2', label: 'Interactive B' },
+                    { _id: 'i1', label: 'Interactive A', count: 100 },
+                    { _id: 'i2', label: 'Interactive B', count: 200 },
                 ],
             },
             hydrationChecks: async (page) => {
@@ -460,38 +464,74 @@ describe('hydration', () => {
                 expect(slowItems).toHaveLength(2);
                 expect(await slowItems[0].textContent()).toEqual('Slow A');
                 expect(await slowItems[1].textContent()).toEqual('Slow B');
-                // Fast list: rendered at SSR, static on client
+                // Fast list: rendered at SSR, purely static on client (no interactive children)
                 const fastItems = await page.$$('#target .fast li');
                 expect(fastItems).toHaveLength(2);
                 expect(await fastItems[0].textContent()).toEqual('Fast A');
                 expect(await fastItems[1].textContent()).toEqual('Fast B');
+                // Fast mixed list: fast forEach with interactive children
+                // - label is fast-only (static on client)
+                // - count is fast+interactive (reactive on client)
+                // - increment button is interactive ref
+                const mixedItems = await page.$$('#target .fast-mixed .item');
+                expect(mixedItems).toHaveLength(2);
+                expect(await page.textContent('#target .fast-mixed .item:nth-child(2) .label')).toEqual('Mixed A');
+                expect(await page.textContent('#target .fast-mixed .item:nth-child(2) .count')).toEqual('10');
+                expect(await page.textContent('#target .fast-mixed .item:nth-child(3) .label')).toEqual('Mixed B');
+                expect(await page.textContent('#target .fast-mixed .item:nth-child(3) .count')).toEqual('20');
                 // Interactive list: rendered at SSR, reactive on client
-                const interactiveItems = await page.$$('#target .interactive li');
+                // - label, count, increment button all interactive
+                const interactiveItems = await page.$$('#target .interactive .item');
                 expect(interactiveItems).toHaveLength(2);
-                expect(await interactiveItems[0].textContent()).toEqual('Interactive A');
-                expect(await interactiveItems[1].textContent()).toEqual('Interactive B');
+                expect(await page.textContent('#target .interactive .item:nth-child(2) .label')).toEqual('Interactive A');
+                expect(await page.textContent('#target .interactive .item:nth-child(2) .count')).toEqual('100');
+                expect(await page.textContent('#target .interactive .item:nth-child(3) .label')).toEqual('Interactive B');
+                expect(await page.textContent('#target .interactive .item:nth-child(3) .count')).toEqual('200');
             },
             interactivityChecks: async (page) => {
-                // Add an item to the interactive list
-                await page.click('#target .interactive button:text("Add")');
+                // --- Per-item increment: fast-mixed forEach ---
+                // Click +1 on first fast-mixed item (count: 10 → 11)
+                await page.click('#target .fast-mixed .item:nth-child(2) button');
                 await page.waitForFunction(
-                    () => document.querySelectorAll('#target .interactive li').length === 3,
+                    () => document.querySelector('#target .fast-mixed .item:nth-child(2) .count')?.textContent === '11',
                     { timeout: 2000 },
                 );
-                let interactiveItems = await page.$$('#target .interactive li');
-                expect(interactiveItems).toHaveLength(3);
-                expect(await interactiveItems[2].textContent()).toEqual('Interactive C');
+                expect(await page.textContent('#target .fast-mixed .item:nth-child(2) .count')).toEqual('11');
+                // Second fast-mixed item unchanged
+                expect(await page.textContent('#target .fast-mixed .item:nth-child(3) .count')).toEqual('20');
+                // Labels unchanged (fast-only, static on client)
+                expect(await page.textContent('#target .fast-mixed .item:nth-child(2) .label')).toEqual('Mixed A');
+
+                // --- Per-item increment: interactive forEach ---
+                // Click +1 on second interactive item (count: 200 → 201)
+                await page.click('#target .interactive .item:nth-child(3) button:text("+1")');
+                await page.waitForFunction(
+                    () => document.querySelector('#target .interactive .item:nth-child(3) .count')?.textContent === '201',
+                    { timeout: 2000 },
+                );
+                expect(await page.textContent('#target .interactive .item:nth-child(3) .count')).toEqual('201');
+                // First interactive item unchanged
+                expect(await page.textContent('#target .interactive .item:nth-child(2) .count')).toEqual('100');
+
+                // --- Add/remove interactive items ---
+                await page.click('#target .interactive button:text("Add")');
+                await page.waitForFunction(
+                    () => document.querySelectorAll('#target .interactive .item').length === 3,
+                    { timeout: 2000 },
+                );
+                expect(await page.textContent('#target .interactive .item:nth-child(4) .label')).toEqual('Interactive C');
+                expect(await page.textContent('#target .interactive .item:nth-child(4) .count')).toEqual('300');
 
                 // Remove last item
                 await page.click('#target .interactive button:text("Remove")');
                 await page.waitForFunction(
-                    () => document.querySelectorAll('#target .interactive li').length === 2,
+                    () => document.querySelectorAll('#target .interactive .item').length === 2,
                     { timeout: 2000 },
                 );
-                interactiveItems = await page.$$('#target .interactive li');
-                expect(interactiveItems).toHaveLength(2);
+                // Previous increment on second item should be preserved
+                expect(await page.textContent('#target .interactive .item:nth-child(3) .count')).toEqual('201');
 
-                // Slow and fast lists should be unchanged
+                // --- Static lists unchanged ---
                 const slowItems = await page.$$('#target .slow li');
                 expect(slowItems).toHaveLength(2);
                 expect(await slowItems[0].textContent()).toEqual('Slow A');

@@ -12,7 +12,20 @@ import {
 } from '/@fs/Users/yoav/work/jay/main/packages/runtime/runtime/dist/index.js';
 export function hydrate(rootElement, options) {
     const [fastItemsRefManager, []] = ReferencesManager.for(options, [], [], [], []);
-    const [interactiveItemsRefManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [fastMixedItemsRefManager, [refIncrement]] = ReferencesManager.for(
+        options,
+        [],
+        ['increment'],
+        [],
+        [],
+    );
+    const [interactiveItemsRefManager, [refIncrement2]] = ReferencesManager.for(
+        options,
+        [],
+        ['increment'],
+        [],
+        [],
+    );
     const [refManager, [refAddButton, refRemoveButton]] = ReferencesManager.for(
         options,
         ['addButton', 'removeButton'],
@@ -21,6 +34,7 @@ export function hydrate(rootElement, options) {
         [],
         {
             fastItems: fastItemsRefManager,
+            fastMixedItems: fastMixedItemsRefManager,
             interactiveItems: interactiveItemsRefManager,
         },
     );
@@ -41,15 +55,42 @@ export function hydrate(rootElement, options) {
                 adoptDynamicElement('0/3', {}, [
                     STATIC,
                     hydrateForEach(
-                        (vs) => vs.interactiveItems,
+                        (vs) => vs.fastMixedItems,
                         '_id',
-                        () => [adoptText('0', (vs1) => vs1.label)],
+                        () => [
+                            adoptText('0', (vs1) => vs1.label),
+                            adoptText('1', (vs1) => vs1.count),
+                            adoptElement('2', {}, [], refIncrement()),
+                        ],
                         (vs1) => {
-                            return e('ul', {}, [e('li', {}, [dt((vs12) => vs12.label)])]);
+                            return e('div', { class: 'item' }, [
+                                e('span', { class: 'label' }, [dt((vs12) => vs12.label)]),
+                                e('span', { class: 'count' }, [dt((vs12) => vs12.count)]),
+                                e('button', {}, ['+1'], refIncrement()),
+                            ]);
                         },
                     ),
-                    adoptElement('0/3/2', {}, [], refAddButton()),
-                    adoptElement('0/3/3', {}, [], refRemoveButton()),
+                ]),
+                adoptDynamicElement('0/4', {}, [
+                    STATIC,
+                    hydrateForEach(
+                        (vs) => vs.interactiveItems,
+                        '_id',
+                        () => [
+                            adoptText('0', (vs1) => vs1.label),
+                            adoptText('1', (vs1) => vs1.count),
+                            adoptElement('2', {}, [], refIncrement2()),
+                        ],
+                        (vs1) => {
+                            return e('div', { class: 'item' }, [
+                                e('span', { class: 'label' }, [dt((vs12) => vs12.label)]),
+                                e('span', { class: 'count' }, [dt((vs12) => vs12.count)]),
+                                e('button', {}, ['+1'], refIncrement()),
+                            ]);
+                        },
+                    ),
+                    adoptElement('0/4/2', {}, [], refAddButton()),
+                    adoptElement('0/4/3', {}, [], refRemoveButton()),
                 ]),
             ]),
         );

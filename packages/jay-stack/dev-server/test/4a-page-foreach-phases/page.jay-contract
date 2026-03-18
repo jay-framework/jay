@@ -4,7 +4,7 @@ tags:
     type: data
     dataType: string
     phase: slow
-  - tag: slow-items
+  - tag: slowItems
     type: sub-contract
     phase: slow
     repeated: true
@@ -16,7 +16,7 @@ tags:
       - tag: label
         type: data
         dataType: string
-  - tag: fast-items
+  - tag: fastItems
     type: sub-contract
     phase: fast
     repeated: true
@@ -28,7 +28,27 @@ tags:
       - tag: label
         type: data
         dataType: string
-  - tag: interactive-items
+  - tag: fastMixedItems
+    type: sub-contract
+    phase: fast
+    repeated: true
+    trackBy: _id
+    tags:
+      - tag: _id
+        type: data
+        dataType: string
+      - tag: label
+        type: data
+        dataType: string
+        phase: fast
+      - tag: count
+        type: data
+        dataType: number
+        phase: fast+interactive
+      - tag: increment
+        type: interactive
+        elementType: HTMLButtonElement
+  - tag: interactiveItems
     type: sub-contract
     phase: fast+interactive
     repeated: true
@@ -40,9 +60,15 @@ tags:
       - tag: label
         type: data
         dataType: string
-  - tag: add-button
+      - tag: count
+        type: data
+        dataType: number
+      - tag: increment
+        type: interactive
+        elementType: HTMLButtonElement
+  - tag: addButton
     type: interactive
     elementType: HTMLButtonElement
-  - tag: remove-button
+  - tag: removeButton
     type: interactive
     elementType: HTMLButtonElement

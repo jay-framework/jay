@@ -18,11 +18,21 @@
                 <li>{label}</li>
             </ul>
         </section>
+        <section class="fast-mixed">
+            <h2>Fast Mixed List</h2>
+            <div class="item" forEach="fastMixedItems" trackBy="_id">
+                <span class="label">{label}</span>
+                <span class="count">{count}</span>
+                <button ref="increment">+1</button>
+            </div>
+        </section>
         <section class="interactive">
             <h2>Interactive List</h2>
-            <ul forEach="interactiveItems" trackBy="_id">
-                <li>{label}</li>
-            </ul>
+            <div class="item" forEach="interactiveItems" trackBy="_id">
+                <span class="label">{label}</span>
+                <span class="count">{count}</span>
+                <button ref="increment">+1</button>
+            </div>
             <button ref="add-button">Add</button>
             <button ref="remove-button">Remove</button>
         </section>
