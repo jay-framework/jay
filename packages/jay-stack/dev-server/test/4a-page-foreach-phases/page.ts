@@ -1,6 +1,15 @@
-import {makeJayStackComponent, phaseOutput, type Signals,} from '@jay-framework/fullstack-component';
-import type {PageFastViewState, PageInteractiveViewState, PageRefs, PageSlowViewState,} from './page.jay-contract';
-import {patch, REPLACE} from "@jay-framework/json-patch";
+import {
+    makeJayStackComponent,
+    phaseOutput,
+    type Signals,
+} from '@jay-framework/fullstack-component';
+import type {
+    PageFastViewState,
+    PageInteractiveViewState,
+    PageRefs,
+    PageSlowViewState,
+} from './page.jay-contract';
+import { patch, REPLACE } from '@jay-framework/json-patch';
 
 const builder = makeJayStackComponent()
     .withProps<{}>()
@@ -37,20 +46,19 @@ const builder = makeJayStackComponent()
     );
 
 export const page = builder.withInteractive(
-    (
-        _props,
-        refs: PageRefs,
-        fastViewState: Signals<PageInteractiveViewState>,
-    ) => {
+    (_props, refs: PageRefs, fastViewState: Signals<PageInteractiveViewState>) => {
         let nextId = 3;
         const [interactiveItems, setInteractiveItems] = fastViewState.interactiveItems;
         const [fastMixedItems, setFastMixedItems] = fastViewState.fastMixedItems;
 
-
         refs.addButton.onclick(() => {
             setInteractiveItems([
                 ...interactiveItems(),
-                { _id: `i${nextId}`, label: `Interactive ${String.fromCharCode(64 + nextId)}`, count: nextId * 100 },
+                {
+                    _id: `i${nextId}`,
+                    label: `Interactive ${String.fromCharCode(64 + nextId)}`,
+                    count: nextId * 100,
+                },
             ]);
             nextId++;
         });
@@ -62,23 +70,23 @@ export const page = builder.withInteractive(
             }
         });
 
-        refs.fastMixedItems.increment.onclick(({viewState, coordinate}) => {
-            const index = fastMixedItems().findIndex(_ => _._id === viewState._id);
+        refs.fastMixedItems.increment.onclick(({ viewState, coordinate }) => {
+            const index = fastMixedItems().findIndex((_) => _._id === viewState._id);
             setFastMixedItems(
                 patch(fastMixedItems(), [
-                    {op: REPLACE, path: [index, "count"], value: viewState.count+1}
-                ])
-            )
-        })
+                    { op: REPLACE, path: [index, 'count'], value: viewState.count + 1 },
+                ]),
+            );
+        });
 
-        refs.interactiveItems.increment.onclick(({viewState, coordinate}) => {
-            const index = interactiveItems().findIndex(_ => _._id === viewState._id);
+        refs.interactiveItems.increment.onclick(({ viewState, coordinate }) => {
+            const index = interactiveItems().findIndex((_) => _._id === viewState._id);
             setInteractiveItems(
                 patch(interactiveItems(), [
-                    {op: REPLACE, path: [index, "count"], value: viewState.count+1}
-                ])
-            )
-        })
+                    { op: REPLACE, path: [index, 'count'], value: viewState.count + 1 },
+                ]),
+            );
+        });
 
         return {
             render: (): PageInteractiveViewState => ({

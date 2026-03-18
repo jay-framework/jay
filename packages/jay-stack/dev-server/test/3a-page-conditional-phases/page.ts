@@ -7,14 +7,16 @@ import {
 const builder = makeJayStackComponent()
     .withProps<{}>()
     .withSlowlyRender(async () =>
-        phaseOutput(
-            { title: 'Phase Conditionals', slowVisible: true, slowHidden: false },
-            {},
-        ),
+        phaseOutput({ title: 'Phase Conditionals', slowVisible: true, slowHidden: false }, {}),
     )
     .withFastRender(async () =>
         phaseOutput(
-            { fastVisible: true, fastHidden: false, interactiveVisible: true, interactiveHidden: false },
+            {
+                fastVisible: true,
+                fastHidden: false,
+                interactiveVisible: true,
+                interactiveHidden: false,
+            },
             {},
         ),
     );
@@ -26,7 +28,7 @@ export const page = builder.withInteractive(
         fastViewState: Signals<{ interactiveVisible: boolean; interactiveHidden: boolean }>,
     ) => {
         const [interactiveVisible, setInteractiveVisible] = fastViewState.interactiveVisible;
-        const [interactiveHidden, setInteractiveHidden] = fastViewState.interactiveHidden
+        const [interactiveHidden, setInteractiveHidden] = fastViewState.interactiveHidden;
 
         refs.toggleButton.onclick(() => {
             setInteractiveVisible(!interactiveVisible());

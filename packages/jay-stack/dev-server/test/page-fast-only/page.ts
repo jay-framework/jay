@@ -2,7 +2,7 @@ import {
     makeJayStackComponent,
     RenderPipeline,
     type Signals,
-// @ts-ignore
+    // @ts-ignore
 } from '@jay-framework/fullstack-component';
 
 // No withSlowlyRender — fast + interactive only

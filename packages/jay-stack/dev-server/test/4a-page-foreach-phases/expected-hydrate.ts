@@ -9,7 +9,7 @@ import {
     adoptDynamicElement,
     STATIC,
 // @ts-ignore
-} from '/@fs/Users/yoav/work/jay/main/packages/runtime/runtime/dist/index.js';
+} from '/@fs{{ROOT}}/packages/runtime/runtime/dist/index.js';
 export function hydrate(rootElement, options) {
     const [fastItemsRefManager, []] = ReferencesManager.for(options, [], [], [], []);
     const [fastMixedItemsRefManager, [refIncrement]] = ReferencesManager.for(

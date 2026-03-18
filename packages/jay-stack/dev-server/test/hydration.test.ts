@@ -91,9 +91,20 @@ function stripTsDirectives(code: string): string {
     return code.replace(/\/\/ @ts-ignore\n/g, '');
 }
 
+/** Monorepo root — used to canonicalize absolute paths in generated code */
+const MONOREPO_ROOT = path.resolve(__dirname, '../../../..');
+const MONOREPO_ROOT_REGEX = new RegExp(MONOREPO_ROOT.replace(/[/\\]/g, '[/\\\\]'), 'g');
+
+/** Replace monorepo-absolute paths with a canonical placeholder */
+function canonicalizePaths(code: string): string {
+    return code.replace(MONOREPO_ROOT_REGEX, '{{ROOT}}');
+}
+
 /** Read expected fixture file */
 function readFixture(dirName: string, fileName: string): string {
-    return stripTsDirectives(fs.readFileSync(path.join(__dirname, dirName, fileName), 'utf-8'));
+    return canonicalizePaths(
+        stripTsDirectives(fs.readFileSync(path.join(__dirname, dirName, fileName), 'utf-8')),
+    );
 }
 
 // ============================================================================
@@ -142,10 +153,7 @@ function testFixture(dirName: string, opts: TestFixtureOpts = {}) {
  * Internal: run tests for a single fixture page in a single mode.
  * Starts its own dev server and Playwright browser.
  */
-function testFixtureMode(
-    dirName: string,
-    opts: TestFixtureOpts & { warmCache?: boolean } = {},
-) {
+function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: boolean } = {}) {
     let devServer: DevServer;
     let devServerUrl: string;
     let browser: Browser;
@@ -207,7 +215,10 @@ function testFixtureMode(
     const hydrateFixtureName = `expected-hydrate.ts`;
 
     const ssrFixturePath = path.join(__dirname, dirName, ssrFixtureName);
-    if (!opts.disableSSR && (fs.existsSync(ssrFixturePath) || process.env.UPDATE_FIXTURES === '1')) {
+    if (
+        !opts.disableSSR &&
+        (fs.existsSync(ssrFixturePath) || process.env.UPDATE_FIXTURES === '1')
+    ) {
         it('SSR output matches fixture', async () => {
             const response = await fetch(`${devServerUrl}/`);
             const html = await response.text();
@@ -221,7 +232,10 @@ function testFixtureMode(
     }
 
     const hydrateFixturePath = path.join(__dirname, dirName, hydrateFixtureName);
-    if (!opts.disableSSR && (fs.existsSync(hydrateFixturePath) || process.env.UPDATE_FIXTURES === '1')) {
+    if (
+        !opts.disableSSR &&
+        (fs.existsSync(hydrateFixturePath) || process.env.UPDATE_FIXTURES === '1')
+    ) {
         it('hydrate script matches fixture', async () => {
             const dirPath = path.resolve(__dirname, dirName);
             // Use pre-rendered path if available (slow-rendered pages have
@@ -241,21 +255,27 @@ function testFixtureMode(
             }
             expect(transformResult?.code).toBeTruthy();
 
-            let actual = transformResult!.code
-                .replace(new RegExp(dirPath.replace(/[/\\]/g, '[/\\\\]'), 'g'), '.')
-                .replace(/\/\/# sourceMappingURL=.*/, '');
+            let actual = canonicalizePaths(
+                transformResult!.code
+                    .replace(new RegExp(dirPath.replace(/[/\\]/g, '[/\\\\]'), 'g'), '.')
+                    .replace(/\/\/# sourceMappingURL=.*/, ''),
+            );
             actual = await prettify(actual);
 
             if (process.env.UPDATE_FIXTURES === '1') {
                 const lines = actual.split('\n');
                 const result: string[] = [];
                 for (const line of lines) {
-                    if (line.startsWith('} from \'') || (line.startsWith('import ') && line.includes(' from \''))) result.push('// @ts-ignore');
+                    if (
+                        line.startsWith("} from '") ||
+                        (line.startsWith('import ') && line.includes(" from '"))
+                    )
+                        result.push('// @ts-ignore');
                     result.push(line);
                 }
                 fs.writeFileSync(hydrateFixturePath, result.join('\n'));
             }
-            const expected = readFixture(dirName, hydrateFixtureName);
+            const expected = await prettify(readFixture(dirName, hydrateFixtureName));
             expect(actual).toEqual(expected);
         });
     }
@@ -356,7 +376,9 @@ describe('hydration', () => {
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Hello Dynamic');
                 expect(await page.textContent('#target p')).toEqual('Fast Count: 10');
-                expect(await page.textContent('#target p >> nth=1')).toEqual('Interactive Count: 20');
+                expect(await page.textContent('#target p >> nth=1')).toEqual(
+                    'Interactive Count: 20',
+                );
                 expect(await page.textContent('#target span')).toEqual('Static text stays');
             },
         });
@@ -475,43 +497,73 @@ describe('hydration', () => {
                 // - increment button is interactive ref
                 const mixedItems = await page.$$('#target .fast-mixed .item');
                 expect(mixedItems).toHaveLength(2);
-                expect(await page.textContent('#target .fast-mixed .item:nth-child(2) .label')).toEqual('Mixed A');
-                expect(await page.textContent('#target .fast-mixed .item:nth-child(2) .count')).toEqual('10');
-                expect(await page.textContent('#target .fast-mixed .item:nth-child(3) .label')).toEqual('Mixed B');
-                expect(await page.textContent('#target .fast-mixed .item:nth-child(3) .count')).toEqual('20');
+                expect(
+                    await page.textContent('#target .fast-mixed .item:nth-child(2) .label'),
+                ).toEqual('Mixed A');
+                expect(
+                    await page.textContent('#target .fast-mixed .item:nth-child(2) .count'),
+                ).toEqual('10');
+                expect(
+                    await page.textContent('#target .fast-mixed .item:nth-child(3) .label'),
+                ).toEqual('Mixed B');
+                expect(
+                    await page.textContent('#target .fast-mixed .item:nth-child(3) .count'),
+                ).toEqual('20');
                 // Interactive list: rendered at SSR, reactive on client
                 // - label, count, increment button all interactive
                 const interactiveItems = await page.$$('#target .interactive .item');
                 expect(interactiveItems).toHaveLength(2);
-                expect(await page.textContent('#target .interactive .item:nth-child(2) .label')).toEqual('Interactive A');
-                expect(await page.textContent('#target .interactive .item:nth-child(2) .count')).toEqual('100');
-                expect(await page.textContent('#target .interactive .item:nth-child(3) .label')).toEqual('Interactive B');
-                expect(await page.textContent('#target .interactive .item:nth-child(3) .count')).toEqual('200');
+                expect(
+                    await page.textContent('#target .interactive .item:nth-child(2) .label'),
+                ).toEqual('Interactive A');
+                expect(
+                    await page.textContent('#target .interactive .item:nth-child(2) .count'),
+                ).toEqual('100');
+                expect(
+                    await page.textContent('#target .interactive .item:nth-child(3) .label'),
+                ).toEqual('Interactive B');
+                expect(
+                    await page.textContent('#target .interactive .item:nth-child(3) .count'),
+                ).toEqual('200');
             },
             interactivityChecks: async (page) => {
                 // --- Per-item increment: fast-mixed forEach ---
                 // Click +1 on first fast-mixed item (count: 10 → 11)
                 await page.click('#target .fast-mixed .item:nth-child(2) button');
                 await page.waitForFunction(
-                    () => document.querySelector('#target .fast-mixed .item:nth-child(2) .count')?.textContent === '11',
+                    () =>
+                        document.querySelector('#target .fast-mixed .item:nth-child(2) .count')
+                            ?.textContent === '11',
                     { timeout: 2000 },
                 );
-                expect(await page.textContent('#target .fast-mixed .item:nth-child(2) .count')).toEqual('11');
+                expect(
+                    await page.textContent('#target .fast-mixed .item:nth-child(2) .count'),
+                ).toEqual('11');
                 // Second fast-mixed item unchanged
-                expect(await page.textContent('#target .fast-mixed .item:nth-child(3) .count')).toEqual('20');
+                expect(
+                    await page.textContent('#target .fast-mixed .item:nth-child(3) .count'),
+                ).toEqual('20');
                 // Labels unchanged (fast-only, static on client)
-                expect(await page.textContent('#target .fast-mixed .item:nth-child(2) .label')).toEqual('Mixed A');
+                expect(
+                    await page.textContent('#target .fast-mixed .item:nth-child(2) .label'),
+                ).toEqual('Mixed A');
 
                 // --- Per-item increment: interactive forEach ---
                 // Click +1 on second interactive item (count: 200 → 201)
                 await page.click('#target .interactive .item:nth-child(3) button:text("+1")');
                 await page.waitForFunction(
-                    () => document.querySelector('#target .interactive .item:nth-child(3) .count')?.textContent === '201',
+                    () =>
+                        document.querySelector('#target .interactive .item:nth-child(3) .count')
+                            ?.textContent === '201',
                     { timeout: 2000 },
                 );
-                expect(await page.textContent('#target .interactive .item:nth-child(3) .count')).toEqual('201');
+                expect(
+                    await page.textContent('#target .interactive .item:nth-child(3) .count'),
+                ).toEqual('201');
                 // First interactive item unchanged
-                expect(await page.textContent('#target .interactive .item:nth-child(2) .count')).toEqual('100');
+                expect(
+                    await page.textContent('#target .interactive .item:nth-child(2) .count'),
+                ).toEqual('100');
 
                 // --- Add/remove interactive items ---
                 await page.click('#target .interactive button:text("Add")');
@@ -519,8 +571,12 @@ describe('hydration', () => {
                     () => document.querySelectorAll('#target .interactive .item').length === 3,
                     { timeout: 2000 },
                 );
-                expect(await page.textContent('#target .interactive .item:nth-child(4) .label')).toEqual('Interactive C');
-                expect(await page.textContent('#target .interactive .item:nth-child(4) .count')).toEqual('300');
+                expect(
+                    await page.textContent('#target .interactive .item:nth-child(4) .label'),
+                ).toEqual('Interactive C');
+                expect(
+                    await page.textContent('#target .interactive .item:nth-child(4) .count'),
+                ).toEqual('300');
 
                 // Remove last item
                 await page.click('#target .interactive button:text("Remove")');
@@ -529,7 +585,9 @@ describe('hydration', () => {
                     { timeout: 2000 },
                 );
                 // Previous increment on second item should be preserved
-                expect(await page.textContent('#target .interactive .item:nth-child(3) .count')).toEqual('201');
+                expect(
+                    await page.textContent('#target .interactive .item:nth-child(3) .count'),
+                ).toEqual('201');
 
                 // --- Static lists unchanged ---
                 const slowItems = await page.$$('#target .slow li');
@@ -555,23 +613,11 @@ describe('hydration', () => {
         });
     });
 
-    describe.skip('5. slowForEach', () => {
-        testFixture('page-slow-foreach', {
-            hydrationChecks: async (page) => {
-                expect(await page.textContent('#target h1')).toEqual('SlowForEach Test');
-                const cards = await page.$$('#target .card');
-                expect(cards).toHaveLength(2);
-                expect(await cards[0].textContent()).toContain('Widget A');
-                expect(await cards[0].textContent()).toContain('29.99');
-                expect(await cards[1].textContent()).toContain('Widget B');
-                expect(await cards[1].textContent()).toContain('49.99');
-            },
-        });
-    });
+    // Test 5 (slowForEach without contract) removed — covered by 4a's slow forEach with contract.
+    // Without a contract, slow render resolves nothing (DL#108), so slowForEach doesn't unroll.
 
     describe.skip('6a. Headless — static placement', () => {
         testFixture('page-headless-static', {
-
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Headless Test');
                 expect(await page.textContent('#target .label')).toEqual('Item 1');
@@ -596,7 +642,6 @@ describe('hydration', () => {
 
     describe.skip('6b. Headless — under condition', () => {
         testFixture('page-headless-conditional', {
-
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Conditional Headless');
                 // showWidget=true initially → widget visible
@@ -714,7 +759,6 @@ describe('hydration', () => {
 
     describe.skip('6d. Headless — under slowForEach', () => {
         testFixture('page-headless-slow-foreach', {
-
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('SlowForEach Headless');
                 const widgets = await page.$$('#target .widget');
@@ -747,7 +791,6 @@ describe('hydration', () => {
         // Tests that coordinates are correct when forEach is not the first child.
         // Also verifies forEach carry forward reaches the interactive constructor.
         testFixture('page-headless-foreach-nested', {
-
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Nested ForEach Test');
                 // Static section should be present
@@ -802,7 +845,6 @@ describe('hydration', () => {
         // Both must get their own fast ViewState and carryForward —
         // the __headlessInstances key must be unique per instance.
         testFixture('page-headless-two-instances', {
-
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Two Instances Test');
                 const widgets = await page.$$('#target .widget');
@@ -899,7 +941,6 @@ describe('hydration', () => {
         // Page has withFastRender + withInteractive but NO withSlowlyRender.
         // Tests that headless instances work without any slow phase.
         testFixture('page-fast-only', {
-
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Fast Only Page');
                 const widgets = await page.$$('#target .widget');
@@ -930,7 +971,6 @@ describe('hydration', () => {
         // SSR renders with empty viewState (undefined values), but after hydration
         // the interactive constructor provides the initial values.
         testFixture('page-interactive-only', {
-
             hydrationChecks: async (page) => {
                 // Wait for the interactive constructor's first render to update the DOM
                 await page.waitForFunction(

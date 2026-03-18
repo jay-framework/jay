@@ -82,6 +82,7 @@ Remove the `noMainContract` flag from `slowRenderTransform`. Without a contract,
 This aligns with Fix 1: no-contract pages have no slow data, so slow render is a no-op.
 
 **Files:**
+
 - `slow-render-transform.ts` — remove `noMainContract` from `isSlowPhase`, `resolveTextBindings`, `transformElement`, `transformChildren`, `SlowRenderContext`
 - `expression-parser.pegjs` — remove `noMainContract` from `isSlowPhase`
 - `expression-compiler.ts` — remove `noMainContract` from `SlowRenderContext`
@@ -116,12 +117,14 @@ If a Jay Stack component without a contract returns non-empty data from `withSlo
 **Fix 1** — Changed `generatePhaseSpecificTypes` in `jay-html-compiler.ts`: when `jayFile.hasInlineData` (no contract), `FastViewState` now equals the full ViewState type instead of `{}`.
 
 **Fix 2** — Removed `noMainContract` flag from:
+
 - `slow-render-transform.ts`: removed from `isSlowPhase`, `resolveTextBindings`, `transformElement`, `transformChildren`, and the `slowRenderTransform` call site
 - `expression-parser.pegjs` and `expression-parser.cjs`: `isSlowPhase` now always returns `false` for unknown bindings
 - `expression-compiler.ts`: removed `noMainContract` from `SlowRenderContext` interface
 - Also fixed `transformElement` forEach check: `!phaseInfo || phase === 'slow'` → `phaseInfo?.phase === 'slow'` (without phase info, forEach is not slow)
 
 **Fix 4** — Updated test components:
+
 - 2b: moved data from `withSlowlyRender` to `withFastRender`
 - 3b: moved data from `withSlowlyRender` to `withFastRender`
 - 4b: removed no-op `withSlowlyRender`, simplified to just `withFastRender` with `phaseOutput`

@@ -44,7 +44,6 @@ async function findMatchingParams(
 }
 
 export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
-
     async runSlowlyForPage(
         pageParams: UrlParams,
         pageProps: PageProps,

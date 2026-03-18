@@ -958,6 +958,16 @@ async function preRenderJayHtml(
         }
     }
 
+    // Warn if slow data is provided without a contract (DL#108).
+    // Without a contract, slow render resolves nothing — the data is silently ignored.
+    if (!contract && slowViewState && Object.keys(slowViewState).length > 0) {
+        getLogger().warn(
+            `[SlowRender] Page ${route.jayHtmlPath} has slow ViewState but no contract. ` +
+                `Without a contract, slow bindings cannot be resolved. ` +
+                `Move data to withFastRender or add a .jay-contract file with phase annotations.`,
+        );
+    }
+
     // ── Pass 1: Resolve page-level slow bindings ──
     const result = slowRenderTransform({
         jayHtmlContent,
@@ -1214,13 +1224,8 @@ async function materializeDynamicContracts(
 
 export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServer> {
     const options = defaults(rawOptions);
-    const {
-        publicBaseUrlPath,
-        pagesRootFolder,
-        projectRootFolder,
-        buildFolder,
-        jayRollupConfig,
-    } = options;
+    const { publicBaseUrlPath, pagesRootFolder, projectRootFolder, buildFolder, jayRollupConfig } =
+        options;
 
     // Clean build folder on startup to avoid stale artifacts triggering HMR
     if (buildFolder) {

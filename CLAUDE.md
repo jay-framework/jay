@@ -1,6 +1,5 @@
 # CLAUDE.md
 
-
 IMPORTANT - YOU ARE NOT ALLOWED TO USE toContain ON CODE FILES.
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.

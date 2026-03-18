@@ -29,7 +29,13 @@ import {
 } from '@jay-framework/compiler-shared';
 import { assignCoordinates } from './assign-coordinates';
 import { generateAllPhaseViewStateTypes } from '../contract/phase-type-generator';
-import { Contract, ContractProp, ContractTag, ContractTagType, getEffectivePhase } from '../contract';
+import {
+    Contract,
+    ContractProp,
+    ContractTag,
+    ContractTagType,
+    getEffectivePhase,
+} from '../contract';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
 import {
@@ -2247,8 +2253,14 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
     // --- Conditional (if=) ---
     // Skip hydrateConditional for non-interactive conditions (slow/fast-only).
     // These are resolved at SSR and static on the client — treat as regular element.
-    if (isConditional(element) && conditionIsInteractive(element.getAttribute('if'), context.interactivePaths)) {
-        const condition = simplifyConditionForHydrate(element.getAttribute('if'), context.interactivePaths);
+    if (
+        isConditional(element) &&
+        conditionIsInteractive(element.getAttribute('if'), context.interactivePaths)
+    ) {
+        const condition = simplifyConditionForHydrate(
+            element.getAttribute('if'),
+            context.interactivePaths,
+        );
         const renderedCondition = parseCondition(condition, context.variables);
         // Read coordinate from jay-coordinate-base (DL#103)
         const coordinate = element.getAttribute(COORD_ATTR) || '0';
@@ -2928,7 +2940,11 @@ function renderHydrateElementContent(
             textFragment = rendered;
         }
         // Skip adoption if bindings are all non-interactive (slow/fast-only)
-        if (textFragment && context.interactivePaths.size > 0 && !textHasInteractiveBindings(dataJayDynamic, context.interactivePaths)) {
+        if (
+            textFragment &&
+            context.interactivePaths.size > 0 &&
+            !textHasInteractiveBindings(dataJayDynamic, context.interactivePaths)
+        ) {
             textFragment = null;
         }
     } else if (childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE) {
@@ -2938,7 +2954,11 @@ function renderHydrateElementContent(
             textFragment = rendered;
         }
         // Skip adoption if bindings are all non-interactive (slow/fast-only)
-        if (textFragment && context.interactivePaths.size > 0 && !textHasInteractiveBindings(text, context.interactivePaths)) {
+        if (
+            textFragment &&
+            context.interactivePaths.size > 0 &&
+            !textHasInteractiveBindings(text, context.interactivePaths)
+        ) {
             textFragment = null;
         }
     }
@@ -2948,7 +2968,11 @@ function renderHydrateElementContent(
     const hasInteractiveChildren = childNodes.some(
         (child) =>
             child.nodeType === NodeType.ELEMENT_NODE &&
-            ((isConditional(child as HTMLElement) && conditionIsInteractive((child as HTMLElement).getAttribute('if'), context.interactivePaths)) ||
+            ((isConditional(child as HTMLElement) &&
+                conditionIsInteractive(
+                    (child as HTMLElement).getAttribute('if'),
+                    context.interactivePaths,
+                )) ||
                 isForEach(child as HTMLElement)),
     );
 
@@ -2956,7 +2980,11 @@ function renderHydrateElementContent(
     const hasTextWithInteractiveBinding = (n: Node) =>
         n.nodeType === NodeType.TEXT_NODE &&
         /\{[^}]+\}/.test((n as Node & { innerText?: string }).innerText || '') &&
-        (context.interactivePaths.size === 0 || textHasInteractiveBindings((n as Node & { innerText?: string }).innerText || '', context.interactivePaths));
+        (context.interactivePaths.size === 0 ||
+            textHasInteractiveBindings(
+                (n as Node & { innerText?: string }).innerText || '',
+                context.interactivePaths,
+            ));
     const hasMixedContentDynamicText =
         childNodes.some(hasTextWithInteractiveBinding) &&
         childNodes.some((n) => n.nodeType === NodeType.ELEMENT_NODE);
@@ -3011,7 +3039,14 @@ function renderHydrateElementContent(
         for (const child of childNodes) {
             if (child.nodeType !== NodeType.ELEMENT_NODE) continue;
             const htmlChild = child as HTMLElement;
-            if ((isConditional(htmlChild) && conditionIsInteractive(htmlChild.getAttribute('if'), context.interactivePaths)) || isForEach(htmlChild)) {
+            if (
+                (isConditional(htmlChild) &&
+                    conditionIsInteractive(
+                        htmlChild.getAttribute('if'),
+                        context.interactivePaths,
+                    )) ||
+                isForEach(htmlChild)
+            ) {
                 // Dynamic child: render normally (produces hydrateForEach/hydrateConditional)
                 const frag = renderHydrateNode(child, context);
                 if (frag.rendered.trim()) {
@@ -4130,7 +4165,11 @@ function renderServerElementContent(
             dynamicTextFragment = fragment;
         }
         // Skip coordinate if bindings are all non-interactive (slow/fast-only)
-        if (dynamicTextFragment && context.interactivePaths.size > 0 && !textHasInteractiveBindings(dataJayDynamic, context.interactivePaths)) {
+        if (
+            dynamicTextFragment &&
+            context.interactivePaths.size > 0 &&
+            !textHasInteractiveBindings(dataJayDynamic, context.interactivePaths)
+        ) {
             dynamicTextFragment = null;
         }
     } else if (childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE) {
@@ -4140,7 +4179,11 @@ function renderServerElementContent(
             dynamicTextFragment = fragment;
         }
         // Skip coordinate if bindings are all non-interactive (slow/fast-only)
-        if (dynamicTextFragment && context.interactivePaths.size > 0 && !textHasInteractiveBindings(text, context.interactivePaths)) {
+        if (
+            dynamicTextFragment &&
+            context.interactivePaths.size > 0 &&
+            !textHasInteractiveBindings(text, context.interactivePaths)
+        ) {
             dynamicTextFragment = null;
         }
     }
@@ -4154,7 +4197,8 @@ function renderServerElementContent(
     const refName = element.attributes.ref ? camelCase(element.attributes.ref) : null;
     const needsCoordinate =
         options?.isRoot === true ||
-        (isConditional(element) && conditionIsInteractive(element.getAttribute('if'), context.interactivePaths)) ||
+        (isConditional(element) &&
+            conditionIsInteractive(element.getAttribute('if'), context.interactivePaths)) ||
         dynamicTextFragment !== null ||
         refName !== null ||
         hasDynamicAttributeBindings(element, variables) ||
@@ -4384,11 +4428,18 @@ function hasMixedContentDynamicText(childNodes: Node[]): boolean {
 }
 
 /** Phase-aware variant: only counts bindings that are interactive. */
-function hasMixedContentDynamicTextInteractive(childNodes: Node[], interactivePaths: Set<string>): boolean {
+function hasMixedContentDynamicTextInteractive(
+    childNodes: Node[],
+    interactivePaths: Set<string>,
+): boolean {
     const hasTextWithInteractiveBinding = (n: Node) =>
         n.nodeType === NodeType.TEXT_NODE &&
         /\{[^}]+\}/.test((n as Node & { innerText?: string }).innerText || '') &&
-        (interactivePaths.size === 0 || textHasInteractiveBindings((n as Node & { innerText?: string }).innerText || '', interactivePaths));
+        (interactivePaths.size === 0 ||
+            textHasInteractiveBindings(
+                (n as Node & { innerText?: string }).innerText || '',
+                interactivePaths,
+            ));
     return (
         childNodes.some(hasTextWithInteractiveBinding) &&
         childNodes.some((n) => n.nodeType === NodeType.ELEMENT_NODE)

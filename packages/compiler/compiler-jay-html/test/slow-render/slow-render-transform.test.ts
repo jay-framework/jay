@@ -1488,7 +1488,8 @@ tags:
 
         it('leaves forEach unrolled without contract', () => {
             const input: SlowRenderInput = {
-                jayHtmlContent: '<html><body><div forEach="items" trackBy="id"><span>{name}</span></div></body></html>',
+                jayHtmlContent:
+                    '<html><body><div forEach="items" trackBy="id"><span>{name}</span></div></body></html>',
                 slowViewState: {
                     items: [
                         { id: '1', name: 'Alpha' },
