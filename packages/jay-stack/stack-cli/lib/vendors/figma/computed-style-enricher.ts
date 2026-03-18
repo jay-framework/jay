@@ -802,7 +802,8 @@ export function generateVariantScenarios(
     for (const [path, jsonValue] of Object.entries(sampleDataOverrides)) {
         defaultQueryParts.push(`vs.${path}=${encodeURIComponent(jsonValue)}`);
     }
-    const defaultQueryString = defaultQueryParts.length > 0 ? '?' + defaultQueryParts.join('&') : '';
+    const defaultQueryString =
+        defaultQueryParts.length > 0 ? '?' + defaultQueryParts.join('&') : '';
 
     const scenarios: VariantScenario[] = [
         { id: 'default', contractValues: {}, queryString: defaultQueryString },
@@ -928,11 +929,7 @@ function scanForIfAttributesWithNesting(
     if (element.childNodes) {
         for (const child of element.childNodes) {
             if ((child as any).rawTagName) {
-                scanForIfAttributesWithNesting(
-                    child as HTMLElement,
-                    results,
-                    currentAncestors,
-                );
+                scanForIfAttributesWithNesting(child as HTMLElement, results, currentAncestors);
             }
         }
     }
@@ -1000,10 +997,7 @@ function generateSampleData(
     return overrides;
 }
 
-function generateItemFromTags(
-    childTags: ContractTag[],
-    index: number,
-): Record<string, unknown> {
+function generateItemFromTags(childTags: ContractTag[], index: number): Record<string, unknown> {
     const item: Record<string, unknown> = {};
     for (const child of childTags) {
         const dataType = parseDataTypeString(child.dataType);

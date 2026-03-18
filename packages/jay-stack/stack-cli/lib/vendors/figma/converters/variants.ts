@@ -410,8 +410,7 @@ export function convertVariantNode(
 
         // When COMPONENT has exactly 1 child with a CSS class, merge the `if`
         // onto that child to preserve flex/grid layout properties (e.g. align-self)
-        const soleChild =
-            variantNode.children?.length === 1 ? variantNode.children[0] : undefined;
+        const soleChild = variantNode.children?.length === 1 ? variantNode.children[0] : undefined;
         const childHasClass = soleChild?.pluginData?.['className'];
 
         if (soleChild && childHasClass) {

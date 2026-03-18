@@ -321,9 +321,7 @@ describe('style-resolver', () => {
         });
 
         it('parses fr units as FLEX grid columns', () => {
-            const { style } = resolveStyle(
-                'display: grid; grid-template-columns: 1fr 1fr 1fr 1fr',
-            );
+            const { style } = resolveStyle('display: grid; grid-template-columns: 1fr 1fr 1fr 1fr');
             expect(style.gridColumns).toEqual([
                 { type: 'FLEX', value: 1 },
                 { type: 'FLEX', value: 1 },
@@ -333,9 +331,7 @@ describe('style-resolver', () => {
         });
 
         it('parses repeat(N, Xfr) syntax', () => {
-            const { style } = resolveStyle(
-                'display: grid; grid-template-columns: repeat(4, 1fr)',
-            );
+            const { style } = resolveStyle('display: grid; grid-template-columns: repeat(4, 1fr)');
             expect(style.gridColumns).toEqual([
                 { type: 'FLEX', value: 1 },
                 { type: 'FLEX', value: 1 },
@@ -357,9 +353,7 @@ describe('style-resolver', () => {
         });
 
         it('parses mixed px and fr columns', () => {
-            const { style } = resolveStyle(
-                'display: grid; grid-template-columns: 100px 1fr',
-            );
+            const { style } = resolveStyle('display: grid; grid-template-columns: 100px 1fr');
             expect(style.gridColumns).toEqual([
                 { type: 'FIXED', value: 100 },
                 { type: 'FLEX', value: 1 },
@@ -367,9 +361,7 @@ describe('style-resolver', () => {
         });
 
         it('parses weighted fr values', () => {
-            const { style } = resolveStyle(
-                'display: grid; grid-template-columns: 1.1fr 1fr',
-            );
+            const { style } = resolveStyle('display: grid; grid-template-columns: 1.1fr 1fr');
             expect(style.gridColumns).toEqual([
                 { type: 'FLEX', value: 1.1 },
                 { type: 'FLEX', value: 1 },

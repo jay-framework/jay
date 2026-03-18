@@ -559,9 +559,7 @@ describe('adaptIRToFigmaVendorDoc', () => {
             const compSet = result.children![0];
             expect(compSet.type).toBe('COMPONENT_SET');
             expect(compSet.children).toHaveLength(2);
-            const hiddenChild = compSet.children!.find((c) =>
-                c.pluginData?.['jay-hidden-variant'],
-            );
+            const hiddenChild = compSet.children!.find((c) => c.pluginData?.['jay-hidden-variant']);
             expect(hiddenChild).toBeDefined();
         });
 
@@ -614,9 +612,7 @@ describe('adaptIRToFigmaVendorDoc', () => {
             const result = adaptIRToFigmaVendorDoc(makeDoc(root));
             const compSet = result.children![0];
             expect(compSet.children!.length).toBeGreaterThan(3);
-            const hiddenChild = compSet.children!.find((c) =>
-                c.pluginData?.['jay-hidden-variant'],
-            );
+            const hiddenChild = compSet.children!.find((c) => c.pluginData?.['jay-hidden-variant']);
             expect(hiddenChild).toBeDefined();
         });
     });
@@ -630,9 +626,7 @@ describe('adaptIRToFigmaVendorDoc', () => {
                     makeFrame({
                         id: 'repeater-1',
                         style: { width: 200, height: 50 },
-                        children: [
-                            makeFrame({ id: 'inner-child', style: { width: 100 } }),
-                        ],
+                        children: [makeFrame({ id: 'inner-child', style: { width: 100 } })],
                         demoItems: [
                             { textOverrides: {}, imageOverrides: {} },
                             { textOverrides: {}, imageOverrides: {} },
