@@ -1,0 +1,32 @@
+<div jay-coordinate="0">
+  <h1>Phase ForEach Test</h1>
+  <section class="slow">
+    <h2>Slow List</h2>
+    <ul>
+      <li>Slow A</li>
+    </ul>
+    <ul>
+      <li>Slow B</li>
+    </ul>
+  </section>
+  <section class="fast" jay-coordinate="0/2">
+    <h2>Fast List</h2>
+    <ul jay-coordinate="f1">
+      <li jay-coordinate="f1/0">Fast A</li>
+    </ul>
+    <ul jay-coordinate="f2">
+      <li jay-coordinate="f2/0">Fast B</li>
+    </ul>
+  </section>
+  <section class="interactive" jay-coordinate="0/3">
+    <h2>Interactive List</h2>
+    <ul jay-coordinate="i1">
+      <li jay-coordinate="i1/0">Interactive A</li>
+    </ul>
+    <ul jay-coordinate="i2">
+      <li jay-coordinate="i2/0">Interactive B</li>
+    </ul>
+    <button jay-coordinate="0/3/2">Add</button>
+    <button jay-coordinate="0/3/3">Remove</button>
+  </section>
+</div>

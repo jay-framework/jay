@@ -436,8 +436,74 @@ describe('hydration', () => {
         });
     });
 
-    describe('4. forEach', () => {
-        testFixture('page-foreach', {
+    describe('4a. Phase-aware forEach', () => {
+        testFixture('4a-page-foreach-phases', {
+            expectedViewState: {
+                title: 'Phase ForEach Test',
+                slowItems: [
+                    { _id: 's1', label: 'Slow A' },
+                    { _id: 's2', label: 'Slow B' },
+                ],
+                fastItems: [
+                    { _id: 'f1', label: 'Fast A' },
+                    { _id: 'f2', label: 'Fast B' },
+                ],
+                interactiveItems: [
+                    { _id: 'i1', label: 'Interactive A' },
+                    { _id: 'i2', label: 'Interactive B' },
+                ],
+            },
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Phase ForEach Test');
+                // Slow list: baked at build time, static
+                const slowItems = await page.$$('#target .slow li');
+                expect(slowItems).toHaveLength(2);
+                expect(await slowItems[0].textContent()).toEqual('Slow A');
+                expect(await slowItems[1].textContent()).toEqual('Slow B');
+                // Fast list: rendered at SSR, static on client
+                const fastItems = await page.$$('#target .fast li');
+                expect(fastItems).toHaveLength(2);
+                expect(await fastItems[0].textContent()).toEqual('Fast A');
+                expect(await fastItems[1].textContent()).toEqual('Fast B');
+                // Interactive list: rendered at SSR, reactive on client
+                const interactiveItems = await page.$$('#target .interactive li');
+                expect(interactiveItems).toHaveLength(2);
+                expect(await interactiveItems[0].textContent()).toEqual('Interactive A');
+                expect(await interactiveItems[1].textContent()).toEqual('Interactive B');
+            },
+            interactivityChecks: async (page) => {
+                // Add an item to the interactive list
+                await page.click('#target .interactive button:text("Add")');
+                await page.waitForFunction(
+                    () => document.querySelectorAll('#target .interactive li').length === 3,
+                    { timeout: 2000 },
+                );
+                let interactiveItems = await page.$$('#target .interactive li');
+                expect(interactiveItems).toHaveLength(3);
+                expect(await interactiveItems[2].textContent()).toEqual('Interactive C');
+
+                // Remove last item
+                await page.click('#target .interactive button:text("Remove")');
+                await page.waitForFunction(
+                    () => document.querySelectorAll('#target .interactive li').length === 2,
+                    { timeout: 2000 },
+                );
+                interactiveItems = await page.$$('#target .interactive li');
+                expect(interactiveItems).toHaveLength(2);
+
+                // Slow and fast lists should be unchanged
+                const slowItems = await page.$$('#target .slow li');
+                expect(slowItems).toHaveLength(2);
+                expect(await slowItems[0].textContent()).toEqual('Slow A');
+                const fastItems = await page.$$('#target .fast li');
+                expect(fastItems).toHaveLength(2);
+                expect(await fastItems[0].textContent()).toEqual('Fast A');
+            },
+        });
+    });
+
+    describe('4b. forEach without contract', () => {
+        testFixture('4b-page-foreach', {
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('ForEach Test');
                 const items = await page.$$('#target li');

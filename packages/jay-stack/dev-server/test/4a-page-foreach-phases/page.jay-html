@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+    <div>
+        <h1>{title}</h1>
+        <section class="slow">
+            <h2>Slow List</h2>
+            <ul forEach="slowItems" trackBy="_id">
+                <li>{label}</li>
+            </ul>
+        </section>
+        <section class="fast">
+            <h2>Fast List</h2>
+            <ul forEach="fastItems" trackBy="_id">
+                <li>{label}</li>
+            </ul>
+        </section>
+        <section class="interactive">
+            <h2>Interactive List</h2>
+            <ul forEach="interactiveItems" trackBy="_id">
+                <li>{label}</li>
+            </ul>
+            <button ref="add-button">Add</button>
+            <button ref="remove-button">Remove</button>
+        </section>
+    </div>
+</body>
+</html>
