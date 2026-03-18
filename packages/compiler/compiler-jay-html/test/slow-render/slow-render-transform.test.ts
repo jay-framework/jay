@@ -864,12 +864,12 @@ tags:
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-123' },
-                    coordinate: ['product-card:0'],
+                    coordinate: ['product-card:AR0'],
                 },
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-456' },
-                    coordinate: ['product-card:1'],
+                    coordinate: ['product-card:AR1'],
                 },
             ]);
         });
@@ -897,7 +897,7 @@ tags:
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-static' },
-                    coordinate: ['product-card:0'],
+                    coordinate: ['product-card:AR0'],
                 },
             ]);
 
@@ -908,7 +908,7 @@ tags:
                     forEachPath: 'products',
                     trackBy: '_id',
                     propBindings: { productId: '{_id}' },
-                    coordinateSuffix: 'product-card:0',
+                    coordinateSuffix: 'product-card:AR0',
                 },
             ]);
         });
@@ -939,7 +939,7 @@ tags:
                     forEachPath: 'items',
                     trackBy: '_id',
                     propBindings: { productId: '{_id}' },
-                    coordinateSuffix: 'product-card:0',
+                    coordinateSuffix: 'product-card:AR0',
                 },
             ]);
         });
@@ -965,7 +965,7 @@ tags:
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-123' },
-                    coordinate: ['product-card:0'],
+                    coordinate: ['product-card:AR0'],
                 },
             ]);
         });
@@ -996,12 +996,12 @@ tags:
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-123' },
-                    coordinate: ['p1', 'product-card:0'],
+                    coordinate: ['p1', 'product-card:AR0'],
                 },
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-456' },
-                    coordinate: ['p2', 'product-card:0'],
+                    coordinate: ['p2', 'product-card:AR0'],
                 },
             ]);
         });
@@ -1038,12 +1038,12 @@ tags:
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-123' },
-                    coordinate: ['p1', '0', 'product-card:0'],
+                    coordinate: ['p1', '0', 'product-card:AR0'],
                 },
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-456' },
-                    coordinate: ['p2', '0', 'product-card:0'],
+                    coordinate: ['p2', '0', 'product-card:AR0'],
                 },
             ]);
         });
@@ -1065,7 +1065,7 @@ tags:
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-123', categoryName: 'electronics' },
-                    coordinate: ['product-card:0'],
+                    coordinate: ['product-card:AR0'],
                 },
             ]);
         });
@@ -1098,7 +1098,7 @@ tags:
 
             const result = discoverAndResolve(jayHtml, [
                 {
-                    coordinate: ['product-card:0'],
+                    coordinate: ['product-card:AR0'],
                     contract: productCardContract,
                     slowViewState: { name: 'Widget A', price: '$29.99' },
                 },
@@ -1112,7 +1112,7 @@ tags:
     <script type="application/jay-headless" plugin="wix-stores" contract="product-card"></script>
 </head>
 <body>
-    <jay:product-card productId="prod-123" ref="0">
+    <jay:product-card productId="prod-123" ref="AR0">
         <div><h2>Widget A</h2><span class="price">$29.99</span></div>
     </jay:product-card>
 </body>
@@ -1134,7 +1134,7 @@ tags:
 
             const result = discoverAndResolve(jayHtml, [
                 {
-                    coordinate: ['product-card:0'],
+                    coordinate: ['product-card:AR0'],
                     contract: productCardContract,
                     slowViewState: { name: 'Widget A' },
                 },
@@ -1146,7 +1146,7 @@ tags:
 <html>
 <head></head>
 <body>
-    <jay:product-card productId="prod-123" ref="0">
+    <jay:product-card productId="prod-123" ref="AR0">
         <div><h2>Widget A</h2><span class="stock">{stockCount}</span></div>
     </jay:product-card>
 </body>
@@ -1170,12 +1170,12 @@ tags:
 
             const result = discoverAndResolve(jayHtml, [
                 {
-                    coordinate: ['product-card:0'],
+                    coordinate: ['product-card:AR0'],
                     contract: productCardContract,
                     slowViewState: { name: 'Widget A' },
                 },
                 {
-                    coordinate: ['product-card:1'],
+                    coordinate: ['product-card:AR1'],
                     contract: productCardContract,
                     slowViewState: { name: 'Widget B' },
                 },
@@ -1187,10 +1187,10 @@ tags:
 <html>
 <head></head>
 <body>
-    <jay:product-card productId="prod-123" ref="0">
+    <jay:product-card productId="prod-123" ref="AR0">
         <h2>Widget A</h2>
     </jay:product-card>
-    <jay:product-card productId="prod-456" ref="1">
+    <jay:product-card productId="prod-456" ref="AR1">
         <h2>Widget B</h2>
     </jay:product-card>
 </body>
@@ -1221,12 +1221,12 @@ tags:
 
             const result = discoverAndResolve(jayHtml, [
                 {
-                    coordinate: ['p1', 'product-card:0'],
+                    coordinate: ['p1', 'product-card:AR0'],
                     contract: productCardContract,
                     slowViewState: { name: 'Widget A', price: '$29.99' },
                 },
                 {
-                    coordinate: ['p2', 'product-card:0'],
+                    coordinate: ['p2', 'product-card:AR0'],
                     contract: productCardContract,
                     slowViewState: { name: 'Widget B', price: '$49.99' },
                 },
@@ -1239,12 +1239,12 @@ tags:
 <head></head>
 <body>
     <div slowForEach="products" jayIndex="0" jayTrackBy="p1">
-        <jay:product-card productId="prod-123" ref="0">
+        <jay:product-card productId="prod-123" ref="AR0">
             <div><h2>Widget A</h2><span>$29.99</span></div>
         </jay:product-card>
     </div>
     <div slowForEach="products" jayIndex="1" jayTrackBy="p2">
-        <jay:product-card productId="prod-456" ref="0">
+        <jay:product-card productId="prod-456" ref="AR0">
             <div><h2>Widget B</h2><span>$49.99</span></div>
         </jay:product-card>
     </div>
@@ -1271,7 +1271,7 @@ tags:
 
             const result = discoverAndResolve(jayHtml, [
                 {
-                    coordinate: ['product-card:0'],
+                    coordinate: ['product-card:AR0'],
                     contract: productCardContract,
                     slowViewState: { name: 'Static Widget' },
                 },
@@ -1283,7 +1283,7 @@ tags:
 <html>
 <head></head>
 <body>
-    <jay:product-card productId="prod-static" ref="0">
+    <jay:product-card productId="prod-static" ref="AR0">
         <h2>Static Widget</h2>
     </jay:product-card>
     <div forEach="products" trackBy="_id">
@@ -1346,7 +1346,7 @@ tags:
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-123' },
-                    coordinate: ['product-card:0'],
+                    coordinate: ['product-card:AR0'],
                 },
             ]);
 
@@ -1369,7 +1369,7 @@ tags:
 </head>
 <body>
     <h1>Our Products</h1>
-    <jay:product-card productId="prod-123" ref="0">
+    <jay:product-card productId="prod-123" ref="AR0">
         <article>
             <h2>Ceramic Vase</h2>
             <span class="price">$34.99</span>
@@ -1434,12 +1434,12 @@ tags:
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-123' },
-                    coordinate: ['prod-123', 'product-card:0'],
+                    coordinate: ['prod-123', 'product-card:AR0'],
                 },
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-456' },
-                    coordinate: ['prod-456', 'product-card:0'],
+                    coordinate: ['prod-456', 'product-card:AR0'],
                 },
             ]);
 
@@ -1468,6 +1468,57 @@ tags:
             // No unresolved component bindings
             expect(finalHtml).not.toContain('{name}');
             expect(finalHtml).not.toContain('{price}');
+        });
+    });
+
+    describe('No contract', () => {
+        it('resolves text bindings without contract', () => {
+            const input: SlowRenderInput = {
+                jayHtmlContent: '<html><body><h1>{title}</h1><p>{subtitle}</p></body></html>',
+                slowViewState: { title: 'Hello World', subtitle: 'Welcome' },
+            };
+
+            const result = slowRenderTransform(input);
+            expect(result.validations).toEqual([]);
+            expect(prettifyHtml(result.val!.preRenderedJayHtml)).toEqual(
+                prettifyHtml('<html><body><h1>Hello World</h1><p>Welcome</p></body></html>'),
+            );
+        });
+
+        it('resolves nested object bindings without contract', () => {
+            const input: SlowRenderInput = {
+                jayHtmlContent: '<html><body><span>{product.name}</span><span>{product.price}</span></body></html>',
+                slowViewState: { product: { name: 'Widget', price: '$9.99' } },
+            };
+
+            const result = slowRenderTransform(input);
+            expect(result.validations).toEqual([]);
+            expect(prettifyHtml(result.val!.preRenderedJayHtml)).toEqual(
+                prettifyHtml('<html><body><span>Widget</span><span>$9.99</span></body></html>'),
+            );
+        });
+
+        it('unrolls forEach arrays without contract', () => {
+            const input: SlowRenderInput = {
+                jayHtmlContent: '<html><body><div forEach="items" trackBy="id"><span>{name}</span></div></body></html>',
+                slowViewState: {
+                    items: [
+                        { id: '1', name: 'Alpha' },
+                        { id: '2', name: 'Beta' },
+                    ],
+                },
+            };
+
+            const result = slowRenderTransform(input);
+            expect(result.validations).toEqual([]);
+            expect(prettifyHtml(result.val!.preRenderedJayHtml)).toEqual(
+                prettifyHtml(
+                    '<html><body>' +
+                        '<div slowForEach="items" jayIndex="0" jayTrackBy="1"><span>Alpha</span></div>' +
+                        '<div slowForEach="items" jayIndex="1" jayTrackBy="2"><span>Beta</span></div>' +
+                        '</body></html>',
+                ),
+            );
         });
     });
 });

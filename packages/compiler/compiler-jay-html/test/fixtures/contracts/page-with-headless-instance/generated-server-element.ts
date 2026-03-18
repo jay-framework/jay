@@ -17,24 +17,24 @@ export function renderToStream(
     w(' jay-coordinate="0/0">');
     w(escapeHtml(String(vs.pageTitle)));
     w('</h1>');
-    const vs_product_card0 = (vs as any).__headlessInstances?.['product-card:0'] as
+    const vs_product_card0 = (vs as any).__headlessInstances?.['product-card:AR0'] as
         | ProductCardViewState
         | undefined;
     if (vs_product_card0) {
         w('<article');
         w(' class="hero-card"');
-        w(' jay-coordinate="0/product-card:0/0">');
+        w(' jay-coordinate="0/product-card:AR0/0">');
         w('<h2');
         w('>');
         w('Hero Product');
         w('</h2>');
         w('<span');
         w(' class="price"');
-        w(' jay-coordinate="0/product-card:0/0/1">');
+        w(' jay-coordinate="0/product-card:AR0/0/1">');
         w(escapeHtml(String(vs_product_card0.price)));
         w('</span>');
         w('<button');
-        w(' jay-coordinate="0/product-card:0/0/2">');
+        w(' jay-coordinate="0/product-card:AR0/0/2">');
         w('Add to Cart');
         w('</button>');
         w('</article>');

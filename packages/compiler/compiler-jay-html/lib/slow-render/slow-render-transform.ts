@@ -173,11 +173,10 @@ function toCamelCase(str: string): string {
  * If the property is not in the phase map (e.g., from a headless component), we don't know
  * its phase and should NOT evaluate it at slow-render time.
  */
-function isSlowPhase(path: string, phaseMap: Map<string, PhaseInfo>): boolean {
+function isSlowPhase(path: string, phaseMap: Map<string, PhaseInfo>, noMainContract: boolean): boolean {
     const info = phaseMap.get(path);
-    // Only treat as slow if explicitly marked as slow in the phase map
-    // Unknown properties (not in map) should NOT be evaluated
-    return info !== undefined && info.phase === 'slow';
+    if (info !== undefined) return info.phase === 'slow';
+    return noMainContract;
 }
 
 /**
@@ -241,6 +240,7 @@ function resolveTextBindings(
     contextData: Record<string, unknown>,
     phaseMap: Map<string, PhaseInfo>,
     contextPath: string = '',
+    noMainContract: boolean = false,
 ): WithValidations<string> {
     const validationErrors: string[] = [];
 
@@ -251,7 +251,7 @@ function resolveTextBindings(
         if (/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(trimmedExpr)) {
             const fullPath = contextPath ? `${contextPath}.${trimmedExpr}` : trimmedExpr;
 
-            if (isSlowPhase(fullPath, phaseMap)) {
+            if (isSlowPhase(fullPath, phaseMap, noMainContract)) {
                 // Get value from the current context data (not root)
                 const value = getValueByPath(contextData, trimmedExpr);
 
@@ -287,6 +287,7 @@ function transformElement(
     phaseMap: Map<string, PhaseInfo>,
     contextPath: string,
     contextData: Record<string, unknown>,
+    noMainContract: boolean = false,
 ): WithValidations<HTMLElement[]> {
     // Handle forEach directive
     const forEachAttr = element.getAttribute('forEach');
@@ -323,7 +324,7 @@ function transformElement(
 
                     // Transform children with new context
                     const itemData = item as Record<string, unknown>;
-                    return transformChildren(cloned, phaseMap, fullPath, itemData).map(
+                    return transformChildren(cloned, phaseMap, fullPath, itemData, noMainContract).map(
                         (children) => {
                             cloned.innerHTML = '';
                             children.forEach((child) => cloned.appendChild(child as any));
@@ -344,6 +345,7 @@ function transformElement(
             slowData: contextData,
             phaseMap: phaseMap as Map<string, { phase: string; isArray?: boolean }>,
             contextPath: contextPath,
+            noMainContract,
         };
 
         const conditionResult = parseConditionForSlowRender(ifAttr, slowContext);
@@ -380,7 +382,7 @@ function transformElement(
         .map((attrName) => {
             const attrValue = element.getAttribute(attrName);
             if (attrValue && hasBindings(attrValue)) {
-                return resolveTextBindings(attrValue, contextData, phaseMap, contextPath).map(
+                return resolveTextBindings(attrValue, contextData, phaseMap, contextPath, noMainContract).map(
                     (resolved) => {
                         element.setAttribute(attrName, resolved);
                         return null; // Side effect only
@@ -392,7 +394,7 @@ function transformElement(
 
     // Merge attribute validations and transform children
     return WithValidations.all(attrResults)
-        .flatMap(() => transformChildren(element, phaseMap, contextPath, contextData))
+        .flatMap(() => transformChildren(element, phaseMap, contextPath, contextData, noMainContract))
         .map((children) => {
             element.innerHTML = '';
             children.forEach((child) => element.appendChild(child as any));
@@ -409,15 +411,16 @@ function transformChildren(
     phaseMap: Map<string, PhaseInfo>,
     contextPath: string,
     contextData: Record<string, unknown>,
+    noMainContract: boolean = false,
 ): WithValidations<Node[]> {
     // Process each child and collect WithValidations results
     const childResults = parent.childNodes.map((child): WithValidations<Node[]> => {
         if (child.nodeType === NodeType.ELEMENT_NODE) {
-            return transformElement(child as HTMLElement, phaseMap, contextPath, contextData);
+            return transformElement(child as HTMLElement, phaseMap, contextPath, contextData, noMainContract);
         } else if (child.nodeType === NodeType.TEXT_NODE) {
             const text = child.rawText;
             if (hasBindings(text)) {
-                return resolveTextBindings(text, contextData, phaseMap, contextPath).map(
+                return resolveTextBindings(text, contextData, phaseMap, contextPath, noMainContract).map(
                     (resolved) => {
                         (child as Node & { _rawText: string })._rawText = resolved;
                         return [child as Node];
@@ -527,9 +530,12 @@ export function slowRenderTransform(input: SlowRenderInput): WithValidations<Slo
             return new WithValidations(undefined, validations);
         }
 
+        // When there's no main contract, treat all bindings as slow
+        const noMainContract = !input.contract;
+
         // Transform body children and generate output
         // Merge parsing validations with transform validations
-        return transformChildren(body, phaseMap, '', input.slowViewState)
+        return transformChildren(body, phaseMap, '', input.slowViewState, noMainContract)
             .withValidationsFrom(new WithValidations(null, validations))
             .map((children) => {
                 body.innerHTML = '';

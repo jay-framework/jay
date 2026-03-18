@@ -27,24 +27,24 @@ export function renderToStream(
     w('>');
     w('<div');
     w('>');
-    const vs_product_card0 = (vs as any).__headlessInstances?.['p1/product-card:0'] as
+    const vs_product_card0 = (vs as any).__headlessInstances?.['p1/product-card:AR0'] as
         | ProductCardViewState
         | undefined;
     if (vs_product_card0) {
         w('<article');
         w(' class="hero-card"');
-        w(' jay-coordinate="p1/product-card:0/0">');
+        w(' jay-coordinate="p1/product-card:AR0/0">');
         w('<h2');
         w('>');
         w('Product A');
         w('</h2>');
         w('<span');
         w(' class="price"');
-        w(' jay-coordinate="p1/product-card:0/0/1">');
+        w(' jay-coordinate="p1/product-card:AR0/0/1">');
         w(escapeHtml(String(vs_product_card0.price)));
         w('</span>');
         w('<button');
-        w(' jay-coordinate="p1/product-card:0/0/2">');
+        w(' jay-coordinate="p1/product-card:AR0/0/2">');
         w('Add to Cart');
         w('</button>');
         w('</article>');
@@ -52,20 +52,20 @@ export function renderToStream(
     w('</div>');
     w('<div');
     w('>');
-    const vs_product_card1 = (vs as any).__headlessInstances?.['p2/product-card:0'] as
+    const vs_product_card1 = (vs as any).__headlessInstances?.['p2/product-card:AR1'] as
         | ProductCardViewState
         | undefined;
     if (vs_product_card1) {
         w('<article');
         w(' class="compact-card"');
-        w(' jay-coordinate="p2/product-card:0/0">');
+        w(' jay-coordinate="p2/product-card:AR1/0">');
         w('<h3');
         w('>');
         w('Product B');
         w('</h3>');
         w('<span');
         w(' class="price"');
-        w(' jay-coordinate="p2/product-card:0/0/1">');
+        w(' jay-coordinate="p2/product-card:AR1/0/1">');
         w(escapeHtml(String(vs_product_card1.price)));
         w('</span>');
         w('</article>');
