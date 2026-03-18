@@ -119,6 +119,8 @@ export type ImportIRStyle = {
     gridRowHeights?: number[];
     gridColumns?: GridColumnDef[];
     gridRows?: GridColumnDef[];
+    gridColumnSpan?: number;
+    gridRowSpan?: number;
     rowGap?: number;
     effects?: ImportIREffect[];
     backgroundImageRef?: ImportIRImageRef;

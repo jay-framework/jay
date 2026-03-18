@@ -1029,6 +1029,16 @@ export function resolveStyle(
                 if (gridRows) style.gridRows = gridRows;
                 break;
             }
+            case 'grid-column': {
+                const spanMatch = value.match(/span\s+(\d+)/);
+                if (spanMatch) style.gridColumnSpan = parseInt(spanMatch[1], 10);
+                break;
+            }
+            case 'grid-row': {
+                const spanMatch = value.match(/span\s+(\d+)/);
+                if (spanMatch) style.gridRowSpan = parseInt(spanMatch[1], 10);
+                break;
+            }
             default:
                 if (RECOGNIZED_BUT_NOT_STORED.has(prop)) break;
                 unsupportedCss[prop] = value;

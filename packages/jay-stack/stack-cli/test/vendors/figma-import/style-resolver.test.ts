@@ -727,4 +727,98 @@ describe('style-resolver', () => {
             expect(warnings.filter((w) => w.includes('CSS_UNSUPPORTED'))).toEqual([]);
         });
     });
+
+    describe('Issue #04: font-weight, color, border-radius from external CSS with var()', () => {
+        const labThemeCss = `
+            :root {
+                --bg-secondary: #f8f8f8;
+                --text-secondary: #666666;
+                --radius: 8px;
+            }
+            .item-card {
+                background: var(--bg-secondary);
+                border: 1px solid #e8e8e8;
+                border-radius: var(--radius);
+                padding: 20px;
+                width: 240px;
+            }
+            .page-title { font-size: 28px; font-weight: 700; }
+            .item-name { font-size: 18px; font-weight: 600; }
+            .item-price { font-size: 16px; color: var(--text-secondary); }
+            .discount-badge {
+                background: #22c55e;
+                color: white;
+                border-radius: 4px;
+                font-weight: 700;
+            }
+        `;
+
+        it('border-radius via var() resolves to numeric value', () => {
+            const { classMap } = parseCssToClassMap(labThemeCss);
+            const { style } = resolveStyle('', ['item-card'], classMap);
+            expect(style.borderRadius).toBe(8);
+        });
+
+        it('font-weight resolves from class without var()', () => {
+            const { classMap } = parseCssToClassMap(labThemeCss);
+            const { style } = resolveStyle('', ['page-title'], classMap);
+            expect(style.fontWeight).toBe(700);
+            expect(style.fontSize).toBe(28);
+        });
+
+        it('font-weight 600 resolves (semi-bold)', () => {
+            const { classMap } = parseCssToClassMap(labThemeCss);
+            const { style } = resolveStyle('', ['item-name'], classMap);
+            expect(style.fontWeight).toBe(600);
+        });
+
+        it('text color via var() resolves', () => {
+            const { classMap } = parseCssToClassMap(labThemeCss);
+            const { style } = resolveStyle('', ['item-price'], classMap);
+            expect(style.textColor).toBe('#666666');
+        });
+
+        it('background via var() resolves', () => {
+            const { classMap } = parseCssToClassMap(labThemeCss);
+            const { style } = resolveStyle('', ['item-card'], classMap);
+            expect(style.backgroundColor).toBe('#f8f8f8');
+        });
+
+        it('all properties resolve together for discount-badge', () => {
+            const { classMap } = parseCssToClassMap(labThemeCss);
+            const { style } = resolveStyle('', ['discount-badge'], classMap);
+            expect(style.backgroundColor).toBe('#22c55e');
+            expect(style.textColor).toBe('white');
+            expect(style.borderRadius).toBe(4);
+            expect(style.fontWeight).toBe(700);
+        });
+    });
+
+    describe('Issue #07 Phase 3: grid-column/grid-row span', () => {
+        it('grid-column: span 2 sets gridColumnSpan', () => {
+            const { style } = resolveStyle('grid-column: span 2');
+            expect(style.gridColumnSpan).toBe(2);
+        });
+
+        it('grid-row: span 3 sets gridRowSpan', () => {
+            const { style } = resolveStyle('grid-row: span 3');
+            expect(style.gridRowSpan).toBe(3);
+        });
+
+        it('grid-column and grid-row together', () => {
+            const { style } = resolveStyle('grid-column: span 2; grid-row: span 2');
+            expect(style.gridColumnSpan).toBe(2);
+            expect(style.gridRowSpan).toBe(2);
+        });
+
+        it('grid-column without span is ignored', () => {
+            const { style } = resolveStyle('grid-column: 1 / 3');
+            expect(style.gridColumnSpan).toBeUndefined();
+        });
+
+        it('grid-column does not produce CSS_UNSUPPORTED warning', () => {
+            const { warnings } = resolveStyle('grid-column: span 2');
+            expect(warnings.filter((w) => w.includes('CSS_UNSUPPORTED'))).toEqual([]);
+        });
+    });
 });

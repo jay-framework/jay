@@ -565,6 +565,33 @@ describe('adaptIRToFigmaVendorDoc', () => {
             expect(hiddenChild).toBeDefined();
         });
 
+        it('skips _hidden_ for multi-dimension when all are fully covered', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        id: 'cs-1',
+                        kind: 'COMPONENT_SET',
+                        componentPropertyDefinitions: {
+                            hasItems: { type: 'VARIANT', variantOptions: ['true', 'false'] },
+                            isExpanded: { type: 'VARIANT', variantOptions: ['true', 'false'] },
+                        },
+                        children: [
+                            makeFrame({ id: 'c1', kind: 'COMPONENT' }),
+                            makeFrame({ id: 'c2', kind: 'COMPONENT' }),
+                            makeFrame({ id: 'c3', kind: 'COMPONENT' }),
+                            makeFrame({ id: 'c4', kind: 'COMPONENT' }),
+                        ],
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const compSet = result.children![0];
+            expect(compSet.children).toHaveLength(4);
+            const names = compSet.children!.map((c) => c.name);
+            expect(names).not.toContainEqual(expect.stringContaining('_hidden_'));
+        });
+
         it('injects _hidden_ when multi-dimension has at least one incomplete dimension', () => {
             const root = makeFrame({
                 kind: 'SECTION',
@@ -591,6 +618,124 @@ describe('adaptIRToFigmaVendorDoc', () => {
                 c.pluginData?.['jay-hidden-variant'],
             );
             expect(hiddenChild).toBeDefined();
+        });
+    });
+
+    describe('Repeater demo item hoisting', () => {
+        it('hoists demo items as siblings of forEach FRAME in parent', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                style: { layoutMode: 'column', gap: 8 },
+                children: [
+                    makeFrame({
+                        id: 'repeater-1',
+                        style: { width: 200, height: 50 },
+                        children: [
+                            makeFrame({ id: 'inner-child', style: { width: 100 } }),
+                        ],
+                        demoItems: [
+                            { textOverrides: {}, imageOverrides: {} },
+                            { textOverrides: {}, imageOverrides: {} },
+                        ],
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            expect(result.children).toHaveLength(3);
+            expect(result.children![0].id).toBe('repeater-1');
+            expect(result.children![1].id).toBe('repeater-1-demo-0');
+            expect(result.children![2].id).toBe('repeater-1-demo-1');
+        });
+
+        it('demo clones are full copies of the forEach FRAME, not just first child', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                style: { layoutMode: 'column' },
+                children: [
+                    makeFrame({
+                        id: 'card',
+                        style: { width: 240, height: 300 },
+                        children: [
+                            makeFrame({ id: 'title', style: { height: 20 } }),
+                            makeFrame({ id: 'body', style: { height: 100 } }),
+                        ],
+                        demoItems: [{ textOverrides: {}, imageOverrides: {} }],
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            expect(result.children).toHaveLength(2);
+            const template = result.children![0];
+            const demo = result.children![1];
+            expect(template.children).toHaveLength(2);
+            expect(demo.children).toHaveLength(2);
+            expect(demo.width).toBe(template.width);
+        });
+
+        it('grid item span properties are mapped to vendor doc', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        id: 'grid-parent',
+                        style: {
+                            layoutMode: 'grid',
+                            gridColumns: [
+                                { type: 'FLEX', value: 1 },
+                                { type: 'FLEX', value: 1 },
+                            ],
+                        },
+                        children: [
+                            makeFrame({
+                                id: 'spanning-child',
+                                style: { gridColumnSpan: 2, gridRowSpan: 2 },
+                            }),
+                        ],
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const child = result.children![0].children![0];
+            expect(child.gridColumnSpan).toBe(2);
+            expect(child.gridRowSpan).toBe(2);
+        });
+
+        it('repeater items are direct children of grid parent', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        id: 'grid-parent',
+                        style: {
+                            layoutMode: 'grid',
+                            gridColumns: [
+                                { type: 'FLEX', value: 1 },
+                                { type: 'FLEX', value: 1 },
+                                { type: 'FLEX', value: 1 },
+                            ],
+                            gap: 20,
+                        },
+                        children: [
+                            makeFrame({
+                                id: 'product-card',
+                                style: { width: 200, height: 250 },
+                                children: [makeFrame({ id: 'card-content' })],
+                                demoItems: [
+                                    { textOverrides: {}, imageOverrides: {} },
+                                    { textOverrides: {}, imageOverrides: {} },
+                                ],
+                            }),
+                        ],
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const gridParent = result.children![0];
+            expect(gridParent.layoutMode).toBe('GRID');
+            expect(gridParent.children).toHaveLength(3);
+            for (const child of gridParent.children!) {
+                expect(child.layoutSizingHorizontal).toBe('FILL');
+            }
         });
     });
 });

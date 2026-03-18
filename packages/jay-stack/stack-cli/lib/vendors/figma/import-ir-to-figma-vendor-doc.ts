@@ -333,6 +333,9 @@ function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVe
         props.layoutGrow = style.flexGrow;
     }
 
+    if (style.gridColumnSpan !== undefined) props.gridColumnSpan = style.gridColumnSpan;
+    if (style.gridRowSpan !== undefined) props.gridRowSpan = style.gridRowSpan;
+
     return props;
 }
 
@@ -742,16 +745,19 @@ function adaptNode(
         }
     }
 
-    // Recursively adapt children
+    // Recursively adapt children, hoisting repeater demo items as siblings
     if (node.children && node.children.length > 0) {
-        base.children = node.children.map((child, i) => adaptNode(child, i, imageAssetFetcher));
-    }
-
-    // Repeater demo items: duplicate template child for visual fidelity
-    if (node.demoItems && node.demoItems.length > 0 && base.children && base.children.length > 0) {
-        const templateDoc = base.children[0];
-        const siblings = createDemoSiblings(templateDoc, node.demoItems, imageAssetFetcher);
-        base.children.push(...siblings);
+        const expandedChildren: FigmaVendorDocument[] = [];
+        for (let i = 0; i < node.children.length; i++) {
+            const child = node.children[i];
+            const adapted = adaptNode(child, i, imageAssetFetcher);
+            expandedChildren.push(adapted);
+            if (child.demoItems && child.demoItems.length > 0) {
+                const siblings = createDemoSiblings(adapted, child.demoItems, imageAssetFetcher);
+                expandedChildren.push(...siblings);
+            }
+        }
+        base.children = expandedChildren;
     }
 
     // Figma-only: inject _hidden_ dummy variant into component sets so designers
