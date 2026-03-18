@@ -15,6 +15,11 @@ export type ImportIRNodeKind =
 
 export type ImportIRLayoutMode = 'none' | 'row' | 'column' | 'grid';
 
+export interface GridColumnDef {
+    type: 'FIXED' | 'FLEX';
+    value: number;
+}
+
 export interface VariantExpressionRef {
     alias: string;
     tagPath: string[];
@@ -112,6 +117,8 @@ export type ImportIRStyle = {
     isAbsolute?: boolean;
     gridColumnWidths?: number[];
     gridRowHeights?: number[];
+    gridColumns?: GridColumnDef[];
+    gridRows?: GridColumnDef[];
     rowGap?: number;
     effects?: ImportIREffect[];
     backgroundImageRef?: ImportIRImageRef;

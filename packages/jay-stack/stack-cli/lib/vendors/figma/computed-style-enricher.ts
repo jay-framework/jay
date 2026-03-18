@@ -785,29 +785,39 @@ export function generateVariantScenarios(
         return [];
     }
 
-    const ifConditions = new Set<string>();
-    scanForIfAttributes(bodyDom, ifConditions);
+    const conditionsWithAncestors: ConditionWithAncestors[] = [];
+    scanForIfAttributesWithNesting(bodyDom, conditionsWithAncestors);
 
-    if (ifConditions.size === 0) {
+    const forEachInfos: ForEachInfo[] = [];
+    scanForEachAttributes(bodyDom, forEachInfos);
+
+    if (conditionsWithAncestors.length === 0 && forEachInfos.length === 0) {
         return [];
     }
 
-    // Always include the default scenario
-    const scenarios: VariantScenario[] = [{ id: 'default', contractValues: {}, queryString: '' }];
+    const sampleDataOverrides = generateSampleData(contractTags, forEachInfos);
 
-    // Dedup: avoid generating identical scenarios for the same override set
+    // Always include the default scenario (with sample data if available)
+    const defaultQueryParts: string[] = [];
+    for (const [path, jsonValue] of Object.entries(sampleDataOverrides)) {
+        defaultQueryParts.push(`vs.${path}=${encodeURIComponent(jsonValue)}`);
+    }
+    const defaultQueryString = defaultQueryParts.length > 0 ? '?' + defaultQueryParts.join('&') : '';
+
+    const scenarios: VariantScenario[] = [
+        { id: 'default', contractValues: {}, queryString: defaultQueryString },
+    ];
+
     const seenIds = new Set<string>(['default']);
 
-    for (const condition of ifConditions) {
+    for (const { condition, ancestorConditions } of conditionsWithAncestors) {
         if (scenarios.length >= maxScenarios) break;
 
-        const tokens = tokenizeCondition(condition);
-        if (tokens.length === 0) continue;
-
-        // Build the set of overrides that make this condition true
+        // Build overrides for THIS condition
         const overrides: Record<string, string> = {};
         let allResolved = true;
 
+        const tokens = tokenizeCondition(condition);
         for (const token of tokens) {
             const override = tokenToOverrideValue(token, contractTags);
             if (!override) {
@@ -817,11 +827,33 @@ export function generateVariantScenarios(
             overrides[override.tagPath] = override.value;
         }
 
+        // Also activate all ancestor conditions (composite scenario)
+        for (const ancestor of ancestorConditions) {
+            const ancestorTokens = tokenizeCondition(ancestor);
+            for (const token of ancestorTokens) {
+                const override = tokenToOverrideValue(token, contractTags);
+                if (!override) continue;
+                if (!(override.tagPath in overrides)) {
+                    overrides[override.tagPath] = override.value;
+                }
+            }
+        }
+
         if (Object.keys(overrides).length === 0) continue;
 
-        // Build scenario ID from sorted overrides (deterministic)
+        // Merge sample data for forEach paths whose ancestor conditions
+        // are satisfied by this scenario's overrides
+        for (const forEach of forEachInfos) {
+            if (sampleDataOverrides[forEach.arrayPath]) {
+                overrides[forEach.arrayPath] = sampleDataOverrides[forEach.arrayPath];
+            }
+        }
+
         const sortedEntries = Object.entries(overrides).sort(([a], [b]) => a.localeCompare(b));
-        const scenarioId = sortedEntries.map(([k, v]) => `${k}=${v}`).join('&');
+        const scenarioId = sortedEntries
+            .filter(([, v]) => !v.startsWith('['))
+            .map(([k, v]) => `${k}=${v}`)
+            .join('&');
 
         if (seenIds.has(scenarioId)) continue;
         seenIds.add(scenarioId);
@@ -830,7 +862,9 @@ export function generateVariantScenarios(
             '?' + sortedEntries.map(([k, v]) => `vs.${k}=${encodeURIComponent(v)}`).join('&');
 
         const contractValues: Record<string, string | number | boolean> = {};
-        for (const [k, v] of sortedEntries) contractValues[k] = v;
+        for (const [k, v] of sortedEntries) {
+            if (!v.startsWith('[')) contractValues[k] = v;
+        }
 
         scenarios.push({
             id: scenarioId,
@@ -845,34 +879,143 @@ export function generateVariantScenarios(
         }
     }
 
-    const conditionCount = ifConditions.size;
-    const scenarioCount = scenarios.length - 1; // exclude default
+    const conditionCount = conditionsWithAncestors.length;
+    const scenarioCount = scenarios.length - 1;
+    const sampleDataCount = Object.keys(sampleDataOverrides).length;
     console.log(
-        `[ComputedStyles] ${conditionCount} if condition(s) → ${scenarioCount} scenario(s) + default`,
+        `[ComputedStyles] ${conditionCount} if condition(s) → ${scenarioCount} scenario(s) + default` +
+            (sampleDataCount > 0 ? ` (${sampleDataCount} forEach sample data injected)` : ''),
     );
     for (const s of scenarios) {
         if (s.id !== 'default') {
-            console.log(`[ComputedStyles]   ${s.id}  →  ${s.queryString}`);
+            console.log(`[ComputedStyles]   ${s.id}  →  ${s.queryString.substring(0, 200)}`);
         }
     }
 
     return scenarios;
 }
 
+interface ConditionWithAncestors {
+    condition: string;
+    ancestorConditions: string[];
+}
+
+interface ForEachInfo {
+    arrayPath: string;
+    ancestorConditions: string[];
+}
+
 /**
- * Recursively scan HTML element for if attributes.
+ * Recursively scan HTML for `if` attributes, tracking ancestor `if` nesting.
+ * Each result records the ancestor chain so composite scenarios can activate
+ * outer conditions alongside inner ones.
  */
-function scanForIfAttributes(element: HTMLElement, conditions: Set<string>): void {
+function scanForIfAttributesWithNesting(
+    element: HTMLElement,
+    results: ConditionWithAncestors[],
+    ancestorConditions: string[] = [],
+): void {
     const ifAttr = element.getAttribute('if');
+    const currentAncestors = ifAttr ? [...ancestorConditions, ifAttr] : ancestorConditions;
+
     if (ifAttr) {
-        conditions.add(ifAttr);
+        results.push({
+            condition: ifAttr,
+            ancestorConditions: [...ancestorConditions],
+        });
     }
 
     if (element.childNodes) {
         for (const child of element.childNodes) {
             if ((child as any).rawTagName) {
-                scanForIfAttributes(child as HTMLElement, conditions);
+                scanForIfAttributesWithNesting(
+                    child as HTMLElement,
+                    results,
+                    currentAncestors,
+                );
             }
         }
     }
+}
+
+/**
+ * Recursively scan HTML for `forEach` attributes, recording ancestor `if`
+ * conditions. Used to associate array data needs with the conditions that
+ * must be active for the forEach to render.
+ */
+function scanForEachAttributes(
+    element: HTMLElement,
+    results: ForEachInfo[],
+    ancestorConditions: string[] = [],
+): void {
+    const ifAttr = element.getAttribute('if');
+    const currentAncestors = ifAttr ? [...ancestorConditions, ifAttr] : ancestorConditions;
+
+    const forEachAttr = element.getAttribute('forEach');
+    if (forEachAttr) {
+        results.push({
+            arrayPath: forEachAttr.trim(),
+            ancestorConditions: [...currentAncestors],
+        });
+    }
+
+    if (element.childNodes) {
+        for (const child of element.childNodes) {
+            if ((child as any).rawTagName) {
+                scanForEachAttributes(child as HTMLElement, results, currentAncestors);
+            }
+        }
+    }
+}
+
+/**
+ * Generate sample data for repeated (list) contract tags.
+ * Produces 2 synthetic items per list tag from the child tag schema.
+ * Returns a map of tag path → JSON-encoded array string.
+ */
+function generateSampleData(
+    contractTags: ContractTag[],
+    forEachInfos: ForEachInfo[],
+    itemCount: number = 2,
+): Record<string, string> {
+    const overrides: Record<string, string> = {};
+    const forEachPaths = new Set(forEachInfos.map((f) => f.arrayPath));
+
+    for (const arrayPath of forEachPaths) {
+        const pathParts = arrayPath.split('.');
+        const tag = findEditorProtocolTag(pathParts, contractTags);
+
+        if (tag?.repeated && tag.tags && tag.tags.length > 0) {
+            const items = Array.from({ length: itemCount }, (_, i) =>
+                generateItemFromTags(tag.tags!, i),
+            );
+            overrides[arrayPath] = JSON.stringify(items);
+        } else if (tag?.repeated) {
+            overrides[arrayPath] = JSON.stringify(
+                Array.from({ length: itemCount }, (_, i) => ({ id: `sample-${i + 1}` })),
+            );
+        }
+    }
+
+    return overrides;
+}
+
+function generateItemFromTags(
+    childTags: ContractTag[],
+    index: number,
+): Record<string, unknown> {
+    const item: Record<string, unknown> = {};
+    for (const child of childTags) {
+        const dataType = parseDataTypeString(child.dataType);
+        if (dataType.kind === 'boolean') {
+            item[child.tag] = index % 2 === 0;
+        } else if (dataType.kind === 'number') {
+            item[child.tag] = (index + 1) * 10;
+        } else if (dataType.kind === 'enum' && dataType.enumValues?.length) {
+            item[child.tag] = dataType.enumValues[index % dataType.enumValues.length];
+        } else {
+            item[child.tag] = `${child.tag} ${index + 1}`;
+        }
+    }
+    return item;
 }

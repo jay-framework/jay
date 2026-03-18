@@ -41,6 +41,7 @@ export function convertGroupNode(
 
     let htmlAttrs = '';
     if (cssClassName) htmlAttrs += `class="${cssClassName}" `;
+    if (context.ifCondition) htmlAttrs += `if="${context.ifCondition}" `;
     htmlAttrs += `id="${node.id}"${refAttr}`;
     if (effectiveStyle) htmlAttrs += ` style="${effectiveStyle}"`;
 
@@ -53,6 +54,7 @@ export function convertGroupNode(
     const childContext: ConversionContext = {
         ...context,
         indentLevel: context.indentLevel + 1,
+        ifCondition: undefined,
     };
 
     // Convert children

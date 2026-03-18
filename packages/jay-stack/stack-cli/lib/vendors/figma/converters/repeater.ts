@@ -103,12 +103,14 @@ function convertRepeaterFlat(
     const { repeaterPath, trackByKey } = analysis;
     const indent = '  '.repeat(context.indentLevel);
 
-    let html = `${indent}<${tag} class="${cssClassName}" forEach="${repeaterPath}" trackBy="${trackByKey}">\n`;
+    const ifAttr = context.ifCondition ? ` if="${context.ifCondition}"` : '';
+    let html = `${indent}<${tag} class="${cssClassName}"${ifAttr} forEach="${repeaterPath}" trackBy="${trackByKey}">\n`;
 
     const newContext: ConversionContext = {
         ...context,
         repeaterPathStack: [...context.repeaterPathStack, repeaterPath!.split('.')],
         indentLevel: context.indentLevel + 1,
+        ifCondition: undefined,
     };
 
     if (!node.children || node.children.length === 0) {
@@ -171,13 +173,15 @@ function convertRepeaterWrapped(
         innerDivSizeStyles = 'width: 100%;';
     }
 
-    let html = `${indent}<div id="${node.id}" style="${outerStyleAttr}">\n`;
+    const ifAttr = context.ifCondition ? ` if="${context.ifCondition}"` : '';
+    let html = `${indent}<div${ifAttr} id="${node.id}" style="${outerStyleAttr}">\n`;
     html += `${innerIndent}<div style="position: relative; ${innerDivSizeStyles}" forEach="${repeaterPath}" trackBy="${trackByKey}">\n`;
 
     const newContext: ConversionContext = {
         ...context,
         repeaterPathStack: [...context.repeaterPathStack, repeaterPath!.split('.')],
         indentLevel: context.indentLevel + 2,
+        ifCondition: undefined,
     };
 
     if (!node.children || node.children.length === 0) {

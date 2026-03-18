@@ -193,6 +193,8 @@ function convertRegularNode(
             dynamicContent || dualContent,
             refAttr || dualRef,
             attributesHtml,
+            context.parentCssClassName,
+            context.ifCondition,
         );
     }
 
@@ -327,6 +329,9 @@ function convertRegularNode(
     if (cssClassName) {
         htmlAttrs += `class="${cssClassName}" `;
     }
+    if (context.ifCondition) {
+        htmlAttrs += `if="${context.ifCondition}" `;
+    }
     if (effectiveStyle) {
         htmlAttrs += ` style="${effectiveStyle}"`;
     }
@@ -431,6 +436,8 @@ function convertRegularNode(
         const childContext: ConversionContext = {
             ...context,
             indentLevel: context.indentLevel + 1,
+            ifCondition: undefined,
+            parentCssClassName: cssClassName || context.parentCssClassName,
         };
 
         for (const child of children) {

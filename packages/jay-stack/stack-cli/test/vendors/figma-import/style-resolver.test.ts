@@ -319,6 +319,84 @@ describe('style-resolver', () => {
             expect(style.gap).toBe(20);
             expect(style.rowGap).toBe(10);
         });
+
+        it('parses fr units as FLEX grid columns', () => {
+            const { style } = resolveStyle(
+                'display: grid; grid-template-columns: 1fr 1fr 1fr 1fr',
+            );
+            expect(style.gridColumns).toEqual([
+                { type: 'FLEX', value: 1 },
+                { type: 'FLEX', value: 1 },
+                { type: 'FLEX', value: 1 },
+                { type: 'FLEX', value: 1 },
+            ]);
+        });
+
+        it('parses repeat(N, Xfr) syntax', () => {
+            const { style } = resolveStyle(
+                'display: grid; grid-template-columns: repeat(4, 1fr)',
+            );
+            expect(style.gridColumns).toEqual([
+                { type: 'FLEX', value: 1 },
+                { type: 'FLEX', value: 1 },
+                { type: 'FLEX', value: 1 },
+                { type: 'FLEX', value: 1 },
+            ]);
+        });
+
+        it('parses repeat(N, Xpx) syntax', () => {
+            const { style } = resolveStyle(
+                'display: grid; grid-template-columns: repeat(3, 200px)',
+            );
+            expect(style.gridColumns).toEqual([
+                { type: 'FIXED', value: 200 },
+                { type: 'FIXED', value: 200 },
+                { type: 'FIXED', value: 200 },
+            ]);
+            expect(style.gridColumnWidths).toEqual([200, 200, 200]);
+        });
+
+        it('parses mixed px and fr columns', () => {
+            const { style } = resolveStyle(
+                'display: grid; grid-template-columns: 100px 1fr',
+            );
+            expect(style.gridColumns).toEqual([
+                { type: 'FIXED', value: 100 },
+                { type: 'FLEX', value: 1 },
+            ]);
+        });
+
+        it('parses weighted fr values', () => {
+            const { style } = resolveStyle(
+                'display: grid; grid-template-columns: 1.1fr 1fr',
+            );
+            expect(style.gridColumns).toEqual([
+                { type: 'FLEX', value: 1.1 },
+                { type: 'FLEX', value: 1 },
+            ]);
+        });
+
+        it('populates gridColumns alongside gridColumnWidths for px values', () => {
+            const { style } = resolveStyle(
+                'display: grid; grid-template-columns: 200px 200px 200px',
+            );
+            expect(style.gridColumnWidths).toEqual([200, 200, 200]);
+            expect(style.gridColumns).toEqual([
+                { type: 'FIXED', value: 200 },
+                { type: 'FIXED', value: 200 },
+                { type: 'FIXED', value: 200 },
+            ]);
+        });
+
+        it('parses grid-template-rows with fr units', () => {
+            const { style } = resolveStyle(
+                'display: grid; grid-template-columns: 1fr; grid-template-rows: auto 1fr',
+            );
+            expect(style.gridRows).toEqual([
+                { type: 'FLEX', value: 1 },
+                { type: 'FLEX', value: 1 },
+            ]);
+        });
     });
 
     describe('absolute positioning', () => {

@@ -408,21 +408,41 @@ export function convertVariantNode(
         const conditions = buildVariantCondition(permutation);
         if (!conditions) continue;
 
-        variantHtml += `${innerIndent}<div if="${conditions}">\n`;
+        // When COMPONENT has exactly 1 child with a CSS class, merge the `if`
+        // onto that child to preserve flex/grid layout properties (e.g. align-self)
+        const soleChild =
+            variantNode.children?.length === 1 ? variantNode.children[0] : undefined;
+        const childHasClass = soleChild?.pluginData?.['className'];
 
-        const variantContext: ConversionContext = {
-            ...context,
-            indentLevel: context.indentLevel + 2,
-        };
+        if (soleChild && childHasClass) {
+            const mergedContext: ConversionContext = {
+                ...context,
+                indentLevel: context.indentLevel + 1,
+                ifCondition: conditions,
+            };
+            const annotated = soleChild.parentType
+                ? soleChild
+                : { ...soleChild, parentType: 'COMPONENT' };
+            variantHtml += convertNodeToJayHtml(annotated, mergedContext);
+        } else {
+            variantHtml += `${innerIndent}<div if="${conditions}">\n`;
 
-        if (variantNode.children && variantNode.children.length > 0) {
-            for (const child of variantNode.children) {
-                const annotated = child.parentType ? child : { ...child, parentType: 'COMPONENT' };
-                variantHtml += convertNodeToJayHtml(annotated, variantContext);
+            const variantContext: ConversionContext = {
+                ...context,
+                indentLevel: context.indentLevel + 2,
+            };
+
+            if (variantNode.children && variantNode.children.length > 0) {
+                for (const child of variantNode.children) {
+                    const annotated = child.parentType
+                        ? child
+                        : { ...child, parentType: 'COMPONENT' };
+                    variantHtml += convertNodeToJayHtml(annotated, variantContext);
+                }
             }
-        }
 
-        variantHtml += `${innerIndent}</div>\n`;
+            variantHtml += `${innerIndent}</div>\n`;
+        }
     }
 
     // 4. Determine ref attribute from analysis

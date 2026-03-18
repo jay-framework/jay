@@ -509,6 +509,190 @@ describe('generateVariantScenarios (condition-driven)', () => {
         });
     });
 
+    // --- Nested if conditions (Issue #06) ---
+
+    it('generates composite scenario for nested if conditions', () => {
+        const body = makeBody(
+            `<body>
+                <div if="catalog.hasItems">
+                    <div if="hasDiscount">badge</div>
+                </div>
+            </body>`,
+        );
+        const contract: Contract = {
+            name: 'test',
+            tags: [
+                {
+                    tag: 'catalog',
+                    type: 'data',
+                    tags: [{ tag: 'hasItems', type: 'variant', dataType: 'boolean' }],
+                },
+                { tag: 'hasDiscount', type: 'variant', dataType: 'boolean' },
+            ],
+        };
+        const scenarios = generateVariantScenarios(body, contract.tags);
+        const ids = scenarios.map((s) => s.id);
+
+        expect(ids).toContain('catalog.hasItems=true');
+        // Inner condition should include the ancestor override
+        expect(ids).toContain('catalog.hasItems=true&hasDiscount=true');
+        // Should NOT have a standalone hasDiscount=true without ancestor
+        expect(ids).not.toContain('hasDiscount=true');
+    });
+
+    it('generates composite scenario for deeply nested if conditions', () => {
+        const body = makeBody(
+            `<body>
+                <div if="outer">
+                    <div if="middle">
+                        <div if="inner">deep</div>
+                    </div>
+                </div>
+            </body>`,
+        );
+        const contract: Contract = {
+            name: 'test',
+            tags: [
+                { tag: 'outer', type: 'variant', dataType: 'boolean' },
+                { tag: 'middle', type: 'variant', dataType: 'boolean' },
+                { tag: 'inner', type: 'variant', dataType: 'boolean' },
+            ],
+        };
+        const scenarios = generateVariantScenarios(body, contract.tags);
+        const ids = scenarios.map((s) => s.id);
+
+        expect(ids).toContain('outer=true');
+        expect(ids).toContain('middle=true&outer=true');
+        expect(ids).toContain('inner=true&middle=true&outer=true');
+    });
+
+    it('generates composite for if nested inside forEach inside if', () => {
+        const body = makeBody(
+            `<body>
+                <div if="catalog.hasItems">
+                    <div forEach="catalog.items">
+                        <span if="hasDiscount">{discountLabel}</span>
+                    </div>
+                </div>
+            </body>`,
+        );
+        const contract: Contract = {
+            name: 'test',
+            tags: [
+                {
+                    tag: 'catalog',
+                    type: 'data',
+                    tags: [
+                        { tag: 'hasItems', type: 'variant', dataType: 'boolean' },
+                        {
+                            tag: 'items',
+                            type: 'subContract',
+                            repeated: true,
+                            tags: [
+                                { tag: 'name', type: 'data', dataType: 'string' },
+                                { tag: 'hasDiscount', type: 'variant', dataType: 'boolean' },
+                                { tag: 'discountLabel', type: 'data', dataType: 'string' },
+                            ],
+                        },
+                    ],
+                },
+                { tag: 'hasDiscount', type: 'variant', dataType: 'boolean' },
+            ],
+        };
+        const scenarios = generateVariantScenarios(body, contract.tags);
+        const ids = scenarios.map((s) => s.id);
+
+        expect(ids).toContain('catalog.hasItems=true');
+        // Inner hasDiscount includes ancestor
+        expect(ids).toContain('catalog.hasItems=true&hasDiscount=true');
+    });
+
+    // --- forEach sample data (Issue #05b) ---
+
+    it('injects sample data for forEach with repeated contract tag', () => {
+        const body = makeBody(
+            `<body>
+                <div if="catalog.hasItems">
+                    <div forEach="catalog.items">{name}</div>
+                </div>
+            </body>`,
+        );
+        const contract: Contract = {
+            name: 'test',
+            tags: [
+                {
+                    tag: 'catalog',
+                    type: 'data',
+                    tags: [
+                        { tag: 'hasItems', type: 'variant', dataType: 'boolean' },
+                        {
+                            tag: 'items',
+                            type: 'subContract',
+                            repeated: true,
+                            tags: [
+                                { tag: 'name', type: 'data', dataType: 'string' },
+                                { tag: 'price', type: 'data', dataType: 'string' },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        };
+        const scenarios = generateVariantScenarios(body, contract.tags);
+
+        // Default scenario should include sample data
+        const defaultScenario = scenarios[0];
+        expect(defaultScenario.queryString).toContain('vs.catalog.items=');
+
+        // hasItems=true scenario should also include sample data
+        const hasItemsScenario = scenarios.find((s) => s.id.includes('catalog.hasItems=true'));
+        expect(hasItemsScenario).toBeDefined();
+        expect(hasItemsScenario!.queryString).toContain('vs.catalog.items=');
+
+        // Decode and verify sample data structure
+        const url = new URL('http://test' + hasItemsScenario!.queryString);
+        const itemsParam = url.searchParams.get('vs.catalog.items');
+        expect(itemsParam).toBeDefined();
+        const items = JSON.parse(itemsParam!);
+        expect(items).toHaveLength(2);
+        expect(items[0]).toHaveProperty('name');
+        expect(items[0]).toHaveProperty('price');
+    });
+
+    it('generates sample data with correct types from contract schema', () => {
+        const body = makeBody(
+            `<body>
+                <div forEach="items">{name}</div>
+            </body>`,
+        );
+        const contract: Contract = {
+            name: 'test',
+            tags: [
+                {
+                    tag: 'items',
+                    type: 'subContract',
+                    repeated: true,
+                    tags: [
+                        { tag: 'name', type: 'data', dataType: 'string' },
+                        { tag: 'count', type: 'data', dataType: 'number' },
+                        { tag: 'active', type: 'variant', dataType: 'boolean' },
+                    ],
+                },
+            ],
+        };
+        const scenarios = generateVariantScenarios(body, contract.tags);
+
+        const defaultScenario = scenarios[0];
+        const url = new URL('http://test' + defaultScenario.queryString);
+        const itemsParam = url.searchParams.get('vs.items');
+        const items = JSON.parse(itemsParam!);
+
+        expect(items).toHaveLength(2);
+        expect(typeof items[0].name).toBe('string');
+        expect(typeof items[0].count).toBe('number');
+        expect(typeof items[0].active).toBe('boolean');
+    });
+
     // --- Real-world store-light page pattern ---
 
     it('handles store-light product page conditions', () => {

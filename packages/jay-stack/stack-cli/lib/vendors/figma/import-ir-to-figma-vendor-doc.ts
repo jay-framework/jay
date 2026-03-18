@@ -147,7 +147,12 @@ function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVe
     if (style.layoutMode) {
         if (style.layoutMode === 'grid') {
             props.layoutMode = 'GRID';
-            if (style.gridColumnWidths && style.gridColumnWidths.length > 0) {
+            if (style.gridColumns && style.gridColumns.length > 0) {
+                props.gridColumnsSizes = style.gridColumns.map((col) => ({
+                    type: col.type as 'FIXED' | 'FLEX',
+                    value: col.value,
+                }));
+            } else if (style.gridColumnWidths && style.gridColumnWidths.length > 0) {
                 const allEqual = style.gridColumnWidths.every(
                     (w) => Math.abs(w - style.gridColumnWidths![0]) < 1,
                 );
@@ -157,7 +162,12 @@ function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVe
                         : { type: 'FIXED' as const, value: w },
                 );
             }
-            if (style.gridRowHeights && style.gridRowHeights.length > 0) {
+            if (style.gridRows && style.gridRows.length > 0) {
+                props.gridRowsSizes = style.gridRows.map((row) => ({
+                    type: row.type as 'FIXED' | 'FLEX',
+                    value: row.value,
+                }));
+            } else if (style.gridRowHeights && style.gridRowHeights.length > 0) {
                 props.gridRowsSizes = style.gridRowHeights.map((h) => ({
                     type: 'FIXED' as const,
                     value: h,
@@ -350,6 +360,12 @@ function pickHiddenValue(existingValues: Set<string>): string {
 function injectHiddenVariant(componentSet: FigmaVendorDocument): void {
     const defs = componentSet.componentPropertyDefinitions;
     if (!defs || !componentSet.children) return;
+
+    const allDimensionsCovered = Object.values(defs).every((def) => {
+        const values = new Set(def.variantOptions);
+        return values.has('true') && values.has('false');
+    });
+    if (allDimensionsCovered) return;
 
     const hiddenProps: Record<string, string> = {};
 
@@ -811,13 +827,27 @@ function adaptNode(
         }
     }
 
-    // Grid children: set fixed column widths from grid-template-columns
-    if (base.layoutMode === 'GRID' && node.style?.gridColumnWidths && base.children) {
-        const colWidth = node.style.gridColumnWidths[0];
-        if (colWidth && colWidth > 0) {
+    // Grid children: set sizing from grid-template-columns
+    if (base.layoutMode === 'GRID' && base.children) {
+        const gridCols = node.style?.gridColumns;
+        if (gridCols && gridCols.length > 0) {
+            const allFlex = gridCols.every((c) => c.type === 'FLEX');
             for (const child of base.children) {
-                if (!child.width) child.width = colWidth;
-                child.layoutSizingHorizontal = 'FIXED';
+                if (allFlex) {
+                    child.layoutSizingHorizontal = 'FILL';
+                } else {
+                    const firstFixed = gridCols.find((c) => c.type === 'FIXED');
+                    if (firstFixed && !child.width) child.width = firstFixed.value;
+                    child.layoutSizingHorizontal = 'FIXED';
+                }
+            }
+        } else if (node.style?.gridColumnWidths && node.style.gridColumnWidths.length > 0) {
+            const colWidth = node.style.gridColumnWidths[0];
+            if (colWidth && colWidth > 0) {
+                for (const child of base.children) {
+                    if (!child.width) child.width = colWidth;
+                    child.layoutSizingHorizontal = 'FIXED';
+                }
             }
         }
     }

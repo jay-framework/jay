@@ -1,17 +1,67 @@
-import type { ImportIRLayoutMode, ImportIRStyle, ImportIREffect, ImportIRFill } from './import-ir';
+import type {
+    ImportIRLayoutMode,
+    ImportIRStyle,
+    ImportIREffect,
+    ImportIRFill,
+    GridColumnDef,
+} from './import-ir';
 import type { ComputedStyleData } from './computed-style-types';
 
 const DYNAMIC_PATTERN = /\{[^}]*\}/;
 
 const GRADIENT_PLACEHOLDER_COLOR = '#E8E4DD';
 
-function parseGridColumnWidths(value: string): number[] | undefined {
-    const cols: number[] = [];
-    for (const token of value.split(/\s+/)) {
-        const px = token.match(/^([\d.]+)px$/);
-        if (px) cols.push(parseFloat(px[1]));
+function expandRepeat(value: string): string {
+    return value.replace(/repeat\(\s*(\d+)\s*,\s*([^)]+)\)/g, (_, count, track) => {
+        const n = parseInt(count, 10);
+        return Array(n).fill(track.trim()).join(' ');
+    });
+}
+
+export function parseGridColumns(value: string): GridColumnDef[] | undefined {
+    const expanded = expandRepeat(value);
+    const cols: GridColumnDef[] = [];
+
+    for (const token of expanded.split(/\s+/).filter(Boolean)) {
+        const pxMatch = token.match(/^([\d.]+)px$/);
+        if (pxMatch) {
+            cols.push({ type: 'FIXED', value: parseFloat(pxMatch[1]) });
+            continue;
+        }
+        const frMatch = token.match(/^([\d.]+)fr$/);
+        if (frMatch) {
+            cols.push({ type: 'FLEX', value: parseFloat(frMatch[1]) });
+            continue;
+        }
+        const pctMatch = token.match(/^([\d.]+)%$/);
+        if (pctMatch) {
+            cols.push({ type: 'FLEX', value: parseFloat(pctMatch[1]) / 100 });
+            continue;
+        }
+        if (token === 'auto') {
+            cols.push({ type: 'FLEX', value: 1 });
+            continue;
+        }
+        const minmaxMatch = token.match(/^minmax\(([^,]+),\s*([^)]+)\)$/);
+        if (minmaxMatch) {
+            const maxPart = minmaxMatch[2].trim();
+            const frInner = maxPart.match(/^([\d.]+)fr$/);
+            if (frInner) {
+                cols.push({ type: 'FLEX', value: parseFloat(frInner[1]) });
+            } else {
+                const pxInner = maxPart.match(/^([\d.]+)px$/);
+                cols.push({ type: 'FIXED', value: pxInner ? parseFloat(pxInner[1]) : 300 });
+            }
+            continue;
+        }
     }
     return cols.length > 0 ? cols : undefined;
+}
+
+function parseGridColumnWidths(value: string): number[] | undefined {
+    const cols = parseGridColumns(value);
+    if (!cols) return undefined;
+    return cols.map((c) => c.value);
 }
 
 export function parseInlineStyle(styleAttr: string): {
@@ -553,10 +603,12 @@ export function resolveStyle(
                     const gridCols = parsed['grid-template-columns'];
                     if (gridCols) {
                         style.gridColumnWidths = parseGridColumnWidths(gridCols);
+                        style.gridColumns = parseGridColumns(gridCols);
                     }
                     const gridRows = parsed['grid-template-rows'];
                     if (gridRows) {
                         style.gridRowHeights = parseGridColumnWidths(gridRows);
+                        style.gridRows = parseGridColumns(gridRows);
                     }
                 } else if (value === 'block' || value === 'flow-root') {
                     if (!style.layoutMode) style.layoutMode = 'column';
@@ -966,11 +1018,15 @@ export function resolveStyle(
             case 'grid-template-columns': {
                 const colWidths = parseGridColumnWidths(value);
                 if (colWidths) style.gridColumnWidths = colWidths;
+                const gridCols = parseGridColumns(value);
+                if (gridCols) style.gridColumns = gridCols;
                 break;
             }
             case 'grid-template-rows': {
                 const rowHeights = parseGridColumnWidths(value);
                 if (rowHeights) style.gridRowHeights = rowHeights;
+                const gridRows = parseGridColumns(value);
+                if (gridRows) style.gridRows = gridRows;
                 break;
             }
             default:

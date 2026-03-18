@@ -155,6 +155,103 @@ describe('adaptIRToFigmaVendorDoc', () => {
                 expect(child.layoutSizingHorizontal).toBe('FIXED');
             }
         });
+
+        it('structured gridColumns with FLEX type map directly', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: {
+                            layoutMode: 'grid',
+                            gridColumns: [
+                                { type: 'FLEX', value: 1 },
+                                { type: 'FLEX', value: 1 },
+                                { type: 'FLEX', value: 1 },
+                                { type: 'FLEX', value: 1 },
+                            ],
+                        },
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const gridFrame = result.children![0];
+            expect(gridFrame.gridColumnsSizes).toEqual([
+                { type: 'FLEX', value: 1 },
+                { type: 'FLEX', value: 1 },
+                { type: 'FLEX', value: 1 },
+                { type: 'FLEX', value: 1 },
+            ]);
+        });
+
+        it('structured gridColumns with mixed FIXED/FLEX map directly', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: {
+                            layoutMode: 'grid',
+                            gridColumns: [
+                                { type: 'FIXED', value: 100 },
+                                { type: 'FLEX', value: 1 },
+                            ],
+                        },
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const gridFrame = result.children![0];
+            expect(gridFrame.gridColumnsSizes).toEqual([
+                { type: 'FIXED', value: 100 },
+                { type: 'FLEX', value: 1 },
+            ]);
+        });
+
+        it('gridColumns preferred over gridColumnWidths when both present', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: {
+                            layoutMode: 'grid',
+                            gridColumnWidths: [200, 200],
+                            gridColumns: [
+                                { type: 'FLEX', value: 1 },
+                                { type: 'FLEX', value: 1 },
+                            ],
+                        },
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const gridFrame = result.children![0];
+            expect(gridFrame.gridColumnsSizes).toEqual([
+                { type: 'FLEX', value: 1 },
+                { type: 'FLEX', value: 1 },
+            ]);
+        });
+
+        it('grid children get FILL sizing for all-FLEX columns', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: {
+                            layoutMode: 'grid',
+                            gridColumns: [
+                                { type: 'FLEX', value: 1 },
+                                { type: 'FLEX', value: 1 },
+                            ],
+                        },
+                        children: [makeFrame({ id: 'child-1' }), makeFrame({ id: 'child-2' })],
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const gridFrame = result.children![0];
+            for (const child of gridFrame.children!) {
+                expect(child.layoutSizingHorizontal).toBe('FILL');
+            }
+        });
     });
 
     describe('Phase 3: visual property mappings', () => {
@@ -415,6 +512,85 @@ describe('adaptIRToFigmaVendorDoc', () => {
             const result = adaptIRToFigmaVendorDoc(makeDoc(root));
             const frame = result.children![0];
             expect(frame.layoutPositioning).toBeUndefined();
+        });
+    });
+
+    describe('Hidden variant injection', () => {
+        it('skips _hidden_ when boolean dimension has both true and false variants', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        id: 'cs-1',
+                        kind: 'COMPONENT_SET',
+                        componentPropertyDefinitions: {
+                            hasItems: { type: 'VARIANT', variantOptions: ['true', 'false'] },
+                        },
+                        children: [
+                            makeFrame({ id: 'c-true', kind: 'COMPONENT' }),
+                            makeFrame({ id: 'c-false', kind: 'COMPONENT' }),
+                        ],
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const compSet = result.children![0];
+            expect(compSet.type).toBe('COMPONENT_SET');
+            expect(compSet.children).toHaveLength(2);
+            const names = compSet.children!.map((c) => c.name);
+            expect(names).not.toContainEqual(expect.stringContaining('_hidden_'));
+        });
+
+        it('injects _hidden_ when boolean dimension only has true variant', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        id: 'cs-1',
+                        kind: 'COMPONENT_SET',
+                        componentPropertyDefinitions: {
+                            hasDiscount: { type: 'VARIANT', variantOptions: ['true'] },
+                        },
+                        children: [makeFrame({ id: 'c-true', kind: 'COMPONENT' })],
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const compSet = result.children![0];
+            expect(compSet.type).toBe('COMPONENT_SET');
+            expect(compSet.children).toHaveLength(2);
+            const hiddenChild = compSet.children!.find((c) =>
+                c.pluginData?.['jay-hidden-variant'],
+            );
+            expect(hiddenChild).toBeDefined();
+        });
+
+        it('injects _hidden_ when multi-dimension has at least one incomplete dimension', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        id: 'cs-1',
+                        kind: 'COMPONENT_SET',
+                        componentPropertyDefinitions: {
+                            hasItems: { type: 'VARIANT', variantOptions: ['true', 'false'] },
+                            isExpanded: { type: 'VARIANT', variantOptions: ['true'] },
+                        },
+                        children: [
+                            makeFrame({ id: 'c1', kind: 'COMPONENT' }),
+                            makeFrame({ id: 'c2', kind: 'COMPONENT' }),
+                            makeFrame({ id: 'c3', kind: 'COMPONENT' }),
+                        ],
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const compSet = result.children![0];
+            expect(compSet.children!.length).toBeGreaterThan(3);
+            const hiddenChild = compSet.children!.find((c) =>
+                c.pluginData?.['jay-hidden-variant'],
+            );
+            expect(hiddenChild).toBeDefined();
         });
     });
 });

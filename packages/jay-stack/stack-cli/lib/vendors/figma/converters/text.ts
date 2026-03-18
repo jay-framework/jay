@@ -29,6 +29,8 @@ export function convertTextNodeToHtml(
     dynamicContent?: string,
     refAttr?: string,
     attributesHtml?: string,
+    parentCssClassName?: string,
+    ifCondition?: string,
 ): string {
     const semanticTag = node.pluginData?.['semanticHtml'];
     const rawClassName = node.pluginData?.['className'];
@@ -192,8 +194,20 @@ export function convertTextNodeToHtml(
     const refString = refAttr || '';
     const attrsString = attributesHtml || '';
     const classAttr = cssClassName ? ` class="${cssClassName}"` : '';
-    const effectiveStyle = cssClassName ? '' : `${commonStyles}${textStyles}`;
+    const ifAttr = ifCondition ? ` if="${ifCondition}"` : '';
+
+    let effectiveStyle: string;
+    if (cssClassName) {
+        effectiveStyle = '';
+    } else if (parentCssClassName) {
+        // TEXT inside a class-bearing parent: suppress CSS-inheritable properties
+        // (color, font-weight, font-family, font-size, etc.) since the parent's class
+        // defines them. Only emit non-inheritable overrides like truncation and layout.
+        effectiveStyle = `${truncationStyle}`;
+    } else {
+        effectiveStyle = `${commonStyles}${textStyles}`;
+    }
     const styleStr = effectiveStyle ? ` style="${effectiveStyle}"` : '';
 
-    return `${indent}<${tag}${classAttr}${refString}${attrsString}${styleStr}>${htmlContent}</${tag}>\n`;
+    return `${indent}<${tag}${classAttr}${ifAttr}${refString}${attrsString}${styleStr}>${htmlContent}</${tag}>\n`;
 }

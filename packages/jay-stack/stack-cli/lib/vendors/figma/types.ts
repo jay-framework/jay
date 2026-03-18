@@ -126,4 +126,6 @@ export interface ConversionContext {
     plugins: any[];
     componentSetIndex?: Map<string, FigmaVendorDocument>;
     diagnostics?: ExportDiagnostic[];
+    ifCondition?: string;
+    parentCssClassName?: string;
 }
