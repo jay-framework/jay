@@ -85,7 +85,7 @@ export function hydrate(rootElement, options) {
                             return e('div', { class: 'item' }, [
                                 e('span', { class: 'label' }, [dt((vs12) => vs12.label)]),
                                 e('span', { class: 'count' }, [dt((vs12) => vs12.count)]),
-                                e('button', {}, ['+1'], refIncrement()),
+                                e('button', {}, ['+1'], refIncrement2()),
                             ]);
                         },
                     ),
