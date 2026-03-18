@@ -379,7 +379,7 @@ describe('CSS Roundtrip Fidelity', () => {
     });
 
     describe('Phase 1 visual fidelity', () => {
-        it('full page import: white section, vertical layout, 960px width', () => {
+        it('full page import: contrast grey section, vertical layout, 960px width', () => {
             const child1: ImportIRNode = {
                 id: 'c1',
                 sourcePath: '/div/div1',
@@ -418,7 +418,7 @@ describe('CSS Roundtrip Fidelity', () => {
             };
             const result = adaptIRToFigmaVendorDoc(ir);
             expect(result.fills).toEqual([
-                { type: 'SOLID', color: { r: 1, g: 1, b: 1 }, opacity: 1 },
+                { type: 'SOLID', color: { r: 0.96, g: 0.96, b: 0.96 }, opacity: 1 },
             ]);
             const contentFrame = result.children![0];
             expect(contentFrame.layoutMode).toBe('VERTICAL');
@@ -459,17 +459,13 @@ describe('CSS Roundtrip Fidelity', () => {
         });
 
         it('flex-direction: row stays HORIZONTAL (no regression)', () => {
-            const frame = importAndGetFigmaFrame(
-                'display: flex; flex-direction: row; gap: 16px',
-            );
+            const frame = importAndGetFigmaFrame('display: flex; flex-direction: row; gap: 16px');
             expect(frame.layoutMode).toBe('HORIZONTAL');
             expect(frame.itemSpacing).toBe(16);
         });
 
         it('flex-direction: column maps to VERTICAL', () => {
-            const frame = importAndGetFigmaFrame(
-                'display: flex; flex-direction: column; gap: 8px',
-            );
+            const frame = importAndGetFigmaFrame('display: flex; flex-direction: column; gap: 8px');
             expect(frame.layoutMode).toBe('VERTICAL');
             expect(frame.itemSpacing).toBe(8);
         });
@@ -517,9 +513,7 @@ describe('CSS Roundtrip Fidelity', () => {
                 kind: 'FRAME',
                 name: 'contents-wrapper',
                 style,
-                children: [
-                    { id: 'c1', sourcePath: '/div/c1', kind: 'FRAME', name: 'c1' },
-                ],
+                children: [{ id: 'c1', sourcePath: '/div/c1', kind: 'FRAME', name: 'c1' }],
             };
             const ir: ImportIRDocument = {
                 version: 'import-ir/v0',

@@ -8,6 +8,14 @@ import {
 
 const DEFAULT_FONT_FAMILY = 'Inter';
 
+/** Subtle grey used for SECTION fill when page content is white/near-white,
+ *  providing visual contrast between the section boundary and content. */
+const SECTION_CONTRAST_GREY = { r: 0.96, g: 0.96, b: 0.96 }; // ~#F5F5F5
+
+function isNearWhite(color: { r: number; g: number; b: number }): boolean {
+    return color.r > 0.95 && color.g > 0.95 && color.b > 0.95;
+}
+
 function fontWeightToStyle(weight: number | undefined): string {
     if (!weight) return 'Regular';
     if (weight < 150) return 'Thin';
@@ -676,6 +684,28 @@ function adaptNode(
             if (node.variantProperties) {
                 base.variantProperties = node.variantProperties;
             }
+
+            // COMPONENT nodes also need block-flow VERTICAL default
+            if (
+                (!base.layoutMode || base.layoutMode === 'NONE') &&
+                node.children &&
+                node.children.length > 0
+            ) {
+                const display = node.style?.display;
+                const isInline = display === 'inline' || display === 'inline-block';
+                const isAbsolute = base.layoutPositioning === 'ABSOLUTE';
+
+                if (!isInline && !isAbsolute) {
+                    base.layoutMode = 'VERTICAL';
+                    if (!base.layoutSizingHorizontal) {
+                        base.layoutSizingHorizontal =
+                            node.style?.width !== undefined ? 'FIXED' : 'HUG';
+                        base.layoutSizingVertical =
+                            node.style?.height !== undefined ? 'FIXED' : 'HUG';
+                    }
+                }
+            }
+
             break;
         }
         case 'COMPONENT_SET': {
@@ -1056,18 +1086,29 @@ export function adaptIRToFigmaVendorDoc(
             root.pluginData['urlRoute'] = ir.route;
         }
 
-        // Set SECTION background from page's body computed style
+        // Set SECTION background from page's body computed style.
+        // When content is white/near-white, use a subtle grey to provide
+        // visual contrast between the section boundary and content.
         const bgColor = ir.pageBackgroundColor;
         if (bgColor) {
             const color = parseColor(bgColor);
             if (color.a > 0) {
+                const sectionColor = isNearWhite(color)
+                    ? SECTION_CONTRAST_GREY
+                    : { r: color.r, g: color.g, b: color.b };
                 root.fills = [
-                    { type: 'SOLID', color: { r: color.r, g: color.g, b: color.b }, opacity: color.a },
+                    {
+                        type: 'SOLID',
+                        color: sectionColor,
+                        opacity: color.a,
+                    },
                 ];
             }
         }
         if (!root.fills) {
-            root.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 }, opacity: 1 }];
+            root.fills = [
+                { type: 'SOLID', color: SECTION_CONTRAST_GREY, opacity: 1 },
+            ];
         }
 
         // Viewport-width fallback for direct FRAME children without explicit width

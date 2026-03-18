@@ -27,9 +27,7 @@ describe('Layer naming', () => {
     });
 
     it('display contents div gets (contents) prefix', () => {
-        const name = getFirstChildName(
-            '<div style="display: contents;"><span>child</span></div>',
-        );
+        const name = getFirstChildName('<div style="display: contents;"><span>child</span></div>');
         expect(name).toMatch(/^\(contents\)/);
     });
 

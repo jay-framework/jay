@@ -178,7 +178,9 @@ export async function enrichWithComputedStyles(options: EnricherOptions): Promis
                     if (scenario === scenarios[0] && !bodyBackgroundColor) {
                         try {
                             bodyBackgroundColor = await page.evaluate(() =>
-                                getComputedStyle(document.body).getPropertyValue('background-color'),
+                                getComputedStyle(document.body).getPropertyValue(
+                                    'background-color',
+                                ),
                             );
                         } catch {
                             // Non-fatal: SECTION will fall back to white default

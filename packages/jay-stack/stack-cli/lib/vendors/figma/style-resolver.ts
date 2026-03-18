@@ -408,13 +408,47 @@ function extractColorFromBackground(value: string): string | undefined {
 
 export type CssClassMap = Map<string, Record<string, string>>;
 
+/**
+ * Remove all @-rule blocks (@media, @supports, @keyframes, etc.) from CSS
+ * text so the simple regex parser only sees top-level rules. This prevents
+ * responsive breakpoint rules from overriding base styles.
+ */
+function stripAtRuleBlocks(css: string): string {
+    const result: string[] = [];
+    let i = 0;
+    while (i < css.length) {
+        if (css[i] === '@') {
+            // Found an @-rule — skip to its opening brace, then balance braces
+            const braceStart = css.indexOf('{', i);
+            if (braceStart === -1) break;
+            let depth = 1;
+            let j = braceStart + 1;
+            while (j < css.length && depth > 0) {
+                if (css[j] === '{') depth++;
+                else if (css[j] === '}') depth--;
+                j++;
+            }
+            i = j;
+        } else {
+            result.push(css[i]);
+            i++;
+        }
+    }
+    return result.join('');
+}
+
 export function parseCssToClassMap(cssText: string): { classMap: CssClassMap; warnings: string[] } {
     const classMap: CssClassMap = new Map();
     const warnings: string[] = [];
     if (!cssText) return { classMap, warnings };
 
     // Remove comments
-    const cleaned = cssText.replace(/\/\*[\s\S]*?\*\//g, '');
+    let cleaned = cssText.replace(/\/\*[\s\S]*?\*\//g, '');
+
+    // Strip @-rule blocks (e.g. @media, @supports, @keyframes) which contain
+    // nested rule blocks that our simple regex-based parser would misinterpret
+    // as top-level rules — responsive breakpoints would override base styles.
+    cleaned = stripAtRuleBlocks(cleaned);
 
     // First pass: collect CSS custom properties from :root / html / body
     const customProperties = new Map<string, string>();

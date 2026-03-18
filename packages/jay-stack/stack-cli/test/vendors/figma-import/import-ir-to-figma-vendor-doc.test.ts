@@ -947,11 +947,11 @@ describe('adaptIRToFigmaVendorDoc', () => {
     });
 
     describe('SECTION background fills', () => {
-        it('SECTION gets white default fills when no pageBackgroundColor', () => {
+        it('SECTION gets contrast grey default fills when no pageBackgroundColor', () => {
             const root = makeFrame({ kind: 'SECTION', children: [makeFrame()] });
             const result = adaptIRToFigmaVendorDoc(makeDoc(root));
             expect(result.fills).toEqual([
-                { type: 'SOLID', color: { r: 1, g: 1, b: 1 }, opacity: 1 },
+                { type: 'SOLID', color: { r: 0.96, g: 0.96, b: 0.96 }, opacity: 1 },
             ]);
         });
 
@@ -973,14 +973,35 @@ describe('adaptIRToFigmaVendorDoc', () => {
             ]);
         });
 
-        it('SECTION gets white fills when body background is transparent', () => {
+        it('SECTION gets contrast grey fills when body background is transparent', () => {
             const root = makeFrame({ kind: 'SECTION', children: [makeFrame()] });
             const doc = makeDoc(root);
             doc.pageBackgroundColor = 'rgba(0, 0, 0, 0)';
             const result = adaptIRToFigmaVendorDoc(doc);
             expect(result.fills).toEqual([
-                { type: 'SOLID', color: { r: 1, g: 1, b: 1 }, opacity: 1 },
+                { type: 'SOLID', color: { r: 0.96, g: 0.96, b: 0.96 }, opacity: 1 },
             ]);
+        });
+
+        it('SECTION gets contrast grey when body is pure white', () => {
+            const root = makeFrame({ kind: 'SECTION', children: [makeFrame()] });
+            const doc = makeDoc(root);
+            doc.pageBackgroundColor = 'rgb(255, 255, 255)';
+            const result = adaptIRToFigmaVendorDoc(doc);
+            expect(result.fills).toEqual([
+                { type: 'SOLID', color: { r: 0.96, g: 0.96, b: 0.96 }, opacity: 1 },
+            ]);
+        });
+
+        it('SECTION keeps dark background color as-is', () => {
+            const root = makeFrame({ kind: 'SECTION', children: [makeFrame()] });
+            const doc = makeDoc(root);
+            doc.pageBackgroundColor = 'rgb(30, 30, 30)';
+            const result = adaptIRToFigmaVendorDoc(doc);
+            const fill = result.fills![0];
+            expect(fill.color!.r).toBeLessThan(0.15);
+            expect(fill.color!.g).toBeLessThan(0.15);
+            expect(fill.color!.b).toBeLessThan(0.15);
         });
     });
 });

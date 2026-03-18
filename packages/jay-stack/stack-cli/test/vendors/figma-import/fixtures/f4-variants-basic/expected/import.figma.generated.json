@@ -2,7 +2,7 @@
   "type": "SECTION",
   "name": "test",
   "visible": true,
-  "fills": [{"type": "SOLID", "color": {"r": 1, "g": 1, "b": 1}, "opacity": 1}],
+  "fills": [{"type": "SOLID", "color": {"r": 0.96, "g": 0.96, "b": 0.96}, "opacity": 1}],
   "pluginData": {
     "jpage": "true",
     "urlRoute": "/test"
@@ -93,6 +93,9 @@
           "variantProperties": {
             "mediaType": "IMAGE"
           },
+          "layoutMode": "VERTICAL",
+          "layoutSizingHorizontal": "HUG",
+          "layoutSizingVertical": "HUG",
           "children": [
             {
               "type": "FRAME",
@@ -153,6 +156,9 @@
           "variantProperties": {
             "mediaType": "VIDEO"
           },
+          "layoutMode": "VERTICAL",
+          "layoutSizingHorizontal": "HUG",
+          "layoutSizingVertical": "HUG",
           "children": [
             {
               "type": "FRAME",
