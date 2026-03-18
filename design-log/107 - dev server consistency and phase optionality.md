@@ -166,6 +166,26 @@ The `dontCacheSlowly` option creates a parallel code path (`handleDirectRequest`
 
 **`slowRenderTransform` treats all values as slow when no contract** — When no `.jay-contract` file exists, `slowRenderTransform` resolved nothing because `isSlowPhase()` returned false for all bindings (empty phase map). Added a `noMainContract` flag (derived from `!input.contract`) that makes `isSlowPhase` return true for any binding not already in the phase map (from headless contracts). Threaded through `resolveTextBindings`, `transformElement`, `transformChildren`. Also added `noMainContract` to `SlowRenderContext` and updated the PEG parser's `isSlowPhase`. Root cause of hydration test 2/3/5 failures (slow ViewState values never baked into pre-rendered HTML → `sendResponse` sends only fast ViewState → page renders with undefined). 3 new tests added in `describe('No contract')`. All 596 compiler-jay-html tests pass.
 
+**Phase-aware hydration: skip adoptText/jay-coordinate for non-interactive bindings** — Test 2a exposed that the hydrate compiler generated `adoptText` + `jay-coordinate` for ALL `{...}` bindings regardless of contract phase. For `fastCount` (phase `fast`), this is wrong — the value is static on the client after SSR. Only `fast+interactive` bindings need client-side adoption.
+
+Fix in `jay-html-compiler.ts`:
+- `buildInteractivePaths(contract?)` — walks contract tags, collects camelCased property names where `getEffectivePhase() === 'fast+interactive'`. Returns empty set when no contract (preserves existing behavior — all bindings remain dynamic).
+- `textHasInteractiveBindings(text, interactivePaths)` — regex-scans `{expr}` bindings, returns true if any binding's root identifier is in the set.
+- Added `interactivePaths: Set<string>` to both `HydrateContext` and `ServerContext`.
+- `renderHydrateElementContent`: after detecting dynamic text, nulls `textFragment` when `interactivePaths` has entries but none match. Same for mixed-content dynamic text check.
+- `renderServerElementContent`: same treatment — nulls `dynamicTextFragment` when bindings are all non-interactive, uses `hasMixedContentDynamicTextInteractive` instead of `hasMixedContentDynamicText`.
+- `renderHydrate()`: new `contract?: Contract` param, sourced from `jayFile.contract` in `generateElementHydrateFile`.
+- `generateServerElementFile`: builds `interactivePaths` in context from `jayFile.contract`.
+- Safety: when `interactivePaths` is empty (no contract), the guard `size > 0` prevents any skipping — no-contract pages behave exactly as before.
+
+New compiler-jay-html test fixture `basics/phase-aware-dynamic-text`:
+- Contract with `title` (slow), `fast-count` (fast), `interactive-count` (fast+interactive)
+- Hydrate fixture: only `adoptText('0/2', ...)` for `interactiveCount` — no adoption for `title` or `fastCount`
+- Server fixture: only `jay-coordinate="0"` (root) and `jay-coordinate="0/2"` (interactiveCount)
+- Semantic assertions: `expect(actual).not.toMatch(/adoptText.*title/)`, `expect(coordinateMatches.length).toBe(2)`
+
+Test results: compiler-jay-html 598 pass (all green). Hydration test 2a: 13/13 pass (all 3 SSR modes).
+
 ### Remaining work (not yet implemented)
 
 - **AR prefix fixture cascade** — changing auto-ref naming from `"0"` to `"AR0"` requires updating all slow-render, server-element, and hydrate fixtures. Root cause of most remaining test failures.

@@ -1,5 +1,8 @@
 # CLAUDE.md
 
+
+IMPORTANT - YOU ARE NOT ALLOWED TO USE toContain IN TEST FILES.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## What is Jay
@@ -166,3 +169,15 @@ The project follows a rigorous design log methodology for all significant featur
 1. **Maintain `./design-log/index.md`**: Catalog important design logs by category in markdown tables
 2. **Before reading**: Check index.md first to find relevant design logs
 3. **After creating/updating**: Add new entries to appropriate category table
+
+IMPORTANT - YOU ARE NOT ALLOWED TO USE toContain IN TEST FILES.
+
+### CODING STANDARD
+
+IMPORTANT - YOU ARE NOT ALLOWED TO USE toContain IN TEST FILES.
+IMPORTANT - YOU ARE NOT ALLOWED TO USE toContain IN TEST FILES.
+IMPORTANT - YOU ARE NOT ALLOWED TO USE toContain IN TEST FILES.
+IMPORTANT - YOU ARE NOT ALLOWED TO USE toContain IN TEST FILES.
+IMPORTANT - YOU ARE NOT ALLOWED TO USE toContain IN TEST FILES.
+IMPORTANT - YOU ARE NOT ALLOWED TO USE toContain IN TEST FILES.
+IMPORTANT - YOU ARE NOT ALLOWED TO USE toContain IN TEST FILES.

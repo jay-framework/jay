@@ -29,7 +29,7 @@ import {
 } from '@jay-framework/compiler-shared';
 import { assignCoordinates } from './assign-coordinates';
 import { generateAllPhaseViewStateTypes } from '../contract/phase-type-generator';
-import { ContractProp } from '../contract';
+import { Contract, ContractProp, ContractTag, ContractTagType, getEffectivePhase } from '../contract';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
 import {
@@ -2058,6 +2058,52 @@ export function generateElementBridgeFile(jayFile: JayHtmlSourceFile): string {
 }
 
 // ============================================================================
+// Phase-aware helpers — skip hydrate/coordinate for non-interactive bindings
+// ============================================================================
+
+/**
+ * Walk contract tags and collect property paths whose effective phase is 'fast+interactive'.
+ * These are the only bindings that need client-side adoption (adoptText / jay-coordinate).
+ */
+function buildInteractivePaths(contract?: Contract): Set<string> {
+    const paths = new Set<string>();
+    if (!contract) return paths;
+
+    function walk(tags: ContractTag[], parentPhase?: import('../contract').RenderingPhase) {
+        for (const tag of tags) {
+            const phase = getEffectivePhase(tag, parentPhase);
+            const name = camelCase(tag.tag);
+            if (phase === 'fast+interactive') {
+                paths.add(name);
+            }
+            if (tag.tags) {
+                walk(tag.tags, phase);
+            }
+        }
+    }
+    walk(contract.tags);
+    return paths;
+}
+
+/**
+ * Check whether a text string contains any `{expr}` binding whose property path
+ * is in the interactive set. When `interactivePaths` is empty every binding is
+ * considered non-interactive (no contract → all bindings are from fast/slow only).
+ */
+function textHasInteractiveBindings(text: string, interactivePaths: Set<string>): boolean {
+    if (interactivePaths.size === 0) return false;
+    const re = /\{([^}]+)\}/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(text)) !== null) {
+        // The binding expression may be `vs.prop` or just `prop`; take the root identifier.
+        const expr = m[1].trim();
+        const root = expr.split('.')[0].split('[')[0];
+        if (interactivePaths.has(root)) return true;
+    }
+    return false;
+}
+
+// ============================================================================
 // Hydrate Target
 // ============================================================================
 
@@ -2087,6 +2133,8 @@ interface HydrateContext {
      * childCompHydrate's forInstance(instanceCoord) can resolve them correctly.
      */
     instanceCoordPrefix?: string;
+    /** Property paths whose phase is 'fast+interactive' — only these need client adoption */
+    interactivePaths: Set<string>;
 }
 
 /**
@@ -2823,11 +2871,19 @@ function renderHydrateElementContent(
         if (rendered.imports.has(Import.dynamicText)) {
             textFragment = rendered;
         }
+        // Skip adoption if bindings are all non-interactive (slow/fast-only)
+        if (textFragment && context.interactivePaths.size > 0 && !textHasInteractiveBindings(dataJayDynamic, context.interactivePaths)) {
+            textFragment = null;
+        }
     } else if (childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE) {
         const text = childNodes[0].innerText || '';
         const rendered = parseTextExpression(textEscape(text), variables);
         if (rendered.imports.has(Import.dynamicText)) {
             textFragment = rendered;
+        }
+        // Skip adoption if bindings are all non-interactive (slow/fast-only)
+        if (textFragment && context.interactivePaths.size > 0 && !textHasInteractiveBindings(text, context.interactivePaths)) {
+            textFragment = null;
         }
     }
 
@@ -2839,11 +2895,12 @@ function renderHydrateElementContent(
     );
 
     // Mixed content: text with binding + element siblings (DL#102 — adoptText by position)
-    const hasTextWithBinding = (n: Node) =>
+    const hasTextWithInteractiveBinding = (n: Node) =>
         n.nodeType === NodeType.TEXT_NODE &&
-        /\{[^}]+\}/.test((n as Node & { innerText?: string }).innerText || '');
+        /\{[^}]+\}/.test((n as Node & { innerText?: string }).innerText || '') &&
+        (context.interactivePaths.size === 0 || textHasInteractiveBindings((n as Node & { innerText?: string }).innerText || '', context.interactivePaths));
     const hasMixedContentDynamicText =
-        childNodes.some(hasTextWithBinding) &&
+        childNodes.some(hasTextWithInteractiveBinding) &&
         childNodes.some((n) => n.nodeType === NodeType.ELEMENT_NODE);
 
     // Determine if this element itself needs adoption
@@ -3053,6 +3110,7 @@ function renderHydrate(
     preRenderType: string,
     refsType: string,
     headlessImports: JayHeadlessImports[],
+    contract?: Contract,
 ): RenderFragment {
     const variables = new Variables(types);
     const importedRefNameToRef = processImportedHeadless(headlessImports);
@@ -3076,6 +3134,7 @@ function renderHydrate(
         insideFastForEach: false,
         insideSlowForEach: false,
         varMappings: {},
+        interactivePaths: buildInteractivePaths(contract),
     };
 
     // Use ensureSingleChildElement to skip the <body> wrapper and get the
@@ -3167,6 +3226,7 @@ export function generateElementHydrateFile(
         preRenderType,
         refsType,
         jayFile.headlessImports,
+        jayFile.contract,
     );
 
     // If we have contract or inline data, replace the 2-parameter JayContract with 5-parameter version
@@ -3239,6 +3299,8 @@ interface ServerContext {
     insideForEach: boolean;
     /** Whether we're inside a slowForEach (affects instance key computation) */
     insideSlowForEach: boolean;
+    /** Property paths whose phase is 'fast+interactive' — only these need client adoption */
+    interactivePaths: Set<string>;
 }
 
 const COORD_ATTR = 'jay-coordinate-base';
@@ -4009,11 +4071,19 @@ function renderServerElementContent(
         if (isDynamic) {
             dynamicTextFragment = fragment;
         }
+        // Skip coordinate if bindings are all non-interactive (slow/fast-only)
+        if (dynamicTextFragment && context.interactivePaths.size > 0 && !textHasInteractiveBindings(dataJayDynamic, context.interactivePaths)) {
+            dynamicTextFragment = null;
+        }
     } else if (childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE) {
         const text = childNodes[0].innerText || '';
         const [fragment, isDynamic] = parseServerTemplateExpression(textEscape(text), variables);
         if (isDynamic) {
             dynamicTextFragment = fragment;
+        }
+        // Skip coordinate if bindings are all non-interactive (slow/fast-only)
+        if (dynamicTextFragment && context.interactivePaths.size > 0 && !textHasInteractiveBindings(text, context.interactivePaths)) {
+            dynamicTextFragment = null;
         }
     }
 
@@ -4030,7 +4100,7 @@ function renderServerElementContent(
         refName !== null ||
         hasDynamicAttributeBindings(element, variables) ||
         hasInteractiveChildElements(childNodes) ||
-        hasMixedContentDynamicText(childNodes);
+        hasMixedContentDynamicTextInteractive(childNodes, context.interactivePaths);
 
     // Read pre-assigned coordinate value from jay-coordinate-base (DL#103)
     const coordTemplate = needsCoordinate ? element.getAttribute(COORD_ATTR) : null;
@@ -4254,6 +4324,18 @@ function hasMixedContentDynamicText(childNodes: Node[]): boolean {
     );
 }
 
+/** Phase-aware variant: only counts bindings that are interactive. */
+function hasMixedContentDynamicTextInteractive(childNodes: Node[], interactivePaths: Set<string>): boolean {
+    const hasTextWithInteractiveBinding = (n: Node) =>
+        n.nodeType === NodeType.TEXT_NODE &&
+        /\{[^}]+\}/.test((n as Node & { innerText?: string }).innerText || '') &&
+        (interactivePaths.size === 0 || textHasInteractiveBindings((n as Node & { innerText?: string }).innerText || '', interactivePaths));
+    return (
+        childNodes.some(hasTextWithInteractiveBinding) &&
+        childNodes.some((n) => n.nodeType === NodeType.ELEMENT_NODE)
+    );
+}
+
 export interface ServerElementOptions {
     /** Path to write debug coordinate pre-process output. When provided, the
      *  serialized DOM with jay-coordinate-base attributes is returned via result. */
@@ -4287,6 +4369,7 @@ export function generateServerElementFile(
         varMappings: {},
         insideForEach: false,
         insideSlowForEach: false,
+        interactivePaths: buildInteractivePaths(jayFile.contract),
     };
 
     // Render root element — coordinate comes from jay-coordinate-base.

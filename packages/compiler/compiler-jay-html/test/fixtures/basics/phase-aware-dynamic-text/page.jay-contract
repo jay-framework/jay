@@ -1,0 +1,14 @@
+name: PhaseAwareDynamicText
+tags:
+  - tag: title
+    type: data
+    dataType: string
+    phase: slow
+  - tag: fast-count
+    type: data
+    dataType: number
+    phase: fast
+  - tag: interactive-count
+    type: data
+    dataType: number
+    phase: fast+interactive

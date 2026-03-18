@@ -41,6 +41,15 @@ describe('generate jay-html server element', () => {
                 await readFixtureServerElementFile(folder),
             );
         });
+
+        it('for phase-aware dynamic text (only interactive bindings get jay-coordinate)', async () => {
+            const folder = 'basics/phase-aware-dynamic-text';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
     });
 
     describe('conditions', () => {
