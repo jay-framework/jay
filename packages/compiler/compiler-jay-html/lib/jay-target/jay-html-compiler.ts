@@ -2103,6 +2103,51 @@ function textHasInteractiveBindings(text: string, interactivePaths: Set<string>)
     return false;
 }
 
+/**
+ * Extract all root identifiers from a condition expression.
+ * Handles `prop`, `!prop`, `a && b`, `a || b`, comparisons, etc.
+ */
+function extractConditionIdentifiers(condition: string): string[] {
+    // Match word characters that start an identifier (not preceded by . which would make it a sub-property)
+    const ids: string[] = [];
+    const re = /(?<![.\w])([a-zA-Z_]\w*)/g;
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(condition)) !== null) {
+        // Skip JS keywords/literals
+        if (['true', 'false', 'null', 'undefined', 'typeof', 'instanceof'].includes(m[1])) continue;
+        ids.push(m[1]);
+    }
+    return ids;
+}
+
+/**
+ * Check whether a conditional's `if=` expression references any interactive property.
+ * When `interactivePaths` is empty (no contract), all conditionals are treated as interactive.
+ */
+function conditionIsInteractive(condition: string, interactivePaths: Set<string>): boolean {
+    if (interactivePaths.size === 0) return true;
+    return extractConditionIdentifiers(condition).some((id) => interactivePaths.has(id));
+}
+
+/**
+ * Simplify a condition expression for hydration by dropping non-interactive `&&` terms.
+ * E.g. `slowFlag && fastFlag && interactiveFlag` → `interactiveFlag` when only
+ * `interactiveFlag` is interactive. Non-interactive terms are always true on the client.
+ * Returns the original condition if it can't be simplified (no `&&`, or `||` present).
+ */
+function simplifyConditionForHydrate(condition: string, interactivePaths: Set<string>): string {
+    if (interactivePaths.size === 0) return condition;
+    // Only simplify pure && expressions (don't touch || which has different semantics)
+    if (condition.includes('||')) return condition;
+    const terms = condition.split('&&').map((t) => t.trim());
+    const interactiveTerms = terms.filter((term) => {
+        const ids = extractConditionIdentifiers(term);
+        return ids.some((id) => interactivePaths.has(id));
+    });
+    if (interactiveTerms.length === 0) return condition;
+    return interactiveTerms.join(' && ');
+}
+
 // ============================================================================
 // Hydrate Target
 // ============================================================================
@@ -2199,8 +2244,10 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
     }
 
     // --- Conditional (if=) ---
-    if (isConditional(element)) {
-        const condition = element.getAttribute('if');
+    // Skip hydrateConditional for non-interactive conditions (slow/fast-only).
+    // These are resolved at SSR and static on the client — treat as regular element.
+    if (isConditional(element) && conditionIsInteractive(element.getAttribute('if'), context.interactivePaths)) {
+        const condition = simplifyConditionForHydrate(element.getAttribute('if'), context.interactivePaths);
         const renderedCondition = parseCondition(condition, context.variables);
         // Read coordinate from jay-coordinate-base (DL#103)
         const coordinate = element.getAttribute(COORD_ATTR) || '0';
@@ -2887,11 +2934,13 @@ function renderHydrateElementContent(
         }
     }
 
-    // Check if children contain conditionals or forEach (makes parent a container)
+    // Check if children contain interactive conditionals or forEach (makes parent a container).
+    // Non-interactive conditionals (slow/fast-only) are resolved at SSR and don't need adoption.
     const hasInteractiveChildren = childNodes.some(
         (child) =>
             child.nodeType === NodeType.ELEMENT_NODE &&
-            (isConditional(child as HTMLElement) || isForEach(child as HTMLElement)),
+            ((isConditional(child as HTMLElement) && conditionIsInteractive((child as HTMLElement).getAttribute('if'), context.interactivePaths)) ||
+                isForEach(child as HTMLElement)),
     );
 
     // Mixed content: text with binding + element siblings (DL#102 — adoptText by position)
@@ -2953,7 +3002,7 @@ function renderHydrateElementContent(
         for (const child of childNodes) {
             if (child.nodeType !== NodeType.ELEMENT_NODE) continue;
             const htmlChild = child as HTMLElement;
-            if (isConditional(htmlChild) || isForEach(htmlChild)) {
+            if ((isConditional(htmlChild) && conditionIsInteractive(htmlChild.getAttribute('if'), context.interactivePaths)) || isForEach(htmlChild)) {
                 // Dynamic child: render normally (produces hydrateForEach/hydrateConditional)
                 const frag = renderHydrateNode(child, context);
                 if (frag.rendered.trim()) {
@@ -4090,12 +4139,13 @@ function renderServerElementContent(
     // Determine if this element needs a jay-coordinate attribute.
     // Only emit for elements that the hydrate target needs to adopt.
     // Root must always emit: hydrate needs adoptElement("0", ...) to resolve.
-    // Conditional elements (if=) must emit: hydrate adoptElement fails otherwise,
+    // Interactive conditional elements (if=) must emit: hydrate adoptElement fails otherwise,
     // causing createFallback to create duplicates (SSR content + client-created).
+    // Non-interactive conditionals (slow/fast-only) are static on client and don't need coordinates.
     const refName = element.attributes.ref ? camelCase(element.attributes.ref) : null;
     const needsCoordinate =
         options?.isRoot === true ||
-        isConditional(element) ||
+        (isConditional(element) && conditionIsInteractive(element.getAttribute('if'), context.interactivePaths)) ||
         dynamicTextFragment !== null ||
         refName !== null ||
         hasDynamicAttributeBindings(element, variables) ||

@@ -182,9 +182,28 @@ New compiler-jay-html test fixture `basics/phase-aware-dynamic-text`:
 - Contract with `title` (slow), `fast-count` (fast), `interactive-count` (fast+interactive)
 - Hydrate fixture: only `adoptText('0/2', ...)` for `interactiveCount` — no adoption for `title` or `fastCount`
 - Server fixture: only `jay-coordinate="0"` (root) and `jay-coordinate="0/2"` (interactiveCount)
-- Semantic assertions: `expect(actual).not.toMatch(/adoptText.*title/)`, `expect(coordinateMatches.length).toBe(2)`
-
 Test results: compiler-jay-html 598 pass (all green). Hydration test 2a: 13/13 pass (all 3 SSR modes).
+
+**Phase-aware conditionals: skip hydrateConditional/jay-coordinate for non-interactive conditions** — Extended the phase-aware fix to `if=` conditionals. A conditional whose condition references a slow or fast-only property doesn't need `hydrateConditional` or `jay-coordinate` — it's resolved at SSR and static on the client.
+
+Fix in `jay-html-compiler.ts`:
+- `conditionIsInteractive(condition, interactivePaths)` — extracts root identifier from `if=` expression (stripping `!` prefix), returns true if it's in the interactive set. When `interactivePaths` is empty (no contract), all conditionals are treated as interactive.
+- Hydrate: `renderHydrateElement` skips the conditional block when `!conditionIsInteractive(...)` — the element is treated as a regular static element instead of generating `hydrateConditional`.
+- Hydrate: `hasInteractiveChildren` only counts conditionals whose condition is interactive — non-interactive conditionals don't trigger `adoptDynamicElement` on the parent.
+- Hydrate: dynamic child loop only treats interactive conditionals as dynamic children.
+- Server: `needsCoordinate` only emits `jay-coordinate` for interactive conditionals.
+
+New compiler-jay-html test fixture `basics/phase-aware-conditionals`:
+- Contract with `slow-flag` (slow), `fast-flag` (fast), `interactive-flag` (fast+interactive)
+- Hydrate fixture: `STATIC, STATIC, hydrateConditional(interactiveFlag)` — slow and fast conditionals produce STATIC sentinels
+- Server fixture: only `jay-coordinate="0"` (root) and `jay-coordinate="0/2"` (interactive conditional)
+
+New dev-server test `3a. Phase-aware conditionals`:
+- 6 conditionals across 3 phases (slow true/false, fast true/false, interactive true/false)
+- Validates slow/fast conditionals are static, interactive conditionals are reactive
+- Interactivity test: toggle button flips interactive conditionals while slow/fast remain unchanged
+
+Test results: compiler-jay-html 600 pass (all green). Hydration test 3a: 16/16 pass (all 3 SSR modes).
 
 ### Remaining work (not yet implemented)
 

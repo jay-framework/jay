@@ -395,11 +395,14 @@ describe('hydration', () => {
                 // Interactive conditionals: resolved at SSR, reactive on client
                 expect(await page.$('#target .interactive-true')).toBeTruthy();
                 expect(await page.$('#target .interactive-hidden')).toBeNull();
+                // Mixed: slow(true) && fast(true) && interactive(true) → visible
+                expect(await page.$('#target .mixed')).toBeTruthy();
             },
             interactivityChecks: async (page) => {
-                // Before toggle: interactiveVisible=true, interactiveHidden=false
+                // Before toggle: interactiveVisible=true, interactiveHidden=false, mixed=visible
                 expect(await page.$('#target .interactive-true')).toBeTruthy();
                 expect(await page.$('#target .interactive-hidden')).toBeNull();
+                expect(await page.$('#target .mixed')).toBeTruthy();
 
                 // Toggle: interactiveVisible→false, interactiveHidden→true
                 await page.click('#target button');
@@ -409,6 +412,8 @@ describe('hydration', () => {
                 );
                 expect(await page.$('#target .interactive-true')).toBeNull();
                 expect(await page.$('#target .interactive-hidden')).toBeTruthy();
+                // Mixed should also hide (interactiveVisible is now false)
+                expect(await page.$('#target .mixed')).toBeNull();
 
                 // Slow and fast conditionals should be unchanged (static)
                 expect(await page.$('#target .slow-true')).toBeTruthy();

@@ -1,0 +1,13 @@
+<html>
+<head>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+    <div>
+        <span if="slowFlag">Slow</span>
+        <span if="fastFlag">Fast</span>
+        <span if="interactiveFlag">Interactive</span>
+        <span if="slowFlag && fastFlag && interactiveFlag">Mixed</span>
+    </div>
+</body>
+</html>

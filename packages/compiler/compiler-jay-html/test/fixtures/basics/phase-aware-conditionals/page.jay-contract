@@ -1,0 +1,14 @@
+name: PhaseAwareConditionals
+tags:
+  - tag: slow-flag
+    type: data
+    dataType: boolean
+    phase: slow
+  - tag: fast-flag
+    type: data
+    dataType: boolean
+    phase: fast
+  - tag: interactive-flag
+    type: data
+    dataType: boolean
+    phase: fast+interactive

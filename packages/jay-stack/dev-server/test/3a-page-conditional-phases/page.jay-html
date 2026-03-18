@@ -12,6 +12,7 @@
         <span if="fastHidden" class="fast-false">Fast Hidden</span>
         <span if="interactiveVisible" class="interactive-true">Interactive Visible</span>
         <span if="interactiveHidden" class="interactive-hidden">Interactive Hidden</span>
+        <span if="slowVisible && fastVisible && interactiveVisible" class="mixed">Mixed</span>
         <button ref="toggle-button">Toggle</button>
     </div>
 </body>
