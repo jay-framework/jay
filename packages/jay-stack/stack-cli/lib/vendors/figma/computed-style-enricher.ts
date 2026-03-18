@@ -116,6 +116,7 @@ export async function enrichWithComputedStyles(options: EnricherOptions): Promis
             const mergedRepeaterDataMap: RepeaterDataMap = new Map();
             const perScenarioMaps = new Map<string, ComputedStyleMap>();
             const screenshots = new Map<string, string>();
+            let bodyBackgroundColor: string | undefined;
 
             if (options.screenshotDir) {
                 mkdirSync(options.screenshotDir, { recursive: true });
@@ -174,6 +175,16 @@ export async function enrichWithComputedStyles(options: EnricherOptions): Promis
                     const { styleMap: scenarioStyleMap, repeaterDataMap: scenarioRepeaterMap } =
                         await extractComputedStyles(page, scenario.id);
 
+                    if (scenario === scenarios[0] && !bodyBackgroundColor) {
+                        try {
+                            bodyBackgroundColor = await page.evaluate(() =>
+                                getComputedStyle(document.body).getPropertyValue('background-color'),
+                            );
+                        } catch {
+                            // Non-fatal: SECTION will fall back to white default
+                        }
+                    }
+
                     perScenarioMaps.set(scenario.id, scenarioStyleMap);
 
                     for (const [key, data] of scenarioStyleMap) {
@@ -227,6 +238,7 @@ export async function enrichWithComputedStyles(options: EnricherOptions): Promis
                 scenarios,
                 screenshots,
                 repeaterDataMap: mergedRepeaterDataMap,
+                bodyBackgroundColor,
             };
         } finally {
             await browser.close();

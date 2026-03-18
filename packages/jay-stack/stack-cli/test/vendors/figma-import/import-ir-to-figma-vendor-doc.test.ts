@@ -732,4 +732,255 @@ describe('adaptIRToFigmaVendorDoc', () => {
             }
         });
     });
+
+    describe('Block flow VERTICAL default', () => {
+        it('container frame with children and no style gets VERTICAL layout', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        children: [makeFrame({ id: 'c1' }), makeFrame({ id: 'c2' })],
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            expect(result.children![0].layoutMode).toBe('VERTICAL');
+        });
+
+        it('container frame with explicit HORIZONTAL layout keeps HORIZONTAL', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: { layoutMode: 'row' },
+                        children: [makeFrame({ id: 'c1' })],
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            expect(result.children![0].layoutMode).toBe('HORIZONTAL');
+        });
+
+        it('empty frame (no children) gets no layout mode', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [makeFrame({ children: undefined })],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            expect(result.children![0].layoutMode).toBeUndefined();
+        });
+
+        it('inline display element does NOT get VERTICAL default', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: { display: 'inline' },
+                        children: [makeFrame({ id: 'c1' })],
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            expect(result.children![0].layoutMode).toBeUndefined();
+        });
+
+        it('inline-block display element does NOT get VERTICAL default', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: { display: 'inline-block' },
+                        children: [makeFrame({ id: 'c1' })],
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            expect(result.children![0].layoutMode).toBeUndefined();
+        });
+
+        it('absolute-positioned frame does NOT get VERTICAL default', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: { isAbsolute: true },
+                        children: [makeFrame({ id: 'c1' })],
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const child = result.children![0];
+            expect(child.layoutMode).not.toBe('VERTICAL');
+        });
+
+        it('display: contents element DOES get VERTICAL default', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: { display: 'contents' },
+                        children: [makeFrame({ id: 'c1' })],
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const child = result.children![0];
+            expect(child.layoutMode).toBe('VERTICAL');
+            expect(child.pluginData?.['jay-layout-source']).toBeUndefined();
+        });
+
+        it('block-default frame gets jay-layout-source pluginData', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        children: [makeFrame({ id: 'c1' })],
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            expect(result.children![0].pluginData?.['jay-layout-source']).toBe('block-default');
+        });
+
+        it('children of new VERTICAL frames get cross-axis FILL', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        children: [makeFrame({ id: 'c1' }), makeFrame({ id: 'c2' })],
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const container = result.children![0];
+            expect(container.layoutMode).toBe('VERTICAL');
+            for (const child of container.children!) {
+                expect(child.layoutSizingHorizontal).toBe('FILL');
+            }
+        });
+
+        it('explicit grid layout is NOT overridden to VERTICAL', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: {
+                            layoutMode: 'grid',
+                            gridColumns: [
+                                { type: 'FLEX', value: 1 },
+                                { type: 'FLEX', value: 1 },
+                            ],
+                        },
+                        children: [makeFrame({ id: 'c1' }), makeFrame({ id: 'c2' })],
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            expect(result.children![0].layoutMode).toBe('GRID');
+        });
+    });
+
+    describe('Viewport-width default for SECTION children', () => {
+        it('SECTION direct FRAME child gets 960px width when no width set', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [makeFrame({ children: [makeFrame({ id: 'c1' })] })],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            expect(result.children![0].width).toBe(960);
+            expect(result.children![0].layoutSizingHorizontal).toBe('FIXED');
+        });
+
+        it('SECTION direct FRAME child keeps explicit width', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: { width: 1200 },
+                        children: [makeFrame({ id: 'c1' })],
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            expect(result.children![0].width).toBe(1200);
+        });
+
+        it('SECTION direct COMPONENT_SET child does NOT get 960px', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        kind: 'COMPONENT_SET',
+                        id: 'cs-1',
+                        children: [
+                            makeFrame({
+                                kind: 'COMPONENT',
+                                id: 'comp-1',
+                                variantProperties: { state: 'default' },
+                            }),
+                        ],
+                        componentPropertyDefinitions: {
+                            state: { type: 'VARIANT', variantOptions: ['default'] },
+                        },
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const cs = result.children![0];
+            expect(cs.width).toBeUndefined();
+        });
+
+        it('nested FRAME does NOT get 960px default', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        style: { width: 800 },
+                        children: [makeFrame({ id: 'inner', children: [makeFrame({ id: 'c1' })] })],
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const inner = result.children![0].children![0];
+            expect(inner.width).not.toBe(960);
+        });
+    });
+
+    describe('SECTION background fills', () => {
+        it('SECTION gets white default fills when no pageBackgroundColor', () => {
+            const root = makeFrame({ kind: 'SECTION', children: [makeFrame()] });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            expect(result.fills).toEqual([
+                { type: 'SOLID', color: { r: 1, g: 1, b: 1 }, opacity: 1 },
+            ]);
+        });
+
+        it('SECTION gets page background color when provided', () => {
+            const root = makeFrame({ kind: 'SECTION', children: [makeFrame()] });
+            const doc = makeDoc(root);
+            doc.pageBackgroundColor = 'rgb(240, 240, 240)';
+            const result = adaptIRToFigmaVendorDoc(doc);
+            expect(result.fills).toEqual([
+                {
+                    type: 'SOLID',
+                    color: {
+                        r: expect.closeTo(240 / 255, 2),
+                        g: expect.closeTo(240 / 255, 2),
+                        b: expect.closeTo(240 / 255, 2),
+                    },
+                    opacity: 1,
+                },
+            ]);
+        });
+
+        it('SECTION gets white fills when body background is transparent', () => {
+            const root = makeFrame({ kind: 'SECTION', children: [makeFrame()] });
+            const doc = makeDoc(root);
+            doc.pageBackgroundColor = 'rgba(0, 0, 0, 0)';
+            const result = adaptIRToFigmaVendorDoc(doc);
+            expect(result.fills).toEqual([
+                { type: 'SOLID', color: { r: 1, g: 1, b: 1 }, opacity: 1 },
+            ]);
+        });
+    });
 });

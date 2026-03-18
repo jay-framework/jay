@@ -2,6 +2,7 @@
   "type": "SECTION",
   "name": "test",
   "visible": true,
+  "fills": [{"type": "SOLID", "color": {"r": 1, "g": 1, "b": 1}, "opacity": 1}],
   "pluginData": { "jpage": "true", "urlRoute": "/test" },
   "children": [
     {

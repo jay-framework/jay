@@ -2,6 +2,7 @@
   "type": "SECTION",
   "name": "test",
   "visible": true,
+  "fills": [{"type": "SOLID", "color": {"r": 1, "g": 1, "b": 1}, "opacity": 1}],
   "pluginData": {
     "jpage": "true",
     "urlRoute": "/test"
@@ -99,6 +100,9 @@
               "visible": true,
               "width": 368,
               "height": 300,
+              "layoutMode": "VERTICAL",
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED",
               "fills": [
                 {
                   "type": "SOLID",
@@ -111,7 +115,9 @@
                 }
               ],
               "cornerRadius": 8,
-              "pluginData": {},
+              "pluginData": {
+                "jay-layout-source": "block-default"
+              },
               "children": [
                 {
                   "type": "TEXT",
@@ -119,6 +125,7 @@
                   "visible": true,
                   "textAutoResize": "WIDTH_AND_HEIGHT",
                   "characters": "Image Media",
+                  "layoutSizingHorizontal": "FILL",
                   "fills": [
                     {
                       "type": "SOLID",
@@ -153,6 +160,9 @@
               "visible": true,
               "width": 368,
               "height": 300,
+              "layoutMode": "VERTICAL",
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED",
               "fills": [
                 {
                   "type": "SOLID",
@@ -165,7 +175,9 @@
                 }
               ],
               "cornerRadius": 8,
-              "pluginData": {},
+              "pluginData": {
+                "jay-layout-source": "block-default"
+              },
               "children": [
                 {
                   "type": "TEXT",
@@ -173,6 +185,7 @@
                   "visible": true,
                   "textAutoResize": "WIDTH_AND_HEIGHT",
                   "characters": "Video Media",
+                  "layoutSizingHorizontal": "FILL",
                   "fills": [
                     {
                       "type": "SOLID",

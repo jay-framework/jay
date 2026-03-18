@@ -18,18 +18,18 @@ describe('style-resolver', () => {
             const { style, warnings } = resolveStyle(
                 'display: flex; flex-direction: row; gap: 16px',
             );
-            expect(style).toEqual({ layoutMode: 'row', gap: 16, rowGap: 16 });
+            expect(style).toEqual({ display: 'flex', layoutMode: 'row', gap: 16, rowGap: 16 });
             expect(warnings).toEqual([]);
         });
 
         it('column layout', () => {
             const { style } = resolveStyle('display: flex; flex-direction: column');
-            expect(style).toEqual({ layoutMode: 'column' });
+            expect(style).toEqual({ display: 'flex', layoutMode: 'column' });
         });
 
         it('flex default: display flex without direction', () => {
             const { style } = resolveStyle('display: flex');
-            expect(style).toEqual({ layoutMode: 'row' });
+            expect(style).toEqual({ display: 'flex', layoutMode: 'row' });
         });
 
         it('no flex: width only has no layoutMode', () => {
@@ -155,6 +155,7 @@ describe('style-resolver', () => {
                 'display: flex; justify-content: center; align-items: stretch',
             );
             expect(style).toEqual({
+                display: 'flex',
                 layoutMode: 'row',
                 justifyContent: 'CENTER',
                 alignItems: 'STRETCH',
@@ -811,6 +812,45 @@ describe('style-resolver', () => {
         it('grid-column does not produce CSS_UNSUPPORTED warning', () => {
             const { warnings } = resolveStyle('grid-column: span 2');
             expect(warnings.filter((w) => w.includes('CSS_UNSUPPORTED'))).toEqual([]);
+        });
+    });
+
+    describe('raw display value storage', () => {
+        it('display: block stores raw display value', () => {
+            const { style } = resolveStyle('display: block');
+            expect(style.display).toBe('block');
+            expect(style.layoutMode).toBe('column');
+        });
+
+        it('display: flex stores raw display value', () => {
+            const { style } = resolveStyle('display: flex');
+            expect(style.display).toBe('flex');
+            expect(style.layoutMode).toBe('row');
+        });
+
+        it('display: contents stores raw display value', () => {
+            const { style } = resolveStyle('display: contents');
+            expect(style.display).toBe('contents');
+            expect(style.layoutMode).toBeUndefined();
+        });
+
+        it('display: inline stores raw display value', () => {
+            const { style } = resolveStyle('display: inline');
+            expect(style.display).toBe('inline');
+            expect(style.layoutMode).toBeUndefined();
+        });
+
+        it('display: inline-block stores raw display value', () => {
+            const { style } = resolveStyle('display: inline-block');
+            expect(style.display).toBe('inline-block');
+            expect(style.layoutMode).toBeUndefined();
+        });
+
+        it('enriched display value is stored', () => {
+            const { style } = resolveStyle('', undefined, undefined, {
+                styles: { display: 'block' },
+            });
+            expect(style.display).toBe('block');
         });
     });
 });

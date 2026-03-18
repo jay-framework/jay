@@ -500,6 +500,8 @@ function adaptNode(
             base.type = 'SECTION';
             base.pluginData = base.pluginData || {};
             base.pluginData['jpage'] = 'true';
+            // Fills are set in adaptIRToFigmaVendorDoc after the root is built,
+            // using pageBackgroundColor from the IR document
             break;
         }
         case 'FRAME': {
@@ -525,6 +527,35 @@ function adaptNode(
                 base.pluginData = base.pluginData || {};
                 base.pluginData['semanticHtml'] = node.tagName;
             }
+
+            // Default block flow: container frames without explicit layout get VERTICAL
+            // (matches CSS block flow where children stack vertically)
+            if (
+                (!base.layoutMode || base.layoutMode === 'NONE') &&
+                node.children &&
+                node.children.length > 0
+            ) {
+                const display = node.style?.display;
+                const isInline = display === 'inline' || display === 'inline-block';
+                const isAbsolute = base.layoutPositioning === 'ABSOLUTE';
+
+                if (!isInline && !isAbsolute) {
+                    base.layoutMode = 'VERTICAL';
+
+                    if (display !== 'contents') {
+                        base.pluginData = base.pluginData || {};
+                        base.pluginData['jay-layout-source'] = 'block-default';
+                    }
+
+                    if (!base.layoutSizingHorizontal) {
+                        base.layoutSizingHorizontal =
+                            node.style?.width !== undefined ? 'FIXED' : 'HUG';
+                        base.layoutSizingVertical =
+                            node.style?.height !== undefined ? 'FIXED' : 'HUG';
+                    }
+                }
+            }
+
             break;
         }
         case 'TEXT': {
@@ -1023,6 +1054,30 @@ export function adaptIRToFigmaVendorDoc(
         root.pluginData['jpage'] = 'true';
         if (ir.route) {
             root.pluginData['urlRoute'] = ir.route;
+        }
+
+        // Set SECTION background from page's body computed style
+        const bgColor = ir.pageBackgroundColor;
+        if (bgColor) {
+            const color = parseColor(bgColor);
+            if (color.a > 0) {
+                root.fills = [
+                    { type: 'SOLID', color: { r: color.r, g: color.g, b: color.b }, opacity: color.a },
+                ];
+            }
+        }
+        if (!root.fills) {
+            root.fills = [{ type: 'SOLID', color: { r: 1, g: 1, b: 1 }, opacity: 1 }];
+        }
+
+        // Viewport-width fallback for direct FRAME children without explicit width
+        if (root.children) {
+            for (const child of root.children) {
+                if (child.type === 'FRAME' && !child.width) {
+                    child.width = 960;
+                    child.layoutSizingHorizontal = 'FIXED';
+                }
+            }
         }
 
         // Generate and attach ImportReport

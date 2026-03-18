@@ -728,9 +728,19 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
     );
     warnings.push(...bindingWarnings);
 
-    let name = element.getAttribute('ref') || element.getAttribute('id') || tag;
+    let name = element.getAttribute('ref') || element.getAttribute('id') || '';
 
-    // Descriptive naming for form elements
+    if (!name) {
+        const classAttr = element.getAttribute('class');
+        if (classAttr) {
+            const firstClass = classAttr.trim().split(/\s+/)[0];
+            name = `${tag}.${firstClass}`;
+        } else {
+            name = tag;
+        }
+    }
+
+    // Descriptive naming for form elements (overrides class-based name)
     if (tag === 'button') {
         const btnText = element.textContent?.trim().substring(0, 30);
         if (btnText) name = `button: ${btnText}`;
@@ -740,6 +750,12 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
     } else if (tag === 'textarea') {
         const taName = htmlAttributes['name'];
         if (taName) name = `textarea: ${taName}`;
+    }
+
+    // Mark display:contents elements for designer clarity
+    const inlineStyle = element.getAttribute('style') || '';
+    if (inlineStyle.includes('display: contents') || inlineStyle.includes('display:contents')) {
+        name = `(contents) ${name}`;
     }
 
     if (tag === 'svg') {
@@ -1340,6 +1356,7 @@ export function buildImportIR(
         repeaterDataMap?: RepeaterDataMap;
         perScenarioMaps?: ScenarioStyleMaps;
         scenarios?: VariantScenario[];
+        bodyBackgroundColor?: string;
     },
 ): ImportIRDocument {
     const warnings: string[] = [];
@@ -1398,6 +1415,7 @@ export function buildImportIR(
         version: 'import-ir/v0',
         pageName,
         route: pageUrl,
+        pageBackgroundColor: options?.bodyBackgroundColor,
         source: {
             kind: 'jay-html',
             filePath: pageUrl,

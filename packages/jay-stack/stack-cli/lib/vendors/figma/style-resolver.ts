@@ -596,6 +596,7 @@ export function resolveStyle(
                 break;
             }
             case 'display':
+                style.display = value;
                 if (value === 'flex' || value === 'inline-flex') {
                     if (!style.layoutMode) style.layoutMode = 'row';
                 } else if (value === 'grid' || value === 'inline-grid') {

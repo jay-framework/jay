@@ -129,6 +129,8 @@ export interface EnricherResult {
     screenshots: Map<string, string>;
     /** All rendered instances per sid, for repeater demo item extraction. */
     repeaterDataMap: RepeaterDataMap;
+    /** Computed background-color of the page's <body> element (CSS color string). */
+    bodyBackgroundColor?: string;
 }
 
 /**

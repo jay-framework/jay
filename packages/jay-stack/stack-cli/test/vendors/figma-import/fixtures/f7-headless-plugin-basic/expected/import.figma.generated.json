@@ -3,6 +3,7 @@
   "name": "test",
   "type": "SECTION",
   "visible": true,
+  "fills": [{"type": "SOLID", "color": {"r": 1, "g": 1, "b": 1}, "opacity": 1}],
   "pluginData": {
     "jpage": "true",
     "urlRoute": "/test"
@@ -210,6 +211,8 @@
           "name": "addToCart",
           "type": "FRAME",
           "visible": true,
+          "layoutMode": "VERTICAL",
+          "layoutSizingVertical": "HUG",
           "paddingTop": 12,
           "paddingRight": 24,
           "paddingBottom": 12,
@@ -227,13 +230,15 @@
           ],
           "cornerRadius": 8,
           "pluginData": {
-            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"addToCart\"]}]"
+            "jay-layer-bindings": "[{\"pageContractPath\":{\"pageUrl\":\"/test\"},\"jayPageSectionId\":\"fbacc9edefa1\",\"tagPath\":[\"addToCart\"]}]",
+            "jay-layout-source": "block-default"
           },
           "children": [
             {
               "id": "1eef49ad9aff",
               "name": "Add to Cart",
               "type": "TEXT",
+              "layoutSizingHorizontal": "FILL",
               "visible": true,
               "textAutoResize": "WIDTH_AND_HEIGHT",
               "characters": "Add to Cart",
@@ -286,6 +291,9 @@
               "visible": true,
               "width": 452,
               "height": 300,
+              "layoutMode": "VERTICAL",
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED",
               "fills": [
                 {
                   "type": "SOLID",
@@ -297,12 +305,15 @@
                   "opacity": 1
                 }
               ],
-              "pluginData": {},
+              "pluginData": {
+                "jay-layout-source": "block-default"
+              },
               "children": [
                 {
                   "id": "7fe22bd5170f",
                   "name": "Image placeholder",
                   "type": "TEXT",
+                  "layoutSizingHorizontal": "FILL",
                   "visible": true,
                   "textAutoResize": "WIDTH_AND_HEIGHT",
                   "characters": "Image placeholder",
@@ -342,6 +353,9 @@
               "visible": true,
               "width": 452,
               "height": 300,
+              "layoutMode": "VERTICAL",
+              "layoutSizingHorizontal": "FIXED",
+              "layoutSizingVertical": "FIXED",
               "fills": [
                 {
                   "type": "SOLID",
@@ -353,12 +367,15 @@
                   "opacity": 1
                 }
               ],
-              "pluginData": {},
+              "pluginData": {
+                "jay-layout-source": "block-default"
+              },
               "children": [
                 {
                   "id": "0720df4fc376",
                   "name": "Video placeholder",
                   "type": "TEXT",
+                  "layoutSizingHorizontal": "FILL",
                   "visible": true,
                   "textAutoResize": "WIDTH_AND_HEIGHT",
                   "characters": "Video placeholder",

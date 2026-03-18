@@ -377,4 +377,170 @@ describe('CSS Roundtrip Fidelity', () => {
             expect(child.primaryAxisAlignItems).toBe('SPACE_BETWEEN');
         });
     });
+
+    describe('Phase 1 visual fidelity', () => {
+        it('full page import: white section, vertical layout, 960px width', () => {
+            const child1: ImportIRNode = {
+                id: 'c1',
+                sourcePath: '/div/div1',
+                kind: 'FRAME',
+                name: 'child1',
+            };
+            const child2: ImportIRNode = {
+                id: 'c2',
+                sourcePath: '/div/div2',
+                kind: 'FRAME',
+                name: 'child2',
+            };
+            const content: ImportIRNode = {
+                id: 'content',
+                sourcePath: '/body/div',
+                kind: 'FRAME',
+                name: 'content',
+                children: [child1, child2],
+            };
+            const ir: ImportIRDocument = {
+                version: 'import-ir/v0',
+                pageName: 'test',
+                route: '/test',
+                pageBackgroundColor: 'rgb(255, 255, 255)',
+                source: { kind: 'jay-html', filePath: '/test', contentHash: 'test' },
+                parser: { baseElementName: 'div' },
+                contracts: {},
+                root: {
+                    id: 'section',
+                    sourcePath: 'section',
+                    kind: 'SECTION',
+                    name: 'test',
+                    children: [content],
+                },
+                warnings: [],
+            };
+            const result = adaptIRToFigmaVendorDoc(ir);
+            expect(result.fills).toEqual([
+                { type: 'SOLID', color: { r: 1, g: 1, b: 1 }, opacity: 1 },
+            ]);
+            const contentFrame = result.children![0];
+            expect(contentFrame.layoutMode).toBe('VERTICAL');
+            expect(contentFrame.width).toBe(960);
+            for (const child of contentFrame.children!) {
+                expect(child.layoutSizingHorizontal).toBe('FILL');
+            }
+        });
+
+        it('page with custom background: section inherits body color', () => {
+            const content: ImportIRNode = {
+                id: 'content',
+                sourcePath: '/body/div',
+                kind: 'FRAME',
+                name: 'content',
+                children: [{ id: 'c1', sourcePath: '/div/c1', kind: 'FRAME', name: 'c1' }],
+            };
+            const ir: ImportIRDocument = {
+                version: 'import-ir/v0',
+                pageName: 'test',
+                route: '/test',
+                pageBackgroundColor: 'rgb(34, 34, 34)',
+                source: { kind: 'jay-html', filePath: '/test', contentHash: 'test' },
+                parser: { baseElementName: 'div' },
+                contracts: {},
+                root: {
+                    id: 'section',
+                    sourcePath: 'section',
+                    kind: 'SECTION',
+                    name: 'test',
+                    children: [content],
+                },
+                warnings: [],
+            };
+            const result = adaptIRToFigmaVendorDoc(ir);
+            const fill = result.fills![0] as { color: { r: number; g: number; b: number } };
+            expect(fill.color.r).toBeCloseTo(34 / 255, 2);
+        });
+
+        it('flex-direction: row stays HORIZONTAL (no regression)', () => {
+            const frame = importAndGetFigmaFrame(
+                'display: flex; flex-direction: row; gap: 16px',
+            );
+            expect(frame.layoutMode).toBe('HORIZONTAL');
+            expect(frame.itemSpacing).toBe(16);
+        });
+
+        it('flex-direction: column maps to VERTICAL', () => {
+            const frame = importAndGetFigmaFrame(
+                'display: flex; flex-direction: column; gap: 8px',
+            );
+            expect(frame.layoutMode).toBe('VERTICAL');
+            expect(frame.itemSpacing).toBe(8);
+        });
+
+        it('grid layout preserved (no regression from Issue #07)', () => {
+            const { style } = resolveStyle(
+                'display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px',
+            );
+            const node: ImportIRNode = {
+                id: 'grid',
+                sourcePath: '/body/div',
+                kind: 'FRAME',
+                name: 'grid',
+                style,
+                children: [
+                    { id: 'c1', sourcePath: '/div/c1', kind: 'FRAME', name: 'c1' },
+                    { id: 'c2', sourcePath: '/div/c2', kind: 'FRAME', name: 'c2' },
+                ],
+            };
+            const ir: ImportIRDocument = {
+                version: 'import-ir/v0',
+                pageName: 'test',
+                route: '/test',
+                source: { kind: 'jay-html', filePath: '/test', contentHash: 'test' },
+                parser: { baseElementName: 'div' },
+                contracts: {},
+                root: {
+                    id: 'section',
+                    sourcePath: 'section',
+                    kind: 'SECTION',
+                    name: 'test',
+                    children: [node],
+                },
+                warnings: [],
+            };
+            const result = adaptIRToFigmaVendorDoc(ir);
+            expect(result.children![0].layoutMode).toBe('GRID');
+        });
+
+        it('display: contents frame gets VERTICAL with no fills', () => {
+            const { style } = resolveStyle('display: contents');
+            const node: ImportIRNode = {
+                id: 'contents',
+                sourcePath: '/body/div',
+                kind: 'FRAME',
+                name: 'contents-wrapper',
+                style,
+                children: [
+                    { id: 'c1', sourcePath: '/div/c1', kind: 'FRAME', name: 'c1' },
+                ],
+            };
+            const ir: ImportIRDocument = {
+                version: 'import-ir/v0',
+                pageName: 'test',
+                route: '/test',
+                source: { kind: 'jay-html', filePath: '/test', contentHash: 'test' },
+                parser: { baseElementName: 'div' },
+                contracts: {},
+                root: {
+                    id: 'section',
+                    sourcePath: 'section',
+                    kind: 'SECTION',
+                    name: 'test',
+                    children: [node],
+                },
+                warnings: [],
+            };
+            const result = adaptIRToFigmaVendorDoc(ir);
+            const contentsFrame = result.children![0];
+            expect(contentsFrame.layoutMode).toBe('VERTICAL');
+            expect(contentsFrame.fills).toBeUndefined();
+        });
+    });
 });

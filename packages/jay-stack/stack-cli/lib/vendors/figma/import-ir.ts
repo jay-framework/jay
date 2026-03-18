@@ -81,6 +81,7 @@ export type ImportIRStyle = {
     maxHeight?: number;
     x?: number;
     y?: number;
+    display?: string;
     layoutMode?: ImportIRLayoutMode;
     layoutWrap?: boolean;
     gap?: number;
@@ -171,6 +172,7 @@ export type ImportIRDocument = {
     version: 'import-ir/v0';
     pageName: string;
     route?: string;
+    pageBackgroundColor?: string;
     source: {
         kind: 'jay-html';
         filePath: string;

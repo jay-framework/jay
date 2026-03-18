@@ -644,6 +644,7 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
         let perScenarioMaps;
         let enricherScenarios: any[] = [];
         let repeaterDataMap;
+        let bodyBackgroundColor: string | undefined;
 
         try {
             const { enrichWithComputedStyles, generateVariantScenarios } = await import(
@@ -691,6 +692,7 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
             perScenarioMaps = enricherResult.perScenario;
             enricherScenarios = enricherResult.scenarios;
             repeaterDataMap = enricherResult.repeaterDataMap;
+            bodyBackgroundColor = enricherResult.bodyBackgroundColor;
         } catch (error) {
             console.warn('[Import] Computed style enrichment failed:', (error as Error).message);
             computedStyleMap = undefined;
@@ -710,6 +712,7 @@ export const figmaVendor: Vendor<FigmaVendorDocument> = {
                 perScenarioMaps,
                 scenarios: enricherScenarios,
                 repeaterDataMap,
+                bodyBackgroundColor,
             },
         );
 
