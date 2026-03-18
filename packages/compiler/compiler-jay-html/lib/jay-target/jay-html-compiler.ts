@@ -2347,6 +2347,11 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             .map((_) => `(${paramName}: ${paramType}) => ${_}`);
         const forEachVariables = variables.childVariableFor(forEachAccessor);
 
+        // Snapshot ref name generator state BEFORE the adopt callback runs.
+        // The create callback needs the same starting state so it generates
+        // the same ref names as the adopt callback for this forEach.
+        const preAdoptRefNameGenerator = context.refNameGenerator.clone();
+
         // Adopt callback: render item children and return as an array.
         // hydrateForEach combines them into a single BaseJayElement internally.
         const itemChildNodes = element.childNodes.filter(
@@ -2370,8 +2375,11 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             : '() => []';
 
         // Create callback: render the item element using the standard element target.
-        // Use a fresh RefNameGenerator so headless instance refs match the adopt callback's
-        // names (e.g., refAR1 instead of refAR2). Both callbacks share the same page-level refs.
+        // Use the pre-adopt snapshot of the RefNameGenerator so the create callback
+        // generates the same ref names as the adopt callback. A fresh generator would
+        // restart naming (e.g., refIncrement instead of refIncrement2 for the second
+        // forEach). Cloning BEFORE the adopt callback captures the right starting state
+        // so both paths independently arrive at the same names.
         // Keep headlessInstanceCounter shared (not reset) so the element target's
         // renderHeadlessInstance generates unique names (counter=1+) that don't conflict
         // with the adopt path's definitions (counter=0).
@@ -2382,7 +2390,7 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             dynamicRef: true,
             isInsideGuard: true,
             insideFastForEach: true,
-            refNameGenerator: new RefNameGenerator(),
+            refNameGenerator: preAdoptRefNameGenerator,
             coordinateCounters: new Map(),
         };
         const createChildNodes = element.childNodes.filter(
