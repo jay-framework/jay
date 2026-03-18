@@ -136,12 +136,21 @@ export async function enrichWithComputedStyles(options: EnricherOptions): Promis
                         timeout,
                     });
                     // Wait for compiler-injected source IDs to appear (indicates rendering is complete)
+                    let hasSidElements = true;
                     try {
                         await page.waitForSelector('[data-jay-sid]', { timeout: 10000 });
                     } catch {
+                        hasSidElements = false;
                         console.warn(
                             `[ComputedStyles] No [data-jay-sid] elements found after 10s — page may not have source IDs enabled`,
                         );
+                        if (scenario === scenarios[0]) {
+                            console.warn(
+                                `[ComputedStyles] First scenario has no source IDs — skipping remaining ${scenarios.length - 1} scenario(s) to avoid timeout`,
+                            );
+                            break;
+                        }
+                        continue;
                     }
                     // Wait for stylesheets to load and apply (CSS affects flex layout, bounding rects)
                     try {
