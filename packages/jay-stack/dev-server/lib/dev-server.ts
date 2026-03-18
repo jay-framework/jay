@@ -83,7 +83,7 @@ function defaults(options: DevServerOptions): DevServerOptions {
         pagesRootFolder,
         projectRootFolder,
         buildFolder,
-        dontCacheSlowly: options.dontCacheSlowly,
+        disableSSR: options.disableSSR,
         jayRollupConfig: {
             ...(options.jayRollupConfig || {}),
             tsConfigFilePath,
@@ -188,53 +188,13 @@ function mkRoute(
                 url,
             };
 
-            // Check if slow render caching is enabled
-            const useSlowRenderCache = !options.dontCacheSlowly;
-
-            // Check if we have a cached pre-rendered jay-html
-            let cachedEntry = useSlowRenderCache
-                ? slowRenderCache.get(route.jayHtmlPath, pageParams)
-                : undefined;
-
-            // Verify the cached file still exists (could be deleted while server is running)
-            if (cachedEntry) {
-                try {
-                    await fs.access(cachedEntry.preRenderedPath);
-                } catch {
-                    // Cached file was deleted, invalidate and rebuild
-                    getLogger().info(
-                        `[SlowRender] Cached file missing, rebuilding: ${cachedEntry.preRenderedPath}`,
-                    );
-                    await slowRenderCache.invalidate(route.jayHtmlPath);
-                    cachedEntry = undefined;
-                }
-            }
-
-            if (cachedEntry) {
-                // Cache hit: use cached pre-rendered jay-html and carryForward
-                // No need to run slow rendering - everything is cached
-                await handleCachedRequest(
-                    vite,
-                    route,
-                    options,
-                    cachedEntry,
-                    pageParams,
-                    pageProps,
-                    allPluginClientInits,
-                    allPluginsWithInit,
-                    projectInit,
-                    res,
-                    url,
-                    timing,
-                );
-            } else if (useSlowRenderCache) {
-                // Cache miss with caching enabled: pre-render and cache
-                await handlePreRenderRequest(
+            if (options.disableSSR) {
+                // Client-only rendering: no SSR, no hydration
+                await handleClientOnlyRequest(
                     vite,
                     route,
                     options,
                     slowlyPhase,
-                    slowRenderCache,
                     pageParams,
                     pageProps,
                     allPluginClientInits,
@@ -245,21 +205,55 @@ function mkRoute(
                     timing,
                 );
             } else {
-                // Caching disabled: run slow render on each request, full viewState to client
-                await handleDirectRequest(
-                    vite,
-                    route,
-                    options,
-                    slowlyPhase,
-                    pageParams,
-                    pageProps,
-                    allPluginClientInits,
-                    allPluginsWithInit,
-                    projectInit,
-                    res,
-                    url,
-                    timing,
-                );
+                // SSR: always use full pipeline with slow render cache
+                let cachedEntry = slowRenderCache.get(route.jayHtmlPath, pageParams);
+
+                // Verify the cached file still exists (could be deleted while server is running)
+                if (cachedEntry) {
+                    try {
+                        await fs.access(cachedEntry.preRenderedPath);
+                    } catch {
+                        // Cached file was deleted, invalidate and rebuild
+                        getLogger().info(
+                            `[SlowRender] Cached file missing, rebuilding: ${cachedEntry.preRenderedPath}`,
+                        );
+                        await slowRenderCache.invalidate(route.jayHtmlPath);
+                        cachedEntry = undefined;
+                    }
+                }
+
+                if (cachedEntry) {
+                    await handleCachedRequest(
+                        vite,
+                        route,
+                        options,
+                        cachedEntry,
+                        pageParams,
+                        pageProps,
+                        allPluginClientInits,
+                        allPluginsWithInit,
+                        projectInit,
+                        res,
+                        url,
+                        timing,
+                    );
+                } else {
+                    await handlePreRenderRequest(
+                        vite,
+                        route,
+                        options,
+                        slowlyPhase,
+                        slowRenderCache,
+                        pageParams,
+                        pageProps,
+                        allPluginClientInits,
+                        allPluginsWithInit,
+                        projectInit,
+                        res,
+                        url,
+                        timing,
+                    );
+                }
             }
         } catch (e) {
             vite?.ssrFixStacktrace(e);
@@ -605,10 +599,11 @@ async function handlePreRenderRequest(
 }
 
 /**
- * Handle request without slow render caching.
- * Used when caching is disabled. Sends full viewState (slow + fast) to client.
+ * Handle request with SSR disabled (client-only rendering).
+ * Runs slow+fast phases to compute viewState, then generates a client-only page
+ * using generateClientScript (element target, no hydration).
  */
-async function handleDirectRequest(
+async function handleClientOnlyRequest(
     vite: ViteDevServer,
     route: JayRoute,
     options: DevServerOptions,
@@ -652,7 +647,7 @@ async function handleDirectRequest(
         usedPackages,
     );
 
-    // Run slow phase (key-based parts + headless instance slow rendering)
+    // Run slow phase
     const slowStart = Date.now();
     const renderedSlowly = await slowlyPhase.runSlowlyForPage(pageParams, pageProps, pageParts);
 
@@ -665,7 +660,7 @@ async function handleDirectRequest(
         return;
     }
 
-    // Run slow phase for headless instances
+    // Discover and render headless instances
     let instanceViewStates: Record<string, object> | undefined;
     let instanceCarryForwards: Record<string, object> | undefined;
     let instancePhaseDataForFast: InstancePhaseData | undefined;
@@ -676,7 +671,6 @@ async function handleDirectRequest(
         const jayHtmlContent = await fs.readFile(route.jayHtmlPath, 'utf-8');
         const discoveryResult = discoverHeadlessInstances(jayHtmlContent);
 
-        // Validate: forEach instances must not have slow phases
         if (discoveryResult.forEachInstances.length > 0) {
             const validationErrors = validateForEachInstances(
                 discoveryResult.forEachInstances,
@@ -684,7 +678,7 @@ async function handleDirectRequest(
             );
             if (validationErrors.length > 0) {
                 getLogger().error(
-                    `[SlowRender] ForEach instance validation failed: ${validationErrors.join(', ')}`,
+                    `[ClientOnly] ForEach instance validation failed: ${validationErrors.join(', ')}`,
                 );
                 res.status(500).end(validationErrors.join('\n'));
                 timing?.end();
@@ -706,7 +700,7 @@ async function handleDirectRequest(
     }
     timing?.recordSlowRender(Date.now() - slowStart);
 
-    // Run fast phase (key-based parts + headless instance fast rendering)
+    // Run fast phase
     const fastStart = Date.now();
     const renderedFast = await renderFastChangingData(
         pageParams,
@@ -731,7 +725,7 @@ async function handleDirectRequest(
         }
     }
 
-    // Run fast phase for forEach headless instances (per-item rendering)
+    // Run fast phase for forEach headless instances
     if (forEachInstancesForFast && renderedFast.kind === 'PhaseOutput') {
         const forEachResult = await renderFastChangingDataForForEachInstances(
             forEachInstancesForFast,
@@ -757,7 +751,7 @@ async function handleDirectRequest(
         return;
     }
 
-    // Deep merge slow + fast viewState
+    // Merge slow + fast viewState
     let viewState: object;
     if (serverTrackByMap && Object.keys(serverTrackByMap).length > 0) {
         viewState = deepMergeViewStates(
@@ -784,23 +778,35 @@ async function handleDirectRequest(
         };
     }
 
-    // Use original jay-html path (no pre-rendering)
-    await sendResponse(
-        vite,
-        res,
-        url,
-        route.jayHtmlPath,
-        route.jayHtmlPath,
-        pageParts,
+    // Generate client-only HTML (element target, no SSR/hydration)
+    const pageHtml = generateClientScript(
         viewState,
         fastCF,
+        pageParts,
+        route.jayHtmlPath,
         clientTrackByMap,
+        getClientInitData(),
         projectInit,
         pluginsForPage,
-        options,
-        undefined,
-        timing,
+        {
+            enableAutomation: !options.disableAutomation,
+        },
     );
+
+    // Save generated page to build folder for debugging
+    if (options.buildFolder) {
+        const pageName = !url || url === '/' ? 'index' : url.replace(/^\//, '').replace(/\//g, '-');
+        const clientScriptDir = path.join(options.buildFolder, 'debug', 'client-entry');
+        await fs.mkdir(clientScriptDir, { recursive: true });
+        await fs.writeFile(path.join(clientScriptDir, `${pageName}.html`), pageHtml, 'utf-8');
+    }
+
+    const viteStart = Date.now();
+    const compiledPageHtml = await vite.transformIndexHtml(!!url ? url : '/', pageHtml);
+    timing?.recordViteClient(Date.now() - viteStart);
+
+    res.status(200).set({ 'Content-Type': 'text/html' }).send(compiledPageHtml);
+    timing?.end();
 }
 
 /**
@@ -1214,8 +1220,12 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
         projectRootFolder,
         buildFolder,
         jayRollupConfig,
-        dontCacheSlowly,
     } = options;
+
+    // Clean build folder on startup to avoid stale artifacts triggering HMR
+    if (buildFolder) {
+        await fs.rm(buildFolder, { recursive: true, force: true }).catch(() => {});
+    }
 
     // Map Jay log level to Vite log level
     const viteLogLevel: 'info' | 'warn' | 'error' | 'silent' =
@@ -1249,7 +1259,7 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     setupActionRouter(vite);
 
     const routes: JayRoutes = await initRoutes(pagesRootFolder);
-    const slowlyPhase = new DevSlowlyChangingPhase(dontCacheSlowly);
+    const slowlyPhase = new DevSlowlyChangingPhase();
 
     // Create pre-rendered jay-html cache
     // Files are written to <buildFolder>/pre-rendered/

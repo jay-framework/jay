@@ -12,7 +12,11 @@ export interface DevServerOptions {
      */
     buildFolder?: string;
     jayRollupConfig: JayRollupConfig;
-    dontCacheSlowly: boolean;
+    /**
+     * Disable server-side rendering. When true, pages are served as client-only
+     * (element target, no hydration). Useful for development without SSR overhead.
+     */
+    disableSSR?: boolean;
     /**
      * Disable automation integration.
      * When false (default), pages are wrapped with automation API for dev tooling.

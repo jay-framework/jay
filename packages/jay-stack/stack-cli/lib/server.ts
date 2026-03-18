@@ -87,7 +87,6 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
         pagesRootFolder: path.resolve(resolvedConfig.devServer.pagesBase),
         projectRootFolder: process.cwd(),
         publicBaseUrlPath: '/',
-        dontCacheSlowly: false,
         jayRollupConfig: jayOptions,
         logLevel: options.logLevel,
     });

@@ -16,7 +16,6 @@ describe('dev server', () => {
         jayRollupConfig: {
             tsConfigFilePath: path.resolve(__dirname, '../../../tsconfig.json'),
         } as JayRollupConfig,
-        dontCacheSlowly: true,
     };
 
     function optionsForDir(directory: string): DevServerOptions {
@@ -143,12 +142,13 @@ window.dispatchEvent(new Event('jay:automation-ready'));
 import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
 import { wrapWithAutomation, AUTOMATION_CONTEXT } from "@jay-framework/runtime-automation";
 import { registerGlobalContext } from "@jay-framework/runtime";
+import { deepMergeViewStates } from "@jay-framework/view-state-merge";
 
 
 import { render } from "/page.jay-html.ts";
 import {page} from "/page.ts"
-
-const viewState = {"title":"Page with Code","content":"This page has both a jay-html file and a code file"};
+const slowViewState = {"title":"Page with Code","content":"This page has both a jay-html file and a code file"};
+const viewState = {};
 const fastCarryForward = {};
 const trackByMap = {};
 
@@ -160,7 +160,9 @@ const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, 
 const instance = pageComp({/* placeholder for page props */})
 
 // Wrap with automation for dev tooling
-const wrapped = wrapWithAutomation(instance);
+// Deep merge slow+fast ViewState so automation can see full page state
+const fullViewState = deepMergeViewStates(slowViewState, {...viewState, ...fastCarryForward}, trackByMap);
+const wrapped = wrapWithAutomation(instance, { initialViewState: fullViewState, trackByMap });
 registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
 window.__jay = window.__jay || {};
 window.__jay.automation = wrapped.automation;
@@ -204,13 +206,14 @@ target.appendChild(wrapped.element.dom);
 import {makeCompositeJayComponent} from "@jay-framework/stack-client-runtime";
 import { wrapWithAutomation, AUTOMATION_CONTEXT } from "@jay-framework/runtime-automation";
 import { registerGlobalContext } from "@jay-framework/runtime";
+import { deepMergeViewStates } from "@jay-framework/view-state-merge";
 
 
 import { render } from "/page.jay-html.ts";
 import {page} from "/page.ts"
 import {headless} from "/headless-component.ts"
-
-const viewState = {"title":"Page with Headless","content":"This page has a headless component","headless":{"content":"This is from the headless component"}};
+const slowViewState = {"title":"Page with Headless","content":"This page has a headless component","headless":{"content":"This is from the headless component"}};
+const viewState = {};
 const fastCarryForward = {};
 const trackByMap = {};
 
@@ -223,7 +226,9 @@ const pageComp = makeCompositeJayComponent(render, viewState, fastCarryForward, 
 const instance = pageComp({/* placeholder for page props */})
 
 // Wrap with automation for dev tooling
-const wrapped = wrapWithAutomation(instance);
+// Deep merge slow+fast ViewState so automation can see full page state
+const fullViewState = deepMergeViewStates(slowViewState, {...viewState, ...fastCarryForward}, trackByMap);
+const wrapped = wrapWithAutomation(instance, { initialViewState: fullViewState, trackByMap });
 registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
 window.__jay = window.__jay || {};
 window.__jay.automation = wrapped.automation;
@@ -248,6 +253,11 @@ function clearScriptForTest(script: string) {
             'from "@jay-framework/runtime-automation"',
         )
         .replace(/from "(\/@fs\/.*?runtime\/dist.*?)"/g, 'from "@jay-framework/runtime"')
+        .replace(
+            /from "(\/@fs\/.*?view-state-merge.*?)"/g,
+            'from "@jay-framework/view-state-merge"',
+        )
+        .replace(/\/build\/pre-rendered\//g, '/')
         .split('\n')
         .map((line) => line.trim())
         .join('\n');
