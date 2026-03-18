@@ -20,7 +20,7 @@ export interface ConditionsViewState {
 export interface ConditionsElementRefs {}
 
 export type ConditionsSlowViewState = {};
-export type ConditionsFastViewState = {};
+export type ConditionsFastViewState = ConditionsViewState;
 export type ConditionsInteractiveViewState = ConditionsViewState;
 
 export type ConditionsElement = JayElement<ConditionsViewState, ConditionsElementRefs>;

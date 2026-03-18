@@ -32,7 +32,7 @@ export interface PageWithHeadlessInSlowForeachViewState {
 export interface PageWithHeadlessInSlowForeachElementRefs {}
 
 export type PageWithHeadlessInSlowForeachSlowViewState = {};
-export type PageWithHeadlessInSlowForeachFastViewState = {};
+export type PageWithHeadlessInSlowForeachFastViewState = PageWithHeadlessInSlowForeachViewState;
 export type PageWithHeadlessInSlowForeachInteractiveViewState =
     PageWithHeadlessInSlowForeachViewState;
 

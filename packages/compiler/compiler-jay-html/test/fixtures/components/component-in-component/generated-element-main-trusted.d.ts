@@ -22,7 +22,7 @@ export interface ComponentInComponentElementRefs {
 }
 
 export type ComponentInComponentSlowViewState = {};
-export type ComponentInComponentFastViewState = {};
+export type ComponentInComponentFastViewState = ComponentInComponentViewState;
 export type ComponentInComponentInteractiveViewState = ComponentInComponentViewState;
 
 export type ComponentInComponentElement = JayElement<

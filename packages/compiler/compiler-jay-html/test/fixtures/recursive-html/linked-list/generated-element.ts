@@ -27,7 +27,7 @@ export interface LinkedListElementRefs {
 }
 
 export type LinkedListSlowViewState = {};
-export type LinkedListFastViewState = {};
+export type LinkedListFastViewState = LinkedListViewState;
 export type LinkedListInteractiveViewState = LinkedListViewState;
 
 export type LinkedListElement = JayElement<LinkedListViewState, LinkedListElementRefs>;

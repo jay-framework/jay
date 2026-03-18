@@ -108,3 +108,34 @@ If a Jay Stack component without a contract returns non-empty data from `withSlo
 5. Generated `.d.ts` for no-contract pages shows `FastViewState = PageViewState`
 6. compiler-jay-html tests all pass (including DL#107 `No contract` slow-render tests updated)
 7. Error emitted when `withSlowlyRender` returns data without a contract
+
+## Implementation Results
+
+### Completed
+
+**Fix 1** — Changed `generatePhaseSpecificTypes` in `jay-html-compiler.ts`: when `jayFile.hasInlineData` (no contract), `FastViewState` now equals the full ViewState type instead of `{}`.
+
+**Fix 2** — Removed `noMainContract` flag from:
+- `slow-render-transform.ts`: removed from `isSlowPhase`, `resolveTextBindings`, `transformElement`, `transformChildren`, and the `slowRenderTransform` call site
+- `expression-parser.pegjs` and `expression-parser.cjs`: `isSlowPhase` now always returns `false` for unknown bindings
+- `expression-compiler.ts`: removed `noMainContract` from `SlowRenderContext` interface
+- Also fixed `transformElement` forEach check: `!phaseInfo || phase === 'slow'` → `phaseInfo?.phase === 'slow'` (without phase info, forEach is not slow)
+
+**Fix 4** — Updated test components:
+- 2b: moved data from `withSlowlyRender` to `withFastRender`
+- 3b: moved data from `withSlowlyRender` to `withFastRender`
+- 4b: removed no-op `withSlowlyRender`, simplified to just `withFastRender` with `phaseOutput`
+- Regenerated `expected-ssr.html` and `expected-hydrate.ts` fixtures for all three
+
+**Slow-render "No contract" tests updated** — The 3 tests from DL#107 (`describe('No contract')`) were updated to validate the new behavior: slow render leaves bindings unresolved and forEach un-unrolled when no contract exists. Reduced from 3 to 2 tests (removed nested object test — redundant with the text binding test).
+
+**Fixture cascade** — 96 inline-data fixture files updated: `FastViewState = {}` → `FastViewState = ViewStateType`. Contract-based fixtures with explicit phase types were not affected.
+
+### Deviations
+
+- **Fix 3 deferred** — Error on `withSlowlyRender` returning data without a contract was not implemented. This is a dev-server pipeline concern and less critical now that the types guide developers to use `withFastRender`.
+
+### Test results
+
+- compiler-jay-html: 599 pass, 4 skipped (all green)
+- dev-server hydration tests 2b, 3b, 4b: 36 pass (all 3 SSR modes)

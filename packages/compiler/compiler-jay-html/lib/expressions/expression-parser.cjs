@@ -6839,13 +6839,13 @@ function peg$parse(input, options) {
       let slowContext = options.slowContext;
       
       // Helper: Check if a property path is slow-phase.
-      // When noMainContract is set, treats unknown bindings as slow.
+      // Without a contract, no bindings are slow — all data is fast+interactive (DL#108).
       function isSlowPhase(path) {
           if (!slowContext) return false;
           const fullPath = slowContext.contextPath ? `${slowContext.contextPath}.${path}` : path;
           const info = slowContext.phaseMap.get(fullPath);
           if (info) return info.phase === 'slow';
-          return !!slowContext.noMainContract;
+          return false;
       }
       
       // Helper: Get phase info for a property path

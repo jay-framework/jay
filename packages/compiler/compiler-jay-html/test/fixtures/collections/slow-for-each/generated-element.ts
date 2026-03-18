@@ -24,7 +24,7 @@ export interface SlowForEachViewState {
 export interface SlowForEachElementRefs {}
 
 export type SlowForEachSlowViewState = {};
-export type SlowForEachFastViewState = {};
+export type SlowForEachFastViewState = SlowForEachViewState;
 export type SlowForEachInteractiveViewState = SlowForEachViewState;
 
 export type SlowForEachElement = JayElement<SlowForEachViewState, SlowForEachElementRefs>;

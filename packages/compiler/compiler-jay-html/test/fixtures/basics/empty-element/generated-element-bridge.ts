@@ -6,7 +6,7 @@ export interface EmptyElementViewState {}
 export interface EmptyElementElementRefs {}
 
 export type EmptyElementSlowViewState = {};
-export type EmptyElementFastViewState = {};
+export type EmptyElementFastViewState = EmptyElementViewState;
 export type EmptyElementInteractiveViewState = EmptyElementViewState;
 
 export type EmptyElementElement = JayElement<EmptyElementViewState, EmptyElementElementRefs>;

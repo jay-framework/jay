@@ -19,7 +19,7 @@ export interface PageUsingNamedCounterElementRefs {
 }
 
 export type PageUsingNamedCounterSlowViewState = {};
-export type PageUsingNamedCounterFastViewState = {};
+export type PageUsingNamedCounterFastViewState = PageUsingNamedCounterViewState;
 export type PageUsingNamedCounterInteractiveViewState = PageUsingNamedCounterViewState;
 
 export type PageUsingNamedCounterElement = JayElement<

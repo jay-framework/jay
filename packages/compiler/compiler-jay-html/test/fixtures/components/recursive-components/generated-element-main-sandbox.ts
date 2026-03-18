@@ -29,7 +29,7 @@ export interface RecursiveComponentsElementRefs {
 }
 
 export type RecursiveComponentsSlowViewState = {};
-export type RecursiveComponentsFastViewState = {};
+export type RecursiveComponentsFastViewState = Node;
 export type RecursiveComponentsInteractiveViewState = Node;
 
 export type RecursiveComponentsElement = JayElement<Node, RecursiveComponentsElementRefs>;

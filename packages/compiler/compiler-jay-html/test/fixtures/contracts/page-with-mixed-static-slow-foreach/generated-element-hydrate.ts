@@ -32,7 +32,7 @@ export interface PageWithMixedStaticSlowForeachViewState {
 export interface PageWithMixedStaticSlowForeachElementRefs {}
 
 export type PageWithMixedStaticSlowForeachSlowViewState = {};
-export type PageWithMixedStaticSlowForeachFastViewState = {};
+export type PageWithMixedStaticSlowForeachFastViewState = PageWithMixedStaticSlowForeachViewState;
 export type PageWithMixedStaticSlowForeachInteractiveViewState =
     PageWithMixedStaticSlowForeachViewState;
 

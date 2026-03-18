@@ -22,7 +22,7 @@ export interface PageWithFullyStaticSlowForeachViewState {
 export interface PageWithFullyStaticSlowForeachElementRefs {}
 
 export type PageWithFullyStaticSlowForeachSlowViewState = {};
-export type PageWithFullyStaticSlowForeachFastViewState = {};
+export type PageWithFullyStaticSlowForeachFastViewState = PageWithFullyStaticSlowForeachViewState;
 export type PageWithFullyStaticSlowForeachInteractiveViewState =
     PageWithFullyStaticSlowForeachViewState;
 

@@ -16,7 +16,7 @@ export interface MixedContentDynamicTextViewState {
 export interface MixedContentDynamicTextElementRefs {}
 
 export type MixedContentDynamicTextSlowViewState = {};
-export type MixedContentDynamicTextFastViewState = {};
+export type MixedContentDynamicTextFastViewState = MixedContentDynamicTextViewState;
 export type MixedContentDynamicTextInteractiveViewState = MixedContentDynamicTextViewState;
 
 export type MixedContentDynamicTextElement = JayElement<

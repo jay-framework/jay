@@ -383,8 +383,6 @@ export interface SlowRenderContext {
     phaseMap: Map<string, { phase: string; isArray?: boolean; enumValues?: string[] }>;
     /** Current context path for nested properties (e.g., "products" when inside forEach) */
     contextPath: string;
-    /** When true, treat all bindings not in phaseMap as slow (no main contract present) */
-    noMainContract?: boolean;
 }
 
 /**

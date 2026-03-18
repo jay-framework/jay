@@ -77,7 +77,7 @@ export interface NestedArraysWithStudentsElementRefs {
 }
 
 export type NestedArraysWithStudentsSlowViewState = {};
-export type NestedArraysWithStudentsFastViewState = {};
+export type NestedArraysWithStudentsFastViewState = NestedArraysWithStudentsViewState;
 export type NestedArraysWithStudentsInteractiveViewState = NestedArraysWithStudentsViewState;
 
 export type NestedArraysWithStudentsElement = JayElement<

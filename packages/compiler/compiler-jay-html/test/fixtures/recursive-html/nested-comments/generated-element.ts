@@ -28,7 +28,7 @@ export interface NestedCommentsElementRefs {
 }
 
 export type NestedCommentsSlowViewState = {};
-export type NestedCommentsFastViewState = {};
+export type NestedCommentsFastViewState = NestedCommentsViewState;
 export type NestedCommentsInteractiveViewState = NestedCommentsViewState;
 
 export type NestedCommentsElement = JayElement<NestedCommentsViewState, NestedCommentsElementRefs>;

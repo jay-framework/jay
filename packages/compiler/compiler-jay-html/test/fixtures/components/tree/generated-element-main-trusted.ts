@@ -26,7 +26,7 @@ export interface TreeNodeElementRefs {
 }
 
 export type TreeNodeSlowViewState = {};
-export type TreeNodeFastViewState = {};
+export type TreeNodeFastViewState = TreeNodeViewState;
 export type TreeNodeInteractiveViewState = TreeNodeViewState;
 
 export type TreeNodeElement = JayElement<TreeNodeViewState, TreeNodeElementRefs>;

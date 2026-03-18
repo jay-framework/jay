@@ -169,14 +169,13 @@ function toCamelCase(str: string): string {
 /**
  * Check if a property path is in the slow phase
  *
- * IMPORTANT: Only return true if the property is EXPLICITLY marked as slow in the phase map.
- * If the property is not in the phase map (e.g., from a headless component), we don't know
- * its phase and should NOT evaluate it at slow-render time.
+ * Only return true if the property is EXPLICITLY marked as slow in the phase map.
+ * Without a contract, no bindings are slow — all data is fast+interactive (DL#108).
  */
-function isSlowPhase(path: string, phaseMap: Map<string, PhaseInfo>, noMainContract: boolean): boolean {
+function isSlowPhase(path: string, phaseMap: Map<string, PhaseInfo>): boolean {
     const info = phaseMap.get(path);
     if (info !== undefined) return info.phase === 'slow';
-    return noMainContract;
+    return false;
 }
 
 /**
@@ -240,7 +239,6 @@ function resolveTextBindings(
     contextData: Record<string, unknown>,
     phaseMap: Map<string, PhaseInfo>,
     contextPath: string = '',
-    noMainContract: boolean = false,
 ): WithValidations<string> {
     const validationErrors: string[] = [];
 
@@ -251,7 +249,7 @@ function resolveTextBindings(
         if (/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(trimmedExpr)) {
             const fullPath = contextPath ? `${contextPath}.${trimmedExpr}` : trimmedExpr;
 
-            if (isSlowPhase(fullPath, phaseMap, noMainContract)) {
+            if (isSlowPhase(fullPath, phaseMap)) {
                 // Get value from the current context data (not root)
                 const value = getValueByPath(contextData, trimmedExpr);
 
@@ -287,7 +285,6 @@ function transformElement(
     phaseMap: Map<string, PhaseInfo>,
     contextPath: string,
     contextData: Record<string, unknown>,
-    noMainContract: boolean = false,
 ): WithValidations<HTMLElement[]> {
     // Handle forEach directive
     const forEachAttr = element.getAttribute('forEach');
@@ -295,8 +292,9 @@ function transformElement(
         const fullPath = contextPath ? `${contextPath}.${forEachAttr}` : forEachAttr;
         const phaseInfo = phaseMap.get(fullPath);
 
-        // If the array is slow phase, unroll it
-        if (!phaseInfo || phaseInfo.phase === 'slow') {
+        // If the array is explicitly slow phase, unroll it.
+        // Without phase info (no contract), forEach is not slow — leave for SSR (DL#108).
+        if (phaseInfo?.phase === 'slow') {
             const arrayValue = getValueByPath(contextData, forEachAttr);
 
             if (Array.isArray(arrayValue)) {
@@ -324,7 +322,7 @@ function transformElement(
 
                     // Transform children with new context
                     const itemData = item as Record<string, unknown>;
-                    return transformChildren(cloned, phaseMap, fullPath, itemData, noMainContract).map(
+                    return transformChildren(cloned, phaseMap, fullPath, itemData).map(
                         (children) => {
                             cloned.innerHTML = '';
                             children.forEach((child) => cloned.appendChild(child as any));
@@ -345,7 +343,6 @@ function transformElement(
             slowData: contextData,
             phaseMap: phaseMap as Map<string, { phase: string; isArray?: boolean }>,
             contextPath: contextPath,
-            noMainContract,
         };
 
         const conditionResult = parseConditionForSlowRender(ifAttr, slowContext);
@@ -382,7 +379,7 @@ function transformElement(
         .map((attrName) => {
             const attrValue = element.getAttribute(attrName);
             if (attrValue && hasBindings(attrValue)) {
-                return resolveTextBindings(attrValue, contextData, phaseMap, contextPath, noMainContract).map(
+                return resolveTextBindings(attrValue, contextData, phaseMap, contextPath).map(
                     (resolved) => {
                         element.setAttribute(attrName, resolved);
                         return null; // Side effect only
@@ -394,7 +391,7 @@ function transformElement(
 
     // Merge attribute validations and transform children
     return WithValidations.all(attrResults)
-        .flatMap(() => transformChildren(element, phaseMap, contextPath, contextData, noMainContract))
+        .flatMap(() => transformChildren(element, phaseMap, contextPath, contextData))
         .map((children) => {
             element.innerHTML = '';
             children.forEach((child) => element.appendChild(child as any));
@@ -411,16 +408,15 @@ function transformChildren(
     phaseMap: Map<string, PhaseInfo>,
     contextPath: string,
     contextData: Record<string, unknown>,
-    noMainContract: boolean = false,
 ): WithValidations<Node[]> {
     // Process each child and collect WithValidations results
     const childResults = parent.childNodes.map((child): WithValidations<Node[]> => {
         if (child.nodeType === NodeType.ELEMENT_NODE) {
-            return transformElement(child as HTMLElement, phaseMap, contextPath, contextData, noMainContract);
+            return transformElement(child as HTMLElement, phaseMap, contextPath, contextData);
         } else if (child.nodeType === NodeType.TEXT_NODE) {
             const text = child.rawText;
             if (hasBindings(text)) {
-                return resolveTextBindings(text, contextData, phaseMap, contextPath, noMainContract).map(
+                return resolveTextBindings(text, contextData, phaseMap, contextPath).map(
                     (resolved) => {
                         (child as Node & { _rawText: string })._rawText = resolved;
                         return [child as Node];
@@ -530,12 +526,10 @@ export function slowRenderTransform(input: SlowRenderInput): WithValidations<Slo
             return new WithValidations(undefined, validations);
         }
 
-        // When there's no main contract, treat all bindings as slow
-        const noMainContract = !input.contract;
-
         // Transform body children and generate output
         // Merge parsing validations with transform validations
-        return transformChildren(body, phaseMap, '', input.slowViewState, noMainContract)
+        // Without a contract, no bindings are slow — all data is fast+interactive (DL#108)
+        return transformChildren(body, phaseMap, '', input.slowViewState)
             .withValidationsFrom(new WithValidations(null, validations))
             .map((children) => {
                 body.innerHTML = '';

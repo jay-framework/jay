@@ -29,7 +29,7 @@ export interface BinaryTreeElementRefs {
 }
 
 export type BinaryTreeSlowViewState = {};
-export type BinaryTreeFastViewState = {};
+export type BinaryTreeFastViewState = BinaryTreeViewState;
 export type BinaryTreeInteractiveViewState = BinaryTreeViewState;
 
 export type BinaryTreeElement = JayElement<BinaryTreeViewState, BinaryTreeElementRefs>;

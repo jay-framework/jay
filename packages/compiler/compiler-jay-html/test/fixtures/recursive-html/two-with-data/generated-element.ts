@@ -35,7 +35,7 @@ export interface TwoWithDataElementRefs {
 }
 
 export type TwoWithDataSlowViewState = {};
-export type TwoWithDataFastViewState = {};
+export type TwoWithDataFastViewState = TwoWithDataViewState;
 export type TwoWithDataInteractiveViewState = TwoWithDataViewState;
 
 export type TwoWithDataElement = JayElement<TwoWithDataViewState, TwoWithDataElementRefs>;

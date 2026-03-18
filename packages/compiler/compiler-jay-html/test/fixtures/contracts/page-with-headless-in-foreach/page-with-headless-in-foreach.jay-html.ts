@@ -32,7 +32,7 @@ export interface PageWithHeadlessInForeachViewState {
 export interface PageWithHeadlessInForeachElementRefs {}
 
 export type PageWithHeadlessInForeachSlowViewState = {};
-export type PageWithHeadlessInForeachFastViewState = {};
+export type PageWithHeadlessInForeachFastViewState = PageWithHeadlessInForeachViewState;
 export type PageWithHeadlessInForeachInteractiveViewState = PageWithHeadlessInForeachViewState;
 
 export type PageWithHeadlessInForeachElement = JayElement<

@@ -17,7 +17,7 @@ export interface WhitespaceAndTextViewState {
 export interface WhitespaceAndTextElementRefs {}
 
 export type WhitespaceAndTextSlowViewState = {};
-export type WhitespaceAndTextFastViewState = {};
+export type WhitespaceAndTextFastViewState = WhitespaceAndTextViewState;
 export type WhitespaceAndTextInteractiveViewState = WhitespaceAndTextViewState;
 
 export type WhitespaceAndTextElement = JayElement<

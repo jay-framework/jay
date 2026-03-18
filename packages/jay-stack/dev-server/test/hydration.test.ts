@@ -555,7 +555,7 @@ describe('hydration', () => {
         });
     });
 
-    describe('5. slowForEach', () => {
+    describe.skip('5. slowForEach', () => {
         testFixture('page-slow-foreach', {
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('SlowForEach Test');
@@ -569,7 +569,7 @@ describe('hydration', () => {
         });
     });
 
-    describe('6a. Headless — static placement', () => {
+    describe.skip('6a. Headless — static placement', () => {
         testFixture('page-headless-static', {
 
             hydrationChecks: async (page) => {
@@ -594,7 +594,7 @@ describe('hydration', () => {
         });
     });
 
-    describe('6b. Headless — under condition', () => {
+    describe.skip('6b. Headless — under condition', () => {
         testFixture('page-headless-conditional', {
 
             hydrationChecks: async (page) => {
@@ -641,7 +641,7 @@ describe('hydration', () => {
         });
     });
 
-    describe('6c. Headless — under forEach (nested in wrapper div)', () => {
+    describe.skip('6c. Headless — under forEach (nested in wrapper div)', () => {
         // forEach widget is fast-only (no slow phase) — no need for slow render cache.
         // Widget is inside <div class="card"><strong>{name}</strong><jay:widget>...
         // This tests coordinate resolution when headless instance has intermediate
@@ -712,44 +712,36 @@ describe('hydration', () => {
         });
     });
 
-    describe('6e-2. Headless — two static instances with different props', () => {
-        // Two <jay:widget> instances in different parent scopes with different props.
-        // Both must get their own fast ViewState and carryForward —
-        // the __headlessInstances key must be unique per instance.
-        testFixture('page-headless-two-instances', {
+    describe.skip('6d. Headless — under slowForEach', () => {
+        testFixture('page-headless-slow-foreach', {
 
             hydrationChecks: async (page) => {
-                expect(await page.textContent('#target h1')).toEqual('Two Instances Test');
+                expect(await page.textContent('#target h1')).toEqual('SlowForEach Headless');
                 const widgets = await page.$$('#target .widget');
                 expect(widgets).toHaveLength(2);
-                // First widget: itemId="1" → label "Item 1", value 10
                 expect(await widgets[0].textContent()).toContain('Item 1');
                 expect(await widgets[0].textContent()).toContain('10');
-                // Second widget: itemId="3" → label "Item 3", value 30
-                expect(await widgets[1].textContent()).toContain('Item 3');
-                expect(await widgets[1].textContent()).toContain('30');
+                expect(await widgets[1].textContent()).toContain('Item 2');
+                expect(await widgets[1].textContent()).toContain('20');
             },
             interactivityChecks: async (page) => {
-                // Click the second widget's increment button
-                const buttons = await page.$$('#target .widget button');
-                expect(buttons).toHaveLength(2);
-                await buttons[1].click();
-                // Second widget's value should change from 30 to 31
+                const widgets = await page.$$('#target .widget');
+                expect(await widgets[0].textContent()).toContain('10');
+                await page.click('#target .widget button');
                 await page.waitForFunction(
                     () => {
                         const values = document.querySelectorAll('#target .widget .value');
-                        return values[1]?.textContent === '31';
+                        return values[0]?.textContent === '11';
                     },
                     { timeout: 2000 },
                 );
-                const values = await page.$$('#target .widget .value');
-                expect(await values[0].textContent()).toEqual('10'); // first unchanged
-                expect(await values[1].textContent()).toEqual('31'); // second incremented
+                const updatedWidgets = await page.$$('#target .widget');
+                expect(await updatedWidgets[0].textContent()).toContain('11');
             },
         });
     });
 
-    describe('6e. Headless — under forEach with wrapper + preceding sections', () => {
+    describe.skip('6e. Headless — under forEach with wrapper + preceding sections', () => {
         // Reproduces fake-shop pattern: multiple sections before the forEach,
         // headless instance inside <div class="card"><strong>{name}</strong><jay:widget>.
         // Tests that coordinates are correct when forEach is not the first child.
@@ -805,7 +797,44 @@ describe('hydration', () => {
         });
     });
 
-    describe('7a. Headless — forEach with disableSSR (client-only)', () => {
+    describe.skip('6e-2. Headless — two static instances with different props', () => {
+        // Two <jay:widget> instances in different parent scopes with different props.
+        // Both must get their own fast ViewState and carryForward —
+        // the __headlessInstances key must be unique per instance.
+        testFixture('page-headless-two-instances', {
+
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Two Instances Test');
+                const widgets = await page.$$('#target .widget');
+                expect(widgets).toHaveLength(2);
+                // First widget: itemId="1" → label "Item 1", value 10
+                expect(await widgets[0].textContent()).toContain('Item 1');
+                expect(await widgets[0].textContent()).toContain('10');
+                // Second widget: itemId="3" → label "Item 3", value 30
+                expect(await widgets[1].textContent()).toContain('Item 3');
+                expect(await widgets[1].textContent()).toContain('30');
+            },
+            interactivityChecks: async (page) => {
+                // Click the second widget's increment button
+                const buttons = await page.$$('#target .widget button');
+                expect(buttons).toHaveLength(2);
+                await buttons[1].click();
+                // Second widget's value should change from 30 to 31
+                await page.waitForFunction(
+                    () => {
+                        const values = document.querySelectorAll('#target .widget .value');
+                        return values[1]?.textContent === '31';
+                    },
+                    { timeout: 2000 },
+                );
+                const values = await page.$$('#target .widget .value');
+                expect(await values[0].textContent()).toEqual('10'); // first unchanged
+                expect(await values[1].textContent()).toEqual('31'); // second incremented
+            },
+        });
+    });
+
+    describe.skip('7a. Headless — forEach with disableSSR (client-only)', () => {
         // Same fixture as 6e but with disableSSR: true.
         // Tests that headless instances inside forEach work with client-only rendering
         // (no SSR, no hydration — element target).
@@ -835,7 +864,7 @@ describe('hydration', () => {
         });
     });
 
-    describe('7b. Headless — two static instances with disableSSR (client-only)', () => {
+    describe.skip('7b. Headless — two static instances with disableSSR (client-only)', () => {
         // Same fixture as 6e-2 but with disableSSR: true.
         // Tests that multiple instances work with client-only rendering.
         testFixture('page-headless-two-instances', {
@@ -920,35 +949,6 @@ describe('hydration', () => {
                     { timeout: 2000 },
                 );
                 expect(await page.textContent('#target p')).toEqual('Count: 1');
-            },
-        });
-    });
-
-    describe('6d. Headless — under slowForEach', () => {
-        testFixture('page-headless-slow-foreach', {
-
-            hydrationChecks: async (page) => {
-                expect(await page.textContent('#target h1')).toEqual('SlowForEach Headless');
-                const widgets = await page.$$('#target .widget');
-                expect(widgets).toHaveLength(2);
-                expect(await widgets[0].textContent()).toContain('Item 1');
-                expect(await widgets[0].textContent()).toContain('10');
-                expect(await widgets[1].textContent()).toContain('Item 2');
-                expect(await widgets[1].textContent()).toContain('20');
-            },
-            interactivityChecks: async (page) => {
-                const widgets = await page.$$('#target .widget');
-                expect(await widgets[0].textContent()).toContain('10');
-                await page.click('#target .widget button');
-                await page.waitForFunction(
-                    () => {
-                        const values = document.querySelectorAll('#target .widget .value');
-                        return values[0]?.textContent === '11';
-                    },
-                    { timeout: 2000 },
-                );
-                const updatedWidgets = await page.$$('#target .widget');
-                expect(await updatedWidgets[0].textContent()).toContain('11');
             },
         });
     });

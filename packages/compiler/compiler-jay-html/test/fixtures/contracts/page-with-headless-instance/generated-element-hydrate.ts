@@ -25,7 +25,7 @@ export interface PageWithHeadlessInstanceViewState {
 export interface PageWithHeadlessInstanceElementRefs {}
 
 export type PageWithHeadlessInstanceSlowViewState = {};
-export type PageWithHeadlessInstanceFastViewState = {};
+export type PageWithHeadlessInstanceFastViewState = PageWithHeadlessInstanceViewState;
 export type PageWithHeadlessInstanceInteractiveViewState = PageWithHeadlessInstanceViewState;
 
 export type PageWithHeadlessInstanceElement = JayElement<

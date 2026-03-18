@@ -27,7 +27,7 @@ export interface ConditionsWithEnumViewState {
 export interface ConditionsWithEnumElementRefs {}
 
 export type ConditionsWithEnumSlowViewState = {};
-export type ConditionsWithEnumFastViewState = {};
+export type ConditionsWithEnumFastViewState = ConditionsWithEnumViewState;
 export type ConditionsWithEnumInteractiveViewState = ConditionsWithEnumViewState;
 
 export type ConditionsWithEnumElement = JayElement<

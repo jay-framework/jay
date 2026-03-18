@@ -26,7 +26,7 @@ export interface PageWithHeadlessMultiChildViewState {
 export interface PageWithHeadlessMultiChildElementRefs {}
 
 export type PageWithHeadlessMultiChildSlowViewState = {};
-export type PageWithHeadlessMultiChildFastViewState = {};
+export type PageWithHeadlessMultiChildFastViewState = PageWithHeadlessMultiChildViewState;
 export type PageWithHeadlessMultiChildInteractiveViewState = PageWithHeadlessMultiChildViewState;
 
 export type PageWithHeadlessMultiChildElement = JayElement<

@@ -26,7 +26,7 @@ export interface DuplicateRefOnlyOneUsedElementRefs {
 }
 
 export type DuplicateRefOnlyOneUsedSlowViewState = {};
-export type DuplicateRefOnlyOneUsedFastViewState = {};
+export type DuplicateRefOnlyOneUsedFastViewState = DuplicateRefOnlyOneUsedViewState;
 export type DuplicateRefOnlyOneUsedInteractiveViewState = DuplicateRefOnlyOneUsedViewState;
 
 export type DuplicateRefOnlyOneUsedElement = JayElement<

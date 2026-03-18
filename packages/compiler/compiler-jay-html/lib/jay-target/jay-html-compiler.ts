@@ -1822,11 +1822,12 @@ function generatePhaseSpecificTypes(jayFile: JayHtmlSourceFile): string {
         return basePhaseTypes;
     }
 
-    // If inline data, default to interactive phase
+    // If inline data (no contract), default to fast+interactive phase (DL#108).
+    // All data is available at SSR and reactive on the client.
     if (jayFile.hasInlineData) {
         return [
             `export type ${baseName}SlowViewState = {};`,
-            `export type ${baseName}FastViewState = {};`,
+            `export type ${baseName}FastViewState = ${actualViewStateTypeName};`,
             `export type ${baseName}InteractiveViewState = ${actualViewStateTypeName};`,
         ].join('\n');
     }

@@ -27,7 +27,7 @@ const PAGE_PARTS: DevServerPagePart[] = [
 
 describe('rendering a product page', () => {
     it('slowly render for gaming laptop', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase(false);
+        const slowlyPhase = new DevSlowlyChangingPhase();
 
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_GAMING_LAPTOP,
@@ -57,7 +57,7 @@ describe('rendering a product page', () => {
     });
 
     it('slowly render for smartphone', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase(false);
+        const slowlyPhase = new DevSlowlyChangingPhase();
 
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_SMARTPHONE,
@@ -87,7 +87,7 @@ describe('rendering a product page', () => {
     });
 
     it('slowly render returns 404 for non existing slug', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase(false);
+        const slowlyPhase = new DevSlowlyChangingPhase();
 
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_NON_EXISTING,
@@ -99,7 +99,7 @@ describe('rendering a product page', () => {
     });
 
     it('fast render for gaming laptop', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase(false);
+        const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_GAMING_LAPTOP,
             PAGE_PROPS,
@@ -133,7 +133,7 @@ describe('rendering a product page', () => {
     });
 
     it('fast render for smartphone', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase(false);
+        const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_SMARTPHONE,
             PAGE_PROPS,
@@ -167,7 +167,7 @@ describe('rendering a product page', () => {
     });
 
     it('interactive render for gaming laptop', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase(false);
+        const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_GAMING_LAPTOP,
             PAGE_PROPS,
@@ -210,7 +210,7 @@ describe('rendering a product page', () => {
     });
 
     it('interactive render for smartphone', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase(false);
+        const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_GAMING_LAPTOP,
             PAGE_PROPS,
@@ -252,7 +252,7 @@ describe('rendering a product page', () => {
     });
 
     it('interactive phase should function and react to events', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase(false);
+        const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_GAMING_LAPTOP,
             PAGE_PROPS,

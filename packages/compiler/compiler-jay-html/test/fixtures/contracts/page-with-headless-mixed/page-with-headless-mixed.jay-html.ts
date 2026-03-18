@@ -40,7 +40,7 @@ export interface PageWithHeadlessMixedElementRefs {
 }
 
 export type PageWithHeadlessMixedSlowViewState = {};
-export type PageWithHeadlessMixedFastViewState = {};
+export type PageWithHeadlessMixedFastViewState = PageWithHeadlessMixedViewState;
 export type PageWithHeadlessMixedInteractiveViewState = PageWithHeadlessMixedViewState;
 
 export type PageWithHeadlessMixedElement = JayElement<

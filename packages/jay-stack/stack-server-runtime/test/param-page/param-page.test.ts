@@ -25,7 +25,7 @@ const PAGE_PARTS: DevServerPagePart[] = [
 
 describe('rendering a parameterized page', () => {
     it('should run the slowly changing phase with variant A', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase(false);
+        const slowlyPhase = new DevSlowlyChangingPhase();
 
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_A,
@@ -46,7 +46,7 @@ describe('rendering a parameterized page', () => {
     });
 
     it('should run the slowly changing phase with variant B', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase(false);
+        const slowlyPhase = new DevSlowlyChangingPhase();
 
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_B,
@@ -67,7 +67,7 @@ describe('rendering a parameterized page', () => {
     });
 
     it('should run the fast changing phase with variant A', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase(false);
+        const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_A,
             PAGE_PROPS,
@@ -97,7 +97,7 @@ describe('rendering a parameterized page', () => {
     });
 
     it('should run the fast changing phase with variant B', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase(false);
+        const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_B,
             PAGE_PROPS,
@@ -127,7 +127,7 @@ describe('rendering a parameterized page', () => {
     });
 
     it('should run the interactive phase with variant A', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase(false);
+        const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_A,
             PAGE_PROPS,
@@ -163,7 +163,7 @@ describe('rendering a parameterized page', () => {
     });
 
     it('should run the interactive phase with variant B', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase(false);
+        const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS_B,
             PAGE_PROPS,

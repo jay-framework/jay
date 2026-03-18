@@ -40,7 +40,7 @@ export interface DynamicComponentInComponentElementRefs {
 }
 
 export type DynamicComponentInComponentSlowViewState = {};
-export type DynamicComponentInComponentFastViewState = {};
+export type DynamicComponentInComponentFastViewState = DynamicComponentInComponentViewState;
 export type DynamicComponentInComponentInteractiveViewState = DynamicComponentInComponentViewState;
 
 export type DynamicComponentInComponentElement = JayElement<

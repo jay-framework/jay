@@ -2,4 +2,4 @@ import { makeJayStackComponent, phaseOutput } from '@jay-framework/fullstack-com
 
 export const page = makeJayStackComponent()
     .withProps<{}>()
-    .withSlowlyRender(async () => phaseOutput({ title: 'Hello Dynamic', count: 42 }, {}));
+    .withFastRender(async () => phaseOutput({ title: 'Hello Dynamic', count: 42 }, {}));

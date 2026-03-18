@@ -15,7 +15,7 @@ export interface TextWithApostropheViewState {
 export interface TextWithApostropheElementRefs {}
 
 export type TextWithApostropheSlowViewState = {};
-export type TextWithApostropheFastViewState = {};
+export type TextWithApostropheFastViewState = TextWithApostropheViewState;
 export type TextWithApostropheInteractiveViewState = TextWithApostropheViewState;
 
 export type TextWithApostropheElement = JayElement<

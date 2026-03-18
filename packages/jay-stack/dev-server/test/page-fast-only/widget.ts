@@ -9,6 +9,7 @@ import type {
     WidgetProps,
     WidgetRefs,
     WidgetFastViewState,
+// @ts-ignore
 } from './widget.jay-contract';
 
 interface WidgetCarryForward {

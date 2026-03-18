@@ -17,7 +17,7 @@ export interface DynamicTextInputTypesViewState {
 export interface DynamicTextInputTypesElementRefs {}
 
 export type DynamicTextInputTypesSlowViewState = {};
-export type DynamicTextInputTypesFastViewState = {};
+export type DynamicTextInputTypesFastViewState = DynamicTextInputTypesViewState;
 export type DynamicTextInputTypesInteractiveViewState = DynamicTextInputTypesViewState;
 
 export type DynamicTextInputTypesElement = JayElement<

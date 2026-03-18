@@ -19,7 +19,7 @@ export interface HeadLinksViewState {
 export interface HeadLinksElementRefs {}
 
 export type HeadLinksSlowViewState = {};
-export type HeadLinksFastViewState = {};
+export type HeadLinksFastViewState = HeadLinksViewState;
 export type HeadLinksInteractiveViewState = HeadLinksViewState;
 
 export type HeadLinksElement = JayElement<HeadLinksViewState, HeadLinksElementRefs>;

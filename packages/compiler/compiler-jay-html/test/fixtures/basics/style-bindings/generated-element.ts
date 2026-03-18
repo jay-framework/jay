@@ -20,7 +20,7 @@ export interface StyleBindingsViewState {
 export interface StyleBindingsElementRefs {}
 
 export type StyleBindingsSlowViewState = {};
-export type StyleBindingsFastViewState = {};
+export type StyleBindingsFastViewState = StyleBindingsViewState;
 export type StyleBindingsInteractiveViewState = StyleBindingsViewState;
 
 export type StyleBindingsElement = JayElement<StyleBindingsViewState, StyleBindingsElementRefs>;

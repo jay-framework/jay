@@ -26,7 +26,7 @@ export interface RefsCommaIssueElementRefs {
 }
 
 export type RefsCommaIssueSlowViewState = {};
-export type RefsCommaIssueFastViewState = {};
+export type RefsCommaIssueFastViewState = RefsCommaIssueViewState;
 export type RefsCommaIssueInteractiveViewState = RefsCommaIssueViewState;
 
 export type RefsCommaIssueElement = JayElement<RefsCommaIssueViewState, RefsCommaIssueElementRefs>;

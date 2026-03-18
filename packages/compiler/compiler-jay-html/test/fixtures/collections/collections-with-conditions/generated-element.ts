@@ -27,7 +27,7 @@ export interface CollectionsWithConditionsViewState {
 export interface CollectionsWithConditionsElementRefs {}
 
 export type CollectionsWithConditionsSlowViewState = {};
-export type CollectionsWithConditionsFastViewState = {};
+export type CollectionsWithConditionsFastViewState = CollectionsWithConditionsViewState;
 export type CollectionsWithConditionsInteractiveViewState = CollectionsWithConditionsViewState;
 
 export type CollectionsWithConditionsElement = JayElement<

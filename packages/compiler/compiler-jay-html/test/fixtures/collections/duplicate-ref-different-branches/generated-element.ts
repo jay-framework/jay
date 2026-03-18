@@ -40,7 +40,7 @@ export interface DuplicateRefDifferentBranchesElementRefs {
 }
 
 export type DuplicateRefDifferentBranchesSlowViewState = {};
-export type DuplicateRefDifferentBranchesFastViewState = {};
+export type DuplicateRefDifferentBranchesFastViewState = DuplicateRefDifferentBranchesViewState;
 export type DuplicateRefDifferentBranchesInteractiveViewState =
     DuplicateRefDifferentBranchesViewState;
 

@@ -36,7 +36,7 @@ export interface NestedBtreeElementRefs {
 }
 
 export type NestedBtreeSlowViewState = {};
-export type NestedBtreeFastViewState = {};
+export type NestedBtreeFastViewState = NestedBtreeViewState;
 export type NestedBtreeInteractiveViewState = NestedBtreeViewState;
 
 export type NestedBtreeElement = JayElement<NestedBtreeViewState, NestedBtreeElementRefs>;

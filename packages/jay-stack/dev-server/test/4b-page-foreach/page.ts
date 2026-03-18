@@ -1,16 +1,10 @@
-import {
-    makeJayStackComponent,
-    phaseOutput,
-    RenderPipeline,
-} from '@jay-framework/fullstack-component';
+import { makeJayStackComponent, phaseOutput } from '@jay-framework/fullstack-component';
 
 export const page = makeJayStackComponent()
     .withProps<{}>()
-    .withSlowlyRender(async () => phaseOutput({}, {}))
-    .withFastRender(async () => {
-        const Pipeline = RenderPipeline.for();
-        return Pipeline.ok({}).toPhaseOutput(() => ({
-            viewState: {
+    .withFastRender(async () =>
+        phaseOutput(
+            {
                 title: 'ForEach Test',
                 items: [
                     { _id: 'a', name: 'Alpha' },
@@ -18,6 +12,6 @@ export const page = makeJayStackComponent()
                     { _id: 'c', name: 'Gamma' },
                 ],
             },
-            carryForward: {},
-        }));
-    });
+            {},
+        ),
+    );

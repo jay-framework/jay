@@ -41,7 +41,7 @@ export interface CollectionWithRepeatingRefsElementRefs {
 }
 
 export type CollectionWithRepeatingRefsSlowViewState = {};
-export type CollectionWithRepeatingRefsFastViewState = {};
+export type CollectionWithRepeatingRefsFastViewState = CollectionWithRepeatingRefsViewState;
 export type CollectionWithRepeatingRefsInteractiveViewState = CollectionWithRepeatingRefsViewState;
 
 export type CollectionWithRepeatingRefsElement = JayElement<

@@ -1471,8 +1471,8 @@ tags:
         });
     });
 
-    describe('No contract', () => {
-        it('resolves text bindings without contract', () => {
+    describe('No contract (DL#108)', () => {
+        it('leaves text bindings unresolved without contract', () => {
             const input: SlowRenderInput = {
                 jayHtmlContent: '<html><body><h1>{title}</h1><p>{subtitle}</p></body></html>',
                 slowViewState: { title: 'Hello World', subtitle: 'Welcome' },
@@ -1480,25 +1480,13 @@ tags:
 
             const result = slowRenderTransform(input);
             expect(result.validations).toEqual([]);
+            // Without a contract, slow render resolves nothing — bindings pass through
             expect(prettifyHtml(result.val!.preRenderedJayHtml)).toEqual(
-                prettifyHtml('<html><body><h1>Hello World</h1><p>Welcome</p></body></html>'),
+                prettifyHtml('<html><body><h1>{title}</h1><p>{subtitle}</p></body></html>'),
             );
         });
 
-        it('resolves nested object bindings without contract', () => {
-            const input: SlowRenderInput = {
-                jayHtmlContent: '<html><body><span>{product.name}</span><span>{product.price}</span></body></html>',
-                slowViewState: { product: { name: 'Widget', price: '$9.99' } },
-            };
-
-            const result = slowRenderTransform(input);
-            expect(result.validations).toEqual([]);
-            expect(prettifyHtml(result.val!.preRenderedJayHtml)).toEqual(
-                prettifyHtml('<html><body><span>Widget</span><span>$9.99</span></body></html>'),
-            );
-        });
-
-        it('unrolls forEach arrays without contract', () => {
+        it('leaves forEach unrolled without contract', () => {
             const input: SlowRenderInput = {
                 jayHtmlContent: '<html><body><div forEach="items" trackBy="id"><span>{name}</span></div></body></html>',
                 slowViewState: {
@@ -1511,12 +1499,10 @@ tags:
 
             const result = slowRenderTransform(input);
             expect(result.validations).toEqual([]);
+            // Without a contract, forEach is not slow — stays as forEach for SSR
             expect(prettifyHtml(result.val!.preRenderedJayHtml)).toEqual(
                 prettifyHtml(
-                    '<html><body>' +
-                        '<div slowForEach="items" jayIndex="0" jayTrackBy="1"><span>Alpha</span></div>' +
-                        '<div slowForEach="items" jayIndex="1" jayTrackBy="2"><span>Beta</span></div>' +
-                        '</body></html>',
+                    '<html><body><div forEach="items" trackBy="id"><span>{name}</span></div></body></html>',
                 ),
             );
         });

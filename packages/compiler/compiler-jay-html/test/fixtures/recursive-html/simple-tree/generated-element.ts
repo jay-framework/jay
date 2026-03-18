@@ -27,7 +27,7 @@ export interface SimpleTreeElementRefs {
 }
 
 export type SimpleTreeSlowViewState = {};
-export type SimpleTreeFastViewState = {};
+export type SimpleTreeFastViewState = SimpleTreeViewState;
 export type SimpleTreeInteractiveViewState = SimpleTreeViewState;
 
 export type SimpleTreeElement = JayElement<SimpleTreeViewState, SimpleTreeElementRefs>;

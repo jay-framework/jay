@@ -3,9 +3,9 @@ import {
     dynamicText as dt,
     ReferencesManager,
     ConstructContext,
+    adoptText,
     hydrateForEach,
     adoptDynamicElement,
-    STATIC,
 // @ts-ignore
 } from '/@fs/Users/yoav/work/jay/main/packages/runtime/runtime/dist/index.js';
 export function hydrate(rootElement, options) {
@@ -13,13 +13,13 @@ export function hydrate(rootElement, options) {
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptDynamicElement('0', {}, [
-                STATIC,
+                adoptText('0/0', (vs) => vs.title),
                 hydrateForEach(
                     (vs) => vs.items,
                     '_id',
-                    () => [],
+                    () => [adoptText('0', (vs1) => vs1.name)],
                     (vs1) => {
-                        return e('ul', {}, [e('li', {}, [dt(vs => vs.name)])]);
+                        return e('ul', {}, [e('li', {}, [dt((vs12) => vs12.name)])]);
                     },
                 ),
             ]),

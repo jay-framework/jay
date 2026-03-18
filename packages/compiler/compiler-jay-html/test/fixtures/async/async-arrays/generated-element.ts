@@ -31,7 +31,7 @@ export interface AsyncArraysViewState {
 export interface AsyncArraysElementRefs {}
 
 export type AsyncArraysSlowViewState = {};
-export type AsyncArraysFastViewState = {};
+export type AsyncArraysFastViewState = AsyncArraysViewState;
 export type AsyncArraysInteractiveViewState = AsyncArraysViewState;
 
 export type AsyncArraysElement = JayElement<AsyncArraysViewState, AsyncArraysElementRefs>;
