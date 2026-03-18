@@ -30,7 +30,7 @@ function _headlessWidget0HydrateRender(options) {
 const _HeadlessWidget0 = makeHeadlessInstanceComponent(
     _headlessWidget0HydrateRender,
     widget,
-    'widget:0',
+    'widget:AR0',
 );
 function _headlessWidget0Render(options) {
     const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
@@ -47,14 +47,14 @@ function _headlessWidget0Render(options) {
 const _HeadlessWidget0Create = makeHeadlessInstanceComponent(
     _headlessWidget0Render,
     widget,
-    'widget:0',
+    'widget:AR0',
 );
 export function hydrate(rootElement, options) {
-    const [refManager, [refToggleButton, ref_0]] = ReferencesManager.for(
+    const [refManager, [refToggleButton, refAr0]] = ReferencesManager.for(
         options,
         ['toggleButton'],
         [],
-        ['0'],
+        ['ar0'],
         [],
     );
     const render = (viewState) =>
@@ -67,10 +67,10 @@ export function hydrate(rootElement, options) {
                         childCompHydrate(
                             _HeadlessWidget0,
                             (vs) => ({ itemId: '1' }),
-                            '0/widget:0',
-                            ref_0(),
+                            '0/widget:AR0',
+                            refAr0(),
                         ),
-                    () => childComp(_HeadlessWidget0Create, (vs) => ({ itemId: '1' }), ref_0()),
+                    () => childComp(_HeadlessWidget0Create, (vs) => ({ itemId: '1' }), refAr0()),
                 ),
                 hydrateConditional(
                     (vs) => !vs.showWidget,

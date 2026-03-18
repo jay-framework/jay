@@ -50,47 +50,41 @@ const _HeadlessWidget1 = makeHeadlessInstanceComponent(_headlessWidget1Render, w
 );
 export function hydrate(rootElement, options) {
     const [itemsRefManager, [refAr0]] = ReferencesManager.for(options, [], [], [], ['ar0']);
-    const [refManager, [refAddButton, refRemoveButton]] = ReferencesManager.for(
-        options,
-        ['addButton', 'removeButton'],
-        [],
-        [],
-        [],
-        {
-            items: itemsRefManager,
-        },
-    );
+    const [refManager, [refAddButton]] = ReferencesManager.for(options, ['addButton'], [], [], [], {
+        items: itemsRefManager,
+    });
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptDynamicElement('0', {}, [
-                STATIC,
-                hydrateForEach(
-                    (vs) => vs.items,
-                    '_id',
-                    () => [
-                        adoptText('0/0', (vs1) => vs1.name),
-                        childCompHydrate(
-                            _HeadlessWidget0Adopt,
-                            (vs1) => ({ itemId: vs1._id }),
-                            '0/widget:AR0',
-                            refAr0(),
-                        ),
-                    ],
-                    (vs1) => {
-                        return e('div', { class: 'list' }, [
-                            e('div', { class: 'card' }, [
-                                e('strong', {}, [dt((vs12) => vs12.name)]),
-                                childComp(
-                                    _HeadlessWidget1,
-                                    (vs12) => ({ itemId: vs12._id }),
-                                    refAr0(),
-                                ),
-                            ]),
-                        ]);
-                    },
-                ),
-                adoptElement('0/2', {}, [], refAddButton()),
-                adoptElement('0/3', {}, [], refRemoveButton()),
+            adoptElement('0', {}, [
+                adoptDynamicElement('0/2', {}, [
+                    STATIC,
+                    hydrateForEach(
+                        (vs) => vs.items,
+                        '_id',
+                        () => [
+                            adoptText('0/0', (vs1) => vs1.name),
+                            childCompHydrate(
+                                _HeadlessWidget0Adopt,
+                                (vs1) => ({ itemId: vs1._id }),
+                                '0/widget:AR0',
+                                refAr0(),
+                            ),
+                        ],
+                        (vs1) => {
+                            return e('div', {}, [
+                                e('div', { class: 'card' }, [
+                                    e('strong', {}, [dt((vs12) => vs12.name)]),
+                                    childComp(
+                                        _HeadlessWidget1,
+                                        (vs12) => ({ itemId: vs12._id }),
+                                        refAr0(),
+                                    ),
+                                ]),
+                            ]);
+                        },
+                    ),
+                ]),
+                adoptElement('0/3', {}, [], refAddButton()),
             ]),
         );
     return [refManager.getPublicAPI(), render];
