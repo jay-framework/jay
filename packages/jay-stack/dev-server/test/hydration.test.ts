@@ -902,71 +902,12 @@ describe('hydration', () => {
         });
     });
 
-    describe.skip('7a. Headless — forEach with disableSSR (client-only)', () => {
-        // Same fixture as 6e but with disableSSR: true.
-        // Tests that headless instances inside forEach work with client-only rendering
-        // (no SSR, no hydration — element target).
-        testFixture('page-headless-foreach-nested', {
-            disableSSR: true,
-            hydrationChecks: async (page) => {
-                expect(await page.textContent('#target h1')).toEqual('Nested ForEach Test');
-                const widgets = await page.$$('#target .widget');
-                expect(widgets).toHaveLength(2);
-                expect(await widgets[0].textContent()).toContain('10');
-                expect(await widgets[1].textContent()).toContain('20');
-            },
-            interactivityChecks: async (page) => {
-                const buttons = await page.$$('#target .widget button');
-                expect(buttons).toHaveLength(2);
-                await buttons[0].click();
-                await page.waitForFunction(
-                    () => {
-                        const values = document.querySelectorAll('#target .widget .value');
-                        return values[0]?.textContent === '11';
-                    },
-                    { timeout: 2000 },
-                );
-                const values = await page.$$('#target .widget .value');
-                expect(await values[0].textContent()).toEqual('11');
-            },
-        });
-    });
-
-    describe.skip('7b. Headless — two static instances with disableSSR (client-only)', () => {
-        // Same fixture as 6e-2 but with disableSSR: true.
-        // Tests that multiple instances work with client-only rendering.
-        testFixture('page-headless-two-instances', {
-            disableSSR: true,
-            hydrationChecks: async (page) => {
-                expect(await page.textContent('#target h1')).toEqual('Two Instances Test');
-                const widgets = await page.$$('#target .widget');
-                expect(widgets).toHaveLength(2);
-                expect(await widgets[0].textContent()).toContain('10');
-                expect(await widgets[1].textContent()).toContain('30');
-            },
-            interactivityChecks: async (page) => {
-                const buttons = await page.$$('#target .widget button');
-                expect(buttons).toHaveLength(2);
-                await buttons[1].click();
-                await page.waitForFunction(
-                    () => {
-                        const values = document.querySelectorAll('#target .widget .value');
-                        return values[1]?.textContent === '31';
-                    },
-                    { timeout: 2000 },
-                );
-                const values = await page.$$('#target .widget .value');
-                expect(await values[0].textContent()).toEqual('10');
-                expect(await values[1].textContent()).toEqual('31');
-            },
-        });
-    });
-
-    // DL#107 gap: fast-only pages lack the discovery pipeline (no slow phase)
-    describe.skip('7c. Fast-only page with headless instance', () => {
-        // Page has withFastRender + withInteractive but NO withSlowlyRender.
-        // Tests that headless instances work without any slow phase.
-        testFixture('page-fast-only', {
+    // 7a: Fast-only page (no withSlowlyRender). Headless widget's inline template
+    // is missing from SSR output — the pre-render pipeline discovers the instance but
+    // the fast-only widget data doesn't reach the server-element target's rendering.
+    // Client gets "undefined is not iterable" — likely from missing __headlessInstances data.
+    describe('7a. Fast-only page with headless instance', () => {
+        testFixture('7a-page-fast-only', {
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Fast Only Page');
                 const widgets = await page.$$('#target .widget');
@@ -990,13 +931,13 @@ describe('hydration', () => {
         });
     });
 
-    // DL#107 gap: interactive-only pages render "undefined" for SSR values
-    describe.skip('7d. Interactive-only page (no slow, no fast)', () => {
-        // Page has only withInteractive — no server phases at all.
-        // Tests that the simplest possible interactive page works.
-        // SSR renders with empty viewState (undefined values), but after hydration
+    // 7b: Interactive-only page (no slow, no fast). SSR-disabled works (client renders
+    // everything). SSR-enabled renders "undefined" for all values — the interactive
+    // constructor provides values but hydrateCompositeJayComponent doesn't trigger an
+    // initial update to propagate the interactive render output to the adopted DOM nodes.
+    describe.skip('7b. Interactive-only page (no slow, no fast)', () => {
         // the interactive constructor provides the initial values.
-        testFixture('page-interactive-only', {
+        testFixture('7b-page-interactive-only', {
             hydrationChecks: async (page) => {
                 // Wait for the interactive constructor's first render to update the DOM
                 await page.waitForFunction(

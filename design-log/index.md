@@ -189,6 +189,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 106 | hydrate dynamic elements with Kindergarten              | One Kindergarten per parent with mixed children; STATIC sentinel; `_setGroup` pattern   |
 | 107 | dev server consistency and phase optionality            | Slow cache on/off parity, optional phases, SSR disable, build cleanup, loadParams cache |
 | 108 | no-contract phase defaults for jay-stack                | Without contract: all data is fast+interactive, no slow phase, remove noMainContract    |
+| 109 | unified dev server phase pipeline                       | Fix instance fast render gate for fast-only pages, hydration initial update             |
 
 ---
 
