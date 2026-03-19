@@ -34,7 +34,7 @@ export function renderToStream(
             w(' class="product-tile"');
             w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '/product-card:AR0/0' + '">');
             w('<h2');
-            w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '/product-card:AR0/0/0' + '">');
+            w('>');
             w(escapeHtml(String(vs_product_card0.name)));
             w('</h2>');
             w('<span');

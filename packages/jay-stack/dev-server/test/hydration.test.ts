@@ -616,7 +616,7 @@ describe('hydration', () => {
     // Test 5 (slowForEach without contract) removed — covered by 4a's slow forEach with contract.
     // Without a contract, slow render resolves nothing (DL#108), so slowForEach doesn't unroll.
 
-    describe.skip('6a. Headless — static placement', () => {
+    describe('6a. Headless — static placement', () => {
         testFixture('page-headless-static', {
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Headless Test');
@@ -640,7 +640,7 @@ describe('hydration', () => {
         });
     });
 
-    describe.skip('6b. Headless — under condition', () => {
+    describe('6b. Headless — under condition', () => {
         testFixture('page-headless-conditional', {
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Conditional Headless');
@@ -686,7 +686,7 @@ describe('hydration', () => {
         });
     });
 
-    describe.skip('6c. Headless — under forEach (nested in wrapper div)', () => {
+    describe('6c. Headless — under forEach (nested in wrapper div)', () => {
         // forEach widget is fast-only (no slow phase) — no need for slow render cache.
         // Widget is inside <div class="card"><strong>{name}</strong><jay:widget>...
         // This tests coordinate resolution when headless instance has intermediate
@@ -757,7 +757,7 @@ describe('hydration', () => {
         });
     });
 
-    describe.skip('6d. Headless — under slowForEach', () => {
+    describe('6d. Headless — under slowForEach', () => {
         testFixture('page-headless-slow-foreach', {
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('SlowForEach Headless');
@@ -785,7 +785,7 @@ describe('hydration', () => {
         });
     });
 
-    describe.skip('6e. Headless — under forEach with wrapper + preceding sections', () => {
+    describe('6e. Headless — under forEach with wrapper + preceding sections', () => {
         // Reproduces fake-shop pattern: multiple sections before the forEach,
         // headless instance inside <div class="card"><strong>{name}</strong><jay:widget>.
         // Tests that coordinates are correct when forEach is not the first child.
@@ -840,7 +840,7 @@ describe('hydration', () => {
         });
     });
 
-    describe.skip('6e-2. Headless — two static instances with different props', () => {
+    describe('6e-2. Headless — two static instances with different props', () => {
         // Two <jay:widget> instances in different parent scopes with different props.
         // Both must get their own fast ViewState and carryForward —
         // the __headlessInstances key must be unique per instance.

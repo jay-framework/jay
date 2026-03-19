@@ -81,7 +81,6 @@ function _headlessProductCard0HydrateRender(
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
             adoptElement('0', {}, [
-                adoptText('0/0', (vs) => vs.name),
                 adoptText('0/1', (vs) => vs.price),
                 adoptElement('0/2', {}, [], refAddToCart()),
             ]),

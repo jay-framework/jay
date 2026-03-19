@@ -2645,6 +2645,8 @@ function renderHydrateHeadlessInstance(
 
     // Compile adopt inline template using HydrateContext with component's ViewState.
     // instanceCoordPrefix: child adoptElement uses relative coords so forInstance(instanceCoord) resolves.
+    // Use the headless component's contract for interactivePaths — the widget's bindings
+    // are resolved against the widget's contract, not the page's contract.
     const adoptChildIndent = new Indent('            ');
     const adoptItemContext: HydrateContext = {
         ...context,
@@ -2657,6 +2659,7 @@ function renderHydrateHeadlessInstance(
         headlessImports: [],
         varMappings: {},
         instanceCoordPrefix: instanceCoord,
+        interactivePaths: buildInteractivePaths(headlessImport.contract),
     };
     const adoptRenderContext = buildRenderContext(adoptItemContext);
 
@@ -3644,6 +3647,8 @@ function renderServerHeadlessInstance(
 
     // Create a context for the inline template with the instance's ViewState.
     // Children read their own jay-coordinate-base — no coordinatePrefix needed.
+    // Use the headless component's contract for interactivePaths — the widget's bindings
+    // are resolved against the widget's contract, not the page's contract.
     const bodyIndent = ifCondition
         ? new Indent(indent.curr + '        ') // Inside if + if guard
         : new Indent(indent.curr + '    '); // Inside if guard only
@@ -3653,6 +3658,7 @@ function renderServerHeadlessInstance(
         indent: bodyIndent,
         // Don't detect nested headless instances inside headless instances (for now)
         headlessContractNames: new Set(),
+        interactivePaths: buildInteractivePaths(headlessImport.contract),
     };
 
     // Render inline template children.
