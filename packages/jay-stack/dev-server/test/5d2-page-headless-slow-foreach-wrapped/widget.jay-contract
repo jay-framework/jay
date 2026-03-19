@@ -1,0 +1,17 @@
+name: Widget
+props:
+  - name: itemId
+    type: string
+    required: true
+tags:
+  - tag: label
+    type: data
+    dataType: string
+    phase: slow
+  - tag: value
+    type: data
+    dataType: number
+    phase: fast+interactive
+  - tag: increment
+    type: interactive
+    elementType: HTMLButtonElement

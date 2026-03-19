@@ -40,7 +40,9 @@ function hashParams(params: Record<string, string>): string {
 }
 
 /**
- * Embeds cache metadata into jay-html content as a <script> tag.
+ * Embeds cache metadata into jay-html content as a <script> tag inside <head>.
+ * This is consistent with existing <script type="application/jay-headless"> and
+ * <script type="application/jay-data"> tags — the compiler ignores unknown script types.
  */
 function embedCacheMetadata(
     jayHtmlContent: string,
@@ -49,7 +51,22 @@ function embedCacheMetadata(
     sourcePath: string,
 ): string {
     const metadata = JSON.stringify({ slowViewState, carryForward, sourcePath });
-    return `${CACHE_TAG_START}${metadata}${CACHE_TAG_END}\n${jayHtmlContent}`;
+    const cacheTag = `${CACHE_TAG_START}${metadata}${CACHE_TAG_END}`;
+
+    // Insert as first child of <head>
+    const headMatch = jayHtmlContent.match(/<head[^>]*>/i);
+    if (headMatch) {
+        const insertPos = headMatch.index! + headMatch[0].length;
+        return (
+            jayHtmlContent.substring(0, insertPos) +
+            '\n' +
+            cacheTag +
+            jayHtmlContent.substring(insertPos)
+        );
+    }
+
+    // Fallback: prepend (shouldn't happen for valid jay-html with <head>)
+    return `${cacheTag}\n${jayHtmlContent}`;
 }
 
 /**

@@ -785,6 +785,37 @@ describe('hydration', () => {
         });
     });
 
+    describe('5d2. Headless — under slowForEach with wrapper div', () => {
+        // Same as 5d but <jay:widget> is wrapped in <div class="card">,
+        // matching the fake-shop pattern where a wrapper element sits between
+        // the forEach item boundary and the headless instance.
+        testFixture('5d2-page-headless-slow-foreach-wrapped', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('SlowForEach Headless');
+                const widgets = await page.$$('#target .widget');
+                expect(widgets).toHaveLength(2);
+                expect(await widgets[0].textContent()).toContain('Item 1');
+                expect(await widgets[0].textContent()).toContain('10');
+                expect(await widgets[1].textContent()).toContain('Item 2');
+                expect(await widgets[1].textContent()).toContain('20');
+            },
+            interactivityChecks: async (page) => {
+                const widgets = await page.$$('#target .widget');
+                expect(await widgets[0].textContent()).toContain('10');
+                await page.click('#target .widget button');
+                await page.waitForFunction(
+                    () => {
+                        const values = document.querySelectorAll('#target .widget .value');
+                        return values[0]?.textContent === '11';
+                    },
+                    { timeout: 2000 },
+                );
+                const updatedWidgets = await page.$$('#target .widget');
+                expect(await updatedWidgets[0].textContent()).toContain('11');
+            },
+        });
+    });
+
     describe('5e. Headless — under forEach with wrapper + preceding sections', () => {
         // Reproduces fake-shop pattern: multiple sections before the forEach,
         // headless instance inside <div class="card"><strong>{name}</strong><jay:widget>.

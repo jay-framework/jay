@@ -2605,8 +2605,8 @@ function renderHydrateHeadlessInstance(
     if (isInsideForEach) {
         coordinateKey = undefined; // forEach: key computed at runtime
     } else if (context.insideSlowForEach) {
-        const suffixIndex = coordSegments.indexOf(coordinateSuffix);
-        const prefix = coordSegments.slice(0, suffixIndex).join('/');
+        // slowForEach: key is trackByValue/suffix — only first segment is the prefix
+        const prefix = coordSegments[0];
         coordinateKey = computeInstanceKey(coordinateSuffix, 'slowForEach', prefix);
     } else {
         // Static instance: key is just the suffix
@@ -3622,9 +3622,10 @@ function renderServerHeadlessInstance(
                 : 'undefined';
         instanceKeyExpr = `String(${trackByExpr}) + ',${coordinateSuffix}'`;
     } else if (context.insideSlowForEach) {
-        // slowForEach: key includes jayTrackBy prefix from the coordinate
-        const suffixIndex = coordSegments.indexOf(coordinateSuffix);
-        const prefix = coordSegments.slice(0, suffixIndex).join('/');
+        // slowForEach: key is trackByValue/suffix, skipping intermediate coordinate-bases.
+        // coordSegments might be ["1", "0", "widget:AR0"] where "0" is a wrapper's
+        // coordinate-base. Only the first segment (trackBy value) is the key prefix.
+        const prefix = coordSegments[0];
         instanceKeyExpr = `'${computeInstanceKey(coordinateSuffix, 'slowForEach', prefix)}'`;
     } else {
         // Static instance: key is just the suffix, regardless of DOM nesting depth

@@ -195,3 +195,44 @@ In `hydrateCompositeJayComponent`: after constructing interactive parts and prod
 
 4. `cd packages/jay-stack/stack-server-runtime && yarn vitest run` — runtime tests pass
 5. `cd packages/compiler/compiler-jay-html && yarn vitest run` — compiler tests pass
+
+## Bug Fix: slowForEach headless instance coordinate mismatch
+
+**Discovered during DL#110 implementation.**
+
+### Problem
+
+When a `<jay:xxx>` headless instance is wrapped in a container element inside a slowForEach, the `__headlessInstances` lookup key in the compiled server-element doesn't match the key produced by the fast renderer.
+
+```html
+<!-- Works (direct child): coordinate = "1/widget:AR0" -->
+<div forEach="items" trackBy="_id">
+  <jay:widget itemId="{_id}">...</jay:widget>
+</div>
+
+<!-- Broken (wrapped): coordinate = "1/0/widget:AR0" -->
+<div forEach="items" trackBy="_id">
+  <div class="card">
+    <jay:widget itemId="{_id}">...</jay:widget>
+  </div>
+</div>
+```
+
+The server-element compiler took ALL coordinate segments before the instance suffix as the prefix (including intermediate coordinate-bases like `0` from wrapper elements). But `discoverHeadlessInstances` only produces `[trackByValue, instanceSuffix]` — no intermediate bases. The fast renderer joins these to create the `__headlessInstances` key.
+
+### Fix
+
+In `jay-html-compiler.ts`, both the server-element and hydrate targets computed the slowForEach prefix as `coordSegments.slice(0, suffixIndex).join('/')`. Changed to use only `coordSegments[0]` (the trackBy value), matching the discovery coordinate format. The decision to exclude intermediate element coordinates was already established for forEach — this aligns slowForEach with the same rule.
+
+Also stripped `<script type="application/jay-cache">` tags in the Vite plugin's `loadJayFile` hook (`rollup-plugin/lib/runtime/load.ts`), since pre-rendered files now embed cache metadata on disk (DL#110).
+
+### Test
+
+Added test `5d2-page-headless-slow-foreach-wrapped` — same as 5d but with a `<div class="card">` wrapper between forEach and `<jay:widget>`. This reproduces the fake-shop pattern.
+
+### Files changed
+
+- `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts` — fix prefix computation (2 locations: server + hydrate targets)
+- `packages/compiler/rollup-plugin/lib/runtime/load.ts` — strip cache tag in Vite load hook
+- `packages/jay-stack/dev-server/test/5d2-page-headless-slow-foreach-wrapped/` — new test fixture
+- `packages/jay-stack/dev-server/test/hydration.test.ts` — test 5d2
