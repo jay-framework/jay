@@ -40,7 +40,7 @@ export const widget = builder.withInteractive(
         fastViewState: Signals<WidgetFastViewState>,
         carryForward: WidgetCarryForward,
     ) => {
-        const [value, setValue] = createSignal(fastViewState.value[0]);
+        const [value, setValue] = fastViewState.value;
 
         refs.increment.onclick(() => {
             setValue(value() + 1);

@@ -2,8 +2,8 @@ import {
     ReferencesManager,
     ConstructContext,
     adoptElement,
-    // @ts-ignore
-} from '/@fs/Users/yoav/work/jay/main/packages/runtime/runtime/dist/index.js';
+// @ts-ignore
+} from '/@fs{{ROOT}}/packages/runtime/runtime/dist/index.js';
 export function hydrate(rootElement, options) {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState) =>

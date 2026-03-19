@@ -90,7 +90,7 @@ function _headlessProductCard0Render(
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0Render,
     productCard,
-    'p1/product-card:0',
+    'p1/product-card:AR0',
 );
 
 // Inline template for headless component: product-card #1
@@ -119,7 +119,7 @@ function _headlessProductCard1Render(
 const _HeadlessProductCard1 = makeHeadlessInstanceComponent(
     _headlessProductCard1Render,
     productCard,
-    'p2/product-card:0',
+    'p2/product-card:AR0',
 );
 
 export function render(

@@ -894,7 +894,9 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             ReferenceManagerTarget.element,
         );
 
-        // Build coordinate key: use explicit ref if present, otherwise auto-generate with scope counter
+        // Build coordinate key: use explicit ref if present, otherwise auto-generate with AR prefix.
+        // Must match assignCoordinates' naming (AR0, AR1, ...) so the element target's
+        // __headlessInstances keys align with the dev server's discovery pipeline.
         const explicitRef = htmlElement.attributes.ref;
         let coordinateRef: string;
         if (explicitRef) {
@@ -903,7 +905,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             const counterKey = [...newContext.coordinatePrefix, contractName].join('/');
             const localIndex = newContext.coordinateCounters.get(counterKey) ?? 0;
             newContext.coordinateCounters.set(counterKey, localIndex + 1);
-            coordinateRef = String(localIndex);
+            coordinateRef = `AR${localIndex}`;
         }
 
         // For static instances: string key. For forEach instances: factory function.

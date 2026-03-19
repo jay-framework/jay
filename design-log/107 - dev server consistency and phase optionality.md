@@ -211,9 +211,22 @@ New dev-server test `3a. Phase-aware conditionals`:
 
 Test results: compiler-jay-html 600 pass (all green). Hydration test 3a: 16/16 pass (all 3 SSR modes).
 
+**AR prefix alignment for element target** — The element target auto-generated headless instance refs as `0`, `1`, etc., while `assignCoordinates` (used by the dev server discovery pipeline) generated `AR0`, `AR1`, etc. This key mismatch caused SSR-disabled headless tests to fail: `makeHeadlessInstanceComponent` looked up `widget:0` in `__headlessInstances` but the data was keyed as `widget:AR0`.
+
+Fix: changed element target's auto-ref generation from `String(localIndex)` to `` `AR${localIndex}` `` in `renderHeadlessInstance`. Updated 4 element target fixtures.
+
+**Headless instance interactivePaths** — The phase-aware hydration fix used the page's contract for `interactivePaths` when compiling headless instance inline templates. But the template bindings reference the widget's contract fields (e.g., `{value}` from the widget, not the page). This caused `value` (fast+interactive in the widget contract) to be skipped from adoption and `jay-coordinate`.
+
+Fix: both `renderHydrateHeadlessInstance` and `renderServerHeadlessInstance` now use `buildInteractivePaths(headlessImport.contract)` instead of inheriting the page's `interactivePaths`. This fixed SSR interactivity failures for tests 5b, 5c, 5e.
+
+**Test restructuring** — Tests renumbered: old 6→5 (headless), old 5a-page-with-headless→6a-page-with-keyed-headless (skipped, key-based headless). Test fixture comparison improved: `prettify()` applied to expected fixtures, monorepo paths canonicalized with `{{ROOT}}` placeholder. `serve-fixture` script enhanced with `--no-ssr` flag, `--list`, `--help`.
+
+Test results: 166 pass, 3 fail (5d slowForEach SSR-disabled only), 42 skipped.
+
 ### Remaining work (not yet implemented)
 
-- **AR prefix fixture cascade** — changing auto-ref naming from `"0"` to `"AR0"` requires updating all slow-render, server-element, and hydrate fixtures. Root cause of most remaining test failures.
+- **5d slowForEach SSR-disabled** — headless inside slowForEach still fails in client-only mode. The slowForEach items have `jayTrackBy` prefixes that the element target handles differently from the discovery pipeline.
+- **6a key-based headless** — skipped, needs investigation for the key-based inclusion pattern.
 - **7c fix** — fast-only page needs the pre-render pipeline to discover headless instances even without a slow phase.
 - **7d fix** — interactive-only page needs the adoptText reconciliation to fire before the first DOM check.
 - **Phase 5 pre-processing extraction** — the full DL#107 structural fix (single pre-processing stage) is not yet implemented.

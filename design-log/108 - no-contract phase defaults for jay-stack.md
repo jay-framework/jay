@@ -134,9 +134,11 @@ If a Jay Stack component without a contract returns non-empty data from `withSlo
 
 **Fixture cascade** — 96 inline-data fixture files updated: `FastViewState = {}` → `FastViewState = ViewStateType`. Contract-based fixtures with explicit phase types were not affected.
 
+**Fix 3** — Warning in dev server's `preRenderJayHtml`: when `slowViewState` has data but no contract exists, logs a warning directing the developer to move data to `withFastRender` or add a `.jay-contract` file.
+
 ### Deviations
 
-- **Fix 3 deferred** — Error on `withSlowlyRender` returning data without a contract was not implemented. This is a dev-server pipeline concern and less critical now that the types guide developers to use `withFastRender`.
+- Fix 3 implemented as a warning (not error) — safer for existing projects.
 
 ### Test results
 

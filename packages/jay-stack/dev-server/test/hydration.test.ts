@@ -876,6 +876,19 @@ describe('hydration', () => {
         });
     });
 
+    describe.skip('6a. Key-based headless component', () => {
+        // Page uses key-based headless inclusion (key="headless" on the script tag)
+        // instead of instance-based <jay:xxx> pattern. Tests backward compatibility.
+        testFixture('6a-page-with-keyed-headless', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Page with Headless');
+                expect(await page.textContent('#target p')).toEqual(
+                    'This page has a headless component',
+                );
+            },
+        });
+    });
+
     describe.skip('7a. Headless — forEach with disableSSR (client-only)', () => {
         // Same fixture as 6e but with disableSSR: true.
         // Tests that headless instances inside forEach work with client-only rendering

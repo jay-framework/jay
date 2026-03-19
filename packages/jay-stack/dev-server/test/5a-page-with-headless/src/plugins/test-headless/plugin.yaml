@@ -1,7 +1,0 @@
-name: test-headless
-module: ../../../headless-component
-contracts:
-  - name: headless
-    contract: ../../../headless-component.jay-contract
-    component: headless
-    description: Test headless component
