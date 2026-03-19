@@ -1,0 +1,8 @@
+jay_stack_version: 0.0.0
+plugins:
+  - name: test-headless
+    path: ./src/plugins/test-headless
+    contracts:
+      - name: headless
+        type: static
+        path: ./headless-component.jay-contract
