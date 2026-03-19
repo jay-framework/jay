@@ -27,9 +27,7 @@ function listFixtures(): string[] {
     return fs
         .readdirSync(__dirname, { withFileTypes: true })
         .filter(
-            (d) =>
-                d.isDirectory() &&
-                fs.existsSync(path.join(__dirname, d.name, 'page.jay-html')),
+            (d) => d.isDirectory() && fs.existsSync(path.join(__dirname, d.name, 'page.jay-html')),
         )
         .map((d) => d.name)
         .sort();

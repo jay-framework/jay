@@ -7,14 +7,18 @@ import {
     partialRender,
 } from '@jay-framework/fullstack-component';
 import { JayComponentCore } from '@jay-framework/component';
-import { DevServerPagePart } from './load-page-parts';
+import { DevServerPagePart, HeadlessInstanceComponent } from './load-page-parts';
 import { resolveServices } from './services';
+import type { DiscoveredHeadlessInstance } from '@jay-framework/compiler-jay-html';
+import type { InstancePhaseData, InstanceSlowRenderResult } from './instance-slow-render';
 
 export interface SlowlyChangingPhase {
     runSlowlyForPage(
         pageParams: object,
         pageProps: PageProps,
         parts: Array<DevServerPagePart>,
+        discoveredInstances?: DiscoveredHeadlessInstance[],
+        headlessInstanceComponents?: HeadlessInstanceComponent[],
     ): Promise<AnySlowlyRenderResult>;
 }
 
@@ -48,6 +52,8 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
         pageParams: UrlParams,
         pageProps: PageProps,
         parts: Array<DevServerPagePart>,
+        discoveredInstances?: DiscoveredHeadlessInstance[],
+        headlessInstanceComponents?: HeadlessInstanceComponent[],
     ): Promise<AnySlowlyRenderResult> {
         for (const part of parts) {
             const { compDefinition, contractInfo } = part;
@@ -105,6 +111,70 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
                 } else return slowlyRenderedPart;
             }
         }
+        // Run slow render for discovered headless instances (DL#109).
+        // All discovered instances are included in instancePhaseData — even those
+        // without slowlyRender — so the fast phase always sees them.
+        if (discoveredInstances && discoveredInstances.length > 0 && headlessInstanceComponents) {
+            const componentByContractName = new Map<string, HeadlessInstanceComponent>();
+            for (const comp of headlessInstanceComponents) {
+                componentByContractName.set(comp.contractName, comp);
+            }
+
+            const instancePhaseData: InstancePhaseData = {
+                discovered: [],
+                carryForwards: {},
+            };
+            const instanceSlowViewStates: Record<string, object> = {};
+            const instanceResolvedData: InstanceSlowRenderResult['resolvedData'] = [];
+
+            for (const instance of discoveredInstances) {
+                const comp = componentByContractName.get(instance.contractName);
+                if (!comp) continue;
+
+                const coordKey = instance.coordinate.join('/');
+
+                // Normalize props
+                const contractProps = comp.contract?.props ?? [];
+                const normalizedProps: Record<string, string> = {};
+                for (const [key, value] of Object.entries(instance.props)) {
+                    const match = contractProps.find(
+                        (p) => p.name.toLowerCase() === key.toLowerCase(),
+                    );
+                    normalizedProps[match ? match.name : key] = value;
+                }
+
+                // Always add to discovered (enables fast phase for all instances)
+                instancePhaseData.discovered.push({
+                    contractName: instance.contractName,
+                    props: normalizedProps,
+                    coordinate: instance.coordinate,
+                });
+
+                // Run slow render if the component has it
+                if (comp.compDefinition.slowlyRender) {
+                    const services = resolveServices(comp.compDefinition.services);
+                    const slowResult = await comp.compDefinition.slowlyRender(
+                        normalizedProps,
+                        ...services,
+                    );
+                    if (slowResult.kind === 'PhaseOutput') {
+                        instanceSlowViewStates[coordKey] = slowResult.rendered;
+                        instancePhaseData.carryForwards[coordKey] = slowResult.carryForward;
+                        instanceResolvedData.push({
+                            coordinate: instance.coordinate,
+                            contract: comp.contract,
+                            slowViewState: slowResult.rendered as Record<string, unknown>,
+                        });
+                    }
+                }
+            }
+
+            // Store instance data in carryForward for downstream consumption
+            (carryForward as any).__instances = instancePhaseData;
+            (carryForward as any).__instanceSlowViewStates = instanceSlowViewStates;
+            (carryForward as any).__instanceResolvedData = instanceResolvedData;
+        }
+
         return partialRender(slowlyViewState, carryForward);
     }
 }

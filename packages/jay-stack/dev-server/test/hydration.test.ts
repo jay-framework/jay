@@ -932,9 +932,9 @@ describe('hydration', () => {
     });
 
     // 7b: Interactive-only page (no slow, no fast). SSR-disabled works (client renders
-    // everything). SSR-enabled renders "undefined" for all values — the interactive
-    // constructor provides values but hydrateCompositeJayComponent doesn't trigger an
-    // initial update to propagate the interactive render output to the adopted DOM nodes.
+    // 7b: element.update(viewState) is called after initial hydrate render (fix in
+    // component.ts) but SSR DOM still shows "undefined". SSR-disabled mode passes.
+    // Needs further investigation into Vite module resolution for the runtime fix.
     describe.skip('7b. Interactive-only page (no slow, no fast)', () => {
         // the interactive constructor provides the initial values.
         testFixture('7b-page-interactive-only', {

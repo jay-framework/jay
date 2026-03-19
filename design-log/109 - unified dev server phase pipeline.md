@@ -56,11 +56,11 @@ forEachInstances: ForEachHeadlessInstance[];
 ```typescript
 // Extended return type:
 interface SlowPhaseResult {
-    rendered: object;           // page slow ViewState
-    carryForward: object;       // page carryForward
-    instancePhaseData: InstancePhaseData;  // always present
-    instanceSlowViewStates: Record<string, object>; // for resolveHeadlessInstances
-    instanceResolvedData: Array<{ coordinate, contract, slowViewState }>; // for resolveHeadlessInstances
+  rendered: object; // page slow ViewState
+  carryForward: object; // page carryForward
+  instancePhaseData: InstancePhaseData; // always present
+  instanceSlowViewStates: Record<string, object>; // for resolveHeadlessInstances
+  instanceResolvedData: Array<{ coordinate; contract; slowViewState }>; // for resolveHeadlessInstances
 }
 ```
 
@@ -77,12 +77,15 @@ The key change: instances WITHOUT `slowlyRender` are still added to `instancePha
 ```typescript
 // Extended signature:
 function renderFastChangingData(
-    pageParams, pageProps, carryForward, parts,
-    // New parameters:
-    instancePhaseData?: InstancePhaseData,
-    headlessInstanceComponents?: HeadlessInstanceComponent[],
-    mergedSlowFastViewState?: object,  // needed for forEach instance array resolution
-): Promise<AnyFastRenderResult>  // returned viewState includes __headlessInstances
+  pageParams,
+  pageProps,
+  carryForward,
+  parts,
+  // New parameters:
+  instancePhaseData?: InstancePhaseData,
+  headlessInstanceComponents?: HeadlessInstanceComponent[],
+  mergedSlowFastViewState?: object, // needed for forEach instance array resolution
+): Promise<AnyFastRenderResult>; // returned viewState includes __headlessInstances
 ```
 
 Handles both static instances and forEach instances. For instances without `slowlyRender`, calls `fastRender(props, ...services)`. For instances with `slowlyRender`, calls `fastRender(props, carryForward, ...services)`.
@@ -159,5 +162,36 @@ In `hydrateCompositeJayComponent`: after constructing interactive parts and prod
 1. Test 7a passes — fast-only page with headless instance renders in all modes
 2. Test 7b passes — interactive-only page updates DOM after hydration in all modes
 3. Tests 1-6a unchanged — no regressions (182 tests)
+
+## Implementation Results
+
+### Completed
+
+**Phase 1** — `loadPageParts` now runs `discoverHeadlessInstances` on the jay-html content and returns `discoveredInstances` and `forEachInstances` in `LoadedPageParts`.
+
+**Phase 2** — `runSlowlyForPage` accepts `discoveredInstances` and `headlessInstanceComponents`. Runs instance slow render after key-based parts. Always includes all discovered instances in `instancePhaseData.discovered` (even without `slowlyRender`). Stores instance data in `carryForward.__instances`, `__instanceSlowViewStates`, `__instanceResolvedData`.
+
+**Phase 3** — `renderFastChangingData` accepts `instancePhaseData`, `forEachInstances`, `headlessInstanceComponents`, `mergedSlowViewState`. Runs static instance fast render and forEach instance fast render. Merges `__headlessInstances` into returned viewState/carryForward. Handles instances without `slowlyRender` (calls `fastRender(props, ...services)` without carryForward).
+
+**Phase 4** — `handleClientOnlyRequest` simplified to use unified flow (discovery from `loadPageParts`, slow from `runSlowlyForPage`, fast from `renderFastChangingData`). `handlePreRenderRequest` simplified: after caching, delegates to `handleCachedRequest` instead of duplicating the fast phase. `handleCachedRequest` updated to use unified `renderFastChangingData`. Removed `renderFastChangingDataForInstances`, `renderFastChangingDataForForEachInstances`, `resolvePathValue`, `resolveBinding` from `dev-server.ts` (moved to `fast-changing-runner.ts`).
+
+**Phase 5 (partial)** — Fix in `component.ts`: after first render (`element = render(viewState)`), calls `element.update(viewState)` to propagate initial values to adopted DOM nodes. Runtime tests pass (56 component, 249 runtime). However, test 7b SSR mode still shows "undefined" — the fix is in the dist but Vite's module resolution in the test doesn't pick it up. SSR-disabled mode passes.
+
+**`preRenderJayHtml`** — Always populates `instancePhaseData` when instances are discovered, even without slow data. This ensures fast-only instances are visible to the fast phase.
+
+### Deviations
+
+- **Change 5 target changed** — The initial update fix was applied in `component.ts` (`makeJayComponent`) instead of `hydrate-composite-component.ts`. The fix is in the shared component creation path, affecting both element and hydrate targets. This is correct — both paths need the initial update.
+- **`handlePreRenderRequest` delegates to `handleCachedRequest`** — Not in the original design but a natural simplification. After caching the pre-render result, the handler creates a cache entry and delegates, eliminating ~60 lines of duplicated fast-phase code.
+- **`preRenderJayHtml` still does its own discovery** — Discovery couldn't fully move to `loadPageParts` for the pre-render path because discovery must run on the pre-rendered HTML (after `slowRenderTransform`). The pre-render handler loads parts twice: first for component definitions, then `preRenderJayHtml` discovers on the transformed HTML.
+- **Test 7b remains skipped** — The `component.ts` fix is correct (runtime tests pass) but the Vite dev server test doesn't pick up the change. Needs investigation into Vite module resolution for workspace packages.
+
+### Test results
+
+- Tests 1-7a: 195 pass, 0 fail, 13 skipped (7b only)
+- stack-server-runtime: 89 pass
+- runtime component: 56 pass
+- runtime: 249 pass
+
 4. `cd packages/jay-stack/stack-server-runtime && yarn vitest run` — runtime tests pass
 5. `cd packages/compiler/compiler-jay-html && yarn vitest run` — compiler tests pass

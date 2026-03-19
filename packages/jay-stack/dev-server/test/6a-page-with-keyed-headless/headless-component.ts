@@ -13,17 +13,9 @@ import type {
 const builder = makeJayStackComponent<HeadlessComponentContract>()
     .withProps<{}>()
     .withSlowlyRender(async () =>
-        phaseOutput<HeadlessComponentSlowViewState>(
-            { label: 'Keyed Headless' },
-            {},
-        ),
+        phaseOutput<HeadlessComponentSlowViewState>({ label: 'Keyed Headless' }, {}),
     )
-    .withFastRender(async () =>
-        phaseOutput<HeadlessComponentFastViewState>(
-            { count: 10 },
-            {},
-        ),
-    );
+    .withFastRender(async () => phaseOutput<HeadlessComponentFastViewState>({ count: 10 }, {}));
 
 export const headless = builder.withInteractive(
     (

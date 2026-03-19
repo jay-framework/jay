@@ -8,6 +8,9 @@ import {
     JAY_IMPORT_RESOLVER,
     HeadlessContractInfo,
     Contract,
+    discoverHeadlessInstances,
+    type DiscoveredHeadlessInstance,
+    type ForEachHeadlessInstance,
 } from '@jay-framework/compiler-jay-html';
 import { AnyJayStackComponentDefinition } from '@jay-framework/fullstack-component';
 import { JayRollupConfig } from '@jay-framework/rollup-plugin';
@@ -52,6 +55,10 @@ export interface LoadedPageParts {
     headlessContracts: HeadlessContractInfo[];
     /** Instance-only headless components (no key) for server-side phase orchestration */
     headlessInstanceComponents: HeadlessInstanceComponent[];
+    /** Discovered <jay:xxx> instances from the jay-html (DL#109) */
+    discoveredInstances: DiscoveredHeadlessInstance[];
+    /** Discovered forEach <jay:xxx> instances from the jay-html (DL#109) */
+    forEachInstances: ForEachHeadlessInstance[];
 }
 
 export interface LoadPagePartsOptions {
@@ -175,6 +182,14 @@ export async function loadPageParts(
                 contractPath: hi.contractPath,
             }));
 
+        // Discover headless instances in the jay-html (DL#109).
+        // For pre-rendered HTML, this finds instances after slow bindings are resolved.
+        // For original jay-html, this finds instances before any rendering.
+        const discoveryResult =
+            headlessInstanceComponents.length > 0
+                ? discoverHeadlessInstances(jayHtmlSource)
+                : { instances: [], forEachInstances: [], preRenderedJayHtml: jayHtmlSource };
+
         return {
             parts,
             serverTrackByMap: jayHtml.serverTrackByMap,
@@ -182,6 +197,8 @@ export async function loadPageParts(
             usedPackages,
             headlessContracts,
             headlessInstanceComponents,
+            discoveredInstances: discoveryResult.instances,
+            forEachInstances: discoveryResult.forEachInstances,
         };
     });
 }

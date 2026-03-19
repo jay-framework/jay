@@ -172,13 +172,18 @@ export function makeJayComponent<
                 let viewState = materializeViewState(viewStateValueOrGetters);
                 currentViewState = viewState;
 
-                if (!element)
+                if (!element) {
                     element = renderWithContexts(
                         componentContext.provideContexts,
                         render,
                         viewState,
                     );
-                else element.update(viewState);
+                    // Trigger initial update so adopted DOM nodes (from hydration)
+                    // reflect the interactive constructor's values when SSR rendered
+                    // "undefined" or stale content. Without this, adoptText nodes
+                    // keep their SSR text until the next reactive update.
+                    element.update(viewState);
+                } else element.update(viewState);
 
                 // Notify viewStateChange listener (uses JayEvent format for consistency)
                 viewStateChangeListener?.({ event: viewState, viewState, coordinate: [] });

@@ -5,8 +5,5 @@ import type { PageSlowViewState } from './page.jay-contract';
 export const page = makeJayStackComponent()
     .withProps<{}>()
     .withSlowlyRender(async () =>
-        phaseOutput<PageSlowViewState>(
-            { title: 'Keyed Headless Test' },
-            {},
-        ),
+        phaseOutput<PageSlowViewState>({ title: 'Keyed Headless Test' }, {}),
     );
