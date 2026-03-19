@@ -911,14 +911,6 @@ async function sendResponse(
         );
     }
 
-    // Save generated page to build folder for debugging
-    if (options.buildFolder) {
-        const pageName = !url || url === '/' ? 'index' : url.replace(/^\//, '').replace(/\//g, '-');
-        const clientScriptDir = path.join(options.buildFolder, 'debug', 'client-entry');
-        await fs.mkdir(clientScriptDir, { recursive: true });
-        await fs.writeFile(path.join(clientScriptDir, `${pageName}.html`), pageHtml, 'utf-8');
-    }
-
     const viteStart = Date.now();
     const compiledPageHtml = await vite.transformIndexHtml(!!url ? url : '/', pageHtml);
     timing?.recordViteClient(Date.now() - viteStart);
