@@ -223,9 +223,20 @@ Fix: both `renderHydrateHeadlessInstance` and `renderServerHeadlessInstance` now
 
 Test results: 166 pass, 3 fail (5d slowForEach SSR-disabled only), 42 skipped.
 
+**5d slowForEach SSR-disabled fix** — Three issues fixed:
+
+1. **Test fixture had pre-rendered jay-html** — `page.jay-html` had `slowForEach` attributes (post-slow-render format) instead of `forEach`. Fixed to use regular `forEach` with `phase: slow` in the contract. The slow render transform unrolls it during the pipeline.
+
+2. **`buildCoordinatePrefix` included intermediate element indices** — When `<jay:widget>` was inside a wrapper div within a slowForEach item, `buildCoordinatePrefix` included the wrapper's child index (e.g., `2/0/widget:AR0`), but the element target only used jayTrackBy values (`2/widget:AR0`). Simplified `buildCoordinatePrefix` to only collect `jayTrackBy` values — no intermediate indices.
+
+3. **`handleClientOnlyRequest` blocked slow-phase forEach instances** — `validateForEachInstances` rejected headless components with slow phases inside forEach. In client-only mode this validation is wrong: the client renders everything. Removed the validation for the client-only path.
+
+4. **`renderFastChangingDataForForEachInstances` skipped slow phase** — For forEach instances with `withSlowlyRender`, `fastRender` expects `(props, carryForward, ...services)`. The function only called `fastRender(props, ...services)`. Fixed to run `slowlyRender` first when present, pass `carryForward` to `fastRender`, and merge slow+fast viewStates.
+
+Test results: 169 pass, 0 fail, 42 skipped. All tests 1–5 pass in all modes (SSR enabled + disabled).
+
 ### Remaining work (not yet implemented)
 
-- **5d slowForEach SSR-disabled** — headless inside slowForEach still fails in client-only mode. The slowForEach items have `jayTrackBy` prefixes that the element target handles differently from the discovery pipeline.
 - **6a key-based headless** — skipped, needs investigation for the key-based inclusion pattern.
 - **7c fix** — fast-only page needs the pre-render pipeline to discover headless instances even without a slow phase.
 - **7d fix** — interactive-only page needs the adoptText reconciliation to fire before the first DOM check.

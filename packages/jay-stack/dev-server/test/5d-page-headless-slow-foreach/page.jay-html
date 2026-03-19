@@ -10,27 +10,14 @@
 <body>
     <div>
         <h1>{title}</h1>
-        <div class="list">
-            <div slowForEach="items" trackBy="_id" jayIndex="0" jayTrackBy="1">
-                <jay:widget itemId="1">
-                    <div class="widget">
-                        <span class="label">{label}</span>
-                        <span class="value">{value}</span>
-                <button ref="increment">+1</button>
-                    </div>
-                </jay:widget>
-            </div>
-            <div slowForEach="items" trackBy="_id" jayIndex="1" jayTrackBy="2">
-                <div class="card">
-                    <jay:widget itemId="2">
-                        <div class="widget">
-                            <span class="label">{label}</span>
-                            <span class="value">{value}</span>
-                            <button ref="increment">+1</button>
-                        </div>
-                    </jay:widget>
+        <div class="list" forEach="items" trackBy="_id">
+            <jay:widget itemId="{_id}">
+                <div class="widget">
+                    <span class="label">{label}</span>
+                    <span class="value">{value}</span>
+                    <button ref="increment">+1</button>
                 </div>
-            </div>
+            </jay:widget>
         </div>
     </div>
 </body>

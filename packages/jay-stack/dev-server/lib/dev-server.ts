@@ -672,18 +672,9 @@ async function handleClientOnlyRequest(
         const discoveryResult = discoverHeadlessInstances(jayHtmlContent);
 
         if (discoveryResult.forEachInstances.length > 0) {
-            const validationErrors = validateForEachInstances(
-                discoveryResult.forEachInstances,
-                headlessInstanceComponents,
-            );
-            if (validationErrors.length > 0) {
-                getLogger().error(
-                    `[ClientOnly] ForEach instance validation failed: ${validationErrors.join(', ')}`,
-                );
-                res.status(500).end(validationErrors.join('\n'));
-                timing?.end();
-                return;
-            }
+            // In client-only mode, skip slow phase validation for forEach instances.
+            // The client renders everything — slow phase data is computed server-side
+            // and included in the viewState, so forEach items work like regular forEach.
             forEachInstancesForFast = discoveryResult.forEachInstances;
         }
 
@@ -1151,16 +1142,31 @@ async function renderFastChangingDataForForEachInstances(
 
             if (comp.compDefinition.fastRender) {
                 const services = resolveServices(comp.compDefinition.services);
-                // No slow phase → fastRender signature is (props, ...services)
-                // carryForward is only injected when withSlowlyRender is used
-                const fastResult = await comp.compDefinition.fastRender(props, ...services);
+
+                // If the component has a slow phase, run it first to get carryForward
+                let slowVS: object = {};
+                let carryForward: object = {};
+                if (comp.compDefinition.slowlyRender) {
+                    const slowResult = await comp.compDefinition.slowlyRender(props, ...services);
+                    if (slowResult.kind === 'PhaseOutput') {
+                        slowVS = slowResult.rendered;
+                        carryForward = slowResult.carryForward;
+                    }
+                }
+
+                // fastRender signature depends on whether slow phase exists:
+                // with slow: (props, carryForward, ...services)
+                // without slow: (props, ...services)
+                const fastResult = comp.compDefinition.slowlyRender
+                    ? await comp.compDefinition.fastRender(props, carryForward, ...services)
+                    : await comp.compDefinition.fastRender(props, ...services);
 
                 if (fastResult.kind === 'PhaseOutput') {
                     const coord = computeForEachInstanceKey(
                         trackByValue,
                         instance.coordinateSuffix,
                     );
-                    viewStates[coord] = fastResult.rendered;
+                    viewStates[coord] = { ...slowVS, ...fastResult.rendered };
                     if (fastResult.carryForward) {
                         carryForwards[coord] = fastResult.carryForward;
                     }
