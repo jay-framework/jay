@@ -902,12 +902,11 @@ describe('hydration', () => {
         });
     });
 
-    // 7a: Fast-only page (no withSlowlyRender). Headless widget's inline template
-    // is missing from SSR output — the pre-render pipeline discovers the instance but
-    // the fast-only widget data doesn't reach the server-element target's rendering.
-    // Client gets "undefined is not iterable" — likely from missing __headlessInstances data.
-    describe('7a. Fast-only page with headless instance', () => {
-        testFixture('7a-page-fast-only', {
+    describe('7. Fast-only page with headless instance (no slow phase)', () => {
+        // Page has withFastRender + withInteractive but NO withSlowlyRender.
+        // Tests that the unified pipeline discovers and renders headless instances
+        // without a slow phase (DL#109).
+        testFixture('7-page-fast-only', {
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Fast Only Page');
                 const widgets = await page.$$('#target .widget');
@@ -927,35 +926,6 @@ describe('hydration', () => {
                 );
                 const values = await page.$$('#target .widget .value');
                 expect(await values[0].textContent()).toEqual('11');
-            },
-        });
-    });
-
-    // 7b: Interactive-only page (no slow, no fast). SSR-disabled works (client renders
-    // 7b: element.update(viewState) is called after initial hydrate render (fix in
-    // component.ts) but SSR DOM still shows "undefined". SSR-disabled mode passes.
-    // Needs further investigation into Vite module resolution for the runtime fix.
-    describe.skip('7b. Interactive-only page (no slow, no fast)', () => {
-        // the interactive constructor provides the initial values.
-        testFixture('7b-page-interactive-only', {
-            hydrationChecks: async (page) => {
-                // Wait for the interactive constructor's first render to update the DOM
-                await page.waitForFunction(
-                    () => document.querySelector('#target h1')?.textContent === 'Interactive Only',
-                    { timeout: 2000 },
-                );
-                expect(await page.textContent('#target h1')).toEqual('Interactive Only');
-                expect(await page.textContent('#target p')).toContain('Count: 0');
-            },
-            interactivityChecks: async (page) => {
-                await page.click('#target button');
-                await page.waitForFunction(
-                    () => {
-                        return document.querySelector('#target p')?.textContent === 'Count: 1';
-                    },
-                    { timeout: 2000 },
-                );
-                expect(await page.textContent('#target p')).toEqual('Count: 1');
             },
         });
     });
