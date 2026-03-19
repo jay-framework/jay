@@ -14,6 +14,7 @@ import {
     type PluginWithInit,
     type PluginClientInitInfo,
     SlowRenderCache,
+    type SlowRenderCacheEntry,
 } from '@jay-framework/stack-server-runtime';
 import type {
     ClientError4xx,
@@ -205,21 +206,8 @@ function mkRoute(
                 );
             } else {
                 // SSR: always use full pipeline with slow render cache
-                let cachedEntry = slowRenderCache.get(route.jayHtmlPath, pageParams);
-
-                // Verify the cached file still exists (could be deleted while server is running)
-                if (cachedEntry) {
-                    try {
-                        await fs.access(cachedEntry.preRenderedPath);
-                    } catch {
-                        // Cached file was deleted, invalidate and rebuild
-                        getLogger().info(
-                            `[SlowRender] Cached file missing, rebuilding: ${cachedEntry.preRenderedPath}`,
-                        );
-                        await slowRenderCache.invalidate(route.jayHtmlPath);
-                        cachedEntry = undefined;
-                    }
-                }
+                // get() reads from disk — returns undefined if file is missing or has no metadata
+                const cachedEntry = await slowRenderCache.get(route.jayHtmlPath, pageParams);
 
                 if (cachedEntry) {
                     await handleCachedRequest(
@@ -272,7 +260,7 @@ async function handleCachedRequest(
     vite: ViteDevServer,
     route: JayRoute,
     options: DevServerOptions,
-    cachedEntry: ReturnType<SlowRenderCache['get']> & object,
+    cachedEntry: SlowRenderCacheEntry,
     pageParams: Record<string, string>,
     pageProps: PageProps,
     allPluginClientInits: PluginClientInitInfo[],
@@ -282,7 +270,7 @@ async function handleCachedRequest(
     url: string,
     timing?: RequestTiming,
 ): Promise<void> {
-    // Load page parts with cached pre-rendered jay-html file
+    // Load page parts with cached pre-rendered jay-html content (already stripped of cache tag)
     const loadStart = Date.now();
     const pagePartsResult: WithValidations<LoadedPageParts> = await loadPageParts(
         vite,
@@ -290,7 +278,10 @@ async function handleCachedRequest(
         options.pagesRootFolder,
         options.projectRootFolder,
         options.jayRollupConfig,
-        { preRenderedPath: cachedEntry.preRenderedPath },
+        {
+            preRenderedPath: cachedEntry.preRenderedPath,
+            preRenderedContent: cachedEntry.preRenderedContent,
+        },
     );
     timing?.recordViteSsr(Date.now() - loadStart);
 
@@ -356,6 +347,7 @@ async function handleCachedRequest(
         options,
         cachedEntry.slowViewState,
         timing,
+        cachedEntry.preRenderedContent,
     );
 }
 
@@ -403,6 +395,9 @@ async function handlePreRenderRequest(
         pageParams,
         pageProps,
         initialPartsResult.val.parts,
+        undefined,
+        undefined,
+        route.jayHtmlPath,
     );
 
     if (renderedSlowly.kind !== 'PhaseOutput') {
@@ -448,25 +443,18 @@ async function handlePreRenderRequest(
         ? { ...renderedSlowly.carryForward, __instances: instancePhaseDataForCache }
         : renderedSlowly.carryForward;
 
-    // Cache the result (writes to disk and returns the path)
-    const preRenderedPath = await slowRenderCache.set(
+    // Cache the result (embeds metadata in file and writes to disk)
+    const cachedEntry = await slowRenderCache.set(
         route.jayHtmlPath,
         pageParams,
         preRenderResult.preRenderedJayHtml,
         renderedSlowly.rendered,
         carryForward,
     );
-    getLogger().info(`[SlowRender] Cached pre-rendered jay-html at ${preRenderedPath}`);
+    getLogger().info(`[SlowRender] Cached pre-rendered jay-html at ${cachedEntry.preRenderedPath}`);
 
     // Delegate to the cached handler — it loads parts from the pre-rendered file,
     // runs the fast phase (including instance fast render), and sends the response.
-    const cachedEntry = {
-        preRenderedPath,
-        slowViewState: renderedSlowly.rendered,
-        carryForward,
-        createdAt: Date.now(),
-        sourcePath: route.jayHtmlPath,
-    };
     await handleCachedRequest(
         vite,
         route,
@@ -543,6 +531,7 @@ async function handleClientOnlyRequest(
         pageParts,
         discoveredInstances,
         headlessInstanceComponents,
+        route.jayHtmlPath,
     );
 
     if (renderedSlowly.kind !== 'PhaseOutput') {
@@ -640,6 +629,7 @@ async function sendResponse(
     options: DevServerOptions,
     slowViewState?: object,
     timing?: RequestTiming,
+    preLoadedContent?: string,
 ): Promise<void> {
     let pageHtml: string;
 
@@ -647,7 +637,8 @@ async function sendResponse(
 
     try {
         // Try SSR: server-render HTML + hydration script
-        const jayHtmlContent = await fs.readFile(jayHtmlPath, 'utf-8');
+        // Use pre-loaded content if available (from cache with tag already stripped)
+        const jayHtmlContent = preLoadedContent ?? (await fs.readFile(jayHtmlPath, 'utf-8'));
         const jayHtmlFilename = path.basename(jayHtmlPath);
         const jayHtmlDir = path.dirname(jayHtmlPath);
 
@@ -921,9 +912,22 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     const { publicBaseUrlPath, pagesRootFolder, projectRootFolder, buildFolder, jayRollupConfig } =
         options;
 
-    // Clean build folder on startup to avoid stale artifacts triggering HMR
+    // Clean build folder on startup, but preserve pre-rendered cache (DL#110).
+    // The pre-rendered/ directory contains filesystem-based cache entries that
+    // survive restarts, so first requests don't re-run the slow render pipeline.
     if (buildFolder) {
-        await fs.rm(buildFolder, { recursive: true, force: true }).catch(() => {});
+        try {
+            const entries = await fs.readdir(buildFolder);
+            for (const entry of entries) {
+                if (entry !== 'pre-rendered') {
+                    await fs
+                        .rm(path.join(buildFolder, entry), { recursive: true, force: true })
+                        .catch(() => {});
+                }
+            }
+        } catch {
+            // Build folder may not exist yet
+        }
     }
 
     // Map Jay log level to Vite log level
@@ -957,7 +961,13 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     // Set up action router for /_jay/actions/* endpoints
     setupActionRouter(vite);
 
-    const routes: JayRoutes = await initRoutes(pagesRootFolder);
+    // Scan routes, excluding any page files found inside the build folder.
+    // This prevents pre-rendered cache files from being picked up as additional routes
+    // when the build folder is inside the pages root (e.g., in tests).
+    const allRoutes: JayRoutes = await initRoutes(pagesRootFolder);
+    const routes = buildFolder
+        ? allRoutes.filter((route) => !route.jayHtmlPath.startsWith(buildFolder))
+        : allRoutes;
     const slowlyPhase = new DevSlowlyChangingPhase();
 
     // Create pre-rendered jay-html cache
@@ -965,8 +975,8 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     const slowRenderCacheDir = path.join(buildFolder!, 'pre-rendered');
     const slowRenderCache = new SlowRenderCache(slowRenderCacheDir, pagesRootFolder);
 
-    // Set up file watching for slow render cache invalidation
-    setupSlowRenderCacheInvalidation(vite, slowRenderCache, pagesRootFolder);
+    // Set up file watching for slow render cache + loadParams cache invalidation
+    setupSlowRenderCacheInvalidation(vite, slowRenderCache, slowlyPhase, pagesRootFolder);
 
     // Get init info for embedding in generated pages
     const projectInit = lifecycleManager.getProjectInit() ?? undefined;
@@ -1063,6 +1073,7 @@ function setupActionRouter(vite: ViteDevServer): void {
 function setupSlowRenderCacheInvalidation(
     vite: ViteDevServer,
     cache: SlowRenderCache,
+    slowlyPhase: DevSlowlyChangingPhase,
     pagesRootFolder: string,
 ): void {
     vite.watcher.on('change', (changedPath) => {
@@ -1074,6 +1085,7 @@ function setupSlowRenderCacheInvalidation(
         // Invalidate cache for jay-html file changes
         if (changedPath.endsWith('.jay-html')) {
             invalidateServerElementCache(changedPath);
+            slowlyPhase.invalidateLoadParamsCache(changedPath);
             cache.invalidate(changedPath).then(() => {
                 getLogger().info(`[SlowRender] Cache invalidated for ${changedPath}`);
             });
@@ -1085,6 +1097,7 @@ function setupSlowRenderCacheInvalidation(
             // The jay-html is in the same directory as page.ts
             const dir = path.dirname(changedPath);
             const jayHtmlPath = path.join(dir, 'page.jay-html');
+            slowlyPhase.invalidateLoadParamsCache(jayHtmlPath);
             cache.invalidate(jayHtmlPath).then(() => {
                 getLogger().info(
                     `[SlowRender] Cache invalidated for ${jayHtmlPath} (page.ts changed)`,
@@ -1097,6 +1110,7 @@ function setupSlowRenderCacheInvalidation(
         if (changedPath.endsWith('.jay-contract')) {
             // The jay-html has the same name as the contract
             const jayHtmlPath = changedPath.replace('.jay-contract', '.jay-html');
+            slowlyPhase.invalidateLoadParamsCache(jayHtmlPath);
             cache.invalidate(jayHtmlPath).then(() => {
                 getLogger().info(
                     `[SlowRender] Cache invalidated for ${jayHtmlPath} (contract changed)`,

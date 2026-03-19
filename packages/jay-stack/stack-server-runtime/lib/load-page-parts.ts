@@ -68,6 +68,12 @@ export interface LoadPagePartsOptions {
      * Import resolution still uses the original jay-html's directory.
      */
     preRenderedPath?: string;
+    /**
+     * Pre-loaded jay-html content to use instead of reading from disk.
+     * When provided (e.g., from SlowRenderCache with cache tag already stripped),
+     * this content is used directly, avoiding an extra file read.
+     */
+    preRenderedContent?: string;
 }
 
 export async function loadPageParts(
@@ -95,9 +101,10 @@ export async function loadPageParts(
         });
     }
 
-    // Use pre-rendered jay-html file if provided, otherwise read from original
+    // Use pre-loaded content if provided, otherwise read from file
     const jayHtmlFilePath = options?.preRenderedPath ?? route.jayHtmlPath;
-    const jayHtmlSource = (await fs.readFile(jayHtmlFilePath)).toString();
+    const jayHtmlSource =
+        options?.preRenderedContent ?? (await fs.readFile(jayHtmlFilePath)).toString();
     // Import resolution uses the original jay-html's directory (not the cache dir)
     const fileName = path.basename(route.jayHtmlPath);
     const dirName = path.dirname(route.jayHtmlPath);

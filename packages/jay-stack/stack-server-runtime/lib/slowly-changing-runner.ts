@@ -19,6 +19,7 @@ export interface SlowlyChangingPhase {
         parts: Array<DevServerPagePart>,
         discoveredInstances?: DiscoveredHeadlessInstance[],
         headlessInstanceComponents?: HeadlessInstanceComponent[],
+        jayHtmlPath?: string,
     ): Promise<AnySlowlyRenderResult>;
 }
 
@@ -48,33 +49,58 @@ async function findMatchingParams(
 }
 
 export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
+    /** Cached loadParams results per route (jayHtmlPath → array of UrlParams[] per part) */
+    private loadParamsCache = new Map<string, UrlParams[][]>();
+
     async runSlowlyForPage(
         pageParams: UrlParams,
         pageProps: PageProps,
         parts: Array<DevServerPagePart>,
         discoveredInstances?: DiscoveredHeadlessInstance[],
         headlessInstanceComponents?: HeadlessInstanceComponent[],
+        jayHtmlPath?: string,
     ): Promise<AnySlowlyRenderResult> {
-        for (const part of parts) {
-            const { compDefinition, contractInfo } = part;
-            if (compDefinition.loadParams) {
-                // Resolve services from registry
-                const services = resolveServices(compDefinition.services);
+        // Validate loadParams (with caching when jayHtmlPath is provided)
+        const loadParamsParts = parts.filter((p) => p.compDefinition.loadParams);
 
-                // For dynamic contracts, append contract info to services
-                // Components expecting contract info should declare it as last service
-                const loadParamsArgs = contractInfo
-                    ? [
-                          ...services,
-                          {
-                              contractName: contractInfo.contractName,
-                              metadata: contractInfo.metadata,
-                          },
-                      ]
-                    : services;
+        if (loadParamsParts.length > 0) {
+            let cachedParamsArray = jayHtmlPath ? this.loadParamsCache.get(jayHtmlPath) : undefined;
 
-                const compParams = compDefinition.loadParams(loadParamsArgs);
-                if (!(await findMatchingParams(pageParams, compParams))) return notFound();
+            if (!cachedParamsArray) {
+                // First call for this route — collect all params from async iterables
+                cachedParamsArray = [];
+                for (const part of loadParamsParts) {
+                    const { compDefinition, contractInfo } = part;
+                    const services = resolveServices(compDefinition.services);
+                    const loadParamsArgs = contractInfo
+                        ? [
+                              ...services,
+                              {
+                                  contractName: contractInfo.contractName,
+                                  metadata: contractInfo.metadata,
+                              },
+                          ]
+                        : services;
+
+                    const compParams = compDefinition.loadParams!(loadParamsArgs);
+                    const collected: UrlParams[] = [];
+                    for await (const batch of compParams) {
+                        collected.push(...batch);
+                    }
+                    cachedParamsArray.push(collected);
+                }
+                if (jayHtmlPath) {
+                    this.loadParamsCache.set(jayHtmlPath, cachedParamsArray);
+                }
+            }
+
+            // Validate: each part's params must match independently
+            for (const partParams of cachedParamsArray) {
+                if (
+                    !partParams.some((p) => isLeftSideParamsSubsetOfRightSideParams(pageParams, p))
+                ) {
+                    return notFound();
+                }
             }
         }
 
@@ -176,6 +202,14 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
         }
 
         return partialRender(slowlyViewState, carryForward);
+    }
+
+    /**
+     * Invalidate the cached loadParams result for a given route.
+     * Called when source files change (page.ts, .jay-contract, .jay-html).
+     */
+    invalidateLoadParamsCache(jayHtmlPath: string): void {
+        this.loadParamsCache.delete(jayHtmlPath);
     }
 }
 
