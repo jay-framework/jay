@@ -1,14 +1,12 @@
-import { makeJayStackComponent, partialRender } from '@jay-framework/fullstack-component';
-import { PageContract, render } from './page.jay-html';
+import { makeJayStackComponent, phaseOutput } from '@jay-framework/fullstack-component';
+// @ts-ignore
+import type { PageSlowViewState } from './page.jay-contract';
 
-export const page = makeJayStackComponent<PageContract>()
+export const page = makeJayStackComponent()
     .withProps<{}>()
     .withSlowlyRender(async () =>
-        partialRender(
-            {
-                title: 'Page with Headless',
-                content: 'This page has a headless component',
-            },
+        phaseOutput<PageSlowViewState>(
+            { title: 'Keyed Headless Test' },
             {},
         ),
     );

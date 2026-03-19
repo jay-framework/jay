@@ -5,15 +5,18 @@
     <script type="application/jay-headless"
             plugin="test-headless"
             contract="headless"
-            key="headless" ></script>
+            key="headless"></script>
     <script type="application/jay-data" contract="./page.jay-contract">
     </script>
 </head>
 <body>
-    <h1>{{title}}</h1>
-    <p>{{content}}</p>
     <div>
-        <p>{{headless.content}}</p>
+        <h1>{title}</h1>
+        <div class="widget">
+            <span class="label">{headless.label}</span>
+            <span class="count">{headless.count}</span>
+            <button ref="headless.increment">+1</button>
+        </div>
     </div>
 </body>
-</html> 
+</html>

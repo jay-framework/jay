@@ -742,17 +742,14 @@ async function handleClientOnlyRequest(
         return;
     }
 
-    // Merge slow + fast viewState
-    let viewState: object;
-    if (serverTrackByMap && Object.keys(serverTrackByMap).length > 0) {
-        viewState = deepMergeViewStates(
-            renderedSlowly.rendered,
-            renderedFast.rendered,
-            serverTrackByMap,
-        );
-    } else {
-        viewState = { ...renderedSlowly.rendered, ...renderedFast.rendered };
-    }
+    // Merge slow + fast viewState using deep merge.
+    // Shallow merge overwrites keyed headless parts (e.g., headless: {label} lost when
+    // fast phase sets headless: {count}). Deep merge preserves both.
+    let viewState: object = deepMergeViewStates(
+        renderedSlowly.rendered,
+        renderedFast.rendered,
+        serverTrackByMap || {},
+    );
 
     // Add headless instance viewStates/carryForwards if any
     if (instanceViewStates && Object.keys(instanceViewStates).length > 0) {

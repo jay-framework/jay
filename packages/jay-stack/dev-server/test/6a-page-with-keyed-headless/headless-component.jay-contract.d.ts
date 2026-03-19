@@ -2,20 +2,26 @@ import {
     JayContract,
     JayElement,
     RenderElement,
+    HTMLElementProxy,
     RenderElementOptions,
 } from '@jay-framework/runtime';
 
 export interface HeadlessComponentViewState {
-    content: string;
+    label: string;
+    count: number;
 }
 
-export interface HeadlessComponentRefs {}
+export interface HeadlessComponentRefs {
+    increment: HTMLElementProxy<HeadlessComponentViewState, HTMLButtonElement>;
+}
 
-export interface HeadlessComponentRepeatedRefs {}
+export interface HeadlessComponentRepeatedRefs {
+    increment: HTMLElementProxy<HeadlessComponentViewState, HTMLButtonElement>;
+}
 
-export type HeadlessComponentSlowViewState = HeadlessComponentViewState;
-export type HeadlessComponentFastViewState = {};
-export type HeadlessComponentInteractiveViewState = {};
+export type HeadlessComponentSlowViewState = Pick<HeadlessComponentViewState, 'label'>;
+export type HeadlessComponentFastViewState = Pick<HeadlessComponentViewState, 'count'>;
+export type HeadlessComponentInteractiveViewState = Pick<HeadlessComponentViewState, 'count'>;
 
 export type HeadlessComponentElement = JayElement<
     HeadlessComponentViewState,

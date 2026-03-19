@@ -1,13 +1,46 @@
-import { HeadlessComponentContract, render } from './headless-component.jay-contract';
-import { makeJayStackComponent, partialRender } from '@jay-framework/fullstack-component';
+import {
+    makeJayStackComponent,
+    phaseOutput,
+    type Signals,
+} from '@jay-framework/fullstack-component';
+import type {
+    HeadlessComponentContract,
+    HeadlessComponentRefs,
+    HeadlessComponentSlowViewState,
+    HeadlessComponentFastViewState,
+} from './headless-component.jay-contract';
 
-export const headless = makeJayStackComponent<HeadlessComponentContract>()
-    .withProps()
+const builder = makeJayStackComponent<HeadlessComponentContract>()
+    .withProps<{}>()
     .withSlowlyRender(async () =>
-        partialRender(
-            {
-                content: 'This is from the headless component',
-            },
+        phaseOutput<HeadlessComponentSlowViewState>(
+            { label: 'Keyed Headless' },
+            {},
+        ),
+    )
+    .withFastRender(async () =>
+        phaseOutput<HeadlessComponentFastViewState>(
+            { count: 10 },
             {},
         ),
     );
+
+export const headless = builder.withInteractive(
+    (
+        _props,
+        refs: HeadlessComponentRefs,
+        fastViewState: Signals<HeadlessComponentFastViewState>,
+    ) => {
+        const [count, setCount] = fastViewState.count;
+
+        refs.increment.onclick(() => {
+            setCount(count() + 1);
+        });
+
+        return {
+            render: () => ({
+                count: count(),
+            }),
+        };
+    },
+);

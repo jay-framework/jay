@@ -876,15 +876,28 @@ describe('hydration', () => {
         });
     });
 
-    describe.skip('6a. Key-based headless component', () => {
+    describe('6a. Key-based headless component', () => {
         // Page uses key-based headless inclusion (key="headless" on the script tag)
-        // instead of instance-based <jay:xxx> pattern. Tests backward compatibility.
+        // instead of instance-based <jay:xxx> pattern.
+        // Headless component has slow (label), fast+interactive (count), and interactive ref (increment).
         testFixture('6a-page-with-keyed-headless', {
             hydrationChecks: async (page) => {
-                expect(await page.textContent('#target h1')).toEqual('Page with Headless');
-                expect(await page.textContent('#target p')).toEqual(
-                    'This page has a headless component',
+                expect(await page.textContent('#target h1')).toEqual('Keyed Headless Test');
+                // label from slow phase, count from fast phase
+                expect(await page.textContent('#target .label')).toEqual('Keyed Headless');
+                expect(await page.textContent('#target .count')).toEqual('10');
+            },
+            interactivityChecks: async (page) => {
+                // Click +1 button → count should increment
+                expect(await page.textContent('#target .count')).toEqual('10');
+                await page.click('#target .widget button');
+                await page.waitForFunction(
+                    () => document.querySelector('#target .count')?.textContent === '11',
+                    { timeout: 2000 },
                 );
+                expect(await page.textContent('#target .count')).toEqual('11');
+                // label should stay the same (slow, static)
+                expect(await page.textContent('#target .label')).toEqual('Keyed Headless');
             },
         });
     });

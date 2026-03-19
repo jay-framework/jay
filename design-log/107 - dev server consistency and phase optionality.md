@@ -235,9 +235,18 @@ Test results: 166 pass, 3 fail (5d slowForEach SSR-disabled only), 42 skipped.
 
 Test results: 169 pass, 0 fail, 42 skipped. All tests 1–5 pass in all modes (SSR enabled + disabled).
 
+**6a key-based headless component** — Extended the key-based headless fixture with all three phases: `label` (slow), `count` (fast+interactive), `increment` (interactive ref). Three issues found and fixed:
+
+1. **Shallow viewState merge overwrote keyed parts** — `handleClientOnlyRequest` merged slow+fast with `{ ...slow, ...fast }`. For keyed headless parts, this overwrites `headless: { label }` with `headless: { count }`. Fixed to always use `deepMergeViewStates` which preserves nested keys.
+
+2. **Test fixture used `{{double-brace}}` syntax** — Updated to single-brace `{headless.label}` and added `ref="headless.increment"` for the button.
+
+3. **Plugin resolution for `.d.ts` generation** — The CLI can't resolve test plugins (`test-headless`). Manually wrote the contract `.d.ts` with proper phase types.
+
+Test results: 182 pass, 0 fail, 32 skipped. All tests 1–6a pass in all modes.
+
 ### Remaining work (not yet implemented)
 
-- **6a key-based headless** — skipped, needs investigation for the key-based inclusion pattern.
-- **7c fix** — fast-only page needs the pre-render pipeline to discover headless instances even without a slow phase.
+- **7c fix** — fast-only page needs the pre-render pipeline to discover headless instances without a slow phase.
 - **7d fix** — interactive-only page needs the adoptText reconciliation to fire before the first DOM check.
 - **Phase 5 pre-processing extraction** — the full DL#107 structural fix (single pre-processing stage) is not yet implemented.
