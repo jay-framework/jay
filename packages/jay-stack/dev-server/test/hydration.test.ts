@@ -616,8 +616,8 @@ describe('hydration', () => {
     // Test 5 (slowForEach without contract) removed — covered by 4a's slow forEach with contract.
     // Without a contract, slow render resolves nothing (DL#108), so slowForEach doesn't unroll.
 
-    describe('6a. Headless — static placement', () => {
-        testFixture('page-headless-static', {
+    describe('5a. Headless — static placement', () => {
+        testFixture('5a-page-headless-static', {
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Headless Test');
                 expect(await page.textContent('#target .label')).toEqual('Item 1');
@@ -640,8 +640,8 @@ describe('hydration', () => {
         });
     });
 
-    describe('6b. Headless — under condition', () => {
-        testFixture('page-headless-conditional', {
+    describe('5b. Headless — under condition', () => {
+        testFixture('5b-page-headless-conditional', {
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Conditional Headless');
                 // showWidget=true initially → widget visible
@@ -686,12 +686,12 @@ describe('hydration', () => {
         });
     });
 
-    describe('6c. Headless — under forEach (nested in wrapper div)', () => {
+    describe('5c. Headless — under forEach (nested in wrapper div)', () => {
         // forEach widget is fast-only (no slow phase) — no need for slow render cache.
         // Widget is inside <div class="card"><strong>{name}</strong><jay:widget>...
         // This tests coordinate resolution when headless instance has intermediate
         // wrapper elements between the forEach item root and the jay:xxx tag.
-        testFixture('page-headless-foreach', {
+        testFixture('5c-page-headless-foreach', {
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('ForEach Headless');
                 // Each card has a <strong> with the item name and a .widget div
@@ -757,8 +757,8 @@ describe('hydration', () => {
         });
     });
 
-    describe('6d. Headless — under slowForEach', () => {
-        testFixture('page-headless-slow-foreach', {
+    describe('5d. Headless — under slowForEach', () => {
+        testFixture('5d-page-headless-slow-foreach', {
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('SlowForEach Headless');
                 const widgets = await page.$$('#target .widget');
@@ -785,12 +785,12 @@ describe('hydration', () => {
         });
     });
 
-    describe('6e. Headless — under forEach with wrapper + preceding sections', () => {
+    describe('5e. Headless — under forEach with wrapper + preceding sections', () => {
         // Reproduces fake-shop pattern: multiple sections before the forEach,
         // headless instance inside <div class="card"><strong>{name}</strong><jay:widget>.
         // Tests that coordinates are correct when forEach is not the first child.
         // Also verifies forEach carry forward reaches the interactive constructor.
-        testFixture('page-headless-foreach-nested', {
+        testFixture('5e-page-headless-foreach-nested', {
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Nested ForEach Test');
                 // Static section should be present
@@ -840,11 +840,11 @@ describe('hydration', () => {
         });
     });
 
-    describe('6e-2. Headless — two static instances with different props', () => {
+    describe('5f. Headless — two static instances with different props', () => {
         // Two <jay:widget> instances in different parent scopes with different props.
         // Both must get their own fast ViewState and carryForward —
         // the __headlessInstances key must be unique per instance.
-        testFixture('page-headless-two-instances', {
+        testFixture('5f-page-headless-two-instances', {
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Two Instances Test');
                 const widgets = await page.$$('#target .widget');
