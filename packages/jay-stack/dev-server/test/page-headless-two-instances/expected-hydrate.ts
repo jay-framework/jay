@@ -4,12 +4,12 @@ import {
     adoptText,
     adoptElement,
     childCompHydrate,
-    // @ts-ignore
-} from '/@fs/Users/yoav/work/jay/main/packages/runtime/runtime/dist/index.js';
 // @ts-ignore
-import { makeHeadlessInstanceComponent } from '/@fs/Users/yoav/work/jay/main/packages/jay-stack/stack-client-runtime/dist/index.js';
+} from '/@fs{{ROOT}}/packages/runtime/runtime/dist/index.js';
 // @ts-ignore
-import { widget } from '/widget';
+import { makeHeadlessInstanceComponent } from '/@fs{{ROOT}}/packages/jay-stack/stack-client-runtime/dist/index.js';
+// @ts-ignore
+import { widget } from '/widget.ts';
 function _headlessWidget0HydrateRender(options) {
     const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
     const render = (viewState) =>
