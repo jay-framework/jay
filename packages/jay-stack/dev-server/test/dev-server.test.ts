@@ -49,7 +49,7 @@ describe('dev server', () => {
     <title>Vite + TS</title>
   </head>
   <body>
-    <div id="target"><div data-jay-sid="10:5" jay-coordinate="0"><h1 data-jay-sid="11:9">Hello World</h1><p data-jay-sid="12:9">This is a simple page without any code file</p></div></div>
+    <div id="target"><div jay-coordinate="0"><h1>Hello World</h1><p>This is a simple page without any code file</p></div></div>
     <script type="module" src="/@id/__x00__/index.html?html-proxy&index=0.js"></script>
   </body>
 </html>`);

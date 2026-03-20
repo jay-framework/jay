@@ -89,7 +89,9 @@ export async function generateSSRPageHtml(
     const jayHtmlPath = path.join(jayHtmlDir, jayHtmlFilename);
 
     // Step 1: Get server element module (cached or compile fresh)
-    let cached = serverModuleCache.get(jayHtmlPath);
+    const injectSourceIds = options.previewMode ?? false;
+    const cacheKey = injectSourceIds ? `${jayHtmlPath}:sid` : jayHtmlPath;
+    let cached = serverModuleCache.get(cacheKey);
     if (!cached) {
         cached = await compileAndLoadServerElement(
             vite,
@@ -100,8 +102,9 @@ export async function generateSSRPageHtml(
             projectRoot,
             routeDir,
             tsConfigFilePath,
+            injectSourceIds,
         );
-        serverModuleCache.set(jayHtmlPath, cached);
+        serverModuleCache.set(cacheKey, cached);
     }
 
     // Step 2: Render HTML to buffer
@@ -211,6 +214,7 @@ async function compileAndLoadServerElement(
     projectRoot: string,
     routeDir: string,
     tsConfigFilePath?: string,
+    injectSourceIds = false,
 ): Promise<CachedServerModule> {
     const jayFile = await parseJayFile(
         jayHtmlContent,
@@ -233,7 +237,7 @@ async function compileAndLoadServerElement(
 
     const serverElementOptions: ServerElementOptions = {
         debugCoordinatePreprocessPath,
-        injectSourceIds: true
+        injectSourceIds,
     };
 
     const serverElementCode = checkValidationErrors(

@@ -91,6 +91,11 @@ function stripTsDirectives(code: string): string {
     return code.replace(/\/\/ @ts-ignore\n/g, '');
 }
 
+/** Normalize machine-specific /@fs/ paths so fixtures are portable across machines */
+function normalizeRepoPaths(code: string): string {
+    return code.replace(/\/@fs\/[^'"]*?\/packages\//g, '/@fs/REPO/packages/');
+}
+
 /** Read expected fixture file */
 function readFixture(dirName: string, fileName: string): string {
     return stripTsDirectives(fs.readFileSync(path.join(__dirname, dirName, fileName), 'utf-8'));
@@ -205,9 +210,9 @@ function testFixture(
             let actual = transformResult!.code
                 .replace(new RegExp(dirPath.replace(/[/\\]/g, '[/\\\\]'), 'g'), '.')
                 .replace(/\/\/# sourceMappingURL=.*/, '');
-            actual = await prettify(actual);
+            actual = await prettify(normalizeRepoPaths(actual));
 
-            const expected = readFixture(dirName, 'expected-hydrate.ts');
+            const expected = await prettify(normalizeRepoPaths(readFixture(dirName, 'expected-hydrate.ts')));
             expect(actual).toEqual(expected);
         });
     }
