@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data">
+        data:
+            title: string
+            items:
+                - _id: string
+                  name: string
+    </script>
+</head>
+<body>
+    <div>
+        <h1>{title}</h1>
+        <ul forEach="items" trackBy="_id">
+            <li>{name}</li>
+        </ul>
+    </div>
+</body>
+</html>

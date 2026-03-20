@@ -82,9 +82,8 @@ function _headlessProductCard0Render(
 
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0Render,
-    productCard.comp,
+    productCard,
     'product-card:0',
-    productCard.contexts,
 );
 
 export function render(options?: RenderElementOptions): PageWithHeadlessMultiChildElementPreRender {

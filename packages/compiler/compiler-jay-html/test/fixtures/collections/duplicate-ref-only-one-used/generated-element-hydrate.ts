@@ -10,6 +10,7 @@ import {
     adoptText,
     adoptElement,
     hydrateForEach,
+    adoptDynamicElement,
 } from '@jay-framework/runtime';
 import {
     DuplicateRefHeadlessViewState,
@@ -87,15 +88,14 @@ export function hydrate(
     });
     const render = (viewState: DuplicateRefOnlyOneUsedViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [
-                adoptText('1', (vs) => vs.title),
+            adoptDynamicElement('0', {}, [
+                adoptText('0/0', (vs) => vs.title),
                 hydrateForEach(
-                    '0',
                     (vs: DuplicateRefOnlyOneUsedViewState) => vs.filters?.filter2?.categories,
                     'id',
                     () => [
                         adoptText('0', (vs1) => vs1.name),
-                        adoptElement('filtersFilter2CategoriesIsSelected', {}, [], refIsSelected()),
+                        adoptElement('1', {}, [], refIsSelected()),
                     ],
                     (vs1: CategoryOfFilter2OfDuplicateRefHeadlessViewState) => {
                         return e('div', {}, [

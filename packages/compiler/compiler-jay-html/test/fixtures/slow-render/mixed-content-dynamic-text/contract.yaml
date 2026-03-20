@@ -1,0 +1,9 @@
+name: Test
+tags:
+  - tag: count
+    type: data
+    dataType: number
+    phase: slow
+  - tag: inc
+    type: interactive
+    elementType: HTMLButtonElement

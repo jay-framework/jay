@@ -2,6 +2,7 @@ import { DevServerOptions, mkDevServer } from '../lib';
 import { JayRollupConfig } from '@jay-framework/vite-plugin';
 import path from 'path';
 import { Request, Response } from 'express';
+import { runHydrateScriptInJsdom } from './run-script-in-jsdom';
 
 // this statement is required to tell vitest to load the right encodeUTF8("") instanceof Uint8Array
 // @see https://github.com/vitest-dev/vitest/issues/4043
@@ -81,6 +82,30 @@ window.__jay.automation = wrapped.automation;
 window.dispatchEvent(new Event('jay:automation-ready'));
 
 // source-map`);
+    });
+
+    it('should run simple-page hydration script in jsdom', async () => {
+        const devServer = await mkDevServer(optionsForDir('./simple-page'));
+        const [html] = await makeRequest(devServer.routes[0].handler, '/');
+        const [script] = await makeRequest(
+            devServer.server,
+            '/@id/__x00__/index.html?html-proxy&index=0.js',
+        );
+
+        const { instance, document } = await runHydrateScriptInJsdom(
+            html,
+            script,
+            devServer.viteServer,
+            path.resolve(__dirname, 'simple-page'),
+        );
+
+        await devServer.viteServer.close();
+
+        expect(instance).toBeDefined();
+        const target = document.getElementById('target');
+        expect(target).toBeTruthy();
+        expect(target!.innerHTML).toContain('Hello World');
+        expect(target!.innerHTML).toContain('This is a simple page without any code file');
     });
 
     it('should handle a jay-html file with code', async () => {

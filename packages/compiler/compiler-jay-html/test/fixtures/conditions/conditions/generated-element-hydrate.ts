@@ -8,8 +8,8 @@ import {
     RenderElementOptions,
     JayContract,
     adoptText,
-    adoptElement,
     hydrateConditional,
+    adoptDynamicElement,
 } from '@jay-framework/runtime';
 
 export interface ConditionsViewState {
@@ -46,15 +46,15 @@ export function hydrate(
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState: ConditionsViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [
+            adoptDynamicElement('0', {}, [
                 hydrateConditional(
                     (vs) => vs.cond,
-                    () => adoptText('1', (vs) => vs.text1),
+                    () => adoptText('0/0', (vs) => vs.text1),
                     () => e('div', { style: { cssText: 'color:red' } }, [dt((vs) => vs.text1)]),
                 ),
                 hydrateConditional(
                     (vs) => !vs.cond,
-                    () => adoptText('2', (vs) => vs.text2),
+                    () => adoptText('0/1', (vs) => vs.text2),
                     () => e('div', { style: { cssText: 'color:green' } }, [dt((vs) => vs.text2)]),
                 ),
             ]),

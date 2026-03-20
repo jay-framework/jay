@@ -64,6 +64,10 @@ describe('Slow Render Transform', () => {
         it('should handle mixed text with multiple bindings', async () => {
             await runSlowRenderTest('mixed-text-bindings');
         });
+
+        it('should resolve slow bindings in mixed content (wrap is in assignCoordinates, not slow render)', async () => {
+            await runSlowRenderTest('mixed-content-dynamic-text');
+        });
     });
 
     describe('Attribute Binding Resolution', () => {
@@ -1049,7 +1053,7 @@ tags:
 
             const { instances } = discoverHeadlessInstances(jayHtml);
 
-            // Coordinates include the parent slowForEach jayTrackBy
+            // Coordinates use jayTrackBy as coordinate base (matches assignCoordinates — no child index)
             expect(instances).toEqual([
                 {
                     contractName: 'product-card',
@@ -1060,6 +1064,48 @@ tags:
                     contractName: 'product-card',
                     props: { productId: 'prod-456' },
                     coordinate: ['p2', 'product-card:0'],
+                },
+            ]);
+        });
+
+        it('should include wrapper element index when jay:xxx is inside an intermediate element', () => {
+            // jay:product-card is inside a <div class="product-card"> wrapper,
+            // not a direct child of the slowForEach div. The wrapper's positional
+            // index must be included to match assignCoordinates.
+            const jayHtml = `<!DOCTYPE html>
+<html>
+<head></head>
+<body>
+    <div slowForEach="products" jayIndex="0" jayTrackBy="p1">
+        <div class="product-card">
+            <jay:product-card productId="prod-123">
+                <h2>{name}</h2>
+            </jay:product-card>
+        </div>
+    </div>
+    <div slowForEach="products" jayIndex="1" jayTrackBy="p2">
+        <div class="product-card">
+            <jay:product-card productId="prod-456">
+                <h2>{name}</h2>
+            </jay:product-card>
+        </div>
+    </div>
+</body>
+</html>`;
+
+            const { instances } = discoverHeadlessInstances(jayHtml);
+
+            // Coordinate includes "0" for the wrapper div position within the slowForEach item
+            expect(instances).toEqual([
+                {
+                    contractName: 'product-card',
+                    props: { productId: 'prod-123' },
+                    coordinate: ['p1', '0', 'product-card:0'],
+                },
+                {
+                    contractName: 'product-card',
+                    props: { productId: 'prod-456' },
+                    coordinate: ['p2', '0', 'product-card:0'],
                 },
             ]);
         });
@@ -1129,8 +1175,7 @@ tags:
 </head>
 <body>
     <jay:product-card productId="prod-123" ref="0">
-        <h2>Widget A</h2>
-        <span class="price">$29.99</span>
+        <div><h2>Widget A</h2><span class="price">$29.99</span></div>
     </jay:product-card>
 </body>
 </html>`),
@@ -1164,8 +1209,7 @@ tags:
 <head></head>
 <body>
     <jay:product-card productId="prod-123" ref="0">
-        <h2>Widget A</h2>
-        <span class="stock">{stockCount}</span>
+        <div><h2>Widget A</h2><span class="stock">{stockCount}</span></div>
     </jay:product-card>
 </body>
 </html>`),
@@ -1258,14 +1302,12 @@ tags:
 <body>
     <div slowForEach="products" jayIndex="0" jayTrackBy="p1">
         <jay:product-card productId="prod-123" ref="0">
-            <h2>Widget A</h2>
-            <span>$29.99</span>
+            <div><h2>Widget A</h2><span>$29.99</span></div>
         </jay:product-card>
     </div>
     <div slowForEach="products" jayIndex="1" jayTrackBy="p2">
         <jay:product-card productId="prod-456" ref="0">
-            <h2>Widget B</h2>
-            <span>$49.99</span>
+            <div><h2>Widget B</h2><span>$49.99</span></div>
         </jay:product-card>
     </div>
 </body>

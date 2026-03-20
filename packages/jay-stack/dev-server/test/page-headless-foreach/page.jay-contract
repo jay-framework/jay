@@ -1,0 +1,24 @@
+name: Page
+tags:
+  - tag: title
+    type: data
+    dataType: string
+    phase: slow
+  - tag: items
+    type: sub-contract
+    repeated: true
+    phase: fast+interactive
+    trackBy: _id
+    tags:
+      - tag: _id
+        type: data
+        dataType: string
+      - tag: name
+        type: data
+        dataType: string
+  - tag: addButton
+    type: interactive
+    elementType: HTMLButtonElement
+  - tag: removeButton
+    type: interactive
+    elementType: HTMLButtonElement

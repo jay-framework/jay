@@ -13,4 +13,5 @@ export * from './generate-target';
 export * from './errors';
 export * from './prettify';
 export * from './plugin-resolution';
+export * from './coordinates';
 export * from '@jay-framework/typescript-bridge';

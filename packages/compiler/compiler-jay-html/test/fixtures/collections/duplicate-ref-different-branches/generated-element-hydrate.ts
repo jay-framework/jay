@@ -13,6 +13,7 @@ import {
     adoptElement,
     hydrateConditional,
     hydrateForEach,
+    adoptDynamicElement,
 } from '@jay-framework/runtime';
 
 export interface ItemOfDuplicateRefDifferentBranchesViewState {
@@ -89,16 +90,15 @@ export function hydrate(
     );
     const render = (viewState: DuplicateRefDifferentBranchesViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [
-                adoptText('1', (vs) => vs.title),
-                adoptElement('2', {}, [
+            adoptDynamicElement('0', {}, [
+                adoptText('0/0', (vs) => vs.title),
+                adoptDynamicElement('0/1', {}, [
                     hydrateForEach(
-                        '2',
                         (vs: DuplicateRefDifferentBranchesViewState) => vs.items,
                         'id',
                         () => [
-                            adoptText('name', (vs1) => vs1.name, refName()),
-                            adoptElement('deleteButton', {}, [], refDeleteButton()),
+                            adoptText('0', (vs1) => vs1.name, refName()),
+                            adoptElement('1', {}, [], refDeleteButton()),
                         ],
                         (vs1: ItemOfDuplicateRefDifferentBranchesViewState) => {
                             return e('div', {}, [
@@ -111,8 +111,8 @@ export function hydrate(
                 hydrateConditional(
                     (vs) => vs.showGlobalDelete,
                     () =>
-                        adoptElement('3', {}, [
-                            adoptElement('deleteButton', {}, [], refDeleteButton2()),
+                        adoptElement('0/2', {}, [
+                            adoptElement('0/2/0', {}, [], refDeleteButton2()),
                         ]),
                     () => e('div', {}, [e('button', {}, ['Delete All'], refDeleteButton2())]),
                 ),

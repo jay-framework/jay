@@ -1,4 +1,4 @@
-import { ConstructContext, ReferencesManager, adoptText } from '../../../lib';
+import { ConstructContext, ReferencesManager, adoptText, adoptElement } from '../../../lib';
 import { hydrate, makeServerHTML } from './hydration-test-utils';
 
 describe('adoptText', () => {
@@ -155,5 +155,51 @@ describe('adoptText', () => {
 
         expect(root.querySelector('[jay-coordinate="0"]')!.textContent).toBe('New Title');
         expect(root.querySelector('[jay-coordinate="1"]')!.textContent).toBe('New Sub');
+    });
+
+    // adoptText with childIndex: mixed content (text + element siblings, DL#102)
+    it('adoptText with childIndex — adopts text at position when parent has mixed content', () => {
+        interface MultiVS {
+            count: number;
+        }
+
+        const { jayElement, root } = hydrate<MultiVS>(
+            '<div jay-coordinate="0">Count: 5 <button>+</button></div>',
+            { count: 5 },
+            () =>
+                adoptElement('0', {}, [
+                    adoptText('0', (vs: MultiVS) => `Count: ${vs.count} `, undefined, 0),
+                ]),
+        );
+
+        const div = root.querySelector('[jay-coordinate="0"]')!;
+        expect(div.childNodes[0].textContent).toBe('Count: 5 ');
+        expect(div.querySelector('button')!.textContent).toBe('+');
+
+        jayElement.update({ count: 10 });
+        expect(div.childNodes[0].textContent).toBe('Count: 10 ');
+        expect(div.querySelector('button')!.textContent).toBe('+');
+    });
+
+    it('adoptText with childIndex — text at index 1 among significant children', () => {
+        interface MultiVS {
+            middle: string;
+        }
+
+        const { jayElement, root } = hydrate<MultiVS>(
+            '<div jay-coordinate="0"><span>prefix</span> middle <button>suffix</button></div>',
+            { middle: 'middle' },
+            () =>
+                adoptElement('0', {}, [
+                    adoptText('0', (vs: MultiVS) => ` ${vs.middle} `, undefined, 1),
+                ]),
+        );
+
+        const div = root.querySelector('[jay-coordinate="0"]')!;
+        // childNodes: [span, text " middle ", button]
+        expect(div.childNodes[1].textContent).toMatch(/middle/);
+
+        jayElement.update({ middle: 'updated' });
+        expect(div.childNodes[1].textContent).toMatch(/updated/);
     });
 });

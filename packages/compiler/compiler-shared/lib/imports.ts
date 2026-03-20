@@ -294,8 +294,24 @@ export const Import = {
         'makeHeadlessInstanceComponent',
         ImportsFor.implementation,
     ),
+    HEADLESS_INSTANCES: importStatementFragment(
+        JAY_STACK_CLIENT_RUNTIME,
+        'HEADLESS_INSTANCES',
+        ImportsFor.implementation,
+    ),
+    useContext: importStatementFragment(JAY_RUNTIME, 'useContext', ImportsFor.implementation),
+    currentConstructionContext: importStatementFragment(
+        JAY_RUNTIME,
+        'currentConstructionContext',
+        ImportsFor.implementation,
+    ),
     adoptText: importStatementFragment(JAY_RUNTIME, 'adoptText', ImportsFor.implementation),
     adoptElement: importStatementFragment(JAY_RUNTIME, 'adoptElement', ImportsFor.implementation),
+    childCompHydrate: importStatementFragment(
+        JAY_RUNTIME,
+        'childCompHydrate',
+        ImportsFor.implementation,
+    ),
     hydrateConditional: importStatementFragment(
         JAY_RUNTIME,
         'hydrateConditional',
@@ -306,6 +322,12 @@ export const Import = {
         'hydrateForEach',
         ImportsFor.implementation,
     ),
+    adoptDynamicElement: importStatementFragment(
+        JAY_RUNTIME,
+        'adoptDynamicElement',
+        ImportsFor.implementation,
+    ),
+    STATIC: importStatementFragment(JAY_RUNTIME, 'STATIC', ImportsFor.implementation),
     escapeHtml: importStatementFragment(JAY_SSR_RUNTIME, 'escapeHtml', ImportsFor.implementation),
     escapeAttr: importStatementFragment(JAY_SSR_RUNTIME, 'escapeAttr', ImportsFor.implementation),
     ServerRenderContext: importStatementFragment(

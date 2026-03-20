@@ -13,14 +13,14 @@ export function renderToStream(vs: ConditionsViewState, ctx: ServerRenderContext
     if (vs.cond) {
         w('<div');
         w(' style="color:red"');
-        w(' jay-coordinate="1">');
+        w(' jay-coordinate="0/0">');
         w(escapeHtml(String(vs.text1)));
         w('</div>');
     }
     if (!vs.cond) {
         w('<div');
         w(' style="color:green"');
-        w(' jay-coordinate="2">');
+        w(' jay-coordinate="0/1">');
         w(escapeHtml(String(vs.text2)));
         w('</div>');
     }

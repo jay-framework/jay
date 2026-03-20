@@ -11,7 +11,14 @@ export {
     generateElementHydrateFile,
     generateServerElementFile,
     generateSandboxRootFile,
+    type ServerElementOptions,
 } from './jay-target/jay-html-compiler';
+export {
+    assignCoordinates,
+    assignCoordinatesToJayHtml,
+    type AssignCoordinatesOptions,
+    type AssignCoordinatesResult,
+} from './jay-target/assign-coordinates';
 export { parseJayFile, getJayHtmlImports } from './jay-target/jay-html-parser';
 
 export { renderRefsType } from './jay-target/jay-html-compile-refs';

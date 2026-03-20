@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data">
+        data:
+            isActive: boolean
+            message: string
+    </script>
+</head>
+<body>
+    <div>
+        <h1>{message}</h1>
+        <span if="isActive">Active</span>
+        <span if="!isActive">Inactive</span>
+    </div>
+</body>
+</html>

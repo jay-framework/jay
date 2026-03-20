@@ -15,7 +15,6 @@ import {
     ProductCardRefs,
     ProductCardInteractiveViewState,
 } from '../product-card/product-card.jay-contract';
-// @ts-ignore
 import { productCard } from '../product-card/product-card';
 
 export interface PageWithHeadlessInstanceViewState {
@@ -71,7 +70,7 @@ function _headlessProductCard0Render(
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('article', { class: 'hero-card' }, [
-                e('h2', {}, [dt((vs) => vs.name)]),
+                e('h2', {}, ['Hero Product']),
                 e('span', { class: 'price' }, [dt((vs) => vs.price)]),
                 e('button', {}, ['Add to Cart'], refAddToCart()),
             ]),
@@ -81,9 +80,8 @@ function _headlessProductCard0Render(
 
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0Render,
-    productCard.comp,
+    productCard,
     'product-card:0',
-    productCard.contexts,
 );
 
 export function render(options?: RenderElementOptions): PageWithHeadlessInstanceElementPreRender {

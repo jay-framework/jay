@@ -10,7 +10,7 @@ export function renderToStream(vs: CompositeViewState, ctx: ServerRenderContext)
     w('<div');
     w(' jay-coordinate="0">');
     w('<div');
-    w(' jay-coordinate="1">');
+    w(' jay-coordinate="0/0">');
     w(escapeHtml(String(vs.text)));
     w('</div>');
     w('<div');
@@ -18,7 +18,7 @@ export function renderToStream(vs: CompositeViewState, ctx: ServerRenderContext)
     w('static');
     w('</div>');
     w('<div');
-    w(' jay-coordinate="2">');
+    w(' jay-coordinate="0/2">');
     w(escapeHtml(String(vs.text2)));
     w('</div>');
     w('</div>');

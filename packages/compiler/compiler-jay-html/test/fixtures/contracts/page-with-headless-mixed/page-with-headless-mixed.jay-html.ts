@@ -19,7 +19,6 @@ import {
     ProductCardInteractiveViewState,
     ProductCardRepeatedRefs,
 } from '../product-card/product-card.jay-contract';
-// @ts-ignore
 import { productCard } from '../product-card/product-card';
 
 export interface ProductOfPageWithHeadlessMixedViewState {
@@ -87,7 +86,7 @@ function _headlessProductCard0Render(
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('article', { class: 'hero-card' }, [
-                e('h2', {}, [dt((vs) => vs.name)]),
+                e('h2', {}, ['Hero Product']),
                 e('span', { class: 'price' }, [dt((vs) => vs.price)]),
                 e('button', {}, ['Add to Cart'], refAddToCart()),
             ]),
@@ -97,9 +96,8 @@ function _headlessProductCard0Render(
 
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0Render,
-    productCard.comp,
+    productCard,
     'product-card:hero',
-    productCard.contexts,
 );
 
 // Inline template for headless component: product-card #1
@@ -118,7 +116,7 @@ function _headlessProductCard1Render(
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', { class: 'promo' }, [
-                e('h3', {}, [dt((vs) => vs.name)]),
+                e('h3', {}, ['Promo Product']),
                 e('span', { class: 'price' }, [dt((vs) => vs.price)]),
             ]),
         ) as _HeadlessProductCard1Element;
@@ -127,9 +125,8 @@ function _headlessProductCard1Render(
 
 const _HeadlessProductCard1 = makeHeadlessInstanceComponent(
     _headlessProductCard1Render,
-    productCard.comp,
+    productCard,
     'product-card:promo',
-    productCard.contexts,
 );
 
 // Inline template for headless component: product-card #2
@@ -164,9 +161,8 @@ function _headlessProductCard2Render(
 
 const _HeadlessProductCard2 = makeHeadlessInstanceComponent(
     _headlessProductCard2Render,
-    productCard.comp,
+    productCard,
     'p1/product-card:0',
-    productCard.contexts,
 );
 
 // Inline template for headless component: product-card #3
@@ -194,9 +190,8 @@ function _headlessProductCard3Render(
 
 const _HeadlessProductCard3 = makeHeadlessInstanceComponent(
     _headlessProductCard3Render,
-    productCard.comp,
+    productCard,
     'p2/product-card:0',
-    productCard.contexts,
 );
 
 export function render(options?: RenderElementOptions): PageWithHeadlessMixedElementPreRender {

@@ -11,30 +11,30 @@ export function renderToStream(vs: PageUsingCounterViewState, ctx: ServerRenderC
     w('<div');
     w(' jay-coordinate="0">');
     w('<div');
-    w(' jay-coordinate="1">');
+    w(' jay-coordinate="0/0">');
     w(escapeHtml(String(`value: ${vs.counter?.count}`)));
     w('</div>');
     w('<button');
-    w(' jay-coordinate="counterAdd">');
+    w(' jay-coordinate="0/1">');
     w('add');
     w('</button>');
     w('<button');
-    w(' jay-coordinate="counterSubtract">');
+    w(' jay-coordinate="0/2">');
     w('subtract');
     w('</button>');
     w('<div');
-    w(' jay-coordinate="2">');
+    w(' jay-coordinate="0/3">');
     if (vs.counter?.isPositive === IsPositive.positive) {
         w('<img');
         w(' src="positive.jpg"');
         w(' alt="positive"');
-        w(' jay-coordinate="3">');
+        w(' jay-coordinate="0/3/0">');
     }
     if (vs.counter?.isPositive === IsPositive.negative) {
         w('<img');
         w(' src="negative.jpg"');
         w(' alt="negative"');
-        w(' jay-coordinate="4">');
+        w(' jay-coordinate="0/3/1">');
     }
     w('</div>');
     w('</div>');

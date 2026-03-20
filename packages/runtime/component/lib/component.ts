@@ -86,7 +86,7 @@ function renderWithContexts<
     index: number = 0,
 ): JayElementT {
     if (provideContexts.length > index) {
-        let [marker, context] = provideContexts[0];
+        let [marker, context] = provideContexts[index];
         return withContext(marker, context, () =>
             renderWithContexts(provideContexts, render, viewState, index + 1),
         );

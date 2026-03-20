@@ -150,7 +150,7 @@ The project follows a rigorous design log methodology for all significant featur
 1. **Reference design logs** by number when relevant (e.g., "See Design Log #50")
 2. **Use codebase terminology**: ViewState, Contract, JayContract, phase annotations
 3. **Show type signatures**: This is a TypeScript project with heavy type usage
-4. **Consider backward compatibility**: Default to non-breaking changes
+4. **Do not preserve backward compatibility** unless explicitly requested. This is an experimental framework — prefer clean APIs over backward-compatible shims
 
 ### On User Feedback
 

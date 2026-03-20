@@ -1,0 +1,6 @@
+name: test-widget
+module: ../../../widget
+contracts:
+  - name: widget
+    contract: ../../../widget.jay-contract
+    component: widget

@@ -52,9 +52,9 @@ export function hydrate(
     const render = (viewState: CounterViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('0', {}, [
-                adoptElement('subtracter', {}, [], refSubtracter()),
-                adoptText('1', (vs) => vs.count),
-                adoptElement('adderButton', {}, [], refAdderButton()),
+                adoptElement('0/0', {}, [], refSubtracter()),
+                adoptText('0/1', (vs) => vs.count),
+                adoptElement('0/2', {}, [], refAdderButton()),
             ]),
         ) as CounterElement;
     return [refManager.getPublicAPI() as CounterElementRefs, render];

@@ -57,7 +57,7 @@ import {
     type InstancePhaseData,
     type ForEachHeadlessInstance,
 } from '@jay-framework/stack-server-runtime';
-import { WithValidations } from '@jay-framework/compiler-shared';
+import { WithValidations, computeForEachInstanceKey } from '@jay-framework/compiler-shared';
 import { getLogger, getDevLogger, type RequestTiming } from '@jay-framework/logger';
 import {
     extractViewStateParams,
@@ -395,10 +395,15 @@ async function handleCachedRequest(
                 fastViewState,
             );
             if (forEachResult) {
-                const existingHeadless = (fastViewState as any).__headlessInstances || {};
+                const existingVS = (fastViewState as any).__headlessInstances || {};
                 fastViewState = {
                     ...fastViewState,
-                    __headlessInstances: { ...existingHeadless, ...forEachResult },
+                    __headlessInstances: { ...existingVS, ...forEachResult.viewStates },
+                };
+                const existingCF = (fastCarryForward as any).__headlessInstances || {};
+                fastCarryForward = {
+                    ...fastCarryForward,
+                    __headlessInstances: { ...existingCF, ...forEachResult.carryForwards },
                 };
             }
         }
@@ -595,10 +600,15 @@ async function handlePreRenderRequest(
                 fastViewState,
             );
             if (forEachResult) {
-                const existingHeadless = (fastViewState as any).__headlessInstances || {};
+                const existingVS = (fastViewState as any).__headlessInstances || {};
                 fastViewState = {
                     ...fastViewState,
-                    __headlessInstances: { ...existingHeadless, ...forEachResult },
+                    __headlessInstances: { ...existingVS, ...forEachResult.viewStates },
+                };
+                const existingCF = (fastCarryForward as any).__headlessInstances || {};
+                fastCarryForward = {
+                    ...fastCarryForward,
+                    __headlessInstances: { ...existingCF, ...forEachResult.carryForwards },
                 };
             }
         }
@@ -691,6 +701,7 @@ async function handleDirectRequest(
 
     // Run slow phase for headless instances
     let instanceViewStates: Record<string, object> | undefined;
+    let instanceCarryForwards: Record<string, object> | undefined;
     let instancePhaseDataForFast: InstancePhaseData | undefined;
     let forEachInstancesForFast: ForEachHeadlessInstance[] | undefined;
     const headlessInstanceComponents = pagePartsResult.val.headlessInstanceComponents ?? [];
@@ -763,8 +774,12 @@ async function handleDirectRequest(
         );
         if (forEachResult) {
             if (!instanceViewStates) instanceViewStates = {};
-            for (const [coordKey, fastVS] of Object.entries(forEachResult)) {
+            for (const [coordKey, fastVS] of Object.entries(forEachResult.viewStates)) {
                 instanceViewStates[coordKey] = fastVS;
+            }
+            if (!instanceCarryForwards) instanceCarryForwards = {};
+            for (const [coordKey, cf] of Object.entries(forEachResult.carryForwards)) {
+                instanceCarryForwards[coordKey] = cf;
             }
         }
     }
@@ -788,11 +803,18 @@ async function handleDirectRequest(
         viewState = { ...renderedSlowly.rendered, ...renderedFast.rendered };
     }
 
-    // Add headless instance viewStates if any
+    // Add headless instance viewStates/carryForwards if any
     if (instanceViewStates && Object.keys(instanceViewStates).length > 0) {
         viewState = {
             ...viewState,
             __headlessInstances: instanceViewStates,
+        };
+    }
+    let fastCF = renderedFast.carryForward;
+    if (instanceCarryForwards && Object.keys(instanceCarryForwards).length > 0) {
+        fastCF = {
+            ...fastCF,
+            __headlessInstances: instanceCarryForwards,
         };
     }
 
@@ -824,7 +846,7 @@ async function handleDirectRequest(
         route.jayHtmlPath,
         pageParts,
         viewState,
-        renderedFast.carryForward,
+        fastCF,
         clientTrackByMap,
         projectInit,
         pluginsForPage,
@@ -1117,13 +1139,16 @@ async function renderFastChangingDataForForEachInstances(
     forEachInstances: ForEachHeadlessInstance[],
     headlessInstanceComponents: HeadlessInstanceComponent[],
     mergedViewState: object,
-): Promise<Record<string, object> | undefined> {
+): Promise<
+    { viewStates: Record<string, object>; carryForwards: Record<string, object> } | undefined
+> {
     const componentByContractName = new Map<string, HeadlessInstanceComponent>();
     for (const comp of headlessInstanceComponents) {
         componentByContractName.set(comp.contractName, comp);
     }
 
     const viewStates: Record<string, object> = {};
+    const carryForwards: Record<string, object> = {};
     let hasResults = false;
 
     for (const instance of forEachInstances) {
@@ -1134,6 +1159,11 @@ async function renderFastChangingDataForForEachInstances(
         const items = resolvePathValue(mergedViewState, instance.forEachPath);
         if (!Array.isArray(items)) continue;
 
+        // Normalize prop names to match contract (case-insensitive)
+        const contractProps = comp.contract?.props ?? [];
+        const normalizePropName = (key: string) =>
+            contractProps.find((p) => p.name.toLowerCase() === key.toLowerCase())?.name ?? key;
+
         for (const item of items) {
             const trackByValue = String(item[instance.trackBy]);
 
@@ -1141,7 +1171,7 @@ async function renderFastChangingDataForForEachInstances(
             const props: Record<string, string> = {};
             for (const [propName, binding] of Object.entries(instance.propBindings)) {
                 // Resolve bindings like "{_id}" → item._id
-                props[propName] = resolveBinding(String(binding), item);
+                props[normalizePropName(propName)] = resolveBinding(String(binding), item);
             }
 
             if (comp.compDefinition.fastRender) {
@@ -1151,16 +1181,21 @@ async function renderFastChangingDataForForEachInstances(
                 const fastResult = await comp.compDefinition.fastRender(props, ...services);
 
                 if (fastResult.kind === 'PhaseOutput') {
-                    // Coordinate: [trackByValue, coordinateSuffix] → "trackByValue,coordinateSuffix"
-                    const coord = [trackByValue, instance.coordinateSuffix].toString();
+                    const coord = computeForEachInstanceKey(
+                        trackByValue,
+                        instance.coordinateSuffix,
+                    );
                     viewStates[coord] = fastResult.rendered;
+                    if (fastResult.carryForward) {
+                        carryForwards[coord] = fastResult.carryForward;
+                    }
                     hasResults = true;
                 }
             }
         }
     }
 
-    return hasResults ? viewStates : undefined;
+    return hasResults ? { viewStates, carryForwards } : undefined;
 }
 
 /**

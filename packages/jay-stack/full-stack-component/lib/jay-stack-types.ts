@@ -186,6 +186,9 @@ export interface JayStackComponentDefinition<
     slowlyRender: RenderSlowly<Services, PropsT, SlowVS, any>;
     fastRender: RenderFast<Services, PropsT, FastVS, any>;
     comp: ComponentConstructor<PropsT, Refs, InteractiveVS, Contexts, CompCore>;
+    /** Client-side defaults for when server fast ViewState is not available
+     *  (e.g., new forEach items created on the client). Client-only. */
+    clientDefaults?: (props: PropsT) => { viewState: FastVS; carryForward?: any };
 }
 
 export type AnyJayStackComponentDefinition = JayStackComponentDefinition<

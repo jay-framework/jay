@@ -1,0 +1,977 @@
+# Design Log #102 — Headless Instance SSR and Hydration Compilation
+
+## Background
+
+The compiler has three code generation targets for jay-html files:
+
+- **Element target** (`generated-element.ts`) — client-side DOM creation
+- **Server-element target** (`generated-server-element.ts`) — SSR streaming HTML
+- **Hydrate target** (`generated-element-hydrate.ts`) — client-side DOM adoption after SSR
+
+Headless component instances (`<jay:contract-name>`) are fully supported in the element target (DL#84, DL#90) but **not implemented** in the server-element or hydrate targets. This means pages with headless instances cannot be server-rendered or hydrated.
+
+The runtime infrastructure is complete — `makeHeadlessInstanceComponent`, `hydrateCompositeJayComponent`, `__headlessInstances` ViewState, and the coordinate system all work. The gap is strictly in the compiler's code generation.
+
+## Current Behavior: Try-Catch Fallback to Client Rendering
+
+The dev-server (`sendResponse()`, line ~810-854) wraps the SSR attempt in a try-catch. When the server-element compiler generates broken code for `<jay:xxx>` tags (treating them as literal HTML), the error is caught and the dev-server falls back to `generateClientScript()` — pure client-side rendering with no SSR.
+
+This means pages with headless instances (like `fake-shop/src/pages/page.jay-html` which uses `product-widget` and `stock-status` instances) **always** fall back to client-only rendering. The runtime infrastructure works (instance discovery, slow/fast phases, `__headlessInstances` ViewState), but the compiled `renderToStream()` function can't handle the `<jay:xxx>` tags.
+
+The fallback is silent except for a warning: `"[SSR] Failed, falling back to client rendering: {error}"`.
+
+## Problem
+
+Five scenarios need support in both server-element and hydrate targets:
+
+1. **Page-level headless component** — old-style `<script type="application/jay-headless">` with `key` (SSR works, hydration missing)
+2. **Nested headless instance** — `<jay:product-card productId="prod-hero">` with inline template
+3. **Conditional headless instance** — `<jay:product-card if="showPromo">`
+4. **forEach headless instance** — `<jay:product-card>` inside `forEach`
+5. **slowForEach headless instance** — `<jay:product-card>` inside `slowForEach`
+
+### Current Compiler Gaps
+
+**Server-element target:**
+
+- `ServerContext` has no `headlessContractNames`, `headlessImports`, or `headlessInstanceDefs`
+- `renderServerElement()` has no check for `<jay:xxx>` component tags
+- A headless instance tag gets treated as literal HTML (`<jay:product-card>`) — broken
+
+**Hydrate target:**
+
+- `HydrateContext` has `headlessContractNames` but `renderHydrateElement()` doesn't distinguish `headless-instance` from `headful`
+- Emits `childComp(product-card, ...)` where `product-card` is undefined — broken
+
+## Design
+
+### Key Insight: Server-Element vs Element/Hydrate Divergence
+
+The server-element target is fundamentally different from element and hydrate targets:
+
+- Element/hydrate generate **component definitions** (`makeHeadlessInstanceComponent`) that are instantiated at runtime via `childComp()`
+- Server-element generates **streaming HTML** — there are no components, no `childComp()`, no `makeHeadlessInstanceComponent`
+
+For server-element, the headless instance's inline template should be **inlined directly** into the `renderToStream` function. The only change needed is switching the ViewState context from the page's `vs` to the instance's ViewState within `vs.__headlessInstances[coordinate]`.
+
+For the hydrate target, the approach mirrors the element target — generate inline template render functions using hydrate APIs (`adoptElement`, `adoptText`, etc.) plus `makeHeadlessInstanceComponent` definitions and `childComp()` calls.
+
+### Server-Element Target Design
+
+#### ViewState Access Pattern
+
+The `renderToStream(vs, ctx)` function receives the full merged ViewState. The headless instance's data is at `vs.__headlessInstances[coordinateKey]`.
+
+For a headless instance, the compiler needs to:
+
+1. Compute the coordinate key (same logic as element target)
+2. Create a local variable for the instance's ViewState
+3. Render the inline template children using that local variable
+4. Assign coordinates to dynamic elements within the inline template
+
+#### Coordinate Keys
+
+Same as element target:
+
+- **Static instance**: `'product-card:0'` or `'product-card:hero'` (if ref is provided)
+- **Inside slowForEach**: `'p1/product-card:0'` (jayTrackBy prefix)
+- **Inside forEach**: runtime expression using trackBy value
+
+#### Example: Simple Instance
+
+Input:
+
+```html
+<jay:product-card productId="prod-hero">
+  <article class="hero-card">
+    <h2>{name}</h2>
+    <span class="price">{price}</span>
+    <button ref="addToCart">Add to Cart</button>
+  </article>
+</jay:product-card>
+```
+
+Server-element output (within `renderToStream`):
+
+```typescript
+// Headless instance: product-card (coordinate: product-card:0)
+const vs_pc0 = (vs as any).__headlessInstances?.['product-card:0'] as
+  | ProductCardViewState
+  | undefined;
+if (vs_pc0) {
+  w('<article');
+  w(' class="hero-card"');
+  w(' jay-coordinate="product-card:0/0">');
+  w('<h2');
+  w(' jay-coordinate="product-card:0/1">');
+  w(escapeHtml(String(vs_pc0.name)));
+  w('</h2>');
+  w('<span');
+  w(' class="price"');
+  w(' jay-coordinate="product-card:0/2">');
+  w(escapeHtml(String(vs_pc0.price)));
+  w('</span>');
+  w('<button');
+  w(' jay-coordinate="product-card:0/addToCart">');
+  w('Add to Cart');
+  w('</button>');
+  w('</article>');
+}
+```
+
+The coordinate prefix for all children within the instance is the instance's coordinate key (e.g., `product-card:0/`).
+
+#### Question Q1: Should the instance be wrapped in a guard?
+
+If `vs.__headlessInstances` doesn't contain the key, the instance shouldn't render. Using `if (vs_pc0)` guard handles this. This also means that if the headless component has no slow/fast phases providing data, the instance won't render on the server — which is correct behavior (it would then be created by the hydrate target's create fallback).
+
+**Answer**: yes, wrap in `if (vs_pc0)` guard.
+
+#### Question Q2: What about the `<jay:xxx>` element itself — does it produce a wrapper element?
+
+No. In the element target, `<jay:product-card>` does not produce a DOM element. The inline template children are rendered directly. The `<jay:xxx>` tag is a compiler directive, not an HTML element.
+
+**Answer**: no wrapper element. Inline template children are rendered directly.
+
+#### Question Q3: How do coordinates work inside headless instances?
+
+The inline template is a separate "scope" — its children get their own coordinate counter starting at 0, prefixed by the instance's coordinate key.
+
+For server-element:
+
+- Set `coordinatePrefix` to the instance's coordinate key
+- Reset `coordinateCounter` to 0
+- Children get coordinates like `product-card:0/0`, `product-card:0/1`, etc.
+- Refs use their ref name: `product-card:0/addToCart`
+
+**Answer**: prefix all child coordinates with the instance's coordinate key. Reset counter. This matches how the hydrate target should access them.
+
+#### Question Q4: Do we need imports for contract types in server-element?
+
+For the server-element, we access `vs.__headlessInstances[key]` with a local variable. We need the ViewState type for type safety, but can use `any` cast since server-element is runtime-only. Looking at the existing `page-using-counter` server-element fixture, it imports `CounterViewState` and `IsPositive` from the contract. So yes, import contract types when needed (e.g., for enum comparisons).
+
+For the simple inline template case, the local variable can be typed as the contract's ViewState type.
+
+**Answer**: import contract ViewState types for type safety. Import enum types when used in conditions.
+
+#### Example: forEach Instance
+
+Input:
+
+```html
+<div class="grid" forEach="products" trackBy="_id">
+  <jay:product-card productId="{_id}">
+    <article class="product-tile">
+      <h2>{name}</h2>
+    </article>
+  </jay:product-card>
+</div>
+```
+
+Server-element output:
+
+```typescript
+w('<div');
+w(' jay-coordinate="' + coordPrefix + '">');
+for (const vs1 of vs.products) {
+  w('<div');
+  w(' class="grid"');
+  w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '">');
+  // Headless instance: product-card (coordinate: dynamic)
+  const vs_pc0 = (vs as any).__headlessInstances?.[vs1._id + ',product-card:0'] as
+    | ProductCardViewState
+    | undefined;
+  if (vs_pc0) {
+    w('<article');
+    w(' class="product-tile"');
+    w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '/product-card:0/0">');
+    w('<h2');
+    w(' jay-coordinate="' + escapeAttr(String(vs1._id)) + '/product-card:0/1">');
+    w(escapeHtml(String(vs_pc0.name)));
+    w('</h2>');
+    w('</article>');
+  }
+  w('</div>');
+}
+w('</div>');
+```
+
+#### Question Q5: forEach coordinate key format — slash vs comma?
+
+Looking at the runtime code (`headless-instance-context.ts`):
+
+- Static: `'product-card:0'` (string)
+- forEach: `(dataIds) => [...dataIds, 'product-card:0'].toString()` — produces `trackByValue,product-card:0`
+
+The comma-separated format comes from `Array.toString()`. The server side (`renderFastChangingDataForForEachInstances`) computes: `[trackByValue, coordinateSuffix].toString()`.
+
+So for forEach, the coordinate key in `__headlessInstances` uses **commas**: `"prod-123,product-card:0"`.
+
+But the `jay-coordinate` attribute for DOM elements uses **slashes** (for the hydration coordinate system). These are two different things:
+
+- `__headlessInstances` key: comma-separated (for data lookup)
+- `jay-coordinate` attribute: slash-separated (for DOM walking)
+
+**Answer**: use comma for `__headlessInstances` key lookup, slash for `jay-coordinate` attributes.
+
+#### Example: slowForEach Instance
+
+Input:
+
+```html
+<div slowForEach="products" trackBy="_id" jayIndex="0" jayTrackBy="p1">
+  <jay:product-card productId="prod-123">
+    <article class="hero-card">
+      <h2>Product A</h2>
+      <span class="price">{price}</span>
+    </article>
+  </jay:product-card>
+</div>
+```
+
+Server-element output:
+
+```typescript
+// slowForEach item: jayTrackBy="p1"
+const vs_pc0 = (vs as any).__headlessInstances?.['p1/product-card:0'] as
+  | ProductCardViewState
+  | undefined;
+if (vs_pc0) {
+  w('<div');
+  w(' jay-coordinate="p1">');
+  w('<article');
+  w(' class="hero-card"');
+  w(' jay-coordinate="p1/product-card:0/0">');
+  w('<h2');
+  w('>');
+  w('Product A');
+  w('</h2>');
+  w('<span');
+  w(' class="price"');
+  w(' jay-coordinate="p1/product-card:0/1">');
+  w(escapeHtml(String(vs_pc0.price)));
+  w('</span>');
+  w('</article>');
+  w('</div>');
+}
+```
+
+For slowForEach, the coordinate prefix includes the `jayTrackBy` value: `p1/product-card:0`.
+
+#### Example: Conditional Instance
+
+Input:
+
+```html
+<jay:product-card productId="prod-promo" ref="promo" if="showPromo">
+  <div class="promo">
+    <h3>{name}</h3>
+  </div>
+</jay:product-card>
+```
+
+Server-element output:
+
+```typescript
+if (vs.showPromo) {
+  const vs_pc1 = (vs as any).__headlessInstances?.['product-card:promo'] as
+    | ProductCardViewState
+    | undefined;
+  if (vs_pc1) {
+    w('<div');
+    w(' class="promo"');
+    w(' jay-coordinate="product-card:promo/0">');
+    w('<h3');
+    w(' jay-coordinate="product-card:promo/1">');
+    w(escapeHtml(String(vs_pc1.name)));
+    w('</h3>');
+    w('</div>');
+  }
+}
+```
+
+The `if` condition on the `<jay:xxx>` tag uses the page's ViewState (not the instance's). The coordinate uses the ref name `promo` instead of a counter.
+
+### Hydrate Target Design
+
+#### Design Principle: SSR and Hydration Must Be In Sync
+
+The SSR output and hydration script are compiled from the same jay-html source. The hydration script should match what SSR produced. If they disagree (e.g., SSR rendered a conditional but hydration expects it absent), that's an error — fail fast rather than silently producing broken DOM.
+
+To validate sync, the compiler can embed a version ID in both the SSR HTML (as a data attribute or comment) and the hydration script. On hydration startup, compare IDs; mismatch → error.
+
+**Hydration script compilation input**: The hydration script is compiled from the **slow-rendered** (pre-rendered) jay-html — the same input as the server-element target. It only needs the slow rendering ViewState to determine its structure. Fast-phase data arrives as runtime JSON, not as structural changes to the compiled script.
+
+#### Question Q6: Do headless instance inline templates need adopt APIs or element APIs?
+
+Headless instance inline templates must use **adopt APIs** (`adoptElement`, `adoptText`) to properly hydrate the SSR-rendered DOM. Creating fresh DOM via `e()` would waste the SSR content and cause a flash of replacement — that's not true hydration.
+
+The current `childComp` (element.ts:41-66) always creates fresh DOM because it calls `ConstructContext.withRootContext()` which creates a context without a coordinate map. We need a new `childCompHydrate` that scopes the coordinate context to the instance's coordinate prefix.
+
+**Answer**: adopt APIs for hydration. New runtime support needed.
+
+#### New Runtime: `childCompHydrate` and `withHydrationChildContext`
+
+**`ConstructContext.withHydrationChildContext(viewState, refManager, fn)`** — like `withRootContext` but inherits `coordinateBase` and `coordinateMap` from the current (parent) context. This allows adopt calls inside the inline template to resolve coordinates scoped to the instance prefix.
+
+**`childCompHydrate(component, getProps, instanceCoordinate, ref)`** — like `childComp` but first extends the current context's `coordinateBase` with the instance coordinate (e.g., `'product-card:0'`), then calls the component factory within that scoped context.
+
+**Coordinate resolution flow:**
+
+1. Page hydrate → `withHydrationRootContext` → context has full coordinateMap
+2. `childCompHydrate(_HeadlessPC, getProps, 'product-card:0', ref)` → extends coordinateBase to `['product-card:0']`, shares coordinateMap
+3. Component factory calls hydratePreRender → `withHydrationChildContext` inherits scoped base
+4. `adoptElement('0')` → `resolveCoordinate('0')` → prepends base → `product-card:0/0` → finds SSR element ✓
+
+This works because `resolveCoordinate` (context.ts:221-228) prepends `coordinateBase.join('/')` to the key before looking up in the shared map.
+
+#### Question Q7: How many preRender functions per headless instance?
+
+**ONE preRender per component definition.** Each `makeHeadlessInstanceComponent` has one preRender.
+
+The SSR and hydration script must agree on what was rendered:
+
+- If SSR rendered the instance → hydrate has adopt version → coordinates match ✓
+- If SSR did not render the instance → hydrate has create version → no DOM to adopt ✓
+- If they disagree → error (detectable via sync ID)
+
+#### Slow vs Fast Conditionals
+
+**Slow conditionals** (condition uses a slow-phase property): Resolved at build time by the slow render transform. If true → the `if` attribute is removed (becomes unconditional). If false → the element is deleted from the pre-rendered jay-html. The hydrate script is compiled from the resolved jay-html, so it naturally has only one path. No special handling needed.
+
+**Fast conditionals** (condition uses a fast/interactive-phase property): Dynamic per request. The hydrate script is compiled once (statically) but must handle both outcomes — SSR may render the instance on one request and skip it on another. So the hydrate needs `hydrateConditional` with **both** adopt and create callbacks, requiring **two separate component definitions**.
+
+For **forEach**, which structurally needs both adopt (existing items) and create (new items), the same two-definition pattern applies.
+
+| Context          | Component Definitions                                       | Hydrate API                                              |
+| ---------------- | ----------------------------------------------------------- | -------------------------------------------------------- |
+| Unconditional    | 1 adopt                                                     | `childCompHydrate`                                       |
+| Slow conditional | 1 (resolved at build time: adopt if true, removed if false) | `childCompHydrate`                                       |
+| Fast conditional | 2: adopt + create                                           | `hydrateConditional` wraps both                          |
+| forEach          | 2: adopt + create                                           | `hydrateForEach` uses adopt for existing, create for new |
+| slowForEach      | 1 adopt                                                     | items pre-rendered, always adopt                         |
+
+#### Code Size Trade-off: Adopt + Create Duplication
+
+For forEach and fast conditionals, having both adopt and create component definitions increases client bundle size. In most cases, the adopt version is considerably smaller than the create version because it doesn't include static DOM nodes — it only wires up dynamic points. But in edge cases (templates with mostly dynamic content), the two versions can be similar in size.
+
+**Future optimization**: The create path can be downloaded dynamically (lazy import). If the data hasn't changed since SSR, the create path isn't needed until a reactive update adds new items (forEach) or toggles a condition. By that time, the create code can be loaded on demand. This defers the cost to when it's actually needed.
+
+#### Example: Simple Instance Hydrate
+
+```typescript
+// Hydrate inline template — uses adopt APIs
+function _headlessProductCard0HydrateRender(
+  options?: RenderElementOptions,
+): _HeadlessProductCard0ElementPreRender {
+  const [refManager, [refAddToCart]] = ReferencesManager.for(options, ['add to cart'], [], [], []);
+  const render = (viewState) =>
+    ConstructContext.withHydrationChildContext(viewState, refManager, () =>
+      adoptElement(
+        '0',
+        { class: 'hero-card' },
+        [adoptText('1', (vs) => vs.name), adoptText('2', (vs) => vs.price)],
+        refAddToCart(),
+      ),
+    ) as _HeadlessProductCard0Element;
+  return [refManager.getPublicAPI() as ProductCardRefs, render];
+}
+
+const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
+  _headlessProductCard0HydrateRender,
+  productCard.comp,
+  'product-card:0',
+  productCard.contexts,
+);
+
+// In page hydrate function:
+adoptElement('0', {}, [
+  adoptText('1', (vs) => vs.pageTitle),
+  childCompHydrate(
+    _HeadlessProductCard0,
+    (vs: PageViewState) => ({ productId: 'prod-hero' }),
+    'product-card:0',
+    refAR1(),
+  ),
+]);
+```
+
+#### Example: Slow Conditional Instance Hydrate
+
+Slow conditionals are resolved at build time. If the condition was true, the `if` attribute is removed and the headless instance becomes unconditional — same as the simple instance example above. If false, the element is deleted from the pre-rendered jay-html.
+
+#### Example: Fast Conditional Instance Hydrate
+
+Fast conditionals are dynamic per request. The hydrate script needs both adopt and create paths:
+
+```typescript
+// TWO separate components: adopt for true-at-SSR, create for false-at-SSR
+const _HeadlessProductCard1Adopt = makeHeadlessInstanceComponent(
+  _headlessProductCard1HydrateRender,
+  productCard.comp,
+  'product-card:promo',
+  productCard.contexts,
+);
+const _HeadlessProductCard1Create = makeHeadlessInstanceComponent(
+  _headlessProductCard1Render,
+  productCard.comp,
+  'product-card:promo',
+  productCard.contexts,
+);
+
+// hydrateConditional handles both cases:
+hydrateConditional(
+  (vs) => vs.showPromo,
+  // adopt path: SSR rendered it
+  () =>
+    childCompHydrate(
+      _HeadlessProductCard1Adopt,
+      (vs: PageViewState) => ({ productId: 'prod-promo' }),
+      'product-card:promo',
+      refPromo(),
+    ),
+  // create path: SSR did not render it
+  () =>
+    childComp(
+      _HeadlessProductCard1Create,
+      (vs: PageViewState) => ({ productId: 'prod-promo' }),
+      refPromo(),
+    ),
+);
+```
+
+#### Example: forEach Instance Hydrate
+
+```typescript
+// TWO separate components: adopt for existing items, create for new items
+const _HeadlessProductCard0Adopt = makeHeadlessInstanceComponent(
+  _headlessProductCard0HydrateRender,
+  productCard.comp,
+  (dataIds) => [...dataIds, 'product-card:0'].toString(),
+  productCard.contexts,
+);
+const _HeadlessProductCard0Create = makeHeadlessInstanceComponent(
+  _headlessProductCard0Render,
+  productCard.comp,
+  (dataIds) => [...dataIds, 'product-card:0'].toString(),
+  productCard.contexts,
+);
+
+// In page hydrate function:
+adoptElement('0', {}, [
+  adoptText('1', (vs) => vs.pageTitle),
+  adoptElement('2', {}, [
+    hydrateForEach(
+      '2',
+      (vs) => vs.products,
+      '_id',
+      () => [
+        childCompHydrate(
+          _HeadlessProductCard0Adopt,
+          (vs1) => ({ productId: vs1._id }),
+          'product-card:0',
+          refAR1(),
+        ),
+      ],
+      (vs1) => {
+        return e('div', { class: 'grid' }, [
+          childComp(_HeadlessProductCard0Create, (vs1) => ({ productId: vs1._id }), refAR1()),
+        ]);
+      },
+    ),
+  ]),
+]);
+```
+
+#### Example: slowForEach Instance Hydrate
+
+```typescript
+// ONE adopt component per slowForEach item (pre-rendered, always adopt)
+const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
+  _headlessProductCard0HydrateRender,
+  productCard.comp,
+  'p1/product-card:0',
+  productCard.contexts,
+);
+
+// In page hydrate function:
+adoptElement('0', {}, [
+  adoptText('1', (vs) => vs.pageTitle),
+  adoptElement('2', {}, [
+    slowForEachItem<PageViewState, ProductViewState>(
+      (vs) => vs.products,
+      0,
+      'p1',
+      () =>
+        adoptElement('p1', {}, [
+          childCompHydrate(
+            _HeadlessProductCard0,
+            (vs1) => ({ productId: 'prod-123' }),
+            'product-card:0',
+            refAR1(),
+          ),
+        ]),
+    ),
+    // ... second item
+  ]),
+]);
+```
+
+### Page-Level Headless (Old-Style) Hydration
+
+The old-style `<script type="application/jay-headless" key="counter">` headless component renders data into the page's own ViewState (e.g., `vs.counter.count`). This is NOT the `<jay:xxx>` instance pattern — it's a top-level data import.
+
+For SSR, this already works (see `page-using-counter/generated-server-element.ts`). For hydration, the page's template accesses `vs.counter.count` etc. — same as any other ViewState property. No special headless handling needed in the hydrate output because the data is part of the page's ViewState directly.
+
+So page-level headless SSR+hydration needs:
+
+- SSR: already covered by `page-using-counter` fixture ✓
+- Hydration: standard template adoption (no headless-specific code needed)
+- Test: add `generated-element-hydrate.ts` fixture for `page-using-counter`
+
+## Implementation Plan
+
+### Phase 1: Server-Element Target — Headless Instance Support
+
+1. Add `headlessContractNames`, `headlessImports` to `ServerContext`
+2. Add component detection (`getComponentName`) to `renderServerElement()`
+3. Implement `renderServerHeadlessInstance()`:
+   - Compute coordinate key (static string or runtime expression for forEach)
+   - Create local variable: `const vs_pcN = (vs as any).__headlessInstances?.[key] as ContractViewState | undefined`
+   - Guard with `if (vs_pcN)`
+   - Set `coordinatePrefix` to instance coordinate key
+   - Reset `coordinateCounter`
+   - Render inline template children with instance's variable context
+4. Handle `if` condition on `<jay:xxx>` — wrap in page-level condition first, then instance guard
+5. Import contract ViewState types as needed
+
+### Phase 2: Runtime — Hydration Support for Child Components
+
+1. Add `ConstructContext.withHydrationChildContext(viewState, refManager, fn)` — inherits `coordinateBase` and `coordinateMap` from parent context
+2. Add `childCompHydrate(component, getProps, instanceCoordinate, ref)` — extends `coordinateBase` with instance coordinate, then calls component factory within scoped context
+3. Optional: sync ID validation between SSR and hydration script
+
+### Phase 3: Hydrate Target — Headless Instance Support
+
+1. Add `headlessImports`, `headlessInstanceDefs`, `headlessInstanceCounter` to `HydrateContext`
+2. Add headless-instance detection in `renderHydrateElement()` (check `componentMatch.kind`)
+3. Implement `renderHydrateHeadlessInstance()`:
+   - Compile inline template with adopt APIs (`adoptElement`, `adoptText`) and `withHydrationChildContext`
+   - Generate `_headlessXxxNHydrateRender` functions and `makeHeadlessInstanceComponent` definitions
+   - Return `childCompHydrate()` calls
+4. forEach and fast conditionals: generate TWO separate component definitions (adopt + create)
+5. Unconditional/slow conditional/slowForEach: ONE adopt component definition
+
+### Phase 4: Test Fixtures and Tests
+
+For each scenario, create expected output fixtures and add test cases:
+
+| Scenario             | Fixture                              | Server-Element | Hydrate     |
+| -------------------- | ------------------------------------ | -------------- | ----------- |
+| Page-level headless  | `page-using-counter`                 | exists ✓       | new fixture |
+| Simple instance      | `page-with-headless-instance`        | new fixture    | new fixture |
+| Conditional instance | `page-with-headless-mixed`           | new fixture    | new fixture |
+| forEach instance     | `page-with-headless-in-foreach`      | new fixture    | new fixture |
+| slowForEach instance | `page-with-headless-in-slow-foreach` | new fixture    | new fixture |
+
+Add test cases to:
+
+- `generate-server-element.test.ts` — 4 new tests
+- `generate-element-hydrate.test.ts` — 5 new tests
+
+### Phase 5: Fake-Shop Integration and Dev-Server Tests
+
+Create dedicated pages in `examples/jay-stack/fake-shop/src/pages/` for each headless instance scenario:
+
+- Page with a single headless instance (unconditional)
+- Page with headless instance inside a fast conditional
+- Page with headless instance inside forEach
+- Page with headless instance inside slowForEach (pre-rendered)
+
+Extend the dev-server tests to cover these pages end-to-end:
+
+- Verify SSR produces correct HTML (no client-only fallback)
+- Verify hydration script loads and hydrates without errors
+- Verify interactive behavior works after hydration (e.g., button clicks trigger actions)
+
+## Verification Criteria
+
+1. All existing tests pass (no regressions)
+2. New server-element fixtures match actual compiler output
+3. New hydrate fixtures match actual compiler output
+4. Server-element coordinates align with hydrate adopt coordinates (same values, same order)
+5. `childCompHydrate` correctly scopes coordinate resolution (e.g., `adoptElement('0')` inside instance resolves to `product-card:0/0`)
+6. forEach hydrate uses adopt component for existing items, create component for new items
+7. The generated code type-checks (correct import paths and type references)
+
+## Implementation Results
+
+### Phase 1: Server-Element Target — Completed
+
+**Files changed:**
+
+- `packages/compiler/compiler-jay-html/lib/expressions/expression-compiler.ts` — Added optional `customVarName` parameter to `Variables` constructor
+- `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts` — Extended `ServerContext`, added `renderServerHeadlessInstance()`, updated `renderServerElement()` and `generateServerElementFile()`
+- `packages/compiler/compiler-jay-html/test/jay-target/generate-server-element.test.ts` — 4 new tests
+
+**New fixture files:**
+
+- `test/fixtures/contracts/page-with-headless-instance/generated-server-element.ts`
+- `test/fixtures/contracts/page-with-headless-in-foreach/generated-server-element.ts`
+- `test/fixtures/contracts/page-with-headless-in-slow-foreach/generated-server-element.ts`
+- `test/fixtures/contracts/page-with-headless-mixed/generated-server-element.ts`
+
+**Deviations from design:**
+
+- Added `customVarName` to `Variables` constructor — design didn't specify how to scope the variable name for inline template children. Without this, expressions resolved to `vs.name` (page ViewState) instead of `vs_product_card0.name` (instance ViewState).
+- Added `headlessCoordinateCounters: Map<string, number>` to `ServerContext` — design didn't specify per-scope counters for coordinate refs. Without this, the second slowForEach instance got `product-card:1` instead of `product-card:0` (each scope should reset).
+- Headless instance detection moved BEFORE conditional check in `renderServerElement()` — design didn't specify ordering. A `<jay:xxx if="...">` must be handled by `renderServerHeadlessInstance()` (which handles the `if` internally) rather than by the conditional handler (which would treat the tag as literal HTML).
+
+**Phase 1 review fixes:**
+
+- **Bug fix**: forEach `__headlessInstances` key now uses raw `String(vs1._id)` instead of `escapeAttr(String(vs1._id))`. Added `rawCoordinatePrefix` to `ServerContext` to track unescaped prefix separately from the HTML-escaped `coordinatePrefix`.
+- **Bug fix**: slowForEach `headlessCoordinateCounters` now reset per item (`new Map()` in slowForEach itemContext). Second item correctly uses `p2/product-card:0` instead of `p2/product-card:1`.
+- **Fixture accuracy**: Updated jay-html fixtures to reflect post-slow-render state — `{name}` (phase:slow) resolved to literals ("Hero Product", "Promo Product"). Updated both jay-html source files and element target fixture files.
+
+**Tests: 568/568 passing (4 new + 564 existing, 4 skipped)**
+
+### Phase 2: Runtime — Completed
+
+**Files changed:**
+
+- `packages/runtime/runtime/lib/context.ts` — Added `forInstance(instanceCoordinate)` method on `ConstructContext` (extends coordinateBase with instance segments, shares coordinateMap). Added `withHydrationChildContext` static method (inherits coordinateBase and coordinateMap from parent context).
+- `packages/runtime/runtime/lib/hydrate.ts` — Added `childCompHydrate(compCreator, getProps, instanceCoordinate, ref)` function. Uses `context.forInstance()` to scope coordinate resolution before calling the component factory.
+- `packages/runtime/runtime/lib/index.ts` — Exported `childCompHydrate`.
+
+**New test file:**
+
+- `packages/runtime/runtime/test/lib/hydration/child-comp-hydrate.test.ts` — 3 tests:
+  - Scopes coordinate resolution to instance prefix (`product-card:0/0` via `adoptElement('0')`)
+  - Multi-segment coordinate prefix (`p1/product-card:0/0` for slowForEach)
+  - Does not interfere with parent coordinate resolution (elements before and after `childCompHydrate` adopt correctly)
+
+**No deviations from design.**
+
+**Tests: 242/242 passing (5 new + 237 existing, 3 skipped)**
+
+### Phase 3: Hydrate Compiler — Completed
+
+**Files changed:**
+
+- `packages/compiler/compiler-shared/lib/imports.ts` — Added `childCompHydrate` import definition
+- `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts`:
+  - Extended `HydrateContext` with `headlessImports`, `headlessInstanceDefs`, `headlessInstanceCounter`, `headlessCoordinateCounters`, `insideFastForEach`, `coordinatePrefix`
+  - Updated `buildRenderContext()` to pass through headless fields
+  - Added headless instance detection in `renderHydrateElement()` (before conditional check)
+  - Implemented `renderHydrateHeadlessInstance()` (~200 lines):
+    - Compiles adopt inline template with `adoptElement`/`adoptText` + `withHydrationChildContext`
+    - For forEach: generates TWO component definitions (adopt + create)
+    - For conditionals: wraps in `hydrateConditional` with adopt + create callbacks
+    - Handles coordinate key computation matching element target
+  - Updated `renderHydrate()` to emit headless instance definitions at module level
+  - Updated forEach/slowForEach item contexts to set `insideFastForEach`, `headlessCoordinateCounters`, `coordinatePrefix`
+- `packages/compiler/compiler-jay-html/test/jay-target/generate-element-hydrate.test.ts` — 5 new tests
+
+**New fixture files:**
+
+- `test/fixtures/contracts/page-using-counter/generated-element-hydrate.ts`
+- `test/fixtures/contracts/page-with-headless-instance/generated-element-hydrate.ts`
+- `test/fixtures/contracts/page-with-headless-in-foreach/generated-element-hydrate.ts`
+- `test/fixtures/contracts/page-with-headless-in-slow-foreach/generated-element-hydrate.ts`
+- `test/fixtures/contracts/page-with-headless-mixed/generated-element-hydrate.ts`
+
+**Phase 3 review fixes:**
+
+- **Bug fix (critical)**: Fast conditional create path was using adopt component (`adoptElement`/`adoptText`). Now generates a Create component with element APIs (`e()`/`dt()`) for conditionals, same as forEach. Changed condition from `isInsideForEach` to `isInsideForEach || !!ifCondition` for create version generation.
+- **Bug fix (critical)**: forEach create callback used `refAR2()` (undefined) instead of `refAR1()`. Fixed by giving the create callback a fresh `RefNameGenerator` so it produces the same ref names as the adopt callback.
+- **Bug fix (high)**: Server-element didn't force coordinates on inline template root elements, causing coordinate mismatch with hydrate target. Fixed by passing `forceCoordinate = true` when rendering inline template root children in `renderServerHeadlessInstance()`.
+- **Code cleanup**: Removed `if (isInsideForEach || true)` hack, replaced with proper `if (ifCondition)` check.
+
+- **Bug fix (critical)**: forEach generated duplicate type/function identifiers (`_HeadlessProductCard0Element`, `_headlessProductCard0Render`). Root cause: `renderHydrateHeadlessInstance` generated a create version, AND the forEach handler's create callback re-rendered the headless instance via the element target's `renderHeadlessInstance()`. Fix: forEach create version is now generated ONLY by the element target (via `renderNode()`), not by `renderHydrateHeadlessInstance`. Conditional create version is still generated by `renderHydrateHeadlessInstance` (since there's no separate create callback handler for conditionals). The `headlessInstanceCounter` is not reset for the create callback, so the element target gets counter=1 (adopt used 0) — unique names, no conflicts.
+
+**Tests: 577/577 passing (all fixtures regenerated, 4 skipped)**
+
+### Phase 4: Test Fixtures and Tests — Completed (during Phases 1-3)
+
+All test fixtures and test cases were created during phases 1-3:
+
+- `generate-server-element.test.ts` — 4 headless instance tests (14 total, all passing)
+- `generate-element-hydrate.test.ts` — 5 headless instance tests (16 total, all passing)
+- All 5 fixture directories have both `generated-server-element.ts` and `generated-element-hydrate.ts`
+
+No additional work needed — Phase 4 was fully covered by phases 1-3.
+
+### Phase 5: Fake-Shop Integration — Completed
+
+The existing fake-shop homepage (`src/pages/page.jay-html`) already exercises the key headless instance scenarios:
+
+- Static instances (`<jay:product-widget productId="1">`, `<jay:product-widget productId="3">`)
+- forEach instances (`<jay:product-widget>` inside `forEach="featuredProducts"`)
+- forEach with fast-only headless (`<jay:stock-status>` inside `forEach="allProducts"`)
+
+**Enhanced smoke tests** (`examples/jay-stack/fake-shop/test/smoke.test.ts`):
+
+- Added "should SSR home page with headless instance content" test
+- Verifies SSR rendered content (target div not empty, `jay-coordinate` attributes present)
+- Verifies product-widget slow-phase data appears in HTML: "Gaming Laptop" (ID 1), "Wireless Headphones" (ID 3), SKU codes
+- Confirms SSR works end-to-end (no client-only fallback)
+
+**Tests: 7/7 smoke tests passing, 577/577 compiler tests passing, 245/245 runtime tests passing**
+
+**Deviation from design:** Did not create separate dedicated pages per scenario — the existing homepage already covers the main scenarios and creating redundant pages adds maintenance burden. The conditional instance scenario (`<jay:xxx if="...">`) is covered by compiler fixture tests but not by an integration test page.
+
+---
+
+## Production Errors (March 2026)
+
+### Issue 1: Runtime Error — `Cannot read properties of undefined (reading 'inStock')`
+
+**Location:** `page.jay-html?import&jay-hydrate.ts` line 68 (in `_headlessProductWidget0HydrateRender`)
+
+**Stack:**
+
+```
+at hydrateConditionalFalse (index.js:1299:25)
+at hydrateConditional (index.js:1258:14)
+```
+
+**Cause:** `hydrateConditionalFalse` calls `condition(context.currData as ViewState)` at line 264 of `hydrate.ts`. When `context.currData` is undefined (e.g. before the headless instance has received its viewState from `HEADLESS_INSTANCES`, or during initial mount before data is ready), the condition `vs => vs.inStock` throws when accessing `vs.inStock` because `vs` is undefined.
+
+**Fix:** Add a guard in `hydrateConditionalFalse` — if `context.currData` is null/undefined, treat the condition as false and skip creation until the first update:
+
+```ts
+// hydrate.ts hydrateConditionalFalse
+const currData = context.currData as ViewState;
+const initialResult = currData != null && condition(currData);
+```
+
+### Issue 2: Multi-Element Return — Comma Expression Returns Only Last Element
+
+**Location:** `withHydrationChildContext` callback in headless hydrate inline templates
+
+**Problem:** When the inline template has multiple children (e.g. product-widget: h3, div, two conditional spans, button), the compiler emits:
+
+```ts
+() => (
+    hydrateConditional(vs => vs.inStock, ...),
+    hydrateConditional(vs => !vs.inStock, ...),
+    adoptElement("addToCart", {}, [], ref())
+)
+```
+
+The comma operator evaluates all expressions but **returns only the last**. So `withHydrationChildContext` receives only the last element (addToCart button). The conditional spans are evaluated but never composed into the parent — the DOM structure is wrong and hydration fails.
+
+**SSR pattern:** Design Log #84: when the inline template has multiple children, wrap in `de('div', {}, [...])` for the element target's create path. The server-element target does **not** wrap — it renders siblings directly.
+
+**Fix:** Mirror the element target's create path. For the adopt hydrate path:
+
+1. **When multiple children:** Wrap in `adoptElement("0", {}, [child1, child2, ...])` where coordinate `"0"` is a wrapper div.
+2. **Server-element:** Must also wrap multiple children in a div so coordinates align. The wrapper gets coordinate `product-widget:0/0`, children get `product-widget:0/0/0`, `product-widget:0/0/1`, etc.
+
+This matches: create = `de('div', {}, [...])`, adopt = `adoptElement("0", {}, [...])`, server = `<div jay-coordinate=".../0">...</div>`.
+
+**Files to change:**
+
+- `jay-html-compiler.ts` — `renderHydrateHeadlessInstance`: when `childNodes.length > 1`, wrap `adoptInlineBody` in `adoptElement("0", {}, [\n${adoptChildren.rendered}\n])` instead of comma-merge.
+- `jay-html-compiler.ts` — `renderServerHeadlessInstance`: when `childNodes.length > 1`, wrap rendered children in a div with the instance's coordinate prefix.
+
+### Issue 3: TSC Error in Build Output
+
+**Location:** `examples/jay-stack/fake-shop/build/pre-rendered/page.jay-html?jay-hydrate.ts`
+
+The user reported TSC errors in this file. The build output may not be included in the main `tsconfig` or may have different import paths. `yarn build:check-types` passed at repo root — the error may be IDE-specific or in a different build context. Needs verification.
+
+### Issue 4: forEach Adopt Component — Duplicate Coordinate Suffix
+
+**Location:** `renderHydrateHeadlessInstance` in `jay-html-compiler.ts`
+
+**Problem:** The adopt component for forEach headless instances had coordinate key `(dataIds) => [...dataIds, 'stock-status:0'].toString()`. But `childCompHydrate` calls `context.forInstance('stock-status:0')` which extends `coordinateBase` with the instance suffix. So `dataIds` already contains the suffix (e.g., `['1', 'stock-status:0']`), and the function appends it again → `'1,stock-status:0,stock-status:0'`.
+
+Server expects `'1,stock-status:0'`, so the ViewState lookup fails → `fastVS` is undefined → `TypeError: undefined is not iterable` when destructuring signals.
+
+**Fix:** Changed adopt component's coordinate key to `(dataIds) => dataIds.join(',')`. The create component (generated by the element target, uses `childComp` which resets coordinateBase) keeps the old pattern `(dataIds) => [...dataIds, 'stock-status:0'].toString()`.
+
+**Files changed:**
+
+- `jay-html-compiler.ts` line 2582 — adopt component key in `renderHydrateHeadlessInstance`
+- `test/fixtures/contracts/page-with-headless-in-foreach/generated-element-hydrate.ts` — updated fixture
+
+### Issue 5: `getComponentName` — Headless Detected as Headful
+
+**Location:** `getComponentName` in `jay-html-helpers.ts`
+
+**Problem:** When a headless component's code link (e.g., `widget` from `widget.ts`) was added to the jay-html's `imports` array, `processImportedComponents` included it in `importedSymbols`. Then `getComponentName` checked headful imports BEFORE headless contract names. Since `widget` was in both sets, `<jay:widget>` was classified as a headful component (`childComp(widget, ...)`) instead of a headless instance (`makeHeadlessInstanceComponent(..., widget.comp, ...)`).
+
+**Symptom:** Runtime error `compCreator is not a function` — `childComp` tried to call the full `JayStackComponentDefinition` object as a function.
+
+**Fix:** Reversed the check order in `getComponentName`: check headless contract names FIRST, then headful imports. A headless import's contract name always takes precedence because the code link is only in `importedSymbols` as a side effect of the import wiring.
+
+**Files changed:**
+
+- `jay-html-helpers.ts` — `getComponentName`: check headless before headful
+
+### Issue 6: Hydrate `makeHeadlessInstanceComponent` Key Mismatch
+
+**Location:** `renderHydrateHeadlessInstance` in `jay-html-compiler.ts`
+
+**Problem:** For static headless instances, `makeHeadlessInstanceComponent` received the full DOM coordinate (e.g., `'0/widget:0'`) as its `coordinateKey`. But the server stores data in `__headlessInstances` with just the suffix (e.g., `'widget:0'`). The `wrappedConstructor` looked up `instanceData.viewStates['0/widget:0']` — key not found → `fastVS` undefined → signals initialized with empty object.
+
+**Symptom:** Headless instance renders SSR content but interactive phase has no data. Button clicks don't update the DOM because signals are empty.
+
+**Fix:** Changed `makeHeadlessInstanceComponent`'s `coordinateKey` parameter from `instanceCoord` (DOM coordinate) to `coordinateKey` (instance key from `computeInstanceKey`). Static: `'widget:0'`, slowForEach: `'p1/widget:0'`.
+
+**Files changed:**
+
+- `jay-html-compiler.ts` — `renderHydrateHeadlessInstance`: use `coordinateKey` not `instanceCoord`
+- `test/fixtures/contracts/page-with-headless-instance/generated-element-hydrate.ts` — updated fixture
+- `test/fixtures/contracts/page-with-headless-mixed/generated-element-hydrate.ts` — updated fixture
+
+### Issue 7 (Open): Headless Instance Ref onclick Not Firing After Hydration
+
+**Location:** Hydration runtime — headless instance ref wiring
+
+**Problem:** After hydration, button clicks inside headless instance inline templates don't trigger `refs.increment.onclick(...)`. The button is adopted from SSR DOM (`adoptElement('0/2', {}, [], refIncrement())`), hydration completes without errors, but the event handler is not bound.
+
+**Symptom:** Clicking a headless instance button has no effect. Value stays unchanged. Confirmed via Playwright test: automation API is available, DOM is correct, but `onclick` handler doesn't fire.
+
+**Root cause:** The headless instance root element (e.g., `<div class="widget">`) had no `jay-coordinate` in the SSR HTML. The hydrate target's `adoptElement('0', {}, [children])` looked for an element with that coordinate, couldn't find it, and returned a fallback that didn't delegate `update`/`mount` to children. The `refIncrement()` was never mounted, so `onclick` never fired.
+
+**Fix:** In `renderServerHeadlessInstance`, render the root child element with `isRoot: true` to force coordinate emission. The `jay-coordinate` attribute is always emitted on the headless instance's root child element, so `adoptElement` can find and adopt it.
+
+**Files changed:**
+
+- `jay-html-compiler.ts` — `renderServerHeadlessInstance`: pass `{ isRoot: true }` when rendering root child
+- All headless server-element fixtures updated
+
+**Status:** Fixed for static, conditional, and forEach placements. slowForEach headless remains broken (separate pre-rendering pipeline issue).
+
+### Issue 8 (Open): forEach Add Item Inserts at Wrong DOM Position
+
+**Location:** `hydrateForEach` in `hydrate.ts`
+
+**Problem:** When a parent element has mixed content (static children + forEach items + buttons), `hydrateForEach` creates a `Kindergarten` directly on the parent with a single group at index 0. It doesn't account for static siblings before the forEach group (e.g., `<h1>`). When a new item is added, `getOffsetFor(group)` returns 0, so the item is inserted before the `<h1>` instead of after existing forEach items.
+
+**Root cause:** `adoptElement` doesn't use Kindergarten — it treats children as a flat list. Only `hydrateForEach` creates a Kindergarten, but without awareness of its position among siblings.
+
+**Fix:** See DL#106 — `adoptElement` should create a Kindergarten when children include dynamic groups (forEach/conditional). Each child gets its own KindergartenGroup, and offsets are computed correctly.
+
+**Status:** Open. Design in DL#106.
+
+### Verification Criteria
+
+1. **Runtime:** No `Cannot read properties of undefined` when hydrating headless instances with conditionals.
+2. **Hydration:** All inline template children (including conditionals) are adopted and composed correctly.
+3. **Server/hydrate alignment:** Server wraps multiple children in a div; hydrate adopts that div and its children.
+4. **Tests:** Update fixtures and add/update tests for multi-child headless adopt path.
+
+---
+
+## Mood Tracker (Key-Based Headless) — Analysis (No Fix)
+
+**Context:** In the fake-shop example, the top-level mood tracker (`key="mt"`) works (buttons respond), but:
+
+1. Numbers (`mt.happy`, `mt.sad`, `mt.neutral`) do not update in the UI.
+2. Sad and neutral conditionals (false at SSR) do not appear when the condition turns true.
+
+### Problem 1: Numbers Not Updating
+
+**Root cause:** Missing `adoptText` for dynamic expressions in mixed-content elements.
+
+**Structure:**
+
+```html
+<div>Happy: {mt.happy} <button ref="mt.happy">more happy</button></div>
+```
+
+- The ref is on the **button**, so the button gets coordinate `mtHappy` (camelCase of `mt.happy`).
+- The hydrate compiler emits `adoptElement("mtHappy", {}, [], refHappy())` — adopting the **button**.
+- The dynamic text `{mt.happy}` lives in a **sibling text node** of the button, not inside it.
+
+**Compiler logic:**
+
+- `renderHydrateElementContent` only sets `textFragment` when `childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE` (single text child).
+- For mixed content (text + expression + element with ref), `textFragment` is null.
+- `renderHydrateNode` returns `RenderFragment.empty()` for text nodes — they are never emitted.
+- The parent div has no ref, no single dynamic text, no interactive children → `needsAdoption` is false → we recurse and merge children.
+- Merge yields: empty (text), empty (text), empty (text), `adoptElement(button)`. The dynamic text is lost.
+
+**Server-element:** The div has no coordinate. Only the button gets `jay-coordinate="mtHappy"`. The dynamic value is rendered inline as text; there is no element wrapping it for `adoptText` to target.
+
+**Result:** No `adoptText` is emitted for `{mt.happy}`, `{mt.sad}`, or `{mt.neutral}`. The numbers stay at their SSR values.
+
+### Problem 2: Sad and Neutral Conditionals Not Appearing
+
+**Expected flow:** When `vs.mt?.currentMood === CurrentMood.sad` becomes true, `hydrateConditionalFalse` should call `createFallback`, create the span, and insert it before its anchor.
+
+**Plausible causes (to verify with debugging):**
+
+1. **Reactive tracking:** `createReaction` in `makeJayComponent` should re-run when the mood tracker’s signals change (via `materializeViewState(instance.render())`). If the reaction does not re-run, `element.update(viewState)` is never called and the conditionals never re-evaluate.
+2. **ViewState merge:** `vs.mt` might not receive the latest values from the headless instance when it updates.
+3. **Condition semantics:** `vs.mt?.currentMood === CurrentMood.sad` — if `vs.mt` is undefined or the enum comparison is wrong, the condition would stay false.
+
+**Files to inspect:**
+
+- `packages/runtime/component/lib/component.ts` — `createReaction` and viewState flow
+- `packages/jay-stack/stack-client-runtime/lib/hydrate-composite-component.ts` — key-based headless merge
+- `packages/runtime/runtime/lib/hydrate.ts` — `hydrateConditionalFalse` update path
+
+### Fix: Coordinate Collision (Sad/Neutral Conditionals)
+
+**Root cause:** The mood tracker's sad conditional used `adoptElement("3", {}, [])`, but the forEach section's item with `trackBy="_id"` and `_id="3"` also got coordinate `"3"` (top-level forEach uses trackBy value as item coordinate). So `resolveCoordinate("3")` found the forEach item div instead of the (non-existent) mood span.
+
+**Fix:** Use hierarchical coordinates for conditional children. When an element has interactive children (conditionals/forEach), pass `coordinatePrefix` so child coordinates become e.g. `"1/2"`, `"1/3"`, `"1/4"` instead of `"2"`, `"3"`, `"4"`.
+
+- **Hydrate** (`renderHydrateElementContent`): Add `coordinatePrefix: [baseCoord]` to childContext when `hasInteractiveChildren`.
+- **Server** (`renderServerElementContent`): Add `coordinatePrefix: '${coordinate}'` to childContext when element has coordinate and is not root (`"0"`).
+- **Fixtures:** Updated to match new hierarchical coordinate output.
+
+---
+
+## Implementation: Instance ViewState for Hydrate Condition Evaluation (Mar 2025)
+
+**Problem:** In slowForEach with headless instances (e.g. fake-shop Featured Products), the 2nd product (Out of Stock) incorrectly showed both "Out of Stock" and "In Stock". Conditions like `if="inStock"` were evaluated against the merged page ViewState instead of the instance ViewState.
+
+**Root cause:** `adoptRenderFnCode` passed `viewState` (from the plugin's renderViewState) to `withHydrationChildContext`. Due to merge order, the merged page ViewState's `inStock` came from the last instance, so `hydrateConditional` for earlier instances saw the wrong value.
+
+**Fix:** Use `HEADLESS_INSTANCES` context to look up the instance ViewState by coordinate key and pass that to `withHydrationChildContext`:
+
+1. **compiler-shared/imports.ts:** Added `HEADLESS_INSTANCES`, `useContext`, `currentConstructionContext`.
+2. **jay-html-compiler.ts (adoptRenderFnCode):** Generate:
+   ```js
+   const instanceData = useContext(HEADLESS_INSTANCES);
+   const instanceKey = 'p2/product-card:0';  // or runtime expr for forEach
+   const instanceVs = instanceData?.viewStates?.[instanceKey] ?? viewState;
+   return ConstructContext.withHydrationChildContext(instanceVs, refManager, () => ...);
+   ```
+3. **Instance key:** Static: `coordinateSuffix`; slowForEach: `prefix/suffix`; forEach: `(dataIds).join(',') + ',' + suffix`.
+4. **Fixtures:** Updated page-with-headless-instance, page-with-headless-in-foreach, page-with-headless-in-slow-foreach, page-with-headless-mixed, page-with-mixed-static-slow-foreach.
+
+**Tests:** generate-element-hydrate.test.ts — 19/19 passing.
+
+---
+
+## Deviations from Original Design
+
+Summary of all implementation choices that differ from the design as originally specified.
+
+### Phase 1: Server-Element Target
+
+1. **`customVarName` in Variables constructor** — Design did not specify how to scope the variable name for inline template children. Added optional `customVarName` so expressions resolve to `vs_product_card0.name` (instance ViewState) instead of `vs.name` (page ViewState).
+
+2. **`headlessCoordinateCounters: Map<string, number>` in ServerContext** — Design did not specify per-scope counters for coordinate refs. Without this, the second slowForEach instance would get `product-card:1` instead of `product-card:0`; each scope must reset its counter.
+
+3. **Headless instance detection before conditional check** — Design did not specify ordering in `renderServerElement()`. A `<jay:xxx if="...">` must be handled by `renderServerHeadlessInstance()` (which handles the `if` internally) rather than by the conditional handler, which would treat the tag as literal HTML.
+
+### Phase 2: Runtime
+
+No deviations.
+
+### Phase 3: Hydrate Target
+
+4. **Instance ViewState source (Mar 2025 fix)** — Original design assumed `withHydrationChildContext(viewState, ...)` would receive the correct instance ViewState from the plugin's `renderViewState()`. In practice, the merged page ViewState was passed (or timing caused wrong data), so conditions like `if="inStock"` evaluated against the wrong instance. **Deviation:** Use `useContext(HEADLESS_INSTANCES)` to look up the instance ViewState by coordinate key and pass that to `withHydrationChildContext`, instead of relying on the plugin's viewState parameter. Fallback to `viewState` when instance data is unavailable.
+
+5. **forEach adopt component coordinate key** — Design (Q5, Example: forEach Instance Hydrate) specified `(dataIds) => [...dataIds, 'product-card:0'].toString()`. **Deviation:** Adopt component uses `(dataIds) => dataIds.join(',')` because `childCompHydrate`'s `forInstance` already extends `coordinateBase` with the instance suffix, so `dataIds` already contains it. Appending again produced `'1,stock-status:0,stock-status:0'` and broke the ViewState lookup. Create component (element target) keeps the original pattern.
+
+### Phase 5: Fake-Shop Integration
+
+6. **No dedicated pages per scenario** — Design specified creating separate pages for single instance, conditional, forEach, slowForEach. **Deviation:** Did not create them; the existing homepage already covers the main scenarios. Creating redundant pages adds maintenance burden. Conditional instance is covered by compiler fixture tests but not by an integration test page.

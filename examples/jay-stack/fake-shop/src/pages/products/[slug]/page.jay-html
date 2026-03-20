@@ -17,7 +17,7 @@
     <div if="type===physical">physical</div>
     <div if="type===virtual">virtual</div>
 
-  <button ref="addToCart">Add to Cart (will print in client and server consoles)</button>
+  <button ref="add-to-cart">Add to Cart (will print in client and server consoles)</button>
     <div if="!inStock">
         out of stock, come back later
     </div>

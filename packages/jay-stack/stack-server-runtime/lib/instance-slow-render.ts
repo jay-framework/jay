@@ -76,8 +76,18 @@ export async function slowRenderInstances(
             continue;
         }
 
+        // Normalize props to match contract prop names (case-insensitive).
+        // HTML parsers may lowercase attributes (e.g. productId -> productid);
+        // components expect the contract's prop names (e.g. productId).
+        const contractProps = comp.contract?.props ?? [];
+        const normalizedProps: Record<string, string> = {};
+        for (const [key, value] of Object.entries(instance.props)) {
+            const match = contractProps.find((p) => p.name.toLowerCase() === key.toLowerCase());
+            normalizedProps[match ? match.name : key] = value;
+        }
+
         const services = resolveServices(comp.compDefinition.services);
-        const slowResult = await comp.compDefinition.slowlyRender(instance.props, ...services);
+        const slowResult = await comp.compDefinition.slowlyRender(normalizedProps, ...services);
 
         if (slowResult.kind === 'PhaseOutput') {
             const coordKey = instance.coordinate.join('/');
@@ -93,7 +103,7 @@ export async function slowRenderInstances(
 
             discoveredForFast.push({
                 contractName: instance.contractName,
-                props: instance.props,
+                props: normalizedProps,
                 coordinate: instance.coordinate,
             });
         }

@@ -33,4 +33,12 @@ export {
     defaultEventWrapper,
 } from './references-manager';
 export { type HeadLink, injectHeadLinks } from './element';
-export { adoptText, adoptElement, hydrateConditional, hydrateForEach } from './hydrate';
+export {
+    adoptText,
+    adoptElement,
+    adoptDynamicElement,
+    STATIC,
+    hydrateConditional,
+    hydrateForEach,
+    childCompHydrate,
+} from './hydrate';

@@ -49,9 +49,9 @@ export function hydrate(
     const render = (viewState: RefsViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('0', {}, [
-                adoptText('ref1', (vs) => vs.text, refRef1()),
-                adoptText('ref', (vs) => vs.text, refRef()),
-                adoptText('ref3', (vs) => vs.text, refRef3()),
+                adoptText('0/0', (vs) => vs.text, refRef1()),
+                adoptText('0/1', (vs) => vs.text, refRef()),
+                adoptText('0/2/0', (vs) => vs.text, refRef3()),
             ]),
         ) as RefsElement;
     return [refManager.getPublicAPI() as RefsElementRefs, render];

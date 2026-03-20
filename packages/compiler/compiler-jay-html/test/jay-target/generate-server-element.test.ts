@@ -74,6 +74,44 @@ describe('generate jay-html server element', () => {
         });
     });
 
+    describe('headless instances', () => {
+        it('for simple headless instance', async () => {
+            const folder = 'contracts/page-with-headless-instance';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
+
+        it('for headless instance inside forEach', async () => {
+            const folder = 'contracts/page-with-headless-in-foreach';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
+
+        it('for headless instance inside slowForEach', async () => {
+            const folder = 'contracts/page-with-headless-in-slow-foreach';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
+
+        it('for headless instance mixed (child, conditional, slowForEach)', async () => {
+            const folder = 'contracts/page-with-headless-mixed';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
+    });
+
     describe('async', () => {
         it('for async simple types', async () => {
             const folder = 'async/async-simple-types';
