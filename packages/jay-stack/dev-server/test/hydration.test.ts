@@ -212,7 +212,9 @@ function testFixture(
                 .replace(/\/\/# sourceMappingURL=.*/, '');
             actual = await prettify(normalizeRepoPaths(actual));
 
-            const expected = await prettify(normalizeRepoPaths(readFixture(dirName, 'expected-hydrate.ts')));
+            const expected = await prettify(
+                normalizeRepoPaths(readFixture(dirName, 'expected-hydrate.ts')),
+            );
             expect(actual).toEqual(expected);
         });
     }
