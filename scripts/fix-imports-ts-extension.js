@@ -3,6 +3,7 @@ import replace from 'replace-in-file';
 // replaces "import ... from file.ts;" to "import ... from file;"
 const options = {
     files: 'packages/**/*.ts',
+    ignore: 'packages/**/test/**/expected-*.ts',
     from: /from '(.+)\.ts';/g,
     to: "from '$1';",
 };
