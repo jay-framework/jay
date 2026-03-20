@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import {
     adoptText,
     adoptElement,
@@ -154,14 +155,25 @@ describe('hydrateConditional with createFallback (if=false at SSR)', () => {
             adoptDynamicElement<ViewState>('container', {}, [
                 hydrateConditional(
                     (vs) => vs.show,
-                    // Adopt callback — will fail since element not in DOM
+                    // Adopt callback — only called when condition is true
                     () => adoptText<ViewState>('container/0', (vs) => vs.text),
-                    // Create callback — fallback for false-at-SSR
+                    // Create callback — used when condition is false at SSR
                     () => e('span', {}, [dt((vs: ViewState) => vs.text)]),
                 ),
             ]),
         );
     }
+
+    it('false at SSR, still false at hydration — no adopt warnings', () => {
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        hydrateWithFallback(false, 'Hello');
+
+        const hydrateWarnings = warnSpy.mock.calls.filter(
+            (call) => typeof call[0] === 'string' && call[0].includes('[jay hydration]'),
+        );
+        expect(hydrateWarnings).toEqual([]);
+        warnSpy.mockRestore();
+    });
 
     it('false at SSR, still false at hydration — element not created', () => {
         const { root } = hydrateWithFallback(false, 'Hello');
@@ -223,94 +235,11 @@ describe('hydrateConditional with createFallback (if=false at SSR)', () => {
         expect(container.querySelector('span')!.textContent).toBe('Updated');
     });
 
-    it('false at SSR, but true at hydration — element created immediately', () => {
-        // ViewState says show=true (data changed between SSR and hydration)
-        const { root } = hydrateWithFallback(true, 'Already visible');
-        const container = root.querySelector('[jay-coordinate="container"]')!;
-
-        // Element should exist immediately (created during construction)
-        const span = container.querySelector('span')!;
-        expect(span).toBeTruthy();
-        expect(span.textContent).toBe('Already visible');
-    });
-
-    it('false at SSR, true at hydration — can toggle off and on', () => {
-        const { jayElement, root } = hydrateWithFallback(true, 'Hello');
-        const container = root.querySelector('[jay-coordinate="container"]')!;
-        const span = container.querySelector('span')!;
-        expect(span).toBeTruthy();
-
-        // Toggle off
-        jayElement.update({ show: false, text: 'Hello' });
-        expect(container.querySelector('span')).toBeNull();
-
-        // Toggle back on
-        jayElement.update({ show: true, text: 'Hello' });
-        expect(container.querySelector('span')).toBe(span);
-    });
+    // Note: "false at SSR, true at hydration" tests removed — this scenario
+    // doesn't happen in practice. The hydration ViewState always matches what
+    // SSR used (it's serialized from the same render pass).
 });
 
-describe('hydrateConditional true at SSR, false at hydration', () => {
-    interface ViewState {
-        show: boolean;
-        text: string;
-    }
-
-    // SSR rendered WITH the conditional element (condition was true)
-    const withElementHTML =
-        '<div jay-coordinate="container">' +
-        '<span jay-coordinate="container/0">ServerText</span>' +
-        '</div>';
-
-    it('true at SSR, false at hydration — element adopted then removed on first update', () => {
-        // SSR had show=true (element in DOM), but hydration state has show=false
-        const { jayElement, root } = hydrate<ViewState>(
-            withElementHTML,
-            { show: false, text: 'ServerText' },
-            () =>
-                adoptDynamicElement<ViewState>('container', {}, [
-                    hydrateConditional(
-                        (vs) => vs.show,
-                        () => adoptText<ViewState>('container/0', (vs) => vs.text),
-                        () => e('span', {}, [dt((vs: ViewState) => vs.text)]),
-                    ),
-                ]),
-        );
-
-        const container = root.querySelector('[jay-coordinate="container"]')!;
-
-        // Element was adopted (exists in DOM from SSR)
-        expect(container.querySelector('[jay-coordinate="container/0"]')).toBeTruthy();
-
-        // First update with show=false removes it
-        jayElement.update({ show: false, text: 'ServerText' });
-        expect(container.querySelector('[jay-coordinate="container/0"]')).toBeNull();
-    });
-
-    it('true at SSR, false at hydration — can toggle back to true (same node)', () => {
-        const { jayElement, root } = hydrate<ViewState>(
-            withElementHTML,
-            { show: false, text: 'ServerText' },
-            () =>
-                adoptDynamicElement<ViewState>('container', {}, [
-                    hydrateConditional(
-                        (vs) => vs.show,
-                        () => adoptText<ViewState>('container/0', (vs) => vs.text),
-                        () => e('span', {}, [dt((vs: ViewState) => vs.text)]),
-                    ),
-                ]),
-        );
-
-        const container = root.querySelector('[jay-coordinate="container"]')!;
-        const span = container.querySelector('[jay-coordinate="container/0"]')!;
-
-        // Remove then re-add
-        jayElement.update({ show: false, text: 'ServerText' });
-        jayElement.update({ show: true, text: 'Updated' });
-
-        // Same node re-inserted with updated text
-        const reappeared = container.querySelector('[jay-coordinate="container/0"]')!;
-        expect(reappeared).toBe(span);
-        expect(reappeared.textContent).toBe('Updated');
-    });
-});
+// Note: "true at SSR, false at hydration" shouldn't happen in practice —
+// the hydration ViewState always matches what SSR used. The condition result
+// at hydration tells hydrateConditional whether the element exists in DOM.

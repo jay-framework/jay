@@ -310,27 +310,24 @@ export function hydrateConditional<ViewState>(
     adoptExisting: () => BaseJayElement<ViewState>,
     createFallback?: () => BaseJayElement<ViewState>,
 ): DynamicChild<ViewState> {
-    const adopted = adoptExisting();
-
     const context = currentConstructionContext();
     const savedContext = saveContext();
 
-    // Determine if condition was true at SSR (element exists in DOM)
-    const wasTrue = adopted && adopted.dom;
+    // The hydration ViewState matches what SSR used, so the condition result
+    // tells us whether the element exists in the DOM:
+    //   true  → SSR rendered it → adopt
+    //   false → SSR skipped it → don't adopt (use createFallback when condition becomes true)
+    const currData = context.currData as ViewState;
+    const wasTrue = currData != null && condition(currData);
+
+    let adopted: BaseJayElement<ViewState> | undefined;
+    if (wasTrue) {
+        adopted = adoptExisting();
+    }
 
     let group: KindergartenGroup | undefined;
     let created: BaseJayElement<ViewState> | undefined = wasTrue ? adopted : undefined;
-    let visible = !!wasTrue;
-
-    // For false-at-SSR: check if condition is already true (data arrived between SSR and hydration)
-    if (!wasTrue && createFallback) {
-        const currData = context.currData as ViewState;
-        const initialResult = currData != null && condition(currData);
-        if (initialResult) {
-            created = wrapWithModifiedCheck(context.currData, createFallback());
-            visible = true;
-        }
-    }
+    let visible = wasTrue;
 
     const update = (newData: ViewState) => {
         if (!group) return;
@@ -364,7 +361,7 @@ export function hydrateConditional<ViewState>(
     };
 
     const result: DynamicChild<ViewState> = {
-        dom: (wasTrue ? adopted.dom : undefined) as any,
+        dom: (wasTrue && adopted ? adopted.dom : undefined) as any,
         update,
         mount: () => {
             if (created && visible) created.mount();
@@ -375,7 +372,7 @@ export function hydrateConditional<ViewState>(
         _setGroup: (g: KindergartenGroup) => {
             group = g;
             // Register existing DOM node in the group if condition was true at SSR
-            if (wasTrue && adopted.dom) {
+            if (wasTrue && adopted?.dom) {
                 group.children.add(adopted.dom);
             }
             // If created immediately (false-at-SSR but condition now true), insert into DOM
