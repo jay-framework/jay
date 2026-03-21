@@ -16,6 +16,7 @@
     "build:check-types": "tsc",
     "test-definitions": "jay-cli definitions test",
     "test-runtime": "jay-cli runtime test",
+    "serve-fixture": "npx tsx test/serve-fixture.ts",
     "clean": "rimraf dist",
     "confirm": "npm run clean && npm run build && npm run build:check-types && npm run test",
     "test": "vitest run",

@@ -864,12 +864,12 @@ tags:
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-123' },
-                    coordinate: ['product-card:0'],
+                    coordinate: ['product-card:AR0'],
                 },
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-456' },
-                    coordinate: ['product-card:1'],
+                    coordinate: ['product-card:AR1'],
                 },
             ]);
         });
@@ -897,7 +897,7 @@ tags:
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-static' },
-                    coordinate: ['product-card:0'],
+                    coordinate: ['product-card:AR0'],
                 },
             ]);
 
@@ -908,7 +908,7 @@ tags:
                     forEachPath: 'products',
                     trackBy: '_id',
                     propBindings: { productId: '{_id}' },
-                    coordinateSuffix: 'product-card:0',
+                    coordinateSuffix: 'product-card:AR0',
                 },
             ]);
         });
@@ -939,7 +939,7 @@ tags:
                     forEachPath: 'items',
                     trackBy: '_id',
                     propBindings: { productId: '{_id}' },
-                    coordinateSuffix: 'product-card:0',
+                    coordinateSuffix: 'product-card:AR0',
                 },
             ]);
         });
@@ -965,7 +965,7 @@ tags:
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-123' },
-                    coordinate: ['product-card:0'],
+                    coordinate: ['product-card:AR0'],
                 },
             ]);
         });
@@ -996,20 +996,20 @@ tags:
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-123' },
-                    coordinate: ['p1', 'product-card:0'],
+                    coordinate: ['p1', 'product-card:AR0'],
                 },
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-456' },
-                    coordinate: ['p2', 'product-card:0'],
+                    coordinate: ['p2', 'product-card:AR0'],
                 },
             ]);
         });
 
-        it('should include wrapper element index when jay:xxx is inside an intermediate element', () => {
+        it('should use only jayTrackBy values in coordinate prefix (no wrapper element index)', () => {
             // jay:product-card is inside a <div class="product-card"> wrapper,
             // not a direct child of the slowForEach div. The wrapper's positional
-            // index must be included to match assignCoordinates.
+            // index is NOT included — only jayTrackBy values, matching the element target.
             const jayHtml = `<!DOCTYPE html>
 <html>
 <head></head>
@@ -1033,17 +1033,17 @@ tags:
 
             const { instances } = discoverHeadlessInstances(jayHtml);
 
-            // Coordinate includes "0" for the wrapper div position within the slowForEach item
+            // Coordinate uses only jayTrackBy — no wrapper div index
             expect(instances).toEqual([
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-123' },
-                    coordinate: ['p1', '0', 'product-card:0'],
+                    coordinate: ['p1', 'product-card:AR0'],
                 },
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-456' },
-                    coordinate: ['p2', '0', 'product-card:0'],
+                    coordinate: ['p2', 'product-card:AR0'],
                 },
             ]);
         });
@@ -1065,7 +1065,7 @@ tags:
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-123', categoryName: 'electronics' },
-                    coordinate: ['product-card:0'],
+                    coordinate: ['product-card:AR0'],
                 },
             ]);
         });
@@ -1098,7 +1098,7 @@ tags:
 
             const result = discoverAndResolve(jayHtml, [
                 {
-                    coordinate: ['product-card:0'],
+                    coordinate: ['product-card:AR0'],
                     contract: productCardContract,
                     slowViewState: { name: 'Widget A', price: '$29.99' },
                 },
@@ -1112,7 +1112,7 @@ tags:
     <script type="application/jay-headless" plugin="wix-stores" contract="product-card"></script>
 </head>
 <body>
-    <jay:product-card productId="prod-123" ref="0">
+    <jay:product-card productId="prod-123" ref="AR0">
         <div><h2>Widget A</h2><span class="price">$29.99</span></div>
     </jay:product-card>
 </body>
@@ -1134,7 +1134,7 @@ tags:
 
             const result = discoverAndResolve(jayHtml, [
                 {
-                    coordinate: ['product-card:0'],
+                    coordinate: ['product-card:AR0'],
                     contract: productCardContract,
                     slowViewState: { name: 'Widget A' },
                 },
@@ -1146,7 +1146,7 @@ tags:
 <html>
 <head></head>
 <body>
-    <jay:product-card productId="prod-123" ref="0">
+    <jay:product-card productId="prod-123" ref="AR0">
         <div><h2>Widget A</h2><span class="stock">{stockCount}</span></div>
     </jay:product-card>
 </body>
@@ -1170,12 +1170,12 @@ tags:
 
             const result = discoverAndResolve(jayHtml, [
                 {
-                    coordinate: ['product-card:0'],
+                    coordinate: ['product-card:AR0'],
                     contract: productCardContract,
                     slowViewState: { name: 'Widget A' },
                 },
                 {
-                    coordinate: ['product-card:1'],
+                    coordinate: ['product-card:AR1'],
                     contract: productCardContract,
                     slowViewState: { name: 'Widget B' },
                 },
@@ -1187,10 +1187,10 @@ tags:
 <html>
 <head></head>
 <body>
-    <jay:product-card productId="prod-123" ref="0">
+    <jay:product-card productId="prod-123" ref="AR0">
         <h2>Widget A</h2>
     </jay:product-card>
-    <jay:product-card productId="prod-456" ref="1">
+    <jay:product-card productId="prod-456" ref="AR1">
         <h2>Widget B</h2>
     </jay:product-card>
 </body>
@@ -1221,12 +1221,12 @@ tags:
 
             const result = discoverAndResolve(jayHtml, [
                 {
-                    coordinate: ['p1', 'product-card:0'],
+                    coordinate: ['p1', 'product-card:AR0'],
                     contract: productCardContract,
                     slowViewState: { name: 'Widget A', price: '$29.99' },
                 },
                 {
-                    coordinate: ['p2', 'product-card:0'],
+                    coordinate: ['p2', 'product-card:AR0'],
                     contract: productCardContract,
                     slowViewState: { name: 'Widget B', price: '$49.99' },
                 },
@@ -1239,12 +1239,12 @@ tags:
 <head></head>
 <body>
     <div slowForEach="products" jayIndex="0" jayTrackBy="p1">
-        <jay:product-card productId="prod-123" ref="0">
+        <jay:product-card productId="prod-123" ref="AR0">
             <div><h2>Widget A</h2><span>$29.99</span></div>
         </jay:product-card>
     </div>
     <div slowForEach="products" jayIndex="1" jayTrackBy="p2">
-        <jay:product-card productId="prod-456" ref="0">
+        <jay:product-card productId="prod-456" ref="AR0">
             <div><h2>Widget B</h2><span>$49.99</span></div>
         </jay:product-card>
     </div>
@@ -1271,7 +1271,7 @@ tags:
 
             const result = discoverAndResolve(jayHtml, [
                 {
-                    coordinate: ['product-card:0'],
+                    coordinate: ['product-card:AR0'],
                     contract: productCardContract,
                     slowViewState: { name: 'Static Widget' },
                 },
@@ -1283,7 +1283,7 @@ tags:
 <html>
 <head></head>
 <body>
-    <jay:product-card productId="prod-static" ref="0">
+    <jay:product-card productId="prod-static" ref="AR0">
         <h2>Static Widget</h2>
     </jay:product-card>
     <div forEach="products" trackBy="_id">
@@ -1346,7 +1346,7 @@ tags:
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-123' },
-                    coordinate: ['product-card:0'],
+                    coordinate: ['product-card:AR0'],
                 },
             ]);
 
@@ -1369,7 +1369,7 @@ tags:
 </head>
 <body>
     <h1>Our Products</h1>
-    <jay:product-card productId="prod-123" ref="0">
+    <jay:product-card productId="prod-123" ref="AR0">
         <article>
             <h2>Ceramic Vase</h2>
             <span class="price">$34.99</span>
@@ -1434,12 +1434,12 @@ tags:
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-123' },
-                    coordinate: ['prod-123', 'product-card:0'],
+                    coordinate: ['prod-123', 'product-card:AR0'],
                 },
                 {
                     contractName: 'product-card',
                     props: { productId: 'prod-456' },
-                    coordinate: ['prod-456', 'product-card:0'],
+                    coordinate: ['prod-456', 'product-card:AR0'],
                 },
             ]);
 
@@ -1468,6 +1468,44 @@ tags:
             // No unresolved component bindings
             expect(finalHtml).not.toContain('{name}');
             expect(finalHtml).not.toContain('{price}');
+        });
+    });
+
+    describe('No contract (DL#108)', () => {
+        it('leaves text bindings unresolved without contract', () => {
+            const input: SlowRenderInput = {
+                jayHtmlContent: '<html><body><h1>{title}</h1><p>{subtitle}</p></body></html>',
+                slowViewState: { title: 'Hello World', subtitle: 'Welcome' },
+            };
+
+            const result = slowRenderTransform(input);
+            expect(result.validations).toEqual([]);
+            // Without a contract, slow render resolves nothing — bindings pass through
+            expect(prettifyHtml(result.val!.preRenderedJayHtml)).toEqual(
+                prettifyHtml('<html><body><h1>{title}</h1><p>{subtitle}</p></body></html>'),
+            );
+        });
+
+        it('leaves forEach unrolled without contract', () => {
+            const input: SlowRenderInput = {
+                jayHtmlContent:
+                    '<html><body><div forEach="items" trackBy="id"><span>{name}</span></div></body></html>',
+                slowViewState: {
+                    items: [
+                        { id: '1', name: 'Alpha' },
+                        { id: '2', name: 'Beta' },
+                    ],
+                },
+            };
+
+            const result = slowRenderTransform(input);
+            expect(result.validations).toEqual([]);
+            // Without a contract, forEach is not slow — stays as forEach for SSR
+            expect(prettifyHtml(result.val!.preRenderedJayHtml)).toEqual(
+                prettifyHtml(
+                    '<html><body><div forEach="items" trackBy="id"><span>{name}</span></div></body></html>',
+                ),
+            );
         });
     });
 });

@@ -183,6 +183,14 @@ export class RefNameGenerator {
         this.constNamesToVariables.set(constName, variables);
         return constName;
     }
+
+    /** Create a snapshot of the current state for use in parallel code generation paths. */
+    clone(): RefNameGenerator {
+        const copy = new RefNameGenerator();
+        copy.nextId = this.nextId;
+        copy.constNamesToVariables = new Map(this.constNamesToVariables);
+        return copy;
+    }
 }
 
 function markAutoOnImportedRefs(

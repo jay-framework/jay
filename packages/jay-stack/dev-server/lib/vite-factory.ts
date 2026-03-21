@@ -42,7 +42,7 @@ export async function createViteServer(options: CreateViteServerOptions): Promis
 
     const vite = await createServer({
         // Don't start HTTP server - we use middleware mode
-        server: { middlewareMode: true },
+        server: { middlewareMode: true, watch: { ignored: ['**/build/**'] } },
         // Use Jay Stack compiler for .jay-html and other custom transforms
         plugins: [...jayStackCompiler(jayRollupConfig)],
         // Custom app type (no default middleware)

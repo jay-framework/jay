@@ -2,56 +2,91 @@
  * Starts a dev server for a fixture page, for manual debugging.
  *
  * Usage:
- *   npx tsx test/serve-fixture.ts <fixture-name>
+ *   yarn serve-fixture <fixture-name> [--no-ssr]
+ *   yarn serve-fixture --list
+ *   yarn serve-fixture --help
  *
- * Examples:
- *   npx tsx test/serve-fixture.ts page-headless-static
- *   npx tsx test/serve-fixture.ts page-headless-conditional
- *   npx tsx test/serve-fixture.ts page-headless-foreach
- *   npx tsx test/serve-fixture.ts page-headless-slow-foreach
- *   npx tsx test/serve-fixture.ts page-static-only
- *   npx tsx test/serve-fixture.ts page-dynamic-text
- *   npx tsx test/serve-fixture.ts page-conditional
- *   npx tsx test/serve-fixture.ts page-foreach
- *   npx tsx test/serve-fixture.ts page-slow-foreach
+ * Options:
+ *   --no-ssr    Disable SSR (client-only rendering, element target)
+ *   --list      List available fixtures
+ *   --help      Show this help
  *
- * Opens on http://localhost:3333 (or next available port).
- * Press Ctrl+C to stop.
+ * Opens on http://localhost:3333. Press Ctrl+C to stop.
  */
 
 import { mkDevServer } from '../lib';
 import type { JayRollupConfig } from '@jay-framework/vite-plugin';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import express from 'express';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const fixtureName = process.argv[2];
+
+function listFixtures(): string[] {
+    return fs
+        .readdirSync(__dirname, { withFileTypes: true })
+        .filter(
+            (d) => d.isDirectory() && fs.existsSync(path.join(__dirname, d.name, 'page.jay-html')),
+        )
+        .map((d) => d.name)
+        .sort();
+}
+
+function printHelp() {
+    console.log(`
+Usage: yarn serve-fixture <fixture-name> [--no-ssr]
+
+Options:
+  --no-ssr    Disable SSR (client-only rendering, element target)
+  --list      List available fixtures
+  --help      Show this help
+
+Examples:
+  yarn serve-fixture 5a-page-headless-static
+  yarn serve-fixture 5a-page-headless-static --no-ssr
+  yarn serve-fixture --list
+`);
+}
+
+const args = process.argv.slice(2);
+
+if (args.includes('--help') || args.includes('-h') || args.length === 0) {
+    printHelp();
+    if (args.length === 0) {
+        console.log('Available fixtures:');
+        listFixtures().forEach((f) => console.log(`  ${f}`));
+    }
+    process.exit(args.length === 0 ? 1 : 0);
+}
+
+if (args.includes('--list')) {
+    listFixtures().forEach((f) => console.log(f));
+    process.exit(0);
+}
+
+const disableSSR = args.includes('--no-ssr');
+const fixtureName = args.find((a) => !a.startsWith('--'));
 
 if (!fixtureName) {
-    console.error('Usage: npx tsx test/serve-fixture.ts <fixture-name>');
-    console.error('');
-    console.error('Available fixtures:');
-    const fixtures = [
-        'page-static-only',
-        'page-dynamic-text',
-        'page-conditional',
-        'page-foreach',
-        'page-slow-foreach',
-        'page-headless-static',
-        'page-headless-conditional',
-        'page-headless-foreach',
-        'page-headless-slow-foreach',
-    ];
-    fixtures.forEach((f) => console.error(`  ${f}`));
+    console.error('Error: no fixture name provided.');
+    printHelp();
     process.exit(1);
 }
 
 const dirPath = path.resolve(__dirname, fixtureName);
+if (!fs.existsSync(path.join(dirPath, 'page.jay-html'))) {
+    console.error(`Error: fixture "${fixtureName}" not found (no page.jay-html).`);
+    console.error('');
+    console.error('Available fixtures:');
+    listFixtures().forEach((f) => console.error(`  ${f}`));
+    process.exit(1);
+}
 
 async function start() {
     console.log(`Starting dev server for fixture: ${fixtureName}`);
     console.log(`Directory: ${dirPath}`);
+    console.log(`SSR: ${disableSSR ? 'disabled' : 'enabled'}`);
 
     const devServer = await mkDevServer({
         pagesRootFolder: dirPath,
@@ -59,7 +94,7 @@ async function start() {
         jayRollupConfig: {
             tsConfigFilePath: path.join(dirPath, 'tsconfig.json'),
         } as JayRollupConfig,
-        dontCacheSlowly: false,
+        disableSSR,
     });
 
     const app = express();
@@ -78,6 +113,7 @@ async function start() {
         console.log('');
         console.log(`  Dev Server: http://localhost:${PORT}`);
         console.log(`  Fixture: ${fixtureName}`);
+        console.log(`  SSR: ${disableSSR ? 'disabled (client-only)' : 'enabled'}`);
         console.log('');
         console.log('  Press Ctrl+C to stop.');
     });

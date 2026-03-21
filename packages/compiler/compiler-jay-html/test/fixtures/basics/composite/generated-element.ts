@@ -17,7 +17,7 @@ export interface CompositeViewState {
 export interface CompositeElementRefs {}
 
 export type CompositeSlowViewState = {};
-export type CompositeFastViewState = {};
+export type CompositeFastViewState = CompositeViewState;
 export type CompositeInteractiveViewState = CompositeViewState;
 
 export type CompositeElement = JayElement<CompositeViewState, CompositeElementRefs>;

@@ -26,7 +26,7 @@ export interface AppElementRefs {
 }
 
 export type AppSlowViewState = {};
-export type AppFastViewState = {};
+export type AppFastViewState = AppViewState;
 export type AppInteractiveViewState = AppViewState;
 
 export type AppElement = JayElement<AppViewState, AppElementRefs>;

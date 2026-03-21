@@ -16,7 +16,7 @@ export interface ItemElementRefs {
 }
 
 export type ItemSlowViewState = {};
-export type ItemFastViewState = {};
+export type ItemFastViewState = ItemViewState;
 export type ItemInteractiveViewState = ItemViewState;
 
 export type ItemElement = JayElement<ItemViewState, ItemElementRefs>;

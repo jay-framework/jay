@@ -25,7 +25,7 @@ export interface PageWithHeadlessInstanceViewState {
 export interface PageWithHeadlessInstanceElementRefs {}
 
 export type PageWithHeadlessInstanceSlowViewState = {};
-export type PageWithHeadlessInstanceFastViewState = {};
+export type PageWithHeadlessInstanceFastViewState = PageWithHeadlessInstanceViewState;
 export type PageWithHeadlessInstanceInteractiveViewState = PageWithHeadlessInstanceViewState;
 
 export type PageWithHeadlessInstanceElement = JayElement<
@@ -80,14 +80,14 @@ function _headlessProductCard0HydrateRender(
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0HydrateRender,
     productCard,
-    'product-card:0',
+    'product-card:AR0',
 );
 
 export function hydrate(
     rootElement: Element,
     options?: RenderElementOptions,
 ): PageWithHeadlessInstanceElementPreRender {
-    const [refManager, [refAR1]] = ReferencesManager.for(options, [], [], ['aR1'], []);
+    const [refManager, [refAr0]] = ReferencesManager.for(options, [], [], ['ar0'], []);
     const render = (viewState: PageWithHeadlessInstanceViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('0', {}, [
@@ -95,8 +95,8 @@ export function hydrate(
                 childCompHydrate(
                     _HeadlessProductCard0,
                     (vs: PageWithHeadlessInstanceViewState) => ({ productId: 'prod-hero' }),
-                    '0/product-card:0',
-                    refAR1(),
+                    '0/product-card:AR0',
+                    refAr0(),
                 ),
             ]),
         ) as PageWithHeadlessInstanceElement;

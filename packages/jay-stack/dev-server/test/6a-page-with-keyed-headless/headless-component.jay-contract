@@ -1,0 +1,13 @@
+name: headless-component
+tags:
+  - tag: label
+    type: data
+    dataType: string
+    phase: slow
+  - tag: count
+    type: data
+    dataType: number
+    phase: fast+interactive
+  - tag: increment
+    type: interactive
+    elementType: HTMLButtonElement

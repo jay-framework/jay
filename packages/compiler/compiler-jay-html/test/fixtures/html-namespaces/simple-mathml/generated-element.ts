@@ -16,7 +16,7 @@ export interface SimpleMathmlViewState {
 export interface SimpleMathmlElementRefs {}
 
 export type SimpleMathmlSlowViewState = {};
-export type SimpleMathmlFastViewState = {};
+export type SimpleMathmlFastViewState = SimpleMathmlViewState;
 export type SimpleMathmlInteractiveViewState = SimpleMathmlViewState;
 
 export type SimpleMathmlElement = JayElement<SimpleMathmlViewState, SimpleMathmlElementRefs>;

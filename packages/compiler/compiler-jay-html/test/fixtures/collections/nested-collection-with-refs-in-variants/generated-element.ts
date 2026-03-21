@@ -46,7 +46,8 @@ export interface NestedCollectionWithRefsInVariantsElementRefs {
 }
 
 export type NestedCollectionWithRefsInVariantsSlowViewState = {};
-export type NestedCollectionWithRefsInVariantsFastViewState = {};
+export type NestedCollectionWithRefsInVariantsFastViewState =
+    NestedCollectionWithRefsInVariantsViewState;
 export type NestedCollectionWithRefsInVariantsInteractiveViewState =
     NestedCollectionWithRefsInVariantsViewState;
 

@@ -59,7 +59,8 @@ export interface NestedCollectionWithRepeatingRefsElementRefs {
 }
 
 export type NestedCollectionWithRepeatingRefsSlowViewState = {};
-export type NestedCollectionWithRepeatingRefsFastViewState = {};
+export type NestedCollectionWithRepeatingRefsFastViewState =
+    NestedCollectionWithRepeatingRefsViewState;
 export type NestedCollectionWithRepeatingRefsInteractiveViewState =
     NestedCollectionWithRepeatingRefsViewState;
 

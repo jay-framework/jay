@@ -32,7 +32,7 @@ export interface IndirectRecursionElementRefs {
 }
 
 export type IndirectRecursionSlowViewState = {};
-export type IndirectRecursionFastViewState = {};
+export type IndirectRecursionFastViewState = IndirectRecursionViewState;
 export type IndirectRecursionInteractiveViewState = IndirectRecursionViewState;
 
 export type IndirectRecursionElement = JayElement<

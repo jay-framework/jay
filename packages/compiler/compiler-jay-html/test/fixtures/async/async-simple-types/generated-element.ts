@@ -21,7 +21,7 @@ export interface AsyncSimpleTypesViewState {
 export interface AsyncSimpleTypesElementRefs {}
 
 export type AsyncSimpleTypesSlowViewState = {};
-export type AsyncSimpleTypesFastViewState = {};
+export type AsyncSimpleTypesFastViewState = AsyncSimpleTypesViewState;
 export type AsyncSimpleTypesInteractiveViewState = AsyncSimpleTypesViewState;
 
 export type AsyncSimpleTypesElement = JayElement<

@@ -52,7 +52,7 @@ export interface CollectionWithRefsElementRefs {
 }
 
 export type CollectionWithRefsSlowViewState = {};
-export type CollectionWithRefsFastViewState = {};
+export type CollectionWithRefsFastViewState = CollectionWithRefsViewState;
 export type CollectionWithRefsInteractiveViewState = CollectionWithRefsViewState;
 
 export type CollectionWithRefsElement = JayElement<

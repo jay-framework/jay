@@ -41,6 +41,24 @@ describe('generate jay-html server element', () => {
                 await readFixtureServerElementFile(folder),
             );
         });
+
+        it('for phase-aware dynamic text (only interactive bindings get jay-coordinate)', async () => {
+            const folder = 'basics/phase-aware-dynamic-text';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
+
+        it('for phase-aware conditionals (only interactive conditions get jay-coordinate)', async () => {
+            const folder = 'basics/phase-aware-conditionals';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
     });
 
     describe('conditions', () => {

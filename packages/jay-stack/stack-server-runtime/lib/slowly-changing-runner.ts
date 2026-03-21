@@ -7,14 +7,19 @@ import {
     partialRender,
 } from '@jay-framework/fullstack-component';
 import { JayComponentCore } from '@jay-framework/component';
-import { DevServerPagePart } from './load-page-parts';
+import { DevServerPagePart, HeadlessInstanceComponent } from './load-page-parts';
 import { resolveServices } from './services';
+import type { DiscoveredHeadlessInstance } from '@jay-framework/compiler-jay-html';
+import type { InstancePhaseData, InstanceSlowRenderResult } from './instance-slow-render';
 
 export interface SlowlyChangingPhase {
     runSlowlyForPage(
         pageParams: object,
         pageProps: PageProps,
         parts: Array<DevServerPagePart>,
+        discoveredInstances?: DiscoveredHeadlessInstance[],
+        headlessInstanceComponents?: HeadlessInstanceComponent[],
+        jayHtmlPath?: string,
     ): Promise<AnySlowlyRenderResult>;
 }
 
@@ -44,33 +49,58 @@ async function findMatchingParams(
 }
 
 export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
-    constructor(private dontCacheSlowly: boolean) {}
+    /** Cached loadParams results per route (jayHtmlPath → array of UrlParams[] per part) */
+    private loadParamsCache = new Map<string, UrlParams[][]>();
 
     async runSlowlyForPage(
         pageParams: UrlParams,
         pageProps: PageProps,
         parts: Array<DevServerPagePart>,
+        discoveredInstances?: DiscoveredHeadlessInstance[],
+        headlessInstanceComponents?: HeadlessInstanceComponent[],
+        jayHtmlPath?: string,
     ): Promise<AnySlowlyRenderResult> {
-        for (const part of parts) {
-            const { compDefinition, contractInfo } = part;
-            if (compDefinition.loadParams) {
-                // Resolve services from registry
-                const services = resolveServices(compDefinition.services);
+        // Validate loadParams (with caching when jayHtmlPath is provided)
+        const loadParamsParts = parts.filter((p) => p.compDefinition.loadParams);
 
-                // For dynamic contracts, append contract info to services
-                // Components expecting contract info should declare it as last service
-                const loadParamsArgs = contractInfo
-                    ? [
-                          ...services,
-                          {
-                              contractName: contractInfo.contractName,
-                              metadata: contractInfo.metadata,
-                          },
-                      ]
-                    : services;
+        if (loadParamsParts.length > 0) {
+            let cachedParamsArray = jayHtmlPath ? this.loadParamsCache.get(jayHtmlPath) : undefined;
 
-                const compParams = compDefinition.loadParams(loadParamsArgs);
-                if (!(await findMatchingParams(pageParams, compParams))) return notFound();
+            if (!cachedParamsArray) {
+                // First call for this route — collect all params from async iterables
+                cachedParamsArray = [];
+                for (const part of loadParamsParts) {
+                    const { compDefinition, contractInfo } = part;
+                    const services = resolveServices(compDefinition.services);
+                    const loadParamsArgs = contractInfo
+                        ? [
+                              ...services,
+                              {
+                                  contractName: contractInfo.contractName,
+                                  metadata: contractInfo.metadata,
+                              },
+                          ]
+                        : services;
+
+                    const compParams = compDefinition.loadParams!(loadParamsArgs);
+                    const collected: UrlParams[] = [];
+                    for await (const batch of compParams) {
+                        collected.push(...batch);
+                    }
+                    cachedParamsArray.push(collected);
+                }
+                if (jayHtmlPath) {
+                    this.loadParamsCache.set(jayHtmlPath, cachedParamsArray);
+                }
+            }
+
+            // Validate: each part's params must match independently
+            for (const partParams of cachedParamsArray) {
+                if (
+                    !partParams.some((p) => isLeftSideParamsSubsetOfRightSideParams(pageParams, p))
+                ) {
+                    return notFound();
+                }
             }
         }
 
@@ -107,7 +137,79 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
                 } else return slowlyRenderedPart;
             }
         }
+        // Run slow render for discovered headless instances (DL#109).
+        // All discovered instances are included in instancePhaseData — even those
+        // without slowlyRender — so the fast phase always sees them.
+        if (discoveredInstances && discoveredInstances.length > 0 && headlessInstanceComponents) {
+            const componentByContractName = new Map<string, HeadlessInstanceComponent>();
+            for (const comp of headlessInstanceComponents) {
+                componentByContractName.set(comp.contractName, comp);
+            }
+
+            const instancePhaseData: InstancePhaseData = {
+                discovered: [],
+                carryForwards: {},
+            };
+            const instanceSlowViewStates: Record<string, object> = {};
+            const instanceResolvedData: InstanceSlowRenderResult['resolvedData'] = [];
+
+            for (const instance of discoveredInstances) {
+                const comp = componentByContractName.get(instance.contractName);
+                if (!comp) continue;
+
+                const coordKey = instance.coordinate.join('/');
+
+                // Normalize props
+                const contractProps = comp.contract?.props ?? [];
+                const normalizedProps: Record<string, string> = {};
+                for (const [key, value] of Object.entries(instance.props)) {
+                    const match = contractProps.find(
+                        (p) => p.name.toLowerCase() === key.toLowerCase(),
+                    );
+                    normalizedProps[match ? match.name : key] = value;
+                }
+
+                // Always add to discovered (enables fast phase for all instances)
+                instancePhaseData.discovered.push({
+                    contractName: instance.contractName,
+                    props: normalizedProps,
+                    coordinate: instance.coordinate,
+                });
+
+                // Run slow render if the component has it
+                if (comp.compDefinition.slowlyRender) {
+                    const services = resolveServices(comp.compDefinition.services);
+                    const slowResult = await comp.compDefinition.slowlyRender(
+                        normalizedProps,
+                        ...services,
+                    );
+                    if (slowResult.kind === 'PhaseOutput') {
+                        instanceSlowViewStates[coordKey] = slowResult.rendered;
+                        instancePhaseData.carryForwards[coordKey] = slowResult.carryForward;
+                        instanceResolvedData.push({
+                            coordinate: instance.coordinate,
+                            contract: comp.contract,
+                            slowViewState: slowResult.rendered as Record<string, unknown>,
+                        });
+                    }
+                }
+            }
+
+            // Store instance data in carryForward for downstream consumption
+            (carryForward as any).__instances = instancePhaseData;
+            (carryForward as any).__instanceSlowViewStates = instanceSlowViewStates;
+            (carryForward as any).__instanceResolvedData = instanceResolvedData;
+        }
+
         return partialRender(slowlyViewState, carryForward);
+    }
+
+    /**
+     * Invalidate the cached loadParams result for a given route.
+     * Called when source files change (page.ts, .jay-contract, .jay-html).
+     */
+    invalidateLoadParamsCache(jayHtmlPath: string): void {
+        this.loadParamsCache.delete(jayHtmlPath);
     }
 }
 

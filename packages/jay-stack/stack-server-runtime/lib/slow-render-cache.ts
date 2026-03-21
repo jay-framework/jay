@@ -2,42 +2,23 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 
+const CACHE_TAG_START = '<script type="application/jay-cache">';
+const CACHE_TAG_END = '</script>';
+
 /**
  * Cache entry for pre-rendered jay-html
  */
 export interface SlowRenderCacheEntry {
     /** Path to the pre-rendered jay-html file on disk */
     preRenderedPath: string;
+    /** Pre-rendered jay-html content with cache metadata tag stripped */
+    preRenderedContent: string;
     /** Slow ViewState that was baked into the jay-html */
     slowViewState: object;
     /** CarryForward data from slow rendering (passed to fast phase) */
     carryForward: object;
-    /** Timestamp when this entry was created */
-    createdAt: number;
     /** Source jay-html path (for debugging) */
     sourcePath: string;
-}
-
-/**
- * Cache key type for pre-rendered jay-html
- * Format: `jayHtmlPath:JSON.stringify(params)`
- */
-type CacheKey = string;
-
-/**
- * Generates a cache key from jay-html path and URL params
- */
-function makeCacheKey(jayHtmlPath: string, params: Record<string, string>): CacheKey {
-    const sortedParams = Object.keys(params)
-        .sort()
-        .reduce(
-            (acc, key) => {
-                acc[key] = params[key];
-                return acc;
-            },
-            {} as Record<string, string>,
-        );
-    return `${jayHtmlPath}:${JSON.stringify(sortedParams)}`;
 }
 
 /**
@@ -59,18 +40,81 @@ function hashParams(params: Record<string, string>): string {
 }
 
 /**
- * Cache for pre-rendered jay-html files.
+ * Embeds cache metadata into jay-html content as a <script> tag inside <head>.
+ * This is consistent with existing <script type="application/jay-headless"> and
+ * <script type="application/jay-data"> tags — the compiler ignores unknown script types.
+ */
+function embedCacheMetadata(
+    jayHtmlContent: string,
+    slowViewState: object,
+    carryForward: object,
+    sourcePath: string,
+): string {
+    const metadata = JSON.stringify({ slowViewState, carryForward, sourcePath });
+    const cacheTag = `${CACHE_TAG_START}${metadata}${CACHE_TAG_END}`;
+
+    // Insert as first child of <head>
+    const headMatch = jayHtmlContent.match(/<head[^>]*>/i);
+    if (headMatch) {
+        const insertPos = headMatch.index! + headMatch[0].length;
+        return (
+            jayHtmlContent.substring(0, insertPos) +
+            '\n' +
+            cacheTag +
+            jayHtmlContent.substring(insertPos)
+        );
+    }
+
+    // Fallback: prepend (shouldn't happen for valid jay-html with <head>)
+    return `${cacheTag}\n${jayHtmlContent}`;
+}
+
+/**
+ * Extracts cache metadata from a jay-html file's content.
+ * Returns the metadata and the content with the tag stripped, or undefined if no tag found.
+ */
+function extractCacheMetadata(
+    fileContent: string,
+):
+    | { content: string; slowViewState: object; carryForward: object; sourcePath: string }
+    | undefined {
+    const startIdx = fileContent.indexOf(CACHE_TAG_START);
+    if (startIdx === -1) return undefined;
+
+    const jsonStart = startIdx + CACHE_TAG_START.length;
+    const endIdx = fileContent.indexOf(CACHE_TAG_END, jsonStart);
+    if (endIdx === -1) return undefined;
+
+    const jsonStr = fileContent.substring(jsonStart, endIdx);
+    const metadata = JSON.parse(jsonStr);
+
+    // Strip the entire tag line including the trailing newline
+    const tagEnd = endIdx + CACHE_TAG_END.length;
+    const afterTag = fileContent[tagEnd] === '\n' ? tagEnd + 1 : tagEnd;
+    const content = fileContent.substring(0, startIdx) + fileContent.substring(afterTag);
+
+    return {
+        content,
+        slowViewState: metadata.slowViewState,
+        carryForward: metadata.carryForward,
+        sourcePath: metadata.sourcePath,
+    };
+}
+
+/**
+ * Filesystem-based cache for pre-rendered jay-html files.
  *
- * This cache stores jay-html content that has been transformed with slow-phase
- * data baked in. The key insight is that since slow ViewState is embedded directly
- * into the jay-html, we don't need to pass it to the client - only fast and
- * interactive ViewState is sent.
+ * Cache metadata (slowViewState, carryForward) is embedded in the pre-rendered
+ * file as a `<script type="application/jay-cache">` tag. This means:
+ * - Cache survives dev server restart
+ * - The filesystem is the single source of truth
+ * - No in-memory map needed for cache entries
  *
- * Pre-rendered files are written to disk so Vite can pick them up and compile them.
+ * On read, the script tag is extracted and stripped before returning content.
  */
 export class SlowRenderCache {
-    private cache = new Map<CacheKey, SlowRenderCacheEntry>();
-    private pathToKeys = new Map<string, Set<CacheKey>>();
+    /** Maps source jay-html path → set of pre-rendered file paths (for invalidation) */
+    private pathToFiles = new Map<string, Set<string>>();
     private readonly cacheDir: string;
     private readonly pagesRoot: string;
 
@@ -84,16 +128,41 @@ export class SlowRenderCache {
     }
 
     /**
-     * Get a cached pre-rendered jay-html entry
+     * Get a cached pre-rendered jay-html entry by reading from disk.
+     * Returns undefined if the cache file doesn't exist or has no metadata tag.
      */
-    get(jayHtmlPath: string, params: Record<string, string>): SlowRenderCacheEntry | undefined {
-        const key = makeCacheKey(jayHtmlPath, params);
-        return this.cache.get(key);
+    async get(
+        jayHtmlPath: string,
+        params: Record<string, string>,
+    ): Promise<SlowRenderCacheEntry | undefined> {
+        const preRenderedPath = this.computeCachePath(jayHtmlPath, params);
+
+        let fileContent: string;
+        try {
+            fileContent = await fs.readFile(preRenderedPath, 'utf-8');
+        } catch {
+            return undefined;
+        }
+
+        const extracted = extractCacheMetadata(fileContent);
+        if (!extracted) return undefined;
+
+        // Register in pathToFiles for invalidation (lazy recovery on restart)
+        this.trackFile(jayHtmlPath, preRenderedPath);
+
+        return {
+            preRenderedPath,
+            preRenderedContent: extracted.content,
+            slowViewState: extracted.slowViewState,
+            carryForward: extracted.carryForward,
+            sourcePath: extracted.sourcePath,
+        };
     }
 
     /**
-     * Store a pre-rendered jay-html entry in the cache.
-     * Writes the pre-rendered content to disk and stores metadata in memory.
+     * Store a pre-rendered jay-html entry.
+     * Embeds metadata as a <script> tag and writes to disk.
+     * Returns the full cache entry with stripped content.
      */
     async set(
         jayHtmlPath: string,
@@ -101,72 +170,67 @@ export class SlowRenderCache {
         preRenderedJayHtml: string,
         slowViewState: object,
         carryForward: object,
-    ): Promise<string> {
-        const key = makeCacheKey(jayHtmlPath, params);
+    ): Promise<SlowRenderCacheEntry> {
+        const preRenderedPath = this.computeCachePath(jayHtmlPath, params);
 
-        // Calculate the cache file path
-        // e.g., /project/src/pages/products/page.jay-html -> products/page_abc123.jay-html
-        const relativePath = path.relative(this.pagesRoot, jayHtmlPath);
-        const dir = path.dirname(relativePath);
-        const basename = path.basename(relativePath, '.jay-html');
-        const paramsHash = hashParams(params);
-        const cacheFileName = `${basename}${paramsHash}.jay-html`;
-        const preRenderedPath = path.join(this.cacheDir, dir, cacheFileName);
-
-        // Ensure the directory exists
-        await fs.mkdir(path.dirname(preRenderedPath), { recursive: true });
-
-        // Write the pre-rendered content to disk
-        await fs.writeFile(preRenderedPath, preRenderedJayHtml, 'utf-8');
-
-        // Track which keys belong to which source path (for invalidation)
-        if (!this.pathToKeys.has(jayHtmlPath)) {
-            this.pathToKeys.set(jayHtmlPath, new Set());
-        }
-        this.pathToKeys.get(jayHtmlPath)!.add(key);
-
-        const entry: SlowRenderCacheEntry = {
-            preRenderedPath,
+        // Embed metadata in the file
+        const fileContent = embedCacheMetadata(
+            preRenderedJayHtml,
             slowViewState,
             carryForward,
-            createdAt: Date.now(),
+            jayHtmlPath,
+        );
+
+        // Ensure directory exists and write to disk
+        await fs.mkdir(path.dirname(preRenderedPath), { recursive: true });
+        await fs.writeFile(preRenderedPath, fileContent, 'utf-8');
+
+        // Track for invalidation
+        this.trackFile(jayHtmlPath, preRenderedPath);
+
+        return {
+            preRenderedPath,
+            preRenderedContent: preRenderedJayHtml,
+            slowViewState,
+            carryForward,
             sourcePath: jayHtmlPath,
         };
-        this.cache.set(key, entry);
-
-        return preRenderedPath;
     }
 
     /**
      * Check if a pre-rendered entry exists for the given path and params
      */
-    has(jayHtmlPath: string, params: Record<string, string>): boolean {
-        const key = makeCacheKey(jayHtmlPath, params);
-        return this.cache.has(key);
+    async has(jayHtmlPath: string, params: Record<string, string>): Promise<boolean> {
+        const preRenderedPath = this.computeCachePath(jayHtmlPath, params);
+        try {
+            await fs.access(preRenderedPath);
+            return true;
+        } catch {
+            return false;
+        }
     }
 
     /**
      * Invalidate all cached entries for a given jay-html source path.
-     * This is called when the source file changes.
-     * Also deletes the cached files from disk.
+     * Deletes cached files from disk.
      */
     async invalidate(jayHtmlPath: string): Promise<void> {
-        const keys = this.pathToKeys.get(jayHtmlPath);
-        if (keys) {
-            for (const key of keys) {
-                const entry = this.cache.get(key);
-                if (entry) {
-                    // Delete the cached file from disk
-                    try {
-                        await fs.unlink(entry.preRenderedPath);
-                    } catch {
-                        // File may not exist, ignore
-                    }
+        // Delete tracked files
+        const files = this.pathToFiles.get(jayHtmlPath);
+        if (files) {
+            for (const filePath of files) {
+                try {
+                    await fs.unlink(filePath);
+                } catch {
+                    // File may not exist
                 }
-                this.cache.delete(key);
             }
-            this.pathToKeys.delete(jayHtmlPath);
+            this.pathToFiles.delete(jayHtmlPath);
         }
+
+        // Also scan the cache directory for matching files (handles startup case
+        // where pathToFiles is not yet populated from a previous server session)
+        await this.scanAndDeleteCacheFiles(jayHtmlPath);
     }
 
     /**
@@ -202,28 +266,78 @@ export class SlowRenderCache {
      * Clear all cached entries and delete cached files from disk
      */
     async clear(): Promise<void> {
-        for (const entry of this.cache.values()) {
-            try {
-                await fs.unlink(entry.preRenderedPath);
-            } catch {
-                // File may not exist, ignore
+        for (const files of this.pathToFiles.values()) {
+            for (const filePath of files) {
+                try {
+                    await fs.unlink(filePath);
+                } catch {
+                    // File may not exist
+                }
             }
         }
-        this.cache.clear();
-        this.pathToKeys.clear();
-    }
+        this.pathToFiles.clear();
 
-    /**
-     * Get the number of cached entries
-     */
-    get size(): number {
-        return this.cache.size;
+        // Also clean the entire cache directory
+        try {
+            await fs.rm(this.cacheDir, { recursive: true, force: true });
+        } catch {
+            // Directory may not exist
+        }
     }
 
     /**
      * Get all cached jay-html paths (for debugging/monitoring)
      */
     getCachedPaths(): string[] {
-        return Array.from(this.pathToKeys.keys());
+        return Array.from(this.pathToFiles.keys());
+    }
+
+    /**
+     * Compute the cache file path for a given jay-html path and params.
+     */
+    private computeCachePath(jayHtmlPath: string, params: Record<string, string>): string {
+        const relativePath = path.relative(this.pagesRoot, jayHtmlPath);
+        const dir = path.dirname(relativePath);
+        const basename = path.basename(relativePath, '.jay-html');
+        const paramsHash = hashParams(params);
+        const cacheFileName = `${basename}${paramsHash}.jay-html`;
+        return path.join(this.cacheDir, dir, cacheFileName);
+    }
+
+    /**
+     * Track a pre-rendered file path for invalidation.
+     */
+    private trackFile(jayHtmlPath: string, preRenderedPath: string): void {
+        if (!this.pathToFiles.has(jayHtmlPath)) {
+            this.pathToFiles.set(jayHtmlPath, new Set());
+        }
+        this.pathToFiles.get(jayHtmlPath)!.add(preRenderedPath);
+    }
+
+    /**
+     * Scan the cache directory for files matching a route and delete them.
+     * Handles the startup case where pathToFiles is not populated from a previous session.
+     */
+    private async scanAndDeleteCacheFiles(jayHtmlPath: string): Promise<void> {
+        const relativePath = path.relative(this.pagesRoot, jayHtmlPath);
+        const dir = path.dirname(relativePath);
+        const basename = path.basename(relativePath, '.jay-html');
+        const cacheSubDir = path.join(this.cacheDir, dir);
+
+        try {
+            const files = await fs.readdir(cacheSubDir);
+            for (const file of files) {
+                // Match files like "page.jay-html" or "page_abc123.jay-html"
+                if (file.startsWith(basename) && file.endsWith('.jay-html')) {
+                    try {
+                        await fs.unlink(path.join(cacheSubDir, file));
+                    } catch {
+                        // Ignore
+                    }
+                }
+            }
+        } catch {
+            // Directory may not exist
+        }
     }
 }

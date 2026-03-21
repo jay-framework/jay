@@ -17,7 +17,7 @@ export interface StylesWithUrlsViewState {
 export interface StylesWithUrlsElementRefs {}
 
 export type StylesWithUrlsSlowViewState = {};
-export type StylesWithUrlsFastViewState = {};
+export type StylesWithUrlsFastViewState = StylesWithUrlsViewState;
 export type StylesWithUrlsInteractiveViewState = StylesWithUrlsViewState;
 
 export type StylesWithUrlsElement = JayElement<StylesWithUrlsViewState, StylesWithUrlsElementRefs>;

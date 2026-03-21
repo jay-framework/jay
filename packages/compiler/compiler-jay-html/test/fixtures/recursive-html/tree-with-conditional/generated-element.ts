@@ -33,7 +33,7 @@ export interface TreeWithConditionalElementRefs {
 }
 
 export type TreeWithConditionalSlowViewState = {};
-export type TreeWithConditionalFastViewState = {};
+export type TreeWithConditionalFastViewState = TreeWithConditionalViewState;
 export type TreeWithConditionalInteractiveViewState = TreeWithConditionalViewState;
 
 export type TreeWithConditionalElement = JayElement<

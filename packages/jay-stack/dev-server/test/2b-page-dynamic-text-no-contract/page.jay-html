@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data">
+        data:
+            title: string
+            count: number
+    </script>
+</head>
+<body>
+    <div>
+        <h1>{title}</h1>
+        <p>Count: {count}</p>
+        <span>Static text stays</span>
+    </div>
+</body>
+</html>

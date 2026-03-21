@@ -24,7 +24,7 @@ export interface PageWithHeadlessInstanceViewState {
 export interface PageWithHeadlessInstanceElementRefs {}
 
 export type PageWithHeadlessInstanceSlowViewState = {};
-export type PageWithHeadlessInstanceFastViewState = {};
+export type PageWithHeadlessInstanceFastViewState = PageWithHeadlessInstanceViewState;
 export type PageWithHeadlessInstanceInteractiveViewState = PageWithHeadlessInstanceViewState;
 
 export type PageWithHeadlessInstanceElement = JayElement<
@@ -81,7 +81,7 @@ function _headlessProductCard0Render(
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0Render,
     productCard,
-    'product-card:0',
+    'product-card:AR0',
 );
 
 export function render(options?: RenderElementOptions): PageWithHeadlessInstanceElementPreRender {

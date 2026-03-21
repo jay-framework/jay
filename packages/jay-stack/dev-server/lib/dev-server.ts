@@ -14,6 +14,7 @@ import {
     type PluginWithInit,
     type PluginClientInitInfo,
     SlowRenderCache,
+    type SlowRenderCacheEntry,
 } from '@jay-framework/stack-server-runtime';
 import type {
     ClientError4xx,
@@ -50,14 +51,13 @@ import {
     LoadedPageParts,
     getServiceRegistry,
     materializeContracts,
-    resolveServices,
     slowRenderInstances,
     validateForEachInstances,
     type HeadlessInstanceComponent,
     type InstancePhaseData,
     type ForEachHeadlessInstance,
 } from '@jay-framework/stack-server-runtime';
-import { WithValidations, computeForEachInstanceKey } from '@jay-framework/compiler-shared';
+import { WithValidations } from '@jay-framework/compiler-shared';
 import { getLogger, getDevLogger, type RequestTiming } from '@jay-framework/logger';
 
 async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
@@ -83,7 +83,7 @@ function defaults(options: DevServerOptions): DevServerOptions {
         pagesRootFolder,
         projectRootFolder,
         buildFolder,
-        dontCacheSlowly: options.dontCacheSlowly,
+        disableSSR: options.disableSSR,
         jayRollupConfig: {
             ...(options.jayRollupConfig || {}),
             tsConfigFilePath,
@@ -188,53 +188,13 @@ function mkRoute(
                 url,
             };
 
-            // Check if slow render caching is enabled
-            const useSlowRenderCache = !options.dontCacheSlowly;
-
-            // Check if we have a cached pre-rendered jay-html
-            let cachedEntry = useSlowRenderCache
-                ? slowRenderCache.get(route.jayHtmlPath, pageParams)
-                : undefined;
-
-            // Verify the cached file still exists (could be deleted while server is running)
-            if (cachedEntry) {
-                try {
-                    await fs.access(cachedEntry.preRenderedPath);
-                } catch {
-                    // Cached file was deleted, invalidate and rebuild
-                    getLogger().info(
-                        `[SlowRender] Cached file missing, rebuilding: ${cachedEntry.preRenderedPath}`,
-                    );
-                    await slowRenderCache.invalidate(route.jayHtmlPath);
-                    cachedEntry = undefined;
-                }
-            }
-
-            if (cachedEntry) {
-                // Cache hit: use cached pre-rendered jay-html and carryForward
-                // No need to run slow rendering - everything is cached
-                await handleCachedRequest(
-                    vite,
-                    route,
-                    options,
-                    cachedEntry,
-                    pageParams,
-                    pageProps,
-                    allPluginClientInits,
-                    allPluginsWithInit,
-                    projectInit,
-                    res,
-                    url,
-                    timing,
-                );
-            } else if (useSlowRenderCache) {
-                // Cache miss with caching enabled: pre-render and cache
-                await handlePreRenderRequest(
+            if (options.disableSSR) {
+                // Client-only rendering: no SSR, no hydration
+                await handleClientOnlyRequest(
                     vite,
                     route,
                     options,
                     slowlyPhase,
-                    slowRenderCache,
                     pageParams,
                     pageProps,
                     allPluginClientInits,
@@ -245,21 +205,42 @@ function mkRoute(
                     timing,
                 );
             } else {
-                // Caching disabled: run slow render on each request, full viewState to client
-                await handleDirectRequest(
-                    vite,
-                    route,
-                    options,
-                    slowlyPhase,
-                    pageParams,
-                    pageProps,
-                    allPluginClientInits,
-                    allPluginsWithInit,
-                    projectInit,
-                    res,
-                    url,
-                    timing,
-                );
+                // SSR: always use full pipeline with slow render cache
+                // get() reads from disk — returns undefined if file is missing or has no metadata
+                const cachedEntry = await slowRenderCache.get(route.jayHtmlPath, pageParams);
+
+                if (cachedEntry) {
+                    await handleCachedRequest(
+                        vite,
+                        route,
+                        options,
+                        cachedEntry,
+                        pageParams,
+                        pageProps,
+                        allPluginClientInits,
+                        allPluginsWithInit,
+                        projectInit,
+                        res,
+                        url,
+                        timing,
+                    );
+                } else {
+                    await handlePreRenderRequest(
+                        vite,
+                        route,
+                        options,
+                        slowlyPhase,
+                        slowRenderCache,
+                        pageParams,
+                        pageProps,
+                        allPluginClientInits,
+                        allPluginsWithInit,
+                        projectInit,
+                        res,
+                        url,
+                        timing,
+                    );
+                }
             }
         } catch (e) {
             vite?.ssrFixStacktrace(e);
@@ -279,7 +260,7 @@ async function handleCachedRequest(
     vite: ViteDevServer,
     route: JayRoute,
     options: DevServerOptions,
-    cachedEntry: ReturnType<SlowRenderCache['get']> & object,
+    cachedEntry: SlowRenderCacheEntry,
     pageParams: Record<string, string>,
     pageProps: PageProps,
     allPluginClientInits: PluginClientInitInfo[],
@@ -289,7 +270,7 @@ async function handleCachedRequest(
     url: string,
     timing?: RequestTiming,
 ): Promise<void> {
-    // Load page parts with cached pre-rendered jay-html file
+    // Load page parts with cached pre-rendered jay-html content (already stripped of cache tag)
     const loadStart = Date.now();
     const pagePartsResult: WithValidations<LoadedPageParts> = await loadPageParts(
         vite,
@@ -297,7 +278,10 @@ async function handleCachedRequest(
         options.pagesRootFolder,
         options.projectRootFolder,
         options.jayRollupConfig,
-        { preRenderedPath: cachedEntry.preRenderedPath },
+        {
+            preRenderedPath: cachedEntry.preRenderedPath,
+            preRenderedContent: cachedEntry.preRenderedContent,
+        },
     );
     timing?.recordViteSsr(Date.now() - loadStart);
 
@@ -316,13 +300,23 @@ async function handleCachedRequest(
         usedPackages,
     );
 
-    // Run fast phase for key-based parts
+    // Run fast phase — includes instance fast render (DL#109)
+    const instancePhaseData = (cachedEntry.carryForward as any)?.__instances as
+        | InstancePhaseData
+        | undefined;
+    const forEachInstances = instancePhaseData?.forEachInstances;
+    const headlessComps = pagePartsResult.val.headlessInstanceComponents;
+
     const fastStart = Date.now();
     const renderedFast = await renderFastChangingData(
         pageParams,
         pageProps,
         cachedEntry.carryForward,
         pageParts,
+        instancePhaseData,
+        forEachInstances,
+        headlessComps,
+        cachedEntry.slowViewState,
     );
     timing?.recordFastRender(Date.now() - fastStart);
 
@@ -332,51 +326,8 @@ async function handleCachedRequest(
         return;
     }
 
-    // Run fast phase for headless instances (if any)
-    let fastViewState = renderedFast.rendered;
-    let fastCarryForward = renderedFast.carryForward;
-
-    const instancePhaseData = (cachedEntry.carryForward as any)?.__instances as
-        | InstancePhaseData
-        | undefined;
-    const headlessComps = pagePartsResult.val.headlessInstanceComponents;
-    if (instancePhaseData && headlessComps.length > 0) {
-        const instanceFastResult = await renderFastChangingDataForInstances(
-            instancePhaseData,
-            headlessComps,
-        );
-        if (instanceFastResult) {
-            fastViewState = {
-                ...fastViewState,
-                __headlessInstances: instanceFastResult.viewStates,
-            };
-            fastCarryForward = {
-                ...fastCarryForward,
-                __headlessInstances: instanceFastResult.carryForwards,
-            };
-        }
-
-        // Run fast phase for forEach instances (per-item rendering)
-        if (instancePhaseData.forEachInstances && instancePhaseData.forEachInstances.length > 0) {
-            const forEachResult = await renderFastChangingDataForForEachInstances(
-                instancePhaseData.forEachInstances,
-                headlessComps,
-                fastViewState,
-            );
-            if (forEachResult) {
-                const existingVS = (fastViewState as any).__headlessInstances || {};
-                fastViewState = {
-                    ...fastViewState,
-                    __headlessInstances: { ...existingVS, ...forEachResult.viewStates },
-                };
-                const existingCF = (fastCarryForward as any).__headlessInstances || {};
-                fastCarryForward = {
-                    ...fastCarryForward,
-                    __headlessInstances: { ...existingCF, ...forEachResult.carryForwards },
-                };
-            }
-        }
-    }
+    const fastViewState = renderedFast.rendered;
+    const fastCarryForward = renderedFast.carryForward;
 
     // Only fast+interactive viewState (slow is baked into jay-html)
     // Use the pre-rendered file path so Vite compiles it
@@ -396,6 +347,7 @@ async function handleCachedRequest(
         options,
         cachedEntry.slowViewState,
         timing,
+        cachedEntry.preRenderedContent,
     );
 }
 
@@ -443,6 +395,9 @@ async function handlePreRenderRequest(
         pageParams,
         pageProps,
         initialPartsResult.val.parts,
+        undefined,
+        undefined,
+        route.jayHtmlPath,
     );
 
     if (renderedSlowly.kind !== 'PhaseOutput') {
@@ -488,127 +443,40 @@ async function handlePreRenderRequest(
         ? { ...renderedSlowly.carryForward, __instances: instancePhaseDataForCache }
         : renderedSlowly.carryForward;
 
-    // Cache the result (writes to disk and returns the path)
-    const preRenderedPath = await slowRenderCache.set(
+    // Cache the result (embeds metadata in file and writes to disk)
+    const cachedEntry = await slowRenderCache.set(
         route.jayHtmlPath,
         pageParams,
         preRenderResult.preRenderedJayHtml,
         renderedSlowly.rendered,
         carryForward,
     );
-    getLogger().info(`[SlowRender] Cached pre-rendered jay-html at ${preRenderedPath}`);
+    getLogger().info(`[SlowRender] Cached pre-rendered jay-html at ${cachedEntry.preRenderedPath}`);
 
-    // Load page parts with pre-rendered jay-html file (no timing - already counted)
-    const pagePartsResult = await loadPageParts(
+    // Delegate to the cached handler — it loads parts from the pre-rendered file,
+    // runs the fast phase (including instance fast render), and sends the response.
+    await handleCachedRequest(
         vite,
         route,
-        options.pagesRootFolder,
-        options.projectRootFolder,
-        options.jayRollupConfig,
-        { preRenderedPath },
-    );
-
-    if (!pagePartsResult.val) {
-        getLogger().info(pagePartsResult.validations.join('\n'));
-        res.status(500).end(pagePartsResult.validations.join('\n'));
-        timing?.end();
-        return;
-    }
-
-    const { parts: pageParts, clientTrackByMap, usedPackages } = pagePartsResult.val;
-
-    const pluginsForPage = filterPluginsForPage(
-        allPluginClientInits,
-        allPluginsWithInit,
-        usedPackages,
-    );
-
-    // Run fast phase for key-based parts
-    const fastStart = Date.now();
-    const renderedFast = await renderFastChangingData(
+        options,
+        cachedEntry,
         pageParams,
         pageProps,
-        carryForward,
-        pageParts,
-    );
-    timing?.recordFastRender(Date.now() - fastStart);
-
-    if (renderedFast.kind !== 'PhaseOutput') {
-        handleOtherResponseCodes(res, renderedFast);
-        timing?.end();
-        return;
-    }
-
-    // Run fast phase for headless instances (if any)
-    let fastViewState = renderedFast.rendered;
-    let fastCarryForward = renderedFast.carryForward;
-
-    const instancePhaseData = (carryForward as any)?.__instances as InstancePhaseData | undefined;
-    const headlessComps = pagePartsResult.val.headlessInstanceComponents;
-    if (instancePhaseData && headlessComps.length > 0) {
-        const instanceFastResult = await renderFastChangingDataForInstances(
-            instancePhaseData,
-            headlessComps,
-        );
-        if (instanceFastResult) {
-            fastViewState = {
-                ...fastViewState,
-                __headlessInstances: instanceFastResult.viewStates,
-            };
-            fastCarryForward = {
-                ...fastCarryForward,
-                __headlessInstances: instanceFastResult.carryForwards,
-            };
-        }
-
-        // Run fast phase for forEach instances (per-item rendering)
-        if (instancePhaseData.forEachInstances && instancePhaseData.forEachInstances.length > 0) {
-            const forEachResult = await renderFastChangingDataForForEachInstances(
-                instancePhaseData.forEachInstances,
-                headlessComps,
-                fastViewState,
-            );
-            if (forEachResult) {
-                const existingVS = (fastViewState as any).__headlessInstances || {};
-                fastViewState = {
-                    ...fastViewState,
-                    __headlessInstances: { ...existingVS, ...forEachResult.viewStates },
-                };
-                const existingCF = (fastCarryForward as any).__headlessInstances || {};
-                fastCarryForward = {
-                    ...fastCarryForward,
-                    __headlessInstances: { ...existingCF, ...forEachResult.carryForwards },
-                };
-            }
-        }
-    }
-
-    // Only fast+interactive viewState (slow is baked into jay-html)
-    // Use the pre-rendered file path so Vite compiles it
-    // Pass slowViewState so automation can show full merged state
-    await sendResponse(
-        vite,
+        allPluginClientInits,
+        allPluginsWithInit,
+        projectInit,
         res,
         url,
-        preRenderedPath,
-        route.jayHtmlPath,
-        pageParts,
-        fastViewState,
-        fastCarryForward,
-        clientTrackByMap,
-        projectInit,
-        pluginsForPage,
-        options,
-        renderedSlowly.rendered,
         timing,
     );
 }
 
 /**
- * Handle request without slow render caching.
- * Used when caching is disabled. Sends full viewState (slow + fast) to client.
+ * Handle request with SSR disabled (client-only rendering).
+ * Runs slow+fast phases to compute viewState, then generates a client-only page
+ * using generateClientScript (element target, no hydration).
  */
-async function handleDirectRequest(
+async function handleClientOnlyRequest(
     vite: ViteDevServer,
     route: JayRoute,
     options: DevServerOptions,
@@ -644,6 +512,9 @@ async function handleDirectRequest(
         serverTrackByMap,
         clientTrackByMap,
         usedPackages,
+        headlessInstanceComponents,
+        discoveredInstances,
+        forEachInstances,
     } = pagePartsResult.val;
 
     const pluginsForPage = filterPluginsForPage(
@@ -652,9 +523,16 @@ async function handleDirectRequest(
         usedPackages,
     );
 
-    // Run slow phase (key-based parts + headless instance slow rendering)
+    // Run slow phase (includes instance slow render — DL#109)
     const slowStart = Date.now();
-    const renderedSlowly = await slowlyPhase.runSlowlyForPage(pageParams, pageProps, pageParts);
+    const renderedSlowly = await slowlyPhase.runSlowlyForPage(
+        pageParams,
+        pageProps,
+        pageParts,
+        discoveredInstances,
+        headlessInstanceComponents,
+        route.jayHtmlPath,
+    );
 
     if (renderedSlowly.kind !== 'PhaseOutput') {
         timing?.recordSlowRender(Date.now() - slowStart);
@@ -664,91 +542,25 @@ async function handleDirectRequest(
         timing?.end();
         return;
     }
-
-    // Run slow phase for headless instances
-    let instanceViewStates: Record<string, object> | undefined;
-    let instanceCarryForwards: Record<string, object> | undefined;
-    let instancePhaseDataForFast: InstancePhaseData | undefined;
-    let forEachInstancesForFast: ForEachHeadlessInstance[] | undefined;
-    const headlessInstanceComponents = pagePartsResult.val.headlessInstanceComponents ?? [];
-
-    if (headlessInstanceComponents.length > 0) {
-        const jayHtmlContent = await fs.readFile(route.jayHtmlPath, 'utf-8');
-        const discoveryResult = discoverHeadlessInstances(jayHtmlContent);
-
-        // Validate: forEach instances must not have slow phases
-        if (discoveryResult.forEachInstances.length > 0) {
-            const validationErrors = validateForEachInstances(
-                discoveryResult.forEachInstances,
-                headlessInstanceComponents,
-            );
-            if (validationErrors.length > 0) {
-                getLogger().error(
-                    `[SlowRender] ForEach instance validation failed: ${validationErrors.join(', ')}`,
-                );
-                res.status(500).end(validationErrors.join('\n'));
-                timing?.end();
-                return;
-            }
-            forEachInstancesForFast = discoveryResult.forEachInstances;
-        }
-
-        if (discoveryResult.instances.length > 0) {
-            const slowResult = await slowRenderInstances(
-                discoveryResult.instances,
-                headlessInstanceComponents,
-            );
-            if (slowResult) {
-                instanceViewStates = { ...slowResult.slowViewStates };
-                instancePhaseDataForFast = slowResult.instancePhaseData;
-            }
-        }
-    }
     timing?.recordSlowRender(Date.now() - slowStart);
 
-    // Run fast phase (key-based parts + headless instance fast rendering)
+    // Extract instance phase data from carryForward (set by runSlowlyForPage)
+    const instancePhaseData = (renderedSlowly.carryForward as any)?.__instances as
+        | InstancePhaseData
+        | undefined;
+
+    // Run fast phase (includes instance fast render — DL#109)
     const fastStart = Date.now();
     const renderedFast = await renderFastChangingData(
         pageParams,
         pageProps,
         renderedSlowly.carryForward,
         pageParts,
+        instancePhaseData,
+        forEachInstances,
+        headlessInstanceComponents,
+        renderedSlowly.rendered,
     );
-
-    // Run fast phase for static headless instances
-    if (instancePhaseDataForFast && instanceViewStates) {
-        const instanceFastResult = await renderFastChangingDataForInstances(
-            instancePhaseDataForFast,
-            headlessInstanceComponents,
-        );
-        if (instanceFastResult) {
-            for (const [coordKey, fastVS] of Object.entries(instanceFastResult.viewStates)) {
-                instanceViewStates[coordKey] = {
-                    ...(instanceViewStates[coordKey] || {}),
-                    ...fastVS,
-                };
-            }
-        }
-    }
-
-    // Run fast phase for forEach headless instances (per-item rendering)
-    if (forEachInstancesForFast && renderedFast.kind === 'PhaseOutput') {
-        const forEachResult = await renderFastChangingDataForForEachInstances(
-            forEachInstancesForFast,
-            headlessInstanceComponents,
-            { ...renderedSlowly.rendered, ...renderedFast.rendered },
-        );
-        if (forEachResult) {
-            if (!instanceViewStates) instanceViewStates = {};
-            for (const [coordKey, fastVS] of Object.entries(forEachResult.viewStates)) {
-                instanceViewStates[coordKey] = fastVS;
-            }
-            if (!instanceCarryForwards) instanceCarryForwards = {};
-            for (const [coordKey, cf] of Object.entries(forEachResult.carryForwards)) {
-                instanceCarryForwards[coordKey] = cf;
-            }
-        }
-    }
     timing?.recordFastRender(Date.now() - fastStart);
 
     if (renderedFast.kind !== 'PhaseOutput') {
@@ -757,50 +569,43 @@ async function handleDirectRequest(
         return;
     }
 
-    // Deep merge slow + fast viewState
-    let viewState: object;
-    if (serverTrackByMap && Object.keys(serverTrackByMap).length > 0) {
-        viewState = deepMergeViewStates(
-            renderedSlowly.rendered,
-            renderedFast.rendered,
-            serverTrackByMap,
-        );
-    } else {
-        viewState = { ...renderedSlowly.rendered, ...renderedFast.rendered };
-    }
+    // Merge slow + fast viewState using deep merge (DL#108).
+    const viewState: object = deepMergeViewStates(
+        renderedSlowly.rendered,
+        renderedFast.rendered,
+        serverTrackByMap || {},
+    );
+    const fastCF = renderedFast.carryForward;
 
-    // Add headless instance viewStates/carryForwards if any
-    if (instanceViewStates && Object.keys(instanceViewStates).length > 0) {
-        viewState = {
-            ...viewState,
-            __headlessInstances: instanceViewStates,
-        };
-    }
-    let fastCF = renderedFast.carryForward;
-    if (instanceCarryForwards && Object.keys(instanceCarryForwards).length > 0) {
-        fastCF = {
-            ...fastCF,
-            __headlessInstances: instanceCarryForwards,
-        };
-    }
-
-    // Use original jay-html path (no pre-rendering)
-    await sendResponse(
-        vite,
-        res,
-        url,
-        route.jayHtmlPath,
-        route.jayHtmlPath,
-        pageParts,
+    // Generate client-only HTML (element target, no SSR/hydration)
+    const pageHtml = generateClientScript(
         viewState,
         fastCF,
+        pageParts,
+        route.jayHtmlPath,
         clientTrackByMap,
+        getClientInitData(),
         projectInit,
         pluginsForPage,
-        options,
-        undefined,
-        timing,
+        {
+            enableAutomation: !options.disableAutomation,
+        },
     );
+
+    // Save generated page to build folder for debugging
+    if (options.buildFolder) {
+        const pageName = !url || url === '/' ? 'index' : url.replace(/^\//, '').replace(/\//g, '-');
+        const clientScriptDir = path.join(options.buildFolder, 'debug', 'client-entry');
+        await fs.mkdir(clientScriptDir, { recursive: true });
+        await fs.writeFile(path.join(clientScriptDir, `${pageName}.html`), pageHtml, 'utf-8');
+    }
+
+    const viteStart = Date.now();
+    const compiledPageHtml = await vite.transformIndexHtml(!!url ? url : '/', pageHtml);
+    timing?.recordViteClient(Date.now() - viteStart);
+
+    res.status(200).set({ 'Content-Type': 'text/html' }).send(compiledPageHtml);
+    timing?.end();
 }
 
 /**
@@ -824,6 +629,7 @@ async function sendResponse(
     options: DevServerOptions,
     slowViewState?: object,
     timing?: RequestTiming,
+    preLoadedContent?: string,
 ): Promise<void> {
     let pageHtml: string;
 
@@ -831,7 +637,8 @@ async function sendResponse(
 
     try {
         // Try SSR: server-render HTML + hydration script
-        const jayHtmlContent = await fs.readFile(jayHtmlPath, 'utf-8');
+        // Use pre-loaded content if available (from cache with tag already stripped)
+        const jayHtmlContent = preLoadedContent ?? (await fs.readFile(jayHtmlPath, 'utf-8'));
         const jayHtmlFilename = path.basename(jayHtmlPath);
         const jayHtmlDir = path.dirname(jayHtmlPath);
 
@@ -952,6 +759,16 @@ async function preRenderJayHtml(
         }
     }
 
+    // Warn if slow data is provided without a contract (DL#108).
+    // Without a contract, slow render resolves nothing — the data is silently ignored.
+    if (!contract && slowViewState && Object.keys(slowViewState).length > 0) {
+        getLogger().warn(
+            `[SlowRender] Page ${route.jayHtmlPath} has slow ViewState but no contract. ` +
+                `Without a contract, slow bindings cannot be resolved. ` +
+                `Move data to withFastRender or add a .jay-contract file with phase annotations.`,
+        );
+    }
+
     // ── Pass 1: Resolve page-level slow bindings ──
     const result = slowRenderTransform({
         jayHtmlContent,
@@ -1024,156 +841,40 @@ async function preRenderJayHtml(
                     );
                 }
             }
+
+            // Always populate instancePhaseData with all discovered instances (DL#109).
+            // Even without slow data, instances need to be visible to the fast phase.
+            if (!instancePhaseData) {
+                const componentByContractName = new Map<string, HeadlessInstanceComponent>();
+                for (const comp of headlessInstanceComponents) {
+                    componentByContractName.set(comp.contractName, comp);
+                }
+                instancePhaseData = {
+                    discovered: discoveryResult.instances
+                        .filter((i) => componentByContractName.has(i.contractName))
+                        .map((i) => {
+                            const comp = componentByContractName.get(i.contractName)!;
+                            const contractProps = comp.contract?.props ?? [];
+                            const normalizedProps: Record<string, string> = {};
+                            for (const [key, value] of Object.entries(i.props)) {
+                                const match = contractProps.find(
+                                    (p) => p.name.toLowerCase() === key.toLowerCase(),
+                                );
+                                normalizedProps[match ? match.name : key] = String(value);
+                            }
+                            return {
+                                contractName: i.contractName,
+                                props: normalizedProps,
+                                coordinate: i.coordinate,
+                            };
+                        }),
+                    carryForwards: {},
+                };
+            }
         }
     }
 
     return { preRenderedJayHtml, instancePhaseData, forEachInstances };
-}
-
-/**
- * Run fast render phase for headless component instances.
- *
- * For each discovered instance, calls the component's fastRender with
- * the instance props and its slow-phase carryForward.
- *
- * @returns Instance fast ViewStates and carryForwards, or undefined if no instances have fastRender
- */
-async function renderFastChangingDataForInstances(
-    instancePhaseData: InstancePhaseData,
-    headlessInstanceComponents: HeadlessInstanceComponent[],
-): Promise<
-    { viewStates: Record<string, object>; carryForwards: Record<string, object> } | undefined
-> {
-    // Build a lookup from contract name to component info
-    const componentByContractName = new Map<string, HeadlessInstanceComponent>();
-    for (const comp of headlessInstanceComponents) {
-        componentByContractName.set(comp.contractName, comp);
-    }
-
-    const viewStates: Record<string, object> = {};
-    const carryForwards: Record<string, object> = {};
-    let hasResults = false;
-
-    for (const instance of instancePhaseData.discovered) {
-        const coordKey = instance.coordinate.join('/');
-        const comp = componentByContractName.get(instance.contractName);
-
-        if (!comp || !comp.compDefinition.fastRender) {
-            continue;
-        }
-
-        // Get the instance's slow-phase carryForward
-        const instanceCarryForward = instancePhaseData.carryForwards[coordKey] || {};
-
-        // Resolve services for this component
-        const services = resolveServices(comp.compDefinition.services);
-
-        // Call the component's fastRender with instance props and carryForward
-        const fastResult = await comp.compDefinition.fastRender(
-            instance.props,
-            instanceCarryForward,
-            ...services,
-        );
-
-        if (fastResult.kind === 'PhaseOutput') {
-            viewStates[coordKey] = fastResult.rendered;
-            carryForwards[coordKey] = fastResult.carryForward;
-            hasResults = true;
-        }
-    }
-
-    return hasResults ? { viewStates, carryForwards } : undefined;
-}
-
-/**
- * Run fast render phase for headless instances inside forEach blocks.
- *
- * These instances have no slow phase. For each forEach item, resolve props
- * from the item data and call the component's fastRender.
- *
- * Uses Coordinate convention: [trackByValue, ...suffix] joined with comma
- * (matching Array.toString() used by the runtime Coordinate type).
- */
-async function renderFastChangingDataForForEachInstances(
-    forEachInstances: ForEachHeadlessInstance[],
-    headlessInstanceComponents: HeadlessInstanceComponent[],
-    mergedViewState: object,
-): Promise<
-    { viewStates: Record<string, object>; carryForwards: Record<string, object> } | undefined
-> {
-    const componentByContractName = new Map<string, HeadlessInstanceComponent>();
-    for (const comp of headlessInstanceComponents) {
-        componentByContractName.set(comp.contractName, comp);
-    }
-
-    const viewStates: Record<string, object> = {};
-    const carryForwards: Record<string, object> = {};
-    let hasResults = false;
-
-    for (const instance of forEachInstances) {
-        const comp = componentByContractName.get(instance.contractName);
-        if (!comp) continue;
-
-        // Resolve the forEach array from the merged (slow + fast) viewState
-        const items = resolvePathValue(mergedViewState, instance.forEachPath);
-        if (!Array.isArray(items)) continue;
-
-        // Normalize prop names to match contract (case-insensitive)
-        const contractProps = comp.contract?.props ?? [];
-        const normalizePropName = (key: string) =>
-            contractProps.find((p) => p.name.toLowerCase() === key.toLowerCase())?.name ?? key;
-
-        for (const item of items) {
-            const trackByValue = String(item[instance.trackBy]);
-
-            // Resolve props from item data using prop bindings
-            const props: Record<string, string> = {};
-            for (const [propName, binding] of Object.entries(instance.propBindings)) {
-                // Resolve bindings like "{_id}" → item._id
-                props[normalizePropName(propName)] = resolveBinding(String(binding), item);
-            }
-
-            if (comp.compDefinition.fastRender) {
-                const services = resolveServices(comp.compDefinition.services);
-                // No slow phase → fastRender signature is (props, ...services)
-                // carryForward is only injected when withSlowlyRender is used
-                const fastResult = await comp.compDefinition.fastRender(props, ...services);
-
-                if (fastResult.kind === 'PhaseOutput') {
-                    const coord = computeForEachInstanceKey(
-                        trackByValue,
-                        instance.coordinateSuffix,
-                    );
-                    viewStates[coord] = fastResult.rendered;
-                    if (fastResult.carryForward) {
-                        carryForwards[coord] = fastResult.carryForward;
-                    }
-                    hasResults = true;
-                }
-            }
-        }
-    }
-
-    return hasResults ? { viewStates, carryForwards } : undefined;
-}
-
-/**
- * Resolve a dot-path value from an object (e.g., "allProducts.items" → obj.allProducts.items).
- */
-function resolvePathValue(obj: any, path: string): any {
-    return path.split('.').reduce((current, segment) => current?.[segment], obj);
-}
-
-/**
- * Resolve a binding expression against a forEach item.
- * Handles "{fieldName}" → item.fieldName, or literal strings.
- */
-function resolveBinding(binding: string, item: any): string {
-    const match = binding.match(/^\{(.+)\}$/);
-    if (match) {
-        return String(item[match[1]] ?? '');
-    }
-    return binding;
 }
 
 /**
@@ -1208,14 +909,26 @@ async function materializeDynamicContracts(
 
 export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServer> {
     const options = defaults(rawOptions);
-    const {
-        publicBaseUrlPath,
-        pagesRootFolder,
-        projectRootFolder,
-        buildFolder,
-        jayRollupConfig,
-        dontCacheSlowly,
-    } = options;
+    const { publicBaseUrlPath, pagesRootFolder, projectRootFolder, buildFolder, jayRollupConfig } =
+        options;
+
+    // Clean build folder on startup, but preserve pre-rendered cache (DL#110).
+    // The pre-rendered/ directory contains filesystem-based cache entries that
+    // survive restarts, so first requests don't re-run the slow render pipeline.
+    if (buildFolder) {
+        try {
+            const entries = await fs.readdir(buildFolder);
+            for (const entry of entries) {
+                if (entry !== 'pre-rendered') {
+                    await fs
+                        .rm(path.join(buildFolder, entry), { recursive: true, force: true })
+                        .catch(() => {});
+                }
+            }
+        } catch {
+            // Build folder may not exist yet
+        }
+    }
 
     // Map Jay log level to Vite log level
     const viteLogLevel: 'info' | 'warn' | 'error' | 'silent' =
@@ -1248,16 +961,22 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     // Set up action router for /_jay/actions/* endpoints
     setupActionRouter(vite);
 
-    const routes: JayRoutes = await initRoutes(pagesRootFolder);
-    const slowlyPhase = new DevSlowlyChangingPhase(dontCacheSlowly);
+    // Scan routes, excluding any page files found inside the build folder.
+    // This prevents pre-rendered cache files from being picked up as additional routes
+    // when the build folder is inside the pages root (e.g., in tests).
+    const allRoutes: JayRoutes = await initRoutes(pagesRootFolder);
+    const routes = buildFolder
+        ? allRoutes.filter((route) => !route.jayHtmlPath.startsWith(buildFolder))
+        : allRoutes;
+    const slowlyPhase = new DevSlowlyChangingPhase();
 
     // Create pre-rendered jay-html cache
     // Files are written to <buildFolder>/pre-rendered/
     const slowRenderCacheDir = path.join(buildFolder!, 'pre-rendered');
     const slowRenderCache = new SlowRenderCache(slowRenderCacheDir, pagesRootFolder);
 
-    // Set up file watching for slow render cache invalidation
-    setupSlowRenderCacheInvalidation(vite, slowRenderCache, pagesRootFolder);
+    // Set up file watching for slow render cache + loadParams cache invalidation
+    setupSlowRenderCacheInvalidation(vite, slowRenderCache, slowlyPhase, pagesRootFolder);
 
     // Get init info for embedding in generated pages
     const projectInit = lifecycleManager.getProjectInit() ?? undefined;
@@ -1354,6 +1073,7 @@ function setupActionRouter(vite: ViteDevServer): void {
 function setupSlowRenderCacheInvalidation(
     vite: ViteDevServer,
     cache: SlowRenderCache,
+    slowlyPhase: DevSlowlyChangingPhase,
     pagesRootFolder: string,
 ): void {
     vite.watcher.on('change', (changedPath) => {
@@ -1365,6 +1085,7 @@ function setupSlowRenderCacheInvalidation(
         // Invalidate cache for jay-html file changes
         if (changedPath.endsWith('.jay-html')) {
             invalidateServerElementCache(changedPath);
+            slowlyPhase.invalidateLoadParamsCache(changedPath);
             cache.invalidate(changedPath).then(() => {
                 getLogger().info(`[SlowRender] Cache invalidated for ${changedPath}`);
             });
@@ -1376,6 +1097,7 @@ function setupSlowRenderCacheInvalidation(
             // The jay-html is in the same directory as page.ts
             const dir = path.dirname(changedPath);
             const jayHtmlPath = path.join(dir, 'page.jay-html');
+            slowlyPhase.invalidateLoadParamsCache(jayHtmlPath);
             cache.invalidate(jayHtmlPath).then(() => {
                 getLogger().info(
                     `[SlowRender] Cache invalidated for ${jayHtmlPath} (page.ts changed)`,
@@ -1388,6 +1110,7 @@ function setupSlowRenderCacheInvalidation(
         if (changedPath.endsWith('.jay-contract')) {
             // The jay-html has the same name as the contract
             const jayHtmlPath = changedPath.replace('.jay-contract', '.jay-html');
+            slowlyPhase.invalidateLoadParamsCache(jayHtmlPath);
             cache.invalidate(jayHtmlPath).then(() => {
                 getLogger().info(
                     `[SlowRender] Cache invalidated for ${jayHtmlPath} (contract changed)`,

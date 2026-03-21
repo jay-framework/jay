@@ -23,7 +23,7 @@ export interface ConditionsWithRepeatedRefElementRefs {
 }
 
 export type ConditionsWithRepeatedRefSlowViewState = {};
-export type ConditionsWithRepeatedRefFastViewState = {};
+export type ConditionsWithRepeatedRefFastViewState = ConditionsWithRepeatedRefViewState;
 export type ConditionsWithRepeatedRefInteractiveViewState = ConditionsWithRepeatedRefViewState;
 
 export type ConditionsWithRepeatedRefElement = JayElement<

@@ -32,7 +32,7 @@ export interface PageWithHeadlessInForeachViewState {
 export interface PageWithHeadlessInForeachElementRefs {}
 
 export type PageWithHeadlessInForeachSlowViewState = {};
-export type PageWithHeadlessInForeachFastViewState = {};
+export type PageWithHeadlessInForeachFastViewState = PageWithHeadlessInForeachViewState;
 export type PageWithHeadlessInForeachInteractiveViewState = PageWithHeadlessInForeachViewState;
 
 export type PageWithHeadlessInForeachElement = JayElement<
@@ -89,7 +89,7 @@ function _headlessProductCard0Render(
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0Render,
     productCard,
-    (dataIds) => [...dataIds, 'product-card:0'].toString(),
+    (dataIds) => [...dataIds, 'product-card:AR0'].toString(),
 );
 
 export function render(options?: RenderElementOptions): PageWithHeadlessInForeachElementPreRender {

@@ -62,7 +62,7 @@ export interface TodoElementRefs {
 }
 
 export type TodoSlowViewState = {};
-export type TodoFastViewState = {};
+export type TodoFastViewState = TodoViewState;
 export type TodoInteractiveViewState = TodoViewState;
 
 export type TodoElement = JayElement<TodoViewState, TodoElementRefs>;

@@ -34,7 +34,7 @@ export interface WithDataAtRootElementRefs {
 }
 
 export type WithDataAtRootSlowViewState = {};
-export type WithDataAtRootFastViewState = {};
+export type WithDataAtRootFastViewState = WithDataAtRootViewState;
 export type WithDataAtRootInteractiveViewState = WithDataAtRootViewState;
 
 export type WithDataAtRootElement = JayElement<WithDataAtRootViewState, WithDataAtRootElementRefs>;

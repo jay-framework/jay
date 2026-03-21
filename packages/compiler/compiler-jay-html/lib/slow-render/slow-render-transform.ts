@@ -169,15 +169,13 @@ function toCamelCase(str: string): string {
 /**
  * Check if a property path is in the slow phase
  *
- * IMPORTANT: Only return true if the property is EXPLICITLY marked as slow in the phase map.
- * If the property is not in the phase map (e.g., from a headless component), we don't know
- * its phase and should NOT evaluate it at slow-render time.
+ * Only return true if the property is EXPLICITLY marked as slow in the phase map.
+ * Without a contract, no bindings are slow — all data is fast+interactive (DL#108).
  */
 function isSlowPhase(path: string, phaseMap: Map<string, PhaseInfo>): boolean {
     const info = phaseMap.get(path);
-    // Only treat as slow if explicitly marked as slow in the phase map
-    // Unknown properties (not in map) should NOT be evaluated
-    return info !== undefined && info.phase === 'slow';
+    if (info !== undefined) return info.phase === 'slow';
+    return false;
 }
 
 /**
@@ -294,8 +292,9 @@ function transformElement(
         const fullPath = contextPath ? `${contextPath}.${forEachAttr}` : forEachAttr;
         const phaseInfo = phaseMap.get(fullPath);
 
-        // If the array is slow phase, unroll it
-        if (!phaseInfo || phaseInfo.phase === 'slow') {
+        // If the array is explicitly slow phase, unroll it.
+        // Without phase info (no contract), forEach is not slow — leave for SSR (DL#108).
+        if (phaseInfo?.phase === 'slow') {
             const arrayValue = getValueByPath(contextData, forEachAttr);
 
             if (Array.isArray(arrayValue)) {
@@ -529,6 +528,7 @@ export function slowRenderTransform(input: SlowRenderInput): WithValidations<Slo
 
         // Transform body children and generate output
         // Merge parsing validations with transform validations
+        // Without a contract, no bindings are slow — all data is fast+interactive (DL#108)
         return transformChildren(body, phaseMap, '', input.slowViewState)
             .withValidationsFrom(new WithValidations(null, validations))
             .map((children) => {
@@ -589,33 +589,18 @@ export interface HeadlessInstanceResolvedData {
  */
 /**
  * Build the coordinate prefix from ancestor slowForEach jayTrackBy values.
- * Walks up the DOM tree collecting trackBy IDs and child indices so the
- * coordinate matches assignCoordinates (used by server/hydrate compilers).
- *
- * assignCoordinates gives "1/0/product-widget:0" when jay:product-widget is
- * inside div.product-card (index 0) inside slowForEach div (jayTrackBy=1).
- * We must produce the same prefix ["1", "0"] for __headlessInstances lookup.
+ * Only collects jayTrackBy values — intermediate element indices are NOT included.
+ * This matches the element target's coordinatePrefix which only accumulates jayTrackBy.
  */
 export function buildCoordinatePrefix(element: HTMLElement): string[] {
     const parts: string[] = [];
-    let child: Node | null = element;
     let current = element.parentNode as HTMLElement | null;
 
     while (current) {
         const jayTrackBy = current.getAttribute?.('jayTrackBy');
         if (jayTrackBy != null) {
-            // slowForEach scope: add jayTrackBy, then child's position within
-            // the slowForEach div (matching assignCoordinates childCounter).
-            // If child is a jay:xxx element, it's a directive that doesn't
-            // participate in childCounter — skip the index.
-            const childTag = (child as HTMLElement)?.tagName?.toLowerCase?.();
-            if (!childTag?.startsWith('jay:')) {
-                const childIndex = getElementChildIndex(child, current);
-                parts.unshift(String(childIndex));
-            }
             parts.unshift(jayTrackBy);
         }
-        child = current;
         current = current.parentNode as HTMLElement | null;
     }
 
@@ -766,13 +751,13 @@ export function discoverHeadlessInstances(
                 if (!hasUnresolvedProps) {
                     const prefix = buildCoordinatePrefix(element);
 
-                    // Use explicit ref or auto-generate one
+                    // Use explicit ref or auto-generate one with AR prefix
                     let ref = element.getAttribute('ref');
                     if (!ref) {
                         const counterKey = [...prefix, contractName].join('/');
                         const localIndex = coordinateCounters.get(counterKey) ?? 0;
                         coordinateCounters.set(counterKey, localIndex + 1);
-                        ref = String(localIndex);
+                        ref = `AR${localIndex}`;
                         element.setAttribute('ref', ref);
                     }
 
@@ -795,7 +780,7 @@ export function discoverHeadlessInstances(
                         const counterKey = ['forEach', contractName].join('/');
                         const localIndex = coordinateCounters.get(counterKey) ?? 0;
                         coordinateCounters.set(counterKey, localIndex + 1);
-                        ref = String(localIndex);
+                        ref = `AR${localIndex}`;
                     }
 
                     forEachInstances.push({

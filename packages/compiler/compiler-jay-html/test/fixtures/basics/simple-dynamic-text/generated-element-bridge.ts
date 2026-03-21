@@ -8,7 +8,7 @@ export interface SimpleDynamicTextViewState {
 export interface SimpleDynamicTextElementRefs {}
 
 export type SimpleDynamicTextSlowViewState = {};
-export type SimpleDynamicTextFastViewState = {};
+export type SimpleDynamicTextFastViewState = SimpleDynamicTextViewState;
 export type SimpleDynamicTextInteractiveViewState = SimpleDynamicTextViewState;
 
 export type SimpleDynamicTextElement = JayElement<

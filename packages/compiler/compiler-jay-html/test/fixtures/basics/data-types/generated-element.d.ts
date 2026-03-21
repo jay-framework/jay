@@ -39,7 +39,7 @@ export interface DataTypesViewState {
 export interface DataTypesElementRefs {}
 
 export type DataTypesSlowViewState = {};
-export type DataTypesFastViewState = {};
+export type DataTypesFastViewState = DataTypesViewState;
 export type DataTypesInteractiveViewState = DataTypesViewState;
 
 export type DataTypesElement = JayElement<DataTypesViewState, DataTypesElementRefs>;

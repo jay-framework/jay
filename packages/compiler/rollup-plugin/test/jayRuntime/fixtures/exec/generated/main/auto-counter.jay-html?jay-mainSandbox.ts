@@ -20,7 +20,7 @@ export interface AutoCounterElementRefs {
 }
 
 export type AutoCounterSlowViewState = {};
-export type AutoCounterFastViewState = {};
+export type AutoCounterFastViewState = AutoCounterViewState;
 export type AutoCounterInteractiveViewState = AutoCounterViewState;
 
 export type AutoCounterElement = JayElement<AutoCounterViewState, AutoCounterElementRefs>;

@@ -22,7 +22,7 @@ export interface RecursiveComponents2ViewState {
 export interface RecursiveComponents2ElementRefs {}
 
 export type RecursiveComponents2SlowViewState = {};
-export type RecursiveComponents2FastViewState = {};
+export type RecursiveComponents2FastViewState = RecursiveComponents2ViewState;
 export type RecursiveComponents2InteractiveViewState = RecursiveComponents2ViewState;
 
 export type RecursiveComponents2Element = JayElement<

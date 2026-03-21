@@ -58,14 +58,15 @@ export function hydrateCompositeJayComponent<
     if (headlessInstanceCarryForwards) delete (fastCarryForward as any).__headlessInstances;
 
     const comp = (props: Props<any>, refs, ...contexts): CompCore => {
-        if (headlessInstanceViewStates || headlessInstanceCarryForwards) {
-            const componentContext = useContext(COMPONENT_CONTEXT);
-            const instancesData: HeadlessInstancesData = {
-                viewStates: headlessInstanceViewStates || {},
-                carryForwards: headlessInstanceCarryForwards || {},
-            };
-            componentContext.provideContexts.push([HEADLESS_INSTANCES, instancesData]);
-        }
+        // Always provide HEADLESS_INSTANCES context — even if empty.
+        // Headless instance constructors call useContext(HEADLESS_INSTANCES)
+        // and would throw if the context is missing.
+        const componentContext = useContext(COMPONENT_CONTEXT);
+        const instancesData: HeadlessInstancesData = {
+            viewStates: headlessInstanceViewStates || {},
+            carryForwards: headlessInstanceCarryForwards || {},
+        };
+        componentContext.provideContexts.push([HEADLESS_INSTANCES, instancesData]);
 
         const instances: Array<[string, JayComponentCore<any, any>]> = interactiveParts.map(
             (part) => {

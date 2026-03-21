@@ -12,7 +12,7 @@ export interface RefsElementRefs {
 }
 
 export type RefsSlowViewState = {};
-export type RefsFastViewState = {};
+export type RefsFastViewState = RefsViewState;
 export type RefsInteractiveViewState = RefsViewState;
 
 export type RefsElement = JayElement<RefsViewState, RefsElementRefs>;

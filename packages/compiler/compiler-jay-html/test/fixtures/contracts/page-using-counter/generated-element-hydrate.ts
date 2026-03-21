@@ -22,7 +22,7 @@ export interface PageUsingCounterElementRefs {
 }
 
 export type PageUsingCounterSlowViewState = {};
-export type PageUsingCounterFastViewState = {};
+export type PageUsingCounterFastViewState = PageUsingCounterViewState;
 export type PageUsingCounterInteractiveViewState = PageUsingCounterViewState;
 
 export type PageUsingCounterElement = JayElement<

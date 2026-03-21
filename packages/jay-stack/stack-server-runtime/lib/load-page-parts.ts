@@ -8,6 +8,9 @@ import {
     JAY_IMPORT_RESOLVER,
     HeadlessContractInfo,
     Contract,
+    discoverHeadlessInstances,
+    type DiscoveredHeadlessInstance,
+    type ForEachHeadlessInstance,
 } from '@jay-framework/compiler-jay-html';
 import { AnyJayStackComponentDefinition } from '@jay-framework/fullstack-component';
 import { JayRollupConfig } from '@jay-framework/rollup-plugin';
@@ -52,6 +55,10 @@ export interface LoadedPageParts {
     headlessContracts: HeadlessContractInfo[];
     /** Instance-only headless components (no key) for server-side phase orchestration */
     headlessInstanceComponents: HeadlessInstanceComponent[];
+    /** Discovered <jay:xxx> instances from the jay-html (DL#109) */
+    discoveredInstances: DiscoveredHeadlessInstance[];
+    /** Discovered forEach <jay:xxx> instances from the jay-html (DL#109) */
+    forEachInstances: ForEachHeadlessInstance[];
 }
 
 export interface LoadPagePartsOptions {
@@ -61,6 +68,12 @@ export interface LoadPagePartsOptions {
      * Import resolution still uses the original jay-html's directory.
      */
     preRenderedPath?: string;
+    /**
+     * Pre-loaded jay-html content to use instead of reading from disk.
+     * When provided (e.g., from SlowRenderCache with cache tag already stripped),
+     * this content is used directly, avoiding an extra file read.
+     */
+    preRenderedContent?: string;
 }
 
 export async function loadPageParts(
@@ -88,9 +101,10 @@ export async function loadPageParts(
         });
     }
 
-    // Use pre-rendered jay-html file if provided, otherwise read from original
+    // Use pre-loaded content if provided, otherwise read from file
     const jayHtmlFilePath = options?.preRenderedPath ?? route.jayHtmlPath;
-    const jayHtmlSource = (await fs.readFile(jayHtmlFilePath)).toString();
+    const jayHtmlSource =
+        options?.preRenderedContent ?? (await fs.readFile(jayHtmlFilePath)).toString();
     // Import resolution uses the original jay-html's directory (not the cache dir)
     const fileName = path.basename(route.jayHtmlPath);
     const dirName = path.dirname(route.jayHtmlPath);
@@ -175,6 +189,14 @@ export async function loadPageParts(
                 contractPath: hi.contractPath,
             }));
 
+        // Discover headless instances in the jay-html (DL#109).
+        // For pre-rendered HTML, this finds instances after slow bindings are resolved.
+        // For original jay-html, this finds instances before any rendering.
+        const discoveryResult =
+            headlessInstanceComponents.length > 0
+                ? discoverHeadlessInstances(jayHtmlSource)
+                : { instances: [], forEachInstances: [], preRenderedJayHtml: jayHtmlSource };
+
         return {
             parts,
             serverTrackByMap: jayHtml.serverTrackByMap,
@@ -182,6 +204,8 @@ export async function loadPageParts(
             usedPackages,
             headlessContracts,
             headlessInstanceComponents,
+            discoveredInstances: discoveryResult.instances,
+            forEachInstances: discoveryResult.forEachInstances,
         };
     });
 }

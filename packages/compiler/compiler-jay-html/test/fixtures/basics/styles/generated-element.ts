@@ -17,7 +17,7 @@ export interface StylesViewState {
 export interface StylesElementRefs {}
 
 export type StylesSlowViewState = {};
-export type StylesFastViewState = {};
+export type StylesFastViewState = StylesViewState;
 export type StylesInteractiveViewState = StylesViewState;
 
 export type StylesElement = JayElement<StylesViewState, StylesElementRefs>;

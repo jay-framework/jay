@@ -17,7 +17,7 @@ export interface SimpleViewState {
 export interface SimpleElementRefs {}
 
 export type SimpleSlowViewState = {};
-export type SimpleFastViewState = {};
+export type SimpleFastViewState = SimpleViewState;
 export type SimpleInteractiveViewState = SimpleViewState;
 
 export type SimpleElement = JayElement<SimpleViewState, SimpleElementRefs>;

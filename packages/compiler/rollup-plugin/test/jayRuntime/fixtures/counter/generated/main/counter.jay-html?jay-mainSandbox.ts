@@ -22,7 +22,7 @@ export interface CounterElementRefs {
 }
 
 export type CounterSlowViewState = {};
-export type CounterFastViewState = {};
+export type CounterFastViewState = CounterViewState;
 export type CounterInteractiveViewState = CounterViewState;
 
 export type CounterElement = JayElement<CounterViewState, CounterElementRefs>;

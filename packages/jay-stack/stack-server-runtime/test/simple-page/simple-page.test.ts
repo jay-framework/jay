@@ -4,7 +4,7 @@ import { render as renderSlowly } from './compiled-slowly/page.slowly-rendered.j
 import { prettify } from '@jay-framework/compiler-shared';
 import { PageProps, partialRender } from '@jay-framework/fullstack-component';
 import { makeCompositeJayComponent } from '@jay-framework/stack-client-runtime';
-import { DevServerPagePart } from '../../lib/load-page-parts';
+import { DevServerPagePart } from '../../lib';
 import { toCompositePart } from '../utils/to-composite.part';
 
 const PAGE_PROPS: PageProps = {
@@ -22,7 +22,7 @@ const PAGE_PARTS: DevServerPagePart[] = [
 
 describe('rendering a simple page', () => {
     it('should run the slowly changing phase', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase(false);
+        const slowlyPhase = new DevSlowlyChangingPhase();
 
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
@@ -43,7 +43,7 @@ describe('rendering a simple page', () => {
     });
 
     it('should run the fast changing phase, getting the carry forward from the slowly phase', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase(false);
+        const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
             PAGE_PROPS,
@@ -74,7 +74,7 @@ describe('rendering a simple page', () => {
     });
 
     it('should run the interactive phase, getting the carry forward from the fast phase', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase(false);
+        const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
             PAGE_PROPS,
@@ -112,7 +112,7 @@ describe('rendering a simple page', () => {
     });
 
     it('interactive phase should function and react to events', async () => {
-        const slowlyPhase = new DevSlowlyChangingPhase(false);
+        const slowlyPhase = new DevSlowlyChangingPhase();
         const slowlyRenderResult = await slowlyPhase.runSlowlyForPage(
             PAGE_PARAMS,
             PAGE_PROPS,

@@ -23,7 +23,7 @@ export interface AttributesViewState {
 export interface AttributesElementRefs {}
 
 export type AttributesSlowViewState = {};
-export type AttributesFastViewState = {};
+export type AttributesFastViewState = AttributesViewState;
 export type AttributesInteractiveViewState = AttributesViewState;
 
 export type AttributesElement = JayElement<AttributesViewState, AttributesElementRefs>;

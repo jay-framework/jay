@@ -28,7 +28,7 @@ export interface CollectionsViewState {
 export interface CollectionsElementRefs {}
 
 export type CollectionsSlowViewState = {};
-export type CollectionsFastViewState = {};
+export type CollectionsFastViewState = CollectionsViewState;
 export type CollectionsInteractiveViewState = CollectionsViewState;
 
 export type CollectionsElement = JayElement<CollectionsViewState, CollectionsElementRefs>;

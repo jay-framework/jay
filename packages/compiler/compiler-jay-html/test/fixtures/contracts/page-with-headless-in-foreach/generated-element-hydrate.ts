@@ -35,7 +35,7 @@ export interface PageWithHeadlessInForeachViewState {
 export interface PageWithHeadlessInForeachElementRefs {}
 
 export type PageWithHeadlessInForeachSlowViewState = {};
-export type PageWithHeadlessInForeachFastViewState = {};
+export type PageWithHeadlessInForeachFastViewState = PageWithHeadlessInForeachViewState;
 export type PageWithHeadlessInForeachInteractiveViewState = PageWithHeadlessInForeachViewState;
 
 export type PageWithHeadlessInForeachElement = JayElement<
@@ -81,7 +81,6 @@ function _headlessProductCard0HydrateRender(
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
             adoptElement('0', {}, [
-                adoptText('0/0', (vs) => vs.name),
                 adoptText('0/1', (vs) => vs.price),
                 adoptElement('0/2', {}, [], refAddToCart()),
             ]),
@@ -91,7 +90,7 @@ function _headlessProductCard0HydrateRender(
 const _HeadlessProductCard0Adopt = makeHeadlessInstanceComponent(
     _headlessProductCard0HydrateRender,
     productCard,
-    (dataIds) => [...dataIds, 'product-card:0'].toString(),
+    (dataIds) => [...dataIds, 'product-card:AR0'].toString(),
 );
 
 // Inline template for headless component: product-card #1
@@ -127,14 +126,14 @@ function _headlessProductCard1Render(
 const _HeadlessProductCard1 = makeHeadlessInstanceComponent(
     _headlessProductCard1Render,
     productCard,
-    (dataIds) => [...dataIds, 'product-card:0'].toString(),
+    (dataIds) => [...dataIds, 'product-card:AR0'].toString(),
 );
 
 export function hydrate(
     rootElement: Element,
     options?: RenderElementOptions,
 ): PageWithHeadlessInForeachElementPreRender {
-    const [productsRefManager, [refAR1]] = ReferencesManager.for(options, [], [], [], ['aR1']);
+    const [productsRefManager, [refAr0]] = ReferencesManager.for(options, [], [], [], ['ar0']);
     const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
         products: productsRefManager,
     });
@@ -151,8 +150,8 @@ export function hydrate(
                             (vs1: ProductOfPageWithHeadlessInForeachViewState) => ({
                                 productId: vs1._id,
                             }),
-                            'product-card:0',
-                            refAR1(),
+                            'product-card:AR0',
+                            refAr0(),
                         ),
                     ],
                     (vs1: ProductOfPageWithHeadlessInForeachViewState) => {
@@ -162,7 +161,7 @@ export function hydrate(
                                 (vs1: ProductOfPageWithHeadlessInForeachViewState) => ({
                                     productId: vs1._id,
                                 }),
-                                refAR1(),
+                                refAr0(),
                             ),
                         ]);
                     },
