@@ -259,6 +259,7 @@ Verified this is hydration-only — the element target's `conditional()` uses in
 ### Fix 2
 
 Two changes:
+
 1. **`adoptDynamicElement`**: after setup, deduplicate — remove nodes from STATIC groups that are also claimed by dynamic groups (the dynamic group is the rightful owner)
 2. **`Kindergarten.getOffsetFor`**: only count children actually present in the parent DOM, so stale references from phantom STATICs don't inflate offsets
 
