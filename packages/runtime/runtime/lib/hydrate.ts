@@ -248,6 +248,8 @@ export function adoptDynamicElement<ViewState>(
     const significantChildren = getSignificantChildren(element);
     let significantIndex = 0;
 
+    const staticGroups: KindergartenGroup[] = [];
+
     for (const child of children) {
         const group = kindergarten.newGroup();
 
@@ -255,6 +257,7 @@ export function adoptDynamicElement<ViewState>(
             const domNode = significantChildren[significantIndex];
             if (domNode) group.children.add(domNode);
             significantIndex++;
+            staticGroups.push(group);
         } else if ('_setGroup' in child) {
             (child as DynamicChild<ViewState>)._setGroup(group);
             collectChild(child, updates, mounts, unmounts);
@@ -262,6 +265,25 @@ export function adoptDynamicElement<ViewState>(
             if (child.dom) group.children.add(child.dom);
             collectChild(child, updates, mounts, unmounts);
             significantIndex++;
+        }
+    }
+
+    // Clean up phantom STATICs: a STATIC for an absent fast-phase conditional
+    // may have claimed a DOM node that also belongs to a subsequent dynamic group.
+    // Remove duplicates — the dynamic group is the rightful owner.
+    const dynamicNodes = new Set<Node>();
+    for (const group of kindergarten.getGroups()) {
+        if (!staticGroups.includes(group)) {
+            for (const child of group.children) {
+                dynamicNodes.add(child);
+            }
+        }
+    }
+    for (const group of staticGroups) {
+        for (const child of group.children) {
+            if (dynamicNodes.has(child)) {
+                group.children.delete(child);
+            }
         }
     }
 

@@ -442,6 +442,23 @@ describe('hydration', () => {
                 expect(await page.$('#target .slow-false')).toBeNull();
                 expect(await page.$('#target .fast-true')).toBeTruthy();
                 expect(await page.$('#target .fast-false')).toBeNull();
+
+                // Toggle back: interactiveVisible→true, interactiveHidden→false
+                await page.click('#target button');
+                await page.waitForFunction(
+                    () => document.querySelector('#target .interactive-true') !== null,
+                    { timeout: 2000 },
+                );
+
+                // Verify ordering: button must remain AFTER all conditionals
+                const order = await page.evaluate(() => {
+                    const children = document.querySelector('#target > div')!.children;
+                    return Array.from(children).map(
+                        (el) => el.className || el.tagName.toLowerCase(),
+                    );
+                });
+                // Button should be last element
+                expect(order[order.length - 1]).toBe('button');
             },
         });
     });

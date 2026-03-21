@@ -239,6 +239,65 @@ describe('conditional-element', () => {
         });
     });
 
+    describe('ordering — multiple conditionals with static sibling at end', () => {
+        // Reproduces the 3a hydration bug: 3 conditionals (A, B, C) where A and C
+        // share a condition, followed by a static button. Toggle swaps A+C and B.
+        interface VS {
+            showAC: boolean;
+        }
+
+        function makeElement(data: VS) {
+            let [refManager, []] = ReferencesManager.for({}, [], [], [], []);
+            return ConstructContext.withRootContext(data, refManager, () =>
+                de('div', {}, [
+                    conditional(
+                        (vs) => vs.showAC,
+                        () => e('span', { id: 'a' }, ['A']),
+                    ),
+                    conditional(
+                        (vs) => !vs.showAC,
+                        () => e('span', { id: 'b' }, ['B']),
+                    ),
+                    conditional(
+                        (vs) => vs.showAC,
+                        () => e('span', { id: 'c' }, ['C']),
+                    ),
+                    e('button', { id: 'btn' }, ['Toggle']),
+                ]),
+            );
+        }
+
+        function getOrder(jayElement: JayElement<VS, any>): string[] {
+            return Array.from(jayElement.dom.childNodes)
+                .filter((n) => n.nodeType === 1)
+                .map((n) => (n as Element).textContent!);
+        }
+
+        it('initial order with showAC=true', () => {
+            const el = makeElement({ showAC: true });
+            expect(getOrder(el)).toEqual(['A', 'C', 'Toggle']);
+        });
+
+        it('toggle off then on — button stays at end', () => {
+            const el = makeElement({ showAC: true });
+            el.update({ showAC: false });
+            expect(getOrder(el)).toEqual(['B', 'Toggle']);
+
+            el.update({ showAC: true });
+            expect(getOrder(el)).toEqual(['A', 'C', 'Toggle']);
+        });
+
+        it('multiple toggles — order always preserved', () => {
+            const el = makeElement({ showAC: true });
+            for (let i = 0; i < 3; i++) {
+                el.update({ showAC: false });
+                expect(getOrder(el)).toEqual(['B', 'Toggle']);
+                el.update({ showAC: true });
+                expect(getOrder(el)).toEqual(['A', 'C', 'Toggle']);
+            }
+        });
+    });
+
     // those tests do not work, yet they should check that a conditional does not update the dom when not needed
     // when updating the dom, using the call to ensureNode, we loss focus on the input. this test is intended to validate
     // we preserve the focus on the input

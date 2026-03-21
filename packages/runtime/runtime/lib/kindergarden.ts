@@ -75,11 +75,22 @@ export class Kindergarten {
         return kindergartenGroup;
     }
 
+    getGroups(): ReadonlyArray<KindergartenGroup> {
+        return this.groups;
+    }
+
     getOffsetFor(group: KindergartenGroup): number {
         let index = 0;
         let offset = 0;
         while (index < this.groups.length && this.groups[index] !== group) {
-            offset += this.groups[index].children.size;
+            // Count only children that are actually present in the DOM.
+            // A phantom STATIC may hold a reference to a node that was
+            // removed by another group (e.g., a conditional that owns the same node).
+            for (const child of this.groups[index].children) {
+                if (child.parentNode === this.parentNode) {
+                    offset++;
+                }
+            }
             index = index + 1;
         }
         return offset;

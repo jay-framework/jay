@@ -234,5 +234,43 @@ Added test `5d2-page-headless-slow-foreach-wrapped` — same as 5d but with a `<
 
 - `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts` — fix prefix computation (2 locations: server + hydrate targets)
 - `packages/compiler/rollup-plugin/lib/runtime/load.ts` — strip cache tag in Vite load hook
+- `packages/compiler/rollup-plugin/lib/runtime/load.ts` — no longer needed (cache tag moved to `<head>` in DL#110)
 - `packages/jay-stack/dev-server/test/5d2-page-headless-slow-foreach-wrapped/` — new test fixture
 - `packages/jay-stack/dev-server/test/hydration.test.ts` — test 5d2
+
+## Bug Fix: hydrateConditional — spurious warnings and element ordering
+
+**Discovered during DL#110 implementation.**
+
+### Problem 1: spurious "coordinate not found" warnings
+
+`hydrateConditional` always called `adoptExisting()` eagerly, even when the condition was false. For false-at-SSR conditionals, the element doesn't exist in the DOM, so `adoptBase` emitted a warning. The warning was a false positive — the fallback `createFallback` path handled it correctly.
+
+### Fix 1
+
+Check the condition BEFORE calling `adoptExisting()`. The hydration ViewState always matches what SSR used, so the condition value tells us whether the element exists in the DOM. If false → skip adoption entirely, use the create path when the condition later becomes true.
+
+### Problem 2: element ordering breaks after conditional toggle
+
+When multiple conditionals are toggled off then back on, re-inserted elements appear after subsequent static siblings (e.g., a button). Root cause: a phantom STATIC (for an absent fast-phase conditional like `fastHidden=false`) claims the next DOM node via `significantIndex`, but that node also belongs to a subsequent `hydrateConditional` group. Two groups owning the same node inflates `getOffsetFor` offsets.
+
+Verified this is hydration-only — the element target's `conditional()` uses individual Kindergarten groups correctly. Added test in `conditional-elements.test.ts` confirming element target ordering works.
+
+### Fix 2
+
+Two changes:
+1. **`adoptDynamicElement`**: after setup, deduplicate — remove nodes from STATIC groups that are also claimed by dynamic groups (the dynamic group is the rightful owner)
+2. **`Kindergarten.getOffsetFor`**: only count children actually present in the parent DOM, so stale references from phantom STATICs don't inflate offsets
+
+### Tests
+
+- `hydrate-conditional.test.ts`: "no adopt warnings" test, "exact 3a" ordering reproduction (3 conditionals, shared condition, phantom STATIC)
+- `conditional-elements.test.ts`: "ordering — multiple conditionals with static sibling at end" (confirms element target is unaffected)
+- `hydration.test.ts`: 3a interactivity check now verifies button stays at end after toggle
+
+### Files changed
+
+- `packages/runtime/runtime/lib/hydrate.ts` — condition-first in `hydrateConditional`, phantom STATIC dedup in `adoptDynamicElement`
+- `packages/runtime/runtime/lib/kindergarden.ts` — `getOffsetFor` counts only DOM-present children, added `getGroups()`
+- `packages/runtime/runtime/test/lib/hydration/hydrate-conditional.test.ts` — warning test, ordering tests
+- `packages/runtime/runtime/test/lib/conditional-elements.test.ts` — element target ordering test
