@@ -66,6 +66,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 84  | headless component props and repeater support         | Props, multiple instances, forEach, jay: prefix                                   |
 | 85  | rendering phases and agent kit for agentic generation | Phases + contract/action discovery; agent-kit folder, markdown content → jay-html |
 | 90  | headless instances in interactive forEach             | Allow fast/interactive-only headless components inside forEach (no slow phase)    |
+| 111 | nested headfull full-stack components                 | Headfull components with own jay-html + SSR via headless pipeline template injection |
 
 ---
 
