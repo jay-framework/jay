@@ -6,15 +6,20 @@ Jay-stack supports three-phase rendering: **slow** (build/SSG), **fast** (SSR pe
 
 **Current component landscape:**
 
-| Layer  | Type     | Builder               | Slow/Fast | Interactive | Import type          |
-| ------ | -------- | --------------------- | --------- | ----------- | -------------------- |
-| Page   | Headfull | makeJayStackComponent | ✓         | ✓           | route (page.ts)      |
-| Nested | Headless | makeJayStackComponent | ✓         | ✓           | `jay-headless`       |
-| Nested | Headfull | makeJayComponent      | —         | ✓           | `jay-headfull`       |
+| Layer  | Type     | Builder               | Slow/Fast | Interactive | Import type              |
+| ------ | -------- | --------------------- | --------- | ----------- | ------------------------ |
+| Page   | Headfull | makeJayStackComponent | ✓         | ✓           | route (page.ts)          |
+| Page   | Headless | makeJayStackComponent | ✓         | ✓           | `jay-headless` with key  |
+| Nested | Headless | makeJayStackComponent | ✓         | ✓           | `jay-headless`           |
+| Nested | Headfull | makeJayComponent      | —         | ✓           | `jay-headfull`           |
+
+Without a contract, headfull, headless, and page components default to interactive-only.
 
 Headless nested components have complete full-stack support — including instance-based rendering (`<jay:contract-name>`), slow/fast phase execution, SSR server-element compilation, hydration, and interactive client composition. This was built through DL#84, DL#102, DL#107, DL#109.
 
-**Headfull nested** (imported via `<script type="application/jay-headfull">`) use `makeJayComponent` — they are client-only. They have no slow/fast phases and no SSR.
+**Headfull nested** (imported via `<script type="application/jay-headfull">`) use `makeJayComponent` — they are client-only. They have no slow/fast phases and no SSR. They can also import CSS files which need to be included in the page.
+
+On the client, headless and page-level full-stack components are all compiled to headfull components — headfull nested components are the client-side implementation target for all component types.
 
 ### Prior Attempt (Failed Branch)
 
