@@ -91,6 +91,11 @@ function stripTsDirectives(code: string): string {
     return code.replace(/\/\/ @ts-ignore\n/g, '');
 }
 
+/** Strip .ts extensions from import paths (Vite resolves to .ts in dev mode) */
+function stripTsExtensionsFromImports(code: string): string {
+    return code.replace(/(from\s+['"])(.+?)\.ts(['"])/g, '$1$2$3');
+}
+
 /** Monorepo root — used to canonicalize absolute paths in generated code */
 const MONOREPO_ROOT = path.resolve(__dirname, '../../../..');
 const MONOREPO_ROOT_REGEX = new RegExp(MONOREPO_ROOT.replace(/[/\\]/g, '[/\\\\]'), 'g');
@@ -261,6 +266,7 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
                     .replace(/\/\/# sourceMappingURL=.*/, ''),
             );
             actual = await prettify(actual);
+            actual = stripTsExtensionsFromImports(actual);
 
             if (process.env.UPDATE_FIXTURES === '1') {
                 const lines = actual.split('\n');

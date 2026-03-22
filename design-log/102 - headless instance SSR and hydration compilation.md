@@ -975,3 +975,24 @@ No deviations.
 ### Phase 5: Fake-Shop Integration
 
 6. **No dedicated pages per scenario** — Design specified creating separate pages for single instance, conditional, forEach, slowForEach. **Deviation:** Did not create them; the existing homepage already covers the main scenarios. Creating redundant pages adds maintenance burden. Conditional instance is covered by compiler fixture tests but not by an integration test page.
+
+### Post-Implementation Bug Fix: slowForEach item variable undefined in server-element
+
+**Bug:** The server-element compiler's `slowForEach` handler (in `renderServerElement()`) set the variable context to the item type (producing `vs1` references in bindings like `vs1.isSelected`) but never generated code to define `vs1`. Regular `forEach` wraps content in `for (const vs1 of array) { ... }`, but `slowForEach` items are pre-rendered individually — there was no loop. Any `fast+interactive` binding on a slowForEach element (e.g., `class="{isSelected ? selected}"`) referenced an undefined variable.
+
+**Fix:** Generate a block-scoped item lookup `{ const vs1 = array?.[index]; if (vs1) { ... } }` only when the rendered content actually references the item variable (`vs1.`). For slow-only arrays where bindings have already been resolved during slow render, no wrapper is needed — and must not be added, since the array data may not be in the SSR ViewState at fast/SSR time.
+
+**Detection:** `childContent.rendered.includes(itemVar + '.')` — if the rendered server-element code contains `vs1.`, the item variable is needed.
+
+**Test:** New fixture `collections/slow-for-each-dynamic-bindings` with `class="{isSelected ? selected}"` on slowForEach elements. Existing fixtures (`page-with-headless-in-slow-foreach`, `page-with-headless-mixed`) confirm no wrapper is generated when not needed.
+
+### Post-Implementation Bug Fix: slowForEach hydrate coordinate doubling
+
+**Bug:** When hydrating a slowForEach element with dynamic bindings (e.g., `class="{isSelected ? selected}"`), the coordinate was doubled. `slowForEachItem` calls `forItem(item, trackByValue)` which pushes `jayTrackBy` (e.g., `"bc0990ba-..."`) onto `coordinateBase`. But the hydrate compiler passed the full `jay-coordinate-base` (also `"bc0990ba-..."`) to `adoptElement`. So `resolveCoordinate("bc0990ba-...")` produced `"bc0990ba-.../bc0990ba-..."` — doubling the prefix. This caused the element to not be found in the coordinate map, triggering a client-side warning.
+
+**Root cause:** The forEach hydrate code strips `$trackBy` prefixes from coordinates (line 3027-3030 in jay-html-compiler.ts) because `forItem` already pushes the trackBy onto `coordinateBase`. But slowForEach had no equivalent stripping — the coordinates were used as-is.
+
+**Fix (two parts):**
+
+1. **Hydrate compiler** — Added `slowForEachJayTrackBy` to `HydrateContext`. In `renderHydrateElementContent`, when inside a slowForEach, strip the jayTrackBy prefix from coordinates. Root element (coordinate === jayTrackBy) becomes `''`; children (e.g., `jayTrackBy/0`) become `0`.
+2. **Runtime** — Updated `resolveCoordinate` and `peekCoordinate` in `ConstructContext` to handle empty key: `resolveCoordinate('')` with `coordinateBase = ["jayTrackBy"]` now correctly resolves to `"jayTrackBy"` instead of `"jayTrackBy/"` (trailing slash).

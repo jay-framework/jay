@@ -2179,6 +2179,8 @@ interface HydrateContext {
     insideFastForEach: boolean;
     /** Whether we're inside a slowForEach (affects instance key computation) */
     insideSlowForEach: boolean;
+    /** The jayTrackBy value of the current slowForEach (for stripping coordinate prefixes) */
+    slowForEachJayTrackBy?: string;
     /** Variable mappings for compiling $placeholder coordinates inside forEach */
     varMappings: Record<string, string>;
     /**
@@ -2496,6 +2498,7 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             indent: indent.child().child(),
             dynamicRef: true,
             insideSlowForEach: true,
+            slowForEachJayTrackBy: jayTrackBy,
         };
         const renderContext2 = buildRenderContext(itemContext);
         const childContent = renderHydrateElementContent(
@@ -3028,6 +3031,17 @@ function renderHydrateElementContent(
         const slashIndex = coordinate.indexOf('/');
         coordinate = slashIndex >= 0 ? coordinate.slice(slashIndex + 1) : '0';
     }
+    // When inside slowForEach, strip the jayTrackBy prefix from coordinates.
+    // slowForEachItem's forItem already pushes jayTrackBy onto coordinateBase,
+    // so coordinates must be relative. Root element (coordinate === jayTrackBy)
+    // becomes '' which resolveCoordinate handles as the coordinateBase itself.
+    if (context.slowForEachJayTrackBy && coordTemplate) {
+        if (coordinate === context.slowForEachJayTrackBy) {
+            coordinate = '';
+        } else if (coordinate.startsWith(context.slowForEachJayTrackBy + '/')) {
+            coordinate = coordinate.slice(context.slowForEachJayTrackBy.length + 1);
+        }
+    }
 
     // Build the ref argument if present
     const renderedRef = renderElementRef(element, renderContext);
@@ -3544,10 +3558,11 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
     if (isSlowForEach(element)) {
         const slowForEachInfo = getSlowForEachInfo(element);
         if (slowForEachInfo) {
-            const { jayTrackBy } = slowForEachInfo;
-            const slowForEachVariables = variables.childVariableFor(
-                parseAccessor(slowForEachInfo.arrayName, variables),
-            );
+            const { arrayName, jayIndex, jayTrackBy } = slowForEachInfo;
+            const arrayAccessor = parseAccessor(arrayName, variables);
+            const slowForEachVariables = variables.childVariableFor(arrayAccessor);
+            const arrayExpr = arrayAccessor.render().rendered;
+            const itemVar = slowForEachVariables.currentVar;
             // Children inside slowForEach read their coordinates from jay-coordinate-base
             // (pre-assigned by assignCoordinates with jayTrackBy prefix, e.g. "p1/0")
             const itemContext: ServerContext = {
@@ -3556,7 +3571,28 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
                 indent,
                 insideSlowForEach: true,
             };
-            return renderServerElementContent(element, itemContext);
+            const childContent = renderServerElementContent(element, itemContext);
+            // Only wrap with item variable lookup when the content actually references
+            // the item variable (e.g., vs1). For slow-only arrays, the data may not be
+            // in the SSR ViewState (it was consumed during slow render), so guarding
+            // with `if (vs1)` would hide the pre-rendered content.
+            const needsItemVar = childContent.rendered.includes(itemVar + '.');
+            if (needsItemVar) {
+                const itemIndent = new Indent(indent.curr + '    ');
+                const indentedContext: ServerContext = {
+                    ...context,
+                    variables: slowForEachVariables,
+                    indent: itemIndent,
+                    insideSlowForEach: true,
+                };
+                const indentedContent = renderServerElementContent(element, indentedContext);
+                return new RenderFragment(
+                    `${indent.firstLine}{ const ${itemVar} = ${arrayExpr}?.[${jayIndex}]; if (${itemVar}) {\n${indentedContent.rendered}\n${indent.firstLine}}}`,
+                    indentedContent.imports,
+                    [...arrayAccessor.validations, ...indentedContent.validations],
+                );
+            }
+            return childContent;
         }
     }
 
