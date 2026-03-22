@@ -262,7 +262,12 @@ export function adoptDynamicElement<ViewState>(
             (child as DynamicChild<ViewState>)._setGroup(group);
             collectChild(child, updates, mounts, unmounts);
         } else {
-            if (child.dom) group.children.add(child.dom);
+            // Claim the actual direct child DOM node from significantChildren,
+            // not child.dom which may be a deeply nested descendant.
+            // This ensures getOffsetFor correctly counts this position when
+            // calculating insertion offsets for conditionals/forEach.
+            const domNode = significantChildren[significantIndex];
+            if (domNode) group.children.add(domNode);
             collectChild(child, updates, mounts, unmounts);
             significantIndex++;
         }

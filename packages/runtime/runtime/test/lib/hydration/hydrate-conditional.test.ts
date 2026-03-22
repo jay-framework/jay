@@ -502,3 +502,95 @@ describe('hydrateConditional ordering — multiple conditionals with static sibl
         expect(getOrder(container)).toEqual(['Header', 'A', 'B', 'Toggle']);
     });
 });
+
+describe('hydrateConditional ordering — static wrapper with nested dynamic content', () => {
+    // Reproduces store-light products page bug: a parent has static wrapper
+    // elements (header, section) containing deeply nested dynamic content
+    // (adoptElement for refs, dynamic attrs). These wrappers are NOT STATIC
+    // entries — they're adopted elements whose .dom is a nested descendant.
+    // The Kindergarten must still count them as occupying direct child slots
+    // so conditional insertion offsets are correct.
+    interface ViewState {
+        show: boolean;
+        count: number;
+    }
+
+    // SSR: header (with nested dynamic span), section (static), conditional div
+    const html =
+        '<div jay-coordinate="container">' +
+        '<header>' +
+        '<span jay-coordinate="container/0/0">42</span>' +
+        '</header>' +
+        '<section>Static Content</section>' +
+        '<div jay-coordinate="container/2">Conditional</div>' +
+        '</div>';
+
+    function setup(show: boolean) {
+        return hydrate<ViewState>(html, { show, count: 42 }, () =>
+            adoptDynamicElement<ViewState>('container', {}, [
+                // Header is a static wrapper, but contains a dynamic descendant (count text)
+                adoptText<ViewState>('container/0/0', (vs) => String(vs.count)),
+                STATIC, // section
+                hydrateConditional(
+                    (vs) => vs.show,
+                    () => adoptElement<ViewState>('container/2', {}),
+                    () => e('div', {}, ['Conditional']),
+                ),
+            ]),
+        );
+    }
+
+    function getOrder(container: Element): string[] {
+        return Array.from(container.childNodes)
+            .filter((n) => n.nodeType === Node.ELEMENT_NODE)
+            .map((n) => n.nodeName.toLowerCase());
+    }
+
+    it('initial order is correct with condition true', () => {
+        const { root } = setup(true);
+        const container = root.querySelector('[jay-coordinate="container"]')!;
+        expect(getOrder(container)).toEqual(['header', 'section', 'div']);
+    });
+
+    it('toggle off then on — conditional reappears after section, not at beginning', () => {
+        const { jayElement, root } = setup(true);
+        const container = root.querySelector('[jay-coordinate="container"]')!;
+
+        jayElement.update({ show: false, count: 42 });
+        expect(getOrder(container)).toEqual(['header', 'section']);
+
+        jayElement.update({ show: true, count: 42 });
+        expect(getOrder(container)).toEqual(['header', 'section', 'div']);
+    });
+
+    it('condition false at SSR then toggled true — inserted at correct position', () => {
+        const htmlNoConditional =
+            '<div jay-coordinate="container">' +
+            '<header>' +
+            '<span jay-coordinate="container/0/0">42</span>' +
+            '</header>' +
+            '<section>Static Content</section>' +
+            '</div>';
+
+        const { jayElement, root } = hydrate<ViewState>(
+            htmlNoConditional,
+            { show: false, count: 42 },
+            () =>
+                adoptDynamicElement<ViewState>('container', {}, [
+                    adoptText<ViewState>('container/0/0', (vs) => String(vs.count)),
+                    STATIC,
+                    hydrateConditional(
+                        (vs) => vs.show,
+                        () => adoptElement<ViewState>('container/2', {}),
+                        () => e('div', {}, ['Conditional']),
+                    ),
+                ]),
+        );
+
+        const container = root.querySelector('[jay-coordinate="container"]')!;
+        expect(getOrder(container)).toEqual(['header', 'section']);
+
+        jayElement.update({ show: true, count: 42 });
+        expect(getOrder(container)).toEqual(['header', 'section', 'div']);
+    });
+});
