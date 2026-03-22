@@ -313,8 +313,16 @@ export function analyzeBindings(
             analysis.type = 'dual';
             analysis.dualPath = binding.fullPath;
         } else if (isInteractiveTag(binding.contractTag!)) {
-            analysis.type = 'interactive';
-            analysis.refPath = binding.fullPath;
+            // `<a href="{...}" ref="...">` yields two bindings on the same node: an attribute
+            // binding and a non-attribute interactive binding. Keep type `attribute` so
+            // validateBindings allows the combination; convertRegularNode already emits
+            // `ref` from `refPath` alongside bound attributes.
+            if (analysis.type === 'attribute' && analysis.attributes.size > 0) {
+                analysis.refPath = binding.fullPath;
+            } else {
+                analysis.type = 'interactive';
+                analysis.refPath = binding.fullPath;
+            }
         } else if (isDataTag(binding.contractTag!)) {
             if (analysis.type === 'attribute') {
                 // Keep attribute type, but add dynamic content
