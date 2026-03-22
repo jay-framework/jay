@@ -399,6 +399,23 @@ Headfull FS is instance-based only (`<jay:Name>` positioning). No `key` attribut
 7. Headfull FS inside forEach works (per-item rendering)
 8. Phase-aware bindings work (slow-only data static after SSR, interactive data dynamic)
 
+### Dev Server Hydration Test Cases
+
+Add test fixtures in `packages/jay-stack/dev-server/test/` mirroring the headless cases (5a–5f, 7), following the same two-layer validation (HTTP SSR HTML + Playwright browser) and three execution modes (SSR disabled, SSR first request, SSR cached):
+
+| Fixture | Scenario | Mirrors |
+| --- | --- | --- |
+| `8a-page-headfull-fs-static` | Single headfull FS component in static placement | 5a |
+| `8b-page-headfull-fs-conditional` | Headfull FS under condition | 5b |
+| `8c-page-headfull-fs-foreach` | Headfull FS inside forEach with wrapper | 5c |
+| `8d-page-headfull-fs-slow-foreach` | Headfull FS inside slowForEach | 5d |
+| `8e-page-headfull-fs-foreach-nested` | Headfull FS in forEach with preceding sections + carry-forward | 5e |
+| `8f-page-headfull-fs-two-instances` | Two headfull FS instances with different props | 5f |
+| `8g-page-headfull-fs-fast-only` | Fast-only page with headfull FS instance (no slow phase) | 7 |
+| `8h-page-headfull-fs-with-css` | Headfull FS with component CSS (`<link>` in head) | — |
+
+Each fixture contains: component jay-html, component jay-contract, component ts, page jay-html, page ts, expected-ssr.html, expected-hydrate.ts.
+
 ## Related Design Logs
 
 - #84 — Headless component props and repeater support (instance-based `<jay:xxx>`)
