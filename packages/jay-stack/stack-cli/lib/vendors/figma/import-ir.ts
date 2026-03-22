@@ -116,6 +116,7 @@ export type ImportIRStyle = {
     clipsContent?: boolean;
     flexGrow?: number;
     isAbsolute?: boolean;
+    isFixed?: boolean;
     gridColumnWidths?: number[];
     gridRowHeights?: number[];
     gridColumns?: GridColumnDef[];

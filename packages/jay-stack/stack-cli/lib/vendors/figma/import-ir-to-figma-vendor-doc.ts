@@ -41,6 +41,11 @@ function cssAngleToFigmaTransform(
     ];
 }
 
+/** True when IR already has a linear gradient paint — used to avoid prepending backgroundColor as a duplicate SOLID (issue #13). */
+function hasLinearGradientFill(style: ImportIRStyle): boolean {
+    return style.fills?.some((f) => f.type === 'GRADIENT_LINEAR') ?? false;
+}
+
 function mapFillToFigma(fill: ImportIRFill): any {
     if (fill.type === 'SOLID') {
         const color = parseColor(fill.color);
@@ -233,7 +238,9 @@ function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVe
         props.fills = bgFills;
     } else if (style.fills && style.fills.length > 0) {
         const figmaFills = style.fills.map(mapFillToFigma);
-        if (style.backgroundColor) {
+        // Do not prepend backgroundColor when fills already include a gradient: that models CSS
+        // fallback color + background-image as two paints and causes degenerate export roundtrip (#13).
+        if (style.backgroundColor && !hasLinearGradientFill(style)) {
             const bgColor = parseColor(style.backgroundColor);
             if (bgColor.a > 0) {
                 figmaFills.unshift({

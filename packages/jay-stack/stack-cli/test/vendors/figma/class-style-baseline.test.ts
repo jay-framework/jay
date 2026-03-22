@@ -459,6 +459,10 @@ describe('getBackgroundFillsStyle — gradient serialization', () => {
         const css = getBackgroundFillsStyle(node);
         expect(css).toContain('background-image:');
         expect(css).toContain('linear-gradient(180deg');
+        // Bottom SOLID must be background-color, not a degenerate linear-gradient(rgba, rgba) (#13)
+        expect(css).toContain('background-color:');
+        expect(css).toContain('rgba(255, 0, 0, 0.5)');
+        expect(css).not.toContain('linear-gradient(rgba(255, 0, 0, 0.5), rgba(255, 0, 0, 0.5))');
     });
 
     it('produces correct angle from gradient transform', () => {

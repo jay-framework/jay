@@ -587,6 +587,13 @@ export function resolveStyle(
 
     const { parsed, dynamicProperties } = parseInlineStyle(mergedStyleStr);
 
+    // When both `background` (shorthand) and `background-image` (longhand) exist,
+    // drop the shorthand to prevent both from independently pushing gradient fills.
+    // The longhand is more specific (comes from enricher or explicit inline) and wins.
+    if (parsed['background-image'] && parsed['background']) {
+        delete parsed['background'];
+    }
+
     for (const prop of dynamicProperties) {
         warnings.push(`CSS_DYNAMIC_VALUE: ${prop}`);
     }
@@ -1087,6 +1094,11 @@ export function resolveStyle(
         const leftPx = parsePx(parsed['left'] ?? '');
         if (topPx !== undefined) style.y = topPx;
         if (leftPx !== undefined) style.x = leftPx;
+    }
+
+    if (parsed['position'] === 'fixed') {
+        style.isFixed = true;
+        style.isAbsolute = true;
     }
 
     if (enrichedStyles?.boundingRect) {

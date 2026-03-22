@@ -28,6 +28,38 @@ import type {
 } from './computed-style-types';
 import { tokenizeCondition } from './condition-tokenizer';
 
+/**
+ * ImportIRStyle fields that correspond to CSS-inherited properties.
+ * When a parent resolves these (class, inline, or enricher), children that
+ * do not set their own value receive the parent's computed IR value.
+ */
+const INHERITABLE_STYLE_KEYS: ReadonlyArray<keyof ImportIRStyle> = [
+    'textColor',
+    'fontFamily',
+    'fontSize',
+    'fontWeight',
+    'fontStyle',
+    'lineHeight',
+    'letterSpacing',
+    'textAlignHorizontal',
+    'textCase',
+];
+
+type InheritedStylesCtx = Partial<
+    Pick<
+        ImportIRStyle,
+        | 'textColor'
+        | 'fontFamily'
+        | 'fontSize'
+        | 'fontWeight'
+        | 'fontStyle'
+        | 'lineHeight'
+        | 'letterSpacing'
+        | 'textAlignHorizontal'
+        | 'textCase'
+    >
+>;
+
 export interface EnrichmentResult {
     data: ComputedStyleData | undefined;
     confidence: 'high' | 'low' | 'none';
@@ -473,6 +505,8 @@ interface BuildNodeContext {
     sourceHtml?: string;
     /** When false, skip repeater-based candidate disambiguation (variant scenario). */
     isDefaultScenario?: boolean;
+    /** Resolved inheritable styles from ancestors (static import has no full cascade). */
+    inheritedStyles?: InheritedStylesCtx;
 }
 
 const MAX_DEMO_ITEMS = 4;
@@ -573,6 +607,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
         perScenarioMaps,
         scenarios,
         sourceHtml,
+        inheritedStyles,
     } = ctx;
     const warnings: string[] = [];
     const componentSets: ImportIRNode[] = [];
@@ -709,6 +744,31 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
         unsupportedCss,
     } = resolveStyle(styleAttr, classNames, cssClassMap, effectiveEnrichedStyles);
     warnings.push(...styleWarnings);
+
+    if (inheritedStyles) {
+        for (const key of INHERITABLE_STYLE_KEYS) {
+            if (style[key] === undefined && inheritedStyles[key] !== undefined) {
+                (style as Record<string, unknown>)[key as string] = inheritedStyles[key];
+            }
+        }
+    }
+
+    let nextInherited: InheritedStylesCtx | undefined;
+    let hasNextInherited = false;
+    const mergedChildInherited: InheritedStylesCtx = {};
+    for (const key of INHERITABLE_STYLE_KEYS) {
+        const own = style[key];
+        if (own !== undefined) {
+            (mergedChildInherited as Record<string, unknown>)[key as string] = own;
+            hasNextInherited = true;
+        } else if (inheritedStyles?.[key] !== undefined) {
+            (mergedChildInherited as Record<string, unknown>)[key as string] = inheritedStyles[key];
+            hasNextInherited = true;
+        }
+    }
+    if (hasNextInherited) {
+        nextInherited = mergedChildInherited;
+    }
 
     // Populate background-image ref from enriched data (first URL only in MVP)
     if (effectiveEnrichedStyles?.image?.backgroundImageUrls?.length) {
@@ -982,6 +1042,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
             const childResult = buildNodeFromElement(childEl, {
                 ...ctx,
                 repeaterContext: newRepeaterContext,
+                inheritedStyles: nextInherited,
             });
             if (childResult) {
                 children.push(childResult.node);
@@ -1170,6 +1231,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
                     ...ctx,
                     computedStyleMap: scenarioStyleMap ?? computedStyleMap,
                     isDefaultScenario: !scenarioStyleMap,
+                    inheritedStyles: nextInherited,
                 });
                 if (!result) {
                     return { id: '', kind: 'FRAME', sourcePath: '', children: [] };
@@ -1219,7 +1281,10 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
             continue;
         }
 
-        const childResult = buildNodeFromElement(childEl, ctx);
+        const childResult = buildNodeFromElement(childEl, {
+            ...ctx,
+            inheritedStyles: nextInherited,
+        });
         if (childResult) {
             children.push(childResult.node);
             warnings.push(...childResult.warnings);

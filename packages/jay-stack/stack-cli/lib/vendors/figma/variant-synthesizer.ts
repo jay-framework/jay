@@ -403,6 +403,9 @@ export function synthesizeVariant(
     // dimensions — on roundtrip the export wraps variant content in a
     // `<div if="...">` that has no styles, so the first child may be a
     // dimensionless wrapper (Issue #03).
+    // Skip fixed-position nodes (e.g. full-viewport overlays with
+    // `position: fixed; inset: 0`) — they are out-of-flow in CSS and
+    // should not inflate the variant instance size in Figma.
     let maxWidth = 0;
     let maxHeight = 0;
     for (const comp of components) {
@@ -415,13 +418,25 @@ export function synthesizeVariant(
         ) {
             node = node.children[0];
         }
-        if (node?.style) {
+        if (node?.style && !node.style.isFixed) {
             if (node.style.width !== undefined && node.style.width > maxWidth)
                 maxWidth = node.style.width;
             if (node.style.height !== undefined && node.style.height > maxHeight)
                 maxHeight = node.style.height;
         }
     }
+
+    // When no non-fixed dimensions were found (all variant content is
+    // fixed-position overlays), use 1×1 to prevent Figma's 100×100 default.
+    const instanceStyle: ImportIRNode['style'] =
+        maxWidth > 0 || maxHeight > 0
+            ? {
+                  ...(maxWidth > 0 ? { width: maxWidth } : {}),
+                  ...(maxHeight > 0 ? { height: maxHeight } : {}),
+              }
+            : preferHiddenDefault
+              ? { width: 1, height: 1 }
+              : undefined;
 
     const instance: ImportIRNode = {
         id: instanceId,
@@ -431,13 +446,7 @@ export function synthesizeVariant(
         mainComponentId: defaultComponentId,
         preferHiddenDefault,
         bindings: instanceBindings,
-        style:
-            maxWidth > 0 || maxHeight > 0
-                ? {
-                      ...(maxWidth > 0 ? { width: maxWidth } : {}),
-                      ...(maxHeight > 0 ? { height: maxHeight } : {}),
-                  }
-                : undefined,
+        style: instanceStyle,
     };
 
     return { componentSet, instance, warnings };

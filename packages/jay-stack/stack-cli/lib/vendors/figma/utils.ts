@@ -499,6 +499,17 @@ function figmaColorToCss(color: { r: number; g: number; b: number; a?: number })
     return rgbToHex({ r: color.r, g: color.g, b: color.b });
 }
 
+function solidFillToBackgroundColorCss(fill: any): string {
+    const { r, g, b } = fill.color;
+    const opacity = fill.opacity !== undefined ? fill.opacity : 1;
+    const hex = rgbToHex({ r, g, b });
+    if (opacity < 1) {
+        const roundedOpacity = Math.round(opacity * 100) / 100;
+        return `background-color: rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${roundedOpacity});`;
+    }
+    return `background-color: ${hex};`;
+}
+
 function serializeLinearGradient(fill: any): string | null {
     if (!fill.gradientStops || fill.gradientStops.length < 2) return null;
 
@@ -530,14 +541,7 @@ export function getBackgroundFillsStyle(node: FigmaVendorDocument): string {
 
     // Single solid fill → emit clean background-color for roundtrip fidelity
     if (visibleFills.length === 1 && visibleFills[0].type === 'SOLID' && visibleFills[0].color) {
-        const { r, g, b } = visibleFills[0].color;
-        const opacity = visibleFills[0].opacity !== undefined ? visibleFills[0].opacity : 1;
-        const hex = rgbToHex({ r, g, b });
-        if (opacity < 1) {
-            const roundedOpacity = Math.round(opacity * 100) / 100;
-            return `background-color: rgba(${Math.round(r * 255)}, ${Math.round(g * 255)}, ${Math.round(b * 255)}, ${roundedOpacity});`;
-        }
-        return `background-color: ${hex};`;
+        return solidFillToBackgroundColorCss(visibleFills[0]);
     }
 
     // Single gradient fill → emit clean background-image for roundtrip fidelity
@@ -547,12 +551,28 @@ export function getBackgroundFillsStyle(node: FigmaVendorDocument): string {
     }
 
     // Multiple fills or non-solid → use background-image layers
+    const lastFill = visibleFills[visibleFills.length - 1];
+    const prefixHasGradient =
+        visibleFills.length > 1 &&
+        visibleFills.slice(0, -1).some((f: any) => f.type === 'GRADIENT_LINEAR');
+    const useBottomSolidAsBackgroundColor =
+        lastFill?.type === 'SOLID' && lastFill.color && prefixHasGradient;
+
     const backgrounds: string[] = [];
     const backgroundSizes: string[] = [];
     const backgroundPositions: string[] = [];
     const backgroundRepeats: string[] = [];
 
-    for (const fill of visibleFills) {
+    for (let i = 0; i < visibleFills.length; i++) {
+        const fill = visibleFills[i];
+        if (
+            useBottomSolidAsBackgroundColor &&
+            i === visibleFills.length - 1 &&
+            fill.type === 'SOLID'
+        ) {
+            // Bottom solid behind gradient(s): CSS background-color, not a fake linear-gradient (#13)
+            continue;
+        }
         if (fill.type === 'SOLID' && fill.color) {
             const { r, g, b } = fill.color;
             const rawOpacity = fill.opacity !== undefined ? fill.opacity : 1;
@@ -577,10 +597,17 @@ export function getBackgroundFillsStyle(node: FigmaVendorDocument): string {
     }
 
     if (backgrounds.length === 0) {
+        if (useBottomSolidAsBackgroundColor) {
+            return solidFillToBackgroundColorCss(lastFill);
+        }
         return 'background: transparent;';
     }
 
-    let style = `background-image: ${backgrounds.join(', ')};`;
+    const bgColorPrefix = useBottomSolidAsBackgroundColor
+        ? `${solidFillToBackgroundColorCss(lastFill)} `
+        : '';
+
+    let style = `${bgColorPrefix}background-image: ${backgrounds.join(', ')};`;
     style += `background-size: ${backgroundSizes.join(', ')};`;
     style += `background-position: ${backgroundPositions.join(', ')};`;
     style += `background-repeat: ${backgroundRepeats.join(', ')};`;

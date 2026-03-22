@@ -309,7 +309,7 @@ describe('adaptIRToFigmaVendorDoc', () => {
             expect(stops[1].color.a).toBe(1);
         });
 
-        it('backgroundColor + gradient → solid fill + gradient fill', () => {
+        it('backgroundColor + gradient fills → gradient only (no duplicate SOLID; issue #13)', () => {
             const root = makeFrame({
                 kind: 'SECTION',
                 children: [
@@ -332,9 +332,8 @@ describe('adaptIRToFigmaVendorDoc', () => {
             });
             const result = adaptIRToFigmaVendorDoc(makeDoc(root));
             const fills = result.children![0].fills!;
-            expect(fills).toHaveLength(2);
-            expect(fills[0].type).toBe('SOLID');
-            expect(fills[1].type).toBe('GRADIENT_LINEAR');
+            expect(fills).toHaveLength(1);
+            expect(fills[0].type).toBe('GRADIENT_LINEAR');
         });
 
         it('per-side border widths → individual strokeWeights', () => {
