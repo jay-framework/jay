@@ -996,3 +996,9 @@ No deviations.
 
 1. **Hydrate compiler** — Added `slowForEachJayTrackBy` to `HydrateContext`. In `renderHydrateElementContent`, when inside a slowForEach, strip the jayTrackBy prefix from coordinates. Root element (coordinate === jayTrackBy) becomes `''`; children (e.g., `jayTrackBy/0`) become `0`.
 2. **Runtime** — Updated `resolveCoordinate` and `peekCoordinate` in `ConstructContext` to handle empty key: `resolveCoordinate('')` with `coordinateBase = ["jayTrackBy"]` now correctly resolves to `"jayTrackBy"` instead of `"jayTrackBy/"` (trailing slash).
+
+### Post-Implementation Bug Fix: hydrate hasDynamicAttrs branch drops element children
+
+**Bug:** `renderHydrateElementContent`'s `hasDynamicAttrs` branch (for elements with dynamic class/attribute bindings) only handled text children (`textFragment`). Element children — such as `<input ref="...">` inside a `<label class="{isSelected ? selected}">` — were silently dropped, producing `adoptElement("...", {...}, [])` with an empty children array. Refs on those children were lost, breaking interactivity.
+
+**Fix:** Added an `else` branch that recurses into child elements via `renderHydrateNode` when there's no `textFragment`. This ensures element children with refs or dynamic bindings are properly adopted. Pre-existing bug, not caused by the slowForEach changes — but exposed by the store-light categories which have both a dynamic class on the parent and a ref on a child input.
