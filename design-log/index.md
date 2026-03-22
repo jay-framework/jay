@@ -191,6 +191,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 108 | no-contract phase defaults for jay-stack                | Without contract: all data is fast+interactive, no slow phase, remove noMainContract    |
 | 109 | unified dev server phase pipeline                       | Fix instance fast render gate for fast-only pages, hydration initial update             |
 | 110 | filesystem-based slow render cache                      | Cache loadParams per route, embed cache metadata in pre-rendered jay-html               |
+| 112 | hydration view state consistency                        | Hydrate with SSR ViewState (matches DOM), then update with client ViewState             |
 
 ---
 
