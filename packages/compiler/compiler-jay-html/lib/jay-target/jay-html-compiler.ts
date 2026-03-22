@@ -2179,6 +2179,8 @@ interface HydrateContext {
     insideFastForEach: boolean;
     /** Whether we're inside a slowForEach (affects instance key computation) */
     insideSlowForEach: boolean;
+    /** The jayTrackBy value of the current slowForEach (for stripping coordinate prefixes) */
+    slowForEachJayTrackBy?: string;
     /** Variable mappings for compiling $placeholder coordinates inside forEach */
     varMappings: Record<string, string>;
     /**
@@ -2496,6 +2498,7 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             indent: indent.child().child(),
             dynamicRef: true,
             insideSlowForEach: true,
+            slowForEachJayTrackBy: jayTrackBy,
         };
         const renderContext2 = buildRenderContext(itemContext);
         const childContent = renderHydrateElementContent(
@@ -3027,6 +3030,17 @@ function renderHydrateElementContent(
     if (context.insideFastForEach && coordinate.startsWith('$')) {
         const slashIndex = coordinate.indexOf('/');
         coordinate = slashIndex >= 0 ? coordinate.slice(slashIndex + 1) : '0';
+    }
+    // When inside slowForEach, strip the jayTrackBy prefix from coordinates.
+    // slowForEachItem's forItem already pushes jayTrackBy onto coordinateBase,
+    // so coordinates must be relative. Root element (coordinate === jayTrackBy)
+    // becomes '' which resolveCoordinate handles as the coordinateBase itself.
+    if (context.slowForEachJayTrackBy && coordTemplate) {
+        if (coordinate === context.slowForEachJayTrackBy) {
+            coordinate = '';
+        } else if (coordinate.startsWith(context.slowForEachJayTrackBy + '/')) {
+            coordinate = coordinate.slice(context.slowForEachJayTrackBy.length + 1);
+        }
     }
 
     // Build the ref argument if present

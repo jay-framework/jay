@@ -242,8 +242,8 @@ export class ConstructContext<ViewState> {
      */
     resolveCoordinate(key: string): Element | undefined {
         if (!this._coordinateMap) return undefined;
-        const fullKey =
-            this.coordinateBase.length > 0 ? this.coordinateBase.join('/') + '/' + key : key;
+        const base = this.coordinateBase.length > 0 ? this.coordinateBase.join('/') : '';
+        const fullKey = base ? (key ? base + '/' + key : base) : key;
         const elements = this._coordinateMap.get(fullKey);
         if (!elements || elements.length === 0) return undefined;
         return elements.shift();
@@ -257,8 +257,8 @@ export class ConstructContext<ViewState> {
      */
     peekCoordinate(key: string): Element | undefined {
         if (!this._coordinateMap) return undefined;
-        const fullKey =
-            this.coordinateBase.length > 0 ? this.coordinateBase.join('/') + '/' + key : key;
+        const base = this.coordinateBase.length > 0 ? this.coordinateBase.join('/') : '';
+        const fullKey = base ? (key ? base + '/' + key : base) : key;
         const elements = this._coordinateMap.get(fullKey);
         if (!elements || elements.length === 0) return undefined;
         return elements[0];
