@@ -6,6 +6,8 @@ import {
     extractSafeProperties,
     extractLayoutProperties,
     buildClassStyleBaseline,
+    buildClassStyleBaselineFromClassOnlyInput,
+    extractStaticClassOnlySafeProps,
     parseClassStyleBaseline,
     diffClassStyleOverrides,
     parseCssDeclarations,
@@ -686,5 +688,434 @@ describe('extractLayoutProperties', () => {
         expect(layout['gap']).toBe('8px');
         expect(layout['width']).toBe('500px');
         expect(layout['height']).toBe('300px');
+    });
+});
+
+// ── Issue #12: Export drops intentional inline style overrides ────────
+
+describe('Issue #12: inline background-color override survives roundtrip', () => {
+    /**
+     * Bug: Inline background-color override lost after roundtrip
+     * Found in: T7 Scenario 6, Step 9 (docs/single-writer/open issues/12)
+     * Expected: Export emits background-color: #ff4444 (differs from class green)
+     * Actual: Export emits color: inherit (drops background override entirely)
+     */
+
+    it('should emit inline background-color that overrides class background', () => {
+        // Simulate: CSS class has background: #22c55e (green)
+        // Developer set inline style="background-color: #ff4444" (red)
+        // After import, Figma node has fills=[red]
+        // The class-only baseline should have green, so diff emits red override.
+        const classStyles = {
+            background: '#22c55e',
+            color: 'white',
+            padding: '4px 10px',
+            'border-radius': '4px',
+            'font-size': '12px',
+            'font-weight': '700',
+        };
+        const classOnlySafeProps = extractStaticClassOnlySafeProps(classStyles);
+
+        // Build baseline from class-only props (green background)
+        const redNode = makeFrame({
+            fills: [{ type: 'SOLID', color: { r: 1, g: 0.267, b: 0.267 } }], // #ff4444
+            cornerRadius: 4,
+        });
+        const baselineJson = buildClassStyleBaselineFromClassOnlyInput(classOnlySafeProps, redNode);
+
+        // Diff against the same red node — background-color must appear as override
+        const { overrides } = diffClassStyleOverrides(baselineJson, redNode);
+        expect(overrides['background-color']).toBeDefined();
+        expect(normalizeColor(overrides['background-color'])).toBe('rgb(255, 68, 68)');
+    });
+
+    it('should NOT emit inline styles that match the class baseline', () => {
+        // Class has border-radius: 4px, node also has cornerRadius=4
+        // No override should be emitted for border-radius
+        const classStyles = {
+            background: '#22c55e',
+            'border-radius': '4px',
+        };
+        const classOnlySafeProps = extractStaticClassOnlySafeProps(classStyles);
+
+        const node = makeFrame({
+            fills: [{ type: 'SOLID', color: { r: 0.133, g: 0.773, b: 0.369 } }], // #22c55e
+            cornerRadius: 4,
+        });
+        const baselineJson = buildClassStyleBaselineFromClassOnlyInput(classOnlySafeProps, node);
+
+        const { overrides } = diffClassStyleOverrides(baselineJson, node);
+        expect(overrides['border-radius']).toBeUndefined();
+    });
+
+    it('should handle shorthand background vs longhand background-color matching', () => {
+        // CSS class uses shorthand "background: #22c55e"
+        // extractStaticClassOnlySafeProps must decompose to "background-color"
+        // so the diff can compare against extractSafeProperties() which uses longhand
+        const classStyles = { background: '#22c55e' };
+        const safeProps = extractStaticClassOnlySafeProps(classStyles);
+        expect(safeProps['background-color']).toBe('#22c55e');
+        expect(safeProps['background-image']).toBe('none');
+    });
+
+    it('should not emit spurious color reset when color is only on CSS class', () => {
+        // CSS class has "color: white" but extractSafeProperties() cannot extract
+        // text color from a FRAME node — so the diff should NOT emit color: inherit
+        const classStyles = {
+            background: '#22c55e',
+            color: 'white',
+        };
+        const classOnlySafeProps = extractStaticClassOnlySafeProps(classStyles);
+
+        const node = makeFrame({
+            fills: [{ type: 'SOLID', color: { r: 1, g: 0.267, b: 0.267 } }], // red
+        });
+        const baselineJson = buildClassStyleBaselineFromClassOnlyInput(classOnlySafeProps, node);
+        const { overrides } = diffClassStyleOverrides(baselineJson, node);
+
+        // background-color should be overridden (red vs green)
+        expect(overrides['background-color']).toBeDefined();
+        // color should NOT be emitted as inherit — it's a text property the frame can't represent
+        expect(overrides['color']).toBeUndefined();
+    });
+
+    it('export integration: class-only baseline preserves inline background override', async () => {
+        // Build a class-only baseline with green background
+        const classStyles = { background: '#22c55e' };
+        const classOnlySafeProps = extractStaticClassOnlySafeProps(classStyles);
+        const redNode = makeFrame({
+            fills: [{ type: 'SOLID', color: { r: 1, g: 0.267, b: 0.267 } }],
+        });
+        const baseline = buildClassStyleBaselineFromClassOnlyInput(classOnlySafeProps, redNode);
+
+        // Build a section with the class-based node
+        const doc = makeSection([
+            {
+                id: 'badge',
+                name: 'discount-badge',
+                type: 'FRAME',
+                x: 0,
+                y: 0,
+                width: 100,
+                height: 30,
+                layoutMode: 'HORIZONTAL',
+                fills: [{ type: 'SOLID', color: { r: 1, g: 0.267, b: 0.267 } }],
+                pluginData: {
+                    className: 'discount-badge',
+                    [CLASS_STYLE_BASELINE_KEY]: baseline,
+                },
+                children: [makeTextNode('t1', '{discountLabel}')],
+            } as unknown as FigmaVendorDocument,
+        ]);
+
+        const result = await figmaVendor.convertToBodyHtml(doc, '/', emptyPage, []);
+        const classLine = findClassLine(result.bodyHtml, 'discount-badge');
+        expect(classLine).toBeDefined();
+        expect(classLine).toContain('background-color:');
+        // Should NOT contain spurious resets for properties the frame can't represent
+        expect(classLine).not.toContain('color: inherit');
+    });
+
+    it('full pipeline: jay-html with CSS → import → export preserves inline override', async () => {
+        // This test exercises the real import pipeline to verify classOnlyBaselineInput
+        // is populated from CSS and survives through to the export baseline diff.
+        const { buildImportIR } = await import('../../../lib/vendors/figma/jay-html-to-import-ir');
+        const { adaptIRToFigmaVendorDoc } = await import(
+            '../../../lib/vendors/figma/import-ir-to-figma-vendor-doc'
+        );
+        const { parse } = await import('node-html-parser');
+
+        const html = `<div style="display: flex; flex-direction: column; padding: 20px;">
+  <div class="discount-badge" style="background-color: #ff4444; padding: 4px 10px; border-radius: 4px;">
+    <span>SALE</span>
+  </div>
+</div>`;
+        const css = `.discount-badge {
+  background: #22c55e;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}`;
+
+        // Step 1: Import — build IR from HTML+CSS
+        const body = parse(html);
+        const ir = buildImportIR(body, '/test', 'test', { css });
+
+        // Step 2: Adapt IR to Figma vendor doc
+        const figmaDoc = adaptIRToFigmaVendorDoc(ir);
+
+        // Find the discount-badge node — it should have CLASS_STYLE_BASELINE_KEY
+        function findNodeByClassName(
+            node: FigmaVendorDocument,
+            className: string,
+        ): FigmaVendorDocument | undefined {
+            if (node.pluginData?.['className'] === className) return node;
+            if (node.children) {
+                for (const child of node.children) {
+                    const found = findNodeByClassName(child, className);
+                    if (found) return found;
+                }
+            }
+            return undefined;
+        }
+
+        const badgeNode = findNodeByClassName(figmaDoc, 'discount-badge');
+        expect(badgeNode).toBeDefined();
+
+        // Verify baseline was stored
+        const baselineJson = badgeNode!.pluginData?.[CLASS_STYLE_BASELINE_KEY];
+        expect(baselineJson).toBeDefined();
+
+        // Verify the baseline reflects CLASS-ONLY state (green), not rendered state (red)
+        const baseline = parseClassStyleBaseline(baselineJson!);
+        expect(baseline).not.toBeNull();
+        const baselineBg = normalizeColor(baseline!.safe['background-color'] || '');
+        expect(baselineBg).toBe(normalizeColor('#22c55e'));
+
+        // Step 3: Export via figmaVendor.
+        // adaptIRToFigmaVendorDoc returns a SECTION. findContentFrame expects
+        // SECTION > FRAME, so we pass the SECTION directly.
+        const result = await figmaVendor.convertToBodyHtml(figmaDoc, '/', emptyPage, []);
+        const classLine = findClassLine(result.bodyHtml, 'discount-badge');
+        expect(classLine).toBeDefined();
+        expect(classLine).toContain('background-color:');
+    });
+
+    it('full pipeline with variant: baseline on if-wrapped class element uses class-only state', async () => {
+        // This is the EXACT bug scenario: a class-based element with an if condition
+        // gets wrapped in COMPONENT_SET > COMPONENT > FRAME during variant synthesis.
+        // The class-only baseline must survive through variant wrapping and reflect
+        // the class-only state (green), NOT the rendered state (red with inline override).
+        const { buildImportIR } = await import('../../../lib/vendors/figma/jay-html-to-import-ir');
+        const { adaptIRToFigmaVendorDoc } = await import(
+            '../../../lib/vendors/figma/import-ir-to-figma-vendor-doc'
+        );
+        const { parse } = await import('node-html-parser');
+
+        const html = `<div style="display: flex; flex-direction: column; padding: 20px;">
+  <div class="discount-badge" if="hasDiscount" style="background-color: #ff4444; padding: 4px 10px; border-radius: 4px;">
+    <span>{discountLabel}</span>
+  </div>
+</div>`;
+        const css = `.discount-badge {
+  background: #22c55e;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+}`;
+        const contractYaml = `name: test
+tags:
+  - tag: hasDiscount
+    type: ViewState
+    dataType: boolean
+  - tag: discountLabel
+    type: ViewState
+    dataType: string`;
+
+        const { parseContract } = await import('@jay-framework/compiler-jay-html');
+        const contractResult = parseContract(contractYaml, 'page.jay-contract');
+        const compilerContract = contractResult.val!;
+        const contract = {
+            name: compilerContract.name,
+            tags: compilerContract.tags.map((tag: any) => ({
+                tag: tag.tag,
+                type: ['ViewState'],
+                dataType: tag.dataType ? String(tag.dataType) : undefined,
+                required: tag.required,
+            })),
+        };
+
+        const body = parse(html);
+        const ir = buildImportIR(body, '/test', 'test', { css, contract });
+        const figmaDoc = adaptIRToFigmaVendorDoc(ir);
+
+        // Find the discount-badge FRAME inside the variant structure:
+        // SECTION > FRAME > INSTANCE + COMPONENT_SET > COMPONENT > FRAME[class=discount-badge]
+        function findNodeByClassName(
+            node: FigmaVendorDocument,
+            className: string,
+        ): FigmaVendorDocument | undefined {
+            if (node.pluginData?.['className'] === className) return node;
+            if (node.children) {
+                for (const child of node.children) {
+                    const found = findNodeByClassName(child, className);
+                    if (found) return found;
+                }
+            }
+            return undefined;
+        }
+
+        const badgeNode = findNodeByClassName(figmaDoc, 'discount-badge');
+        expect(badgeNode).toBeDefined();
+        expect(badgeNode!.type).toBe('FRAME');
+
+        // Verify baseline exists on the node
+        const baselineJson = badgeNode!.pluginData?.[CLASS_STYLE_BASELINE_KEY];
+        expect(baselineJson).toBeDefined();
+
+        // CRITICAL: Verify the baseline reflects CLASS-ONLY state (green),
+        // not the rendered state (red from inline override)
+        const baseline = parseClassStyleBaseline(baselineJson!);
+        expect(baseline).not.toBeNull();
+        const baselineBg = normalizeColor(baseline!.safe['background-color'] || '');
+        expect(baselineBg).toBe(normalizeColor('#22c55e'));
+
+        // Verify the diff produces background-color as an override
+        const { overrides } = diffClassStyleOverrides(baselineJson!, badgeNode!);
+        expect(overrides['background-color']).toBeDefined();
+
+        // Verify the diff does NOT produce spurious color reset
+        expect(overrides['color']).toBeUndefined();
+
+        // Export integration: extract the badge node and export it directly
+        // (bypasses variant machinery which needs complex binding setup)
+        const doc = makeSection([
+            {
+                ...badgeNode!,
+                children: [makeTextNode('t1', '{discountLabel}')],
+            } as unknown as FigmaVendorDocument,
+        ]);
+        const result = await figmaVendor.convertToBodyHtml(doc, '/', emptyPage, []);
+        const classLine = findClassLine(result.bodyHtml, 'discount-badge');
+        expect(classLine).toBeDefined();
+        expect(classLine).toContain('background-color:');
+        expect(classLine).not.toContain('color: inherit');
+    });
+
+    /**
+     * Bug: Issue #12 — export drops intentional inline style overrides
+     * Reproduction: discount-badge inside forEach repeater with if condition
+     * Expected: classOnlyBaselineInput populated from CSS (green #22c55e)
+     * Actual: classOnlyBaselineInput empty → computed-style fallback bakes in red #ff4444
+     *
+     * This test mirrors the EXACT real HTML structure from level-5-class-overrides:
+     * forEach repeater > item-card > if-wrapped discount-badge with class + inline override.
+     * The existing test uses a simple (non-forEach) structure and passes — this one
+     * isolates whether forEach nesting breaks classOnlyBaselineInput propagation.
+     */
+    it('full pipeline with forEach nesting: baseline on class+inline element inside repeater uses class-only state', async () => {
+        const { buildImportIR } = await import('../../../lib/vendors/figma/jay-html-to-import-ir');
+        const { adaptIRToFigmaVendorDoc } = await import(
+            '../../../lib/vendors/figma/import-ir-to-figma-vendor-doc'
+        );
+        const { parse } = await import('node-html-parser');
+
+        // Real structure: forEach > item-card > if-wrapped discount-badge
+        const html = `<div style="display: flex; flex-direction: column;">
+  <div class="items-grid" forEach="catalog.items" trackBy="id">
+    <div class="item-card">
+      <div class="discount-badge" if="hasDiscount" style="background-color: #ff4444; padding: 4px 10px;">
+        <span>{discountLabel}</span>
+      </div>
+      <h3 class="item-name">{name}</h3>
+      <span class="item-price">{price}</span>
+    </div>
+  </div>
+</div>`;
+        const css = `.items-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  padding: 20px;
+}
+.item-card {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  border-radius: 8px;
+  background: white;
+}
+.discount-badge {
+  background: #22c55e;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  align-self: flex-start;
+}
+.item-name {
+  font-size: 16px;
+  font-weight: 600;
+}
+.item-price {
+  font-size: 14px;
+  color: #666;
+}`;
+        const contractYaml = `name: test
+tags:
+  - tag: catalog
+    type: ViewState
+    dataType: object
+    objectFields:
+      - name: items
+        type: array
+        itemFields:
+          - name: id
+            type: string
+          - name: hasDiscount
+            type: boolean
+          - name: discountLabel
+            type: string
+          - name: name
+            type: string
+          - name: price
+            type: string`;
+
+        const { parseContract } = await import('@jay-framework/compiler-jay-html');
+        const contractResult = parseContract(contractYaml, 'page.jay-contract');
+        const compilerContract = contractResult.val!;
+        const contract = {
+            name: compilerContract.name,
+            tags: compilerContract.tags.map((tag: any) => ({
+                tag: tag.tag,
+                type: ['ViewState'],
+                dataType: tag.dataType ? String(tag.dataType) : undefined,
+                required: tag.required,
+                objectFields: tag.objectFields,
+            })),
+        };
+
+        const body = parse(html);
+        const ir = buildImportIR(body, '/test', 'test', { css, contract });
+        const figmaDoc = adaptIRToFigmaVendorDoc(ir);
+
+        // Find the discount-badge node deep in the variant/repeater structure
+        function findNodeByClassName(
+            node: FigmaVendorDocument,
+            className: string,
+        ): FigmaVendorDocument | undefined {
+            if (node.pluginData?.['className'] === className) return node;
+            if (node.children) {
+                for (const child of node.children) {
+                    const found = findNodeByClassName(child, className);
+                    if (found) return found;
+                }
+            }
+            return undefined;
+        }
+
+        const badgeNode = findNodeByClassName(figmaDoc, 'discount-badge');
+        expect(badgeNode).toBeDefined();
+        expect(badgeNode!.type).toBe('FRAME');
+
+        // Verify baseline exists
+        const baselineJson = badgeNode!.pluginData?.[CLASS_STYLE_BASELINE_KEY];
+        expect(baselineJson).toBeDefined();
+
+        // CRITICAL: baseline must reflect CLASS-ONLY state (green #22c55e),
+        // NOT the rendered state (red #ff4444 from inline override)
+        const baseline = parseClassStyleBaseline(baselineJson!);
+        expect(baseline).not.toBeNull();
+        const baselineBg = normalizeColor(baseline!.safe['background-color'] || '');
+        expect(baselineBg).toBe(normalizeColor('#22c55e'));
+
+        // The diff must detect background-color as an override (red != green)
+        const { overrides } = diffClassStyleOverrides(baselineJson!, badgeNode!);
+        expect(overrides['background-color']).toBeDefined();
     });
 });

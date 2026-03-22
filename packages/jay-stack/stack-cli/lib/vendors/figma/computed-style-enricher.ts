@@ -548,8 +548,10 @@ async function extractComputedStyles(
                 const origStyle = htmlElement.getAttribute('style');
                 htmlElement.removeAttribute('style');
                 const classOnlyComputed = window.getComputedStyle(htmlElement);
-                if (origStyle != null) htmlElement.setAttribute('style', origStyle);
 
+                // IMPORTANT: getComputedStyle returns a LIVE CSSStyleDeclaration.
+                // All values must be read BEFORE restoring the style attribute,
+                // otherwise reads reflect the restored inline styles, not class-only.
                 classOnlyStyles = {};
                 for (const prop of SAFE_BASELINE_PROPS) {
                     const v = classOnlyComputed.getPropertyValue(prop);
@@ -579,6 +581,9 @@ async function extractComputedStyles(
                     classOnlyStyles['background-image'] = 'none';
                 }
                 if (!classOnlyStyles['opacity']) classOnlyStyles['opacity'] = '1';
+
+                // Restore inline styles after all class-only values have been read
+                if (origStyle != null) htmlElement.setAttribute('style', origStyle);
             }
 
             result.push({

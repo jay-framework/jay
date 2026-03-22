@@ -6,7 +6,7 @@ export const CLASS_STYLE_BASELINE_KEY = 'jay-class-style-baseline-v1';
 export interface ClassStyleBaseline {
     safe: Record<string, string>;
     layout?: Record<string, string>;
-    meta: { source: 'computed-style' | 'static'; version: 1 };
+    meta: { source: 'computed-style' | 'class-only' | 'static'; version: 1 };
 }
 
 export interface OverrideDiffResult {
@@ -286,6 +286,17 @@ function copyIfSafe(
 // ── Baseline capture and diff ───────────────────────────────────────
 
 /**
+ * CSS properties that appear in SAFE_OVERRIDE_PROPERTIES but cannot be
+ * extracted from FRAME nodes by extractSafeProperties(). Including them
+ * in the class-only baseline would cause guaranteed false-positive resets
+ * (e.g. `color: inherit`) because the export-time diff always sees them
+ * as "removed" when the current extraction produces nothing for them.
+ *
+ * `color` (text color) maps to Figma TEXT fills, not FRAME fills.
+ */
+const CLASS_ONLY_EXCLUDED_PROPS = new Set(['color']);
+
+/**
  * Build a class-style baseline from class-only CSS values (browser extraction).
  * Use when import has class+inline nodes so baseline reflects stylesheet state,
  * not rendered class+inline state. Layout still comes from the Figma node.
@@ -296,7 +307,7 @@ export function buildClassStyleBaselineFromClassOnlyInput(
 ): string {
     const safe: Record<string, string> = {};
     for (const [prop, value] of Object.entries(classOnlySafeProps)) {
-        if (SAFE_OVERRIDE_PROPERTIES.has(prop)) {
+        if (SAFE_OVERRIDE_PROPERTIES.has(prop) && !CLASS_ONLY_EXCLUDED_PROPS.has(prop)) {
             safe[prop] = normalizePropertyValue(prop, value);
         }
     }
@@ -310,7 +321,7 @@ export function buildClassStyleBaselineFromClassOnlyInput(
     const baseline: ClassStyleBaseline = {
         safe,
         layout,
-        meta: { source: 'computed-style', version: 1 },
+        meta: { source: 'class-only', version: 1 },
     };
     return JSON.stringify(baseline);
 }
