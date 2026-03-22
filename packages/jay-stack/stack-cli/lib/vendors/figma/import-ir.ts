@@ -117,6 +117,8 @@ export type ImportIRStyle = {
     flexGrow?: number;
     isAbsolute?: boolean;
     isFixed?: boolean;
+    /** Full-viewport or full-parent inset overlay (DL-108); drives Figma INSTANCE + export. */
+    isFullOverlay?: boolean;
     gridColumnWidths?: number[];
     gridRowHeights?: number[];
     gridColumns?: GridColumnDef[];

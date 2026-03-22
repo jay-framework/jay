@@ -51,7 +51,13 @@ describe('variant-synthesizer: fixed-position nodes excluded from instance sizin
                         id: 'overlay-node',
                         sourcePath: 'test',
                         kind: 'FRAME',
-                        style: { width: 1280, height: 900, isFixed: true, isAbsolute: true },
+                        style: {
+                            width: 1280,
+                            height: 900,
+                            isFixed: true,
+                            isAbsolute: true,
+                            isFullOverlay: true,
+                        },
                     };
                 }
                 // Normal content with real dimensions
@@ -64,9 +70,10 @@ describe('variant-synthesizer: fixed-position nodes excluded from instance sizin
             },
         );
 
-        // Instance should use 400×300 from the content, not 1280×900 from the fixed overlay
-        expect(result.instance.style?.width).toBe(400);
-        expect(result.instance.style?.height).toBe(300);
+        // Overlay variant triggers DL-108 INSTANCE (absolute fill), not content max size
+        expect(result.instance.style?.isFullOverlay).toBe(true);
+        expect(result.instance.style?.width).toBeUndefined();
+        expect(result.instance.style?.height).toBeUndefined();
     });
 
     it('should use normal (non-fixed) node dimensions for instance size', () => {
@@ -134,15 +141,21 @@ describe('variant-synthesizer: fixed-position nodes excluded from instance sizin
                 id: 'overlay-node',
                 sourcePath: 'test',
                 kind: 'FRAME',
-                style: { width: 1280, height: 900, isFixed: true, isAbsolute: true },
+                style: {
+                    width: 1280,
+                    height: 900,
+                    isFixed: true,
+                    isAbsolute: true,
+                    isFullOverlay: true,
+                },
             }),
             undefined, // contractContext
             () => false, // isVisibleInDefault — overlay hidden by default → preferHiddenDefault
         );
 
-        // No non-fixed dimensions + preferHiddenDefault → instance collapses to 1×1
-        // (avoids Figma's 100×100 default)
-        expect(result.instance.style?.width).toBe(1);
-        expect(result.instance.style?.height).toBe(1);
+        // DL-108: full-overlay INSTANCE uses absolute fill, not 1×1 band-aid
+        expect(result.instance.style?.isFullOverlay).toBe(true);
+        expect(result.instance.style?.width).toBeUndefined();
+        expect(result.instance.style?.height).toBeUndefined();
     });
 });

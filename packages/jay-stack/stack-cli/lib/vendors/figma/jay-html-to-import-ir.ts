@@ -60,6 +60,19 @@ type InheritedStylesCtx = Partial<
     >
 >;
 
+/** True if this element's inline or class rules set `color` (not inherited-only). */
+function elementDeclaresOwnTextColor(
+    styleAttr: string,
+    classNames: string[] | undefined,
+    cssClassMap: CssClassMap | undefined,
+): boolean {
+    const { parsed } = parseInlineStyle(styleAttr);
+    if (parsed['color']) return true;
+    if (!classNames?.length || !cssClassMap?.size) return false;
+    const classStyles = resolveClassStyles(classNames.join(' '), cssClassMap);
+    return Object.prototype.hasOwnProperty.call(classStyles, 'color');
+}
+
 export interface EnrichmentResult {
     data: ComputedStyleData | undefined;
     confidence: 'high' | 'low' | 'none';
@@ -751,6 +764,16 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
                 (style as Record<string, unknown>)[key as string] = inheritedStyles[key];
             }
         }
+    }
+
+    // Enricher appends getComputedStyle() after class rules; `color` is often the page/body
+    // default (#212121) for headings that inherit from a parent (e.g. .hero-banner { color: white }).
+    // When the element does not declare its own color, prefer ancestor inheritance over that noise.
+    if (
+        !elementDeclaresOwnTextColor(styleAttr, classNames, cssClassMap) &&
+        inheritedStyles?.textColor !== undefined
+    ) {
+        style.textColor = inheritedStyles.textColor;
     }
 
     let nextInherited: InheritedStylesCtx | undefined;

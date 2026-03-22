@@ -15,6 +15,27 @@ import type { ConditionIdentifier } from './condition-tokenizer';
 const VARIANT_SYNTHETIC_DIMENSION = 'VARIANT_SYNTHETIC_DIMENSION';
 const EXPRESSION_OPS = new Set(['>', '<', '>=', '<=']);
 
+/** Capped size for overlay COMPONENT defs in the set (INSTANCE fills parent via constraints). DL-108 */
+const OVERLAY_COMPONENT_CAP_W = 320;
+const OVERLAY_COMPONENT_CAP_H = 240;
+
+/**
+ * First node in a variant COMPONENT subtree used for sizing / overlay detection
+ * (same walk as INSTANCE max-size: skip dimensionless single-child wrappers).
+ */
+export function getVariantDimensionSourceNode(comp: ImportIRNode): ImportIRNode | undefined {
+    let node: ImportIRNode | undefined = comp.children?.[0];
+    while (
+        node &&
+        node.style?.width === undefined &&
+        node.style?.height === undefined &&
+        node.children?.length === 1
+    ) {
+        node = node.children[0];
+    }
+    return node;
+}
+
 /**
  * Convert a condition token to the variant value string stored in Figma.
  *
@@ -398,27 +419,42 @@ export function synthesizeVariant(
     const instanceDomPath = buildDomPath(group.containerParent, body);
     const instanceId = generateNodeId(instanceDomPath, ['variant-instance', ...group.conditions]);
 
+    for (const comp of components) {
+        const src = getVariantDimensionSourceNode(comp);
+        if (src?.style?.isFullOverlay) {
+            src.style = {
+                ...src.style,
+                width: OVERLAY_COMPONENT_CAP_W,
+                height: OVERLAY_COMPONENT_CAP_H,
+            };
+        }
+    }
+
+    const hasOverlayVariant = components.some((c) => {
+        const n = getVariantDimensionSourceNode(c);
+        return Boolean(n?.style?.isFullOverlay);
+    });
+
+    let overlayUsesFixed = false;
+    for (const comp of components) {
+        const n = getVariantDimensionSourceNode(comp);
+        if (n?.style?.isFullOverlay && n.style.isFixed) {
+            overlayUsesFixed = true;
+            break;
+        }
+    }
+
     // Compute INSTANCE dimensions from the max of all COMPONENT children.
     // Walk down single-child chains to find the first node with explicit
     // dimensions — on roundtrip the export wraps variant content in a
     // `<div if="...">` that has no styles, so the first child may be a
     // dimensionless wrapper (Issue #03).
-    // Skip fixed-position nodes (e.g. full-viewport overlays with
-    // `position: fixed; inset: 0`) — they are out-of-flow in CSS and
-    // should not inflate the variant instance size in Figma.
+    // Skip fixed-position nodes and full overlays — out-of-flow in CSS.
     let maxWidth = 0;
     let maxHeight = 0;
     for (const comp of components) {
-        let node = comp.children?.[0];
-        while (
-            node &&
-            node.style?.width === undefined &&
-            node.style?.height === undefined &&
-            node.children?.length === 1
-        ) {
-            node = node.children[0];
-        }
-        if (node?.style && !node.style.isFixed) {
+        const node = getVariantDimensionSourceNode(comp);
+        if (node?.style && !node.style.isFixed && !node.style.isFullOverlay) {
             if (node.style.width !== undefined && node.style.width > maxWidth)
                 maxWidth = node.style.width;
             if (node.style.height !== undefined && node.style.height > maxHeight)
@@ -426,17 +462,25 @@ export function synthesizeVariant(
         }
     }
 
-    // When no non-fixed dimensions were found (all variant content is
-    // fixed-position overlays), use 1×1 to prevent Figma's 100×100 default.
-    const instanceStyle: ImportIRNode['style'] =
-        maxWidth > 0 || maxHeight > 0
-            ? {
-                  ...(maxWidth > 0 ? { width: maxWidth } : {}),
-                  ...(maxHeight > 0 ? { height: maxHeight } : {}),
-              }
-            : preferHiddenDefault
-              ? { width: 1, height: 1 }
-              : undefined;
+    // When no in-flow dimensions were found and the set is not a full-overlay
+    // INSTANCE (DL-108), use 1×1 to prevent Figma's 100×100 default.
+    let instanceStyle: ImportIRNode['style'] | undefined;
+    if (hasOverlayVariant) {
+        instanceStyle = {
+            isFullOverlay: true,
+            isAbsolute: true,
+            ...(overlayUsesFixed ? { isFixed: true } : {}),
+            x: 0,
+            y: 0,
+        };
+    } else if (maxWidth > 0 || maxHeight > 0) {
+        instanceStyle = {
+            ...(maxWidth > 0 ? { width: maxWidth } : {}),
+            ...(maxHeight > 0 ? { height: maxHeight } : {}),
+        };
+    } else if (preferHiddenDefault) {
+        instanceStyle = { width: 1, height: 1 };
+    }
 
     const instance: ImportIRNode = {
         id: instanceId,

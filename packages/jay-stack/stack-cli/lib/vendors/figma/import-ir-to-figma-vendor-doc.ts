@@ -355,6 +355,9 @@ function mapStyleToFigmaProps(style: ImportIRStyle | undefined): Partial<FigmaVe
 export const HIDDEN_VARIANT_MARKER = 'jay-hidden-variant';
 const PREFER_HIDDEN_MARKER = 'jay-prefer-hidden-default';
 
+/** Export reconstructs full-inset overlay CSS from this pluginData (DL-108). */
+export const JAY_OVERLAY_PLUGIN_KEY = 'jay-overlay';
+
 /**
  * Pick a collision-safe hidden value for a variant dimension.
  * Starts with `_hidden_`, wrapping in extra underscores if it collides
@@ -738,6 +741,21 @@ function adaptNode(
             }
             const styleProps = mapStyleToFigmaProps(node.style);
             Object.assign(base, styleProps);
+            if (node.style?.isFullOverlay) {
+                base.layoutPositioning = 'ABSOLUTE';
+                base.x = 0;
+                base.y = 0;
+                delete base.width;
+                delete base.height;
+                base.layoutSizingHorizontal = 'FILL';
+                base.layoutSizingVertical = 'FILL';
+                base.pluginData = base.pluginData || {};
+                base.pluginData[JAY_OVERLAY_PLUGIN_KEY] = node.style.isFixed ? 'fixed' : 'absolute';
+                (base as { constraints?: { horizontal: string; vertical: string } }).constraints = {
+                    horizontal: 'SCALE',
+                    vertical: 'SCALE',
+                };
+            }
             break;
         }
         case 'VECTOR_PLACEHOLDER': {

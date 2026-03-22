@@ -105,6 +105,62 @@ function parseUnitless(value: string): number | undefined {
     return !isNaN(num) ? num : undefined;
 }
 
+/** True for CSS lengths that resolve to zero inset (DL-108 overlay detection). */
+function cssInsetIsZero(value: string | undefined): boolean {
+    if (value === undefined) return false;
+    const v = value.trim().toLowerCase();
+    return v === '0' || v === '0px' || v === '0em' || v === '0rem';
+}
+
+function expandInsetShorthand(raw: string): {
+    top: string;
+    right: string;
+    bottom: string;
+    left: string;
+} {
+    const parts = raw.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return { top: '0', right: '0', bottom: '0', left: '0' };
+    if (parts.length === 1) {
+        const p = parts[0]!;
+        return { top: p, right: p, bottom: p, left: p };
+    }
+    if (parts.length === 2) {
+        const [v, h] = parts as [string, string];
+        return { top: v, right: h, bottom: v, left: h };
+    }
+    if (parts.length === 3) {
+        const [t, h, b] = parts as [string, string, string];
+        return { top: t, right: h, bottom: b, left: h };
+    }
+    const [t, r, b, l] = parts as [string, string, string, string];
+    return { top: t, right: r, bottom: b, left: l };
+}
+
+function parsedIndicatesFullInset(parsed: Record<string, string>): boolean {
+    const insetRaw = parsed['inset'];
+    if (
+        insetRaw !== undefined &&
+        insetRaw.trim() !== '' &&
+        insetRaw.trim().toLowerCase() !== 'auto'
+    ) {
+        const { top, right, bottom, left } = expandInsetShorthand(insetRaw);
+        if (
+            cssInsetIsZero(top) &&
+            cssInsetIsZero(right) &&
+            cssInsetIsZero(bottom) &&
+            cssInsetIsZero(left)
+        ) {
+            return true;
+        }
+    }
+    return (
+        cssInsetIsZero(parsed['top']) &&
+        cssInsetIsZero(parsed['right']) &&
+        cssInsetIsZero(parsed['bottom']) &&
+        cssInsetIsZero(parsed['left'])
+    );
+}
+
 const RECOGNIZED_BUT_NOT_STORED = new Set([
     'box-sizing',
     'overflow-x',
@@ -938,6 +994,9 @@ export function resolveStyle(
             case 'position':
             case 'top':
             case 'left':
+            case 'right':
+            case 'bottom':
+            case 'inset':
                 break;
             case 'justify-content': {
                 const display = parsed['display'];
@@ -1099,6 +1158,11 @@ export function resolveStyle(
     if (parsed['position'] === 'fixed') {
         style.isFixed = true;
         style.isAbsolute = true;
+    }
+
+    const pos = parsed['position'];
+    if ((pos === 'fixed' || pos === 'absolute') && parsedIndicatesFullInset(parsed)) {
+        style.isFullOverlay = true;
     }
 
     if (enrichedStyles?.boundingRect) {

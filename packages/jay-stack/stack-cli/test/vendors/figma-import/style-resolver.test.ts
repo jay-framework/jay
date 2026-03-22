@@ -440,6 +440,32 @@ describe('style-resolver', () => {
         });
     });
 
+    describe('DL-108 full overlay detection (isFullOverlay)', () => {
+        it('position: fixed; inset: 0', () => {
+            const { style } = resolveStyle('position: fixed; inset: 0');
+            expect(style.isFullOverlay).toBe(true);
+            expect(style.isFixed).toBe(true);
+        });
+
+        it('position: fixed; inset: 0px', () => {
+            const { style } = resolveStyle('position: fixed; inset: 0px');
+            expect(style.isFullOverlay).toBe(true);
+        });
+
+        it('position: absolute; top/right/bottom/left 0', () => {
+            const { style } = resolveStyle(
+                'position: absolute; top: 0; right: 0; bottom: 0; left: 0',
+            );
+            expect(style.isFullOverlay).toBe(true);
+            expect(style.isFixed).toBeUndefined();
+        });
+
+        it('fixed without full inset is not isFullOverlay', () => {
+            const { style } = resolveStyle('position: fixed; top: 0; left: 0; width: 200px');
+            expect(style.isFullOverlay).toBeUndefined();
+        });
+    });
+
     describe('Phase 3: gradient fills', () => {
         it('linear-gradient(180deg, ...) → fills array', () => {
             const { style } = resolveStyle(

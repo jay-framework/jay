@@ -128,4 +128,6 @@ export interface ConversionContext {
     diagnostics?: ExportDiagnostic[];
     ifCondition?: string;
     parentCssClassName?: string;
+    /** DL-108: emit full-inset overlay on the `if` wrapper (merged variant path). */
+    jayOverlay?: 'fixed' | 'absolute';
 }

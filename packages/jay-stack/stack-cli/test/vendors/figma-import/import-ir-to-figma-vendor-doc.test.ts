@@ -1019,4 +1019,36 @@ describe('adaptIRToFigmaVendorDoc', () => {
             expect(content.fills![0].color!.r).toBeCloseTo(200 / 255, 2);
         });
     });
+
+    describe('DL-108 overlay INSTANCE', () => {
+        it('maps isFullOverlay IR to absolute FILL + jay-overlay pluginData', () => {
+            const root = makeFrame({
+                kind: 'SECTION',
+                children: [
+                    makeFrame({
+                        kind: 'INSTANCE',
+                        id: 'inst-1',
+                        style: {
+                            isFullOverlay: true,
+                            isAbsolute: true,
+                            isFixed: true,
+                            x: 0,
+                            y: 0,
+                        },
+                    }),
+                ],
+            });
+            const result = adaptIRToFigmaVendorDoc(makeDoc(root));
+            const inst = result.children![0];
+            expect(inst.type).toBe('INSTANCE');
+            expect(inst.layoutPositioning).toBe('ABSOLUTE');
+            expect(inst.layoutSizingHorizontal).toBe('FILL');
+            expect(inst.layoutSizingVertical).toBe('FILL');
+            expect(inst.pluginData?.['jay-overlay']).toBe('fixed');
+            expect(inst.x).toBe(0);
+            expect(inst.y).toBe(0);
+            expect(inst.width).toBeUndefined();
+            expect(inst.height).toBeUndefined();
+        });
+    });
 });

@@ -798,3 +798,33 @@ export function getFrameSizeStyles(node: FigmaVendorDocument): string {
 
     return sizeStyles;
 }
+
+/** Layout props to drop when emitting Jay full-inset overlay CSS (DL-108). */
+export const JAY_OVERLAY_STYLE_STRIP_PROPS = new Set([
+    'position',
+    'top',
+    'right',
+    'bottom',
+    'left',
+    'inset',
+    'width',
+    'height',
+    'min-width',
+    'max-width',
+    'min-height',
+    'max-height',
+]);
+
+export function stripPropertiesFromInlineStyle(style: string, propsToRemove: Set<string>): string {
+    if (!style.trim()) return '';
+    const kept: string[] = [];
+    for (const part of style.split(';')) {
+        const trimmed = part.trim();
+        if (!trimmed) continue;
+        const colon = trimmed.indexOf(':');
+        if (colon <= 0) continue;
+        const prop = trimmed.slice(0, colon).trim().toLowerCase();
+        if (!propsToRemove.has(prop)) kept.push(trimmed);
+    }
+    return kept.length ? `${kept.join('; ')}; ` : '';
+}

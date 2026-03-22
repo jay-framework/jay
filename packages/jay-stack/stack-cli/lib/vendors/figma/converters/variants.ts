@@ -1,7 +1,7 @@
 import type { FigmaVendorDocument, ContractTag } from '@jay-framework/editor-protocol';
 import type { ConversionContext, BindingAnalysis } from '../types';
 import { parseDataTypeString } from '../computed-style-enricher';
-import { HIDDEN_VARIANT_MARKER } from '../import-ir-to-figma-vendor-doc';
+import { HIDDEN_VARIANT_MARKER, JAY_OVERLAY_PLUGIN_KEY } from '../import-ir-to-figma-vendor-doc';
 
 /**
  * Returns the set of valid variant values for a contract tag, or null if the
@@ -323,6 +323,10 @@ export function convertVariantNode(
     const indent = '  '.repeat(context.indentLevel);
     const innerIndent = '  '.repeat(context.indentLevel + 1);
 
+    const jayOverlayRaw = node.pluginData?.[JAY_OVERLAY_PLUGIN_KEY];
+    const jayOverlayMode =
+        jayOverlayRaw === 'fixed' || jayOverlayRaw === 'absolute' ? jayOverlayRaw : undefined;
+
     // 1. Get all variant property values (resolve via componentSetIndex if needed)
     const propertyValues = getComponentVariantValues(
         node,
@@ -418,13 +422,20 @@ export function convertVariantNode(
                 ...context,
                 indentLevel: context.indentLevel + 1,
                 ifCondition: conditions,
+                jayOverlay: jayOverlayMode,
             };
             const annotated = soleChild.parentType
                 ? soleChild
                 : { ...soleChild, parentType: 'COMPONENT' };
             variantHtml += convertNodeToJayHtml(annotated, mergedContext);
         } else {
-            variantHtml += `${innerIndent}<div if="${conditions}">\n`;
+            const overlayStyleAttr =
+                jayOverlayMode === 'fixed'
+                    ? ' style="position: fixed; inset: 0;"'
+                    : jayOverlayMode === 'absolute'
+                      ? ' style="position: absolute; inset: 0;"'
+                      : '';
+            variantHtml += `${innerIndent}<div if="${conditions}"${overlayStyleAttr}>\n`;
 
             const variantContext: ConversionContext = {
                 ...context,

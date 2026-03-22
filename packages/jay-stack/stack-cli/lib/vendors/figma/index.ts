@@ -16,6 +16,8 @@ import {
     getBackgroundFillsStyle,
     getStrokeStyles,
     getFrameSizeStyles,
+    stripPropertiesFromInlineStyle,
+    JAY_OVERLAY_STYLE_STRIP_PROPS,
 } from './utils';
 import { convertTextNodeToHtml } from './converters/text';
 import { convertImageNodeToHtml, extractStaticImageUrl } from './converters/image';
@@ -322,6 +324,15 @@ function convertRegularNode(
                 // Invalid JSON — skip silently
             }
         }
+    }
+
+    if (context.jayOverlay) {
+        const prefix =
+            context.jayOverlay === 'fixed'
+                ? 'position: fixed; inset: 0; '
+                : 'position: absolute; inset: 0; ';
+        effectiveStyle =
+            prefix + stripPropertiesFromInlineStyle(effectiveStyle, JAY_OVERLAY_STYLE_STRIP_PROPS);
     }
 
     // Build HTML attributes
