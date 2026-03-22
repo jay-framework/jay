@@ -975,3 +975,13 @@ No deviations.
 ### Phase 5: Fake-Shop Integration
 
 6. **No dedicated pages per scenario** — Design specified creating separate pages for single instance, conditional, forEach, slowForEach. **Deviation:** Did not create them; the existing homepage already covers the main scenarios. Creating redundant pages adds maintenance burden. Conditional instance is covered by compiler fixture tests but not by an integration test page.
+
+### Post-Implementation Bug Fix: slowForEach item variable undefined in server-element
+
+**Bug:** The server-element compiler's `slowForEach` handler (in `renderServerElement()`) set the variable context to the item type (producing `vs1` references in bindings like `vs1.isSelected`) but never generated code to define `vs1`. Regular `forEach` wraps content in `for (const vs1 of array) { ... }`, but `slowForEach` items are pre-rendered individually — there was no loop. Any `fast+interactive` binding on a slowForEach element (e.g., `class="{isSelected ? selected}"`) referenced an undefined variable.
+
+**Fix:** Generate a block-scoped item lookup `{ const vs1 = array?.[index]; if (vs1) { ... } }` only when the rendered content actually references the item variable (`vs1.`). For slow-only arrays where bindings have already been resolved during slow render, no wrapper is needed — and must not be added, since the array data may not be in the SSR ViewState at fast/SSR time.
+
+**Detection:** `childContent.rendered.includes(itemVar + '.')` — if the rendered server-element code contains `vs1.`, the item variable is needed.
+
+**Test:** New fixture `collections/slow-for-each-dynamic-bindings` with `class="{isSelected ? selected}"` on slowForEach elements. Existing fixtures (`page-with-headless-in-slow-foreach`, `page-with-headless-mixed`) confirm no wrapper is generated when not needed.

@@ -3544,10 +3544,11 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
     if (isSlowForEach(element)) {
         const slowForEachInfo = getSlowForEachInfo(element);
         if (slowForEachInfo) {
-            const { jayTrackBy } = slowForEachInfo;
-            const slowForEachVariables = variables.childVariableFor(
-                parseAccessor(slowForEachInfo.arrayName, variables),
-            );
+            const { arrayName, jayIndex, jayTrackBy } = slowForEachInfo;
+            const arrayAccessor = parseAccessor(arrayName, variables);
+            const slowForEachVariables = variables.childVariableFor(arrayAccessor);
+            const arrayExpr = arrayAccessor.render().rendered;
+            const itemVar = slowForEachVariables.currentVar;
             // Children inside slowForEach read their coordinates from jay-coordinate-base
             // (pre-assigned by assignCoordinates with jayTrackBy prefix, e.g. "p1/0")
             const itemContext: ServerContext = {
@@ -3556,7 +3557,28 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
                 indent,
                 insideSlowForEach: true,
             };
-            return renderServerElementContent(element, itemContext);
+            const childContent = renderServerElementContent(element, itemContext);
+            // Only wrap with item variable lookup when the content actually references
+            // the item variable (e.g., vs1). For slow-only arrays, the data may not be
+            // in the SSR ViewState (it was consumed during slow render), so guarding
+            // with `if (vs1)` would hide the pre-rendered content.
+            const needsItemVar = childContent.rendered.includes(itemVar + '.');
+            if (needsItemVar) {
+                const itemIndent = new Indent(indent.curr + '    ');
+                const indentedContext: ServerContext = {
+                    ...context,
+                    variables: slowForEachVariables,
+                    indent: itemIndent,
+                    insideSlowForEach: true,
+                };
+                const indentedContent = renderServerElementContent(element, indentedContext);
+                return new RenderFragment(
+                    `${indent.firstLine}{ const ${itemVar} = ${arrayExpr}?.[${jayIndex}]; if (${itemVar}) {\n${indentedContent.rendered}\n${indent.firstLine}}}`,
+                    indentedContent.imports,
+                    [...arrayAccessor.validations, ...indentedContent.validations],
+                );
+            }
+            return childContent;
         }
     }
 

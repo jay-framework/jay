@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data">
+        data:
+            categories:
+                - categoryId: string
+                  categoryName: string
+                  isSelected: boolean
+    </script>
+</head>
+<body>
+    <div class="filter-categories">
+        <label class="chip {isSelected ? selected}" slowForEach="categories" trackBy="categoryId" jayIndex="0" jayTrackBy="cat1">
+            <input type="checkbox" ref="categories.isSelected" />
+            Category A
+        </label>
+        <label class="chip {isSelected ? selected}" slowForEach="categories" trackBy="categoryId" jayIndex="1" jayTrackBy="cat2">
+            <input type="checkbox" ref="categories.isSelected" />
+            Category B
+        </label>
+    </div>
+</body>
+</html>

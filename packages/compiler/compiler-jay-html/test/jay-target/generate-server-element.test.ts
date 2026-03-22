@@ -130,6 +130,17 @@ describe('generate jay-html server element', () => {
         });
     });
 
+    describe('slowForEach', () => {
+        it('for slowForEach with dynamic bindings on element', async () => {
+            const folder = 'collections/slow-for-each-dynamic-bindings';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
+    });
+
     describe('async', () => {
         it('for async simple types', async () => {
             const folder = 'async/async-simple-types';
