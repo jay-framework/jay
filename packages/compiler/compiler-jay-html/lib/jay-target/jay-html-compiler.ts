@@ -3175,6 +3175,7 @@ function renderHydrateElementContent(
         let childrenRendered = '[]';
         let childImports = Imports.none();
         let childValidations: string[] = [];
+        let childRefs: RefsTree | undefined;
 
         if (textFragment) {
             const accessor = textFragment.rendered.replace(/^dt\(/, '').replace(/\)$/, '');
@@ -3183,6 +3184,18 @@ function renderHydrateElementContent(
                 textFragment.imports.minus(Import.dynamicText),
             );
             childValidations = textFragment.validations;
+        } else {
+            // Recurse into child elements (e.g., <input ref="..."> inside a dynamic-attr parent)
+            const children = mergeHydrateFragments(
+                childNodes.map((child) => renderHydrateNode(child, context)),
+                ',\n',
+            );
+            if (children.rendered.trim()) {
+                childrenRendered = `[${children.rendered}]`;
+                childImports = children.imports;
+                childValidations = children.validations;
+                childRefs = children.refs;
+            }
         }
 
         const refSuffix = renderedRef.rendered ? `, ${renderedRef.rendered}` : '';
@@ -3194,7 +3207,7 @@ function renderHydrateElementContent(
                 .plus(childImports)
                 .plus(renderedRef.imports),
             [...attributes.validations, ...childValidations, ...renderedRef.validations],
-            renderedRef.refs,
+            mergeRefsTrees(...[childRefs, renderedRef.refs].filter(Boolean)),
         );
     }
 

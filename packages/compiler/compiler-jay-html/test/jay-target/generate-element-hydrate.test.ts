@@ -42,6 +42,15 @@ describe('generate jay-html element hydrate', () => {
             );
         });
 
+        it('for dynamic attribute parent with child ref', async () => {
+            const folder = 'basics/dynamic-attr-with-child-ref';
+            const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);
+            expect(hydrateFile.validations).toEqual([]);
+            expect(await prettify(hydrateFile.val)).toEqual(
+                await readFixtureElementHydrateFile(folder),
+            );
+        });
+
         it('for mixed content dynamic text (adoptText by position, DL#102)', async () => {
             const folder = 'basics/mixed-content-dynamic-text';
             const hydrateFile = await readFileAndGenerateElementHydrateFile(folder);

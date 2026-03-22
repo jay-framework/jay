@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data">
+        data:
+            isSelected: boolean
+            label: string
+    </script>
+</head>
+<body>
+    <label class="{isSelected ? selected}">
+        <input type="checkbox" ref="toggle" />
+        {label}
+    </label>
+</body>
+</html>

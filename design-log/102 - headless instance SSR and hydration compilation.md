@@ -996,3 +996,19 @@ No deviations.
 
 1. **Hydrate compiler** — Added `slowForEachJayTrackBy` to `HydrateContext`. In `renderHydrateElementContent`, when inside a slowForEach, strip the jayTrackBy prefix from coordinates. Root element (coordinate === jayTrackBy) becomes `''`; children (e.g., `jayTrackBy/0`) become `0`.
 2. **Runtime** — Updated `resolveCoordinate` and `peekCoordinate` in `ConstructContext` to handle empty key: `resolveCoordinate('')` with `coordinateBase = ["jayTrackBy"]` now correctly resolves to `"jayTrackBy"` instead of `"jayTrackBy/"` (trailing slash).
+
+### Post-Implementation Bug Fix: hydrate hasDynamicAttrs branch drops element children
+
+**Bug:** `renderHydrateElementContent`'s `hasDynamicAttrs` branch (for elements with dynamic class/attribute bindings) only handled text children (`textFragment`). Element children — such as `<input ref="...">` inside a `<label class="{isSelected ? selected}">` — were silently dropped, producing `adoptElement("...", {...}, [])` with an empty children array. Refs on those children were lost, breaking interactivity.
+
+**Fix:** Added an `else` branch that recurses into child elements via `renderHydrateNode` when there's no `textFragment`. This ensures element children with refs or dynamic bindings are properly adopted. Pre-existing bug, not caused by the slowForEach changes — but exposed by the store-light categories which have both a dynamic class on the parent and a ref on a child input.
+
+### Post-Implementation Bug Fix: conditional insertion at wrong position with nested dynamic content
+
+**Bug:** When a parent element (`adoptDynamicElement`) had static wrapper children (e.g., `<header>`, `<section>`) containing deeply nested dynamic descendants (e.g., a ref'd input or dynamic text), the Kindergarten's `getOffsetFor` miscounted the preceding groups. The adopted element's `child.dom` pointed to the deeply nested descendant (not a direct child of the parent), so `child.parentNode === this.parentNode` was false and the group contributed 0 to the offset. Conditionals after these wrappers were inserted at the beginning of the container instead of their correct position.
+
+**Root cause:** `adoptDynamicElement` claimed `child.dom` (the nested descendant) in the Kindergarten group. Since `getOffsetFor` checks `child.parentNode === this.parentNode`, nested nodes don't count as occupying a direct child slot.
+
+**Fix:** In `adoptDynamicElement` (runtime `hydrate.ts`), claim the actual direct child DOM node from `significantChildren[significantIndex]` instead of `child.dom`. The dynamic descendants' update/mount functions are still collected via `collectChild`. This ensures `getOffsetFor` correctly counts every direct child position.
+
+**Test:** 3 new tests in `hydrate-conditional.test.ts` — `hydrateConditional ordering — static wrapper with nested dynamic content`. Verified tests fail without the fix (conditional appears at beginning instead of correct position).
