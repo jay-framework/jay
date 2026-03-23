@@ -1,0 +1,7 @@
+name: test-status
+module: ../../../status-component
+contracts:
+  - name: status
+    contract: ../../../status-component.jay-contract
+    component: status
+    description: Test status component with client-side mismatch

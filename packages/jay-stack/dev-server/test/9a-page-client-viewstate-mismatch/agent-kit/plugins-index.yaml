@@ -1,0 +1,8 @@
+jay_stack_version: 0.14.0
+plugins:
+  - name: test-status
+    path: ./src/plugins/test-status
+    contracts:
+      - name: status
+        type: static
+        path: ./status-component.jay-contract
