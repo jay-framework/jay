@@ -101,7 +101,7 @@ export function hydrateCompositeJayComponent<
 
         return {
             render: () => {
-                let viewState = {...defaultViewState};
+                let viewState = { ...defaultViewState };
                 instances.forEach(([key, instance]) => {
                     const rendered = materializeViewState(instance.render());
                     if (key) {
