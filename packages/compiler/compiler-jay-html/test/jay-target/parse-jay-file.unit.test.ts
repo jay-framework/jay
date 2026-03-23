@@ -77,6 +77,9 @@ describe('compiler', () => {
                 `Plugin manifest resolution not supported in this test`,
             ]);
         },
+        readJayHtml() {
+            return null;
+        },
     };
 
     function jayFileWith(jayYaml, body, scripts?) {

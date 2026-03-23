@@ -1007,4 +1007,261 @@ describe('hydration', () => {
             },
         });
     });
+
+    describe('8b. Headfull FS — under condition', () => {
+        testFixture('8b-page-headfull-fs-conditional', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Conditional Headfull FS');
+                // showWidget=true initially → widget visible
+                expect(await page.textContent('#target .label')).toEqual('Item 1');
+                expect(await page.textContent('#target .value')).toEqual('10');
+                // "Widget hidden" text should NOT be visible
+                expect(await page.$('#target p')).toBeNull();
+            },
+            interactivityChecks: async (page) => {
+                // Widget increment button works
+                expect(await page.textContent('#target .value')).toEqual('10');
+                await page.click('#target .widget button');
+                await page.waitForFunction(
+                    () => document.querySelector('#target .value')?.textContent === '11',
+                    { timeout: 2000 },
+                );
+                expect(await page.textContent('#target .value')).toEqual('11');
+
+                // Toggle: hide widget
+                await page.click('button:text("Toggle")');
+                await page.waitForFunction(
+                    () => document.querySelector('#target p')?.textContent === 'Widget hidden',
+                    { timeout: 2000 },
+                );
+                expect(await page.$('#target .widget')).toBeNull();
+                expect(await page.textContent('#target p')).toEqual('Widget hidden');
+
+                // Toggle: show widget again
+                await page.click('button:text("Toggle")');
+                await page.waitForFunction(
+                    () => document.querySelector('#target .widget') !== null,
+                    { timeout: 2000 },
+                );
+                expect(await page.$('#target .widget')).toBeTruthy();
+            },
+        });
+    });
+
+    describe('8c. Headfull FS — inside forEach with wrapper', () => {
+        testFixture('8c-page-headfull-fs-foreach', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('ForEach Headfull FS');
+                const cards = await page.$$('#target .card');
+                expect(cards).toHaveLength(3);
+                expect(await cards[0].textContent()).toContain('Item 1');
+                expect(await cards[1].textContent()).toContain('Item 2');
+                expect(await cards[2].textContent()).toContain('Item 3');
+                const widgets = await page.$$('#target .widget');
+                expect(widgets).toHaveLength(3);
+                expect(await widgets[0].textContent()).toContain('10');
+                expect(await widgets[1].textContent()).toContain('20');
+                expect(await widgets[2].textContent()).toContain('30');
+            },
+            interactivityChecks: async (page) => {
+                const buttons = await page.$$('#target .widget button');
+                expect(buttons).toHaveLength(3);
+                await buttons[1].click();
+                await page.waitForFunction(
+                    () => {
+                        const values = document.querySelectorAll('#target .widget .value');
+                        return values[1]?.textContent === '21';
+                    },
+                    { timeout: 2000 },
+                );
+                let values = await page.$$('#target .widget .value');
+                expect(await values[0].textContent()).toEqual('10');
+                expect(await values[1].textContent()).toEqual('21');
+                expect(await values[2].textContent()).toEqual('30');
+
+                // Add a new item
+                await page.click('button:text("Add Item")');
+                await page.waitForFunction(
+                    () => document.querySelectorAll('#target .widget').length === 4,
+                    { timeout: 2000 },
+                );
+                let widgets = await page.$$('#target .widget');
+                expect(widgets).toHaveLength(4);
+                expect(await widgets[3].textContent()).toContain('Item 4');
+                expect(await widgets[3].textContent()).toContain('40');
+
+                // Remove last item
+                await page.click('button:text("Remove Last")');
+                await page.waitForFunction(
+                    () => document.querySelectorAll('#target .widget').length === 3,
+                    { timeout: 2000 },
+                );
+                widgets = await page.$$('#target .widget');
+                expect(widgets).toHaveLength(3);
+                values = await page.$$('#target .widget .value');
+                expect(await values[1].textContent()).toEqual('21');
+            },
+        });
+    });
+
+    describe('8d. Headfull FS — inside slowForEach', () => {
+        testFixture('8d-page-headfull-fs-slow-foreach', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('SlowForEach Headfull FS');
+                const widgets = await page.$$('#target .widget');
+                expect(widgets).toHaveLength(2);
+                expect(await widgets[0].textContent()).toContain('Item 1');
+                expect(await widgets[0].textContent()).toContain('10');
+                expect(await widgets[1].textContent()).toContain('Item 2');
+                expect(await widgets[1].textContent()).toContain('20');
+            },
+            interactivityChecks: async (page) => {
+                const widgets = await page.$$('#target .widget');
+                expect(await widgets[0].textContent()).toContain('10');
+                await page.click('#target .widget button');
+                await page.waitForFunction(
+                    () => {
+                        const values = document.querySelectorAll('#target .widget .value');
+                        return values[0]?.textContent === '11';
+                    },
+                    { timeout: 2000 },
+                );
+                const updatedWidgets = await page.$$('#target .widget');
+                expect(await updatedWidgets[0].textContent()).toContain('11');
+            },
+        });
+    });
+
+    describe('8e. Headfull FS — forEach with preceding sections + carry-forward', () => {
+        testFixture('8e-page-headfull-fs-foreach-nested', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual(
+                    'Nested ForEach Headfull FS',
+                );
+                expect(await page.textContent('#target .section h2')).toEqual('Static Section');
+                const widgets = await page.$$('#target .widget');
+                expect(widgets).toHaveLength(2);
+                expect(await widgets[0].textContent()).toContain('10');
+                expect(await widgets[1].textContent()).toContain('20');
+                const names = await page.$$('#target .card strong');
+                expect(names).toHaveLength(2);
+                expect(await names[0].textContent()).toEqual('Alpha');
+                expect(await names[1].textContent()).toEqual('Beta');
+            },
+            interactivityChecks: async (page) => {
+                const buttons = await page.$$('#target .widget button');
+                expect(buttons).toHaveLength(2);
+                // Click first widget (itemId="1" → step=1)
+                await buttons[0].click();
+                await page.waitForFunction(
+                    () => {
+                        const values = document.querySelectorAll('#target .widget .value');
+                        return values[0]?.textContent === '11';
+                    },
+                    { timeout: 2000 },
+                );
+                let values = await page.$$('#target .widget .value');
+                expect(await values[0].textContent()).toEqual('11');
+                expect(await values[1].textContent()).toEqual('20');
+
+                // Click second widget (itemId="2" → step=2, verifies carry-forward)
+                await buttons[1].click();
+                await page.waitForFunction(
+                    () => {
+                        const values = document.querySelectorAll('#target .widget .value');
+                        return values[1]?.textContent === '22';
+                    },
+                    { timeout: 2000 },
+                );
+                values = await page.$$('#target .widget .value');
+                expect(await values[1].textContent()).toEqual('22');
+            },
+        });
+    });
+
+    describe('8f. Headfull FS — two static instances with different props', () => {
+        testFixture('8f-page-headfull-fs-two-instances', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual(
+                    'Two Instances Headfull FS',
+                );
+                const widgets = await page.$$('#target .widget');
+                expect(widgets).toHaveLength(2);
+                expect(await widgets[0].textContent()).toContain('Item 1');
+                expect(await widgets[0].textContent()).toContain('10');
+                expect(await widgets[1].textContent()).toContain('Item 3');
+                expect(await widgets[1].textContent()).toContain('30');
+            },
+            interactivityChecks: async (page) => {
+                const buttons = await page.$$('#target .widget button');
+                expect(buttons).toHaveLength(2);
+                await buttons[1].click();
+                await page.waitForFunction(
+                    () => {
+                        const values = document.querySelectorAll('#target .widget .value');
+                        return values[1]?.textContent === '31';
+                    },
+                    { timeout: 2000 },
+                );
+                const values = await page.$$('#target .widget .value');
+                expect(await values[0].textContent()).toEqual('10');
+                expect(await values[1].textContent()).toEqual('31');
+            },
+        });
+    });
+
+    describe('8g. Headfull FS — fast-only page (no slow phase)', () => {
+        testFixture('8g-page-headfull-fs-fast-only', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Fast Only Headfull FS');
+                const widgets = await page.$$('#target .widget');
+                expect(widgets).toHaveLength(1);
+                expect(await widgets[0].textContent()).toContain('10');
+            },
+            interactivityChecks: async (page) => {
+                const buttons = await page.$$('#target .widget button');
+                expect(buttons).toHaveLength(1);
+                await buttons[0].click();
+                await page.waitForFunction(
+                    () => {
+                        const values = document.querySelectorAll('#target .widget .value');
+                        return values[0]?.textContent === '11';
+                    },
+                    { timeout: 2000 },
+                );
+                const values = await page.$$('#target .widget .value');
+                expect(await values[0].textContent()).toEqual('11');
+            },
+        });
+    });
+
+    describe('8h. Headfull FS — with component CSS', () => {
+        testFixture('8h-page-headfull-fs-with-css', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Headfull FS CSS Test');
+                const widgets = await page.$$('#target .widget');
+                expect(widgets).toHaveLength(1);
+                expect(await widgets[0].textContent()).toContain('10');
+            },
+            interactivityChecks: async (page) => {
+                // Verify CSS is applied
+                const borderStyle = await page.evaluate(() => {
+                    const widget = document.querySelector('#target .widget');
+                    return widget ? getComputedStyle(widget).borderStyle : '';
+                });
+                expect(borderStyle).toEqual('solid');
+
+                // Interactivity works
+                await page.click('#target .widget button');
+                await page.waitForFunction(
+                    () => {
+                        const values = document.querySelectorAll('#target .widget .value');
+                        return values[0]?.textContent === '11';
+                    },
+                    { timeout: 2000 },
+                );
+                expect(await page.textContent('#target .value')).toEqual('11');
+            },
+        });
+    });
 });

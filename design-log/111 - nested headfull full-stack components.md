@@ -457,30 +457,26 @@ Each fixture contains: component jay-html, component jay-contract, component ts,
 
 - `<jay:Name>` with existing children: changed from error to silent skip. Needed because pre-rendered HTML re-enters `parseJayFile` with templates already injected. Skipping preserves the pre-rendered content.
 
-### Phase 3: Dev Server Integration (in progress)
+### Phase 3: Dev Server Integration (completed)
 
 **Additional files changed:**
 
-- `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-parser.ts` — Added `injectHeadfullFSTemplates(html, sourceDir, resolver)` exported function for standalone HTML template injection before slow render
-- `packages/compiler/compiler-jay-html/lib/slow-render/slow-render-transform.ts` — Added `application/jay-headfull` to script type skip list in `resolveRelativePaths`, preventing `src` attribute from being resolved to absolute path
-- `packages/jay-stack/dev-server/lib/dev-server.ts` — Added `injectHeadfullFSTemplates` calls in `preRenderJayHtml` (before slow render) and `sendResponse` (before SSR compilation, using source directory for resolution)
+- `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-parser.ts` — Added `injectHeadfullFSTemplates(html, sourceDir, resolver)` exported function; added `projectRoot` fallback for contract/module resolution from cache directories
+- `packages/compiler/compiler-jay-html/lib/slow-render/slow-render-transform.ts` — Added `application/jay-headfull` to script type skip list in `resolveRelativePaths`
+- `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler.ts` — Exclude component's code link name from `importedSymbols` in headless instance child context, preventing HTML tags (e.g., `<header>`) from colliding with the component import name
+- `packages/jay-stack/dev-server/lib/dev-server.ts` — Added `injectHeadfullFSTemplates` calls in `preRenderJayHtml` and `sendResponse`
 
 **Discoveries:**
 
-1. `slowRenderTransform` resolves `src` attributes on script tags to absolute paths — headfull FS scripts need to be excluded (like headless scripts)
-2. `sendResponse` uses the pre-rendered file's directory for compilation — headfull FS contracts aren't in `build/pre-rendered/`, so template injection in `sendResponse` must use the source directory
-3. `preRenderJayHtml` reads original HTML — templates must be injected before `slowRenderTransform` so instance bindings are resolved in Pass 2
+1. `slowRenderTransform` resolves `src` attributes on script tags to absolute paths — headfull FS scripts need to be excluded
+2. `sendResponse` uses the pre-rendered directory for compilation — template injection must use the source directory
+3. `preRenderJayHtml` reads original HTML — templates must be injected before `slowRenderTransform` so instance bindings resolve in Pass 2
+4. Contract/module resolution from cache directories: relative paths from `build/pre-rendered/` don't exist. Added `projectRoot` fallback for contract loading and `moduleResolveDir` for code link
+5. Element target name collision: component export `header` + HTML tag `<header>` in template. Fixed by excluding the code link name from the child context's `importedSymbols`
 
-**Additional discoveries:**
+**8a test results:** 9/9 pass (SSR disabled, SSR first, SSR cached — page loads, hydration, interactivity)
 
-4. `parseHeadfullFSImports` contract and module resolution: when jay-html is parsed from a cache directory (`build/pre-rendered/`), relative paths (`./header/header`) point to non-existent locations. Added `projectRoot` fallback for contract loading (try/catch with fallback to `path.resolve(projectRoot, contractAttr)`) and module path resolution (`moduleResolveDir` for `codeLink`).
-
-**8a test results (run alone):**
-- SSR first request: 3/3 pass (page loads, hydration, interactivity)
-- SSR cached request: 3/3 pass (page loads, hydration, interactivity)
-- SSR disabled: 3/3 fail (client-only element target — vite transform issue, separate concern)
-
-**Remaining:** SSR disabled (client-only) mode — vite plugin transform of `page.jay-html.ts` for element target. The vite transform fails silently, resulting in no component rendering on the client.
+**No regressions:** 609/609 compiler-jay-html tests pass.
 
 ## Related Design Logs
 

@@ -151,9 +151,7 @@ export const JAY_IMPORT_RESOLVER: JayImportResolver = {
         return resolvePluginManifest(projectRoot, pluginName);
     },
     readJayHtml(importingModuleDir: string, src: string): string | null {
-        const resolvedPath = src.startsWith('.')
-            ? path.resolve(importingModuleDir, src)
-            : src;
+        const resolvedPath = src.startsWith('.') ? path.resolve(importingModuleDir, src) : src;
         const jayHtmlPath = resolvedPath + '.jay-html';
         try {
             return fs.readFileSync(jayHtmlPath, 'utf-8');
