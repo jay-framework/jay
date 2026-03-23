@@ -724,6 +724,321 @@ async function parseHeadlessImports(
     return result;
 }
 
+/**
+ * Inject headfull full-stack component templates into jay-html.
+ * Finds <script type="application/jay-headfull" contract="..."> tags,
+ * reads each component's jay-html file, and injects the body content
+ * into matching <jay:Name> tags that are empty/self-closing.
+ *
+ * This must be called on the raw HTML string BEFORE the slow render pipeline,
+ * so that instance bindings can be resolved during pre-rendering.
+ *
+ * @param html - The raw jay-html content
+ * @param sourceDir - Absolute path to the directory containing the jay-html file
+ * @param importResolver - Resolver for reading component jay-html files
+ * @returns The HTML with headfull FS templates injected (or unchanged if none found)
+ */
+export function injectHeadfullFSTemplates(
+    html: string,
+    sourceDir: string,
+    importResolver: JayImportResolver,
+): string {
+    const root = parse(html);
+    const allHeadfullElements = root.querySelectorAll('script[type="application/jay-headfull"]');
+    const fsElements = allHeadfullElements.filter((el) => el.getAttribute('contract'));
+
+    if (fsElements.length === 0) return html;
+
+    const body = root.querySelector('body');
+    if (!body) return html;
+
+    for (const element of fsElements) {
+        const src = element.getAttribute('src');
+        const rawNames = element.getAttribute('names');
+        if (!src || !rawNames) continue;
+
+        const names = parseImportNames(rawNames);
+        if (names.length === 0) continue;
+
+        const contractName = (names[0].as || names[0].name).toLowerCase();
+
+        const jayHtmlContent = importResolver.readJayHtml(sourceDir, src);
+        if (!jayHtmlContent) continue;
+
+        const jayHtmlRoot = parse(jayHtmlContent);
+        const jayHtmlBody = jayHtmlRoot.querySelector('body');
+        if (!jayHtmlBody) continue;
+
+        // Inject into matching <jay:Name> tags
+        const jayTags = body
+            .querySelectorAll('*')
+            .filter((el) => el.tagName?.toLowerCase() === `jay:${contractName}`);
+
+        for (const jayTag of jayTags) {
+            if (!jayTag.innerHTML.trim()) {
+                jayTag.set_content(jayHtmlBody.innerHTML);
+            }
+        }
+    }
+
+    return root.toString();
+}
+
+interface HeadfullFSParseResult {
+    headlessImports: JayHeadlessImports[];
+    css?: string;
+    linkedCssFiles: string[];
+}
+
+/**
+ * Parse headfull full-stack imports (application/jay-headfull with contract attribute).
+ * These are headfull components that participate in three-phase rendering.
+ * They are converted to JayHeadlessImports entries and their jay-html body content
+ * is injected into matching <jay:Name> tags in the parent page body.
+ */
+async function parseHeadfullFSImports(
+    elements: HTMLElement[],
+    validations: Array<string>,
+    filePath: string,
+    importResolver: JayImportResolver,
+    body: HTMLElement,
+    projectRoot: string,
+): Promise<HeadfullFSParseResult> {
+    const headlessImports: JayHeadlessImports[] = [];
+    const cssParts: string[] = [];
+    const linkedCssFiles: string[] = [];
+
+    for (const element of elements) {
+        const src = element.getAttribute('src');
+        const contractAttr = element.getAttribute('contract');
+        const rawNames = element.getAttribute('names');
+
+        if (!src) {
+            validations.push('headfull FS import must specify src attribute');
+            continue;
+        }
+        if (!contractAttr) {
+            continue;
+        }
+        if (!rawNames) {
+            validations.push(`headfull FS import for module ${src} must specify names attribute`);
+            continue;
+        }
+
+        const names = parseImportNames(rawNames);
+        if (names.length === 0) {
+            validations.push(
+                `headfull FS import for module ${src} does not specify what to import`,
+            );
+            continue;
+        }
+
+        // First name is the component export name; lowercased for <jay:xxx> tag matching
+        const componentExportName = names[0].name;
+        const contractName = (names[0].as || componentExportName).toLowerCase();
+
+        // Load the contract — try filePath first, fall back to projectRoot
+        // (pre-rendered files live in build/pre-rendered/ but contracts stay in the source directory)
+        let contractPath = path.resolve(filePath, contractAttr);
+        let loadedContract: Contract;
+        try {
+            const contractResult = importResolver.loadContract(contractPath);
+            validations.push(...contractResult.validations);
+            if (!contractResult.val) {
+                continue;
+            }
+            loadedContract = contractResult.val;
+        } catch (e) {
+            // Contract not found at filePath — try projectRoot as fallback
+            // (happens when parsing pre-rendered HTML from build/pre-rendered/)
+            if (projectRoot && projectRoot !== filePath) {
+                try {
+                    contractPath = path.resolve(projectRoot, contractAttr);
+                    const fallbackResult = importResolver.loadContract(contractPath);
+                    validations.push(...fallbackResult.validations);
+                    if (!fallbackResult.val) {
+                        continue;
+                    }
+                    loadedContract = fallbackResult.val;
+                } catch (e2) {
+                    validations.push(
+                        `Failed to load contract for headfull FS component ${src}: ${e2.message}`,
+                    );
+                    continue;
+                }
+            } else {
+                validations.push(
+                    `Failed to load contract for headfull FS component ${src}: ${e.message}`,
+                );
+                continue;
+            }
+        }
+
+        // Read the component's jay-html file — try filePath first, fall back to projectRoot
+        let jayHtmlContent = importResolver.readJayHtml(filePath, src);
+        if (jayHtmlContent === null && projectRoot && projectRoot !== filePath) {
+            jayHtmlContent = importResolver.readJayHtml(projectRoot, src);
+        }
+        if (jayHtmlContent === null) {
+            validations.push(
+                `jay-html file not found for headfull FS component ${src} (expected ${src}.jay-html)`,
+            );
+            continue;
+        }
+
+        const jayHtmlRoot = parse(jayHtmlContent);
+        const jayHtmlBody = jayHtmlRoot.querySelector('body');
+        if (!jayHtmlBody) {
+            validations.push(`headfull FS component ${src} jay-html must have a body tag`);
+            continue;
+        }
+
+        // Extract CSS from component's jay-html head
+        const componentDir = path.dirname(path.resolve(filePath, src));
+        const componentCssResult = await extractCss(jayHtmlRoot, componentDir);
+        validations.push(...componentCssResult.validations);
+        if (componentCssResult.val?.css) {
+            cssParts.push(componentCssResult.val.css);
+        }
+        if (componentCssResult.val?.linkedCssFiles) {
+            linkedCssFiles.push(...componentCssResult.val.linkedCssFiles);
+        }
+
+        // Inject template: find matching <jay:Name> tags in parent body
+        const jayTags = body
+            .querySelectorAll('*')
+            .filter((el) => el.tagName?.toLowerCase() === `jay:${contractName}`);
+
+        for (const jayTag of jayTags) {
+            const existingContent = jayTag.innerHTML.trim();
+            if (existingContent) {
+                // Tag already has content — either pre-rendered injection or user content.
+                // Skip injection; the existing content is used as-is.
+                continue;
+            }
+            jayTag.set_content(jayHtmlBody.innerHTML);
+        }
+
+        // Build JayHeadlessImports entry
+        try {
+            const contractTypes = await contractToImportsViewStateAndRefs(
+                loadedContract,
+                contractPath,
+                importResolver,
+            );
+
+            contractTypes.map(({ type, refs: subContractRefsTree, enumsToImport }) => {
+                const contractInternalName = loadedContract.name;
+                const refsTypeName = `${pascalCase(contractInternalName)}Refs`;
+                const repeatedRefsTypeName = `${pascalCase(contractInternalName)}RepeatedRefs`;
+                const refs = mkRefsTree(
+                    subContractRefsTree.refs,
+                    subContractRefsTree.children,
+                    subContractRefsTree.repeated,
+                    refsTypeName,
+                    repeatedRefsTypeName,
+                );
+
+                const relativeContractPath = path.relative(filePath, contractPath);
+
+                const enumsToImportRelativeToJayHtml: EnumToImport[] = enumsToImport.map(
+                    (enumToImport) => ({
+                        type: enumToImport.type,
+                        declaringModule: path.relative(filePath, enumToImport.declaringModule),
+                    }),
+                );
+
+                const enumsFromContract = enumsToImportRelativeToJayHtml
+                    .filter((_) => _.declaringModule === relativeContractPath)
+                    .map((_) => _.type);
+
+                const nestedTypeNames = collectNestedTypeNames(type);
+                const nestedTypeImports = nestedTypeNames
+                    .filter((name) => name !== type.name)
+                    .map((name) => ({ name, type: JayUnknown }));
+
+                const contractLink: JayImportLink = {
+                    module: relativeContractPath,
+                    names: [
+                        { name: type.name, type },
+                        { name: refsTypeName, type: JayUnknown },
+                        ...nestedTypeImports,
+                        ...enumsFromContract.map((_) => ({ name: _.name, type: _ })),
+                    ],
+                };
+
+                const enumsFromOtherContracts = enumsToImportRelativeToJayHtml.filter(
+                    (_) => _.declaringModule !== relativeContractPath,
+                );
+
+                const enumImportLinks: JayImportLink[] = Object.entries(
+                    enumsFromOtherContracts.reduce(
+                        (acc, enumToImport) => {
+                            const module = enumToImport.declaringModule;
+                            if (!acc[module]) {
+                                acc[module] = [];
+                            }
+                            acc[module].push(enumToImport);
+                            return acc;
+                        },
+                        {} as Record<string, EnumToImport[]>,
+                    ),
+                ).map(([module, enums]) => ({
+                    module,
+                    names: enums.map((enumToImport) => ({
+                        name: enumToImport.type.name,
+                        type: enumToImport.type,
+                    })),
+                }));
+
+                const contractLinks = [contractLink, ...enumImportLinks];
+
+                // Module path for code link — resolve from projectRoot when filePath
+                // is a different directory (e.g., build/pre-rendered/)
+                const moduleResolveDir =
+                    projectRoot && projectRoot !== filePath ? projectRoot : filePath;
+                let relativeModule = path.relative(
+                    filePath,
+                    importResolver.resolveLink(moduleResolveDir, src),
+                );
+                if (!relativeModule.startsWith('.')) {
+                    relativeModule = './' + relativeModule;
+                }
+
+                const codeLink: JayImportLink = {
+                    module: relativeModule,
+                    names: [
+                        {
+                            name: componentExportName,
+                            type: new JayComponentType(componentExportName, []),
+                        },
+                    ],
+                };
+
+                headlessImports.push({
+                    contractName,
+                    refs,
+                    rootType: type,
+                    contractLinks,
+                    codeLink,
+                    contract: loadedContract,
+                    contractPath,
+                });
+            });
+        } catch (e) {
+            validations.push(
+                `failed to parse contract for headfull FS component ${src} - ${e.message}${e.stack}`,
+            );
+        }
+    }
+
+    return {
+        headlessImports,
+        css: cssParts.length > 0 ? cssParts.join('\n\n') : undefined,
+        linkedCssFiles,
+    };
+}
+
 function normalizeFilename(filename: string): string {
     return filename.replace('.jay-html', '');
 }
@@ -895,13 +1210,38 @@ export async function parseJayFile(
     const { val: jayYaml, validations } = parseYaml(root);
     if (validations.length > 0) return new WithValidations(undefined, validations);
 
+    // Split headfull imports: regular (no contract) vs full-stack (with contract)
+    const allHeadfullElements = root.querySelectorAll('script[type="application/jay-headfull"]');
+    const regularHeadfullElements = allHeadfullElements.filter(
+        (el) => !el.getAttribute('contract'),
+    );
+    const fsHeadfullElements = allHeadfullElements.filter((el) => el.getAttribute('contract'));
+
     const headfullImports = parseHeadfullImports(
-        root.querySelectorAll('script[type="application/jay-headfull"]'),
+        regularHeadfullElements,
         validations,
         filePath,
         options,
         linkedContractResolver,
     );
+
+    // Get body early — needed for headfull FS template injection
+    let body = root.querySelector('body');
+    if (body === null) {
+        validations.push(`jay file must have exactly a body tag`);
+        return new WithValidations(undefined, validations);
+    }
+
+    // Parse headfull full-stack imports (loads contracts, injects templates, extracts CSS)
+    const headfullFSResult = await parseHeadfullFSImports(
+        fsHeadfullElements,
+        validations,
+        filePath,
+        linkedContractResolver,
+        body,
+        projectRoot,
+    );
+
     const headlessImports = await parseHeadlessImports(
         root.querySelectorAll('script[type="application/jay-headless"]'),
         validations,
@@ -909,13 +1249,17 @@ export async function parseJayFile(
         linkedContractResolver,
         projectRoot,
     );
+
+    // Merge headfull FS imports with headless imports
+    const allHeadlessImports = [...headlessImports, ...headfullFSResult.headlessImports];
+
     const importNames = headfullImports.flatMap((_) => _.names);
     const types = await parseTypes(
         jayYaml,
         validations,
         baseElementName,
         importNames,
-        headlessImports,
+        allHeadlessImports,
         filePath,
         linkedContractResolver,
     );
@@ -930,7 +1274,7 @@ export async function parseJayFile(
     );
     const imports: JayImportLink[] = [
         ...headfullImports,
-        ...headlessImports.flatMap((_) => [
+        ...allHeadlessImports.flatMap((_) => [
             ..._.contractLinks,
             ...(usedAsInstance.has(_.contractName) ? [_.codeLink] : []),
         ]),
@@ -946,16 +1290,20 @@ export async function parseJayFile(
 
     if (validations.length > 0) return new WithValidations(undefined, validations);
 
-    let body = root.querySelector('body');
-    if (body === null) {
-        validations.push(`jay file must have exactly a body tag`);
-        return new WithValidations(undefined, validations);
+    // Merge CSS from headfull FS components
+    let css = cssResult.val?.css;
+    if (headfullFSResult.css) {
+        css = css ? css + '\n\n' + headfullFSResult.css : headfullFSResult.css;
+    }
+    let allLinkedCssFiles = cssResult.val?.linkedCssFiles || [];
+    if (headfullFSResult.linkedCssFiles.length > 0) {
+        allLinkedCssFiles = [...allLinkedCssFiles, ...headfullFSResult.linkedCssFiles];
     }
 
     // Extract trackBy information from contracts for deep merge
     const { serverTrackByMap, clientTrackByMap } = extractTrackByMaps(
         jayYaml.parsedContract,
-        headlessImports,
+        allHeadlessImports,
     );
 
     return new WithValidations(
@@ -966,11 +1314,10 @@ export async function parseJayFile(
             body,
             baseElementName,
             namespaces,
-            headlessImports,
+            headlessImports: allHeadlessImports,
             headLinks,
-            css: cssResult.val?.css,
-            linkedCssFiles:
-                cssResult.val?.linkedCssFiles.length > 0 ? cssResult.val.linkedCssFiles : undefined,
+            css,
+            linkedCssFiles: allLinkedCssFiles.length > 0 ? allLinkedCssFiles : undefined,
             filename: normalizedFileName,
             contract: jayYaml.parsedContract,
             contractRef: jayYaml.contractRef,

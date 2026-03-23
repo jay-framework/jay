@@ -47,6 +47,13 @@ export interface JayImportResolver {
         metadata?: Record<string, unknown>;
     }>;
     resolvePluginManifest(pluginName: string, projectRoot: string): WithValidations<PluginManifest>;
+    /**
+     * Read a jay-html file adjacent to a component module.
+     * Given a module src path (e.g., "./header/header"), resolves to the absolute path
+     * and reads the corresponding .jay-html file (same base name + .jay-html extension).
+     * Returns the file content string, or null if not found.
+     */
+    readJayHtml(importingModuleDir: string, src: string): string | null;
 }
 
 export const JAY_IMPORT_RESOLVER: JayImportResolver = {
@@ -142,5 +149,16 @@ export const JAY_IMPORT_RESOLVER: JayImportResolver = {
         projectRoot: string,
     ): WithValidations<PluginManifest> {
         return resolvePluginManifest(projectRoot, pluginName);
+    },
+    readJayHtml(importingModuleDir: string, src: string): string | null {
+        const resolvedPath = src.startsWith('.')
+            ? path.resolve(importingModuleDir, src)
+            : src;
+        const jayHtmlPath = resolvedPath + '.jay-html';
+        try {
+            return fs.readFileSync(jayHtmlPath, 'utf-8');
+        } catch {
+            return null;
+        }
     },
 };

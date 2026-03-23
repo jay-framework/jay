@@ -473,8 +473,12 @@ function resolveRelativePaths(root: HTMLElement, sourceDir: string): void {
     const scripts = root.querySelectorAll('script[src]');
     for (const script of scripts) {
         const scriptType = script.getAttribute('type');
-        // Skip jay-specific scripts (already handled above)
-        if (scriptType === 'application/jay-data' || scriptType === 'application/jay-headless') {
+        // Skip jay-specific scripts (already handled above or handled by the parser)
+        if (
+            scriptType === 'application/jay-data' ||
+            scriptType === 'application/jay-headless' ||
+            scriptType === 'application/jay-headfull'
+        ) {
             continue;
         }
         const src = script.getAttribute('src');

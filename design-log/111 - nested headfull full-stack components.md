@@ -6,12 +6,12 @@ Jay-stack supports three-phase rendering: **slow** (build/SSG), **fast** (SSR pe
 
 **Current component landscape:**
 
-| Layer  | Type     | Builder               | Slow/Fast | Interactive | Import type              |
-| ------ | -------- | --------------------- | --------- | ----------- | ------------------------ |
-| Page   | Headfull | makeJayStackComponent | ✓         | ✓           | route (page.ts)          |
-| Page   | Headless | makeJayStackComponent | ✓         | ✓           | `jay-headless` with key  |
-| Nested | Headless | makeJayStackComponent | ✓         | ✓           | `jay-headless`           |
-| Nested | Headfull | makeJayComponent      | —         | ✓           | `jay-headfull`           |
+| Layer  | Type     | Builder               | Slow/Fast | Interactive | Import type             |
+| ------ | -------- | --------------------- | --------- | ----------- | ----------------------- |
+| Page   | Headfull | makeJayStackComponent | ✓         | ✓           | route (page.ts)         |
+| Page   | Headless | makeJayStackComponent | ✓         | ✓           | `jay-headless` with key |
+| Nested | Headless | makeJayStackComponent | ✓         | ✓           | `jay-headless`          |
+| Nested | Headfull | makeJayComponent      | —         | ✓           | `jay-headfull`          |
 
 Without a contract, headfull, headless, and page components default to interactive-only.
 
@@ -108,6 +108,7 @@ Reuse `application/jay-headfull`. Add optional `contract` attribute:
 ```
 
 Attributes:
+
 - `src` — path to component module (as today)
 - `contract` — path to `.jay-contract` file (new, optional)
 - `names` — component export name (as today)
@@ -119,12 +120,14 @@ When `contract` is present, `<jay:Header>` is instance-based (position = where t
 The critical new step: **before compilation**, read the headfull component's jay-html and inject its `<body>` content as the inline template of the `<jay:Name>` tag in the parent.
 
 **Before injection:**
+
 ```html
 <!-- page.jay-html -->
 <jay:Header logoUrl="/logo.png" />
 ```
 
 **After injection (what the compiler sees):**
+
 ```html
 <jay:Header logoUrl="/logo.png">
   <!-- injected from header.jay-html body -->
@@ -138,6 +141,7 @@ The critical new step: **before compilation**, read the headfull component's jay
 ```
 
 From this point, the existing headless instance pipeline handles everything:
+
 - `parseHeadlessImports` creates `JayHeadlessImports` with contract info
 - `renderHeadlessInstance` compiles the inline template
 - `renderServerHeadlessInstance` generates SSR server-element code
@@ -175,6 +179,7 @@ export const header = makeJayStackComponent<HeaderContract>()
 ### What Changes vs What's Reused
 
 **Reused (no changes):**
+
 - Headless instance compilation (element target, server-element, hydrate)
 - `discoverHeadlessInstances` — finds `<jay:xxx>` tags, builds coordinates
 - `slowRenderInstances` / fast render pipeline
@@ -184,6 +189,7 @@ export const header = makeJayStackComponent<HeaderContract>()
 - Phase-aware binding filtering
 
 **New:**
+
 1. **Parser change**: `parseHeadfullImports` — when `contract` is present, treat as headless import (load contract, create `JayHeadlessImports` entry) instead of headfull import
 2. **Template injection**: Before headless instance compilation, read the headfull component's jay-html file and inject its body content into `<jay:Name>` tags that are empty (self-closing)
 3. **Import resolver extension**: `JayImportResolver` needs a method to read a component's jay-html file content given its module path
@@ -207,6 +213,7 @@ Headfull imports **without** `contract` continue through the current path (type 
 Given `src="./header/header"`, the component module is `./header/header.ts`. The jay-html file is conventionally at `./header/header.jay-html` (same base name).
 
 The resolver should:
+
 1. Take the `src` path
 2. Resolve it to an absolute path
 3. Look for `<baseName>.jay-html` adjacent to the module
@@ -224,12 +231,14 @@ The injection transforms the parsed DOM before headless instance compilation:
 3. If the tag already has children → validation error (headfull FS owns its template)
 
 CSS from the component's jay-html:
+
 - `<link>` and `<style>` tags from the component's `<head>` should be collected and added to the page's CSS pipeline
 - This follows the existing CSS extraction pattern
 
 ### Jay-html of a Headfull FS Component
 
 The component's jay-html follows the standard format but:
+
 - Has `<script type="application/jay-data">` with the ViewState shape (as today)
 - Has a `<body>` with the UI template
 - Does **not** need `<script type="application/jay-headfull">` or `<script type="application/jay-headless">` (it IS the component)
@@ -238,24 +247,24 @@ The component's jay-html follows the standard format but:
 ```html
 <!-- header/header.jay-html -->
 <html>
-<head>
-  <script type="application/jay-data">
-    data:
-      navItems: array
-      logoUrl: string
-      timestamp: number
-  </script>
-  <link rel="stylesheet" href="./header.css" />
-</head>
-<body>
-  <header>
-    <img src="{logoUrl}" />
-    <nav>
-      <a forEach="navItems" trackBy="id" href="{item.url}">{item.label}</a>
-    </nav>
-    <span>{timestamp}</span>
-  </header>
-</body>
+  <head>
+    <script type="application/jay-data">
+      data:
+        navItems: array
+        logoUrl: string
+        timestamp: number
+    </script>
+    <link rel="stylesheet" href="./header.css" />
+  </head>
+  <body>
+    <header>
+      <img src="{logoUrl}" />
+      <nav>
+        <a forEach="navItems" trackBy="id" href="{item.url}">{item.label}</a>
+      </nav>
+      <span>{timestamp}</span>
+    </header>
+  </body>
 </html>
 ```
 
@@ -302,32 +311,27 @@ The component's jay-html follows the standard format but:
 
 ```html
 <!-- src/components/header/header.jay-contract -->
-data:
-  slow:
-    navItems: array
-    logoUrl: string
-  fast:
-    cartCount: number
+data: slow: navItems: array logoUrl: string fast: cartCount: number
 ```
 
 ```html
 <!-- src/components/header/header.jay-html -->
 <html>
-<head>
-  <script type="application/jay-data">
-    data:
-      navItems: array
-      logoUrl: string
-      cartCount: number
-  </script>
-</head>
-<body>
-  <header>
-    <img src="{logoUrl}" />
-    <nav><a forEach="navItems" trackBy="id" href="{item.url}">{item.label}</a></nav>
-    <span>Cart: {cartCount}</span>
-  </header>
-</body>
+  <head>
+    <script type="application/jay-data">
+      data:
+        navItems: array
+        logoUrl: string
+        cartCount: number
+    </script>
+  </head>
+  <body>
+    <header>
+      <img src="{logoUrl}" />
+      <nav><a forEach="navItems" trackBy="id" href="{item.url}">{item.label}</a></nav>
+      <span>Cart: {cartCount}</span>
+    </header>
+  </body>
 </html>
 ```
 
@@ -345,7 +349,8 @@ export const header = makeJayStackComponent<HeaderContract>()
 
 ```html
 <!-- src/pages/page.jay-html -->
-<script type="application/jay-headfull"
+<script
+  type="application/jay-headfull"
   src="../components/header/header"
   contract="../components/header/header.jay-contract"
   names="Header"
@@ -359,7 +364,8 @@ export const header = makeJayStackComponent<HeaderContract>()
 ### ✅ Footer with dynamic year
 
 ```html
-<script type="application/jay-headfull"
+<script
+  type="application/jay-headfull"
   src="../components/footer/footer"
   contract="../components/footer/footer.jay-contract"
   names="Footer"
@@ -380,11 +386,11 @@ Headfull FS is instance-based only (`<jay:Name>` positioning). No `key` attribut
 
 ## Trade-offs
 
-| Approach | Pros | Cons |
-| --- | --- | --- |
+| Approach                                               | Pros                                                                 | Cons                                                                               |
+| ------------------------------------------------------ | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | **Template injection into headless pipeline** (chosen) | Reuses entire headless infra; minimal new code; proven SSR/hydration | Requires jay-html reading at parse time; component jay-html is flattened into page |
-| **Separate headfull compilation pipeline** | Clean separation of headfull vs headless | Duplicates significant compilation logic; two SSR paths to maintain |
-| **Post-slow merge** (failed branch approach) | Conceptually clean | Too early — headless infra wasn't ready; complex merge step; timing issues |
+| **Separate headfull compilation pipeline**             | Clean separation of headfull vs headless                             | Duplicates significant compilation logic; two SSR paths to maintain                |
+| **Post-slow merge** (failed branch approach)           | Conceptually clean                                                   | Too early — headless infra wasn't ready; complex merge step; timing issues         |
 
 **Decision**: Template injection into the headless pipeline. The headless instance infrastructure is mature and handles all the hard problems (coordinates, SSR, hydration, phases). We just need to source the inline template from a file instead of from inline markup.
 
@@ -403,18 +409,78 @@ Headfull FS is instance-based only (`<jay:Name>` positioning). No `key` attribut
 
 Add test fixtures in `packages/jay-stack/dev-server/test/` mirroring the headless cases (5a–5f, 7), following the same two-layer validation (HTTP SSR HTML + Playwright browser) and three execution modes (SSR disabled, SSR first request, SSR cached):
 
-| Fixture | Scenario | Mirrors |
-| --- | --- | --- |
-| `8a-page-headfull-fs-static` | Single headfull FS component in static placement | 5a |
-| `8b-page-headfull-fs-conditional` | Headfull FS under condition | 5b |
-| `8c-page-headfull-fs-foreach` | Headfull FS inside forEach with wrapper | 5c |
-| `8d-page-headfull-fs-slow-foreach` | Headfull FS inside slowForEach | 5d |
-| `8e-page-headfull-fs-foreach-nested` | Headfull FS in forEach with preceding sections + carry-forward | 5e |
-| `8f-page-headfull-fs-two-instances` | Two headfull FS instances with different props | 5f |
-| `8g-page-headfull-fs-fast-only` | Fast-only page with headfull FS instance (no slow phase) | 7 |
-| `8h-page-headfull-fs-with-css` | Headfull FS with component CSS (`<link>` in head) | — |
+| Fixture                              | Scenario                                                       | Mirrors |
+| ------------------------------------ | -------------------------------------------------------------- | ------- |
+| `8a-page-headfull-fs-static`         | Single headfull FS component in static placement               | 5a      |
+| `8b-page-headfull-fs-conditional`    | Headfull FS under condition                                    | 5b      |
+| `8c-page-headfull-fs-foreach`        | Headfull FS inside forEach with wrapper                        | 5c      |
+| `8d-page-headfull-fs-slow-foreach`   | Headfull FS inside slowForEach                                 | 5d      |
+| `8e-page-headfull-fs-foreach-nested` | Headfull FS in forEach with preceding sections + carry-forward | 5e      |
+| `8f-page-headfull-fs-two-instances`  | Two headfull FS instances with different props                 | 5f      |
+| `8g-page-headfull-fs-fast-only`      | Fast-only page with headfull FS instance (no slow phase)       | 7       |
+| `8h-page-headfull-fs-with-css`       | Headfull FS with component CSS (`<link>` in head)              | —       |
 
 Each fixture contains: component jay-html, component jay-contract, component ts, page jay-html, page ts, expected-ssr.html, expected-hydrate.ts.
+
+## Implementation Results
+
+### Phase 1+2: Parser + Template Injection (completed)
+
+**Files changed:**
+
+- `packages/compiler/compiler-jay-html/lib/jay-target/jay-import-resolver.ts` — Added `readJayHtml(importingModuleDir, src)` method to `JayImportResolver` interface and `JAY_IMPORT_RESOLVER` implementation
+- `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-parser.ts` — Added `parseHeadfullFSImports()` function; modified `parseJayFile()` to split headfull elements by contract attribute, merge results
+
+**Implementation:**
+
+- `parseJayFile` splits `application/jay-headfull` elements into regular (no `contract`) and FS (with `contract`)
+- Regular elements go through existing `parseHeadfullImports` → `JayImportLink[]`
+- FS elements go through new `parseHeadfullFSImports` → `JayHeadlessImports[]` + CSS
+- Template injection: reads component jay-html via `readJayHtml`, injects `<body>` content into matching `<jay:Name>` tags
+- CSS merging: extracts CSS from component jay-html `<head>`, merges with page CSS
+- Contract name: lowercased `names` attribute value, matching `<jay:xxx>` tag convention
+
+**Tests:** 8 new tests in `parse-jay-file.unit.test.ts` (49 total, all passing):
+
+- Headfull FS recognition and JayHeadlessImports creation
+- Template injection into `<jay:Name>` tags
+- Regular headfull imports unaffected
+- Error: jay-html file not found
+- Error: `<jay:Name>` already has children
+- CSS extraction from component jay-html
+- Case-insensitive tag matching
+- Merging with headless imports
+
+**No regressions:** 607/607 tests pass across all compiler-jay-html test files.
+
+**Deviations from design:**
+
+- `<jay:Name>` with existing children: changed from error to silent skip. Needed because pre-rendered HTML re-enters `parseJayFile` with templates already injected. Skipping preserves the pre-rendered content.
+
+### Phase 3: Dev Server Integration (in progress)
+
+**Additional files changed:**
+
+- `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-parser.ts` — Added `injectHeadfullFSTemplates(html, sourceDir, resolver)` exported function for standalone HTML template injection before slow render
+- `packages/compiler/compiler-jay-html/lib/slow-render/slow-render-transform.ts` — Added `application/jay-headfull` to script type skip list in `resolveRelativePaths`, preventing `src` attribute from being resolved to absolute path
+- `packages/jay-stack/dev-server/lib/dev-server.ts` — Added `injectHeadfullFSTemplates` calls in `preRenderJayHtml` (before slow render) and `sendResponse` (before SSR compilation, using source directory for resolution)
+
+**Discoveries:**
+
+1. `slowRenderTransform` resolves `src` attributes on script tags to absolute paths — headfull FS scripts need to be excluded (like headless scripts)
+2. `sendResponse` uses the pre-rendered file's directory for compilation — headfull FS contracts aren't in `build/pre-rendered/`, so template injection in `sendResponse` must use the source directory
+3. `preRenderJayHtml` reads original HTML — templates must be injected before `slowRenderTransform` so instance bindings are resolved in Pass 2
+
+**Additional discoveries:**
+
+4. `parseHeadfullFSImports` contract and module resolution: when jay-html is parsed from a cache directory (`build/pre-rendered/`), relative paths (`./header/header`) point to non-existent locations. Added `projectRoot` fallback for contract loading (try/catch with fallback to `path.resolve(projectRoot, contractAttr)`) and module path resolution (`moduleResolveDir` for `codeLink`).
+
+**8a test results (run alone):**
+- SSR first request: 3/3 pass (page loads, hydration, interactivity)
+- SSR cached request: 3/3 pass (page loads, hydration, interactivity)
+- SSR disabled: 3/3 fail (client-only element target — vite transform issue, separate concern)
+
+**Remaining:** SSR disabled (client-only) mode — vite plugin transform of `page.jay-html.ts` for element target. The vite transform fails silently, resulting in no component rendering on the client.
 
 ## Related Design Logs
 

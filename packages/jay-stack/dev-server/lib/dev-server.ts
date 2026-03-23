@@ -46,6 +46,7 @@ import {
     JAY_IMPORT_RESOLVER,
     discoverHeadlessInstances,
     resolveHeadlessInstances,
+    injectHeadfullFSTemplates,
 } from '@jay-framework/compiler-jay-html';
 import {
     LoadedPageParts,
@@ -638,9 +639,15 @@ async function sendResponse(
     try {
         // Try SSR: server-render HTML + hydration script
         // Use pre-loaded content if available (from cache with tag already stripped)
-        const jayHtmlContent = preLoadedContent ?? (await fs.readFile(jayHtmlPath, 'utf-8'));
+        let jayHtmlContent = preLoadedContent ?? (await fs.readFile(jayHtmlPath, 'utf-8'));
         const jayHtmlFilename = path.basename(jayHtmlPath);
         const jayHtmlDir = path.dirname(jayHtmlPath);
+
+        // Inject headfull FS templates using the ORIGINAL source directory for resolution.
+        // The pre-rendered HTML may be in build/pre-rendered/, but contract and jay-html
+        // files are relative to the original page location.
+        const sourceDir = path.dirname(sourceJayHtmlPath);
+        jayHtmlContent = injectHeadfullFSTemplates(jayHtmlContent, sourceDir, JAY_IMPORT_RESOLVER);
 
         pageHtml = await generateSSRPageHtml(
             vite,
@@ -769,13 +776,23 @@ async function preRenderJayHtml(
         );
     }
 
+    // Inject headfull FS component templates into the HTML before slow render.
+    // This ensures instance bindings in headfull FS templates are resolved during pre-rendering,
+    // just like inline templates in headless instances.
+    const sourceDir = path.dirname(route.jayHtmlPath);
+    const jayHtmlWithTemplates = injectHeadfullFSTemplates(
+        jayHtmlContent,
+        sourceDir,
+        JAY_IMPORT_RESOLVER,
+    );
+
     // ── Pass 1: Resolve page-level slow bindings ──
     const result = slowRenderTransform({
-        jayHtmlContent,
+        jayHtmlContent: jayHtmlWithTemplates,
         slowViewState: slowViewState as Record<string, unknown>,
         contract,
         headlessContracts,
-        sourceDir: path.dirname(route.jayHtmlPath),
+        sourceDir,
         importResolver: JAY_IMPORT_RESOLVER,
     });
 

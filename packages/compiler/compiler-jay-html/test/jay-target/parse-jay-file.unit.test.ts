@@ -1614,6 +1614,416 @@ describe('compiler', () => {
             });
         });
     });
+
+    describe('headfull full-stack imports', () => {
+        const headerContract: Contract = {
+            name: 'Header',
+            tags: [
+                {
+                    tag: 'logo-url',
+                    type: [ContractTagType.data],
+                    dataType: JayString,
+                    phase: 'slow',
+                },
+                {
+                    tag: 'cart-count',
+                    type: [ContractTagType.data],
+                    dataType: JayNumber,
+                    phase: 'fast+interactive',
+                },
+                {
+                    tag: 'increment',
+                    type: [ContractTagType.interactive],
+                    elementType: ['HTMLButtonElement'],
+                },
+            ],
+        };
+
+        const headerJayHtml = `<html>
+<head>
+    <script type="application/jay-data">
+        data:
+            logoUrl: string
+            cartCount: number
+    </script>
+</head>
+<body>
+    <header>
+        <img src="{logoUrl}" />
+        <span>{cartCount}</span>
+        <button ref="increment">+</button>
+    </header>
+</body>
+</html>`;
+
+        function makeHeadfullFSResolver(
+            overrides: Partial<JayImportResolver> = {},
+        ): JayImportResolver {
+            return {
+                ...defaultImportResolver,
+                loadContract(fullPath: string): WithValidations<Contract> {
+                    if (fullPath.includes('header')) {
+                        return new WithValidations(headerContract, []);
+                    }
+                    throw new Error(`Unexpected contract path: ${fullPath}`);
+                },
+                resolveLink(importingModule: string, link: string): string {
+                    if (link.includes('header')) return '/components/header/header';
+                    return '/resolved/' + link;
+                },
+                readJayHtml(importingModuleDir: string, src: string): string | null {
+                    if (src.includes('header')) return headerJayHtml;
+                    return null;
+                },
+                ...overrides,
+            };
+        }
+
+        it('should parse headfull FS import and create headlessImports entry', async () => {
+            const resolver = makeHeadfullFSResolver();
+
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |   title: string
+                        |`,
+                    `<body>
+                        |   <h1>{title}</h1>
+                        |   <jay:header logoUrl="/logo.png" />
+                        | </body>`,
+                    `<script type="application/jay-headfull"
+                        |   src="./header/header"
+                        |   contract="./header/header.jay-contract"
+                        |   names="header"
+                        | ></script>`,
+                ),
+                'Page',
+                '/pages',
+                {},
+                resolver,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([]);
+            expect(jayFile.val.headlessImports).toHaveLength(1);
+
+            const headlessImport = jayFile.val.headlessImports[0];
+            expect(headlessImport.contractName).toEqual('header');
+            expect(headlessImport.contract).toEqual(headerContract);
+            expect(headlessImport.codeLink.names[0].name).toEqual('header');
+        });
+
+        it('should inject jay-html body content into <jay:Name> tags', async () => {
+            const resolver = makeHeadfullFSResolver();
+
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |   title: string
+                        |`,
+                    `<body>
+                        |   <h1>{title}</h1>
+                        |   <jay:header logoUrl="/logo.png" />
+                        | </body>`,
+                    `<script type="application/jay-headfull"
+                        |   src="./header/header"
+                        |   contract="./header/header.jay-contract"
+                        |   names="header"
+                        | ></script>`,
+                ),
+                'Page',
+                '/pages',
+                {},
+                resolver,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([]);
+            // After injection, the <jay:header> tag should have the component's body content
+            const jayTag = jayFile.val.body
+                .querySelectorAll('*')
+                .find((el) => el.tagName?.toLowerCase() === 'jay:header');
+            expect(jayTag).toBeDefined();
+            expect(jayTag.querySelector('header')).toBeTruthy();
+            expect(jayTag.querySelector('button')).toBeTruthy();
+        });
+
+        it('should not treat headfull imports without contract as full-stack', async () => {
+            // Regular headfull import (no contract) should still be processed as JayImportLink
+            const resolver: JayImportResolver = {
+                ...defaultImportResolver,
+                resolveLink(importingModule: string, link: string): string {
+                    return '/resolved/' + link;
+                },
+                analyzeExportedTypes() {
+                    return [new JayObjectType('counter', { count: JayNumber })];
+                },
+                readJayHtml() {
+                    return null;
+                },
+            };
+
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |   title: string
+                        |`,
+                    `<body><div>{title}</div></body>`,
+                    `<script type="application/jay-headfull"
+                        |   src="./counter"
+                        |   names="counter"
+                        | ></script>`,
+                ),
+                'Page',
+                '/pages',
+                {},
+                resolver,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([]);
+            // No headless imports — regular headfull import is a JayImportLink
+            expect(jayFile.val.headlessImports).toHaveLength(0);
+            // But the import should still be in the imports array
+            expect(jayFile.val.imports.some((i) => i.names.some((n) => n.name === 'counter'))).toBe(
+                true,
+            );
+        });
+
+        it('should error when jay-html file is not found', async () => {
+            const resolver = makeHeadfullFSResolver({
+                readJayHtml() {
+                    return null;
+                },
+            });
+
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |   title: string
+                        |`,
+                    `<body><jay:header /></body>`,
+                    `<script type="application/jay-headfull"
+                        |   src="./header/header"
+                        |   contract="./header/header.jay-contract"
+                        |   names="header"
+                        | ></script>`,
+                ),
+                'Page',
+                '/pages',
+                {},
+                resolver,
+                '',
+            );
+
+            expect(jayFile.validations.length).toBeGreaterThan(0);
+            expect(jayFile.validations[0]).toMatch(/jay-html file not found/);
+        });
+
+        it('should skip injection when <jay:Name> already has children', async () => {
+            const resolver = makeHeadfullFSResolver();
+
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |   title: string
+                        |`,
+                    `<body>
+                        |   <jay:header logoUrl="/logo.png">
+                        |       <div>existing content</div>
+                        |   </jay:header>
+                        | </body>`,
+                    `<script type="application/jay-headfull"
+                        |   src="./header/header"
+                        |   contract="./header/header.jay-contract"
+                        |   names="header"
+                        | ></script>`,
+                ),
+                'Page',
+                '/pages',
+                {},
+                resolver,
+                '',
+            );
+
+            // No error — existing content is preserved (e.g., from pre-rendering)
+            expect(jayFile.validations).toEqual([]);
+            // The existing content should be preserved, not replaced
+            const jayTag = jayFile.val.body
+                .querySelectorAll('*')
+                .find((el) => el.tagName?.toLowerCase() === 'jay:header');
+            expect(jayTag.innerHTML).toMatch(/existing content/);
+        });
+
+        it('should extract CSS from headfull FS component jay-html', async () => {
+            const jayHtmlWithCss = `<html>
+<head>
+    <script type="application/jay-data">
+        data:
+            logoUrl: string
+    </script>
+    <style>.header { color: red; }</style>
+</head>
+<body>
+    <header class="header">{logoUrl}</header>
+</body>
+</html>`;
+
+            const resolver = makeHeadfullFSResolver({
+                readJayHtml() {
+                    return jayHtmlWithCss;
+                },
+            });
+
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |   title: string
+                        |`,
+                    `<body><jay:header /></body>`,
+                    `<script type="application/jay-headfull"
+                        |   src="./header/header"
+                        |   contract="./header/header.jay-contract"
+                        |   names="header"
+                        | ></script>`,
+                ),
+                'Page',
+                '/pages',
+                {},
+                resolver,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([]);
+            expect(jayFile.val.css).toEqual('.header { color: red; }');
+        });
+
+        it('should handle case-insensitive tag matching', async () => {
+            const resolver = makeHeadfullFSResolver();
+
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |   title: string
+                        |`,
+                    `<body>
+                        |   <jay:Header logoUrl="/logo.png" />
+                        | </body>`,
+                    `<script type="application/jay-headfull"
+                        |   src="./header/header"
+                        |   contract="./header/header.jay-contract"
+                        |   names="header"
+                        | ></script>`,
+                ),
+                'Page',
+                '/pages',
+                {},
+                resolver,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([]);
+            expect(jayFile.val.headlessImports).toHaveLength(1);
+            // Template should be injected despite case difference
+            const jayTag = jayFile.val.body
+                .querySelectorAll('*')
+                .find((el) => el.tagName?.toLowerCase() === 'jay:header');
+            expect(jayTag).toBeDefined();
+            expect(jayTag.querySelector('header')).toBeTruthy();
+        });
+
+        it('should merge headfull FS imports with headless imports', async () => {
+            const counterContract: Contract = {
+                name: 'counter',
+                tags: [
+                    {
+                        tag: 'count',
+                        type: [ContractTagType.data],
+                        dataType: JayNumber,
+                    },
+                ],
+            };
+
+            const resolver: JayImportResolver = {
+                ...defaultImportResolver,
+                loadContract(fullPath: string): WithValidations<Contract> {
+                    if (fullPath.includes('header')) {
+                        return new WithValidations(headerContract, []);
+                    }
+                    if (fullPath.includes('counter')) {
+                        return new WithValidations(counterContract, []);
+                    }
+                    throw new Error(`Unexpected contract path: ${fullPath}`);
+                },
+                resolveLink(importingModule: string, link: string): string {
+                    if (link.includes('header')) return '/components/header/header';
+                    if (link.includes('counter')) return '/path/to/counter';
+                    return '/resolved/' + link;
+                },
+                readJayHtml(importingModuleDir: string, src: string): string | null {
+                    if (src.includes('header')) return headerJayHtml;
+                    return null;
+                },
+                resolvePluginComponent(pluginName: string, contractName: string) {
+                    if (pluginName === 'test-counter' && contractName === 'counter') {
+                        return new WithValidations(
+                            {
+                                contractPath: '/path/to/counter.jay-contract',
+                                componentPath: '/path/to/counter',
+                                componentName: 'counter',
+                            },
+                            [],
+                        );
+                    }
+                    return new WithValidations(null as any, ['Plugin not found']);
+                },
+                loadPluginContract(pluginName: string, contractName: string) {
+                    if (pluginName === 'test-counter' && contractName === 'counter') {
+                        return new WithValidations(
+                            {
+                                contract: counterContract,
+                                contractPath: '/path/to/counter.jay-contract',
+                            },
+                            [],
+                        );
+                    }
+                    return new WithValidations(null as any, ['Plugin not found']);
+                },
+            };
+
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |   title: string
+                        |`,
+                    `<body>
+                        |   <jay:header logoUrl="/logo.png" />
+                        |   <jay:counter />
+                        | </body>`,
+                    `<script type="application/jay-headfull"
+                        |   src="./header/header"
+                        |   contract="./header/header.jay-contract"
+                        |   names="header"
+                        | ></script>
+                        | <script type="application/jay-headless"
+                        |   plugin="test-counter"
+                        |   contract="counter"
+                        | ></script>`,
+                ),
+                'Page',
+                '/pages',
+                {},
+                resolver,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([]);
+            // Both headfull FS and headless imports should be in headlessImports
+            expect(jayFile.val.headlessImports).toHaveLength(2);
+            const names = jayFile.val.headlessImports.map((i) => i.contractName).sort();
+            expect(names).toEqual(['counter', 'header']);
+        });
+    });
 });
 
 function assertArrayType(value: JayType): JayArrayType {

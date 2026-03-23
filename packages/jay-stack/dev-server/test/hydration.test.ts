@@ -166,6 +166,7 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
     beforeAll(async () => {
         const dirPath = path.resolve(__dirname, dirName);
         devServer = await mkDevServer({
+            publicBaseUrlPath: path.join(dirPath, 'public'),
             pagesRootFolder: dirPath,
             projectRootFolder: dirPath,
             jayRollupConfig: {
@@ -980,6 +981,29 @@ describe('hydration', () => {
                 );
                 const values = await page.$$('#target .widget .value');
                 expect(await values[0].textContent()).toEqual('11');
+            },
+        });
+    });
+
+    describe('8a. Headfull FS — static placement', () => {
+        testFixture('8a-page-headfull-fs-static', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Headfull FS Test');
+                expect(await page.textContent('#target .cart-count')).toEqual('5');
+            },
+            interactivityChecks: async (page) => {
+                // Initial value
+                expect(await page.textContent('#target .cart-count')).toEqual('5');
+                // Click increment button
+                await page.click('#target button');
+                // Value should increase
+                await page.waitForFunction(
+                    () => {
+                        return document.querySelector('#target .cart-count')?.textContent === '6';
+                    },
+                    { timeout: 2000 },
+                );
+                expect(await page.textContent('#target .cart-count')).toEqual('6');
             },
         });
     });
