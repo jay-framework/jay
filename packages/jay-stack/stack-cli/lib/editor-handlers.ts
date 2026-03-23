@@ -1207,34 +1207,6 @@ export function createEditorHandlers(
                     // Write Jay HTML file
                     await fs.promises.writeFile(jayHtmlPath, fullJayHtml, 'utf-8');
 
-                    // Debug: dump export pipeline artifacts
-                    try {
-                        const debugDir = path.join(dirname, '_debug');
-                        await fs.promises.mkdir(debugDir, { recursive: true });
-                        await fs.promises.writeFile(
-                            path.join(debugDir, 'export-final-jay-html.html'),
-                            fullJayHtml,
-                            'utf-8',
-                        );
-                        await fs.promises.writeFile(
-                            path.join(debugDir, 'export-conversion-result.json'),
-                            JSON.stringify(
-                                {
-                                    bodyHtmlLength: conversionResult.bodyHtml.length,
-                                    bodyHtmlLineCount: conversionResult.bodyHtml.split('\n').length,
-                                    fontFamilies: Array.from(conversionResult.fontFamilies || []),
-                                    hasContractData: !!conversionResult.contractData,
-                                },
-                                null,
-                                2,
-                            ),
-                            'utf-8',
-                        );
-                        getLogger().info(`[Debug] Export artifacts written to ${debugDir}`);
-                    } catch (debugErr) {
-                        getLogger().warn('[Debug] Failed to write export debug files:', debugErr);
-                    }
-
                     getLogger().info(`✅ Successfully converted to Jay HTML: ${jayHtmlPath}`);
 
                     return {
@@ -1344,22 +1316,6 @@ export function createEditorHandlers(
             );
 
             getLogger().info(`📥 Imported ${vendorId} document from Jay-HTML: ${jayHtmlPath}`);
-
-            // Debug: dump vendorDoc to file for inspection
-            try {
-                const debugDir = path.join(dirname, '_debug');
-                await fs.promises.mkdir(debugDir, { recursive: true });
-                await fs.promises.writeFile(
-                    path.join(debugDir, 'import-vendor-doc.json'),
-                    JSON.stringify(importResult.vendorDoc, null, 2),
-                    'utf-8',
-                );
-                getLogger().info(
-                    `[Debug] Import vendor doc written to ${debugDir}/import-vendor-doc.json`,
-                );
-            } catch (debugErr) {
-                getLogger().warn('[Debug] Failed to write import debug files:', debugErr);
-            }
 
             const { buildBaseline } = await import('./vendors/figma/iterative/merge-applier');
             const importBaseline = buildBaseline(
