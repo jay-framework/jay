@@ -78,32 +78,32 @@ return makeJayComponent(preRender, comp, ...contextMarkers);
 
 ```typescript
 const preRender = (options?: RenderElementOptions) => {
-    const [refs, render] = hydratePreRender(rootElement, options);
-    let element: JayElementT | undefined;
-    const wrappedRender = (viewState: ViewState) => {
-        if (!element) {
-            // First call: hydrate with SSR ViewState (matches DOM)
-            element = render(defaultViewState);
-            // Then reconcile with the actual client ViewState
-            if (viewState !== defaultViewState) {
-                element.update(viewState);
-            }
-        } else {
-            element.update(viewState);
-        }
-        return element;
-    };
-    return [refs, wrappedRender];
+  const [refs, render] = hydratePreRender(rootElement, options);
+  let element: JayElementT | undefined;
+  const wrappedRender = (viewState: ViewState) => {
+    if (!element) {
+      // First call: hydrate with SSR ViewState (matches DOM)
+      element = render(defaultViewState);
+      // Then reconcile with the actual client ViewState
+      if (viewState !== defaultViewState) {
+        element.update(viewState);
+      }
+    } else {
+      element.update(viewState);
+    }
+    return element;
+  };
+  return [refs, wrappedRender];
 };
 ```
 
 ### What this fixes
 
-| Scenario | Before (broken) | After (fixed) |
-| --- | --- | --- |
-| SSR: `hasItems=false`, client: `hasItems=true` | `hydrateConditional` tries to adopt absent element → warning | Hydrates with false (correct), then update shows element |
-| SSR: 0 cart items, client: 3 items | `hydrateForEach` can't match DOM items | Hydrates with 0 items (correct), then update adds 3 |
-| SSR: default theme, client: dark theme (localStorage) | Attribute mismatch during adoption | Hydrates with default (correct), then update applies dark theme |
+| Scenario                                              | Before (broken)                                              | After (fixed)                                                   |
+| ----------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------------------------- |
+| SSR: `hasItems=false`, client: `hasItems=true`        | `hydrateConditional` tries to adopt absent element → warning | Hydrates with false (correct), then update shows element        |
+| SSR: 0 cart items, client: 3 items                    | `hydrateForEach` can't match DOM items                       | Hydrates with 0 items (correct), then update adds 3             |
+| SSR: default theme, client: dark theme (localStorage) | Attribute mismatch during adoption                           | Hydrates with default (correct), then update applies dark theme |
 
 ### What doesn't change
 
@@ -135,11 +135,11 @@ The SSR ViewState is decomposed into signals (`makeSignals(partViewState)`). If 
 
 ### Files changed
 
-| File | Change |
-| --- | --- |
+| File                                                      | Change                                                     |
+| --------------------------------------------------------- | ---------------------------------------------------------- |
 | `stack-client-runtime/lib/hydrate-composite-component.ts` | Wrapped render function; fixed `defaultViewState` mutation |
-| `dev-server/test/9a-page-client-viewstate-mismatch/` | New test fixture with keyed headless component |
-| `dev-server/test/hydration.test.ts` | Added test group "9. Client ViewState mismatch (DL#112)" |
+| `dev-server/test/9a-page-client-viewstate-mismatch/`      | New test fixture with keyed headless component             |
+| `dev-server/test/hydration.test.ts`                       | Added test group "9. Client ViewState mismatch (DL#112)"   |
 
 ### Implementation details
 

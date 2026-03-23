@@ -51,21 +51,22 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Full-Stack Components & Rendering
 
-| #   | Title                                                 | Description                                                                       |
-| --- | ----------------------------------------------------- | --------------------------------------------------------------------------------- |
-| 36  | Partial Rendering                                     | Partial/incremental rendering                                                     |
-| 37  | Composite Component                                   | Composite component patterns                                                      |
-| 49  | full stack component rendering manifest               | Manifest for full-stack rendering                                                 |
-| 52  | jay-stack client-server code splitting                | Client/server code splitting                                                      |
-| 54  | render result monads                                  | Result type patterns for rendering                                                |
-| 55  | full stack component parameter flow refinement        | Props and parameter flow                                                          |
-| 56  | deep merge view states with track-by                  | Array merging with track-by keys                                                  |
-| 58  | jay-stack headless component resolution               | Headless component resolution                                                     |
-| 62  | relocate deep merge for stack-client-runtime          | Client runtime deep merge                                                         |
-| 72  | skip client script for non-interactive components     | Optimization for static components                                                |
-| 84  | headless component props and repeater support         | Props, multiple instances, forEach, jay: prefix                                   |
-| 85  | rendering phases and agent kit for agentic generation | Phases + contract/action discovery; agent-kit folder, markdown content → jay-html |
-| 90  | headless instances in interactive forEach             | Allow fast/interactive-only headless components inside forEach (no slow phase)    |
+| #   | Title                                                 | Description                                                                          |
+| --- | ----------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| 36  | Partial Rendering                                     | Partial/incremental rendering                                                        |
+| 37  | Composite Component                                   | Composite component patterns                                                         |
+| 49  | full stack component rendering manifest               | Manifest for full-stack rendering                                                    |
+| 52  | jay-stack client-server code splitting                | Client/server code splitting                                                         |
+| 54  | render result monads                                  | Result type patterns for rendering                                                   |
+| 55  | full stack component parameter flow refinement        | Props and parameter flow                                                             |
+| 56  | deep merge view states with track-by                  | Array merging with track-by keys                                                     |
+| 58  | jay-stack headless component resolution               | Headless component resolution                                                        |
+| 62  | relocate deep merge for stack-client-runtime          | Client runtime deep merge                                                            |
+| 72  | skip client script for non-interactive components     | Optimization for static components                                                   |
+| 84  | headless component props and repeater support         | Props, multiple instances, forEach, jay: prefix                                      |
+| 85  | rendering phases and agent kit for agentic generation | Phases + contract/action discovery; agent-kit folder, markdown content → jay-html    |
+| 90  | headless instances in interactive forEach             | Allow fast/interactive-only headless components inside forEach (no slow phase)       |
+| 111 | nested headfull full-stack components                 | Headfull components with own jay-html + SSR via headless pipeline template injection |
 
 ---
 

@@ -24,19 +24,13 @@ export type StatusComponentSlowViewState = {};
 export type StatusComponentFastViewState = StatusComponentViewState;
 export type StatusComponentInteractiveViewState = StatusComponentViewState;
 
-export type StatusComponentElement = JayElement<
-    StatusComponentViewState,
-    StatusComponentRefs
->;
+export type StatusComponentElement = JayElement<StatusComponentViewState, StatusComponentRefs>;
 export type StatusComponentElementRender = RenderElement<
     StatusComponentViewState,
     StatusComponentRefs,
     StatusComponentElement
 >;
-export type StatusComponentElementPreRender = [
-    StatusComponentRefs,
-    StatusComponentElementRender,
-];
+export type StatusComponentElementPreRender = [StatusComponentRefs, StatusComponentElementRender];
 export type StatusComponentContract = JayContract<
     StatusComponentViewState,
     StatusComponentRefs,

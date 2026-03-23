@@ -1,0 +1,16 @@
+<html>
+<head>
+    <script type="application/jay-data">
+        data:
+            label: string
+            value: number
+    </script>
+</head>
+<body>
+    <div class="widget">
+        <span class="label">{label}</span>
+        <span class="value">{value}</span>
+        <button ref="increment">+1</button>
+    </div>
+</body>
+</html>
