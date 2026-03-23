@@ -1,5 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
+import { parse } from 'node-html-parser';
+import YAML from 'yaml';
 import { getLogger } from '@jay-framework/logger';
 
 export enum JayRouteParamType {
@@ -18,9 +20,9 @@ export type JayRoute = {
     jayHtmlPath: string;
     compPath: string;
     /**
-     * For static override routes, inferred params from sibling dynamic routes.
-     * e.g., /products/ceramic-flower-vase has inferredParams: { slug: 'ceramic-flower-vase' }
-     * when /products/[slug] exists as a sibling.
+     * Explicit params declared via <script type="application/jay-params"> in the jay-html.
+     * Used by static override routes to provide param values.
+     * e.g., /products/ceramic-flower-vase declares { slug: 'ceramic-flower-vase' }.
      */
     inferredParams?: Record<string, string>;
 };
@@ -92,6 +94,16 @@ async function scanDirectory(
             routes = [...routes, ...(await scanDirectory(BASE_DIR, fullPath, options))];
         } else if (item.name === options.jayHtmlFilename) {
             const route = convertToRoutePath(BASE_DIR, fullPath, options);
+            // Read jay-html and extract explicit params from <script type="application/jay-params">
+            const { params, validations } = await parseJayParams(fullPath);
+            if (params) {
+                route.inferredParams = params;
+            }
+            if (validations.length > 0) {
+                for (const v of validations) {
+                    getLogger().warn(`[route-scanner] ${route.rawRoute}: ${v}`);
+                }
+            }
             routes.push(route);
         }
     }
@@ -159,121 +171,63 @@ export function sortRoutesByPriority(routes: JayRoutes): JayRoutes {
 }
 
 /**
- * Check if a route has any dynamic segments (params).
+ * Strip common leading whitespace from YAML embedded in HTML.
+ * HTML indentation produces YAML lines with extra leading spaces that
+ * confuse the YAML parser.
  */
-function hasDynamicSegments(route: JayRoute): boolean {
-    return route.segments.some((seg) => typeof seg !== 'string');
+function dedentYaml(text: string): string {
+    const lines = text.split('\n').filter((l) => l.trim().length > 0);
+    if (lines.length === 0) return '';
+    const minIndent = Math.min(...lines.map((l) => l.match(/^\s*/)?.[0].length ?? 0));
+    return lines.map((l) => l.slice(minIndent)).join('\n');
 }
 
 /**
- * Check if a route is fully static (no dynamic segments).
- */
-function isFullyStaticRoute(route: JayRoute): boolean {
-    return route.segments.every((seg) => typeof seg === 'string');
-}
-
-/**
- * Check if a dynamic route pattern could match a static route.
- * For each segment position:
- * - If the dynamic route has a static segment, it must match the static route's segment
- * - If the dynamic route has a param, it can match any static value
+ * Parse <script type="application/jay-params"> from a jay-html file.
+ * Uses node-html-parser (same parser as the compiler) for robust parsing.
+ * Returns the parsed params and any validation errors.
  *
- * Example:
- *   static:  ['products', 'ceramic-flower-vase']
- *   dynamic: ['products', { name: 'slug' }]
- *   → true (products matches, [slug] can match 'ceramic-flower-vase')
+ * @see Design Log #113
  */
-function dynamicRouteCouldMatch(staticRoute: JayRoute, dynamicRoute: JayRoute): boolean {
-    if (staticRoute.segments.length !== dynamicRoute.segments.length) return false;
-    if (staticRoute.segments.length === 0) return false;
-
-    for (let i = 0; i < staticRoute.segments.length; i++) {
-        const staticSeg = staticRoute.segments[i];
-        const dynSeg = dynamicRoute.segments[i];
-
-        // Static route should only have string segments
-        if (typeof staticSeg !== 'string') return false;
-
-        // If dynamic route has a static segment at this position, it must match
-        if (typeof dynSeg === 'string') {
-            if (staticSeg !== dynSeg) return false;
-        }
-        // If dynamic route has a param, it can match any value - continue
+async function parseJayParams(
+    jayHtmlPath: string,
+): Promise<{ params: Record<string, string> | undefined; validations: string[] }> {
+    let content: string;
+    try {
+        content = await fs.readFile(jayHtmlPath, 'utf-8');
+    } catch {
+        return { params: undefined, validations: [] };
     }
 
-    return true;
-}
-
-/**
- * Result of param inference for logging/debugging.
- */
-export interface ParamInferenceResult {
-    staticRoute: string;
-    dynamicRoute: string;
-    inferredParams: Record<string, string>;
-}
-
-/**
- * Infer params for static routes based on sibling dynamic routes.
- *
- * For each fully-static route, find a sibling dynamic route and map
- * the static segment values to the param names from the dynamic route.
- *
- * Example:
- *   /products/ceramic-flower-vase (static)
- *   /products/[slug] (dynamic sibling)
- *   → inferredParams: { slug: 'ceramic-flower-vase' }
- *
- * Returns the routes with inferred params added, plus an inference log.
- */
-export function inferParamsForStaticRoutes(routes: JayRoutes): {
-    routes: JayRoutes;
-    inferenceLog: ParamInferenceResult[];
-} {
-    const inferenceLog: ParamInferenceResult[] = [];
-
-    // Find all dynamic routes for quick lookup
-    const dynamicRoutes = routes.filter(hasDynamicSegments);
-
-    const enrichedRoutes = routes.map((route) => {
-        // Skip if not fully static (has its own params)
-        if (!isFullyStaticRoute(route)) return route;
-
-        // Skip root route
-        if (route.segments.length === 0) return route;
-
-        // Find a dynamic route that could match this static route
-        const dynamicSibling = dynamicRoutes.find((dyn) => dynamicRouteCouldMatch(route, dyn));
-
-        if (!dynamicSibling) return route;
-
-        // Build inferred params by comparing segment-by-segment
-        const inferredParams: Record<string, string> = {};
-
-        for (let i = 0; i < route.segments.length; i++) {
-            const staticSeg = route.segments[i];
-            const dynSeg = dynamicSibling.segments[i];
-
-            // If static segment corresponds to a param in the dynamic route
-            if (typeof staticSeg === 'string' && typeof dynSeg !== 'string') {
-                inferredParams[dynSeg.name] = staticSeg;
-            }
-        }
-
-        // Only add if we found any params to infer
-        if (Object.keys(inferredParams).length === 0) return route;
-
-        // Log the inference
-        inferenceLog.push({
-            staticRoute: route.rawRoute,
-            dynamicRoute: dynamicSibling.rawRoute,
-            inferredParams,
-        });
-
-        return { ...route, inferredParams };
+    const root = parse(content, {
+        comment: true,
+        blockTextElements: { script: true, style: true },
     });
+    const head = root.querySelector('head');
+    const paramScripts = (head ?? root).querySelectorAll('script[type="application/jay-params"]');
 
-    return { routes: enrichedRoutes, inferenceLog };
+    if (paramScripts.length === 0) return { params: undefined, validations: [] };
+
+    if (paramScripts.length > 1) {
+        return {
+            params: undefined,
+            validations: [
+                'Multiple <script type="application/jay-params"> tags found — expected at most one',
+            ],
+        };
+    }
+
+    const body = dedentYaml(paramScripts[0].textContent ?? '');
+    if (!body) return { params: undefined, validations: [] };
+
+    try {
+        return { params: YAML.parse(body), validations: [] };
+    } catch (e) {
+        return {
+            params: undefined,
+            validations: [`Failed to parse jay-params YAML: ${(e as Error).message}`],
+        };
+    }
 }
 
 export async function scanRoutes(baseDir: string, options: ScanFilesOptions): Promise<JayRoutes> {
@@ -283,18 +237,14 @@ export async function scanRoutes(baseDir: string, options: ScanFilesOptions): Pr
     const routes = await scanDirectory(BASE_DIR, BASE_DIR, options);
     const sortedRoutes = sortRoutesByPriority(routes);
 
-    // Infer params for static override routes
-    const { routes: enrichedRoutes, inferenceLog } = inferParamsForStaticRoutes(sortedRoutes);
-
-    // Log inferred params for debugging (can be disabled in production)
-    if (inferenceLog.length > 0) {
-        getLogger().info('[route-scanner] Inferred params for static override routes:');
-        for (const entry of inferenceLog) {
-            getLogger().info(
-                `  ${entry.staticRoute} → params from ${entry.dynamicRoute}: ${JSON.stringify(entry.inferredParams)}`,
-            );
+    // Log explicit params for debugging
+    const routesWithParams = sortedRoutes.filter((r) => r.inferredParams);
+    if (routesWithParams.length > 0) {
+        getLogger().info('[route-scanner] Routes with explicit params (jay-params):');
+        for (const route of routesWithParams) {
+            getLogger().info(`  ${route.rawRoute} → ${JSON.stringify(route.inferredParams)}`);
         }
     }
 
-    return enrichedRoutes;
+    return sortedRoutes;
 }

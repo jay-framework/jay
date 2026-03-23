@@ -28,11 +28,7 @@ const builder = makeJayStackComponent<StatusComponentContract>()
     );
 
 export const status = builder.withInteractive(
-    (
-        _props,
-        refs: StatusComponentRefs,
-        fastViewState: Signals<StatusComponentFastViewState>,
-    ) => {
+    (_props, refs: StatusComponentRefs, fastViewState: Signals<StatusComponentFastViewState>) => {
         const [showBanner, setShowBanner] = fastViewState.showBanner;
         const [bannerText, setBannerText] = fastViewState.bannerText;
         const [counter, setCounter] = fastViewState.counter;

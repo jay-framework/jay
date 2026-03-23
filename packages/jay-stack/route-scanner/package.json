@@ -9,7 +9,9 @@
     "readme.md"
   ],
   "dependencies": {
-    "@jay-framework/logger": "workspace:^"
+    "@jay-framework/logger": "workspace:^",
+    "node-html-parser": "^6.1.12",
+    "yaml": "^2.3.4"
   },
   "scripts": {
     "build": "npm run build:js && npm run build:types",

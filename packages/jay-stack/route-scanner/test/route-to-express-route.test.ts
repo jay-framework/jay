@@ -21,6 +21,10 @@ describe('route-to-express-route', () => {
                 '/priority/products',
                 '/priority/products/:slug',
                 '/priority/products/ceramic-flower-vase',
+                // Jay-params test fixtures
+                '/jay-params/with-params',
+                '/jay-params/no-params',
+                '/jay-params/no-head',
             ]),
         );
     });

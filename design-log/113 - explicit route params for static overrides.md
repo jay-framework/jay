@@ -5,6 +5,7 @@
 DL#69 introduced route priority ordering (static routes match before dynamic). DL#70 added automatic param inference so static override routes like `/products/ceramic-flower-vase` get `{ slug: 'ceramic-flower-vase' }` by matching against sibling dynamic routes like `/products/[slug]`.
 
 The inference logic (`inferParamsForStaticRoutes` in route-scanner.ts) works by:
+
 1. Finding all fully static routes
 2. For each, searching for a dynamic sibling route where static segments align
 3. Mapping static segment values to param names from the dynamic route
@@ -27,15 +28,15 @@ Replace automatic inference with an explicit declaration in the override route's
 ```html
 <!-- /products/ceramic-flower-vase/page.jay-html -->
 <html>
-<head>
+  <head>
     <script type="application/jay-params">
       slug: ceramic-flower-vase
     </script>
     <script type="application/jay-data" contract="./page.jay-contract"></script>
-</head>
-<body>
+  </head>
+  <body>
     ...
-</body>
+  </body>
 </html>
 ```
 
@@ -44,12 +45,14 @@ The tag body is YAML (consistent with `application/jay-data`). Keys are param na
 ### Route scanner changes
 
 During `scanDirectory`, when a `page.jay-html` is found:
+
 1. Read the file content
 2. Parse `<script type="application/jay-params">` if present
 3. Parse the YAML body as `Record<string, string>`
 4. Store as `route.inferredParams`
 
 Remove:
+
 - `inferParamsForStaticRoutes()`
 - `dynamicRouteCouldMatch()`
 - `isFullyStaticRoute()`
@@ -81,33 +84,31 @@ import { WithValidations } from '@jay-framework/compiler-shared';
  * Uses the same HTML parser as the compiler (node-html-parser).
  */
 export function parseJayParams(
-    jayHtmlContent: string,
+  jayHtmlContent: string,
 ): WithValidations<Record<string, string> | undefined> {
-    const root = parse(jayHtmlContent, {
-        comment: true,
-        blockTextElements: { script: true, style: true },
-    });
-    const head = root.querySelector('head');
-    if (!head) return new WithValidations(undefined, []);
+  const root = parse(jayHtmlContent, {
+    comment: true,
+    blockTextElements: { script: true, style: true },
+  });
+  const head = root.querySelector('head');
+  if (!head) return new WithValidations(undefined, []);
 
-    const paramScripts = head.querySelectorAll('script[type="application/jay-params"]');
-    if (paramScripts.length === 0) return new WithValidations(undefined, []);
-    if (paramScripts.length > 1) {
-        return new WithValidations(undefined, [
-            'Multiple <script type="application/jay-params"> tags found — expected at most one',
-        ]);
-    }
+  const paramScripts = head.querySelectorAll('script[type="application/jay-params"]');
+  if (paramScripts.length === 0) return new WithValidations(undefined, []);
+  if (paramScripts.length > 1) {
+    return new WithValidations(undefined, [
+      'Multiple <script type="application/jay-params"> tags found — expected at most one',
+    ]);
+  }
 
-    const body = paramScripts[0].textContent?.trim();
-    if (!body) return new WithValidations(undefined, []);
+  const body = paramScripts[0].textContent?.trim();
+  if (!body) return new WithValidations(undefined, []);
 
-    try {
-        return new WithValidations(YAML.parse(body), []);
-    } catch (e) {
-        return new WithValidations(undefined, [
-            `Failed to parse jay-params YAML: ${e.message}`,
-        ]);
-    }
+  try {
+    return new WithValidations(YAML.parse(body), []);
+  } catch (e) {
+    return new WithValidations(undefined, [`Failed to parse jay-params YAML: ${e.message}`]);
+  }
 }
 ```
 
@@ -177,10 +178,10 @@ No `application/jay-params` tag needed. `inferredParams` is undefined. Same as t
 
 ## Trade-offs
 
-| Approach | Pros | Cons |
-| --- | --- | --- |
-| **Explicit jay-params** (chosen) | Clear, no collisions, developer controls | Requires manual declaration |
-| **Automatic inference** (current) | Zero config | Complex, collision-prone, invisible |
+| Approach                          | Pros                                     | Cons                                |
+| --------------------------------- | ---------------------------------------- | ----------------------------------- |
+| **Explicit jay-params** (chosen)  | Clear, no collisions, developer controls | Requires manual declaration         |
+| **Automatic inference** (current) | Zero config                              | Complex, collision-prone, invisible |
 
 ## Verification Criteria
 

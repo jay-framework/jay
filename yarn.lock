@@ -4660,6 +4660,7 @@ __metadata:
     "@jay-framework/dev-environment": "workspace:^"
     "@jay-framework/logger": "workspace:^"
     "@types/node": "npm:^20.11.5"
+    node-html-parser: "npm:^6.1.12"
     nodemon: "npm:^3.0.3"
     replace-in-file: "npm:^7.1.0"
     rimraf: "npm:^5.0.5"
@@ -4667,6 +4668,7 @@ __metadata:
     typescript: "npm:^5.3.3"
     vite: "npm:^5.0.11"
     vitest: "npm:^1.2.1"
+    yaml: "npm:^2.3.4"
   languageName: unknown
   linkType: soft
 

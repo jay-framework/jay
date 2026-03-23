@@ -1,1 +1,10 @@
-<div>Ceramic flower vase - static override</div>
+<html>
+<head>
+    <script type="application/jay-params">
+      slug: ceramic-flower-vase
+    </script>
+</head>
+<body>
+    <div>Ceramic flower vase - static override</div>
+</body>
+</html>
