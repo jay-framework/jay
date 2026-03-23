@@ -744,7 +744,12 @@ function tokenToOverrideValue(
 
     const tagPath = token.path.join('.');
     const tag = findEditorProtocolTag(token.path, contractTags);
-    const dataType = parseDataTypeString(tag?.dataType);
+    // Conditions inside `forEach` use item-local paths (e.g. `hasRibbon`, `ribbon.name`).
+    // Those tags are not on the page-root contract; emitting `vs.hasRibbon` / `vs.ribbon.name`
+    // corrupts preview merge. Skip unless the path resolves from merged page tags.
+    if (!tag) return undefined;
+
+    const dataType = parseDataTypeString(tag.dataType);
 
     if (token.operator === '==' && token.comparedValue != null) {
         return { tagPath, value: token.comparedValue };
@@ -782,8 +787,7 @@ function tokenToOverrideValue(
         if (dataType.kind === 'string') {
             return { tagPath, value: token.isNegated ? '' : 'Sample' };
         }
-        // Unknown type — assume truthy needs "true", negated needs "false"
-        // (best effort for tags not found in contract)
+        // Known tag but nonstandard type — best-effort boolean-ish override
         return { tagPath, value: token.isNegated ? '' : 'true' };
     }
 
@@ -1028,6 +1032,12 @@ function generateSampleData(
 function generateItemFromTags(childTags: ContractTag[], index: number): Record<string, unknown> {
     const item: Record<string, unknown> = {};
     for (const child of childTags) {
+        const nestedTags = child.tags && child.tags.length > 0 ? child.tags : undefined;
+        if (nestedTags) {
+            item[child.tag] = generateItemFromTags(nestedTags, index);
+            continue;
+        }
+
         const dataType = parseDataTypeString(child.dataType);
         if (dataType.kind === 'boolean') {
             item[child.tag] = index % 2 === 0;

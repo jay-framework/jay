@@ -693,6 +693,49 @@ describe('generateVariantScenarios (condition-driven)', () => {
         expect(typeof items[0].active).toBe('boolean');
     });
 
+    it('nests sub-contract objects in forEach sample data (ribbon.name for product cards)', () => {
+        const body = makeBody(
+            `<body>
+                <div forEach="items">
+                    <span if="hasRibbon && ribbon.name">{ribbon.name}</span>
+                </div>
+            </body>`,
+        );
+        const contract: Contract = {
+            name: 'test',
+            tags: [
+                {
+                    tag: 'items',
+                    type: 'subContract',
+                    repeated: true,
+                    tags: [
+                        { tag: 'hasRibbon', type: 'variant', dataType: 'boolean' },
+                        {
+                            tag: 'ribbon',
+                            type: 'subContract',
+                            tags: [
+                                { tag: '_id', type: 'data', dataType: 'string' },
+                                { tag: 'name', type: 'data', dataType: 'string' },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        };
+        const scenarios = generateVariantScenarios(body, contract.tags);
+        const defaultScenario = scenarios[0];
+        const url = new URL('http://test' + defaultScenario.queryString);
+        const itemsParam = url.searchParams.get('vs.items');
+        expect(itemsParam).toBeDefined();
+        const items = JSON.parse(itemsParam!);
+        expect(items[0].ribbon).toBeDefined();
+        expect(typeof items[0].ribbon).toBe('object');
+        expect(items[0].ribbon).toHaveProperty('name');
+        expect(typeof (items[0].ribbon as { name: string }).name).toBe('string');
+        // Repeater-local `ribbon.name` must not become a bogus root vs.ribbon.name override
+        expect(url.searchParams.has('vs.ribbon.name')).toBe(false);
+    });
+
     // --- Real-world store-light page pattern ---
 
     it('handles store-light product page conditions', () => {
