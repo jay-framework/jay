@@ -109,7 +109,8 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | --- | ---------------------------------------------------- | -------------------------------- |
 | 53  | jay-stack environment query parameter handling       | Query parameter handling         |
 | 69  | route priority ordering for static vs dynamic routes | Route matching priority          |
-| 70  | static route param inference                         | Static route parameter inference |
+| 70  | static route param inference                         | Static route parameter inference (superseded by #113) |
+| 113 | explicit route params for static overrides            | Replace auto-inference with `<script type="application/jay-params">` |
 
 ---
 
