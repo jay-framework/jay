@@ -333,6 +333,24 @@ function hasBindingBearingChildren(element: HTMLElement): boolean {
     return false;
 }
 
+const MAX_TEXT_LAYER_NAME_LEN = 24;
+
+function truncateTextLayerName(text: string): string {
+    const t = text.replace(/\s+/g, ' ').trim();
+    if (!t) return '';
+    return t.length > MAX_TEXT_LAYER_NAME_LEN ? t.slice(0, MAX_TEXT_LAYER_NAME_LEN) : t;
+}
+
+/**
+ * True when flattened source text is empty or clearly Jay binding / placeholder
+ * (not a static literal). Snapshot text should drive Figma characters in that case.
+ */
+function sourceTextIsBindingOrEmpty(sourceNorm: string): boolean {
+    if (!sourceNorm) return true;
+    if (sourceNorm.includes('{')) return true;
+    return false;
+}
+
 function flattenTextContent(element: HTMLElement): string {
     const parts: string[] = [];
 
@@ -705,18 +723,18 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
         return null;
     }
 
-    // Re-import guard: for text elements with static source content, prefer source over enrichment.
+    // Re-import guard: for text elements with **static literal** source, prefer source over enrichment.
     // Wrong sid mapping on re-import can assign sibling text (e.g. "✕Search") to page-title.
-    // When source has static text (no { binding), trust it — reject enrichment for text and dimensions.
+    // Binding-only / empty source must NOT trigger this — snapshot text is authoritative (Issue 001).
     let effectiveEnrichedStyles = enrichedStyles;
     if (isTextElement(element)) {
         const sourceText = flattenTextContent(element);
         const sourceNorm = sourceText.replace(/\s+/g, ' ').trim();
-        const hasStaticSource = sourceNorm.length > 0 && !sourceNorm.includes('{');
+        const hasStaticLiteralSource = !sourceTextIsBindingOrEmpty(sourceNorm);
         const enrichedNorm = enrichedStyles?.textContent?.replace(/\s+/g, ' ').trim() ?? '';
 
-        if (hasStaticSource) {
-            // Source has static text — check for mismatch (wrong enrichment candidate)
+        if (hasStaticLiteralSource) {
+            // Source has real static copy — check for mismatch (wrong enrichment candidate)
             if (
                 enrichedNorm &&
                 sourceNorm !== enrichedNorm &&
@@ -952,26 +970,56 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
         const sourceNorm = norm(sourceText);
         const enrichedNorm = enrichedText ? norm(enrichedText) : '';
 
-        // Use enriched only when we have it and it matches source (or source is empty).
-        // When effectiveEnrichedStyles was rejected above (TEXT_MISMATCH_GUARD), use source.
+        // Static literal: require high confidence + text agreement (or empty source).
+        // Binding-only / empty source: prefer snapshot text whenever we have enrichment data,
+        // even at low confidence — still warn on ambiguity (Issue 001).
         const textsMatch =
             !sourceNorm ||
             sourceNorm === enrichedNorm ||
             sourceNorm.includes(enrichedNorm) ||
             enrichedNorm.includes(sourceNorm);
-        const useEnriched =
+        const preferSnapshotForBindingOrEmpty =
+            sourceTextIsBindingOrEmpty(sourceNorm) &&
+            enrichedNorm.length > 0 &&
+            effectiveEnrichedStyles != null;
+
+        const useEnrichedHighConfidence =
             enrichment.confidence === 'high' &&
             enrichedNorm &&
             textsMatch &&
             effectiveEnrichedStyles != null;
 
+        const useEnrichedFromSnapshot =
+            preferSnapshotForBindingOrEmpty &&
+            (enrichment.confidence === 'high' || enrichment.confidence === 'low');
+
+        const useEnriched = useEnrichedHighConfidence || useEnrichedFromSnapshot;
+
         const characters = useEnriched ? effectiveEnrichedStyles!.textContent! : sourceText;
 
-        if (enrichment.confidence !== 'high' && enrichedText && enrichedText !== sourceText) {
+        if (preferSnapshotForBindingOrEmpty && useEnriched && enrichment.confidence === 'low') {
+            warnings.push(
+                `TEXT_SAMPLE_LOW_CONFIDENCE: sid=${sourceId} binding/empty source, using snapshot text (ambiguous enrichment candidate)`,
+            );
+        }
+
+        if (
+            enrichment.confidence !== 'high' &&
+            enrichedText &&
+            enrichedText !== sourceText &&
+            !preferSnapshotForBindingOrEmpty
+        ) {
             warnings.push(
                 `TEXT_OVERRIDE_SKIPPED: sid=${sourceId} enrichment confidence low, using source text`,
             );
         }
+
+        const hasRefOrId = !!(element.getAttribute('ref') || element.getAttribute('id'));
+        const usedSnapshotCharacters = useEnriched;
+        const textDisplayName =
+            usedSnapshotCharacters && !hasRefOrId && characters.trim()
+                ? truncateTextLayerName(characters)
+                : name;
 
         const hasContainer = !!(style.backgroundColor || style.padding || style.layoutMode);
 
@@ -989,7 +1037,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
                 id: textChildId,
                 sourcePath: domPath + '/text',
                 kind: 'TEXT',
-                name: characters.substring(0, 20) || 'text',
+                name: truncateTextLayerName(characters) || 'text',
                 tagName: 'span',
                 className: undefined,
                 htmlAttributes: undefined,
@@ -1027,7 +1075,7 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
             id: nodeId,
             sourcePath: domPath,
             kind: 'TEXT',
-            name,
+            name: textDisplayName,
             tagName: tag,
             className,
             visible: true,
