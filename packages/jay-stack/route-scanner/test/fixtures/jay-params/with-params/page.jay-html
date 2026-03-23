@@ -1,0 +1,11 @@
+<html>
+<head>
+    <script type="application/jay-params">
+      slug: my-product
+      category: electronics
+    </script>
+</head>
+<body>
+    <div>With params</div>
+</body>
+</html>
