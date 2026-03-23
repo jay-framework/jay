@@ -73,6 +73,19 @@ function elementDeclaresOwnTextColor(
     return Object.prototype.hasOwnProperty.call(classStyles, 'color');
 }
 
+/** True if this element's inline or class rules set `text-align` (not inherited-only). */
+function elementDeclaresOwnTextAlign(
+    styleAttr: string,
+    classNames: string[] | undefined,
+    cssClassMap: CssClassMap | undefined,
+): boolean {
+    const { parsed } = parseInlineStyle(styleAttr);
+    if (parsed['text-align']) return true;
+    if (!classNames?.length || !cssClassMap?.size) return false;
+    const classStyles = resolveClassStyles(classNames.join(' '), cssClassMap);
+    return Object.prototype.hasOwnProperty.call(classStyles, 'text-align');
+}
+
 export interface EnrichmentResult {
     data: ComputedStyleData | undefined;
     confidence: 'high' | 'low' | 'none';
@@ -774,6 +787,15 @@ function buildNodeFromElement(element: HTMLElement, ctx: BuildNodeContext): Buil
         inheritedStyles?.textColor !== undefined
     ) {
         style.textColor = inheritedStyles.textColor;
+    }
+
+    // Same for `text-align`: computed style often reports `start`/`left` on the text node even when
+    // the author relied on an ancestor (e.g. .hero-banner { text-align: center }) — Issue #14.
+    if (
+        !elementDeclaresOwnTextAlign(styleAttr, classNames, cssClassMap) &&
+        inheritedStyles?.textAlignHorizontal !== undefined
+    ) {
+        style.textAlignHorizontal = inheritedStyles.textAlignHorizontal;
     }
 
     let nextInherited: InheritedStylesCtx | undefined;

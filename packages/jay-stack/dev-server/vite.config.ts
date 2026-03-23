@@ -37,5 +37,9 @@ export default defineConfig({
     },
     test: {
         globals: true,
+        // hydration.test.ts and dev-server.test.ts each spawn Vite (middleware mode still binds
+        // HMR WebSocket). Parallel files → "Port is already in use" → Playwright "Execution
+        // context was destroyed" / flaky timeouts (see dev-server full `yarn test`).
+        fileParallelism: false,
     },
 });
