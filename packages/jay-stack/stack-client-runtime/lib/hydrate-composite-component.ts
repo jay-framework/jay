@@ -101,7 +101,7 @@ export function hydrateCompositeJayComponent<
 
         return {
             render: () => {
-                let viewState = defaultViewState;
+                let viewState = {...defaultViewState};
                 instances.forEach(([key, instance]) => {
                     const rendered = materializeViewState(instance.render());
                     if (key) {
@@ -128,8 +128,28 @@ export function hydrateCompositeJayComponent<
         return [...cm, ...part.contextMarkers];
     }, []);
 
-    // Adapt hydrate function to PreRenderElement signature by binding rootElement
-    const preRender = (options?: RenderElementOptions) => hydratePreRender(rootElement, options);
+    // Adapt hydrate function to PreRenderElement signature by binding rootElement.
+    // Wraps the render function so the first call hydrates with the SSR ViewState
+    // (guaranteed to match the DOM), then reconciles with the client ViewState.
+    // This handles components whose interactive constructors produce different
+    // initial state based on client-local data (cookies, localStorage, API calls).
+    // See Design Log #112.
+    const preRender = (options?: RenderElementOptions) => {
+        const [refs, render] = hydratePreRender(rootElement, options);
+        let element: JayElementT | undefined;
+        const wrappedRender = (viewState: ViewState) => {
+            if (!element) {
+                // First call: hydrate with SSR ViewState (matches DOM)
+                element = render(defaultViewState);
+                // Reconcile with the actual client ViewState via the update path
+                element.update(viewState);
+            } else {
+                element.update(viewState);
+            }
+            return element;
+        };
+        return [refs, wrappedRender] as [Refs, RenderElement<ViewState, Refs, JayElementT>];
+    };
 
     return makeJayComponent<PropsT, ViewState, Refs, JayElementT, Array<any>, CompCore>(
         preRender,

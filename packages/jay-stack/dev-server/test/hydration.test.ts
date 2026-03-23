@@ -983,4 +983,50 @@ describe('hydration', () => {
             },
         });
     });
+
+    describe('9. Client ViewState mismatch (DL#112)', () => {
+        // Uses a KEYED headless component (key="status") that overrides SSR values
+        // in its interactive constructor. This tests the mutation path:
+        // render() aliases defaultViewState and mutates it via viewState[key] = ...
+        testFixture('9a-page-client-viewstate-mismatch', {
+            expectedViewState: {
+                title: 'ViewState Mismatch Test',
+                status: {
+                    // Client overrides SSR values (SSR had: showBanner=false, counter=0)
+                    showBanner: true,
+                    bannerText: 'Client Banner',
+                    counter: 5,
+                },
+            },
+            hydrationChecks: async (page) => {
+                // Title from slow phase — always present
+                expect(await page.textContent('#target h1')).toEqual('ViewState Mismatch Test');
+
+                // Banner: SSR had status.showBanner=false, but client sets it to true.
+                // After hydration + reconciliation, the banner should be visible
+                // with the client's text.
+                await page.waitForFunction(
+                    () => document.querySelector('#target .banner') !== null,
+                    { timeout: 2000 },
+                );
+                expect(await page.$('#target .banner')).toBeTruthy();
+                expect(await page.textContent('#target .banner-text')).toEqual('Client Banner');
+
+                // Counter: SSR had 0, client sets 5
+                expect(await page.textContent('#target .counter')).toEqual('Count: 5');
+            },
+            interactivityChecks: async (page) => {
+                // Click increment: counter goes from 5 to 6
+                await page.click('#target button');
+                await page.waitForFunction(
+                    () => document.querySelector('#target .counter')?.textContent === 'Count: 6',
+                    { timeout: 2000 },
+                );
+                expect(await page.textContent('#target .counter')).toEqual('Count: 6');
+
+                // Banner should still be visible
+                expect(await page.$('#target .banner')).toBeTruthy();
+            },
+        });
+    });
 });

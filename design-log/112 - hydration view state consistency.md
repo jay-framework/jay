@@ -131,6 +131,42 @@ The SSR ViewState is decomposed into signals (`makeSignals(partViewState)`). If 
    - Conditional element visible on client but not on SSR (or vice versa)
 2. Verify no hydration warnings and correct final DOM
 
+## Implementation Results
+
+### Files changed
+
+| File | Change |
+| --- | --- |
+| `stack-client-runtime/lib/hydrate-composite-component.ts` | Wrapped render function; fixed `defaultViewState` mutation |
+| `dev-server/test/9a-page-client-viewstate-mismatch/` | New test fixture with keyed headless component |
+| `dev-server/test/hydration.test.ts` | Added test group "9. Client ViewState mismatch (DL#112)" |
+
+### Implementation details
+
+Two changes in `hydrateCompositeJayComponent`:
+
+**1. Prevent `defaultViewState` mutation (root cause fix):**
+Changed `let viewState = defaultViewState` to `let viewState = {...defaultViewState}` in the `comp`'s `render()` function. Previously, `viewState[key] = deepMergeViewStates(...)` for keyed parts mutated `defaultViewState` directly (same reference). The shallow copy prevents this. `deepMergeViewStates` never mutates its inputs (creates a new `result` object), so shallow copy is sufficient.
+
+**2. Wrap render for SSR/client reconciliation (design fix):**
+The `preRender` wrapper intercepts the first `render(viewState)` call: hydrates with `defaultViewState` (now guaranteed to have original SSR values), then reconciles with the client ViewState via `element.update(viewState)`.
+
+### Deviation from design
+
+The design proposed snapshotting `defaultViewState` via `JSON.parse(JSON.stringify(...))` inside `preRender()`. The actual implementation is simpler: fix the mutation at the source (`{...defaultViewState}` in render) and use `defaultViewState` directly in the wrapper. No deep copy needed.
+
+### Test fixture: 9a-page-client-viewstate-mismatch
+
+Uses a **keyed** headless component (`key="status"`) — critical because the mutation only occurs for keyed parts (`viewState[key] = ...`). Non-keyed parts reassign `viewState` to a new object from `deepMergeViewStates`, leaving `defaultViewState` untouched.
+
+- Keyed headless component fast phase: `showBanner=false, bannerText='Server Default', counter=0`
+- Client interactive constructor: sets `showBanner=true, bannerText='Client Banner', counter=5`
+- Validates: banner appears after hydration (not present in SSR HTML), counter shows 5, interactivity works (increment to 6)
+- Test verified to FAIL without the fix (4 failures in SSR modes)
+- 12 test cases (SSR disabled + first request + cached, each with page load + hydration + interactivity + viewstate)
+
+### Tests: 220/220 passing (208 existing + 12 new)
+
 ## Verification Criteria
 
 1. No hydration warnings when client ViewState differs from SSR

@@ -1,0 +1,17 @@
+name: status-component
+tags:
+  - tag: show-banner
+    type: data
+    dataType: boolean
+    phase: fast+interactive
+  - tag: banner-text
+    type: data
+    dataType: string
+    phase: fast+interactive
+  - tag: counter
+    type: data
+    dataType: number
+    phase: fast+interactive
+  - tag: increment
+    type: interactive
+    elementType: HTMLButtonElement
