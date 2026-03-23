@@ -166,7 +166,6 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
     beforeAll(async () => {
         const dirPath = path.resolve(__dirname, dirName);
         devServer = await mkDevServer({
-            publicBaseUrlPath: path.join(dirPath, 'public'),
             pagesRootFolder: dirPath,
             projectRootFolder: dirPath,
             jayRollupConfig: {
@@ -1135,9 +1134,7 @@ describe('hydration', () => {
     describe('8e. Headfull FS — forEach with preceding sections + carry-forward', () => {
         testFixture('8e-page-headfull-fs-foreach-nested', {
             hydrationChecks: async (page) => {
-                expect(await page.textContent('#target h1')).toEqual(
-                    'Nested ForEach Headfull FS',
-                );
+                expect(await page.textContent('#target h1')).toEqual('Nested ForEach Headfull FS');
                 expect(await page.textContent('#target .section h2')).toEqual('Static Section');
                 const widgets = await page.$$('#target .widget');
                 expect(widgets).toHaveLength(2);
@@ -1182,9 +1179,7 @@ describe('hydration', () => {
     describe('8f. Headfull FS — two static instances with different props', () => {
         testFixture('8f-page-headfull-fs-two-instances', {
             hydrationChecks: async (page) => {
-                expect(await page.textContent('#target h1')).toEqual(
-                    'Two Instances Headfull FS',
-                );
+                expect(await page.textContent('#target h1')).toEqual('Two Instances Headfull FS');
                 const widgets = await page.$$('#target .widget');
                 expect(widgets).toHaveLength(2);
                 expect(await widgets[0].textContent()).toContain('Item 1');
