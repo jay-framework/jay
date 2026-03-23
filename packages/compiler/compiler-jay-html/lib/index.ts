@@ -14,7 +14,11 @@ export {
     type AssignCoordinatesOptions,
     type AssignCoordinatesResult,
 } from './jay-target/assign-coordinates';
-export { parseJayFile, getJayHtmlImports } from './jay-target/jay-html-parser';
+export {
+    parseJayFile,
+    getJayHtmlImports,
+    injectHeadfullFSTemplates,
+} from './jay-target/jay-html-parser';
 
 export { renderRefsType } from './jay-target/jay-html-compile-refs';
 export { generateTypes } from './jay-target/jay-html-compile-types';

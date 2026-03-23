@@ -42,6 +42,9 @@ describe('compile contract', () => {
                 `Plugin manifest resolution not supported in this test`,
             ]);
         },
+        readJayHtml() {
+            return null;
+        },
     };
     it('should compile counter contract', async () => {
         const contract = `
@@ -732,6 +735,9 @@ describe('compile contract', () => {
                 return new WithValidations(null as any, [
                     `Plugin manifest resolution not supported in this test`,
                 ]);
+            },
+            readJayHtml() {
+                return null;
             },
         };
 

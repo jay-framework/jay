@@ -854,9 +854,14 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             collectContractRefs(headlessImport.refs);
 
             // Compile each child against the component's ViewState
+            // Exclude the component's own code link name from importedSymbols to prevent
+            // HTML tags like <header> from being mistaken for the component import "header".
+            const childImportedSymbols = new Set(newContext.importedSymbols);
+            childImportedSymbols.delete(pluginComponentName);
             const childContext: RenderContext = {
                 ...newContext,
                 variables: componentVariables,
+                importedSymbols: childImportedSymbols,
                 indent: childIndent,
                 importedRefNameToRef: instanceRefMap,
                 recursiveRegions: [],
