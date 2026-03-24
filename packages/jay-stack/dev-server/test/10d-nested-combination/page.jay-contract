@@ -1,0 +1,38 @@
+name: Page
+tags:
+  - tag: title
+    type: data
+    dataType: string
+    phase: slow
+  - tag: categories
+    type: sub-contract
+    repeated: true
+    phase: slow
+    trackBy: _id
+    tags:
+      - tag: _id
+        type: data
+        dataType: string
+      - tag: name
+        type: data
+        dataType: string
+      - tag: showDetails
+        type: data
+        dataType: boolean
+        phase: slow
+      - tag: isActive
+        type: data
+        dataType: boolean
+        phase: fast+interactive
+      - tag: items
+        type: sub-contract
+        repeated: true
+        phase: fast+interactive
+        trackBy: _id
+        tags:
+          - tag: _id
+            type: data
+            dataType: string
+          - tag: label
+            type: data
+            dataType: string

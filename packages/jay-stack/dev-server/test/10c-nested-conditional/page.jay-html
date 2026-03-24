@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data">
+        data:
+            title: string
+            items:
+                - _id: string
+                  name: string
+                  isActive: boolean
+    </script>
+</head>
+<body>
+    <div>
+        <h1>{title}</h1>
+        <div class="item" forEach="items" trackBy="_id">
+            <span class="name">{name}</span>
+            <span class="badge" if="isActive">Active</span>
+            <span class="badge-off" if="!isActive">Inactive</span>
+        </div>
+    </div>
+</body>
+</html>

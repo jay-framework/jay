@@ -298,6 +298,23 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
         }
     });
 
+    it('no hydration warnings', async () => {
+        const page = await browser.newPage();
+        const warnings: string[] = [];
+        page.on('console', (msg) => {
+            if (msg.type() === 'warning' && msg.text().includes('[jay hydration]')) {
+                warnings.push(msg.text());
+            }
+        });
+        try {
+            await page.goto(`${devServerUrl}/`, { waitUntil: 'load' });
+            await waitForHydration(page);
+            expect(warnings).toEqual([]);
+        } finally {
+            await page.close();
+        }
+    }, 15000);
+
     if (opts.ssrChecks) {
         it('SSR content has expected structure', async () => {
             const response = await fetch(`${devServerUrl}/`);
@@ -1302,6 +1319,140 @@ describe('hydration', () => {
 
                 // Banner should still be visible
                 expect(await page.$('#target .banner')).toBeTruthy();
+            },
+        });
+    });
+
+    describe('10a. Nested slow forEach', () => {
+        testFixture('10a-nested-slow-foreach', {
+            hydrationChecks: async (page) => {
+                // Title renders
+                expect(await page.textContent('#target h1')).toEqual('Nested Slow ForEach');
+
+                // Both categories render with correct headings
+                const headings = await page.$$('#target .category h2');
+                expect(headings).toHaveLength(2);
+                expect(await headings[0].textContent()).toEqual('Fruits');
+                expect(await headings[1].textContent()).toEqual('Vegetables');
+
+                // All items render under correct categories
+                const categories = await page.$$('#target .category');
+                expect(categories).toHaveLength(2);
+
+                const fruitsItems = await categories[0].$$('li');
+                expect(fruitsItems).toHaveLength(2);
+                expect(await fruitsItems[0].textContent()).toEqual('Apple');
+                expect(await fruitsItems[1].textContent()).toEqual('Banana');
+
+                const vegItems = await categories[1].$$('li');
+                expect(vegItems).toHaveLength(2);
+                expect(await vegItems[0].textContent()).toEqual('Carrot');
+                expect(await vegItems[1].textContent()).toEqual('Daikon');
+            },
+        });
+    });
+
+    describe('10b. Nested fast forEach', () => {
+        testFixture('10b-nested-fast-foreach', {
+            hydrationChecks: async (page) => {
+                // Title renders
+                expect(await page.textContent('#target h1')).toEqual('Nested Fast ForEach');
+
+                // Both groups render with correct headings
+                const headings = await page.$$('#target .group h2');
+                expect(headings).toHaveLength(2);
+                expect(await headings[0].textContent()).toEqual('Group A');
+                expect(await headings[1].textContent()).toEqual('Group B');
+
+                // Nested items render correctly
+                const groups = await page.$$('#target .group');
+                expect(groups).toHaveLength(2);
+
+                const groupAItems = await groups[0].$$('li');
+                expect(groupAItems).toHaveLength(2);
+                expect(await groupAItems[0].textContent()).toEqual('Item A1');
+                expect(await groupAItems[1].textContent()).toEqual('Item A2');
+
+                const groupBItems = await groups[1].$$('li');
+                expect(groupBItems).toHaveLength(3);
+                expect(await groupBItems[0].textContent()).toEqual('Item B1');
+                expect(await groupBItems[1].textContent()).toEqual('Item B2');
+                expect(await groupBItems[2].textContent()).toEqual('Item B3');
+            },
+        });
+    });
+
+    describe('10c. Nested conditional', () => {
+        testFixture('10c-nested-conditional', {
+            hydrationChecks: async (page) => {
+                // Title renders
+                expect(await page.textContent('#target h1')).toEqual('Nested Conditional');
+
+                // All 3 items render
+                const items = await page.$$('#target .item');
+                expect(items).toHaveLength(3);
+
+                // Names render correctly
+                const names = await page.$$('#target .item .name');
+                expect(await names[0].textContent()).toEqual('Alpha');
+                expect(await names[1].textContent()).toEqual('Beta');
+                expect(await names[2].textContent()).toEqual('Gamma');
+
+                // Active badges: Alpha(active), Beta(inactive), Gamma(active)
+                const activeBadge0 = await items[0].$('.badge');
+                expect(activeBadge0).toBeTruthy();
+                const inactiveBadge0 = await items[0].$('.badge-off');
+                expect(inactiveBadge0).toBeNull();
+
+                const activeBadge1 = await items[1].$('.badge');
+                expect(activeBadge1).toBeNull();
+                const inactiveBadge1 = await items[1].$('.badge-off');
+                expect(inactiveBadge1).toBeTruthy();
+
+                const activeBadge2 = await items[2].$('.badge');
+                expect(activeBadge2).toBeTruthy();
+                const inactiveBadge2 = await items[2].$('.badge-off');
+                expect(inactiveBadge2).toBeNull();
+            },
+        });
+    });
+
+    describe('10d. Nested combination', () => {
+        testFixture('10d-nested-combination', {
+            hydrationChecks: async (page) => {
+                // Title renders
+                expect(await page.textContent('#target h1')).toEqual('Nested Combination');
+
+                // Both categories render
+                const categories = await page.$$('#target .category');
+                expect(categories).toHaveLength(2);
+
+                // Category headings
+                const headings = await page.$$('#target .category h2');
+                expect(await headings[0].textContent()).toEqual('Enabled');
+                expect(await headings[1].textContent()).toEqual('Disabled');
+
+                // Slow conditional: showDetails=true for Enabled, false for Disabled
+                const details0 = await categories[0].$('.details');
+                expect(details0).toBeTruthy();
+                const details1 = await categories[1].$('.details');
+                expect(details1).toBeNull();
+
+                // Fast conditional: isActive=true for Enabled, false for Disabled
+                const active0 = await categories[0].$('.active-badge');
+                expect(active0).toBeTruthy();
+                const active1 = await categories[1].$('.active-badge');
+                expect(active1).toBeNull();
+
+                // Fast forEach items under each category
+                const enabledItems = await categories[0].$$('li');
+                expect(enabledItems).toHaveLength(2);
+                expect(await enabledItems[0].textContent()).toEqual('E-One');
+                expect(await enabledItems[1].textContent()).toEqual('E-Two');
+
+                const disabledItems = await categories[1].$$('li');
+                expect(disabledItems).toHaveLength(1);
+                expect(await disabledItems[0].textContent()).toEqual('D-One');
             },
         });
     });
