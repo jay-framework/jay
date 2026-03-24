@@ -618,6 +618,28 @@ function interactiveConstructor(
 
 - **fastCarryForward**: Injected as the **first context parameter** (after viewStateSignals), providing access to data carried forward from the fast render phase
 
+## Server-Side Rendering
+
+Jay Stack automatically server-side renders pages using data from the slow and fast phases. No configuration is needed — SSR and hydration are built into the framework.
+
+### How It Works
+
+1. **Server render** — The compiler produces a `server-element` target that compiles jay-html into a streaming HTML renderer. The server executes the slow and fast render phases, producing complete HTML with all server-available data filled in.
+
+2. **Client hydration** — The compiler produces a `hydrate` target that adopts the server-rendered DOM instead of creating new elements. It attaches event listeners and wires up reactive bindings without re-rendering the page.
+
+3. **Phase-aware bindings** — Only `fast+interactive` bindings receive `jay-coordinate` attributes for client-side hydration. Slow-only bindings are baked into the HTML and need no client-side wiring.
+
+4. **ViewState consistency** — During hydration, the client uses the SSR ViewState (which matches the server-rendered DOM) as its initial state, then reconciles with any client-computed state. This prevents flicker from mismatched server and client data.
+
+### What Gets SSR'd
+
+- Page-level data from slow and fast render phases
+- Headless component instances (key-based and instance-based)
+- Headfull full-stack components (when `contract` attribute is present)
+- Conditionals and forEach loops driven by server-phase data
+- CSS from component jay-html files (merged into page)
+
 ## URL Parameter Loading
 
 ### Basic Parameter Loading

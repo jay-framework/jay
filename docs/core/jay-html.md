@@ -216,6 +216,52 @@ Instances are then created in the template body using `<jay:name>`:
 <jay:Item prop1="value" prop2="{dynamicValue}" />
 ```
 
+### Importing Headfull Full-Stack Components (Jay Stack)
+
+In Jay Stack applications, adding a `contract` attribute to a headfull import makes the component full-stack — it participates in slow/fast/interactive rendering phases and is server-side rendered:
+
+```html
+<script
+  type="application/jay-headfull"
+  src="../components/shared-header"
+  names="SharedHeader"
+  contract="../components/shared-header/shared-header.jay-contract"
+></script>
+```
+
+**Attributes** (in addition to standard headfull attributes):
+
+- `contract` - Path to the component's contract file. When present, the component is compiled as a full-stack component with three-phase rendering and SSR support.
+
+**How it works:**
+
+1. The component has its own jay-html file whose `<head>` imports the same contract via `application/jay-data`:
+   ```html
+   <!-- shared-header.jay-html -->
+   <html>
+     <head>
+       <script type="application/jay-data" contract="./shared-header.jay-contract"></script>
+       <style>
+         /* component styles */
+       </style>
+     </head>
+     <body>
+       <nav>{navItems}</nav>
+     </body>
+   </html>
+   ```
+2. At compile time, the component's `<body>` content is injected as the inline template of each `<jay:Name>` tag
+3. CSS from the component's `<head>` is merged into the page's styles
+4. The existing headless instance pipeline handles all phases (slow/fast/interactive), SSR, and hydration
+
+**Usage** — same as client-only headfull, with props:
+
+```html
+<jay:SharedHeader logoUrl="/logo.png" />
+```
+
+**When to use:** Headfull full-stack components own their UI and render it on the server. Use them for reusable layouts like headers, footers, or sidebars that need SSR. Without the `contract` attribute, headfull components are client-only (Jay framework).
+
 ### Importing Headless Components
 
 Headless components can be used in two ways: **key-based** (data merged into parent ViewState under a key) and **instance-based** (rendered with an inline template via `<jay:xxx>` tags).

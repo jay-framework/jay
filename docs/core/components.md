@@ -65,6 +65,32 @@ export const component = makeJayStackComponent<ComponentContract>().withInteract
 );
 ```
 
+## Choosing a Component Type
+
+The component type depends on which framework you're using:
+
+**Jay** (client-only framework):
+
+| Need                             | Component Type | Builder            |
+| -------------------------------- | -------------- | ------------------ |
+| Reusable UI + logic, client-only | Headfull       | `makeJayComponent` |
+
+**Jay Stack** (full-stack framework):
+
+| Need                                 | Component Type                     | Builder                                        |
+| ------------------------------------ | ---------------------------------- | ---------------------------------------------- |
+| Reusable UI + logic, with SSR        | Headfull full-stack                | `makeJayStackComponent` + `contract` attribute |
+| Data + behavior, UI from parent page | Headless                           | `makeJayStackComponent` + contract             |
+| Page-level data binding              | Headless (key-based)               | `key` attribute in `jay-headless`              |
+| Positioned component in template     | Headless/Headfull (instance-based) | `<jay:Name>` tag                               |
+| Plugin-provided component            | Headless                           | `plugin.yaml` + contract                       |
+
+**Headfull vs headless:** Headfull components own their UI — the component's jay-html defines the template. Headless components delegate UI to the parent page, which provides an inline template inside the `<jay:Name>` tag.
+
+**Jay vs Jay Stack:** Jay components (`makeJayComponent`) are client-only — they run entirely in the browser with no server-side rendering. Jay Stack components (`makeJayStackComponent`) are full-stack — they support slow/fast/interactive rendering phases, SSR, and server-side data loading. Choose based on whether your application needs a server.
+
+**Key-based vs instance-based:** Key-based headless components merge their ViewState into the page under a key prefix — use for singleton data providers (e.g., a product page). Instance-based headless components are positioned in the template with `<jay:Name>` tags and support multiple instances with different props.
+
 ## Component Structure
 
 ### Constructor Function

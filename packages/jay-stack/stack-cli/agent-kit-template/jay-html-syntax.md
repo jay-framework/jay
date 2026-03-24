@@ -10,8 +10,16 @@ A `.jay-html` file is standard HTML with jay-specific extensions.
     <!-- Page contract (optional — defines page-level data) -->
     <script type="application/jay-data" contract="./page.jay-contract"></script>
 
+    <!-- Explicit route params (for static override routes) -->
+    <script type="application/jay-params">
+      slug: ceramic-flower-vase
+    </script>
+
     <!-- Headless component imports -->
     <script type="application/jay-headless" plugin="..." contract="..." key="..."></script>
+
+    <!-- Headfull component imports -->
+    <script type="application/jay-headfull" src="..." names="..." contract="..."></script>
 
     <!-- Styles -->
     <style>
@@ -202,6 +210,35 @@ Use `<jay:contract-name>` tags with props:
 ```
 
 Inside `<jay:...>`, bindings resolve to **that instance's** contract tags (not the parent).
+
+## Headfull Full-Stack Components
+
+Headfull components that own their UI can be made full-stack by adding a `contract` attribute:
+
+```html
+<head>
+  <script
+    type="application/jay-headfull"
+    src="../components/shared-header"
+    names="SharedHeader"
+    contract="../components/shared-header/shared-header.jay-contract"
+  ></script>
+</head>
+```
+
+**Attributes:**
+
+- `src` — Path to the component module
+- `names` — Component name to import
+- `contract` — Path to the contract file (makes the component full-stack with SSR)
+
+**Usage** — same as client-only headfull, with props:
+
+```html
+<jay:SharedHeader logoUrl="/logo.png" />
+```
+
+Without `contract`, the component is client-only. With `contract`, it participates in slow/fast/interactive phases and is server-side rendered. Use headfull full-stack components for reusable UI with fixed layout that needs SSR (headers, footers, sidebars).
 
 ## Page-Level Contract
 

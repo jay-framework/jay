@@ -39,13 +39,43 @@ Static routes match before dynamic routes (most specific first):
 3. **`[[param]]`** — optional param
 4. **`[...param]`** — catch-all — lowest priority
 
-Static override alongside a dynamic route:
+## Static Route Overrides
+
+A static route can override a dynamic route for a specific URL — giving one particular page a custom layout while the dynamic route handles everything else:
 
 ```
 src/pages/products/
 ├── [slug]/page.jay-html              # dynamic: /products/:slug
 └── ceramic-flower-vase/page.jay-html # static override for this specific product
 ```
+
+The static `ceramic-flower-vase/` route takes priority over `[slug]/` for that URL, but all other product URLs still use the dynamic route.
+
+### Static Override Params (`jay-params`)
+
+Static override routes often use the same contract as the dynamic route they override. Since the static route has no dynamic directory segment, the params must be declared explicitly using `<script type="application/jay-params">`:
+
+```html
+<!-- src/pages/products/ceramic-flower-vase/page.jay-html -->
+<html>
+  <head>
+    <script type="application/jay-params">
+      slug: ceramic-flower-vase
+    </script>
+    <script
+      type="application/jay-headless"
+      plugin="wix-stores"
+      contract="product-page"
+      key="product"
+    ></script>
+  </head>
+  <body>
+    <h1>{product.productName}</h1>
+  </body>
+</html>
+```
+
+The script body is YAML. The declared params are passed to the component as if extracted from a dynamic URL segment. Without this, the component would receive no param values.
 
 ## Page Files
 
@@ -82,9 +112,9 @@ tags:
 
 ## Dynamic Routes and Contract Params
 
-When a contract declares `params`, it means the component expects those URL parameters to be provided by the route. This tells you that the page using this contract **should be placed in a matching dynamic route directory**.
+When a component on the page — whether the page contract, a headless component, or a headfull full-stack component — declares `params`, the page should be placed in a dynamic route directory that provides those params.
 
-For example, if a contract declares:
+For example, if a headless component's contract declares:
 
 ```yaml
 name: product-page
@@ -94,11 +124,13 @@ tags:
   - ...
 ```
 
-Then the page using this contract should live at a route that provides a `slug` param:
+Then the page using this component should live at a route that provides a `slug` param:
 
 ```
 src/pages/products/[slug]/page.jay-html
 ```
+
+Multiple components on the same page can each declare params. The route directory must provide all required params across all components. For example, if the page contract requires `lang` and a headless component requires `slug`, the page should live at `src/pages/[lang]/products/[slug]/page.jay-html`.
 
 ### Discovering Param Values
 
