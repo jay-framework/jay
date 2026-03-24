@@ -3,8 +3,7 @@ import {
     JayStackComponentDefinition,
     PageProps,
     UrlParams,
-    notFound,
-    partialRender,
+    phaseOutput,
 } from '@jay-framework/fullstack-component';
 import { JayComponentCore } from '@jay-framework/component';
 import { DevServerPagePart, HeadlessInstanceComponent } from './load-page-parts';
@@ -23,35 +22,7 @@ export interface SlowlyChangingPhase {
     ): Promise<AnySlowlyRenderResult>;
 }
 
-function urlParamsKey(params: UrlParams) {
-    return Object.keys(params)
-        .sort()
-        .reduce((prev, curr) => `${prev}${curr}=${params[curr]}&`, '');
-}
-
-function equalParams(aPageParams: UrlParams, pageParams: UrlParams) {
-    return urlParamsKey(aPageParams) === urlParamsKey(pageParams);
-}
-
-function isLeftSideParamsSubsetOfRightSideParams(left: UrlParams, right: UrlParams): boolean {
-    return Object.keys(left).reduce((prev, curr) => prev && left[curr] === right[curr], true);
-}
-
-async function findMatchingParams(
-    search: UrlParams,
-    searchTarget: AsyncIterable<UrlParams[]>,
-): Promise<boolean> {
-    for await (const paramsArray of searchTarget) {
-        if (paramsArray.find((params) => isLeftSideParamsSubsetOfRightSideParams(search, params)))
-            return true;
-    }
-    return false;
-}
-
 export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
-    /** Cached loadParams results per route (jayHtmlPath → array of UrlParams[] per part) */
-    private loadParamsCache = new Map<string, UrlParams[][]>();
-
     async runSlowlyForPage(
         pageParams: UrlParams,
         pageProps: PageProps,
@@ -60,50 +31,6 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
         headlessInstanceComponents?: HeadlessInstanceComponent[],
         jayHtmlPath?: string,
     ): Promise<AnySlowlyRenderResult> {
-        // Validate loadParams (with caching when jayHtmlPath is provided)
-        const loadParamsParts = parts.filter((p) => p.compDefinition.loadParams);
-
-        if (loadParamsParts.length > 0) {
-            let cachedParamsArray = jayHtmlPath ? this.loadParamsCache.get(jayHtmlPath) : undefined;
-
-            if (!cachedParamsArray) {
-                // First call for this route — collect all params from async iterables
-                cachedParamsArray = [];
-                for (const part of loadParamsParts) {
-                    const { compDefinition, contractInfo } = part;
-                    const services = resolveServices(compDefinition.services);
-                    const loadParamsArgs = contractInfo
-                        ? [
-                              ...services,
-                              {
-                                  contractName: contractInfo.contractName,
-                                  metadata: contractInfo.metadata,
-                              },
-                          ]
-                        : services;
-
-                    const compParams = compDefinition.loadParams!(loadParamsArgs);
-                    const collected: UrlParams[] = [];
-                    for await (const batch of compParams) {
-                        collected.push(...batch);
-                    }
-                    cachedParamsArray.push(collected);
-                }
-                if (jayHtmlPath) {
-                    this.loadParamsCache.set(jayHtmlPath, cachedParamsArray);
-                }
-            }
-
-            // Validate: each part's params must match independently
-            for (const partParams of cachedParamsArray) {
-                if (
-                    !partParams.some((p) => isLeftSideParamsSubsetOfRightSideParams(pageParams, p))
-                ) {
-                    return notFound();
-                }
-            }
-        }
-
         let slowlyViewState = {};
         let carryForward = {};
         for (const part of parts) {
@@ -201,16 +128,9 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
             (carryForward as any).__instanceResolvedData = instanceResolvedData;
         }
 
-        return partialRender(slowlyViewState, carryForward);
+        return phaseOutput(slowlyViewState, carryForward);
     }
 
-    /**
-     * Invalidate the cached loadParams result for a given route.
-     * Called when source files change (page.ts, .jay-contract, .jay-html).
-     */
-    invalidateLoadParamsCache(jayHtmlPath: string): void {
-        this.loadParamsCache.delete(jayHtmlPath);
-    }
 }
 
 export async function runLoadParams<

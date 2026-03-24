@@ -311,3 +311,58 @@ Update `checkRouteParams` to only warn for `required` params missing from the ro
 3. `packages/compiler/compiler-jay-html/lib/contract/contract-compiler.ts` — generate `?` for optional
 4. `packages/jay-stack/stack-cli/lib/validate.ts` — skip optional params in warnings
 5. Tests for parser, compiler, and validation
+
+## Follow-up: Skip loadParams Validation in Dev Server
+
+### Problem
+
+On the first request to a route in the dev server, `loadParams` blocks page serving because it must load ALL valid param combinations before validating even one request. If the underlying API is slow, this causes multi-second delays (observed: 38 seconds) on first page load.
+
+The `loadParams` flow:
+1. Request arrives for `/products/ceramic-vase`
+2. `runSlowlyForPage` calls `loadParams` → queries API for ALL valid product slugs
+3. Waits for full enumeration to complete (38s)
+4. Validates that `ceramic-vase` is in the list
+5. Only then runs `slowlyRender`
+
+This is wasteful — `slowlyRender` already receives `pageParams` and can return `notFound()` if the params are invalid.
+
+### Design
+
+**Remove loadParams validation from `DevSlowlyChangingPhase.runSlowlyForPage()`.**
+
+The render hooks (`slowlyRender`, `fastRender`) already receive `pageParams` from the URL and can return `notFound()` for invalid params. This makes loadParams validation redundant for dev serving.
+
+`loadParams` remains in the component builder API (`withLoadParams`) for future SSG enumeration, where knowing all valid params IS the goal.
+
+### Changes
+
+#### `packages/jay-stack/stack-server-runtime/lib/slowly-changing-runner.ts`
+
+Remove from `DevSlowlyChangingPhase`:
+- The `loadParamsCache` field
+- The loadParams validation block in `runSlowlyForPage` (lines 63–105)
+- The `invalidateLoadParamsCache` method
+
+#### `packages/jay-stack/dev-server/lib/dev-server.ts`
+
+Remove from `setupSlowRenderCacheInvalidation`:
+- All `slowlyPhase.invalidateLoadParamsCache(...)` calls (3 occurrences)
+- The `slowlyPhase` parameter (no longer needed)
+
+### What stays
+
+- `withLoadParams()` builder method on `makeJayStackComponent` — API unchanged
+- `loadParams` field on `JayStackComponentDefinition` — preserved for SSG
+- `runLoadParams` standalone function — preserved for SSG
+
+### Trade-offs
+
+| | With loadParams validation | Without (proposed) |
+|---|---|---|
+| **First request latency** | Blocked by full enumeration | Immediate — render handles it |
+| **Invalid param handling** | Early 404 before render | 404 from slowRender |
+| **Per-request cost (valid)** | Cache lookup (cheap) | None (skipped) |
+| **Per-request cost (invalid)** | Cache lookup → 404 | Full render → 404 (slightly more expensive) |
+
+The trade-off is clear: saving 38s on first load far outweighs the slightly more expensive 404 path for invalid params (which is rare in dev).

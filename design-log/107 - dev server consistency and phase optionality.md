@@ -250,3 +250,17 @@ Test results: 182 pass, 0 fail, 32 skipped. All tests 1–6a pass in all modes.
 - **7c fix** — fast-only page needs the pre-render pipeline to discover headless instances without a slow phase.
 - **7d fix** — interactive-only page needs the adoptText reconciliation to fire before the first DOM check.
 - **Phase 5 pre-processing extraction** — the full DL#107 structural fix (single pre-processing stage) is not yet implemented.
+
+## Follow-up: Fix Refresh Loop When Running Multiple Dev Servers
+
+### Problem
+
+Running two dev server instances on the same project causes pages to refresh in a loop. Both Vite instances share the default dependency cache at `node_modules/.vite`. When one writes optimization artifacts, the other's file watcher detects the change and triggers a full page reload, which causes further writes, creating a loop.
+
+### Fix
+
+Each `createViteServer` call now generates a unique `cacheDir` using a random suffix (`node_modules/.vite-<hex>`). This isolates the instances so their file watchers don't interfere.
+
+The per-instance cache directory is cleaned up when `vite.close()` is called.
+
+**File changed**: `packages/jay-stack/dev-server/lib/vite-factory.ts`

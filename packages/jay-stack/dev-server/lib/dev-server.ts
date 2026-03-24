@@ -992,8 +992,8 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     const slowRenderCacheDir = path.join(buildFolder!, 'pre-rendered');
     const slowRenderCache = new SlowRenderCache(slowRenderCacheDir, pagesRootFolder);
 
-    // Set up file watching for slow render cache + loadParams cache invalidation
-    setupSlowRenderCacheInvalidation(vite, slowRenderCache, slowlyPhase, pagesRootFolder);
+    // Set up file watching for slow render cache invalidation
+    setupSlowRenderCacheInvalidation(vite, slowRenderCache, pagesRootFolder);
 
     // Get init info for embedding in generated pages
     const projectInit = lifecycleManager.getProjectInit() ?? undefined;
@@ -1090,7 +1090,6 @@ function setupActionRouter(vite: ViteDevServer): void {
 function setupSlowRenderCacheInvalidation(
     vite: ViteDevServer,
     cache: SlowRenderCache,
-    slowlyPhase: DevSlowlyChangingPhase,
     pagesRootFolder: string,
 ): void {
     vite.watcher.on('change', (changedPath) => {
@@ -1102,7 +1101,6 @@ function setupSlowRenderCacheInvalidation(
         // Invalidate cache for jay-html file changes
         if (changedPath.endsWith('.jay-html')) {
             invalidateServerElementCache(changedPath);
-            slowlyPhase.invalidateLoadParamsCache(changedPath);
             cache.invalidate(changedPath).then(() => {
                 getLogger().info(`[SlowRender] Cache invalidated for ${changedPath}`);
             });
@@ -1114,7 +1112,6 @@ function setupSlowRenderCacheInvalidation(
             // The jay-html is in the same directory as page.ts
             const dir = path.dirname(changedPath);
             const jayHtmlPath = path.join(dir, 'page.jay-html');
-            slowlyPhase.invalidateLoadParamsCache(jayHtmlPath);
             cache.invalidate(jayHtmlPath).then(() => {
                 getLogger().info(
                     `[SlowRender] Cache invalidated for ${jayHtmlPath} (page.ts changed)`,
@@ -1127,7 +1124,6 @@ function setupSlowRenderCacheInvalidation(
         if (changedPath.endsWith('.jay-contract')) {
             // The jay-html has the same name as the contract
             const jayHtmlPath = changedPath.replace('.jay-contract', '.jay-html');
-            slowlyPhase.invalidateLoadParamsCache(jayHtmlPath);
             cache.invalidate(jayHtmlPath).then(() => {
                 getLogger().info(
                     `[SlowRender] Cache invalidated for ${jayHtmlPath} (contract changed)`,
