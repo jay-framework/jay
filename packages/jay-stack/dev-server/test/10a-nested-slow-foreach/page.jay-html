@@ -8,9 +8,10 @@
         <h1>{title}</h1>
         <div class="category" forEach="categories" trackBy="_id">
             <h2>{name}</h2>
-            <ul forEach="items" trackBy="_id">
-                <li>{label}</li>
-            </ul>
+            <div class="item" forEach="items" trackBy="_id">
+                <span class="label">{label}</span>
+                <span class="count">{count}</span>
+            </div>
         </div>
     </div>
 </body>

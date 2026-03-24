@@ -28,3 +28,7 @@ tags:
           - tag: label
             type: data
             dataType: string
+          - tag: count
+            type: data
+            dataType: number
+            phase: fast+interactive

@@ -2497,13 +2497,19 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
 
         // Render element content in the item's variable scope.
         // Children read their own jay-coordinate-base (pre-assigned with jayTrackBy prefix).
+        // Accumulate slowForEachJayTrackBy for nested slowForEach — assignCoordinates
+        // uses the accumulated slowForEachPrefix (e.g., "outer/inner") for child coordinates,
+        // so the stripping logic must match.
+        const accumulatedJayTrackBy = context.slowForEachJayTrackBy
+            ? `${context.slowForEachJayTrackBy}/${jayTrackBy}`
+            : jayTrackBy;
         const itemContext: HydrateContext = {
             ...context,
             variables: slowForEachVariables,
             indent: indent.child().child(),
             dynamicRef: true,
             insideSlowForEach: true,
-            slowForEachJayTrackBy: jayTrackBy,
+            slowForEachJayTrackBy: accumulatedJayTrackBy,
         };
         const renderContext2 = buildRenderContext(itemContext);
         const childContent = renderHydrateElementContent(

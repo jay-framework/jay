@@ -357,7 +357,7 @@ When a fast forEach is nested inside another fast forEach (or inside a slow forE
 **Fix in `jay-html-compiler.ts` (SSR):** Three new `ServerContext` fields:
 
 - `forEachAccumulatedPrefix` — full prefix chain (all ancestor + current forEach). Prefixes static (positional) coordinates and serves as the forEach item root coordinate.
-- `forEachAncestorPrefix` — ancestor-only prefix (before current forEach). Prefixes dynamic ($-based) coordinates where `$_id` already resolves to the current item's value.
+- `forEachAncestorPrefix` — ancestor-only prefix (before current forEach). Prefixes dynamic ($-based) coordinates where `$\_id` already resolves to the current item's value.
 - `slowForEachCoordPrefix` — concrete jayTrackBy string from ancestor slow forEach, consumed by fast forEach handler.
 
 Static coords (no `$`) → prepend `forEachAccumulatedPrefix`. Dynamic coords (with `$`) → prepend `forEachAncestorPrefix`.
@@ -368,17 +368,32 @@ Added "no hydration warnings" test to `testFixtureMode`. Captures `console.warn`
 
 ### New test fixtures (10a–10d)
 
-| Fixture                   | Description                                              |
-| ------------------------- | -------------------------------------------------------- |
-| `10a-nested-slow-foreach` | 2 categories × 2 items, nested slowForEach               |
-| `10b-nested-fast-foreach` | 2 groups × 2-3 items, nested fast forEach (Bug G)        |
-| `10c-nested-conditional`  | Conditional inside forEach, active/inactive per item     |
-| `10d-nested-combination`  | Slow forEach → fast conditional + fast forEach           |
+| Fixture                   | Description                                          |
+| ------------------------- | ---------------------------------------------------- |
+| `10a-nested-slow-foreach` | 2 categories × 2 items, nested slowForEach           |
+| `10b-nested-fast-foreach` | 2 groups × 2-3 items, nested fast forEach (Bug G)    |
+| `10c-nested-conditional`  | Conditional inside forEach, active/inactive per item |
+| `10d-nested-combination`  | Slow forEach → fast conditional + fast forEach       |
 
 Each has `expected-ssr.html` and `expected-hydrate.ts`.
 
-### Test results (after Bug G fix)
+### Fix: Nested slowForEach coordinate stripping mismatch (Bug H)
+
+Discovered via real-world golf page (nested slow forEach with interactive content). The hydrate compiler's `slowForEachJayTrackBy` was set to just the immediate jayTrackBy value (e.g., `f999e7a4...`), but `assignCoordinates` uses the accumulated `slowForEachPrefix` (e.g., `e2a1b326.../f999e7a4...`). The stripping logic (`coordinate.startsWith(slowForEachJayTrackBy + '/')`) failed for nested items, leaving the full coordinate unstripped. At runtime, `forItem` had already accumulated the same segments in `coordinateBase`, causing doubling: `outer/inner/outer/inner`.
+
+**Fix:** Accumulate `slowForEachJayTrackBy` in the hydrate context, matching `assignCoordinates`' `slowForEachPrefix`:
+
+```typescript
+const accumulatedJayTrackBy = context.slowForEachJayTrackBy
+  ? `${context.slowForEachJayTrackBy}/${jayTrackBy}`
+  : jayTrackBy;
+```
+
+**Test:** Updated 10a fixture to include `count` field at `phase: fast+interactive` inside the inner slow forEach items, forcing the hydrate compiler to generate `slowForEachItem` calls for nested items. This exposed a further code generation issue (see DL#115).
+
+### Test results (after Bug G + H fixes)
 
 - 455/455 hydration tests pass (52 new across 10a–10d)
 - 616/616 compiler-jay-html tests pass
 - 68/68 packages build successfully
+- 10a now validates nested slowForEach with interactive content (hydration warnings + DOM checks)

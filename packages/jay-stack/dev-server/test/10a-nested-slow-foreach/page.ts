@@ -27,4 +27,27 @@ export const page = makeJayStackComponent()
             },
             {},
         ),
+    )
+    .withFastRender(async () =>
+        phaseOutput(
+            {
+                categories: [
+                    {
+                        _id: 'c1',
+                        items: [
+                            { _id: 'i1', count: 10 },
+                            { _id: 'i2', count: 20 },
+                        ],
+                    },
+                    {
+                        _id: 'c2',
+                        items: [
+                            { _id: 'i3', count: 30 },
+                            { _id: 'i4', count: 40 },
+                        ],
+                    },
+                ],
+            },
+            {},
+        ),
     );

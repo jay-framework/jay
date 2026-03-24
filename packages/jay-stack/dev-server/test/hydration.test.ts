@@ -1335,19 +1335,27 @@ describe('hydration', () => {
                 expect(await headings[0].textContent()).toEqual('Fruits');
                 expect(await headings[1].textContent()).toEqual('Vegetables');
 
-                // All items render under correct categories
+                // All items render under correct categories with labels and counts
                 const categories = await page.$$('#target .category');
                 expect(categories).toHaveLength(2);
 
-                const fruitsItems = await categories[0].$$('li');
+                const fruitsItems = await categories[0].$$('.item');
                 expect(fruitsItems).toHaveLength(2);
-                expect(await fruitsItems[0].textContent()).toEqual('Apple');
-                expect(await fruitsItems[1].textContent()).toEqual('Banana');
+                expect(await fruitsItems[0].$eval('.label', (el) => el.textContent)).toEqual(
+                    'Apple',
+                );
+                expect(await fruitsItems[0].$eval('.count', (el) => el.textContent)).toEqual('10');
+                expect(await fruitsItems[1].$eval('.label', (el) => el.textContent)).toEqual(
+                    'Banana',
+                );
+                expect(await fruitsItems[1].$eval('.count', (el) => el.textContent)).toEqual('20');
 
-                const vegItems = await categories[1].$$('li');
+                const vegItems = await categories[1].$$('.item');
                 expect(vegItems).toHaveLength(2);
-                expect(await vegItems[0].textContent()).toEqual('Carrot');
-                expect(await vegItems[1].textContent()).toEqual('Daikon');
+                expect(await vegItems[0].$eval('.label', (el) => el.textContent)).toEqual('Carrot');
+                expect(await vegItems[0].$eval('.count', (el) => el.textContent)).toEqual('30');
+                expect(await vegItems[1].$eval('.label', (el) => el.textContent)).toEqual('Daikon');
+                expect(await vegItems[1].$eval('.count', (el) => el.textContent)).toEqual('40');
             },
         });
     });
