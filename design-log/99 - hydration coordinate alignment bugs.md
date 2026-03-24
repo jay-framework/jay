@@ -381,3 +381,36 @@ Fix: Removed the `console.warn` from `hydrateForEach` when container is not foun
 
 - All 68 packages build successfully
 - All 68 packages test successfully (561 compiler tests, no failures)
+
+## Follow-up: Bug F — Nested slowForEach Coordinate Mismatch
+
+### Problem
+
+When slowForEach items are nested (a slowForEach inside another slowForEach), coordinates diverge between server and client:
+
+- **Server** (`assignCoordinates`): each slowForEach item gets a flat coordinate — just its `jayTrackBy` value, ignoring any parent slowForEach context.
+- **Client** (`slowForEachItem` → `forItem`): each nested call appends `trackByValue` to `coordinateBase`, producing concatenated coordinates.
+
+Example with outer trackBy `"opt-A"` and inner trackBy `"choice-1"`:
+
+- Server assigns: `"choice-1"` (flat)
+- Client resolves: `"opt-A/choice-1"` (concatenated) → no match in coordinateMap
+
+This also causes collisions: two different outer items can contain inner items with the same trackBy, both assigned the same flat coordinate.
+
+### Fix
+
+Thread a `slowForEachPrefix` through `walkChildren` in `assign-coordinates.ts`. This prefix tracks the chain of jayTrackBy values from ancestor slowForEach items — separate from `parentCoord` (which includes positional indices that the client doesn't accumulate).
+
+When a nested slowForEach is encountered:
+
+```typescript
+const coord = slowForEachPrefix ? `${slowForEachPrefix}/${jayTrackBy}` : jayTrackBy;
+```
+
+Regular elements between slowForEach levels pass `slowForEachPrefix` through unchanged, so intermediate positional indices don't pollute the prefix.
+
+### Files changed
+
+- `packages/compiler/compiler-jay-html/lib/jay-target/assign-coordinates.ts` — add `slowForEachPrefix` parameter to `walkChildren`, `assignHeadlessInstance`, `walkForEachChildren`
+- `packages/compiler/compiler-jay-html/test/jay-target/coordinate-preprocess.test.ts` — two new tests: nested slowForEach with and without intermediate elements

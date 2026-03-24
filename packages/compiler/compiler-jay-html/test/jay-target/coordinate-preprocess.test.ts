@@ -233,6 +233,67 @@ describe('assignCoordinates', () => {
             const span = jayTag.querySelector('span')!;
             expect(span.getAttribute(COORD)).toBe('p1/product-card:0/0/0');
         });
+
+        it('should concatenate coordinates for nested slowForEach', () => {
+            const body = getBody(`<body><div>
+                <div class="outer" slowForEach="options" trackBy="_id" jayIndex="0" jayTrackBy="opt-A">
+                    <div class="inner" slowForEach="choices" trackBy="_id" jayIndex="0" jayTrackBy="choice-1">
+                        <button>Select</button>
+                    </div>
+                    <div class="inner" slowForEach="choices" trackBy="_id" jayIndex="1" jayTrackBy="choice-2">
+                        <button>Select</button>
+                    </div>
+                </div>
+                <div class="outer" slowForEach="options" trackBy="_id" jayIndex="1" jayTrackBy="opt-B">
+                    <div class="inner" slowForEach="choices" trackBy="_id" jayIndex="0" jayTrackBy="choice-1">
+                        <button>Select</button>
+                    </div>
+                </div>
+            </div></body>`);
+            assignCoordinates(body, { headlessContractNames: new Set() });
+
+            const outers = body.querySelectorAll('.outer');
+            expect(outers[0].getAttribute(COORD)).toBe('opt-A');
+            expect(outers[1].getAttribute(COORD)).toBe('opt-B');
+
+            const inners = body.querySelectorAll('.inner');
+            // Nested: concatenated with parent slowForEach prefix
+            expect(inners[0].getAttribute(COORD)).toBe('opt-A/choice-1');
+            expect(inners[1].getAttribute(COORD)).toBe('opt-A/choice-2');
+            expect(inners[2].getAttribute(COORD)).toBe('opt-B/choice-1');
+
+            // Children use the concatenated prefix
+            const buttons = body.querySelectorAll('button');
+            expect(buttons[0].getAttribute(COORD)).toBe('opt-A/choice-1/0');
+            expect(buttons[1].getAttribute(COORD)).toBe('opt-A/choice-2/0');
+            expect(buttons[2].getAttribute(COORD)).toBe('opt-B/choice-1/0');
+        });
+
+        it('should concatenate coordinates for nested slowForEach with intermediate elements', () => {
+            const body = getBody(`<body><div>
+                <div class="outer" slowForEach="options" trackBy="_id" jayIndex="0" jayTrackBy="opt-A">
+                    <div class="wrapper">
+                        <div class="inner" slowForEach="choices" trackBy="_id" jayIndex="0" jayTrackBy="choice-1">
+                            <button>Select</button>
+                        </div>
+                    </div>
+                </div>
+            </div></body>`);
+            assignCoordinates(body, { headlessContractNames: new Set() });
+
+            const outer = body.querySelector('.outer')!;
+            expect(outer.getAttribute(COORD)).toBe('opt-A');
+
+            const wrapper = body.querySelector('.wrapper')!;
+            expect(wrapper.getAttribute(COORD)).toBe('opt-A/0');
+
+            // Inner slowForEach uses slowForEachPrefix (opt-A), not parentCoord (opt-A/0)
+            const inner = body.querySelector('.inner')!;
+            expect(inner.getAttribute(COORD)).toBe('opt-A/choice-1');
+
+            const button = body.querySelector('button')!;
+            expect(button.getAttribute(COORD)).toBe('opt-A/choice-1/0');
+        });
     });
 
     describe('forEach', () => {

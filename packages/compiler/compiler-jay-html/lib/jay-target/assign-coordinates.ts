@@ -88,12 +88,19 @@ export function assignCoordinates(
 
 /**
  * Walk children of an element and assign coordinates.
+ *
+ * @param slowForEachPrefix — Tracks the chain of jayTrackBy values from ancestor
+ *   slowForEach items. This is separate from parentCoord because the client's
+ *   coordinateBase only accumulates trackBy values (via forItem), not positional
+ *   indices from intermediate elements. When a nested slowForEach is encountered,
+ *   its coordinate is slowForEachPrefix/jayTrackBy (not parentCoord/jayTrackBy).
  */
 function walkChildren(
     parent: HTMLElement,
     parentCoord: string,
     options: AssignCoordinatesOptions,
     scope: ScopeState,
+    slowForEachPrefix: string = '',
 ): void {
     for (const child of parent.childNodes) {
         if (child.nodeType !== NodeType.ELEMENT_NODE) continue;
@@ -116,7 +123,14 @@ function walkChildren(
                     ref = `AR${idx}`;
                     element.setAttribute('ref', ref);
                 }
-                assignHeadlessInstance(element, contractName, ref, parentCoord, options);
+                assignHeadlessInstance(
+                    element,
+                    contractName,
+                    ref,
+                    parentCoord,
+                    options,
+                    slowForEachPrefix,
+                );
                 // Don't increment childCounter — jay:xxx is a directive, not a DOM element
                 continue;
             }
@@ -130,7 +144,7 @@ function walkChildren(
                 const coord = `${parentCoord}/${scope.childCounter}`;
                 element.setAttribute(COORD_ATTR, coord);
                 scope.childCounter++;
-                walkForEachChildren(element, `$${trackBy}`, options);
+                walkForEachChildren(element, `$${trackBy}`, options, slowForEachPrefix);
                 continue;
             }
         }
@@ -140,8 +154,11 @@ function walkChildren(
         if (slowForEachAttr) {
             const jayTrackBy = element.getAttribute('jayTrackBy');
             if (jayTrackBy) {
-                element.setAttribute(COORD_ATTR, jayTrackBy);
-                walkChildren(element, jayTrackBy, options, newScope());
+                // Concatenate with ancestor slowForEach chain — the client accumulates
+                // trackBy values via forItem, so nested slowForEach coordinates must match.
+                const coord = slowForEachPrefix ? `${slowForEachPrefix}/${jayTrackBy}` : jayTrackBy;
+                element.setAttribute(COORD_ATTR, coord);
+                walkChildren(element, coord, options, newScope(), coord);
                 // Don't increment — slowForEach items use jayTrackBy as coordinate
                 continue;
             }
@@ -152,8 +169,8 @@ function walkChildren(
         element.setAttribute(COORD_ATTR, coord);
         scope.childCounter++;
 
-        // Recurse into children
-        walkChildren(element, coord, options, newScope());
+        // Recurse into children — pass slowForEachPrefix through unchanged
+        walkChildren(element, coord, options, newScope(), slowForEachPrefix);
     }
 }
 
@@ -167,6 +184,7 @@ function assignHeadlessInstance(
     ref: string,
     parentCoord: string,
     options: AssignCoordinatesOptions,
+    slowForEachPrefix: string = '',
 ): void {
     const instanceCoord = `${parentCoord}/${contractName}:${ref}`;
     // Store the instance coordinate on the jay:xxx tag for compilers to read.
@@ -189,7 +207,7 @@ function assignHeadlessInstance(
     }
 
     // Walk inline template children with the instance coordinate as scope
-    walkChildren(element, instanceCoord, options, newScope());
+    walkChildren(element, instanceCoord, options, newScope(), slowForEachPrefix);
 }
 
 /**
@@ -199,6 +217,7 @@ function walkForEachChildren(
     parent: HTMLElement,
     itemPrefix: string,
     options: AssignCoordinatesOptions,
+    slowForEachPrefix: string = '',
 ): void {
     const scope = newScope();
 
@@ -221,7 +240,7 @@ function walkForEachChildren(
                 }
                 const instanceCoord = `${itemPrefix}/${contractName}:${ref}`;
                 element.setAttribute(COORD_ATTR, instanceCoord);
-                walkChildren(element, instanceCoord, options, newScope());
+                walkChildren(element, instanceCoord, options, newScope(), slowForEachPrefix);
                 continue;
             }
         }
@@ -230,6 +249,6 @@ function walkForEachChildren(
         element.setAttribute(COORD_ATTR, coord);
         scope.childCounter++;
 
-        walkChildren(element, coord, options, newScope());
+        walkChildren(element, coord, options, newScope(), slowForEachPrefix);
     }
 }
