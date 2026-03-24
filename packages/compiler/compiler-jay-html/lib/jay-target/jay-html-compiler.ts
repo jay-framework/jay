@@ -3431,6 +3431,15 @@ interface ServerContext {
     insideSlowForEach: boolean;
     /** Property paths whose phase is 'fast+interactive' — only these need client adoption */
     interactivePaths: Set<string>;
+    /** Accumulated JS expression for the full forEach coordinate prefix (all levels).
+     *  Used to prefix static (positional) coords from nested forEach and for deeper nesting. */
+    forEachAccumulatedPrefix?: string;
+    /** JS expression for ancestor forEach prefix (all levels BEFORE the current forEach).
+     *  Used to prefix dynamic ($-based) coords that already include the current trackBy. */
+    forEachAncestorPrefix?: string;
+    /** Concrete jayTrackBy value from an ancestor slow forEach item.
+     *  Consumed by fast forEach handler to include in prefix computation. */
+    slowForEachCoordPrefix?: string;
 }
 
 const COORD_ATTR = 'jay-coordinate-base';
@@ -3537,17 +3546,31 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
         // Children inside forEach have jay-coordinate-base with $trackBy placeholders
         // (e.g. "$_id/0") that get compiled to runtime expressions using varMappings.
         const trackByExpr = `${forEachVariables.currentVar}.${trackBy}`;
+        // Compute ancestor prefix: everything BEFORE this forEach (slow forEach prefix
+        // and/or outer fast forEach prefix). Used to prefix dynamic child coordinates.
+        const slowPrefix = context.slowForEachCoordPrefix
+            ? `'${context.slowForEachCoordPrefix}'`
+            : undefined;
+        const ancestorPrefix = context.forEachAccumulatedPrefix ?? slowPrefix;
+        // Accumulated prefix: ancestor + current trackBy. Used for static child coordinates
+        // (from nested forEach) and for deeper nesting computation.
+        const currentTrackByPrefix = `escapeAttr(String(${trackByExpr}))`;
+        const accumulatedPrefix = ancestorPrefix
+            ? `${ancestorPrefix} + '/' + ${currentTrackByPrefix}`
+            : currentTrackByPrefix;
         const itemContext: ServerContext = {
             ...context,
             variables: forEachVariables,
             indent: itemIndent,
             varMappings: { ...context.varMappings, [trackBy]: trackByExpr },
             insideForEach: true,
+            forEachAccumulatedPrefix: accumulatedPrefix,
+            forEachAncestorPrefix: ancestorPrefix,
+            slowForEachCoordPrefix: undefined, // consumed by ancestorPrefix computation
         };
         const openTag = renderServerOpenTag(element, itemContext, null);
-        // Item root coordinate: the forEach element itself gets jay-coordinate with the
-        // trackBy value per iteration (not from jay-coordinate-base, which is the container).
-        const itemRootCoordExpr = `escapeAttr(String(${trackByExpr}))`;
+        // Item root coordinate: includes accumulated prefix from ancestor forEach loops.
+        const itemRootCoordExpr = accumulatedPrefix;
         const coordinateW = w(
             itemIndent,
             `' jay-coordinate="' + ${itemRootCoordExpr} + '">'`,
@@ -3582,12 +3605,17 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
             const arrayExpr = arrayAccessor.render().rendered;
             const itemVar = slowForEachVariables.currentVar;
             // Children inside slowForEach read their coordinates from jay-coordinate-base
-            // (pre-assigned by assignCoordinates with jayTrackBy prefix, e.g. "p1/0")
+            // (pre-assigned by assignCoordinates with jayTrackBy prefix, e.g. "p1/0").
+            // Set slowForEachCoordPrefix so nested fast forEach can include it in prefix.
+            const slowCoordPrefix = context.slowForEachCoordPrefix
+                ? `${context.slowForEachCoordPrefix}/${jayTrackBy}`
+                : jayTrackBy;
             const itemContext: ServerContext = {
                 ...context,
                 variables: slowForEachVariables,
                 indent,
                 insideSlowForEach: true,
+                slowForEachCoordPrefix: slowCoordPrefix,
             };
             const childContent = renderServerElementContent(element, itemContext);
             // Only wrap with item variable lookup when the content actually references
@@ -3602,6 +3630,7 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
                     variables: slowForEachVariables,
                     indent: itemIndent,
                     insideSlowForEach: true,
+                    slowForEachCoordPrefix: slowCoordPrefix,
                 };
                 const indentedContent = renderServerElementContent(element, indentedContext);
                 return new RenderFragment(
@@ -4282,16 +4311,42 @@ function renderServerElementContent(
     }
     if (coordTemplate !== null) {
         if (isStaticCoordinate(coordTemplate)) {
-            parts.push(w(indent, `' jay-coordinate="${coordTemplate}">'`));
+            // Static coordinate (no $placeholder). If inside forEach with an accumulated
+            // prefix, this is a nested forEach child with positional coords — prepend
+            // the full accumulated prefix (all ancestor + current forEach trackBy values).
+            if (context.forEachAccumulatedPrefix) {
+                parts.push(
+                    w(
+                        indent,
+                        `' jay-coordinate="' + ${context.forEachAccumulatedPrefix} + '/${coordTemplate}">'`,
+                        Imports.for(Import.escapeAttr),
+                    ),
+                );
+            } else {
+                parts.push(w(indent, `' jay-coordinate="${coordTemplate}">'`));
+            }
         } else {
             const coordExpr = compileCoordinateExpr(coordTemplate, context.varMappings);
-            parts.push(
-                w(
-                    indent,
-                    `' jay-coordinate="' + ${coordExpr} + '">'`,
-                    Imports.for(Import.escapeAttr),
-                ),
-            );
+            // Dynamic coordinate with $placeholder. If there's an ancestor prefix
+            // (from slow forEach or outer fast forEach), prepend it — the $trackBy
+            // in the template already resolves to the current forEach's item value.
+            if (context.forEachAncestorPrefix) {
+                parts.push(
+                    w(
+                        indent,
+                        `' jay-coordinate="' + ${context.forEachAncestorPrefix} + '/' + ${coordExpr} + '">'`,
+                        Imports.for(Import.escapeAttr),
+                    ),
+                );
+            } else {
+                parts.push(
+                    w(
+                        indent,
+                        `' jay-coordinate="' + ${coordExpr} + '">'`,
+                        Imports.for(Import.escapeAttr),
+                    ),
+                );
+            }
         }
     } else {
         parts.push(w(indent, `'>'`));

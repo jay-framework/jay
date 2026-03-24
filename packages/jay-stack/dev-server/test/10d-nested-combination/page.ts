@@ -29,9 +29,7 @@ const builder = makeJayStackComponent()
                     {
                         _id: 'c2',
                         isActive: false,
-                        items: [
-                            { _id: 'd1', label: 'D-One' },
-                        ],
+                        items: [{ _id: 'd1', label: 'D-One' }],
                     },
                 ],
             },

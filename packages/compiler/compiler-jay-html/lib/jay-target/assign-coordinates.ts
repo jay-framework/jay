@@ -215,7 +215,7 @@ function assignHeadlessInstance(
  */
 function walkForEachChildren(
     parent: HTMLElement,
-    itemPrefix: string,
+    itemPrefix: string | null,
     options: AssignCoordinatesOptions,
     slowForEachPrefix: string = '',
 ): void {
@@ -238,14 +238,37 @@ function walkForEachChildren(
                     ref = `AR${idx}`;
                     element.setAttribute('ref', ref);
                 }
-                const instanceCoord = `${itemPrefix}/${contractName}:${ref}`;
+                const instanceCoord = itemPrefix
+                    ? `${itemPrefix}/${contractName}:${ref}`
+                    : `${contractName}:${ref}`;
                 element.setAttribute(COORD_ATTR, instanceCoord);
                 walkChildren(element, instanceCoord, options, newScope(), slowForEachPrefix);
                 continue;
             }
         }
 
-        const coord = `${itemPrefix}/${scope.childCounter}`;
+        // Nested forEach — assign container coordinate in current scope,
+        // then recurse with positional-only coordinates for inner children.
+        // Inner children get coords like "0", "1" without the parent $trackBy prefix,
+        // because the SSR compiler prepends the accumulated forEach prefix at render time.
+        const forEachAttr = element.getAttribute('forEach');
+        if (forEachAttr) {
+            const trackBy = element.getAttribute('trackBy');
+            if (trackBy) {
+                const coord = itemPrefix
+                    ? `${itemPrefix}/${scope.childCounter}`
+                    : `${scope.childCounter}`;
+                element.setAttribute(COORD_ATTR, coord);
+                scope.childCounter++;
+                // Inner forEach children get purely positional coordinates (no $trackBy prefix).
+                // This avoids coordinate conflicts when the same trackBy name is used
+                // at multiple nesting levels (e.g., both use trackBy="_id").
+                walkForEachChildren(element, null, options, slowForEachPrefix);
+                continue;
+            }
+        }
+
+        const coord = itemPrefix ? `${itemPrefix}/${scope.childCounter}` : `${scope.childCounter}`;
         element.setAttribute(COORD_ATTR, coord);
         scope.childCounter++;
 

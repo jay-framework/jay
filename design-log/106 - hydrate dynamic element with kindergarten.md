@@ -341,3 +341,44 @@ Changes:
 - `computeInstanceKey`, hydrate compiler: no change (already receive/extract the suffix as-is).
 
 **Test:** Added 6e-2 test (`page-headless-two-instances`) — two static widget instances with different props in separate wrapper divs. Verifies each gets its own fast ViewState and interactivity works independently.
+
+### Fix: Nested fast forEach coordinate mismatch (Bug G)
+
+When a fast forEach is nested inside another fast forEach (or inside a slow forEach), SSR output produced coordinates missing ancestor prefixes. The hydration runtime accumulates `coordinateBase` via `forItem()` at each level, so it looks for `g1/a1/0`, but SSR generated `a1/0`.
+
+**Root cause — two issues:**
+
+1. `walkForEachChildren` in `assign-coordinates.ts` had no nested forEach detection. A forEach inside a forEach was treated as a regular element, producing coordinates in the wrong scope (e.g., `$_id/1/0` instead of positional `0` within the inner forEach).
+
+2. SSR compiler's forEach item root coordinate was always just the trackBy value — no ancestor prefix. The `$_id` placeholder caused variable shadowing when the same trackBy name was used at multiple levels.
+
+**Fix in `assign-coordinates.ts`:** `walkForEachChildren` now detects nested forEach children. When found, it assigns the container coordinate in the current scope, then recursively calls `walkForEachChildren` with `itemPrefix = null` — inner children get purely positional coordinates (e.g., `0`, `1`), avoiding `$_id` shadowing.
+
+**Fix in `jay-html-compiler.ts` (SSR):** Three new `ServerContext` fields:
+
+- `forEachAccumulatedPrefix` — full prefix chain (all ancestor + current forEach). Prefixes static (positional) coordinates and serves as the forEach item root coordinate.
+- `forEachAncestorPrefix` — ancestor-only prefix (before current forEach). Prefixes dynamic ($-based) coordinates where `$_id` already resolves to the current item's value.
+- `slowForEachCoordPrefix` — concrete jayTrackBy string from ancestor slow forEach, consumed by fast forEach handler.
+
+Static coords (no `$`) → prepend `forEachAccumulatedPrefix`. Dynamic coords (with `$`) → prepend `forEachAncestorPrefix`.
+
+### Test infrastructure: hydration warning detection
+
+Added "no hydration warnings" test to `testFixtureMode`. Captures `console.warn` messages containing `[jay hydration]` during hydration and fails if any are found. Runs for every fixture in all 3 modes (SSR disabled, first request, cached).
+
+### New test fixtures (10a–10d)
+
+| Fixture                   | Description                                              |
+| ------------------------- | -------------------------------------------------------- |
+| `10a-nested-slow-foreach` | 2 categories × 2 items, nested slowForEach               |
+| `10b-nested-fast-foreach` | 2 groups × 2-3 items, nested fast forEach (Bug G)        |
+| `10c-nested-conditional`  | Conditional inside forEach, active/inactive per item     |
+| `10d-nested-combination`  | Slow forEach → fast conditional + fast forEach           |
+
+Each has `expected-ssr.html` and `expected-hydrate.ts`.
+
+### Test results (after Bug G fix)
+
+- 455/455 hydration tests pass (52 new across 10a–10d)
+- 616/616 compiler-jay-html tests pass
+- 68/68 packages build successfully

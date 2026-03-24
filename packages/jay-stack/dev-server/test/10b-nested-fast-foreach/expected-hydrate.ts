@@ -8,7 +8,7 @@ import {
     adoptText,
     hydrateForEach,
     adoptDynamicElement,
-// @ts-ignore
+    // @ts-ignore
 } from '/@fs{{ROOT}}/packages/runtime/runtime/dist/index.js';
 export function hydrate(rootElement, options) {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
@@ -24,7 +24,7 @@ export function hydrate(rootElement, options) {
                         hydrateForEach(
                             (vs1) => vs1.items,
                             '_id',
-                            () => [adoptText('1/0', (vs2) => vs2.label)],
+                            () => [adoptText('0', (vs2) => vs2.label)],
                             (vs2) => {
                                 return e('ul', {}, [e('li', {}, [dt((vs22) => vs22.label)])]);
                             },
