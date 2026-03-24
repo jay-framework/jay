@@ -32,9 +32,12 @@ export interface ContractProp {
     default?: string;
 }
 
-/** URL/load params for a page (e.g. [slug]). Always string in generated type (UrlParams = Record<string, string>). Design Log #85. */
+export type ContractParamKind = 'required' | 'optional' | 'catch-all';
+
+/** URL/load params for a page (e.g. [slug]). Design Log #85, #113. */
 export interface ContractParam {
     name: string;
+    kind: ContractParamKind;
 }
 
 export interface Contract {

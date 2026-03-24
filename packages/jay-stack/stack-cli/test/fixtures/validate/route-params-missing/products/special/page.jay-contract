@@ -1,0 +1,7 @@
+name: product-page
+params:
+  slug: string
+tags:
+  - tag: title
+    type: data
+    dataType: string

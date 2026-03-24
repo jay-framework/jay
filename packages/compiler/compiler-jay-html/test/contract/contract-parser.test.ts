@@ -1122,7 +1122,7 @@ tags:
 
             const result = parseContract(contract, 'contract.jay-contract');
             expect(result.validations).toEqual([]);
-            expect(result.val.params).toEqual([{ name: 'slug' }]);
+            expect(result.val.params).toEqual([{ name: 'slug', kind: 'required' }]);
         });
 
         it('should parse contract with multiple params', () => {
@@ -1139,7 +1139,10 @@ tags:
 
             const result = parseContract(contract, 'contract.jay-contract');
             expect(result.validations).toEqual([]);
-            expect(result.val.params).toEqual([{ name: 'slug' }, { name: 'id' }]);
+            expect(result.val.params).toEqual([
+                { name: 'slug', kind: 'required' },
+                { name: 'id', kind: 'required' },
+            ]);
         });
 
         it('should parse contract without params (backward compatible)', () => {
@@ -1154,6 +1157,60 @@ tags:
             const result = parseContract(contract, 'contract.jay-contract');
             expect(result.validations).toEqual([]);
             expect(result.val.params).toBeUndefined();
+        });
+
+        it('should parse optional param (string?)', () => {
+            const contract = `
+            name: i18n-page
+            params:
+              lang: string?
+            tags:
+              - tag: title
+                type: data
+                dataType: string
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.params).toEqual([{ name: 'lang', kind: 'optional' }]);
+        });
+
+        it('should parse catch-all param (string[])', () => {
+            const contract = `
+            name: docs-page
+            params:
+              path: string[]
+            tags:
+              - tag: content
+                type: data
+                dataType: string
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.params).toEqual([{ name: 'path', kind: 'catch-all' }]);
+        });
+
+        it('should parse mixed param kinds', () => {
+            const contract = `
+            name: complex-page
+            params:
+              slug: string
+              lang: string?
+              path: string[]
+            tags:
+              - tag: title
+                type: data
+                dataType: string
+            `;
+
+            const result = parseContract(contract, 'contract.jay-contract');
+            expect(result.validations).toEqual([]);
+            expect(result.val.params).toEqual([
+                { name: 'slug', kind: 'required' },
+                { name: 'lang', kind: 'optional' },
+                { name: 'path', kind: 'catch-all' },
+            ]);
         });
     });
 });

@@ -1620,5 +1620,93 @@ export interface ProductListUnwrappedRepeatedRefs {}
             export type CounterContract = JayContract<CounterViewState, CounterRefs, CounterSlowViewState, CounterFastViewState, CounterInteractiveViewState>`),
             );
         });
+
+        it('should compile optional param as optional property', async () => {
+            const contract = `
+            name: i18n-page
+            params:
+              slug: string
+              lang: string?
+            tags:
+              - tag: title
+                type: data
+                dataType: string
+            `;
+
+            const parsedContract = parseContract(contract, 'contract.jay-contract');
+            const result = await compileContract(parsedContract, './contract', noHopResolver);
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+            import { JayContract } from '@jay-framework/runtime';
+
+            export interface I18nPageViewState {
+                title: string;
+            }
+
+            export type I18nPageSlowViewState = Pick<I18nPageViewState, 'title'>;
+
+            export type I18nPageFastViewState = {};
+
+            export type I18nPageInteractiveViewState = {};
+
+            export interface I18nPageRefs {}
+
+            export interface I18nPageRepeatedRefs {}
+
+            import { UrlParams } from '@jay-framework/fullstack-component';
+
+            export interface I18nPageParams extends UrlParams {
+                slug: string;
+                lang?: string;
+            }
+
+            export type I18nPageContract = JayContract<I18nPageViewState, I18nPageRefs, I18nPageSlowViewState, I18nPageFastViewState, I18nPageInteractiveViewState>`),
+            );
+        });
+
+        it('should compile catch-all param as string array', async () => {
+            const contract = `
+            name: docs-page
+            params:
+              path: string[]
+            tags:
+              - tag: content
+                type: data
+                dataType: string
+            `;
+
+            const parsedContract = parseContract(contract, 'contract.jay-contract');
+            const result = await compileContract(parsedContract, './contract', noHopResolver);
+
+            expect(result.validations).toEqual([]);
+            expect(await prettify(result.val)).toBe(
+                await prettify(`
+            import { JayContract } from '@jay-framework/runtime';
+
+            export interface DocsPageViewState {
+                content: string;
+            }
+
+            export type DocsPageSlowViewState = Pick<DocsPageViewState, 'content'>;
+
+            export type DocsPageFastViewState = {};
+
+            export type DocsPageInteractiveViewState = {};
+
+            export interface DocsPageRefs {}
+
+            export interface DocsPageRepeatedRefs {}
+
+            import { UrlParams } from '@jay-framework/fullstack-component';
+
+            export interface DocsPageParams extends UrlParams {
+                path: string[];
+            }
+
+            export type DocsPageContract = JayContract<DocsPageViewState, DocsPageRefs, DocsPageSlowViewState, DocsPageFastViewState, DocsPageInteractiveViewState>`),
+            );
+        });
     });
 });

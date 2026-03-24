@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import path from 'path';
-import { validateJayFiles } from '../lib/validate';
+import {
+    validateJayFiles,
+    extractRouteParams,
+    extractJayParams,
+    checkRouteParams,
+} from '../lib/validate';
 
 describe('validateJayFiles', () => {
     const baseFixturesDir = path.resolve('./test/fixtures/validate');
@@ -71,5 +76,106 @@ describe('validateJayFiles', () => {
         expect(result.jayHtmlFilesScanned).toBe(0);
         expect(result.contractFilesScanned).toBe(0);
         expect(result.errors).toHaveLength(0);
+    });
+});
+
+describe('extractRouteParams', () => {
+    it('should extract params from dynamic route segments', () => {
+        const params = extractRouteParams('/pages/products/[slug]/page.jay-html', '/pages');
+        expect(params).toEqual(new Set(['slug']));
+    });
+
+    it('should extract optional params', () => {
+        const params = extractRouteParams('/pages/[[lang]]/about/page.jay-html', '/pages');
+        expect(params).toEqual(new Set(['lang']));
+    });
+
+    it('should extract catch-all params', () => {
+        const params = extractRouteParams('/pages/docs/[...path]/page.jay-html', '/pages');
+        expect(params).toEqual(new Set(['path']));
+    });
+
+    it('should extract multiple params', () => {
+        const params = extractRouteParams('/pages/[category]/[slug]/page.jay-html', '/pages');
+        expect(params).toEqual(new Set(['category', 'slug']));
+    });
+
+    it('should return empty set for static routes', () => {
+        const params = extractRouteParams('/pages/products/special/page.jay-html', '/pages');
+        expect(params).toEqual(new Set());
+    });
+});
+
+describe('extractJayParams', () => {
+    it('should extract param names from jay-params script', () => {
+        const html = `<html><head>
+            <script type="application/jay-params">
+              slug: ceramic-flower-vase
+              category: home
+            </script>
+        </head><body></body></html>`;
+        const params = extractJayParams(html);
+        expect(params).toEqual(new Set(['slug', 'category']));
+    });
+
+    it('should return empty set when no jay-params script', () => {
+        const html = `<html><head>
+            <script type="application/jay-data">
+              data:
+                title: string
+            </script>
+        </head><body></body></html>`;
+        const params = extractJayParams(html);
+        expect(params).toEqual(new Set());
+    });
+
+    it('should return empty set when no head', () => {
+        const html = `<div>No head</div>`;
+        const params = extractJayParams(html);
+        expect(params).toEqual(new Set());
+    });
+});
+
+describe('route param validation (integration)', () => {
+    const baseFixturesDir = path.resolve('./test/fixtures/validate');
+
+    it('should produce no warnings when dynamic route provides contract params', async () => {
+        const result = await validateJayFiles({
+            path: path.join(baseFixturesDir, 'route-params-valid'),
+        });
+
+        expect(result.errors).toHaveLength(0);
+        expect(result.warnings).toHaveLength(0);
+    });
+
+    it('should produce no warnings when jay-params provides contract params', async () => {
+        const result = await validateJayFiles({
+            path: path.join(baseFixturesDir, 'route-params-static-override'),
+        });
+
+        expect(result.errors).toHaveLength(0);
+        expect(result.warnings).toHaveLength(0);
+    });
+
+    it('should produce warning when static route misses contract params', async () => {
+        const result = await validateJayFiles({
+            path: path.join(baseFixturesDir, 'route-params-missing'),
+        });
+
+        expect(result.errors).toHaveLength(0);
+        expect(result.warnings).toHaveLength(1);
+        expect(result.warnings[0].message).toEqual(
+            'Contract requires param "slug" but the route does not provide it. ' +
+                'Add a dynamic segment [slug] to the route path or declare it in <script type="application/jay-params">.',
+        );
+    });
+
+    it('should produce no warnings when page has no contract params', async () => {
+        const result = await validateJayFiles({
+            path: path.join(baseFixturesDir, 'valid'),
+        });
+
+        expect(result.errors).toHaveLength(0);
+        expect(result.warnings).toHaveLength(0);
     });
 });

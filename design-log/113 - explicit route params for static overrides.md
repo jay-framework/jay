@@ -190,3 +190,124 @@ No `application/jay-params` tag needed. `inferredParams` is undefined. Same as t
 3. Dev server serves override routes with correct params
 4. Slow render cache keys correctly with explicit params
 5. Existing dynamic routes (`[slug]`) unaffected
+
+## Follow-up: Validate Route Params
+
+### Problem
+
+Pages can use contracts (page contract, headless components, headfull FS components) that declare `params`. The route directory must provide all required params. Currently there's no validation — a page at a static route using a contract that expects `slug` produces no error.
+
+### Design
+
+Add validation to `validateJayFiles` in stack-cli that checks route params against contract params.
+
+**Param sources on a page** (from `parseJayFile` result):
+
+- `parsedFile.contract?.params` — page's own contract params
+- `parsedFile.headlessImports[i].contract?.params` — headless + headfull FS component params
+
+**Route params available** — extracted from file path relative to `pagesBase`:
+
+- `[slug]` → required param `slug`
+- `[[lang]]` → optional param `lang`
+- `[...path]` → catch-all param `path`
+- `jay-params` in the jay-html `<head>` also provide params
+
+**Rule**: Every param name declared in any contract on the page must be provided by either a dynamic route segment OR explicit `jay-params`. Missing params emit a **warning** (not error) — the component may handle missing params gracefully.
+
+### Implementation
+
+Three new functions in `validate.ts`:
+
+- `extractRouteParams(filePath, pagesBase)` — regex-match path segments for `[param]` patterns
+- `extractJayParams(content)` — parse `<script type="application/jay-params">` from raw HTML
+- `checkRouteParams(parsedFile, filePath, pagesBase, content)` — collect contract params, compare against available params, return warning messages
+
+Also update `printJayValidationResult` to print warnings.
+
+## Follow-up: Extend Contract Params with Optional and Catch-All
+
+### Problem
+
+`ContractParam` currently only has `{ name: string }`. All params are implicitly required. But routes support three param kinds:
+
+- `[slug]` — required, always present
+- `[[lang]]` — optional, may be undefined
+- `[...path]` — catch-all, captures remaining path segments
+
+The contract has no way to express this, which means:
+
+1. The generated `Params` type always marks every param as required `string` — no `?` for optional
+2. Validation can't distinguish "this param must exist" from "this param is nice to have"
+3. Catch-all params have no type-level representation
+
+### Design
+
+#### YAML syntax
+
+Use TypeScript-like type annotations in the value field (currently ignored):
+
+```yaml
+params:
+  slug: string # required
+  lang: string? # optional
+  path: string[] # catch-all
+```
+
+`string` = required (backwards-compatible). `string?` = optional. `string[]` = catch-all.
+
+#### `ContractParam` type
+
+```typescript
+export type ContractParamKind = 'required' | 'optional' | 'catch-all';
+
+export interface ContractParam {
+  name: string;
+  kind: ContractParamKind;
+}
+```
+
+#### Parser changes (`contract-parser.ts`)
+
+```typescript
+// Current:
+parsedParams = Object.keys(parsedYaml.params).map((name) => ({ name }));
+
+// New:
+parsedParams = Object.entries(parsedYaml.params).map(([name, value]) => ({
+  name,
+  kind:
+    typeof value === 'string' && value.endsWith('?')
+      ? 'optional'
+      : typeof value === 'string' && value.endsWith('[]')
+        ? 'catch-all'
+        : 'required',
+}));
+```
+
+#### Type generation changes (`contract-compiler.ts`)
+
+```typescript
+// Current: all params are required string
+params.map((param) => `  ${camelCase(param.name)}: string;`);
+
+// New: optional gets ?, catch-all gets string[]
+params.map((param) => {
+  const name = camelCase(param.name);
+  if (param.kind === 'optional') return `  ${name}?: string;`;
+  if (param.kind === 'catch-all') return `  ${name}: string[];`;
+  return `  ${name}: string;`;
+});
+```
+
+#### Validation changes (`validate.ts`)
+
+Update `checkRouteParams` to only warn for `required` params missing from the route. `optional` params don't trigger warnings. `catch-all` params only match `[...name]` route segments.
+
+### Files to modify
+
+1. `packages/compiler/compiler-jay-html/lib/contract/contract.ts` — add `ContractParamKind`, update `ContractParam`
+2. `packages/compiler/compiler-jay-html/lib/contract/contract-parser.ts` — parse value as kind
+3. `packages/compiler/compiler-jay-html/lib/contract/contract-compiler.ts` — generate `?` for optional
+4. `packages/jay-stack/stack-cli/lib/validate.ts` — skip optional params in warnings
+5. Tests for parser, compiler, and validation

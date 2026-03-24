@@ -413,7 +413,15 @@ export function parseContract(contractYaml: string, fileName: string): WithValid
             typeof parsedYaml.params === 'object' &&
             !Array.isArray(parsedYaml.params)
         ) {
-            parsedParams = Object.keys(parsedYaml.params).map((name) => ({ name }));
+            parsedParams = Object.entries(parsedYaml.params).map(([name, value]) => ({
+                name,
+                kind:
+                    typeof value === 'string' && value.endsWith('?')
+                        ? 'optional'
+                        : typeof value === 'string' && value.endsWith('[]')
+                          ? 'catch-all'
+                          : 'required',
+            }));
             if (parsedParams.length === 0) parsedParams = undefined;
         }
 

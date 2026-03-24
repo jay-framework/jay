@@ -17,6 +17,8 @@ import {
     type JayHtmlSourceFile,
 } from '@jay-framework/compiler-jay-html';
 import { getLogger } from '@jay-framework/logger';
+import { parse as parseHtml } from 'node-html-parser';
+import YAML from 'yaml';
 import { loadConfig, getConfigWithDefaults } from './config';
 
 export interface ValidateOptions {
@@ -303,6 +305,104 @@ export function analyzeTagCoverage(jayHtml: JayHtmlSourceFile, file: string): Fi
     return { file, contracts };
 }
 
+// Same regex as route-scanner: matches [param], [[optional]], [...catchAll]
+const PARSE_PARAM = /^\[(\[)?(\.\.\.)?([^\]]+)\]?\]$/;
+
+/** @internal Exported for testing */
+export function extractRouteParams(filePath: string, pagesBase: string): Set<string> {
+    const relative = path.relative(pagesBase, filePath);
+    const segments = relative.split(path.sep);
+    const params = new Set<string>();
+    for (const segment of segments) {
+        const match = PARSE_PARAM.exec(segment);
+        if (match) {
+            params.add(match[3]);
+        }
+    }
+    return params;
+}
+
+function dedentYaml(text: string): string {
+    const lines = text.split('\n').filter((l) => l.trim().length > 0);
+    if (lines.length === 0) return '';
+    const minIndent = Math.min(...lines.map((l) => l.match(/^\s*/)?.[0].length ?? 0));
+    return lines.map((l) => l.slice(minIndent)).join('\n');
+}
+
+/** @internal Exported for testing */
+export function extractJayParams(content: string): Set<string> {
+    const root = parseHtml(content, {
+        comment: true,
+        blockTextElements: { script: true, style: true },
+    });
+    const head = root.querySelector('head');
+    if (!head) return new Set();
+
+    const paramScripts = head.querySelectorAll('script[type="application/jay-params"]');
+    if (paramScripts.length !== 1) return new Set();
+
+    const body = dedentYaml(paramScripts[0].textContent ?? '');
+    if (!body) return new Set();
+
+    try {
+        const parsed = YAML.parse(body);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+            return new Set(Object.keys(parsed));
+        }
+        return new Set();
+    } catch {
+        return new Set();
+    }
+}
+
+/** @internal Exported for testing */
+export function checkRouteParams(
+    parsedFile: JayHtmlSourceFile,
+    filePath: string,
+    pagesBase: string,
+    jayHtmlContent: string,
+): string[] {
+    // Collect required and catch-all param names from contracts on this page (skip optional)
+    const requiredParams = new Set<string>();
+
+    function collectParams(params: { name: string; kind: string }[]) {
+        for (const p of params) {
+            if (p.kind !== 'optional') {
+                requiredParams.add(p.name);
+            }
+        }
+    }
+
+    if (parsedFile.contract?.params) {
+        collectParams(parsedFile.contract.params);
+    }
+
+    for (const imp of parsedFile.headlessImports) {
+        if (imp.contract?.params) {
+            collectParams(imp.contract.params);
+        }
+    }
+
+    if (requiredParams.size === 0) return [];
+
+    // Collect available params from route segments and jay-params
+    const routeParams = extractRouteParams(filePath, pagesBase);
+    const jayParams = extractJayParams(jayHtmlContent);
+    const availableParams = new Set([...routeParams, ...jayParams]);
+
+    const warnings: string[] = [];
+    for (const param of requiredParams) {
+        if (!availableParams.has(param)) {
+            warnings.push(
+                `Contract requires param "${param}" but the route does not provide it. ` +
+                    `Add a dynamic segment [${param}] to the route path or declare it in <script type="application/jay-params">.`,
+            );
+        }
+    }
+
+    return warnings;
+}
+
 export async function validateJayFiles(options: ValidateOptions = {}): Promise<ValidationResult> {
     const config = loadConfig();
     const resolvedConfig = getConfigWithDefaults(config);
@@ -393,6 +493,12 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                 continue; // Skip generation if parsing failed
             }
 
+            // Check route params match contract params
+            const routeParamWarnings = checkRouteParams(parsedFile.val!, jayFile, scanDir, content);
+            for (const msg of routeParamWarnings) {
+                warnings.push({ file: relativePath, message: msg });
+            }
+
             // Analyze tag coverage for headless imports
             const fileCoverage = analyzeTagCoverage(parsedFile.val!, relativePath);
             if (fileCoverage) {
@@ -472,6 +578,16 @@ export function printJayValidationResult(result: ValidationResult, options: Vali
         logger.important(
             chalk.red(`${result.errors.length} error(s) found, ${validFiles} file(s) valid.`),
         );
+    }
+
+    if (result.warnings.length > 0) {
+        logger.important('');
+        logger.important(chalk.yellow('Warnings:'));
+        for (const warning of result.warnings) {
+            logger.important(chalk.yellow(`  ⚠ ${warning.file}`));
+            logger.important(chalk.gray(`    ${warning.message}`));
+            logger.important('');
+        }
     }
 
     if (result.coverage.length > 0) {

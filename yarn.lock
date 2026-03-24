@@ -4429,6 +4429,7 @@ __metadata:
     commander: "npm:^14.0.0"
     express: "npm:^5.0.1"
     glob: "npm:^10.3.10"
+    node-html-parser: "npm:^6.1.12"
     nodemon: "npm:^3.0.3"
     replace-in-file: "npm:^7.1.0"
     rimraf: "npm:^5.0.5"
