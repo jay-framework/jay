@@ -1462,6 +1462,42 @@ describe('hydration', () => {
                 expect(disabledItems).toHaveLength(1);
                 expect(await disabledItems[0].textContent()).toEqual('D-One');
             },
+            interactivityChecks: async (page) => {
+                // Toggle "Enabled" category: isActive true → false
+                const categories = await page.$$('#target .category');
+                const enabledToggle = await categories[0].$('button');
+                await enabledToggle!.click();
+                await page.waitForFunction(
+                    () =>
+                        document
+                            .querySelectorAll('#target .category')[0]
+                            ?.querySelector('.active-badge') === null,
+                    { timeout: 2000 },
+                );
+                // Active badge should be gone
+                expect(await categories[0].$('.active-badge')).toBeNull();
+                // Items and other content should still be intact
+                const enabledItems = await categories[0].$$('li');
+                expect(enabledItems).toHaveLength(2);
+                expect(await enabledItems[0].textContent()).toEqual('E-One');
+
+                // Toggle "Disabled" category: isActive false → true
+                const disabledToggle = await categories[1].$('button');
+                await disabledToggle!.click();
+                await page.waitForFunction(
+                    () =>
+                        document
+                            .querySelectorAll('#target .category')[1]
+                            ?.querySelector('.active-badge') !== null,
+                    { timeout: 2000 },
+                );
+                // Active badge should appear
+                expect(await categories[1].$('.active-badge')).toBeTruthy();
+                // Items should still be intact
+                const disabledItems = await categories[1].$$('li');
+                expect(disabledItems).toHaveLength(1);
+                expect(await disabledItems[0].textContent()).toEqual('D-One');
+            },
         });
     });
 });

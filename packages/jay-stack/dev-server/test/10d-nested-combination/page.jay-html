@@ -13,6 +13,7 @@
             <ul forEach="items" trackBy="_id">
                 <li>{label}</li>
             </ul>
+            <button ref="toggle-button">Toggle</button>
         </div>
     </div>
 </body>

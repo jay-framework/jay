@@ -66,7 +66,7 @@ export function renderToStream(vs: PageWithHeadlessMixedViewState, ctx: ServerRe
     w(' class="grid"');
     w('>');
     w('<div');
-    w('>');
+    w(' jay-coordinate="p1">');
     const vs_product_card2 = (vs as any).__headlessInstances?.['p1/product-card:0'] as
         | ProductCardViewState
         | undefined;
@@ -91,7 +91,7 @@ export function renderToStream(vs: PageWithHeadlessMixedViewState, ctx: ServerRe
     }
     w('</div>');
     w('<div');
-    w('>');
+    w(' jay-coordinate="p2">');
     const vs_product_card3 = (vs as any).__headlessInstances?.['p2/product-card:0'] as
         | ProductCardViewState
         | undefined;

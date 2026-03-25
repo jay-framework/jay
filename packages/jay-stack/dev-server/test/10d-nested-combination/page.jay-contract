@@ -24,6 +24,9 @@ tags:
         type: data
         dataType: boolean
         phase: fast+interactive
+      - tag: toggleButton
+        type: interactive
+        elementType: HTMLButtonElement
       - tag: items
         type: sub-contract
         repeated: true

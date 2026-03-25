@@ -13,7 +13,20 @@ import {
     // @ts-ignore
 } from '/@fs{{ROOT}}/packages/runtime/runtime/dist/index.js';
 export function hydrate(rootElement, options) {
-    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [itemsRefManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [categoriesRefManager, [refToggleButton]] = ReferencesManager.for(
+        options,
+        [],
+        ['toggleButton'],
+        [],
+        [],
+        {
+            items: itemsRefManager,
+        },
+    );
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
+        categories: categoriesRefManager,
+    });
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('0', {}, [
@@ -38,6 +51,7 @@ export function hydrate(rootElement, options) {
                                     return e('ul', {}, [e('li', {}, [dt((vs22) => vs22.label)])]);
                                 },
                             ),
+                            adoptElement('4', {}, [], refToggleButton()),
                         ]),
                 ),
                 slowForEachItem(
@@ -60,6 +74,7 @@ export function hydrate(rootElement, options) {
                                     return e('ul', {}, [e('li', {}, [dt((vs22) => vs22.label)])]);
                                 },
                             ),
+                            adoptElement('3', {}, [], refToggleButton()),
                         ]),
                 ),
             ]),

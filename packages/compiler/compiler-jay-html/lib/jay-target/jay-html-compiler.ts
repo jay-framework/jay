@@ -2512,25 +2512,93 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             slowForEachJayTrackBy: accumulatedJayTrackBy,
         };
         const renderContext2 = buildRenderContext(itemContext);
-        const childContent = renderHydrateElementContent(
-            element,
-            itemContext,
-            renderContext2,
-            null,
+        // Process children individually to determine if wrapping is needed (DL#115).
+        // slowForEachItem's callback must return a single BaseJayElement. When there are
+        // multiple dynamic children, wrap in adoptElement to provide a single return value.
+        const itemChildNodes = element.childNodes.filter(
+            (_) => _.nodeType !== NodeType.TEXT_NODE || (_.innerText || '').trim() !== '',
         );
+        const childFragments = itemChildNodes.map((child) => renderHydrateNode(child, itemContext));
+        const nonEmptyChildren = childFragments.filter((f) => f.rendered.trim());
 
-        // Drop fully static items — nothing to adopt, coordinates allow wiring to non-static items
-        if (childContent.rendered.trim().length === 0) {
+        // Drop fully static items — nothing to adopt
+        if (nonEmptyChildren.length === 0) {
             return RenderFragment.empty();
         }
 
+        let callbackBody: string;
+        let callbackImports = Imports.none();
+        let callbackValidations: string[] = [];
+        let callbackRefs: RefsTree | undefined;
+
+        if (nonEmptyChildren.length === 1) {
+            // Single dynamic child — use directly, no wrapper needed
+            callbackBody = nonEmptyChildren[0].rendered.trim();
+            callbackImports = nonEmptyChildren[0].imports;
+            callbackValidations = [...nonEmptyChildren[0].validations];
+            callbackRefs = nonEmptyChildren[0].refs;
+        } else {
+            // Multiple dynamic children — wrap in adoptElement/adoptDynamicElement.
+            // The '' coordinate resolves to coordinateBase itself (the jayTrackBy value),
+            // matching the jay-coordinate attribute on the slow forEach item's root element.
+            //
+            // Check if any child is a dynamic group (conditional/forEach) that needs
+            // Kindergarten for DOM positioning. If so, use adoptDynamicElement with STATIC
+            // sentinels for non-dynamic children.
+            const hasDynamicGroups = itemChildNodes.some(
+                (child) =>
+                    child.nodeType === NodeType.ELEMENT_NODE &&
+                    ((isConditional(child as HTMLElement) &&
+                        conditionIsInteractive(
+                            (child as HTMLElement).getAttribute('if'),
+                            itemContext.interactivePaths,
+                        )) ||
+                        isForEach(child as HTMLElement) ||
+                        isSlowForEach(child as HTMLElement)),
+            );
+
+            if (hasDynamicGroups) {
+                // adoptDynamicElement with STATIC sentinels for proper Kindergarten positioning
+                const childParts: string[] = [];
+                for (let i = 0; i < childFragments.length; i++) {
+                    const frag = childFragments[i];
+                    if (frag.rendered.trim()) {
+                        childParts.push(frag.rendered);
+                        callbackImports = callbackImports.plus(frag.imports);
+                        callbackValidations.push(...frag.validations);
+                        if (frag.refs)
+                            callbackRefs = callbackRefs
+                                ? mergeRefsTrees(callbackRefs, frag.refs)
+                                : frag.refs;
+                    } else if (itemChildNodes[i].nodeType === NodeType.ELEMENT_NODE) {
+                        childParts.push(`${indent.firstLine}        STATIC`);
+                        callbackImports = callbackImports.plus(Import.STATIC);
+                    }
+                }
+                const childrenArr = childParts.join(',\n');
+                callbackBody = `adoptDynamicElement('', {}, [\n${childrenArr},\n${indent.firstLine}    ])`;
+                callbackImports = callbackImports.plus(Import.adoptDynamicElement);
+            } else {
+                // No dynamic groups — plain adoptElement suffices
+                const childrenArr = nonEmptyChildren.map((f) => f.rendered).join(',\n');
+                callbackBody = `adoptElement('', {}, [\n${childrenArr},\n${indent.firstLine}    ])`;
+                for (const f of nonEmptyChildren) {
+                    callbackImports = callbackImports.plus(f.imports);
+                    callbackValidations.push(...f.validations);
+                    if (f.refs)
+                        callbackRefs = callbackRefs ? mergeRefsTrees(callbackRefs, f.refs) : f.refs;
+                }
+                callbackImports = callbackImports.plus(Import.adoptElement);
+            }
+        }
+
         const slowForEachFragment = new RenderFragment(
-            `${indent.firstLine}slowForEachItem<${parentTypeName}, ${itemTypeName}>(${getItemsFragment.rendered}, ${jayIndex}, '${jayTrackBy}',\n${indent.firstLine}() => ${childContent.rendered.trim()}\n${indent.firstLine})`,
+            `${indent.firstLine}slowForEachItem<${parentTypeName}, ${itemTypeName}>(${getItemsFragment.rendered}, ${jayIndex}, '${jayTrackBy}',\n${indent.firstLine}() => ${callbackBody}\n${indent.firstLine})`,
             Imports.for(Import.slowForEachItem)
                 .plus(getItemsFragment.imports)
-                .plus(childContent.imports),
-            [...getItemsFragment.validations, ...childContent.validations],
-            childContent.refs,
+                .plus(callbackImports),
+            [...getItemsFragment.validations, ...callbackValidations],
+            callbackRefs,
         );
 
         return nestRefs(arrayName.split('.'), slowForEachFragment);
@@ -3623,7 +3691,11 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
                 insideSlowForEach: true,
                 slowForEachCoordPrefix: slowCoordPrefix,
             };
-            const childContent = renderServerElementContent(element, itemContext);
+            // Force jay-coordinate emission on slow forEach item root elements
+            // so the hydrate code's adoptElement can resolve them (DL#115).
+            const childContent = renderServerElementContent(element, itemContext, {
+                isRoot: true,
+            });
             // Only wrap with item variable lookup when the content actually references
             // the item variable (e.g., vs1). For slow-only arrays, the data may not be
             // in the SSR ViewState (it was consumed during slow render), so guarding
@@ -3638,7 +3710,9 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
                     insideSlowForEach: true,
                     slowForEachCoordPrefix: slowCoordPrefix,
                 };
-                const indentedContent = renderServerElementContent(element, indentedContext);
+                const indentedContent = renderServerElementContent(element, indentedContext, {
+                    isRoot: true,
+                });
                 return new RenderFragment(
                     `${indent.firstLine}{ const ${itemVar} = ${arrayExpr}?.[${jayIndex}]; if (${itemVar}) {\n${indentedContent.rendered}\n${indent.firstLine}}}`,
                     indentedContent.imports,

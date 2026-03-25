@@ -4,6 +4,8 @@ import {
     ConstructContext,
     adoptText,
     adoptElement,
+    adoptDynamicElement,
+    STATIC,
     // @ts-ignore
 } from '/@fs{{ROOT}}/packages/runtime/runtime/dist/index.js';
 export function hydrate(rootElement, options) {
@@ -16,36 +18,42 @@ export function hydrate(rootElement, options) {
                     0,
                     'c1',
                     () =>
-                        slowForEachItem(
-                            (vs1) => vs1.items,
-                            0,
-                            'i1',
-                            () => adoptText('1', (vs2) => vs2.count),
-                        ),
-                    slowForEachItem(
-                        (vs1) => vs1.items,
-                        1,
-                        'i2',
-                        () => adoptText('1', (vs2) => vs2.count),
-                    ),
+                        adoptDynamicElement('', {}, [
+                            STATIC,
+                            slowForEachItem(
+                                (vs1) => vs1.items,
+                                0,
+                                'i1',
+                                () => adoptText('1', (vs2) => vs2.count),
+                            ),
+                            slowForEachItem(
+                                (vs1) => vs1.items,
+                                1,
+                                'i2',
+                                () => adoptText('1', (vs2) => vs2.count),
+                            ),
+                        ]),
                 ),
                 slowForEachItem(
                     (vs) => vs.categories,
                     1,
                     'c2',
                     () =>
-                        slowForEachItem(
-                            (vs1) => vs1.items,
-                            0,
-                            'i3',
-                            () => adoptText('1', (vs2) => vs2.count),
-                        ),
-                    slowForEachItem(
-                        (vs1) => vs1.items,
-                        1,
-                        'i4',
-                        () => adoptText('1', (vs2) => vs2.count),
-                    ),
+                        adoptDynamicElement('', {}, [
+                            STATIC,
+                            slowForEachItem(
+                                (vs1) => vs1.items,
+                                0,
+                                'i3',
+                                () => adoptText('1', (vs2) => vs2.count),
+                            ),
+                            slowForEachItem(
+                                (vs1) => vs1.items,
+                                1,
+                                'i4',
+                                () => adoptText('1', (vs2) => vs2.count),
+                            ),
+                        ]),
                 ),
             ]),
         );

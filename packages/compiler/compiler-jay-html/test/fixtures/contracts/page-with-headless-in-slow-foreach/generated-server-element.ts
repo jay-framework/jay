@@ -26,7 +26,7 @@ export function renderToStream(
     w(' class="grid"');
     w('>');
     w('<div');
-    w('>');
+    w(' jay-coordinate="p1">');
     const vs_product_card0 = (vs as any).__headlessInstances?.['p1/product-card:AR0'] as
         | ProductCardViewState
         | undefined;
@@ -51,7 +51,7 @@ export function renderToStream(
     }
     w('</div>');
     w('<div');
-    w('>');
+    w(' jay-coordinate="p2">');
     const vs_product_card1 = (vs as any).__headlessInstances?.['p2/product-card:AR1'] as
         | ProductCardViewState
         | undefined;
