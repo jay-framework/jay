@@ -8,8 +8,9 @@
  * wix-server-client, the import should be rewritten to wix-server-client/client
  * in client builds.
  *
- * Uses a `transform` hook instead of `resolveId` to ensure the rewrite happens
- * before rollup's `external` option is evaluated.
+ * Uses a `transform` hook to rewrite import specifiers in source code, and a
+ * `resolveId` hook (build mode only) to ensure Rollup uses the rewritten
+ * specifiers for external packages.
  *
  * Detection:
  * 1. Check if the imported package has a plugin.yaml (is a Jay plugin)
@@ -118,27 +119,15 @@ export function isSubpathImport(source: string, packageName: string): boolean {
 }
 
 /**
- * Regex to match import declarations.
- * Captures:
- * - Group 1: import clause (what's being imported)
- * - Group 2: the quote character (' or ")
- * - Group 3: the module specifier
- *
- * Matches patterns like:
- * - import { foo } from 'package'
- * - import { foo, bar } from "package"
- * - import foo from 'package'
- * - import * as foo from 'package'
+ * Regex to match import declarations (supports multi-line).
+ * Uses [\s\S]+? instead of .+? to match across newlines.
  */
-const IMPORT_REGEX = /import\s+(.+?)\s+from\s+(['"])([^'"]+)\2/g;
+const IMPORT_REGEX = /import\s+([\s\S]+?)\s+from\s+(['"])([^'"]+)\2/g;
 
 /**
- * Regex to match export from declarations.
- * Matches patterns like:
- * - export { foo } from 'package'
- * - export * from 'package'
+ * Regex to match export from declarations (supports multi-line).
  */
-const EXPORT_FROM_REGEX = /export\s+(.+?)\s+from\s+(['"])([^'"]+)\2/g;
+const EXPORT_FROM_REGEX = /export\s+([\s\S]+?)\s+from\s+(['"])([^'"]+)\2/g;
 
 export interface TransformImportsOptions {
     /** The source code to transform */
@@ -230,8 +219,9 @@ export interface PluginClientImportResolverOptions {
  * Creates a Vite plugin that transforms plugin package imports to /client
  * in client builds.
  *
- * Uses the `transform` hook to rewrite import declarations before rollup's
- * external option is evaluated.
+ * Uses `transform` hook to rewrite import specifiers in source code, plus
+ * `resolveId` hook (build mode only) for external packages where Rollup
+ * uses the specifier from resolveId rather than the transformed source.
  */
 export function createPluginClientImportResolver(
     options: PluginClientImportResolverOptions = {},

@@ -178,6 +178,22 @@ describe('plugin-client-import-resolver', () => {
                     `import { foo } from "@jay-framework/wix-server-client/client";`,
                 );
             });
+
+            it('should handle multi-line imports', () => {
+                const source = `import {
+    WIX_CART_CONTEXT,
+    type CartState,
+    type CartOperationResult as CartResult,
+} from '@jay-framework/wix-stores';`;
+                const result = transform(source);
+
+                expect(result.hasChanges).toBe(true);
+                expect(result.code).toBe(`import {
+    WIX_CART_CONTEXT,
+    type CartState,
+    type CartOperationResult as CartResult,
+} from '@jay-framework/wix-stores/client';`);
+            });
         });
 
         describe('export from declarations', () => {
@@ -243,13 +259,18 @@ import { baz } from 'other-package';
         });
 
         describe('real-world scenarios', () => {
-            it('should transform wix-stores-context.ts pattern', () => {
+            it('should transform wix-stores-context.ts pattern with multi-line import', () => {
                 const source = `
 import { createJayContext, registerGlobalContext, useGlobalContext } from '@jay-framework/runtime';
 import { WIX_CLIENT_CONTEXT } from '@jay-framework/wix-server-client';
-import { 
-    getProductsV3Client, 
-    getCategoriesClient, 
+import {
+    WIX_CART_CONTEXT,
+    type CartState,
+    type CartOperationResult as CartResult,
+} from '@jay-framework/wix-stores';
+import {
+    getProductsV3Client,
+    getCategoriesClient,
 } from '../services/wix-store-api.js';
 
 export const WIX_STORES_CONTEXT = createJayContext<WixStoresContext>();
@@ -257,9 +278,9 @@ export const WIX_STORES_CONTEXT = createJayContext<WixStoresContext>();
                 const result = transform(source);
 
                 expect(result.hasChanges).toBe(true);
-                // Only wix-server-client should be rewritten
                 expect(result.code).toContain(`from '@jay-framework/wix-server-client/client'`);
-                // Other imports should be unchanged
+                expect(result.code).toContain(`from '@jay-framework/wix-stores/client'`);
+                // Non-plugin imports unchanged
                 expect(result.code).toContain(`from '@jay-framework/runtime'`);
                 expect(result.code).toContain(`from '../services/wix-store-api.js'`);
             });

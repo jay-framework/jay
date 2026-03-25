@@ -195,6 +195,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 110 | filesystem-based slow render cache                      | Cache loadParams per route, embed cache metadata in pre-rendered jay-html               |
 | 112 | hydration view state consistency                        | Hydrate with SSR ViewState (matches DOM), then update with client ViewState             |
 | 115 | slowForEachItem adopt element wrapping                  | Wrap slowForEachItem callback in adoptElement for multi-child nested slow forEach       |
+| 116 | client import rewriting in library builds               | Fix bare @jay-framework/\* imports not rewritten to /client in vite build output        |
 
 ---
 
