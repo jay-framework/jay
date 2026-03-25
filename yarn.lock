@@ -4428,6 +4428,7 @@ __metadata:
     chalk: "npm:^4.1.2"
     commander: "npm:^14.0.0"
     express: "npm:^5.0.1"
+    get-port: "npm:^7.0.0"
     glob: "npm:^10.3.10"
     node-html-parser: "npm:^6.1.12"
     nodemon: "npm:^3.0.3"

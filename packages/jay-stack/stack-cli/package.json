@@ -1,6 +1,6 @@
 {
   "name": "@jay-framework/jay-stack-cli",
-  "version": "0.14.0",
+  "version": "0.15.0",
   "license": "Apache-2.0",
   "type": "module",
   "main": "dist/index.js",
@@ -35,6 +35,7 @@
     "chalk": "^4.1.2",
     "commander": "^14.0.0",
     "express": "^5.0.1",
+    "get-port": "^7.0.0",
     "glob": "^10.3.10",
     "node-html-parser": "^6.1.12",
     "vite": "^5.0.11",
