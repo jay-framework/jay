@@ -112,6 +112,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 69  | route priority ordering for static vs dynamic routes | Route matching priority                                              |
 | 70  | static route param inference                         | Static route parameter inference (superseded by #113)                |
 | 113 | explicit route params for static overrides           | Replace auto-inference with `<script type="application/jay-params">` |
+| 117 | fast phase query parameters                          | Type-safe query string access in fast phase only (`props.query`)     |
 
 ---
 

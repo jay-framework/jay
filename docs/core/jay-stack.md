@@ -46,13 +46,18 @@ Jay Stack implements three distinct rendering phases for optimal performance:
 **When**: Page serving
 **Output**: Server-rendered HTML with dynamic data
 
+The fast phase receives `props.query` — a `Record<string, string>` parsed from the URL query string. Query params are not available in the slow phase.
+
 ```typescript
 .withFastRender(async (props, carryForward, inventory) => {
   // Load dynamic data that can change
   const status = await inventory.getStatus(carryForward.productId);
 
+  // Query params are available via props.query
+  const page = parseInt(props.query.page || '1');
+
   return phaseOutput(
-    { inStock: status.available > 0 },
+    { inStock: status.available > 0, page },
     { productId: carryForward.productId, inStock: status.available > 0 }
   );
 })
@@ -207,14 +212,15 @@ Defines the fast rendering function for dynamic data:
 
 ```typescript
 async function fastRender(
-  props: ProductPageProps & ProductParams,
+  props: ProductPageProps & ProductParams & RequestQuery,
   slowCarryForward: { productId: string }, // Injected as FIRST SERVICE
   inventory: InventoryService, // Then requested services
 ) {
   const status = await inventory.getStatus(slowCarryForward.productId);
+  const page = parseInt(props.query.page || '1'); // Query params available here
 
   return phaseOutput(
-    { inStock: status.available > 0 },
+    { inStock: status.available > 0, page },
     { productId: slowCarryForward.productId, inStock: status.available > 0 },
   );
 }
@@ -224,7 +230,7 @@ makeJayStackComponent<ProductContract>().withServices(INVENTORY_SERVICE).withFas
 
 **Parameter order:**
 
-1. **props** - Component props
+1. **props** - Component props (includes `query: Record<string, string>` from the URL query string)
 2. **slowCarryForward** - Carry forward data from slow render (injected as **first service**)
 3. **...requestedServices** - Services specified via `withServices()`
 
@@ -492,12 +498,12 @@ Data flows between phases using the **carry forward** mechanism. Each phase can 
 
 ### Props Composition and Parameter Injection
 
-Props remain constant across phases, while carry forward data is injected via different mechanisms:
+Props flow through all phases with carry forward injected via different mechanisms:
 
 ```typescript
 // Phase 1: Slow Render
 function slowRender(
-  props: PageProps & ProductParams,
+  props: PageProps & ProductParams,          // No query — slow phase is cached
   ...services
 ) {
   return phaseOutput(viewState, carryForward);
@@ -505,16 +511,17 @@ function slowRender(
 
 // Phase 2: Fast Render
 function fastRender(
-  props: PageProps & ProductParams,          // Same props as slow
-  slowCarryForward: { productId: string },   // Injected as FIRST SERVICE
-  ...requestedServices                        // Other services follow
+  props: PageProps & ProductParams & RequestQuery,  // Includes query params
+  slowCarryForward: { productId: string },          // Injected as FIRST SERVICE
+  ...requestedServices                               // Other services follow
 ) {
+  const page = props.query.page;  // ✅ Available here
   return phaseOutput(viewState, carryForward);
 }
 
 // Phase 3: Interactive
 function interactive(
-  props: PageProps & ProductParams,                    // Same props as slow/fast
+  props: PageProps & ProductParams,                    // No query (use browser APIs)
   refs: ComponentRefs,                                 // From contract
   viewStateSignals: Signals<FastViewState>,           // Fast ViewState as signals
   fastCarryForward: { productId: string; inStock: boolean },  // Injected as FIRST CONTEXT
@@ -526,12 +533,13 @@ function interactive(
 
 **Key principles:**
 
-1. **Props are stable**: The same props object flows through all phases (from `withProps()` + URL params)
-2. **Carry forward is injected separately**:
+1. **Props are stable**: The same base props flow through all phases (from `withProps()` + URL params)
+2. **Query params are fast-only**: `props.query` is only available in the fast render phase. The slow phase is cached and should not depend on per-request query strings. The interactive phase can use `new URLSearchParams(window.location.search)` directly.
+3. **Carry forward is injected separately**:
    - In fast render: As the **first service** parameter
    - In interactive: As the **first context** parameter (after viewStateSignals)
-3. **Services stay server-side**: Only available in slow and fast render
-4. **Contexts are client-side**: Only available in interactive phase
+4. **Services stay server-side**: Only available in slow and fast render
+5. **Contexts are client-side**: Only available in interactive phase
 
 ### Service and Context Injection
 

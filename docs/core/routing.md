@@ -110,6 +110,35 @@ The script body is YAML. The declared params are passed to the component just as
 
 Without `jay-params`, the component would receive no param values and its `loadParams`-dependent data would not load correctly.
 
+## Query Parameters
+
+URL query parameters (`?page=2&sort=price`) are available in the **fast phase only** via `props.query`. They are not available in the slow phase because slow render results are cached by path params — query param variations would either bust the cache or serve stale content.
+
+```typescript
+// ✅ Fast phase — props.query is available
+.withFastRender(async (props, carryForward, dbService) => {
+    const page = parseInt(props.query.page || '1');
+    const sort = props.query.sort || 'name';
+    const products = await dbService.getProducts({ page, sort });
+
+    return phaseOutput({ products, currentPage: page }, {});
+})
+
+// ❌ Slow phase — props.query does not exist (TypeScript error)
+.withSlowlyRender(async (props, dbService) => {
+    props.query  // ← compile error
+})
+```
+
+`props.query` is a `Record<string, string>`. For repeated keys (`?tag=a&tag=b`), the last value wins. When the URL has no query string, `props.query` is `{}`.
+
+The interactive phase (client-side) can read query params directly from the browser:
+
+```typescript
+const params = new URLSearchParams(window.location.search);
+const page = params.get('page');
+```
+
 ## Loading Params for SSG
 
 For static site generation (SSG), dynamic routes need to know all possible param combinations at build time. Plugin components provide a `loadParams` generator that yields valid param sets:

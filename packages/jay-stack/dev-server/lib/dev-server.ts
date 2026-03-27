@@ -189,6 +189,14 @@ function mkRoute(
                 url,
             };
 
+            // Parse query parameters from request URL (DL#117).
+            // Available in the fast phase only — not passed to slow phase.
+            const query: Record<string, string> = {};
+            const urlObj = new URL(req.originalUrl, `http://${req.headers.host}`);
+            for (const [key, value] of urlObj.searchParams) {
+                query[key] = value; // last value wins for repeated keys
+            }
+
             if (options.disableSSR) {
                 // Client-only rendering: no SSR, no hydration
                 await handleClientOnlyRequest(
@@ -204,6 +212,7 @@ function mkRoute(
                     res,
                     url,
                     timing,
+                    query,
                 );
             } else {
                 // SSR: always use full pipeline with slow render cache
@@ -224,6 +233,7 @@ function mkRoute(
                         res,
                         url,
                         timing,
+                        query,
                     );
                 } else {
                     await handlePreRenderRequest(
@@ -240,6 +250,7 @@ function mkRoute(
                         res,
                         url,
                         timing,
+                        query,
                     );
                 }
             }
@@ -270,6 +281,7 @@ async function handleCachedRequest(
     res: Response,
     url: string,
     timing?: RequestTiming,
+    query: Record<string, string> = {},
 ): Promise<void> {
     // Load page parts with cached pre-rendered jay-html content (already stripped of cache tag)
     const loadStart = Date.now();
@@ -318,6 +330,7 @@ async function handleCachedRequest(
         forEachInstances,
         headlessComps,
         cachedEntry.slowViewState,
+        query,
     );
     timing?.recordFastRender(Date.now() - fastStart);
 
@@ -370,6 +383,7 @@ async function handlePreRenderRequest(
     res: Response,
     url: string,
     timing?: RequestTiming,
+    query: Record<string, string> = {},
 ): Promise<void> {
     // First, load page parts with original jay-html to get component definitions
     const loadStart = Date.now();
@@ -469,6 +483,7 @@ async function handlePreRenderRequest(
         res,
         url,
         timing,
+        query,
     );
 }
 
@@ -490,6 +505,7 @@ async function handleClientOnlyRequest(
     res: Response,
     url: string,
     timing?: RequestTiming,
+    query: Record<string, string> = {},
 ): Promise<void> {
     const loadStart = Date.now();
     const pagePartsResult = await loadPageParts(
@@ -561,6 +577,7 @@ async function handleClientOnlyRequest(
         forEachInstances,
         headlessInstanceComponents,
         renderedSlowly.rendered,
+        query,
     );
     timing?.recordFastRender(Date.now() - fastStart);
 

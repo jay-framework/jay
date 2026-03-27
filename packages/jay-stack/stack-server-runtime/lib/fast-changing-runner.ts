@@ -33,6 +33,7 @@ export async function renderFastChangingData(
     forEachInstances?: ForEachHeadlessInstance[],
     headlessInstanceComponents?: HeadlessInstanceComponent[],
     mergedSlowViewState?: object,
+    query: Record<string, string> = {},
 ): Promise<AnyFastRenderResult> {
     let fastViewState = {};
     let fastCarryForward = {};
@@ -48,6 +49,7 @@ export async function renderFastChangingData(
             const partProps = {
                 ...pageProps,
                 ...pageParams,
+                query,
                 ...(contractInfo && {
                     contractName: contractInfo.contractName,
                     metadata: contractInfo.metadata,
@@ -92,9 +94,10 @@ export async function renderFastChangingData(
             const cf = instancePhaseData.carryForwards[coordKey];
 
             // fastRender signature depends on whether slow phase exists
+            const instanceProps = { ...instance.props, query };
             const fastResult = comp.compDefinition.slowlyRender
-                ? await comp.compDefinition.fastRender(instance.props, cf, ...services)
-                : await comp.compDefinition.fastRender(instance.props, ...services);
+                ? await comp.compDefinition.fastRender(instanceProps, cf, ...services)
+                : await comp.compDefinition.fastRender(instanceProps, ...services);
 
             if (fastResult.kind === 'PhaseOutput') {
                 // Merge instance slow ViewState (if any) with fast ViewState.
@@ -153,9 +156,10 @@ export async function renderFastChangingData(
                         }
                     }
 
+                    const forEachProps = { ...props, query };
                     const fastResult = comp.compDefinition.slowlyRender
-                        ? await comp.compDefinition.fastRender(props, cf, ...services)
-                        : await comp.compDefinition.fastRender(props, ...services);
+                        ? await comp.compDefinition.fastRender(forEachProps, cf, ...services)
+                        : await comp.compDefinition.fastRender(forEachProps, ...services);
 
                     if (fastResult.kind === 'PhaseOutput') {
                         const coord = computeForEachInstanceKey(

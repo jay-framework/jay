@@ -76,6 +76,15 @@ export interface PageProps {
     url: string;
 }
 
+/**
+ * Query string parameters parsed from the request URL.
+ * Available in the fast phase only — not in the slow phase.
+ * For repeated keys (?a=1&a=2), the last value wins.
+ */
+export interface RequestQuery {
+    query: Record<string, string>;
+}
+
 export type UrlParams = Record<string, string>;
 
 // ============================================================================
@@ -164,7 +173,7 @@ export type RenderFast<
     FastViewState extends object,
     FastCarryForward,
 > = (
-    props: PropsT,
+    props: PropsT & RequestQuery,
     ...services: Services
 ) => Promise<FastRenderResult<FastViewState, FastCarryForward>>;
 

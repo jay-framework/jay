@@ -142,3 +142,20 @@ jay-stack params wix-stores/product-page
 ```
 
 Params are always strings (URL params).
+
+## Query Parameters
+
+URL query parameters (`?page=2&sort=price`) are available in the **fast render phase only** via `props.query`:
+
+```typescript
+.withFastRender(async (props, carryForward, dbService) => {
+    const page = parseInt(props.query.page || '1');
+    const sort = props.query.sort || 'name';
+    const products = await dbService.getProducts({ page, sort });
+    return phaseOutput({ products, currentPage: page }, {});
+})
+```
+
+- `props.query` is `Record<string, string>` — empty `{}` when no query string
+- Not available in the slow phase (compile error) — slow results are cached by path params only
+- In the interactive phase, use `new URLSearchParams(window.location.search)` directly
