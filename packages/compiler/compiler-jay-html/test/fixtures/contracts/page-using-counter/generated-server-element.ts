@@ -28,13 +28,13 @@ export function renderToStream(vs: PageUsingCounterViewState, ctx: ServerRenderC
         w('<img');
         w(' src="positive.jpg"');
         w(' alt="positive"');
-        w(' jay-coordinate="0/3/0">');
+        w(' jay-coordinate="0/3/0" />');
     }
     if (vs.counter?.isPositive === IsPositive.negative) {
         w('<img');
         w(' src="negative.jpg"');
         w(' alt="negative"');
-        w(' jay-coordinate="0/3/1">');
+        w(' jay-coordinate="0/3/1" />');
     }
     w('</div>');
     w('</div>');

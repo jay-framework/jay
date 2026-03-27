@@ -37,7 +37,7 @@ fast-changing-runner.ts:
 ### Why query params belong in the fast phase
 
 - Fast phase runs per-request (SSR)
-- Query params modify *how* a resource is displayed (pagination, sorting, filtering), not *which* resource
+- Query params modify _how_ a resource is displayed (pagination, sorting, filtering), not _which_ resource
 - Fast phase already receives per-request data (`pageProps`, `pageParams`)
 
 ## Design
@@ -47,7 +47,7 @@ fast-changing-runner.ts:
 ```typescript
 // jay-stack-types.ts
 export interface RequestQuery {
-    query: Record<string, string>;
+  query: Record<string, string>;
 }
 ```
 
@@ -58,14 +58,14 @@ Change `RenderFast` to intersect `PropsT` with `RequestQuery`:
 ```typescript
 // Before
 export type RenderFast<Services, PropsT, FastViewState, FastCarryForward> = (
-    props: PropsT,
-    ...services: Services
+  props: PropsT,
+  ...services: Services
 ) => Promise<FastRenderResult<FastViewState, FastCarryForward>>;
 
 // After
 export type RenderFast<Services, PropsT, FastViewState, FastCarryForward> = (
-    props: PropsT & RequestQuery,
-    ...services: Services
+  props: PropsT & RequestQuery,
+  ...services: Services
 ) => Promise<FastRenderResult<FastViewState, FastCarryForward>>;
 ```
 
@@ -98,7 +98,7 @@ Parse query params from the request in `dev-server.ts` and pass to `renderFastCh
 const urlObj = new URL(req.originalUrl, `http://${req.headers.host}`);
 const query: Record<string, string> = {};
 for (const [key, value] of urlObj.searchParams) {
-    query[key] = value;  // last value wins for repeated keys
+  query[key] = value; // last value wins for repeated keys
 }
 ```
 
@@ -195,20 +195,22 @@ In `fast-changing-runner.ts`, instance fast render also needs query params:
 
 ```typescript
 export const page = makeJayStackComponent<ProductListContract>()
-    .withServices(PRODUCTS_DB)
-    .withSlowlyRender(async (props, db) => {
-        // Slow: fetch categories (cached, no query params)
-        const categories = await db.getCategories();
-        return phaseOutput({ categories }, {});
-    })
-    .withFastRender(async (props, carryForward, db) => {
-        // Fast: paginate based on query params (per-request)
-        const page = parseInt(props.query.page || '1');
-        const sort = props.query.sort || 'name';
-        const products = await db.getProducts({ page, sort });
-        return phaseOutput({ products, currentPage: page, sortBy: sort }, {});
-    })
-    .withInteractive((refs, viewState) => { /* ... */ });
+  .withServices(PRODUCTS_DB)
+  .withSlowlyRender(async (props, db) => {
+    // Slow: fetch categories (cached, no query params)
+    const categories = await db.getCategories();
+    return phaseOutput({ categories }, {});
+  })
+  .withFastRender(async (props, carryForward, db) => {
+    // Fast: paginate based on query params (per-request)
+    const page = parseInt(props.query.page || '1');
+    const sort = props.query.sort || 'name';
+    const products = await db.getProducts({ page, sort });
+    return phaseOutput({ products, currentPage: page, sortBy: sort }, {});
+  })
+  .withInteractive((refs, viewState) => {
+    /* ... */
+  });
 ```
 
 ### ✅ Search page
@@ -232,12 +234,12 @@ export const page = makeJayStackComponent<ProductListContract>()
 
 ## Trade-offs
 
-| Aspect | Benefit | Cost |
-|---|---|---|
-| Type safety | Slow phase cannot access query (compile error) | Slightly different prop types between phases |
-| Simplicity | `Record<string, string>` is easy to use | No multi-value support initially |
-| Caching | Slow cache unaffected by query variations | None |
-| Backward compat | Existing components unaffected (query is additive) | Fast render callbacks see new field |
+| Aspect          | Benefit                                            | Cost                                         |
+| --------------- | -------------------------------------------------- | -------------------------------------------- |
+| Type safety     | Slow phase cannot access query (compile error)     | Slightly different prop types between phases |
+| Simplicity      | `Record<string, string>` is easy to use            | No multi-value support initially             |
+| Caching         | Slow cache unaffected by query variations          | None                                         |
+| Backward compat | Existing components unaffected (query is additive) | Fast render callbacks see new field          |
 
 ## Verification Criteria
 

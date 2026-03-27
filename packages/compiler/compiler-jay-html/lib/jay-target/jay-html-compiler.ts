@@ -4126,6 +4126,7 @@ function renderServerElementAsString(
     const coordinate = coordTemplate || (needsCoordinate ? overrideCoordinate || null : null);
 
     const isVoid = voidElements.has(element.rawTagName.toLowerCase());
+    const closeTag = isVoid ? ' />' : '>';
     const stringParts: RenderFragment[] = [];
 
     // Opening tag
@@ -4138,9 +4139,9 @@ function renderServerElementAsString(
     }
 
     if (coordinate !== null) {
-        stringParts.push(new RenderFragment(`' jay-coordinate="${coordinate}">'`));
+        stringParts.push(new RenderFragment(`' jay-coordinate="${coordinate}"${closeTag}'`));
     } else {
-        stringParts.push(new RenderFragment(`'>'`));
+        stringParts.push(new RenderFragment(`'${closeTag}'`));
     }
 
     if (!isVoid) {
@@ -4381,6 +4382,7 @@ function renderServerElementContent(
     const coordTemplate = needsCoordinate ? element.getAttribute(COORD_ATTR) : null;
 
     const isVoid = voidElements.has(element.rawTagName.toLowerCase());
+    const closeTag = isVoid ? ' />' : '>';
     const parts: RenderFragment[] = [];
 
     // Opening tag
@@ -4398,12 +4400,12 @@ function renderServerElementContent(
                 parts.push(
                     w(
                         indent,
-                        `' jay-coordinate="' + ${context.forEachAccumulatedPrefix} + '/${coordTemplate}">'`,
+                        `' jay-coordinate="' + ${context.forEachAccumulatedPrefix} + '/${coordTemplate}"${closeTag}'`,
                         Imports.for(Import.escapeAttr),
                     ),
                 );
             } else {
-                parts.push(w(indent, `' jay-coordinate="${coordTemplate}">'`));
+                parts.push(w(indent, `' jay-coordinate="${coordTemplate}"${closeTag}'`));
             }
         } else {
             const coordExpr = compileCoordinateExpr(coordTemplate, context.varMappings);
@@ -4414,7 +4416,7 @@ function renderServerElementContent(
                 parts.push(
                     w(
                         indent,
-                        `' jay-coordinate="' + ${context.forEachAncestorPrefix} + '/' + ${coordExpr} + '">'`,
+                        `' jay-coordinate="' + ${context.forEachAncestorPrefix} + '/' + ${coordExpr} + '"${closeTag}'`,
                         Imports.for(Import.escapeAttr),
                     ),
                 );
@@ -4422,14 +4424,14 @@ function renderServerElementContent(
                 parts.push(
                     w(
                         indent,
-                        `' jay-coordinate="' + ${coordExpr} + '">'`,
+                        `' jay-coordinate="' + ${coordExpr} + '"${closeTag}'`,
                         Imports.for(Import.escapeAttr),
                     ),
                 );
             }
         }
     } else {
-        parts.push(w(indent, `'>'`));
+        parts.push(w(indent, `'${closeTag}'`));
     }
 
     if (isVoid) return mergeServerFragments(parts);

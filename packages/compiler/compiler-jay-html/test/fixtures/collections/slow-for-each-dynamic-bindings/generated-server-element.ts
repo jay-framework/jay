@@ -26,7 +26,7 @@ export function renderToStream(
             w(' jay-coordinate="cat1">');
             w('<input');
             w(' type="checkbox"');
-            w(' jay-coordinate="cat1/0">');
+            w(' jay-coordinate="cat1/0" />');
             w(' Category A ');
             w('</label>');
         }
@@ -39,7 +39,7 @@ export function renderToStream(
             w(' jay-coordinate="cat2">');
             w('<input');
             w(' type="checkbox"');
-            w(' jay-coordinate="cat2/0">');
+            w(' jay-coordinate="cat2/0" />');
             w(' Category B ');
             w('</label>');
         }

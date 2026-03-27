@@ -24,16 +24,16 @@ export function renderToStream(vs: AttributesViewState, ctx: ServerRenderContext
     w('</div>');
     w('<input');
     w(' value="some value"');
-    w('>');
+    w(' />');
     w('<input');
     w(' id="abc"');
     w(' value="' + escapeAttr(String(vs.text2)) + '"');
-    w(' jay-coordinate="0/3">');
+    w(' jay-coordinate="0/3" />');
     w('<input');
     w(' type="checkbox"');
     w(' checked="' + escapeAttr(String(vs.bool1)) + '"');
     w(' value="' + escapeAttr(String(vs.text2)) + '"');
-    w(' jay-coordinate="0/4">');
+    w(' jay-coordinate="0/4" />');
     w('<label');
     w(' for="abc"');
     w('>');
@@ -101,6 +101,6 @@ export function renderToStream(vs: AttributesViewState, ctx: ServerRenderContext
     w('<img');
     w(' src="/image.jpg"');
     w(' alt="Peat\'s Beast- PX finish- 54.1%"');
-    w('>');
+    w(' />');
     w('</div>');
 }
