@@ -1,18 +1,19 @@
 import { JayRoute, JayRouteParamType } from './route-scanner';
 
 export function routeToExpressRoute(route: JayRoute): string {
-    return (
-        '/' +
-        route.segments
-            .map((segment) => {
-                if (typeof segment === 'string') return segment;
-                else {
-                    if (segment.type === JayRouteParamType.single) return `:${segment.name}`;
-                    else if (segment.type === JayRouteParamType.optional)
-                        return `:${segment.name}?`;
-                    else return `:${segment.name}*`;
-                }
-            })
-            .join('/')
-    );
+    const parts: string[] = [];
+    for (const segment of route.segments) {
+        if (typeof segment === 'string') {
+            parts.push('/' + segment);
+        } else if (segment.type === JayRouteParamType.single) {
+            parts.push('/:' + segment.name);
+        } else if (segment.type === JayRouteParamType.optional) {
+            // Express 5 / path-to-regexp v8: optional segments use braces
+            parts.push('{/:' + segment.name + '}');
+        } else {
+            // Express 5 / path-to-regexp v8: wildcard uses *name
+            parts.push('/*' + segment.name);
+        }
+    }
+    return parts.length === 0 ? '/' : parts.join('');
 }
