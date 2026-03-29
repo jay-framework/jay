@@ -1,0 +1,18 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    items:
+    -  name: string
+       isActive: boolean
+       id: string
+    </script>
+</head>
+<body>
+<div>
+    <div class="item {isActive ? active}" forEach="items" trackBy="id" ref="items.selected">
+        <span>{name}</span>
+    </div>
+</div>
+</body>
+</html>
