@@ -454,7 +454,7 @@ export function hydrateForEach<ViewState, Item>(
         const id = String(item[trackBy]);
 
         // Resolve the item root element at the CURRENT scope (before forItem changes base)
-        const itemDom = context.resolveCoordinate(id);
+        const itemDom = context.peekCoordinate(id);
 
         const childContext = context.forItem(item, id);
         const adopted = withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => {

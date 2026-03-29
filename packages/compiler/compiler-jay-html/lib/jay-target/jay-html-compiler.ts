@@ -2392,9 +2392,29 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             itemChildNodes.map((child) => renderHydrateNode(child, itemContext)),
             ',\n',
         );
-        const adoptBody = itemContent.rendered.trim()
-            ? `() => [\n${itemContent.rendered},\n${indent.firstLine}    ]`
-            : '() => []';
+
+        // Check if forEach item element itself needs adoption (dynamic attrs or ref)
+        const itemRenderCtx = buildRenderContext(itemContext);
+        const itemAttrs = renderDynamicAttributes(element, itemRenderCtx);
+        const itemHasDynamicAttrs =
+            itemAttrs.imports.has(Import.dynamicAttribute) ||
+            itemAttrs.imports.has(Import.dynamicProperty) ||
+            itemAttrs.imports.has(Import.booleanAttribute);
+        const itemRefFragment = renderElementRef(element, itemRenderCtx);
+        const needsItemAdoption = itemHasDynamicAttrs || !!itemRefFragment.rendered.trim();
+
+        let adoptBody: string;
+        if (needsItemAdoption) {
+            const refSuffix = itemRefFragment.rendered ? `, ${itemRefFragment.rendered}` : '';
+            const childrenArr = itemContent.rendered.trim()
+                ? `[\n${itemContent.rendered},\n${indent.firstLine}        ]`
+                : '[]';
+            adoptBody = `() => [\n${indent.firstLine}        adoptElement("", ${itemAttrs.rendered}, ${childrenArr}${refSuffix}),\n${indent.firstLine}    ]`;
+        } else {
+            adoptBody = itemContent.rendered.trim()
+                ? `() => [\n${itemContent.rendered},\n${indent.firstLine}    ]`
+                : '() => []';
+        }
 
         // Create callback: render the item element using the standard element target.
         // Use the pre-adopt snapshot of the RefNameGenerator so the create callback
@@ -2444,22 +2464,32 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         );
         const forEachElementFunc = forEachNeedsDynamic ? 'de' : 'e';
         const forEachElementImport = forEachNeedsDynamic ? Import.dynamicElement : Import.element;
-        const createBody = `(${forEachVariables.currentVar}: ${forEachVariables.currentType.name}) => {\n${indent.firstLine}    return ${forEachElementFunc}('${element.rawTagName}', ${createAttributes.rendered}, [${createChildren.rendered}]);\n${indent.firstLine}    }`;
+        // Render ref on the forEach item element for the create callback
+        const createItemRef = renderElementRef(element, createRenderContext);
+        const createRefSuffix = createItemRef.rendered ? `, ${createItemRef.rendered}` : '';
+        const createBody = `(${forEachVariables.currentVar}: ${forEachVariables.currentType.name}) => {\n${indent.firstLine}    return ${forEachElementFunc}('${element.rawTagName}', ${createAttributes.rendered}, [${createChildren.rendered}]${createRefSuffix});\n${indent.firstLine}    }`;
 
+        let allImports = Imports.for(Import.hydrateForEach)
+            .plus(forEachElementImport)
+            .plus(forEachFragment.imports)
+            .plus(itemContent.imports)
+            .plus(createChildren.imports)
+            .plus(createAttributes.imports)
+            .plus(itemAttrs.imports)
+            .plus(itemRefFragment.imports)
+            .plus(createItemRef.imports);
+        if (needsItemAdoption) {
+            allImports = allImports.plus(Import.adoptElement);
+        }
         const hydrateForEachFragment = new RenderFragment(
             `${indent.firstLine}hydrateForEach(${forEachFragment.rendered}, '${trackBy}',\n${indent.firstLine}    ${adoptBody},\n${indent.firstLine}    ${createBody},\n${indent.firstLine})`,
-            Imports.for(Import.hydrateForEach)
-                .plus(forEachElementImport)
-                .plus(forEachFragment.imports)
-                .plus(itemContent.imports)
-                .plus(createChildren.imports)
-                .plus(createAttributes.imports),
+            allImports,
             [
                 ...forEachFragment.validations,
                 ...itemContent.validations,
                 ...createChildren.validations,
             ],
-            itemContent.refs,
+            mergeRefsTrees(itemContent.refs, itemRefFragment.refs),
         );
         // Nest refs under the forEach access path, matching the standard element target
         return nestRefs(forEachAccessor.terms, hydrateForEachFragment);

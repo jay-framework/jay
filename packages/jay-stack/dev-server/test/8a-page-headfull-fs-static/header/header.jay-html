@@ -8,7 +8,7 @@
 </head>
 <body>
     <header>
-        <img src="{logoUrl}" style="width: 36px; height: 36px;" />
+        <img src="{logoUrl}" style="width: 36px; height: 36px" />
         <span class="cart-count">{cartCount}</span>
         <button ref="increment">+</button>
     </header>
