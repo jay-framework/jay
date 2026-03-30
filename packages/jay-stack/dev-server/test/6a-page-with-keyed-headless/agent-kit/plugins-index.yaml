@@ -1,4 +1,4 @@
-jay_stack_version: 0.15.2
+jay_stack_version: 0.15.3
 plugins:
   - name: test-headless
     path: ./src/plugins/test-headless

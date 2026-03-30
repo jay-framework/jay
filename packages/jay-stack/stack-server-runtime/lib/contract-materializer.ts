@@ -53,7 +53,6 @@ export interface PluginsIndexEntry {
 }
 
 export interface PluginsIndex {
-    jay_stack_version: string;
     plugins: PluginsIndexEntry[];
 }
 
@@ -291,16 +290,6 @@ function toKebabCase(str: string): string {
         .replace(/^-/, '');
 }
 
-function getJayStackVersion(): string {
-    try {
-        const packageJsonPath = path.join(__dirname, '..', 'package.json');
-        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-        return packageJson.version || '0.0.0';
-    } catch {
-        return '0.0.0';
-    }
-}
-
 // ============================================================================
 // Main Materialization Function
 // ============================================================================
@@ -488,7 +477,6 @@ export async function materializeContracts(
 
     // Write plugins-index.yaml (single index file — Design Log #85)
     const pluginsIndex: PluginsIndex = {
-        jay_stack_version: getJayStackVersion(),
         plugins: Array.from(pluginsIndexMap.entries()).map(([name, data]) => ({
             name,
             path: data.path,
@@ -580,7 +568,6 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
     }
 
     return {
-        jay_stack_version: getJayStackVersion(),
         plugins: Array.from(pluginsMap.entries()).map(([name, data]) => ({
             name,
             path: data.path,
