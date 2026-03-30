@@ -11,6 +11,7 @@ import { mkDevServer, type DevServer } from '../lib';
 import { JayRollupConfig } from '@jay-framework/vite-plugin';
 import path from 'path';
 import fs from 'fs';
+import http from 'node:http';
 import { prettify } from '@jay-framework/compiler-shared';
 import jsBeautify from 'js-beautify';
 import { chromium, type Browser, type Page } from 'playwright';
@@ -165,6 +166,13 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
 
     beforeAll(async () => {
         const dirPath = path.resolve(__dirname, dirName);
+
+        // Create Express app and HTTP server first so Vite's HMR WebSocket
+        // piggybacks on this server's port instead of the default 24678
+        const express = await import('express');
+        const app = express.default();
+        const httpServer = http.createServer(app);
+
         devServer = await mkDevServer({
             pagesRootFolder: dirPath,
             projectRootFolder: dirPath,
@@ -172,11 +180,8 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
                 tsConfigFilePath: path.join(dirPath, 'tsconfig.json'),
             } as JayRollupConfig,
             disableSSR: opts.disableSSR,
+            httpServer,
         });
-
-        // Create Express app with routes + Vite middleware
-        const express = await import('express');
-        const app = express.default();
 
         // Mount page routes first (SSR handlers)
         for (const route of devServer.routes) {
@@ -187,7 +192,7 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
         app.use(devServer.viteServer.middlewares);
 
         // Start HTTP server on random port
-        const httpServer = app.listen(0);
+        httpServer.listen(0);
         await new Promise<void>((resolve) => httpServer.on('listening', resolve));
         const addr = httpServer.address();
         const port = typeof addr === 'object' && addr ? addr.port : 3000;

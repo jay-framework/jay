@@ -1,4 +1,5 @@
 import express, { Express } from 'express';
+import http from 'node:http';
 import { mkDevServer } from '@jay-framework/dev-server';
 import { createEditorServer } from '@jay-framework/editor-server';
 import getPort from 'get-port';
@@ -39,6 +40,7 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
 
     // Create http server
     const app: Express = express();
+    const httpServer = http.createServer(app);
     // Find available port for dev server
     const devServerPort = await getPort({ port: resolvedConfig.devServer.portRange });
 
@@ -82,13 +84,15 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
     editorServer.onExport(handlers.onExport);
     editorServer.onImport(handlers.onImport);
 
-    // Start dev server
+    // Start dev server — pass httpServer so Vite's HMR WebSocket piggybacks
+    // on Express's port instead of binding to the default port 24678
     const { server, viteServer, routes } = await mkDevServer({
         pagesRootFolder: path.resolve(resolvedConfig.devServer.pagesBase),
         projectRootFolder: process.cwd(),
         publicBaseUrlPath: '/',
         jayRollupConfig: jayOptions,
         logLevel: options.logLevel,
+        httpServer,
     });
 
     app.use(server);
@@ -109,8 +113,8 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
     // generate page d.ts files
     generatePageDefinitionFiles(routes, jayOptions.tsConfigFilePath, process.cwd());
 
-    // Start http server
-    const expressServer = app.listen(devServerPort, () => {
+    // Start http server (HMR WebSocket is attached to this server)
+    httpServer.listen(devServerPort, () => {
         log.important(`🚀 Jay Stack dev server started successfully!`);
         log.important(`📱 Dev Server: http://localhost:${devServerPort}`);
         log.important(`🎨 Editor Server: http://localhost:${editorPort} (ID: ${editorId})`);
@@ -135,8 +139,8 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
     const shutdown = async () => {
         log.important('\n🛑 Shutting down servers...');
         await editorServer.stop();
-        expressServer.closeAllConnections();
-        await new Promise((resolve) => expressServer.close(resolve));
+        httpServer.closeAllConnections();
+        await new Promise((resolve) => httpServer.close(resolve));
         process.exit(0);
     };
 

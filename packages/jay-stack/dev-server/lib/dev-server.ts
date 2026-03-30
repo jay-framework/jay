@@ -89,6 +89,7 @@ function defaults(options: DevServerOptions): DevServerOptions {
             ...(options.jayRollupConfig || {}),
             tsConfigFilePath,
         },
+        httpServer: options.httpServer,
     };
 }
 
@@ -980,6 +981,7 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
         base: publicBaseUrlPath,
         jayRollupConfig,
         logLevel: viteLogLevel,
+        httpServer: options.httpServer,
     });
 
     // Set the Vite server and initialize services

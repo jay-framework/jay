@@ -18,6 +18,7 @@ import { mkDevServer } from '../lib';
 import type { JayRollupConfig } from '@jay-framework/vite-plugin';
 import path from 'path';
 import fs from 'fs';
+import http from 'node:http';
 import { fileURLToPath } from 'url';
 import express from 'express';
 
@@ -88,6 +89,9 @@ async function start() {
     console.log(`Directory: ${dirPath}`);
     console.log(`SSR: ${disableSSR ? 'disabled' : 'enabled'}`);
 
+    const app = express();
+    const httpServer = http.createServer(app);
+
     const devServer = await mkDevServer({
         pagesRootFolder: dirPath,
         projectRootFolder: dirPath,
@@ -95,9 +99,8 @@ async function start() {
             tsConfigFilePath: path.join(dirPath, 'tsconfig.json'),
         } as JayRollupConfig,
         disableSSR,
+        httpServer,
     });
-
-    const app = express();
 
     // Mount page routes first (SSR handlers)
     for (const route of devServer.routes) {
@@ -109,7 +112,7 @@ async function start() {
     app.use(devServer.viteServer.middlewares);
 
     const PORT = 3333;
-    const httpServer = app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
         console.log('');
         console.log(`  Dev Server: http://localhost:${PORT}`);
         console.log(`  Fixture: ${fixtureName}`);

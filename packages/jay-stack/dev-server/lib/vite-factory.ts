@@ -9,6 +9,7 @@ import { createServer, ViteDevServer } from 'vite';
 import { jayStackCompiler, JayRollupConfig } from '@jay-framework/compiler-jay-stack';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import type { Server } from 'node:http';
 
 export interface CreateViteServerOptions {
     /** Project root directory */
@@ -23,6 +24,8 @@ export interface CreateViteServerOptions {
     logLevel?: 'info' | 'warn' | 'error' | 'silent';
     /** Whether to clear screen on rebuild */
     clearScreen?: boolean;
+    /** HTTP server for HMR WebSocket (avoids default port 24678 collision) */
+    httpServer?: Server;
 }
 
 /**
@@ -39,6 +42,7 @@ export async function createViteServer(options: CreateViteServerOptions): Promis
         jayRollupConfig = { tsConfigFilePath: path.join(projectRoot, 'tsconfig.json') },
         logLevel = 'info',
         clearScreen = true,
+        httpServer,
     } = options;
 
     // Unique cache directory per Vite instance — prevents refresh loops when
@@ -49,7 +53,11 @@ export async function createViteServer(options: CreateViteServerOptions): Promis
 
     const vite = await createServer({
         // Don't start HTTP server - we use middleware mode
-        server: { middlewareMode: true, watch: { ignored: ['**/build/**'] } },
+        server: {
+            middlewareMode: true,
+            hmr: httpServer ? { server: httpServer } : undefined,
+            watch: { ignored: ['**/build/**'] },
+        },
         // Use Jay Stack compiler for .jay-html and other custom transforms
         plugins: [...jayStackCompiler(jayRollupConfig)],
         // Custom app type (no default middleware)

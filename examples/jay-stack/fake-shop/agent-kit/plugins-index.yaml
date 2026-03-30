@@ -1,4 +1,3 @@
-jay_stack_version: 0.0.0
 plugins:
   - name: product-rating
     path: ./src/plugins/product-rating

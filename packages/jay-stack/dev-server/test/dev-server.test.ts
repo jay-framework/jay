@@ -1,6 +1,7 @@
 import { DevServerOptions, mkDevServer } from '../lib';
 import { JayRollupConfig } from '@jay-framework/vite-plugin';
 import path from 'path';
+import http from 'node:http';
 import { Request, Response } from 'express';
 import { runHydrateScriptInJsdom } from './run-script-in-jsdom';
 
@@ -18,16 +19,18 @@ describe('dev server', () => {
         } as JayRollupConfig,
     };
 
-    function optionsForDir(directory: string): DevServerOptions {
+    function optionsForDir(directory: string, httpServer?: http.Server): DevServerOptions {
         return {
             ...baseOptions,
             pagesRootFolder: path.resolve(__dirname, directory),
             projectRootFolder: path.resolve(__dirname, directory),
+            httpServer,
         };
     }
 
     it('should handle a simple jay-html file without code', async () => {
-        const devServer = await mkDevServer(optionsForDir('./simple-page'));
+        const httpServer = http.createServer();
+        const devServer = await mkDevServer(optionsForDir('./simple-page', httpServer));
         expect(devServer.routes).toHaveLength(1);
         expect(devServer.routes[0].path).toBe('/');
 
@@ -84,7 +87,8 @@ window.dispatchEvent(new Event('jay:automation-ready'));
     });
 
     it('should run simple-page hydration script in jsdom', async () => {
-        const devServer = await mkDevServer(optionsForDir('./simple-page'));
+        const httpServer = http.createServer();
+        const devServer = await mkDevServer(optionsForDir('./simple-page', httpServer));
         const [html] = await makeRequest(devServer.routes[0].handler, '/');
         const [script] = await makeRequest(
             devServer.server,
@@ -108,7 +112,8 @@ window.dispatchEvent(new Event('jay:automation-ready'));
     });
 
     it('should handle a jay-html file with code', async () => {
-        const devServer = await mkDevServer(optionsForDir('./page-with-code'));
+        const httpServer = http.createServer();
+        const devServer = await mkDevServer(optionsForDir('./page-with-code', httpServer));
         expect(devServer.routes).toHaveLength(1);
         expect(devServer.routes[0].path).toBe('/');
 
@@ -173,7 +178,10 @@ target.appendChild(wrapped.element.dom);
     });
 
     it('should handle a jay-html file with headless component', async () => {
-        const devServer = await mkDevServer(optionsForDir('./6a-page-with-keyed-headless'));
+        const httpServer = http.createServer();
+        const devServer = await mkDevServer(
+            optionsForDir('./6a-page-with-keyed-headless', httpServer),
+        );
         expect(devServer.routes).toHaveLength(1);
         expect(devServer.routes[0].path).toBe('/');
 

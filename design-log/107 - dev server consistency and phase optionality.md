@@ -264,3 +264,20 @@ Each `createViteServer` call now generates a unique `cacheDir` using a random su
 The per-instance cache directory is cleaned up when `vite.close()` is called.
 
 **File changed**: `packages/jay-stack/dev-server/lib/vite-factory.ts`
+
+## Follow-up: Fix HMR WebSocket Port Collision Between Concurrent Dev Servers
+
+### Problem
+
+When two dev server instances run simultaneously (different projects), pages flush and reload continuously. Vite in middleware mode, with no explicit `hmr` config, creates a standalone WebSocket server on hardcoded port 24678. Both instances bind to this same port, causing cross-talk — HMR messages from one server trigger reloads in the other's browser tabs.
+
+### Fix
+
+Pass the Express HTTP server to Vite so the HMR WebSocket piggybacks on Express's port (which is already unique per instance via `get-port`).
+
+- `vite-factory.ts`: Accept optional `httpServer`, pass as `hmr.server` in Vite config
+- `dev-server-options.ts`: Add `httpServer` to `DevServerOptions`
+- `dev-server.ts`: Forward `options.httpServer` to `createViteServer`
+- `stack-cli/server.ts`: Create `http.createServer(app)` before `mkDevServer`, pass it in, then call `httpServer.listen()`
+
+**Files changed**: `vite-factory.ts`, `dev-server-options.ts`, `dev-server.ts`, `stack-cli/server.ts`
