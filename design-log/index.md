@@ -118,15 +118,16 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Compiler & Build System
 
-| #   | Title                                  | Description                           |
-| --- | -------------------------------------- | ------------------------------------- |
-| 04  | compiler                               | Initial compiler design               |
-| 20  | component compiler                     | Component compilation                 |
-| 25  | building the compiler                  | Compiler architecture, code splitting |
-| 28  | runtime compiler                       | Runtime compilation                   |
-| 29  | algorithm to split safe code           | Safe code splitting algorithm         |
-| 73  | jay-stack validate command             | Plugin validation command             |
-| 74  | watch linked style files in dev server | Dev server file watching              |
+| #   | Title                                  | Description                                             |
+| --- | -------------------------------------- | ------------------------------------------------------- |
+| 04  | compiler                               | Initial compiler design                                 |
+| 20  | component compiler                     | Component compilation                                   |
+| 25  | building the compiler                  | Compiler architecture, code splitting                   |
+| 28  | runtime compiler                       | Runtime compilation                                     |
+| 29  | algorithm to split safe code           | Safe code splitting algorithm                           |
+| 73  | jay-stack validate command             | Plugin validation command                               |
+| 74  | watch linked style files in dev server | Dev server file watching                                |
+| 118 | jay-html-compiler refactor             | Extract shared algorithms + split by compilation target |
 
 ---
 

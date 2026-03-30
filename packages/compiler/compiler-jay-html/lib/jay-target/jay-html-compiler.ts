@@ -6,6 +6,7 @@ import {
     isEnumType,
     isPromiseType,
     JayComponentType,
+    JayPromiseType,
     JayErrorType,
     JayImportLink,
     JayType,
@@ -88,6 +89,19 @@ import {
 } from './jay-html-compile-refs';
 import { processImportedComponents, renderImports } from './jay-html-compile-imports';
 import { tagToNamespace } from './tag-to-namespace';
+import {
+    buildContractRefMap,
+    COORD_ATTR,
+    expandContractType,
+    extractHeadlessCoordinate,
+    filterContentNodes,
+    isDirectiveAttribute,
+    isValidationError,
+    resolveHeadlessImport,
+    validateAsyncAccessor,
+    validateForEachAccessor,
+    validateSlowForEachAccessor,
+} from './jay-html-compiler-shared';
 
 interface RecursiveRegionInfo {
     refName: string;
@@ -218,20 +232,7 @@ function renderAttributes(element: HTMLElement, { variables }: RenderContext): R
         let attrKey = attrCanonical.match(attributesRequiresQuotes)
             ? `"${attrCanonical}"`
             : attrCanonical;
-        if (
-            attrCanonical === 'if' ||
-            attrCanonical === 'foreach' ||
-            attrCanonical === 'trackby' ||
-            attrCanonical === 'ref' ||
-            attrCanonical === 'slowforeach' ||
-            attrCanonical === 'jayindex' ||
-            attrCanonical === 'jaytrackby' ||
-            attrCanonical === 'jay-coordinate-base' ||
-            attrCanonical === AsyncDirectiveTypes.loading.directive ||
-            attrCanonical === AsyncDirectiveTypes.resolved.directive ||
-            attrCanonical === AsyncDirectiveTypes.rejected.directive
-        )
-            return;
+        if (isDirectiveAttribute(attrCanonical)) return;
         if (attrCanonical === 'style') {
             renderedAttributes.push(renderStyleAttribute(attributes[attrName], variables));
         } else if (attrCanonical === 'class') {
@@ -283,20 +284,7 @@ function renderDynamicAttributes(
         const attrKey = attrCanonical.match(attributesRequiresQuotes)
             ? `"${attrCanonical}"`
             : attrCanonical;
-        if (
-            attrCanonical === 'if' ||
-            attrCanonical === 'foreach' ||
-            attrCanonical === 'trackby' ||
-            attrCanonical === 'ref' ||
-            attrCanonical === 'slowforeach' ||
-            attrCanonical === 'jayindex' ||
-            attrCanonical === 'jaytrackby' ||
-            attrCanonical === 'jay-coordinate-base' ||
-            attrCanonical === AsyncDirectiveTypes.loading.directive ||
-            attrCanonical === AsyncDirectiveTypes.resolved.directive ||
-            attrCanonical === AsyncDirectiveTypes.rejected.directive
-        )
-            return;
+        if (isDirectiveAttribute(attrCanonical)) return;
         if (attrCanonical === 'style') {
             const styleFragment = renderStyleAttribute(attributes[attrName], variables);
             // Only include if it has dynamic imports (da)
@@ -599,12 +587,7 @@ function renderNode(node: Node, context: RenderContext): RenderFragment {
             };
         }
 
-        let childNodes =
-            node.childNodes.length > 1
-                ? node.childNodes.filter(
-                      (_) => _.nodeType !== NodeType.TEXT_NODE || _.innerText.trim() !== '',
-                  )
-                : node.childNodes;
+        let childNodes = filterContentNodes(node.childNodes, true);
 
         let childIndent = contextForChildren.indent.child();
         if (childNodes.length === 1 && childNodes[0].nodeType === NodeType.TEXT_NODE)
@@ -771,17 +754,9 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
         contractName: string,
     ): RenderFragment {
         // Find the matching headless import
-        const headlessImport = newContext.headlessImports.find(
-            (h) => h.contractName === contractName,
-        );
-        if (!headlessImport) {
-            return new RenderFragment(
-                '',
-                Imports.none(),
-                [`No headless import found for contract "${contractName}"`],
-                mkRefsTree([], {}),
-            );
-        }
+        const headlessResult = resolveHeadlessImport(contractName, newContext.headlessImports);
+        if (isValidationError(headlessResult)) return headlessResult;
+        const headlessImport = headlessResult;
 
         // Generate unique names for this instance
         const idx = newContext.headlessInstanceCounter.count++;
@@ -812,9 +787,7 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
         const componentVariables = new Variables(headlessImport.rootType);
         const childIndent = newContext.indent.child(false);
 
-        const childNodes = htmlElement.childNodes.filter(
-            (_) => _.nodeType !== NodeType.TEXT_NODE || _.innerText.trim() !== '',
-        );
+        const childNodes = filterContentNodes(htmlElement.childNodes);
 
         let inlineBody: RenderFragment;
         if (childNodes.length === 0) {
@@ -827,31 +800,8 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 mkRefsTree([], {}),
             );
         } else {
-            // Build importedRefNameToRef from the contract's refs tree
-            // This maps template ref attribute names (camelCase) to contract Ref objects
-            // We use originalName as the ref field so ReferencesManager.for() uses the
-            // original tag name (e.g., 'add to cart') rather than the camelCased version
-            const instanceRefMap = new Map<string, Ref>();
-            const collectContractRefs = (refsTree: RefsTree) => {
-                for (const ref of refsTree.refs) {
-                    // Create a ref with originalName as the ref field for ReferencesManager
-                    const refWithOriginalName = mkRef(
-                        ref.originalName, // Use original tag name for ReferencesManager
-                        ref.originalName,
-                        ref.constName,
-                        ref.repeated,
-                        ref.autoRef,
-                        ref.viewStateType,
-                        ref.elementType,
-                    );
-                    // Map camelCase(tagName) -> Ref, so ref="addToCart" matches tag "add to cart"
-                    instanceRefMap.set(camelCase(ref.originalName), refWithOriginalName);
-                }
-                for (const child of Object.values(refsTree.children)) {
-                    collectContractRefs(child);
-                }
-            };
-            collectContractRefs(headlessImport.refs);
+            // Build ref map from contract refs for inline template compilation
+            const instanceRefMap = buildContractRefMap(headlessImport.refs);
 
             // Compile each child against the component's ViewState
             // Exclude the component's own code link name from importedSymbols to prevent
@@ -1037,10 +987,7 @@ const ${componentSymbol} = makeHeadlessInstanceComponent(
                 const newVariables = variables.childVariableForWithData(accessorExpr);
 
                 // Render children (not the with-data element itself) with new context
-                const childNodes = htmlElement.childNodes.filter(
-                    (child) =>
-                        child.nodeType !== NodeType.TEXT_NODE || child.innerText.trim() !== '',
-                );
+                const childNodes = filterContentNodes(htmlElement.childNodes);
 
                 if (childNodes.length !== 1) {
                     return new RenderFragment('', Imports.none(), [
@@ -1142,26 +1089,19 @@ const ${componentSymbol} = makeHeadlessInstanceComponent(
                 let renderedCondition = parseCondition(condition, variables);
                 return c(renderedCondition, childElement);
             } else if (isForEach(htmlElement)) {
-                const forEach = htmlElement.getAttribute('forEach'); // todo extract type
-                const trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
+                const forEach = htmlElement.getAttribute('forEach');
+                const trackBy = htmlElement.getAttribute('trackBy');
 
-                const forEachAccessor = parseAccessor(forEach, variables);
+                const validated = validateForEachAccessor(forEach, variables);
+                if (isValidationError(validated)) return validated;
+                const { accessor: forEachAccessor, childVariables: forEachVariables } = validated;
                 const forEachAccessPath = forEachAccessor.terms;
-                if (forEachAccessor.resolvedType === JayUnknown)
-                    return new RenderFragment('', Imports.none(), [
-                        `forEach directive - failed to resolve forEach type [forEach=${forEach}]`,
-                    ]);
-                if (!isArrayType(forEachAccessor.resolvedType))
-                    return new RenderFragment('', Imports.none(), [
-                        `forEach directive - resolved forEach type is not an array [forEach=${forEach}]`,
-                    ]);
 
                 const paramName = forEachAccessor.rootVar;
                 const paramType = variables.currentType.name;
                 const forEachFragment = forEachAccessor
                     .render()
                     .map((_) => `(${paramName}: ${paramType}) => ${_}`);
-                let forEachVariables = variables.childVariableFor(forEachAccessor);
 
                 // Track the forEach iteration type as a used component import
                 context.usedComponentImports.add(forEachVariables.currentType.name);
@@ -1192,18 +1132,10 @@ const ${componentSymbol} = makeHeadlessInstanceComponent(
                 const { arrayName, jayIndex, jayTrackBy } = slowForEachInfo;
 
                 // Parse the array accessor to get type info
-                const arrayAccessor = parseAccessor(arrayName, variables);
-                if (arrayAccessor.resolvedType === JayUnknown)
-                    return new RenderFragment('', Imports.none(), [
-                        `slowForEach directive - failed to resolve array type [slowForEach=${arrayName}]`,
-                    ]);
-                if (!isArrayType(arrayAccessor.resolvedType))
-                    return new RenderFragment('', Imports.none(), [
-                        `slowForEach directive - resolved type is not an array [slowForEach=${arrayName}]`,
-                    ]);
-
-                // Get the item type for the child context
-                let slowForEachVariables = variables.childVariableFor(arrayAccessor);
+                const slowValidated = validateSlowForEachAccessor(arrayName, variables);
+                if (isValidationError(slowValidated)) return slowValidated;
+                const { accessor: arrayAccessor, childVariables: slowForEachVariables } =
+                    slowValidated;
 
                 // Track the iteration type as a used component import
                 context.usedComponentImports.add(slowForEachVariables.currentType.name);
@@ -1247,23 +1179,22 @@ const ${componentSymbol} = makeHeadlessInstanceComponent(
             } else if (checkAsync(htmlElement).isAsync) {
                 const asyncDirective = checkAsync(htmlElement);
                 const asyncProperty = htmlElement.getAttribute(asyncDirective.directive);
-                const asyncAccessor = parseAccessor(asyncProperty, variables);
+                const asyncResult = validateAsyncAccessor(
+                    asyncProperty,
+                    asyncDirective.directive,
+                    variables,
+                );
+                if (isValidationError(asyncResult)) return asyncResult;
+                const asyncAccessor = asyncResult;
                 const asyncAccessPath = asyncAccessor.terms;
-                if (asyncAccessor.resolvedType === JayUnknown)
-                    return new RenderFragment('', Imports.none(), [
-                        `async directive - failed to resolve type for ${asyncDirective}=${asyncProperty}`,
-                    ]);
-                if (!isPromiseType(asyncAccessor.resolvedType))
-                    return new RenderFragment('', Imports.none(), [
-                        `async directive - resolved type for ${asyncDirective}=${asyncProperty} is not a promise, found ${asyncAccessor.resolvedType.name}`,
-                    ]);
 
                 const getPromiseFragment: RenderFragment = asyncAccessor
                     .render()
                     .map((_) => `vs => ${_}`);
 
                 if (asyncDirective === AsyncDirectiveTypes.resolved) {
-                    const promiseResolvedType = asyncAccessor.resolvedType.itemType;
+                    const promiseResolvedType = (asyncAccessor.resolvedType as JayPromiseType)
+                        .itemType;
                     const childVariables = new Variables(promiseResolvedType, variables, 1);
 
                     let newContext = {
@@ -1590,12 +1521,7 @@ ${indent.firstLine}])`,
     }
 
     function renderHtmlElement(htmlElement, newContext: RenderContext) {
-        let childNodes =
-            node.childNodes.length > 1
-                ? node.childNodes.filter(
-                      (_) => _.nodeType !== NodeType.TEXT_NODE || _.innerText.trim() !== '',
-                  )
-                : node.childNodes;
+        let childNodes = filterContentNodes(node.childNodes, true);
 
         let childIndent = newContext.indent.withFirstLineBreak();
         let childRenders =
@@ -1645,26 +1571,19 @@ ${indent.firstLine}])`,
     if (node.nodeType === NodeType.ELEMENT_NODE) {
         let htmlElement = node as HTMLElement;
         if (isForEach(htmlElement)) {
-            const forEach = htmlElement.getAttribute('forEach'); // todo extract type
-            const trackBy = htmlElement.getAttribute('trackBy'); // todo validate as attribute
-            const forEachAccessor = parseAccessor(forEach, variables);
-            const forEachAccessPath = forEachAccessor.terms;
+            const forEach = htmlElement.getAttribute('forEach');
+            const trackBy = htmlElement.getAttribute('trackBy');
 
-            if (forEachAccessor.resolvedType === JayUnknown)
-                return new RenderFragment('', Imports.none(), [
-                    `forEach directive - failed to resolve forEach type [forEach=${forEach}]`,
-                ]);
-            if (!isArrayType(forEachAccessor.resolvedType))
-                return new RenderFragment('', Imports.none(), [
-                    `forEach directive - resolved forEach type is not an array [forEach=${forEach}]`,
-                ]);
+            const validated = validateForEachAccessor(forEach, variables);
+            if (isValidationError(validated)) return validated;
+            const { accessor: forEachAccessor, childVariables: forEachVariables } = validated;
+            const forEachAccessPath = forEachAccessor.terms;
 
             const paramName = forEachAccessor.rootVar;
             const paramType = variables.currentType.name;
             const forEachFragment = forEachAccessor
                 .render()
                 .map((_) => `(${paramName}: ${paramType}) => ${_}`);
-            let forEachVariables = variables.childVariableFor(forEachAccessor);
             let childElement = renderHtmlElement(htmlElement, {
                 ...context,
                 variables: forEachVariables,
@@ -1871,15 +1790,7 @@ export function generateElementDefinitionFile(
 
         // If we have contract or inline data, replace the 2-parameter JayContract with 5-parameter version
         if (jayFile.contract || jayFile.hasInlineData) {
-            const old2ParamContract = `export type ${baseName}Contract = JayContract<${baseName}ViewState, ${baseName}ElementRefs>;`;
-            const new5ParamContract = `export type ${baseName}Contract = JayContract<
-    ${baseName}ViewState,
-    ${baseName}ElementRefs,
-    ${baseName}SlowViewState,
-    ${baseName}FastViewState,
-    ${baseName}InteractiveViewState
->;`;
-            renderedElement = renderedElement.replace(old2ParamContract, new5ParamContract);
+            renderedElement = expandContractType(renderedElement, baseName);
         }
 
         return [
@@ -1922,23 +1833,7 @@ export function generateElementFile(
 
     // If we have contract or inline data, replace the 2-parameter JayContract with 5-parameter version
     if (jayFile.contract || jayFile.hasInlineData) {
-        const baseName = jayFile.baseElementName;
-        // Use regex to match any ViewState type name (not just ${baseName}ViewState)
-        // This handles cases like imported types (e.g., "Node" instead of "RecursiveComponentsViewState")
-        const contractPattern = new RegExp(
-            `export type ${baseName}Contract = JayContract<([^,]+), ${baseName}ElementRefs>;`,
-            'g',
-        );
-
-        renderedElement = renderedElement.replace(contractPattern, (match, viewStateType) => {
-            return `export type ${baseName}Contract = JayContract<
-    ${viewStateType},
-    ${baseName}ElementRefs,
-    ${baseName}SlowViewState,
-    ${baseName}FastViewState,
-    ${baseName}InteractiveViewState
->;`;
-        });
+        renderedElement = expandContractType(renderedElement, jayFile.baseElementName);
     }
 
     // Build the set of used component type names from headless imports
@@ -2032,23 +1927,7 @@ export function generateElementBridgeFile(jayFile: JayHtmlSourceFile): string {
 
     // If we have contract or inline data, replace the 2-parameter JayContract with 5-parameter version
     if (jayFile.contract || jayFile.hasInlineData) {
-        const baseName = jayFile.baseElementName;
-        // Use regex to match any ViewState type name (not just ${baseName}ViewState)
-        // This handles cases like imported types (e.g., "Node" instead of "RecursiveComponentsViewState")
-        const contractPattern = new RegExp(
-            `export type ${baseName}Contract = JayContract<([^,]+), ${baseName}ElementRefs>;`,
-            'g',
-        );
-
-        renderedElement = renderedElement.replace(contractPattern, (match, viewStateType) => {
-            return `export type ${baseName}Contract = JayContract<
-    ${viewStateType},
-    ${baseName}ElementRefs,
-    ${baseName}SlowViewState,
-    ${baseName}FastViewState,
-    ${baseName}InteractiveViewState
->;`;
-        });
+        renderedElement = expandContractType(renderedElement, jayFile.baseElementName);
     }
 
     return [
@@ -2297,9 +2176,7 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             indent: new Indent('    ').child().noFirstLineBreak(),
             isInsideGuard: true,
         };
-        const createChildNodes = element.childNodes.filter(
-            (_) => _.nodeType !== NodeType.TEXT_NODE || (_.innerText || '').trim() !== '',
-        );
+        const createChildNodes = filterContentNodes(element.childNodes);
         let createChildren =
             createChildNodes.length === 0
                 ? RenderFragment.empty()
@@ -2351,23 +2228,16 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         const { variables, indent } = context;
         const forEach = element.getAttribute('forEach');
         const trackBy = element.getAttribute('trackBy');
-        const forEachAccessor = parseAccessor(forEach, variables);
 
-        if (forEachAccessor.resolvedType === JayUnknown)
-            return new RenderFragment('', Imports.none(), [
-                `forEach directive - failed to resolve forEach type [forEach=${forEach}]`,
-            ]);
-        if (!isArrayType(forEachAccessor.resolvedType))
-            return new RenderFragment('', Imports.none(), [
-                `forEach directive - resolved forEach type is not an array [forEach=${forEach}]`,
-            ]);
+        const validated = validateForEachAccessor(forEach, variables);
+        if (isValidationError(validated)) return validated;
+        const { accessor: forEachAccessor, childVariables: forEachVariables } = validated;
 
         const paramName = forEachAccessor.rootVar;
         const paramType = variables.currentType.name;
         const forEachFragment = forEachAccessor
             .render()
             .map((_) => `(${paramName}: ${paramType}) => ${_}`);
-        const forEachVariables = variables.childVariableFor(forEachAccessor);
 
         // Snapshot ref name generator state BEFORE the adopt callback runs.
         // The create callback needs the same starting state so it generates
@@ -2376,9 +2246,7 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
 
         // Adopt callback: render item children and return as an array.
         // hydrateForEach combines them into a single BaseJayElement internally.
-        const itemChildNodes = element.childNodes.filter(
-            (_) => _.nodeType !== NodeType.TEXT_NODE || (_.innerText || '').trim() !== '',
-        );
+        const itemChildNodes = filterContentNodes(element.childNodes);
         const trackByExpr = `${forEachVariables.currentVar}.${trackBy}`;
         const itemContext: HydrateContext = {
             ...context,
@@ -2435,9 +2303,7 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             refNameGenerator: preAdoptRefNameGenerator,
             coordinateCounters: new Map(),
         };
-        const createChildNodes = element.childNodes.filter(
-            (_) => _.nodeType !== NodeType.TEXT_NODE || (_.innerText || '').trim() !== '',
-        );
+        const createChildNodes = filterContentNodes(element.childNodes);
         let createChildren =
             createChildNodes.length === 0
                 ? RenderFragment.empty()
@@ -2507,17 +2373,9 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         const { arrayName, jayIndex, jayTrackBy } = slowForEachInfo;
         const { variables, indent } = context;
 
-        const arrayAccessor = parseAccessor(arrayName, variables);
-        if (arrayAccessor.resolvedType === JayUnknown)
-            return new RenderFragment('', Imports.none(), [
-                `slowForEach directive - failed to resolve array type [slowForEach=${arrayName}]`,
-            ]);
-        if (!isArrayType(arrayAccessor.resolvedType))
-            return new RenderFragment('', Imports.none(), [
-                `slowForEach directive - resolved type is not an array [slowForEach=${arrayName}]`,
-            ]);
-
-        const slowForEachVariables = variables.childVariableFor(arrayAccessor);
+        const slowValidated = validateSlowForEachAccessor(arrayName, variables);
+        if (isValidationError(slowValidated)) return slowValidated;
+        const { accessor: arrayAccessor, childVariables: slowForEachVariables } = slowValidated;
         const parentTypeName = variables.currentType.name;
         const itemTypeName = slowForEachVariables.currentType.name;
         const paramName = arrayAccessor.rootVar;
@@ -2545,9 +2403,7 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         // Process children individually to determine if wrapping is needed (DL#115).
         // slowForEachItem's callback must return a single BaseJayElement. When there are
         // multiple dynamic children, wrap in adoptElement to provide a single return value.
-        const itemChildNodes = element.childNodes.filter(
-            (_) => _.nodeType !== NodeType.TEXT_NODE || (_.innerText || '').trim() !== '',
-        );
+        const itemChildNodes = filterContentNodes(element.childNodes);
         const childFragments = itemChildNodes.map((child) => renderHydrateNode(child, itemContext));
         const nonEmptyChildren = childFragments.filter((f) => f.rendered.trim());
 
@@ -2672,12 +2528,9 @@ function renderHydrateHeadlessInstance(
     renderContext: RenderContext,
     contractName: string,
 ): RenderFragment {
-    const headlessImport = context.headlessImports.find((h) => h.contractName === contractName);
-    if (!headlessImport) {
-        return new RenderFragment('', Imports.none(), [
-            `No headless import found for contract "${contractName}"`,
-        ]);
-    }
+    const headlessResult = resolveHeadlessImport(contractName, context.headlessImports);
+    if (isValidationError(headlessResult)) return headlessResult;
+    const headlessImport = headlessResult;
 
     // Generate unique names
     const idx = context.headlessInstanceCounter.count++;
@@ -2700,16 +2553,9 @@ function renderHydrateHeadlessInstance(
     }
 
     // Read instance coordinate from pre-assigned jay-coordinate-base (DL#103)
-    const instanceCoord = element.getAttribute(COORD_ATTR);
-    if (!instanceCoord) {
-        return new RenderFragment('', Imports.none(), [
-            `Headless instance <jay:${contractName}> missing jay-coordinate-base — run assignCoordinates first`,
-        ]);
-    }
-    // Extract coordinateSuffix from the full coordinate (last contractName:N segment)
-    const coordSegments = instanceCoord.split('/');
-    const coordinateSuffix =
-        coordSegments.find((s) => s.startsWith(contractName + ':')) || `${contractName}:0`;
+    const coordResult = extractHeadlessCoordinate(element, contractName);
+    if (isValidationError(coordResult)) return coordResult;
+    const { instanceCoord, coordSegments, coordinateSuffix } = coordResult;
     const isInsideForEach = context.insideFastForEach;
 
     // Compute instance key for __headlessInstances lookup (same logic as server target)
@@ -2727,35 +2573,15 @@ function renderHydrateHeadlessInstance(
 
     // --- Compile adopt inline template (hydrate APIs) ---
     const componentVariables = new Variables(headlessImport.rootType);
-    const childNodes = element.childNodes.filter(
-        (_) => _.nodeType !== NodeType.TEXT_NODE || (_.innerText || '').trim() !== '',
-    );
+    const childNodes = filterContentNodes(element.childNodes);
     if (childNodes.length === 0) {
         return new RenderFragment('', Imports.none(), [
             `Headless component instance <jay:${contractName}> must have inline template content`,
         ]);
     }
 
-    // Build ref map from contract refs (same as element target)
-    const instanceRefMap = new Map<string, Ref>();
-    const collectContractRefs = (refsTree: RefsTree) => {
-        for (const ref of refsTree.refs) {
-            const refWithOriginalName = mkRef(
-                ref.originalName,
-                ref.originalName,
-                ref.constName,
-                ref.repeated,
-                ref.autoRef,
-                ref.viewStateType,
-                ref.elementType,
-            );
-            instanceRefMap.set(camelCase(ref.originalName), refWithOriginalName);
-        }
-        for (const child of Object.values(refsTree.children)) {
-            collectContractRefs(child);
-        }
-    };
-    collectContractRefs(headlessImport.refs);
+    // Build ref map from contract refs
+    const instanceRefMap = buildContractRefMap(headlessImport.refs);
 
     // Compile adopt inline template using HydrateContext with component's ViewState.
     // instanceCoordPrefix: child adoptElement uses relative coords so forInstance(instanceCoord) resolves.
@@ -3041,12 +2867,7 @@ function renderHydrateElementContent(
         attributes.imports.has(Import.booleanAttribute);
 
     // Filter child nodes (remove whitespace-only text nodes if there are multiple children)
-    const childNodes =
-        element.childNodes.length > 1
-            ? element.childNodes.filter(
-                  (_) => _.nodeType !== NodeType.TEXT_NODE || (_.innerText || '').trim() !== '',
-              )
-            : element.childNodes;
+    const childNodes = filterContentNodes(element.childNodes, true);
 
     // Check if this element has a single dynamic text child, or data-jay-dynamic (from wrap in slow render)
     let textFragment: RenderFragment | null = null;
@@ -3466,23 +3287,7 @@ export function generateElementHydrateFile(
     // If we have contract or inline data, replace the 2-parameter JayContract with 5-parameter version
     let finalRenderedElement = renderedElement;
     if (jayFile.contract || jayFile.hasInlineData) {
-        const baseName = jayFile.baseElementName;
-        const contractPattern = new RegExp(
-            `export type ${baseName}Contract = JayContract<([^,]+), ${baseName}ElementRefs>;`,
-            'g',
-        );
-        finalRenderedElement = finalRenderedElement.replace(
-            contractPattern,
-            (match, viewStateType) => {
-                return `export type ${baseName}Contract = JayContract<
-    ${viewStateType},
-    ${baseName}ElementRefs,
-    ${baseName}SlowViewState,
-    ${baseName}FastViewState,
-    ${baseName}InteractiveViewState
->;`;
-            },
-        );
+        finalRenderedElement = expandContractType(finalRenderedElement, jayFile.baseElementName);
     }
 
     // Combine imports: type definitions (from renderedImplementation) + hydrate function.
@@ -3545,8 +3350,6 @@ interface ServerContext {
      *  Consumed by fast forEach handler to include in prefix computation. */
     slowForEachCoordPrefix?: string;
 }
-
-const COORD_ATTR = 'jay-coordinate-base';
 
 /**
  * Read pre-assigned coordinate from jay-coordinate-base attribute.
@@ -3632,18 +3435,11 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
     if (isForEach(element)) {
         const forEach = element.getAttribute('forEach');
         const trackBy = element.getAttribute('trackBy');
-        const forEachAccessor = parseAccessor(forEach, variables);
 
-        if (forEachAccessor.resolvedType === JayUnknown)
-            return new RenderFragment('', Imports.none(), [
-                `forEach directive - failed to resolve forEach type [forEach=${forEach}]`,
-            ]);
-        if (!isArrayType(forEachAccessor.resolvedType))
-            return new RenderFragment('', Imports.none(), [
-                `forEach directive - resolved forEach type is not an array [forEach=${forEach}]`,
-            ]);
+        const validated = validateForEachAccessor(forEach, variables);
+        if (isValidationError(validated)) return validated;
+        const { accessor: forEachAccessor, childVariables: forEachVariables } = validated;
 
-        const forEachVariables = variables.childVariableFor(forEachAccessor);
         const arrayExpr = forEachAccessor.render().rendered;
         const itemIndent = new Indent(indent.curr + '    ');
         // Add trackBy variable mapping for $placeholder compilation in child coordinates.
@@ -3682,9 +3478,7 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
         );
 
         // Render children
-        const childNodes = element.childNodes.filter(
-            (_) => _.nodeType !== NodeType.TEXT_NODE || (_.innerText || '').trim() !== '',
-        );
+        const childNodes = filterContentNodes(element.childNodes);
         const children = mergeServerFragments(
             childNodes.map((child) => renderServerNode(child, itemContext)),
         );
@@ -3704,8 +3498,9 @@ function renderServerElement(element: HTMLElement, context: ServerContext): Rend
         const slowForEachInfo = getSlowForEachInfo(element);
         if (slowForEachInfo) {
             const { arrayName, jayIndex, jayTrackBy } = slowForEachInfo;
-            const arrayAccessor = parseAccessor(arrayName, variables);
-            const slowForEachVariables = variables.childVariableFor(arrayAccessor);
+            const slowValidated = validateSlowForEachAccessor(arrayName, variables);
+            if (isValidationError(slowValidated)) return slowValidated;
+            const { accessor: arrayAccessor, childVariables: slowForEachVariables } = slowValidated;
             const arrayExpr = arrayAccessor.render().rendered;
             const itemVar = slowForEachVariables.currentVar;
             // Children inside slowForEach read their coordinates from jay-coordinate-base
@@ -3774,12 +3569,9 @@ function renderServerHeadlessInstance(
     const { indent } = context;
 
     // Find the matching headless import
-    const headlessImport = context.headlessImports.find((h) => h.contractName === contractName);
-    if (!headlessImport) {
-        return new RenderFragment('', Imports.none(), [
-            `No headless import found for contract "${contractName}"`,
-        ]);
-    }
+    const headlessResult = resolveHeadlessImport(contractName, context.headlessImports);
+    if (isValidationError(headlessResult)) return headlessResult;
+    const headlessImport = headlessResult;
 
     // Generate unique variable name for this instance's ViewState
     const idx = context.headlessInstanceCounter.count++;
@@ -3787,17 +3579,9 @@ function renderServerHeadlessInstance(
     const viewStateTypeName = headlessImport.rootType.name;
 
     // Read instance coordinate from pre-assigned jay-coordinate-base (DL#103)
-    const instanceCoord = element.getAttribute(COORD_ATTR);
-    if (!instanceCoord) {
-        return new RenderFragment('', Imports.none(), [
-            `Headless instance <jay:${contractName}> missing jay-coordinate-base — run assignCoordinates first`,
-        ]);
-    }
-
-    // Extract coordinateSuffix from the full coordinate (last contractName:N segment)
-    const coordSegments = instanceCoord.split('/');
-    const coordinateSuffix =
-        coordSegments.find((s) => s.startsWith(contractName + ':')) || `${contractName}:0`;
+    const coordResult = extractHeadlessCoordinate(element, contractName);
+    if (isValidationError(coordResult)) return coordResult;
+    const { instanceCoord, coordSegments, coordinateSuffix } = coordResult;
 
     // Compute __headlessInstances lookup key.
     // The key format depends on the context:
@@ -3831,9 +3615,7 @@ function renderServerHeadlessInstance(
     // Compile inline template children against the component's ViewState,
     // using the instance variable name so expressions resolve to vs_product_card0.name etc.
     const componentVariables = new Variables(headlessImport.rootType, undefined, 0, varName);
-    const childNodes = element.childNodes.filter(
-        (_) => _.nodeType !== NodeType.TEXT_NODE || (_.innerText || '').trim() !== '',
-    );
+    const childNodes = filterContentNodes(element.childNodes);
 
     if (childNodes.length === 0) {
         return new RenderFragment('', Imports.none(), [
@@ -3941,21 +3723,7 @@ function renderServerAttributes(element: HTMLElement, context: ServerContext): R
 
     Object.keys(attributes).forEach((attrName) => {
         const attrCanonical = attrName.toLowerCase();
-        if (
-            attrCanonical === 'if' ||
-            attrCanonical === 'foreach' ||
-            attrCanonical === 'trackby' ||
-            attrCanonical === 'ref' ||
-            attrCanonical === 'slowforeach' ||
-            attrCanonical === 'jayindex' ||
-            attrCanonical === 'jaytrackby' ||
-            attrCanonical === COORD_ATTR ||
-            attrCanonical === 'data-jay-dynamic' || // compile-time only (DL#102)
-            attrCanonical === AsyncDirectiveTypes.loading.directive ||
-            attrCanonical === AsyncDirectiveTypes.resolved.directive ||
-            attrCanonical === AsyncDirectiveTypes.rejected.directive
-        )
-            return;
+        if (isDirectiveAttribute(attrCanonical, 'data-jay-dynamic')) return;
 
         const attrValue = attributes[attrName];
 
@@ -4085,18 +3853,11 @@ function renderServerNodeAsString(node: Node, context: ServerContext): RenderFra
 function renderServerForEachAsString(element: HTMLElement, context: ServerContext): RenderFragment {
     const { variables } = context;
     const forEach = element.getAttribute('forEach');
-    const forEachAccessor = parseAccessor(forEach, variables);
 
-    if (forEachAccessor.resolvedType === JayUnknown)
-        return new RenderFragment('', Imports.none(), [
-            `forEach directive - failed to resolve forEach type [forEach=${forEach}]`,
-        ]);
-    if (!isArrayType(forEachAccessor.resolvedType))
-        return new RenderFragment('', Imports.none(), [
-            `forEach directive - resolved forEach type is not an array [forEach=${forEach}]`,
-        ]);
+    const validated = validateForEachAccessor(forEach, variables);
+    if (isValidationError(validated)) return validated;
+    const { accessor: forEachAccessor, childVariables: forEachVariables } = validated;
 
-    const forEachVariables = variables.childVariableFor(forEachAccessor);
     const arrayExpr = forEachAccessor.render().rendered;
     const itemContext: ServerContext = {
         ...context,
@@ -4126,12 +3887,7 @@ function renderServerElementAsString(
     const refAttr = element.attributes.ref;
     const refName = refAttr ? camelCase(refAttr) : null;
 
-    const childNodes =
-        element.childNodes.length > 1
-            ? element.childNodes.filter(
-                  (_) => _.nodeType !== NodeType.TEXT_NODE || (_.innerText || '').trim() !== '',
-              )
-            : element.childNodes;
+    const childNodes = filterContentNodes(element.childNodes, true);
 
     // Determine coordinate
     let dynamicTextFragment: RenderFragment | null = null;
@@ -4223,21 +3979,7 @@ function renderServerAttributesAsString(
 
     Object.keys(attributes).forEach((attrName) => {
         const attrCanonical = attrName.toLowerCase();
-        if (
-            attrCanonical === 'if' ||
-            attrCanonical === 'foreach' ||
-            attrCanonical === 'trackby' ||
-            attrCanonical === 'ref' ||
-            attrCanonical === 'slowforeach' ||
-            attrCanonical === 'jayindex' ||
-            attrCanonical === 'jaytrackby' ||
-            attrCanonical === COORD_ATTR ||
-            attrCanonical === 'data-jay-dynamic' || // compile-time only (DL#102)
-            attrCanonical === AsyncDirectiveTypes.loading.directive ||
-            attrCanonical === AsyncDirectiveTypes.resolved.directive ||
-            attrCanonical === AsyncDirectiveTypes.rejected.directive
-        )
-            return;
+        if (isDirectiveAttribute(attrCanonical, 'data-jay-dynamic')) return;
 
         const attrValue = attributes[attrName];
 
@@ -4350,12 +4092,7 @@ function renderServerElementContent(
     const { variables, indent } = context;
 
     // Check if this element has a single dynamic text child
-    const childNodes =
-        element.childNodes.length > 1
-            ? element.childNodes.filter(
-                  (_) => _.nodeType !== NodeType.TEXT_NODE || (_.innerText || '').trim() !== '',
-              )
-            : element.childNodes;
+    const childNodes = filterContentNodes(element.childNodes, true);
 
     let dynamicTextFragment: RenderFragment | null = null;
     const dataJayDynamic = element.getAttribute('data-jay-dynamic');
@@ -4530,17 +4267,9 @@ function renderServerAsyncGroup(group: AsyncGroup, context: ServerContext): Rend
     const parts: RenderFragment[] = [];
 
     // Parse the async accessor from the parent's variables
-    const asyncAccessor = parseAccessor(propName, variables);
-    if (asyncAccessor.resolvedType === JayUnknown) {
-        return new RenderFragment('', Imports.none(), [
-            `async directive - failed to resolve type for when-loading=${propName}`,
-        ]);
-    }
-    if (!isPromiseType(asyncAccessor.resolvedType)) {
-        return new RenderFragment('', Imports.none(), [
-            `async directive - resolved type for when-loading=${propName} is not a promise`,
-        ]);
-    }
+    const asyncResult = validateAsyncAccessor(propName, 'when-loading', variables);
+    if (isValidationError(asyncResult)) return asyncResult;
+    const asyncAccessor = asyncResult;
 
     // 1. Render when-loading inline with jay-async wrapper
     if (group.loadingElement) {
@@ -4561,7 +4290,7 @@ function renderServerAsyncGroup(group: AsyncGroup, context: ServerContext): Rend
     const templateValidations: string[] = [];
 
     if (group.resolvedElement) {
-        const promiseResolvedType = asyncAccessor.resolvedType.itemType;
+        const promiseResolvedType = (asyncAccessor.resolvedType as JayPromiseType).itemType;
         const resolvedVariables = new Variables(promiseResolvedType, variables, 1);
         const resolvedContext: ServerContext = {
             ...context,
@@ -4609,16 +4338,7 @@ function hasDynamicAttributeBindings(element: HTMLElement, variables: Variables)
     const attributes = element.attributes;
     for (const attrName of Object.keys(attributes)) {
         const attrCanonical = attrName.toLowerCase();
-        if (
-            attrCanonical === 'if' ||
-            attrCanonical === 'foreach' ||
-            attrCanonical === 'trackby' ||
-            attrCanonical === 'ref' ||
-            attrCanonical === 'slowforeach' ||
-            attrCanonical === 'jayindex' ||
-            attrCanonical === 'jaytrackby'
-        )
-            continue;
+        if (isDirectiveAttribute(attrCanonical)) continue;
         const attrValue = attributes[attrName];
         if (propertyMapping[attrCanonical]?.type === BOOLEAN_ATTRIBUTE) {
             if (attrValue !== '') return true; // Dynamic boolean is always dynamic
