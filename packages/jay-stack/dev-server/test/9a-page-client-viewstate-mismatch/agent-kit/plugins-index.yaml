@@ -1,4 +1,3 @@
-jay_stack_version: 0.15.3
 plugins:
   - name: test-status
     path: ./src/plugins/test-status

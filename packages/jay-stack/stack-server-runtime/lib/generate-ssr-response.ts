@@ -250,6 +250,14 @@ async function compileAndLoadServerElement(
     const serverElementPath = path.join(serverElementDir, serverElementFilename);
     await fs.writeFile(serverElementPath, adjustedCode, 'utf-8');
 
+    // Invalidate Vite's module graph for this path — the build/ directory is in the
+    // watcher ignore list, so Vite won't detect the file was overwritten and would
+    // return a stale cached module without this.
+    const existingModule = vite.moduleGraph.getModuleById(serverElementPath);
+    if (existingModule) {
+        vite.moduleGraph.invalidateModule(existingModule);
+    }
+
     const serverModule = await vite.ssrLoadModule(serverElementPath);
 
     return {

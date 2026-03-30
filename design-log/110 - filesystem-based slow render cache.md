@@ -154,3 +154,19 @@ A: Keep it for invalidation. But instead of mapping to cache keys, map source pa
 - hydration: 195/195 passed
 - dev-server: 4/4 passed
 - TypeScript: zero type errors in both packages
+
+## Bug Fix: Server Element Cache Not Invalidated on File Change
+
+### Problem
+
+Two caches were not properly invalidated when jay-html, page.ts, or .jay-contract files changed:
+
+1. **`serverModuleCache` key mismatch** — The cache in `generate-ssr-response.ts` is keyed by the pre-rendered path (e.g., `build/pre-rendered/products/[slug]/page_abc123.jay-html`), but `invalidateServerElementCache(changedPath)` was called with the source path (e.g., `src/pages/products/[slug]/page.jay-html`). These never matched, so the server element cache was never invalidated. Additionally, `invalidateServerElementCache` was only called for `.jay-html` changes — not for `page.ts` or `.jay-contract` changes.
+
+2. **Vite module graph staleness** — `compileAndLoadServerElement` writes a `.server-element.ts` file into `build/pre-rendered/` and loads it via `vite.ssrLoadModule()`. But `build/` is in the watcher's ignore list (`vite-factory.ts`), so Vite never detects the file was overwritten and returns a stale cached module.
+
+### Fix
+
+**`dev-server.ts`:** Replaced `invalidateServerElementCache(changedPath)` with `clearServerElementCache()` in all three watcher branches (`.jay-html`, `page.ts`, `.jay-contract`). Since pre-rendered paths include param hashes, we can't map source → pre-rendered paths. Clearing all entries is safe in dev — the server element is recompiled on next request.
+
+**`generate-ssr-response.ts`:** Added Vite module graph invalidation in `compileAndLoadServerElement` before calling `vite.ssrLoadModule()`. This ensures Vite reloads the newly written `.server-element.ts` instead of returning a stale version from its ignored-directory cache.

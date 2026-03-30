@@ -30,7 +30,7 @@ import { loadPageParts } from '@jay-framework/stack-server-runtime';
 import {
     generateClientScript,
     generateSSRPageHtml,
-    invalidateServerElementCache,
+    clearServerElementCache,
     ProjectClientInitInfo,
 } from '@jay-framework/stack-server-runtime';
 import { Request, Response } from 'express';
@@ -1117,9 +1117,10 @@ function setupSlowRenderCacheInvalidation(
 
         // Invalidate cache for jay-html file changes
         if (changedPath.endsWith('.jay-html')) {
-            invalidateServerElementCache(changedPath);
+            clearServerElementCache();
             cache.invalidate(changedPath).then(() => {
                 getLogger().info(`[SlowRender] Cache invalidated for ${changedPath}`);
+                vite.ws.send({ type: 'full-reload' });
             });
             return;
         }
@@ -1129,10 +1130,12 @@ function setupSlowRenderCacheInvalidation(
             // The jay-html is in the same directory as page.ts
             const dir = path.dirname(changedPath);
             const jayHtmlPath = path.join(dir, 'page.jay-html');
+            clearServerElementCache();
             cache.invalidate(jayHtmlPath).then(() => {
                 getLogger().info(
                     `[SlowRender] Cache invalidated for ${jayHtmlPath} (page.ts changed)`,
                 );
+                vite.ws.send({ type: 'full-reload' });
             });
             return;
         }
@@ -1141,10 +1144,12 @@ function setupSlowRenderCacheInvalidation(
         if (changedPath.endsWith('.jay-contract')) {
             // The jay-html has the same name as the contract
             const jayHtmlPath = changedPath.replace('.jay-contract', '.jay-html');
+            clearServerElementCache();
             cache.invalidate(jayHtmlPath).then(() => {
                 getLogger().info(
                     `[SlowRender] Cache invalidated for ${jayHtmlPath} (contract changed)`,
                 );
+                vite.ws.send({ type: 'full-reload' });
             });
             return;
         }
