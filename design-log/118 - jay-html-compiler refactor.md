@@ -166,3 +166,63 @@ Each step: move one target's functions to its own file, update imports, keep pub
 - **Import overhead**: Target files import from shared module — but this is standard module organization
 - **Shared helpers may over-abstract**: We keep helpers concrete (return the same types, use the same signatures) rather than introducing generic abstractions
 - **Phase 1 helpers are the real win**: Even without the file split, extracting shared algorithms prevents cross-target drift
+
+## Implementation Results
+
+### What was done
+
+**Phase 1 (Steps 1-7): Shared helper extraction** — all completed.
+
+| Helper | Occurrences replaced | Notes |
+|---|---|---|
+| `filterContentNodes` | 14 | Fixed null-safety inconsistency (element target used `_.innerText.trim()`, now all use `(_.innerText \|\| '').trim()`) |
+| `isDirectiveAttribute` | 5 | Accepts `...extra` for target-specific additions (e.g. `'data-jay-dynamic'` in server) |
+| `validateForEachAccessor` | 5 | (not 4 — `renderServerForEachAsString` had one too) |
+| `validateSlowForEachAccessor` | 3 | Added missing validation to server target (was skipping JayUnknown/isArrayType checks) |
+| `validateAsyncAccessor` | 2 | |
+| `expandContractType` | 4 | Unified definition file's string-match approach with the regex approach |
+| `resolveHeadlessImport` | 3 | |
+| `extractHeadlessCoordinate` | 2 | (element target uses different coordinate logic, not extracted) |
+| `buildContractRefMap` | 2 | |
+| `generateHeadlessTypeNames` | skipped | The 3 targets diverge enough that a shared helper would be forced |
+
+Also moved to shared: `textEscape`, `propertyMapping`, `PROPERTY`, `BOOLEAN_ATTRIBUTE`, `attributesRequiresQuotes`, `COORD_ATTR`.
+
+**Phase 2 (Step 8): Phase helpers** — completed. Extracted to `jay-html-compiler-phase.ts`.
+
+**Phase 3 (Steps 9-11): Target extraction** — completed for server, hydrate, and bridge.
+
+| Target | New file | Lines |
+|---|---|---|
+| Server | `jay-html-compiler-server.ts` | 1,235 |
+| Hydrate | `jay-html-compiler-hydrate.ts` | 1,300 |
+| Bridge/Sandbox | `jay-html-compiler-bridge.ts` | 294 |
+
+**Steps 12-13: Element target extraction** — skipped. `renderNode` uses deeply nested closures that capture outer function scope. Extracting it would require restructuring the function itself, not just moving code. The main file at 1,784 lines is manageable.
+
+**Step 14: Full validation** — `yarn confirm` passes.
+
+### Deviations from design
+
+1. `generateServerElementFile` moved to the server file (not kept in main). `index.ts` imports directly from `jay-html-compiler-server.ts`.
+2. `generateElementHydrateFile`, `generateElementBridgeFile`, `generateSandboxRootFile` kept in main file — they share `renderFunctionImplementation` and other helpers with `generateElementFile`.
+3. `isValidationError` made generic (`<T>(result: T | RenderFragment)`) to work with all union return types.
+4. Two `itemType` accesses needed explicit cast to `JayPromiseType` after validation (the helper returns `Accessor` which loses the type narrowing from `isPromiseType`).
+
+### Final file structure
+
+```
+jay-html-compiler.ts          1,784 lines  Element target + shared renderers + public generators
+jay-html-compiler-shared.ts     284 lines  Shared utilities (filtering, validation, constants)
+jay-html-compiler-phase.ts       97 lines  Phase-aware helpers (interactive path detection)
+jay-html-compiler-bridge.ts     294 lines  Bridge/sandbox compilation target
+jay-html-compiler-hydrate.ts  1,300 lines  Hydrate compilation target
+jay-html-compiler-server.ts   1,235 lines  Server compilation target
+```
+
+### Verification
+
+- All 617 tests pass (23 test files, 4 skipped)
+- Zero type errors in lib/ files
+- `yarn confirm` passes (rebuild + type check + test + format)
+- Public API unchanged — `index.ts` exports the same symbols
