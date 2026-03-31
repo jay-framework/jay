@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+<div>
+    <h1>{title}</h1>
+    <div when-resolved="message">
+        <p class="resolved">{.}</p>
+    </div>
+    <div when-loading="message">
+        <p class="loading">Loading...</p>
+    </div>
+</div>
+</body>
+</html>

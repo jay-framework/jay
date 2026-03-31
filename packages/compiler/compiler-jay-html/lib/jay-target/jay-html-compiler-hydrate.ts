@@ -539,6 +539,14 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         return nestRefs(arrayName.split('.'), slowForEachFragment);
     }
 
+    // --- Async directives (when-loading, when-resolved, when-rejected) ---
+    // Async elements are handled by SSR swap scripts which replace the pending
+    // placeholder with resolved/rejected content before hydration runs.
+    // The resolved content is static after SSR — skip adoption entirely.
+    if (checkAsync(element).isAsync) {
+        return RenderFragment.empty();
+    }
+
     // --- Headful component (childComp) ---
     // componentMatch was already computed above (headless-instance check).
     // Only headful components reach here.

@@ -3,6 +3,28 @@ import type { TrackByMap } from '@jay-framework/view-state-merge';
 import type { PluginClientInitInfo } from './plugin-init-discovery';
 
 /**
+ * Generate JS code to reconstruct Promise.resolve()/Promise.reject() for async ViewState properties.
+ * JSON.stringify drops Promise objects, so this emits assignments that recreate them from tracked outcomes.
+ */
+export function generatePromiseReconstruction(
+    outcomes: Array<{ id: string; status: 'resolved' | 'rejected'; value: any }>,
+): string {
+    if (outcomes.length === 0) return '';
+    return (
+        outcomes
+            .map((outcome) => {
+                if (outcome.status === 'resolved') {
+                    return `      viewState[${JSON.stringify(outcome.id)}] = Promise.resolve(${JSON.stringify(outcome.value)});`;
+                } else {
+                    const errMsg = outcome.value?.message ?? 'Unknown error';
+                    return `      viewState[${JSON.stringify(outcome.id)}] = Promise.reject(new Error(${JSON.stringify(errMsg)}));`;
+                }
+            })
+            .join('\n') + '\n'
+    );
+}
+
+/**
  * Information needed to generate client init script for the project.
  */
 export interface ProjectClientInitInfo {
@@ -166,7 +188,44 @@ export function buildAutomationWrap(
       window.dispatchEvent(new Event('jay:automation-ready'));${appendLine}`;
 }
 
-export function generateClientScript(
+/**
+ * Resolve all top-level Promise values in a ViewState object.
+ * Returns the ViewState with Promises replaced by their resolved values,
+ * plus a list of outcomes for reconstructing Promise.resolve()/Promise.reject()
+ * in the client script.
+ */
+export async function resolveViewStatePromises(
+    viewState: object,
+): Promise<{
+    resolved: object;
+    outcomes: Array<{ id: string; status: 'resolved' | 'rejected'; value: any }>;
+}> {
+    const entries = Object.entries(viewState);
+    const hasPromises = entries.some(([, v]) => v instanceof Promise);
+    if (!hasPromises) return { resolved: viewState, outcomes: [] };
+
+    const result = { ...viewState };
+    const outcomes: Array<{ id: string; status: 'resolved' | 'rejected'; value: any }> = [];
+    for (const [key, value] of entries) {
+        if (value instanceof Promise) {
+            try {
+                const val = await value;
+                (result as any)[key] = val;
+                outcomes.push({ id: key, status: 'resolved', value: val });
+            } catch (err: any) {
+                delete (result as any)[key];
+                outcomes.push({
+                    id: key,
+                    status: 'rejected',
+                    value: { message: err?.message ?? String(err) },
+                });
+            }
+        }
+    }
+    return { resolved: result, outcomes };
+}
+
+export async function generateClientScript(
     defaultViewState: object,
     fastCarryForward: object,
     parts: DevServerPagePart[],
@@ -177,6 +236,9 @@ export function generateClientScript(
     pluginInits: PluginClientInitInfo[] = [],
     options: GenerateClientScriptOptions = {},
 ) {
+    // Resolve Promise values and track outcomes for client-side reconstruction.
+    const { resolved, outcomes } = await resolveViewStatePromises(defaultViewState);
+    defaultViewState = resolved;
     const {
         partImports,
         compositeParts,
@@ -205,7 +267,7 @@ export function generateClientScript(
       import { render } from '${jayHtmlPath}';
       ${partImports}${slowViewStateDecl}
       const viewState = ${JSON.stringify(defaultViewState)};
-      const fastCarryForward = ${JSON.stringify(fastCarryForward)};
+${generatePromiseReconstruction(outcomes)}      const fastCarryForward = ${JSON.stringify(fastCarryForward)};
       const trackByMap = ${JSON.stringify(trackByMap)};
 ${clientInitExecution}
       const target = document.getElementById('target');

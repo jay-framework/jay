@@ -5,13 +5,14 @@ import {
     type ServerElementOptions,
 } from '@jay-framework/compiler-jay-html';
 import { checkValidationErrors, JAY_QUERY_HYDRATE } from '@jay-framework/compiler-shared';
-import type { ServerRenderContext } from '@jay-framework/ssr-runtime';
+import { asyncSwapScript, type ServerRenderContext } from '@jay-framework/ssr-runtime';
 import type { ViteDevServer } from 'vite';
 import type { DevServerPagePart } from './load-page-parts';
 import type { TrackByMap } from '@jay-framework/view-state-merge';
 import {
     buildScriptFragments,
     buildAutomationWrap,
+    generatePromiseReconstruction,
     type ProjectClientInitInfo,
     type GenerateClientScriptOptions,
 } from './generate-client-script';
@@ -107,6 +108,7 @@ export async function generateSSRPageHtml(
     // Step 2: Render HTML to buffer
     const htmlChunks: string[] = [];
     const asyncPromises: Array<Promise<string>> = [];
+    const asyncOutcomes: Array<{ id: string; status: 'resolved' | 'rejected'; value: any }> = [];
 
     const ctx: ServerRenderContext = {
         write: (chunk: string) => {
@@ -115,14 +117,20 @@ export async function generateSSRPageHtml(
         onAsync: (promise, id, templates) => {
             const asyncPromise = promise.then(
                 (val) => {
+                    asyncOutcomes.push({ id, status: 'resolved', value: val });
                     if (templates.resolved) {
-                        return templates.resolved(val);
+                        return asyncSwapScript(id, templates.resolved(val));
                     }
                     return '';
                 },
                 (err) => {
+                    asyncOutcomes.push({
+                        id,
+                        status: 'rejected',
+                        value: { message: err?.message ?? String(err) },
+                    });
                     if (templates.rejected) {
-                        return templates.rejected(err);
+                        return asyncSwapScript(id, templates.rejected(err));
                     }
                     return '';
                 },
@@ -138,7 +146,7 @@ export async function generateSSRPageHtml(
     const asyncResults = await Promise.all(asyncPromises);
     const ssrHtml = htmlChunks.join('');
 
-    // Append async swap scripts for any resolved async content
+    // Async swap scripts replace pending placeholders with resolved/rejected content
     const asyncScripts = asyncResults.filter((r) => r !== '').join('');
 
     // Step 3: Build hydration script
@@ -152,6 +160,7 @@ export async function generateSSRPageHtml(
         projectInit,
         pluginInits,
         options,
+        asyncOutcomes,
     );
 
     // Step 4: Build head links from jay-html <head> section
@@ -284,6 +293,7 @@ function generateHydrationScript(
     projectInit?: ProjectClientInitInfo,
     pluginInits: PluginClientInitInfo[] = [],
     options: GenerateClientScriptOptions = {},
+    asyncOutcomes: Array<{ id: string; status: 'resolved' | 'rejected'; value: any }> = [],
 ): string {
     const {
         partImports,
@@ -307,7 +317,7 @@ function generateHydrationScript(
       import { hydrate } from '${hydrateImportPath}';
       ${partImports}${slowViewStateDecl}
       const viewState = ${JSON.stringify(defaultViewState)};
-      const fastCarryForward = ${JSON.stringify(fastCarryForward)};
+${generatePromiseReconstruction(asyncOutcomes)}      const fastCarryForward = ${JSON.stringify(fastCarryForward)};
       const trackByMap = ${JSON.stringify(trackByMap)};
 
       const target = document.getElementById('target');

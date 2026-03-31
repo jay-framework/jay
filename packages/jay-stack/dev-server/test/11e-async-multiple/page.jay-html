@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+<div>
+    <h1>{title}</h1>
+    <div when-resolved="data1">
+        <p class="data1-resolved">{.}</p>
+    </div>
+    <div when-loading="data1">
+        <p class="data1-loading">Loading data1...</p>
+    </div>
+    <div when-rejected="data1">
+        <p class="data1-error">Error: {message}</p>
+    </div>
+    <div when-resolved="data2">
+        <p class="data2-resolved">{.}</p>
+    </div>
+    <div when-loading="data2">
+        <p class="data2-loading">Loading data2...</p>
+    </div>
+    <div when-rejected="data2">
+        <p class="data2-error">Error: {message}</p>
+    </div>
+</div>
+</body>
+</html>

@@ -597,7 +597,7 @@ async function handleClientOnlyRequest(
     const fastCF = renderedFast.carryForward;
 
     // Generate client-only HTML (element target, no SSR/hydration)
-    const pageHtml = generateClientScript(
+    const pageHtml = await generateClientScript(
         viewState,
         fastCF,
         pageParts,
@@ -692,7 +692,7 @@ async function sendResponse(
     } catch (err) {
         // Fall back to client-only rendering
         getLogger().warn(`[SSR] Failed, falling back to client rendering: ${err.message}`);
-        pageHtml = generateClientScript(
+        pageHtml = await generateClientScript(
             viewState,
             carryForward,
             pageParts,

@@ -1505,4 +1505,101 @@ describe('hydration', () => {
             },
         });
     });
+
+    describe('11a. Async data — resolved promise', () => {
+        testFixture('11a-async-data', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Async Data Test');
+                await page.waitForFunction(
+                    () => document.querySelector('#target .resolved') !== null,
+                    { timeout: 3000 },
+                );
+                expect(await page.textContent('#target .resolved')).toEqual('Hello from async!');
+                expect(await page.$('#target .loading')).toBeNull();
+                expect(await page.$('#target .error')).toBeNull();
+            },
+        });
+    });
+
+    describe('11b. Async data — rejected promise', () => {
+        testFixture('11b-async-data-rejected', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Async Rejected Test');
+                await page.waitForFunction(
+                    () => document.querySelector('#target .error') !== null,
+                    { timeout: 3000 },
+                );
+                expect(await page.textContent('#target .error')).toEqual('Error: Failed to load');
+                expect(await page.$('#target .resolved')).toBeNull();
+                expect(await page.$('#target .loading')).toBeNull();
+            },
+        });
+    });
+
+    describe('11c. Async sub-contract (object)', () => {
+        testFixture('11c-async-sub-contract', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Async Object Test');
+                await page.waitForFunction(() => document.querySelector('#target .name') !== null, {
+                    timeout: 3000,
+                });
+                expect(await page.textContent('#target .name')).toEqual('Alice');
+                expect(await page.textContent('#target .email')).toEqual('alice@test.com');
+                expect(await page.$('#target .loading')).toBeNull();
+            },
+        });
+    });
+
+    describe('11d. Async repeated sub-contract (array)', () => {
+        testFixture('11d-async-repeated', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Async Array Test');
+                await page.waitForFunction(
+                    () => document.querySelector('#target .resolved') !== null,
+                    { timeout: 3000 },
+                );
+                expect(await page.textContent('#target .resolved')).toEqual('Items loaded');
+                expect(await page.$('#target .loading')).toBeNull();
+            },
+        });
+    });
+
+    describe('11e. Multiple async properties (mixed resolve/reject)', () => {
+        testFixture('11e-async-multiple', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Multiple Async Test');
+                await page.waitForFunction(
+                    () =>
+                        document.querySelector('#target .data1-resolved') !== null &&
+                        document.querySelector('#target .data2-error') !== null,
+                    { timeout: 3000 },
+                );
+                // data1 resolved
+                expect(await page.textContent('#target .data1-resolved')).toEqual('First resolved');
+                expect(await page.$('#target .data1-loading')).toBeNull();
+                expect(await page.$('#target .data1-error')).toBeNull();
+                // data2 rejected
+                expect(await page.textContent('#target .data2-error')).toEqual(
+                    'Error: Second failed',
+                );
+                expect(await page.$('#target .data2-resolved')).toBeNull();
+                expect(await page.$('#target .data2-loading')).toBeNull();
+            },
+        });
+    });
+
+    describe('11g. Async with delayed resolution', () => {
+        testFixture('11g-async-delayed', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Async Delayed Test');
+                // SSR waits for the promise (100ms setTimeout) before sending response
+                await page.waitForFunction(
+                    () => document.querySelector('#target .resolved') !== null,
+                    { timeout: 3000 },
+                );
+                expect(await page.textContent('#target .resolved')).toEqual('Delayed response');
+                expect(await page.$('#target .loading')).toBeNull();
+            },
+        });
+    });
 });

@@ -1,0 +1,17 @@
+name: Page
+tags:
+  - tag: title
+    type: data
+    dataType: string
+    phase: slow
+  - tag: userProfile
+    type: sub-contract
+    phase: fast
+    async: true
+    tags:
+      - tag: name
+        type: data
+        dataType: string
+      - tag: email
+        type: data
+        dataType: string

@@ -176,28 +176,29 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Server-Side Rendering (SSR) & Hydration
 
-| #   | Title                                                   | Description                                                                             |
-| --- | ------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| 11  | server side rendering                                   | SSR design                                                                              |
-| 23  | JSON compare and patch                                  | JSON diffing for SSR hydration                                                          |
-| 48  | Jay Stack Services                                      | Service injection for SSR                                                               |
-| 50  | jay stack - headless configuration                      | Headless SSR configuration                                                              |
-| 93  | client hydration                                        | Hydrate server-rendered DOM: skip static HTML, adopt dynamic nodes                      |
-| 94  | SSR streaming renderer                                  | Compile jay-html to streaming server render, no DOM APIs                                |
-| 98  | route-based server-element output                       | Server-element files follow route structure (consistent with DL96)                      |
-| 99  | hydration coordinate alignment bugs                     | Fix forEach prefix, conditional+ref counter, containerCoordinate                        |
-| 100 | hydrate conditional creation fallback                   | Level 3 hydration: create elements for false-at-SSR conditionals                        |
-| 102 | headless instance SSR and hydration compilation         | Server-element and hydrate targets for `<jay:xxx>` headless instances                   |
-| 103 | coordinate pre-processing for SSR hydration consistency | Pre-assign jay-coordinate-base to all nodes; server and hydrate read it                 |
-| 104 | hydration test plan                                     | Test plan: static, conditionals, forEach, slowForEach, headless (a–d)                   |
-| 106 | hydrate dynamic elements with Kindergarten              | One Kindergarten per parent with mixed children; STATIC sentinel; `_setGroup` pattern   |
-| 107 | dev server consistency and phase optionality            | Slow cache on/off parity, optional phases, SSR disable, build cleanup, loadParams cache |
-| 108 | no-contract phase defaults for jay-stack                | Without contract: all data is fast+interactive, no slow phase, remove noMainContract    |
-| 109 | unified dev server phase pipeline                       | Fix instance fast render gate for fast-only pages, hydration initial update             |
-| 110 | filesystem-based slow render cache                      | Cache loadParams per route, embed cache metadata in pre-rendered jay-html               |
-| 112 | hydration view state consistency                        | Hydrate with SSR ViewState (matches DOM), then update with client ViewState             |
-| 115 | slowForEachItem adopt element wrapping                  | Wrap slowForEachItem callback in adoptElement for multi-child nested slow forEach       |
-| 116 | client import rewriting in library builds               | Fix bare @jay-framework/\* imports not rewritten to /client in vite build output        |
+| #   | Title                                                   | Description                                                                                            |
+| --- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 11  | server side rendering                                   | SSR design                                                                                             |
+| 23  | JSON compare and patch                                  | JSON diffing for SSR hydration                                                                         |
+| 48  | Jay Stack Services                                      | Service injection for SSR                                                                              |
+| 50  | jay stack - headless configuration                      | Headless SSR configuration                                                                             |
+| 93  | client hydration                                        | Hydrate server-rendered DOM: skip static HTML, adopt dynamic nodes                                     |
+| 94  | SSR streaming renderer                                  | Compile jay-html to streaming server render, no DOM APIs                                               |
+| 98  | route-based server-element output                       | Server-element files follow route structure (consistent with DL96)                                     |
+| 99  | hydration coordinate alignment bugs                     | Fix forEach prefix, conditional+ref counter, containerCoordinate                                       |
+| 100 | hydrate conditional creation fallback                   | Level 3 hydration: create elements for false-at-SSR conditionals                                       |
+| 102 | headless instance SSR and hydration compilation         | Server-element and hydrate targets for `<jay:xxx>` headless instances                                  |
+| 103 | coordinate pre-processing for SSR hydration consistency | Pre-assign jay-coordinate-base to all nodes; server and hydrate read it                                |
+| 104 | hydration test plan                                     | Test plan: static, conditionals, forEach, slowForEach, headless (a–d)                                  |
+| 106 | hydrate dynamic elements with Kindergarten              | One Kindergarten per parent with mixed children; STATIC sentinel; `_setGroup` pattern                  |
+| 107 | dev server consistency and phase optionality            | Slow cache on/off parity, optional phases, SSR disable, build cleanup, loadParams cache                |
+| 108 | no-contract phase defaults for jay-stack                | Without contract: all data is fast+interactive, no slow phase, remove noMainContract                   |
+| 109 | unified dev server phase pipeline                       | Fix instance fast render gate for fast-only pages, hydration initial update                            |
+| 110 | filesystem-based slow render cache                      | Cache loadParams per route, embed cache metadata in pre-rendered jay-html                              |
+| 112 | hydration view state consistency                        | Hydrate with SSR ViewState (matches DOM), then update with client ViewState                            |
+| 115 | slowForEachItem adopt element wrapping                  | Wrap slowForEachItem callback in adoptElement for multi-child nested slow forEach                      |
+| 116 | client import rewriting in library builds               | Fix bare @jay-framework/\* imports not rewritten to /client in vite build output                       |
+| 119 | async data SSR and hydration                            | Fix async data (Promise types) through SSR swap scripts, hydrate compiler, and ViewState serialization |
 
 ---
 

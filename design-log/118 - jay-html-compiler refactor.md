@@ -173,18 +173,18 @@ Each step: move one target's functions to its own file, update imports, keep pub
 
 **Phase 1 (Steps 1-7): Shared helper extraction** — all completed.
 
-| Helper | Occurrences replaced | Notes |
-|---|---|---|
-| `filterContentNodes` | 14 | Fixed null-safety inconsistency (element target used `_.innerText.trim()`, now all use `(_.innerText \|\| '').trim()`) |
-| `isDirectiveAttribute` | 5 | Accepts `...extra` for target-specific additions (e.g. `'data-jay-dynamic'` in server) |
-| `validateForEachAccessor` | 5 | (not 4 — `renderServerForEachAsString` had one too) |
-| `validateSlowForEachAccessor` | 3 | Added missing validation to server target (was skipping JayUnknown/isArrayType checks) |
-| `validateAsyncAccessor` | 2 | |
-| `expandContractType` | 4 | Unified definition file's string-match approach with the regex approach |
-| `resolveHeadlessImport` | 3 | |
-| `extractHeadlessCoordinate` | 2 | (element target uses different coordinate logic, not extracted) |
-| `buildContractRefMap` | 2 | |
-| `generateHeadlessTypeNames` | skipped | The 3 targets diverge enough that a shared helper would be forced |
+| Helper                        | Occurrences replaced | Notes                                                                                                                  |
+| ----------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `filterContentNodes`          | 14                   | Fixed null-safety inconsistency (element target used `_.innerText.trim()`, now all use `(_.innerText \|\| '').trim()`) |
+| `isDirectiveAttribute`        | 5                    | Accepts `...extra` for target-specific additions (e.g. `'data-jay-dynamic'` in server)                                 |
+| `validateForEachAccessor`     | 5                    | (not 4 — `renderServerForEachAsString` had one too)                                                                    |
+| `validateSlowForEachAccessor` | 3                    | Added missing validation to server target (was skipping JayUnknown/isArrayType checks)                                 |
+| `validateAsyncAccessor`       | 2                    |                                                                                                                        |
+| `expandContractType`          | 4                    | Unified definition file's string-match approach with the regex approach                                                |
+| `resolveHeadlessImport`       | 3                    |                                                                                                                        |
+| `extractHeadlessCoordinate`   | 2                    | (element target uses different coordinate logic, not extracted)                                                        |
+| `buildContractRefMap`         | 2                    |                                                                                                                        |
+| `generateHeadlessTypeNames`   | skipped              | The 3 targets diverge enough that a shared helper would be forced                                                      |
 
 Also moved to shared: `textEscape`, `propertyMapping`, `PROPERTY`, `BOOLEAN_ATTRIBUTE`, `attributesRequiresQuotes`, `COORD_ATTR`.
 
@@ -192,11 +192,11 @@ Also moved to shared: `textEscape`, `propertyMapping`, `PROPERTY`, `BOOLEAN_ATTR
 
 **Phase 3 (Steps 9-11): Target extraction** — completed for server, hydrate, and bridge.
 
-| Target | New file | Lines |
-|---|---|---|
-| Server | `jay-html-compiler-server.ts` | 1,235 |
-| Hydrate | `jay-html-compiler-hydrate.ts` | 1,300 |
-| Bridge/Sandbox | `jay-html-compiler-bridge.ts` | 294 |
+| Target         | New file                       | Lines |
+| -------------- | ------------------------------ | ----- |
+| Server         | `jay-html-compiler-server.ts`  | 1,235 |
+| Hydrate        | `jay-html-compiler-hydrate.ts` | 1,300 |
+| Bridge/Sandbox | `jay-html-compiler-bridge.ts`  | 294   |
 
 **Steps 12-13: Element target extraction** — skipped. `renderNode` uses deeply nested closures that capture outer function scope. Extracting it would require restructuring the function itself, not just moving code. The main file at 1,784 lines is manageable.
 

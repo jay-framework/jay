@@ -40,8 +40,8 @@ describe('generateClientScript', () => {
     const noAutomation = { enableAutomation: false };
 
     describe('basic HTML structure', () => {
-        it('should generate valid HTML with no parts', () => {
-            const html = generateClientScript(
+        it('should generate valid HTML with no parts', async () => {
+            const html = await generateClientScript(
                 {},
                 {},
                 [],
@@ -86,11 +86,11 @@ describe('generateClientScript', () => {
             );
         });
 
-        it('should include viewState and fastCarryForward', () => {
+        it('should include viewState and fastCarryForward', async () => {
             const viewState = { count: 5, name: 'test' };
             const fastCarryForward = { timestamp: 12345 };
 
-            const html = generateClientScript(
+            const html = await generateClientScript(
                 viewState,
                 fastCarryForward,
                 [],
@@ -135,9 +135,9 @@ describe('generateClientScript', () => {
             );
         });
 
-        it('should include trackByMap when provided', () => {
+        it('should include trackByMap when provided', async () => {
             const trackByMap = { items: 'id' };
-            const html = generateClientScript(
+            const html = await generateClientScript(
                 {},
                 {},
                 [],
@@ -184,7 +184,7 @@ describe('generateClientScript', () => {
     });
 
     describe('page parts', () => {
-        it('should generate imports for page parts', () => {
+        it('should generate imports for page parts', async () => {
             const parts: DevServerPagePart[] = [
                 createPagePart(
                     'import { ProductCard } from "/src/components/product-card";',
@@ -192,7 +192,7 @@ describe('generateClientScript', () => {
                 ),
             ];
 
-            const html = generateClientScript(
+            const html = await generateClientScript(
                 {},
                 {},
                 parts,
@@ -240,7 +240,7 @@ describe('generateClientScript', () => {
             );
         });
 
-        it('should generate multiple imports for multiple parts', () => {
+        it('should generate multiple imports for multiple parts', async () => {
             const parts: DevServerPagePart[] = [
                 createPagePart(
                     'import { ProductCard } from "/src/components/product-card";',
@@ -252,7 +252,7 @@ describe('generateClientScript', () => {
                 ),
             ];
 
-            const html = generateClientScript(
+            const html = await generateClientScript(
                 {},
                 {},
                 parts,
@@ -304,13 +304,13 @@ import { CartButton } from "/src/components/cart-button";
     });
 
     describe('makeJayInit plugin client init', () => {
-        it('should import and call plugin JayInit with its serverData', () => {
+        it('should import and call plugin JayInit with its serverData', async () => {
             const plugins: PluginClientInitInfo[] = [
                 createPluginInitInfo('wix-stores', '@wix/wix-stores/lib/init', 'init'),
             ];
             const clientInitData = { 'wix-stores': { currency: 'USD' } };
 
-            const html = generateClientScript(
+            const html = await generateClientScript(
                 {},
                 {},
                 [],
@@ -364,7 +364,7 @@ import { CartButton } from "/src/components/cart-button";
             );
         });
 
-        it('should import and call multiple plugins in dependency order', () => {
+        it('should import and call multiple plugins in dependency order', async () => {
             const plugins: PluginClientInitInfo[] = [
                 createPluginInitInfo('wix-auth', '@wix/auth/lib/init', 'init'),
                 createPluginInitInfo('wix-stores', '@wix/stores/lib/init', 'storesInit'),
@@ -374,7 +374,7 @@ import { CartButton } from "/src/components/cart-button";
                 'wix-stores': { currency: 'USD' },
             };
 
-            const html = generateClientScript(
+            const html = await generateClientScript(
                 {},
                 {},
                 [],
@@ -435,14 +435,14 @@ import { CartButton } from "/src/components/cart-button";
     });
 
     describe('project init (makeJayInit pattern)', () => {
-        it('should import and call project JayInit', () => {
+        it('should import and call project JayInit', async () => {
             const projectInit: ProjectClientInitInfo = {
                 importPath: '/src/lib/init',
                 initExport: 'init',
             };
             const clientInitData = { project: { theme: 'dark' } };
 
-            const html = generateClientScript(
+            const html = await generateClientScript(
                 {},
                 {},
                 [],
@@ -499,7 +499,7 @@ import { CartButton } from "/src/components/cart-button";
     });
 
     describe('full integration', () => {
-        it('should generate complete page with plugins and project init', () => {
+        it('should generate complete page with plugins and project init', async () => {
             const viewState = { productId: 'prod-123' };
             const fastCarryForward = { userId: 'user-456' };
             const parts: DevServerPagePart[] = [
@@ -521,7 +521,7 @@ import { CartButton } from "/src/components/cart-button";
                 createPluginInitInfo('wix-stores', '@wix/stores/lib/init', 'init'),
             ];
 
-            const html = generateClientScript(
+            const html = await generateClientScript(
                 viewState,
                 fastCarryForward,
                 parts,

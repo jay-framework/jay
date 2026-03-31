@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data" contract="./page.jay-contract"></script>
+</head>
+<body>
+<div>
+    <h1>{title}</h1>
+    <div when-resolved="userProfile">
+        <p class="name">{name}</p>
+        <p class="email">{email}</p>
+    </div>
+    <div when-loading="userProfile">
+        <p class="loading">Loading profile...</p>
+    </div>
+</div>
+</body>
+</html>
