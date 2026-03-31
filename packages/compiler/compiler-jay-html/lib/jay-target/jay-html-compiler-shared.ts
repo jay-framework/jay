@@ -37,6 +37,53 @@ export function filterContentNodes(childNodes: Node[], onlyIfMultiple: boolean =
     );
 }
 
+// ============================================================================
+// Attribute rendering constants
+// ============================================================================
+
+export function textEscape(s: string): string {
+    return s.replace(/'/g, "\\'");
+}
+
+export const PROPERTY = 1;
+export const BOOLEAN_ATTRIBUTE = 3;
+export const propertyMapping: Record<string, { type: number }> = {
+    // DOM properties (use template-style parsing with dp())
+    value: { type: PROPERTY },
+    checked: { type: PROPERTY },
+
+    // Boolean attributes (use condition-style parsing with ba())
+    // The presence/absence of these attributes is controlled by a condition expression
+    disabled: { type: BOOLEAN_ATTRIBUTE },
+    selected: { type: BOOLEAN_ATTRIBUTE },
+    readonly: { type: BOOLEAN_ATTRIBUTE },
+    required: { type: BOOLEAN_ATTRIBUTE },
+    hidden: { type: BOOLEAN_ATTRIBUTE },
+    autofocus: { type: BOOLEAN_ATTRIBUTE },
+    multiple: { type: BOOLEAN_ATTRIBUTE },
+    open: { type: BOOLEAN_ATTRIBUTE },
+    novalidate: { type: BOOLEAN_ATTRIBUTE },
+    formnovalidate: { type: BOOLEAN_ATTRIBUTE },
+    // Media attributes
+    autoplay: { type: BOOLEAN_ATTRIBUTE },
+    controls: { type: BOOLEAN_ATTRIBUTE },
+    loop: { type: BOOLEAN_ATTRIBUTE },
+    muted: { type: BOOLEAN_ATTRIBUTE },
+    playsinline: { type: BOOLEAN_ATTRIBUTE },
+    // Other
+    reversed: { type: BOOLEAN_ATTRIBUTE },
+    ismap: { type: BOOLEAN_ATTRIBUTE },
+    defer: { type: BOOLEAN_ATTRIBUTE },
+    async: { type: BOOLEAN_ATTRIBUTE },
+    default: { type: BOOLEAN_ATTRIBUTE },
+    inert: { type: BOOLEAN_ATTRIBUTE },
+};
+export const attributesRequiresQuotes = /[- ]/;
+
+// ============================================================================
+// Directive attribute detection
+// ============================================================================
+
 /**
  * Set of attribute names that are directives (not rendered as HTML attributes).
  * Shared across all compilation targets to prevent drift when new directives are added.
