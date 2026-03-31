@@ -194,9 +194,7 @@ export function buildAutomationWrap(
  * plus a list of outcomes for reconstructing Promise.resolve()/Promise.reject()
  * in the client script.
  */
-export async function resolveViewStatePromises(
-    viewState: object,
-): Promise<{
+export async function resolveViewStatePromises(viewState: object): Promise<{
     resolved: object;
     outcomes: Array<{ id: string; status: 'resolved' | 'rejected'; value: any }>;
 }> {
