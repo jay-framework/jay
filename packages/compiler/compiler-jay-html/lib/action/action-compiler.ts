@@ -16,6 +16,7 @@ import {
     JayAtomicType,
     isObjectType,
     isArrayType,
+    isRecordType,
     isEnumType,
     isAtomicType,
     isImportedType,
@@ -59,6 +60,8 @@ function collectImportedAliases(type: JayType, aliases: Set<string>): void {
         }
     } else if (isArrayType(type)) {
         collectImportedAliases(type.itemType, aliases);
+    } else if (isRecordType(type)) {
+        collectImportedAliases(type.itemType, aliases);
     }
 }
 
@@ -91,6 +94,11 @@ function renderType(type: JayType, aliasToViewState: Map<string, string>, indent
     if (isArrayType(type)) {
         const itemStr = renderType(type.itemType, aliasToViewState, indent + '  ');
         return `Array<${itemStr}>`;
+    }
+
+    if (isRecordType(type)) {
+        const valueStr = renderType(type.itemType, aliasToViewState, indent + '  ');
+        return `Record<string, ${valueStr}>`;
     }
 
     if (isObjectType(type)) {

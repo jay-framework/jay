@@ -218,6 +218,90 @@ outputSchema: productCard
         );
     });
 
+    it('should generate Record<string, boolean> for record(boolean)', () => {
+        const yaml = `
+name: getStock
+description: Get stock
+inputSchema:
+  productId: string
+outputSchema:
+  stock: record(boolean)
+`;
+        expect(compile(yaml)).toEqual(
+            `export interface GetStockInput {\n` +
+                `  productId: string;\n` +
+                `}\n` +
+                `\n` +
+                `export interface GetStockOutput {\n` +
+                `  stock: Record<string, boolean>;\n` +
+                `}`,
+        );
+    });
+
+    it('should generate nested Record for record(record(boolean))', () => {
+        const yaml = `
+name: getVariantStock
+description: Get variant stock
+inputSchema:
+  productId: string
+outputSchema:
+  variants: record(record(boolean))
+`;
+        expect(compile(yaml)).toEqual(
+            `export interface GetVariantStockInput {\n` +
+                `  productId: string;\n` +
+                `}\n` +
+                `\n` +
+                `export interface GetVariantStockOutput {\n` +
+                `  variants: Record<string, Record<string, boolean>>;\n` +
+                `}`,
+        );
+    });
+
+    it('should handle optional record property', () => {
+        const yaml = `
+name: getStock
+description: Get stock
+inputSchema:
+  productId: string
+outputSchema:
+  stock?: record(boolean)
+`;
+        expect(compile(yaml)).toEqual(
+            `export interface GetStockInput {\n` +
+                `  productId: string;\n` +
+                `}\n` +
+                `\n` +
+                `export interface GetStockOutput {\n` +
+                `  stock?: Record<string, boolean>;\n` +
+                `}`,
+        );
+    });
+
+    it('should generate import for record(contractAlias)', () => {
+        const yaml = `
+name: getProducts
+description: Get products
+import:
+  productCard: product-card.jay-contract
+inputSchema:
+  ids: string[]
+outputSchema:
+  products: record(productCard)
+`;
+        expect(compile(yaml)).toEqual(
+            `import { ProductCardViewState } from './product-card.jay-contract';\n` +
+                `\n` +
+                `export interface GetProductsInput {\n` +
+                `  ids: Array<string>;\n` +
+                `}\n` +
+                `\n` +
+                `export interface GetProductsOutput {\n` +
+                `  products: Record<string, ProductCardViewState>;\n` +
+                `}`,
+        );
+    });
+
     it('should use custom contract resolver', () => {
         const yaml = `
 name: searchProducts

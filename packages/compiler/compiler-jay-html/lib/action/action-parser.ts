@@ -16,6 +16,7 @@ import {
     JayType,
     JayObjectType,
     JayArrayType,
+    JayRecordType,
     JayEnumType,
     JayImportedType,
     JayOptionalType,
@@ -93,6 +94,14 @@ function resolveStringType(
     if (parseIsEnum(value)) {
         const name = path.length > 0 ? path[path.length - 1] : 'value';
         return new JayEnumType(name, parseEnumValues(value));
+    }
+
+    // Record: record(T)
+    if (value.startsWith('record(') && value.endsWith(')')) {
+        const innerStr = value.slice(7, -1);
+        const innerType = resolveStringType(innerStr, importAliases, path);
+        if (innerType) return new JayRecordType(innerType);
+        return null;
     }
 
     // Contract import alias

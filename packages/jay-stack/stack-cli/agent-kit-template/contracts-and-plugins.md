@@ -244,6 +244,7 @@ Schemas use a compact type notation:
 | `propName: enum(a \| b \| c)`     | Required enum                                            |
 | `propName:` + nested block        | Nested object                                            |
 | `propName:` + `- childProp: type` | Array of objects (YAML list)                             |
+| `propName: record(T)`             | Record with typed values (e.g., `record(boolean)`)       |
 | `propName: importedName`          | Type from `import:` block (references a `.jay-contract`) |
 | `- importedName`                  | Array of imported type                                   |
 

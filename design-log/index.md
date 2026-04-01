@@ -46,6 +46,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 61  | json-patch typed JSONPointer                 | Typed JSON operations                                                  |
 | 79  | linked contracts with mixed phase properties | Linked sub-contracts across rendering phases                           |
 | 95  | jay-action contract references               | Reference contract ViewState types from .jay-action output schemas     |
+| 120 | record type in jay-action                    | `record(T)` type notation for typed Record maps in action schemas      |
 
 ---
 

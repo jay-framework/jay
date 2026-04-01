@@ -186,6 +186,7 @@ outputSchema:
 | `name: enum(a \| b \| c)`  | Enum type                |
 | `nested:` + indented block | Object with properties   |
 | `- itemType`               | Array of items           |
+| `name: record(T)`          | Record with typed values |
 | `name: ContractName`       | Type from `import` block |
 
 The `import` block lets you reference contract ViewState types in schemas, avoiding duplication.

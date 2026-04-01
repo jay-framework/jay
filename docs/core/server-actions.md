@@ -498,17 +498,18 @@ outputSchema:
 
 ## Type Notation
 
-| Notation                      | Meaning                | Example                      |
-| ----------------------------- | ---------------------- | ---------------------------- |
-| `string`, `number`, `boolean` | Primitives             | `name: string`               |
-| `enum(a \| b \| c)`           | Enum type              | `sortBy?: enum(asc \| desc)` |
-| `propName?:`                  | Optional property      | `filters?: ...`              |
-| `type[]`                      | Array shorthand        | `ids: string[]`              |
-| YAML list `- ...`             | Array of objects       | `items:\n  - id: string`     |
-| `- importedName`              | Array of imported type | `products:\n  - productCard` |
-| `importedName`                | Imported contract type | `product: productCard`       |
-| `importedName?`               | Nullable imported type | `outputSchema: productCard?` |
-| `{}`                          | Unknown-shape object   | `filter: {}`                 |
+| Notation                      | Meaning                  | Example                      |
+| ----------------------------- | ------------------------ | ---------------------------- |
+| `string`, `number`, `boolean` | Primitives               | `name: string`               |
+| `enum(a \| b \| c)`           | Enum type                | `sortBy?: enum(asc \| desc)` |
+| `propName?:`                  | Optional property        | `filters?: ...`              |
+| `type[]`                      | Array shorthand          | `ids: string[]`              |
+| YAML list `- ...`             | Array of objects         | `items:\n  - id: string`     |
+| `- importedName`              | Array of imported type   | `products:\n  - productCard` |
+| `importedName`                | Imported contract type   | `product: productCard`       |
+| `importedName?`               | Nullable imported type   | `outputSchema: productCard?` |
+| `record(T)`                   | Record with typed values | `stock: record(boolean)`     |
+| `{}`                          | Unknown-shape object     | `filter: {}`                 |
 
 ## Contract Imports
 

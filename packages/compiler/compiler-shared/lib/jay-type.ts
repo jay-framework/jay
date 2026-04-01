@@ -10,6 +10,7 @@ export enum JayTypeKind {
     object,
     array,
     union,
+    record,
     promise,
     recursive,
     optional,
@@ -113,6 +114,15 @@ export class JayArrayType implements JayType {
     readonly kind = JayTypeKind.array;
 }
 
+export class JayRecordType implements JayType {
+    constructor(public readonly itemType: JayType) {}
+
+    get name() {
+        return `Record<string, ${this.itemType.name}>`;
+    }
+    readonly kind = JayTypeKind.record;
+}
+
 export class JayUnionType implements JayType {
     constructor(public readonly ofTypes: JayType[]) {}
     readonly kind = JayTypeKind.union;
@@ -196,6 +206,9 @@ export function isObjectType(aType: JayType): aType is JayObjectType {
 export function isArrayType(aType: JayType): aType is JayArrayType {
     return aType.kind === JayTypeKind.array;
 }
+export function isRecordType(aType: JayType): aType is JayRecordType {
+    return aType.kind === JayTypeKind.record;
+}
 export function isUnionType(aType: JayType): aType is JayUnionType {
     return aType.kind === JayTypeKind.union;
 }
@@ -228,6 +241,8 @@ export function equalJayTypes(a: JayType, b: JayType) {
             )
         );
     else if (a instanceof JayArrayType && b instanceof JayArrayType)
+        return equalJayTypes(a.itemType, b.itemType);
+    else if (a instanceof JayRecordType && b instanceof JayRecordType)
         return equalJayTypes(a.itemType, b.itemType);
     else if (a instanceof JayTypeAlias && b instanceof JayTypeAlias) return true;
     else if (a instanceof JayHTMLType && b instanceof JayHTMLType) return true;

@@ -5,6 +5,7 @@ import {
     JayEnumType,
     JayObjectType,
     JayArrayType,
+    JayRecordType,
     JayImportedType,
     JayOptionalType,
     JayUnknown,
@@ -104,6 +105,25 @@ describe('jayTypeToJsonSchema', () => {
                     price: { type: 'number' },
                 },
                 required: ['name', 'price'],
+            },
+        });
+    });
+
+    it('should convert record of primitives', () => {
+        expect(jayTypeToJsonSchema(new JayRecordType(new JayAtomicType('boolean')))).toEqual({
+            type: 'object',
+            additionalProperties: { type: 'boolean' },
+        });
+    });
+
+    it('should convert nested record', () => {
+        expect(
+            jayTypeToJsonSchema(new JayRecordType(new JayRecordType(new JayAtomicType('boolean')))),
+        ).toEqual({
+            type: 'object',
+            additionalProperties: {
+                type: 'object',
+                additionalProperties: { type: 'boolean' },
             },
         });
     });

@@ -11,6 +11,7 @@ import {
     isEnumType,
     isObjectType,
     isArrayType,
+    isRecordType,
     isImportedType,
     isOptionalType,
 } from './jay-type';
@@ -23,6 +24,7 @@ export interface JsonSchemaProperty {
     description?: string;
     enum?: string[];
     items?: JsonSchemaProperty;
+    additionalProperties?: JsonSchemaProperty;
     properties?: Record<string, JsonSchemaProperty>;
     required?: string[];
 }
@@ -60,6 +62,14 @@ export function jayTypeToJsonSchema(type: JayType): JsonSchemaProperty | null {
             return { type: 'array', items: itemSchema };
         }
         return { type: 'array' };
+    }
+
+    if (isRecordType(type)) {
+        const valueSchema = jayTypeToJsonSchema(type.itemType);
+        if (valueSchema) {
+            return { type: 'object', additionalProperties: valueSchema };
+        }
+        return { type: 'object' };
     }
 
     if (isObjectType(type)) {

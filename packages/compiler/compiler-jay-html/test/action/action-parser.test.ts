@@ -3,11 +3,13 @@ import { parseAction } from '../../lib';
 import {
     JayObjectType,
     JayArrayType,
+    JayRecordType,
     JayEnumType,
     JayImportedType,
     JayOptionalType,
     isObjectType,
     isArrayType,
+    isRecordType,
     isEnumType,
     isImportedType,
     isAtomicType,
@@ -224,6 +226,108 @@ description: A test
 `;
         const result = parseAction(yaml, 'test.jay-action');
         expect(result.validations.some((v) => v.includes('inputSchema'))).toBe(true);
+    });
+
+    it('should parse record(boolean) as JayRecordType', () => {
+        const yaml = `
+name: getStock
+description: Get stock map
+inputSchema:
+  productId: string
+outputSchema:
+  stock: record(boolean)
+`;
+        const result = parseAction(yaml, 'get-stock.jay-action');
+
+        expect(result.validations).toEqual([]);
+        const output = result.val!.outputType;
+        expect(isObjectType(output)).toBe(true);
+        const stockType = (output as JayObjectType).props.stock;
+        expect(isRecordType(stockType)).toBe(true);
+        expect(isAtomicType((stockType as JayRecordType).itemType)).toBe(true);
+        expect((stockType as JayRecordType).itemType.name).toBe('boolean');
+    });
+
+    it('should parse record(string) and record(number)', () => {
+        const yaml = `
+name: getMeta
+description: Get metadata
+inputSchema:
+  id: string
+outputSchema:
+  labels: record(string)
+  counts: record(number)
+`;
+        const result = parseAction(yaml, 'get-meta.jay-action');
+
+        expect(result.validations).toEqual([]);
+        const output = result.val!.outputType as JayObjectType;
+        expect(isRecordType(output.props.labels)).toBe(true);
+        expect((output.props.labels as JayRecordType).itemType.name).toBe('string');
+        expect(isRecordType(output.props.counts)).toBe(true);
+        expect((output.props.counts as JayRecordType).itemType.name).toBe('number');
+    });
+
+    it('should parse nested record(record(boolean))', () => {
+        const yaml = `
+name: getVariantStock
+description: Get variant stock map
+inputSchema:
+  productId: string
+outputSchema:
+  variants: record(record(boolean))
+`;
+        const result = parseAction(yaml, 'variant-stock.jay-action');
+
+        expect(result.validations).toEqual([]);
+        const output = result.val!.outputType as JayObjectType;
+        const variantsType = output.props.variants;
+        expect(isRecordType(variantsType)).toBe(true);
+        const innerType = (variantsType as JayRecordType).itemType;
+        expect(isRecordType(innerType)).toBe(true);
+        expect(isAtomicType((innerType as JayRecordType).itemType)).toBe(true);
+        expect((innerType as JayRecordType).itemType.name).toBe('boolean');
+    });
+
+    it('should parse record with import alias', () => {
+        const yaml = `
+name: getProducts
+description: Get products map
+import:
+  productCard: product-card.jay-contract
+inputSchema:
+  ids: string[]
+outputSchema:
+  products: record(productCard)
+`;
+        const result = parseAction(yaml, 'get-products.jay-action');
+
+        expect(result.validations).toEqual([]);
+        const output = result.val!.outputType as JayObjectType;
+        const productsType = output.props.products;
+        expect(isRecordType(productsType)).toBe(true);
+        const itemType = (productsType as JayRecordType).itemType;
+        expect(isImportedType(itemType)).toBe(true);
+        expect(itemType.name).toBe('productCard');
+    });
+
+    it('should parse optional record property', () => {
+        const yaml = `
+name: getStock
+description: Get stock
+inputSchema:
+  productId: string
+outputSchema:
+  stock?: record(boolean)
+`;
+        const result = parseAction(yaml, 'get-stock.jay-action');
+
+        expect(result.validations).toEqual([]);
+        const output = result.val!.outputType as JayObjectType;
+        expect(isOptionalType(output.props.stock)).toBe(true);
+        const inner = (output.props.stock as JayOptionalType).innerType;
+        expect(isRecordType(inner)).toBe(true);
+        expect((inner as JayRecordType).itemType.name).toBe('boolean');
     });
 
     it('should throw on malformed YAML', () => {
