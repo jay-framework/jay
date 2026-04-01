@@ -33,6 +33,15 @@ describe('generate jay-html server element', () => {
             );
         });
 
+        it('for style bindings with dynamic values', async () => {
+            const folder = 'basics/style-bindings';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
+
         it('for attributes with dynamic bindings', async () => {
             const folder = 'basics/attributes';
             const serverFile = await readFileAndGenerateServerElementFile(folder);

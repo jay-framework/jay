@@ -506,8 +506,22 @@ function renderServerAttributes(element: HTMLElement, context: ServerContext): R
                 parts.push(w(indent, `' class="${escaped}"'`));
             }
         } else if (attrCanonical === 'style') {
-            const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-            parts.push(w(indent, `' style="${escaped}"'`));
+            const [fragment, isDynamic] = parseServerTemplateExpression(
+                textEscape(attrValue),
+                variables,
+            );
+            if (isDynamic) {
+                parts.push(
+                    w(
+                        indent,
+                        `' style="' + escapeAttr(String(${fragment.rendered})) + '"'`,
+                        Imports.for(Import.escapeAttr),
+                    ),
+                );
+            } else {
+                const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                parts.push(w(indent, `' style="${escaped}"'`));
+            }
         } else {
             // Regular attribute — use template PEG rule for raw accessor
             const [fragment, isDynamic] = parseServerTemplateExpression(
@@ -750,8 +764,21 @@ function renderServerAttributesAsString(
                 parts.push(new RenderFragment(`' class="${escaped}"'`));
             }
         } else if (attrCanonical === 'style') {
-            const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-            parts.push(new RenderFragment(`' style="${escaped}"'`));
+            const [fragment, isDynamic] = parseServerTemplateExpression(
+                textEscape(attrValue),
+                variables,
+            );
+            if (isDynamic) {
+                parts.push(
+                    new RenderFragment(
+                        `' style="' + escapeAttr(String(${fragment.rendered})) + '"'`,
+                        Imports.for(Import.escapeAttr),
+                    ),
+                );
+            } else {
+                const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                parts.push(new RenderFragment(`' style="${escaped}"'`));
+            }
         } else {
             const [fragment, isDynamic] = parseServerTemplateExpression(
                 textEscape(attrValue),

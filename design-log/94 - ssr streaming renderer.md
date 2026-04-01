@@ -793,3 +793,31 @@ User sees: "Hello" + "Still loading" → "Hello" + "World" (swap) → interactiv
 **Root cause:** The hydrate forEach handler was missing `nestRefs(forEachAccessPath, ...)` which the standard element target uses to nest child refs under the forEach access path. It was also missing `dynamicRef: true`. Additionally, `deDuplicateRefsTree` had a broken comparison (`refsMap[ref.ref] === ref.ref` — object vs string, always false), and `equalJayTypes` had bugs in `JayObjectType` comparison (`a[prop]` instead of `a.props[prop]`, `.map()` instead of `.every()`).
 
 **Fix:** Added `nestRefs`, `dynamicRef: true`, and adopt-only refs to the hydrate forEach handler. Fixed `deDuplicateRefsTree` to use proper `Map`-based comparison. Fixed `equalJayTypes` in compiler-shared. See DL#93 "Phase 3 Bug Fix — Duplicate Ref Declarations in Hydrate forEach" for full details and tests.
+
+### Bug Fix — Dynamic Style Attributes Not Rendered in SSR
+
+**Problem:** `style="background-color: {colorCode}"` rendered as the literal string `background-color: {colorCode}` in SSR output instead of interpolating the variable. Discovered on the golf project's product page where color swatches had `style="background-color: {colorCode}"`.
+
+**Root cause:** In `jay-html-compiler-server.ts`, both `renderServerAttributes()` and `renderServerAttributesAsString()` had a special case for `style` attributes that treated them as completely static — escaping and emitting the raw string without ever calling `parseServerTemplateExpression()` to detect `{variable}` bindings:
+
+```typescript
+} else if (attrCanonical === 'style') {
+    const escaped = attrValue.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    parts.push(w(indent, `' style="${escaped}"'`));
+}
+```
+
+All other attributes (data-_, aria-_, custom) correctly used `parseServerTemplateExpression()` to check for dynamic bindings. The `class` attribute also had proper dynamic handling via `parseClassExpression()`. Only `style` was broken.
+
+**Fix:** Both locations now use `parseServerTemplateExpression()` to check for dynamic bindings, matching how other attributes are handled. Static styles still output directly; dynamic styles interpolate variables via `escapeAttr(String(...))`.
+
+**Files modified:**
+
+- `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler-server.ts` — Two locations: `renderServerAttributes()` and `renderServerAttributesAsString()`. Both now parse style values for dynamic expressions.
+
+**Test added:**
+
+- `test/jay-target/generate-server-element.test.ts` — "for style bindings with dynamic values": fully dynamic, mixed static+dynamic, kebab-case properties, fully static, complex real-world styles.
+- `test/fixtures/basics/style-bindings/generated-server-element.ts` — Golden fixture.
+
+**Test results:** 627/627 passing, 0 regressions.
