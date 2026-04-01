@@ -281,3 +281,7 @@ Pass the Express HTTP server to Vite so the HMR WebSocket piggybacks on Express'
 - `stack-cli/server.ts`: Create `http.createServer(app)` before `mkDevServer`, pass it in, then call `httpServer.listen()`
 
 **Files changed**: `vite-factory.ts`, `dev-server-options.ts`, `dev-server.ts`, `stack-cli/server.ts`
+
+## Follow-up: Removed Per-Instance Vite Cache Directory
+
+The unique `.vite-<hex>` cache directory fix was removed. It did not solve the refresh loop problem and left behind orphan cache folders in `node_modules/` that were never cleaned up (cleanup only ran on graceful `vite.close()`). The HMR WebSocket port fix above was the actual solution.

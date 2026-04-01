@@ -8,7 +8,6 @@
 import { createServer, ViteDevServer } from 'vite';
 import { jayStackCompiler, JayRollupConfig } from '@jay-framework/compiler-jay-stack';
 import path from 'node:path';
-import crypto from 'node:crypto';
 import type { Server } from 'node:http';
 
 export interface CreateViteServerOptions {
@@ -45,12 +44,6 @@ export async function createViteServer(options: CreateViteServerOptions): Promis
         httpServer,
     } = options;
 
-    // Unique cache directory per Vite instance — prevents refresh loops when
-    // multiple dev servers run on the same project (each would otherwise share
-    // node_modules/.vite and trigger the other's file watcher on cache writes)
-    const instanceId = crypto.randomBytes(4).toString('hex');
-    const cacheDir = path.join(projectRoot, 'node_modules', `.vite-${instanceId}`);
-
     const vite = await createServer({
         // Don't start HTTP server - we use middleware mode
         server: {
@@ -66,8 +59,6 @@ export async function createViteServer(options: CreateViteServerOptions): Promis
         base,
         // Root directory for module resolution
         root: pagesRoot,
-        // Isolate dep optimization cache per instance
-        cacheDir,
         // SSR configuration
         ssr: {
             // Mark jay-framework packages as external so Vite uses Node's require
@@ -83,14 +74,6 @@ export async function createViteServer(options: CreateViteServerOptions): Promis
         logLevel,
         clearScreen,
     });
-
-    // Clean up the per-instance cache directory when the server closes
-    const originalClose = vite.close.bind(vite);
-    vite.close = async () => {
-        await originalClose();
-        const { rm } = await import('node:fs/promises');
-        await rm(cacheDir, { recursive: true, force: true }).catch(() => {});
-    };
 
     return vite;
 }
