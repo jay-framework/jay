@@ -28,7 +28,7 @@ import { getLogger } from '@jay-framework/logger';
 interface CachedServerModule {
     renderToStream: (vs: object, ctx: ServerRenderContext) => void;
     headLinks: Array<{ rel: string; href: string; attributes: Record<string, string> }>;
-    css?: string;
+    cssHref?: string;
 }
 
 /**
@@ -164,6 +164,8 @@ export async function generateSSRPageHtml(
     );
 
     // Step 4: Build head links from jay-html <head> section
+    // CSS is served via a Vite-processed <link> tag — this gives us PostCSS, @import
+    // resolution, HMR, and avoids duplication with the hydrate module.
     const headLinksHtml = cached.headLinks
         .map((link) => {
             const attrs = Object.entries(link.attributes)
@@ -172,10 +174,12 @@ export async function generateSSRPageHtml(
             return `    <link rel="${link.rel}" href="${link.href}"${attrs} />`;
         })
         .join('\n');
-    const inlineCss = cached.css ? `    <style>\n${cached.css}\n    </style>` : '';
+    const cssLink = cached.cssHref
+        ? `    <link rel="stylesheet" href="${cached.cssHref}" />`
+        : '';
 
     // Step 5: Build full HTML page
-    const headExtras = [headLinksHtml, inlineCss].filter((_) => _).join('\n');
+    const headExtras = [headLinksHtml, cssLink].filter((_) => _).join('\n');
     return `<!doctype html>
 <html lang="en">
   <head>
@@ -269,13 +273,29 @@ async function compileAndLoadServerElement(
 
     const serverModule = await vite.ssrLoadModule(serverElementPath);
 
+    // Write CSS to the build folder beside the server element and serve it as a real file.
+    let cssHref: string | undefined;
+    if (parsedJayFile.css) {
+        const cssFilename = jayHtmlFilename.replace('.jay-html', '.css');
+        const cssPath = path.join(serverElementDir, cssFilename);
+        await fs.writeFile(cssPath, parsedJayFile.css, 'utf-8');
+
+        // Invalidate Vite's module graph for the CSS file — same reason as server element above.
+        const existingCssModule = vite.moduleGraph.getModuleById(cssPath);
+        if (existingCssModule) {
+            vite.moduleGraph.invalidateModule(existingCssModule);
+        }
+
+        cssHref = '/@fs' + cssPath;
+    }
+
     return {
         renderToStream: serverModule.renderToStream as (
             vs: object,
             ctx: ServerRenderContext,
         ) => void,
         headLinks: parsedJayFile.headLinks,
-        css: parsedJayFile.css,
+        cssHref,
     };
 }
 

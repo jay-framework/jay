@@ -1729,11 +1729,9 @@ export function generateElementHydrateFile(
         .minus(Import.conditional)
         .minus(Import.forEach);
     const hydrateImports = typeOnlyImports.plus(Import.jayElement).plus(renderedHydrate.imports);
-    const cssImport = generateCssImport(jayFile);
 
     const renderedFile = [
         renderImports(hydrateImports, ImportsFor.implementation, jayFile.imports, importerMode),
-        cssImport,
         types,
         renderedRefs,
         phaseTypes,
