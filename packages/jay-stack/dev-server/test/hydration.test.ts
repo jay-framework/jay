@@ -8,6 +8,7 @@
  */
 
 import { mkDevServer, type DevServer } from '../lib';
+import { clearServerElementCache } from '@jay-framework/stack-server-runtime';
 import { JayRollupConfig } from '@jay-framework/vite-plugin';
 import path from 'path';
 import fs from 'fs';
@@ -216,7 +217,10 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
         }).catch(() => {});
         await devServer?.viteServer?.close();
 
-        // Clean up build directories created during the test
+        // Clean up build directories and server element cache.
+        // The cache is module-level — without clearing it, subsequent test modes
+        // would reuse stale entries pointing to deleted CSS files.
+        clearServerElementCache();
         const buildDir = path.join(__dirname, dirName, 'build');
         fs.rmSync(buildDir, { recursive: true, force: true });
     });

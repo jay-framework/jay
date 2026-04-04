@@ -10,7 +10,6 @@ import {
 import { makeHeadlessInstanceComponent } from '/@fs{{ROOT}}/packages/jay-stack/stack-client-runtime/dist/index.js';
 // @ts-ignore
 import { header } from '/header/header';
-import '/build/pre-rendered/page.jay-html.css';
 function _headlessHeader0HydrateRender(options) {
     const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
     const render = (viewState) =>

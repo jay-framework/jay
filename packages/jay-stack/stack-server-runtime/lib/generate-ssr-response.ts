@@ -175,9 +175,7 @@ export async function generateSSRPageHtml(
             return `    <link rel="${link.rel}" href="${link.href}"${attrs} />`;
         })
         .join('\n');
-    const cssLink = cached.cssHref
-        ? `    <link rel="stylesheet" href="${cached.cssHref}" />`
-        : '';
+    const cssLink = cached.cssHref ? `    <link rel="stylesheet" href="${cached.cssHref}" />` : '';
 
     // Step 5: Build full HTML page
     const headExtras = [headLinksHtml, cssLink].filter((_) => _).join('\n');
@@ -290,7 +288,7 @@ async function compileAndLoadServerElement(
         }
 
         const hash = crypto.createHash('md5').update(parsedJayFile.css).digest('hex').slice(0, 8);
-        cssHref = '/@fs' + cssPath + '?v=' + hash;
+        cssHref = '/@fs' + cssPath + '?v=' + hash + '&direct';
     }
 
     return {
