@@ -5,6 +5,7 @@ import {
     Import,
     JAY_CONTRACT_EXTENSION,
     JAY_EXTENSION,
+    JAY_QUERY_HYDRATE,
     TS_EXTENSION,
 } from '@jay-framework/compiler-shared';
 import { getLogger } from '@jay-framework/logger';
@@ -121,9 +122,20 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
             getLogger().info(`[watchChange] ${id} ${change.event}`);
             jayContext.deleteCachedJayFile(id);
             if (server) {
-                const module = server.moduleGraph.getModuleById(id + TS_EXTENSION);
-                if (module) {
-                    server.moduleGraph.invalidateModule(module);
+                // Invalidate all module variants generated from this jay-html file
+                const variants = [
+                    id + TS_EXTENSION,
+                    id + JAY_QUERY_HYDRATE + TS_EXTENSION,
+                ];
+                let invalidated = false;
+                for (const variantId of variants) {
+                    const module = server.moduleGraph.getModuleById(variantId);
+                    if (module) {
+                        server.moduleGraph.invalidateModule(module);
+                        invalidated = true;
+                    }
+                }
+                if (invalidated) {
                     server.ws.send({
                         type: 'full-reload',
                     });
