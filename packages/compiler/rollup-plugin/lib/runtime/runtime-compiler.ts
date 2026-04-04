@@ -123,10 +123,7 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
             jayContext.deleteCachedJayFile(id);
             if (server) {
                 // Invalidate all module variants generated from this jay-html file
-                const variants = [
-                    id + TS_EXTENSION,
-                    id + JAY_QUERY_HYDRATE + TS_EXTENSION,
-                ];
+                const variants = [id + TS_EXTENSION, id + JAY_QUERY_HYDRATE + TS_EXTENSION];
                 let invalidated = false;
                 for (const variantId of variants) {
                     const module = server.moduleGraph.getModuleById(variantId);

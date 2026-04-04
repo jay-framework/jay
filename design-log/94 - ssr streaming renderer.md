@@ -829,6 +829,7 @@ Previously CSS loaded twice in SSR dev mode: once as inline `<style>` in the SSR
 **Fix:** `compileAndLoadServerElement` writes extracted CSS to a file in the build folder (beside the server element), then emits a `<link rel="stylesheet" href="/@fs/...">` in the SSR `<head>`. The `/@fs/` prefix is needed because Vite's root is `pagesRoot`, and the build folder is outside it. Removed the CSS import from the hydrate target to eliminate duplication.
 
 **Changes:**
+
 - `stack-server-runtime/lib/generate-ssr-response.ts` — Changed `CachedServerModule.css` → `cssHref`, write CSS file to `build/pre-rendered/{routeDir}/`, emit `<link>` with `/@fs/` URL instead of inline `<style>`
 - `compiler-jay-html/lib/jay-target/jay-html-compiler.ts` — Removed `generateCssImport()` from `generateElementHydrateFile()`
 
