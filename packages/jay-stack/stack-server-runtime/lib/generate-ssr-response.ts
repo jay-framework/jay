@@ -19,6 +19,7 @@ import {
 import type { PluginClientInitInfo } from './plugin-init-discovery';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import { getLogger } from '@jay-framework/logger';
 
 // ============================================================================
@@ -281,12 +282,15 @@ async function compileAndLoadServerElement(
         await fs.writeFile(cssPath, parsedJayFile.css, 'utf-8');
 
         // Invalidate Vite's module graph for the CSS file — same reason as server element above.
-        const existingCssModule = vite.moduleGraph.getModuleById(cssPath);
-        if (existingCssModule) {
-            vite.moduleGraph.invalidateModule(existingCssModule);
+        const cssModules = vite.moduleGraph.getModulesByFile(cssPath);
+        if (cssModules) {
+            for (const mod of cssModules) {
+                vite.moduleGraph.invalidateModule(mod);
+            }
         }
 
-        cssHref = '/@fs' + cssPath;
+        const hash = crypto.createHash('md5').update(parsedJayFile.css).digest('hex').slice(0, 8);
+        cssHref = '/@fs' + cssPath + '?v=' + hash;
     }
 
     return {
