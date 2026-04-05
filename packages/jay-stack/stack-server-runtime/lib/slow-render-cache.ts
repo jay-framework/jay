@@ -327,8 +327,10 @@ export class SlowRenderCache {
         try {
             const files = await fs.readdir(cacheSubDir);
             for (const file of files) {
-                // Match files like "page.jay-html" or "page_abc123.jay-html"
-                if (file.startsWith(basename) && file.endsWith('.jay-html')) {
+                // Match all build artifacts sharing the basename prefix:
+                // pre-rendered jay-html (page_abc.jay-html), server element (page_abc.server-element.ts),
+                // and extracted CSS (page_abc.css)
+                if (file.startsWith(basename)) {
                     try {
                         await fs.unlink(path.join(cacheSubDir, file));
                     } catch {
