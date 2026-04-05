@@ -641,7 +641,14 @@ function peg$parse(input, options) {
     },
     peg$c137 = function (head, oper, val) {
       if (oper.length === 2) oper = oper + '=';
-      return head.render().map((_) => `${_} ${oper} ${head.resolvedType.name}.${val}`);
+      const fragment = head.render().map((_) => `${_} ${oper} ${head.resolvedType.name}.${val}`);
+      if (head.resolvedType.values && !head.resolvedType.values.includes(val)) {
+        fragment.validations = [
+          ...fragment.validations,
+          `Unknown enum value "${val}" for type ${head.resolvedType.name}. Valid values: ${head.resolvedType.values.join(', ')}`,
+        ];
+      }
+      return fragment;
     },
     peg$c138 = function () {
       return vars.resolveAccessor(['.']);

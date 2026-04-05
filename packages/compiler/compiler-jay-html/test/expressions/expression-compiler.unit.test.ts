@@ -110,6 +110,19 @@ describe('expression-compiler', () => {
             expect(actual.rendered).toEqual('vs => vs.anEnum !== AnEnum.one');
         });
 
+        it('reports validation error for invalid enum value', () => {
+            const actual = parseCondition('anEnum === invalid', defaultVars);
+            expect(actual.rendered).toEqual('vs => vs.anEnum === AnEnum.invalid');
+            expect(actual.validations).toEqual([
+                'Unknown enum value "invalid" for type AnEnum. Valid values: one, two, three',
+            ]);
+        });
+
+        it('no validation error for valid enum value', () => {
+            const actual = parseCondition('anEnum === two', defaultVars);
+            expect(actual.validations).toEqual([]);
+        });
+
         it('logical AND with two boolean conditions', () => {
             const actual = parseCondition('member && member2', defaultVars);
             expect(actual.rendered).toEqual('vs => (vs.member) && (vs.member2)');

@@ -567,7 +567,11 @@ enumCondition
   = head:accessor _ oper:EqualityOperator _ val:Identifier {
     if (oper.length === 2)
         oper = oper + "=";
-    return head.render().map(_ => `${_} ${oper} ${head.resolvedType.name}.${val}`)
+    const fragment = head.render().map(_ => `${_} ${oper} ${head.resolvedType.name}.${val}`);
+    if (head.resolvedType.values && !head.resolvedType.values.includes(val)) {
+        fragment.validations = [...fragment.validations, `Unknown enum value "${val}" for type ${head.resolvedType.name}. Valid values: ${head.resolvedType.values.join(', ')}`];
+    }
+    return fragment;
 }
 
 accessor
