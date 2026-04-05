@@ -133,7 +133,7 @@ A: Keep it for invalidation. But instead of mapping to cache keys, map source pa
 
 **`dev-server.ts`:**
 
-- Build folder cleanup now preserves `pre-rendered/` directory for cache survival across restarts
+- Build folder is now fully cleared on startup (was: preserving `pre-rendered/`). Server elements, CSS files, and pre-rendered cache all go stale when package code or jay-html templates change between restarts. The cost of re-running the slow render pipeline on first request is small compared to the debugging cost of stale artifacts
 - `get()` calls are now awaited (async API)
 - Removed `fs.access` check — `get()` handles file existence internally
 - `handleCachedRequest` passes `preRenderedContent` to both `loadPageParts` and `sendResponse`

@@ -947,22 +947,11 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     const { publicBaseUrlPath, pagesRootFolder, projectRootFolder, buildFolder, jayRollupConfig } =
         options;
 
-    // Clean build folder on startup, but preserve pre-rendered cache (DL#110).
-    // The pre-rendered/ directory contains filesystem-based cache entries that
-    // survive restarts, so first requests don't re-run the slow render pipeline.
+    // Clean entire build folder on startup.
+    // Server elements, CSS files, and pre-rendered cache all live here and go
+    // stale when package code or jay-html templates change between restarts.
     if (buildFolder) {
-        try {
-            const entries = await fs.readdir(buildFolder);
-            for (const entry of entries) {
-                if (entry !== 'pre-rendered') {
-                    await fs
-                        .rm(path.join(buildFolder, entry), { recursive: true, force: true })
-                        .catch(() => {});
-                }
-            }
-        } catch {
-            // Build folder may not exist yet
-        }
+        await fs.rm(buildFolder, { recursive: true, force: true }).catch(() => {});
     }
 
     // Map Jay log level to Vite log level
