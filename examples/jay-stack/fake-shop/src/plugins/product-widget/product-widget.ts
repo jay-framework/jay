@@ -65,7 +65,7 @@ export const productWidget = makeJayStackComponent<ProductWidgetContract>()
             fastViewState: Signals<ProductWidgetFastViewState>,
             carryForward: WidgetCarryForward,
         ) => {
-            const [inStock, setInStock] = createSignal(carryForward.productId !== '');
+            const [inStock, setInStock] = fastViewState.inStock;
 
             refs.addToCart.onclick(() => {
                 console.log(`Adding product ${carryForward.productId} to cart`);
