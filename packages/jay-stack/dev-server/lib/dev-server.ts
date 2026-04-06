@@ -427,11 +427,15 @@ async function handlePreRenderRequest(
 
     // Pre-render the jay-html with slow viewState (two-pass pipeline)
     // Pass 1: page-level bindings, Pass 2: headless instance bindings
+    const partKeys = initialPartsResult.val.parts
+        .map((p) => p.key)
+        .filter((k): k is string => !!k);
     const preRenderResult = await preRenderJayHtml(
         route,
         renderedSlowly.rendered,
         initialPartsResult.val.headlessContracts,
         initialPartsResult.val.headlessInstanceComponents,
+        partKeys,
     );
     timing?.recordSlowRender(Date.now() - slowStart);
 
@@ -749,12 +753,14 @@ interface PreRenderResult {
  * @param slowViewState - The slow phase view state data
  * @param headlessContracts - Key-based headless contracts (from loadPageParts)
  * @param headlessInstanceComponents - Instance-only headless components (from loadPageParts)
+ * @param partKeys - Keys from keyed page parts (plugins), used to distinguish plugin data from page-level data
  */
 async function preRenderJayHtml(
     route: JayRoute,
     slowViewState: object,
     headlessContracts: HeadlessContractInfo[],
     headlessInstanceComponents: HeadlessInstanceComponent[],
+    partKeys: string[] = [],
 ): Promise<PreRenderResult | undefined> {
     // Read the original jay-html
     const jayHtmlContent = await fs.readFile(route.jayHtmlPath, 'utf-8');
@@ -786,7 +792,11 @@ async function preRenderJayHtml(
 
     // Warn if slow data is provided without a contract (DL#108).
     // Without a contract, slow render resolves nothing — the data is silently ignored.
-    if (!contract && slowViewState && Object.keys(slowViewState).length > 0) {
+    // Skip warning when slowViewState only contains keyed part data (plugins) —
+    // plugins have their own contracts and don't need the page-level contract.
+    const hasPageLevelSlowData =
+        slowViewState && Object.keys(slowViewState).some((k) => !partKeys.includes(k));
+    if (!contract && hasPageLevelSlowData) {
         getLogger().warn(
             `[SlowRender] Page ${route.jayHtmlPath} has slow ViewState but no contract. ` +
                 `Without a contract, slow bindings cannot be resolved. ` +
