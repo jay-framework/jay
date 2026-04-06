@@ -641,7 +641,8 @@ function peg$parse(input, options) {
     },
     peg$c137 = function (head, oper, val) {
       if (oper.length === 2) oper = oper + '=';
-      const fragment = head.render().map((_) => `${_} ${oper} ${head.resolvedType.name}.${val}`);
+      const enumName = head.resolvedType.alias || head.resolvedType.name;
+      const fragment = head.render().map((_) => `${_} ${oper} ${enumName}.${val}`);
       if (head.resolvedType.values && !head.resolvedType.values.includes(val)) {
         fragment.validations = [
           ...fragment.validations,

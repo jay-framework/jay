@@ -35,18 +35,19 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 
 ## Contracts & Type System
 
-| #   | Title                                        | Description                                                            |
-| --- | -------------------------------------------- | ---------------------------------------------------------------------- |
-| 35  | partial and complementary types              | Type composition patterns                                              |
-| 38  | Contract File                                | Jay contract file format (YAML), ViewState and Refs types              |
-| 45  | View State Types                             | ViewState type system                                                  |
-| 50  | rendering phases in contracts                | Phase annotations (`slow`, `fast`, `fast+interactive`) for type safety |
-| 51  | jay-html with contract references            | Contract references in templates                                       |
-| 51  | Project Structure Identification             | Pages vs Components identification                                     |
-| 61  | json-patch typed JSONPointer                 | Typed JSON operations                                                  |
-| 79  | linked contracts with mixed phase properties | Linked sub-contracts across rendering phases                           |
-| 95  | jay-action contract references               | Reference contract ViewState types from .jay-action output schemas     |
-| 120 | record type in jay-action                    | `record(T)` type notation for typed Record maps in action schemas      |
+| #   | Title                                        | Description                                                                 |
+| --- | -------------------------------------------- | --------------------------------------------------------------------------- |
+| 35  | partial and complementary types              | Type composition patterns                                                   |
+| 38  | Contract File                                | Jay contract file format (YAML), ViewState and Refs types                   |
+| 45  | View State Types                             | ViewState type system                                                       |
+| 50  | rendering phases in contracts                | Phase annotations (`slow`, `fast`, `fast+interactive`) for type safety      |
+| 51  | jay-html with contract references            | Contract references in templates                                            |
+| 51  | Project Structure Identification             | Pages vs Components identification                                          |
+| 61  | json-patch typed JSONPointer                 | Typed JSON operations                                                       |
+| 79  | linked contracts with mixed phase properties | Linked sub-contracts across rendering phases                                |
+| 95  | jay-action contract references               | Reference contract ViewState types from .jay-action output schemas          |
+| 120 | record type in jay-action                    | `record(T)` type notation for typed Record maps in action schemas           |
+| 122 | enum name collision across linked contracts  | Fix import shadowing and duplication when linked contracts share enum names |
 
 ---
 

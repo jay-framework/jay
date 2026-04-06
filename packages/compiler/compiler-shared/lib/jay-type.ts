@@ -52,6 +52,7 @@ export class JayEnumType implements JayType {
         public readonly name: string,
         public readonly values: Array<string>,
     ) {}
+    public alias?: string;
     readonly kind = JayTypeKind.enum;
 }
 

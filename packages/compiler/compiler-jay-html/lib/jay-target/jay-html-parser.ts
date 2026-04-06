@@ -61,6 +61,63 @@ function resolveImportedType(imports: JayImportName[], type: string): JayType {
     } else return JayUnknown;
 }
 
+/** Deduplicate enums by (declaringModule, type.name) — keeps the first occurrence of each. */
+function deduplicateEnums(enums: EnumToImport[]): EnumToImport[] {
+    const seen = new Set<string>();
+    return enums.filter((e) => {
+        const key = `${e.declaringModule}::${e.type.name}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
+/**
+ * Resolve cross-contract enum name collisions by aliasing duplicates.
+ * When two enums from different modules share the same name, subsequent occurrences
+ * get aliased (e.g., OptionRenderType$1) so imports don't shadow each other.
+ * Always alias across different modules — even same values in different order would
+ * produce different numeric indices at runtime.
+ */
+function resolveEnumCollisions(allHeadlessImports: JayHeadlessImports[]): void {
+    // Collect all enum import names across all headless imports
+    const enumsByName = new Map<string, Array<{ importName: JayImportName; module: string }>>();
+
+    for (const headless of allHeadlessImports) {
+        for (const link of headless.contractLinks) {
+            for (const importName of link.names) {
+                if (importName.type instanceof JayEnumType) {
+                    const entries = enumsByName.get(importName.type.name) || [];
+                    entries.push({ importName, module: link.module });
+                    enumsByName.set(importName.type.name, entries);
+                }
+            }
+        }
+    }
+
+    // For each name group with collisions, alias subsequent entries from different modules
+    for (const [, entries] of enumsByName) {
+        if (entries.length <= 1) continue;
+
+        let counter = 0;
+        const firstEntry = entries[0];
+
+        for (let i = 1; i < entries.length; i++) {
+            const entry = entries[i];
+            const entryEnum = entry.importName.type as JayEnumType;
+
+            // Same module — no collision possible (deduplication handles this)
+            if (entry.module === firstEntry.module) continue;
+
+            // Different module — always alias to avoid shadowing
+            counter++;
+            const alias = `${entryEnum.name}$${counter}`;
+            entryEnum.alias = alias;
+            entry.importName.as = alias;
+        }
+    }
+}
+
 /**
  * Checks if a type string is a recursive reference (starts with "$/" like "$/data")
  */
@@ -676,8 +733,10 @@ async function parseHeadlessImports(
                     ],
                 };
 
-                const enumsFromOtherContracts = enumsToImportRelativeToJayHtml.filter(
-                    (_) => _.declaringModule !== relativeContractPath,
+                const enumsFromOtherContracts = deduplicateEnums(
+                    enumsToImportRelativeToJayHtml.filter(
+                        (_) => _.declaringModule !== relativeContractPath,
+                    ),
                 );
 
                 const enumImportLinks: JayImportLink[] = Object.entries(
@@ -967,8 +1026,10 @@ async function parseHeadfullFSImports(
                     ],
                 };
 
-                const enumsFromOtherContracts = enumsToImportRelativeToJayHtml.filter(
-                    (_) => _.declaringModule !== relativeContractPath,
+                const enumsFromOtherContracts = deduplicateEnums(
+                    enumsToImportRelativeToJayHtml.filter(
+                        (_) => _.declaringModule !== relativeContractPath,
+                    ),
                 );
 
                 const enumImportLinks: JayImportLink[] = Object.entries(
@@ -1252,6 +1313,9 @@ export async function parseJayFile(
 
     // Merge headfull FS imports with headless imports
     const allHeadlessImports = [...headlessImports, ...headfullFSResult.headlessImports];
+
+    // Resolve cross-contract enum name collisions by aliasing duplicates
+    resolveEnumCollisions(allHeadlessImports);
 
     const importNames = headfullImports.flatMap((_) => _.names);
     const types = await parseTypes(

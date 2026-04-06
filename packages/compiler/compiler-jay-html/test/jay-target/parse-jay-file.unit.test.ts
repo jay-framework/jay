@@ -1616,6 +1616,258 @@ describe('compiler', () => {
                 // searchResults is NOT here - it's dynamic
             });
         });
+
+        it('should alias colliding enum names from different contracts with different values', async () => {
+            // Contract A has enum tag "status" → Status with values ACTIVE | INACTIVE
+            const contractA: Contract = {
+                name: 'widgetA',
+                tags: [
+                    {
+                        tag: 'label',
+                        type: [ContractTagType.data],
+                        dataType: JayString,
+                    },
+                    {
+                        tag: 'status',
+                        type: [ContractTagType.variant],
+                        dataType: new JayEnumType('Status', ['ACTIVE', 'INACTIVE']),
+                    },
+                ],
+            };
+
+            // Contract B has enum tag "status" → Status with values PENDING | DONE
+            const contractB: Contract = {
+                name: 'widgetB',
+                tags: [
+                    {
+                        tag: 'title',
+                        type: [ContractTagType.data],
+                        dataType: JayString,
+                    },
+                    {
+                        tag: 'status',
+                        type: [ContractTagType.variant],
+                        dataType: new JayEnumType('Status', ['PENDING', 'DONE']),
+                    },
+                ],
+            };
+
+            const resolver: JayImportResolver = {
+                ...defaultImportResolver,
+                resolvePluginComponent(pluginName: string, contractName: string) {
+                    if (pluginName === 'test-widget-a' && contractName === 'widget-a') {
+                        return new WithValidations(
+                            {
+                                contractPath: '/plugins/widget-a/widget-a.jay-contract',
+                                componentPath: '/plugins/widget-a/widget-a',
+                                componentName: 'widgetA',
+                            },
+                            [],
+                        );
+                    }
+                    if (pluginName === 'test-widget-b' && contractName === 'widget-b') {
+                        return new WithValidations(
+                            {
+                                contractPath: '/plugins/widget-b/widget-b.jay-contract',
+                                componentPath: '/plugins/widget-b/widget-b',
+                                componentName: 'widgetB',
+                            },
+                            [],
+                        );
+                    }
+                    return new WithValidations(null as any, [`Plugin not found`]);
+                },
+                loadPluginContract(pluginName: string, contractName: string) {
+                    if (pluginName === 'test-widget-a' && contractName === 'widget-a') {
+                        return new WithValidations(
+                            {
+                                contract: contractA,
+                                contractPath: '/plugins/widget-a/widget-a.jay-contract',
+                            },
+                            [],
+                        );
+                    }
+                    if (pluginName === 'test-widget-b' && contractName === 'widget-b') {
+                        return new WithValidations(
+                            {
+                                contract: contractB,
+                                contractPath: '/plugins/widget-b/widget-b.jay-contract',
+                            },
+                            [],
+                        );
+                    }
+                    return new WithValidations(null as any, [`Plugin not found`]);
+                },
+                loadContract(fullPath: string): WithValidations<Contract> {
+                    if (fullPath.includes('widget-a')) return new WithValidations(contractA, []);
+                    if (fullPath.includes('widget-b')) return new WithValidations(contractB, []);
+                    throw new Error('Unexpected contract path: ' + fullPath);
+                },
+                resolveLink(importingModule: string, link: string): string {
+                    return '/resolved/' + link;
+                },
+            };
+
+            const jayFile = await parseJayFile(
+                stripMargin(
+                    `<html>
+                    |   <head>
+                    |     <script type="application/jay-headless" plugin="test-widget-a" contract="widget-a" key="a"></script>
+                    |     <script type="application/jay-headless" plugin="test-widget-b" contract="widget-b" key="b"></script>
+                    |     <script type="application/jay-data">data:</script>
+                    |   </head>
+                    |   <body></body>
+                    | </html>`,
+                ),
+                'Page',
+                '',
+                {},
+                resolver,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([]);
+            expect(jayFile.val.headlessImports).toHaveLength(2);
+
+            // The first contract's enum should keep its original name
+            const importA = jayFile.val.headlessImports.find((i) => i.contractName === 'widget-a')!;
+            const enumFromA = importA.contractLinks
+                .flatMap((l) => l.names)
+                .find((n) => n.type instanceof JayEnumType);
+            expect(enumFromA).toBeDefined();
+            expect(enumFromA!.name).toEqual('Status');
+            expect(enumFromA!.as).toBeUndefined();
+            expect((enumFromA!.type as JayEnumType).alias).toBeUndefined();
+
+            // The second contract's enum should be aliased to avoid collision
+            const importB = jayFile.val.headlessImports.find((i) => i.contractName === 'widget-b')!;
+            const enumFromB = importB.contractLinks
+                .flatMap((l) => l.names)
+                .find((n) => n.type instanceof JayEnumType);
+            expect(enumFromB).toBeDefined();
+            expect(enumFromB!.name).toEqual('Status');
+            expect(enumFromB!.as).toEqual('Status$1');
+            expect((enumFromB!.type as JayEnumType).alias).toEqual('Status$1');
+        });
+
+        it('should alias enums with same name even when values match across different contracts', async () => {
+            // Even identical enums from different modules must be aliased —
+            // same values in different order would produce different numeric indices
+            const contractC: Contract = {
+                name: 'widgetC',
+                tags: [
+                    {
+                        tag: 'mode',
+                        type: [ContractTagType.variant],
+                        dataType: new JayEnumType('Mode', ['LIGHT', 'DARK']),
+                    },
+                ],
+            };
+
+            const contractD: Contract = {
+                name: 'widgetD',
+                tags: [
+                    {
+                        tag: 'mode',
+                        type: [ContractTagType.variant],
+                        dataType: new JayEnumType('Mode', ['LIGHT', 'DARK']),
+                    },
+                ],
+            };
+
+            const resolver: JayImportResolver = {
+                ...defaultImportResolver,
+                resolvePluginComponent(pluginName: string, contractName: string) {
+                    if (pluginName === 'test-widget-c' && contractName === 'widget-c') {
+                        return new WithValidations(
+                            {
+                                contractPath: '/plugins/widget-c/widget-c.jay-contract',
+                                componentPath: '/plugins/widget-c/widget-c',
+                                componentName: 'widgetC',
+                            },
+                            [],
+                        );
+                    }
+                    if (pluginName === 'test-widget-d' && contractName === 'widget-d') {
+                        return new WithValidations(
+                            {
+                                contractPath: '/plugins/widget-d/widget-d.jay-contract',
+                                componentPath: '/plugins/widget-d/widget-d',
+                                componentName: 'widgetD',
+                            },
+                            [],
+                        );
+                    }
+                    return new WithValidations(null as any, [`Plugin not found`]);
+                },
+                loadPluginContract(pluginName: string, contractName: string) {
+                    if (pluginName === 'test-widget-c' && contractName === 'widget-c') {
+                        return new WithValidations(
+                            {
+                                contract: contractC,
+                                contractPath: '/plugins/widget-c/widget-c.jay-contract',
+                            },
+                            [],
+                        );
+                    }
+                    if (pluginName === 'test-widget-d' && contractName === 'widget-d') {
+                        return new WithValidations(
+                            {
+                                contract: contractD,
+                                contractPath: '/plugins/widget-d/widget-d.jay-contract',
+                            },
+                            [],
+                        );
+                    }
+                    return new WithValidations(null as any, [`Plugin not found`]);
+                },
+                loadContract(fullPath: string): WithValidations<Contract> {
+                    if (fullPath.includes('widget-c')) return new WithValidations(contractC, []);
+                    if (fullPath.includes('widget-d')) return new WithValidations(contractD, []);
+                    throw new Error('Unexpected contract path: ' + fullPath);
+                },
+                resolveLink(importingModule: string, link: string): string {
+                    return '/resolved/' + link;
+                },
+            };
+
+            const jayFile = await parseJayFile(
+                stripMargin(
+                    `<html>
+                    |   <head>
+                    |     <script type="application/jay-headless" plugin="test-widget-c" contract="widget-c" key="c"></script>
+                    |     <script type="application/jay-headless" plugin="test-widget-d" contract="widget-d" key="d"></script>
+                    |     <script type="application/jay-data">data:</script>
+                    |   </head>
+                    |   <body></body>
+                    | </html>`,
+                ),
+                'Page',
+                '',
+                {},
+                resolver,
+                '',
+            );
+
+            expect(jayFile.validations).toEqual([]);
+
+            // Same name from different modules — second should still be aliased
+            const firstImport = jayFile.val.headlessImports[0];
+            const firstEnum = firstImport.contractLinks
+                .flatMap((l) => l.names)
+                .find((n) => n.type instanceof JayEnumType);
+            expect(firstEnum).toBeDefined();
+            expect(firstEnum!.as).toBeUndefined();
+            expect((firstEnum!.type as JayEnumType).alias).toBeUndefined();
+
+            const secondImport = jayFile.val.headlessImports[1];
+            const secondEnum = secondImport.contractLinks
+                .flatMap((l) => l.names)
+                .find((n) => n.type instanceof JayEnumType);
+            expect(secondEnum).toBeDefined();
+            expect(secondEnum!.as).toEqual('Mode$1');
+            expect((secondEnum!.type as JayEnumType).alias).toEqual('Mode$1');
+        });
     });
 
     describe('headfull full-stack imports', () => {
