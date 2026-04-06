@@ -8,6 +8,7 @@
 import { Request, Response, RequestHandler } from 'express';
 import { ActionRegistry, actionRegistry } from '@jay-framework/stack-server-runtime';
 import type { HttpMethod } from '@jay-framework/fullstack-component';
+import { getDevLogger } from '@jay-framework/logger';
 
 /**
  * The base path for action endpoints.
@@ -124,6 +125,9 @@ export function createActionRouter(options?: ActionRouterOptions): RequestHandle
             return;
         }
 
+        // Start request timing
+        const timing = getDevLogger()?.startRequest(requestMethod, ACTION_ENDPOINT_BASE + '/' + actionName);
+
         // Execute the action
         const result = await registry.execute(actionName, input);
 
@@ -149,6 +153,8 @@ export function createActionRouter(options?: ActionRouterOptions): RequestHandle
                 error: result.error,
             });
         }
+
+        timing?.end();
     };
 }
 
