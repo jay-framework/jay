@@ -1,0 +1,26 @@
+name: test-widget
+tags:
+  - tag: title
+    type: data
+    dataType: string
+
+  - tag: addToCart
+    type: interactive
+    elementType: HTMLButtonElement
+
+  - tag: searchInput
+    type: interactive
+    elementType: HTMLInputElement
+
+  - tag: items
+    type: sub-contract
+    repeated: true
+    trackBy: _id
+    tags:
+      - tag: _id
+        type: data
+        dataType: string
+      - tag: isSelected
+        type: [data, interactive]
+        dataType: boolean
+        elementType: HTMLInputElement

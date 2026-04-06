@@ -427,9 +427,7 @@ async function handlePreRenderRequest(
 
     // Pre-render the jay-html with slow viewState (two-pass pipeline)
     // Pass 1: page-level bindings, Pass 2: headless instance bindings
-    const partKeys = initialPartsResult.val.parts
-        .map((p) => p.key)
-        .filter((k): k is string => !!k);
+    const partKeys = initialPartsResult.val.parts.map((p) => p.key).filter((k): k is string => !!k);
     const preRenderResult = await preRenderJayHtml(
         route,
         renderedSlowly.rendered,

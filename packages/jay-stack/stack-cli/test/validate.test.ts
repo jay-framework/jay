@@ -5,7 +5,10 @@ import {
     extractRouteParams,
     extractJayParams,
     checkRouteParams,
+    checkRefElementTypes,
 } from '../lib/validate';
+import { parseJayFile, JAY_IMPORT_RESOLVER } from '@jay-framework/compiler-jay-html';
+import { promises as fsp } from 'fs';
 
 describe('validateJayFiles', () => {
     const baseFixturesDir = path.resolve('./test/fixtures/validate');
@@ -177,5 +180,61 @@ describe('route param validation (integration)', () => {
 
         expect(result.errors).toHaveLength(0);
         expect(result.warnings).toHaveLength(0);
+    });
+});
+
+describe('checkRefElementTypes', () => {
+    const fixturesDir = path.resolve('./test/fixtures/validate');
+
+    async function parseFixture(fixturePath: string) {
+        const jayFile = path.join(fixturesDir, fixturePath);
+        const content = await fsp.readFile(jayFile, 'utf-8');
+        const filename = path.basename(jayFile.replace('.jay-html', ''));
+        const dirname = path.dirname(jayFile);
+        const projectRoot = dirname;
+        const parsed = await parseJayFile(
+            content,
+            filename,
+            dirname,
+            {},
+            JAY_IMPORT_RESOLVER,
+            projectRoot,
+        );
+        expect(parsed.validations).toHaveLength(0);
+        return parsed.val!;
+    }
+
+    it('should produce no warnings when ref element types match contract', async () => {
+        const jayHtml = await parseFixture('headless-coverage/page.jay-html');
+        const warnings = checkRefElementTypes(jayHtml, 'test.jay-html');
+        expect(warnings).toHaveLength(0);
+    });
+
+    it('should warn when ref element type does not match contract', async () => {
+        const jayHtml = await parseFixture('ref-element-type-mismatch/page.jay-html');
+        const warnings = checkRefElementTypes(jayHtml, 'test.jay-html');
+        expect(warnings).toHaveLength(2);
+        expect(warnings[0]).toEqual(
+            'Ref "widget.searchInput" is on a <div> (HTMLDivElement) but the contract declares HTMLInputElement',
+        );
+        expect(warnings[1]).toEqual(
+            'Ref "widget.items.isSelected" is on a <button> (HTMLButtonElement) but the contract declares HTMLInputElement',
+        );
+    });
+});
+
+describe('ref element type validation (integration)', () => {
+    const baseFixturesDir = path.resolve('./test/fixtures/validate');
+
+    it('should produce warnings for ref element type mismatches via validateJayFiles', async () => {
+        const fixtureDir = path.join(baseFixturesDir, 'ref-element-type-mismatch');
+        const result = await validateJayFiles({
+            path: fixtureDir,
+            projectRoot: fixtureDir,
+        });
+
+        expect(result.errors).toHaveLength(0);
+        const refWarnings = result.warnings.filter((w) => w.message.startsWith('Ref "'));
+        expect(refWarnings).toHaveLength(2);
     });
 });

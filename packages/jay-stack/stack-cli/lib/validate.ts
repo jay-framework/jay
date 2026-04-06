@@ -13,7 +13,9 @@ import {
     JAY_IMPORT_RESOLVER,
     generateElementFile,
     parseContract,
+    htmlElementTagNameMap,
     type ContractTag,
+    type Contract,
     type JayHtmlSourceFile,
 } from '@jay-framework/compiler-jay-html';
 import { getLogger } from '@jay-framework/logger';
@@ -305,6 +307,163 @@ export function analyzeTagCoverage(jayHtml: JayHtmlSourceFile, file: string): Fi
     return { file, contracts };
 }
 
+// --- Ref element type checking ---
+
+const htmlTagNameMap = htmlElementTagNameMap as Record<string, string>;
+
+/** Resolve a contract tag by dot-separated path (e.g. "filters.optionFilters.choices.isSelected"). */
+function resolveContractTag(contract: Contract, tagPath: string): ContractTag | undefined {
+    const segments = tagPath.split('.');
+    let tags = contract.tags;
+    for (let i = 0; i < segments.length; i++) {
+        const tag = tags.find((t) => t.tag === segments[i]);
+        if (!tag) return undefined;
+        if (i === segments.length - 1) return tag;
+        if (!tag.tags) return undefined;
+        tags = tag.tags;
+    }
+    return undefined;
+}
+
+interface RefElementInfo {
+    refPath: string;
+    htmlTag: string;
+    actualType: string;
+}
+
+/** @internal Exported for testing */
+export function checkRefElementTypes(jayHtml: JayHtmlSourceFile, file: string): string[] {
+    const imports = jayHtml.headlessImports;
+    const keyMap = new Map<string, number>();
+    for (let i = 0; i < imports.length; i++) {
+        if (imports[i].key) {
+            keyMap.set(imports[i].key!, i);
+        }
+    }
+
+    const warnings: string[] = [];
+
+    interface Scope {
+        importIndex: number;
+        prefix: string;
+    }
+
+    function checkRef(ref: RefElementInfo, scopes: Scope[]): void {
+        const refPath = ref.refPath;
+        const dot = refPath.indexOf('.');
+        let importIndex: number | undefined;
+        let tagPath: string;
+
+        // Try keyed resolution first
+        if (dot !== -1) {
+            const key = refPath.substring(0, dot);
+            const idx = keyMap.get(key);
+            if (idx !== undefined) {
+                importIndex = idx;
+                tagPath = refPath.substring(dot + 1);
+            }
+        }
+
+        // Fall back to scope resolution
+        if (importIndex === undefined && scopes.length > 0) {
+            const scope = scopes[scopes.length - 1];
+            importIndex = scope.importIndex;
+            tagPath = scope.prefix ? `${scope.prefix}.${refPath}` : refPath;
+        }
+
+        if (importIndex === undefined) return;
+
+        const imp = imports[importIndex!];
+        if (!imp.contract) return;
+
+        const contractTag = resolveContractTag(imp.contract, tagPath!);
+        if (!contractTag || !contractTag.elementType) return;
+
+        // Check if actual element type is compatible with contract's declared type(s)
+        const contractTypes = contractTag.elementType;
+        if (contractTypes.includes('HTMLElement')) return; // HTMLElement accepts anything
+        if (!contractTypes.includes(ref.actualType)) {
+            const label = imp.key ? `${imp.key}.${tagPath!}` : tagPath!;
+            warnings.push(
+                `Ref "${label}" is on a <${ref.htmlTag}> (${ref.actualType}) ` +
+                    `but the contract declares ${contractTypes.join(' | ')}`,
+            );
+        }
+    }
+
+    function walkElement(element: any, scopes: Scope[]): void {
+        const tagName: string | undefined = element.rawTagName?.toLowerCase();
+        let childScopes = scopes;
+
+        // <jay:contract-name> → instance scope
+        if (tagName?.startsWith('jay:')) {
+            const contractName = tagName.substring(4);
+            const idx = imports.findIndex(
+                (imp) => imp.contractName === contractName && imp.contract,
+            );
+            if (idx !== -1) {
+                childScopes = [...scopes, { importIndex: idx, prefix: '' }];
+            }
+        }
+
+        // forEach → push scope
+        const forEachVal = element.getAttribute?.('forEach');
+        if (forEachVal) {
+            const fePath = extractTagPath(forEachVal);
+            if (fePath) {
+                const dot = fePath.indexOf('.');
+                if (dot !== -1) {
+                    const key = fePath.substring(0, dot);
+                    const idx = keyMap.get(key);
+                    if (idx !== undefined) {
+                        childScopes = [
+                            ...childScopes,
+                            { importIndex: idx, prefix: fePath.substring(dot + 1) },
+                        ];
+                    }
+                } else if (childScopes.length > 0) {
+                    const scope = childScopes[childScopes.length - 1];
+                    const newPrefix = scope.prefix ? `${scope.prefix}.${fePath}` : fePath;
+                    childScopes = [
+                        ...childScopes,
+                        { importIndex: scope.importIndex, prefix: newPrefix },
+                    ];
+                }
+            }
+        }
+
+        // with-data accessor → push scope
+        if (tagName === 'with-data') {
+            const accessor = element.getAttribute?.('accessor');
+            if (accessor && accessor !== '.' && childScopes.length > 0) {
+                const scope = childScopes[childScopes.length - 1];
+                const newPrefix = scope.prefix ? `${scope.prefix}.${accessor}` : accessor;
+                childScopes = [
+                    ...childScopes,
+                    { importIndex: scope.importIndex, prefix: newPrefix },
+                ];
+            }
+        }
+
+        // Check ref attribute for element type mismatch
+        const refVal = element.getAttribute?.('ref');
+        if (refVal && tagName) {
+            const actualType = htmlTagNameMap[tagName] ?? 'HTMLElement';
+            checkRef({ refPath: refVal, htmlTag: tagName, actualType }, childScopes);
+        }
+
+        // Walk children
+        for (const child of element.childNodes ?? []) {
+            if (child.nodeType === 1) {
+                walkElement(child, childScopes);
+            }
+        }
+    }
+
+    walkElement(jayHtml.body, []);
+    return warnings;
+}
+
 // Same regex as route-scanner: matches [param], [[optional]], [...catchAll]
 const PARSE_PARAM = /^\[(\[)?(\.\.\.)?([^\]]+)\]?\]$/;
 
@@ -496,6 +655,12 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
             // Check route params match contract params
             const routeParamWarnings = checkRouteParams(parsedFile.val!, jayFile, scanDir, content);
             for (const msg of routeParamWarnings) {
+                warnings.push({ file: relativePath, message: msg });
+            }
+
+            // Check ref element types match contract declarations
+            const refTypeWarnings = checkRefElementTypes(parsedFile.val!, relativePath);
+            for (const msg of refTypeWarnings) {
                 warnings.push({ file: relativePath, message: msg });
             }
 

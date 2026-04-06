@@ -126,7 +126,10 @@ export function createActionRouter(options?: ActionRouterOptions): RequestHandle
         }
 
         // Start request timing
-        const timing = getDevLogger()?.startRequest(requestMethod, ACTION_ENDPOINT_BASE + '/' + actionName);
+        const timing = getDevLogger()?.startRequest(
+            requestMethod,
+            ACTION_ENDPOINT_BASE + '/' + actionName,
+        );
 
         // Execute the action
         const result = await registry.execute(actionName, input);

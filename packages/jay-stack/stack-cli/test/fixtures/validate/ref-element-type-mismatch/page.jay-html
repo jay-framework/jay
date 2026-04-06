@@ -1,0 +1,26 @@
+<html>
+<head>
+    <script type="application/jay-headless"
+            plugin="test-widget"
+            contract="test-widget"
+            key="widget"></script>
+    <script type="application/jay-data">
+data:
+    pageTitle: string
+    </script>
+</head>
+<body>
+<div>
+    <h1>{pageTitle}</h1>
+    <h2>{widget.title}</h2>
+    <!-- correct: button matches HTMLButtonElement -->
+    <button ref="widget.addToCart">Add</button>
+    <!-- mismatch: div used for HTMLInputElement ref -->
+    <div ref="widget.searchInput">Search</div>
+    <!-- mismatch inside forEach: button used for HTMLInputElement ref -->
+    <div forEach="widget.items" trackBy="_id">
+        <button ref="widget.items.isSelected">Select</button>
+    </div>
+</div>
+</body>
+</html>
