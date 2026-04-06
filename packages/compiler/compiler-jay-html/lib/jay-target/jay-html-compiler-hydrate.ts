@@ -305,11 +305,6 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             insideFastForEach: true,
             varMappings: { ...context.varMappings, [trackBy]: trackByExpr },
         };
-        const itemContent = mergeHydrateFragments(
-            itemChildNodes.map((child) => renderHydrateNode(child, itemContext)),
-            ',\n',
-        );
-
         // Check if forEach item element itself needs adoption (dynamic attrs or ref)
         const itemRenderCtx = buildRenderContext(itemContext);
         const itemAttrs = renderDynamicAttributes(element, itemRenderCtx);
@@ -320,17 +315,105 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         const itemRefFragment = renderElementRef(element, itemRenderCtx);
         const needsItemAdoption = itemHasDynamicAttrs || !!itemRefFragment.rendered.trim();
 
+        // Check if forEach item children contain interactive conditionals or forEach (DL#121).
+        // When true, wrap in adoptDynamicElement to create a Kindergarten with groups for
+        // dynamic children, enabling condition toggling after hydration.
+        const itemHasInteractiveChildren = itemChildNodes.some(
+            (child) =>
+                child.nodeType === NodeType.ELEMENT_NODE &&
+                ((isConditional(child as HTMLElement) &&
+                    conditionIsInteractive(
+                        (child as HTMLElement).getAttribute('if'),
+                        context.interactivePaths,
+                    )) ||
+                    isForEach(child as HTMLElement)),
+        );
+
         let adoptBody: string;
-        if (needsItemAdoption) {
+        let itemContent: RenderFragment;
+
+        if (itemHasInteractiveChildren) {
+            // Build children with STATIC/dynamic classification — same pattern as
+            // adoptDynamicElement for regular elements.
+            const childParts: string[] = [];
+            let childImports = Imports.none();
+            const childValidations: string[] = [];
+            const childRefs: RefsTree[] = [];
+
+            for (const child of itemChildNodes) {
+                if (child.nodeType !== NodeType.ELEMENT_NODE) {
+                    // Text nodes: render normally, include if they produce hydrate code
+                    const frag = renderHydrateNode(child, itemContext);
+                    if (frag.rendered.trim()) {
+                        childParts.push(frag.rendered);
+                        childImports = childImports.plus(frag.imports);
+                        childValidations.push(...frag.validations);
+                        if (frag.refs) childRefs.push(frag.refs);
+                    }
+                    continue;
+                }
+                const htmlChild = child as HTMLElement;
+                if (
+                    (isConditional(htmlChild) &&
+                        conditionIsInteractive(
+                            htmlChild.getAttribute('if'),
+                            context.interactivePaths,
+                        )) ||
+                    isForEach(htmlChild)
+                ) {
+                    // Dynamic child: render normally (hydrateConditional/hydrateForEach)
+                    const frag = renderHydrateNode(child, itemContext);
+                    if (frag.rendered.trim()) {
+                        childParts.push(frag.rendered);
+                        childImports = childImports.plus(frag.imports);
+                        childValidations.push(...frag.validations);
+                        if (frag.refs) childRefs.push(frag.refs);
+                    }
+                } else {
+                    // Static or adopted child: check if it produces hydrate code
+                    const frag = renderHydrateNode(child, itemContext);
+                    if (frag.rendered.trim()) {
+                        childParts.push(frag.rendered);
+                        childImports = childImports.plus(frag.imports);
+                        childValidations.push(...frag.validations);
+                        if (frag.refs) childRefs.push(frag.refs);
+                    } else {
+                        // No hydrate code — emit STATIC sentinel
+                        childParts.push(`${itemContext.indent.firstLine}STATIC`);
+                        childImports = childImports.plus(Import.STATIC);
+                    }
+                }
+            }
+
             const refSuffix = itemRefFragment.rendered ? `, ${itemRefFragment.rendered}` : '';
-            const childrenArr = itemContent.rendered.trim()
-                ? `[\n${itemContent.rendered},\n${indent.firstLine}        ]`
+            const childrenArr = childParts.length
+                ? `[\n${childParts.join(',\n')},\n${indent.firstLine}        ]`
                 : '[]';
-            adoptBody = `() => [\n${indent.firstLine}        adoptElement("", ${itemAttrs.rendered}, ${childrenArr}${refSuffix}),\n${indent.firstLine}    ]`;
+            adoptBody = `() => [\n${indent.firstLine}        adoptDynamicElement("", ${itemAttrs.rendered}, ${childrenArr}${refSuffix}),\n${indent.firstLine}    ]`;
+
+            itemContent = new RenderFragment(
+                '',
+                Imports.for(Import.adoptDynamicElement).plus(childImports),
+                childValidations,
+                mergeRefsTrees(...childRefs),
+            );
         } else {
-            adoptBody = itemContent.rendered.trim()
-                ? `() => [\n${itemContent.rendered},\n${indent.firstLine}    ]`
-                : '() => []';
+            itemContent = mergeHydrateFragments(
+                itemChildNodes.map((child) => renderHydrateNode(child, itemContext)),
+                ',\n',
+            );
+
+            if (needsItemAdoption) {
+                const refSuffix = itemRefFragment.rendered ? `, ${itemRefFragment.rendered}` : '';
+                const childrenArr = itemContent.rendered.trim()
+                    ? `[\n${itemContent.rendered},\n${indent.firstLine}        ]`
+                    : '[]';
+                adoptBody = `() => [\n${indent.firstLine}        adoptElement("", ${itemAttrs.rendered}, ${childrenArr}${refSuffix}),\n${indent.firstLine}    ]`;
+            } else {
+                adoptBody = itemContent.rendered.trim()
+                    ? `() => [\n${itemContent.rendered},\n${indent.firstLine}    ]`
+                    : '() => []';
+            }
         }
 
         // Create callback: render the item element using the standard element target.
@@ -393,7 +476,7 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             .plus(itemAttrs.imports)
             .plus(itemRefFragment.imports)
             .plus(createItemRef.imports);
-        if (needsItemAdoption) {
+        if (needsItemAdoption && !itemHasInteractiveChildren) {
             allImports = allImports.plus(Import.adoptElement);
         }
         const hydrateForEachFragment = new RenderFragment(

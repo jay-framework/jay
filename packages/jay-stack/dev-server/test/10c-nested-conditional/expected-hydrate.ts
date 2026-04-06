@@ -13,7 +13,16 @@ import {
     // @ts-ignore
 } from '/@fs{{ROOT}}/packages/runtime/runtime/dist/index.js';
 export function hydrate(rootElement, options) {
-    const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
+    const [itemsRefManager, [refToggleButton]] = ReferencesManager.for(
+        options,
+        [],
+        ['toggleButton'],
+        [],
+        [],
+    );
+    const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
+        items: itemsRefManager,
+    });
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptDynamicElement('0', {}, [
@@ -22,17 +31,20 @@ export function hydrate(rootElement, options) {
                     (vs) => vs.items,
                     '_id',
                     () => [
-                        adoptText('0', (vs1) => vs1.name),
-                        hydrateConditional(
-                            (vs1) => vs1.isActive,
-                            () => adoptElement('1', {}, []),
-                            () => e('span', { class: 'badge' }, ['Active']),
-                        ),
-                        hydrateConditional(
-                            (vs1) => !vs1.isActive,
-                            () => adoptElement('2', {}, []),
-                            () => e('span', { class: 'badge-off' }, ['Inactive']),
-                        ),
+                        adoptDynamicElement('', {}, [
+                            adoptText('0', (vs1) => vs1.name),
+                            hydrateConditional(
+                                (vs1) => vs1.isActive,
+                                () => adoptElement('1', {}, []),
+                                () => e('span', { class: 'badge' }, ['Active']),
+                            ),
+                            hydrateConditional(
+                                (vs1) => !vs1.isActive,
+                                () => adoptElement('2', {}, []),
+                                () => e('span', { class: 'badge-off' }, ['Inactive']),
+                            ),
+                            adoptElement('3', {}, [], refToggleButton()),
+                        ]),
                     ],
                     (vs1) => {
                         return de('div', { class: 'item' }, [
@@ -45,6 +57,7 @@ export function hydrate(rootElement, options) {
                                 (vs12) => !vs12.isActive,
                                 () => e('span', { class: 'badge-off' }, ['Inactive']),
                             ),
+                            e('button', {}, ['Toggle'], refToggleButton()),
                         ]);
                     },
                 ),

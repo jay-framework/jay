@@ -1,13 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <script type="application/jay-data">
-        data:
-            title: string
-            items:
-                - _id: string
-                  name: string
-                  isActive: boolean
+    <script type="application/jay-data" contract="./page.jay-contract">
     </script>
 </head>
 <body>
@@ -17,6 +11,7 @@
             <span class="name">{name}</span>
             <span class="badge" if="isActive">Active</span>
             <span class="badge-off" if="!isActive">Inactive</span>
+            <button ref="toggleButton">Toggle</button>
         </div>
     </div>
 </body>

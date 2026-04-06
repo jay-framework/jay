@@ -1431,6 +1431,30 @@ describe('hydration', () => {
                 const inactiveBadge2 = await items[2].$('.badge-off');
                 expect(inactiveBadge2).toBeNull();
             },
+            interactivityChecks: async (page) => {
+                // Toggle Beta (inactive → active): click the second toggle button
+                const buttons = await page.$$('#target .item button');
+                expect(buttons).toHaveLength(3);
+                await buttons[1].click();
+
+                // Beta should now show "Active" badge
+                await page.waitForFunction(
+                    () => {
+                        const items = document.querySelectorAll('#target .item');
+                        return items[1]?.querySelector('.badge') !== null;
+                    },
+                    { timeout: 2000 },
+                );
+                const items = await page.$$('#target .item');
+                expect(await items[1].$('.badge')).toBeTruthy();
+                expect(await items[1].$('.badge-off')).toBeNull();
+
+                // Alpha and Gamma unchanged
+                expect(await items[0].$('.badge')).toBeTruthy();
+                expect(await items[0].$('.badge-off')).toBeNull();
+                expect(await items[2].$('.badge')).toBeTruthy();
+                expect(await items[2].$('.badge-off')).toBeNull();
+            },
         });
     });
 

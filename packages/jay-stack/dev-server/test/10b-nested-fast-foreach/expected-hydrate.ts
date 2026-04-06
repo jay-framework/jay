@@ -20,15 +20,17 @@ export function hydrate(rootElement, options) {
                     (vs) => vs.groups,
                     '_id',
                     () => [
-                        adoptText('0', (vs1) => vs1.name),
-                        hydrateForEach(
-                            (vs1) => vs1.items,
-                            '_id',
-                            () => [adoptText('0', (vs2) => vs2.label)],
-                            (vs2) => {
-                                return e('ul', {}, [e('li', {}, [dt((vs22) => vs22.label)])]);
-                            },
-                        ),
+                        adoptDynamicElement('', {}, [
+                            adoptText('0', (vs1) => vs1.name),
+                            hydrateForEach(
+                                (vs1) => vs1.items,
+                                '_id',
+                                () => [adoptText('0', (vs2) => vs2.label)],
+                                (vs2) => {
+                                    return e('ul', {}, [e('li', {}, [dt((vs22) => vs22.label)])]);
+                                },
+                            ),
+                        ]),
                     ],
                     (vs1) => {
                         return de('div', { class: 'group' }, [
