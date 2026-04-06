@@ -226,15 +226,16 @@ describe('checkRefElementTypes', () => {
 describe('ref element type validation (integration)', () => {
     const baseFixturesDir = path.resolve('./test/fixtures/validate');
 
-    it('should produce warnings for ref element type mismatches via validateJayFiles', async () => {
+    it('should produce errors for ref element type mismatches via validateJayFiles', async () => {
         const fixtureDir = path.join(baseFixturesDir, 'ref-element-type-mismatch');
         const result = await validateJayFiles({
             path: fixtureDir,
             projectRoot: fixtureDir,
         });
 
-        expect(result.errors).toHaveLength(0);
-        const refWarnings = result.warnings.filter((w) => w.message.startsWith('Ref "'));
-        expect(refWarnings).toHaveLength(2);
+        expect(result.valid).toBe(false);
+        const refErrors = result.errors.filter((e) => e.message.startsWith('Ref "'));
+        expect(refErrors).toHaveLength(2);
+        expect(refErrors[0].stage).toBe('generate');
     });
 });

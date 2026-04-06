@@ -659,9 +659,9 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
             }
 
             // Check ref element types match contract declarations
-            const refTypeWarnings = checkRefElementTypes(parsedFile.val!, relativePath);
-            for (const msg of refTypeWarnings) {
-                warnings.push({ file: relativePath, message: msg });
+            const refTypeErrors = checkRefElementTypes(parsedFile.val!, relativePath);
+            for (const msg of refTypeErrors) {
+                errors.push({ file: relativePath, message: msg, stage: 'generate' });
             }
 
             // Analyze tag coverage for headless imports
