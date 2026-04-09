@@ -120,7 +120,11 @@ export function jayRuntime(jayOptions: JayRollupConfig = {}, givenJayContext?: J
         },
         watchChange(id: string, change: { event: 'create' | 'update' | 'delete' }): void {
             getLogger().info(`[watchChange] ${id} ${change.event}`);
-            jayContext.deleteCachedJayFile(id);
+            // Clear ALL cached jay files, not just the changed source file.
+            // Build-directory files (e.g. build/pre-rendered/page.jay-html) are derived
+            // from source files and cached under their own paths. When a source file changes,
+            // those derived caches become stale but watchChange only fires for the source path.
+            jayContext.jayFileCache.clear();
             if (server) {
                 // Invalidate all module variants generated from this jay-html file
                 const variants = [id + TS_EXTENSION, id + JAY_QUERY_HYDRATE + TS_EXTENSION];

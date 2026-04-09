@@ -270,6 +270,13 @@ async function compileAndLoadServerElement(
         vite.moduleGraph.invalidateModule(existingModule);
     }
 
+    // Also invalidate the hydrate and element modules derived from the jay-html file.
+    // The hydrate script imports from this pre-rendered path (e.g. page_hash.jay-html?jay-hydrate),
+    // which Vite caches in its module graph. Without invalidation, Vite serves the stale
+    // compiled hydrate/element code after the jay-html content changes, causing hydration mismatches.
+    const jayHtmlPath = path.join(serverElementDir, jayHtmlFilename);
+    invalidateJayHtmlModules(vite, jayHtmlPath);
+
     const serverModule = await vite.ssrLoadModule(serverElementPath);
 
     // Write CSS to the build folder beside the server element and serve it as a real file.
@@ -299,6 +306,51 @@ async function compileAndLoadServerElement(
         headLinks: parsedJayFile.headLinks,
         cssHref,
     };
+}
+
+/**
+ * Invalidate all Vite module graph entries derived from a jay-html file in the build directory.
+ * This covers the element module (.jay-html.ts), hydrate module (.jay-html?jay-hydrate.ts),
+ * and any other variants that Vite may have cached.
+ *
+ * Uses multiple lookup strategies since Vite's module graph may store modules under
+ * different keys depending on how they were resolved (by file, by ID, or by URL).
+ */
+function invalidateJayHtmlModules(vite: ViteDevServer, jayHtmlPath: string): void {
+    let count = 0;
+
+    // Strategy 1: getModulesByFile — works when Vite mapped the module to this file path
+    const byFile = vite.moduleGraph.getModulesByFile(jayHtmlPath);
+    if (byFile) {
+        for (const mod of byFile) {
+            vite.moduleGraph.invalidateModule(mod);
+            count++;
+        }
+    }
+
+    // Strategy 2: getModuleById with known ID patterns (element + hydrate targets)
+    const knownIds = [jayHtmlPath + '.ts', jayHtmlPath + JAY_QUERY_HYDRATE + '.ts'];
+    for (const id of knownIds) {
+        const mod = vite.moduleGraph.getModuleById(id);
+        if (mod) {
+            vite.moduleGraph.invalidateModule(mod);
+            count++;
+        }
+    }
+
+    // Strategy 3: scan idToModuleMap for any module whose ID contains this file path.
+    // Catches modules registered with unexpected query param formats (e.g. ?import&jay-hydrate.ts).
+    const idMap = vite.moduleGraph.idToModuleMap;
+    for (const [id, mod] of idMap) {
+        if (id.includes(jayHtmlPath)) {
+            vite.moduleGraph.invalidateModule(mod);
+            count++;
+        }
+    }
+
+    if (count > 0) {
+        getLogger().info(`[SSR] Invalidated ${count} Vite module(s) for ${jayHtmlPath}`);
+    }
 }
 
 /**

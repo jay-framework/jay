@@ -170,3 +170,21 @@ Two caches were not properly invalidated when jay-html, page.ts, or .jay-contrac
 **`dev-server.ts`:** Replaced `invalidateServerElementCache(changedPath)` with `clearServerElementCache()` in all three watcher branches (`.jay-html`, `page.ts`, `.jay-contract`). Since pre-rendered paths include param hashes, we can't map source → pre-rendered paths. Clearing all entries is safe in dev — the server element is recompiled on next request.
 
 **`generate-ssr-response.ts`:** Added Vite module graph invalidation in `compileAndLoadServerElement` before calling `vite.ssrLoadModule()`. This ensures Vite reloads the newly written `.server-element.ts` instead of returning a stale version from its ignored-directory cache.
+
+## Bug Fix: Hydration Script Not Reloaded on jay-html Change
+
+### Problem
+
+After editing a jay-html file, the SSR HTML output updated correctly but the hydration script served to the browser did not change, causing hydration mismatch warnings (DOM structure from new SSR vs old hydration code).
+
+Two caches held stale data for pre-rendered file paths:
+
+1. **Vite module graph** — The hydrate module is imported from the pre-rendered path (e.g., `build/pre-rendered/.../page_hash.jay-html?jay-hydrate`). The rollup plugin's `watchChange` hook invalidated modules keyed by the **source** path, but the hydrate module was registered under the **pre-rendered** path. `getModuleById` never found it.
+
+2. **Rollup plugin `jayFileCache`** — The plugin caches parsed jay-html results in `JayPluginContext.jayFileCache`, keyed by `originId` (the resolved file path). When a source file changed, `watchChange` called `deleteCachedJayFile(sourceFilePath)`, but the hydrate module's cache entry was keyed by the pre-rendered path. After Vite module invalidation, re-transformation still returned the stale cached parse result (`getJayFileStructure` line 21-22 returns cached result without checking the new file content).
+
+### Fix
+
+**`runtime-compiler.ts` (`watchChange`):** Changed `jayContext.deleteCachedJayFile(id)` to `jayContext.jayFileCache.clear()`. When any source jay-html changes, all cached parse results are cleared — including entries for derived build-directory files. This is safe since jay-html changes are infrequent and reparsing is fast.
+
+**`generate-ssr-response.ts` (`compileAndLoadServerElement`):** Added `invalidateJayHtmlModules()` which invalidates all Vite module graph entries derived from the pre-rendered jay-html file. Uses three lookup strategies (by file, by known ID patterns, and full `idToModuleMap` scan) since Vite may store modules under different keys depending on resolution context.
