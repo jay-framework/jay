@@ -95,6 +95,36 @@ Each page directory can contain:
 </jay:my-widget>
 ```
 
+### Headfull Full-Stack Components
+
+Headfull components own their UI template and participate in three-phase rendering. Add `contract` to a headfull import:
+
+```html
+<script
+  type="application/jay-headfull"
+  src="./header/header"
+  contract="./header/header.jay-contract"
+  names="header"
+></script>
+<jay:header logoUrl="/logo.png" />
+```
+
+Headfull FS components can nest other headfull FS or headless components in their own `<head>`:
+
+```html
+<!-- header/header.jay-html — uses a plugin headless inside its template -->
+<head>
+  <script type="application/jay-headless" plugin="my-plugin" contract="cart-indicator"></script>
+</head>
+<body>
+  <header>
+    <jay:cart-indicator><span>{itemCount}</span></jay:cart-indicator>
+  </header>
+</body>
+```
+
+All nested imports are hoisted to the page level. Nesting depth is unlimited. Key-based headless imports are not allowed inside headfull FS components.
+
 ### Discovery Commands
 
 ```bash

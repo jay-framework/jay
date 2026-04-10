@@ -368,8 +368,9 @@ function renderServerHeadlessInstance(
         ...context,
         variables: componentVariables,
         indent: bodyIndent,
-        // Don't detect nested headless instances inside headless instances (for now)
-        headlessContractNames: new Set(),
+        // Pass headless contract names through so nested headless instances
+        // inside headfull FS component templates can be detected (DL#123)
+        headlessContractNames: context.headlessContractNames,
         interactivePaths: buildInteractivePaths(headlessImport.contract),
     };
 

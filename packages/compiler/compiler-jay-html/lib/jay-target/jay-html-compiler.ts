@@ -794,8 +794,9 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
                 recursiveRegions: [],
                 isInsideGuard: false,
                 insideFastForEach: false,
-                // Don't detect nested headless instances inside headless instances (for now)
-                headlessContractNames: new Set(),
+                // Pass headless contract names through so nested headless instances
+                // inside headfull FS component templates can be detected (DL#123)
+                headlessContractNames: newContext.headlessContractNames,
             };
 
             const renderedChildren = childNodes

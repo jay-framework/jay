@@ -262,17 +262,80 @@ Header's `header/header.jay-html`:
 
 The child context inside `renderHeadlessInstance` needs to know about headless contracts that are available in the scope. Currently the comment says "Don't detect nested headless instances inside headless instances (for now)". This restriction needs to be lifted, at least for headfull FS components whose templates may legitimately contain headless instances.
 
+## Decisions
+
+### Scenario A: Do not support — restrict via validation
+
+Page-level keyed headless components are designed for pages without code, where all functionality comes from a plugin. They don't support props — only params (URL parameters). Params are a page-level concept and make no sense for a nested component.
+
+A headfull component that needs cart data should import the cart as a nested headless instance (Scenario C), not as a page-level keyed headless. The headfull component has its own contract and rendering phases — it can manage the cart indicator as a child component within its own template.
+
+**Action:** Add a validation rule in `stack-cli validate` that headfull FS component jay-html files cannot declare page-level keyed headless imports (`<script type="application/jay-headless" key="...">` in a headfull component's head).
+
+### Scenario B: Support — recursive headfull nesting
+
+Headfull components should be able to import other headfull components. This is the natural composition model:
+
+- A **page** imports a **layout** (headfull)
+- The **layout** imports a **header** (headfull)
+- The **header** imports a **cart-indicator** (headless, see Scenario C)
+
+`parseHeadfullFSImports` must process component jay-html heads recursively. When loading a headfull component's jay-html, its `<head>` is scanned for nested `<script type="application/jay-headfull">` imports. Those are processed the same way — load their jay-html, inject templates, collect `JayHeadlessImports` entries — and all results are hoisted to the page level. Template injection must happen bottom-up: the innermost component templates are injected first, then their parents, so the final page body has all templates fully expanded.
+
+The same applies to `injectHeadfullFSTemplates` (dev server runtime injection).
+
+No depth limit — recursion terminates naturally since each level loads a different file. Circular imports should be detected and reported as an error.
+
+### Scenario C: Support — headless instances inside headfull templates
+
+Headfull components should be able to use headless instances in their templates. This is how a header component includes a cart indicator from a plugin:
+
+Header's `header/header.jay-html`:
+
+```html
+<head>
+  <script
+    type="application/jay-headless"
+    plugin="wix-cart"
+    contract="cart-indicator"
+    names="CartIndicator"
+  ></script>
+</head>
+<body>
+  <header>
+    <img src="/logo.png" />
+    <jay:cart-indicator />
+  </header>
+</body>
+```
+
+`parseHeadfullFSImports` must process the headfull component's `<head>` to discover headless imports (`<script type="application/jay-headless">`), not just headfull imports. These headless imports are hoisted to the page level alongside the headfull's own `JayHeadlessImports` entry. After template injection, `<jay:cart-indicator>` appears inside the headfull's injected body. The compiler must recognize it as a headless instance.
+
+This requires lifting the `headlessContractNames: new Set()` restriction in `renderHeadlessInstance`. The child context should carry the set of headless contract names that the headfull component declared in its head.
+
+### Component nesting rules summary
+
+| Component type  | Can import headfull? | Can import headless (instance)? | Can import keyed headless? |
+| --------------- | -------------------- | ------------------------------- | -------------------------- |
+| **Page**        | Yes                  | Yes                             | Yes                        |
+| **Headfull FS** | Yes (recursive)      | Yes (from its own head)         | No (validation error)      |
+| **Headless**    | No (no template)     | No (no template)                | No (no template)           |
+
+### Import hoisting
+
+All component imports declared in nested headfull jay-html heads get **hoisted to the page level**. After recursive processing, the page's `allHeadlessImports` array contains entries from every level. Template injection flattens the entire tree into the page body. From the compiler's perspective, all `<jay:xxx>` tags exist in a single flat document — the nesting is resolved at parse time.
+
 ## Questions
 
-1. For Scenario A (keyed headless in headfull), should the headfull component declare its keyed headless dependencies in its own jay-html head, and have them hoisted to the page? Or should the page declare all keyed headless imports and pass data via props?
+1. ~~For Scenario A (keyed headless in headfull), should the headfull component declare its keyed headless dependencies in its own jay-html head, and have them hoisted to the page? Or should the page declare all keyed headless imports and pass data via props?~~ **Answered:** Not supported. Headfull components use headless instances (Scenario C) instead.
 
-2. For Scenario B (headfull in headfull), should nesting depth be limited (e.g., max 2 levels) or fully recursive?
+2. ~~For Scenario B (headfull in headfull), should nesting depth be limited (e.g., max 2 levels) or fully recursive?~~ **Answered:** Fully recursive, with circular import detection.
 
-3. For Scenario C (headless inside headfull), should the headless import be declared in the headfull component's jay-html head (and hoisted), or must it be declared at the page level?
+3. ~~For Scenario C (headless inside headfull), should the headless import be declared in the headfull component's jay-html head (and hoisted), or must it be declared at the page level?~~ **Answered:** Declared in the headfull component's own jay-html head. Hoisted to page level during parsing.
 
 4. Does Scenario B require a slot/children mechanism (the layout's `<slot />` above) or is the headfull FS component always a leaf with no page-provided children?
 
-5. What's the priority order for implementing these? Are some scenarios more immediately needed than others?
+5. ~~What's the priority order for implementing these? Are some scenarios more immediately needed than others?~~ **Answered:** Scenario C (headless in headfull) first, then Scenario B (headfull in headfull). Scenario A is a validation rule only.
 
 ## Appendix: Current Code Paths
 
@@ -312,3 +375,39 @@ The child context inside `renderHeadlessInstance` needs to know about headless c
 - Finds instances at the page level for slow phase rendering
 - After template injection, would find `<jay:cart-indicator>` inside the injected template
 - But compilation blocks it (see above), so discovery alone isn't sufficient
+
+## Implementation Results
+
+### Scenarios B+C implemented, Scenario A deferred
+
+All compiler targets (element, hydrate, server), the slow-render pipeline, and the dev server were updated.
+
+### Files modified
+
+| File                                                            | Change                                                                                                                                         |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `compiler-jay-html/lib/jay-target/jay-html-parser.ts`           | Recursive `parseHeadfullFSImports` with circular detection, headless import discovery in headfull heads, recursive `injectHeadfullFSTemplates` |
+| `compiler-jay-html/lib/jay-target/jay-html-compiler.ts`         | Pass `headlessContractNames` through child context in `renderHeadlessInstance`                                                                 |
+| `compiler-jay-html/lib/jay-target/jay-html-compiler-hydrate.ts` | Pass `headlessContractNames`/`headlessImports` through child contexts; strip parent `instanceCoordPrefix` from nested coordinate               |
+| `compiler-jay-html/lib/jay-target/jay-html-compiler-server.ts`  | Pass `headlessContractNames` through child context                                                                                             |
+| `compiler-jay-html/lib/slow-render/slow-render-transform.ts`    | `discoverHeadlessInstances` and `resolveHeadlessInstances` recurse into `<jay:xxx>` children                                                   |
+| `stack-server-runtime/lib/load-page-parts.ts`                   | Inject headfull FS templates before instance discovery (fixes client-only mode)                                                                |
+
+### Deviations from original plan
+
+1. **All three compiler targets needed the same fix** — the plan only mentioned `jay-html-compiler.ts` but `jay-html-compiler-hydrate.ts` and `jay-html-compiler-server.ts` also had `headlessContractNames: new Set()` blocking nested detection.
+
+2. **Slow-render discovery/resolution needed recursion** — not in the original plan. `discoverHeadlessInstances` and `resolveHeadlessInstances` had `return` after processing `<jay:xxx>`, preventing nested instance discovery. Changed to recurse into children after processing.
+
+3. **Hydrate coordinate stripping** — `childCompHydrate` received absolute coordinates, but nested instances need coordinates relative to their parent. Added prefix stripping when `instanceCoordPrefix` is set.
+
+4. **Recursive path resolution** — nested headfull element `src`/`contract` attributes are relative to the component's directory, but generated imports must be relative to the page. Added path rewriting before recursing.
+
+5. **`loadPageParts` template injection** — the client-only (SSR-disabled) path ran `discoverHeadlessInstances` on raw HTML without template injection. Added `injectHeadfullFSTemplates` call before discovery.
+
+6. **Headfull FS components must have all three phases** — the runtime's `makeHeadlessInstanceComponent` expects an interactive constructor. Components with only `withSlowlyRender()` fail with "interactiveConstructor is not a function". This is a fixture requirement, not a compiler issue.
+
+### Test results
+
+- 571/571 hydration tests pass (including 32 new tests for 8i + 8j)
+- 631/631 compiler tests pass (zero regressions)

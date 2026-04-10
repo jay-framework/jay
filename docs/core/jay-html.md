@@ -262,6 +262,73 @@ In Jay Stack applications, adding a `contract` attribute to a headfull import ma
 
 **When to use:** Headfull full-stack components own their UI and render it on the server. Use them for reusable layouts like headers, footers, or sidebars that need SSR. Without the `contract` attribute, headfull components are client-only (Jay framework).
 
+#### Nesting Headfull Full-Stack Components
+
+Headfull FS components can import other headfull FS components and headless plugin components in their own `<head>`. All imports are hoisted to the page level at compile time.
+
+**Headfull inside headfull** — a page uses a layout, the layout uses a header:
+
+```html
+<!-- layout/layout.jay-html -->
+<html>
+  <head>
+    <script
+      type="application/jay-headfull"
+      src="../header/header"
+      contract="../header/header.jay-contract"
+      names="header"
+    ></script>
+    <script type="application/jay-data">
+      data:
+          sidebarLabel: string
+    </script>
+  </head>
+  <body>
+    <div class="layout">
+      <jay:header logoUrl="/logo.png" />
+      <aside>{sidebarLabel}</aside>
+    </div>
+  </body>
+</html>
+```
+
+The page imports the layout, and the layout's header import is discovered and processed recursively. Nesting depth is unlimited; circular imports are detected and reported as errors.
+
+**Headless inside headfull** — a header component uses a headless widget from a plugin:
+
+```html
+<!-- header/header.jay-html -->
+<html>
+  <head>
+    <script type="application/jay-headless" plugin="my-plugin" contract="cart-indicator"></script>
+    <script type="application/jay-data">
+      data:
+          logoUrl: string
+    </script>
+  </head>
+  <body>
+    <header>
+      <img src="{logoUrl}" />
+      <jay:cart-indicator>
+        <span class="count">{itemCount}</span>
+      </jay:cart-indicator>
+    </header>
+  </body>
+</html>
+```
+
+The headless import is hoisted to the page level. The `<jay:cart-indicator>` tag with its inline template works exactly like a page-level headless instance — it gets its own slow/fast/interactive phases.
+
+**Restriction:** Headfull FS component jay-html files cannot declare key-based headless imports (with `key` attribute). Use instance-based headless imports instead.
+
+#### Component nesting rules
+
+| Parent component | Can import headfull FS? | Can import headless (instance)? | Can import keyed headless? |
+| ---------------- | ----------------------- | ------------------------------- | -------------------------- |
+| **Page**         | Yes                     | Yes                             | Yes                        |
+| **Headfull FS**  | Yes (recursive)         | Yes (in its own head)           | No                         |
+| **Headless**     | No (no template)        | No (no template)                | No (no template)           |
+
 ### Importing Headless Components
 
 Headless components can be used in two ways: **key-based** (data merged into parent ViewState under a key) and **instance-based** (rendered with an inline template via `<jay:xxx>` tags).

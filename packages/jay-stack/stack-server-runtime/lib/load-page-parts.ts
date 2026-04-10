@@ -9,6 +9,7 @@ import {
     HeadlessContractInfo,
     Contract,
     discoverHeadlessInstances,
+    injectHeadfullFSTemplates,
     type DiscoveredHeadlessInstance,
     type ForEachHeadlessInstance,
 } from '@jay-framework/compiler-jay-html';
@@ -191,10 +192,16 @@ export async function loadPageParts(
 
         // Discover headless instances in the jay-html (DL#109).
         // For pre-rendered HTML, this finds instances after slow bindings are resolved.
-        // For original jay-html, this finds instances before any rendering.
+        // For original jay-html, inject headfull FS templates first so nested headless
+        // instances inside headfull components are discoverable (DL#123).
+        const jayHtmlForDiscovery = injectHeadfullFSTemplates(
+            jayHtmlSource,
+            dirName,
+            JAY_IMPORT_RESOLVER,
+        );
         const discoveryResult =
             headlessInstanceComponents.length > 0
-                ? discoverHeadlessInstances(jayHtmlSource)
+                ? discoverHeadlessInstances(jayHtmlForDiscovery)
                 : { instances: [], forEachInstances: [], preRenderedJayHtml: jayHtmlSource };
 
         return {

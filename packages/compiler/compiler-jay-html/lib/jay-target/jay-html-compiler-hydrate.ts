@@ -735,8 +735,10 @@ function renderHydrateHeadlessInstance(
         importedRefNameToRef: instanceRefMap,
         dynamicRef: false,
         insideFastForEach: false,
-        headlessContractNames: new Set(),
-        headlessImports: [],
+        // Pass headless contract names and imports through so nested headless instances
+        // inside headfull FS component templates can be detected (DL#123)
+        headlessContractNames: context.headlessContractNames,
+        headlessImports: context.headlessImports,
         varMappings: {},
         instanceCoordPrefix: instanceCoord,
         interactivePaths: buildInteractivePaths(headlessImport.contract),
@@ -838,8 +840,10 @@ ${adoptInlineBody.rendered}
             dynamicRef: false,
             isInsideGuard: true,
             insideFastForEach: false,
-            headlessContractNames: new Set(),
-            headlessImports: [],
+            // Pass headless contract names and imports through so nested headless instances
+            // inside headfull FS component templates can be detected (DL#123)
+            headlessContractNames: renderContext.headlessContractNames,
+            headlessImports: renderContext.headlessImports,
             coordinatePrefix: [],
             coordinateCounters: new Map(),
         };
@@ -940,10 +944,20 @@ const ${createComponentSymbol} = makeHeadlessInstanceComponent(
     // forEach/slowForEach: strip the first segment ($trackBy or jayTrackBy) — forItem already
     // scopes by trackBy value. Remaining path includes intermediate wrapper elements.
     // e.g. "$_id/0/stock-status:0" → "0/stock-status:0"
+    // Nested: when inside another headless instance (instanceCoordPrefix set), strip the parent
+    // prefix so the coordinate is relative (DL#123). forInstance() at runtime appends to the
+    // already-scoped coordinateBase, so passing the absolute path would double the prefix.
+    let resolvedCoord = instanceCoord;
+    if (
+        context.instanceCoordPrefix &&
+        instanceCoord.startsWith(context.instanceCoordPrefix + '/')
+    ) {
+        resolvedCoord = instanceCoord.slice(context.instanceCoordPrefix.length + 1);
+    }
     const coordKeyArg =
         isInsideForEach || context.insideSlowForEach
             ? `'${coordSegments.slice(1).join('/')}'`
-            : `'${instanceCoord}'`;
+            : `'${resolvedCoord}'`;
 
     if (ifCondition) {
         // Fast conditional: wrap in hydrateConditional with adopt and create callbacks.

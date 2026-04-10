@@ -1,0 +1,6 @@
+name: Layout
+tags:
+  - tag: sidebarLabel
+    type: data
+    dataType: string
+    phase: slow

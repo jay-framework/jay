@@ -1286,6 +1286,54 @@ describe('hydration', () => {
         });
     });
 
+    describe('8i. Headfull FS — nested headless inside headfull (DL#123 Scenario C)', () => {
+        testFixture('8i-page-headfull-fs-nested-headless', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Nested Headless Test');
+                expect(await page.textContent('#target .label')).toEqual('Item 1');
+                expect(await page.textContent('#target .value')).toEqual('10');
+            },
+            interactivityChecks: async (page) => {
+                // Initial value
+                expect(await page.textContent('#target .value')).toEqual('10');
+                // Click increment button
+                await page.click('#target button');
+                // Value should increase
+                await page.waitForFunction(
+                    () => {
+                        return document.querySelector('#target .value')?.textContent === '11';
+                    },
+                    { timeout: 2000 },
+                );
+                expect(await page.textContent('#target .value')).toEqual('11');
+            },
+        });
+    });
+
+    describe('8j. Headfull FS — nested headfull inside headfull (DL#123 Scenario B)', () => {
+        testFixture('8j-page-headfull-fs-nested-headfull', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Nested Headfull Test');
+                expect(await page.textContent('#target .cart-count')).toEqual('5');
+                expect(await page.textContent('#target .sidebar')).toEqual('Sidebar');
+            },
+            interactivityChecks: async (page) => {
+                // Initial value
+                expect(await page.textContent('#target .cart-count')).toEqual('5');
+                // Click increment button
+                await page.click('#target button');
+                // Value should increase
+                await page.waitForFunction(
+                    () => {
+                        return document.querySelector('#target .cart-count')?.textContent === '6';
+                    },
+                    { timeout: 2000 },
+                );
+                expect(await page.textContent('#target .cart-count')).toEqual('6');
+            },
+        });
+    });
+
     describe('9. Client ViewState mismatch (DL#112)', () => {
         // Uses a KEYED headless component (key="status") that overrides SSR values
         // in its interactive constructor. This tests the mutation path:

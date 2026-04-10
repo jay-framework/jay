@@ -1,0 +1,18 @@
+<html>
+<head>
+    <script type="application/jay-headfull"
+            src="../header/header"
+            contract="../header/header.jay-contract"
+            names="header"></script>
+    <script type="application/jay-data">
+        data:
+            sidebarLabel: string
+    </script>
+</head>
+<body>
+    <div class="layout">
+        <jay:header logoUrl="/logo.png" />
+        <aside class="sidebar">{sidebarLabel}</aside>
+    </div>
+</body>
+</html>

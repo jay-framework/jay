@@ -811,6 +811,24 @@ export function injectHeadfullFSTemplates(
     const body = root.querySelector('body');
     if (!body) return html;
 
+    injectHeadfullFSTemplatesRecursive(fsElements, body, sourceDir, importResolver, new Set());
+
+    return root.toString();
+}
+
+/**
+ * Recursively inject headfull FS templates bottom-up (DL#123 Scenario B).
+ * For each headfull FS import, loads the component's jay-html. If that component's
+ * head contains its own headfull FS imports, those are processed first (recursively).
+ * Then the (now fully expanded) body is injected into matching <jay:Name> tags.
+ */
+function injectHeadfullFSTemplatesRecursive(
+    fsElements: HTMLElement[],
+    body: HTMLElement,
+    sourceDir: string,
+    importResolver: JayImportResolver,
+    visited: Set<string>,
+): void {
     for (const element of fsElements) {
         const src = element.getAttribute('src');
         const rawNames = element.getAttribute('names');
@@ -821,12 +839,32 @@ export function injectHeadfullFSTemplates(
 
         const contractName = (names[0].as || names[0].name).toLowerCase();
 
+        // Circular import detection
+        const resolvedSrc = path.resolve(sourceDir, src);
+        if (visited.has(resolvedSrc)) continue;
+        visited.add(resolvedSrc);
+
         const jayHtmlContent = importResolver.readJayHtml(sourceDir, src);
         if (!jayHtmlContent) continue;
 
         const jayHtmlRoot = parse(jayHtmlContent);
         const jayHtmlBody = jayHtmlRoot.querySelector('body');
         if (!jayHtmlBody) continue;
+
+        // Recurse: process nested headfull FS imports in the child's head first (bottom-up)
+        const nestedHeadfullElements = jayHtmlRoot
+            .querySelectorAll('script[type="application/jay-headfull"]')
+            .filter((el) => el.getAttribute('contract'));
+        if (nestedHeadfullElements.length > 0) {
+            const childDir = path.dirname(path.resolve(sourceDir, src));
+            injectHeadfullFSTemplatesRecursive(
+                nestedHeadfullElements,
+                jayHtmlBody,
+                childDir,
+                importResolver,
+                visited,
+            );
+        }
 
         // Inject into matching <jay:Name> tags
         const jayTags = body
@@ -839,8 +877,6 @@ export function injectHeadfullFSTemplates(
             }
         }
     }
-
-    return root.toString();
 }
 
 interface HeadfullFSParseResult {
@@ -854,6 +890,8 @@ interface HeadfullFSParseResult {
  * These are headfull components that participate in three-phase rendering.
  * They are converted to JayHeadlessImports entries and their jay-html body content
  * is injected into matching <jay:Name> tags in the parent page body.
+ *
+ * Recursively processes nested headfull FS imports (DL#123 Scenario B).
  */
 async function parseHeadfullFSImports(
     elements: HTMLElement[],
@@ -862,6 +900,7 @@ async function parseHeadfullFSImports(
     importResolver: JayImportResolver,
     body: HTMLElement,
     projectRoot: string,
+    visited: Set<string> = new Set(),
 ): Promise<HeadfullFSParseResult> {
     const headlessImports: JayHeadlessImports[] = [];
     const cssParts: string[] = [];
@@ -895,6 +934,16 @@ async function parseHeadfullFSImports(
         // First name is the component export name; lowercased for <jay:xxx> tag matching
         const componentExportName = names[0].name;
         const contractName = (names[0].as || componentExportName).toLowerCase();
+
+        // Circular import detection (DL#123 Scenario B)
+        const resolvedSrc = path.resolve(filePath, src);
+        if (visited.has(resolvedSrc)) {
+            validations.push(
+                `Circular headfull FS import detected: ${src} has already been processed`,
+            );
+            continue;
+        }
+        visited.add(resolvedSrc);
 
         // Load the contract — try filePath first, fall back to projectRoot
         // (pre-rendered files live in build/pre-rendered/ but contracts stay in the source directory)
@@ -961,6 +1010,64 @@ async function parseHeadfullFSImports(
         }
         if (componentCssResult.val?.linkedCssFiles) {
             linkedCssFiles.push(...componentCssResult.val.linkedCssFiles);
+        }
+
+        // Discover headless imports in the component's jay-html head (DL#123 Scenario C)
+        const nestedHeadlessElements = jayHtmlRoot.querySelectorAll(
+            'script[type="application/jay-headless"]',
+        );
+        if (nestedHeadlessElements.length > 0) {
+            const nestedHeadless = await parseHeadlessImports(
+                nestedHeadlessElements,
+                validations,
+                filePath,
+                importResolver,
+                projectRoot,
+            );
+            headlessImports.push(...nestedHeadless);
+        }
+
+        // Recursively process nested headfull FS imports in the child's head (DL#123 Scenario B).
+        // This must happen before injecting the child's body into the parent, so that
+        // grandchild templates are already expanded (bottom-up injection order).
+        const nestedHeadfullFSElements = jayHtmlRoot
+            .querySelectorAll('script[type="application/jay-headfull"]')
+            .filter((el) => el.getAttribute('contract'));
+        if (nestedHeadfullFSElements.length > 0) {
+            // Pre-resolve nested element paths: src and contract are relative to the
+            // component's directory, but import paths must be relative to the page's
+            // filePath. Rewrite attributes so the recursive call uses the page filePath.
+            for (const nestedEl of nestedHeadfullFSElements) {
+                const nestedSrc = nestedEl.getAttribute('src');
+                if (nestedSrc) {
+                    const absoluteSrc = path.resolve(componentDir, nestedSrc);
+                    let relativeSrc = path.relative(filePath, absoluteSrc);
+                    if (!relativeSrc.startsWith('.')) relativeSrc = './' + relativeSrc;
+                    nestedEl.setAttribute('src', relativeSrc);
+                }
+                const nestedContract = nestedEl.getAttribute('contract');
+                if (nestedContract) {
+                    const absoluteContract = path.resolve(componentDir, nestedContract);
+                    let relativeContract = path.relative(filePath, absoluteContract);
+                    if (!relativeContract.startsWith('.'))
+                        relativeContract = './' + relativeContract;
+                    nestedEl.setAttribute('contract', relativeContract);
+                }
+            }
+            const nestedResult = await parseHeadfullFSImports(
+                nestedHeadfullFSElements,
+                validations,
+                filePath,
+                importResolver,
+                jayHtmlBody,
+                projectRoot,
+                visited,
+            );
+            headlessImports.push(...nestedResult.headlessImports);
+            if (nestedResult.css) {
+                cssParts.push(nestedResult.css);
+            }
+            linkedCssFiles.push(...nestedResult.linkedCssFiles);
         }
 
         // Inject template: find matching <jay:Name> tags in parent body

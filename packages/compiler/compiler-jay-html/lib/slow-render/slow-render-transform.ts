@@ -797,7 +797,13 @@ export function discoverHeadlessInstances(
                 }
             }
 
-            // Don't recurse into jay:xxx children for discovery
+            // Recurse into jay:xxx children to discover nested headless instances
+            // inside headfull FS component templates (DL#123 Scenario C).
+            for (const child of element.childNodes) {
+                if (child.nodeType === NodeType.ELEMENT_NODE) {
+                    walk(child as HTMLElement, insidePreservedForEach, forEachContexts);
+                }
+            }
             return;
         }
 
@@ -920,7 +926,13 @@ export function resolveHeadlessInstances(
                 }
             }
 
-            // Don't recurse into jay:xxx children (already handled above or skipped)
+            // Recurse into jay:xxx children to resolve nested headless instances
+            // inside headfull FS component templates (DL#123 Scenario C).
+            for (const child of element.childNodes) {
+                if (child.nodeType === NodeType.ELEMENT_NODE) {
+                    walkAndResolve(child as HTMLElement, insidePreservedForEach || hasForEach);
+                }
+            }
             return;
         }
 

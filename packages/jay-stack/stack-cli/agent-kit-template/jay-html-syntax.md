@@ -240,6 +240,67 @@ Headfull components that own their UI can be made full-stack by adding a `contra
 
 Without `contract`, the component is client-only. With `contract`, it participates in slow/fast/interactive phases and is server-side rendered. Use headfull full-stack components for reusable UI with fixed layout that needs SSR (headers, footers, sidebars).
 
+### Nesting Components Inside Headfull FS
+
+Headfull FS components can import other headfull FS components and headless plugin components in their own `<head>`. All imports are hoisted to the page level at compile time.
+
+**Headfull inside headfull** — a layout uses a header:
+
+```html
+<!-- layout/layout.jay-html -->
+<html>
+  <head>
+    <script
+      type="application/jay-headfull"
+      src="../header/header"
+      contract="../header/header.jay-contract"
+      names="header"
+    ></script>
+    <script type="application/jay-data">
+      data:
+          sidebarLabel: string
+    </script>
+  </head>
+  <body>
+    <div class="layout">
+      <jay:header logoUrl="/logo.png" />
+      <aside>{sidebarLabel}</aside>
+    </div>
+  </body>
+</html>
+```
+
+**Headless inside headfull** — a header uses a plugin widget:
+
+```html
+<!-- header/header.jay-html -->
+<html>
+  <head>
+    <script type="application/jay-headless" plugin="my-plugin" contract="cart-indicator"></script>
+    <script type="application/jay-data">
+      data:
+          logoUrl: string
+    </script>
+  </head>
+  <body>
+    <header>
+      <img src="{logoUrl}" />
+      <jay:cart-indicator>
+        <span class="count">{itemCount}</span>
+      </jay:cart-indicator>
+    </header>
+  </body>
+</html>
+```
+
+Nesting depth is unlimited. Circular imports are detected as errors. Key-based headless imports (`key="..."`) are not allowed inside headfull FS components — use instance-based imports instead.
+
+| Parent component | Can import headfull FS? | Can import headless (instance)? | Can import keyed headless? |
+| ---------------- | ----------------------- | ------------------------------- | -------------------------- |
+| **Page**         | Yes                     | Yes                             | Yes                        |
+| **Headfull FS**  | Yes (recursive)         | Yes (in its own head)           | No                         |
+| **Headless**     | No (no template)        | No (no template)                | No (no template)           |
+
 ## Page-Level Contract
 
 A page can define its own data contract:

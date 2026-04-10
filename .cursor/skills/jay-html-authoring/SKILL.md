@@ -198,6 +198,65 @@ Import a local component (with its own rendering logic):
 <jay:TodoComponent props="{todoProps}"></jay:TodoComponent>
 ```
 
+### Headfull Full-Stack Components (Jay Stack)
+
+Adding a `contract` attribute makes a headfull import full-stack (SSR + three-phase rendering):
+
+```html
+<script
+  type="application/jay-headfull"
+  src="./header/header"
+  contract="./header/header.jay-contract"
+  names="header"
+></script>
+<jay:header logoUrl="/logo.png" />
+```
+
+The component has its own jay-html with `<head>` (data contract, styles) and `<body>` (template). At compile time, the body is injected into each `<jay:Name>` tag.
+
+#### Nesting Components Inside Headfull FS
+
+Headfull FS components can import other components in their own `<head>`:
+
+**Headfull inside headfull** (e.g., page → layout → header):
+
+```html
+<!-- layout/layout.jay-html -->
+<head>
+  <script
+    type="application/jay-headfull"
+    src="../header/header"
+    contract="../header/header.jay-contract"
+    names="header"
+  ></script>
+</head>
+<body>
+  <div class="layout">
+    <jay:header logoUrl="/logo.png" />
+    <aside>{sidebarLabel}</aside>
+  </div>
+</body>
+```
+
+**Headless inside headfull** (e.g., header using a plugin widget):
+
+```html
+<!-- header/header.jay-html -->
+<head>
+  <script type="application/jay-headless" plugin="my-plugin" contract="cart-indicator"></script>
+</head>
+<body>
+  <header>
+    <img src="{logoUrl}" />
+    <jay:cart-indicator>
+      <span>{itemCount}</span>
+    </jay:cart-indicator>
+  </header>
+</body>
+```
+
+All nested imports are hoisted to page level. Nesting depth is unlimited. Key-based headless imports (`key="..."`) are not allowed inside headfull FS components — use instance-based imports instead.
+
 ## Styling
 
 **Inline `<style>`:**
