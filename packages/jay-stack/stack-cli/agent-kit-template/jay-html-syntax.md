@@ -31,6 +31,10 @@ Plugin-provided logic component. No template — the page or headfull component 
 | **Headfull FS**  | Yes (recursive)         | Yes (in its own head)           | No                         |
 | **Headless**     | No (no template)        | No (no template)                | No (no template)           |
 
+## Validation
+
+After creating or editing jay-html files, run `jay-stack validate` to check for errors. It catches issues like unknown refs, missing contracts, and invalid bindings. See [cli-commands.md](cli-commands.md) for details.
+
 ## Reference
 
 | File                                                         | Topic                                                        |
