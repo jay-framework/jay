@@ -25,7 +25,7 @@ const builder = makeJayStackComponent<LayoutContract>()
         }));
     });
 
-export const layout = builder.withInteractive(() => {
+export const Layout = builder.withInteractive(() => {
     return {
         render: () => ({}),
     };
