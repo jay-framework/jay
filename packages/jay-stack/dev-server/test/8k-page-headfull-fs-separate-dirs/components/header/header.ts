@@ -33,7 +33,7 @@ const builder = makeJayStackComponent<HeaderContract>()
         }));
     });
 
-export const header = builder.withInteractive(
+export const TestHeader = builder.withInteractive(
     (
         props: Props<HeaderProps>,
         refs: HeaderRefs,

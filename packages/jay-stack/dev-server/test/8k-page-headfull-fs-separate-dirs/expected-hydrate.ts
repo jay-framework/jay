@@ -9,8 +9,8 @@ import {
 // @ts-ignore
 import { makeHeadlessInstanceComponent } from '/@fs{{ROOT}}/packages/jay-stack/stack-client-runtime/dist/index.js';
 // @ts-ignore
-import { header } from '/@fs./components/header/header';
-function _headlessHeader0HydrateRender(options) {
+import { TestHeader } from '/@fs./components/header/header';
+function _headlessTestHeader0HydrateRender(options) {
     const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
@@ -21,10 +21,10 @@ function _headlessHeader0HydrateRender(options) {
         );
     return [refManager.getPublicAPI(), render];
 }
-const _HeadlessHeader0 = makeHeadlessInstanceComponent(
-    _headlessHeader0HydrateRender,
-    header,
-    'header:AR0',
+const _HeadlessTestHeader0 = makeHeadlessInstanceComponent(
+    _headlessTestHeader0HydrateRender,
+    TestHeader,
+    'testheader:AR0',
 );
 export function hydrate(rootElement, options) {
     const [refManager, [refAr0]] = ReferencesManager.for(options, [], [], ['ar0'], []);
@@ -32,9 +32,9 @@ export function hydrate(rootElement, options) {
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
             adoptElement('0', {}, [
                 childCompHydrate(
-                    _HeadlessHeader0,
+                    _HeadlessTestHeader0,
                     (vs) => ({ logoUrl: '/logo.png' }),
-                    '0/header:AR0',
+                    '0/testheader:AR0',
                     refAr0(),
                 ),
             ]),

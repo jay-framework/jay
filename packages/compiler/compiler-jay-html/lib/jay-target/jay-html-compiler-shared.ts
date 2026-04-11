@@ -201,7 +201,10 @@ export function resolveHeadlessImport(
     contractName: string,
     headlessImports: JayHeadlessImports[],
 ): JayHeadlessImports | RenderFragment {
-    const headlessImport = headlessImports.find((h) => h.contractName === contractName);
+    // Lowercase: contract names are stored lowercase, but contractName may come
+    // from rawTagName preserving original case.
+    const lowerName = contractName.toLowerCase();
+    const headlessImport = headlessImports.find((h) => h.contractName === lowerName);
     if (!headlessImport) {
         return new RenderFragment('', Imports.none(), [
             `No headless import found for contract "${contractName}"`,
@@ -225,8 +228,11 @@ export function extractHeadlessCoordinate(
         ]);
     }
     const coordSegments = instanceCoord.split('/');
+    // Lowercase: coordinates use lowercase contract names, but contractName
+    // may come from rawTagName preserving original case.
+    const lowerName = contractName.toLowerCase();
     const coordinateSuffix =
-        coordSegments.find((s) => s.startsWith(contractName + ':')) || `${contractName}:0`;
+        coordSegments.find((s) => s.startsWith(lowerName + ':')) || `${lowerName}:0`;
     return { instanceCoord, coordSegments, coordinateSuffix };
 }
 

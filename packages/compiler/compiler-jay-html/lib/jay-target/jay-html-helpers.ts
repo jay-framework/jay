@@ -181,7 +181,8 @@ export function getComponentName(
         // Check headless instance FIRST — a headless import's contract name
         // takes precedence over a headful import with the same name, since
         // the headless code link also appears in importedSymbols.
-        if (headlessContractNames?.has(componentName)) {
+        // Lowercase: contract names are stored lowercase, rawTagName preserves original case.
+        if (headlessContractNames?.has(componentName.toLowerCase())) {
             return { name: componentName, kind: 'headless-instance' };
         }
         // Check headful (imported symbols)

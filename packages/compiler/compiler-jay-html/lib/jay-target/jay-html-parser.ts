@@ -837,7 +837,7 @@ function injectHeadfullFSTemplatesRecursive(
         const names = parseImportNames(rawNames);
         if (names.length === 0) continue;
 
-        const contractName = names[0].as || names[0].name;
+        const contractName = (names[0].as || names[0].name).toLowerCase();
 
         // Circular import detection
         const resolvedSrc = path.resolve(sourceDir, src);
@@ -866,11 +866,10 @@ function injectHeadfullFSTemplatesRecursive(
             );
         }
 
-        // Inject into matching <jay:Name> tags (case-insensitive — HTML tag names are normalized)
-        const lowerContractName = contractName.toLowerCase();
+        // Inject into matching <jay:Name> tags
         const jayTags = body
             .querySelectorAll('*')
-            .filter((el) => el.tagName?.toLowerCase() === `jay:${lowerContractName}`);
+            .filter((el) => el.tagName?.toLowerCase() === `jay:${contractName}`);
 
         for (const jayTag of jayTags) {
             if (!jayTag.innerHTML.trim()) {
@@ -936,9 +935,9 @@ async function parseHeadfullFSImports(
             continue;
         }
 
-        // First name is the component export name; original case preserved for coordinates/lookups
+        // First name is the component export name; lowercased for <jay:xxx> tag matching
         const componentExportName = names[0].name;
-        const contractName = names[0].as || componentExportName;
+        const contractName = (names[0].as || componentExportName).toLowerCase();
 
         // Circular import detection (DL#123 Scenario B)
         const resolvedSrc = path.resolve(filePath, src);
@@ -1108,11 +1107,9 @@ async function parseHeadfullFSImports(
         }
 
         // Inject template: find matching <jay:Name> tags in parent body
-        // (case-insensitive — HTML tag names are normalized)
-        const lowerContractName = contractName.toLowerCase();
         const jayTags = body
             .querySelectorAll('*')
-            .filter((el) => el.tagName?.toLowerCase() === `jay:${lowerContractName}`);
+            .filter((el) => el.tagName?.toLowerCase() === `jay:${contractName}`);
 
         for (const jayTag of jayTags) {
             const existingContent = jayTag.innerHTML.trim();
@@ -1482,12 +1479,11 @@ export async function parseJayFile(
     // Collect contract names that are used as <jay:xxx> instances in the template.
     // Only these need the codeLink import (for makeHeadlessInstanceComponent).
     // Key-based headless components without instances don't need it.
-    // Use rawTagName to preserve original casing (matches contractName which stores original case).
     const usedAsInstance = new Set(
         root
             .querySelectorAll('*')
-            .filter((_) => _.rawTagName?.toLowerCase().startsWith('jay:'))
-            .map((_) => _.rawTagName.substring(4)),
+            .filter((_) => _.tagName?.toLowerCase().startsWith('jay:'))
+            .map((_) => _.tagName.toLowerCase().substring(4)),
     );
     const imports: JayImportLink[] = [
         ...headfullImports,

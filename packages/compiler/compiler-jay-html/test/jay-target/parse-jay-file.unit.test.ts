@@ -2340,7 +2340,7 @@ describe('compiler', () => {
 
             expect(jayFile.validations).toEqual([]);
             expect(jayFile.val.headlessImports).toHaveLength(1);
-            expect(jayFile.val.headlessImports[0].contractName).toEqual('KitanHeader');
+            expect(jayFile.val.headlessImports[0].contractName).toEqual('kitanheader');
             expect(jayFile.val.css).toEqual('.header { color: blue; }');
         });
 
