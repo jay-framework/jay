@@ -3,7 +3,7 @@ import {
     ConstructContext,
     adoptElement,
     childCompHydrate,
-// @ts-ignore
+    // @ts-ignore
 } from '/@fs{{ROOT}}/packages/runtime/runtime/dist/index.js';
 // @ts-ignore
 import { makeHeadlessInstanceComponent } from '/@fs{{ROOT}}/packages/jay-stack/stack-client-runtime/dist/index.js';

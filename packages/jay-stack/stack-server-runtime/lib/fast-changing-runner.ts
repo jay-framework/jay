@@ -88,27 +88,37 @@ export async function renderFastChangingData(
         for (const instance of instancePhaseData.discovered) {
             const coordKey = instance.coordinate.join('/');
             const comp = componentByContractName.get(instance.contractName);
-            if (!comp || !comp.compDefinition.fastRender) continue;
+            if (!comp) continue;
 
-            const services = resolveServices(comp.compDefinition.services);
-            const cf = instancePhaseData.carryForwards[coordKey];
+            // Instance slow ViewState: available from instancePhaseData.slowViewStates
+            // (pre-render path) or carryForward.__instanceSlowViewStates (runSlowlyForPage path).
+            const instanceSlowVS =
+                instancePhaseData.slowViewStates?.[coordKey] ??
+                (carryForward as any)?.__instanceSlowViewStates?.[coordKey];
 
-            // fastRender signature depends on whether slow phase exists
-            const instanceProps = { ...instance.props, query };
-            const fastResult = comp.compDefinition.slowlyRender
-                ? await comp.compDefinition.fastRender(instanceProps, cf, ...services)
-                : await comp.compDefinition.fastRender(instanceProps, ...services);
+            if (comp.compDefinition.fastRender) {
+                const services = resolveServices(comp.compDefinition.services);
+                const cf = instancePhaseData.carryForwards[coordKey];
 
-            if (fastResult.kind === 'PhaseOutput') {
-                // Merge instance slow ViewState (if any) with fast ViewState.
-                // Instance slow data is stored in carryForward.__instanceSlowViewStates by runSlowlyForPage.
-                const instanceSlowVS = (carryForward as any)?.__instanceSlowViewStates?.[coordKey];
-                instanceViewStates[coordKey] = instanceSlowVS
-                    ? { ...instanceSlowVS, ...fastResult.rendered }
-                    : fastResult.rendered;
-                if (fastResult.carryForward) {
-                    instanceCarryForwards[coordKey] = fastResult.carryForward;
+                // fastRender signature depends on whether slow phase exists
+                const instanceProps = { ...instance.props, query };
+                const fastResult = comp.compDefinition.slowlyRender
+                    ? await comp.compDefinition.fastRender(instanceProps, cf, ...services)
+                    : await comp.compDefinition.fastRender(instanceProps, ...services);
+
+                if (fastResult.kind === 'PhaseOutput') {
+                    // Merge instance slow ViewState (if any) with fast ViewState.
+                    instanceViewStates[coordKey] = instanceSlowVS
+                        ? { ...instanceSlowVS, ...fastResult.rendered }
+                        : fastResult.rendered;
+                    if (fastResult.carryForward) {
+                        instanceCarryForwards[coordKey] = fastResult.carryForward;
+                    }
                 }
+            } else {
+                // No fastRender — populate with slow ViewState if available,
+                // or empty object for static-only components (no phases at all).
+                instanceViewStates[coordKey] = instanceSlowVS ?? {};
             }
         }
     }

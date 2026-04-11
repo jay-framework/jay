@@ -30,6 +30,8 @@ export interface InstancePhaseData {
     }>;
     /** CarryForward per instance (keyed by coordinate path, e.g. "p1/product-card:0") */
     carryForwards: Record<string, object>;
+    /** Slow ViewState per instance (keyed by coordinate path) */
+    slowViewStates?: Record<string, object>;
     /** ForEach instances that need fast-phase per-item rendering */
     forEachInstances?: ForEachHeadlessInstance[];
 }
@@ -116,7 +118,7 @@ export async function slowRenderInstances(
     return {
         resolvedData,
         slowViewStates,
-        instancePhaseData: { discovered: discoveredForFast, carryForwards },
+        instancePhaseData: { discovered: discoveredForFast, carryForwards, slowViewStates },
     };
 }
 

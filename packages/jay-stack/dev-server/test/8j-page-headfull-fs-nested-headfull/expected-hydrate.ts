@@ -11,7 +11,7 @@ import { makeHeadlessInstanceComponent } from '/@fs{{ROOT}}/packages/jay-stack/s
 // @ts-ignore
 import { header } from '/header/header';
 // @ts-ignore
-import { layout } from '/layout/layout';
+import { Layout } from '/layout/layout';
 function _headlessHeader1HydrateRender(options) {
     const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
     const render = (viewState) =>
@@ -45,7 +45,7 @@ function _headlessLayout0HydrateRender(options) {
 }
 const _HeadlessLayout0 = makeHeadlessInstanceComponent(
     _headlessLayout0HydrateRender,
-    layout,
+    Layout,
     'layout:AR0',
 );
 export function hydrate(rootElement, options) {
