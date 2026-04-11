@@ -837,7 +837,7 @@ function injectHeadfullFSTemplatesRecursive(
         const names = parseImportNames(rawNames);
         if (names.length === 0) continue;
 
-        const contractName = (names[0].as || names[0].name).toLowerCase();
+        const contractName = names[0].as || names[0].name;
 
         // Circular import detection
         const resolvedSrc = path.resolve(sourceDir, src);
@@ -866,10 +866,11 @@ function injectHeadfullFSTemplatesRecursive(
             );
         }
 
-        // Inject into matching <jay:Name> tags
+        // Inject into matching <jay:Name> tags (case-insensitive — HTML tag names are normalized)
+        const lowerContractName = contractName.toLowerCase();
         const jayTags = body
             .querySelectorAll('*')
-            .filter((el) => el.tagName?.toLowerCase() === `jay:${contractName}`);
+            .filter((el) => el.tagName?.toLowerCase() === `jay:${lowerContractName}`);
 
         for (const jayTag of jayTags) {
             if (!jayTag.innerHTML.trim()) {
@@ -935,9 +936,9 @@ async function parseHeadfullFSImports(
             continue;
         }
 
-        // First name is the component export name; lowercased for <jay:xxx> tag matching
+        // First name is the component export name; original case preserved for coordinates/lookups
         const componentExportName = names[0].name;
-        const contractName = (names[0].as || componentExportName).toLowerCase();
+        const contractName = names[0].as || componentExportName;
 
         // Circular import detection (DL#123 Scenario B)
         const resolvedSrc = path.resolve(filePath, src);
@@ -1102,9 +1103,11 @@ async function parseHeadfullFSImports(
         }
 
         // Inject template: find matching <jay:Name> tags in parent body
+        // (case-insensitive — HTML tag names are normalized)
+        const lowerContractName = contractName.toLowerCase();
         const jayTags = body
             .querySelectorAll('*')
-            .filter((el) => el.tagName?.toLowerCase() === `jay:${contractName}`);
+            .filter((el) => el.tagName?.toLowerCase() === `jay:${lowerContractName}`);
 
         for (const jayTag of jayTags) {
             const existingContent = jayTag.innerHTML.trim();
