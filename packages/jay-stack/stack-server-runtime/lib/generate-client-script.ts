@@ -265,7 +265,8 @@ export async function generateClientScript(
       import { render } from '${jayHtmlPath}';
       ${partImports}${slowViewStateDecl}
       const viewState = ${JSON.stringify(defaultViewState)};
-${generatePromiseReconstruction(outcomes)}      const fastCarryForward = ${JSON.stringify(fastCarryForward)};
+${generatePromiseReconstruction(outcomes)}      
+      const fastCarryForward = ${JSON.stringify(fastCarryForward)};
       const trackByMap = ${JSON.stringify(trackByMap)};
 ${clientInitExecution}
       const target = document.getElementById('target');
