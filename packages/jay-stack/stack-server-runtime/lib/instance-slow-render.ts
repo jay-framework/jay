@@ -74,9 +74,7 @@ export async function slowRenderInstances(
 
     for (const instance of discovered) {
         const comp = componentByContractName.get(instance.contractName);
-        if (!comp || !comp.compDefinition.slowlyRender) {
-            continue;
-        }
+        if (!comp) continue;
 
         // Normalize props to match contract prop names (case-insensitive).
         // HTML parsers may lowercase attributes (e.g. productId -> productid);
@@ -88,26 +86,30 @@ export async function slowRenderInstances(
             normalizedProps[match ? match.name : key] = value;
         }
 
-        const services = resolveServices(comp.compDefinition.services);
-        const slowResult = await comp.compDefinition.slowlyRender(normalizedProps, ...services);
+        // Always add to discovered so the fast phase sees all instances —
+        // even those without slowlyRender (e.g., fast-only components).
+        discoveredForFast.push({
+            contractName: instance.contractName,
+            props: normalizedProps,
+            coordinate: instance.coordinate,
+        });
 
-        if (slowResult.kind === 'PhaseOutput') {
-            const coordKey = instance.coordinate.join('/');
+        if (comp.compDefinition.slowlyRender) {
+            const services = resolveServices(comp.compDefinition.services);
+            const slowResult = await comp.compDefinition.slowlyRender(normalizedProps, ...services);
 
-            resolvedData.push({
-                coordinate: instance.coordinate,
-                contract: comp.contract,
-                slowViewState: slowResult.rendered as Record<string, unknown>,
-            });
+            if (slowResult.kind === 'PhaseOutput') {
+                const coordKey = instance.coordinate.join('/');
 
-            slowViewStates[coordKey] = slowResult.rendered;
-            carryForwards[coordKey] = slowResult.carryForward;
+                resolvedData.push({
+                    coordinate: instance.coordinate,
+                    contract: comp.contract,
+                    slowViewState: slowResult.rendered as Record<string, unknown>,
+                });
 
-            discoveredForFast.push({
-                contractName: instance.contractName,
-                props: normalizedProps,
-                coordinate: instance.coordinate,
-            });
+                slowViewStates[coordKey] = slowResult.rendered;
+                carryForwards[coordKey] = slowResult.carryForward;
+            }
         }
     }
 

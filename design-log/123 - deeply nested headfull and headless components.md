@@ -425,3 +425,58 @@ All compiler targets (element, hydrate, server), the slow-render pipeline, and t
 2. **Module path resolution** — `moduleResolveDir` tracks which base directory found the jay-html file. If `readJayHtml(filePath, src)` succeeds, module resolution uses `filePath`. If it falls back to `readJayHtml(projectRoot, src)`, module resolution uses `projectRoot`.
 
 3. **Contract and CSS resolution from componentDir** — Moved `readJayHtml` before `loadContract`. Contract loading now has three fallbacks: `filePath`, `projectRoot`, and `componentDir` (the directory where the jay-html was found). CSS extraction uses `componentDir` directly instead of computing it from `path.dirname(path.resolve(filePath, src))` — which was wrong for the directory convention. This fixes pre-rendered files with deep relative paths where neither `filePath` nor `projectRoot` resolves correctly.
+
+### Post-implementation: hydrate compiler and server pipeline fixes for headfull FS
+
+Testing the golf project (headfull FS header with nested headless plugins in a separate `components/` directory) revealed several issues in the hydrate compiler and server-side rendering pipeline.
+
+#### Bug 1: Case-insensitive component name matching
+
+**Problem:** Headfull FS contract names are stored lowercase (from `names` attribute via `.toLowerCase()`), but `getComponentName()` uses `rawTagName` which preserves original casing (e.g., `KitanHeader`). The `Set.has()` check is case-sensitive, so `headlessContractNames.has("KitanHeader")` fails when the set contains `"kitanheader"`.
+
+**Result:** The hydrate compiler treated the component as headful (`childComp`) instead of headless-instance (`childCompHydrate` + `makeHeadlessInstanceComponent`).
+
+**Fix:** Lowercase at the three comparison points where `rawTagName` meets stored names:
+
+- `getComponentName()` in `jay-html-helpers.ts` — `componentName.toLowerCase()` for `headlessContractNames.has()`
+- `resolveHeadlessImport()` in `jay-html-compiler-shared.ts` — lowercase for matching
+- `extractHeadlessCoordinate()` in `jay-html-compiler-shared.ts` — lowercase for coordinate segment lookup
+
+**Additional case-sensitivity fixes:**
+
+- `usedAsInstance` in `jay-html-parser.ts` — used lowercased tag names to build the set, ensuring `codeLink` imports are included for headfull FS components regardless of `names` casing
+- `discoverHeadlessInstances()` in `slow-render-transform.ts` — uses lowercased tag names consistently
+
+#### Bug 2: Duplicate ref bindings from slowForEach-expanded items
+
+**Problem:** `mergeRefsTrees()` concatenated all refs from all trees without deduplication. When 50 slowForEach-expanded items each contributed a `categoryLink` ref, the hydrate render function got 50 `refCategoryLink` bindings — a JavaScript error (duplicate declarations).
+
+**Fix:** Deduplicate refs by `constName` in `mergeRefsTrees()` (`render-fragment.ts`). When the same ref appears in multiple sibling trees (e.g., slowForEach items), keep one entry, preferring the repeated/collection variant. Refs with `null` constName (react target) are excluded from dedup.
+
+#### Bug 3: Plugin client imports not rewritten in hydrate output
+
+**Problem:** The `plugin-client-import-resolver` Vite plugin ran with `enforce: 'pre'`, processing files before the jay-runtime transform generated hydrate JS code. Plugin imports like `@jay-framework/wix-cart` in the generated hydrate code were never rewritten to `/client`, causing the server module to load in the browser.
+
+**Fix:** Changed `enforce: 'pre'` to `enforce: 'post'` in `plugin-client-import-resolver.ts` so it runs after the jay-runtime transform generates the import statements.
+
+#### Bug 4: Slow-only headfull FS components not rendered in SSR
+
+**Problem:** The server element code checks `__headlessInstances['header:AR0']` to conditionally render a headfull FS component's content. But `fast-changing-runner.ts` only populated `__headlessInstances` for components with `fastRender`. Slow-only components (no fast phase) were never included, so their SSR output was empty.
+
+**Fix:** In `fast-changing-runner.ts`, populate `__headlessInstances` for all discovered instances: slow ViewState for slow-only components, `{}` for static-only components (no phases at all). Also added `slowViewStates` field to `InstancePhaseData` so slow data flows through both the pre-render path and the `runSlowlyForPage` path.
+
+#### Bug 5: Fast-only components dropped from instance discovery
+
+**Problem:** `slowRenderInstances()` only added instances with `slowlyRender` to `discoveredForFast`. Fast-only components (like `cart-indicator` which has `fastRender` but no `slowlyRender`) were silently dropped. Since other instances DID have `slowlyRender`, the function returned non-undefined, skipping the fallback that would include all instances.
+
+**Fix:** In `slowRenderInstances()`, always add all instances to `discoveredForFast` regardless of whether they have `slowlyRender`. The slow render step is optional — not having it shouldn't exclude the instance from the fast phase.
+
+#### Test coverage added
+
+- **8k fixture** — Headfull FS with separate `pages/` and `components/` directories, deep relative paths, PascalCase component names
+- **8l fixture** — Slow-only headfull FS component (no fast/interactive phases), verifies SSR renders the component content
+
+#### Known remaining issues
+
+- **SSR disabled mode with PascalCase names** — The standard element target (client-only rendering) has issues with PascalCase headfull FS component names. SSR-enabled modes work correctly. 5 test failures in SSR disabled mode for 8j/8k.
+- **Hydration warnings** — The golf project still has hydration-related issues to investigate separately.
