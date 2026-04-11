@@ -1482,11 +1482,12 @@ export async function parseJayFile(
     // Collect contract names that are used as <jay:xxx> instances in the template.
     // Only these need the codeLink import (for makeHeadlessInstanceComponent).
     // Key-based headless components without instances don't need it.
+    // Use rawTagName to preserve original casing (matches contractName which stores original case).
     const usedAsInstance = new Set(
         root
             .querySelectorAll('*')
-            .filter((_) => _.tagName?.toLowerCase().startsWith('jay:'))
-            .map((_) => _.tagName.toLowerCase().substring(4)),
+            .filter((_) => _.rawTagName?.toLowerCase().startsWith('jay:'))
+            .map((_) => _.rawTagName.substring(4)),
     );
     const imports: JayImportLink[] = [
         ...headfullImports,
