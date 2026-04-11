@@ -130,6 +130,10 @@ interface TestFixtureOpts {
     /** Disable SSR — serves client-only pages (element target, no hydration).
      *  When true, only the SSR-disabled mode is tested. */
     disableSSR?: boolean;
+    /** Subdirectory within the fixture that contains the pages (sets pagesRootFolder). */
+    pagesSubdir?: string;
+    /** URL route path to test (default: '/'). */
+    routePath?: string;
 }
 
 /**
@@ -164,9 +168,11 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
     let devServer: DevServer;
     let devServerUrl: string;
     let browser: Browser;
+    const routePath = opts.routePath ?? '/';
 
     beforeAll(async () => {
         const dirPath = path.resolve(__dirname, dirName);
+        const pagesRoot = opts.pagesSubdir ? path.join(dirPath, opts.pagesSubdir) : dirPath;
 
         // Create Express app and HTTP server first so Vite's HMR WebSocket
         // piggybacks on this server's port instead of the default 24678
@@ -175,7 +181,7 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
         const httpServer = http.createServer(app);
 
         devServer = await mkDevServer({
-            pagesRootFolder: dirPath,
+            pagesRootFolder: pagesRoot,
             projectRootFolder: dirPath,
             jayRollupConfig: {
                 tsConfigFilePath: path.join(dirPath, 'tsconfig.json'),
@@ -206,7 +212,7 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
 
         // Prime the slow render cache so test requests hit the cached path
         if (opts.warmCache) {
-            await fetch(`${devServerUrl}/`);
+            await fetch(`${devServerUrl}${routePath}`);
         }
     }, 30000);
 
@@ -221,8 +227,16 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
         // The cache is module-level — without clearing it, subsequent test modes
         // would reuse stale entries pointing to deleted CSS files.
         clearServerElementCache();
-        const buildDir = path.join(__dirname, dirName, 'build');
-        fs.rmSync(buildDir, { recursive: true, force: true });
+        const dirPath = path.resolve(__dirname, dirName);
+        const pagesRoot = opts.pagesSubdir ? path.join(dirPath, opts.pagesSubdir) : dirPath;
+        // Clean build dirs in both project root and page directory
+        fs.rmSync(path.join(dirPath, 'build'), { recursive: true, force: true });
+        if (opts.pagesSubdir) {
+            // Also clean build dirs created under the pages tree
+            const routeSubPath = routePath === '/' ? '' : routePath.replace(/^\//, '');
+            const pageDir = routeSubPath ? path.join(pagesRoot, routeSubPath) : pagesRoot;
+            fs.rmSync(path.join(pageDir, 'build'), { recursive: true, force: true });
+        }
     });
 
     const ssrFixtureName = `expected-ssr.html`;
@@ -234,7 +248,7 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
         (fs.existsSync(ssrFixturePath) || process.env.UPDATE_FIXTURES === '1')
     ) {
         it('SSR output matches fixture', async () => {
-            const response = await fetch(`${devServerUrl}/`);
+            const response = await fetch(`${devServerUrl}${routePath}`);
             const html = await response.text();
             const ssrContent = normalizeHtml(extractTargetContent(html));
             if (process.env.UPDATE_FIXTURES === '1') {
@@ -252,12 +266,20 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
     ) {
         it('hydrate script matches fixture', async () => {
             const dirPath = path.resolve(__dirname, dirName);
+            const pagesRoot = opts.pagesSubdir ? path.join(dirPath, opts.pagesSubdir) : dirPath;
+            const routeSubPath = routePath === '/' ? '' : routePath.replace(/^\//, '');
+            const pageDir = routeSubPath ? path.join(pagesRoot, routeSubPath) : pagesRoot;
             // Use pre-rendered path if available (slow-rendered pages have
             // slow bindings resolved — hydrate script should not adopt them)
-            const preRenderedPath = path.join(dirPath, 'build/pre-rendered/page.jay-html');
+            const preRenderedPath = path.join(
+                dirPath,
+                'build/pre-rendered',
+                routeSubPath,
+                'page.jay-html',
+            );
             const hydrateSourcePath = fs.existsSync(preRenderedPath)
                 ? preRenderedPath
-                : path.resolve(dirPath, 'page.jay-html');
+                : path.join(pageDir, 'page.jay-html');
 
             let transformResult = await devServer.viteServer
                 .transformRequest(hydrateSourcePath + '?jay-hydrate')
@@ -300,7 +322,7 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
         const errors: string[] = [];
         page.on('pageerror', (err) => errors.push(err.message));
         try {
-            await page.goto(`${devServerUrl}/`, { waitUntil: 'load' });
+            await page.goto(`${devServerUrl}${routePath}`, { waitUntil: 'load' });
             expect(errors).toEqual([]);
         } finally {
             await page.close();
@@ -316,7 +338,7 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
             }
         });
         try {
-            await page.goto(`${devServerUrl}/`, { waitUntil: 'load' });
+            await page.goto(`${devServerUrl}${routePath}`, { waitUntil: 'load' });
             await waitForHydration(page);
             expect(warnings).toEqual([]);
         } finally {
@@ -326,7 +348,7 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
 
     if (opts.ssrChecks) {
         it('SSR content has expected structure', async () => {
-            const response = await fetch(`${devServerUrl}/`);
+            const response = await fetch(`${devServerUrl}${routePath}`);
             const html = await response.text();
             const targetHtml = extractTargetContent(html);
             opts.ssrChecks!(targetHtml);
@@ -337,7 +359,7 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
         it('automation API returns expected viewState', async () => {
             const page = await browser.newPage();
             try {
-                await page.goto(`${devServerUrl}/`, { waitUntil: 'load' });
+                await page.goto(`${devServerUrl}${routePath}`, { waitUntil: 'load' });
                 const pageState = await page.evaluate(() => {
                     return (window as any).__jay?.automation?.getPageState();
                 });
@@ -353,7 +375,7 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
         it('DOM is correct after hydration', async () => {
             const page = await browser.newPage();
             try {
-                await page.goto(`${devServerUrl}/`, { waitUntil: 'load' });
+                await page.goto(`${devServerUrl}${routePath}`, { waitUntil: 'load' });
                 await waitForHydration(page);
                 page.setDefaultTimeout(2000);
                 await opts.hydrationChecks!(page);
@@ -369,7 +391,7 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
         it('interactivity works after hydration', async () => {
             const page = await browser.newPage();
             try {
-                await page.goto(`${devServerUrl}/`, { waitUntil: 'load' });
+                await page.goto(`${devServerUrl}${routePath}`, { waitUntil: 'load' });
                 await waitForHydration(page);
                 page.setDefaultTimeout(2000);
                 await opts.interactivityChecks!(page);
@@ -1316,6 +1338,31 @@ describe('hydration', () => {
                 expect(await page.textContent('#target h1')).toEqual('Nested Headfull Test');
                 expect(await page.textContent('#target .cart-count')).toEqual('5');
                 expect(await page.textContent('#target .sidebar')).toEqual('Sidebar');
+            },
+            interactivityChecks: async (page) => {
+                // Initial value
+                expect(await page.textContent('#target .cart-count')).toEqual('5');
+                // Click increment button
+                await page.click('#target button');
+                // Value should increase
+                await page.waitForFunction(
+                    () => {
+                        return document.querySelector('#target .cart-count')?.textContent === '6';
+                    },
+                    { timeout: 2000 },
+                );
+                expect(await page.textContent('#target .cart-count')).toEqual('6');
+            },
+        });
+    });
+
+    describe('8k. Headfull FS — separate pages/components dirs with deep paths', () => {
+        testFixture('8k-page-headfull-fs-separate-dirs', {
+            pagesSubdir: 'pages',
+            routePath: '/category',
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Headfull FS Test');
+                expect(await page.textContent('#target .cart-count')).toEqual('5');
             },
             interactivityChecks: async (page) => {
                 // Initial value
