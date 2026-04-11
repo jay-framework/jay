@@ -87,6 +87,8 @@ export async function generateSSRPageHtml(
     projectInit?: ProjectClientInitInfo,
     pluginInits: PluginClientInitInfo[] = [],
     options: GenerateClientScriptOptions = {},
+    /** Source directory for headfull FS file resolution when jayHtmlDir is pre-rendered */
+    sourceDir?: string,
 ): Promise<string> {
     const jayHtmlPath = path.join(jayHtmlDir, jayHtmlFilename);
 
@@ -102,6 +104,7 @@ export async function generateSSRPageHtml(
             projectRoot,
             routeDir,
             tsConfigFilePath,
+            sourceDir,
         );
         serverModuleCache.set(jayHtmlPath, cached);
     }
@@ -223,6 +226,7 @@ async function compileAndLoadServerElement(
     projectRoot: string,
     routeDir: string,
     tsConfigFilePath?: string,
+    sourceDir?: string,
 ): Promise<CachedServerModule> {
     const jayFile = await parseJayFile(
         jayHtmlContent,
@@ -231,6 +235,7 @@ async function compileAndLoadServerElement(
         { relativePath: tsConfigFilePath },
         JAY_IMPORT_RESOLVER,
         projectRoot,
+        sourceDir,
     );
     const parsedJayFile = checkValidationErrors(jayFile);
 

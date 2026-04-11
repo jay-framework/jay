@@ -73,6 +73,8 @@ export async function loadCssFile(
         const code = checkCodeErrors(await readFileAsString(originId));
         const fileName = path.basename(originId);
         const dirName = path.dirname(originId);
+        // For pre-rendered files, map back to the original source directory
+        const sourceDir = jayContext.resolveSourceDir(originId);
         const jayHtml = await parseJayFile(
             code,
             fileName,
@@ -82,6 +84,7 @@ export async function loadCssFile(
             },
             JAY_IMPORT_RESOLVER,
             jayContext.projectRoot,
+            sourceDir !== dirName ? sourceDir : undefined,
         );
 
         // Watch linked CSS files so changes trigger recompilation

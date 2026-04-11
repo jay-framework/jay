@@ -411,3 +411,17 @@ All compiler targets (element, hydrate, server), the slow-render pipeline, and t
 
 - 571/571 hydration tests pass (including 32 new tests for 8i + 8j)
 - 631/631 compiler tests pass (zero regressions)
+
+### Post-implementation bug fix: headfull FS module path resolution
+
+**Bug:** Headfull FS `src` attribute resolved from `projectRoot` instead of `filePath` (the importing jay-html file's directory). For deeply nested pages like `src/pages/products/kitan/[[category]]/page.jay-html`, the relative path `../../../../components/kitan-header` was resolved from the project root, producing `/Users/components/kitan-header/kitan-header` instead of `src/components/kitan-header`.
+
+**Root cause:** `parseHeadfullFSImports` set `moduleResolveDir = projectRoot` whenever `projectRoot !== filePath`. This condition is true for ALL nested pages (not just pre-rendered), but the `projectRoot` fallback only makes sense when parsing pre-rendered files from `build/pre-rendered/` where the source modules are back in the source directory.
+
+**Fix (three parts):**
+
+1. **`readJayHtml` return type and directory convention** — Changed `readJayHtml` to return `{ content, componentDir }` instead of just the content string. The `componentDir` is the actual directory containing the jay-html file. Also added directory convention: tries `<src>.jay-html` first, then `<src>/<basename>.jay-html`. This supports component directories like `components/kitan-header/kitan-header.jay-html` where `src` points to the directory.
+
+2. **Module path resolution** — `moduleResolveDir` tracks which base directory found the jay-html file. If `readJayHtml(filePath, src)` succeeds, module resolution uses `filePath`. If it falls back to `readJayHtml(projectRoot, src)`, module resolution uses `projectRoot`.
+
+3. **Contract and CSS resolution from componentDir** — Moved `readJayHtml` before `loadContract`. Contract loading now has three fallbacks: `filePath`, `projectRoot`, and `componentDir` (the directory where the jay-html was found). CSS extraction uses `componentDir` directly instead of computing it from `path.dirname(path.resolve(filePath, src))` — which was wrong for the directory convention. This fixes pre-rendered files with deep relative paths where neither `filePath` nor `projectRoot` resolves correctly.

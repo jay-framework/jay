@@ -20,10 +20,16 @@ export class JayPluginContext {
     readonly compilerPatterns: CompiledPattern[];
     readonly jayFileCache = new Map<string, CompilerSourceFile>();
     readonly globalFunctionsRepository: FunctionRepositoryBuilder;
+    private readonly preRenderedPrefix: string | undefined;
+    private readonly pagesRoot: string | undefined;
 
     constructor(readonly jayOptions: JayRollupConfig = {}) {
         this.projectRoot = path.dirname(jayOptions.tsConfigFilePath ?? process.cwd());
         this.outputDir = jayOptions.outputDir && path.join(this.projectRoot, jayOptions.outputDir);
+        if (jayOptions.buildFolder && jayOptions.pagesRoot) {
+            this.preRenderedPrefix = path.resolve(jayOptions.buildFolder, 'pre-rendered');
+            this.pagesRoot = path.resolve(jayOptions.pagesRoot);
+        }
         this.tsPrinter = createPrinter({ newLine: NewLineKind.LineFeed });
         let compilerPatternsParseResult = compileFunctionSplitPatternsBlock(
             (jayOptions.compilerPatternFiles || []).map((fileName) => {
@@ -56,5 +62,19 @@ export class JayPluginContext {
 
     deleteCachedJayFile(id: string): boolean {
         return this.jayFileCache.delete(id);
+    }
+
+    /**
+     * Map a file path to its source directory. For pre-rendered files
+     * (under build/pre-rendered/), maps back to the original source pages directory.
+     * For source files, returns path.dirname(filePath) unchanged.
+     */
+    resolveSourceDir(filePath: string): string {
+        const dir = path.dirname(filePath);
+        if (this.preRenderedPrefix && this.pagesRoot && dir.startsWith(this.preRenderedPrefix)) {
+            const routeRelative = path.relative(this.preRenderedPrefix, dir);
+            return path.join(this.pagesRoot, routeRelative);
+        }
+        return dir;
     }
 }

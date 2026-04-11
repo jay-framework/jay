@@ -88,6 +88,8 @@ function defaults(options: DevServerOptions): DevServerOptions {
         jayRollupConfig: {
             ...(options.jayRollupConfig || {}),
             tsConfigFilePath,
+            pagesRoot: pagesRootFolder,
+            buildFolder,
         },
         httpServer: options.httpServer,
     };
@@ -690,6 +692,8 @@ async function sendResponse(
                 enableAutomation: !options.disableAutomation,
                 slowViewState,
             },
+            // Pass source directory for headfull FS file resolution when using pre-rendered path
+            jayHtmlDir !== sourceDir ? sourceDir : undefined,
         );
     } catch (err) {
         // Fall back to client-only rendering

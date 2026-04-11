@@ -50,10 +50,15 @@ export interface JayImportResolver {
     /**
      * Read a jay-html file adjacent to a component module.
      * Given a module src path (e.g., "./header/header"), resolves to the absolute path
-     * and reads the corresponding .jay-html file (same base name + .jay-html extension).
-     * Returns the file content string, or null if not found.
+     * and reads the corresponding .jay-html file. Tries two conventions:
+     * 1. File-based: `<src>.jay-html` (e.g., `header/header.jay-html`)
+     * 2. Directory-based: `<src>/<basename>.jay-html` (e.g., `header/header/header.jay-html`)
+     * Returns the file content and the directory containing the jay-html file, or null if not found.
      */
-    readJayHtml(importingModuleDir: string, src: string): string | null;
+    readJayHtml(
+        importingModuleDir: string,
+        src: string,
+    ): { content: string; componentDir: string } | null;
 }
 
 export const JAY_IMPORT_RESOLVER: JayImportResolver = {
@@ -150,11 +155,25 @@ export const JAY_IMPORT_RESOLVER: JayImportResolver = {
     ): WithValidations<PluginManifest> {
         return resolvePluginManifest(projectRoot, pluginName);
     },
-    readJayHtml(importingModuleDir: string, src: string): string | null {
+    readJayHtml(
+        importingModuleDir: string,
+        src: string,
+    ): { content: string; componentDir: string } | null {
         const resolvedPath = src.startsWith('.') ? path.resolve(importingModuleDir, src) : src;
+        // Try <src>.jay-html first (file-based convention)
         const jayHtmlPath = resolvedPath + '.jay-html';
         try {
-            return fs.readFileSync(jayHtmlPath, 'utf-8');
+            const content = fs.readFileSync(jayHtmlPath, 'utf-8');
+            return { content, componentDir: path.dirname(jayHtmlPath) };
+        } catch {
+            // fall through
+        }
+        // Try <src>/<basename>.jay-html (directory-based convention)
+        const dirJayHtmlPath =
+            path.resolve(resolvedPath, path.basename(resolvedPath)) + '.jay-html';
+        try {
+            const content = fs.readFileSync(dirJayHtmlPath, 'utf-8');
+            return { content, componentDir: path.dirname(dirJayHtmlPath) };
         } catch {
             return null;
         }

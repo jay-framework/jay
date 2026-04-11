@@ -48,6 +48,8 @@ async function getJayStructureFromJayHtmlSource(
     id: string,
 ): Promise<WithValidations<CompilerSourceFile>> {
     const { filename, dirname } = getFileContext(id);
+    // For pre-rendered files, resolve headfull FS paths from the original source directory
+    const sourceDir = jayContext.resolveSourceDir(id);
     return await parseJayFile(
         code,
         filename,
@@ -57,6 +59,7 @@ async function getJayStructureFromJayHtmlSource(
         },
         JAY_IMPORT_RESOLVER,
         jayContext.projectRoot,
+        sourceDir !== dirname ? sourceDir : undefined,
     );
 }
 

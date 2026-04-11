@@ -844,10 +844,10 @@ function injectHeadfullFSTemplatesRecursive(
         if (visited.has(resolvedSrc)) continue;
         visited.add(resolvedSrc);
 
-        const jayHtmlContent = importResolver.readJayHtml(sourceDir, src);
-        if (!jayHtmlContent) continue;
+        const jayHtmlResult = importResolver.readJayHtml(sourceDir, src);
+        if (!jayHtmlResult) continue;
 
-        const jayHtmlRoot = parse(jayHtmlContent);
+        const jayHtmlRoot = parse(jayHtmlResult.content);
         const jayHtmlBody = jayHtmlRoot.querySelector('body');
         if (!jayHtmlBody) continue;
 
@@ -856,7 +856,7 @@ function injectHeadfullFSTemplatesRecursive(
             .querySelectorAll('script[type="application/jay-headfull"]')
             .filter((el) => el.getAttribute('contract'));
         if (nestedHeadfullElements.length > 0) {
-            const childDir = path.dirname(path.resolve(sourceDir, src));
+            const childDir = jayHtmlResult.componentDir;
             injectHeadfullFSTemplatesRecursive(
                 nestedHeadfullElements,
                 jayHtmlBody,
@@ -901,6 +901,10 @@ async function parseHeadfullFSImports(
     body: HTMLElement,
     projectRoot: string,
     visited: Set<string> = new Set(),
+    /** Source directory for file resolution (jay-html, contracts). When processing
+     *  pre-rendered files, this is the original source page directory. When not set,
+     *  filePath is used (normal source compilation). */
+    sourceDir?: string,
 ): Promise<HeadfullFSParseResult> {
     const headlessImports: JayHeadlessImports[] = [];
     const cssParts: string[] = [];
@@ -945,9 +949,34 @@ async function parseHeadfullFSImports(
         }
         visited.add(resolvedSrc);
 
-        // Load the contract — try filePath first, fall back to projectRoot
-        // (pre-rendered files live in build/pre-rendered/ but contracts stay in the source directory)
-        let contractPath = path.resolve(filePath, contractAttr);
+        // Read the component's jay-html FIRST — we need its componentDir for contract resolution.
+        // Try sourceDir (if provided), then filePath, then projectRoot.
+        const resolveDir = sourceDir || filePath;
+        let jayHtmlResult = importResolver.readJayHtml(resolveDir, src);
+        let moduleResolveDir = resolveDir;
+        if (jayHtmlResult === null && resolveDir !== filePath) {
+            jayHtmlResult = importResolver.readJayHtml(filePath, src);
+            if (jayHtmlResult !== null) {
+                moduleResolveDir = filePath;
+            }
+        }
+        if (jayHtmlResult === null && projectRoot && projectRoot !== filePath && projectRoot !== resolveDir) {
+            jayHtmlResult = importResolver.readJayHtml(projectRoot, src);
+            if (jayHtmlResult !== null) {
+                moduleResolveDir = projectRoot;
+            }
+        }
+        if (jayHtmlResult === null) {
+            validations.push(
+                `jay-html file not found for headfull FS component ${src} (expected ${src}.jay-html)`,
+            );
+            continue;
+        }
+
+        // Load the contract — try resolveDir (sourceDir or filePath), then projectRoot,
+        // then componentDir. For pre-rendered files with deep relative paths, filePath and
+        // projectRoot may both fail because neither matches the original source directory depth.
+        let contractPath = path.resolve(resolveDir, contractAttr);
         let loadedContract: Contract;
         try {
             const contractResult = importResolver.loadContract(contractPath);
@@ -957,8 +986,8 @@ async function parseHeadfullFSImports(
             }
             loadedContract = contractResult.val;
         } catch (e) {
-            // Contract not found at filePath — try projectRoot as fallback
-            // (happens when parsing pre-rendered HTML from build/pre-rendered/)
+            // Try projectRoot fallback (pre-rendered files with shallow relative paths)
+            let resolved = false;
             if (projectRoot && projectRoot !== filePath) {
                 try {
                     contractPath = path.resolve(projectRoot, contractAttr);
@@ -968,41 +997,43 @@ async function parseHeadfullFSImports(
                         continue;
                     }
                     loadedContract = fallbackResult.val;
-                } catch (e2) {
+                    resolved = true;
+                } catch {
+                    // fall through to componentDir fallback
+                }
+            }
+            // Try componentDir fallback (contract adjacent to the jay-html file)
+            if (!resolved) {
+                try {
+                    contractPath = path.resolve(
+                        jayHtmlResult.componentDir,
+                        path.basename(contractAttr),
+                    );
+                    const fallbackResult = importResolver.loadContract(contractPath);
+                    validations.push(...fallbackResult.validations);
+                    if (!fallbackResult.val) {
+                        continue;
+                    }
+                    loadedContract = fallbackResult.val;
+                } catch (e3) {
                     validations.push(
-                        `Failed to load contract for headfull FS component ${src}: ${e2.message}`,
+                        `Failed to load contract for headfull FS component ${src}: ${e3.message}`,
                     );
                     continue;
                 }
-            } else {
-                validations.push(
-                    `Failed to load contract for headfull FS component ${src}: ${e.message}`,
-                );
-                continue;
             }
         }
 
-        // Read the component's jay-html file — try filePath first, fall back to projectRoot
-        let jayHtmlContent = importResolver.readJayHtml(filePath, src);
-        if (jayHtmlContent === null && projectRoot && projectRoot !== filePath) {
-            jayHtmlContent = importResolver.readJayHtml(projectRoot, src);
-        }
-        if (jayHtmlContent === null) {
-            validations.push(
-                `jay-html file not found for headfull FS component ${src} (expected ${src}.jay-html)`,
-            );
-            continue;
-        }
-
-        const jayHtmlRoot = parse(jayHtmlContent);
+        const jayHtmlRoot = parse(jayHtmlResult.content);
         const jayHtmlBody = jayHtmlRoot.querySelector('body');
         if (!jayHtmlBody) {
             validations.push(`headfull FS component ${src} jay-html must have a body tag`);
             continue;
         }
 
-        // Extract CSS from component's jay-html head
-        const componentDir = path.dirname(path.resolve(filePath, src));
+        // Extract CSS from component's jay-html head — use the actual directory
+        // where the jay-html was found (handles directory convention correctly)
+        const componentDir = jayHtmlResult.componentDir;
         const componentCssResult = await extractCss(jayHtmlRoot, componentDir);
         validations.push(...componentCssResult.validations);
         if (componentCssResult.val?.css) {
@@ -1161,10 +1192,8 @@ async function parseHeadfullFSImports(
 
                 const contractLinks = [contractLink, ...enumImportLinks];
 
-                // Module path for code link — resolve from projectRoot when filePath
-                // is a different directory (e.g., build/pre-rendered/)
-                const moduleResolveDir =
-                    projectRoot && projectRoot !== filePath ? projectRoot : filePath;
+                // Module path for code link — resolve from the same directory that
+                // found the jay-html file (filePath for source, projectRoot for pre-rendered)
                 let relativeModule = path.relative(
                     filePath,
                     importResolver.resolveLink(moduleResolveDir, src),
@@ -1369,6 +1398,12 @@ export async function parseJayFile(
     options: ResolveTsConfigOptions,
     linkedContractResolver: JayImportResolver,
     projectRoot: string,
+    /** Optional source directory for resolving headfull FS files (jay-html, contracts).
+     *  When parsing pre-rendered files, filePath is in build/pre-rendered/ but headfull
+     *  relative paths were written for the original source directory. Pass the source
+     *  directory here so file resolution works correctly while module paths stay relative
+     *  to the actual filePath. */
+    sourceDir?: string,
 ): Promise<WithValidations<JayHtmlSourceFile>> {
     const normalizedFileName = normalizeFilename(filename);
     const baseElementName = capitalCase(normalizedFileName, { delimiter: '' });
@@ -1408,6 +1443,8 @@ export async function parseJayFile(
         linkedContractResolver,
         body,
         projectRoot,
+        undefined, // visited
+        sourceDir,
     );
 
     const headlessImports = await parseHeadlessImports(

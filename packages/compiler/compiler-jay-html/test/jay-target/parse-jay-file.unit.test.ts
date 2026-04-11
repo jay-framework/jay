@@ -78,7 +78,7 @@ describe('compiler', () => {
             ]);
         },
         readJayHtml() {
-            return null;
+            return null as any;
         },
     };
 
@@ -1926,8 +1926,9 @@ describe('compiler', () => {
                     if (link.includes('header')) return '/components/header/header';
                     return '/resolved/' + link;
                 },
-                readJayHtml(importingModuleDir: string, src: string): string | null {
-                    if (src.includes('header')) return headerJayHtml;
+                readJayHtml(importingModuleDir: string, src: string) {
+                    if (src.includes('header'))
+                        return { content: headerJayHtml, componentDir: '/components/header' };
                     return null;
                 },
                 ...overrides,
@@ -2126,7 +2127,7 @@ describe('compiler', () => {
 
             const resolver = makeHeadfullFSResolver({
                 readJayHtml() {
-                    return jayHtmlWithCss;
+                    return { content: jayHtmlWithCss, componentDir: '/components/header' };
                 },
             });
 
@@ -2215,8 +2216,9 @@ describe('compiler', () => {
                     if (link.includes('counter')) return '/path/to/counter';
                     return '/resolved/' + link;
                 },
-                readJayHtml(importingModuleDir: string, src: string): string | null {
-                    if (src.includes('header')) return headerJayHtml;
+                readJayHtml(importingModuleDir: string, src: string) {
+                    if (src.includes('header'))
+                        return { content: headerJayHtml, componentDir: '/components/header' };
                     return null;
                 },
                 resolvePluginComponent(pluginName: string, contractName: string) {
@@ -2277,6 +2279,110 @@ describe('compiler', () => {
             expect(jayFile.val.headlessImports).toHaveLength(2);
             const names = jayFile.val.headlessImports.map((i) => i.contractName).sort();
             expect(names).toEqual(['counter', 'header']);
+        });
+
+        it('should resolve component directory correctly for directory-convention imports', async () => {
+            // Simulates: src="../../../../components/kitan-header" where the jay-html is at
+            // components/kitan-header/kitan-header.jay-html (directory convention, not file convention).
+            // The componentDir returned by readJayHtml determines where CSS links are resolved from.
+            const componentJayHtml = `<html>
+<head>
+    <script type="application/jay-data">
+        data:
+            logoUrl: string
+    </script>
+    <style>.header { color: blue; }</style>
+</head>
+<body>
+    <header><img src="{logoUrl}" /></header>
+</body>
+</html>`;
+
+            const resolver = makeHeadfullFSResolver({
+                readJayHtml(importingModuleDir: string, src: string) {
+                    if (src.includes('kitan-header')) {
+                        // Directory convention: componentDir is the directory itself
+                        return {
+                            content: componentJayHtml,
+                            componentDir: '/project/src/components/kitan-header',
+                        };
+                    }
+                    return null;
+                },
+                loadContract(fullPath: string) {
+                    return new WithValidations(headerContract, []);
+                },
+                resolveLink(importingModule: string, link: string) {
+                    return '/project/src/components/kitan-header';
+                },
+            });
+
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |   title: string
+                        |`,
+                    `<body>
+                        |   <jay:kitanheader />
+                        | </body>`,
+                    `<script type="application/jay-headfull"
+                        |   src="../../../../components/kitan-header"
+                        |   contract="../../../../components/kitan-header/kitan-header.jay-contract"
+                        |   names="KitanHeader"
+                        | ></script>`,
+                ),
+                'Page',
+                '/project/src/pages/products/kitan/category',
+                {},
+                resolver,
+                '/project',
+            );
+
+            expect(jayFile.validations).toEqual([]);
+            expect(jayFile.val.headlessImports).toHaveLength(1);
+            expect(jayFile.val.headlessImports[0].contractName).toEqual('kitanheader');
+            expect(jayFile.val.css).toEqual('.header { color: blue; }');
+        });
+
+        it('should resolve module path from filePath for source files', async () => {
+            // Ensures deeply nested pages resolve module imports from the page directory,
+            // not from projectRoot (which would produce wrong paths)
+            const resolver = makeHeadfullFSResolver({
+                resolveLink(importingModule: string, link: string) {
+                    // resolveLink should resolve from whichever base was passed
+                    if (link.startsWith('.')) {
+                        const path = require('path');
+                        return path.resolve(importingModule, link);
+                    }
+                    return link;
+                },
+            });
+
+            const jayFile = await parseJayFile(
+                jayFileWith(
+                    `data:
+                        |   title: string
+                        |`,
+                    `<body>
+                        |   <jay:header />
+                        | </body>`,
+                    `<script type="application/jay-headfull"
+                        |   src="../../components/header/header"
+                        |   contract="../../components/header/header.jay-contract"
+                        |   names="header"
+                        | ></script>`,
+                ),
+                'Page',
+                '/project/src/pages/products',
+                {},
+                resolver,
+                '/project',
+            );
+
+            expect(jayFile.validations).toEqual([]);
+            // Module path should be relative to filePath: ../../components/header/header
+            const codeLink = jayFile.val.headlessImports[0].codeLink;
+            expect(codeLink.module).toEqual('../../components/header/header');
         });
     });
 });

@@ -43,7 +43,7 @@ describe('compile contract', () => {
             ]);
         },
         readJayHtml() {
-            return null;
+            return null as any;
         },
     };
     it('should compile counter contract', async () => {

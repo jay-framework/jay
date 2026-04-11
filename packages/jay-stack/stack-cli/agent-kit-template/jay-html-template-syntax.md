@@ -56,8 +56,7 @@ Use the `if` attribute to conditionally show elements.
 ### Boolean
 
 ```html
-<span if="inStock">In Stock</span>
-<span if="!inStock">Out of Stock</span>
+<span if="inStock">In Stock</span> <span if="!inStock">Out of Stock</span>
 ```
 
 ### Enum Variant
@@ -161,8 +160,7 @@ Match the element type to the contract's `elementType`:
 **Key-based headless refs** — prefix with the key:
 
 ```html
-<button ref="rating.submitButton">Submit</button>
-<button ref="mt.happy">+1 Happy</button>
+<button ref="rating.submitButton">Submit</button> <button ref="mt.happy">+1 Happy</button>
 ```
 
 **Refs inside forEach** — use the tag path from the contract:
