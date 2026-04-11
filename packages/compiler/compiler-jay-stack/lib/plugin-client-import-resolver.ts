@@ -233,7 +233,7 @@ export function createPluginClientImportResolver(
 
     return {
         name: 'jay-stack:plugin-client-import',
-        enforce: 'pre',
+        enforce: 'post',
 
         configResolved(config) {
             projectRoot = config.root || projectRoot;

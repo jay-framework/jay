@@ -961,7 +961,12 @@ async function parseHeadfullFSImports(
                 moduleResolveDir = filePath;
             }
         }
-        if (jayHtmlResult === null && projectRoot && projectRoot !== filePath && projectRoot !== resolveDir) {
+        if (
+            jayHtmlResult === null &&
+            projectRoot &&
+            projectRoot !== filePath &&
+            projectRoot !== resolveDir
+        ) {
             jayHtmlResult = importResolver.readJayHtml(projectRoot, src);
             if (jayHtmlResult !== null) {
                 moduleResolveDir = projectRoot;
