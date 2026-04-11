@@ -1,0 +1,14 @@
+<html>
+<head>
+    <script type="application/jay-data">
+        data:
+            logoUrl: string
+    </script>
+</head>
+<body>
+    <header>
+        <img src="{logoUrl}" style="width: 36px; height: 36px" />
+        <span class="brand">Kitan</span>
+    </header>
+</body>
+</html>

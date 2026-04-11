@@ -1,0 +1,10 @@
+name: Header
+props:
+  - name: logoUrl
+    type: string
+    required: true
+tags:
+  - tag: logoUrl
+    type: data
+    dataType: string
+    phase: slow

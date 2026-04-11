@@ -1381,6 +1381,15 @@ describe('hydration', () => {
         });
     });
 
+    describe('8l. Headfull FS — slow-only component (no fast/interactive)', () => {
+        testFixture('8l-page-headfull-fs-slow-only', {
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Headfull FS Test');
+                expect(await page.textContent('#target .brand')).toEqual('Kitan');
+            },
+        });
+    });
+
     describe('9. Client ViewState mismatch (DL#112)', () => {
         // Uses a KEYED headless component (key="status") that overrides SSR values
         // in its interactive constructor. This tests the mutation path:
