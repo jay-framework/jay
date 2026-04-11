@@ -517,7 +517,11 @@ class BuilderImplementation<
     fastRender: RenderFast<Services, PropsT, FastVS, CarryForward>;
     comp: ComponentConstructor<PropsT & CarryForward, Refs, InteractiveVS, Contexts, CompCore>;
     clientDefaults?: (props: PropsT) => { viewState: FastVS; carryForward?: any };
-    constructor() {}
+    constructor() {
+        // No-op interactive render — headfull FS components without interactive tags
+        // still need a valid comp for hydration (childComp calls compCreator)
+        this.comp = (() => ({ render: () => ({}) })) as any;
+    }
 
     withProps<NewPropsT extends object>(): Builder<
         'Services',
