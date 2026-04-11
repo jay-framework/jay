@@ -16,7 +16,25 @@ export interface RefsTree {
 }
 
 export function mergeRefsTrees(...trees: RefsTree[]): RefsTree {
-    const allRefs = trees.flatMap((tree) => tree.refs);
+    // Deduplicate refs by constName — the same ref appearing in multiple sibling
+    // trees (e.g., slowForEach items) is the same binding, not separate refs.
+    // When duplicates exist, prefer the repeated (collection) variant.
+    // Only deduplicate when constName is set (some targets like react use null).
+    const refsByConstName = new Map<string, Ref>();
+    const refsWithoutConstName: Ref[] = [];
+    for (const tree of trees) {
+        for (const ref of tree.refs) {
+            if (ref.constName == null) {
+                refsWithoutConstName.push(ref);
+            } else {
+                const existing = refsByConstName.get(ref.constName);
+                if (!existing || (!existing.repeated && ref.repeated)) {
+                    refsByConstName.set(ref.constName, ref);
+                }
+            }
+        }
+    }
+    const allRefs = [...refsWithoutConstName, ...refsByConstName.values()];
     const allChildren: Record<string, RefsTree> = {};
     const allKeys = new Set(trees.flatMap((tree) => Object.keys(tree.children)));
 
