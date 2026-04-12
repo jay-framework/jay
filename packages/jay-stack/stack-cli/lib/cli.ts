@@ -118,44 +118,62 @@ program
         }
     });
 
+/** Agent-kit role names. Design Log #125. */
+type AgentKitRole = 'designer' | 'developer' | 'plugin';
+const ALL_ROLES: AgentKitRole[] = ['designer', 'developer', 'plugin'];
+
 /**
- * Copies agent-kit documentation files from the template folder.
+ * Copies agent-kit documentation files from the template folder into role subfolders.
  * Does not overwrite existing files so users can customize.
  * Use --force to regenerate all docs.
- * Template folder: stack-cli/agent-kit-template/ (Design Log #85).
+ * Template folder: stack-cli/agent-kit-template/{role}/ (Design Log #85, #125).
  */
-async function ensureAgentKitDocs(projectRoot: string, force?: boolean): Promise<void> {
+async function ensureAgentKitDocs(
+    projectRoot: string,
+    force?: boolean,
+    mode?: string,
+): Promise<void> {
     const path = await import('node:path');
     const fs = await import('node:fs/promises');
     const { fileURLToPath } = await import('node:url');
 
     const agentKitDir = path.join(projectRoot, 'agent-kit');
-    await fs.mkdir(agentKitDir, { recursive: true });
 
     // Resolve template folder: ../agent-kit-template/ relative to dist/index.js (or lib/ in dev)
     const thisDir = path.dirname(fileURLToPath(import.meta.url));
     const templateDir = path.resolve(thisDir, '..', 'agent-kit-template');
 
-    let files: string[];
-    try {
-        files = (await fs.readdir(templateDir)).filter((f) => f.endsWith('.md'));
-    } catch {
-        getLogger().warn(chalk.yellow('   Agent-kit template folder not found: ' + templateDir));
-        return;
-    }
+    const roles: AgentKitRole[] = mode && ALL_ROLES.includes(mode as AgentKitRole)
+        ? [mode as AgentKitRole]
+        : ALL_ROLES;
 
-    for (const filename of files) {
-        const destPath = path.join(agentKitDir, filename);
-        if (!force) {
-            try {
-                await fs.access(destPath);
-                continue; // File exists, don't overwrite
-            } catch {
-                // File doesn't exist, copy it
-            }
+    for (const role of roles) {
+        const roleTemplateDir = path.join(templateDir, role);
+        const roleOutputDir = path.join(agentKitDir, role);
+
+        let files: string[];
+        try {
+            files = (await fs.readdir(roleTemplateDir)).filter((f) => f.endsWith('.md'));
+        } catch {
+            // Role template folder doesn't exist yet — skip silently
+            continue;
         }
-        await fs.copyFile(path.join(templateDir, filename), destPath);
-        getLogger().info(chalk.gray(`   Created agent-kit/${filename}`));
+
+        await fs.mkdir(roleOutputDir, { recursive: true });
+
+        for (const filename of files) {
+            const destPath = path.join(roleOutputDir, filename);
+            if (!force) {
+                try {
+                    await fs.access(destPath);
+                    continue; // File exists, don't overwrite
+                } catch {
+                    // File doesn't exist, copy it
+                }
+            }
+            await fs.copyFile(path.join(roleTemplateDir, filename), destPath);
+            getLogger().info(chalk.gray(`   Created agent-kit/${role}/${filename}`));
+        }
     }
 }
 
@@ -356,6 +374,7 @@ program
     .option('--dynamic-only', 'Only process dynamic contracts')
     .option('--force', 'Force re-materialization')
     .option('--no-references', 'Skip reference data generation')
+    .option('-m, --mode <role>', 'Generate guides for a specific role: designer, developer, or plugin (default: all)')
     .option('-v, --verbose', 'Show detailed output')
     .action(async (options) => {
         const projectRoot = process.cwd();
@@ -369,7 +388,7 @@ program
         );
         try {
             if (!options.list) {
-                await ensureAgentKitDocs(projectRoot, options.force);
+                await ensureAgentKitDocs(projectRoot, options.force, options.mode);
                 // Generate plugin reference data (Design Log #87)
                 if (options.references !== false) {
                     await generatePluginReferences(projectRoot, options, initErrors, viteServer);

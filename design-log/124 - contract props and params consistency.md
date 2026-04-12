@@ -10,17 +10,32 @@ Related design logs: #38 (Contract File), #84 (headless props), #113 (explicit r
 
 Components in consumer projects (e.g., the Wix mono repo) have contracts that are missing `props` and `params` declarations, even though the component implementation requires them. The agent-kit template already documents how to read and declare props/params in contracts, so the gap is in validation — nothing enforces consistency.
 
+### Concrete example: wix-stores-v1
+
+```typescript
+// lib/components/product-page.ts
+export interface ProductPageParams extends UrlParams { slug: string; }
+
+export const productPage = makeJayStackComponent<ProductPageContract>()
+    .withProps<PageProps>()
+    .withLoadParams(loadProductParams)  // yields ProductPageParams[]
+    ...
+```
+
+```yaml
+# product-page.jay-contract — NO params section!
+name: product-page
+tags:
+  - {tag: productName, type: data, ...}
+```
+
+The component uses `.withLoadParams()` with `{ slug: string }`, but the contract has no `params`. The agent-kit doesn't know about `slug`, so AI-generated pages may not provide it.
+
 ### Gap: Validate commands don't check component-contract consistency for props/params
 
-The `jay-stack validate` command checks that route segments satisfy contract params (the `checkRouteParams` function), but there is no check in the other direction — ensuring that a component's implementation (its `loadParams`, `props` in the headless script) is consistent with what the contract declares.
-
-The `jay-stack validate-plugin` command validates almost nothing about the component — just that the export name is a valid string, not a path.
-
-Neither command checks:
-
-- That a component accepting props has those props declared in its contract
-- That a component using params has those params declared in its contract
-- That contract props/params match the component's actual function signature
+- `jay-stack validate` checks contract→route (does the route provide what contracts need), but not route→contract (are route params declared in some contract)
+- `jay-stack validate-plugin` validates almost nothing about the component
+- Neither checks that `.withProps<>()` / `.withLoadParams<>()` usage matches contract declarations
 
 **Files**:
 
@@ -30,45 +45,143 @@ Neither command checks:
 ## Questions
 
 1. **Q: What level of validation is feasible?**
-   Loading the component module to inspect its signature is complex and fragile. Should we limit validation to static checks — e.g., if a route has `[slug]` segments but the contract has no `params`, warn? Or if a headless import passes props in jay-html but the contract has no `props` section, warn?
+
+   **A:** Static checks at two levels: (a) jay-html attributes vs contract props, and (b) single-file AST analysis of component source to detect `.withProps<>()` / `.withLoadParams<>()` usage. The AST approach is proven by existing analyzers like `source-file-binding-resolver.ts`.
 
 2. **Q: Should validate-plugin check that the contract's props match the component's TypeScript signature?**
-   This would require the typescript-bridge or compiler-analyze-exported-types. Is that in scope or a separate effort?
+
+   **A:** Yes — single-file AST check using `typescript-bridge`. This is the most important check (Phase 3). Detect builder method calls and extract type parameters to compare against contract.
 
 3. **Q: Are there cases where a component has props but intentionally omits them from the contract?**
 
+   **A:** No. Props must be in the contract. The `props="{.}"` pass-through pattern in client-only jay is not a prop declaration — the validator should skip `props` as an attribute name.
+
 ## Design
 
-Add validation rules to the existing validate commands:
+### Phase 1: Route→contract param consistency (`checkRouteToContractParams`)
 
-#### In `jay-stack validate` (page validation):
+**What:** If a page is on a dynamic route, check that for each route param, at least one contract on the page (page-level or any keyed headless) declares it. One param might be consumed by the page contract, another by a headless component.
 
-- **Route segments without contract params**: If a page is at a dynamic route (e.g., `products/[slug]/page.jay-html`) and has a `page.jay-contract`, warn if the contract is missing `params` that match the route segments
-- **Jay-html prop usage without contract props**: If a `<jay:component>` instance passes attributes that look like props, but the resolved contract has no `props` section, warn
+**Rule:** Collect all route params from the path. Collect all declared params from all contracts (page + headless). For each route param not in the combined set → warning.
 
-#### In `jay-stack validate-plugin` (plugin validation):
+**Edge cases:**
+- No contract on the page at all → skip (nothing to check against)
+- No contracts declare any params → warn for all route params
 
-- **Contract props completeness**: If we can load the component's TypeScript types (via the existing type extraction), check that each prop in the signature is declared in the contract. This may be a stretch goal.
+### Phase 2: Jay-html→contract prop consistency (`checkHeadlessInstanceProps`)
+
+**What:** When a `<jay:xxx>` instance passes attributes, check that the resolved contract declares matching props. Also check that required contract props are present on the instance.
+
+**Skip attributes:** `if`, `forEach`, `trackBy`, `ref`, `slowForEach`, `jayIndex`, `jayTrackBy`, `jay-coordinate-base`, `jay-scope`, `when-resolved`, `when-loading`, `when-rejected`, `accessor`, `props`, `key`
+
+### Phase 3: Component source→contract consistency (`checkComponentPropsAndParams`)
+
+**What:** In validate-plugin, parse the component's TypeScript source and check:
+1. If it calls `.withProps<T>()` with custom props → contract must declare `props`
+2. If it calls `.withLoadParams(...)` → contract must declare `params`
+3. Individual property names match between interface and contract
+
+**AST patterns to detect:**
+
+```
+Builder chain:
+  makeJayStackComponent<ContractType>()
+    .withProps<PropsType>()           ← detect this
+    .withLoadParams(loadFn)           ← detect this
+    ...
+```
+
+**Props type resolution:**
+- `.withProps<PageProps>()` → `PageProps` is the framework base type (`{ language, url }`). No custom props. Skip.
+- `.withProps<ProductCardProps>()` → custom props. Find `interface ProductCardProps { productId: string }` in same file. Each property must be in contract `props`.
+- `.withProps<PageProps & CustomProps>()` → intersection. Strip `PageProps`, extract `CustomProps` properties.
+
+**Params type resolution:**
+- `.withLoadParams(loadProductParams)` → find the function → look for the params interface it yields (e.g., `ProductPageParams extends UrlParams { slug: string }`)
+- Extract properties from the params interface (excluding inherited `UrlParams` fields)
+- Each property must be in contract `params`
+
+**Framework types to skip:**
+- `PageProps` — framework base type, not component props
+- `UrlParams` — base for params, provides inherited fields like `Record<string, string>`
+- `RequestQuery` — fast-phase only, not user-defined
 
 ## Implementation Plan
 
-### Phase 1: Validate — route-to-contract param consistency
+### Phase 1: `checkRouteToContractParams`
 
-1. In `validate.ts`, add a check: if a page is on a dynamic route and has a page-level contract, ensure the contract declares `params` matching the route's dynamic segments
-2. This is the reverse of the existing `checkRouteParams` (which checks contract→route). The new check is route→contract.
+**File:** `packages/jay-stack/stack-cli/lib/validate.ts`
 
-### Phase 2: Validate — jay-html prop-to-contract consistency
+1. Add `checkRouteToContractParams(parsedFile, filePath, pagesBase)`:
+   - Extract route params via `extractRouteParams`
+   - If no route params → return `[]`
+   - Collect all declared params from page contract + all headless import contracts
+   - If no contracts exist at all → return `[]`
+   - For each route param not in the combined declared set → emit warning
+2. Call from `validateJayFiles` after existing `checkRouteParams`
+3. Add test fixtures + tests
 
-1. In `validate.ts`, when a `<jay:component>` passes attributes, check that the resolved contract has a `props` section declaring those attributes
+### Phase 2: `checkHeadlessInstanceProps`
 
-### Phase 3 (stretch): validate-plugin type checking
+**File:** `packages/jay-stack/stack-cli/lib/validate.ts`
 
-1. Use `compiler-analyze-exported-types` to extract the component's prop types from its TypeScript source
-2. Compare against the contract's `props` declarations
-3. Warn on mismatches
+1. Add `HEADLESS_SKIP_ATTRS` set (union of directive attrs + `props`, `key`)
+2. Add `checkHeadlessInstanceProps(jayHtml, file)`:
+   - Walk body tree, find `<jay:xxx>` elements
+   - Match to headless import by contract name
+   - Collect non-skip attributes → check each exists in `contract.props` by name
+   - Check each required `contract.props` entry has a matching attribute on the element
+3. Call from `validateJayFiles` after `checkRefElementTypes`
+4. Add test fixtures + tests
+
+### Phase 3: `checkComponentPropsAndParams`
+
+**File:** `packages/jay-stack/plugin-validator/lib/check-component-contract.ts` (new)
+
+1. Parse the component source with `ts.createSourceFile()` (single-file, no program needed)
+2. Walk AST top-level statements:
+   - Collect all `interface` declarations by name (for later property extraction)
+   - Find exported variable declarations with `makeJayStackComponent` call chains
+3. Walk the builder call chain:
+   - `.withProps<T>()` → extract type argument name
+   - `.withLoadParams(fn)` → mark that params are used, find function to extract params type
+4. Resolve types to interfaces:
+   - If props type is `PageProps` alone → skip (framework type)
+   - If props type is intersection `PageProps & CustomProps` → extract `CustomProps`
+   - Find the matching interface in the file → extract property names
+   - For params: find the function, look for the params interface (extends UrlParams)
+5. Compare against contract:
+   - Props: each interface property → must exist in `contract.props[].name`
+   - Params: each interface property → must exist in `contract.params[].name`
+   - Reverse: contract prop/param not in interface → warning (contract is over-declared)
+6. Return errors for mismatches
+
+**Integrate into `validate-plugin`:**
+
+1. In `validateComponent()`, resolve the component source file path from `module` field + component name
+2. Load and parse the contract (already done)
+3. Call `checkComponentPropsAndParams(sourcePath, parsedContract)`
+4. Add results as errors
+
+**File resolution for component source:**
+- Local plugins: `pluginPath + module` field → directory or file → find `.ts` file exporting the component name
+- NPM packages: look for `lib/` directory (source may be available alongside dist)
+
+### Phase order
+
+Phase 3 is the most important — implement first. Phases 1 and 2 add complementary checks for the consumer side (page validation).
 
 ## Trade-offs
 
-- **Phase 1 is straightforward** — route segment names are already extracted by `checkRouteParams`
-- **Phase 2 requires understanding how props are passed** in jay-html to contracts — may need parser support
-- **Phase 3 is complex** — requires loading TypeScript, may be slow, should be optional
+- **Phase 1:** Straightforward — reuses `extractRouteParams`, adds combined param collection
+- **Phase 2:** Uses same tree-walking pattern as existing `checkRefElementTypes`
+- **Phase 3:** Single-file AST approach (no type checker needed) — lightweight but can't resolve cross-file types. Properties from imported types won't be checked, only interfaces defined in the same file. This covers the common case (component defines its own props/params interfaces).
+
+## Verification Criteria
+
+1. Existing validate tests still pass
+2. Phase 1: warns when route provides params no contract declares
+3. Phase 2: warns on undeclared props and missing required props
+4. Phase 3: detects `.withProps<>()` / `.withLoadParams<>()` and validates against contract
+5. Run against wix-stores-v1 → should flag missing `params` on product-page and category-page contracts
+6. `yarn vitest run` in `packages/jay-stack/stack-cli` and `packages/jay-stack/plugin-validator` pass
