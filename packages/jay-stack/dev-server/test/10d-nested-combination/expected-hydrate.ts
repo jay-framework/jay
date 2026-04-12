@@ -29,29 +29,30 @@ export function hydrate(rootElement, options) {
     });
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [
+            adoptElement('S0/0', {}, [
                 slowForEachItem(
                     (vs) => vs.categories,
                     0,
                     'c1',
                     () =>
-                        adoptDynamicElement('', {}, [
+                        adoptDynamicElement('S1/0', {}, [
                             STATIC,
                             STATIC,
                             hydrateConditional(
                                 (vs1) => vs1.isActive,
-                                () => adoptElement('2', {}, []),
+                                () => adoptElement('S1/0/2', {}, []),
                                 () => e('span', { class: 'active-badge' }, ['Active']),
                             ),
                             hydrateForEach(
                                 (vs1) => vs1.items,
                                 '_id',
-                                () => [adoptText('0', (vs2) => vs2.label)],
+                                'S1/0/3',
+                                () => [adoptText('S2/0', (vs2) => vs2.label)],
                                 (vs2) => {
                                     return e('ul', {}, [e('li', {}, [dt((vs22) => vs22.label)])]);
                                 },
                             ),
-                            adoptElement('4', {}, [], refToggleButton()),
+                            adoptElement('S1/0/4', {}, [], refToggleButton()),
                         ]),
                 ),
                 slowForEachItem(
@@ -59,22 +60,23 @@ export function hydrate(rootElement, options) {
                     1,
                     'c2',
                     () =>
-                        adoptDynamicElement('', {}, [
+                        adoptDynamicElement('S3/0', {}, [
                             STATIC,
                             hydrateConditional(
                                 (vs1) => vs1.isActive,
-                                () => adoptElement('1', {}, []),
+                                () => adoptElement('S3/0/1', {}, []),
                                 () => e('span', { class: 'active-badge' }, ['Active']),
                             ),
                             hydrateForEach(
                                 (vs1) => vs1.items,
                                 '_id',
-                                () => [adoptText('0', (vs2) => vs2.label)],
+                                'S3/0/2',
+                                () => [adoptText('S4/0', (vs2) => vs2.label)],
                                 (vs2) => {
                                     return e('ul', {}, [e('li', {}, [dt((vs22) => vs22.label)])]);
                                 },
                             ),
-                            adoptElement('3', {}, [], refToggleButton()),
+                            adoptElement('S3/0/3', {}, [], refToggleButton()),
                         ]),
                 ),
             ]),

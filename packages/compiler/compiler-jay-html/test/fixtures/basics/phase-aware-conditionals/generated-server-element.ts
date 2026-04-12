@@ -12,7 +12,7 @@ export function renderToStream(
 ): void {
     const { write: w } = ctx;
     w('<div');
-    w(' jay-coordinate="0">');
+    w(' jay-coordinate="S0/0">');
     if (vs.slowFlag) {
         w('<span');
         w('>');
@@ -27,13 +27,13 @@ export function renderToStream(
     }
     if (vs.interactiveFlag) {
         w('<span');
-        w(' jay-coordinate="0/2">');
+        w(' jay-coordinate="S0/0/2">');
         w('Interactive');
         w('</span>');
     }
     if (vs.slowFlag && vs.fastFlag && vs.interactiveFlag) {
         w('<span');
-        w(' jay-coordinate="0/3">');
+        w(' jay-coordinate="S0/0/3">');
         w('Mixed');
         w('</span>');
     }

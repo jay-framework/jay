@@ -23,7 +23,10 @@ describe('childCompHydrate', () => {
         price: number;
     }
 
-    function makeHydrateComponent(coordinateKey: string) {
+    // With scoped coordinates (DL#126), the child component's preRender uses
+    // coordinates from the LOCAL scope map (built from the scope root's subtree).
+    // The coordinates here (S1/0, S1/1, S1/2) are what the child sees in its local map.
+    function makeHydrateComponent() {
         const preRender = (options?: any) => {
             const [refManager] = ReferencesManager.for(options, [], [], [], []);
             const render = (viewState: ProductViewState) =>
@@ -31,9 +34,9 @@ describe('childCompHydrate', () => {
                     viewState,
                     refManager,
                     () =>
-                        adoptElement<ProductViewState>('0', {}, [
-                            adoptText<ProductViewState>('1', (vs) => vs.name),
-                            adoptText<ProductViewState>('2', (vs) => vs.price),
+                        adoptElement<ProductViewState>('S1/0', {}, [
+                            adoptText<ProductViewState>('S1/1', (vs) => vs.name),
+                            adoptText<ProductViewState>('S1/2', (vs) => vs.price),
                         ]),
                 );
             return [refManager.getPublicAPI(), render] as any;
@@ -47,18 +50,21 @@ describe('childCompHydrate', () => {
     }
 
     it('scopes coordinate resolution to instance prefix', () => {
+        // In scoped coordinates, the scope root (article) has jay-coordinate="S1/0"
+        // and its children have S1/1, S1/2. childCompHydrate resolves "S1/0" from
+        // the parent map, builds a local map from the article's subtree.
         const root = makeServerHTML(
             '<div jay-coordinate="0">' +
                 '<h1 jay-coordinate="1">Page Title</h1>' +
-                '<article jay-coordinate="product-card:0/0">' +
-                '<span jay-coordinate="product-card:0/1">Widget</span>' +
-                '<span jay-coordinate="product-card:0/2">99</span>' +
+                '<article jay-coordinate="S1/0">' +
+                '<span jay-coordinate="S1/1">Widget</span>' +
+                '<span jay-coordinate="S1/2">99</span>' +
                 '</article>' +
                 '</div>',
         );
 
         const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        const ProductComp = makeHydrateComponent('product-card:0');
+        const ProductComp = makeHydrateComponent();
 
         const jayElement = ConstructContext.withHydrationRootContext<PageViewState, {}>(
             { pageTitle: 'Page Title' },
@@ -67,51 +73,64 @@ describe('childCompHydrate', () => {
             () =>
                 adoptElement<PageViewState>('0', {}, [
                     adoptText<PageViewState>('1', (vs) => vs.pageTitle),
-                    childCompHydrate(ProductComp, (_vs: PageViewState) => ({}), 'product-card:0'),
+                    childCompHydrate(ProductComp, (_vs: PageViewState) => ({}), 'S1/0'),
                 ]),
         );
 
         // The article element should be adopted (not created fresh)
-        const article = root.querySelector('[jay-coordinate="product-card:0/0"]');
+        const article = root.querySelector('[jay-coordinate="S1/0"]');
         expect(article).toBeTruthy();
 
         // Text nodes should be adopted and wired up
-        const nameSpan = root.querySelector('[jay-coordinate="product-card:0/1"]');
+        const nameSpan = root.querySelector('[jay-coordinate="S1/1"]');
         expect(nameSpan).toBeTruthy();
         expect(nameSpan!.textContent).toBe('Widget');
     });
 
     it('adopts correct elements with nested coordinate prefix (slowForEach)', () => {
+        // In scoped coordinates, the slowForEach item has its own scope (S1).
+        // The headless instance inside it has scope S2. The scope root is S2/0 (the article).
         const root = makeServerHTML(
             '<div jay-coordinate="0">' +
-                '<article jay-coordinate="p1/product-card:0/0">' +
-                '<span jay-coordinate="p1/product-card:0/1">Item A</span>' +
-                '<span jay-coordinate="p1/product-card:0/2">42</span>' +
+                '<article jay-coordinate="S2/0">' +
+                '<span jay-coordinate="S2/1">Item A</span>' +
+                '<span jay-coordinate="S2/2">42</span>' +
                 '</article>' +
                 '</div>',
         );
 
         const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        const ProductComp = makeHydrateComponent('product-card:0');
 
-        // childCompHydrate with multi-segment coordinate 'p1/product-card:0'
-        // should resolve to 'p1/product-card:0/...'
+        // Create a component that adopts using S2/* coordinates (its local scope)
+        const preRender = (options?: any) => {
+            const [rm] = ReferencesManager.for(options, [], [], [], []);
+            const render = (viewState: ProductViewState) =>
+                ConstructContext.withHydrationChildContext<ProductViewState, {}>(
+                    viewState,
+                    rm,
+                    () =>
+                        adoptElement<ProductViewState>('S2/0', {}, [
+                            adoptText<ProductViewState>('S2/1', (vs) => vs.name),
+                            adoptText<ProductViewState>('S2/2', (vs) => vs.price),
+                        ]),
+                );
+            return [rm.getPublicAPI(), render] as any;
+        };
+        const ProductComp = makeJayComponent(preRender, ((_p: any, _r: any) => ({
+            render: () => ({ name: 'Test', price: 99 }),
+        })) as any);
+
         ConstructContext.withHydrationRootContext<PageViewState, {}>(
             { pageTitle: 'Page' },
             refManager,
             root,
             () =>
                 adoptElement<PageViewState>('0', {}, [
-                    childCompHydrate(
-                        ProductComp,
-                        (_vs: PageViewState) => ({}),
-                        'p1/product-card:0',
-                    ),
+                    childCompHydrate(ProductComp, (_vs: PageViewState) => ({}), 'S2/0'),
                 ]),
         );
 
-        // The article should be adopted via p1/product-card:0/0
-        const article = root.querySelector('[jay-coordinate="p1/product-card:0/0"]');
+        const article = root.querySelector('[jay-coordinate="S2/0"]');
         expect(article).toBeTruthy();
     });
 
@@ -119,16 +138,16 @@ describe('childCompHydrate', () => {
         const root = makeServerHTML(
             '<div jay-coordinate="0">' +
                 '<h1 jay-coordinate="1">Title</h1>' +
-                '<article jay-coordinate="product-card:0/0">' +
-                '<span jay-coordinate="product-card:0/1">Widget</span>' +
-                '<span jay-coordinate="product-card:0/2">99</span>' +
+                '<article jay-coordinate="S1/0">' +
+                '<span jay-coordinate="S1/1">Widget</span>' +
+                '<span jay-coordinate="S1/2">99</span>' +
                 '</article>' +
                 '<p jay-coordinate="2">Footer</p>' +
                 '</div>',
         );
 
         const [refManager] = ReferencesManager.for({}, [], [], [], []);
-        const ProductComp = makeHydrateComponent('product-card:0');
+        const ProductComp = makeHydrateComponent();
 
         interface VS {
             pageTitle: string;
@@ -142,7 +161,7 @@ describe('childCompHydrate', () => {
             () =>
                 adoptElement<VS>('0', {}, [
                     adoptText<VS>('1', (vs) => vs.pageTitle),
-                    childCompHydrate(ProductComp, (_vs: VS) => ({}), 'product-card:0'),
+                    childCompHydrate(ProductComp, (_vs: VS) => ({}), 'S1/0'),
                     adoptText<VS>('2', (vs) => vs.footer),
                 ]),
         );
@@ -164,37 +183,50 @@ describe('childCompHydrate', () => {
             items: Array<{ id: string }>;
         }
 
-        // SSR HTML: two forEach items, each containing a headless instance
+        // SSR HTML: two forEach items, each containing a headless instance.
+        // All items share jay-coordinate="0/0". Each item's article uses scope S2.
         const html =
             '<ul jay-coordinate="0">' +
-            '<li jay-coordinate="a">' +
-            '<article jay-coordinate="a/product-card:0/0">' +
-            '<span jay-coordinate="a/product-card:0/1">Item A</span>' +
-            '<span jay-coordinate="a/product-card:0/2">10</span>' +
+            '<li jay-coordinate="0/0">' +
+            '<article jay-coordinate="S2/0">' +
+            '<span jay-coordinate="S2/1">Item A</span>' +
+            '<span jay-coordinate="S2/2">10</span>' +
             '</article>' +
             '</li>' +
-            '<li jay-coordinate="b">' +
-            '<article jay-coordinate="b/product-card:0/0">' +
-            '<span jay-coordinate="b/product-card:0/1">Item B</span>' +
-            '<span jay-coordinate="b/product-card:0/2">20</span>' +
+            '<li jay-coordinate="0/0">' +
+            '<article jay-coordinate="S2/0">' +
+            '<span jay-coordinate="S2/1">Item B</span>' +
+            '<span jay-coordinate="S2/2">20</span>' +
             '</article>' +
             '</li>' +
             '</ul>';
 
-        const ProductComp = makeHydrateComponent('product-card:0');
+        // Component adopts using S2/* (its local scope within each forEach item)
+        const preRender = (options?: any) => {
+            const [rm] = ReferencesManager.for(options, [], [], [], []);
+            const render = (viewState: ProductViewState) =>
+                ConstructContext.withHydrationChildContext<ProductViewState, {}>(
+                    viewState,
+                    rm,
+                    () =>
+                        adoptElement<ProductViewState>('S2/0', {}, [
+                            adoptText<ProductViewState>('S2/1', (vs) => vs.name),
+                            adoptText<ProductViewState>('S2/2', (vs) => vs.price),
+                        ]),
+                );
+            return [rm.getPublicAPI(), render] as any;
+        };
+        const ProductComp = makeJayComponent(preRender, ((_p: any, _r: any) => ({
+            render: () => ({ name: 'Test', price: 99 }),
+        })) as any);
 
         const { root } = hydrate<ListViewState>(html, { items: [{ id: 'a' }, { id: 'b' }] }, () =>
             adoptDynamicElement<ListViewState>('0', {}, [
                 hydrateForEach<ListViewState, { id: string }>(
                     (vs) => vs.items,
                     'id',
-                    () => [
-                        childCompHydrate(
-                            ProductComp,
-                            (_item: { id: string }) => ({}),
-                            'product-card:0',
-                        ),
-                    ],
+                    '0/0',
+                    () => [childCompHydrate(ProductComp, (_item: { id: string }) => ({}), 'S2/0')],
                     (_item, _id) =>
                         e('li', {}, [e('article', {}, [dt((_i: { id: string }) => 'new')])]),
                 ),
@@ -202,13 +234,10 @@ describe('childCompHydrate', () => {
         );
 
         // Each item's headless instance should adopt the correct elements
-        const itemAName = root.querySelector('[jay-coordinate="a/product-card:0/1"]');
-        expect(itemAName).toBeTruthy();
-        expect(itemAName!.textContent).toBe('Item A');
-
-        const itemBName = root.querySelector('[jay-coordinate="b/product-card:0/1"]');
-        expect(itemBName).toBeTruthy();
-        expect(itemBName!.textContent).toBe('Item B');
+        const spans = root.querySelectorAll('[jay-coordinate="S2/1"]');
+        expect(spans.length).toBe(2);
+        expect(spans[0].textContent).toBe('Item A');
+        expect(spans[1].textContent).toBe('Item B');
     });
 
     it('works inside hydrateConditional — adopts when condition is true at SSR', () => {
@@ -219,13 +248,13 @@ describe('childCompHydrate', () => {
         // SSR HTML: conditional rendered as true, headless instance inside
         const html =
             '<div jay-coordinate="0">' +
-            '<article jay-coordinate="product-card:0/0">' +
-            '<span jay-coordinate="product-card:0/1">Visible</span>' +
-            '<span jay-coordinate="product-card:0/2">50</span>' +
+            '<article jay-coordinate="S1/0">' +
+            '<span jay-coordinate="S1/1">Visible</span>' +
+            '<span jay-coordinate="S1/2">50</span>' +
             '</article>' +
             '</div>';
 
-        const ProductComp = makeHydrateComponent('product-card:0');
+        const ProductComp = makeHydrateComponent();
 
         const { jayElement, root } = hydrate<ConditionalViewState>(
             html,
@@ -238,7 +267,7 @@ describe('childCompHydrate', () => {
                             childCompHydrate(
                                 ProductComp,
                                 (_vs: ConditionalViewState) => ({}),
-                                'product-card:0',
+                                'S1/0',
                             ),
                     ),
                 ]),
@@ -247,17 +276,15 @@ describe('childCompHydrate', () => {
         const container = root.querySelector('[jay-coordinate="0"]')!;
 
         // Should adopt the SSR element
-        expect(container.querySelector('[jay-coordinate="product-card:0/1"]')).toBeTruthy();
-        expect(container.querySelector('[jay-coordinate="product-card:0/1"]')!.textContent).toBe(
-            'Visible',
-        );
+        expect(container.querySelector('[jay-coordinate="S1/1"]')).toBeTruthy();
+        expect(container.querySelector('[jay-coordinate="S1/1"]')!.textContent).toBe('Visible');
 
         // Toggle condition to false — element should be removed from container
         jayElement.update({ showProduct: false });
-        expect(container.querySelector('[jay-coordinate="product-card:0/0"]')).toBeNull();
+        expect(container.querySelector('[jay-coordinate="S1/0"]')).toBeNull();
 
         // Toggle back to true — element should be re-inserted
         jayElement.update({ showProduct: true });
-        expect(container.querySelector('[jay-coordinate="product-card:0/0"]')).toBeTruthy();
+        expect(container.querySelector('[jay-coordinate="S1/0"]')).toBeTruthy();
     });
 });

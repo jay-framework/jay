@@ -9,7 +9,7 @@ export interface PhaseAwareDynamicTextViewState {
 export function renderToStream(vs: PhaseAwareDynamicTextViewState, ctx: ServerRenderContext): void {
     const { write: w } = ctx;
     w('<div');
-    w(' jay-coordinate="0">');
+    w(' jay-coordinate="S0/0">');
     w('<h1');
     w('>');
     w(escapeHtml(String(vs.title)));
@@ -19,7 +19,7 @@ export function renderToStream(vs: PhaseAwareDynamicTextViewState, ctx: ServerRe
     w(escapeHtml(String(`Fast Count: ${vs.fastCount}`)));
     w('</p>');
     w('<p');
-    w(' jay-coordinate="0/2">');
+    w(' jay-coordinate="S0/0/2">');
     w(escapeHtml(String(`Interactive Count: ${vs.interactiveCount}`)));
     w('</p>');
     w('<span');

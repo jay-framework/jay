@@ -29,7 +29,11 @@ export interface PageWithMixedStaticSlowForeachViewState {
     products: Array<ProductOfPageWithMixedStaticSlowForeachViewState>;
 }
 
-export interface PageWithMixedStaticSlowForeachElementRefs {}
+export interface PageWithMixedStaticSlowForeachElementRefs {
+    products: {
+        ar0: ProductCardRepeatedRefs;
+    };
+}
 
 export type PageWithMixedStaticSlowForeachSlowViewState = {};
 export type PageWithMixedStaticSlowForeachFastViewState = PageWithMixedStaticSlowForeachViewState;
@@ -78,9 +82,9 @@ function _headlessProductCard0HydrateRender(
     );
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('0', {}, [
-                adoptText('0/1', (vs) => vs.price),
-                adoptElement('0/2', {}, [], refAddToCart()),
+            adoptElement('S4/0', {}, [
+                adoptText('S4/0/1', (vs) => vs.price),
+                adoptElement('S4/0/2', {}, [], refAddToCart()),
             ]),
         ) as _HeadlessProductCard0Element;
     return [refManager.getPublicAPI() as ProductCardRefs, render];
@@ -88,7 +92,7 @@ function _headlessProductCard0HydrateRender(
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0HydrateRender,
     productCard,
-    'p3/product-card:AR0',
+    'S3/0/product-card:AR0',
 );
 
 export function hydrate(
@@ -101,8 +105,8 @@ export function hydrate(
     });
     const render = (viewState: PageWithMixedStaticSlowForeachViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [
-                adoptText('0/0', (vs) => vs.pageTitle),
+            adoptElement('S0/0', {}, [
+                adoptText('S0/0/0', (vs) => vs.pageTitle),
                 slowForEachItem<
                     PageWithMixedStaticSlowForeachViewState,
                     ProductOfPageWithMixedStaticSlowForeachViewState
@@ -116,7 +120,7 @@ export function hydrate(
                             (vs1: ProductOfPageWithMixedStaticSlowForeachViewState) => ({
                                 productId: 'prod-c',
                             }),
-                            'product-card:AR0',
+                            'S4/0',
                             refAr0(),
                         ),
                 ),

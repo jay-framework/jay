@@ -29,7 +29,12 @@ export interface PageWithHeadlessInSlowForeachViewState {
     products: Array<ProductOfPageWithHeadlessInSlowForeachViewState>;
 }
 
-export interface PageWithHeadlessInSlowForeachElementRefs {}
+export interface PageWithHeadlessInSlowForeachElementRefs {
+    products: {
+        ar0: ProductCardRepeatedRefs;
+        ar1: ProductCardRepeatedRefs;
+    };
+}
 
 export type PageWithHeadlessInSlowForeachSlowViewState = {};
 export type PageWithHeadlessInSlowForeachFastViewState = PageWithHeadlessInSlowForeachViewState;
@@ -78,9 +83,9 @@ function _headlessProductCard0HydrateRender(
     );
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('0', {}, [
-                adoptText('0/1', (vs) => vs.price),
-                adoptElement('0/2', {}, [], refAddToCart()),
+            adoptElement('S2/0', {}, [
+                adoptText('S2/0/1', (vs) => vs.price),
+                adoptElement('S2/0/2', {}, [], refAddToCart()),
             ]),
         ) as _HeadlessProductCard0Element;
     return [refManager.getPublicAPI() as ProductCardRefs, render];
@@ -88,7 +93,7 @@ function _headlessProductCard0HydrateRender(
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0HydrateRender,
     productCard,
-    'p1/product-card:AR0',
+    'S1/0/product-card:AR0',
 );
 
 // Hydrate inline template for headless component: product-card #1
@@ -106,14 +111,14 @@ function _headlessProductCard1HydrateRender(
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('0', {}, [adoptText('0/1', (vs) => vs.price)]),
+            adoptElement('S4/0', {}, [adoptText('S4/0/1', (vs) => vs.price)]),
         ) as _HeadlessProductCard1Element;
     return [refManager.getPublicAPI() as ProductCardRefs, render];
 }
 const _HeadlessProductCard1 = makeHeadlessInstanceComponent(
     _headlessProductCard1HydrateRender,
     productCard,
-    'p2/product-card:AR1',
+    'S3/0/product-card:AR1',
 );
 
 export function hydrate(
@@ -132,8 +137,8 @@ export function hydrate(
     });
     const render = (viewState: PageWithHeadlessInSlowForeachViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [
-                adoptText('0/0', (vs) => vs.pageTitle),
+            adoptElement('S0/0', {}, [
+                adoptText('S0/0/0', (vs) => vs.pageTitle),
                 slowForEachItem<
                     PageWithHeadlessInSlowForeachViewState,
                     ProductOfPageWithHeadlessInSlowForeachViewState
@@ -147,7 +152,7 @@ export function hydrate(
                             (vs1: ProductOfPageWithHeadlessInSlowForeachViewState) => ({
                                 productId: 'prod-123',
                             }),
-                            'product-card:AR0',
+                            'S2/0',
                             refAr0(),
                         ),
                 ),
@@ -164,7 +169,7 @@ export function hydrate(
                             (vs1: ProductOfPageWithHeadlessInSlowForeachViewState) => ({
                                 productId: 'prod-456',
                             }),
-                            'product-card:AR1',
+                            'S4/0',
                             refAr1(),
                         ),
                 ),

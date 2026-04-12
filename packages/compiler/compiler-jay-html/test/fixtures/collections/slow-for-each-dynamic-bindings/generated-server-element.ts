@@ -17,16 +17,16 @@ export function renderToStream(
     const { write: w } = ctx;
     w('<div');
     w(' class="filter-categories"');
-    w(' jay-coordinate="0">');
+    w(' jay-coordinate="S0/0">');
     {
         const vs1 = vs.categories?.[0];
         if (vs1) {
             w('<label');
             w(' class="' + escapeAttr(String(`chip ${vs1.isSelected ? 'selected' : ''}`)) + '"');
-            w(' jay-coordinate="cat1">');
+            w(' jay-coordinate="S1/0">');
             w('<input');
             w(' type="checkbox"');
-            w(' jay-coordinate="cat1/0" />');
+            w(' jay-coordinate="S1/0/0" />');
             w(' Category A ');
             w('</label>');
         }
@@ -36,10 +36,10 @@ export function renderToStream(
         if (vs1) {
             w('<label');
             w(' class="' + escapeAttr(String(`chip ${vs1.isSelected ? 'selected' : ''}`)) + '"');
-            w(' jay-coordinate="cat2">');
+            w(' jay-coordinate="S2/0">');
             w('<input');
             w(' type="checkbox"');
-            w(' jay-coordinate="cat2/0" />');
+            w(' jay-coordinate="S2/0/0" />');
             w(' Category B ');
             w('</label>');
         }

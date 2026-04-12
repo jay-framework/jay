@@ -20,7 +20,6 @@ import {
     RenderFragment,
     RuntimeMode,
     computeInstanceKey,
-    compileForEachInstanceKeyExpr,
 } from '@jay-framework/compiler-shared';
 import { HTMLElement, NodeType } from 'node-html-parser';
 import Node from 'node-html-parser/dist/nodes/node';
@@ -112,16 +111,6 @@ interface HydrateContext {
     insideFastForEach: boolean;
     /** Whether we're inside a slowForEach (affects instance key computation) */
     insideSlowForEach: boolean;
-    /** The jayTrackBy value of the current slowForEach (for stripping coordinate prefixes) */
-    slowForEachJayTrackBy?: string;
-    /** Variable mappings for compiling $placeholder coordinates inside forEach */
-    varMappings: Record<string, string>;
-    /**
-     * When compiling a headless instance's adopt inline template, the instance's full coordinate
-     * (e.g. "0/2/1/product-widget:0"). Child adoptElement calls use relative coordinates so
-     * childCompHydrate's forInstance(instanceCoord) can resolve them correctly.
-     */
-    instanceCoordPrefix?: string;
     /** Property paths whose phase is 'fast+interactive' — only these need client adoption */
     interactivePaths: Set<string>;
 }
@@ -303,7 +292,6 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             indent: indent.child().child(),
             dynamicRef: true, // Refs inside forEach are collection refs
             insideFastForEach: true,
-            varMappings: { ...context.varMappings, [trackBy]: trackByExpr },
         };
         // Check if forEach item element itself needs adoption (dynamic attrs or ref)
         const itemRenderCtx = buildRenderContext(itemContext);
@@ -385,11 +373,13 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
                 }
             }
 
+            // Item root coordinate for the local scope map
+            const itemRootCoord2 = element.getAttribute(COORD_ATTR) || '';
             const refSuffix = itemRefFragment.rendered ? `, ${itemRefFragment.rendered}` : '';
             const childrenArr = childParts.length
                 ? `[\n${childParts.join(',\n')},\n${indent.firstLine}        ]`
                 : '[]';
-            adoptBody = `() => [\n${indent.firstLine}        adoptDynamicElement("", ${itemAttrs.rendered}, ${childrenArr}${refSuffix}),\n${indent.firstLine}    ]`;
+            adoptBody = `() => [\n${indent.firstLine}        adoptDynamicElement("${itemRootCoord2}", ${itemAttrs.rendered}, ${childrenArr}${refSuffix}),\n${indent.firstLine}    ]`;
 
             itemContent = new RenderFragment(
                 '',
@@ -403,12 +393,17 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
                 ',\n',
             );
 
+            // With scoped coordinates (DL#126), the item root is consumed by hydrateForEach
+            // (via resolveCoordinate on the parent map). The adopt callback runs within a
+            // LOCAL scope map built from the item's DOM subtree, which also contains the
+            // item root under its jay-coordinate value.
             if (needsItemAdoption) {
+                const itemRootCoord = element.getAttribute(COORD_ATTR) || '';
                 const refSuffix = itemRefFragment.rendered ? `, ${itemRefFragment.rendered}` : '';
                 const childrenArr = itemContent.rendered.trim()
                     ? `[\n${itemContent.rendered},\n${indent.firstLine}        ]`
                     : '[]';
-                adoptBody = `() => [\n${indent.firstLine}        adoptElement("", ${itemAttrs.rendered}, ${childrenArr}${refSuffix}),\n${indent.firstLine}    ]`;
+                adoptBody = `() => [\n${indent.firstLine}        adoptElement("${itemRootCoord}", ${itemAttrs.rendered}, ${childrenArr}${refSuffix}),\n${indent.firstLine}    ]`;
             } else {
                 adoptBody = itemContent.rendered.trim()
                     ? `() => [\n${itemContent.rendered},\n${indent.firstLine}    ]`
@@ -479,8 +474,11 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         if (needsItemAdoption && !itemHasInteractiveChildren) {
             allImports = allImports.plus(Import.adoptElement);
         }
+        // Pass the item root coordinate so hydrateForEach can resolve each item's
+        // root DOM element and build a local scope map for its subtree (DL#126).
+        const itemRootCoordForEach = element.getAttribute(COORD_ATTR) || '0';
         const hydrateForEachFragment = new RenderFragment(
-            `${indent.firstLine}hydrateForEach(${forEachFragment.rendered}, '${trackBy}',\n${indent.firstLine}    ${adoptBody},\n${indent.firstLine}    ${createBody},\n${indent.firstLine})`,
+            `${indent.firstLine}hydrateForEach(${forEachFragment.rendered}, '${trackBy}', '${itemRootCoordForEach}',\n${indent.firstLine}    ${adoptBody},\n${indent.firstLine}    ${createBody},\n${indent.firstLine})`,
             allImports,
             [
                 ...forEachFragment.validations,
@@ -516,20 +514,14 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
             .map((_) => `(${paramName}: ${parentTypeName}) => ${_}`);
 
         // Render element content in the item's variable scope.
-        // Children read their own jay-coordinate-base (pre-assigned with jayTrackBy prefix).
-        // Accumulate slowForEachJayTrackBy for nested slowForEach — assignCoordinates
-        // uses the accumulated slowForEachPrefix (e.g., "outer/inner") for child coordinates,
-        // so the stripping logic must match.
-        const accumulatedJayTrackBy = context.slowForEachJayTrackBy
-            ? `${context.slowForEachJayTrackBy}/${jayTrackBy}`
-            : jayTrackBy;
+        // With scoped coordinates (DL#126), children read their own jay-coordinate-base
+        // which is already fully-qualified within the item's scope (e.g., "S3/0").
         const itemContext: HydrateContext = {
             ...context,
             variables: slowForEachVariables,
             indent: indent.child().child(),
             dynamicRef: true,
             insideSlowForEach: true,
-            slowForEachJayTrackBy: accumulatedJayTrackBy,
         };
         const renderContext2 = buildRenderContext(itemContext);
         // Process children individually to determine if wrapping is needed (DL#115).
@@ -594,12 +586,15 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
                     }
                 }
                 const childrenArr = childParts.join(',\n');
-                callbackBody = `adoptDynamicElement('', {}, [\n${childrenArr},\n${indent.firstLine}    ])`;
+                // Use the slowForEach item's scoped coordinate for the wrapper element
+                const itemCoord = element.getAttribute(COORD_ATTR) || '';
+                callbackBody = `adoptDynamicElement('${itemCoord}', {}, [\n${childrenArr},\n${indent.firstLine}    ])`;
                 callbackImports = callbackImports.plus(Import.adoptDynamicElement);
             } else {
                 // No dynamic groups — plain adoptElement suffices
+                const itemCoord = element.getAttribute(COORD_ATTR) || '';
                 const childrenArr = nonEmptyChildren.map((f) => f.rendered).join(',\n');
-                callbackBody = `adoptElement('', {}, [\n${childrenArr},\n${indent.firstLine}    ])`;
+                callbackBody = `adoptElement('${itemCoord}', {}, [\n${childrenArr},\n${indent.firstLine}    ])`;
                 for (const f of nonEmptyChildren) {
                     callbackImports = callbackImports.plus(f.imports);
                     callbackValidations.push(...f.validations);
@@ -695,20 +690,18 @@ function renderHydrateHeadlessInstance(
     // Read instance coordinate from pre-assigned jay-coordinate-base (DL#103)
     const coordResult = extractHeadlessCoordinate(element, contractName);
     if (isValidationError(coordResult)) return coordResult;
-    const { instanceCoord, coordSegments, coordinateSuffix } = coordResult;
+    const { instanceCoord, coordSegments, coordinateSuffix, childScopeId } = coordResult;
     const isInsideForEach = context.insideFastForEach;
 
-    // Compute instance key for __headlessInstances lookup (same logic as server target)
+    // Compute instance key for __headlessInstances lookup.
+    // With scoped coordinates (DL#126), the key is the full jay-coordinate-base value
+    // for static and slowForEach instances. For forEach, the key is computed at runtime.
     let coordinateKey: string | undefined;
     if (isInsideForEach) {
         coordinateKey = undefined; // forEach: key computed at runtime
-    } else if (context.insideSlowForEach) {
-        // slowForEach: key is trackByValue/suffix — only first segment is the prefix
-        const prefix = coordSegments[0];
-        coordinateKey = computeInstanceKey(coordinateSuffix, 'slowForEach', prefix);
     } else {
-        // Static instance: key is just the suffix
-        coordinateKey = computeInstanceKey(coordinateSuffix, 'static');
+        // Static or slowForEach: use the full instance coordinate as key
+        coordinateKey = instanceCoord;
     }
 
     // --- Compile adopt inline template (hydrate APIs) ---
@@ -724,9 +717,8 @@ function renderHydrateHeadlessInstance(
     const instanceRefMap = buildContractRefMap(headlessImport.refs);
 
     // Compile adopt inline template using HydrateContext with component's ViewState.
-    // instanceCoordPrefix: child adoptElement uses relative coords so forInstance(instanceCoord) resolves.
-    // Use the headless component's contract for interactivePaths — the widget's bindings
-    // are resolved against the widget's contract, not the page's contract.
+    // With scoped coordinates (DL#126), no instanceCoordPrefix or stripping needed —
+    // coordinates are fully qualified within their scope.
     const adoptChildIndent = new Indent('            ');
     const adoptItemContext: HydrateContext = {
         ...context,
@@ -739,8 +731,6 @@ function renderHydrateHeadlessInstance(
         // inside headfull FS component templates can be detected (DL#123)
         headlessContractNames: context.headlessContractNames,
         headlessImports: context.headlessImports,
-        varMappings: {},
-        instanceCoordPrefix: instanceCoord,
         interactivePaths: buildInteractivePaths(headlessImport.contract),
     };
     const adoptRenderContext = buildRenderContext(adoptItemContext);
@@ -756,9 +746,10 @@ function renderHydrateHeadlessInstance(
             true, // forceAdopt
         );
     } else {
-        // Multiple children — wrap in adoptElement("0", {}, [children]) so the callback
-        // returns a single element (comma expression would return only the last).
-        // Children get coordinates "0/0", "0/1", etc. to match server wrapper structure.
+        // Multiple children — wrap in adoptElement with the wrapper's scoped coordinate
+        // so the callback returns a single element (comma expression would return only the last).
+        // The wrapper is the first child in the instance's child scope.
+        const wrapperCoord = childScopeId ? `${childScopeId}/0` : '0';
         const adoptChildContext: HydrateContext = {
             ...adoptItemContext,
         };
@@ -767,7 +758,7 @@ function renderHydrateHeadlessInstance(
             ',\n',
         );
         adoptInlineBody = new RenderFragment(
-            `${adoptChildIndent.firstLine}adoptElement("0", {}, [\n${adoptChildren.rendered}\n${adoptChildIndent.firstLine}])`,
+            `${adoptChildIndent.firstLine}adoptElement("${wrapperCoord}", {}, [\n${adoptChildren.rendered}\n${adoptChildIndent.firstLine}])`,
             adoptChildren.imports.plus(Import.adoptElement),
             adoptChildren.validations,
             adoptChildren.refs,
@@ -939,31 +930,20 @@ const ${createComponentSymbol} = makeHeadlessInstanceComponent(
     if (renderedRef.rendered !== '') renderedRef = renderedRef.map((_) => ', ' + _);
 
     // --- Build the call expression ---
-    // childCompHydrate's forInstance(coord) sets coordinateBase for child adoptElement resolution.
-    // Static: full instanceCoord (e.g. "0/2/1/product-widget:0").
-    // forEach/slowForEach: strip the first segment ($trackBy or jayTrackBy) — forItem already
-    // scopes by trackBy value. Remaining path includes intermediate wrapper elements.
-    // e.g. "$_id/0/stock-status:0" → "0/stock-status:0"
-    // Nested: when inside another headless instance (instanceCoordPrefix set), strip the parent
-    // prefix so the coordinate is relative (DL#123). forInstance() at runtime appends to the
-    // already-scoped coordinateBase, so passing the absolute path would double the prefix.
-    let resolvedCoord = instanceCoord;
-    if (
-        context.instanceCoordPrefix &&
-        instanceCoord.startsWith(context.instanceCoordPrefix + '/')
-    ) {
-        resolvedCoord = instanceCoord.slice(context.instanceCoordPrefix.length + 1);
-    }
-    const coordKeyArg =
-        isInsideForEach || context.insideSlowForEach
-            ? `'${coordSegments.slice(1).join('/')}'`
-            : `'${resolvedCoord}'`;
+    // With scoped coordinates (DL#126), no coordinate stripping needed.
+    // childCompHydrate no longer takes a coordinate argument — the child's
+    // adopt calls use fully-qualified scoped coordinates directly.
+
+    // Build the scope root coordinate for the inline template root element.
+    // The child scope ID comes from jay-scope on the <jay:xxx> tag.
+    // The inline template root is the first child, with coordinate S<n>/0.
+    const scopeRootCoord = childScopeId ? `'${childScopeId}/0'` : 'undefined';
 
     if (ifCondition) {
         // Fast conditional: wrap in hydrateConditional with adopt and create callbacks.
         // createComponentSymbol is guaranteed to exist here (needsCreateVersion was true).
         const renderedCondition = parseCondition(ifCondition, context.variables);
-        const adoptCall = `() => childCompHydrate(${adoptComponentSymbol}, ${getProps}, ${coordKeyArg}${renderedRef.rendered})`;
+        const adoptCall = `() => childCompHydrate(${adoptComponentSymbol}, ${getProps}, ${scopeRootCoord}${renderedRef.rendered})`;
         const createCall = `() => childComp(${createComponentSymbol}, ${getProps}${renderedRef.rendered})`;
         const callExpr = `${context.indent.firstLine}hydrateConditional(${renderedCondition.rendered}, ${adoptCall},\n${context.indent.firstLine}    ${createCall})`;
 
@@ -983,7 +963,7 @@ const ${createComponentSymbol} = makeHeadlessInstanceComponent(
     }
 
     return new RenderFragment(
-        `${context.indent.firstLine}childCompHydrate(${adoptComponentSymbol}, ${getProps}, ${coordKeyArg}${renderedRef.rendered})`,
+        `${context.indent.firstLine}childCompHydrate(${adoptComponentSymbol}, ${getProps}, ${scopeRootCoord}${renderedRef.rendered})`,
         Imports.for(Import.childCompHydrate)
             .plus(propsGetterAndRefs.imports)
             .plus(renderedRef.imports),
@@ -1098,34 +1078,10 @@ function renderHydrateElementContent(
         );
     }
 
-    // Read pre-assigned coordinate from jay-coordinate-base (DL#103).
-    const coordTemplate = element.getAttribute(COORD_ATTR);
-    let coordinate = coordTemplate || coordinateOverride || '0';
-    // When inside headless adopt (instanceCoordPrefix set), use relative coord for forInstance resolution.
-    if (
-        context.instanceCoordPrefix &&
-        coordTemplate?.startsWith(context.instanceCoordPrefix + '/')
-    ) {
-        coordinate = coordTemplate.slice(context.instanceCoordPrefix.length + 1);
-    }
-    // When inside forEach, strip the $trackBy prefix (e.g. "$_id/0/0" → "0/0").
-    // hydrateForEach's forItem(id) already sets coordinateBase to [id], so
-    // resolveCoordinate("0/0") correctly resolves to "1/0/0" at runtime.
-    if (context.insideFastForEach && coordinate.startsWith('$')) {
-        const slashIndex = coordinate.indexOf('/');
-        coordinate = slashIndex >= 0 ? coordinate.slice(slashIndex + 1) : '0';
-    }
-    // When inside slowForEach, strip the jayTrackBy prefix from coordinates.
-    // slowForEachItem's forItem already pushes jayTrackBy onto coordinateBase,
-    // so coordinates must be relative. Root element (coordinate === jayTrackBy)
-    // becomes '' which resolveCoordinate handles as the coordinateBase itself.
-    if (context.slowForEachJayTrackBy && coordTemplate) {
-        if (coordinate === context.slowForEachJayTrackBy) {
-            coordinate = '';
-        } else if (coordinate.startsWith(context.slowForEachJayTrackBy + '/')) {
-            coordinate = coordinate.slice(context.slowForEachJayTrackBy.length + 1);
-        }
-    }
+    // Read pre-assigned coordinate from jay-coordinate-base (DL#103, #126).
+    // With scoped coordinates, coordinates are fully qualified (e.g., "S2/0") —
+    // no stripping or prefix manipulation needed.
+    const coordinate = element.getAttribute(COORD_ATTR) || coordinateOverride || '0';
 
     // Build the ref argument if present
     const renderedRef = renderElementRef(element, renderContext);
@@ -1342,7 +1298,6 @@ export function renderHydrate(
         headlessInstanceCounter: { count: 0 },
         insideFastForEach: false,
         insideSlowForEach: false,
-        varMappings: {},
         interactivePaths: buildInteractivePaths(contract),
     };
 

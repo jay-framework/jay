@@ -46,7 +46,7 @@ export function hydrate(
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState: SimpleDynamicTextViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptText('0', (vs) => vs.s1),
+            adoptText('S0/0', (vs) => vs.s1),
         ) as SimpleDynamicTextElement;
     return [refManager.getPublicAPI() as SimpleDynamicTextElementRefs, render];
 }

@@ -47,6 +47,7 @@ import {
     discoverHeadlessInstances,
     resolveHeadlessInstances,
     injectHeadfullFSTemplates,
+    assignCoordinatesToJayHtml,
 } from '@jay-framework/compiler-jay-html';
 import {
     LoadedPageParts,
@@ -842,14 +843,22 @@ async function preRenderJayHtml(
     let forEachInstances: ForEachHeadlessInstance[] | undefined;
 
     if (headlessInstanceComponents.length > 0) {
+        // Discovery first (assigns ref attributes on <jay:xxx> tags), then coordinate
+        // assignment reads those refs to produce consistent scoped coordinates (DL#126).
         const discoveryResult = discoverHeadlessInstances(preRenderedJayHtml);
-        // Use the HTML with embedded ref attributes for downstream consumers
-        preRenderedJayHtml = discoveryResult.preRenderedJayHtml;
-
+        // Use the HTML with embedded ref attributes
+        const htmlWithRefs = discoveryResult.preRenderedJayHtml;
+        // Assign scoped coordinates — now jay-coordinate-base is set on all elements
+        const headlessContractNameSet = new Set(
+            headlessInstanceComponents.map((c) => c.contractName),
+        );
+        preRenderedJayHtml = assignCoordinatesToJayHtml(htmlWithRefs, headlessContractNameSet);
+        // Re-discover to pick up the jay-coordinate-base values for key computation
+        const finalDiscovery = discoverHeadlessInstances(preRenderedJayHtml);
         // Validate: forEach instances must not have slow phases
-        if (discoveryResult.forEachInstances.length > 0) {
+        if (finalDiscovery.forEachInstances.length > 0) {
             const validationErrors = validateForEachInstances(
-                discoveryResult.forEachInstances,
+                finalDiscovery.forEachInstances,
                 headlessInstanceComponents,
             );
             if (validationErrors.length > 0) {
@@ -858,12 +867,12 @@ async function preRenderJayHtml(
                 );
                 return undefined;
             }
-            forEachInstances = discoveryResult.forEachInstances;
+            forEachInstances = finalDiscovery.forEachInstances;
         }
 
-        if (discoveryResult.instances.length > 0) {
+        if (finalDiscovery.instances.length > 0) {
             const slowResult = await slowRenderInstances(
-                discoveryResult.instances,
+                finalDiscovery.instances,
                 headlessInstanceComponents,
             );
 

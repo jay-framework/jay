@@ -10,6 +10,7 @@ import {
     Contract,
     discoverHeadlessInstances,
     injectHeadfullFSTemplates,
+    assignCoordinatesToJayHtml,
     type DiscoveredHeadlessInstance,
     type ForEachHeadlessInstance,
 } from '@jay-framework/compiler-jay-html';
@@ -199,10 +200,26 @@ export async function loadPageParts(
             dirName,
             JAY_IMPORT_RESOLVER,
         );
-        const discoveryResult =
-            headlessInstanceComponents.length > 0
-                ? discoverHeadlessInstances(jayHtmlForDiscovery)
-                : { instances: [], forEachInstances: [], preRenderedJayHtml: jayHtmlSource };
+        // Discovery first (assigns ref attributes), then coordinate assignment (DL#126).
+        // Re-discover after coordinates are assigned so keys use jay-coordinate-base.
+        let discoveryResult: ReturnType<typeof discoverHeadlessInstances>;
+        if (headlessInstanceComponents.length > 0) {
+            const firstDiscovery = discoverHeadlessInstances(jayHtmlForDiscovery);
+            const headlessContractNameSet = new Set(
+                jayHtml.headlessImports.map((hi) => hi.contractName),
+            );
+            const jayHtmlWithCoords = assignCoordinatesToJayHtml(
+                firstDiscovery.preRenderedJayHtml,
+                headlessContractNameSet,
+            );
+            discoveryResult = discoverHeadlessInstances(jayHtmlWithCoords);
+        } else {
+            discoveryResult = {
+                instances: [],
+                forEachInstances: [],
+                preRenderedJayHtml: jayHtmlSource,
+            };
+        }
 
         return {
             parts,

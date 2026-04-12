@@ -29,7 +29,11 @@ export interface PageWithHeadlessInForeachViewState {
     products: Array<ProductOfPageWithHeadlessInForeachViewState>;
 }
 
-export interface PageWithHeadlessInForeachElementRefs {}
+export interface PageWithHeadlessInForeachElementRefs {
+    products: {
+        ar0: ProductCardRepeatedRefs;
+    };
+}
 
 export type PageWithHeadlessInForeachSlowViewState = {};
 export type PageWithHeadlessInForeachFastViewState = PageWithHeadlessInForeachViewState;
@@ -93,7 +97,7 @@ const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
 );
 
 export function render(options?: RenderElementOptions): PageWithHeadlessInForeachElementPreRender {
-    const [productsRefManager, [refAR1]] = ReferencesManager.for(options, [], [], [], ['aR1']);
+    const [productsRefManager, [refAr0]] = ReferencesManager.for(options, [], [], [], ['ar0']);
     const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
         products: productsRefManager,
     });
@@ -110,7 +114,7 @@ export function render(options?: RenderElementOptions): PageWithHeadlessInForeac
                                 (vs1: ProductOfPageWithHeadlessInForeachViewState) => ({
                                     productId: vs1._id,
                                 }),
-                                refAR1(),
+                                refAr0(),
                             ),
                         ]);
                     },

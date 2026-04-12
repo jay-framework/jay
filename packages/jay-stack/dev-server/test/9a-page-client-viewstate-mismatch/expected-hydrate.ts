@@ -23,13 +23,13 @@ export function hydrate(rootElement, options) {
     });
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptDynamicElement('0', {}, [
+            adoptDynamicElement('S0/0', {}, [
                 STATIC,
                 hydrateConditional(
                     (vs) => vs.status?.showBanner,
                     () =>
-                        adoptElement('0/1', {}, [
-                            adoptText('0/1/0', (vs) => vs.status?.bannerText),
+                        adoptElement('S0/0/1', {}, [
+                            adoptText('S0/0/1/0', (vs) => vs.status?.bannerText),
                         ]),
                     () =>
                         e('div', { class: 'banner' }, [
@@ -38,8 +38,8 @@ export function hydrate(rootElement, options) {
                             ]),
                         ]),
                 ),
-                adoptText('0/2', (vs) => `Count: ${vs.status?.counter}`),
-                adoptElement('0/3', {}, [], refIncrement()),
+                adoptText('S0/0/2', (vs) => `Count: ${vs.status?.counter}`),
+                adoptElement('S0/0/3', {}, [], refIncrement()),
             ]),
         );
     return [refManager.getPublicAPI(), render];

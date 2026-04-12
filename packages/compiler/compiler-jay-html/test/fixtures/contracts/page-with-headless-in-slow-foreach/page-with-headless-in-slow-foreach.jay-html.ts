@@ -29,7 +29,12 @@ export interface PageWithHeadlessInSlowForeachViewState {
     products: Array<ProductOfPageWithHeadlessInSlowForeachViewState>;
 }
 
-export interface PageWithHeadlessInSlowForeachElementRefs {}
+export interface PageWithHeadlessInSlowForeachElementRefs {
+    products: {
+        ar0: ProductCardRepeatedRefs;
+        ar1: ProductCardRepeatedRefs;
+    };
+}
 
 export type PageWithHeadlessInSlowForeachSlowViewState = {};
 export type PageWithHeadlessInSlowForeachFastViewState = PageWithHeadlessInSlowForeachViewState;
@@ -90,7 +95,7 @@ function _headlessProductCard0Render(
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0Render,
     productCard,
-    'p1/product-card:AR0',
+    'S1/0/product-card:AR0',
 );
 
 // Inline template for headless component: product-card #1
@@ -119,18 +124,18 @@ function _headlessProductCard1Render(
 const _HeadlessProductCard1 = makeHeadlessInstanceComponent(
     _headlessProductCard1Render,
     productCard,
-    'p2/product-card:AR0',
+    'S3/0/product-card:AR1',
 );
 
 export function render(
     options?: RenderElementOptions,
 ): PageWithHeadlessInSlowForeachElementPreRender {
-    const [productsRefManager, [refAR1, refAR2]] = ReferencesManager.for(
+    const [productsRefManager, [refAr0, refAr1]] = ReferencesManager.for(
         options,
         [],
         [],
         [],
-        ['aR1', 'aR2'],
+        ['ar0', 'ar1'],
     );
     const [refManager, []] = ReferencesManager.for(options, [], [], [], [], {
         products: productsRefManager,
@@ -154,7 +159,7 @@ export function render(
                                     (vs1: ProductOfPageWithHeadlessInSlowForeachViewState) => ({
                                         productId: 'prod-123',
                                     }),
-                                    refAR1(),
+                                    refAr0(),
                                 ),
                             ]),
                     ),
@@ -172,7 +177,7 @@ export function render(
                                     (vs1: ProductOfPageWithHeadlessInSlowForeachViewState) => ({
                                         productId: 'prod-456',
                                     }),
-                                    refAR2(),
+                                    refAr1(),
                                 ),
                             ]),
                     ),

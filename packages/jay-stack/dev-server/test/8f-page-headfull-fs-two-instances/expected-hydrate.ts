@@ -14,9 +14,9 @@ function _headlessHeader0HydrateRender(options) {
     const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('0', {}, [
-                adoptText('0/1', (vs) => vs.value),
-                adoptElement('0/2', {}, [], refIncrement()),
+            adoptElement('S1/0', {}, [
+                adoptText('S1/0/1', (vs) => vs.value),
+                adoptElement('S1/0/2', {}, [], refIncrement()),
             ]),
         );
     return [refManager.getPublicAPI(), render];
@@ -24,15 +24,15 @@ function _headlessHeader0HydrateRender(options) {
 const _HeadlessHeader0 = makeHeadlessInstanceComponent(
     _headlessHeader0HydrateRender,
     header,
-    'header:AR0',
+    'S0/0/1/header:AR0',
 );
 function _headlessHeader1HydrateRender(options) {
     const [refManager, [refIncrement2]] = ReferencesManager.for(options, ['increment'], [], [], []);
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('0', {}, [
-                adoptText('0/1', (vs) => vs.value),
-                adoptElement('0/2', {}, [], refIncrement2()),
+            adoptElement('S2/0', {}, [
+                adoptText('S2/0/1', (vs) => vs.value),
+                adoptElement('S2/0/2', {}, [], refIncrement2()),
             ]),
         );
     return [refManager.getPublicAPI(), render];
@@ -40,7 +40,7 @@ function _headlessHeader1HydrateRender(options) {
 const _HeadlessHeader1 = makeHeadlessInstanceComponent(
     _headlessHeader1HydrateRender,
     header,
-    'header:AR1',
+    'S0/0/2/header:AR1',
 );
 export function hydrate(rootElement, options) {
     const [refManager, [refAr0, refAr1]] = ReferencesManager.for(
@@ -52,19 +52,9 @@ export function hydrate(rootElement, options) {
     );
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [
-                childCompHydrate(
-                    _HeadlessHeader0,
-                    (vs) => ({ itemId: '1' }),
-                    '0/1/header:AR0',
-                    refAr0(),
-                ),
-                childCompHydrate(
-                    _HeadlessHeader1,
-                    (vs) => ({ itemId: '3' }),
-                    '0/2/header:AR1',
-                    refAr1(),
-                ),
+            adoptElement('S0/0', {}, [
+                childCompHydrate(_HeadlessHeader0, (vs) => ({ itemId: '1' }), 'S1/0', refAr0()),
+                childCompHydrate(_HeadlessHeader1, (vs) => ({ itemId: '3' }), 'S2/0', refAr1()),
             ]),
         );
     return [refManager.getPublicAPI(), render];

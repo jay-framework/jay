@@ -51,7 +51,7 @@ describe('dev server', () => {
     <title>Vite + TS</title>
   </head>
   <body>
-    <div id="target"><div jay-coordinate="0"><h1>Hello World</h1><p>This is a simple page without any code file</p></div></div>
+    <div id="target"><div jay-coordinate="S0/0"><h1>Hello World</h1><p>This is a simple page without any code file</p></div></div>
     <script type="module" src="/@id/__x00__/index.html?html-proxy&index=0.js"></script>
   </body>
 </html>`);
@@ -154,6 +154,7 @@ import { render } from "/page.jay-html.ts";
 import {page} from "/page.ts"
 const slowViewState = {"title":"Page with Code","content":"This page has both a jay-html file and a code file"};
 const viewState = {};
+
 const fastCarryForward = {};
 const trackByMap = {};
 

@@ -47,7 +47,9 @@ export function hydrate(
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState: MixedContentDynamicTextViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [adoptText('0', (vs) => `Count: ${vs.count} `, undefined, 0)]),
+            adoptElement('S0/0', {}, [
+                adoptText('S0/0', (vs) => `Count: ${vs.count} `, undefined, 0),
+            ]),
         ) as MixedContentDynamicTextElement;
     return [refManager.getPublicAPI() as MixedContentDynamicTextElementRefs, render];
 }

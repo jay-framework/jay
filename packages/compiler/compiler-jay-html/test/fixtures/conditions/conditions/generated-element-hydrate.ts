@@ -46,15 +46,15 @@ export function hydrate(
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState: ConditionsViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptDynamicElement('0', {}, [
+            adoptDynamicElement('S0/0', {}, [
                 hydrateConditional(
                     (vs) => vs.cond,
-                    () => adoptText('0/0', (vs) => vs.text1),
+                    () => adoptText('S0/0/0', (vs) => vs.text1),
                     () => e('div', { style: { cssText: 'color:red' } }, [dt((vs) => vs.text1)]),
                 ),
                 hydrateConditional(
                     (vs) => !vs.cond,
-                    () => adoptText('0/1', (vs) => vs.text2),
+                    () => adoptText('S0/0/1', (vs) => vs.text2),
                     () => e('div', { style: { cssText: 'color:green' } }, [dt((vs) => vs.text2)]),
                 ),
             ]),

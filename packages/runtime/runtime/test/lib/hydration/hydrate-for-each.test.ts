@@ -20,20 +20,28 @@ interface ViewState {
     items: Item[];
 }
 
+// With scoped coordinates (DL#126), the adopt callback runs within a LOCAL
+// scope map built from each item's DOM subtree. The item root has jay-coordinate
+// matching the forEach element's coordinate (shared by all items). Inner elements
+// use item-scope coordinates (S1/0, etc.).
 function forEachAdopt() {
-    return [adoptText<Item>('0', (item) => item.name)];
+    return [adoptText<Item>('S1/0', (item) => item.name)];
 }
 
 function forEachCreate() {
     return de<Item>('li', {}, [dt((i: Item) => i.name)]);
 }
 
+// All forEach items share the same jay-coordinate (the forEach element's position
+// in the parent scope). Each item's subtree has item-scope coordinates.
+// The itemCoordinate arg tells hydrateForEach which coordinate to resolve per item.
 function hydrateForEachTest(html: string, items: Item[]) {
     return hydrate<ViewState>(html, { items }, () =>
         adoptDynamicElement<ViewState>('0', {}, [
             hydrateForEach<ViewState, Item>(
                 (vs) => vs.items,
                 'id',
+                '0/0',
                 forEachAdopt,
                 (_item, _id) => forEachCreate(),
             ),
@@ -41,15 +49,17 @@ function hydrateForEachTest(html: string, items: Item[]) {
     );
 }
 
+// Items share jay-coordinate="0/0" (the forEach element position in parent scope).
+// Each item's span has jay-coordinate="S1/0" in the item scope.
 const twoItemsHTML =
     '<ul jay-coordinate="0">' +
-    '<li jay-coordinate="a"><span jay-coordinate="a/0">Alice</span></li>' +
-    '<li jay-coordinate="b"><span jay-coordinate="b/0">Bob</span></li>' +
+    '<li jay-coordinate="0/0"><span jay-coordinate="S1/0">Alice</span></li>' +
+    '<li jay-coordinate="0/0"><span jay-coordinate="S1/0">Bob</span></li>' +
     '</ul>';
 
 const oneItemHTML =
     '<ul jay-coordinate="0">' +
-    '<li jay-coordinate="a"><span jay-coordinate="a/0">Alice</span></li>' +
+    '<li jay-coordinate="0/0"><span jay-coordinate="S1/0">Alice</span></li>' +
     '</ul>';
 
 describe('hydrateForEach', () => {
@@ -59,14 +69,12 @@ describe('hydrateForEach', () => {
             { id: 'a', name: 'Alice' },
             { id: 'b', name: 'Bob' },
         ]);
-        const li1 = root.querySelector('[jay-coordinate="a"]')!;
-        const li2 = root.querySelector('[jay-coordinate="b"]')!;
+        // All items share the same coordinate; resolved in document order
+        const lis = root.querySelectorAll('[jay-coordinate="0/0"]')!;
 
-        // Node identity preserved
-        expect(li1).toBeTruthy();
-        expect(li2).toBeTruthy();
-        expect(li1.tagName).toBe('LI');
-        expect(li2.tagName).toBe('LI');
+        expect(lis.length).toBe(2);
+        expect(lis[0].tagName).toBe('LI');
+        expect(lis[1].tagName).toBe('LI');
     });
 
     // Test #26: item dynamic content updates
@@ -83,8 +91,9 @@ describe('hydrateForEach', () => {
             ],
         });
 
-        expect(root.querySelector('[jay-coordinate="a/0"]')!.textContent).toBe('Alicia');
-        expect(root.querySelector('[jay-coordinate="b/0"]')!.textContent).toBe('Bobby');
+        const spans = root.querySelectorAll('[jay-coordinate="S1/0"]');
+        expect(spans[0].textContent).toBe('Alicia');
+        expect(spans[1].textContent).toBe('Bobby');
     });
 
     // Test #28: add new item
@@ -175,12 +184,13 @@ describe('hydrateForEach with static siblings (Kindergarten positioning)', () =>
         items: Item[];
     }
 
-    // SSR HTML: h1 before list, buttons after list
+    // SSR HTML: h1 before list, button after list.
+    // forEach items share jay-coordinate="0/1" (position in parent scope).
     const withSiblingsHTML =
         '<div jay-coordinate="0">' +
         '<h1 jay-coordinate="0/0">Title</h1>' +
-        '<li jay-coordinate="a"><span jay-coordinate="a/0">Alice</span></li>' +
-        '<li jay-coordinate="b"><span jay-coordinate="b/0">Bob</span></li>' +
+        '<li jay-coordinate="0/1"><span jay-coordinate="S1/0">Alice</span></li>' +
+        '<li jay-coordinate="0/1"><span jay-coordinate="S1/0">Bob</span></li>' +
         '<button jay-coordinate="0/2">Add</button>' +
         '</div>';
 
@@ -191,6 +201,7 @@ describe('hydrateForEach with static siblings (Kindergarten positioning)', () =>
                 hydrateForEach<SiblingViewState, Item>(
                     (vs) => vs.items,
                     'id',
+                    '0/1',
                     forEachAdopt,
                     (_item, _id) => forEachCreate(),
                 ),
@@ -259,6 +270,7 @@ describe('hydrateForEach with static siblings (Kindergarten positioning)', () =>
                     hydrateForEach<SiblingViewState, Item>(
                         (vs) => vs.items,
                         'id',
+                        '0/1',
                         forEachAdopt,
                         (_item, _id) => forEachCreate(),
                     ),
@@ -293,7 +305,7 @@ describe('hydrateConditional + forEach + STATIC (mixed children)', () => {
             '<div jay-coordinate="0">' +
             '<h1 jay-coordinate="0/0">Header</h1>' +
             '<span jay-coordinate="0/1">Conditional</span>' +
-            '<li jay-coordinate="a"><span jay-coordinate="a/0">Alice</span></li>' +
+            '<li jay-coordinate="0/2"><span jay-coordinate="S1/0">Alice</span></li>' +
             '<p>Footer</p>' +
             '</div>';
 
@@ -310,6 +322,7 @@ describe('hydrateConditional + forEach + STATIC (mixed children)', () => {
                     hydrateForEach<MixedViewState, Item>(
                         (vs) => vs.items,
                         'id',
+                        '0/2',
                         forEachAdopt,
                         (_item, _id) => forEachCreate(),
                     ),
@@ -351,7 +364,7 @@ describe('hydrateConditional + forEach + STATIC (mixed children)', () => {
         const html =
             '<div jay-coordinate="0">' +
             '<span jay-coordinate="0/0">Visible</span>' +
-            '<li jay-coordinate="a"><span jay-coordinate="a/0">Alice</span></li>' +
+            '<li jay-coordinate="0/1"><span jay-coordinate="S1/0">Alice</span></li>' +
             '</div>';
 
         const { jayElement, root } = hydrate<MixedViewState>(
@@ -366,6 +379,7 @@ describe('hydrateConditional + forEach + STATIC (mixed children)', () => {
                     hydrateForEach<MixedViewState, Item>(
                         (vs) => vs.items,
                         'id',
+                        '0/1',
                         forEachAdopt,
                         (_item, _id) => forEachCreate(),
                     ),

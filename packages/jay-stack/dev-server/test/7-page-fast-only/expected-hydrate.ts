@@ -14,10 +14,10 @@ function _headlessWidget0HydrateRender(options) {
     const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('0', {}, [
-                adoptText('0/0', (vs) => vs.label),
-                adoptText('0/1', (vs) => vs.value),
-                adoptElement('0/2', {}, [], refIncrement()),
+            adoptElement('S1/0', {}, [
+                adoptText('S1/0/0', (vs) => vs.label),
+                adoptText('S1/0/1', (vs) => vs.value),
+                adoptElement('S1/0/2', {}, [], refIncrement()),
             ]),
         );
     return [refManager.getPublicAPI(), render];
@@ -25,20 +25,15 @@ function _headlessWidget0HydrateRender(options) {
 const _HeadlessWidget0 = makeHeadlessInstanceComponent(
     _headlessWidget0HydrateRender,
     widget,
-    'widget:AR0',
+    'S0/0/widget:AR0',
 );
 export function hydrate(rootElement, options) {
     const [refManager, [refAr0]] = ReferencesManager.for(options, [], [], ['ar0'], []);
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [
-                adoptText('0/0', (vs) => vs.title),
-                childCompHydrate(
-                    _HeadlessWidget0,
-                    (vs) => ({ itemId: '1' }),
-                    '0/widget:AR0',
-                    refAr0(),
-                ),
+            adoptElement('S0/0', {}, [
+                adoptText('S0/0/0', (vs) => vs.title),
+                childCompHydrate(_HeadlessWidget0, (vs) => ({ itemId: '1' }), 'S1/0', refAr0()),
             ]),
         );
     return [refManager.getPublicAPI(), render];

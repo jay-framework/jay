@@ -88,14 +88,15 @@ export function hydrate(
     });
     const render = (viewState: DuplicateRefOnlyOneUsedViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptDynamicElement('0', {}, [
-                adoptText('0/0', (vs) => vs.title),
+            adoptDynamicElement('S0/0', {}, [
+                adoptText('S0/0/0', (vs) => vs.title),
                 hydrateForEach(
                     (vs: DuplicateRefOnlyOneUsedViewState) => vs.filters?.filter2?.categories,
                     'id',
+                    'S0/0/1',
                     () => [
-                        adoptText('0', (vs1) => vs1.name),
-                        adoptElement('1', {}, [], refIsSelected()),
+                        adoptText('S1/0', (vs1) => vs1.name),
+                        adoptElement('S1/1', {}, [], refIsSelected()),
                     ],
                     (vs1: CategoryOfFilter2OfDuplicateRefHeadlessViewState) => {
                         return e('div', {}, [

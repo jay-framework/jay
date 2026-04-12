@@ -57,8 +57,8 @@ export function hydrate(
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState: PhaseAwareDynamicTextViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [
-                adoptText('0/2', (vs) => `Interactive Count: ${vs.interactiveCount}`),
+            adoptElement('S0/0', {}, [
+                adoptText('S0/0/2', (vs) => `Interactive Count: ${vs.interactiveCount}`),
             ]),
         ) as PhaseAwareDynamicTextElement;
     return [refManager.getPublicAPI() as PhaseAwareDynamicTextElementRefs, render];

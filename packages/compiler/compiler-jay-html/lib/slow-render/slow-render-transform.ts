@@ -753,11 +753,10 @@ export function discoverHeadlessInstances(
                 const hasUnresolvedProps = Object.values(props).some((v) => hasBindings(v));
 
                 if (!hasUnresolvedProps) {
-                    const prefix = buildCoordinatePrefix(element);
-
                     // Use explicit ref or auto-generate one with AR prefix
                     let ref = element.getAttribute('ref');
                     if (!ref) {
+                        const prefix = buildCoordinatePrefix(element);
                         const counterKey = [...prefix, contractName].join('/');
                         const localIndex = coordinateCounters.get(counterKey) ?? 0;
                         coordinateCounters.set(counterKey, localIndex + 1);
@@ -765,7 +764,13 @@ export function discoverHeadlessInstances(
                         element.setAttribute('ref', ref);
                     }
 
-                    const coordinate = [...prefix, `${contractName}:${ref}`];
+                    // With scoped coordinates (DL#126), read the coordinate from
+                    // jay-coordinate-base (assigned by assignCoordinatesToJayHtml).
+                    // Fall back to buildCoordinatePrefix for backward compatibility.
+                    const coordBase = element.getAttribute('jay-coordinate-base');
+                    const coordinate = coordBase
+                        ? coordBase.split('/')
+                        : [...buildCoordinatePrefix(element), `${contractName}:${ref}`];
 
                     instances.push({
                         contractName,

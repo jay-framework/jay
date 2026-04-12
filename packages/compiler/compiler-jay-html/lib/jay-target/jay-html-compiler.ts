@@ -394,7 +394,8 @@ export function renderChildCompProps(
             attrCanonical === 'if' ||
             attrCanonical === 'foreach' ||
             attrCanonical === 'trackby' ||
-            attrCanonical === 'jay-coordinate-base'
+            attrCanonical === 'jay-coordinate-base' ||
+            attrCanonical === 'jay-scope'
         )
             return;
         if (attrCanonical === 'props') {
@@ -841,12 +842,14 @@ ${indent.curr}return ${childElement.rendered}}, '${trackBy}')`,
             coordinateRef = `AR${localIndex}`;
         }
 
-        // For static instances: string key. For forEach instances: factory function.
+        // For static instances: string key from jay-coordinate-base (DL#126).
+        // For forEach instances: factory function using dataIds.
         const isInsideForEach = newContext.insideFastForEach;
         const coordinateSuffix = `${contractName}:${coordinateRef}`;
+        const instanceCoordBase = htmlElement.getAttribute('jay-coordinate-base');
         const coordinateKey = isInsideForEach
             ? undefined // will use factory
-            : [...newContext.coordinatePrefix, coordinateSuffix].join('/');
+            : instanceCoordBase || [...newContext.coordinatePrefix, coordinateSuffix].join('/');
 
         // Generate type aliases and render function code
         const renderFnCode = `
@@ -1303,6 +1306,11 @@ function renderFunctionImplementation(
     const importedRefNameToRef = processImportedHeadless(headlessImports);
     // Build set of headless contract names for detecting <jay:contract-name> instances
     const headlessContractNames = new Set(headlessImports.map((h) => h.contractName));
+
+    // Pre-process: assign scoped coordinates (DL#126) so headless instance keys
+    // match the server/hydrate targets. Must run before element rendering.
+    assignCoordinates(rootBodyElement, { headlessContractNames });
+
     const rootElement = ensureSingleChildElement(rootBodyElement);
     let renderedRoot: RenderFragment;
     const usedComponentImports = new Set<string>(); // Track used component types

@@ -3,6 +3,7 @@ import { parse, HTMLElement } from 'node-html-parser';
 import { assignCoordinates } from '../../lib/jay-target/assign-coordinates';
 
 const COORD = 'jay-coordinate-base';
+const SCOPE = 'jay-scope';
 
 function getBody(html: string): HTMLElement {
     const root = parse(html);
@@ -37,12 +38,12 @@ function collectCoordinates(element: HTMLElement): Record<string, string> {
 
 describe('assignCoordinates', () => {
     describe('basic elements', () => {
-        it('should assign root element coordinate "0"', () => {
+        it('should assign root element coordinate "S0/0"', () => {
             const body = getBody('<body><div><h1>Hello</h1></div></body>');
             assignCoordinates(body, { headlessContractNames: new Set() });
 
             const root = body.querySelector('div')!;
-            expect(root.getAttribute(COORD)).toBe('0');
+            expect(root.getAttribute(COORD)).toBe('S0/0');
         });
 
         it('should assign sequential coordinates to children', () => {
@@ -54,9 +55,9 @@ describe('assignCoordinates', () => {
             assignCoordinates(body, { headlessContractNames: new Set() });
 
             const children = body.querySelector('div')!.querySelectorAll('h1, p, span');
-            expect(children[0].getAttribute(COORD)).toBe('0/0');
-            expect(children[1].getAttribute(COORD)).toBe('0/1');
-            expect(children[2].getAttribute(COORD)).toBe('0/2');
+            expect(children[0].getAttribute(COORD)).toBe('S0/0/0');
+            expect(children[1].getAttribute(COORD)).toBe('S0/0/1');
+            expect(children[2].getAttribute(COORD)).toBe('S0/0/2');
         });
 
         it('should use positional counter even for elements with refs', () => {
@@ -67,8 +68,8 @@ describe('assignCoordinates', () => {
             assignCoordinates(body, { headlessContractNames: new Set() });
 
             // Fully positional — ref is ignored for coordinates
-            expect(body.querySelector('button')!.getAttribute(COORD)).toBe('0/0');
-            expect(body.querySelector('span')!.getAttribute(COORD)).toBe('0/1');
+            expect(body.querySelector('button')!.getAttribute(COORD)).toBe('S0/0/0');
+            expect(body.querySelector('span')!.getAttribute(COORD)).toBe('S0/0/1');
         });
 
         it('should handle nested elements', () => {
@@ -81,16 +82,16 @@ describe('assignCoordinates', () => {
             assignCoordinates(body, { headlessContractNames: new Set() });
 
             const wrapper = body.querySelector('.wrapper')!;
-            expect(wrapper.getAttribute(COORD)).toBe('0/0');
-            expect(wrapper.querySelector('h1')!.getAttribute(COORD)).toBe('0/0/0');
-            expect(wrapper.querySelector('p')!.getAttribute(COORD)).toBe('0/0/1');
+            expect(wrapper.getAttribute(COORD)).toBe('S0/0/0');
+            expect(wrapper.querySelector('h1')!.getAttribute(COORD)).toBe('S0/0/0/0');
+            expect(wrapper.querySelector('p')!.getAttribute(COORD)).toBe('S0/0/0/1');
         });
     });
 
     describe('headless instances', () => {
         const headlessNames = new Set(['product-card']);
 
-        it('should assign instance coordinate to jay:xxx tag', () => {
+        it('should assign instance coordinate with scope to jay:xxx tag', () => {
             const body = getBody(`<body><div>
                 <jay:product-card productId="123" ref="0">
                     <article class="card">
@@ -101,13 +102,17 @@ describe('assignCoordinates', () => {
             assignCoordinates(body, { headlessContractNames: headlessNames });
 
             const jayTag = body.querySelector('jay\\:product-card')!;
-            expect(jayTag.getAttribute(COORD)).toBe('0/product-card:0');
+            // Instance coordinate in parent scope
+            expect(jayTag.getAttribute(COORD)).toBe('S0/0/product-card:0');
+            // jay-scope marks the child scope boundary
+            expect(jayTag.getAttribute(SCOPE)).toBe('S1');
 
+            // Children are in the child scope S1
             const article = jayTag.querySelector('article')!;
-            expect(article.getAttribute(COORD)).toBe('0/product-card:0/0');
+            expect(article.getAttribute(COORD)).toBe('S1/0');
 
             const h2 = jayTag.querySelector('h2')!;
-            expect(h2.getAttribute(COORD)).toBe('0/product-card:0/0/0');
+            expect(h2.getAttribute(COORD)).toBe('S1/0/0');
         });
 
         it('should assign unique coordinates to two consecutive jay:xxx tags', () => {
@@ -126,15 +131,18 @@ describe('assignCoordinates', () => {
             assignCoordinates(body, { headlessContractNames: headlessNames });
 
             const [jayTag1, jayTag2] = body.querySelectorAll('jay\\:product-card')!;
-            // Uses per-scope counter, not ref attribute — always unique
-            expect(jayTag1.getAttribute(COORD)).toBe('0/product-card:0');
-            expect(jayTag2.getAttribute(COORD)).toBe('0/product-card:1');
+            expect(jayTag1.getAttribute(COORD)).toBe('S0/0/product-card:0');
+            expect(jayTag2.getAttribute(COORD)).toBe('S0/0/product-card:1');
+
+            // Each instance gets its own child scope
+            expect(jayTag1.getAttribute(SCOPE)).toBe('S1');
+            expect(jayTag2.getAttribute(SCOPE)).toBe('S2');
 
             const article1 = jayTag1.querySelector('article')!;
-            expect(article1.getAttribute(COORD)).toBe('0/product-card:0/0');
+            expect(article1.getAttribute(COORD)).toBe('S1/0');
 
             const article2 = jayTag2.querySelector('article')!;
-            expect(article2.getAttribute(COORD)).toBe('0/product-card:1/0');
+            expect(article2.getAttribute(COORD)).toBe('S2/0');
         });
 
         it('should use ref attribute for coordinate suffix', () => {
@@ -147,12 +155,11 @@ describe('assignCoordinates', () => {
             </div></body>`);
             assignCoordinates(body, { headlessContractNames: headlessNames });
 
-            // Coordinate uses ref attribute, not a counter
             const jayTag = body.querySelector('jay\\:product-card')!;
-            expect(jayTag.getAttribute(COORD)).toBe('0/product-card:hero');
+            expect(jayTag.getAttribute(COORD)).toBe('S0/0/product-card:hero');
 
             const article = jayTag.querySelector('article')!;
-            expect(article.getAttribute(COORD)).toBe('0/product-card:hero/0');
+            expect(article.getAttribute(COORD)).toBe('S1/0');
         });
 
         it('should use positional counter for inline template refs', () => {
@@ -166,9 +173,9 @@ describe('assignCoordinates', () => {
             </div></body>`);
             assignCoordinates(body, { headlessContractNames: headlessNames });
 
-            // Fully positional — ref="addToCart" gets counter-based coordinate
+            // Fully positional within child scope S1
             const button = body.querySelector('button')!;
-            expect(button.getAttribute(COORD)).toBe('0/product-card:0/0/1');
+            expect(button.getAttribute(COORD)).toBe('S1/0/1');
         });
 
         it('should not increment parent counter for jay:xxx tags', () => {
@@ -181,14 +188,14 @@ describe('assignCoordinates', () => {
             </div></body>`);
             assignCoordinates(body, { headlessContractNames: headlessNames });
 
-            expect(body.querySelector('h1')!.getAttribute(COORD)).toBe('0/0');
+            expect(body.querySelector('h1')!.getAttribute(COORD)).toBe('S0/0/0');
             // jay:xxx doesn't increment counter
-            expect(body.querySelector('p')!.getAttribute(COORD)).toBe('0/1');
+            expect(body.querySelector('p')!.getAttribute(COORD)).toBe('S0/0/1');
         });
     });
 
     describe('slowForEach', () => {
-        it('should use jayTrackBy as coordinate', () => {
+        it('should create a new scope for each slowForEach item', () => {
             const body = getBody(`<body><div>
                 <div class="grid">
                     <div slowForEach="products" trackBy="_id" jayIndex="0" jayTrackBy="p1">
@@ -202,11 +209,14 @@ describe('assignCoordinates', () => {
             assignCoordinates(body, { headlessContractNames: new Set() });
 
             const items = body.querySelectorAll('[slowForEach]');
-            expect(items[0].getAttribute(COORD)).toBe('p1');
-            expect(items[1].getAttribute(COORD)).toBe('p2');
+            // Each item gets its own scope
+            expect(items[0].getAttribute(SCOPE)).toBe('S1');
+            expect(items[0].getAttribute(COORD)).toBe('S1/0');
+            expect(items[1].getAttribute(SCOPE)).toBe('S2');
+            expect(items[1].getAttribute(COORD)).toBe('S2/0');
 
-            expect(items[0].querySelector('h2')!.getAttribute(COORD)).toBe('p1/0');
-            expect(items[1].querySelector('h2')!.getAttribute(COORD)).toBe('p2/0');
+            expect(items[0].querySelector('h2')!.getAttribute(COORD)).toBe('S1/0/0');
+            expect(items[1].querySelector('h2')!.getAttribute(COORD)).toBe('S2/0/0');
         });
 
         it('should handle headless instance inside slowForEach', () => {
@@ -224,17 +234,19 @@ describe('assignCoordinates', () => {
             </div></body>`);
             assignCoordinates(body, { headlessContractNames: headlessNames });
 
+            // slowForEach item scope S1, headless instance scope S2
             const jayTag = body.querySelector('jay\\:product-card')!;
-            expect(jayTag.getAttribute(COORD)).toBe('p1/product-card:0');
+            expect(jayTag.getAttribute(COORD)).toBe('S1/0/product-card:0');
+            expect(jayTag.getAttribute(SCOPE)).toBe('S2');
 
             const article = jayTag.querySelector('article')!;
-            expect(article.getAttribute(COORD)).toBe('p1/product-card:0/0');
+            expect(article.getAttribute(COORD)).toBe('S2/0');
 
             const span = jayTag.querySelector('span')!;
-            expect(span.getAttribute(COORD)).toBe('p1/product-card:0/0/0');
+            expect(span.getAttribute(COORD)).toBe('S2/0/0');
         });
 
-        it('should concatenate coordinates for nested slowForEach', () => {
+        it('should create unique scopes for nested slowForEach', () => {
             const body = getBody(`<body><div>
                 <div class="outer" slowForEach="options" trackBy="_id" jayIndex="0" jayTrackBy="opt-A">
                     <div class="inner" slowForEach="choices" trackBy="_id" jayIndex="0" jayTrackBy="choice-1">
@@ -253,23 +265,28 @@ describe('assignCoordinates', () => {
             assignCoordinates(body, { headlessContractNames: new Set() });
 
             const outers = body.querySelectorAll('.outer');
-            expect(outers[0].getAttribute(COORD)).toBe('opt-A');
-            expect(outers[1].getAttribute(COORD)).toBe('opt-B');
+            expect(outers[0].getAttribute(SCOPE)).toBe('S1');
+            expect(outers[0].getAttribute(COORD)).toBe('S1/0');
+            expect(outers[1].getAttribute(SCOPE)).toBe('S4');
+            expect(outers[1].getAttribute(COORD)).toBe('S4/0');
 
             const inners = body.querySelectorAll('.inner');
-            // Nested: concatenated with parent slowForEach prefix
-            expect(inners[0].getAttribute(COORD)).toBe('opt-A/choice-1');
-            expect(inners[1].getAttribute(COORD)).toBe('opt-A/choice-2');
-            expect(inners[2].getAttribute(COORD)).toBe('opt-B/choice-1');
+            // Each nested slowForEach gets its own scope
+            expect(inners[0].getAttribute(SCOPE)).toBe('S2');
+            expect(inners[0].getAttribute(COORD)).toBe('S2/0');
+            expect(inners[1].getAttribute(SCOPE)).toBe('S3');
+            expect(inners[1].getAttribute(COORD)).toBe('S3/0');
+            expect(inners[2].getAttribute(SCOPE)).toBe('S5');
+            expect(inners[2].getAttribute(COORD)).toBe('S5/0');
 
-            // Children use the concatenated prefix
+            // Children are in their respective item scopes
             const buttons = body.querySelectorAll('button');
-            expect(buttons[0].getAttribute(COORD)).toBe('opt-A/choice-1/0');
-            expect(buttons[1].getAttribute(COORD)).toBe('opt-A/choice-2/0');
-            expect(buttons[2].getAttribute(COORD)).toBe('opt-B/choice-1/0');
+            expect(buttons[0].getAttribute(COORD)).toBe('S2/0/0');
+            expect(buttons[1].getAttribute(COORD)).toBe('S3/0/0');
+            expect(buttons[2].getAttribute(COORD)).toBe('S5/0/0');
         });
 
-        it('should concatenate coordinates for nested slowForEach with intermediate elements', () => {
+        it('should create scopes for nested slowForEach with intermediate elements', () => {
             const body = getBody(`<body><div>
                 <div class="outer" slowForEach="options" trackBy="_id" jayIndex="0" jayTrackBy="opt-A">
                     <div class="wrapper">
@@ -282,22 +299,24 @@ describe('assignCoordinates', () => {
             assignCoordinates(body, { headlessContractNames: new Set() });
 
             const outer = body.querySelector('.outer')!;
-            expect(outer.getAttribute(COORD)).toBe('opt-A');
+            expect(outer.getAttribute(SCOPE)).toBe('S1');
+            expect(outer.getAttribute(COORD)).toBe('S1/0');
 
             const wrapper = body.querySelector('.wrapper')!;
-            expect(wrapper.getAttribute(COORD)).toBe('opt-A/0');
+            expect(wrapper.getAttribute(COORD)).toBe('S1/0/0');
 
-            // Inner slowForEach uses slowForEachPrefix (opt-A), not parentCoord (opt-A/0)
+            // Inner slowForEach gets its own scope
             const inner = body.querySelector('.inner')!;
-            expect(inner.getAttribute(COORD)).toBe('opt-A/choice-1');
+            expect(inner.getAttribute(SCOPE)).toBe('S2');
+            expect(inner.getAttribute(COORD)).toBe('S2/0');
 
             const button = body.querySelector('button')!;
-            expect(button.getAttribute(COORD)).toBe('opt-A/choice-1/0');
+            expect(button.getAttribute(COORD)).toBe('S2/0/0');
         });
     });
 
     describe('forEach', () => {
-        it('should use $trackBy placeholder for item coordinates', () => {
+        it('should assign item scope for forEach children', () => {
             const body = getBody(`<body><div>
                 <div class="grid" forEach="products" trackBy="_id">
                     <h2>Product</h2>
@@ -306,14 +325,17 @@ describe('assignCoordinates', () => {
             </div></body>`);
             assignCoordinates(body, { headlessContractNames: new Set() });
 
+            // forEach container gets parent scope coordinate + item scope
             const forEachEl = body.querySelector('[forEach]')!;
-            expect(forEachEl.getAttribute(COORD)).toBe('0/0');
+            expect(forEachEl.getAttribute(COORD)).toBe('S0/0/0');
+            expect(forEachEl.getAttribute(SCOPE)).toBe('S1');
 
+            // Children are in the item scope S1
             const h2 = forEachEl.querySelector('h2')!;
-            expect(h2.getAttribute(COORD)).toBe('$_id/0');
+            expect(h2.getAttribute(COORD)).toBe('S1/0');
 
             const span = forEachEl.querySelector('span')!;
-            expect(span.getAttribute(COORD)).toBe('$_id/1');
+            expect(span.getAttribute(COORD)).toBe('S1/1');
         });
 
         it('should handle headless instance inside forEach', () => {
@@ -329,11 +351,13 @@ describe('assignCoordinates', () => {
             </div></body>`);
             assignCoordinates(body, { headlessContractNames: headlessNames });
 
+            // forEach item scope S1, headless instance scope S2
             const jayTag = body.querySelector('jay\\:product-card')!;
-            expect(jayTag.getAttribute(COORD)).toBe('$_id/product-card:0');
+            expect(jayTag.getAttribute(COORD)).toBe('S1/product-card:0');
+            expect(jayTag.getAttribute(SCOPE)).toBe('S2');
 
             const article = jayTag.querySelector('article')!;
-            expect(article.getAttribute(COORD)).toBe('$_id/product-card:0/0');
+            expect(article.getAttribute(COORD)).toBe('S2/0');
         });
     });
 
@@ -352,10 +376,11 @@ describe('assignCoordinates', () => {
             const jayTag = body.querySelector('jay\\:product-card')!;
             const wrapper = jayTag.querySelector('div')!;
             expect(wrapper).toBeTruthy();
-            expect(wrapper.getAttribute(COORD)).toBe('0/product-card:0/0');
+            // Wrapper is in child scope S1
+            expect(wrapper.getAttribute(COORD)).toBe('S1/0');
 
-            expect(wrapper.querySelector('h2')!.getAttribute(COORD)).toBe('0/product-card:0/0/0');
-            expect(wrapper.querySelector('span')!.getAttribute(COORD)).toBe('0/product-card:0/0/1');
+            expect(wrapper.querySelector('h2')!.getAttribute(COORD)).toBe('S1/0/0');
+            expect(wrapper.querySelector('span')!.getAttribute(COORD)).toBe('S1/0/1');
         });
 
         it('should not wrap single-child inline templates', () => {
@@ -367,10 +392,10 @@ describe('assignCoordinates', () => {
             </div></body>`);
             assignCoordinates(body, { headlessContractNames: headlessNames });
 
-            // Should NOT have a wrapper div
+            // Should NOT have a wrapper div — article is in child scope S1
             const jayTag = body.querySelector('jay\\:product-card')!;
             const article = jayTag.querySelector('article')!;
-            expect(article.getAttribute(COORD)).toBe('0/product-card:0/0');
+            expect(article.getAttribute(COORD)).toBe('S1/0');
         });
     });
 });

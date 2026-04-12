@@ -7,7 +7,7 @@ export interface SimpleDynamicTextViewState {
 export function renderToStream(vs: SimpleDynamicTextViewState, ctx: ServerRenderContext): void {
     const { write: w } = ctx;
     w('<div');
-    w(' jay-coordinate="0">');
+    w(' jay-coordinate="S0/0">');
     w(escapeHtml(String(vs.s1)));
     w('</div>');
 }

@@ -58,7 +58,7 @@ export function hydrate(
         ReferencesManager.for(options, [], [], ['counter1', 'counterTwo', 'aR1', 'aR2', 'aR3'], []);
     const render = (viewState: ComponentInComponentViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [
+            adoptElement('S0/0', {}, [
                 childComp(
                     Counter,
                     (vs: ComponentInComponentViewState) => ({ initialValue: vs.count1 }),

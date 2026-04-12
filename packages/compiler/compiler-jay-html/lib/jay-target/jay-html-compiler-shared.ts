@@ -97,6 +97,7 @@ const DIRECTIVE_ATTRIBUTES = new Set([
     'jayindex',
     'jaytrackby',
     'jay-coordinate-base',
+    'jay-scope',
     AsyncDirectiveTypes.loading.directive,
     AsyncDirectiveTypes.resolved.directive,
     AsyncDirectiveTypes.rejected.directive,
@@ -215,12 +216,22 @@ export function resolveHeadlessImport(
 
 /**
  * Extract coordinate info from a headless instance element.
- * Reads jay-coordinate-base, splits into segments, and extracts the suffix.
+ * Reads jay-coordinate-base and jay-scope, extracts the scope ID and suffix.
+ *
+ * In scoped coordinates (DL#126), the instance coordinate is `S<n>/contractName:ref`
+ * and the jay-scope attribute holds the child scope ID.
  */
 export function extractHeadlessCoordinate(
     element: HTMLElement,
     contractName: string,
-): { instanceCoord: string; coordSegments: string[]; coordinateSuffix: string } | RenderFragment {
+):
+    | {
+          instanceCoord: string;
+          coordSegments: string[];
+          coordinateSuffix: string;
+          childScopeId: string | undefined;
+      }
+    | RenderFragment {
     const instanceCoord = element.getAttribute(COORD_ATTR);
     if (!instanceCoord) {
         return new RenderFragment('', Imports.none(), [
@@ -233,7 +244,8 @@ export function extractHeadlessCoordinate(
     const lowerName = contractName.toLowerCase();
     const coordinateSuffix =
         coordSegments.find((s) => s.startsWith(lowerName + ':')) || `${lowerName}:0`;
-    return { instanceCoord, coordSegments, coordinateSuffix };
+    const childScopeId = element.getAttribute('jay-scope') || undefined;
+    return { instanceCoord, coordSegments, coordinateSuffix, childScopeId };
 }
 
 /**

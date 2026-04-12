@@ -12,12 +12,13 @@ export function hydrate(rootElement, options) {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptDynamicElement('0', {}, [
-                adoptText('0/0', (vs) => vs.title),
+            adoptDynamicElement('S0/0', {}, [
+                adoptText('S0/0/0', (vs) => vs.title),
                 hydrateForEach(
                     (vs) => vs.items,
                     '_id',
-                    () => [adoptText('0', (vs1) => vs1.name)],
+                    'S0/0/1',
+                    () => [adoptText('S1/0', (vs1) => vs1.name)],
                     (vs1) => {
                         return e('ul', {}, [e('li', {}, [dt((vs12) => vs12.name)])]);
                     },

@@ -32,7 +32,11 @@ export interface PageWithHeadlessInForeachViewState {
     products: Array<ProductOfPageWithHeadlessInForeachViewState>;
 }
 
-export interface PageWithHeadlessInForeachElementRefs {}
+export interface PageWithHeadlessInForeachElementRefs {
+    products: {
+        ar0: ProductCardRepeatedRefs;
+    };
+}
 
 export type PageWithHeadlessInForeachSlowViewState = {};
 export type PageWithHeadlessInForeachFastViewState = PageWithHeadlessInForeachViewState;
@@ -80,9 +84,9 @@ function _headlessProductCard0HydrateRender(
     );
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('0', {}, [
-                adoptText('0/1', (vs) => vs.price),
-                adoptElement('0/2', {}, [], refAddToCart()),
+            adoptElement('S2/0', {}, [
+                adoptText('S2/0/1', (vs) => vs.price),
+                adoptElement('S2/0/2', {}, [], refAddToCart()),
             ]),
         ) as _HeadlessProductCard0Element;
     return [refManager.getPublicAPI() as ProductCardRefs, render];
@@ -139,18 +143,19 @@ export function hydrate(
     });
     const render = (viewState: PageWithHeadlessInForeachViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptDynamicElement('0', {}, [
-                adoptText('0/0', (vs) => vs.pageTitle),
+            adoptDynamicElement('S0/0', {}, [
+                adoptText('S0/0/0', (vs) => vs.pageTitle),
                 hydrateForEach(
                     (vs: PageWithHeadlessInForeachViewState) => vs.products,
                     '_id',
+                    'S0/0/1',
                     () => [
                         childCompHydrate(
                             _HeadlessProductCard0Adopt,
                             (vs1: ProductOfPageWithHeadlessInForeachViewState) => ({
                                 productId: vs1._id,
                             }),
-                            'product-card:AR0',
+                            'S2/0',
                             refAr0(),
                         ),
                     ],

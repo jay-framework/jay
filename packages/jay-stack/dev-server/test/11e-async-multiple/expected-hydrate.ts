@@ -8,7 +8,7 @@ export function hydrate(rootElement, options) {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, []),
+            adoptElement('S0/0', {}, []),
         );
     return [refManager.getPublicAPI(), render];
 }

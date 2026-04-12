@@ -97,7 +97,7 @@ function _headlessProductCard0Render(
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0Render,
     productCard,
-    'product-card:hero',
+    'S0/0/product-card:hero',
 );
 
 // Inline template for headless component: product-card #1
@@ -126,7 +126,7 @@ function _headlessProductCard1Render(
 const _HeadlessProductCard1 = makeHeadlessInstanceComponent(
     _headlessProductCard1Render,
     productCard,
-    'product-card:promo',
+    'S0/0/product-card:promo',
 );
 
 // Inline template for headless component: product-card #2
@@ -162,7 +162,7 @@ function _headlessProductCard2Render(
 const _HeadlessProductCard2 = makeHeadlessInstanceComponent(
     _headlessProductCard2Render,
     productCard,
-    'p1/product-card:0',
+    'S3/0/product-card:0',
 );
 
 // Inline template for headless component: product-card #3
@@ -191,7 +191,7 @@ function _headlessProductCard3Render(
 const _HeadlessProductCard3 = makeHeadlessInstanceComponent(
     _headlessProductCard3Render,
     productCard,
-    'p2/product-card:0',
+    'S5/0/product-card:0',
 );
 
 export function render(options?: RenderElementOptions): PageWithHeadlessMixedElementPreRender {

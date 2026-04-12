@@ -22,7 +22,9 @@ export interface PageWithHeadlessInstanceViewState {
     pageTitle: string;
 }
 
-export interface PageWithHeadlessInstanceElementRefs {}
+export interface PageWithHeadlessInstanceElementRefs {
+    ar0: ProductCardRefs;
+}
 
 export type PageWithHeadlessInstanceSlowViewState = {};
 export type PageWithHeadlessInstanceFastViewState = PageWithHeadlessInstanceViewState;
@@ -70,9 +72,9 @@ function _headlessProductCard0HydrateRender(
     );
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('0', {}, [
-                adoptText('0/1', (vs) => vs.price),
-                adoptElement('0/2', {}, [], refAddToCart()),
+            adoptElement('S1/0', {}, [
+                adoptText('S1/0/1', (vs) => vs.price),
+                adoptElement('S1/0/2', {}, [], refAddToCart()),
             ]),
         ) as _HeadlessProductCard0Element;
     return [refManager.getPublicAPI() as ProductCardRefs, render];
@@ -80,7 +82,7 @@ function _headlessProductCard0HydrateRender(
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0HydrateRender,
     productCard,
-    'product-card:AR0',
+    'S0/0/product-card:AR0',
 );
 
 export function hydrate(
@@ -90,12 +92,12 @@ export function hydrate(
     const [refManager, [refAr0]] = ReferencesManager.for(options, [], [], ['ar0'], []);
     const render = (viewState: PageWithHeadlessInstanceViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [
-                adoptText('0/0', (vs) => vs.pageTitle),
+            adoptElement('S0/0', {}, [
+                adoptText('S0/0/0', (vs) => vs.pageTitle),
                 childCompHydrate(
                     _HeadlessProductCard0,
                     (vs: PageWithHeadlessInstanceViewState) => ({ productId: 'prod-hero' }),
-                    '0/product-card:AR0',
+                    'S1/0',
                     refAr0(),
                 ),
             ]),

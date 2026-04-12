@@ -60,17 +60,17 @@ export function hydrate(
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState: PhaseAwareConditionalsViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptDynamicElement('0', {}, [
+            adoptDynamicElement('S0/0', {}, [
                 STATIC,
                 STATIC,
                 hydrateConditional(
                     (vs) => vs.interactiveFlag,
-                    () => adoptElement('0/2', {}, []),
+                    () => adoptElement('S0/0/2', {}, []),
                     () => e('span', {}, ['Interactive']),
                 ),
                 hydrateConditional(
                     (vs) => vs.interactiveFlag,
-                    () => adoptElement('0/3', {}, []),
+                    () => adoptElement('S0/0/3', {}, []),
                     () => e('span', {}, ['Mixed']),
                 ),
             ]),

@@ -21,7 +21,9 @@ export interface PageWithHeadlessInstanceViewState {
     pageTitle: string;
 }
 
-export interface PageWithHeadlessInstanceElementRefs {}
+export interface PageWithHeadlessInstanceElementRefs {
+    ar0: ProductCardRefs;
+}
 
 export type PageWithHeadlessInstanceSlowViewState = {};
 export type PageWithHeadlessInstanceFastViewState = PageWithHeadlessInstanceViewState;
@@ -81,11 +83,11 @@ function _headlessProductCard0Render(
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0Render,
     productCard,
-    'product-card:AR0',
+    'S0/0/product-card:AR0',
 );
 
 export function render(options?: RenderElementOptions): PageWithHeadlessInstanceElementPreRender {
-    const [refManager, [refAR1]] = ReferencesManager.for(options, [], [], ['aR1'], []);
+    const [refManager, [refAr0]] = ReferencesManager.for(options, [], [], ['ar0'], []);
     const render = (viewState: PageWithHeadlessInstanceViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
@@ -93,7 +95,7 @@ export function render(options?: RenderElementOptions): PageWithHeadlessInstance
                 childComp(
                     _HeadlessProductCard0,
                     (vs: PageWithHeadlessInstanceViewState) => ({ productId: 'prod-hero' }),
-                    refAR1(),
+                    refAr0(),
                 ),
             ]),
         ) as PageWithHeadlessInstanceElement;

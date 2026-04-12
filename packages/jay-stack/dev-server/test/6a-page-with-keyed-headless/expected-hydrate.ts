@@ -18,9 +18,9 @@ export function hydrate(rootElement, options) {
     });
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [
-                adoptText('0/1/1', (vs) => vs.headless?.count),
-                adoptElement('0/1/2', {}, [], refIncrement()),
+            adoptElement('S0/0', {}, [
+                adoptText('S0/0/1/1', (vs) => vs.headless?.count),
+                adoptElement('S0/0/1/2', {}, [], refIncrement()),
             ]),
         );
     return [refManager.getPublicAPI(), render];

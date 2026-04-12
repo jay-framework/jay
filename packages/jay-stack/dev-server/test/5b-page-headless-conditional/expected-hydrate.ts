@@ -20,9 +20,9 @@ function _headlessWidget0HydrateRender(options) {
     const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('0', {}, [
-                adoptText('0/1', (vs) => vs.value),
-                adoptElement('0/2', {}, [], refIncrement()),
+            adoptElement('S1/0', {}, [
+                adoptText('S1/0/1', (vs) => vs.value),
+                adoptElement('S1/0/2', {}, [], refIncrement()),
             ]),
         );
     return [refManager.getPublicAPI(), render];
@@ -30,14 +30,14 @@ function _headlessWidget0HydrateRender(options) {
 const _HeadlessWidget0 = makeHeadlessInstanceComponent(
     _headlessWidget0HydrateRender,
     widget,
-    'widget:AR0',
+    'S0/0/widget:AR0',
 );
 function _headlessWidget0Render(options) {
     const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', { class: 'widget' }, [
-                e('span', { class: 'label' }, ['Item 1']),
+                e('span', { class: 'label' }, [dt((vs) => vs.label)]),
                 e('span', { class: 'value' }, [dt((vs) => vs.value)]),
                 e('button', {}, ['+1'], refIncrement()),
             ]),
@@ -47,7 +47,7 @@ function _headlessWidget0Render(options) {
 const _HeadlessWidget0Create = makeHeadlessInstanceComponent(
     _headlessWidget0Render,
     widget,
-    'widget:AR0',
+    'S0/0/widget:AR0',
 );
 export function hydrate(rootElement, options) {
     const [refManager, [refToggleButton, refAr0]] = ReferencesManager.for(
@@ -59,7 +59,7 @@ export function hydrate(rootElement, options) {
     );
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptDynamicElement('0', {}, [
+            adoptDynamicElement('S0/0', {}, [
                 STATIC,
                 hydrateConditional(
                     (vs) => vs.showWidget,
@@ -67,17 +67,17 @@ export function hydrate(rootElement, options) {
                         childCompHydrate(
                             _HeadlessWidget0,
                             (vs) => ({ itemId: '1' }),
-                            '0/widget:AR0',
+                            'S1/0',
                             refAr0(),
                         ),
                     () => childComp(_HeadlessWidget0Create, (vs) => ({ itemId: '1' }), refAr0()),
                 ),
                 hydrateConditional(
                     (vs) => !vs.showWidget,
-                    () => adoptElement('0/1', {}, []),
+                    () => adoptElement('S0/0/1', {}, []),
                     () => e('p', {}, ['Widget hidden']),
                 ),
-                adoptElement('0/2', {}, [], refToggleButton()),
+                adoptElement('S0/0/2', {}, [], refToggleButton()),
             ]),
         );
     return [refManager.getPublicAPI(), render];

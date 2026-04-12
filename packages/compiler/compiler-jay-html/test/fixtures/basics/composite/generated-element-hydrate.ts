@@ -42,9 +42,9 @@ export function hydrate(
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState: CompositeViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [
-                adoptText('0/0', (vs) => vs.text),
-                adoptText('0/2', (vs) => vs.text2),
+            adoptElement('S0/0', {}, [
+                adoptText('S0/0/0', (vs) => vs.text),
+                adoptText('S0/0/2', (vs) => vs.text2),
             ]),
         ) as CompositeElement;
     return [refManager.getPublicAPI() as CompositeElementRefs, render];

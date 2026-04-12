@@ -75,15 +75,16 @@ export function hydrate(
     });
     const render = (viewState: ForeachDynamicClassViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptDynamicElement('0', {}, [
+            adoptDynamicElement('S0/0', {}, [
                 hydrateForEach(
                     (vs: ForeachDynamicClassViewState) => vs.items,
                     'id',
+                    'S0/0/0',
                     () => [
                         adoptElement(
-                            '',
+                            'S0/0/0',
                             { class: da((vs1) => `item ${vs1.isActive ? 'active' : ''}`) },
-                            [adoptText('0', (vs1) => vs1.name)],
+                            [adoptText('S1/0', (vs1) => vs1.name)],
                             refItemsSelected(),
                         ),
                     ],

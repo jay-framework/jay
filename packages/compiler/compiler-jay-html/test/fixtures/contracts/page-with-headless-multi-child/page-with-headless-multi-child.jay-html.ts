@@ -4,7 +4,6 @@ import {
     dynamicText as dt,
     RenderElement,
     ReferencesManager,
-    dynamicElement as de,
     ConstructContext,
     childComp,
     RenderElementOptions,
@@ -16,14 +15,15 @@ import {
     ProductCardRefs,
     ProductCardInteractiveViewState,
 } from '../product-card/product-card.jay-contract';
-// @ts-ignore
 import { productCard } from '../product-card/product-card';
 
 export interface PageWithHeadlessMultiChildViewState {
     pageTitle: string;
 }
 
-export interface PageWithHeadlessMultiChildElementRefs {}
+export interface PageWithHeadlessMultiChildElementRefs {
+    ar0: ProductCardRefs;
+}
 
 export type PageWithHeadlessMultiChildSlowViewState = {};
 export type PageWithHeadlessMultiChildFastViewState = PageWithHeadlessMultiChildViewState;
@@ -71,7 +71,7 @@ function _headlessProductCard0Render(
     );
     const render = (viewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
-            de('div', {}, [
+            e('div', {}, [
                 e('h2', {}, [dt((vs) => vs.name)]),
                 e('span', { class: 'price' }, [dt((vs) => vs.price)]),
                 e('button', {}, ['Add to Cart'], refAddToCart()),
@@ -83,11 +83,11 @@ function _headlessProductCard0Render(
 const _HeadlessProductCard0 = makeHeadlessInstanceComponent(
     _headlessProductCard0Render,
     productCard,
-    'product-card:AR0',
+    'S0/0/product-card:AR0',
 );
 
 export function render(options?: RenderElementOptions): PageWithHeadlessMultiChildElementPreRender {
-    const [refManager, [refAR1]] = ReferencesManager.for(options, [], [], ['aR1'], []);
+    const [refManager, [refAr0]] = ReferencesManager.for(options, [], [], ['ar0'], []);
     const render = (viewState: PageWithHeadlessMultiChildViewState) =>
         ConstructContext.withRootContext(viewState, refManager, () =>
             e('div', {}, [
@@ -95,7 +95,7 @@ export function render(options?: RenderElementOptions): PageWithHeadlessMultiChi
                 childComp(
                     _HeadlessProductCard0,
                     (vs: PageWithHeadlessMultiChildViewState) => ({ productId: 'prod-hero' }),
-                    refAR1(),
+                    refAr0(),
                 ),
             ]),
         ) as PageWithHeadlessMultiChildElement;

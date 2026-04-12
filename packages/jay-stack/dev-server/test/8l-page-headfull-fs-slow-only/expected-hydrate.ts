@@ -1,4 +1,5 @@
 import {
+    dynamicAttribute as da,
     ReferencesManager,
     ConstructContext,
     adoptElement,
@@ -13,24 +14,24 @@ function _headlessHeader0HydrateRender(options) {
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('0', {}, []),
+            adoptElement('S1/0', {}, [adoptElement('S1/0/0', { src: da((vs) => vs.logoUrl) }, [])]),
         );
     return [refManager.getPublicAPI(), render];
 }
 const _HeadlessHeader0 = makeHeadlessInstanceComponent(
     _headlessHeader0HydrateRender,
     header,
-    'header:AR0',
+    'S0/0/header:AR0',
 );
 export function hydrate(rootElement, options) {
     const [refManager, [refAr0]] = ReferencesManager.for(options, [], [], ['ar0'], []);
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [
+            adoptElement('S0/0', {}, [
                 childCompHydrate(
                     _HeadlessHeader0,
                     (vs) => ({ logoUrl: '/logo.png' }),
-                    '0/header:AR0',
+                    'S1/0',
                     refAr0(),
                 ),
             ]),

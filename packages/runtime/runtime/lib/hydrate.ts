@@ -428,12 +428,15 @@ export function hydrateConditional<ViewState>(
  *
  * @param accessor - Function to get the array from the ViewState
  * @param trackBy - Property name used for item identity (reconciliation key)
+ * @param itemCoordinate - Scoped coordinate of each forEach item root element (DL#126).
+ *   All items share this coordinate; each resolveCoordinate call consumes the next one.
  * @param adoptItem - Called per existing item during hydration (should use adoptText/adoptElement)
  * @param createItem - Called per new item (regular element()/dynamicText() from generated-element.ts)
  */
 export function hydrateForEach<ViewState, Item>(
     accessor: (vs: ViewState) => Item[],
     trackBy: string,
+    itemCoordinate: string,
     adoptItem: () => BaseJayElement<Item>[],
     createItem: (item: Item, id: string) => BaseJayElement<Item>,
 ): DynamicChild<ViewState> {
@@ -444,20 +447,26 @@ export function hydrateForEach<ViewState, Item>(
     // Get initial items from current ViewState
     const initialItems: Item[] = accessor(context.currData as ViewState) || [];
 
-    // Adopt existing items. For each item:
-    // 1. Resolve the item's root DOM element by its trackBy coordinate (BEFORE forItem scope)
-    // 2. Create a forItem child context (which changes coordinateBase)
-    // 3. Call adoptItem within that context (adopts inner elements like text, attributes)
-    // 4. Build a BaseJayElement with dom = item root element, updates from adopted children
+    // Adopt existing items with scoped coordinate resolution (DL#126).
+    // Each item shares the same coordinate in the parent scope. For each item:
+    // 1. Resolve the item's root DOM element (consuming from parent scope map)
+    // 2. Build a LOCAL coordinate map from the item's DOM subtree
+    // 3. Create a scoped context so adopt calls resolve against the local map
+    // 4. Call adoptItem within that context
     const adoptedItems: BaseJayElement<Item>[] = [];
-    for (const item of initialItems) {
+    for (let i = 0; i < initialItems.length; i++) {
+        const item = initialItems[i];
         const id = String(item[trackBy]);
 
-        // Resolve the item root element at the CURRENT scope (before forItem changes base)
-        const itemDom = context.peekCoordinate(id);
+        // Resolve item root from the PARENT scope (consuming in document order)
+        const itemDom = context.resolveCoordinate(itemCoordinate);
 
-        const childContext = context.forItem(item, id);
-        const adopted = withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => {
+        // Build a scoped context with a LOCAL map from this item's subtree
+        const scopedContext = itemDom
+            ? context.forScope(itemDom).forItem(item, id)
+            : context.forItem(item, id);
+
+        const adopted = withContext(CONSTRUCTION_CONTEXT_MARKER, scopedContext, () => {
             const elements = adoptItem();
             // Combine array of adopted elements into a single BaseJayElement
             const updates: updateFunc<Item>[] = [];
@@ -560,19 +569,14 @@ export function hydrateForEach<ViewState, Item>(
 /**
  * Hydration-aware child component instantiation.
  *
- * Like childComp, but extends the current ConstructContext's coordinateBase
- * with the instance's coordinate key before calling the component factory.
- * This scopes coordinate resolution so that adoptElement('0') inside the
- * child's inline template resolves to '{instanceCoordinate}/0' in the
- * page's coordinate map.
- *
- * Used for headless component instances during hydration. The child
- * component's preRender calls ConstructContext.withHydrationChildContext()
- * which inherits the scoped coordinateBase.
+ * With scoped coordinates (DL#126), the child component creates a LOCAL
+ * coordinate map from its inline template root element's subtree.
+ * This ensures the child's adopt calls resolve against the correct DOM
+ * branch, not the global map.
  *
  * @param compCreator - Component factory (from makeHeadlessInstanceComponent)
  * @param getProps - Extracts component props from parent ViewState
- * @param instanceCoordinate - The instance's coordinate key (e.g., 'product-card:0')
+ * @param scopeRootCoordinate - Coordinate of the inline template root element (e.g., "S2/0")
  * @param ref - Optional ref for the component instance
  */
 export function childCompHydrate<
@@ -584,13 +588,17 @@ export function childCompHydrate<
 >(
     compCreator: JayComponentConstructor<Props>,
     getProps: (t: ParentVS) => Props,
-    instanceCoordinate: string,
+    scopeRootCoordinate?: string,
     ref?: PrivateRef<ParentVS, ChildComp>,
 ): BaseJayElement<ParentVS> {
     const context = currentConstructionContext();
-    const childContext = context.forInstance(instanceCoordinate);
 
-    // Run the component factory within the scoped context
+    // Build a scoped context for the child's inline template
+    const scopeRoot = scopeRootCoordinate
+        ? context.resolveCoordinate(scopeRootCoordinate)
+        : undefined;
+    const childContext = scopeRoot ? context.forScope(scopeRoot) : context;
+
     return withContext(CONSTRUCTION_CONTEXT_MARKER, childContext, () => {
         const childComp = compCreator(getProps(context.currData as ParentVS));
         const updates: updateFunc<ParentVS>[] = [(t: ParentVS) => childComp.update(getProps(t))];

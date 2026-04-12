@@ -1404,20 +1404,18 @@ describe('hydration', () => {
                 expect(await page.textContent('#target h1')).toEqual('Nested Headless Test');
                 expect(await page.textContent('#target .label')).toEqual('Item 1');
                 // After hydration reconciliation: showBadge=true → div.full appears
-                await page.waitForFunction(
-                    () => document.querySelector('#target .full') !== null,
-                    { timeout: 2000 },
-                );
+                await page.waitForFunction(() => document.querySelector('#target .full') !== null, {
+                    timeout: 2000,
+                });
                 expect(await page.textContent('#target .full .value')).toEqual('10');
                 // div.basic should be gone
                 expect(await page.$('#target .basic')).toBeNull();
             },
             interactivityChecks: async (page) => {
                 // Wait for div.full to appear (client override)
-                await page.waitForFunction(
-                    () => document.querySelector('#target .full') !== null,
-                    { timeout: 2000 },
-                );
+                await page.waitForFunction(() => document.querySelector('#target .full') !== null, {
+                    timeout: 2000,
+                });
                 expect(await page.textContent('#target .full .value')).toEqual('10');
                 // Button exists and works
                 await page.click('#target .full button');

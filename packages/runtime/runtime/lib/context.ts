@@ -184,6 +184,16 @@ export class ConstructContext<ViewState> {
         return [...this.coordinateBase, refName];
     };
 
+    /**
+     * Create a child context for a forEach/slowForEach item.
+     *
+     * With scoped coordinates (DL#126), coordinateBase is NOT accumulated —
+     * scoped coordinates are fully qualified within each scope. Only dataIds
+     * accumulates (for __headlessInstances key lookup).
+     *
+     * coordinateBase is still maintained for the non-hydration path where
+     * coordinate() is used for refs.
+     */
     forItem<ChildViewState>(childViewState: ChildViewState, id: string) {
         return new ConstructContext(
             childViewState,
@@ -194,23 +204,26 @@ export class ConstructContext<ViewState> {
             [...this._dataIds, id],
         );
     }
-
     /**
-     * Create a child context scoped to a headless instance's coordinate prefix.
-     * Extends coordinateBase for coordinate resolution but does NOT add to dataIds
-     * (instance segments are not trackBy values).
+     * Create a child context scoped to a DOM subtree (DL#126).
+     *
+     * Builds a LOCAL coordinate map from the scope root element's subtree.
+     * All coordinate lookups within this scope search the local map only.
+     * This ensures forEach items with shared scope IDs resolve correctly —
+     * each item builds its own local map from its own DOM branch.
      */
-    forInstance(instanceCoordinate: string) {
-        const segments = instanceCoordinate.split('/');
+    forScope(scopeRootElement: Element) {
+        const localMap = buildCoordinateMap(scopeRootElement);
         return new ConstructContext(
             this.data,
             false,
-            [...this.coordinateBase, ...segments],
-            this._coordinateMap,
-            this._rootElement,
+            [],
+            localMap,
+            scopeRootElement,
             this._dataIds,
         );
     }
+
     forAsync<ChildViewState>(childViewState: ChildViewState) {
         return new ConstructContext(
             childViewState,
@@ -234,17 +247,18 @@ export class ConstructContext<ViewState> {
 
     /**
      * Resolve an element by its coordinate key from the hydration map.
-     * The key is scoped by the current coordinateBase — e.g., inside a forEach
-     * item with trackBy "item-1", resolveCoordinate("addBtn") looks up "item-1/addBtn".
      *
-     * When multiple elements share the same coordinate (e.g., duplicate ref names),
-     * each call returns the next element in document order.
+     * With scoped coordinates (DL#126), the key is fully qualified within the
+     * scope (e.g., "S2/0"). No coordinateBase prefix is applied — coordinates
+     * are self-contained within their scope.
+     *
+     * When multiple elements share the same coordinate (e.g., forEach items
+     * sharing the same template scope IDs), each call returns the next element
+     * in document order.
      */
     resolveCoordinate(key: string): Element | undefined {
         if (!this._coordinateMap) return undefined;
-        const base = this.coordinateBase.length > 0 ? this.coordinateBase.join('/') : '';
-        const fullKey = base ? (key ? base + '/' + key : base) : key;
-        const elements = this._coordinateMap.get(fullKey);
+        const elements = this._coordinateMap.get(key);
         if (!elements || elements.length === 0) return undefined;
         return elements.shift();
     }
@@ -257,9 +271,7 @@ export class ConstructContext<ViewState> {
      */
     peekCoordinate(key: string): Element | undefined {
         if (!this._coordinateMap) return undefined;
-        const base = this.coordinateBase.length > 0 ? this.coordinateBase.join('/') : '';
-        const fullKey = base ? (key ? base + '/' + key : base) : key;
-        const elements = this._coordinateMap.get(fullKey);
+        const elements = this._coordinateMap.get(key);
         if (!elements || elements.length === 0) return undefined;
         return elements[0];
     }

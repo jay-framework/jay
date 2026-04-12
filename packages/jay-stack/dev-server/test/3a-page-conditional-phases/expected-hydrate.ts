@@ -18,27 +18,27 @@ export function hydrate(rootElement, options) {
     );
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptDynamicElement('0', {}, [
+            adoptDynamicElement('S0/0', {}, [
                 STATIC,
                 STATIC,
                 STATIC,
                 STATIC,
                 hydrateConditional(
                     (vs) => vs.interactiveVisible,
-                    () => adoptElement('0/4', {}, []),
+                    () => adoptElement('S0/0/4', {}, []),
                     () => e('span', { class: 'interactive-true' }, ['Interactive Visible']),
                 ),
                 hydrateConditional(
                     (vs) => vs.interactiveHidden,
-                    () => adoptElement('0/5', {}, []),
+                    () => adoptElement('S0/0/5', {}, []),
                     () => e('span', { class: 'interactive-hidden' }, ['Interactive Hidden']),
                 ),
                 hydrateConditional(
                     (vs) => vs.interactiveVisible,
-                    () => adoptElement('0/6', {}, []),
+                    () => adoptElement('S0/0/6', {}, []),
                     () => e('span', { class: 'mixed' }, ['Mixed']),
                 ),
-                adoptElement('0/7', {}, [], refToggleButton()),
+                adoptElement('S0/0/7', {}, [], refToggleButton()),
             ]),
         );
     return [refManager.getPublicAPI(), render];

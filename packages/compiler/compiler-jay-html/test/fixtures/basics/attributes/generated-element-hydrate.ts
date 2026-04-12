@@ -48,37 +48,41 @@ export function hydrate(
     const [refManager, []] = ReferencesManager.for(options, [], [], [], []);
     const render = (viewState: AttributesViewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [
-                adoptText('0/0', (vs) => vs.text),
-                adoptElement('0/3', { value: dp((vs) => vs.text2) }, []),
+            adoptElement('S0/0', {}, [
+                adoptText('S0/0/0', (vs) => vs.text),
+                adoptElement('S0/0/3', { value: dp((vs) => vs.text2) }, []),
                 adoptElement(
-                    '0/4',
+                    'S0/0/4',
                     { checked: dp((vs) => vs.bool1), value: dp((vs) => vs.text2) },
                     [],
                 ),
-                adoptText('0/6', (vs) => vs.text3),
-                adoptElement('0/7', { class: da((vs) => `${vs.bool1 ? 'main' : ''}`) }, [
-                    adoptText('0/7', (vs) => vs.text3),
+                adoptText('S0/0/6', (vs) => vs.text3),
+                adoptElement('S0/0/7', { class: da((vs) => `${vs.bool1 ? 'main' : ''}`) }, [
+                    adoptText('S0/0/7', (vs) => vs.text3),
                 ]),
-                adoptElement('0/8', { class: da((vs) => `${vs.bool1 ? 'main' : 'second'}`) }, [
-                    adoptText('0/8', (vs) => vs.text3),
+                adoptElement('S0/0/8', { class: da((vs) => `${vs.bool1 ? 'main' : 'second'}`) }, [
+                    adoptText('S0/0/8', (vs) => vs.text3),
                 ]),
                 adoptElement(
-                    '0/9',
+                    'S0/0/9',
                     {
                         class: da(
                             (vs) =>
                                 `first-class ${vs.bool1 ? 'main' : 'second'} ${!vs.bool1 ? 'third' : 'forth'}`,
                         ),
                     },
-                    [adoptText('0/9', (vs) => vs.text3)],
+                    [adoptText('S0/0/9', (vs) => vs.text3)],
                 ),
-                adoptElement('0/10', { 'data-attribute': da((vs) => vs.text) }, []),
-                adoptElement('0/11', { 'data-attribute': da((vs) => `${vs.text}-abcd`) }, []),
-                adoptElement('0/12', { 'data-attribute': da((vs) => `abcd-${vs.text}`) }, []),
-                adoptElement('0/13', { 'data-attribute': da((vs) => `abcd-${vs.text}-abcd`) }, []),
-                adoptElement('0/14', { disabled: ba((vs) => vs.bool1) }, []),
-                adoptElement('0/15', { disabled: ba((vs) => !vs.bool1) }, []),
+                adoptElement('S0/0/10', { 'data-attribute': da((vs) => vs.text) }, []),
+                adoptElement('S0/0/11', { 'data-attribute': da((vs) => `${vs.text}-abcd`) }, []),
+                adoptElement('S0/0/12', { 'data-attribute': da((vs) => `abcd-${vs.text}`) }, []),
+                adoptElement(
+                    'S0/0/13',
+                    { 'data-attribute': da((vs) => `abcd-${vs.text}-abcd`) },
+                    [],
+                ),
+                adoptElement('S0/0/14', { disabled: ba((vs) => vs.bool1) }, []),
+                adoptElement('S0/0/15', { disabled: ba((vs) => !vs.bool1) }, []),
             ]),
         ) as AttributesElement;
     return [refManager.getPublicAPI() as AttributesElementRefs, render];

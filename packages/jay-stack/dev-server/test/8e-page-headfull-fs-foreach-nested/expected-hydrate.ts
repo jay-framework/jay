@@ -20,10 +20,10 @@ function _headlessHeader0HydrateRender(options) {
     const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
     const render = (viewState) =>
         ConstructContext.withHydrationChildContext(viewState, refManager, () =>
-            adoptElement('0', {}, [
-                adoptText('0/0', (vs) => vs.label),
-                adoptText('0/1', (vs) => vs.value),
-                adoptElement('0/2', {}, [], refIncrement()),
+            adoptElement('S2/0', {}, [
+                adoptText('S2/0/0', (vs) => vs.label),
+                adoptText('S2/0/1', (vs) => vs.value),
+                adoptElement('S2/0/2', {}, [], refIncrement()),
             ]),
         );
     return [refManager.getPublicAPI(), render];
@@ -55,18 +55,19 @@ export function hydrate(rootElement, options) {
     });
     const render = (viewState) =>
         ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
-            adoptElement('0', {}, [
-                adoptDynamicElement('0/2', {}, [
+            adoptElement('S0/0', {}, [
+                adoptDynamicElement('S0/0/2', {}, [
                     STATIC,
                     hydrateForEach(
                         (vs) => vs.items,
                         '_id',
+                        'S0/0/2/1',
                         () => [
-                            adoptText('0/0', (vs1) => vs1.name),
+                            adoptText('S1/0/0', (vs1) => vs1.name),
                             childCompHydrate(
                                 _HeadlessHeader0Adopt,
                                 (vs1) => ({ itemId: vs1._id }),
-                                '0/header:AR0',
+                                'S2/0',
                                 refAr0(),
                             ),
                         ],
@@ -84,7 +85,7 @@ export function hydrate(rootElement, options) {
                         },
                     ),
                 ]),
-                adoptElement('0/3', {}, [], refAddButton()),
+                adoptElement('S0/0/3', {}, [], refAddButton()),
             ]),
         );
     return [refManager.getPublicAPI(), render];

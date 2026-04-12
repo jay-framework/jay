@@ -29,12 +29,12 @@ The more nesting levels (headfull FS → headless plugin → slowForEach), the m
 
 ### Element Types and Coordinates
 
-| Element Type | Coordinate Format | Example |
-|---|---|---|
-| Regular HTML element | `parentCoord/childIndex` | `0/1/2` |
-| slowForEach item | `slowForEachPrefix/jayTrackBy` | `p1/p2` |
-| Headless instance `<jay:xxx>` | `parentCoord/contractName:ref` | `0/widget:AR0` |
-| forEach item | `$trackBy/childIndex` (template) | `$_id/0` |
+| Element Type                  | Coordinate Format                | Example        |
+| ----------------------------- | -------------------------------- | -------------- |
+| Regular HTML element          | `parentCoord/childIndex`         | `0/1/2`        |
+| slowForEach item              | `slowForEachPrefix/jayTrackBy`   | `p1/p2`        |
+| Headless instance `<jay:xxx>` | `parentCoord/contractName:ref`   | `0/widget:AR0` |
+| forEach item                  | `$trackBy/childIndex` (template) | `$_id/0`       |
 
 ### The Two Coordinate Chains
 
@@ -50,10 +50,10 @@ For page-level slowForEach, both chains produce the same result. For nested case
 
 The runtime maintains `coordinateBase` that mirrors Chain A:
 
-| Method | Adds to coordinateBase | Used by |
-|---|---|---|
-| `forItem(id)` | `[...base, id]` | forEach, slowForEach |
-| `forInstance(coord)` | `[...base, ...segments]` | headless instances |
+| Method               | Adds to coordinateBase   | Used by              |
+| -------------------- | ------------------------ | -------------------- |
+| `forItem(id)`        | `[...base, id]`          | forEach, slowForEach |
+| `forInstance(coord)` | `[...base, ...segments]` | headless instances   |
 
 Resolution: `fullKey = coordinateBase.join('/') + '/' + localCoordinate`
 
@@ -274,3 +274,32 @@ The same IDs appear in every forEach iteration — this is correct because each 
 2. Golf project: slowForEach items inside category-list inside kitanheader render and hydrate correctly
 3. No hydration coordinate warnings in any test or the golf project
 4. Test 8m (ViewState mismatch in nested headless) continues to work
+
+## Implementation Results
+
+### Test Results
+
+- compiler-jay-html: 633 passed, 4 skipped (637 total)
+- runtime hydration: 67 passed
+- dev-server hydration: 618 passed
+- dev-server unit: 4 passed
+
+### Deviations from Original Design
+
+1. **Local scope maps via `forScope()` instead of global map only.** The design mentioned using the same mechanism as `withHydrationRootContext`, but the implementation revealed that forEach items sharing the same scope IDs require LOCAL coordinate maps per item. `forScope(element)` builds a map from the element's subtree. Without this, `adoptText` (which uses `peekCoordinate`) would resolve the same entry for all items, causing cross-item contamination.
+
+2. **`forItem` still accumulates `coordinateBase`.** The design said to remove coordinateBase accumulation, but the non-hydration path (element target) still uses `coordinateBase` via the `coordinate()` method for ref resolution. `forItem` keeps accumulating for backward compatibility; `resolveCoordinate` simply ignores it (uses key directly).
+
+3. **`childCompHydrate` takes `scopeRootCoordinate` parameter.** The design said no coordinate argument needed. In practice, `childCompHydrate` needs to find the scope root element to build a local map via `forScope()`. The coordinate is passed and consumed from the parent scope's map.
+
+4. **`hydrateForEach` takes `itemCoordinate` parameter.** Each forEach item's root element shares the same coordinate (e.g., `S0/0/1`). `hydrateForEach` resolves each item root from the parent scope (consuming entries in document order), then builds a local scope map for each item.
+
+5. **`__headlessInstances` key changed to full `jay-coordinate-base` value.** The design didn't specify key format changes. The implementation uses the full scoped coordinate (e.g., `S0/0/widget:AR0`) instead of just the suffix (`widget:AR0`). This required:
+
+   - Running `assignCoordinatesToJayHtml` before `discoverHeadlessInstances` in the dev-server pipeline
+   - Running discovery twice: first to assign refs, then coordinate assignment, then re-discovery to read `jay-coordinate-base`
+   - Updating the element target to also run `assignCoordinates` and read `jay-coordinate-base` for the key
+
+6. **`adoptText` still uses `peekCoordinate` (unchanged).** The design implied removing the peek/resolve distinction. In practice, `adoptText` and `adoptElement` can share the same coordinate (element with dynamic attrs + text content), so `adoptText` must peek while `adoptElement` consumes. The forEach cross-contamination is solved by local scope maps, not by changing peek behavior.
+
+7. **Coordinate format `S<n>/<path>` includes full path within scope.** The design showed `S<n>/<relativeCoord>` as a flat index. The implementation uses the full positional path within the scope (e.g., `S0/0/0/1` for a deeply nested element), matching the old system's path structure but prefixed with the scope ID.
