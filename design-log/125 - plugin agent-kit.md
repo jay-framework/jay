@@ -40,56 +40,166 @@ An AI agent tasked with creating or modifying a jay plugin has no equivalent of 
    **A:** It can be developed inline within a project. See `examples/jay-stack/fake-shop` for an example.
 
 5. **Q: How does a plugin describe which contract/action to use when?**
-   Today we list available contracts and actions, but don't describe _when_ to use each one. A plugin should be able to provide guidance like "use `product-page` for detail pages, `product-search` for listing pages."
+   **A:** Add a `description` field to `.jay-contract` files (`.jay-action` already has one). The `agent-kit` command extracts descriptions into the materialized index, giving agents a quick overview without opening every file. `plugin.yaml` keeps its short `description` per contract as a summary for indexing.
 
 6. **Q: How does a plugin tell the agent about its reference files?**
-   Plugins can create reference files (product catalogs, schemas, etc.) but there is no mechanism to describe what those files are or how to use them. The agent needs a way to discover and understand plugin-created references.
+   **A:** Two parts: (1) plugin declares its references in `plugin.yaml` so the system knows they exist, (2) the `agent-kit` command generates an `INDEX.md` per plugin in `references/<plugin>/` describing what each reference file contains and how to use it.
 
 7. **Q: Should there be three agent-kits instead of two?**
-   Three roles: **designer** (creates jay-html UI), **developer** (builds the project, wiring, config), **plugin** (creates contracts, components, actions). All three under one `agent-kit/` folder.
+   **A:** Yes. Three roles: **designer** (creates jay-html UI), **developer** (builds the project, wiring, config), **plugin** (creates contracts, components, actions). All under one `agent-kit/` folder as subfolders.
 
 8. **Q: Should `agent-kit` work before `setup`?**
-   Currently `agent-kit` only works after `jay-stack setup`. It should also work before — generating instruction files without materialized contracts/references. When running before setup, it should note which plugins are not initialized but not fail.
+   **A:** Yes. Before setup: generates instruction/guide files only, notes which plugins are not initialized (as info, not errors). After setup: also materializes contracts and references.
 
 9. **Q: Should plugins be able to contribute skills to each agent-kit?**
-   A plugin may want to add specific instructions for designers ("how to style this component"), developers ("how to configure this plugin"), or other plugin authors ("how to extend this plugin").
+   **A:** Yes. A plugin package can include an `agent-kit/` folder with subfolders matching the three roles (`designer/`, `developer/`, `plugin/`). The `agent-kit` command merges these into the project's agent-kit.
 
 10. **Q: What should we call the three folders and their instruction files?**
-    Options for folders: `designer/`, `developer/`, `plugin/` — or call them `agents`?
-    Options for instruction files within: call them `skills`?
+    **A:** Folders: `designer/`, `developer/`, `plugin/` — these are roles, not agents. Instruction files: **guides** (not "skills" to avoid confusion with `.cursor/skills/`). Each folder has an `INSTRUCTIONS.md` as the index pointing to the guides.
 
 ## Design
 
 ### CLI Interface
 
 ```bash
-jay-stack agent-kit                # existing: project mode (default)
-jay-stack agent-kit --mode plugin  # new: plugin authoring mode
+jay-stack agent-kit              # generates all three roles
+jay-stack agent-kit --mode plugin    # generate only plugin guides
+jay-stack agent-kit --mode designer  # generate only designer guides
+jay-stack agent-kit --mode developer # generate only developer guides
 ```
+
+Before `jay-stack setup`: generates guide files only, notes uninitialized plugins as info (not errors).
+After `jay-stack setup`: also materializes contracts and references.
 
 ### Document Size Guideline
 
 Each guide file should aim for **100–200 lines**. If a document exceeds ~250 lines, split it into focused sub-documents. The structure below is the initial split — it is flexible and should be adjusted based on actual content length during implementation.
 
-### Plugin Agent-Kit Output
+### Unified Agent-Kit Output
 
 ```
-agent-kit-plugin/
-├── INSTRUCTIONS.md            # Plugin authoring workflow + index of guides
-├── contracts-guide.md         # Contract data types, phases, props, params, sub-contracts
-├── plugin-structure.md        # plugin.yaml, package layout, exports
-├── component-structure.md     # makeJayStackComponent, builder API, three phases, props, params
-├── component-state.md         # createSignal, createPatchableSignal, createMemo, createEffect, createDerivedArray, createEvent
-├── component-refs.md          # Refs, collection refs, element types
-├── component-data.md          # Immutable data, JSON Patch, map hook
-├── component-context.md       # provideContext, provideReactiveContext, createReactiveContext, registerReactiveGlobalContext
-├── render-results.md          # phaseOutput, RenderPipeline, errors, redirects
-├── actions-guide.md           # makeJayAction, makeJayQuery, .jay-action files
-├── services-guide.md          # createJayService, makeJayInit
-└── validation.md              # jay-stack validate-plugin usage
+agent-kit/
+├── references/                    # Plugin-generated reference data
+│   └── <plugin-name>/
+│       ├── INDEX.md               # Describes each reference file
+│       └── ...reference files
+├── materialized-contracts/        # Materialized contract files
+│
+├── designer/                      # Role: creates jay-html UI
+│   ├── INSTRUCTIONS.md            # Workflow + index of guides
+│   ├── jay-html-syntax.md
+│   ├── jay-html-template-syntax.md
+│   ├── jay-html-components.md
+│   ├── jay-html-styling.md
+│   ├── routing.md
+│   ├── contracts-and-plugins.md   # Reading contracts, mapping to jay-html
+│   ├── cli-commands.md
+│   └── <plugin-contributed>*.md   # Plugins can add designer guides
+│
+├── developer/                     # Role: builds the project + page components
+│   ├── INSTRUCTIONS.md
+│   ├── project-structure.md
+│   ├── routing.md
+│   ├── configuration.md           # .jay, plugin config, init
+│   ├── page-contracts.md          # Page-level contracts (page.jay-contract)
+│   ├── page-components.md         # page.ts: makeJayStackComponent for pages
+│   ├── component-state.md         # createSignal, createMemo, createEffect, etc.
+│   ├── component-refs.md          # Refs, collection refs
+│   ├── component-data.md          # Immutable data, JSON Patch, map
+│   ├── render-results.md          # phaseOutput, RenderPipeline, errors, redirects
+│   ├── cli-commands.md
+│   └── <plugin-contributed>*.md   # Plugins can add developer guides
+│
+└── plugin/                        # Role: creates plugins (contracts, components, actions)
+    ├── INSTRUCTIONS.md
+    ├── contracts-guide.md
+    ├── plugin-structure.md
+    ├── component-structure.md
+    ├── component-state.md
+    ├── component-refs.md
+    ├── component-data.md
+    ├── component-context.md
+    ├── render-results.md
+    ├── actions-guide.md
+    ├── services-guide.md
+    ├── validation.md
+    └── <plugin-contributed>*.md   # Plugins can add plugin-author guides
 ```
 
-### Key Content Areas
+### Contract Description Field
+
+Add `description` to `.jay-contract` files:
+
+```yaml
+name: product-page
+description: Full product detail page with gallery, options, and add-to-cart. Use for individual product routes like /products/[slug].
+params:
+  slug: string
+tags:
+  ...
+```
+
+The `agent-kit` command extracts descriptions into the materialized index.
+
+### Plugin-Contributed Guides
+
+A plugin package can include an `agent-kit/` folder:
+
+```
+my-plugin/
+├── plugin.yaml
+├── agent-kit/
+│   ├── designer/
+│   │   └── my-plugin-usage.md     # "How to use this plugin's contracts in jay-html"
+│   ├── developer/
+│   │   └── my-plugin-config.md    # "How to configure this plugin"
+│   └── plugin/
+│       └── my-plugin-extending.md # "How to extend this plugin"
+└── lib/
+    └── ...
+```
+
+The `agent-kit` command merges these into the project's agent-kit.
+
+### Plugin Reference Declaration
+
+Plugins declare references in `plugin.yaml`:
+
+```yaml
+references:
+  - name: product-catalog
+    description: All products with IDs, slugs, names, and prices
+    file: product-catalog.json
+  - name: collection-schemas
+    description: Collection field schemas for filtering
+    file: collection-schemas.json
+```
+
+The `agent-kit` command generates `references/<plugin>/INDEX.md` from these declarations.
+
+### Key Content Areas — Developer Guides
+
+The developer role includes creating page-level full-stack components (`page.ts`) with their own contracts (`page.jay-contract`). Many component guides are shared with the plugin role — the content is the same, but scoped to page components rather than plugin components.
+
+#### Page Contracts (page-contracts.md)
+
+- When a page needs its own contract (page-level data, not from a plugin)
+- `page.jay-contract` format — same as plugin contracts but for page-owned data
+- Props and params in page contracts
+- Combining page contract with headless plugin contracts
+
+#### Page Components (page-components.md)
+
+- `page.ts` file: `makeJayStackComponent` for page-level logic
+- Three-phase rendering in a page context
+- `loadParams` for route params
+- Combining page component with headless plugin components on the same page
+
+#### Component State, Refs, Data, Render Results
+
+Same content as plugin guides (`component-state.md`, `component-refs.md`, `component-data.md`, `render-results.md`) — shared template files between developer and plugin roles.
+
+### Key Content Areas — Plugin Guides
 
 #### Contract Authoring (contracts-guide.md)
 
@@ -99,6 +209,7 @@ agent-kit-plugin/
 - **Interactive elements**: refs, element types
 - **Props vs params**: when to use each — props for component configuration (passed by parent), params for URL route segments (passed by routing)
 - **Phase guidance**: how to decide `slow` vs `fast` vs `fast+interactive` — what belongs at build time vs request time vs client-side
+- **Description field**: always include a description explaining when to use this contract
 - Examples of good and bad contracts
 
 #### Component Structure (component-structure.md)
@@ -142,10 +253,11 @@ agent-kit-plugin/
 
 #### Plugin Structure (plugin-structure.md)
 
-- `plugin.yaml` format: contracts, actions, config templates
+- `plugin.yaml` format: contracts, actions, config templates, references
 - Package layout: `lib/`, `dist/`, exports
 - NPM package requirements (`package.json` exports field)
 - Inline plugins within a project (see `examples/jay-stack/fake-shop`)
+- Contributing agent-kit guides for each role
 
 #### Actions (actions-guide.md)
 
@@ -163,35 +275,48 @@ agent-kit-plugin/
 - Running `jay-stack validate-plugin`
 - Common validation errors and how to fix them
 
-### Workflow in INSTRUCTIONS.md
+### Workflow in Plugin INSTRUCTIONS.md
 
 1. Read INSTRUCTIONS.md for overview
 2. Read the relevant guides for the task at hand
-3. Define contracts first (source of truth)
+3. Define contracts first (source of truth) — include `description` field
 4. Implement components matching the contracts
 5. Define actions with `.jay-action` metadata
-6. Set up `plugin.yaml`
-7. Run `jay-stack validate-plugin` to check correctness
+6. Set up `plugin.yaml` (including references declarations)
+7. Optionally add agent-kit guides for designer/developer roles
+8. Run `jay-stack validate-plugin` to check correctness
 
 ## Implementation Plan
 
-### Phase 1: Template files
+### Phase 1: Unified folder structure + plugin guides
 
-1. Create `packages/jay-stack/stack-cli/agent-kit-plugin-template/` with the guide files (output to `agent-kit-plugin/`)
-2. Content derived from existing `.cursor/skills/` and design logs
+1. Restructure `agent-kit-template/` to output into `agent-kit/designer/` (move existing project guides there)
+2. Create `agent-kit-plugin-template/` with plugin guide files, output into `agent-kit/plugin/`
+3. Create `agent-kit-developer-template/` with developer guide files, output into `agent-kit/developer/`
 
 ### Phase 2: CLI integration
 
-1. Add `--mode` flag to `agent-kit` command in `cli.ts`
-2. Default mode is `project` (existing behavior)
-3. `plugin` mode copies from `agent-kit-plugin-template/` instead
+1. Add `--mode` flag to `agent-kit` command (`designer`, `developer`, `plugin`, or all)
+2. Support running before setup (guides only, no materialized contracts/references)
 
-### Phase 3: Dynamic content
+### Phase 3: Contract description field
 
-1. If generating inside an existing plugin, introspect existing contracts and `plugin.yaml` to include context-specific references
+1. Add `description` to `.jay-contract` parser
+2. Extract descriptions into materialized index during `agent-kit`
+
+### Phase 4: Plugin-contributed guides
+
+1. Read `agent-kit/` folder from each plugin package
+2. Merge contributed guides into the project's agent-kit under the appropriate role folder
+
+### Phase 5: Plugin reference declarations
+
+1. Add `references` section to `plugin.yaml` schema
+2. Generate `references/<plugin>/INDEX.md` from declarations during `agent-kit`
 
 ## Trade-offs
 
-- **Separate template folder** keeps project and plugin concerns cleanly separated
-- **Separate output folder** (`agent-kit-plugin/`) allows both project and plugin agent-kits to coexist (important for inline plugins)
-- **Static templates first** (Phase 1-2) gives immediate value; dynamic introspection (Phase 3) can follow
+- **Unified `agent-kit/` folder** with role subfolders keeps everything discoverable
+- **Three roles** may seem heavy but reflects real workflow separation — most projects will only use one or two
+- **Before-setup support** means guide files are static templates (no plugin-specific content), but still valuable for bootstrapping
+- **Plugin-contributed guides** require plugins to opt in — no extra burden on plugins that don't need it
