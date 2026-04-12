@@ -346,7 +346,7 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
         }
     }, 15000);
 
-    if (opts.ssrChecks) {
+    if (opts.ssrChecks && !opts.disableSSR) {
         it('SSR content has expected structure', async () => {
             const response = await fetch(`${devServerUrl}${routePath}`);
             const html = await response.text();
@@ -1386,6 +1386,46 @@ describe('hydration', () => {
             hydrationChecks: async (page) => {
                 expect(await page.textContent('#target h1')).toEqual('Headfull FS Test');
                 expect(await page.textContent('#target .brand')).toEqual('Kitan');
+            },
+        });
+    });
+
+    describe('8m. Headfull FS — nested headless with client ViewState mismatch', () => {
+        // Server returns showBadge=false, client overrides to true.
+        // SSR renders div.basic (label+value only), hydration must adopt with
+        // server ViewState first, then reconcile to show div.full (with button).
+        testFixture('8m-page-headfull-fs-nested-headless-multi-child', {
+            ssrChecks: (html) => {
+                // SSR: showBadge=false → div.basic visible, div.full absent
+                expect(html).toMatch(/class="basic"/);
+                expect(html).not.toMatch(/class="full"/);
+            },
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Nested Headless Test');
+                expect(await page.textContent('#target .label')).toEqual('Item 1');
+                // After hydration reconciliation: showBadge=true → div.full appears
+                await page.waitForFunction(
+                    () => document.querySelector('#target .full') !== null,
+                    { timeout: 2000 },
+                );
+                expect(await page.textContent('#target .full .value')).toEqual('10');
+                // div.basic should be gone
+                expect(await page.$('#target .basic')).toBeNull();
+            },
+            interactivityChecks: async (page) => {
+                // Wait for div.full to appear (client override)
+                await page.waitForFunction(
+                    () => document.querySelector('#target .full') !== null,
+                    { timeout: 2000 },
+                );
+                expect(await page.textContent('#target .full .value')).toEqual('10');
+                // Button exists and works
+                await page.click('#target .full button');
+                await page.waitForFunction(
+                    () => document.querySelector('#target .full .value')?.textContent === '11',
+                    { timeout: 2000 },
+                );
+                expect(await page.textContent('#target .full .value')).toEqual('11');
             },
         });
     });

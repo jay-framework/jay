@@ -1,0 +1,30 @@
+<html>
+<head>
+    <script type="application/jay-headless"
+            plugin="test-widget"
+            contract="widget"></script>
+    <script type="application/jay-data">
+        data:
+            logoUrl: string
+    </script>
+</head>
+<body>
+    <div class="top-bar">
+        <img src="{logoUrl}" style="width: 36px; height: 36px" />
+    </div>
+    <div class="content">
+        <jay:widget itemId="1">
+            <div class="widget">
+                <span class="label">{label}</span>
+                <div class="basic" if="!showBadge">
+                    <span class="value">{value}</span>
+                </div>
+                <div class="full" if="showBadge">
+                    <span class="value">{value}</span>
+                    <button ref="increment">+1</button>
+                </div>
+            </div>
+        </jay:widget>
+    </div>
+</body>
+</html>

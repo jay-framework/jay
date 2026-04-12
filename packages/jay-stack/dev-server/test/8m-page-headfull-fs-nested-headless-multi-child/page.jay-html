@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-headfull"
+            src="./header/header"
+            contract="./header/header.jay-contract"
+            names="header"></script>
+    <script type="application/jay-data" contract="./page.jay-contract">
+    </script>
+</head>
+<body>
+    <div>
+        <h1>{pageTitle}</h1>
+        <jay:header logoUrl="/logo.png" />
+    </div>
+</body>
+</html>

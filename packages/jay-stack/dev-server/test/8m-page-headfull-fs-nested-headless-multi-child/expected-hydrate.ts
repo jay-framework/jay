@@ -1,0 +1,90 @@
+import {
+    element as e,
+    dynamicText as dt,
+    ReferencesManager,
+    ConstructContext,
+    adoptText,
+    adoptElement,
+    childCompHydrate,
+    hydrateConditional,
+    adoptDynamicElement,
+    STATIC,
+// @ts-ignore
+} from '/@fs{{ROOT}}/packages/runtime/runtime/dist/index.js';
+// @ts-ignore
+import { makeHeadlessInstanceComponent } from '/@fs{{ROOT}}/packages/jay-stack/stack-client-runtime/dist/index.js';
+// @ts-ignore
+import { widget } from '/widget';
+// @ts-ignore
+import { header } from '/header/header';
+function _headlessWidget1HydrateRender(options) {
+    const [refManager, [refIncrement]] = ReferencesManager.for(options, ['increment'], [], [], []);
+    const render = (viewState) =>
+        ConstructContext.withHydrationChildContext(viewState, refManager, () =>
+            adoptDynamicElement('0', {}, [
+                STATIC,
+                hydrateConditional(
+                    (vs) => !vs.showBadge,
+                    () => adoptElement('0/1', {}, [adoptText('0/1/0', (vs) => vs.value)]),
+                    () =>
+                        e('div', { class: 'basic' }, [
+                            e('span', { class: 'value' }, [dt((vs) => vs.value)]),
+                        ]),
+                ),
+                hydrateConditional(
+                    (vs) => vs.showBadge,
+                    () =>
+                        adoptElement('0/2', {}, [
+                            adoptText('0/2/0', (vs) => vs.value),
+                            adoptElement('0/2/1', {}, [], refIncrement()),
+                        ]),
+                    () =>
+                        e('div', { class: 'full' }, [
+                            e('span', { class: 'value' }, [dt((vs) => vs.value)]),
+                            e('button', {}, ['+1'], refIncrement()),
+                        ]),
+                ),
+            ]),
+        );
+    return [refManager.getPublicAPI(), render];
+}
+const _HeadlessWidget1 = makeHeadlessInstanceComponent(
+    _headlessWidget1HydrateRender,
+    widget,
+    'widget:AR0',
+);
+function _headlessHeader0HydrateRender(options) {
+    const [refManager, [refAr0]] = ReferencesManager.for(options, [], [], ['ar0'], []);
+    const render = (viewState) =>
+        ConstructContext.withHydrationChildContext(viewState, refManager, () =>
+            adoptElement('0', {}, [
+                childCompHydrate(
+                    _HeadlessWidget1,
+                    (vs) => ({ itemId: '1' }),
+                    '0/1/widget:AR0',
+                    refAr0(),
+                ),
+            ]),
+        );
+    return [refManager.getPublicAPI(), render];
+}
+const _HeadlessHeader0 = makeHeadlessInstanceComponent(
+    _headlessHeader0HydrateRender,
+    header,
+    'header:AR0',
+);
+export function hydrate(rootElement, options) {
+    const [refManager, [refAr02]] = ReferencesManager.for(options, [], [], ['ar0'], []);
+    const render = (viewState) =>
+        ConstructContext.withHydrationRootContext(viewState, refManager, rootElement, () =>
+            adoptElement('0', {}, [
+                childCompHydrate(
+                    _HeadlessHeader0,
+                    (vs) => ({ logoUrl: '/logo.png' }),
+                    '0/header:AR0',
+                    refAr02(),
+                ),
+            ]),
+        );
+    return [refManager.getPublicAPI(), render];
+}

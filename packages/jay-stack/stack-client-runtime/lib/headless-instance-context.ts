@@ -161,10 +161,34 @@ export function makeHeadlessInstanceComponent<
         // Merge render() output with full fast ViewState signals.
         // The interactive render() only returns interactive-phase properties (e.g., { value }).
         // Slow/fast-only properties (e.g., label) must persist from the initial ViewState.
+        //
+        // During hydration, the first render must use the server ViewState (matching the DOM)
+        // so adoptElement/hydrateConditional find the elements they expect. The interactive
+        // constructor may override values from client-local data (cookies, localStorage, etc.)
+        // which would mismatch the SSR DOM.
+        //
+        // A dedicated signal gates the transition: the first reactive cycle reads it as false
+        // and returns server ViewState. Setting it to true queues a second cycle that returns
+        // client ViewState, patching the element tree to reflect client-side overrides.
+        // See Design Log #112.
         const originalRender = compCore.render;
-        compCore.render = () => {
-            return { ...resolvedFastVS, ...originalRender() };
-        };
+        const isHydrating = currentConstructionContext()?.isHydrating;
+        if (isHydrating) {
+            const [hydrationDone, setHydrationDone] = createSignal(false);
+            compCore.render = () => {
+                const done = hydrationDone();
+                const clientVS = { ...resolvedFastVS, ...originalRender() };
+                if (!done) {
+                    setHydrationDone(true);
+                    return resolvedFastVS as any;
+                }
+                return clientVS;
+            };
+        } else {
+            compCore.render = () => {
+                return { ...resolvedFastVS, ...originalRender() };
+            };
+        }
 
         return compCore;
     };
