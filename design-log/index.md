@@ -202,27 +202,30 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 115 | slowForEachItem adopt element wrapping                  | Wrap slowForEachItem callback in adoptElement for multi-child nested slow forEach                      |
 | 116 | client import rewriting in library builds               | Fix bare @jay-framework/\* imports not rewritten to /client in vite build output                       |
 | 119 | async data SSR and hydration                            | Fix async data (Promise types) through SSR swap scripts, hydrate compiler, and ViewState serialization |
+| 126 | coordinate assignment rules                             | Complete rules for coordinate assignment across forEach, slowForEach, headless, headfull nesting       |
 
 ---
 
 ## Developer Experience & Tooling
 
-| #   | Title                                                  | Description                                                                           |
-| --- | ------------------------------------------------------ | ------------------------------------------------------------------------------------- |
-| 26  | `jay start` - compiling sandbox application            | Dev server startup                                                                    |
-| 33  | Jay 4 React                                            | React integration                                                                     |
-| 41  | package naming migration to @jay-framework             | Package naming convention                                                             |
-| 42  | editor integration                                     | Editor/IDE integration                                                                |
-| 76  | AI Agent Integration                                   | AI agent automation API                                                               |
-| 77  | automation dev server integration                      | Automation API for dev tools                                                          |
-| 80  | materializing dynamic contracts for agentic generation | CLI and dev server contract materialization for AI agents                             |
-| 81  | dev server test mode                                   | Health/shutdown endpoints and timeout for smoke testing                               |
-| 83  | dev server logging and timing                          | Clean output, verbose mode, timing for render phases                                  |
-| 85  | rendering phases and agent kit for agentic generation  | Agent-kit folder: instructions, contracts, markdown content with headless annotations |
-| 91  | WebMCP plugin for jay-stack                            | Generic WebMCP support: automation→tools/resources/prompts, plugin packaging          |
-| 114 | documentation gaps and updates                         | Audit of docs vs design logs; gap list and update plan                                |
-| 92  | Gemini agent plugin for jay-stack                      | Embedded AI agent: Gemini API, .jay-action metadata, chat contract, page automation   |
-| 97  | Contract-based tool descriptions for gemini agent      | Semantic tool descriptions from .jay-contract via server action, not embedded in HTML |
+| #   | Title                                                  | Description                                                                               |
+| --- | ------------------------------------------------------ | ----------------------------------------------------------------------------------------- |
+| 26  | `jay start` - compiling sandbox application            | Dev server startup                                                                        |
+| 33  | Jay 4 React                                            | React integration                                                                         |
+| 41  | package naming migration to @jay-framework             | Package naming convention                                                                 |
+| 42  | editor integration                                     | Editor/IDE integration                                                                    |
+| 76  | AI Agent Integration                                   | AI agent automation API                                                                   |
+| 77  | automation dev server integration                      | Automation API for dev tools                                                              |
+| 80  | materializing dynamic contracts for agentic generation | CLI and dev server contract materialization for AI agents                                 |
+| 81  | dev server test mode                                   | Health/shutdown endpoints and timeout for smoke testing                                   |
+| 83  | dev server logging and timing                          | Clean output, verbose mode, timing for render phases                                      |
+| 85  | rendering phases and agent kit for agentic generation  | Agent-kit folder: instructions, contracts, markdown content with headless annotations     |
+| 91  | WebMCP plugin for jay-stack                            | Generic WebMCP support: automation→tools/resources/prompts, plugin packaging              |
+| 114 | documentation gaps and updates                         | Audit of docs vs design logs; gap list and update plan                                    |
+| 124 | contract props and params consistency                  | Ensure contracts declare props/params; agent-kit authoring docs + validate checks         |
+| 125 | plugin agent-kit                                       | `agent-kit --mode plugin` for AI agents creating plugins (contracts, components, actions) |
+| 92  | Gemini agent plugin for jay-stack                      | Embedded AI agent: Gemini API, .jay-action metadata, chat contract, page automation       |
+| 97  | Contract-based tool descriptions for gemini agent      | Semantic tool descriptions from .jay-contract via server action, not embedded in HTML     |
 
 ---
 
