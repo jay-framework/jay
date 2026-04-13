@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script type="application/jay-data" contract="./page.jay-contract">
+    </script>
+</head>
+<body>
+    <div>
+        <h1>{title}</h1>
+        <div class="item" forEach="items" trackBy="_id">
+            <button class="choice out-of-stock"
+                    if="!inStock"
+                    ref="choiceButton">
+                {name}
+            </button>
+            <button class="choice"
+                    if="inStock"
+                    ref="choiceButton">
+                {name}
+            </button>
+        </div>
+    </div>
+</body>
+</html>

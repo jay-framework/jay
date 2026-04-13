@@ -1676,6 +1676,69 @@ describe('hydration', () => {
         });
     });
 
+    describe('10e. Conditional ref with dynamic text', () => {
+        testFixture('10e-conditional-ref-with-text', {
+            hydrationChecks: async (page) => {
+                // Title renders
+                expect(await page.textContent('#target h1')).toEqual('Conditional Ref');
+
+                // All items render
+                const items = await page.$$('#target .item');
+                expect(items).toHaveLength(3);
+
+                // In-stock items have .choice button (not .out-of-stock)
+                const item0Button = await items[0].$('button.choice:not(.out-of-stock)');
+                expect(item0Button).toBeTruthy();
+                expect(await item0Button!.textContent()).toEqual(expect.stringContaining('Small'));
+
+                // Out-of-stock item has .out-of-stock button
+                const item1Button = await items[1].$('button.out-of-stock');
+                expect(item1Button).toBeTruthy();
+                expect(await item1Button!.textContent()).toEqual(
+                    expect.stringContaining('Medium'),
+                );
+            },
+            interactivityChecks: async (page) => {
+                // Click the out-of-stock button for "Medium" — should toggle to in-stock
+                const items = await page.$$('#target .item');
+                const mediumButton = await items[1].$('button');
+                await mediumButton!.click();
+                await page.waitForFunction(
+                    () => {
+                        const item = document.querySelectorAll('#target .item')[1];
+                        const btn = item?.querySelector('button');
+                        return btn && !btn.classList.contains('out-of-stock');
+                    },
+                    { timeout: 2000 },
+                );
+                // Button should now be in-stock (no out-of-stock class)
+                const updatedButton = await items[1].$('button.choice:not(.out-of-stock)');
+                expect(updatedButton).toBeTruthy();
+                expect(await updatedButton!.textContent()).toEqual(
+                    expect.stringContaining('Medium'),
+                );
+
+                // Click the NEWLY CREATED in-stock button to toggle back to out-of-stock.
+                // This tests that the create callback wires the ref correctly —
+                // if the ref is missing, clicking the new button does nothing.
+                await updatedButton!.click();
+                await page.waitForFunction(
+                    () => {
+                        const item = document.querySelectorAll('#target .item')[1];
+                        const btn = item?.querySelector('button');
+                        return btn && btn.classList.contains('out-of-stock');
+                    },
+                    { timeout: 2000 },
+                );
+                const restoredButton = await items[1].$('button.out-of-stock');
+                expect(restoredButton).toBeTruthy();
+                expect(await restoredButton!.textContent()).toEqual(
+                    expect.stringContaining('Medium'),
+                );
+            },
+        });
+    });
+
     describe('11a. Async data — resolved promise', () => {
         testFixture('11a-async-data', {
             hydrationChecks: async (page) => {

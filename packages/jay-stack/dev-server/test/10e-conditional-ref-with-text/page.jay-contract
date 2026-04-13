@@ -1,0 +1,25 @@
+name: Page
+tags:
+  - tag: title
+    type: data
+    dataType: string
+    phase: fast+interactive
+  - tag: items
+    type: sub-contract
+    repeated: true
+    phase: fast+interactive
+    trackBy: _id
+    tags:
+      - tag: _id
+        type: data
+        dataType: string
+      - tag: name
+        type: data
+        dataType: string
+      - tag: inStock
+        type: variant
+        dataType: boolean
+        phase: fast+interactive
+      - tag: choiceButton
+        type: interactive
+        elementType: HTMLButtonElement
