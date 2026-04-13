@@ -172,6 +172,80 @@ describe('ReferencesManager operations', () => {
         });
     });
 
+    describe('nested forEach — ref coordinates include both trackBy levels', () => {
+        interface Choice {
+            choiceId: string;
+            label: string;
+        }
+        interface Group {
+            groupId: string;
+            choices: Choice[];
+        }
+        interface NestedViewState {
+            groups: Group[];
+        }
+        interface NestedRefs {
+            choiceRef: HTMLElementCollectionProxy<Choice, HTMLDivElement>;
+        }
+
+        const choiceRefName = 'choiceRef';
+        const NESTED_VIEW_STATE: NestedViewState = {
+            groups: [
+                {
+                    groupId: 'g1',
+                    choices: [
+                        { choiceId: 'c1', label: 'Choice 1' },
+                        { choiceId: 'c2', label: 'Choice 2' },
+                    ],
+                },
+                {
+                    groupId: 'g2',
+                    choices: [{ choiceId: 'c3', label: 'Choice 3' }],
+                },
+            ],
+        };
+
+        function mkNestedElement() {
+            let [refManager, [choiceRef]] = ReferencesManager.for({}, [], [choiceRefName], [], []);
+            let jayRootElement = ConstructContext.withRootContext<NestedViewState, NestedRefs>(
+                NESTED_VIEW_STATE,
+                refManager,
+                () => {
+                    return de('div', {}, [
+                        forEach(
+                            (vs: NestedViewState) => vs.groups,
+                            (group: Group) => {
+                                return de('div', {}, [
+                                    forEach(
+                                        () => group.choices,
+                                        (choice: Choice) => {
+                                            return e('div', {}, [choice.label], choiceRef());
+                                        },
+                                        'choiceId',
+                                    ),
+                                ]);
+                            },
+                            'groupId',
+                        ),
+                    ]);
+                },
+            );
+            return { jayRootElement };
+        }
+
+        it('map should provide coordinates with both outer and inner trackBy values', () => {
+            let { jayRootElement } = mkNestedElement();
+            let mockCallback = vi.fn((a, b, c) => undefined);
+            jayRootElement.refs.choiceRef.map(mockCallback);
+
+            expect(mockCallback.mock.calls.length).toBe(3);
+            // Each coordinate should include [outerGroupId, innerChoiceId, refName]
+            expect(mockCallback.mock.calls[0][2]).toEqual(['g1', 'c1', choiceRefName]);
+            expect(mockCallback.mock.calls[1][2]).toEqual(['g1', 'c2', choiceRefName]);
+            expect(mockCallback.mock.calls[2][2]).toEqual(['g2', 'c3', choiceRefName]);
+        });
+    });
+
     describe('single referenced component', () => {
         interface RootElementViewState {}
         interface RootElementRefs {

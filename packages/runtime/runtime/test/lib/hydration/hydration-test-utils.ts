@@ -18,10 +18,11 @@ export function hydrate<VS>(
     html: string,
     viewState: VS,
     hydrateConstructor: () => BaseJayElement<VS>,
-): { jayElement: JayElement<VS, {}>; root: Element } {
+    customRefManager?: any,
+): { jayElement: JayElement<VS, any>; root: Element } {
     const root = makeServerHTML(html);
-    const [refManager] = ReferencesManager.for({}, [], [], [], []);
-    const jayElement = ConstructContext.withHydrationRootContext<VS, {}>(
+    const refManager = customRefManager ?? ReferencesManager.for({}, [], [], [], [])[0];
+    const jayElement = ConstructContext.withHydrationRootContext<VS, any>(
         viewState,
         refManager,
         root,

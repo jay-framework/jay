@@ -303,3 +303,32 @@ The same IDs appear in every forEach iteration — this is correct because each 
 6. **`adoptText` still uses `peekCoordinate` (unchanged).** The design implied removing the peek/resolve distinction. In practice, `adoptText` and `adoptElement` can share the same coordinate (element with dynamic attrs + text content), so `adoptText` must peek while `adoptElement` consumes. The forEach cross-contamination is solved by local scope maps, not by changing peek behavior.
 
 7. **Coordinate format `S<n>/<path>` includes full path within scope.** The design showed `S<n>/<relativeCoord>` as a flat index. The implementation uses the full positional path within the scope (e.g., `S0/0/0/1` for a deeply nested element), matching the old system's path structure but prefixed with the scope ID.
+
+## Follow-up: Nested forEach Ref Coordinates Missing Outer TrackBy
+
+### Problem
+
+Refs inside two levels of forEach only included the inner forEach's trackBy value in their coordinate, missing the outer forEach's trackBy. For example, a ref at `search.filters.optionFilters.choices.isSelected` (two forEach levels: `optionFilters` trackBy `optionId`, `choices` trackBy `choiceId`) produced coordinate `[choiceId, refName]` instead of the expected `[optionId, choiceId, refName]`. Single-level forEach refs worked correctly.
+
+### Root Cause
+
+`forScope()` in `context.ts` unconditionally reset `coordinateBase` to `[]`. During hydration, `hydrateForEach` calls `context.forScope(itemDom).forItem(item, id)` for each item. In nested forEach:
+
+1. Outer forEach: `forScope()` resets to `[]`, then `forItem()` adds outer id → `[outerId]`
+2. Inner forEach: `forScope()` resets to `[]` again, then `forItem()` adds inner id → `[innerId]`
+3. The outer id is lost.
+
+The non-hydration path (element target) was unaffected because it calls `forItem()` directly without `forScope()`.
+
+### Fix
+
+Changed `forScope()` to preserve `this.coordinateBase` instead of resetting to `[]`. The hydration coordinate map resolution doesn't use `coordinateBase` (it uses the local map directly via `resolveCoordinate`), so preserving it only affects ref coordinate generation — which is exactly what was broken.
+
+**File changed:** `packages/runtime/runtime/lib/context.ts` — `forScope()` method.
+
+### Tests Added
+
+1. `packages/runtime/runtime/test/lib/ref-operations.test.ts` — "nested forEach — ref coordinates include both trackBy levels": non-hydration path (confirmed already working).
+2. `packages/runtime/runtime/test/lib/hydration/hydrate-for-each.test.ts` — "nested hydrateForEach — ref coordinates include both trackBy levels": hydration path with nested forEach and refs, verifying coordinates include both outer and inner trackBy values.
+
+All runtime tests (262) and dev-server tests (632) pass.

@@ -8,6 +8,7 @@ import {
     dynamicText as dt,
     dynamicElement as de,
     element as e,
+    ReferencesManager,
 } from '../../../lib';
 import { hydrate } from './hydration-test-utils';
 
@@ -360,7 +361,7 @@ describe('hydrateConditional + forEach + STATIC (mixed children)', () => {
         expect(elements[3].nodeName).toBe('P');
     });
 
-    it('add forEach item while conditional is hidden — correct position', () => {
+    it('add forEach item while conditional is hidden - correct position', () => {
         const html =
             '<div jay-coordinate="0">' +
             '<span jay-coordinate="0/0">Visible</span>' +
@@ -420,5 +421,96 @@ describe('hydrateConditional + forEach + STATIC (mixed children)', () => {
         expect(elements[0].textContent).toBe('Back');
         expect(elements[1].textContent).toBe('Alice');
         expect(elements[2].textContent).toBe('Bob');
+    });
+});
+
+describe('nested hydrateForEach — ref coordinates include both trackBy levels', () => {
+    interface Choice {
+        choiceId: string;
+        label: string;
+    }
+    interface Group {
+        groupId: string;
+        choices: Choice[];
+    }
+    interface NestedViewState {
+        groups: Group[];
+    }
+
+    // SSR HTML: outer forEach with inner forEach, refs on inner items
+    // Outer items share 0/0. Inner items share S1/0/1.
+    // Inner item content at S2/0.
+    const nestedHTML =
+        '<div jay-coordinate="0">' +
+        // Group g1: 2 choices
+        '<div jay-coordinate="0/0">' +
+        '<span jay-coordinate="S1/0">Group 1</span>' +
+        '<div jay-coordinate="S1/0/1"><span jay-coordinate="S2/0">Choice A</span></div>' +
+        '<div jay-coordinate="S1/0/1"><span jay-coordinate="S2/0">Choice B</span></div>' +
+        '</div>' +
+        // Group g2: 1 choice
+        '<div jay-coordinate="0/0">' +
+        '<span jay-coordinate="S1/0">Group 2</span>' +
+        '<div jay-coordinate="S1/0/1"><span jay-coordinate="S2/0">Choice C</span></div>' +
+        '</div>' +
+        '</div>';
+
+    it('ref coordinates include both outer and inner trackBy values', () => {
+        const choiceRefName = 'choiceRef';
+
+        const [refManager, [choiceRef]] = ReferencesManager.for({}, [], [choiceRefName], [], []);
+
+        const viewState: NestedViewState = {
+            groups: [
+                {
+                    groupId: 'g1',
+                    choices: [
+                        { choiceId: 'c1', label: 'Choice A' },
+                        { choiceId: 'c2', label: 'Choice B' },
+                    ],
+                },
+                {
+                    groupId: 'g2',
+                    choices: [{ choiceId: 'c3', label: 'Choice C' }],
+                },
+            ],
+        };
+
+        const { jayElement } = hydrate<NestedViewState>(
+            nestedHTML,
+            viewState,
+            () =>
+                adoptDynamicElement<NestedViewState>('0', {}, [
+                    hydrateForEach<NestedViewState, Group>(
+                        (vs) => vs.groups,
+                        'groupId',
+                        '0/0',
+                        () => [
+                            adoptDynamicElement<Group>('0/0', {}, [
+                                STATIC,
+                                hydrateForEach<Group, Choice>(
+                                    (g) => g.choices,
+                                    'choiceId',
+                                    'S1/0/1',
+                                    () => [adoptElement<Choice>('S2/0', {}, [], choiceRef())],
+                                    (_choice) =>
+                                        e('div', {}, [e('span', {}, [dt((c: Choice) => c.label)])]),
+                                ),
+                            ]),
+                        ],
+                        (_group) => de('div', {}, [dt((g: Group) => g.groupId)]),
+                    ),
+                ]),
+            refManager,
+        );
+
+        const mockCallback = vi.fn((a, b, c) => undefined);
+        jayElement.refs[choiceRefName].map(mockCallback);
+
+        expect(mockCallback.mock.calls.length).toBe(3);
+        // Each coordinate should include [outerGroupId, innerChoiceId, refName]
+        expect(mockCallback.mock.calls[0][2]).toEqual(['g1', 'c1', choiceRefName]);
+        expect(mockCallback.mock.calls[1][2]).toEqual(['g1', 'c2', choiceRefName]);
+        expect(mockCallback.mock.calls[2][2]).toEqual(['g2', 'c3', choiceRefName]);
     });
 });

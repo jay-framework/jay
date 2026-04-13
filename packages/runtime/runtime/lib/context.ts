@@ -217,7 +217,7 @@ export class ConstructContext<ViewState> {
         return new ConstructContext(
             this.data,
             false,
-            [],
+            this.coordinateBase,
             localMap,
             scopeRootElement,
             this._dataIds,
