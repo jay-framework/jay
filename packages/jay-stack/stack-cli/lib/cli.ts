@@ -143,9 +143,8 @@ async function ensureAgentKitDocs(
     const thisDir = path.dirname(fileURLToPath(import.meta.url));
     const templateDir = path.resolve(thisDir, '..', 'agent-kit-template');
 
-    const roles: AgentKitRole[] = mode && ALL_ROLES.includes(mode as AgentKitRole)
-        ? [mode as AgentKitRole]
-        : ALL_ROLES;
+    const roles: AgentKitRole[] =
+        mode && ALL_ROLES.includes(mode as AgentKitRole) ? [mode as AgentKitRole] : ALL_ROLES;
 
     for (const role of roles) {
         const roleTemplateDir = path.join(templateDir, role);
@@ -374,7 +373,10 @@ program
     .option('--dynamic-only', 'Only process dynamic contracts')
     .option('--force', 'Force re-materialization')
     .option('--no-references', 'Skip reference data generation')
-    .option('-m, --mode <role>', 'Generate guides for a specific role: designer, developer, or plugin (default: all)')
+    .option(
+        '-m, --mode <role>',
+        'Generate guides for a specific role: designer, developer, or plugin (default: all)',
+    )
     .option('-v, --verbose', 'Show detailed output')
     .action(async (options) => {
         const projectRoot = process.cwd();

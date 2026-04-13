@@ -562,6 +562,152 @@ export function checkRouteParams(
     return warnings;
 }
 
+/**
+ * Check that route params are declared in at least one contract on the page (DL#124 Phase 1).
+ *
+ * Reverse of checkRouteParams: if the route provides params (e.g., [slug]),
+ * at least one contract (page-level or headless) should declare that param.
+ * Different params may be consumed by different components.
+ *
+ * @internal Exported for testing
+ */
+export function checkRouteToContractParams(
+    parsedFile: JayHtmlSourceFile,
+    filePath: string,
+    pagesBase: string,
+): string[] {
+    const routeParams = extractRouteParams(filePath, pagesBase);
+    if (routeParams.size === 0) return [];
+
+    // Check if ANY contract exists on this page
+    const hasAnyContract =
+        !!parsedFile.contract || parsedFile.headlessImports.some((imp) => !!imp.contract);
+    if (!hasAnyContract) return [];
+
+    // Collect ALL declared params across all contracts
+    const declaredParams = new Set<string>();
+
+    if (parsedFile.contract?.params) {
+        for (const p of parsedFile.contract.params) {
+            declaredParams.add(p.name);
+        }
+    }
+
+    for (const imp of parsedFile.headlessImports) {
+        if (imp.contract?.params) {
+            for (const p of imp.contract.params) {
+                declaredParams.add(p.name);
+            }
+        }
+    }
+
+    const warnings: string[] = [];
+    for (const routeParam of routeParams) {
+        if (!declaredParams.has(routeParam)) {
+            warnings.push(
+                `Route provides param "${routeParam}" but no contract on this page declares it. ` +
+                    `Add params: { ${routeParam}: string } to the appropriate contract.`,
+            );
+        }
+    }
+
+    return warnings;
+}
+
+// --- Headless instance prop checking (DL#124 Phase 2) ---
+
+/** Attributes on <jay:xxx> that are NOT props — directives and framework attributes */
+const HEADLESS_SKIP_ATTRS = new Set([
+    'foreach',
+    'if',
+    'ref',
+    'trackby',
+    'slowforeach',
+    'jayindex',
+    'jaytrackby',
+    'when-resolved',
+    'when-loading',
+    'when-rejected',
+    'accessor',
+    'props',
+    'key',
+    'jay-coordinate-base',
+    'jay-scope',
+]);
+
+/**
+ * Check that <jay:xxx> instance attributes match contract props (DL#124 Phase 2).
+ *
+ * For each <jay:xxx> element:
+ * 1. Non-directive attributes should be declared as contract props
+ * 2. Required contract props should be present as attributes
+ *
+ * @internal Exported for testing
+ */
+export function checkHeadlessInstanceProps(jayHtml: JayHtmlSourceFile, file: string): string[] {
+    const imports = jayHtml.headlessImports;
+    const warnings: string[] = [];
+
+    function walkElement(element: any): void {
+        const tagName: string | undefined = element.rawTagName?.toLowerCase();
+
+        if (tagName?.startsWith('jay:')) {
+            const contractName = tagName.substring(4);
+            const imp = imports.find((i) => i.contractName === contractName && i.contract);
+
+            if (imp?.contract) {
+                const contract = imp.contract;
+                const attrs: Record<string, string> = element.attributes ?? {};
+
+                // Collect non-directive attributes as prop candidates
+                const passedProps = new Set<string>();
+                for (const attrName of Object.keys(attrs)) {
+                    if (!HEADLESS_SKIP_ATTRS.has(attrName.toLowerCase())) {
+                        passedProps.add(attrName);
+                    }
+                }
+
+                // Check each passed prop is declared in contract
+                if (passedProps.size > 0) {
+                    const contractPropNames = new Set((contract.props || []).map((p) => p.name));
+                    for (const prop of passedProps) {
+                        if (!contractPropNames.has(prop)) {
+                            const label = imp.key ? `${imp.key} (${contractName})` : contractName;
+                            warnings.push(
+                                `<jay:${contractName}> passes attribute "${prop}" but the ` +
+                                    `"${contract.name}" contract does not declare it as a prop. ` +
+                                    `Add to ${contractName}.jay-contract: props: [{ name: ${prop}, type: string }]`,
+                            );
+                        }
+                    }
+                }
+
+                // Check required contract props are present
+                if (contract.props) {
+                    for (const contractProp of contract.props) {
+                        if (contractProp.required && !passedProps.has(contractProp.name)) {
+                            warnings.push(
+                                `<jay:${contractName}> is missing required prop ` +
+                                    `"${contractProp.name}" declared in the "${contract.name}" contract.`,
+                            );
+                        }
+                    }
+                }
+            }
+        }
+
+        // Walk children
+        for (const child of element.childNodes ?? []) {
+            if (child.nodeType === 1) {
+                walkElement(child);
+            }
+        }
+    }
+
+    walkElement(jayHtml.body);
+    return warnings;
+}
+
 export async function validateJayFiles(options: ValidateOptions = {}): Promise<ValidationResult> {
     const config = loadConfig();
     const resolvedConfig = getConfigWithDefaults(config);
@@ -652,9 +798,19 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
                 continue; // Skip generation if parsing failed
             }
 
-            // Check route params match contract params
+            // Check route params match contract params (contract→route)
             const routeParamWarnings = checkRouteParams(parsedFile.val!, jayFile, scanDir, content);
             for (const msg of routeParamWarnings) {
+                warnings.push({ file: relativePath, message: msg });
+            }
+
+            // Check route params are declared in contracts (route→contract, DL#124)
+            const routeToContractWarnings = checkRouteToContractParams(
+                parsedFile.val!,
+                jayFile,
+                scanDir,
+            );
+            for (const msg of routeToContractWarnings) {
                 warnings.push({ file: relativePath, message: msg });
             }
 
@@ -662,6 +818,12 @@ export async function validateJayFiles(options: ValidateOptions = {}): Promise<V
             const refTypeErrors = checkRefElementTypes(parsedFile.val!, relativePath);
             for (const msg of refTypeErrors) {
                 errors.push({ file: relativePath, message: msg, stage: 'generate' });
+            }
+
+            // Check headless instance props match contract (DL#124 Phase 2)
+            const headlessPropWarnings = checkHeadlessInstanceProps(parsedFile.val!, relativePath);
+            for (const msg of headlessPropWarnings) {
+                warnings.push({ file: relativePath, message: msg });
             }
 
             // Analyze tag coverage for headless imports

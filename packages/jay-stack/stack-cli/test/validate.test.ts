@@ -5,6 +5,8 @@ import {
     extractRouteParams,
     extractJayParams,
     checkRouteParams,
+    checkRouteToContractParams,
+    checkHeadlessInstanceProps,
     checkRefElementTypes,
 } from '../lib/validate';
 import { parseJayFile, JAY_IMPORT_RESOLVER } from '@jay-framework/compiler-jay-html';
@@ -237,5 +239,98 @@ describe('ref element type validation (integration)', () => {
         const refErrors = result.errors.filter((e) => e.message.startsWith('Ref "'));
         expect(refErrors).toHaveLength(2);
         expect(refErrors[0].stage).toBe('generate');
+    });
+});
+
+describe('route-to-contract param validation (DL#124 Phase 1)', () => {
+    const baseFixturesDir = path.resolve('./test/fixtures/validate');
+
+    it('should produce warning when route has [slug] but contract has no params', async () => {
+        const result = await validateJayFiles({
+            path: path.join(baseFixturesDir, 'route-to-contract-missing'),
+        });
+
+        expect(result.errors).toHaveLength(0);
+        expect(result.warnings).toHaveLength(1);
+        expect(result.warnings[0].message).toEqual(
+            'Route provides param "slug" but no contract on this page declares it. ' +
+                'Add params: { slug: string } to the appropriate contract.',
+        );
+    });
+
+    it('should produce no warning when route has [slug] and contract declares params', async () => {
+        const result = await validateJayFiles({
+            path: path.join(baseFixturesDir, 'route-params-valid'),
+        });
+
+        expect(result.errors).toHaveLength(0);
+        // Should have no route-to-contract warnings (existing test verifies no warnings at all)
+        const routeToContractWarnings = result.warnings.filter((w) =>
+            w.message.startsWith('Route provides param'),
+        );
+        expect(routeToContractWarnings).toHaveLength(0);
+    });
+
+    it('should produce no warning for static routes', async () => {
+        const result = await validateJayFiles({
+            path: path.join(baseFixturesDir, 'valid'),
+        });
+
+        const routeToContractWarnings = result.warnings.filter((w) =>
+            w.message.startsWith('Route provides param'),
+        );
+        expect(routeToContractWarnings).toHaveLength(0);
+    });
+});
+
+describe('headless instance props validation (DL#124 Phase 2)', () => {
+    const baseFixturesDir = path.resolve('./test/fixtures/validate');
+
+    it('should warn when jay:xxx passes attribute not declared as contract prop', async () => {
+        const fixtureDir = path.join(baseFixturesDir, 'headless-props-undeclared');
+        const result = await validateJayFiles({
+            path: fixtureDir,
+            projectRoot: fixtureDir,
+        });
+
+        const propWarnings = result.warnings.filter((w) => w.message.includes('passes attribute'));
+        expect(propWarnings).toHaveLength(1);
+        expect(propWarnings[0].message).toEqual(
+            '<jay:test-widget> passes attribute "itemId" but the "Widget" contract does not declare it as a prop. ' +
+                'Add to test-widget.jay-contract: props: [{ name: itemId, type: string }]',
+        );
+    });
+
+    it('should warn when jay:xxx is missing a required contract prop', async () => {
+        const fixtureDir = path.join(baseFixturesDir, 'headless-props-missing-required');
+        const result = await validateJayFiles({
+            path: fixtureDir,
+            projectRoot: fixtureDir,
+        });
+
+        const propWarnings = result.warnings.filter((w) =>
+            w.message.includes('missing required prop'),
+        );
+        expect(propWarnings).toHaveLength(1);
+        expect(propWarnings[0].message).toEqual(
+            '<jay:test-widget> is missing required prop "itemId" declared in the "Widget" contract.',
+        );
+    });
+
+    it('should not warn when props match contract', async () => {
+        // The headless-coverage fixture has a widget used as <jay:test-widget> with keyed access
+        // It has no props passed, and no props declared — should be clean
+        const fixtureDir = path.join(baseFixturesDir, 'headless-coverage');
+        const result = await validateJayFiles({
+            path: fixtureDir,
+            projectRoot: fixtureDir,
+        });
+
+        const propWarnings = result.warnings.filter(
+            (w) =>
+                w.message.includes('passes attribute') ||
+                w.message.includes('missing required prop'),
+        );
+        expect(propWarnings).toHaveLength(0);
     });
 });

@@ -26,7 +26,7 @@ export const productPage = makeJayStackComponent<ProductPageContract>()
 # product-page.jay-contract — NO params section!
 name: product-page
 tags:
-  - {tag: productName, type: data, ...}
+  - { tag: productName, type: data, ... }
 ```
 
 The component uses `.withLoadParams()` with `{ slug: string }`, but the contract has no `params`. The agent-kit doesn't know about `slug`, so AI-generated pages may not provide it.
@@ -65,6 +65,7 @@ The component uses `.withLoadParams()` with `{ slug: string }`, but the contract
 **Rule:** Collect all route params from the path. Collect all declared params from all contracts (page + headless). For each route param not in the combined set → warning.
 
 **Edge cases:**
+
 - No contract on the page at all → skip (nothing to check against)
 - No contracts declare any params → warn for all route params
 
@@ -77,6 +78,7 @@ The component uses `.withLoadParams()` with `{ slug: string }`, but the contract
 ### Phase 3: Component source→contract consistency (`checkComponentPropsAndParams`)
 
 **What:** In validate-plugin, parse the component's TypeScript source and check:
+
 1. If it calls `.withProps<T>()` with custom props → contract must declare `props`
 2. If it calls `.withLoadParams(...)` → contract must declare `params`
 3. Individual property names match between interface and contract
@@ -92,16 +94,19 @@ Builder chain:
 ```
 
 **Props type resolution:**
+
 - `.withProps<PageProps>()` → `PageProps` is the framework base type (`{ language, url }`). No custom props. Skip.
 - `.withProps<ProductCardProps>()` → custom props. Find `interface ProductCardProps { productId: string }` in same file. Each property must be in contract `props`.
 - `.withProps<PageProps & CustomProps>()` → intersection. Strip `PageProps`, extract `CustomProps` properties.
 
 **Params type resolution:**
+
 - `.withLoadParams(loadProductParams)` → find the function → look for the params interface it yields (e.g., `ProductPageParams extends UrlParams { slug: string }`)
 - Extract properties from the params interface (excluding inherited `UrlParams` fields)
 - Each property must be in contract `params`
 
 **Framework types to skip:**
+
 - `PageProps` — framework base type, not component props
 - `UrlParams` — base for params, provides inherited fields like `Record<string, string>`
 - `RequestQuery` — fast-phase only, not user-defined
@@ -164,6 +169,7 @@ Builder chain:
 4. Add results as errors
 
 **File resolution for component source:**
+
 - Local plugins: `pluginPath + module` field → directory or file → find `.ts` file exporting the component name
 - NPM packages: look for `lib/` directory (source may be available alongside dist)
 
@@ -185,3 +191,57 @@ Phase 3 is the most important — implement first. Phases 1 and 2 add complement
 4. Phase 3: detects `.withProps<>()` / `.withLoadParams<>()` and validates against contract
 5. Run against wix-stores-v1 → should flag missing `params` on product-page and category-page contracts
 6. `yarn vitest run` in `packages/jay-stack/stack-cli` and `packages/jay-stack/plugin-validator` pass
+
+## Implementation Results
+
+### Test Results
+
+- stack-cli: 104 passed (7 test files), including 6 new tests for Phases 1 and 2
+- plugin-validator: 13 passed (1 test file), all new for Phase 3
+
+### Files Modified
+
+| File                                                                | Change                                                                |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `plugin-validator/lib/check-component-contract.ts`                  | **New.** Single-file AST checker using typescript-bridge              |
+| `plugin-validator/lib/validate-plugin.ts`                           | Added `checkComponentContractConsistency`, source/contract resolution |
+| `plugin-validator/lib/types.ts`                                     | Added `'component-contract-mismatch'` error type                      |
+| `plugin-validator/lib/index.ts`                                     | Export `checkComponentPropsAndParams`                                 |
+| `plugin-validator/package.json`                                     | Added `@jay-framework/typescript-bridge` dependency                   |
+| `plugin-validator/test/check-component-contract.test.ts`            | **New.** 13 tests for Phase 3                                         |
+| `stack-cli/lib/validate.ts`                                         | Added `checkRouteToContractParams` and `checkHeadlessInstanceProps`   |
+| `stack-cli/test/validate.test.ts`                                   | Added 6 integration tests for Phases 1 and 2                          |
+| `stack-cli/test/fixtures/validate/route-to-contract-missing/`       | **New fixture**                                                       |
+| `stack-cli/test/fixtures/validate/headless-props-undeclared/`       | **New fixture**                                                       |
+| `stack-cli/test/fixtures/validate/headless-props-missing-required/` | **New fixture**                                                       |
+
+### Deviations from Design
+
+1. **Phase 3 uses `parseContract` from compiler-jay-html** rather than raw YAML parsing, to get proper `ContractProp[]` and `ContractParam[]` types with all fields (required, kind, etc.).
+
+2. **Types imported from `.jay-contract` files are skipped** in Phase 3 — if a component uses `.withProps<WidgetProps>()` where `WidgetProps` is imported from the contract's generated `.d.ts`, the check is skipped because the types match by definition.
+
+3. **Phase 3 integrated into `validateComponent()`** in validate-plugin.ts, calling `checkComponentContractConsistency()` which resolves the source file and contract file independently.
+
+### Post-implementation improvements
+
+4. **Contract file resolution via `package.json` exports chain.** The original `validateContract` guessed contract file locations (`dist/`, `lib/`, root). This failed for wix-stores where plugin.yaml says `contract: product-page.jay-contract` and `package.json` exports maps it to `./dist/contracts/product-page.jay-contract`. Added `resolveContractFile()` which first checks `package.json` exports for `"./<contractSpec>"` → follows the mapped path → falls back to guessing.
+
+5. **Component source resolution via `index.ts` export chain.** The original design guessed source file locations. This failed for wix-stores where components are re-exported from `lib/index.ts` (e.g., `export { productPage } from './components/product-page'`). Added `resolveComponentSourcePath()` which parses the entry module's AST, finds the re-export matching the component name, and follows the module path to the actual `.ts` file. Also handles `export * from './module'` by parsing each star-exported module to check if it exports the component name.
+
+6. **Error messages prefixed with `[contractName]`.** All error/warning messages from Phase 3 now start with `[contract-name]` (e.g., `[product-page] component uses .withLoadParams()...`) to identify which component the error relates to when validating plugins with multiple contracts.
+
+7. **Vite build externals.** Added `@jay-framework/typescript-bridge`, `module`, and `typescript` to the plugin-validator's `vite.config.ts` rollup externals. Without this, Vite tried to bundle `typescript-bridge` (which uses `createRequire` from Node's `module` builtin) and failed with a browser compatibility error.
+
+### Verified against real plugins
+
+Running `validate-plugin` against wix-stores:
+
+- `[product-page]` — flagged missing `params` (component uses `.withLoadParams()`)
+- `[product-search]` — flagged missing `props` (`{category, subcategory}`) and missing `params`
+- `[category-list]` — flagged missing `props` (`{parentCategory}`)
+
+Running against wix-stores-v1:
+
+- `[product-page]` — flagged missing `params`
+- `[category-page]` — flagged missing `params`

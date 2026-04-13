@@ -1,4 +1,5 @@
 export { validatePlugin } from './validate-plugin';
+export { checkComponentPropsAndParams } from './check-component-contract';
 export type {
     ValidatePluginOptions,
     ValidationResult,

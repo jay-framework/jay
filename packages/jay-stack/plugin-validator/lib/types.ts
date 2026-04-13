@@ -25,6 +25,7 @@ export interface ValidationError {
         | 'file-missing'
         | 'export-mismatch'
         | 'contract-invalid'
+        | 'component-contract-mismatch'
         | 'type-generation-failed';
     message: string;
     location?: string;

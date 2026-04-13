@@ -26,7 +26,9 @@
   },
   "dependencies": {
     "@jay-framework/compiler-jay-html": "workspace:^",
+    "@jay-framework/compiler-shared": "workspace:^",
     "@jay-framework/editor-protocol": "workspace:^",
+    "@jay-framework/typescript-bridge": "workspace:^",
     "chalk": "^4.1.2",
     "yaml": "^2.3.4"
   },

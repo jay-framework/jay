@@ -2,7 +2,10 @@ import fs from 'fs';
 import path from 'path';
 import YAML from 'yaml';
 import { loadPluginManifest } from '@jay-framework/compiler-shared';
+import { parseContract } from '@jay-framework/compiler-jay-html';
+import { ts } from '@jay-framework/typescript-bridge';
 import type { ValidatePluginOptions, ValidationResult, PluginContext } from './types';
+import { checkComponentPropsAndParams } from './check-component-contract';
 
 /**
  * Validates a Jay Stack plugin package or local plugin directory.
@@ -259,6 +262,54 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
 }
 
 /**
+ * Resolve a contract file path following the chain:
+ * plugin.yaml contract name → package.json exports → actual file.
+ *
+ * For NPM packages: looks up "./<contractSpec>" in package.json exports,
+ * then falls back to searching dist/, lib/, and root.
+ * For local plugins: resolves relative to plugin directory.
+ */
+function resolveContractFile(contractSpec: string, context: PluginContext): string | undefined {
+    if (context.isNpmPackage) {
+        // 1. Try package.json exports chain first
+        const packageJsonPath = path.join(context.pluginPath, 'package.json');
+        if (fs.existsSync(packageJsonPath)) {
+            try {
+                const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+                if (packageJson.exports) {
+                    const exportKey = './' + contractSpec;
+                    const exportValue = packageJson.exports[exportKey];
+                    if (exportValue) {
+                        const resolvedPath =
+                            typeof exportValue === 'string'
+                                ? exportValue
+                                : exportValue.default || exportValue.import || exportValue.require;
+                        if (resolvedPath) {
+                            const fullPath = path.join(context.pluginPath, resolvedPath);
+                            if (fs.existsSync(fullPath)) return fullPath;
+                        }
+                    }
+                }
+            } catch {
+                // package.json parse error — fall through to guessing
+            }
+        }
+
+        // 2. Fall back to searching common locations
+        for (const dir of ['dist', 'lib', '']) {
+            const candidate = path.join(context.pluginPath, dir, contractSpec);
+            if (fs.existsSync(candidate)) return candidate;
+        }
+
+        return undefined;
+    } else {
+        // Local plugins: resolve relative to plugin directory
+        const candidate = path.join(context.pluginPath, contractSpec);
+        return fs.existsSync(candidate) ? candidate : undefined;
+    }
+}
+
+/**
  * Validates a single contract definition
  */
 async function validateContract(
@@ -270,50 +321,18 @@ async function validateContract(
 ): Promise<void> {
     result.contractsChecked = (result.contractsChecked || 0) + 1;
 
-    let contractPath: string;
+    const contractPath = resolveContractFile(contract.contract, context);
 
-    if (context.isNpmPackage) {
-        // For NPM packages, contract should be an export subpath (e.g., "mood-tracker.jay-contract")
-        // Check if the file exists in common locations
-        const contractSpec = contract.contract;
-        const possiblePaths = [
-            path.join(context.pluginPath, 'dist', contractSpec),
-            path.join(context.pluginPath, 'lib', contractSpec),
-            path.join(context.pluginPath, contractSpec),
-        ];
-
-        let found = false;
-        for (const possiblePath of possiblePaths) {
-            if (fs.existsSync(possiblePath)) {
-                contractPath = possiblePath;
-                found = true;
-                break;
-            }
-        }
-
-        if (!found) {
-            result.errors.push({
-                type: 'file-missing',
-                message: `Contract file not found: ${contractSpec}`,
-                location: `plugin.yaml contracts[${index}]`,
-                suggestion: `Ensure the contract file exists (looked in dist/, lib/, and root)`,
-            });
-            return;
-        }
-    } else {
-        // For local plugins, contract is a relative path
-        contractPath = path.join(context.pluginPath, contract.contract);
-
-        // Check if contract file exists
-        if (!fs.existsSync(contractPath)) {
-            result.errors.push({
-                type: 'file-missing',
-                message: `Contract file not found: ${contract.contract}`,
-                location: `plugin.yaml contracts[${index}]`,
-                suggestion: `Create the contract file at ${contractPath}`,
-            });
-            return;
-        }
+    if (!contractPath) {
+        result.errors.push({
+            type: 'file-missing',
+            message: `Contract file not found: ${contract.contract}`,
+            location: `plugin.yaml contracts[${index}]`,
+            suggestion: context.isNpmPackage
+                ? `Ensure the contract is exported in package.json and the file exists`
+                : `Create the contract file at ${path.join(context.pluginPath, contract.contract)}`,
+        });
+        return;
     }
 
     // Validate contract file is valid YAML
@@ -368,7 +387,7 @@ async function validateContract(
 }
 
 /**
- * Validates that component export name is valid
+ * Validates that component export name is valid and checks component-contract consistency.
  */
 async function validateComponent(
     contract: any,
@@ -390,6 +409,7 @@ async function validateComponent(
             location: `plugin.yaml contracts[${index}]`,
             suggestion: 'Component should be the exported member name (e.g., "moodTracker")',
         });
+        return;
     }
 
     // Warn if component name looks like a path instead of an export name
@@ -402,6 +422,213 @@ async function validateComponent(
                 'Component should be the exported member name (e.g., "moodTracker"), not a file path',
         });
     }
+
+    // --- Component-contract consistency check (DL#124 Phase 3) ---
+    // Find the component source file and the contract file, then check
+    // that .withProps<T>() / .withLoadParams() match contract props/params.
+    await checkComponentContractConsistency(contract, context, result);
+}
+
+/** Check if a statement has the `export` modifier. */
+function hasExportModifier(node: any): boolean {
+    return node.modifiers?.some((m: any) => m.kind === ts.SyntaxKind.ExportKeyword) ?? false;
+}
+
+/**
+ * Resolve a module specifier to an actual file path, trying common extensions.
+ */
+function resolveModulePath(basePath: string): string | undefined {
+    for (const ext of ['', '.ts', '.js', '/index.ts', '/index.js']) {
+        const candidate = basePath + ext;
+        if (fs.existsSync(candidate)) return candidate;
+    }
+    return undefined;
+}
+
+/**
+ * Resolve the component source file by following the export chain from the
+ * plugin's entry module.
+ *
+ * 1. Find the entry file (from plugin.yaml `module` field or default index.ts)
+ * 2. Parse it with TS AST
+ * 3. Find the re-export that exports `componentName`
+ *    (e.g., `export { productPage } from './components/product-page'`)
+ * 4. Resolve that module path to the actual .ts file
+ */
+function resolveComponentSourcePath(
+    componentName: string,
+    context: PluginContext,
+): string | undefined {
+    const modulePath = context.manifest.module || 'index';
+    const entryBase = path.join(context.pluginPath, modulePath);
+    const entryFile = resolveModulePath(entryBase);
+
+    // Also try lib/ if module is a bare name like "index"
+    const libEntryFile = !entryFile
+        ? resolveModulePath(path.join(context.pluginPath, 'lib', modulePath))
+        : undefined;
+
+    const sourceEntry = entryFile || libEntryFile;
+    if (!sourceEntry) return undefined;
+    if (!sourceEntry.endsWith('.ts')) return undefined;
+
+    // Parse the entry file and find the re-export for componentName
+    let sourceCode: string;
+    try {
+        sourceCode = fs.readFileSync(sourceEntry, 'utf-8');
+    } catch {
+        return undefined;
+    }
+
+    const sourceFile = ts.createSourceFile(
+        sourceEntry,
+        sourceCode,
+        ts.ScriptTarget.Latest,
+        true,
+        ts.ScriptKind.TS,
+    );
+
+    // Walk statements looking for the component export
+    const starReexportModules: string[] = [];
+
+    for (const statement of sourceFile.statements) {
+        if (!ts.isExportDeclaration(statement)) continue;
+        if (!statement.moduleSpecifier) continue;
+        if (!ts.isStringLiteral(statement.moduleSpecifier)) continue;
+
+        const moduleSpec = statement.moduleSpecifier.text;
+        const exportClause = statement.exportClause;
+
+        if (!exportClause) {
+            // `export * from './module'` — collect for later checking
+            starReexportModules.push(moduleSpec);
+            continue;
+        }
+
+        // `export { componentName } from './module'`
+        if (ts.isNamedExports(exportClause)) {
+            for (const element of exportClause.elements) {
+                const exportedName = element.name.text;
+                if (exportedName === componentName) {
+                    const resolvedBase = path.resolve(path.dirname(sourceEntry), moduleSpec);
+                    return resolveModulePath(resolvedBase);
+                }
+            }
+        }
+    }
+
+    // Check `export * from ...` modules — the component may be re-exported through one
+    for (const moduleSpec of starReexportModules) {
+        // Skip external packages (only follow relative imports)
+        if (!moduleSpec.startsWith('.')) continue;
+
+        const resolvedBase = path.resolve(path.dirname(sourceEntry), moduleSpec);
+        const resolvedPath = resolveModulePath(resolvedBase);
+        if (!resolvedPath || !resolvedPath.endsWith('.ts')) continue;
+
+        // Check if this module exports the component name
+        try {
+            const modSource = fs.readFileSync(resolvedPath, 'utf-8');
+            const modFile = ts.createSourceFile(
+                resolvedPath,
+                modSource,
+                ts.ScriptTarget.Latest,
+                true,
+                ts.ScriptKind.TS,
+            );
+
+            for (const stmt of modFile.statements) {
+                // export const componentName = ...
+                if (ts.isVariableStatement(stmt) && hasExportModifier(stmt)) {
+                    for (const decl of stmt.declarationList.declarations) {
+                        if (ts.isIdentifier(decl.name) && decl.name.text === componentName) {
+                            return resolvedPath;
+                        }
+                    }
+                }
+                // export function componentName() ...
+                if (
+                    ts.isFunctionDeclaration(stmt) &&
+                    hasExportModifier(stmt) &&
+                    stmt.name?.text === componentName
+                ) {
+                    return resolvedPath;
+                }
+            }
+        } catch {
+            continue;
+        }
+    }
+
+    // Component might be defined directly in the entry file
+    return sourceEntry;
+}
+
+/**
+ * Resolve the contract file path for a contract entry (reuses resolveContractFile).
+ */
+function resolveContractPath(contract: any, context: PluginContext): string | undefined {
+    return resolveContractFile(contract.contract, context);
+}
+
+/**
+ * Check component source against contract for props/params consistency (DL#124).
+ */
+async function checkComponentContractConsistency(
+    contract: any,
+    context: PluginContext,
+    result: ValidationResult,
+): Promise<void> {
+    // Resolve component source by following the export chain from the entry module
+    const componentName = contract.component;
+    if (!componentName) return;
+
+    const sourcePath = resolveComponentSourcePath(componentName, context);
+    if (!sourcePath) return; // Can't check without source
+
+    // Only check TypeScript sources
+    if (!sourcePath.endsWith('.ts')) return;
+
+    // Resolve contract file
+    const contractPath = resolveContractPath(contract, context);
+    if (!contractPath) return; // Already reported in validateContract
+
+    // Read and parse the contract for props/params
+    let contractContent: string;
+    try {
+        contractContent = await fs.promises.readFile(contractPath, 'utf-8');
+    } catch {
+        return;
+    }
+
+    const parsed = parseContract(contractContent, path.basename(contractPath));
+    if (parsed.validations.length > 0) return; // Contract has parse errors, skip
+
+    // Read component source
+    let sourceCode: string;
+    try {
+        sourceCode = await fs.promises.readFile(sourcePath, 'utf-8');
+    } catch {
+        return;
+    }
+
+    // Derive contract name: strip .jay-contract suffix from the contract spec
+    const contractName = contract.contract.replace(/\.jay-contract$/, '');
+
+    // Run the check
+    const checkResult = checkComponentPropsAndParams(
+        sourceCode,
+        {
+            props: parsed.val?.props,
+            params: parsed.val?.params,
+        },
+        contractName,
+        contractPath,
+        sourcePath,
+    );
+
+    result.errors.push(...checkResult.errors);
+    result.warnings.push(...checkResult.warnings);
 }
 
 /**

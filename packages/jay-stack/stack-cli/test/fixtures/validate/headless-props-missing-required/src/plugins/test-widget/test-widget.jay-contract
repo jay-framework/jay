@@ -1,0 +1,9 @@
+name: Widget
+props:
+  - name: itemId
+    type: string
+    required: true
+tags:
+  - tag: label
+    type: data
+    dataType: string

@@ -1,0 +1,5 @@
+name: Widget
+tags:
+  - tag: label
+    type: data
+    dataType: string
