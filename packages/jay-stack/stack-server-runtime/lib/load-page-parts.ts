@@ -61,6 +61,8 @@ export interface LoadedPageParts {
     discoveredInstances: DiscoveredHeadlessInstance[];
     /** Discovered forEach <jay:xxx> instances from the jay-html (DL#109) */
     forEachInstances: ForEachHeadlessInstance[];
+    /** Absolute paths to linked CSS files (from <link rel="stylesheet">) for dev-server watching */
+    linkedCssFiles: string[];
 }
 
 export interface LoadPagePartsOptions {
@@ -230,6 +232,7 @@ export async function loadPageParts(
             headlessInstanceComponents,
             discoveredInstances: discoveryResult.instances,
             forEachInstances: discoveryResult.forEachInstances,
+            linkedCssFiles: jayHtml.linkedCssFiles ?? [],
         };
     });
 }
