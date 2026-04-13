@@ -1165,5 +1165,22 @@ function setupSlowRenderCacheInvalidation(
             });
             return;
         }
+
+        // Invalidate cache for CSS file changes.
+        // CSS files may be linked from jay-html (or nested headfull FS components)
+        // via <link rel="stylesheet">. The CSS content is embedded in the SSR output,
+        // so the pre-rendered cache must be invalidated when CSS changes.
+        // Since CSS files can be referenced from any jay-html via relative paths,
+        // we clear the entire cache — CSS edits are infrequent.
+        if (changedPath.endsWith('.css')) {
+            clearServerElementCache();
+            cache.clear().then(() => {
+                getLogger().info(
+                    `[SlowRender] Cache cleared (CSS changed: ${changedPath})`,
+                );
+                vite.ws.send({ type: 'full-reload' });
+            });
+            return;
+        }
     });
 }
