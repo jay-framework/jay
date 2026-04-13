@@ -66,14 +66,31 @@ export function hydrate(
             adoptDynamicElement('S0/0', {}, [
                 hydrateConditional(
                     (vs) => vs.cond,
-                    () => adoptText('S0/0/0', (vs) => vs.text1, refText1()),
-                    () => e('div', { style: { cssText: 'color:red' } }, [dt((vs) => vs.text1)]),
+                    () =>
+                        adoptElement(
+                            'S0/0/0',
+                            {},
+                            [adoptText('S0/0/0', (vs) => vs.text1)],
+                            refText1(),
+                        ),
+                    () =>
+                        e(
+                            'div',
+                            { style: { cssText: 'color:red' } },
+                            [dt((vs) => vs.text1)],
+                            refText1(),
+                        ),
                 ),
                 hydrateConditional(
                     (vs) => !vs.cond,
                     () =>
                         adoptElement('S0/0/1', {}, [
-                            adoptText('S0/0/1/0', (vs) => vs.text2, refText2()),
+                            adoptElement(
+                                'S0/0/1/0',
+                                {},
+                                [adoptText('S0/0/1/0', (vs) => vs.text2)],
+                                refText2(),
+                            ),
                         ]),
                     () =>
                         e('div', { style: { cssText: 'color:green' } }, [

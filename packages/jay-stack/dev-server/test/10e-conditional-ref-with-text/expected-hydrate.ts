@@ -6,6 +6,7 @@ import {
     dynamicElement as de,
     ConstructContext,
     adoptText,
+    adoptElement,
     hydrateConditional,
     hydrateForEach,
     adoptDynamicElement,
@@ -35,20 +36,36 @@ export function hydrate(rootElement, options) {
                             hydrateConditional(
                                 (vs1) => !vs1.inStock,
                                 () =>
-                                    adoptText('S1/0', (vs1) => ` ${vs1.name} `, refChoiceButton()),
+                                    adoptElement(
+                                        'S1/0',
+                                        {},
+                                        [adoptText('S1/0', (vs1) => ` ${vs1.name} `)],
+                                        refChoiceButton(),
+                                    ),
                                 () =>
-                                    e('button', { class: 'choice out-of-stock' }, [
-                                        dt((vs1) => ` ${vs1.name} `),
-                                    ]),
+                                    e(
+                                        'button',
+                                        { class: 'choice out-of-stock' },
+                                        [dt((vs1) => ` ${vs1.name} `)],
+                                        refChoiceButton(),
+                                    ),
                             ),
                             hydrateConditional(
                                 (vs1) => vs1.inStock,
                                 () =>
-                                    adoptText('S1/1', (vs1) => ` ${vs1.name} `, refChoiceButton()),
+                                    adoptElement(
+                                        'S1/1',
+                                        {},
+                                        [adoptText('S1/1', (vs1) => ` ${vs1.name} `)],
+                                        refChoiceButton(),
+                                    ),
                                 () =>
-                                    e('button', { class: 'choice' }, [
-                                        dt((vs1) => ` ${vs1.name} `),
-                                    ]),
+                                    e(
+                                        'button',
+                                        { class: 'choice' },
+                                        [dt((vs1) => ` ${vs1.name} `)],
+                                        refChoiceButton(),
+                                    ),
                             ),
                         ]),
                     ],

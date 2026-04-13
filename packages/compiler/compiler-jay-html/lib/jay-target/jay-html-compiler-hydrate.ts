@@ -242,7 +242,10 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
         );
         const createElementFunc = needDynamicElement ? 'de' : 'e';
         const createElementImport = needDynamicElement ? Import.dynamicElement : Import.element;
-        const createBody = `() => ${createElementFunc}('${element.rawTagName}', ${createAttributes.rendered}, [${createChildren.rendered}])`;
+        // Include ref in the create callback so newly created elements get the ref wired
+        const createRef = renderElementRef(element, createRenderContext);
+        const createRefSuffix = createRef.rendered ? `, ${createRef.rendered}` : '';
+        const createBody = `() => ${createElementFunc}('${element.rawTagName}', ${createAttributes.rendered}, [${createChildren.rendered}]${createRefSuffix})`;
 
         return new RenderFragment(
             `${context.indent.firstLine}hydrateConditional(${renderedCondition.rendered}, ${adoptBody},\n${context.indent.firstLine}    ${createBody})`,
@@ -251,7 +254,8 @@ function renderHydrateElement(element: HTMLElement, context: HydrateContext): Re
                 .plus(renderedCondition.imports)
                 .plus(childContent.imports)
                 .plus(createChildren.imports)
-                .plus(createAttributes.imports),
+                .plus(createAttributes.imports)
+                .plus(createRef.imports),
             [
                 ...renderedCondition.validations,
                 ...childContent.validations,
@@ -1197,16 +1201,29 @@ function renderHydrateElementContent(
     }
 
     if (textFragment && !hasDynamicAttrs) {
-        // Simple text adoption: adoptText("coord", accessor, ref?)
         const accessor = textFragment.rendered.replace(/^dt\(/, '').replace(/\)$/, '');
-        const refSuffix = renderedRef.rendered ? `, ${renderedRef.rendered}` : '';
+        if (refName) {
+            // Element has both dynamic text and a ref — adopt the element with adoptElement
+            // and use adoptText for the text child. adoptText alone would not properly
+            // adopt the element (e.g., <button ref="x">{name}</button>).
+            const refSuffix = renderedRef.rendered ? `, ${renderedRef.rendered}` : '';
+            return new RenderFragment(
+                `${indent.firstLine}adoptElement("${coordinate}", ${attributes.rendered}, [adoptText("${coordinate}", ${accessor})]${refSuffix})`,
+                Imports.for(Import.adoptElement)
+                    .plus(Import.adoptText)
+                    .plus(textFragment.imports.minus(Import.dynamicText))
+                    .plus(renderedRef.imports)
+                    .plus(attributes.imports),
+                [...textFragment.validations, ...renderedRef.validations, ...attributes.validations],
+                renderedRef.refs,
+            );
+        }
+        // Simple text adoption: adoptText("coord", accessor)
         return new RenderFragment(
-            `${indent.firstLine}adoptText("${coordinate}", ${accessor}${refSuffix})`,
+            `${indent.firstLine}adoptText("${coordinate}", ${accessor})`,
             Imports.for(Import.adoptText)
-                .plus(textFragment.imports.minus(Import.dynamicText))
-                .plus(renderedRef.imports),
-            [...textFragment.validations, ...renderedRef.validations],
-            renderedRef.refs,
+                .plus(textFragment.imports.minus(Import.dynamicText)),
+            [...textFragment.validations],
         );
     }
 

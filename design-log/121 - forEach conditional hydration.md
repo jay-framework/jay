@@ -107,3 +107,35 @@ The `STATIC` sentinels mark the `<span class="name">` and `<button>` positions s
 1. `cd packages/jay-stack/dev-server && yarn vitest run test/hydration.test.ts -t "10c"` — all pass including SSR interactivity
 2. `cd packages/jay-stack/dev-server && yarn vitest run` — full suite passes
 3. `cd packages/compiler/compiler-jay-html && yarn vitest run` — all pass
+
+## Follow-up Fix: Conditional ref with dynamic text
+
+### Problem
+
+DL#121 fixed conditionals on elements with static text (`<span if="cond">Active</span>`). A remaining bug affected elements with both `if`, `ref`, AND dynamic text — e.g., `<button if="!inStock" ref="choiceButton">{name}</button>` inside a forEach.
+
+Discovered in the golf project's product card quick-option buttons.
+
+### Two bugs
+
+**Bug 1 — Adopt path:** `renderHydrateElementContent` at the `textFragment && !hasDynamicAttrs` branch (line ~1199) emitted `adoptText("S16/0", accessor, ref)`. `adoptText` adopts the text node, not the element — the button was never properly adopted. The ref happened to work accidentally because `adoptText` peeks the parent element and calls `ref.set(element)`, but the element's attributes and children weren't tracked.
+
+**Bug 2 — Create path:** The `hydrateConditional` create callback (line ~245) was built manually without the ref argument: `e('button', {class: '...'}, [dt(...)])`. When the condition toggled false→true at runtime, the newly created button had no ref wired, so click handlers didn't fire. This was the user-visible failure.
+
+### Fix
+
+**File:** `packages/compiler/compiler-jay-html/lib/jay-target/jay-html-compiler-hydrate.ts`
+
+1. **Adopt path:** When element has `textFragment` AND `refName`, emit `adoptElement("coord", {}, [adoptText("coord", accessor)], ref())` instead of `adoptText("coord", accessor, ref())`. The `adoptText` without ref is fine as a child — it just tracks the text content. The ref is wired to the element via `adoptElement`.
+
+2. **Create path:** Added `renderElementRef(element, createRenderContext)` to build the ref argument, appended as 4th arg to `e()`: `e('button', {attrs}, [children], refChoiceButton())`.
+
+### Test
+
+Added test `10e-conditional-ref-with-text` — forEach with two conditional buttons (`if="!inStock"` / `if="inStock"`), both with `ref="choiceButton"` and dynamic text `{name}`. The interactivity test clicks the button twice: first to toggle the condition (creates a new button via the create callback), then clicks the NEW button to verify the ref is wired.
+
+### Test Results
+
+- dev-server hydration: 634 passed
+- compiler-jay-html: 633 passed, 4 skipped
+- 3 existing fixtures updated (basics/refs, conditions-with-refs, duplicate-ref-different-branches)
