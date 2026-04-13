@@ -91,9 +91,12 @@ A page can have both a page contract and headless plugin contracts. The page con
 <!-- page.jay-html -->
 <html>
   <head>
-    <script type="application/jay-headless"
-      plugin="wix-stores" contract="product-page" key="product">
-    </script>
+    <script
+      type="application/jay-headless"
+      plugin="wix-stores"
+      contract="product-page"
+      key="product"
+    ></script>
   </head>
   <body>
     <!-- Page contract data -->

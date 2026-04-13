@@ -9,15 +9,12 @@ import { makeJayStackComponent, phaseOutput } from '@jay-framework/fullstack-com
 import type { HomePageContract } from './page.jay-contract.generated';
 
 export const page = makeJayStackComponent<HomePageContract>()
-    .withSlowlyRender(async () => {
-        return phaseOutput(
-            { heroTitle: 'Welcome', heroSubtitle: 'Build something great' },
-            {},
-        );
-    })
-    .withFastRender(async () => {
-        return phaseOutput({ featuredCount: 12 }, {});
-    });
+  .withSlowlyRender(async () => {
+    return phaseOutput({ heroTitle: 'Welcome', heroSubtitle: 'Build something great' }, {});
+  })
+  .withFastRender(async () => {
+    return phaseOutput({ featuredCount: 12 }, {});
+  });
 ```
 
 The export name must be `page` for page-level components.
@@ -28,23 +25,23 @@ For dynamic routes, use `withLoadParams` and access params via props:
 
 ```typescript
 export const page = makeJayStackComponent<ProductPageContract>()
-    .withServices(PRODUCTS_DB)
-    .withLoadParams(async function* (db) {
-        const products = await db.getAll();
-        yield products.map(p => ({ slug: p.slug }));
-    })
-    .withSlowlyRender(async (props, db) => {
-        const product = await db.getBySlug(props.slug);
-        if (!product) return notFound('Product not found');
-        return phaseOutput(
-            { title: product.name, description: product.desc },
-            { productId: product.id },
-        );
-    })
-    .withFastRender(async (props, db) => {
-        const price = await db.getPrice(props.carryForward.productId);
-        return phaseOutput({ price, inStock: price > 0 }, {});
-    });
+  .withServices(PRODUCTS_DB)
+  .withLoadParams(async function* (db) {
+    const products = await db.getAll();
+    yield products.map((p) => ({ slug: p.slug }));
+  })
+  .withSlowlyRender(async (props, db) => {
+    const product = await db.getBySlug(props.slug);
+    if (!product) return notFound('Product not found');
+    return phaseOutput(
+      { title: product.name, description: product.desc },
+      { productId: product.id },
+    );
+  })
+  .withFastRender(async (props, db) => {
+    const price = await db.getPrice(props.carryForward.productId);
+    return phaseOutput({ price, inStock: price > 0 }, {});
+  });
 ```
 
 ## Page Component with Interactive Phase
@@ -53,35 +50,35 @@ Add client-side interactivity:
 
 ```typescript
 export const page = makeJayStackComponent<ProductPageContract>()
-    .withServices(PRODUCTS_DB)
-    .withSlowlyRender(async (props, db) => {
-        // ... slow render
-    })
-    .withFastRender(async (props, db) => {
-        // ... fast render
-    })
-    .withInteractive(function ProductPage(props, refs) {
-        const [quantity, setQuantity] = createSignal(1);
+  .withServices(PRODUCTS_DB)
+  .withSlowlyRender(async (props, db) => {
+    // ... slow render
+  })
+  .withFastRender(async (props, db) => {
+    // ... fast render
+  })
+  .withInteractive(function ProductPage(props, refs) {
+    const [quantity, setQuantity] = createSignal(1);
 
-        refs.addToCart.onClick(async () => {
-            await addToCartAction({
-                productId: props.carryForward.productId,
-                quantity: quantity(),
-            });
-        });
-
-        refs.quantityInput.exec$((input) => {
-            input.addEventListener('change', (e) => {
-                setQuantity(parseInt((e.target as HTMLInputElement).value));
-            });
-        });
-
-        return {
-            render: () => ({
-                quantity: quantity(),
-            }),
-        };
+    refs.addToCart.onClick(async () => {
+      await addToCartAction({
+        productId: props.carryForward.productId,
+        quantity: quantity(),
+      });
     });
+
+    refs.quantityInput.exec$((input) => {
+      input.addEventListener('change', (e) => {
+        setQuantity(parseInt((e.target as HTMLInputElement).value));
+      });
+    });
+
+    return {
+      render: () => ({
+        quantity: quantity(),
+      }),
+    };
+  });
 ```
 
 ## Combining with Headless Plugins

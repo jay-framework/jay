@@ -10,8 +10,8 @@ Create a typed service marker:
 import { createJayService } from '@jay-framework/fullstack-component';
 
 export interface ProductsDatabase {
-    getProduct(slug: string): Promise<Product | null>;
-    search(query: string): Promise<Product[]>;
+  getProduct(slug: string): Promise<Product | null>;
+  search(query: string): Promise<Product[]>;
 }
 
 export const PRODUCTS_DB = createJayService<ProductsDatabase>('ProductsDatabase');
@@ -28,11 +28,10 @@ Initialize services and client-side state during app startup:
 ```typescript
 import { makeJayInit, registerService } from '@jay-framework/fullstack-component';
 
-export const init = makeJayInit()
-    .withServer(async () => {
-        const db = await connectToDatabase();
-        registerService(PRODUCTS_DB, db);
-    });
+export const init = makeJayInit().withServer(async () => {
+  const db = await connectToDatabase();
+  registerService(PRODUCTS_DB, db);
+});
 ```
 
 ### Server + Client init
@@ -41,26 +40,25 @@ The server can pass data to the client via the return value:
 
 ```typescript
 export const init = makeJayInit()
-    .withServer(async () => {
-        registerService(PRODUCTS_DB, await connectDb());
-        return { currency: 'USD', storeId: 'store-123' };
-    })
-    .withClient((data) => {
-        // data is typed: { currency: string; storeId: string }
-        registerReactiveGlobalContext(STORE_CONFIG, () => ({
-            currency: data.currency,
-            storeId: data.storeId,
-        }));
-    });
+  .withServer(async () => {
+    registerService(PRODUCTS_DB, await connectDb());
+    return { currency: 'USD', storeId: 'store-123' };
+  })
+  .withClient((data) => {
+    // data is typed: { currency: string; storeId: string }
+    registerReactiveGlobalContext(STORE_CONFIG, () => ({
+      currency: data.currency,
+      storeId: data.storeId,
+    }));
+  });
 ```
 
 ### Client-only init
 
 ```typescript
-export const init = makeJayInit()
-    .withClient(() => {
-        initAnalytics();
-    });
+export const init = makeJayInit().withClient(() => {
+  initAnalytics();
+});
 ```
 
 ## Using Services
@@ -69,21 +67,21 @@ export const init = makeJayInit()
 
 ```typescript
 makeJayStackComponent<MyContract>()
-    .withServices(PRODUCTS_DB)
-    .withSlowlyRender(async (props, db) => {
-        const product = await db.getProduct(props.slug);
-        return phaseOutput({ title: product.name }, {});
-    });
+  .withServices(PRODUCTS_DB)
+  .withSlowlyRender(async (props, db) => {
+    const product = await db.getProduct(props.slug);
+    return phaseOutput({ title: product.name }, {});
+  });
 ```
 
 ### In Actions
 
 ```typescript
 makeJayAction('products.search')
-    .withServices(PRODUCTS_DB)
-    .withHandler(async (input, db) => {
-        return db.search(input.query);
-    });
+  .withServices(PRODUCTS_DB)
+  .withHandler(async (input, db) => {
+    return db.search(input.query);
+  });
 ```
 
 ### In loadParams

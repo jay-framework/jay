@@ -37,17 +37,17 @@ There is no standalone "interactive" phase. Any tag with `type: interactive` (re
 
 ## Reference Docs
 
-| File                                                        | Topic                                                                                           |
-|-------------------------------------------------------------| ----------------------------------------------------------------------------------------------- |
-| [project-structure.md](project-structure.md)                | Project layout, styling patterns (CSS themes, design tokens), configuration files               |
-| [jay-html-syntax.md](jay-html-syntax.md)                    | Jay-HTML overview: philosophy, component types, nesting rules, links to sub-files               |
-| [jay-html-template-syntax.md](jay-html-template-syntax.md)  | Template markup: data binding, conditions (boolean, enum, numeric, &&/\|\|), loops, refs        |
-| [jay-html-components.md](jay-html-components.md)            | Component imports: headless (key/instance), headfull FS, nesting patterns                       |
-| [jay-html-styling.md](jay-html-styling.md)                  | Styling: inline, external, dynamic style bindings, class bindings                               |
-| [routing.md](routing.md)                                    | Directory-based routing: page structure, dynamic routes, route priority                         |
-| [contracts-and-plugins.md](contracts-and-plugins.md)        | Reading contracts, plugin.yaml, .jay-action files, and the materialized indexes                 |
-| [cli-commands.md](cli-commands.md)                          | CLI commands: setup, validate, params, action, dev server                                       |
-| `../references/<plugin>/`                                   | Pre-generated discovery data: product catalogs, collection schemas (from `jay-stack agent-kit`) |
+| File                                                       | Topic                                                                                           |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| [project-structure.md](project-structure.md)               | Project layout, styling patterns (CSS themes, design tokens), configuration files               |
+| [jay-html-syntax.md](jay-html-syntax.md)                   | Jay-HTML overview: philosophy, component types, nesting rules, links to sub-files               |
+| [jay-html-template-syntax.md](jay-html-template-syntax.md) | Template markup: data binding, conditions (boolean, enum, numeric, &&/\|\|), loops, refs        |
+| [jay-html-components.md](jay-html-components.md)           | Component imports: headless (key/instance), headfull FS, nesting patterns                       |
+| [jay-html-styling.md](jay-html-styling.md)                 | Styling: inline, external, dynamic style bindings, class bindings                               |
+| [routing.md](routing.md)                                   | Directory-based routing: page structure, dynamic routes, route priority                         |
+| [contracts-and-plugins.md](contracts-and-plugins.md)       | Reading contracts, plugin.yaml, .jay-action files, and the materialized indexes                 |
+| [cli-commands.md](cli-commands.md)                         | CLI commands: setup, validate, params, action, dev server                                       |
+| `../references/<plugin>/`                                  | Pre-generated discovery data: product catalogs, collection schemas (from `jay-stack agent-kit`) |
 
 ## Quick Start
 

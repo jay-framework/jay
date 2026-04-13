@@ -45,17 +45,17 @@ The project can have an `init.ts` for project-level initialization:
 import { makeJayInit, registerService } from '@jay-framework/fullstack-component';
 
 export const init = makeJayInit()
-    .withServer(async () => {
-        // Register project-level services
-        registerService(MY_SERVICE, createMyService());
+  .withServer(async () => {
+    // Register project-level services
+    registerService(MY_SERVICE, createMyService());
 
-        // Return data for client
-        return { locale: 'en-US' };
-    })
-    .withClient((data) => {
-        // Client-side init
-        console.log('Locale:', data.locale);
-    });
+    // Return data for client
+    return { locale: 'en-US' };
+  })
+  .withClient((data) => {
+    // Client-side init
+    console.log('Locale:', data.locale);
+  });
 ```
 
 Init runs after all plugin inits, in dependency order.

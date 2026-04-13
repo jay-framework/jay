@@ -135,8 +135,7 @@ name: product-page
 description: Full product detail page with gallery, options, and add-to-cart. Use for individual product routes like /products/[slug].
 params:
   slug: string
-tags:
-  ...
+tags: ...
 ```
 
 The `agent-kit` command extracts descriptions into the materialized index.

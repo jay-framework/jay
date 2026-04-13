@@ -10,8 +10,8 @@ Returns ViewState data and optional carry-forward data for the next phase:
 import { phaseOutput } from '@jay-framework/fullstack-component';
 
 return phaseOutput(
-    { title: 'My Product', price: 29.99 },   // ViewState — sent to template
-    { productId: 'abc123' },                   // CarryForward — passed to next phase only
+  { title: 'My Product', price: 29.99 }, // ViewState — sent to template
+  { productId: 'abc123' }, // CarryForward — passed to next phase only
 );
 ```
 
@@ -23,8 +23,12 @@ Return errors to stop rendering and show an error page:
 
 ```typescript
 import {
-    notFound, badRequest, unauthorized, forbidden,
-    serverError5xx, clientError4xx,
+  notFound,
+  badRequest,
+  unauthorized,
+  forbidden,
+  serverError5xx,
+  clientError4xx,
 } from '@jay-framework/fullstack-component';
 
 // 404
@@ -64,17 +68,16 @@ import { RenderPipeline } from '@jay-framework/fullstack-component';
 
 const Pipeline = RenderPipeline.for<SlowViewState, CarryForward>();
 
-return Pipeline
-    .try(() => db.getProduct(props.slug))
-    .map(product => product ?? Pipeline.notFound('Product not found'))
-    .map(async product => ({
-        ...product,
-        reviews: await db.getReviews(product.id),
-    }))
-    .toPhaseOutput(product => ({
-        viewState: { title: product.name, price: product.price },
-        carryForward: { productId: product.id },
-    }));
+return Pipeline.try(() => db.getProduct(props.slug))
+  .map((product) => product ?? Pipeline.notFound('Product not found'))
+  .map(async (product) => ({
+    ...product,
+    reviews: await db.getReviews(product.id),
+  }))
+  .toPhaseOutput((product) => ({
+    viewState: { title: product.name, price: product.price },
+    carryForward: { productId: product.id },
+  }));
 ```
 
 ### Pipeline Factory Methods
@@ -82,15 +85,15 @@ return Pipeline
 ```typescript
 const P = RenderPipeline.for<VS, CF>();
 
-P.ok(value)                    // Wrap a value
-P.try(() => fetchData())       // Wrap a function (catches errors)
-P.from(previousPhaseResult)    // Continue from a prior phase result
-P.notFound('message')          // Error pipeline
-P.badRequest('message')        // Error pipeline
-P.unauthorized('message')      // Error pipeline
-P.forbidden('message')         // Error pipeline
-P.serverError(500, 'message')  // Error pipeline
-P.redirect(301, '/path')       // Redirect pipeline
+P.ok(value); // Wrap a value
+P.try(() => fetchData()); // Wrap a function (catches errors)
+P.from(previousPhaseResult); // Continue from a prior phase result
+P.notFound('message'); // Error pipeline
+P.badRequest('message'); // Error pipeline
+P.unauthorized('message'); // Error pipeline
+P.forbidden('message'); // Error pipeline
+P.serverError(500, 'message'); // Error pipeline
+P.redirect(301, '/path'); // Redirect pipeline
 ```
 
 ### Pipeline Chain Methods

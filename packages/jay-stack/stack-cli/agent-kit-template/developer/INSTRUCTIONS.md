@@ -18,16 +18,16 @@ The developer sets up the project, configures plugins, creates page-level compon
 
 ## Guides
 
-| File                                             | Topic                                                      |
-| ------------------------------------------------ | ---------------------------------------------------------- |
-| [project-structure.md](project-structure.md)     | Directory layout, configuration files                      |
-| [routing.md](routing.md)                         | Directory-based routing, dynamic routes                    |
-| [configuration.md](configuration.md)             | .jay file, plugin config, init.ts                          |
-| [page-contracts.md](page-contracts.md)           | Page-level contracts (page.jay-contract)                   |
-| [page-components.md](page-components.md)         | page.ts: makeJayStackComponent for pages                   |
-| [component-state.md](component-state.md)         | createSignal, createMemo, createEffect, createDerivedArray |
-| [component-refs.md](component-refs.md)           | Refs, collection refs, element types                       |
-| [component-data.md](component-data.md)           | Immutable data, JSON Patch, patching                       |
-| [render-results.md](render-results.md)           | phaseOutput, RenderPipeline, errors, redirects             |
-| [cli-commands.md](cli-commands.md)               | CLI commands: setup, validate, dev, agent-kit              |
-| `../references/<plugin>/`                        | Plugin reference data                                      |
+| File                                         | Topic                                                      |
+| -------------------------------------------- | ---------------------------------------------------------- |
+| [project-structure.md](project-structure.md) | Directory layout, configuration files                      |
+| [routing.md](routing.md)                     | Directory-based routing, dynamic routes                    |
+| [configuration.md](configuration.md)         | .jay file, plugin config, init.ts                          |
+| [page-contracts.md](page-contracts.md)       | Page-level contracts (page.jay-contract)                   |
+| [page-components.md](page-components.md)     | page.ts: makeJayStackComponent for pages                   |
+| [component-state.md](component-state.md)     | createSignal, createMemo, createEffect, createDerivedArray |
+| [component-refs.md](component-refs.md)       | Refs, collection refs, element types                       |
+| [component-data.md](component-data.md)       | Immutable data, JSON Patch, patching                       |
+| [render-results.md](render-results.md)       | phaseOutput, RenderPipeline, errors, redirects             |
+| [cli-commands.md](cli-commands.md)           | CLI commands: setup, validate, dev, agent-kit              |
+| `../references/<plugin>/`                    | Plugin reference data                                      |

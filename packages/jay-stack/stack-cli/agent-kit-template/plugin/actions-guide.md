@@ -8,11 +8,11 @@ Actions provide RPC-style server endpoints for client-to-server communication.
 import { makeJayAction } from '@jay-framework/fullstack-component';
 
 export const addToCart = makeJayAction('cart.addToCart')
-    .withServices(CART_SERVICE)
-    .withHandler(async (input: { productId: string; quantity: number }, cartService) => {
-        const cart = await cartService.addItem(input.productId, input.quantity);
-        return { cartItemCount: cart.items.length };
-    });
+  .withServices(CART_SERVICE)
+  .withHandler(async (input: { productId: string; quantity: number }, cartService) => {
+    const cart = await cartService.addItem(input.productId, input.quantity);
+    return { cartItemCount: cart.items.length };
+  });
 ```
 
 ## makeJayQuery — Reads (GET)
@@ -23,24 +23,25 @@ Queries use GET and support caching:
 import { makeJayQuery } from '@jay-framework/fullstack-component';
 
 export const searchProducts = makeJayQuery('products.search')
-    .withServices(PRODUCTS_SERVICE)
-    .withCaching({ maxAge: 60 })
-    .withHandler(async (input: { query: string; page?: number }, productsDb) => {
-        const results = await productsDb.search(input.query, input.page);
-        return { products: results.items, totalCount: results.total };
-    });
+  .withServices(PRODUCTS_SERVICE)
+  .withCaching({ maxAge: 60 })
+  .withHandler(async (input: { query: string; page?: number }, productsDb) => {
+    const results = await productsDb.search(input.query, input.page);
+    return { products: results.items, totalCount: results.total };
+  });
 ```
 
 ## Builder API
 
 ```typescript
 makeJayAction('name')
-    .withServices(SERVICE1, SERVICE2)           // Inject services
-    .withMethod('PUT')                          // Override HTTP method (default: POST for actions)
-    .withCaching({ maxAge: 60 })                // Enable caching (queries only)
-    .withHandler(async (input, svc1, svc2) => { // Define handler
-        return result;
-    });
+  .withServices(SERVICE1, SERVICE2) // Inject services
+  .withMethod('PUT') // Override HTTP method (default: POST for actions)
+  .withCaching({ maxAge: 60 }) // Enable caching (queries only)
+  .withHandler(async (input, svc1, svc2) => {
+    // Define handler
+    return result;
+  });
 ```
 
 ## ActionError
@@ -103,16 +104,16 @@ outputSchema:
 
 ### Jay-Type Notation for Schemas
 
-| Notation                    | Meaning                    |
-| --------------------------- | -------------------------- |
-| `prop: string`              | Required string            |
-| `prop?: number`             | Optional number            |
-| `prop: boolean`             | Required boolean           |
-| `prop: enum(a \| b \| c)`  | Required enum              |
-| `prop:` + nested block      | Nested object              |
-| `prop:` + `- child: type`  | Array of objects           |
-| `prop: record(T)`          | Record with typed values   |
-| `prop: importedName`       | Type from `import:` block  |
+| Notation                  | Meaning                   |
+| ------------------------- | ------------------------- |
+| `prop: string`            | Required string           |
+| `prop?: number`           | Optional number           |
+| `prop: boolean`           | Required boolean          |
+| `prop: enum(a \| b \| c)` | Required enum             |
+| `prop:` + nested block    | Nested object             |
+| `prop:` + `- child: type` | Array of objects          |
+| `prop: record(T)`         | Record with typed values  |
+| `prop: importedName`      | Type from `import:` block |
 
 ## Type Helpers
 

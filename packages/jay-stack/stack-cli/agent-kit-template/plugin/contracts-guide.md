@@ -28,9 +28,9 @@ tags:
 ```yaml
 - tag: productName
   type: data
-  dataType: string       # string (default), number, boolean, date
-  required: true         # optional, defaults to false
-  phase: slow            # slow, fast, or fast+interactive
+  dataType: string # string (default), number, boolean, date
+  required: true # optional, defaults to false
+  phase: slow # slow, fast, or fast+interactive
   description: Display name
 ```
 
@@ -48,7 +48,7 @@ tags:
 ```yaml
 - tag: addToCart
   type: interactive
-  elementType: HTMLButtonElement   # HTMLAnchorElement, HTMLInputElement, HTMLSelectElement, etc.
+  elementType: HTMLButtonElement # HTMLAnchorElement, HTMLInputElement, HTMLSelectElement, etc.
 ```
 
 Interactive tags are always `fast+interactive` — do not specify a phase.
@@ -65,6 +65,7 @@ A tag can be both data and interactive:
 ### `sub-contract` — Nested objects
 
 Inline:
+
 ```yaml
 - tag: pricing
   type: sub-contract
@@ -78,6 +79,7 @@ Inline:
 ```
 
 Linked (reference another contract file):
+
 ```yaml
 - tag: author
   type: sub-contract
@@ -90,7 +92,7 @@ Linked (reference another contract file):
 - tag: items
   type: sub-contract
   repeated: true
-  trackBy: id           # Required: identifies each item
+  trackBy: id # Required: identifies each item
   phase: fast
   tags:
     - tag: id
@@ -111,13 +113,13 @@ Wrap any tag in `Promise<T>` with `async: true`:
 - tag: reviews
   type: data
   async: true
-  dataType: string        # Compiles to Promise<string>
+  dataType: string # Compiles to Promise<string>
 
 - tag: relatedProducts
   type: sub-contract
   repeated: true
   trackBy: id
-  async: true             # Compiles to Promise<Array<...>>
+  async: true # Compiles to Promise<Array<...>>
   tags:
     - tag: id
       type: data
@@ -128,13 +130,14 @@ Wrap any tag in `Promise<T>` with `async: true`:
 
 Each tag has a phase that determines when its data is available:
 
-| Phase              | When               | Use For                                           |
-| ------------------ | ------------------ | ------------------------------------------------- |
-| `slow`             | Build time (SSG)   | Static content, SEO data, product names           |
-| `fast`             | Request time (SSR) | Per-request data, live pricing, stock              |
-| `fast+interactive` | Request + client   | Data that also updates on the client               |
+| Phase              | When               | Use For                                 |
+| ------------------ | ------------------ | --------------------------------------- |
+| `slow`             | Build time (SSG)   | Static content, SEO data, product names |
+| `fast`             | Request time (SSR) | Per-request data, live pricing, stock   |
+| `fast+interactive` | Request + client   | Data that also updates on the client    |
 
 **How to choose:**
+
 - Can the data be known at build time? Use `slow`
 - Does it change per request (user, time, session)? Use `fast`
 - Does it also update on the client after interaction? Use `fast+interactive`
@@ -156,7 +159,7 @@ props:
     description: The product to display
   - name: showPricing
     type: boolean
-    default: "true"
+    default: 'true'
 ```
 
 ### Params — URL route segments
@@ -165,9 +168,9 @@ Params come from dynamic route segments (`[slug]`, `[[lang]]`, `[...path]`). Use
 
 ```yaml
 params:
-  slug: string       # required — from [slug]
-  lang: string?      # optional — from [[lang]]
-  path: string[]     # catch-all — from [...path]
+  slug: string # required — from [slug]
+  lang: string? # optional — from [[lang]]
+  path: string[] # catch-all — from [...path]
 ```
 
 ## Description Field

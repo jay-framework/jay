@@ -27,10 +27,10 @@ import { createPatchableSignal } from '@jay-framework/component';
 import { REPLACE, ADD, REMOVE } from '@jay-framework/json-patch';
 
 const [state, setState, patchState] = createPatchableSignal({
-    title: 'Product',
-    price: 29.99,
-    tags: ['sale', 'featured'],
-    details: { color: 'red', size: 'M' },
+  title: 'Product',
+  price: 29.99,
+  tags: ['sale', 'featured'],
+  details: { color: 'red', size: 'M' },
 });
 ```
 
@@ -46,14 +46,14 @@ patchState({ op: REPLACE, path: ['details', 'color'], value: 'blue' });
 **ADD** — Add a new field or array item:
 
 ```typescript
-patchState({ op: ADD, path: ['tags', 1], value: 'new-tag' });  // Insert at index 1
+patchState({ op: ADD, path: ['tags', 1], value: 'new-tag' }); // Insert at index 1
 patchState({ op: ADD, path: ['details', 'weight'], value: '500g' });
 ```
 
 **REMOVE** — Remove a field or array item:
 
 ```typescript
-patchState({ op: REMOVE, path: ['tags', 0] });  // Remove first tag
+patchState({ op: REMOVE, path: ['tags', 0] }); // Remove first tag
 patchState({ op: REMOVE, path: ['details', 'size'] });
 ```
 
@@ -62,8 +62,8 @@ patchState({ op: REMOVE, path: ['details', 'size'] });
 ```typescript
 import { MOVE } from '@jay-framework/json-patch';
 
-patchState({ op: MOVE, from: ['tags', 0], path: ['tags', 2] });  // Reorder array item
-patchState({ op: MOVE, from: ['details', 'color'], path: ['primaryColor'] });  // Relocate field
+patchState({ op: MOVE, from: ['tags', 0], path: ['tags', 2] }); // Reorder array item
+patchState({ op: MOVE, from: ['details', 'color'], path: ['primaryColor'] }); // Relocate field
 ```
 
 ### Multiple Patches
@@ -72,8 +72,8 @@ Apply multiple patches at once — the framework batches them into a single upda
 
 ```typescript
 patchState(
-    { op: REPLACE, path: ['price'], value: 19.99 },
-    { op: REPLACE, path: ['details', 'color'], value: 'blue' },
+  { op: REPLACE, path: ['price'], value: 19.99 },
+  { op: REPLACE, path: ['details', 'color'], value: 'blue' },
 );
 ```
 
@@ -92,15 +92,16 @@ Transform an array reactively with smart caching. Only remaps items that actuall
 import { createDerivedArray } from '@jay-framework/component';
 
 const displayProducts = createDerivedArray(
-    () => products(),
-    (item, index, length) => ({
-        label: `${item().name} - ${formatPrice(item().price)}`,
-        position: `${index() + 1} of ${length()}`,
-    }),
+  () => products(),
+  (item, index, length) => ({
+    label: `${item().name} - ${formatPrice(item().price)}`,
+    position: `${index() + 1} of ${length()}`,
+  }),
 );
 ```
 
 Key behavior:
+
 - If an item's object identity hasn't changed, the cached mapped result is reused
 - `index()` and `length()` are tracked — if you don't call them, changes to index/length won't trigger a remap
 - Returns a `Getter<U[]>` — read with `displayProducts()`

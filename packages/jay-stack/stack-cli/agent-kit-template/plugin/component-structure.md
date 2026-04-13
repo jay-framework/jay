@@ -9,23 +9,20 @@ import { makeJayStackComponent, phaseOutput } from '@jay-framework/fullstack-com
 import type { MyContract } from './my-contract.generated';
 
 export const myComponent = makeJayStackComponent<MyContract>()
-    .withSlowlyRender(async (props) => {
-        const data = await fetchStaticData();
-        return phaseOutput(
-            { title: data.title, description: data.description },  // ViewState
-            { productId: data.id },                                 // CarryForward
-        );
-    })
-    .withFastRender(async (props) => {
-        return phaseOutput(
-            { price: await getPrice(), inStock: true },
-            {},
-        );
-    })
-    .withInteractive(function MyComponent(props, refs) {
-        // Client-side hooks here
-        return { render: () => ({}) };
-    });
+  .withSlowlyRender(async (props) => {
+    const data = await fetchStaticData();
+    return phaseOutput(
+      { title: data.title, description: data.description }, // ViewState
+      { productId: data.id }, // CarryForward
+    );
+  })
+  .withFastRender(async (props) => {
+    return phaseOutput({ price: await getPrice(), inStock: true }, {});
+  })
+  .withInteractive(function MyComponent(props, refs) {
+    // Client-side hooks here
+    return { render: () => ({}) };
+  });
 ```
 
 ## Builder API
@@ -35,8 +32,7 @@ export const myComponent = makeJayStackComponent<MyContract>()
 Declare the props type (must match contract `props`):
 
 ```typescript
-makeJayStackComponent<MyContract>()
-    .withProps<{ productId: string; currency?: string }>()
+makeJayStackComponent<MyContract>().withProps<{ productId: string; currency?: string }>();
 ```
 
 ### `.withServices(...markers)`
@@ -134,6 +130,7 @@ The interactive phase runs in the browser. Use hooks here (see component-state.m
 ## Render Return Types
 
 Each phase can return:
+
 - `phaseOutput(viewState, carryForward)` — success
 - `notFound()`, `badRequest()`, `unauthorized()`, `forbidden()` — client errors
 - `serverError5xx(status, message)` — server errors
@@ -155,8 +152,7 @@ props:
 
 ```typescript
 // Component
-makeJayStackComponent<MyContract>()
-    .withProps<{ productId: string }>()
+makeJayStackComponent<MyContract>().withProps<{ productId: string }>();
 ```
 
 ## Params and Contract Alignment

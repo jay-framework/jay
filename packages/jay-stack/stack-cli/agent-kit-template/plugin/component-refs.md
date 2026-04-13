@@ -27,11 +27,13 @@ A ref maps to one DOM element:
 Refs provide type-safe access to the DOM element:
 
 ```typescript
-refs.submitButton.onClick(() => { /* ... */ });
+refs.submitButton.onClick(() => {
+  /* ... */
+});
 
 // exec$ gives direct access to the element and current ViewState
 refs.submitButton.exec$((element, viewState) => {
-    element.disabled = viewState.isSubmitting;
+  element.disabled = viewState.isSubmitting;
 });
 ```
 
@@ -41,7 +43,7 @@ When an interactive tag is inside a `repeated` sub-contract, the ref becomes a c
 
 ```html
 <div forEach="items" trackBy="id">
-    <button ref="itemButton$">Click</button>
+  <button ref="itemButton$">Click</button>
 </div>
 ```
 
@@ -67,7 +69,7 @@ The `$` is stripped from the name in the contract and component code:
 ```typescript
 // Map over all items in the collection
 const labels = refs.itemButton.map((proxy, viewState, coordinate) => {
-    return viewState.name;
+  return viewState.name;
 });
 
 // Find a specific item
@@ -75,7 +77,7 @@ const target = refs.itemButton.find((viewState) => viewState.id === 'target-id')
 
 // Find by coordinate
 const target = refs.itemButton.find((viewState, coordinate) =>
-    sameCoordinate(coordinate, ['item-2', 'itemButton']),
+  sameCoordinate(coordinate, ['item-2', 'itemButton']),
 );
 ```
 

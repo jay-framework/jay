@@ -16,20 +16,20 @@ A plugin provides headless components (data + interactions, no UI) that project 
 
 ## Guides
 
-| File                                             | Topic                                                             |
-| ------------------------------------------------ | ----------------------------------------------------------------- |
-| [contracts-guide.md](contracts-guide.md)         | Contract format: tags, types, phases, props, params, sub-contracts |
-| [plugin-structure.md](plugin-structure.md)       | plugin.yaml, package layout, exports                              |
-| [component-structure.md](component-structure.md) | makeJayStackComponent, builder API, three-phase rendering         |
+| File                                             | Topic                                                                   |
+| ------------------------------------------------ | ----------------------------------------------------------------------- |
+| [contracts-guide.md](contracts-guide.md)         | Contract format: tags, types, phases, props, params, sub-contracts      |
+| [plugin-structure.md](plugin-structure.md)       | plugin.yaml, package layout, exports                                    |
+| [component-structure.md](component-structure.md) | makeJayStackComponent, builder API, three-phase rendering               |
 | [component-state.md](component-state.md)         | createSignal, createMemo, createEffect, createDerivedArray, createEvent |
-| [component-refs.md](component-refs.md)           | Refs, collection refs, element types                              |
-| [component-data.md](component-data.md)           | Immutable data, JSON Patch, createPatchableSignal                 |
-| [component-context.md](component-context.md)     | Context hooks: provide, reactive, global                          |
-| [render-results.md](render-results.md)           | phaseOutput, RenderPipeline, errors, redirects                    |
-| [actions-guide.md](actions-guide.md)             | makeJayAction, makeJayQuery, .jay-action files                    |
-| [services-guide.md](services-guide.md)           | createJayService, makeJayInit                                     |
-| [validation.md](validation.md)                   | jay-stack validate-plugin usage                                   |
-| `../references/<plugin>/`                        | Plugin reference data                                             |
+| [component-refs.md](component-refs.md)           | Refs, collection refs, element types                                    |
+| [component-data.md](component-data.md)           | Immutable data, JSON Patch, createPatchableSignal                       |
+| [component-context.md](component-context.md)     | Context hooks: provide, reactive, global                                |
+| [render-results.md](render-results.md)           | phaseOutput, RenderPipeline, errors, redirects                          |
+| [actions-guide.md](actions-guide.md)             | makeJayAction, makeJayQuery, .jay-action files                          |
+| [services-guide.md](services-guide.md)           | createJayService, makeJayInit                                           |
+| [validation.md](validation.md)                   | jay-stack validate-plugin usage                                         |
+| `../references/<plugin>/`                        | Plugin reference data                                                   |
 
 ## Key Principles
 
