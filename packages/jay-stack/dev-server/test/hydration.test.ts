@@ -1694,9 +1694,7 @@ describe('hydration', () => {
                 // Out-of-stock item has .out-of-stock button
                 const item1Button = await items[1].$('button.out-of-stock');
                 expect(item1Button).toBeTruthy();
-                expect(await item1Button!.textContent()).toEqual(
-                    expect.stringContaining('Medium'),
-                );
+                expect(await item1Button!.textContent()).toEqual(expect.stringContaining('Medium'));
             },
             interactivityChecks: async (page) => {
                 // Click the out-of-stock button for "Medium" — should toggle to in-stock

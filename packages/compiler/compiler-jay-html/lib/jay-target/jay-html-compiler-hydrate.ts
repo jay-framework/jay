@@ -1214,15 +1214,18 @@ function renderHydrateElementContent(
                     .plus(textFragment.imports.minus(Import.dynamicText))
                     .plus(renderedRef.imports)
                     .plus(attributes.imports),
-                [...textFragment.validations, ...renderedRef.validations, ...attributes.validations],
+                [
+                    ...textFragment.validations,
+                    ...renderedRef.validations,
+                    ...attributes.validations,
+                ],
                 renderedRef.refs,
             );
         }
         // Simple text adoption: adoptText("coord", accessor)
         return new RenderFragment(
             `${indent.firstLine}adoptText("${coordinate}", ${accessor})`,
-            Imports.for(Import.adoptText)
-                .plus(textFragment.imports.minus(Import.dynamicText)),
+            Imports.for(Import.adoptText).plus(textFragment.imports.minus(Import.dynamicText)),
             [...textFragment.validations],
         );
     }
