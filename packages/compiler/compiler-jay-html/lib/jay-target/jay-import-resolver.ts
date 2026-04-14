@@ -58,7 +58,7 @@ export interface JayImportResolver {
     readJayHtml(
         importingModuleDir: string,
         src: string,
-    ): { content: string; componentDir: string } | null;
+    ): { content: string; componentDir: string; filePath: string } | null;
 }
 
 export const JAY_IMPORT_RESOLVER: JayImportResolver = {
@@ -158,13 +158,13 @@ export const JAY_IMPORT_RESOLVER: JayImportResolver = {
     readJayHtml(
         importingModuleDir: string,
         src: string,
-    ): { content: string; componentDir: string } | null {
+    ): { content: string; componentDir: string; filePath: string } | null {
         const resolvedPath = src.startsWith('.') ? path.resolve(importingModuleDir, src) : src;
         // Try <src>.jay-html first (file-based convention)
         const jayHtmlPath = resolvedPath + '.jay-html';
         try {
             const content = fs.readFileSync(jayHtmlPath, 'utf-8');
-            return { content, componentDir: path.dirname(jayHtmlPath) };
+            return { content, componentDir: path.dirname(jayHtmlPath), filePath: jayHtmlPath };
         } catch {
             // fall through
         }
@@ -173,7 +173,11 @@ export const JAY_IMPORT_RESOLVER: JayImportResolver = {
             path.resolve(resolvedPath, path.basename(resolvedPath)) + '.jay-html';
         try {
             const content = fs.readFileSync(dirJayHtmlPath, 'utf-8');
-            return { content, componentDir: path.dirname(dirJayHtmlPath) };
+            return {
+                content,
+                componentDir: path.dirname(dirJayHtmlPath),
+                filePath: dirJayHtmlPath,
+            };
         } catch {
             return null;
         }

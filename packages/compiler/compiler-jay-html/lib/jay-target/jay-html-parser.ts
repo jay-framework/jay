@@ -883,6 +883,8 @@ interface HeadfullFSParseResult {
     headlessImports: JayHeadlessImports[];
     css?: string;
     linkedCssFiles: string[];
+    /** Absolute paths to headfull component jay-html files (including nested) */
+    linkedComponentFiles: string[];
 }
 
 /**
@@ -909,6 +911,7 @@ async function parseHeadfullFSImports(
     const headlessImports: JayHeadlessImports[] = [];
     const cssParts: string[] = [];
     const linkedCssFiles: string[] = [];
+    const linkedComponentFiles: string[] = [];
 
     for (const element of elements) {
         const src = element.getAttribute('src');
@@ -977,6 +980,9 @@ async function parseHeadfullFSImports(
             );
             continue;
         }
+
+        // Track the component jay-html file for dev-server watching
+        linkedComponentFiles.push(jayHtmlResult.filePath);
 
         // Load the contract — try resolveDir (sourceDir or filePath), then projectRoot,
         // then componentDir. For pre-rendered files with deep relative paths, filePath and
@@ -1104,6 +1110,7 @@ async function parseHeadfullFSImports(
                 cssParts.push(nestedResult.css);
             }
             linkedCssFiles.push(...nestedResult.linkedCssFiles);
+            linkedComponentFiles.push(...nestedResult.linkedComponentFiles);
         }
 
         // Inject template: find matching <jay:Name> tags in parent body
@@ -1238,6 +1245,7 @@ async function parseHeadfullFSImports(
         headlessImports,
         css: cssParts.length > 0 ? cssParts.join('\n\n') : undefined,
         linkedCssFiles,
+        linkedComponentFiles,
     };
 }
 
@@ -1512,6 +1520,7 @@ export async function parseJayFile(
     if (headfullFSResult.linkedCssFiles.length > 0) {
         allLinkedCssFiles = [...allLinkedCssFiles, ...headfullFSResult.linkedCssFiles];
     }
+    const allLinkedComponentFiles = headfullFSResult.linkedComponentFiles;
 
     // Extract trackBy information from contracts for deep merge
     const { serverTrackByMap, clientTrackByMap } = extractTrackByMaps(
@@ -1531,6 +1540,8 @@ export async function parseJayFile(
             headLinks,
             css,
             linkedCssFiles: allLinkedCssFiles.length > 0 ? allLinkedCssFiles : undefined,
+            linkedComponentFiles:
+                allLinkedComponentFiles.length > 0 ? allLinkedComponentFiles : undefined,
             filename: normalizedFileName,
             contract: jayYaml.parsedContract,
             contractRef: jayYaml.contractRef,

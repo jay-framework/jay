@@ -10,14 +10,10 @@
         <div class="item" forEach="items" trackBy="_id">
             <button class="choice out-of-stock"
                     if="!inStock"
-                    ref="choiceButton">
-                {name}
-            </button>
+                    ref="choiceButton">{name}</button>
             <button class="choice"
                     if="inStock"
-                    ref="choiceButton">
-                {name}
-            </button>
+                    ref="choiceButton">{name}</button>
         </div>
     </div>
 </body>

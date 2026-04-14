@@ -62,8 +62,8 @@ import {
 import { WithValidations } from '@jay-framework/compiler-shared';
 import { getLogger, getDevLogger, type RequestTiming } from '@jay-framework/logger';
 
-/** Callback to register linked CSS files for watching. Set by setupSlowRenderCacheInvalidation. */
-let _watchLinkedCssFiles: (cssFiles: string[]) => void = () => {};
+/** Callback to register linked files for watching. Set by setupSlowRenderCacheInvalidation. */
+let _watchLinkedFiles: (files: string[]) => void = () => {};
 
 async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
     return await scanRoutes(pagesBaseFolder, {
@@ -312,11 +312,16 @@ async function handleCachedRequest(
         return;
     }
 
-    const { parts: pageParts, clientTrackByMap, usedPackages, linkedCssFiles } =
-        pagePartsResult.val;
+    const {
+        parts: pageParts,
+        clientTrackByMap,
+        usedPackages,
+        linkedCssFiles,
+        linkedComponentFiles,
+    } = pagePartsResult.val;
 
-    // Register linked CSS files for watching (absolute paths from jay-html parser)
-    if (linkedCssFiles?.length) _watchLinkedCssFiles(linkedCssFiles);
+    // Register linked files for watching (absolute paths from jay-html parser)
+    _watchLinkedFiles([...(linkedCssFiles || []), ...(linkedComponentFiles || [])]);
 
     const pluginsForPage = filterPluginsForPage(
         allPluginClientInits,
@@ -414,9 +419,9 @@ async function handlePreRenderRequest(
         return;
     }
 
-    // Register linked CSS files for watching
-    if (initialPartsResult.val.linkedCssFiles?.length)
-        _watchLinkedCssFiles(initialPartsResult.val.linkedCssFiles);
+    // Register linked files for watching
+    const { linkedCssFiles: initCss, linkedComponentFiles: initComps } = initialPartsResult.val;
+    _watchLinkedFiles([...(initCss || []), ...(initComps || [])]);
 
     // Run slow phase to get slowViewState and carryForward
     // Includes key-based parts slow render + pre-render pipeline (instance slow render)
@@ -550,10 +555,11 @@ async function handleClientOnlyRequest(
         discoveredInstances,
         forEachInstances,
         linkedCssFiles,
+        linkedComponentFiles,
     } = pagePartsResult.val;
 
-    // Register linked CSS files for watching
-    _watchLinkedCssFiles(linkedCssFiles);
+    // Register linked files for watching
+    _watchLinkedFiles([...(linkedCssFiles || []), ...(linkedComponentFiles || [])]);
 
     const pluginsForPage = filterPluginsForPage(
         allPluginClientInits,
@@ -1037,8 +1043,8 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     const slowRenderCache = new SlowRenderCache(slowRenderCacheDir, pagesRootFolder);
 
     // Set up file watching for slow render cache invalidation.
-    // Sets _watchLinkedCssFiles callback for registering CSS files after SSR.
-    _watchLinkedCssFiles = setupSlowRenderCacheInvalidation(
+    // Sets _watchLinkedFiles callback for registering CSS/component files after SSR.
+    _watchLinkedFiles = setupSlowRenderCacheInvalidation(
         vite,
         slowRenderCache,
         pagesRootFolder,
@@ -1142,49 +1148,46 @@ function setupSlowRenderCacheInvalidation(
     cache: SlowRenderCache,
     pagesRootFolder: string,
     projectRootFolder: string,
-): (cssFiles: string[]) => void {
-    // Track watched CSS files to avoid re-adding. Vite's root is pagesRootFolder
-    // (e.g., src/pages/), so CSS files outside it (src/styles/, src/components/)
-    // are invisible to the watcher unless explicitly added with absolute paths.
-    const watchedCssFiles = new Set<string>();
+): (files: string[]) => void {
+    // Track watched files (CSS, component jay-html) to avoid re-adding.
+    // Vite's root is pagesRootFolder (e.g., src/pages/), so files outside it
+    // (src/styles/, src/components/) are invisible to the watcher unless
+    // explicitly added with absolute paths.
+    const watchedFiles = new Set<string>();
 
     /**
-     * Register linked CSS files for watching. Called after loadPageParts()
-     * so we watch exactly the CSS files referenced by jay-html pages.
+     * Register linked files for watching. Called after loadPageParts()
+     * so we watch exactly the files referenced by jay-html pages.
      */
-    const watchLinkedCssFiles = (cssFiles: string[]) => {
-        for (const cssFile of cssFiles) {
-            if (watchedCssFiles.has(cssFile)) continue;
-            watchedCssFiles.add(cssFile);
-            vite.watcher.add(cssFile);
-            getLogger().info(`[SlowRender] Watching CSS: ${cssFile}`);
+    const watchLinkedFiles = (files: string[]) => {
+        for (const file of files) {
+            if (watchedFiles.has(file)) continue;
+            watchedFiles.add(file);
+            vite.watcher.add(file);
+            getLogger().info(`[SlowRender] Watching: ${file}`);
         }
     };
 
     vite.watcher.on('change', (changedPath) => {
-        // CSS files linked from jay-html (or nested headfull FS components).
-        // The CSS content is inlined in the SSR output by the parser, so the
-        // pre-rendered cache must be invalidated when CSS changes.
-        if (changedPath.endsWith('.css') && watchedCssFiles.has(changedPath)) {
+        // CSS or component files linked from jay-html.
+        // CSS content is inlined in the SSR output; component jay-html templates
+        // are injected into pages. Both require cache invalidation on change.
+        if (watchedFiles.has(changedPath)) {
             clearServerElementCache();
             cache.clear().then(() => {
                 getLogger().info(
-                    `[SlowRender] Cache cleared (CSS changed: ${changedPath})`,
+                    `[SlowRender] Cache cleared (linked file changed: ${changedPath})`,
                 );
                 vite.ws.send({ type: 'full-reload' });
             });
             return;
         }
 
-        // Component jay-html files (headfull FS) may live outside the pages folder
-        // (e.g., src/components/). A change to any jay-html should clear the cache
-        // since it may be included by a page via headfull FS import.
-        if (changedPath.endsWith('.jay-html') && changedPath.startsWith(projectRootFolder)) {
+        // Page jay-html files inside the pages folder
+        if (changedPath.endsWith('.jay-html') && changedPath.startsWith(pagesRootFolder)) {
             clearServerElementCache();
             cache.clear().then(() => {
-                getLogger().info(
-                    `[SlowRender] Cache cleared (jay-html changed: ${changedPath})`,
-                );
+                getLogger().info(`[SlowRender] Cache cleared (jay-html changed: ${changedPath})`);
                 vite.ws.send({ type: 'full-reload' });
             });
             return;
@@ -1225,5 +1228,5 @@ function setupSlowRenderCacheInvalidation(
         }
     });
 
-    return watchLinkedCssFiles;
+    return watchLinkedFiles;
 }

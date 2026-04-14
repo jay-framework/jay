@@ -1928,7 +1928,11 @@ describe('compiler', () => {
                 },
                 readJayHtml(importingModuleDir: string, src: string) {
                     if (src.includes('header'))
-                        return { content: headerJayHtml, componentDir: '/components/header' };
+                        return {
+                            content: headerJayHtml,
+                            componentDir: '/components/header',
+                            filePath: '/components/header/header.jay-html',
+                        };
                     return null;
                 },
                 ...overrides,
@@ -2127,7 +2131,11 @@ describe('compiler', () => {
 
             const resolver = makeHeadfullFSResolver({
                 readJayHtml() {
-                    return { content: jayHtmlWithCss, componentDir: '/components/header' };
+                    return {
+                        content: jayHtmlWithCss,
+                        componentDir: '/components/header',
+                        filePath: '/components/header/header.jay-html',
+                    };
                 },
             });
 
@@ -2218,7 +2226,11 @@ describe('compiler', () => {
                 },
                 readJayHtml(importingModuleDir: string, src: string) {
                     if (src.includes('header'))
-                        return { content: headerJayHtml, componentDir: '/components/header' };
+                        return {
+                            content: headerJayHtml,
+                            componentDir: '/components/header',
+                            filePath: '/components/header/header.jay-html',
+                        };
                     return null;
                 },
                 resolvePluginComponent(pluginName: string, contractName: string) {
@@ -2305,6 +2317,7 @@ describe('compiler', () => {
                         return {
                             content: componentJayHtml,
                             componentDir: '/project/src/components/kitan-header',
+                            filePath: '/project/src/components/kitan-header/kitan-header.jay-html',
                         };
                     }
                     return null;
