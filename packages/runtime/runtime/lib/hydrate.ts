@@ -170,12 +170,18 @@ function adoptBase<ViewState>(
         if (typeof value === 'object' && value !== null && 'valueFunc' in value) {
             const dynAttr = value as { valueFunc: (vs: ViewState) => any; style: number };
             let attrValue = dynAttr.valueFunc(context.currData as ViewState);
+            const isBooleanAttr = dynAttr.style === 3; // BOOLEAN_ATTRIBUTE
 
             if (!(key === STYLE && element instanceof HTMLElement)) {
                 updates.push((newData: ViewState) => {
                     const newAttrValue = dynAttr.valueFunc(newData);
                     if (newAttrValue !== attrValue) {
-                        element.setAttribute(key, newAttrValue as string);
+                        if (isBooleanAttr) {
+                            if (newAttrValue) element.setAttribute(key, '');
+                            else element.removeAttribute(key);
+                        } else {
+                            element.setAttribute(key, newAttrValue as string);
+                        }
                     }
                     attrValue = newAttrValue;
                 });

@@ -54,10 +54,14 @@ Use `{expression}` to bind contract data:
 HTML boolean attributes (`disabled`, `checked`, `hidden`, `readonly`) can be bound to contract data:
 
 ```html
-<button disabled="isSubmitting">Submit</button>       <!-- disabled when isSubmitting is true -->
-<button disabled="!inStock">Add to Cart</button>       <!-- disabled when inStock is false -->
-<input type="checkbox" checked="isSelected" />          <!-- checked when isSelected is true -->
-<div hidden="!isVisible">Content</div>                  <!-- hidden when isVisible is false -->
+<button disabled="isSubmitting">Submit</button>
+<!-- disabled when isSubmitting is true -->
+<button disabled="!inStock">Add to Cart</button>
+<!-- disabled when inStock is false -->
+<input type="checkbox" checked="isSelected" />
+<!-- checked when isSelected is true -->
+<div hidden="!isVisible">Content</div>
+<!-- hidden when isVisible is false -->
 ```
 
 - Set the attribute value to a **boolean tag name** — the attribute is present when true, absent when false
