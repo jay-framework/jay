@@ -38,6 +38,7 @@ export interface ActionIndexEntry {
 /** Contract entry within a plugin in plugins-index.yaml */
 export interface PluginContractEntry {
     name: string;
+    description?: string;
     type: 'static' | 'dynamic';
     path: string;
     metadata?: Record<string, unknown>;
@@ -370,8 +371,23 @@ export async function materializeContracts(
 
                 // Make path relative to project root for portability
                 const relativePath = path.relative(projectRoot, contractPath);
+                // Description: prefer plugin.yaml, fall back to contract file
+                let description = contract.description;
+                if (!description) {
+                    try {
+                        const contractContent = fs.readFileSync(contractPath, 'utf-8');
+                        const parsed = YAML.parse(contractContent);
+                        if (parsed?.description && typeof parsed.description === 'string') {
+                            description = parsed.description;
+                        }
+                    } catch {
+                        // Contract file may not be readable — skip description
+                    }
+                }
+
                 pluginsIndexMap.get(plugin.name)!.contracts.push({
                     name: contract.name,
+                    ...(description && { description }),
                     type: 'static',
                     path: './' + relativePath,
                 });
@@ -422,8 +438,18 @@ export async function materializeContracts(
                         // Make path relative to project root
                         const relativePath = path.relative(projectRoot, filePath);
 
+                        // Try to extract description from the generated YAML
+                        let dynDescription: string | undefined;
+                        try {
+                            const parsedYaml = YAML.parse(generated.yaml);
+                            if (parsedYaml?.description && typeof parsedYaml.description === 'string') {
+                                dynDescription = parsedYaml.description;
+                            }
+                        } catch { /* skip */ }
+
                         const contractEntry: PluginContractEntry = {
                             name: fullName,
+                            ...(dynDescription && { description: dynDescription }),
                             type: 'dynamic',
                             path: './' + relativePath,
                             ...(generated.metadata && { metadata: generated.metadata }),
@@ -540,8 +566,21 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
 
                 const relativePath = path.relative(projectRoot, contractPath);
 
+                // Description: prefer plugin.yaml, fall back to contract file
+                let listDescription = contract.description;
+                if (!listDescription) {
+                    try {
+                        const contractContent = fs.readFileSync(contractPath, 'utf-8');
+                        const parsed = YAML.parse(contractContent);
+                        if (parsed?.description && typeof parsed.description === 'string') {
+                            listDescription = parsed.description;
+                        }
+                    } catch { /* skip */ }
+                }
+
                 pluginsMap.get(plugin.name)!.contracts.push({
                     name: contract.name,
+                    ...(listDescription && { description: listDescription }),
                     type: 'static',
                     path: './' + relativePath,
                 });

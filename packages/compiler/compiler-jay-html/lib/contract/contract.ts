@@ -42,6 +42,8 @@ export interface ContractParam {
 
 export interface Contract {
     name: string;
+    /** Human-readable description of the contract (for agent-kit and validation). */
+    description?: string;
     tags: Array<ContractTag>;
     props?: Array<ContractProp>;
     /** URL/load params (e.g. slug for [slug] route). Generates Params extends UrlParams. */
