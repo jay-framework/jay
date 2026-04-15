@@ -252,7 +252,8 @@ Same content as plugin guides (`component-state.md`, `component-refs.md`, `compo
 
 #### Plugin Structure (plugin-structure.md)
 
-- `plugin.yaml` format: contracts, actions, config templates, references
+- `plugin.yaml` format: contracts, actions, services, contexts, config templates, references
+- Listing services and contexts in `plugin.yaml` with `name`, `marker`, and `description`
 - Package layout: `lib/`, `dist/`, exports
 - NPM package requirements (`package.json` exports field)
 - Inline plugins within a project (see `examples/jay-stack/fake-shop`)
@@ -268,6 +269,15 @@ Same content as plugin guides (`component-state.md`, `component-refs.md`, `compo
 
 - `createJayService` — service markers for dependency injection
 - `makeJayInit` — server/client initialization
+- Listing services in `plugin.yaml`: `name`, `marker`, `description`
+- Services provide server-side APIs (e.g., product catalog queries) for other plugins or page components to consume via `.withServices(MARKER)`
+
+#### Contexts (component-context.md)
+
+- `provideContext` / `provideReactiveContext`
+- `createReactiveContext` / `registerReactiveGlobalContext`
+- Listing contexts in `plugin.yaml`: `name`, `marker`, `description`
+- Contexts provide client-side reactive state (e.g., cart state) for other plugins or page components to consume via `.withContexts(MARKER)`
 
 #### Validation (validation.md)
 
@@ -280,10 +290,11 @@ Same content as plugin guides (`component-state.md`, `component-refs.md`, `compo
 2. Read the relevant guides for the task at hand
 3. Define contracts first (source of truth) — include `description` field
 4. Implement components matching the contracts
-5. Define actions with `.jay-action` metadata
-6. Set up `plugin.yaml` (including references declarations)
-7. Optionally add agent-kit guides for designer/developer roles
-8. Run `jay-stack validate-plugin` to check correctness
+5. Define services and contexts if the plugin provides APIs for other plugins
+6. Define actions with `.jay-action` metadata
+7. Set up `plugin.yaml` — list contracts, actions, services, contexts (each with `name`, `description`)
+8. Optionally add agent-kit guides for designer/developer roles
+9. Run `jay-stack validate-plugin` to check correctness
 
 ## Implementation Plan
 
@@ -319,3 +330,59 @@ Same content as plugin guides (`component-state.md`, `component-refs.md`, `compo
 - **Three roles** may seem heavy but reflects real workflow separation — most projects will only use one or two
 - **Before-setup support** means guide files are static templates (no plugin-specific content), but still valuable for bootstrapping
 - **Plugin-contributed guides** require plugins to opt in — no extra burden on plugins that don't need it
+
+## Implementation Results
+
+### Phase 3: Contract description field — completed
+
+**Contract type** (`compiler-jay-html/lib/contract/contract.ts`): Added optional `description?: string` field to `Contract` interface.
+
+**Contract parser** (`contract-parser.ts`): Parses top-level `description` from `.jay-contract` YAML. Added to `ParsedYaml` interface.
+
+**`PluginContractEntry`** (`contract-materializer.ts`): Added optional `description?: string` field.
+
+**Materialization**: Contract descriptions are resolved from two sources:
+1. `plugin.yaml` manifest entry `description` (preferred)
+2. `.jay-contract` file top-level `description` (fallback — reads and parses the contract file)
+
+Both static and dynamic contract paths include the description in `plugins-index.yaml`. The listing path (used by CLI) also resolves descriptions.
+
+### Boolean attribute agent-kit documentation
+
+Added "Boolean Attributes" section to `agent-kit-template/designer/jay-html-template-syntax.md` explaining `disabled="boolField"` and `disabled="!boolField"` patterns.
+
+### Open: Services and contexts in plugin.yaml and plugins-index.yaml
+
+Services and contexts provide APIs that allow one plugin to provide functionality for other plugins to consume (e.g., `WIX_STORES_SERVICE` provides product data that other plugins can use). Currently these are not listed in `plugin.yaml` or `plugins-index.yaml`.
+
+**Needed:**
+
+0. **Purpose**: Services provide server-side APIs (e.g., product queries). Contexts provide client-side reactive state (e.g., cart state). One plugin provides them, other plugins consume them via `withServices(MARKER)` / `withContexts(MARKER)`.
+
+1. **Listing with description** — Add to `plugin.yaml`:
+   ```yaml
+   services:
+     - name: wix-stores
+       marker: WIX_STORES_SERVICE_MARKER
+       description: Provides Wix Stores product catalog API (query products, collections, variants)
+   contexts:
+     - name: wix-stores
+       marker: WIX_STORES_CONTEXT
+       description: Client-side cart and store interaction context
+   ```
+   Propagate to `plugins-index.yaml` so agents know what services/contexts each plugin offers. The provider function is an internal concern — not listed.
+
+2. **Validation** — In `validate-plugin`:
+   - If a component uses `.withServices(MARKER)`, verify the service is listed in the plugin's `plugin.yaml` (or a dependency's)
+   - If a component uses `.withContexts(MARKER)`, verify the context is listed
+
+3. **Documentation** (optional) — If a plugin provides a markdown doc for a service/context:
+   ```yaml
+   services:
+     - name: wix-stores
+       marker: WIX_STORES_SERVICE_MARKER
+       description: ...
+       doc: ./docs/wix-stores-service.md  # optional
+   ```
+   - Referenced from `plugin.yaml` and `plugins-index.yaml`
+   - Validated: if `doc` is specified, the file must exist and be exported from the package
