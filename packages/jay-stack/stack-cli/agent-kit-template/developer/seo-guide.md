@@ -25,9 +25,9 @@ return phaseOutput(
 
 ```typescript
 interface HeadTag {
-  tag: string;                        // 'title', 'meta', 'link', etc.
-  attrs?: Record<string, string>;     // HTML attributes
-  children?: string;                  // Text content (for <title>, <script>, etc.)
+  tag: string; // 'title', 'meta', 'link', etc.
+  attrs?: Record<string, string>; // HTML attributes
+  children?: string; // Text content (for <title>, <script>, etc.)
 }
 ```
 
@@ -62,9 +62,9 @@ interface HeadTag {
 If the data source provides a generic structure (array of tags with type/props/children), map it:
 
 ```typescript
-const headTags = seoData.tags.map(tag => ({
+const headTags = seoData.tags.map((tag) => ({
   tag: tag.type,
-  attrs: Object.fromEntries(tag.props.map(p => [p.key, p.value])),
+  attrs: Object.fromEntries(tag.props.map((p) => [p.key, p.value])),
   children: tag.children,
 }));
 

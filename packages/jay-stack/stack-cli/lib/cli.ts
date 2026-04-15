@@ -160,7 +160,10 @@ async function ensureAgentKitDocs(
         await fs.mkdir(roleOutputDir, { recursive: true });
 
         for (const filename of files) {
-            await fs.copyFile(path.join(roleTemplateDir, filename), path.join(roleOutputDir, filename));
+            await fs.copyFile(
+                path.join(roleTemplateDir, filename),
+                path.join(roleOutputDir, filename),
+            );
             getLogger().info(chalk.gray(`   Created agent-kit/${role}/${filename}`));
         }
     }

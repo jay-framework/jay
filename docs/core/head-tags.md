@@ -22,7 +22,10 @@ export const page = makeJayStackComponent<ProductPageContract>()
           { tag: 'meta', attrs: { name: 'description', content: product.description } },
           { tag: 'meta', attrs: { property: 'og:title', content: product.name } },
           { tag: 'meta', attrs: { property: 'og:image', content: product.imageUrl } },
-          { tag: 'link', attrs: { rel: 'canonical', href: `https://example.com/products/${product.slug}` } },
+          {
+            tag: 'link',
+            attrs: { rel: 'canonical', href: `https://example.com/products/${product.slug}` },
+          },
         ],
       },
     );
@@ -35,9 +38,9 @@ The SSR pipeline serializes these tags and injects them into the `<head>` of the
 
 ```typescript
 interface HeadTag {
-  tag: string;                        // Element name: 'title', 'meta', 'link', etc.
-  attrs?: Record<string, string>;     // HTML attributes
-  children?: string;                  // Text content (for non-void elements like <title>)
+  tag: string; // Element name: 'title', 'meta', 'link', etc.
+  attrs?: Record<string, string>; // HTML attributes
+  children?: string; // Text content (for non-void elements like <title>)
 }
 ```
 
@@ -53,6 +56,7 @@ interface HeadTag {
 When multiple components on the same page declare head tags, collisions are resolved with **last-write-wins**:
 
 - Tags are deduplicated by identity key:
+
   - `<title>` — singleton (one per page)
   - `<meta name="X">` — keyed by `name`
   - `<meta property="X">` — keyed by `property`
@@ -69,9 +73,9 @@ When multiple components on the same page declare head tags, collisions are reso
 If your data source provides a generic SEO structure (e.g., an array of tag objects with type/props/children), map it to `HeadTag[]` in the component:
 
 ```typescript
-const headTags = seoData.tags.map(tag => ({
+const headTags = seoData.tags.map((tag) => ({
   tag: tag.type,
-  attrs: Object.fromEntries(tag.props.map(p => [p.key, p.value])),
+  attrs: Object.fromEntries(tag.props.map((p) => [p.key, p.value])),
   children: tag.children,
 }));
 
