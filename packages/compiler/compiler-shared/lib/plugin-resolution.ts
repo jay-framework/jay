@@ -59,6 +59,20 @@ export interface PluginManifest {
     actions?: ActionManifestEntry[];
     /** Plugin initialization configuration */
     init?: PluginInitConfig;
+    /** Server-side services provided by this plugin (DL#125) */
+    services?: Array<{
+        name: string;
+        marker: string;
+        description?: string;
+        doc?: string;
+    }>;
+    /** Client-side contexts provided by this plugin (DL#125) */
+    contexts?: Array<{
+        name: string;
+        marker: string;
+        description?: string;
+        doc?: string;
+    }>;
     /** Plugin setup configuration (Design Log #87) */
     setup?: {
         /** Export name (NPM) or relative path (local) to setup handler function */

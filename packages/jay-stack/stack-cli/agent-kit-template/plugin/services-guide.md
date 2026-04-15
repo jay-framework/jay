@@ -94,6 +94,20 @@ makeJayAction('products.search')
 })
 ```
 
+## Listing in plugin.yaml
+
+If your plugin provides services for other plugins to consume, list them in `plugin.yaml`:
+
+```yaml
+services:
+  - name: products-db
+    marker: PRODUCTS_DB
+    description: Product catalog database API (query, search, get by slug)
+    doc: ./docs/products-db-service.md  # optional — markdown documentation
+```
+
+This makes the service discoverable in `plugins-index.yaml`. If `doc` is provided, the file must exist and be exported from the package.
+
 ## Service Lifecycle
 
 - Services are registered during `makeJayInit().withServer()` callbacks

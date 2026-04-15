@@ -4,7 +4,7 @@ A plugin provides headless components, contracts, and actions. It can be a stand
 
 ## plugin.yaml
 
-The plugin manifest declares all contracts, actions, and configuration:
+The plugin manifest declares all contracts, actions, services, contexts, and configuration:
 
 ```yaml
 name: my-plugin
@@ -25,6 +25,16 @@ actions:
   - name: addToCart
     action: add-to-cart.jay-action
 
+services:
+  - name: my-store
+    marker: MY_STORE_SERVICE_MARKER
+    description: Provides product catalog API (query, filter, sort)
+
+contexts:
+  - name: my-cart
+    marker: MY_CART_CONTEXT
+    description: Client-side cart state (add/remove items, totals)
+
 setup:
   handler: setup-handler
   references: references-handler
@@ -44,6 +54,44 @@ setup:
 
 - `name` — Action name (used with `jay-stack action <plugin>/<action>`)
 - `action` — Path to `.jay-action` metadata file
+
+### Service Entry Fields
+
+- `name` — Service name (for identification in plugins-index)
+- `marker` — Exported service marker constant (e.g., `MY_STORE_SERVICE_MARKER`)
+- `description` — What APIs this service provides
+- `doc` — (optional) Path to a markdown file documenting the service API
+
+Services are server-side APIs created with `createJayService`. Other plugins and page components consume them via `.withServices(MARKER)`.
+
+### Context Entry Fields
+
+- `name` — Context name (for identification in plugins-index)
+- `marker` — Exported context marker constant (e.g., `MY_CART_CONTEXT`)
+- `description` — What reactive state this context provides
+- `doc` — (optional) Path to a markdown file documenting the context API
+
+Contexts are client-side reactive state. Other plugins and page components consume them via `.withContexts(MARKER)`.
+
+### Documentation Files
+
+When `doc` is specified, the markdown file must exist and (for NPM packages) be exported in `package.json`:
+
+```yaml
+services:
+  - name: my-store
+    marker: MY_STORE_SERVICE_MARKER
+    description: Product catalog API
+    doc: ./docs/my-store-service.md
+```
+
+```json
+{
+  "exports": {
+    "./docs/my-store-service.md": "./docs/my-store-service.md"
+  }
+}
+```
 
 ### Setup Fields
 

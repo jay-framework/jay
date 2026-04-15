@@ -154,6 +154,48 @@ async function validateLocalPlugins(
 }
 
 /**
+ * Validate a doc file reference — check file exists and (for NPM) is exported.
+ */
+function validateDocFile(
+    docPath: string,
+    label: string,
+    context: PluginContext,
+    result: ValidationResult,
+): void {
+    const resolvedPath = path.join(context.pluginPath, docPath);
+    if (!fs.existsSync(resolvedPath)) {
+        result.errors.push({
+            type: 'file-missing',
+            message: `Doc file for ${label} not found: ${docPath}`,
+            location: 'plugin.yaml',
+            suggestion: `Create the documentation file at ${resolvedPath}`,
+        });
+        return;
+    }
+
+    // For NPM packages, check the doc is exported in package.json
+    if (context.isNpmPackage) {
+        const packageJsonPath = path.join(context.pluginPath, 'package.json');
+        try {
+            const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+            if (packageJson.exports) {
+                const exportKey = './' + docPath.replace(/^\.\//, '');
+                if (!packageJson.exports[exportKey]) {
+                    result.errors.push({
+                        type: 'export-mismatch',
+                        message: `Doc file for ${label} is not exported in package.json: ${docPath}`,
+                        location: packageJsonPath,
+                        suggestion: `Add "${exportKey}": "${docPath}" to the exports field`,
+                    });
+                }
+            }
+        } catch {
+            // package.json issues already reported elsewhere
+        }
+    }
+}
+
+/**
  * Validates plugin.yaml schema - ensures required fields are present
  */
 async function validateSchema(context: PluginContext, result: ValidationResult): Promise<void> {
@@ -258,6 +300,70 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
             location: 'plugin.yaml',
             suggestion: 'Add either "contracts" or "dynamic_contracts" to expose functionality',
         });
+    }
+
+    // Validate services (DL#125)
+    if (manifest.services) {
+        if (!Array.isArray(manifest.services)) {
+            result.errors.push({
+                type: 'schema',
+                message: 'Field "services" must be an array',
+                location: 'plugin.yaml',
+            });
+        } else {
+            manifest.services.forEach((service, index) => {
+                if (!service.name) {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Service at index ${index} is missing "name" field`,
+                        location: 'plugin.yaml',
+                    });
+                }
+                if (!service.marker) {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Service "${service.name || index}" is missing "marker" field`,
+                        location: 'plugin.yaml',
+                        suggestion: 'Specify the exported service marker constant name',
+                    });
+                }
+                if (service.doc) {
+                    validateDocFile(service.doc, `service "${service.name}"`, context, result);
+                }
+            });
+        }
+    }
+
+    // Validate contexts (DL#125)
+    if (manifest.contexts) {
+        if (!Array.isArray(manifest.contexts)) {
+            result.errors.push({
+                type: 'schema',
+                message: 'Field "contexts" must be an array',
+                location: 'plugin.yaml',
+            });
+        } else {
+            manifest.contexts.forEach((ctx, index) => {
+                if (!ctx.name) {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Context at index ${index} is missing "name" field`,
+                        location: 'plugin.yaml',
+                    });
+                }
+                if (!ctx.marker) {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Context "${ctx.name || index}" is missing "marker" field`,
+                        location: 'plugin.yaml',
+                        suggestion: 'Specify the exported context marker constant name',
+                    });
+                }
+                if (ctx.doc) {
+                    validateDocFile(ctx.doc, `context "${ctx.name}"`, context, result);
+                }
+            });
+        }
     }
 }
 

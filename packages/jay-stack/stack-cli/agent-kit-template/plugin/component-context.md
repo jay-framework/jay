@@ -87,3 +87,17 @@ makeJayStackComponent<MyContract>()
     };
   });
 ```
+
+## Listing in plugin.yaml
+
+If your plugin provides contexts for other plugins to consume, list them in `plugin.yaml`:
+
+```yaml
+contexts:
+  - name: cart
+    marker: CART_CONTEXT
+    description: Client-side cart state (item count, add/remove items, totals)
+    doc: ./docs/cart-context.md  # optional — markdown documentation
+```
+
+This makes the context discoverable in `plugins-index.yaml`. If `doc` is provided, the file must exist and be exported from the package.

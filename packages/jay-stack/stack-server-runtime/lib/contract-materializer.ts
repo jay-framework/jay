@@ -44,6 +44,22 @@ export interface PluginContractEntry {
     metadata?: Record<string, unknown>;
 }
 
+/** Service entry in plugins-index.yaml (DL#125) */
+export interface ServiceIndexEntry {
+    name: string;
+    marker: string;
+    description?: string;
+    doc?: string;
+}
+
+/** Context entry in plugins-index.yaml (DL#125) */
+export interface ContextIndexEntry {
+    name: string;
+    marker: string;
+    description?: string;
+    doc?: string;
+}
+
 /** Entry for plugins-index.yaml (Design Log #85) */
 export interface PluginsIndexEntry {
     name: string;
@@ -51,6 +67,10 @@ export interface PluginsIndexEntry {
     contracts: PluginContractEntry[];
     /** Actions with .jay-action metadata (exposed to AI agents) */
     actions?: ActionIndexEntry[];
+    /** Server-side services provided by this plugin (DL#125) */
+    services?: ServiceIndexEntry[];
+    /** Client-side contexts provided by this plugin (DL#125) */
+    contexts?: ContextIndexEntry[];
 }
 
 export interface PluginsIndex {
@@ -315,14 +335,7 @@ export async function materializeContracts(
     } = options;
 
     /** Per-plugin data for plugins-index.yaml (Design Log #85) */
-    const pluginsIndexMap = new Map<
-        string,
-        {
-            path: string;
-            contracts: PluginContractEntry[];
-            actions: ActionIndexEntry[];
-        }
-    >();
+    const pluginsIndexMap = new Map<string, Omit<PluginsIndexEntry, 'name'>>();
     let staticCount = 0;
     let dynamicCount = 0;
 
@@ -353,11 +366,40 @@ export async function materializeContracts(
         // Ensure plugin entry exists in plugins index
         const pluginRelPath = path.relative(projectRoot, plugin.pluginPath);
         if (!pluginsIndexMap.has(plugin.name)) {
-            pluginsIndexMap.set(plugin.name, {
+            const entry: Omit<PluginsIndexEntry, 'name'> = {
                 path: './' + pluginRelPath.replace(/\\/g, '/'),
                 contracts: [],
                 actions: [],
-            });
+            };
+            // Add services from plugin.yaml (DL#125)
+            if (manifest.services?.length) {
+                entry.services = manifest.services.map((s) => {
+                    const docPath = s.doc
+                        ? './' + path.relative(projectRoot, path.resolve(plugin.pluginPath, s.doc))
+                        : undefined;
+                    return {
+                        name: s.name,
+                        marker: s.marker,
+                        ...(s.description && { description: s.description }),
+                        ...(docPath && { doc: docPath }),
+                    };
+                });
+            }
+            // Add contexts from plugin.yaml (DL#125)
+            if (manifest.contexts?.length) {
+                entry.contexts = manifest.contexts.map((c) => {
+                    const docPath = c.doc
+                        ? './' + path.relative(projectRoot, path.resolve(plugin.pluginPath, c.doc))
+                        : undefined;
+                    return {
+                        name: c.name,
+                        marker: c.marker,
+                        ...(c.description && { description: c.description }),
+                        ...(docPath && { doc: docPath }),
+                    };
+                });
+            }
+            pluginsIndexMap.set(plugin.name, entry);
         }
 
         // Add static contracts to index
@@ -488,7 +530,9 @@ export async function materializeContracts(
                 if (!metadata) continue;
 
                 const actionRelPath = path.relative(projectRoot, metadataFilePath);
-                pluginsIndexMap.get(plugin.name)!.actions.push({
+                const pluginEntry = pluginsIndexMap.get(plugin.name)!;
+                if (!pluginEntry.actions) pluginEntry.actions = [];
+                pluginEntry.actions.push({
                     name: metadata.name,
                     description: metadata.description,
                     path: './' + actionRelPath.replace(/\\/g, '/'),
@@ -507,7 +551,9 @@ export async function materializeContracts(
             name,
             path: data.path,
             contracts: data.contracts,
-            ...(data.actions.length > 0 && { actions: data.actions }),
+            ...(data.actions && data.actions.length > 0 && { actions: data.actions }),
+            ...(data.services?.length && { services: data.services }),
+            ...(data.contexts?.length && { contexts: data.contexts }),
         })),
     };
 
@@ -535,7 +581,10 @@ export async function materializeContracts(
 export async function listContracts(options: MaterializeContractsOptions): Promise<PluginsIndex> {
     const { projectRoot, dynamicOnly = false, pluginFilter } = options;
 
-    const pluginsMap = new Map<string, { path: string; contracts: PluginContractEntry[] }>();
+    const pluginsMap = new Map<
+        string,
+        Omit<PluginsIndexEntry, 'name'>
+    >();
 
     // Scan for plugins using shared scanner
     const plugins = await scanPlugins({
@@ -549,10 +598,37 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
         const { manifest } = plugin;
         const pluginRelPath = path.relative(projectRoot, plugin.pluginPath);
         if (!pluginsMap.has(plugin.name)) {
-            pluginsMap.set(plugin.name, {
+            const entry: Omit<PluginsIndexEntry, 'name'> = {
                 path: './' + pluginRelPath.replace(/\\/g, '/'),
                 contracts: [],
-            });
+            };
+            if (manifest.services?.length) {
+                entry.services = manifest.services.map((s) => {
+                    const docPath = s.doc
+                        ? './' + path.relative(projectRoot, path.resolve(plugin.pluginPath, s.doc))
+                        : undefined;
+                    return {
+                        name: s.name,
+                        marker: s.marker,
+                        ...(s.description && { description: s.description }),
+                        ...(docPath && { doc: docPath }),
+                    };
+                });
+            }
+            if (manifest.contexts?.length) {
+                entry.contexts = manifest.contexts.map((c) => {
+                    const docPath = c.doc
+                        ? './' + path.relative(projectRoot, path.resolve(plugin.pluginPath, c.doc))
+                        : undefined;
+                    return {
+                        name: c.name,
+                        marker: c.marker,
+                        ...(c.description && { description: c.description }),
+                        ...(docPath && { doc: docPath }),
+                    };
+                });
+            }
+            pluginsMap.set(plugin.name, entry);
         }
 
         // Add static contracts
@@ -611,6 +687,8 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
             name,
             path: data.path,
             contracts: data.contracts,
+            ...(data.services?.length && { services: data.services }),
+            ...(data.contexts?.length && { contexts: data.contexts }),
         })),
     };
 }
