@@ -29,5 +29,6 @@ The developer sets up the project, configures plugins, creates page-level compon
 | [component-refs.md](component-refs.md)       | Refs, collection refs, element types                       |
 | [component-data.md](component-data.md)       | Immutable data, JSON Patch, patching                       |
 | [render-results.md](render-results.md)       | phaseOutput, RenderPipeline, errors, redirects             |
+| [seo-guide.md](seo-guide.md)                 | SEO head tags: title, meta, OG, canonical via phaseOutput  |
 | [cli-commands.md](cli-commands.md)           | CLI commands: setup, validate, dev, agent-kit              |
 | `../references/<plugin>/`                    | Plugin reference data                                      |

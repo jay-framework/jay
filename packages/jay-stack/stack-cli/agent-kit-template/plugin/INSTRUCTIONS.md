@@ -28,6 +28,7 @@ A plugin provides headless components (data + interactions, no UI) that project 
 | [render-results.md](render-results.md)           | phaseOutput, RenderPipeline, errors, redirects                          |
 | [actions-guide.md](actions-guide.md)             | makeJayAction, makeJayQuery, .jay-action files                          |
 | [services-guide.md](services-guide.md)           | createJayService, makeJayInit                                           |
+| [seo-guide.md](seo-guide.md)                     | SEO head tags: title, meta, OG, canonical via phaseOutput               |
 | [validation.md](validation.md)                   | jay-stack validate-plugin usage                                         |
 | `../references/<plugin>/`                        | Plugin reference data                                                   |
 

@@ -124,13 +124,12 @@ const ALL_ROLES: AgentKitRole[] = ['designer', 'developer', 'plugin'];
 
 /**
  * Copies agent-kit documentation files from the template folder into role subfolders.
- * Does not overwrite existing files so users can customize.
- * Use --force to regenerate all docs.
+ * Framework-provided guides are always refreshed to ensure the latest content.
  * Template folder: stack-cli/agent-kit-template/{role}/ (Design Log #85, #125).
  */
 async function ensureAgentKitDocs(
     projectRoot: string,
-    force?: boolean,
+    _force?: boolean,
     mode?: string,
 ): Promise<void> {
     const path = await import('node:path');
@@ -161,16 +160,7 @@ async function ensureAgentKitDocs(
         await fs.mkdir(roleOutputDir, { recursive: true });
 
         for (const filename of files) {
-            const destPath = path.join(roleOutputDir, filename);
-            if (!force) {
-                try {
-                    await fs.access(destPath);
-                    continue; // File exists, don't overwrite
-                } catch {
-                    // File doesn't exist, copy it
-                }
-            }
-            await fs.copyFile(path.join(roleTemplateDir, filename), destPath);
+            await fs.copyFile(path.join(roleTemplateDir, filename), path.join(roleOutputDir, filename));
             getLogger().info(chalk.gray(`   Created agent-kit/${role}/${filename}`));
         }
     }
