@@ -342,6 +342,7 @@ Same content as plugin guides (`component-state.md`, `component-refs.md`, `compo
 **`PluginContractEntry`** (`contract-materializer.ts`): Added optional `description?: string` field.
 
 **Materialization**: Contract descriptions are resolved from two sources:
+
 1. `plugin.yaml` manifest entry `description` (preferred)
 2. `.jay-contract` file top-level `description` (fallback — reads and parses the contract file)
 
@@ -360,6 +361,7 @@ Services and contexts provide APIs that allow one plugin to provide functionalit
 0. **Purpose**: Services provide server-side APIs (e.g., product queries). Contexts provide client-side reactive state (e.g., cart state). One plugin provides them, other plugins consume them via `withServices(MARKER)` / `withContexts(MARKER)`.
 
 1. **Listing with description** — Add to `plugin.yaml`:
+
    ```yaml
    services:
      - name: wix-stores
@@ -370,9 +372,11 @@ Services and contexts provide APIs that allow one plugin to provide functionalit
        marker: WIX_STORES_CONTEXT
        description: Client-side cart and store interaction context
    ```
+
    Propagate to `plugins-index.yaml` so agents know what services/contexts each plugin offers. The provider function is an internal concern — not listed.
 
 2. **Validation** — In `validate-plugin`:
+
    - If a component uses `.withServices(MARKER)`, verify the service is listed in the plugin's `plugin.yaml` (or a dependency's)
    - If a component uses `.withContexts(MARKER)`, verify the context is listed
 
@@ -382,7 +386,7 @@ Services and contexts provide APIs that allow one plugin to provide functionalit
      - name: wix-stores
        marker: WIX_STORES_SERVICE_MARKER
        description: ...
-       doc: ./docs/wix-stores-service.md  # optional
+       doc: ./docs/wix-stores-service.md # optional
    ```
    - Referenced from `plugin.yaml` and `plugins-index.yaml`
    - Validated: if `doc` is specified, the file must exist and be exported from the package

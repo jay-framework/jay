@@ -484,10 +484,15 @@ export async function materializeContracts(
                         let dynDescription: string | undefined;
                         try {
                             const parsedYaml = YAML.parse(generated.yaml);
-                            if (parsedYaml?.description && typeof parsedYaml.description === 'string') {
+                            if (
+                                parsedYaml?.description &&
+                                typeof parsedYaml.description === 'string'
+                            ) {
                                 dynDescription = parsedYaml.description;
                             }
-                        } catch { /* skip */ }
+                        } catch {
+                            /* skip */
+                        }
 
                         const contractEntry: PluginContractEntry = {
                             name: fullName,
@@ -581,10 +586,7 @@ export async function materializeContracts(
 export async function listContracts(options: MaterializeContractsOptions): Promise<PluginsIndex> {
     const { projectRoot, dynamicOnly = false, pluginFilter } = options;
 
-    const pluginsMap = new Map<
-        string,
-        Omit<PluginsIndexEntry, 'name'>
-    >();
+    const pluginsMap = new Map<string, Omit<PluginsIndexEntry, 'name'>>();
 
     // Scan for plugins using shared scanner
     const plugins = await scanPlugins({
@@ -651,7 +653,9 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
                         if (parsed?.description && typeof parsed.description === 'string') {
                             listDescription = parsed.description;
                         }
-                    } catch { /* skip */ }
+                    } catch {
+                        /* skip */
+                    }
                 }
 
                 pluginsMap.get(plugin.name)!.contracts.push({

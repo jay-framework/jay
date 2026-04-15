@@ -18,3 +18,4 @@ export * from './slow-render-cache';
 export * from './contract-materializer';
 export * from './plugin-scanner';
 export * from './plugin-setup';
+export * from './head-tags';

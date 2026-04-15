@@ -203,7 +203,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 116 | client import rewriting in library builds               | Fix bare @jay-framework/\* imports not rewritten to /client in vite build output                       |
 | 119 | async data SSR and hydration                            | Fix async data (Promise types) through SSR swap scripts, hydrate compiler, and ViewState serialization |
 | 126 | coordinate assignment rules                             | Complete rules for coordinate assignment across forEach, slowForEach, headless, headfull nesting       |
-| 127 | SEO head injection                                     | Render SEO data (title, meta, OG tags) from ViewState into `<head>` during SSR                         |
+| 127 | SEO head injection                                      | Render SEO data (title, meta, OG tags) from ViewState into `<head>` during SSR                         |
 
 ---
 

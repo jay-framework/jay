@@ -19,37 +19,38 @@ The Wix Stores product page contract defines an `seoData` structure:
       repeated: true
       trackBy: position
       tags:
-        - {tag: position, type: data, dataType: string}
-        - {tag: type, type: data, dataType: string}    # element name: meta, title, link, etc.
+        - { tag: position, type: data, dataType: string }
+        - { tag: type, type: data, dataType: string } # element name: meta, title, link, etc.
         - tag: props
           type: sub-contract
           repeated: true
           trackBy: key
           tags:
-            - {tag: key, type: data, dataType: string}   # attribute name
-            - {tag: value, type: data, dataType: string}  # attribute value
+            - { tag: key, type: data, dataType: string } # attribute name
+            - { tag: value, type: data, dataType: string } # attribute value
         - tag: meta
           type: sub-contract
           repeated: true
           trackBy: key
           tags:
-            - {tag: key, type: data, dataType: string}
-            - {tag: value, type: data, dataType: string}
-        - {tag: children, type: data, dataType: string}   # inner text (e.g. for <title>)
+            - { tag: key, type: data, dataType: string }
+            - { tag: value, type: data, dataType: string }
+        - { tag: children, type: data, dataType: string } # inner text (e.g. for <title>)
     - tag: settings
       type: sub-contract
       tags:
-        - {tag: preventAutoRedirect, type: data, dataType: boolean}
+        - { tag: preventAutoRedirect, type: data, dataType: boolean }
         - tag: keywords
           type: sub-contract
           repeated: true
           trackBy: term
           tags:
-            - {tag: term, type: data, dataType: string}
-            - {tag: isMain, type: data, dataType: boolean}
+            - { tag: term, type: data, dataType: string }
+            - { tag: isMain, type: data, dataType: boolean }
 ```
 
 This structure represents serialized HTML elements for the `<head>`:
+
 - `type` is the element name (`meta`, `title`, `link`, `script`)
 - `props` are the attributes (`name`/`content`, `property`/`content` for OG, `rel`/`href` for canonical)
 - `children` is inner text (e.g., the text inside `<title>`)
@@ -63,6 +64,7 @@ An AI agent tried to bind this in the template body:
 ```
 
 This doesn't work because:
+
 1. `<meta>` tags must be in `<head>`, not `<body>`
 2. Jay-html doesn't support dynamic element names (the `type` field determines the tag name)
 3. Jay-html doesn't support dynamic attribute names (`name="{key}"` — the attribute name itself is dynamic)
@@ -123,6 +125,7 @@ Renders the Wix seoData structure as-is — each tag becomes its `type` element 
 #### Contract implications
 
 The contract can be either:
+
 - **Flat named fields** (seoTitle, seoDescription, etc.) — for simple bindings
 - **Generic structure** (tags with type/props/children) — for jay-element/jay-spread
 
@@ -144,20 +147,18 @@ The compiler generates a **head render function** that takes ViewState and retur
 ```typescript
 // Generated: page.jay-html?jay-head.ts
 export function renderHead(viewState: ViewState): string {
-    let html = '';
-    // Simple bindings
-    html += `<title>${escapeHtml(viewState.p.productName)} | My Store</title>`;
-    // Generic bindings (forEach + jay-element + jay-spread)
-    for (const tag of viewState.p.seoData.tags) {
-        html += `<${escapeTag(tag.type)}`;
-        for (const prop of tag.props) {
-            html += ` ${escapeAttr(prop.key)}="${escapeAttr(prop.value)}"`;
-        }
-        html += tag.children
-            ? `>${escapeHtml(tag.children)}</${escapeTag(tag.type)}>`
-            : ` />`;
+  let html = '';
+  // Simple bindings
+  html += `<title>${escapeHtml(viewState.p.productName)} | My Store</title>`;
+  // Generic bindings (forEach + jay-element + jay-spread)
+  for (const tag of viewState.p.seoData.tags) {
+    html += `<${escapeTag(tag.type)}`;
+    for (const prop of tag.props) {
+      html += ` ${escapeAttr(prop.key)}="${escapeAttr(prop.value)}"`;
     }
-    return html;
+    html += tag.children ? `>${escapeHtml(tag.children)}</${escapeTag(tag.type)}>` : ` />`;
+  }
+  return html;
 }
 ```
 
@@ -204,16 +205,16 @@ The component's slow/fast render returns head tags alongside ViewState. The SSR 
 
 ```typescript
 return phaseOutput(
-    { title: product.name },
-    {},
-    {
-        headTags: [
-            { tag: 'title', children: product.name + ' | My Store' },
-            { tag: 'meta', attrs: { name: 'description', content: product.description } },
-            { tag: 'meta', attrs: { property: 'og:title', content: product.name } },
-            { tag: 'link', attrs: { rel: 'canonical', href: canonicalUrl } },
-        ],
-    },
+  { title: product.name },
+  {},
+  {
+    headTags: [
+      { tag: 'title', children: product.name + ' | My Store' },
+      { tag: 'meta', attrs: { name: 'description', content: product.description } },
+      { tag: 'meta', attrs: { property: 'og:title', content: product.name } },
+      { tag: 'link', attrs: { rel: 'canonical', href: canonicalUrl } },
+    ],
+  },
 );
 ```
 
@@ -262,18 +263,18 @@ headTags: product.seoData.tags.map(tag => ({
 
 ### Comparison
 
-| Aspect | Option A (template-driven) | Option B (component-driven) |
-| ------ | -------------------------- | --------------------------- |
-| Jay philosophy | Follows (template controls) | Breaks (component controls) |
-| Compiler changes | Yes (parser, new target) | No |
-| Implementation effort | High | Low |
-| Designer control | Full | None |
-| Generic structures | Yes (jay-element/jay-spread) | Yes (component maps data) |
-| Simple cases | Clean (`<title>{name}</title>`) | Verbose (phaseOutput 3rd arg) |
-| XSS safety | Must escape in generated code | Typed API handles escaping |
-| Forward-compatible | Yes (add template lines) | Yes (add headTags in code) |
-| Visibility in template | Head structure visible | Head structure hidden in code |
-| Head tags are... | Invisible UI infrastructure | Invisible UI infrastructure |
+| Aspect                 | Option A (template-driven)      | Option B (component-driven)   |
+| ---------------------- | ------------------------------- | ----------------------------- |
+| Jay philosophy         | Follows (template controls)     | Breaks (component controls)   |
+| Compiler changes       | Yes (parser, new target)        | No                            |
+| Implementation effort  | High                            | Low                           |
+| Designer control       | Full                            | None                          |
+| Generic structures     | Yes (jay-element/jay-spread)    | Yes (component maps data)     |
+| Simple cases           | Clean (`<title>{name}</title>`) | Verbose (phaseOutput 3rd arg) |
+| XSS safety             | Must escape in generated code   | Typed API handles escaping    |
+| Forward-compatible     | Yes (add template lines)        | Yes (add headTags in code)    |
+| Visibility in template | Head structure visible          | Head structure hidden in code |
+| Head tags are...       | Invisible UI infrastructure     | Invisible UI infrastructure   |
 
 ### Pragmatic consideration
 
@@ -297,13 +298,13 @@ Multiple sources can produce headTags during a single page render. Collisions mu
 
 ### Collision scenarios
 
-| Scenario | Example | Risk |
-| -------- | ------- | ---- |
-| Two page-level headless components both declare `<title>` | Product plugin + SEO plugin | High — common |
-| Page component and headless plugin both declare `og:title` | Page sets title, plugin sets OG | High — common |
-| Nested headless inside forEach declares meta tags | Each product in a list declares its own `<title>` | Medium — likely a bug |
-| Nested headfull FS component declares meta tags | A header component adds its own meta | Low — unusual |
-| Same component's slow and fast phases both declare `<title>` | Fast phase updates the title from slow | High — expected |
+| Scenario                                                     | Example                                           | Risk                  |
+| ------------------------------------------------------------ | ------------------------------------------------- | --------------------- |
+| Two page-level headless components both declare `<title>`    | Product plugin + SEO plugin                       | High — common         |
+| Page component and headless plugin both declare `og:title`   | Page sets title, plugin sets OG                   | High — common         |
+| Nested headless inside forEach declares meta tags            | Each product in a list declares its own `<title>` | Medium — likely a bug |
+| Nested headfull FS component declares meta tags              | A header component adds its own meta              | Low — unusual         |
+| Same component's slow and fast phases both declare `<title>` | Fast phase updates the title from slow            | High — expected       |
 
 ### Identity: what makes two head tags "the same"?
 
@@ -328,6 +329,7 @@ Multiple sources can produce headTags during a single page render. Collisions mu
    - Nested components: contribute to their parent's headTags (bubbled up)
 
 This means:
+
 - The **page component** has final say (it runs last, can override plugins)
 - **Fast phase** overrides **slow phase** (more recent data wins)
 - **Nested components inside forEach** — headTags are collected from all instances but duplicates are deduplicated by key. This is likely a mistake — warn at dev time.
@@ -406,3 +408,25 @@ This means:
 6. Fast phase headTags replace slow phase headTags entirely
 7. forEach-nested components' headTags are ignored
 8. Existing tests continue to pass
+
+## Implementation Results
+
+### Files Changed
+
+| File                                                  | Change                                                                                              |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `full-stack-component/lib/jay-stack-types.ts`         | Added `HeadTag` interface, added optional `headTags` to `PhaseOutput`                               |
+| `full-stack-component/lib/render-results.ts`          | Added optional 3rd `options` param to `phaseOutput()`                                               |
+| **NEW** `stack-server-runtime/lib/head-tags.ts`       | `tagIdentityKey()`, `mergeHeadTags()`, `serializeHeadTags()` with HTML escaping                     |
+| `stack-server-runtime/lib/index.ts`                   | Export head-tags module                                                                             |
+| `stack-server-runtime/lib/slowly-changing-runner.ts`  | Collect headTags from page parts and instances into `carryForward.__slowHeadTags`                   |
+| `stack-server-runtime/lib/fast-changing-runner.ts`    | Collect headTags from page parts and static instances (not forEach); store on returned PhaseOutput  |
+| `stack-server-runtime/lib/generate-ssr-response.ts`   | Accept `headTags` param, serialize into `<head>`, replace hardcoded title if component provides one |
+| `dev-server/lib/dev-server.ts`                        | Thread headTags through `handleCachedRequest` → `sendResponse` → `generateSSRPageHtml`              |
+| **NEW** `stack-server-runtime/test/head-tags.test.ts` | 23 unit tests for identity keys, merging, collision warnings, serialization, escaping               |
+| **NEW** `dev-server/test/12a-page-head-tags/`         | Integration fixture: page component returns headTags from slow phase                                |
+| `dev-server/test/hydration.test.ts`                   | Added `fullHtmlChecks` option to `TestFixtureOpts`, added 12a test case                             |
+
+### Deviations from Design
+
+None — implementation follows the design as specified.

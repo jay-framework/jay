@@ -103,7 +103,7 @@ services:
   - name: products-db
     marker: PRODUCTS_DB
     description: Product catalog database API (query, search, get by slug)
-    doc: ./docs/products-db-service.md  # optional — markdown documentation
+    doc: ./docs/products-db-service.md # optional — markdown documentation
 ```
 
 This makes the service discoverable in `plugins-index.yaml`. If `doc` is provided, the file must exist and be exported from the package.

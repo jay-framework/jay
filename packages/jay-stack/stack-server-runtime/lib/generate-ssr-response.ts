@@ -7,7 +7,9 @@ import {
 import { checkValidationErrors, JAY_QUERY_HYDRATE } from '@jay-framework/compiler-shared';
 import { asyncSwapScript, type ServerRenderContext } from '@jay-framework/ssr-runtime';
 import type { ViteDevServer } from 'vite';
+import type { HeadTag } from '@jay-framework/fullstack-component';
 import type { DevServerPagePart } from './load-page-parts';
+import { serializeHeadTags } from './head-tags';
 import type { TrackByMap } from '@jay-framework/view-state-merge';
 import {
     buildScriptFragments,
@@ -89,6 +91,8 @@ export async function generateSSRPageHtml(
     options: GenerateClientScriptOptions = {},
     /** Source directory for headfull FS file resolution when jayHtmlDir is pre-rendered */
     sourceDir?: string,
+    /** Head tags to inject into <head> during SSR (Design Log #127) */
+    headTags?: HeadTag[],
 ): Promise<string> {
     const jayHtmlPath = path.join(jayHtmlDir, jayHtmlFilename);
 
@@ -181,14 +185,17 @@ export async function generateSSRPageHtml(
     const cssLink = cached.cssHref ? `    <link rel="stylesheet" href="${cached.cssHref}" />` : '';
 
     // Step 5: Build full HTML page
-    const headExtras = [headLinksHtml, cssLink].filter((_) => _).join('\n');
+    // Head tags from components (DL#127)
+    const headTagsHtml = headTags && headTags.length > 0 ? serializeHeadTags(headTags) : '';
+    const hasCustomTitle = headTags?.some((t) => t.tag.toLowerCase() === 'title');
+    const titleHtml = hasCustomTitle ? '' : '    <title>Vite + TS</title>\n';
+    const headExtras = [headLinksHtml, cssLink, headTagsHtml].filter((_) => _).join('\n');
     return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + TS</title>
-${headExtras ? headExtras + '\n' : ''}  </head>
+${titleHtml}${headExtras ? headExtras + '\n' : ''}  </head>
   <body>
     <div id="target">${ssrHtml}</div>${asyncScripts}
     ${hydrationScript}

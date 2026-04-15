@@ -3,5 +3,6 @@ plugins:
     path: ./src/plugins/test-status
     contracts:
       - name: status
+        description: Test status component with client-side mismatch
         type: static
         path: ./status-component.jay-contract

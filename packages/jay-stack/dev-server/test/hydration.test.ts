@@ -125,6 +125,8 @@ function readFixture(dirName: string, fileName: string): string {
 interface TestFixtureOpts {
     expectedViewState?: object;
     ssrChecks?: (targetHtml: string) => void;
+    /** Check the full HTML response (including <head>) during SSR. */
+    fullHtmlChecks?: (html: string) => void;
     hydrationChecks?: (page: Page) => Promise<void>;
     interactivityChecks?: (page: Page) => Promise<void>;
     /** Disable SSR — serves client-only pages (element target, no hydration).
@@ -256,6 +258,14 @@ function testFixtureMode(dirName: string, opts: TestFixtureOpts & { warmCache?: 
             }
             const expected = normalizeHtml(readFixture(dirName, ssrFixtureName));
             expect(ssrContent).toEqual(expected);
+        });
+    }
+
+    if (!opts.disableSSR && opts.fullHtmlChecks) {
+        it('full HTML checks pass', async () => {
+            const response = await fetch(`${devServerUrl}${routePath}`);
+            const html = await response.text();
+            opts.fullHtmlChecks!(html);
         });
     }
 
@@ -1830,6 +1840,25 @@ describe('hydration', () => {
                 );
                 expect(await page.textContent('#target .resolved')).toEqual('Delayed response');
                 expect(await page.$('#target .loading')).toBeNull();
+            },
+        });
+    });
+
+    describe('12a. Head tags from component (DL#127)', () => {
+        testFixture('12a-page-head-tags', {
+            fullHtmlChecks: (html) => {
+                // Component's headTags should be in <head>
+                expect(html).toMatch(/<title>My Product \| Store<\/title>/);
+                expect(html).toMatch(/<meta name="description" content="A great product" \/>/);
+                expect(html).toMatch(/<meta property="og:title" content="My Product" \/>/);
+                expect(html).toMatch(
+                    /<link rel="canonical" href="https:\/\/example\.com\/product" \/>/,
+                );
+                // Default "Vite + TS" title should NOT appear (replaced by component's title)
+                expect(html).not.toMatch(/<title>Vite \+ TS<\/title>/);
+            },
+            hydrationChecks: async (page) => {
+                expect(await page.textContent('#target h1')).toEqual('Hello');
             },
         });
     });

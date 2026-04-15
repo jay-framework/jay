@@ -25,7 +25,7 @@ import type {
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { RequestHandler } from 'express-serve-static-core';
-import { renderFastChangingData } from '@jay-framework/stack-server-runtime';
+import { renderFastChangingData, mergeHeadTags } from '@jay-framework/stack-server-runtime';
 import { loadPageParts } from '@jay-framework/stack-server-runtime';
 import {
     generateClientScript,
@@ -359,6 +359,11 @@ async function handleCachedRequest(
     const fastViewState = renderedFast.rendered;
     const fastCarryForward = renderedFast.carryForward;
 
+    // Head tags (DL#127): fast replaces slow entirely. If fast has none, use slow.
+    const headTags =
+        renderedFast.headTags ??
+        mergeHeadTags((cachedEntry.carryForward as any)?.__slowHeadTags ?? []);
+
     // Only fast+interactive viewState (slow is baked into jay-html)
     // Use the pre-rendered file path so Vite compiles it
     // Pass slowViewState so automation can show full merged state
@@ -378,6 +383,7 @@ async function handleCachedRequest(
         cachedEntry.slowViewState,
         timing,
         cachedEntry.preRenderedContent,
+        headTags,
     );
 }
 
@@ -675,6 +681,7 @@ async function sendResponse(
     slowViewState?: object,
     timing?: RequestTiming,
     preLoadedContent?: string,
+    headTags?: import('@jay-framework/fullstack-component').HeadTag[],
 ): Promise<void> {
     let pageHtml: string;
 
@@ -716,6 +723,7 @@ async function sendResponse(
             },
             // Pass source directory for headfull FS file resolution when using pre-rendered path
             jayHtmlDir !== sourceDir ? sourceDir : undefined,
+            headTags,
         );
     } catch (err) {
         // Fall back to client-only rendering

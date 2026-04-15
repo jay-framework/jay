@@ -3,5 +3,6 @@ plugins:
     path: ./src/plugins/test-headless
     contracts:
       - name: headless
+        description: Test headless component
         type: static
         path: ./headless-component.jay-contract

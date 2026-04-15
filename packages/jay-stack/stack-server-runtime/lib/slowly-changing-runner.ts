@@ -1,5 +1,6 @@
 import {
     AnySlowlyRenderResult,
+    HeadTag,
     JayStackComponentDefinition,
     PageProps,
     UrlParams,
@@ -33,6 +34,7 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
     ): Promise<AnySlowlyRenderResult> {
         let slowlyViewState = {};
         let carryForward = {};
+        const slowHeadTagSources: HeadTag[][] = [];
         for (const part of parts) {
             const { compDefinition, key, contractInfo } = part;
             if (compDefinition.slowlyRender) {
@@ -60,6 +62,10 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
                     } else {
                         slowlyViewState[key] = slowlyRenderedPart.rendered;
                         carryForward[key] = slowlyRenderedPart.carryForward;
+                    }
+                    // Collect head tags (DL#127)
+                    if (slowlyRenderedPart.headTags) {
+                        slowHeadTagSources.push(slowlyRenderedPart.headTags);
                     }
                 } else return slowlyRenderedPart;
             }
@@ -118,6 +124,10 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
                             contract: comp.contract,
                             slowViewState: slowResult.rendered as Record<string, unknown>,
                         });
+                        // Collect head tags from instances (DL#127)
+                        if (slowResult.headTags) {
+                            slowHeadTagSources.push(slowResult.headTags);
+                        }
                     }
                 }
             }
@@ -126,6 +136,11 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
             (carryForward as any).__instances = instancePhaseData;
             (carryForward as any).__instanceSlowViewStates = instanceSlowViewStates;
             (carryForward as any).__instanceResolvedData = instanceResolvedData;
+        }
+
+        // Store slow head tags in carryForward for the cached path (DL#127)
+        if (slowHeadTagSources.length > 0) {
+            (carryForward as any).__slowHeadTags = slowHeadTagSources;
         }
 
         return phaseOutput(slowlyViewState, carryForward);
