@@ -225,6 +225,7 @@ Quick reference to find relevant design logs by topic. Design logs capture desig
 | 114 | documentation gaps and updates                         | Audit of docs vs design logs; gap list and update plan                                    |
 | 124 | contract props and params consistency                  | Ensure contracts declare props/params; agent-kit authoring docs + validate checks         |
 | 125 | plugin agent-kit                                       | `agent-kit --mode plugin` for AI agents creating plugins (contracts, components, actions) |
+| 128 | unfolded variant view                                  | Page freeze: capture ViewState, render static SSR snapshots for side-by-side comparison   |
 | 92  | Gemini agent plugin for jay-stack                      | Embedded AI agent: Gemini API, .jay-action metadata, chat contract, page automation       |
 | 97  | Contract-based tool descriptions for gemini agent      | Semantic tool descriptions from .jay-contract via server action, not embedded in HTML     |
 
