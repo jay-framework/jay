@@ -30,6 +30,7 @@ import { loadPageParts } from '@jay-framework/stack-server-runtime';
 import {
     generateClientScript,
     generateSSRPageHtml,
+    generateFrozenPageHtml,
     clearServerElementCache,
     ProjectClientInitInfo,
 } from '@jay-framework/stack-server-runtime';
@@ -61,6 +62,7 @@ import {
 } from '@jay-framework/stack-server-runtime';
 import { WithValidations } from '@jay-framework/compiler-shared';
 import { getLogger, getDevLogger, type RequestTiming } from '@jay-framework/logger';
+import { FreezeStore } from './freeze';
 
 /** Callback to register linked files for watching. Set by setupSlowRenderCacheInvalidation. */
 let _watchLinkedFiles: (files: string[]) => void = () => {};
@@ -176,6 +178,7 @@ function mkRoute(
     slowlyPhase: SlowlyChangingPhase,
     options: DevServerOptions,
     slowRenderCache: SlowRenderCache,
+    freezeStore: FreezeStore | undefined,
     projectInit?: ProjectClientInitInfo,
     allPluginsWithInit: PluginWithInit[] = [],
     allPluginClientInits: PluginClientInitInfo[] = [],
@@ -202,6 +205,24 @@ function mkRoute(
             const urlObj = new URL(req.originalUrl, `http://${req.headers.host}`);
             for (const [key, value] of urlObj.searchParams) {
                 query[key] = value; // last value wins for repeated keys
+            }
+
+            // Frozen page rendering (DL#127): serve a static SSR snapshot
+            // from a saved ViewState — no component logic, no client scripts.
+            const freezeId = query['_jay_freeze'];
+            if (freezeId && freezeStore) {
+                timing?.annotate('[FROZEN]');
+                await handleFrozenRequest(
+                    vite,
+                    route,
+                    options,
+                    freezeStore,
+                    freezeId,
+                    query['format'] === 'fragment' ? 'fragment' : 'page',
+                    res,
+                    timing,
+                );
+                return;
             }
 
             if (options.disableSSR) {
@@ -760,6 +781,78 @@ async function sendResponse(
     timing?.end();
 }
 
+// ============================================================================
+// Frozen page rendering (DL#127)
+// ============================================================================
+
+/**
+ * Handle a frozen page request — render SSR with a saved ViewState.
+ * No component logic runs, no client scripts are included.
+ */
+async function handleFrozenRequest(
+    vite: ViteDevServer,
+    route: JayRoute,
+    options: DevServerOptions,
+    freezeStore: FreezeStore,
+    freezeId: string,
+    format: 'page' | 'fragment',
+    res: Response,
+    timing?: RequestTiming,
+): Promise<void> {
+    const entry = await freezeStore.get(freezeId);
+    if (!entry) {
+        getLogger().warn(`[Freeze] Freeze "${freezeId}" not found`);
+        res.status(404).send(`Freeze "${freezeId}" not found`);
+        timing?.end();
+        return;
+    }
+
+    const label = entry.name ? `"${entry.name}" (${freezeId})` : freezeId;
+    getLogger().info(`[Freeze] Serving frozen page ${label} for ${route.rawRoute} [${format}]`);
+
+    try {
+        const jayHtmlContent = await fs.readFile(route.jayHtmlPath, 'utf-8');
+        const jayHtmlFilename = path.basename(route.jayHtmlPath);
+        const jayHtmlDir = path.dirname(route.jayHtmlPath);
+        const sourceDir = jayHtmlDir;
+        const routeDir = path.dirname(
+            path.relative(options.pagesRootFolder!, route.jayHtmlPath),
+        );
+
+        // Inject headfull FS templates (component jay-html)
+        const {
+            injectHeadfullFSTemplates,
+        } = await import('@jay-framework/compiler-jay-html');
+        const { JAY_IMPORT_RESOLVER } = await import('@jay-framework/compiler-jay-html');
+        const fullJayHtml = injectHeadfullFSTemplates(jayHtmlContent, sourceDir, JAY_IMPORT_RESOLVER);
+
+        const html = await generateFrozenPageHtml(
+            vite,
+            fullJayHtml,
+            jayHtmlFilename,
+            jayHtmlDir,
+            entry.viewState,
+            options.buildFolder!,
+            options.projectRootFolder!,
+            routeDir,
+            options.jayRollupConfig?.tsConfigFilePath,
+            undefined,
+            format,
+            entry.name,
+        );
+
+        const headers: Record<string, string> = { 'Content-Type': 'text/html' };
+        if (format === 'fragment') {
+            headers['Access-Control-Allow-Origin'] = '*';
+        }
+        res.status(200).set(headers).send(html);
+    } catch (err: any) {
+        getLogger().warn(`[Freeze] Failed to render frozen page: ${err.message}`);
+        res.status(500).send(`Failed to render frozen page: ${err.message}`);
+    }
+    timing?.end();
+}
+
 /**
  * Result of pre-rendering jay-html, including instance carryForward data.
  */
@@ -997,11 +1090,20 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     const { publicBaseUrlPath, pagesRootFolder, projectRootFolder, buildFolder, jayRollupConfig } =
         options;
 
-    // Clean entire build folder on startup.
+    // Clean build folder on startup, preserving freezes/.
     // Server elements, CSS files, and pre-rendered cache all live here and go
     // stale when package code or jay-html templates change between restarts.
+    // Frozen ViewState snapshots (build/freezes/) are preserved across restarts.
     if (buildFolder) {
-        await fs.rm(buildFolder, { recursive: true, force: true }).catch(() => {});
+        try {
+            const entries = await fs.readdir(buildFolder).catch(() => []);
+            for (const entry of entries) {
+                if (entry === 'freezes') continue;
+                await fs.rm(path.join(buildFolder, entry), { recursive: true, force: true });
+            }
+        } catch {
+            // Build folder may not exist yet
+        }
     }
 
     // Map Jay log level to Vite log level
@@ -1064,6 +1166,12 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     const pluginsWithInit = lifecycleManager.getPluginsWithInit();
     const pluginClientInits = preparePluginClientInits(pluginsWithInit);
 
+    // Set up page freeze (DL#127)
+    const freezeStore = buildFolder ? new FreezeStore(buildFolder) : undefined;
+    if (freezeStore) {
+        setupFreezeEndpoint(vite, freezeStore);
+    }
+
     const devServerRoutes: DevServerRoute[] = routes.map((route: JayRoute) =>
         mkRoute(
             route,
@@ -1071,6 +1179,7 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
             slowlyPhase,
             options,
             slowRenderCache,
+            freezeStore,
             projectInit,
             pluginsWithInit,
             pluginClientInits,
@@ -1143,6 +1252,42 @@ function setupActionRouter(vite: ViteDevServer): void {
     vite.middlewares.use(ACTION_ENDPOINT_BASE, createActionRouter());
 
     getLogger().info(`[Actions] Action router mounted at ${ACTION_ENDPOINT_BASE}`);
+}
+
+/**
+ * Sets up the freeze POST endpoint for saving ViewState snapshots (DL#127).
+ */
+function setupFreezeEndpoint(vite: ViteDevServer, freezeStore: FreezeStore): void {
+    vite.middlewares.use((req: any, res: any, next: any) => {
+        if (req.method === 'POST' && (req.url === '/_jay/freeze' || req.originalUrl === '/_jay/freeze')) {
+            let body = '';
+            req.on('data', (chunk: any) => (body += chunk));
+            req.on('end', async () => {
+                try {
+                    const { route, viewState } = JSON.parse(body);
+                    if (!route || !viewState) {
+                        res.writeHead(400, { 'Content-Type': 'application/json' });
+                        res.end(JSON.stringify({ error: 'Missing route or viewState' }));
+                        return;
+                    }
+                    const entry = await freezeStore.save(route, viewState);
+                    getLogger().info(
+                        `[Freeze] Saved freeze "${entry.id}" for ${route}`,
+                    );
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify(entry));
+                } catch (err: any) {
+                    getLogger().warn(`[Freeze] Failed to save: ${err.message}`);
+                    res.writeHead(500, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ error: err.message }));
+                }
+            });
+        } else {
+            next();
+        }
+    });
+
+    getLogger().info('[Freeze] Freeze endpoint mounted at /_jay/freeze');
 }
 
 /**

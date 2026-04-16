@@ -204,6 +204,113 @@ ${titleHtml}${headExtras ? headExtras + '\n' : ''}  </head>
 }
 
 /**
+ * Generate a frozen page — pure SSR HTML with no client scripts (DL#127).
+ *
+ * Uses the same server element module as generateSSRPageHtml, but:
+ * - No hydration script
+ * - No Vite client
+ * - No component runtime
+ * - Just rendered HTML + CSS
+ *
+ * @param format - 'page' for full HTML document, 'fragment' for body-only (shadow DOM)
+ */
+export async function generateFrozenPageHtml(
+    vite: ViteDevServer,
+    jayHtmlContent: string,
+    jayHtmlFilename: string,
+    jayHtmlDir: string,
+    viewState: object,
+    buildFolder: string,
+    projectRoot: string,
+    routeDir: string,
+    tsConfigFilePath?: string,
+    sourceDir?: string,
+    format: 'page' | 'fragment' = 'page',
+    freezeName?: string,
+): Promise<string> {
+    const jayHtmlPath = path.join(jayHtmlDir, jayHtmlFilename);
+
+    // Reuse the same server element cache
+    let cached = serverModuleCache.get(jayHtmlPath);
+    if (!cached) {
+        cached = await compileAndLoadServerElement(
+            vite,
+            jayHtmlContent,
+            jayHtmlFilename,
+            jayHtmlDir,
+            buildFolder,
+            projectRoot,
+            routeDir,
+            tsConfigFilePath,
+            sourceDir,
+        );
+        serverModuleCache.set(jayHtmlPath, cached);
+    }
+
+    // Render HTML
+    const htmlChunks: string[] = [];
+    const ctx: ServerRenderContext = {
+        write: (chunk: string) => {
+            htmlChunks.push(chunk);
+        },
+        onAsync: () => {
+            // In frozen mode, async content is not supported — skip
+        },
+    };
+
+    cached.renderToStream(viewState, ctx);
+    const ssrHtml = htmlChunks.join('');
+
+    if (format === 'fragment') {
+        // Shadow DOM fragment: body content + scoped styles only
+        const inlineCss = cached.cssHref
+            ? `<link rel="stylesheet" href="${cached.cssHref}" />`
+            : '';
+        return `${inlineCss}\n${ssrHtml}`;
+    }
+
+    // Full page: complete HTML document, no client scripts
+    const headLinksHtml = cached.headLinks
+        .map((link) => {
+            const attrs = Object.entries(link.attributes)
+                .map(([k, v]) => ` ${k}="${v}"`)
+                .join('');
+            return `    <link rel="${link.rel}" href="${link.href}"${attrs} />`;
+        })
+        .join('\n');
+    const cssLink = cached.cssHref ? `    <link rel="stylesheet" href="${cached.cssHref}" />` : '';
+    const headExtras = [headLinksHtml, cssLink].filter((_) => _).join('\n');
+    const label = freezeName ? ` — ${freezeName}` : '';
+
+    return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Frozen${label}</title>
+${headExtras ? headExtras + '\n' : ''}    <style>
+      body::before {
+        content: 'FROZEN${label ? `: ${freezeName}` : ''}';
+        position: fixed;
+        top: 0;
+        right: 0;
+        background: #1a1a2e;
+        color: #e0e0ff;
+        padding: 2px 10px;
+        font: 11px/1.6 system-ui;
+        z-index: 99999;
+        border-bottom-left-radius: 4px;
+        opacity: 0.8;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="target">${ssrHtml}</div>
+  </body>
+</html>`;
+}
+
+/**
  * Rebase relative import paths in generated code from one directory to another.
  * The compiler calculates import paths relative to the source jay-html directory,
  * but the generated server-element file lives in a different directory (build/pre-rendered/{routeDir}/).

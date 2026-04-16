@@ -45,6 +45,8 @@ export interface RequestTiming {
     recordFastRender: (ms: number) => void;
     /** Record Vite client transform time */
     recordViteClient: (ms: number) => void;
+    /** Add an annotation tag to the timing line (e.g., "[FROZEN]") */
+    annotate: (tag: string) => void;
     /** End the request and print final timing line */
     end: () => void;
 }
@@ -191,6 +193,7 @@ export function resetDevLogger(): void {
 interface TimingState {
     method: string;
     path: string;
+    annotation: string;
     startTime: number;
     viteSsr: number;
     params: number;
@@ -228,13 +231,15 @@ export function createDevLogger(level: LogLevel): JayDevLogger {
         const total = Date.now() - state.startTime;
         const timingStr = parts.length > 0 ? `[${parts.join(' | ')}] ` : '';
 
-        return `${state.method} ${state.path} ${timingStr}${total}ms`;
+        const ann = state.annotation ? ` ${state.annotation}` : '';
+        return `${state.method} ${state.path}${ann} ${timingStr}${total}ms`;
     }
 
     function createTiming(method: string, path: string): RequestTiming {
         const state: TimingState = {
             method,
             path,
+            annotation: '',
             startTime: Date.now(),
             viteSsr: 0,
             params: 0,
@@ -279,6 +284,10 @@ export function createDevLogger(level: LogLevel): JayDevLogger {
             },
             recordViteClient: (ms: number) => {
                 state.viteClient += ms;
+                updateLine();
+            },
+            annotate: (tag: string) => {
+                state.annotation = tag;
                 updateLine();
             },
             end: () => {

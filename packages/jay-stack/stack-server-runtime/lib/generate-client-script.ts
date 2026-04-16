@@ -150,6 +150,58 @@ ${parts.map((part) => '        ' + part.clientPart).join(',\n')}
 }
 
 /**
+ * Client-side freeze shortcut script (DL#127).
+ * Alt+S (Option+S on Mac) captures the current ViewState, saves it, and opens a frozen tab.
+ * Includes visual feedback: white flash + camera shutter sound.
+ */
+const FREEZE_SHORTCUT_SCRIPT = `
+      // Page Freeze shortcut: Alt+S / Option+S (DL#127)
+      // Use e.code instead of e.key — on Mac, Option+S produces 'ß', not 's'
+      document.addEventListener('keydown', async (e) => {
+        if (e.altKey && e.code === 'KeyS') {
+          e.preventDefault();
+          const automation = window.__jay?.automation;
+          if (!automation) return;
+
+          // Visual feedback: white flash
+          const flash = document.createElement('div');
+          flash.style.cssText = 'position:fixed;inset:0;background:white;z-index:999999;opacity:0.8;pointer-events:none;transition:opacity 0.3s';
+          document.body.appendChild(flash);
+          requestAnimationFrame(() => { flash.style.opacity = '0'; });
+          setTimeout(() => flash.remove(), 400);
+
+          // Audio feedback: camera shutter
+          try {
+            const ctx = new AudioContext();
+            const buf = ctx.createBuffer(1, ctx.sampleRate * 0.15, ctx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < data.length; i++) {
+              data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.02));
+            }
+            const src = ctx.createBufferSource();
+            src.buffer = buf;
+            src.connect(ctx.destination);
+            src.start();
+          } catch {}
+
+          // Capture and save
+          try {
+            const state = automation.getPageState();
+            const route = window.location.pathname;
+            const resp = await fetch('/_jay/freeze', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ route, viewState: state.viewState }),
+            });
+            const { id } = await resp.json();
+            window.open(route + '?_jay_freeze=' + id, '_blank');
+          } catch (err) {
+            console.error('[Freeze] Failed:', err);
+          }
+        }
+      });`;
+
+/**
  * Generate the automation wrapping code.
  * @param mode - 'client' appends to DOM; 'hydrate' skips appendChild (DOM already present)
  */
@@ -167,6 +219,8 @@ export function buildAutomationWrap(
 
     const appendLine = appendDom ? `\n      target.appendChild(wrapped.element.dom);` : '';
 
+    const freezeScript = FREEZE_SHORTCUT_SCRIPT;
+
     if (hasSlowViewState) {
         return `
       // Wrap with automation for dev tooling
@@ -176,7 +230,8 @@ export function buildAutomationWrap(
       registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
       window.__jay = window.__jay || {};
       window.__jay.automation = wrapped.automation;
-      window.dispatchEvent(new Event('jay:automation-ready'));${appendLine}`;
+      window.dispatchEvent(new Event('jay:automation-ready'));${appendLine}
+${freezeScript}`;
     }
 
     return `
@@ -185,7 +240,8 @@ export function buildAutomationWrap(
       registerGlobalContext(AUTOMATION_CONTEXT, wrapped.automation);
       window.__jay = window.__jay || {};
       window.__jay.automation = wrapped.automation;
-      window.dispatchEvent(new Event('jay:automation-ready'));${appendLine}`;
+      window.dispatchEvent(new Event('jay:automation-ready'));${appendLine}
+${freezeScript}`;
 }
 
 /**
