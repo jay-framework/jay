@@ -217,7 +217,9 @@ function mkRoute(
                     route,
                     options,
                     freezeStore,
+                    slowRenderCache,
                     freezeId,
+                    pageParams,
                     query['format'] === 'fragment' ? 'fragment' : 'page',
                     res,
                     timing,
@@ -794,7 +796,9 @@ async function handleFrozenRequest(
     route: JayRoute,
     options: DevServerOptions,
     freezeStore: FreezeStore,
+    slowRenderCache: SlowRenderCache,
     freezeId: string,
+    pageParams: Record<string, string>,
     format: 'page' | 'fragment',
     res: Response,
     timing?: RequestTiming,
@@ -811,10 +815,16 @@ async function handleFrozenRequest(
     getLogger().info(`[Freeze] Serving frozen page ${label} for ${route.rawRoute} [${format}]`);
 
     try {
-        const jayHtmlContent = await fs.readFile(route.jayHtmlPath, 'utf-8');
-        const jayHtmlFilename = path.basename(route.jayHtmlPath);
-        const jayHtmlDir = path.dirname(route.jayHtmlPath);
-        const sourceDir = jayHtmlDir;
+        // Use the pre-rendered jay-html (with slowForEach items unrolled)
+        // so the server element sees the same structure as the client hydrate.
+        // Fall back to the original jay-html if no pre-rendered version exists.
+        const cachedEntry = await slowRenderCache.get(route.jayHtmlPath, pageParams);
+        const jayHtmlPath = cachedEntry?.preRenderedPath ?? route.jayHtmlPath;
+        const jayHtmlContent = cachedEntry?.preRenderedContent
+            ?? (await fs.readFile(jayHtmlPath, 'utf-8'));
+        const jayHtmlFilename = path.basename(jayHtmlPath);
+        const jayHtmlDir = path.dirname(jayHtmlPath);
+        const sourceDir = path.dirname(route.jayHtmlPath);
         const routeDir = path.dirname(
             path.relative(options.pagesRootFolder!, route.jayHtmlPath),
         );
