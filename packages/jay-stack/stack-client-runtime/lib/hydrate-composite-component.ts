@@ -119,6 +119,13 @@ export function hydrateCompositeJayComponent<
                         ) as ViewState;
                     }
                 });
+
+                // Re-inject instance ViewStates (DL#128)
+                const ivs = instancesData.viewStates;
+                if (Object.keys(ivs).length > 0) {
+                    (viewState as any).__headlessInstances = ivs;
+                }
+
                 return viewState;
             },
         } as unknown as CompCore;

@@ -24,6 +24,7 @@ import {
     ConcreteJayComponent,
     JayComponentCore,
     makeJayComponent,
+    materializeViewState,
     createSignal,
     type ContextMarkers,
 } from '@jay-framework/component';
@@ -173,6 +174,7 @@ export function makeHeadlessInstanceComponent<
         // See Design Log #112.
         const originalRender = compCore.render;
         const isHydrating = currentConstructionContext()?.isHydrating;
+
         if (isHydrating) {
             const [hydrationDone, setHydrationDone] = createSignal(false);
             compCore.render = () => {
@@ -180,13 +182,21 @@ export function makeHeadlessInstanceComponent<
                 const clientVS = { ...resolvedFastVS, ...originalRender() };
                 if (!done) {
                     setHydrationDone(true);
+                    // Store materialized values for ViewState capture (DL#128).
+                    // render() returns signal getters for the reactive system,
+                    // but instanceData needs plain values for the automation API.
+                    if (instanceData) instanceData.viewStates[resolvedKey] = materializeViewState(resolvedFastVS);
                     return resolvedFastVS as any;
                 }
+                if (instanceData) instanceData.viewStates[resolvedKey] = materializeViewState(clientVS);
                 return clientVS;
             };
         } else {
             compCore.render = () => {
-                return { ...resolvedFastVS, ...originalRender() };
+                const vs = { ...resolvedFastVS, ...originalRender() };
+                // Store materialized values for ViewState capture (DL#128)
+                if (instanceData) instanceData.viewStates[resolvedKey] = materializeViewState(vs);
+                return vs;
             };
         }
 

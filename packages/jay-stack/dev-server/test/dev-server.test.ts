@@ -238,7 +238,9 @@ function clearScriptForTest(script: string) {
         .replace(/\/build\/pre-rendered\//g, '/')
         .split('\n')
         .map((line) => line.trim())
-        .join('\n');
+        .join('\n')
+        // Strip the freeze shortcut script (DL#128) — it's an implementation detail
+        .replace(/\n\/\/ Page Freeze shortcut:[\s\S]*?\n\/\/ source-map/, '\n// source-map');
 }
 
 async function makeRequest(handler: any, path: string): Promise<[string, Record<string, string>]> {

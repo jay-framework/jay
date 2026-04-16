@@ -99,7 +99,7 @@ Persists across server restarts so designers build up a library of states.
 
 2. **Q: Does `getPageState()` capture nested headless component ViewState?**
 
-   **A:** Gap to investigate. The automation API's `getPageState()` returns the page-level merged ViewState. Nested headless components may have their own ViewState not included. If not, extend the automation API to capture the full component tree state.
+   **A:** Keyed headless components (`key="w"`) — yes, merged under `viewState.w` by the composite `render()`. Non-keyed instances and headfull FS components — **no**. Their ViewState lives in the `HEADLESS_INSTANCES` context (keyed by coordinate, e.g., `S0/0/widget:AR0`), extracted and deleted from the ViewState in `composite-component.ts` before it reaches the automation API. Fix: the composite component's `render()` should re-inject `__headlessInstances` with each instance's current ViewState.
 
 3. **Q: How does the design board know when to refresh?**
 
@@ -120,14 +120,24 @@ Add to the dev-server:
 - Storage: `build/freezes/<id>.json`
 - Client-side: register `Alt+S` / `Option+S` keyboard shortcut on dev pages (in the automation setup script, not a plugin) to trigger freeze and open new tab
 
-### Phase 2: Verify nested headless component ViewState capture
+### Phase 2: Complete ViewState capture for non-keyed instances
 
-Investigate Q2 — does `automation.getPageState().viewState` include the full merged ViewState for nested headless components (e.g., a product-page with a nested product-widget)?
+**Problem:** Non-keyed headless instances and headfull FS components store their ViewState in the `HEADLESS_INSTANCES` context, not in the composite component's ViewState. The `__headlessInstances` object is extracted and deleted from the ViewState in `composite-component.ts` (lines 44-49) before hydration. It is never re-injected into the ViewState that `render()` returns, so the automation API never sees it.
 
-- Test with a page that has keyed headless components and verify the captured ViewState includes their data
-- Test with instance-only (non-keyed) headless components
-- If gaps exist: extend the automation API to walk the component tree and merge all ViewState data into the capture
-- Resolve any issues before proceeding — the freeze is only useful if it captures the complete page state
+**Fix:** In the composite component's `render()` function, after merging all keyed and unkeyed parts, re-inject `__headlessInstances` with each instance component's current ViewState (from their interactive `render()` output).
+
+**File:** `packages/jay-stack/stack-client-runtime/lib/composite-component.ts`
+
+In the `render()` closure (around line 96-117):
+1. After the existing merge loop that handles keyed and unkeyed parts
+2. Collect each instance component's current ViewState by its coordinate key
+3. Add `viewState.__headlessInstances = { [coordKey]: instanceVS, ... }` to the returned ViewState
+
+**Test:** Add a test to `packages/runtime/runtime-automation/test/integration.test.ts` that:
+1. Creates a composite component with a non-keyed headless instance
+2. Wraps with automation
+3. Verifies `getPageState().viewState.__headlessInstances` contains the instance's ViewState under the correct coordinate key
+4. Triggers an interactive update on the instance and verifies the captured ViewState reflects the change
 
 ### Phase 3: Editor protocol freeze management
 

@@ -717,6 +717,18 @@ describe('hydration', () => {
                     { timeout: 2000 },
                 );
                 expect(await page.textContent('#target .value')).toEqual('11');
+
+                // DL#128: Verify automation API captures non-keyed instance ViewState
+                const viewState = await page.evaluate(() => {
+                    return (window as any).__jay?.automation?.getPageState()?.viewState;
+                });
+                expect(viewState).toBeDefined();
+                expect(viewState.__headlessInstances).toBeDefined();
+                const instKeys = Object.keys(viewState.__headlessInstances);
+                expect(instKeys.length).toBeGreaterThan(0);
+                const instVS = viewState.__headlessInstances[instKeys[0]];
+                expect(instVS.label).toEqual('Item 1');
+                expect(instVS.value).toEqual(11);
             },
         });
     });
