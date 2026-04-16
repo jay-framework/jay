@@ -46,6 +46,7 @@ Frozen pages can be served in two formats:
 **1. Full page** — complete HTML document with `<html>`, `<head>`, `<body>`. Opens in a browser tab. Includes inlined CSS.
 
 **2. HTML fragment** — just the rendered body content with scoped styles, suitable for embedding in a shadow DOM inside a design board application. For shadow DOM to work correctly:
+
 - CSS is inlined (scoped to the fragment)
 - Fonts are inlined as base64 data URIs (prevents cross-origin/relative URL issues)
 - Images are inlined or use absolute URLs (prevents relative path mismatches)
@@ -59,12 +60,14 @@ After creating a freeze, the user can rename it (e.g., "in-stock", "out-of-stock
 The freeze system spans two layers:
 
 **Dev-server** (HTTP) — handles the two core operations that need direct access to the rendering pipeline:
+
 - `POST /_jay/freeze` — save ViewState, return ID (the freeze operation itself)
 - `GET /route?_jay_freeze=<id>` — serve frozen page (full page format)
 - `GET /route?_jay_freeze=<id>&format=fragment` — serve frozen page (shadow DOM fragment)
 - CORS headers on fragment endpoint for cross-origin design board access
 
 **Editor protocol** (Socket.IO) — exposes freeze management for design board applications:
+
 - `listFreezes(route)` — list saved freezes for a route
 - `renameFreeeze(id, name)` — rename a freeze
 - `deleteFreeze(id)` — delete a freeze
@@ -75,6 +78,7 @@ The socket notification replaces HMR for shadow DOM embedded views — the desig
 ### Storage
 
 JSON files in `build/freezes/`. Each freeze:
+
 ```json
 {
   "id": "abc123",
@@ -106,6 +110,7 @@ Persists across server restarts so designers build up a library of states.
 ### Phase 1: Dev-server freeze endpoints
 
 Add to the dev-server:
+
 - `POST /_jay/freeze` — body: `{ route, viewState }` → store, return `{ id }`
 - Frozen page rendering: detect `?_jay_freeze=<id>` in route handler
   - Load saved ViewState
@@ -118,6 +123,7 @@ Add to the dev-server:
 ### Phase 2: Verify nested headless component ViewState capture
 
 Investigate Q2 — does `automation.getPageState().viewState` include the full merged ViewState for nested headless components (e.g., a product-page with a nested product-widget)?
+
 - Test with a page that has keyed headless components and verify the captured ViewState includes their data
 - Test with instance-only (non-keyed) headless components
 - If gaps exist: extend the automation API to walk the component tree and merge all ViewState data into the capture
@@ -126,6 +132,7 @@ Investigate Q2 — does `automation.getPageState().viewState` include the full m
 ### Phase 3: Editor protocol freeze management
 
 Add to the editor protocol:
+
 - `listRoutes()` — list all page routes in the project (so the design board can navigate and freeze any page)
 - `listFreezes(route)` — list saved freezes for a route
 - `renameFreeze(id, name)` — rename
@@ -141,14 +148,14 @@ Add to the editor protocol:
 
 ## Key Files
 
-| Purpose | File |
-|---------|------|
-| Dev-server route handler | `dev-server/lib/dev-server.ts` |
-| SSR page generation | `dev-server/lib/dev-server.ts` (`sendResponse`, `generateSSRPageHtml`) |
-| Server element compiler | `compiler-jay-html/lib/jay-target/jay-html-compiler-server.ts` |
-| Automation API | `runtime-automation/lib/automation-agent.ts` |
-| Editor protocol | `editor-protocol/lib/protocol.ts` |
-| Editor server | `editor-server/lib/editor-server.ts` |
+| Purpose                  | File                                                                   |
+| ------------------------ | ---------------------------------------------------------------------- |
+| Dev-server route handler | `dev-server/lib/dev-server.ts`                                         |
+| SSR page generation      | `dev-server/lib/dev-server.ts` (`sendResponse`, `generateSSRPageHtml`) |
+| Server element compiler  | `compiler-jay-html/lib/jay-target/jay-html-compiler-server.ts`         |
+| Automation API           | `runtime-automation/lib/automation-agent.ts`                           |
+| Editor protocol          | `editor-protocol/lib/protocol.ts`                                      |
+| Editor server            | `editor-server/lib/editor-server.ts`                                   |
 
 ## Trade-offs
 
