@@ -1,4 +1,4 @@
-# Design Log #127 — Page Freeze and Variant View
+# Design Log #127 — Page Freeze
 
 ## Background
 
@@ -12,7 +12,7 @@ Designers working on jay-html pages need to:
 
 1. See what the page looks like in different data states (variant values, different data)
 2. Preserve specific states for comparison while editing the jay-html
-3. See changes to the jay-html reflected in all saved states via live reload
+3. Embed frozen page views in design board applications
 
 Today they must manually toggle states, reload, and remember which combinations they've checked.
 
@@ -20,84 +20,124 @@ Today they must manually toggle states, reload, and remember which combinations 
 
 ### Core Concept
 
-A **freeze** captures the current ViewState of a live page and opens it in a new tab. The frozen page renders using the compiled jay-html template + the saved ViewState, without running any component logic. It's a pure data-driven render.
+A **freeze** captures the current ViewState of a live page. The frozen page is rendered as pure SSR — the server element compiler produces static HTML from the saved ViewState. No component logic runs, no client scripts are included.
 
 ### Flow
 
 1. User navigates to a page and interacts until reaching the desired state
-2. User triggers **freeze** (button in dev toolbar, keyboard shortcut, or automation command)
-3. The client captures the current ViewState via `window.__jay.automation.getPageState().viewState`
-4. Client POSTs the ViewState to the dev-server → server stores it, returns an ID
-5. Client opens a new tab at the same route with `?_jay_freeze=<id>`
-6. Server loads the frozen page: SSR renders the jay-html using the saved ViewState as-is (no component slow/fast/interactive phases)
-7. The frozen page gets **live reload** — when the jay-html changes, the page re-renders with the same saved ViewState
+2. User presses **Alt+S** (Option+S on Mac) to trigger freeze
+3. **Visual feedback**: full-page white flash overlay (like a camera flash) + camera shutter sound effect — confirms the freeze was captured
+4. The client captures the current ViewState via `window.__jay.automation.getPageState().viewState`
+5. Client POSTs the ViewState to the dev-server → server stores it, returns an ID
+6. Client opens a new tab at the same route with `?_jay_freeze=<id>`
+7. Server loads the saved ViewState, SSR-renders the jay-html with it, returns static HTML
 
 ### What Freeze Gives You
 
-- **Multiple states side by side**: freeze the page with `stockStatus=IN_STOCK`, then navigate back, change the state to `OUT_OF_STOCK`, freeze again. Now you have two tabs showing both states.
-- **Live jay-html editing**: change the jay-html → both frozen tabs update via HMR, showing how the template change looks in both states.
+- **Multiple states side by side**: freeze with `stockStatus=IN_STOCK`, navigate back, change state, freeze again. Two tabs showing both states.
 - **Any state is freezable**: slow-only, fast, interactive, client-only states — whatever the automation API can capture.
-- **No special rendering mode**: the page renders normally with the compiled template, just with fixed data.
+- **Pseudo-classes still work**: `:hover`, `:focus`, `:active` are CSS — they work on the static HTML. The frozen page is fully responsive and supports breakpoints.
+- **No special rendering mode**: pure SSR with fixed data.
+
+### Output Formats
+
+Frozen pages can be served in two formats:
+
+**1. Full page** — complete HTML document with `<html>`, `<head>`, `<body>`. Opens in a browser tab. Includes inlined CSS.
+
+**2. HTML fragment** — just the rendered body content with scoped styles, suitable for embedding in a shadow DOM inside a design board application. For shadow DOM to work correctly:
+- CSS is inlined (scoped to the fragment)
+- Fonts are inlined as base64 data URIs (prevents cross-origin/relative URL issues)
+- Images are inlined or use absolute URLs (prevents relative path mismatches)
 
 ### Named Freezes
 
-After creating a freeze, the user can name it (e.g., "in-stock", "out-of-stock", "empty-cart"). The dev-server provides:
+After creating a freeze, the user can rename it (e.g., "in-stock", "out-of-stock", "empty-cart"). Rename is a post-save operation to keep the freeze flow fast.
 
-- `POST /_jay/freeze` — save ViewState, return ID
-- `PATCH /_jay/freeze/:id` — rename a freeze
-- `GET /_jay/freeze/list?route=/products/kitan` — list saved freezes for a route
-- `DELETE /_jay/freeze/:id` — delete a freeze
+### API Architecture
 
-Storage: JSON files in `build/freezes/`. Persists across server restarts so designers can build up a library of states.
+The freeze system spans two layers:
+
+**Dev-server** (HTTP) — handles the two core operations that need direct access to the rendering pipeline:
+- `POST /_jay/freeze` — save ViewState, return ID (the freeze operation itself)
+- `GET /route?_jay_freeze=<id>` — serve frozen page (full page format)
+- `GET /route?_jay_freeze=<id>&format=fragment` — serve frozen page (shadow DOM fragment)
+- CORS headers on fragment endpoint for cross-origin design board access
+
+**Editor protocol** (Socket.IO) — exposes freeze management for design board applications:
+- `listFreezes(route)` — list saved freezes for a route
+- `renameFreeeze(id, name)` — rename a freeze
+- `deleteFreeze(id)` — delete a freeze
+- `onFreezeChanged(callback)` — notify design board when jay-html changes so it can refresh its embedded frozen views
+
+The socket notification replaces HMR for shadow DOM embedded views — the design board application listens for change events and re-fetches the fragment.
+
+### Storage
+
+JSON files in `build/freezes/`. Each freeze:
+```json
+{
+  "id": "abc123",
+  "name": "in-stock",
+  "route": "/products/kitan",
+  "viewState": { ... },
+  "createdAt": "2026-04-16T10:00:00Z"
+}
+```
+
+Persists across server restarts so designers build up a library of states.
 
 ## Questions
 
-1. **Q: Can this be implemented as a plugin?**
+1. **Q: How does the frozen page render?**
 
-   **A:** Partially. The client-side part (capture ViewState, POST to server, open new tab) fits the plugin model — similar to webMCP, it hooks into `window.__jay.automation` via `makeJayInit().withClient()`. However, the server-side part (storing freezes, serving frozen pages with saved ViewState instead of component-computed ViewState) requires dev-server changes. A plugin can provide the client trigger + UI, while the dev-server provides the freeze API endpoints and the frozen page rendering.
+   **A:** Pure SSR — no client scripts. The server element compiler produces HTML from the saved ViewState. For full-page format: complete HTML document with inlined CSS. For fragment format: body content with scoped styles, inlined fonts/images for shadow DOM compatibility.
 
-2. **Q: How does the frozen page render?**
+2. **Q: Does `getPageState()` capture nested headless component ViewState?**
 
-   **A:** Pure SSR — no client scripts at all. The dev-server runs the server element compiler with the saved ViewState and returns static HTML with CSS. No hydrate script, no Vite client, no component runtime. Just the rendered HTML snapshot. This is the simplest approach: the server element compiler already produces HTML from a ViewState — we just skip the client entry script generation.
+   **A:** Gap to investigate. The automation API's `getPageState()` returns the page-level merged ViewState. Nested headless components may have their own ViewState not included. If not, extend the automation API to capture the full component tree state.
 
-3. **Q: Does `getPageState()` capture nested headless component ViewState?**
+3. **Q: How does the design board know when to refresh?**
 
-   **A:** This is a gap to investigate. The automation API's `getPageState()` returns the page-level merged ViewState. Nested headless components may have their own ViewState that isn't included. If not, we need to extend the automation API to capture the full component tree state.
-
-4. **Q: What about CSS and assets?**
-
-   **A:** The frozen page includes CSS (inlined from the jay-html's `<link>` and `<style>` tags) and references the same assets. No client runtime needed.
-
-5. **Q: What about live reload?**
-
-   **A:** Without the Vite client script, there's no automatic HMR. The user manually refreshes the frozen tab after editing jay-html. This is acceptable — the frozen page is a snapshot for inspection, not an interactive development surface. If live reload is needed later, we can add just the Vite client script without the component runtime.
+   **A:** Via the editor protocol socket. When jay-html or CSS changes, the dev-server emits a `freezeChanged` event. The design board re-fetches the fragment endpoint to get the updated render.
 
 ## Implementation Plan
 
-### Phase 1: Dev-server freeze API
+### Phase 1: Dev-server freeze endpoints
 
-Add endpoints to the dev-server:
-- `POST /_jay/freeze` — body: `{ route, viewState }` → stores freeze, returns `{ id }`
-- `GET /_jay/freeze/list?route=...` — returns freezes for a route
-- `PATCH /_jay/freeze/:id` — body: `{ name }` → rename
-- `DELETE /_jay/freeze/:id`
-- Storage: `build/freezes/<id>.json` with `{ id, name, route, viewState, createdAt }`
+Add to the dev-server:
+- `POST /_jay/freeze` — body: `{ route, viewState }` → store, return `{ id }`
+- Frozen page rendering: detect `?_jay_freeze=<id>` in route handler
+  - Load saved ViewState
+  - SSR-render jay-html with it (skip slow/fast phases)
+  - `format=fragment`: return body HTML with scoped styles, inlined fonts/images, CORS headers
+  - Default: return full-page HTML document
+- Storage: `build/freezes/<id>.json`
+- Client-side: register `Alt+S` / `Option+S` keyboard shortcut on dev pages (in the automation setup script, not a plugin) to trigger freeze and open new tab
 
-### Phase 2: Frozen page rendering
+### Phase 2: Verify nested headless component ViewState capture
 
-In the dev-server route handler, detect `?_jay_freeze=<id>`:
-- Load the saved ViewState from storage
-- Skip slow+fast phase computation — use the saved ViewState directly
-- Run the server element compiler with the saved ViewState to produce HTML
-- Return pure static HTML: CSS + rendered body, no client scripts (no hydrate, no Vite client, no component runtime)
-- The result is a minimal SSR-only page — just the HTML snapshot
+Investigate Q2 — does `automation.getPageState().viewState` include the full merged ViewState for nested headless components (e.g., a product-page with a nested product-widget)?
+- Test with a page that has keyed headless components and verify the captured ViewState includes their data
+- Test with instance-only (non-keyed) headless components
+- If gaps exist: extend the automation API to walk the component tree and merge all ViewState data into the capture
+- Resolve any issues before proceeding — the freeze is only useful if it captures the complete page state
 
-### Phase 3: Client-side freeze plugin
+### Phase 3: Editor protocol freeze management
 
-Create `packages/jay-stack-plugins/page-freeze/` as a `global: true` plugin:
-- `makeJayInit().withClient()` hooks into `window.__jay.automation`
-- Adds a freeze button to the page (floating dev toolbar or keyboard shortcut)
-- On trigger: captures ViewState via `automation.getPageState()`, POSTs to freeze API, opens new tab
+Add to the editor protocol:
+- `listRoutes()` — list all page routes in the project (so the design board can navigate and freeze any page)
+- `listFreezes(route)` — list saved freezes for a route
+- `renameFreeze(id, name)` — rename
+- `deleteFreeze(id)` — delete
+- `onFreezeChanged` event — emitted when jay-html/CSS changes, so design board can refresh
+
+### Phase 4: Shadow DOM fragment support
+
+- Inline fonts as base64 data URIs in the fragment output
+- Inline images or rewrite to absolute URLs
+- Scoped CSS (already inlined by the jay-html parser)
+- CORS headers on fragment endpoint
 
 ## Key Files
 
@@ -105,16 +145,17 @@ Create `packages/jay-stack-plugins/page-freeze/` as a `global: true` plugin:
 |---------|------|
 | Dev-server route handler | `dev-server/lib/dev-server.ts` |
 | SSR page generation | `dev-server/lib/dev-server.ts` (`sendResponse`, `generateSSRPageHtml`) |
+| Server element compiler | `compiler-jay-html/lib/jay-target/jay-html-compiler-server.ts` |
 | Automation API | `runtime-automation/lib/automation-agent.ts` |
-| webMCP plugin (pattern reference) | `jay-stack-plugins/webmcp/` |
-| Client init pattern | `jay-stack-plugins/webmcp/lib/init.ts` |
+| Editor protocol | `editor-protocol/lib/protocol.ts` |
+| Editor server | `editor-server/lib/editor-server.ts` |
 
 ## Trade-offs
 
-- **Simple concept**: freeze is just "save ViewState + SSR with it". No special compile modes, no variant discovery, no partial unfolding.
-- **Pure static output**: frozen pages are plain HTML — no client scripts, no runtime. Minimal, fast, inspectable.
-- **No live reload**: without Vite client, user manually refreshes after jay-html edits. Acceptable for snapshot inspection. Can add Vite client later if needed.
-- **Plugin architecture**: client-side trigger is a plugin (like webMCP). Server-side API lives in dev-server (needs direct access to rendering pipeline).
-- **Persistent storage**: freezes survive server restarts, building up a state library over time. Cost: some disk space in `build/freezes/`.
-- **Automation API dependency**: requires the page to have automation enabled (default in dev). Gap: nested component state may not be captured.
-- **No automatic variant enumeration**: user manually creates freezes for each state they care about. This is intentional — they know which states matter.
+- **Dev-server core, not a plugin**: freeze needs direct access to the rendering pipeline (SSR with arbitrary ViewState) and the editor protocol (socket events). Too integrated for a plugin.
+- **Pure static output**: frozen pages are plain HTML — no client scripts, no runtime. Minimal, fast, embeddable.
+- **Two formats**: full-page for browser tabs, fragment for shadow DOM embedding. Fragment requires font/image inlining for cross-origin compatibility.
+- **Socket for refresh**: shadow DOM views can't use HMR. The editor protocol socket notifies the design board to re-fetch on changes.
+- **Persistent storage**: freezes survive server restarts. Cost: disk space in `build/freezes/`.
+- **Automation API dependency**: requires automation enabled (default in dev). Gap: nested component state capture.
+- **No automatic variant enumeration**: user manually creates freezes. This is intentional — they know which states matter.
