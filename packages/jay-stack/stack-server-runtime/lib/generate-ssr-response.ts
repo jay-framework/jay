@@ -262,10 +262,23 @@ export async function generateFrozenPageHtml(
     const ssrHtml = htmlChunks.join('');
 
     if (format === 'fragment') {
-        // Shadow DOM fragment: body content + scoped styles only
-        const inlineCss = cached.cssHref
-            ? `<link rel="stylesheet" href="${cached.cssHref}" />`
-            : '';
+        // Shadow DOM fragment: body content + scoped styles.
+        // For shadow DOM to work cross-origin, CSS must be inlined (not linked).
+        // Images use absolute URLs. Fonts would need base64 inlining for full
+        // cross-origin support (deferred — requires reading font files from disk).
+        let inlineCss = '';
+        if (cached.cssHref) {
+            try {
+                // cssHref is a Vite URL like /@fs/path/to/file.css?v=hash&direct
+                // Extract the filesystem path and read the CSS directly.
+                const cssPath = cached.cssHref.replace(/^\/@fs/, '').replace(/\?.*$/, '');
+                const cssContent = await fs.readFile(cssPath, 'utf-8');
+                inlineCss = `<style>${cssContent}</style>`;
+            } catch {
+                // Fallback to link tag
+                inlineCss = `<link rel="stylesheet" href="${cached.cssHref}" />`;
+            }
+        }
         return `${inlineCss}\n${ssrHtml}`;
     }
 

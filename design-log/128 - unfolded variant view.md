@@ -129,11 +129,13 @@ Add to the dev-server:
 **File:** `packages/jay-stack/stack-client-runtime/lib/composite-component.ts`
 
 In the `render()` closure (around line 96-117):
+
 1. After the existing merge loop that handles keyed and unkeyed parts
 2. Collect each instance component's current ViewState by its coordinate key
 3. Add `viewState.__headlessInstances = { [coordKey]: instanceVS, ... }` to the returned ViewState
 
 **Test:** Add a test to `packages/runtime/runtime-automation/test/integration.test.ts` that:
+
 1. Creates a composite component with a non-keyed headless instance
 2. Wraps with automation
 3. Verifies `getPageState().viewState.__headlessInstances` contains the instance's ViewState under the correct coordinate key

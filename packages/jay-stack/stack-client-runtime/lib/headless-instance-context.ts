@@ -185,10 +185,12 @@ export function makeHeadlessInstanceComponent<
                     // Store materialized values for ViewState capture (DL#128).
                     // render() returns signal getters for the reactive system,
                     // but instanceData needs plain values for the automation API.
-                    if (instanceData) instanceData.viewStates[resolvedKey] = materializeViewState(resolvedFastVS);
+                    if (instanceData)
+                        instanceData.viewStates[resolvedKey] = materializeViewState(resolvedFastVS);
                     return resolvedFastVS as any;
                 }
-                if (instanceData) instanceData.viewStates[resolvedKey] = materializeViewState(clientVS);
+                if (instanceData)
+                    instanceData.viewStates[resolvedKey] = materializeViewState(clientVS);
                 return clientVS;
             };
         } else {

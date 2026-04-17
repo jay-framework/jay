@@ -12,6 +12,14 @@ import {
     GetProjectInfoResponse,
     ExportResponse,
     ImportResponse,
+    ListRoutesMessage,
+    ListRoutesResponse,
+    ListFreezesMessage,
+    ListFreezesResponse,
+    RenameFreezeMessage,
+    RenameFreezeResponse,
+    DeleteFreezeMessage,
+    DeleteFreezeResponse,
     EditorProtocolMessageTypes,
     EditorProtocolResponseTypes,
 } from '@jay-framework/editor-protocol';
@@ -74,6 +82,23 @@ export class EditorClient implements EditorProtocol {
         params: ImportMessage<TVendorDoc>,
     ): Promise<ImportResponse<TVendorDoc>> {
         return this.connectionManager.sendMessage<ImportMessage<TVendorDoc>>(params);
+    }
+
+    // Freeze management (DL#128)
+    async listRoutes(params: ListRoutesMessage): Promise<ListRoutesResponse> {
+        return this.connectionManager.sendMessage<ListRoutesMessage>(params);
+    }
+
+    async listFreezes(params: ListFreezesMessage): Promise<ListFreezesResponse> {
+        return this.connectionManager.sendMessage<ListFreezesMessage>(params);
+    }
+
+    async renameFreeze(params: RenameFreezeMessage): Promise<RenameFreezeResponse> {
+        return this.connectionManager.sendMessage<RenameFreezeMessage>(params);
+    }
+
+    async deleteFreeze(params: DeleteFreezeMessage): Promise<DeleteFreezeResponse> {
+        return this.connectionManager.sendMessage<DeleteFreezeMessage>(params);
     }
 
     async send(params: EditorProtocolMessageTypes<any>): Promise<EditorProtocolResponseTypes<any>> {

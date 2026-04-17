@@ -86,7 +86,7 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
 
     // Start dev server — pass httpServer so Vite's HMR WebSocket piggybacks
     // on Express's port instead of binding to the default port 24678
-    const { server, viteServer, routes } = await mkDevServer({
+    const { server, viteServer, routes, freezeStore } = await mkDevServer({
         pagesRootFolder: path.resolve(resolvedConfig.devServer.pagesBase),
         projectRootFolder: process.cwd(),
         publicBaseUrlPath: '/',
@@ -96,6 +96,45 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
     });
 
     app.use(server);
+
+    // Wire freeze management handlers (DL#128)
+    if (freezeStore) {
+        editorServer.onListRoutes(async () => ({
+            type: 'listRoutes' as const,
+            success: true,
+            routes: routes.map((r) => ({
+                path: r.path,
+                jayHtmlPath: r.fsRoute.jayHtmlPath,
+            })),
+        }));
+        editorServer.onListFreezes(async (params) => ({
+            type: 'listFreezes' as const,
+            success: true,
+            freezes: (await freezeStore.list(params.route)).map(
+                ({ id, name, route, createdAt }) => ({
+                    id,
+                    name,
+                    route,
+                    createdAt,
+                }),
+            ),
+        }));
+        editorServer.onRenameFreeze(async (params) => ({
+            type: 'renameFreeze' as const,
+            success: await freezeStore.rename(params.id, params.name),
+        }));
+        editorServer.onDeleteFreeze(async (params) => ({
+            type: 'deleteFreeze' as const,
+            success: await freezeStore.delete(params.id),
+        }));
+
+        // Emit freezeChanged when jay-html or CSS changes
+        viteServer.watcher.on('change', (changedPath) => {
+            if (changedPath.endsWith('.jay-html') || changedPath.endsWith('.css')) {
+                editorServer.emitFreezeChanged();
+            }
+        });
+    }
 
     // Serve static files from public folder
     const publicPath = path.resolve(resolvedConfig.devServer.publicFolder);

@@ -219,28 +219,30 @@ target.appendChild(wrapped.element.dom);
 
 function clearScriptForTest(script: string) {
     const cmd = process.cwd();
-    return script
-        .replace(cmd, '')
-        .replace(/\/\/\#.*/, '// source-map')
-        .replace(
-            /from "(\/@fs\/.*?stack-client-runtime.*?)"/g,
-            'from "@jay-framework/stack-client-runtime"',
-        )
-        .replace(
-            /from "(\/@fs\/.*?runtime-automation.*?)"/g,
-            'from "@jay-framework/runtime-automation"',
-        )
-        .replace(/from "(\/@fs\/.*?runtime\/dist.*?)"/g, 'from "@jay-framework/runtime"')
-        .replace(
-            /from "(\/@fs\/.*?view-state-merge.*?)"/g,
-            'from "@jay-framework/view-state-merge"',
-        )
-        .replace(/\/build\/pre-rendered\//g, '/')
-        .split('\n')
-        .map((line) => line.trim())
-        .join('\n')
-        // Strip the freeze shortcut script (DL#128) — it's an implementation detail
-        .replace(/\n\/\/ Page Freeze shortcut:[\s\S]*?\n\/\/ source-map/, '\n// source-map');
+    return (
+        script
+            .replace(cmd, '')
+            .replace(/\/\/\#.*/, '// source-map')
+            .replace(
+                /from "(\/@fs\/.*?stack-client-runtime.*?)"/g,
+                'from "@jay-framework/stack-client-runtime"',
+            )
+            .replace(
+                /from "(\/@fs\/.*?runtime-automation.*?)"/g,
+                'from "@jay-framework/runtime-automation"',
+            )
+            .replace(/from "(\/@fs\/.*?runtime\/dist.*?)"/g, 'from "@jay-framework/runtime"')
+            .replace(
+                /from "(\/@fs\/.*?view-state-merge.*?)"/g,
+                'from "@jay-framework/view-state-merge"',
+            )
+            .replace(/\/build\/pre-rendered\//g, '/')
+            .split('\n')
+            .map((line) => line.trim())
+            .join('\n')
+            // Strip the freeze shortcut script (DL#128) — it's an implementation detail
+            .replace(/\n\/\/ Page Freeze shortcut:[\s\S]*?\n\/\/ source-map/, '\n// source-map')
+    );
 }
 
 async function makeRequest(handler: any, path: string): Promise<[string, Record<string, string>]> {

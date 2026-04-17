@@ -112,6 +112,7 @@ export interface DevServer {
     viteServer: ViteDevServer;
     routes: DevServerRoute[];
     lifecycleManager: ServiceLifecycleManager;
+    freezeStore?: FreezeStore;
 }
 
 function handleOtherResponseCodes(
@@ -820,21 +821,21 @@ async function handleFrozenRequest(
         // Fall back to the original jay-html if no pre-rendered version exists.
         const cachedEntry = await slowRenderCache.get(route.jayHtmlPath, pageParams);
         const jayHtmlPath = cachedEntry?.preRenderedPath ?? route.jayHtmlPath;
-        const jayHtmlContent = cachedEntry?.preRenderedContent
-            ?? (await fs.readFile(jayHtmlPath, 'utf-8'));
+        const jayHtmlContent =
+            cachedEntry?.preRenderedContent ?? (await fs.readFile(jayHtmlPath, 'utf-8'));
         const jayHtmlFilename = path.basename(jayHtmlPath);
         const jayHtmlDir = path.dirname(jayHtmlPath);
         const sourceDir = path.dirname(route.jayHtmlPath);
-        const routeDir = path.dirname(
-            path.relative(options.pagesRootFolder!, route.jayHtmlPath),
-        );
+        const routeDir = path.dirname(path.relative(options.pagesRootFolder!, route.jayHtmlPath));
 
         // Inject headfull FS templates (component jay-html)
-        const {
-            injectHeadfullFSTemplates,
-        } = await import('@jay-framework/compiler-jay-html');
+        const { injectHeadfullFSTemplates } = await import('@jay-framework/compiler-jay-html');
         const { JAY_IMPORT_RESOLVER } = await import('@jay-framework/compiler-jay-html');
-        const fullJayHtml = injectHeadfullFSTemplates(jayHtmlContent, sourceDir, JAY_IMPORT_RESOLVER);
+        const fullJayHtml = injectHeadfullFSTemplates(
+            jayHtmlContent,
+            sourceDir,
+            JAY_IMPORT_RESOLVER,
+        );
 
         const html = await generateFrozenPageHtml(
             vite,
@@ -1201,6 +1202,7 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
         viteServer: vite,
         routes: devServerRoutes,
         lifecycleManager,
+        freezeStore,
     };
 }
 
@@ -1269,7 +1271,10 @@ function setupActionRouter(vite: ViteDevServer): void {
  */
 function setupFreezeEndpoint(vite: ViteDevServer, freezeStore: FreezeStore): void {
     vite.middlewares.use((req: any, res: any, next: any) => {
-        if (req.method === 'POST' && (req.url === '/_jay/freeze' || req.originalUrl === '/_jay/freeze')) {
+        if (
+            req.method === 'POST' &&
+            (req.url === '/_jay/freeze' || req.originalUrl === '/_jay/freeze')
+        ) {
             let body = '';
             req.on('data', (chunk: any) => (body += chunk));
             req.on('end', async () => {
@@ -1281,9 +1286,7 @@ function setupFreezeEndpoint(vite: ViteDevServer, freezeStore: FreezeStore): voi
                         return;
                     }
                     const entry = await freezeStore.save(route, viewState);
-                    getLogger().info(
-                        `[Freeze] Saved freeze "${entry.id}" for ${route}`,
-                    );
+                    getLogger().info(`[Freeze] Saved freeze "${entry.id}" for ${route}`);
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify(entry));
                 } catch (err: any) {
