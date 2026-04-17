@@ -178,3 +178,50 @@ Add to the editor protocol:
 - **Persistent storage**: freezes survive server restarts. Cost: disk space in `build/freezes/`.
 - **Automation API dependency**: requires automation enabled (default in dev). Gap: nested component state capture.
 - **No automatic variant enumeration**: user manually creates freezes. This is intentional — they know which states matter.
+
+## Implementation Results
+
+### Phase 1: Dev-server freeze endpoints — completed
+
+- `FreezeStore` class (`dev-server/lib/freeze.ts`) — CRUD for freeze entries in `build/freezes/`
+- `POST /_jay/freeze` endpoint — saves ViewState, returns `{ id }`
+- `?_jay_freeze=<id>` frozen page rendering via `generateFrozenPageHtml` (pure SSR, no client scripts)
+- `?_jay_freeze=<id>&format=fragment` — body-only HTML with inlined CSS for shadow DOM
+- Alt+S / Option+S keyboard shortcut (uses `e.code === 'KeyS'` for Mac compatibility)
+- Visual feedback: white flash overlay + synthesized camera shutter sound
+- Request timing shows `[FROZEN]` annotation
+- Build folder cleanup preserves `freezes/` directory
+- "FROZEN" badge in top-right corner of frozen pages
+
+### Phase 2: Nested component ViewState capture — completed
+
+Non-keyed headless instance ViewState was missing from `automation.getPageState().viewState`. Fixed by:
+
+1. Each instance's wrapped `render()` writes its materialized ViewState to `instanceData.viewStates[resolvedKey]` (using `materializeViewState` to resolve signal getters to plain values)
+2. Composite component's `render()` re-injects `instanceData.viewStates` as `__headlessInstances` in the returned ViewState
+3. Automation agent's `getPageState()` computes the slow+fast merge fresh on each call (not cached), and prefers the component's `__headlessInstances` over the stale slow-phase snapshot
+
+### Phase 3: Editor protocol freeze management — completed
+
+- Protocol types: `ListRoutesMessage/Response`, `ListFreezesMessage/Response`, `RenameFreezeMessage/Response`, `DeleteFreezeMessage/Response`, `FreezeEntry`
+- Editor server: handlers + `emitFreezeChanged()` socket event
+- Editor client: implemented all freeze protocol methods
+- CLI wiring: connected handlers to FreezeStore and routes, emits `freezeChanged` on jay-html/CSS changes
+
+### Phase 4: Shadow DOM fragment support — completed
+
+- CSS inlined by reading the file directly from disk (strips `/@fs` prefix and query params from Vite URL)
+- CORS headers (`Access-Control-Allow-Origin: *`) on fragment responses
+- Font inlining deferred — requires reading font files and base64 encoding
+
+### Deviations from design
+
+1. **Frozen page uses pre-rendered jay-html.** The original implementation read the original jay-html source, which caused slowForEach items to be compiled as forEach loops with wrong `__headlessInstances` keys. Fixed to load the pre-rendered jay-html from the slow render cache (with `slowForEach` items unrolled and scoped coordinates assigned).
+
+2. **Instance ViewState via `render()` not `viewStateChange` event.** The design suggested using the component's `viewStateChange` event for capturing instance ViewState. Instead, each instance's wrapped `render()` directly updates `instanceData.viewStates[resolvedKey]` with `materializeViewState(vs)`. This is simpler — no event subscription, no cross-component wiring, and `instanceData.viewStates` already has the right shape from SSR.
+
+3. **No `instanceGetters` Map or factory wrapper.** Initial implementation used a `Map<string, () => object>` for lazy collection and overrode the component's `viewState` getter via a factory wrapper. Simplified to direct writes in `render()` + re-injection in composite `render()`. No Maps, no getter overrides, no factory wrappers.
+
+4. **Automation agent computes merge fresh.** Previously cached `mergedViewState` in the `viewStateChange` handler. Changed to compute on each `getPageState()` call so it always reads the latest `__headlessInstances` from the component's ViewState (which includes instance data updated during their own reactive cycles, not just the page's).
+
+5. **CSS inlined by reading from disk, not Vite transform.** Initially tried `vite.transformRequest()` which wraps CSS in JS modules. Simplified to reading the CSS file directly from the filesystem path extracted from the Vite URL.
