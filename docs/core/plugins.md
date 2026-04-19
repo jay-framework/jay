@@ -39,6 +39,7 @@ setup:
 | `contracts`         | array?           | Static contract declarations                                                 |
 | `dynamic_contracts` | object or array? | Runtime-generated contracts                                                  |
 | `actions`           | array?           | Server action exports                                                        |
+| `routes`            | array?           | Plugin-provided pages (backoffice tools, admin dashboards)                   |
 | `init`              | string?          | Export name for `JayInit` constant (auto-discovers `lib/init.ts` if omitted) |
 | `setup`             | object?          | Setup command configuration                                                  |
 
@@ -79,6 +80,31 @@ actions:
 ```
 
 Actions with `.jay-action` metadata are discoverable by AI agents via the agent-kit.
+
+### routes
+
+Plugins can provide complete pages served by the dev server (DL#130). Best for backoffice tools, admin dashboards, and editors — pages with a boxed design that doesn't need per-site customization.
+
+```yaml
+routes:
+  - path: /admin/products
+    jayHtml: ./pages/admin/page.jay-html   # Relative path (local) or export subpath (NPM)
+    css: ./pages/admin/page.css            # Optional CSS file
+    component: ./pages/admin/page.ts       # Relative path (local) or exported member name (NPM)
+    description: Product admin dashboard
+```
+
+| Field         | Type    | Description                                                         |
+| ------------- | ------- | ------------------------------------------------------------------- |
+| `path`        | string  | Route path (e.g., `/admin/products`, `/dashboard/[section]`)        |
+| `jayHtml`     | string  | Path to jay-html template (relative for local, export key for NPM)  |
+| `css`         | string? | Path to CSS file (optional)                                         |
+| `component`   | string  | Path to page component (relative for local, member name for NPM)    |
+| `description` | string? | What this page does                                                 |
+
+**Route priority**: If a project defines the same route path in `src/pages/`, the project's page takes precedence. Plugin routes only fill gaps.
+
+Plugin pages use the same rendering pipeline as project pages — full SSR, hydration, and HMR support. A plugin route is essentially a headless component + jay-html template + route path.
 
 ### setup
 
