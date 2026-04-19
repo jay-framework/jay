@@ -5,6 +5,7 @@ import {
     JayRoutes,
     routeToExpressRoute,
     scanRoutes,
+    createRoute,
 } from '@jay-framework/stack-route-scanner';
 import {
     DevSlowlyChangingPhase,
@@ -24,6 +25,7 @@ import type {
 } from '@jay-framework/fullstack-component';
 import path from 'node:path';
 import fs from 'node:fs/promises';
+import fsSync from 'node:fs';
 import { RequestHandler } from 'express-serve-static-core';
 import { renderFastChangingData, mergeHeadTags } from '@jay-framework/stack-server-runtime';
 import { loadPageParts } from '@jay-framework/stack-server-runtime';
@@ -60,6 +62,7 @@ import {
     type InstancePhaseData,
     type ForEachHeadlessInstance,
 } from '@jay-framework/stack-server-runtime';
+import { scanPlugins } from '@jay-framework/stack-server-runtime';
 import { WithValidations } from '@jay-framework/compiler-shared';
 import { getLogger, getDevLogger, type RequestTiming } from '@jay-framework/logger';
 import { FreezeStore } from './freeze';
@@ -73,6 +76,107 @@ async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
         jayHtmlFilename: 'page.jay-html',
         compFilename: 'page.ts',
     });
+}
+
+/**
+ * Scan plugins for routes declared in plugin.yaml (DL#130).
+ * Resolves jayHtml/css paths via package.json exports.
+ * Skips routes that collide with existing project routes.
+ */
+async function scanPluginRoutes(
+    projectRoot: string,
+    projectRoutes: JayRoutes,
+): Promise<JayRoutes> {
+    const plugins = await scanPlugins({ projectRoot, includeDevDeps: true });
+    const projectPaths = new Set(projectRoutes.map((r) => r.rawRoute));
+    const pluginRoutes: JayRoutes = [];
+
+    for (const [, plugin] of plugins) {
+        if (!plugin.manifest.routes) continue;
+
+        for (const route of plugin.manifest.routes) {
+            // Skip if project already defines this route
+            if (projectPaths.has(route.path)) {
+                getLogger().info(
+                    `[Routes] Plugin "${plugin.name}" route ${route.path} skipped — project route takes precedence`,
+                );
+                continue;
+            }
+
+            // Resolve jayHtml path via package.json exports
+            const jayHtmlPath = resolvePluginExport(plugin.pluginPath, route.jayHtml);
+            if (!jayHtmlPath) {
+                getLogger().warn(
+                    `[Routes] Plugin "${plugin.name}" route ${route.path}: jayHtml "${route.jayHtml}" not found`,
+                );
+                continue;
+            }
+
+            // Resolve component path — use the module entry point
+            // (component is an exported member name, resolved at SSR load time)
+            const compPath = resolvePluginModule(plugin);
+
+            pluginRoutes.push(createRoute(route.path, jayHtmlPath, compPath));
+
+            getLogger().info(
+                `[Routes] Plugin "${plugin.name}" provides route ${route.path}`,
+            );
+        }
+    }
+
+    return pluginRoutes;
+}
+
+/** Resolve a plugin export subpath via package.json exports. */
+function resolvePluginExport(pluginPath: string, exportSubpath: string): string | undefined {
+    const packageJsonPath = path.join(pluginPath, 'package.json');
+    try {
+        const packageJson = JSON.parse(fsSync.readFileSync(packageJsonPath, 'utf-8'));
+        if (packageJson.exports) {
+            const exportKey = './' + exportSubpath;
+            const exportValue = packageJson.exports[exportKey];
+            if (exportValue) {
+                const resolved = typeof exportValue === 'string'
+                    ? exportValue
+                    : exportValue.default || exportValue.import || exportValue.require;
+                if (resolved) {
+                    const fullPath = path.join(pluginPath, resolved);
+                    return fullPath;
+                }
+            }
+        }
+    } catch { /* skip */ }
+
+    // Fallback: try common locations
+    for (const dir of ['dist', 'lib', '']) {
+        const candidate = path.join(pluginPath, dir, exportSubpath);
+        try {
+            fsSync.accessSync(candidate);
+            return candidate;
+        } catch { /* skip */ }
+    }
+    return undefined;
+}
+
+/** Resolve the main module path for a plugin. */
+function resolvePluginModule(plugin: { pluginPath: string; manifest: { module?: string } }): string {
+    const modulePath = plugin.manifest.module || 'index';
+    for (const ext of ['.ts', '.js', '/index.ts', '/index.js']) {
+        const candidate = path.join(plugin.pluginPath, modulePath + ext);
+        try {
+            fsSync.accessSync(candidate);
+            return candidate;
+        } catch { /* skip */ }
+    }
+    // Try lib/ directory
+    for (const ext of ['.ts', '.js']) {
+        const candidate = path.join(plugin.pluginPath, 'lib', path.basename(modulePath) + ext);
+        try {
+            fsSync.accessSync(candidate);
+            return candidate;
+        } catch { /* skip */ }
+    }
+    return path.join(plugin.pluginPath, modulePath);
 }
 
 function defaults(options: DevServerOptions): DevServerOptions {
@@ -1155,10 +1259,14 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     // Scan routes, excluding any page files found inside the build folder.
     // This prevents pre-rendered cache files from being picked up as additional routes
     // when the build folder is inside the pages root (e.g., in tests).
-    const allRoutes: JayRoutes = await initRoutes(pagesRootFolder);
-    const routes = buildFolder
-        ? allRoutes.filter((route) => !route.jayHtmlPath.startsWith(buildFolder))
-        : allRoutes;
+    const projectRoutes: JayRoutes = await initRoutes(pagesRootFolder);
+    const filteredProjectRoutes = buildFolder
+        ? projectRoutes.filter((route) => !route.jayHtmlPath.startsWith(buildFolder))
+        : projectRoutes;
+
+    // Scan plugin routes and merge — project routes take precedence (DL#130)
+    const pluginRoutes = await scanPluginRoutes(projectRootFolder, filteredProjectRoutes);
+    const routes = [...filteredProjectRoutes, ...pluginRoutes];
     const slowlyPhase = new DevSlowlyChangingPhase();
 
     // Create pre-rendered jay-html cache

@@ -365,6 +365,50 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
             });
         }
     }
+
+    // Validate routes (DL#130)
+    if (manifest.routes) {
+        if (!Array.isArray(manifest.routes)) {
+            result.errors.push({
+                type: 'schema',
+                message: 'Field "routes" must be an array',
+                location: 'plugin.yaml',
+            });
+        } else {
+            manifest.routes.forEach((route, index) => {
+                if (!route.path) {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Route at index ${index} is missing "path" field`,
+                        location: 'plugin.yaml',
+                    });
+                }
+                if (!route.jayHtml) {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Route "${route.path || index}" is missing "jayHtml" field`,
+                        location: 'plugin.yaml',
+                        suggestion: 'Specify the export subpath for the jay-html file',
+                    });
+                }
+                if (!route.component) {
+                    result.errors.push({
+                        type: 'schema',
+                        message: `Route "${route.path || index}" is missing "component" field`,
+                        location: 'plugin.yaml',
+                        suggestion: 'Specify the exported member name for the page component',
+                    });
+                }
+                // Validate exports exist
+                if (route.jayHtml) {
+                    validateDocFile(route.jayHtml, `route "${route.path}" jayHtml`, context, result);
+                }
+                if (route.css) {
+                    validateDocFile(route.css, `route "${route.path}" css`, context, result);
+                }
+            });
+        }
+    }
 }
 
 /**
