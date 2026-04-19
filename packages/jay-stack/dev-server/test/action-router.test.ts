@@ -9,7 +9,7 @@ import {
     makeJayAction,
     makeJayQuery,
     ActionError,
-    createJayService,
+    createJayService, makeJayStream,
 } from '@jay-framework/fullstack-component';
 
 // Mock Express request/response
@@ -248,6 +248,102 @@ describe('Action Router', () => {
     describe('ACTION_ENDPOINT_BASE', () => {
         it('should have correct value', () => {
             expect(ACTION_ENDPOINT_BASE).toBe('/_jay/actions');
+        });
+    });
+
+    // --- Streaming Actions (DL#129) ---
+
+    describe('streaming actions', () => {
+        function createStreamMockResponse() {
+            const res: any = {
+                statusCode: 200,
+                headers: {} as Record<string, string>,
+                chunks: [] as string[],
+                ended: false,
+                setHeader(key: string, value: string) {
+                    this.headers[key] = value;
+                    return this;
+                },
+                write(data: string) {
+                    this.chunks.push(data);
+                    return true;
+                },
+                end() {
+                    this.ended = true;
+                },
+                status(code: number) {
+                    this.statusCode = code;
+                    return this;
+                },
+                json(data: any) {
+                    this.body = data;
+                    return this;
+                },
+                set(header: string, value: string) {
+                    this.headers[header] = value;
+                    return this;
+                },
+            };
+            return res;
+        }
+
+        it('should respond with NDJSON for streaming actions', async () => {
+            const stream = makeJayStream('test.stream').withHandler(
+                async function* (input: { count: number }) {
+                    for (let i = 0; i < input.count; i++) {
+                        yield { index: i };
+                    }
+                },
+            );
+
+            registry.registerStream(stream);
+
+            const router = createActionRouter({ registry });
+            const req = createMockRequest({
+                method: 'POST',
+                path: '/test.stream',
+                body: { count: 3 },
+            });
+            const res = createStreamMockResponse();
+
+            await router(req as any, res as any, () => {});
+
+            expect(res.headers['Content-Type']).toBe('application/x-ndjson');
+            expect(res.ended).toBe(true);
+
+            // Parse NDJSON chunks
+            const lines = res.chunks.map((c: string) => JSON.parse(c.trim()));
+            expect(lines).toHaveLength(4); // 3 chunks + done
+            expect(lines[0]).toEqual({ chunk: { index: 0 } });
+            expect(lines[1]).toEqual({ chunk: { index: 1 } });
+            expect(lines[2]).toEqual({ chunk: { index: 2 } });
+            expect(lines[3]).toEqual({ done: true });
+        });
+
+        it('should handle streaming errors mid-stream', async () => {
+            const stream = makeJayStream('test.errorStream').withHandler(
+                async function* () {
+                    yield 'ok';
+                    throw new Error('mid-stream failure');
+                },
+            );
+
+            registry.registerStream(stream);
+
+            const router = createActionRouter({ registry });
+            const req = createMockRequest({
+                method: 'POST',
+                path: '/test.errorStream',
+                body: {},
+            });
+            const res = createStreamMockResponse();
+
+            await router(req as any, res as any, () => {});
+
+            const lines = res.chunks.map((c: string) => JSON.parse(c.trim()));
+            expect(lines[0]).toEqual({ chunk: 'ok' });
+            expect(lines[1]).toEqual({ error: 'mid-stream failure' });
+            expect(res.ended).toBe(true);
         });
     });
 });

@@ -131,6 +131,25 @@ export function createActionRouter(options?: ActionRouterOptions): RequestHandle
             ACTION_ENDPOINT_BASE + '/' + actionName,
         );
 
+        // Streaming action (DL#129): respond with NDJSON
+        if (registry.isStreaming(actionName)) {
+            res.setHeader('Content-Type', 'application/x-ndjson');
+            res.setHeader('Transfer-Encoding', 'chunked');
+
+            try {
+                const generator = registry.executeStream(actionName, input);
+                for await (const chunk of generator) {
+                    res.write(JSON.stringify({ chunk }) + '\n');
+                }
+                res.write(JSON.stringify({ done: true }) + '\n');
+            } catch (err: any) {
+                res.write(JSON.stringify({ error: err.message }) + '\n');
+            }
+            res.end();
+            timing?.end();
+            return;
+        }
+
         // Execute the action
         const result = await registry.execute(actionName, input);
 

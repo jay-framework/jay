@@ -8,6 +8,8 @@
 import type {
     JayAction,
     JayActionDefinition,
+    JayStreamAction,
+    JayStreamActionDefinition,
     HttpMethod,
     CacheOptions,
     ActionError,
@@ -20,28 +22,46 @@ import type { ActionMetadata } from './action-metadata';
 // ============================================================================
 
 /**
- * Registered action entry with resolved metadata.
+ * Base fields shared by all registered action types.
  */
-export interface RegisteredAction {
+export interface RegisteredActionBase {
     /** Unique action name */
     actionName: string;
-
     /** HTTP method */
     method: HttpMethod;
-
-    /** Cache options (for GET requests) */
-    cacheOptions?: CacheOptions;
-
     /** Service markers for dependency injection */
     services: any[];
-
-    /** The handler function */
-    handler: (input: any, ...services: any[]) => Promise<any>;
-
     /** Optional metadata from .jay-action file (description, input/output schemas).
      *  Actions with metadata are exposed to AI agents; those without are not. */
     metadata?: ActionMetadata;
 }
+
+/**
+ * Registered request-response action entry.
+ * Uses `isStreaming` as a discriminator for the union.
+ */
+export interface RegisteredAction extends RegisteredActionBase {
+    /** Discriminator: false or absent for regular actions */
+    isStreaming?: false;
+    /** Cache options (for GET requests) */
+    cacheOptions?: CacheOptions;
+    /** The handler function */
+    handler: (input: any, ...services: any[]) => Promise<any>;
+}
+
+/**
+ * Registered streaming action entry (DL#129).
+ */
+export interface RegisteredStreamAction extends RegisteredActionBase {
+    method: 'POST';
+    /** Discriminator: true for streaming actions */
+    isStreaming: true;
+    /** The generator handler function */
+    handler: (input: any, ...services: any[]) => AsyncIterable<any>;
+}
+
+/** Union of all registered action types, discriminated by `isStreaming`. */
+export type RegisteredActionEntry = RegisteredAction | RegisteredStreamAction;
 
 /**
  * Result of executing an action.
@@ -82,7 +102,7 @@ export interface ActionErrorResponse {
  * ```
  */
 export class ActionRegistry {
-    private readonly actions = new Map<string, RegisteredAction>();
+    private readonly actions = new Map<string, RegisteredActionEntry>();
 
     /**
      * Registers an action with the registry.
@@ -107,7 +127,7 @@ export class ActionRegistry {
      * @param actionName - The unique action name
      * @returns The registered action or undefined
      */
-    get(actionName: string): RegisteredAction | undefined {
+    get(actionName: string): RegisteredActionEntry | undefined {
         return this.actions.get(actionName);
     }
 
@@ -189,6 +209,18 @@ export class ActionRegistry {
             };
         }
 
+        // Streaming actions must use executeStream()
+        if (action.isStreaming) {
+            return {
+                success: false,
+                error: {
+                    code: 'STREAMING_ACTION',
+                    message: `Action '${actionName}' is a streaming action — use executeStream() instead`,
+                    isActionError: false,
+                },
+            };
+        }
+
         try {
             // Resolve services
             const services = resolveServices(action.services);
@@ -255,6 +287,47 @@ export class ActionRegistry {
 
         return parts.length > 0 ? parts.join(', ') : undefined;
     }
+
+    // --- Streaming actions (DL#129) ---
+
+    /**
+     * Register a streaming action.
+     */
+    registerStream<I, C, S extends any[]>(
+        action: JayStreamAction<I, C> & JayStreamActionDefinition<I, C, S>,
+    ): void {
+        const entry: RegisteredStreamAction = {
+            actionName: action.actionName,
+            method: 'POST',
+            isStreaming: true,
+            services: action.services as any[],
+            handler: action.handler,
+        };
+        this.actions.set(action.actionName, entry);
+    }
+
+    /**
+     * Check if a registered action is a streaming action.
+     */
+    isStreaming(actionName: string): boolean {
+        const action = this.actions.get(actionName);
+        return !!action?.isStreaming;
+    }
+
+    /**
+     * Execute a streaming action, returning an async iterable of chunks.
+     */
+    async *executeStream(actionName: string, input: unknown): AsyncGenerator<any> {
+        const action = this.actions.get(actionName);
+        if (!action || !action.isStreaming) {
+            throw new Error(`Streaming action '${actionName}' not found`);
+        }
+
+        const services = resolveServices(action.services);
+        for await (const chunk of action.handler(input, ...services)) {
+            yield chunk;
+        }
+    }
 }
 
 // ============================================================================
@@ -285,7 +358,7 @@ export function registerAction<I, O, S extends any[]>(
  * Retrieves a registered action by name from the default registry.
  * @deprecated Use actionRegistry.get() instead
  */
-export function getRegisteredAction(actionName: string): RegisteredAction | undefined {
+export function getRegisteredAction(actionName: string): RegisteredActionEntry | undefined {
     return actionRegistry.get(actionName);
 }
 
