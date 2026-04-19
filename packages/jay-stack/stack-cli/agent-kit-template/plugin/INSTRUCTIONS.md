@@ -32,7 +32,7 @@ A plugin provides headless components (data + interactions, no UI) that project 
 | [plugin-routes.md](plugin-routes.md)             | Plugin-provided pages: routes, jay-html templates, page components      |
 | [seo-guide.md](seo-guide.md)                     | SEO head tags: title, meta, OG, canonical via phaseOutput               |
 | [validation.md](validation.md)                   | jay-stack validate-plugin usage                                         |
-| [dev-server-service.md](dev-server-service.md)   | Dev server service API: routes, params, freeze management       |
+| [dev-server-service.md](dev-server-service.md)   | Dev server service API: routes, params, freeze management               |
 | `../references/<plugin>/`                        | Plugin reference data                                                   |
 
 ## Key Principles

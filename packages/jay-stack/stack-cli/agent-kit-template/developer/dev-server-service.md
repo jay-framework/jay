@@ -10,10 +10,10 @@ Registered as `DEV_SERVER_SERVICE` — injectable in actions and components:
 import { DEV_SERVER_SERVICE } from '@jay-framework/dev-server';
 
 export const listAllRoutes = makeJayAction('admin.listRoutes')
-    .withServices(DEV_SERVER_SERVICE)
-    .withHandler(async (_input, devServer) => {
-        return devServer.listRoutes();
-    });
+  .withServices(DEV_SERVER_SERVICE)
+  .withHandler(async (_input, devServer) => {
+    return devServer.listRoutes();
+  });
 ```
 
 ## Direct Access

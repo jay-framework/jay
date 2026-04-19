@@ -67,7 +67,7 @@ import { WithValidations } from '@jay-framework/compiler-shared';
 import { getLogger, getDevLogger, type RequestTiming } from '@jay-framework/logger';
 import { FreezeStore } from './freeze';
 import { DevServerService, DEV_SERVER_SERVICE } from './dev-server-service';
-import {registerService} from "@jay-framework/stack-server-runtime/dist";
+import { registerService } from '@jay-framework/stack-server-runtime/dist';
 
 /** Callback to register linked files for watching. Set by setupSlowRenderCacheInvalidation. */
 let _watchLinkedFiles: (files: string[]) => void = () => {};

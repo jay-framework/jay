@@ -10,21 +10,21 @@ Registered as `DEV_SERVER_SERVICE` — inject in actions and components:
 import { DEV_SERVER_SERVICE } from '@jay-framework/dev-server';
 
 export const listAllRoutes = makeJayAction('admin.listRoutes')
-    .withServices(DEV_SERVER_SERVICE)
-    .withHandler(async (_input, devServer) => {
-        return devServer.listRoutes();
-    });
+  .withServices(DEV_SERVER_SERVICE)
+  .withHandler(async (_input, devServer) => {
+    return devServer.listRoutes();
+  });
 ```
 
 Or in a component:
 
 ```typescript
 makeJayStackComponent()
-    .withServices(DEV_SERVER_SERVICE)
-    .withFastRender(async (_props, devServer) => {
-        const routes = devServer.listRoutes();
-        return phaseOutput({ routes, routeCount: routes.length }, {});
-    });
+  .withServices(DEV_SERVER_SERVICE)
+  .withFastRender(async (_props, devServer) => {
+    const routes = devServer.listRoutes();
+    return phaseOutput({ routes, routeCount: routes.length }, {});
+  });
 ```
 
 ## Direct Access
@@ -52,8 +52,8 @@ Runs the `loadParams` generator for a route and streams param batches:
 
 ```typescript
 await service.loadRouteParams('/products/kitan/[[category]]', (batch) => {
-    console.log(batch.params); // [{ category: 'shirts' }, { category: 'pants' }]
-    console.log(batch.hasMore); // true while generator has more, false on last batch
+  console.log(batch.params); // [{ category: 'shirts' }, { category: 'pants' }]
+  console.log(batch.hasMore); // true while generator has more, false on last batch
 });
 ```
 
@@ -114,6 +114,6 @@ The `freezeChanged` socket event is emitted when jay-html or CSS files change. D
 
 ```typescript
 socket.on('freezeChanged', () => {
-    // Re-fetch frozen page fragments
+  // Re-fetch frozen page fragments
 });
 ```

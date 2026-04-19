@@ -19,26 +19,29 @@ A plugin route is a **headless component + jay-html template + route path**. It 
 ```html
 <!-- pages/admin/page.jay-html -->
 <html>
-<head>
+  <head>
     <script type="application/jay-data">
-data:
-    title: string
-    items:
-        - name: string
-          count: number
+      data:
+          title: string
+          items:
+              - name: string
+                count: number
     </script>
     <style>
-        .admin { max-width: 800px; margin: 0 auto; padding: 20px; font-family: system-ui; }
+      .admin {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        font-family: system-ui;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="admin">
-        <h1>{title}</h1>
-        <div forEach="items" trackBy="name">
-            <span>{name}</span>: <strong>{count}</strong>
-        </div>
+      <h1>{title}</h1>
+      <div forEach="items" trackBy="name"><span>{name}</span>: <strong>{count}</strong></div>
     </div>
-</body>
+  </body>
 </html>
 ```
 
@@ -50,15 +53,12 @@ import { makeJayStackComponent, phaseOutput } from '@jay-framework/fullstack-com
 import { MY_SERVICE, MyService } from '../../services';
 
 export const page = makeJayStackComponent()
-    .withProps<{}>()
-    .withServices(MY_SERVICE)
-    .withFastRender(async (_props, myService: MyService) => {
-        const data = await myService.getDashboardData();
-        return phaseOutput(
-            { title: 'Admin Dashboard', items: data.items },
-            {},
-        );
-    });
+  .withProps<{}>()
+  .withServices(MY_SERVICE)
+  .withFastRender(async (_props, myService: MyService) => {
+    const data = await myService.getDashboardData();
+    return phaseOutput({ title: 'Admin Dashboard', items: data.items }, {});
+  });
 ```
 
 The page component follows the same pattern as any `makeJayStackComponent` — supports `withSlowlyRender`, `withFastRender`, `withInteractive`, `withLoadParams`, and `withServices`.
@@ -112,16 +112,16 @@ The page component can use `withLoadParams` for SSG parameter discovery:
 
 ```typescript
 export const page = makeJayStackComponent()
-    .withProps<{}>()
-    .withServices(PRODUCTS_SERVICE)
-    .withLoadParams<{ id: string }>(async function* (productsService) {
-        const products = await productsService.listAll();
-        yield products.map(p => ({ id: p.id }));
-    })
-    .withSlowlyRender(async (props: { id: string }, productsService) => {
-        const product = await productsService.getById(props.id);
-        return phaseOutput({ name: product.name, price: product.price }, {});
-    });
+  .withProps<{}>()
+  .withServices(PRODUCTS_SERVICE)
+  .withLoadParams<{ id: string }>(async function* (productsService) {
+    const products = await productsService.listAll();
+    yield products.map((p) => ({ id: p.id }));
+  })
+  .withSlowlyRender(async (props: { id: string }, productsService) => {
+    const product = await productsService.getById(props.id);
+    return phaseOutput({ name: product.name, price: product.price }, {});
+  });
 ```
 
 ## Route Priority
