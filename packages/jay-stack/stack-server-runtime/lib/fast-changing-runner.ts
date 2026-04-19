@@ -62,11 +62,16 @@ export async function renderFastChangingData(
                 }),
             };
 
-            const fastRenderedPart = await compDefinition.fastRender(
-                partProps,
-                partSlowlyCarryForward,
-                ...services,
-            );
+            const fastRenderedPart = compDefinition.slowlyRender ?
+                await compDefinition.fastRender(
+                    partProps,
+                    partSlowlyCarryForward,
+                    ...services,
+                ) :
+                await compDefinition.fastRender(
+                    partProps,
+                    ...services,
+                );
             if (fastRenderedPart.kind === 'PhaseOutput') {
                 if (!key) {
                     fastViewState = { ...fastViewState, ...fastRenderedPart.rendered };
