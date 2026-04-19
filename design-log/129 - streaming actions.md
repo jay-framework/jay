@@ -216,3 +216,27 @@ interface JayStreamActionDefinition<Input, Chunk, Services extends any[]> {
 - **New builder (`makeJayStream`)**: separate from `makeJayAction`/`makeJayQuery` to keep semantics clear. Generator handlers have different error handling, return types, and transport.
 - **`AsyncGenerator` on both sides**: server handler is `async function*`, client receives `AsyncGenerator`. Symmetric, composable, supports `for await...of` and early termination (`break`).
 - **`.jay-action` with `streaming: true`**: minimal schema extension. `outputSchema` describes the chunk shape. Agents can discover streaming actions and know what each chunk looks like.
+- **No caching for streaming**: streaming actions are POST and produce chunks over time. HTTP caching doesn't apply. Result caching could be added later if needed.
+
+## Implementation Results
+
+### Phases 1, 2, 4 completed. Phase 3 (client-side HTTP consumer) deferred.
+
+### Files Modified
+
+| File | Change |
+|------|--------|
+| `full-stack-component/lib/jay-action-builder.ts` | Added `JayStreamAction`, `JayStreamActionDefinition`, `JayStreamBuilder`, `makeJayStream()`, `isJayStreamAction()`, `StreamChunk<T>` |
+| `stack-server-runtime/lib/action-registry.ts` | Added `RegisteredActionBase`, `RegisteredStreamAction`, `RegisteredActionEntry` discriminated union, `registerStream()`, `isStreaming()`, `executeStream()` |
+| `dev-server/lib/action-router.ts` | Added NDJSON streaming response for `isStreaming` actions |
+| `full-stack-component/test/jay-action-builder.test.ts` | 5 tests: metadata, async iteration, service injection, `isJayStreamAction`, `StreamChunk` type |
+| `stack-server-runtime/test/action-registry.test.ts` | 5 tests: register/detect, `isStreaming` false for regular, multi-chunk execution, not-found error, mid-stream error |
+| `dev-server/test/action-router.test.ts` | 2 tests: NDJSON response with chunks + done, mid-stream error handling |
+
+### Deviations from design
+
+1. **Discriminated union for registry entries.** The design didn't specify registry types. Implementation uses `RegisteredActionBase` (shared fields) extended by `RegisteredAction` (`isStreaming?: false`) and `RegisteredStreamAction` (`isStreaming: true`), combined as `RegisteredActionEntry`. The `isStreaming` field serves as the discriminator — no `as any` casts needed.
+
+2. **`execute()` rejects streaming actions.** When a streaming action is called via `execute()` (the regular path), it returns an error `STREAMING_ACTION` directing callers to use `executeStream()` instead. This prevents accidentally awaiting a generator.
+
+3. **Phase 3 (client-side HTTP consumer) deferred.** The client-side build transform that replaces action calls with `fetch` hasn't been updated for streaming yet. Server-side callable works directly (calls the handler). Client-side NDJSON streaming consumption will be added when the Vite plugin transform is updated.
