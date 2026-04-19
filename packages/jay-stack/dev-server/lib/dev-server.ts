@@ -63,6 +63,7 @@ import {
 import { WithValidations } from '@jay-framework/compiler-shared';
 import { getLogger, getDevLogger, type RequestTiming } from '@jay-framework/logger';
 import { FreezeStore } from './freeze';
+import { DevServerService } from './dev-server-service';
 
 /** Callback to register linked files for watching. Set by setupSlowRenderCacheInvalidation. */
 let _watchLinkedFiles: (files: string[]) => void = () => {};
@@ -113,6 +114,8 @@ export interface DevServer {
     routes: DevServerRoute[];
     lifecycleManager: ServiceLifecycleManager;
     freezeStore?: FreezeStore;
+    /** Public API for design board applications and CLI (DL#128) */
+    service: DevServerService;
 }
 
 function handleOtherResponseCodes(
@@ -1197,12 +1200,15 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
         ),
     );
 
+    const service = new DevServerService(devServerRoutes, vite, freezeStore);
+
     return {
         server: vite.middlewares,
         viteServer: vite,
         routes: devServerRoutes,
         lifecycleManager,
         freezeStore,
+        service,
     };
 }
 

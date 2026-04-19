@@ -202,6 +202,28 @@ export interface DeleteFreezeResponse extends BaseResponse {
     type: 'deleteFreeze';
 }
 
+// --- Route params discovery (DL#128) ---
+
+export interface LoadRouteParamsMessage extends BaseMessage<LoadRouteParamsResponse> {
+    type: 'loadRouteParams';
+    /** Route path, e.g. "/products/kitan/[[category]]" */
+    route: string;
+}
+
+/** Initial response acknowledging the request. Param batches arrive as events. */
+export interface LoadRouteParamsResponse extends BaseResponse {
+    type: 'loadRouteParams';
+}
+
+/** Streamed event: a batch of params from the loadParams generator */
+export interface RouteParamsBatchEvent {
+    type: 'routeParamsBatch';
+    route: string;
+    params: Record<string, string>[];
+    /** true if more batches may follow, false if this is the last */
+    hasMore: boolean;
+}
+
 // Union types for all messages and responses
 export type EditorProtocolMessageTypes<TVendorDoc> =
     | PublishMessage
@@ -213,7 +235,8 @@ export type EditorProtocolMessageTypes<TVendorDoc> =
     | ListRoutesMessage
     | ListFreezesMessage
     | RenameFreezeMessage
-    | DeleteFreezeMessage;
+    | DeleteFreezeMessage
+    | LoadRouteParamsMessage;
 
 export type EditorProtocolResponseTypes<TVendorDoc> =
     | PublishResponse
@@ -225,7 +248,8 @@ export type EditorProtocolResponseTypes<TVendorDoc> =
     | ListRoutesResponse
     | ListFreezesResponse
     | RenameFreezeResponse
-    | DeleteFreezeResponse;
+    | DeleteFreezeResponse
+    | LoadRouteParamsResponse;
 
 export interface ProtocolMessage<TVendorDoc> {
     id: string;
@@ -252,6 +276,8 @@ export interface EditorProtocol {
     listFreezes(params: ListFreezesMessage): Promise<ListFreezesResponse>;
     renameFreeze(params: RenameFreezeMessage): Promise<RenameFreezeResponse>;
     deleteFreeze(params: DeleteFreezeMessage): Promise<DeleteFreezeResponse>;
+    // Route params discovery
+    loadRouteParams(params: LoadRouteParamsMessage): Promise<LoadRouteParamsResponse>;
 }
 
 // Dev server side interface for handling editor requests
@@ -269,4 +295,8 @@ export interface DevServerProtocol {
     onDeleteFreeze(callback: EditorProtocol['deleteFreeze']): void;
     /** Emit freeze-changed event to all connected clients */
     emitFreezeChanged(): void;
+    // Route params discovery — handler receives the message and streams batches via emitRouteParamsBatch
+    onLoadRouteParams(callback: EditorProtocol['loadRouteParams']): void;
+    /** Emit a batch of params to all connected clients */
+    emitRouteParamsBatch(event: RouteParamsBatchEvent): void;
 }

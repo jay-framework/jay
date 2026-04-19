@@ -20,6 +20,8 @@ import {
     RenameFreezeResponse,
     DeleteFreezeMessage,
     DeleteFreezeResponse,
+    LoadRouteParamsMessage,
+    LoadRouteParamsResponse,
     EditorProtocolMessageTypes,
     EditorProtocolResponseTypes,
 } from '@jay-framework/editor-protocol';
@@ -99,6 +101,11 @@ export class EditorClient implements EditorProtocol {
 
     async deleteFreeze(params: DeleteFreezeMessage): Promise<DeleteFreezeResponse> {
         return this.connectionManager.sendMessage<DeleteFreezeMessage>(params);
+    }
+
+    // Route params discovery
+    async loadRouteParams(params: LoadRouteParamsMessage): Promise<LoadRouteParamsResponse> {
+        return this.connectionManager.sendMessage<LoadRouteParamsMessage>(params);
     }
 
     async send(params: EditorProtocolMessageTypes<any>): Promise<EditorProtocolResponseTypes<any>> {

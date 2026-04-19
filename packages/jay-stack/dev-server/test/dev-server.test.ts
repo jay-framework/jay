@@ -217,6 +217,108 @@ target.appendChild(wrapped.element.dom);
     }, 5000000);
 });
 
+describe('DevServerService', () => {
+    const baseOptions = {
+        serverBase: '/',
+        pagesBase: path.resolve(__dirname, './'),
+        projectRootFolder: path.resolve(__dirname, './'),
+        jayRollupConfig: {
+            tsConfigFilePath: path.resolve(__dirname, '../../../tsconfig.json'),
+        },
+    };
+
+    it('listRoutes returns all routes', async () => {
+        const httpServer = http.createServer();
+        const devServer = await mkDevServer({
+            ...baseOptions,
+            pagesRootFolder: path.resolve(__dirname, './simple-page'),
+            projectRootFolder: path.resolve(__dirname, './simple-page'),
+            httpServer,
+        });
+
+        const routes = devServer.service.listRoutes();
+        expect(routes).toHaveLength(1);
+        expect(routes[0].path).toBe('/');
+        expect(routes[0].jayHtmlPath).toBeDefined();
+        expect(routes[0].compPath).toBeDefined();
+
+        await devServer.viteServer.close();
+    });
+
+    it('loadRouteParams returns error for route without loadParams', async () => {
+        const httpServer = http.createServer();
+        const devServer = await mkDevServer({
+            ...baseOptions,
+            pagesRootFolder: path.resolve(__dirname, './simple-page'),
+            projectRootFolder: path.resolve(__dirname, './simple-page'),
+            httpServer,
+        });
+
+        const batches: any[] = [];
+        const result = await devServer.service.loadRouteParams('/', (batch) => {
+            batches.push(batch);
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.error).toBeDefined();
+
+        await devServer.viteServer.close();
+    });
+
+    it('loadRouteParams streams param batches for route with loadParams', async () => {
+        const httpServer = http.createServer();
+        const devServer = await mkDevServer({
+            ...baseOptions,
+            pagesRootFolder: path.resolve(__dirname, './page-with-params'),
+            projectRootFolder: path.resolve(__dirname, './page-with-params'),
+            httpServer,
+        });
+
+        const batches: any[] = [];
+        const result = await devServer.service.loadRouteParams('/', (batch) => {
+            batches.push(batch);
+        });
+
+        expect(result.success).toBe(true);
+
+        // Generator yields 2 batches + 1 done signal
+        expect(batches).toHaveLength(3);
+
+        // First batch: [{ slug: 'item-a' }, { slug: 'item-b' }]
+        expect(batches[0].hasMore).toBe(true);
+        expect(batches[0].params).toHaveLength(2);
+        expect(batches[0].params[0].slug).toBe('item-a');
+        expect(batches[0].params[1].slug).toBe('item-b');
+
+        // Second batch: [{ slug: 'item-c' }]
+        expect(batches[1].hasMore).toBe(true);
+        expect(batches[1].params).toHaveLength(1);
+        expect(batches[1].params[0].slug).toBe('item-c');
+
+        // Done signal
+        expect(batches[2].hasMore).toBe(false);
+        expect(batches[2].params).toHaveLength(0);
+
+        await devServer.viteServer.close();
+    });
+
+    it('loadRouteParams returns error for unknown route', async () => {
+        const httpServer = http.createServer();
+        const devServer = await mkDevServer({
+            ...baseOptions,
+            pagesRootFolder: path.resolve(__dirname, './simple-page'),
+            projectRootFolder: path.resolve(__dirname, './simple-page'),
+            httpServer,
+        });
+
+        const result = await devServer.service.loadRouteParams('/nonexistent', () => {});
+        expect(result.success).toBe(false);
+        expect(result.error).toEqual('Route "/nonexistent" not found');
+
+        await devServer.viteServer.close();
+    });
+});
+
 function clearScriptForTest(script: string) {
     const cmd = process.cwd();
     return (

@@ -86,7 +86,7 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
 
     // Start dev server — pass httpServer so Vite's HMR WebSocket piggybacks
     // on Express's port instead of binding to the default port 24678
-    const { server, viteServer, routes, freezeStore } = await mkDevServer({
+    const { server, viteServer, routes, service } = await mkDevServer({
         pagesRootFolder: path.resolve(resolvedConfig.devServer.pagesBase),
         projectRootFolder: process.cwd(),
         publicBaseUrlPath: '/',
@@ -97,26 +97,21 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
 
     app.use(server);
 
-    // Wire freeze management handlers (DL#128)
+    // Wire editor protocol handlers to DevServerService (DL#128)
+    const { freezeStore } = service;
+
+    editorServer.onListRoutes(async () => ({
+        type: 'listRoutes' as const,
+        success: true,
+        routes: service.listRoutes(),
+    }));
+
     if (freezeStore) {
-        editorServer.onListRoutes(async () => ({
-            type: 'listRoutes' as const,
-            success: true,
-            routes: routes.map((r) => ({
-                path: r.path,
-                jayHtmlPath: r.fsRoute.jayHtmlPath,
-            })),
-        }));
         editorServer.onListFreezes(async (params) => ({
             type: 'listFreezes' as const,
             success: true,
             freezes: (await freezeStore.list(params.route)).map(
-                ({ id, name, route, createdAt }) => ({
-                    id,
-                    name,
-                    route,
-                    createdAt,
-                }),
+                ({ id, name, route, createdAt }) => ({ id, name, route, createdAt }),
             ),
         }));
         editorServer.onRenameFreeze(async (params) => ({
@@ -135,6 +130,24 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
             }
         });
     }
+
+    // Route params discovery — delegates to DevServerService
+    editorServer.onLoadRouteParams(async (params) => {
+        const routePath = params.route;
+        const result = await service.loadRouteParams(routePath, (batch) => {
+            editorServer.emitRouteParamsBatch({
+                type: 'routeParamsBatch',
+                route: routePath,
+                params: batch.params,
+                hasMore: batch.hasMore,
+            });
+        });
+        return {
+            type: 'loadRouteParams' as const,
+            success: result.success,
+            ...(result.error && { error: result.error }),
+        };
+    });
 
     // Serve static files from public folder
     const publicPath = path.resolve(resolvedConfig.devServer.publicFolder);

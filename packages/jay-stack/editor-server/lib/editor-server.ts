@@ -27,6 +27,9 @@ import type {
     RenameFreezeResponse,
     DeleteFreezeMessage,
     DeleteFreezeResponse,
+    LoadRouteParamsMessage,
+    LoadRouteParamsResponse,
+    RouteParamsBatchEvent,
 } from '@jay-framework/editor-protocol';
 import { createProtocolResponse } from '@jay-framework/editor-protocol';
 
@@ -64,6 +67,7 @@ export class EditorServer implements DevServerProtocol {
         listFreezes?: (params: ListFreezesMessage) => Promise<ListFreezesResponse>;
         renameFreeze?: (params: RenameFreezeMessage) => Promise<RenameFreezeResponse>;
         deleteFreeze?: (params: DeleteFreezeMessage) => Promise<DeleteFreezeResponse>;
+        loadRouteParams?: (params: LoadRouteParamsMessage) => Promise<LoadRouteParamsResponse>;
     } = {};
 
     constructor(options: EditorServerOptions) {
@@ -197,6 +201,14 @@ export class EditorServer implements DevServerProtocol {
 
     emitFreezeChanged(): void {
         this.io?.emit('freezeChanged');
+    }
+
+    onLoadRouteParams(callback: (params: LoadRouteParamsMessage) => Promise<LoadRouteParamsResponse>): void {
+        this.handlers.loadRouteParams = callback;
+    }
+
+    emitRouteParamsBatch(event: RouteParamsBatchEvent): void {
+        this.io?.emit('routeParamsBatch', event);
     }
 
     private handlePortDiscovery(req: any, res: any): void {
@@ -355,6 +367,12 @@ export class EditorServer implements DevServerProtocol {
                     id,
                     await this.handlers.deleteFreeze(payload as DeleteFreezeMessage),
                 );
+
+            case 'loadRouteParams':
+                if (!this.handlers.loadRouteParams) {
+                    throw new Error('Load route params handler not registered');
+                }
+                return createProtocolResponse(id, await this.handlers.loadRouteParams(payload as LoadRouteParamsMessage));
 
             default:
                 throw new Error(`Unknown message type: ${(payload as any).type}`);
