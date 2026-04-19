@@ -24,11 +24,6 @@ export interface RouteInfo {
     compPath: string;
 }
 
-export interface RouteParamsBatch {
-    params: Record<string, string>[];
-    hasMore: boolean;
-}
-
 export class DevServerService {
     constructor(
         private routes: DevServerRoute[],
@@ -50,40 +45,25 @@ export class DevServerService {
     }
 
     /**
-     * Run loadParams for a route and call the callback for each batch.
-     * Returns false if the route doesn't exist or has no loadParams.
+     * Run loadParams for a route, yielding param batches as an async generator.
+     * Throws if the route doesn't exist or has no loadParams.
      */
-    async loadRouteParams(
-        routePath: string,
-        onBatch: (batch: RouteParamsBatch) => void,
-    ): Promise<{ success: boolean; error?: string }> {
+    async *loadRouteParams(routePath: string): AsyncGenerator<Record<string, string>[]> {
         const matched = this.routes.find((r) => r.path === routePath);
         if (!matched) {
-            return { success: false, error: `Route "${routePath}" not found` };
+            throw new Error(`Route "${routePath}" not found`);
         }
 
-        try {
-            const module = await this.vite.ssrLoadModule(matched.fsRoute.compPath);
-            const component = module.page;
+        const module = await this.vite.ssrLoadModule(matched.fsRoute.compPath);
+        const component = module.page;
 
-            if (!component?.loadParams) {
-                return { success: false, error: `Route "${routePath}" has no loadParams` };
-            }
-
-            const { resolveServices } = await import('@jay-framework/stack-server-runtime');
-            const services = resolveServices(component.services || []);
-
-            // Run generator and stream batches
-            const generator = component.loadParams(services);
-            for await (const batch of generator) {
-                onBatch({ params: batch, hasMore: true });
-            }
-            onBatch({ params: [], hasMore: false });
-
-            return { success: true };
-        } catch (err: any) {
-            onBatch({ params: [], hasMore: false });
-            return { success: false, error: err.message };
+        if (!component?.loadParams) {
+            throw new Error(`Route "${routePath}" has no loadParams`);
         }
+
+        const { resolveServices } = await import('@jay-framework/stack-server-runtime');
+        const services = resolveServices(component.services || []);
+
+        yield* component.loadParams(services);
     }
 }

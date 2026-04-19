@@ -131,22 +131,40 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
         });
     }
 
-    // Route params discovery — delegates to DevServerService
+    // Route params discovery — delegates to DevServerService generator
     editorServer.onLoadRouteParams(async (params) => {
         const routePath = params.route;
-        const result = await service.loadRouteParams(routePath, (batch) => {
-            editorServer.emitRouteParamsBatch({
-                type: 'routeParamsBatch',
-                route: routePath,
-                params: batch.params,
-                hasMore: batch.hasMore,
-            });
-        });
-        return {
-            type: 'loadRouteParams' as const,
-            success: result.success,
-            ...(result.error && { error: result.error }),
-        };
+        try {
+            // Stream batches asynchronously, respond immediately
+            (async () => {
+                try {
+                    for await (const batch of service.loadRouteParams(routePath)) {
+                        editorServer.emitRouteParamsBatch({
+                            type: 'routeParamsBatch',
+                            route: routePath,
+                            params: batch,
+                            hasMore: true,
+                        });
+                    }
+                    editorServer.emitRouteParamsBatch({
+                        type: 'routeParamsBatch',
+                        route: routePath,
+                        params: [],
+                        hasMore: false,
+                    });
+                } catch (err: any) {
+                    editorServer.emitRouteParamsBatch({
+                        type: 'routeParamsBatch',
+                        route: routePath,
+                        params: [],
+                        hasMore: false,
+                    });
+                }
+            })();
+            return { type: 'loadRouteParams' as const, success: true };
+        } catch (err: any) {
+            return { type: 'loadRouteParams' as const, success: false, error: err.message };
+        }
     });
 
     // Serve static files from public folder

@@ -245,7 +245,7 @@ describe('DevServerService', () => {
         await devServer.viteServer.close();
     });
 
-    it('loadRouteParams returns error for route without loadParams', async () => {
+    it('loadRouteParams throws for route without loadParams', async () => {
         const httpServer = http.createServer();
         const devServer = await mkDevServer({
             ...baseOptions,
@@ -254,18 +254,16 @@ describe('DevServerService', () => {
             httpServer,
         });
 
-        const batches: any[] = [];
-        const result = await devServer.service.loadRouteParams('/', (batch) => {
-            batches.push(batch);
-        });
-
-        expect(result.success).toBe(false);
-        expect(result.error).toBeDefined();
+        await expect(async () => {
+            for await (const _ of devServer.service.loadRouteParams('/')) {
+                // should not reach here
+            }
+        }).rejects.toThrow();
 
         await devServer.viteServer.close();
     });
 
-    it('loadRouteParams streams param batches for route with loadParams', async () => {
+    it('loadRouteParams yields param batches for route with loadParams', async () => {
         const httpServer = http.createServer();
         const devServer = await mkDevServer({
             ...baseOptions,
@@ -275,34 +273,26 @@ describe('DevServerService', () => {
         });
 
         const batches: any[] = [];
-        const result = await devServer.service.loadRouteParams('/', (batch) => {
+        for await (const batch of devServer.service.loadRouteParams('/')) {
             batches.push(batch);
-        });
+        }
 
-        expect(result.success).toBe(true);
-
-        // Generator yields 2 batches + 1 done signal
-        expect(batches).toHaveLength(3);
+        // Generator yields 2 batches
+        expect(batches).toHaveLength(2);
 
         // First batch: [{ slug: 'item-a' }, { slug: 'item-b' }]
-        expect(batches[0].hasMore).toBe(true);
-        expect(batches[0].params).toHaveLength(2);
-        expect(batches[0].params[0].slug).toBe('item-a');
-        expect(batches[0].params[1].slug).toBe('item-b');
+        expect(batches[0]).toHaveLength(2);
+        expect(batches[0][0].slug).toBe('item-a');
+        expect(batches[0][1].slug).toBe('item-b');
 
         // Second batch: [{ slug: 'item-c' }]
-        expect(batches[1].hasMore).toBe(true);
-        expect(batches[1].params).toHaveLength(1);
-        expect(batches[1].params[0].slug).toBe('item-c');
-
-        // Done signal
-        expect(batches[2].hasMore).toBe(false);
-        expect(batches[2].params).toHaveLength(0);
+        expect(batches[1]).toHaveLength(1);
+        expect(batches[1][0].slug).toBe('item-c');
 
         await devServer.viteServer.close();
     });
 
-    it('loadRouteParams returns error for unknown route', async () => {
+    it('loadRouteParams throws for unknown route', async () => {
         const httpServer = http.createServer();
         const devServer = await mkDevServer({
             ...baseOptions,
@@ -311,9 +301,11 @@ describe('DevServerService', () => {
             httpServer,
         });
 
-        const result = await devServer.service.loadRouteParams('/nonexistent', () => {});
-        expect(result.success).toBe(false);
-        expect(result.error).toEqual('Route "/nonexistent" not found');
+        await expect(async () => {
+            for await (const _ of devServer.service.loadRouteParams('/nonexistent')) {
+                // should not reach here
+            }
+        }).rejects.toThrow('Route "/nonexistent" not found');
 
         await devServer.viteServer.close();
     });

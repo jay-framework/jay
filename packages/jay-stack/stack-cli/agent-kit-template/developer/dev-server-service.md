@@ -37,16 +37,15 @@ const routes = service.listRoutes();
 
 ### loadRouteParams(route, onBatch)
 
-Runs the `loadParams` generator for a route and streams param batches:
+Async generator that yields param batches from the route's `loadParams`:
 
 ```typescript
-await service.loadRouteParams('/products/kitan/[[category]]', (batch) => {
-  console.log(batch.params); // [{ category: 'shirts' }, { category: 'pants' }]
-  console.log(batch.hasMore); // true while generator has more, false on last batch
-});
+for await (const batch of service.loadRouteParams('/products/kitan/[[category]]')) {
+  console.log(batch); // [{ category: 'shirts' }, { category: 'pants' }]
+}
 ```
 
-Returns `{ success, error? }`. Fails if the route doesn't exist or has no `loadParams`.
+Throws if the route doesn't exist or has no `loadParams`.
 
 ## Freeze Management
 
