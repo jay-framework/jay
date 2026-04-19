@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { ActionRegistry } from '../lib/action-registry';
+import { ActionRegistry, type RegisteredAction } from '../lib/action-registry';
 import { registerService, clearServiceRegistry } from '../lib/services';
 import {
     makeJayAction,
@@ -87,7 +87,7 @@ describe('ActionRegistry', () => {
             const registered = registry.get('products.search');
             expect(registered).toBeDefined();
             expect(registered!.method).toBe('GET');
-            expect(registered!.cacheOptions).toEqual({ maxAge: 60 });
+            expect((registered as RegisteredAction).cacheOptions).toEqual({ maxAge: 60 });
         });
     });
 
@@ -467,13 +467,13 @@ describe('Streaming Action Registry (DL#129)', () => {
     });
 
     it('executeStream yields all chunks from the handler', async () => {
-        const stream = makeJayStream('test.multi').withHandler(
-            async function* (input: { count: number }) {
-                for (let i = 0; i < input.count; i++) {
-                    yield { index: i };
-                }
-            },
-        );
+        const stream = makeJayStream('test.multi').withHandler(async function* (input: {
+            count: number;
+        }) {
+            for (let i = 0; i < input.count; i++) {
+                yield { index: i };
+            }
+        });
 
         registry.registerStream(stream);
 

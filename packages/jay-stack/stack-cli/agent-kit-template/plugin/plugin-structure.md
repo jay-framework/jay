@@ -35,6 +35,12 @@ contexts:
     marker: MY_CART_CONTEXT
     description: Client-side cart state (add/remove items, totals)
 
+routes:
+  - path: /admin/dashboard
+    jayHtml: ./pages/admin/page.jay-html
+    component: ./pages/admin/page.ts
+    description: Admin dashboard with product stats
+
 setup:
   handler: setup-handler
   references: references-handler
@@ -92,6 +98,16 @@ services:
   }
 }
 ```
+
+### Route Entry Fields
+
+- `path` — Route path (e.g., `/admin/products`, `/dashboard/[section]`)
+- `jayHtml` — Path to the page's jay-html template (relative to plugin root, or export subpath for NPM)
+- `css` — (optional) Path to the page's CSS file
+- `component` — Path to the page component (relative to plugin root, or exported member name for NPM)
+- `description` — What this page does
+
+Plugin routes are served by the dev server alongside project routes. If a project defines the same route path, the project's page takes precedence.
 
 ### Setup Fields
 

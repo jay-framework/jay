@@ -401,7 +401,12 @@ async function validateSchema(context: PluginContext, result: ValidationResult):
                 }
                 // Validate exports exist
                 if (route.jayHtml) {
-                    validateDocFile(route.jayHtml, `route "${route.path}" jayHtml`, context, result);
+                    validateDocFile(
+                        route.jayHtml,
+                        `route "${route.path}" jayHtml`,
+                        context,
+                        result,
+                    );
                 }
                 if (route.css) {
                     validateDocFile(route.css, `route "${route.path}" css`, context, result);

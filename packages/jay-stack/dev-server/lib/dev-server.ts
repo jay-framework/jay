@@ -83,10 +83,7 @@ async function initRoutes(pagesBaseFolder: string): Promise<JayRoutes> {
  * Resolves jayHtml/css paths via package.json exports.
  * Skips routes that collide with existing project routes.
  */
-async function scanPluginRoutes(
-    projectRoot: string,
-    projectRoutes: JayRoutes,
-): Promise<JayRoutes> {
+async function scanPluginRoutes(projectRoot: string, projectRoutes: JayRoutes): Promise<JayRoutes> {
     const plugins = await scanPlugins({ projectRoot, includeDevDeps: true });
     const projectPaths = new Set(projectRoutes.map((r) => r.rawRoute));
     const pluginRoutes: JayRoutes = [];
@@ -112,15 +109,16 @@ async function scanPluginRoutes(
                 continue;
             }
 
-            // Resolve component path — use the module entry point
-            // (component is an exported member name, resolved at SSR load time)
-            const compPath = resolvePluginModule(plugin);
+            // Resolve component path.
+            // For local plugins: component is a relative file path (e.g., ./pages/admin/page.ts)
+            // For NPM plugins: component is an exported member name from the module
+            const compPath = route.component.startsWith('.')
+                ? path.resolve(plugin.pluginPath, route.component)
+                : resolvePluginModule(plugin);
 
             pluginRoutes.push(createRoute(route.path, jayHtmlPath, compPath));
 
-            getLogger().info(
-                `[Routes] Plugin "${plugin.name}" provides route ${route.path}`,
-            );
+            getLogger().info(`[Routes] Plugin "${plugin.name}" provides route ${route.path}`);
         }
     }
 
@@ -129,44 +127,57 @@ async function scanPluginRoutes(
 
 /** Resolve a plugin export subpath via package.json exports. */
 function resolvePluginExport(pluginPath: string, exportSubpath: string): string | undefined {
+    // Normalize: strip leading ./ for export lookup
+    const normalized = exportSubpath.replace(/^\.\//, '');
+
     const packageJsonPath = path.join(pluginPath, 'package.json');
     try {
         const packageJson = JSON.parse(fsSync.readFileSync(packageJsonPath, 'utf-8'));
         if (packageJson.exports) {
-            const exportKey = './' + exportSubpath;
+            const exportKey = './' + normalized;
             const exportValue = packageJson.exports[exportKey];
             if (exportValue) {
-                const resolved = typeof exportValue === 'string'
-                    ? exportValue
-                    : exportValue.default || exportValue.import || exportValue.require;
+                const resolved =
+                    typeof exportValue === 'string'
+                        ? exportValue
+                        : exportValue.default || exportValue.import || exportValue.require;
                 if (resolved) {
                     const fullPath = path.join(pluginPath, resolved);
                     return fullPath;
                 }
             }
         }
-    } catch { /* skip */ }
+    } catch {
+        /* skip */
+    }
 
     // Fallback: try common locations
     for (const dir of ['dist', 'lib', '']) {
-        const candidate = path.join(pluginPath, dir, exportSubpath);
+        const candidate = path.join(pluginPath, dir, normalized);
         try {
             fsSync.accessSync(candidate);
             return candidate;
-        } catch { /* skip */ }
+        } catch {
+            /* skip */
+        }
     }
     return undefined;
 }
 
 /** Resolve the main module path for a plugin. */
-function resolvePluginModule(plugin: { pluginPath: string; manifest: { module?: string } }): string {
+function resolvePluginModule(plugin: {
+    pluginPath: string;
+    manifest: { module?: string };
+}): string {
     const modulePath = plugin.manifest.module || 'index';
     for (const ext of ['.ts', '.js', '/index.ts', '/index.js']) {
         const candidate = path.join(plugin.pluginPath, modulePath + ext);
         try {
             fsSync.accessSync(candidate);
             return candidate;
-        } catch { /* skip */ }
+        } catch {
+            /* skip */
+        }
     }
     // Try lib/ directory
     for (const ext of ['.ts', '.js']) {
@@ -174,7 +185,9 @@ function resolvePluginModule(plugin: { pluginPath: string; manifest: { module?: 
         try {
             fsSync.accessSync(candidate);
             return candidate;
-        } catch { /* skip */ }
+        } catch {
+            /* skip */
+        }
     }
     return path.join(plugin.pluginPath, modulePath);
 }

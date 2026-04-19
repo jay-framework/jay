@@ -337,9 +337,7 @@ export interface JayStreamBuilder<Services extends any[]> {
     ): JayStreamAction<I, C> & JayStreamActionDefinition<I, C, Services>;
 }
 
-class JayStreamBuilderImpl<Services extends any[]>
-    implements JayStreamBuilder<Services>
-{
+class JayStreamBuilderImpl<Services extends any[]> implements JayStreamBuilder<Services> {
     private _services: ServiceMarkers<Services> = [] as unknown as ServiceMarkers<Services>;
 
     constructor(private readonly _actionName: string) {}

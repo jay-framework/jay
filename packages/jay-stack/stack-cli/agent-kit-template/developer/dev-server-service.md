@@ -27,8 +27,8 @@ Runs the `loadParams` generator for a route and streams param batches:
 
 ```typescript
 await service.loadRouteParams('/products/kitan/[[category]]', (batch) => {
-    console.log(batch.params); // [{ category: 'shirts' }, { category: 'pants' }]
-    console.log(batch.hasMore); // true while generator has more, false on last batch
+  console.log(batch.params); // [{ category: 'shirts' }, { category: 'pants' }]
+  console.log(batch.hasMore); // true while generator has more, false on last batch
 });
 ```
 
@@ -63,12 +63,12 @@ await store.delete('abc123');
 
 These APIs are also exposed via the editor protocol (Socket.IO) for design board applications:
 
-| Protocol Message | Service Method |
-|-----------------|---------------|
-| `listRoutes` | `service.listRoutes()` |
-| `listFreezes` | `service.freezeStore.list(route)` |
-| `renameFreeze` | `service.freezeStore.rename(id, name)` |
-| `deleteFreeze` | `service.freezeStore.delete(id)` |
+| Protocol Message  | Service Method                            |
+| ----------------- | ----------------------------------------- |
+| `listRoutes`      | `service.listRoutes()`                    |
+| `listFreezes`     | `service.freezeStore.list(route)`         |
+| `renameFreeze`    | `service.freezeStore.rename(id, name)`    |
+| `deleteFreeze`    | `service.freezeStore.delete(id)`          |
 | `loadRouteParams` | `service.loadRouteParams(route, onBatch)` |
 
 ### Streaming Events
@@ -89,6 +89,6 @@ The `freezeChanged` socket event is emitted when jay-html or CSS files change. D
 
 ```typescript
 socket.on('freezeChanged', () => {
-    // Re-fetch frozen page fragments
+  // Re-fetch frozen page fragments
 });
 ```

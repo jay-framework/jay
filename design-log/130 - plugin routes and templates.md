@@ -113,6 +113,7 @@ This is the same resolution chain used for contracts (DL#124) — `plugin.yaml` 
 ### Validation (validate-plugin)
 
 `validate-plugin` should check:
+
 - Each route's `jayHtml` is exported in `package.json`
 - Each route's `css` (if present) is exported in `package.json`
 - Each route's `component` exists as an exported member from the module
@@ -215,3 +216,25 @@ The only difference: the source files come from the plugin's NPM package instead
 - **No template override (MVP)**: customizing a plugin page requires fully replacing it. Template-level customization (swap just the jay-html) is a future feature.
 - **Plugin pages can use plugin components**: a plugin's page jay-html can reference its own headless components, actions, and services naturally.
 - **Route scanning order**: project first, then plugins. This ensures project routes are never shadowed.
+
+## Implementation Results
+
+### Files Modified
+
+| File                                                       | Change                                                                                            |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `compiler-shared/lib/plugin-resolution.ts`                 | Added `routes` field to `PluginManifest`                                                          |
+| `plugin-validator/lib/validate-plugin.ts`                  | Route schema + export validation                                                                  |
+| `route-scanner/lib/route-scanner.ts`                       | Added `parseRouteSegments()` and `createRoute()` exports                                          |
+| `dev-server/lib/dev-server.ts`                             | `scanPluginRoutes()`, `resolvePluginExport()`, `resolvePluginModule()`, merge with project routes |
+| `stack-server-runtime/lib/contract-materializer.ts`        | `RouteIndexEntry`, routes in `plugins-index.yaml`                                                 |
+| `stack-cli/agent-kit-template/plugin/plugin-structure.md`  | Route entry fields documentation                                                                  |
+| `examples/jay-stack/fake-shop/src/plugins/product-widget/` | Example admin dashboard route                                                                     |
+
+### Deviations from Design
+
+1. **Route parsing in route-scanner, not dev-server.** The design had all scanning in the dev server. Moved `parseRouteSegments` and `createRoute` to `@jay-framework/stack-route-scanner` since route parsing is a route-scanner concern.
+
+2. **Local plugins use file paths, NPM use export names.** The `component` field in `routes` is a relative file path for local plugins (e.g., `./pages/admin/page.ts`) and an exported member name for NPM packages. Detected by checking if the value starts with `./`.
+
+3. **Example uses product-widget plugin.** The fake-shop example adds an `/admin/products` route to the product-widget plugin, showing a product dashboard page with the same rendering pipeline as project pages.

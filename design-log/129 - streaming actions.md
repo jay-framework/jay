@@ -19,11 +19,10 @@ The current action system is strictly request → response:
 
 ```typescript
 // Current: single response
-export const searchProducts = makeJayAction('products.search')
-    .withHandler(async (input) => {
-        const results = await db.search(input.query);
-        return results; // Single response
-    });
+export const searchProducts = makeJayAction('products.search').withHandler(async (input) => {
+  const results = await db.search(input.query);
+  return results; // Single response
+});
 ```
 
 For `loadRouteParams`, we worked around this by adding a custom editor protocol message with socket events. But this pattern doesn't generalize — each streaming use case would need its own protocol extension.
@@ -68,16 +67,16 @@ This works but requires protocol-level extensions for each streaming case.
 
 ```typescript
 export const discoverParams = makeJayStream('routes.discoverParams')
-    .withServices(PRODUCTS_SERVICE)
-    .withHandler(async function* (input, productsService) {
-        let page = 1;
-        while (true) {
-            const products = await productsService.list({ page, pageSize: 100 });
-            yield products.map(p => ({ slug: p.slug }));
-            if (!products.hasMore) break;
-            page++;
-        }
-    });
+  .withServices(PRODUCTS_SERVICE)
+  .withHandler(async function* (input, productsService) {
+    let page = 1;
+    while (true) {
+      const products = await productsService.list({ page, pageSize: 100 });
+      yield products.map((p) => ({ slug: p.slug }));
+      if (!products.hasMore) break;
+      page++;
+    }
+  });
 ```
 
 ### Transport: Chunked HTTP (NDJSON)
@@ -106,7 +105,7 @@ The client-side action returns `AsyncGenerator<Chunk>`:
 
 ```typescript
 for await (const params of discoverParams({ route: '/products/[slug]' })) {
-    console.log(params); // [{ slug: 'item-a' }, { slug: 'item-b' }]
+  console.log(params); // [{ slug: 'item-a' }, { slug: 'item-b' }]
 }
 ```
 
@@ -115,23 +114,25 @@ Implementation: `fetch` the action endpoint, read the response body as a stream,
 ### Action Router Changes
 
 The action router currently does:
+
 ```typescript
 const result = await registry.execute(actionName, input);
 res.status(200).json({ success: true, data: result.data });
 ```
 
 For streaming actions:
+
 ```typescript
 if (action.isStreaming) {
-    res.setHeader('Content-Type', 'application/x-ndjson');
-    res.setHeader('Transfer-Encoding', 'chunked');
+  res.setHeader('Content-Type', 'application/x-ndjson');
+  res.setHeader('Transfer-Encoding', 'chunked');
 
-    const generator = registry.executeStream(actionName, input);
-    for await (const chunk of generator) {
-        res.write(JSON.stringify({ chunk }) + '\n');
-    }
-    res.write(JSON.stringify({ done: true }) + '\n');
-    res.end();
+  const generator = registry.executeStream(actionName, input);
+  for await (const chunk of generator) {
+    res.write(JSON.stringify({ chunk }) + '\n');
+  }
+  res.write(JSON.stringify({ done: true }) + '\n');
+  res.end();
 }
 ```
 
@@ -151,10 +152,10 @@ outputSchema:
 
 ### Action Types
 
-| Builder | Handler return | Transport | Use case |
-|---------|---------------|-----------|----------|
-| `makeJayAction` | `Promise<T>` | POST → JSON | Mutations |
-| `makeJayQuery` | `Promise<T>` | GET → JSON | Reads |
+| Builder         | Handler return     | Transport     | Use case  |
+| --------------- | ------------------ | ------------- | --------- |
+| `makeJayAction` | `Promise<T>`       | POST → JSON   | Mutations |
+| `makeJayQuery`  | `Promise<T>`       | GET → JSON    | Reads     |
 | `makeJayStream` | `AsyncIterable<T>` | POST → NDJSON | Streaming |
 
 ### Type Signature
@@ -163,18 +164,18 @@ Server and client share the same type — the handler's yield type becomes the c
 
 ```typescript
 interface JayStreamAction<Input, Chunk> {
-    (input: Input): AsyncIterable<Chunk>;
-    readonly actionName: string;
-    readonly method: 'POST';
-    readonly _brand: 'JayStreamAction';
+  (input: Input): AsyncIterable<Chunk>;
+  readonly actionName: string;
+  readonly method: 'POST';
+  readonly _brand: 'JayStreamAction';
 }
 
 interface JayStreamActionDefinition<Input, Chunk, Services extends any[]> {
-    actionName: string;
-    method: 'POST';
-    isStreaming: true;
-    services: ServiceMarkers<Services>;
-    handler: (input: Input, ...services: Services) => AsyncIterable<Chunk>;
+  actionName: string;
+  method: 'POST';
+  isStreaming: true;
+  services: ServiceMarkers<Services>;
+  handler: (input: Input, ...services: Services) => AsyncIterable<Chunk>;
 }
 ```
 
@@ -224,14 +225,14 @@ interface JayStreamActionDefinition<Input, Chunk, Services extends any[]> {
 
 ### Files Modified
 
-| File | Change |
-|------|--------|
-| `full-stack-component/lib/jay-action-builder.ts` | Added `JayStreamAction`, `JayStreamActionDefinition`, `JayStreamBuilder`, `makeJayStream()`, `isJayStreamAction()`, `StreamChunk<T>` |
-| `stack-server-runtime/lib/action-registry.ts` | Added `RegisteredActionBase`, `RegisteredStreamAction`, `RegisteredActionEntry` discriminated union, `registerStream()`, `isStreaming()`, `executeStream()` |
-| `dev-server/lib/action-router.ts` | Added NDJSON streaming response for `isStreaming` actions |
-| `full-stack-component/test/jay-action-builder.test.ts` | 5 tests: metadata, async iteration, service injection, `isJayStreamAction`, `StreamChunk` type |
-| `stack-server-runtime/test/action-registry.test.ts` | 5 tests: register/detect, `isStreaming` false for regular, multi-chunk execution, not-found error, mid-stream error |
-| `dev-server/test/action-router.test.ts` | 2 tests: NDJSON response with chunks + done, mid-stream error handling |
+| File                                                   | Change                                                                                                                                                      |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `full-stack-component/lib/jay-action-builder.ts`       | Added `JayStreamAction`, `JayStreamActionDefinition`, `JayStreamBuilder`, `makeJayStream()`, `isJayStreamAction()`, `StreamChunk<T>`                        |
+| `stack-server-runtime/lib/action-registry.ts`          | Added `RegisteredActionBase`, `RegisteredStreamAction`, `RegisteredActionEntry` discriminated union, `registerStream()`, `isStreaming()`, `executeStream()` |
+| `dev-server/lib/action-router.ts`                      | Added NDJSON streaming response for `isStreaming` actions                                                                                                   |
+| `full-stack-component/test/jay-action-builder.test.ts` | 5 tests: metadata, async iteration, service injection, `isJayStreamAction`, `StreamChunk` type                                                              |
+| `stack-server-runtime/test/action-registry.test.ts`    | 5 tests: register/detect, `isStreaming` false for regular, multi-chunk execution, not-found error, mid-stream error                                         |
+| `dev-server/test/action-router.test.ts`                | 2 tests: NDJSON response with chunks + done, mid-stream error handling                                                                                      |
 
 ### Deviations from design
 

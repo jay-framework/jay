@@ -203,7 +203,9 @@ export class EditorServer implements DevServerProtocol {
         this.io?.emit('freezeChanged');
     }
 
-    onLoadRouteParams(callback: (params: LoadRouteParamsMessage) => Promise<LoadRouteParamsResponse>): void {
+    onLoadRouteParams(
+        callback: (params: LoadRouteParamsMessage) => Promise<LoadRouteParamsResponse>,
+    ): void {
         this.handlers.loadRouteParams = callback;
     }
 
@@ -372,7 +374,10 @@ export class EditorServer implements DevServerProtocol {
                 if (!this.handlers.loadRouteParams) {
                     throw new Error('Load route params handler not registered');
                 }
-                return createProtocolResponse(id, await this.handlers.loadRouteParams(payload as LoadRouteParamsMessage));
+                return createProtocolResponse(
+                    id,
+                    await this.handlers.loadRouteParams(payload as LoadRouteParamsMessage),
+                );
 
             default:
                 throw new Error(`Unknown message type: ${(payload as any).type}`);

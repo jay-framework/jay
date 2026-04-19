@@ -13,6 +13,9 @@ plugins:
         description: Product widget card showing name, price, and stock status
         type: static
         path: ./src/plugins/product-widget/product-widget.jay-contract
+    routes:
+      - path: /admin/products
+        description: Product admin dashboard — list all products with stats
   - name: stock-status
     path: ./src/plugins/stock-status
     contracts:

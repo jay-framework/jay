@@ -9,7 +9,8 @@ import {
     makeJayAction,
     makeJayQuery,
     ActionError,
-    createJayService, makeJayStream,
+    createJayService,
+    makeJayStream,
 } from '@jay-framework/fullstack-component';
 
 // Mock Express request/response
@@ -288,13 +289,13 @@ describe('Action Router', () => {
         }
 
         it('should respond with NDJSON for streaming actions', async () => {
-            const stream = makeJayStream('test.stream').withHandler(
-                async function* (input: { count: number }) {
-                    for (let i = 0; i < input.count; i++) {
-                        yield { index: i };
-                    }
-                },
-            );
+            const stream = makeJayStream('test.stream').withHandler(async function* (input: {
+                count: number;
+            }) {
+                for (let i = 0; i < input.count; i++) {
+                    yield { index: i };
+                }
+            });
 
             registry.registerStream(stream);
 
@@ -321,12 +322,10 @@ describe('Action Router', () => {
         });
 
         it('should handle streaming errors mid-stream', async () => {
-            const stream = makeJayStream('test.errorStream').withHandler(
-                async function* () {
-                    yield 'ok';
-                    throw new Error('mid-stream failure');
-                },
-            );
+            const stream = makeJayStream('test.errorStream').withHandler(async function* () {
+                yield 'ok';
+                throw new Error('mid-stream failure');
+            });
 
             registry.registerStream(stream);
 

@@ -128,7 +128,7 @@ export const discoverParams = makeJayStream('routes.discoverParams')
     let page = 1;
     while (true) {
       const products = await productsService.list({ page, pageSize: 100 });
-      yield products.map(p => ({ slug: p.slug }));
+      yield products.map((p) => ({ slug: p.slug }));
       if (!products.hasMore) break;
       page++;
     }
@@ -171,8 +171,11 @@ outputSchema:
 
 ```typescript
 import {
-  ActionInput, ActionOutput, isJayAction,
-  StreamChunk, isJayStreamAction,
+  ActionInput,
+  ActionOutput,
+  isJayAction,
+  StreamChunk,
+  isJayStreamAction,
 } from '@jay-framework/fullstack-component';
 
 type SearchInput = ActionInput<typeof searchProducts>;

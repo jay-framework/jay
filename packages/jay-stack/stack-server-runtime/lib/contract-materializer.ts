@@ -60,6 +60,12 @@ export interface ContextIndexEntry {
     doc?: string;
 }
 
+/** Route entry in plugins-index.yaml (DL#130) */
+export interface RouteIndexEntry {
+    path: string;
+    description?: string;
+}
+
 /** Entry for plugins-index.yaml (Design Log #85) */
 export interface PluginsIndexEntry {
     name: string;
@@ -71,6 +77,8 @@ export interface PluginsIndexEntry {
     services?: ServiceIndexEntry[];
     /** Client-side contexts provided by this plugin (DL#125) */
     contexts?: ContextIndexEntry[];
+    /** Plugin-provided routes (DL#130) */
+    routes?: RouteIndexEntry[];
 }
 
 export interface PluginsIndex {
@@ -399,6 +407,13 @@ export async function materializeContracts(
                     };
                 });
             }
+            // Add routes from plugin.yaml (DL#130)
+            if (manifest.routes?.length) {
+                entry.routes = manifest.routes.map((r) => ({
+                    path: r.path,
+                    ...(r.description && { description: r.description }),
+                }));
+            }
             pluginsIndexMap.set(plugin.name, entry);
         }
 
@@ -559,6 +574,7 @@ export async function materializeContracts(
             ...(data.actions && data.actions.length > 0 && { actions: data.actions }),
             ...(data.services?.length && { services: data.services }),
             ...(data.contexts?.length && { contexts: data.contexts }),
+            ...(data.routes?.length && { routes: data.routes }),
         })),
     };
 
@@ -630,6 +646,12 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
                     };
                 });
             }
+            if (manifest.routes?.length) {
+                entry.routes = manifest.routes.map((r) => ({
+                    path: r.path,
+                    ...(r.description && { description: r.description }),
+                }));
+            }
             pluginsMap.set(plugin.name, entry);
         }
 
@@ -693,6 +715,7 @@ export async function listContracts(options: MaterializeContractsOptions): Promi
             contracts: data.contracts,
             ...(data.services?.length && { services: data.services }),
             ...(data.contexts?.length && { contexts: data.contexts }),
+            ...(data.routes?.length && { routes: data.routes }),
         })),
     };
 }

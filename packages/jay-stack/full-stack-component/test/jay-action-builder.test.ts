@@ -207,9 +207,9 @@ import { makeJayStream, isJayStreamAction, StreamChunk } from '../lib';
 
 describe('makeJayStream', () => {
     it('should create a streaming action with correct metadata', () => {
-        const stream = makeJayStream('test.stream').withHandler(async function* (
-            input: { page: number },
-        ) {
+        const stream = makeJayStream('test.stream').withHandler(async function* (input: {
+            page: number;
+        }) {
             yield [{ id: '1' }, { id: '2' }];
             yield [{ id: '3' }];
         });
@@ -221,9 +221,9 @@ describe('makeJayStream', () => {
     });
 
     it('should be callable and return async iterable', async () => {
-        const stream = makeJayStream('test.stream').withHandler(async function* (
-            input: { query: string },
-        ) {
+        const stream = makeJayStream('test.stream').withHandler(async function* (input: {
+            query: string;
+        }) {
             yield { result: input.query + '-1' };
             yield { result: input.query + '-2' };
         });
@@ -264,9 +264,9 @@ describe('makeJayStream', () => {
     });
 
     it('StreamChunk extracts the chunk type', () => {
-        const stream = makeJayStream('test.typed').withHandler(async function* (
-            _input: { x: number },
-        ) {
+        const stream = makeJayStream('test.typed').withHandler(async function* (_input: {
+            x: number;
+        }) {
             yield { name: 'a', value: 1 };
         });
 

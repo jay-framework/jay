@@ -1,4 +1,8 @@
-import { makeJayStackComponent, partialRender, type UrlParams } from '@jay-framework/fullstack-component';
+import {
+    makeJayStackComponent,
+    partialRender,
+    type UrlParams,
+} from '@jay-framework/fullstack-component';
 
 interface PageParams extends UrlParams {
     slug: string;
