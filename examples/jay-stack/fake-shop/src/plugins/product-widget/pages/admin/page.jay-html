@@ -1,0 +1,45 @@
+<html>
+<head>
+    <script type="application/jay-data">
+data:
+    title: string
+    productCount: number
+    products:
+        - name: string
+          price: number
+          sku: string
+    </script>
+    <style>
+        .admin-dashboard { max-width: 800px; margin: 0 auto; padding: 20px; font-family: system-ui; }
+        .admin-dashboard h1 { color: #1a1a2e; }
+        .stats { background: #f0f0ff; padding: 16px; border-radius: 8px; margin: 16px 0; }
+        .product-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+        .product-table th, .product-table td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #e0e0e0; }
+        .product-table th { background: #f5f5f5; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="admin-dashboard">
+        <h1>{title}</h1>
+        <div class="stats">
+            <strong>Total Products:</strong> {productCount}
+        </div>
+        <table class="product-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Price</th>
+                    <th>SKU</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr forEach="products" trackBy="sku">
+                    <td>{name}</td>
+                    <td>${price}</td>
+                    <td>{sku}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+</html>

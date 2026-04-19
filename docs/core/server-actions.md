@@ -127,7 +127,7 @@ export const discoverParams = makeJayStream('routes.discoverParams')
     let page = 1;
     while (true) {
       const products = await productsService.list({ page, pageSize: 100 });
-      yield products.map(p => ({ slug: p.slug }));
+      yield products.map((p) => ({ slug: p.slug }));
       if (!products.hasMore) break;
       page++;
     }
