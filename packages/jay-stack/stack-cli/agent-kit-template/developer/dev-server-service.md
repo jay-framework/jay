@@ -1,10 +1,24 @@
 # Dev Server Service API
 
-The dev server exposes a `DevServerService` for design board applications and CLI tools. It provides route listing, param discovery, and freeze management.
+The dev server exposes a `DevServerService` for design board applications, CLI tools, and plugins. It provides route listing, param discovery, and freeze management.
 
-## Access
+## Service Marker
 
-The service is returned from `mkDevServer()`:
+Registered as `DEV_SERVER_SERVICE` — injectable in actions and components:
+
+```typescript
+import { DEV_SERVER_SERVICE } from '@jay-framework/dev-server';
+
+export const listAllRoutes = makeJayAction('admin.listRoutes')
+    .withServices(DEV_SERVER_SERVICE)
+    .withHandler(async (_input, devServer) => {
+        return devServer.listRoutes();
+    });
+```
+
+## Direct Access
+
+Also returned from `mkDevServer()` for CLI usage:
 
 ```typescript
 const { service } = await mkDevServer(options);

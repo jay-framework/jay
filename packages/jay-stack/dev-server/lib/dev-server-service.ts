@@ -1,14 +1,22 @@
 /**
- * Dev Server Service — public API for design board applications and CLI (DL#128).
+ * Dev Server Service — public API for design board applications, CLI, and plugins (DL#128, DL#130).
  *
  * Encapsulates route listing, param discovery, and freeze management.
- * Returned from mkDevServer and wired into the editor protocol by the CLI.
+ * Returned from mkDevServer and registered as a Jay service so plugin
+ * components and actions can inject it via `.withServices(DEV_SERVER_SERVICE)`.
  */
 
 import type { ViteDevServer } from 'vite';
 import type { JayRoute } from '@jay-framework/stack-route-scanner';
+import { createJayService } from '@jay-framework/fullstack-component';
 import type { FreezeStore, FreezeEntry } from './freeze';
 import type { DevServerRoute } from './dev-server';
+
+/**
+ * Service marker for DevServerService.
+ * Use with `.withServices(DEV_SERVER_SERVICE)` in actions and components.
+ */
+export const DEV_SERVER_SERVICE = createJayService<DevServerService>('DevServerService');
 
 export interface RouteInfo {
     path: string;

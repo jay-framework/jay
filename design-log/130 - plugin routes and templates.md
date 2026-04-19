@@ -238,3 +238,5 @@ The only difference: the source files come from the plugin's NPM package instead
 2. **Local plugins use file paths, NPM use export names.** The `component` field in `routes` is a relative file path for local plugins (e.g., `./pages/admin/page.ts`) and an exported member name for NPM packages. Detected by checking if the value starts with `./`.
 
 3. **Example uses product-widget plugin.** The fake-shop example adds an `/admin/products` route to the product-widget plugin, showing a product dashboard page with the same rendering pipeline as project pages.
+
+4. **DevServerService registered as a Jay service.** `DEV_SERVER_SERVICE` marker created via `createJayService<DevServerService>('DevServerService')` and registered with `registerService` during `mkDevServer`. Plugin actions and components can inject it via `.withServices(DEV_SERVER_SERVICE)` to access route listing, param discovery, and freeze management. Import from `@jay-framework/dev-server`.

@@ -66,7 +66,8 @@ import { scanPlugins } from '@jay-framework/stack-server-runtime';
 import { WithValidations } from '@jay-framework/compiler-shared';
 import { getLogger, getDevLogger, type RequestTiming } from '@jay-framework/logger';
 import { FreezeStore } from './freeze';
-import { DevServerService } from './dev-server-service';
+import { DevServerService, DEV_SERVER_SERVICE } from './dev-server-service';
+import {registerService} from "@jay-framework/stack-server-runtime/dist";
 
 /** Callback to register linked files for watching. Set by setupSlowRenderCacheInvalidation. */
 let _watchLinkedFiles: (files: string[]) => void = () => {};
@@ -1322,6 +1323,9 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
     );
 
     const service = new DevServerService(devServerRoutes, vite, freezeStore);
+
+    // Register as a Jay service so plugin actions/components can inject it (DL#130)
+    registerService(DEV_SERVER_SERVICE, service);
 
     return {
         server: vite.middlewares,

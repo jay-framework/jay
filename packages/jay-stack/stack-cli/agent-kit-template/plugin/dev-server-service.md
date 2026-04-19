@@ -2,9 +2,34 @@
 
 The dev server exposes a `DevServerService` for plugins, design board applications, and CLI tools. It provides route listing, param discovery, and freeze management.
 
-## Access
+## Service Marker
 
-The service is returned from `mkDevServer()`:
+Registered as `DEV_SERVER_SERVICE` — inject in actions and components:
+
+```typescript
+import { DEV_SERVER_SERVICE } from '@jay-framework/dev-server';
+
+export const listAllRoutes = makeJayAction('admin.listRoutes')
+    .withServices(DEV_SERVER_SERVICE)
+    .withHandler(async (_input, devServer) => {
+        return devServer.listRoutes();
+    });
+```
+
+Or in a component:
+
+```typescript
+makeJayStackComponent()
+    .withServices(DEV_SERVER_SERVICE)
+    .withFastRender(async (_props, devServer) => {
+        const routes = devServer.listRoutes();
+        return phaseOutput({ routes, routeCount: routes.length }, {});
+    });
+```
+
+## Direct Access
+
+Also returned from `mkDevServer()` for CLI usage:
 
 ```typescript
 const { service } = await mkDevServer(options);
