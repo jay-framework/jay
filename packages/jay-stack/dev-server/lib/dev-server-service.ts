@@ -7,10 +7,11 @@
  */
 
 import type { ViteDevServer } from 'vite';
-import type { JayRoute } from '@jay-framework/stack-route-scanner';
 import { createJayService } from '@jay-framework/fullstack-component';
-import type { FreezeStore, FreezeEntry } from './freeze';
+import type { FreezeStore } from './freeze';
 import type { DevServerRoute } from './dev-server';
+import {getLogger} from "@jay-framework/logger";
+import {resolveServices} from '@jay-framework/stack-server-runtime';
 
 /**
  * Service marker for DevServerService.
@@ -51,17 +52,25 @@ export class DevServerService {
     async *loadRouteParams(routePath: string): AsyncGenerator<Record<string, string>[]> {
         const matched = this.routes.find((r) => r.path === routePath);
         if (!matched) {
+            getLogger().error(`[loadRouteParams] Route [${routePath}] not found`);
             throw new Error(`Route "${routePath}" not found`);
         }
 
-        const module = await this.vite.ssrLoadModule(matched.fsRoute.compPath);
+        let module: Record<string, any>;
+        try {
+            module = await this.vite.ssrLoadModule(matched.fsRoute.compPath);
+        }
+        catch (e) {
+            getLogger().error(`[loadRouteParams] Route [${routePath}] - ssrLoadModule: ${e.message}`);
+            throw new Error(`[loadRouteParams] Route [${routePath}] - ssrLoadModule: ${e.message}`);
+        }
         const component = module.page;
 
         if (!component?.loadParams) {
+            getLogger().error(`[loadRouteParams] Route [${routePath}] has no loadParams`);
             throw new Error(`Route "${routePath}" has no loadParams`);
         }
 
-        const { resolveServices } = await import('@jay-framework/stack-server-runtime');
         const services = resolveServices(component.services || []);
 
         yield* component.loadParams(services);
