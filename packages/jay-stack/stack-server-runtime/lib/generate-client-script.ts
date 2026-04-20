@@ -194,7 +194,11 @@ const FREEZE_SHORTCUT_SCRIPT = `
               body: JSON.stringify({ route, viewState: state.viewState }),
             });
             const { id } = await resp.json();
-            window.open(route + '?_jay_freeze=' + id, '_blank');
+            if (new URLSearchParams(window.location.search).has('_jay_embed')) {
+              window.parent.postMessage({ type: 'jay:freeze', id, route }, '*');
+            } else {
+              window.open(route + '?_jay_freeze=' + id, '_blank');
+            }
           } catch (err) {
             console.error('[Freeze] Failed:', err);
           }

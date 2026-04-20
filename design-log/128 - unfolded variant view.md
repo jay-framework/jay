@@ -225,3 +225,49 @@ Non-keyed headless instance ViewState was missing from `automation.getPageState(
 4. **Automation agent computes merge fresh.** Previously cached `mergedViewState` in the `viewStateChange` handler. Changed to compute on each `getPageState()` call so it always reads the latest `__headlessInstances` from the component's ViewState (which includes instance data updated during their own reactive cycles, not just the page's).
 
 5. **CSS inlined by reading from disk, not Vite transform.** Initially tried `vite.transformRequest()` which wraps CSS in JS modules. Simplified to reading the CSS file directly from the filesystem path extracted from the Vite URL.
+
+## Addendum: Iframe-mode freeze (AIditor integration)
+
+### Problem
+
+When the AIditor loads a page inside an iframe, the current freeze flow opens a new browser tab (`window.open`). This breaks the AIditor experience — the freeze result should stay within the AIditor's control, not escape to a separate tab.
+
+### Design
+
+A URL parameter `_jay_embed=true` (added by the AIditor to the iframe `src`) switches the freeze behavior:
+
+1. **Detection**: the freeze shortcut script checks `new URLSearchParams(window.location.search).has('_jay_embed')`
+2. **Instead of `window.open`**: after saving the freeze and receiving the `id`, the script calls `window.parent.postMessage({ type: 'jay:freeze', id, route }, '*')`
+3. **No new tab**: the AIditor receives the message and decides how to display the frozen view (e.g., open it in a new iframe panel, add it to a side-by-side comparison, etc.)
+
+### Message format
+
+```typescript
+interface JayFreezeMessage {
+    type: 'jay:freeze';
+    id: string;      // freeze ID returned by POST /_jay/freeze
+    route: string;   // page route (window.location.pathname)
+}
+```
+
+### Changes
+
+**`stack-server-runtime/lib/generate-client-script.ts`** — update `FREEZE_SHORTCUT_SCRIPT`:
+
+```js
+// After saving the freeze:
+const id = (await resp.json()).id;
+const embedMode = new URLSearchParams(window.location.search).has('_jay_embed');
+if (embedMode) {
+    window.parent.postMessage({ type: 'jay:freeze', id, route }, '*');
+} else {
+    window.open(route + '?_jay_freeze=' + id, '_blank');
+}
+```
+
+### Notes
+
+- `_jay_embed` is a general-purpose flag — other iframe-aware behaviors can check it in the future
+- The AIditor is responsible for constructing the freeze URL (`route + '?_jay_freeze=' + id`) when it decides to display the frozen view
+- Visual feedback (flash + sound) still plays in both modes — confirms the freeze was captured
+- The `*` target origin in `postMessage` is acceptable since the message contains only a freeze ID and route path (no sensitive data)
