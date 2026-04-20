@@ -1247,6 +1247,57 @@ async function slowlyRender(
 }
 ```
 
+## Page Freeze
+
+Page freeze captures the current ViewState of a live page and renders it as pure static HTML (SSR only, no client scripts). Useful for inspecting specific data states, comparing states side by side, and embedding in design board applications.
+
+### Usage
+
+Press **Alt+S** (Option+S on Mac) on any dev page to freeze the current state. A white flash and shutter sound confirm the capture. The frozen page opens in a new tab.
+
+### Frozen Page URL
+
+```
+/products/kitan?_jay_freeze=<id>
+```
+
+Add `&format=fragment` for a body-only HTML fragment with inlined CSS, suitable for shadow DOM embedding.
+
+### Iframe / Embed Mode
+
+When a page is loaded inside an iframe with `?_jay_embed=true` (e.g., by the AIditor), freezing does **not** open a new tab. Instead, the page posts a message to the parent frame:
+
+```typescript
+// Message posted to parent window
+{
+    type: 'jay:freeze',
+    id: string,      // freeze ID
+    route: string,   // page route path
+}
+```
+
+The parent application receives the message and controls how the frozen view is displayed (e.g., in a side panel, a new iframe, etc.). To construct the frozen page URL:
+
+```
+route + '?_jay_freeze=' + id                   // full page
+route + '?_jay_freeze=' + id + '&format=fragment'  // shadow DOM fragment
+```
+
+### Freeze Management API
+
+Freezes are managed via `DevServerService.freezeStore`:
+
+```typescript
+const store = service.freezeStore;
+await store.save(route, viewState);   // save
+await store.list(route);              // list by route
+await store.get(id);                  // get by ID
+await store.rename(id, name);         // rename
+await store.delete(id);              // delete
+```
+
+Also available via the editor protocol (Socket.IO): `listFreezes`, `renameFreeze`, `deleteFreeze`, `freezeChanged` event.
+
 ## Next Steps
 
 Now that you understand Jay Stack components:

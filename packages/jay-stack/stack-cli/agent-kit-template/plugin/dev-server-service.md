@@ -56,7 +56,7 @@ for await (const batch of service.loadRouteParams('/products/kitan/[[category]]'
 }
 ```
 
-Returns `{ success, error? }`. Fails if the route doesn't exist or has no `loadParams`.
+Returns empty if the route has no `page.ts` or no `loadParams`. Throws if the route doesn't exist.
 
 ## Freeze Management
 
@@ -115,4 +115,20 @@ The `freezeChanged` socket event is emitted when jay-html or CSS files change. D
 socket.on('freezeChanged', () => {
   // Re-fetch frozen page fragments
 });
+```
+
+## Iframe / Embed Mode
+
+When a page is loaded inside an iframe with `?_jay_embed=true` (e.g., by the AIditor), the freeze shortcut (Alt+S) posts a message to the parent frame instead of opening a new tab:
+
+```typescript
+// Message posted to parent window
+{ type: 'jay:freeze', id: string, route: string }
+```
+
+The parent application receives the message and constructs the frozen page URL:
+
+```
+route + '?_jay_freeze=' + id                        // full page
+route + '?_jay_freeze=' + id + '&format=fragment'   // shadow DOM fragment
 ```
