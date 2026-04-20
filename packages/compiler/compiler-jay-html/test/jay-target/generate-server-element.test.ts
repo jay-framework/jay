@@ -51,6 +51,15 @@ describe('generate jay-html server element', () => {
             );
         });
 
+        it('for attributes with multi-line values', async () => {
+            const folder = 'basics/multiline-attribute';
+            const serverFile = await readFileAndGenerateServerElementFile(folder);
+            expect(serverFile.validations).toEqual([]);
+            expect(await prettify(serverFile.val)).toEqual(
+                await readFixtureServerElementFile(folder),
+            );
+        });
+
         it('for phase-aware dynamic text (only interactive bindings get jay-coordinate)', async () => {
             const folder = 'basics/phase-aware-dynamic-text';
             const serverFile = await readFileAndGenerateServerElementFile(folder);

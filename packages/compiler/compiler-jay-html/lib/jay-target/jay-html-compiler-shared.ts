@@ -45,6 +45,11 @@ export function textEscape(s: string): string {
     return s.replace(/'/g, "\\'");
 }
 
+/** Escape a static attribute value for embedding in a JS single-quoted string literal. */
+export function escapeForJsString(s: string): string {
+    return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+}
+
 export const PROPERTY = 1;
 export const BOOLEAN_ATTRIBUTE = 3;
 export const propertyMapping: Record<string, { type: number }> = {
