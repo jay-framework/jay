@@ -30,6 +30,8 @@ export interface ActionMetadata {
     method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
     /** Export name in the source module */
     exportName: string;
+    /** Whether this is a streaming action (makeJayStream) */
+    isStreaming?: boolean;
 }
 
 /**
@@ -185,13 +187,25 @@ function extractActionFromExpression(
             continue;
         }
 
-        // Check for makeJayAction/makeJayQuery root call
+        // Check for makeJayAction/makeJayQuery/makeJayStream root call
         if (tsBridge.isIdentifier(expr)) {
             const funcName = expr.text;
-            if (funcName === 'makeJayAction' || funcName === 'makeJayQuery') {
+            if (
+                funcName === 'makeJayAction' ||
+                funcName === 'makeJayQuery' ||
+                funcName === 'makeJayStream'
+            ) {
                 // Get the action name from first argument
                 const nameArg = current.arguments[0];
                 if (nameArg && tsBridge.isStringLiteral(nameArg)) {
+                    if (funcName === 'makeJayStream') {
+                        return {
+                            actionName: nameArg.text,
+                            method: 'POST',
+                            isStreaming: true,
+                        };
+                    }
+
                     // Default method based on builder type
                     method = funcName === 'makeJayQuery' ? 'GET' : 'POST';
 
@@ -306,6 +320,7 @@ export async function transformActionImports(
     }> = [];
 
     let needsCreateActionCallerImport = false;
+    let needsCreateStreamCallerImport = false;
 
     for (const imp of actionImports) {
         // Resolve the action module
@@ -324,10 +339,17 @@ export async function transformActionImports(
         for (const importName of imp.namedImports) {
             const action = actions.find((a) => a.exportName === importName);
             if (action) {
-                callerDeclarations.push(
-                    `const ${importName} = createActionCaller('${action.actionName}', '${action.method}');`,
-                );
-                needsCreateActionCallerImport = true;
+                if (action.isStreaming) {
+                    callerDeclarations.push(
+                        `const ${importName} = createStreamCaller('${action.actionName}');`,
+                    );
+                    needsCreateStreamCallerImport = true;
+                } else {
+                    callerDeclarations.push(
+                        `const ${importName} = createActionCaller('${action.actionName}', '${action.method}');`,
+                    );
+                    needsCreateActionCallerImport = true;
+                }
             } else {
                 // Not an action - might be ActionError or other export
                 // Keep the original import for non-action exports
@@ -356,9 +378,12 @@ export async function transformActionImports(
         result = result.slice(0, rep.start) + rep.replacement + result.slice(rep.end);
     }
 
-    // Add createActionCaller import at the top
-    if (needsCreateActionCallerImport) {
-        const importStatement = `import { createActionCaller } from '@jay-framework/stack-client-runtime';\n`;
+    // Add client runtime imports at the top
+    const importNames: string[] = [];
+    if (needsCreateActionCallerImport) importNames.push('createActionCaller');
+    if (needsCreateStreamCallerImport) importNames.push('createStreamCaller');
+    if (importNames.length > 0) {
+        const importStatement = `import { ${importNames.join(', ')} } from '@jay-framework/stack-client-runtime';\n`;
         result = importStatement + result;
     }
 

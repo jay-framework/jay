@@ -1,0 +1,47 @@
+name: Page
+tags:
+  - tag: status
+    type: data
+    dataType: string
+    phase: fast+interactive
+    description: Current check status (idle, checking, done)
+
+  - tag: checkedCount
+    type: data
+    dataType: number
+    phase: fast+interactive
+    description: Number of products checked so far
+
+  - tag: totalCount
+    type: data
+    dataType: number
+    phase: fast
+    description: Total number of products
+
+  - tag: results
+    type: sub-contract
+    repeated: true
+    trackBy: productId
+    phase: fast+interactive
+    description: Inventory check results streamed from server
+    tags:
+      - tag: productId
+        type: data
+        dataType: string
+      - tag: name
+        type: data
+        dataType: string
+      - tag: sku
+        type: data
+        dataType: string
+      - tag: units
+        type: data
+        dataType: number
+      - tag: inStock
+        type: data
+        dataType: boolean
+
+  - tag: start-check
+    type: interactive
+    elementType: HTMLButtonElement
+    description: Start inventory check button

@@ -240,4 +240,48 @@ interface JayStreamActionDefinition<Input, Chunk, Services extends any[]> {
 
 2. **`execute()` rejects streaming actions.** When a streaming action is called via `execute()` (the regular path), it returns an error `STREAMING_ACTION` directing callers to use `executeStream()` instead. This prevents accidentally awaiting a generator.
 
-3. **Phase 3 (client-side HTTP consumer) deferred.** The client-side build transform that replaces action calls with `fetch` hasn't been updated for streaming yet. Server-side callable works directly (calls the handler). Client-side NDJSON streaming consumption will be added when the Vite plugin transform is updated.
+3. ~~**Phase 3 (client-side HTTP consumer) deferred.**~~ Now completed — see below.
+
+### Phase 3 completed: Client-side streaming + build transform
+
+#### Files Modified
+
+| File                                                       | Change                                                                                                                                                                                                                              |
+| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `stack-client-runtime/lib/action-caller.ts`                | Added `createStreamCaller<Input, Chunk>()` — fetches NDJSON endpoint, reads via `ReadableStream`, parses line-by-line, returns `AsyncIterable<Chunk>`                                                                               |
+| `compiler-jay-stack/lib/transform-action-imports.ts`       | `extractActionFromExpression` recognizes `makeJayStream` (sets `isStreaming: true` on metadata); transform emits `createStreamCaller('name')` for streaming actions; combined import when both action and stream callers are needed |
+| `compiler-jay-stack/test/transform-action-imports.test.ts` | 5 new tests: extract stream metadata, extract stream with services, extract mixed actions+streams, transform stream imports, transform mixed imports                                                                                |
+
+#### Fake-shop example
+
+| File                                                                            | Purpose                                                                                                                                         |
+| ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `examples/jay-stack/fake-shop/src/actions/inventory-check.actions.ts`           | `makeJayStream('inventory.check')` — streams stock status for each product one by one using `PRODUCTS_DATABASE_SERVICE` and `INVENTORY_SERVICE` |
+| `examples/jay-stack/fake-shop/src/pages/inventory-check/page.jay-contract`      | Contract: status, checkedCount, totalCount, repeated results, start-check button                                                                |
+| `examples/jay-stack/fake-shop/src/pages/inventory-check/page.jay-html`          | Template: button triggers check, live progress counter, streamed result rows with stock status                                                  |
+| `examples/jay-stack/fake-shop/src/pages/inventory-check/page.ts`                | Page component: `for await (const result of checkInventory())` in interactive phase, updates signals as chunks arrive                           |
+| `examples/jay-stack/fake-shop/src/pages/inventory-check/page.jay-contract.d.ts` | Generated types from contract                                                                                                                   |
+| `examples/jay-stack/fake-shop/src/pages/inventory-check/page.jay-html.d.ts`     | Generated types from jay-html                                                                                                                   |
+
+#### Build transform behavior
+
+The existing action import transform now handles `makeJayStream` the same way it handles `makeJayAction`/`makeJayQuery`. In client builds:
+
+```typescript
+// Source (page.ts)
+import { checkInventory } from '../../actions/inventory-check.actions';
+
+// Client build output
+import { createStreamCaller } from '@jay-framework/stack-client-runtime';
+const checkInventory = createStreamCaller('inventory.check');
+```
+
+When a file imports both regular actions and streams, the import combines:
+
+```typescript
+import { createActionCaller, createStreamCaller } from '@jay-framework/stack-client-runtime';
+```
+
+#### `createStreamCaller` implementation
+
+Uses `fetch` with `ReadableStream` to consume the NDJSON response. Reads the response body incrementally, splits by newlines, parses each JSON line, and yields `chunk` values via `AsyncIterable`. Handles `{ done: true }` termination and `{ error: "..." }` mid-stream errors (throws `ActionError`).

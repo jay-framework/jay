@@ -127,6 +127,78 @@ describe('transform-action-imports', () => {
             ]);
         });
 
+        it('should extract makeJayStream with POST method and isStreaming flag', () => {
+            const source = `
+                import { makeJayStream } from '@jay-framework/fullstack-component';
+
+                export const checkInventory = makeJayStream('inventory.check')
+                    .withHandler(async function* () {
+                        yield { name: 'item1' };
+                    });
+            `;
+
+            const actions = extractActionsFromSource(source, 'test.ts');
+
+            expect(actions).toHaveLength(1);
+            expect(actions[0]).toEqual({
+                actionName: 'inventory.check',
+                method: 'POST',
+                exportName: 'checkInventory',
+                isStreaming: true,
+            });
+        });
+
+        it('should extract makeJayStream with services', () => {
+            const source = `
+                import { makeJayStream } from '@jay-framework/fullstack-component';
+
+                export const checkInventory = makeJayStream('inventory.check')
+                    .withServices(PRODUCTS_SERVICE, INVENTORY_SERVICE)
+                    .withHandler(async function* (input, productsDb, inventory) {
+                        yield { name: 'item1' };
+                    });
+            `;
+
+            const actions = extractActionsFromSource(source, 'test.ts');
+
+            expect(actions).toHaveLength(1);
+            expect(actions[0]).toEqual({
+                actionName: 'inventory.check',
+                method: 'POST',
+                exportName: 'checkInventory',
+                isStreaming: true,
+            });
+        });
+
+        it('should extract mixed actions and streams from same file', () => {
+            const source = `
+                import { makeJayAction, makeJayStream } from '@jay-framework/fullstack-component';
+
+                export const addToCart = makeJayAction('cart.addToCart')
+                    .withHandler(async (input) => ({ success: true }));
+
+                export const checkInventory = makeJayStream('inventory.check')
+                    .withHandler(async function* () {
+                        yield { name: 'item1' };
+                    });
+            `;
+
+            const actions = extractActionsFromSource(source, 'test.ts');
+
+            expect(actions).toHaveLength(2);
+            expect(actions[0]).toEqual({
+                actionName: 'cart.addToCart',
+                method: 'POST',
+                exportName: 'addToCart',
+            });
+            expect(actions[1]).toEqual({
+                actionName: 'inventory.check',
+                method: 'POST',
+                exportName: 'checkInventory',
+                isStreaming: true,
+            });
+        });
+
         it('should ignore non-exported actions', () => {
             const source = `
                 import { makeJayAction } from '@jay-framework/fullstack-component';
@@ -283,6 +355,105 @@ describe('transform-action-imports', () => {
                 const addToCart = createActionCaller('cart.addToCart', 'POST');
 
                 await addToCart({ productId: '123' });
+            `;
+
+            expect(await prettify(result!.code)).toEqual(await prettify(expected));
+        });
+
+        it('should transform stream imports to createStreamCaller', async () => {
+            const streamActionSource = `
+                import { makeJayStream } from '@jay-framework/fullstack-component';
+
+                export const checkInventory = makeJayStream('inventory.check')
+                    .withServices(PRODUCTS_SERVICE)
+                    .withHandler(async function* (input, productsDb) {
+                        yield { name: 'item1' };
+                    });
+            `;
+
+            const mockStreamResolve = async (importSource: string, _importer: string) => {
+                if (importSource.includes('.actions') || importSource.includes('/actions/')) {
+                    return { path: '/test/inventory.actions.ts', code: streamActionSource };
+                }
+                return null;
+            };
+
+            const source = `
+                import { checkInventory } from './actions/inventory-check.actions';
+
+                async function run() {
+                    for await (const chunk of checkInventory({})) {
+                        console.log(chunk);
+                    }
+                }
+            `;
+
+            const result = await transformActionImports(source, '/test/page.ts', mockStreamResolve);
+
+            expect(result).not.toBeNull();
+
+            const expected = `
+                import { createStreamCaller } from '@jay-framework/stack-client-runtime';
+
+                const checkInventory = createStreamCaller('inventory.check');
+
+                async function run() {
+                    for await (const chunk of checkInventory({})) {
+                        console.log(chunk);
+                    }
+                }
+            `;
+
+            expect(await prettify(result!.code)).toEqual(await prettify(expected));
+        });
+
+        it('should transform mixed action and stream imports', async () => {
+            const mixedSource = `
+                import { makeJayAction, makeJayStream } from '@jay-framework/fullstack-component';
+
+                export const addToCart = makeJayAction('cart.addToCart')
+                    .withHandler(async (input) => ({ success: true }));
+
+                export const checkInventory = makeJayStream('inventory.check')
+                    .withHandler(async function* () {
+                        yield { name: 'item1' };
+                    });
+            `;
+
+            const mockMixedResolve = async (importSource: string, _importer: string) => {
+                if (importSource.includes('.actions') || importSource.includes('/actions/')) {
+                    return { path: '/test/mixed.actions.ts', code: mixedSource };
+                }
+                return null;
+            };
+
+            const source = `
+                import { addToCart, checkInventory } from './actions/shop.actions';
+
+                async function run() {
+                    await addToCart({ productId: '1' });
+                    for await (const chunk of checkInventory({})) {
+                        console.log(chunk);
+                    }
+                }
+            `;
+
+            const result = await transformActionImports(source, '/test/page.ts', mockMixedResolve);
+
+            expect(result).not.toBeNull();
+
+            const expected = `
+                import { createActionCaller, createStreamCaller } from '@jay-framework/stack-client-runtime';
+
+                const addToCart = createActionCaller('cart.addToCart', 'POST');
+                const checkInventory = createStreamCaller('inventory.check');
+
+                async function run() {
+                    await addToCart({ productId: '1' });
+                    for await (const chunk of checkInventory({})) {
+                        console.log(chunk);
+                    }
+                }
             `;
 
             expect(await prettify(result!.code)).toEqual(await prettify(expected));
