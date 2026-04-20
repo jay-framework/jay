@@ -285,3 +285,9 @@ import { createActionCaller, createStreamCaller } from '@jay-framework/stack-cli
 #### `createStreamCaller` implementation
 
 Uses `fetch` with `ReadableStream` to consume the NDJSON response. Reads the response body incrementally, splits by newlines, parses each JSON line, and yields `chunk` values via `AsyncIterable`. Handles `{ done: true }` termination and `{ error: "..." }` mid-stream errors (throws `ActionError`).
+
+#### Additional fixes
+
+**Action discovery** — `stack-server-runtime/lib/action-discovery.ts` only checked `isJayAction()` when scanning action files. Streaming actions (`makeJayStream`) were never registered, causing 404s. Fixed all three discovery paths (project actions, NPM plugin actions, local plugin actions) to also check `isJayStreamAction()` and call `registry.registerStream()`.
+
+**Vite plugin virtual module** — `compiler-jay-stack/lib/index.ts` `load` hook hardcoded `createActionCaller` for all actions. Updated to check `action.isStreaming` and emit `createStreamCaller` for streaming actions, with a combined import when both are needed.

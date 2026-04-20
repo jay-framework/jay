@@ -1322,7 +1322,14 @@ export async function mkDevServer(rawOptions: DevServerOptions): Promise<DevServ
         ),
     );
 
-    const service = new DevServerService(devServerRoutes, vite, freezeStore);
+    const service = new DevServerService(
+        devServerRoutes,
+        vite,
+        options.pagesRootFolder,
+        options.projectRootFolder,
+        options.jayRollupConfig,
+        freezeStore,
+    );
 
     // Register as a Jay service so plugin actions/components can inject it (DL#130)
     registerService(DEV_SERVER_SERVICE, service);

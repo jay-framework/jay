@@ -240,3 +240,21 @@ The only difference: the source files come from the plugin's NPM package instead
 3. **Example uses product-widget plugin.** The fake-shop example adds an `/admin/products` route to the product-widget plugin, showing a product dashboard page with the same rendering pipeline as project pages.
 
 4. **DevServerService registered as a Jay service.** `DEV_SERVER_SERVICE` marker created via `createJayService<DevServerService>('DevServerService')` and registered with `registerService` during `mkDevServer`. Plugin actions and components can inject it via `.withServices(DEV_SERVER_SERVICE)` to access route listing, param discovery, and freeze management. Import from `@jay-framework/dev-server`.
+
+### loadRouteParams and route scanner fixes
+
+**Route scanner: `compPath` existence check** — `route-scanner/lib/route-scanner.ts` always derived `compPath` by string replacement (`page.jay-html` → `page.ts`) without checking file existence. Routes without a `page.ts` got a non-existent `compPath`, causing SSR load failures. Fixed: `compPath` is now `''` when the file doesn't exist.
+
+**`loadRouteParams` uses `loadPageParts` + `runLoadParams`** — The original `loadRouteParams` in `DevServerService` only loaded `page.ts` directly, ignoring keyed headless components that may also define `loadParams`. Rewritten to:
+1. Call `loadPageParts()` to get all `DevServerPagePart[]` (page + keyed headless plugins)
+2. Delegate to `runLoadParams()` in `stack-server-runtime/lib/slowly-changing-runner.ts`, which iterates all parts and calls `loadParams` on each one that defines it
+3. Return empty when `compPath` is empty (no `page.ts`) or when no parts have `loadParams`
+
+`DevServerService` constructor now takes `pagesBase`, `projectBase`, and `jayRollupConfig` to support calling `loadPageParts`.
+
+| File | Change |
+| --- | --- |
+| `route-scanner/lib/route-scanner.ts` | Check file existence for `compPath`, set `''` if missing |
+| `stack-server-runtime/lib/slowly-changing-runner.ts` | `runLoadParams(parts)` iterates all parts, resolves services, yields param batches |
+| `dev-server/lib/dev-server-service.ts` | Constructor takes page/project config; `loadRouteParams` uses `loadPageParts` + `runLoadParams` |
+| `dev-server/lib/dev-server.ts` | Pass config args to `DevServerService` constructor |

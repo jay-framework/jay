@@ -1,12 +1,10 @@
 import {
     AnySlowlyRenderResult,
     HeadTag,
-    JayStackComponentDefinition,
     PageProps,
     UrlParams,
     phaseOutput,
 } from '@jay-framework/fullstack-component';
-import { JayComponentCore } from '@jay-framework/component';
 import { DevServerPagePart, HeadlessInstanceComponent } from './load-page-parts';
 import { resolveServices } from './services';
 import type { DiscoveredHeadlessInstance } from '@jay-framework/compiler-jay-html';
@@ -147,53 +145,19 @@ export class DevSlowlyChangingPhase implements SlowlyChangingPhase {
     }
 }
 
-export async function runLoadParams<
-    Refs extends object,
-    SlowVS extends object,
-    FastVS extends object,
-    InteractiveVS extends object,
-    Services extends Array<any>,
-    Contexts extends Array<any>,
-    PropsT extends object,
-    Params extends UrlParams,
-    CompCore extends JayComponentCore<PropsT, InteractiveVS>,
->(
-    compDefinition: JayStackComponentDefinition<
-        Refs,
-        SlowVS,
-        FastVS,
-        InteractiveVS,
-        Services,
-        Contexts,
-        PropsT,
-        Params,
-        CompCore
-    >,
-    services: Services,
-) {
-    compDefinition.loadParams(services);
+/**
+ * Run loadParams for all parts (page + keyed headless components).
+ * Yields param batches from each part that has loadParams.
+ */
+export async function* runLoadParams(
+    parts: DevServerPagePart[],
+): AsyncGenerator<Record<string, string>[]> {
+    for (const part of parts) {
+        if (part.compDefinition.loadParams) {
+            const services = resolveServices(part.compDefinition.services);
+            for await (const batch of part.compDefinition.loadParams(services)) {
+                yield batch;
+            }
+        }
+    }
 }
-
-export function runSlowlyChangingRender<
-    Refs extends object,
-    SlowVS extends object,
-    FastVS extends object,
-    InteractiveVS extends object,
-    Services extends Array<any>,
-    Contexts extends Array<any>,
-    PropsT extends object,
-    Params extends UrlParams,
-    CompCore extends JayComponentCore<PropsT, InteractiveVS>,
->(
-    compDefinition: JayStackComponentDefinition<
-        Refs,
-        SlowVS,
-        FastVS,
-        InteractiveVS,
-        Services,
-        Contexts,
-        PropsT,
-        Params,
-        CompCore
-    >,
-) {}

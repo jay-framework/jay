@@ -1,4 +1,4 @@
-import { promises as fs } from 'fs';
+import { promises as fs, existsSync } from 'fs';
 import path from 'path';
 import { parse } from 'node-html-parser';
 import YAML from 'yaml';
@@ -75,7 +75,8 @@ function convertToRoutePath(
             else return name;
         });
 
-    const compPath = jayHtmlPath.replace(jayHtmlFilename, compFilename);
+    const candidateCompPath = jayHtmlPath.replace(jayHtmlFilename, compFilename);
+    const compPath = existsSync(candidateCompPath) ? candidateCompPath : '';
     return { segments, jayHtmlPath, compPath, rawRoute };
 }
 

@@ -8,10 +8,11 @@
 
 import type { ViteDevServer } from 'vite';
 import { createJayService } from '@jay-framework/fullstack-component';
+import type { JayRollupConfig } from '@jay-framework/rollup-plugin';
 import type { FreezeStore } from './freeze';
 import type { DevServerRoute } from './dev-server';
-import {getLogger} from "@jay-framework/logger";
-import {resolveServices} from '@jay-framework/stack-server-runtime';
+import { getLogger } from '@jay-framework/logger';
+import { loadPageParts, runLoadParams } from '@jay-framework/stack-server-runtime';
 
 /**
  * Service marker for DevServerService.
@@ -29,6 +30,9 @@ export class DevServerService {
     constructor(
         private routes: DevServerRoute[],
         private vite: ViteDevServer,
+        private pagesBase: string,
+        private projectBase: string,
+        private jayRollupConfig: JayRollupConfig,
         private _freezeStore?: FreezeStore,
     ) {}
 
@@ -47,7 +51,8 @@ export class DevServerService {
 
     /**
      * Run loadParams for a route, yielding param batches as an async generator.
-     * Throws if the route doesn't exist or has no loadParams.
+     * Loads all page parts (page component + keyed headless components) and
+     * calls loadParams on each one that defines it.
      */
     async *loadRouteParams(routePath: string): AsyncGenerator<Record<string, string>[]> {
         const matched = this.routes.find((r) => r.path === routePath);
@@ -56,23 +61,18 @@ export class DevServerService {
             throw new Error(`Route "${routePath}" not found`);
         }
 
-        let module: Record<string, any>;
-        try {
-            module = await this.vite.ssrLoadModule(matched.fsRoute.compPath);
-        }
-        catch (e) {
-            getLogger().error(`[loadRouteParams] Route [${routePath}] - ssrLoadModule: ${e.message}`);
-            throw new Error(`[loadRouteParams] Route [${routePath}] - ssrLoadModule: ${e.message}`);
-        }
-        const component = module.page;
+        const loaded = await loadPageParts(
+            this.vite,
+            matched.fsRoute,
+            this.pagesBase,
+            this.projectBase,
+            this.jayRollupConfig,
+        );
 
-        if (!component?.loadParams) {
-            getLogger().error(`[loadRouteParams] Route [${routePath}] has no loadParams`);
-            throw new Error(`Route "${routePath}" has no loadParams`);
+        if (!loaded.val) {
+            return;
         }
 
-        const services = resolveServices(component.services || []);
-
-        yield* component.loadParams(services);
+        yield* runLoadParams(loaded.val.parts);
     }
 }

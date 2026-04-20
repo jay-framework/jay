@@ -245,7 +245,7 @@ describe('DevServerService', () => {
         await devServer.viteServer.close();
     });
 
-    it('loadRouteParams throws for route without loadParams', async () => {
+    it('loadRouteParams returns empty for route without loadParams', async () => {
         const httpServer = http.createServer();
         const devServer = await mkDevServer({
             ...baseOptions,
@@ -254,11 +254,12 @@ describe('DevServerService', () => {
             httpServer,
         });
 
-        await expect(async () => {
-            for await (const _ of devServer.service.loadRouteParams('/')) {
-                // should not reach here
-            }
-        }).rejects.toThrow();
+        const batches: any[] = [];
+        for await (const batch of devServer.service.loadRouteParams('/')) {
+            batches.push(batch);
+        }
+
+        expect(batches).toHaveLength(0);
 
         await devServer.viteServer.close();
     });
