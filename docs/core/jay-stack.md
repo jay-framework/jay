@@ -1265,7 +1265,15 @@ Add `&format=fragment` for a body-only HTML fragment with inlined CSS, suitable 
 
 ### Iframe / Embed Mode
 
-When a page is loaded inside an iframe with `?_jay_embed=true` (e.g., by the AIditor), freezing does **not** open a new tab. Instead, the page posts a message to the parent frame:
+When a page is loaded inside an iframe with `?_jay_embed=true` (e.g., by the AIditor), the Alt+S keyboard shortcut is disabled (the parent page owns it). Instead, the parent and iframe communicate via `postMessage`:
+
+**Parent → iframe**: request a freeze
+
+```typescript
+iframe.contentWindow.postMessage({ type: 'jay:requestFreeze' }, '*');
+```
+
+**Iframe → parent**: freeze completed
 
 ```typescript
 // Message posted to parent window
@@ -1276,7 +1284,7 @@ When a page is loaded inside an iframe with `?_jay_embed=true` (e.g., by the AId
 }
 ```
 
-The parent application receives the message and controls how the frozen view is displayed (e.g., in a side panel, a new iframe, etc.). To construct the frozen page URL:
+The parent application receives the message and controls how the frozen view is displayed. To construct the frozen page URL:
 
 ```
 route + '?_jay_freeze=' + id                   // full page
@@ -1289,11 +1297,11 @@ Freezes are managed via `DevServerService.freezeStore`:
 
 ```typescript
 const store = service.freezeStore;
-await store.save(route, viewState);   // save
-await store.list(route);              // list by route
-await store.get(id);                  // get by ID
-await store.rename(id, name);         // rename
-await store.delete(id);              // delete
+await store.save(route, viewState); // save
+await store.list(route); // list by route
+await store.get(id); // get by ID
+await store.rename(id, name); // rename
+await store.delete(id); // delete
 ```
 
 Also available via the editor protocol (Socket.IO): `listFreezes`, `renameFreeze`, `deleteFreeze`, `freezeChanged` event.

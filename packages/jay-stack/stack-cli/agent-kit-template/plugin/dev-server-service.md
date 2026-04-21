@@ -119,14 +119,17 @@ socket.on('freezeChanged', () => {
 
 ## Iframe / Embed Mode
 
-When a page is loaded inside an iframe with `?_jay_embed=true` (e.g., by the AIditor), the freeze shortcut (Alt+S) posts a message to the parent frame instead of opening a new tab:
+When a page is loaded inside an iframe with `?_jay_embed=true` (e.g., by the AIditor), the Alt+S shortcut is disabled (parent owns it). Freeze is triggered via `postMessage`:
 
 ```typescript
-// Message posted to parent window
-{ type: 'jay:freeze', id: string, route: string }
+// Parent → iframe: request freeze
+iframe.contentWindow.postMessage({ type: 'jay:requestFreeze' }, '*');
+
+// Iframe → parent: freeze done
+// { type: 'jay:freeze', id: string, route: string }
 ```
 
-The parent application receives the message and constructs the frozen page URL:
+The parent constructs the frozen page URL:
 
 ```
 route + '?_jay_freeze=' + id                        // full page

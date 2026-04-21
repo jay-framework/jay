@@ -234,34 +234,35 @@ When the AIditor loads a page inside an iframe, the current freeze flow opens a 
 
 ### Design
 
-A URL parameter `_jay_embed=true` (added by the AIditor to the iframe `src`) switches the freeze behavior:
+A URL parameter `_jay_embed=true` (added by the AIditor to the iframe `src`) switches the freeze behavior. Since the parent window is also a jay dev server application, it captures Alt+S itself. The iframe must not also listen for Alt+S — instead, the parent triggers the freeze via `postMessage`.
 
-1. **Detection**: the freeze shortcut script checks `new URLSearchParams(window.location.search).has('_jay_embed')`
-2. **Instead of `window.open`**: after saving the freeze and receiving the `id`, the script calls `window.parent.postMessage({ type: 'jay:freeze', id, route }, '*')`
-3. **No new tab**: the AIditor receives the message and decides how to display the frozen view (e.g., open it in a new iframe panel, add it to a side-by-side comparison, etc.)
+**Two-way protocol:**
 
-### Message format
+1. **Parent → iframe**: `{ type: 'jay:requestFreeze' }` — tells the iframe to capture and save a freeze
+2. **Iframe → parent**: `{ type: 'jay:freeze', id, route }` — returns the freeze ID once saved
+
+### Embed mode behavior
+
+When `_jay_embed` is present:
+
+- The Alt+S keyboard handler is **not registered** (parent owns this shortcut)
+- A `message` event listener waits for `jay:requestFreeze` from the parent
+- On receiving the request, the iframe runs the freeze (flash, sound, capture, save)
+- After saving, posts `jay:freeze` back to the parent with the freeze ID and route
+
+### Message formats
 
 ```typescript
-interface JayFreezeMessage {
-    type: 'jay:freeze';
-    id: string;      // freeze ID returned by POST /_jay/freeze
-    route: string;   // page route (window.location.pathname)
+// Parent → iframe
+interface JayRequestFreezeMessage {
+  type: 'jay:requestFreeze';
 }
-```
 
-### Changes
-
-**`stack-server-runtime/lib/generate-client-script.ts`** — update `FREEZE_SHORTCUT_SCRIPT`:
-
-```js
-// After saving the freeze:
-const id = (await resp.json()).id;
-const embedMode = new URLSearchParams(window.location.search).has('_jay_embed');
-if (embedMode) {
-    window.parent.postMessage({ type: 'jay:freeze', id, route }, '*');
-} else {
-    window.open(route + '?_jay_freeze=' + id, '_blank');
+// Iframe → parent
+interface JayFreezeMessage {
+  type: 'jay:freeze';
+  id: string; // freeze ID returned by POST /_jay/freeze
+  route: string; // page route (window.location.pathname)
 }
 ```
 
@@ -269,5 +270,5 @@ if (embedMode) {
 
 - `_jay_embed` is a general-purpose flag — other iframe-aware behaviors can check it in the future
 - The AIditor is responsible for constructing the freeze URL (`route + '?_jay_freeze=' + id`) when it decides to display the frozen view
-- Visual feedback (flash + sound) still plays in both modes — confirms the freeze was captured
+- Visual feedback (flash + sound) still plays in the iframe — confirms the freeze was captured
 - The `*` target origin in `postMessage` is acceptable since the message contains only a freeze ID and route path (no sensitive data)

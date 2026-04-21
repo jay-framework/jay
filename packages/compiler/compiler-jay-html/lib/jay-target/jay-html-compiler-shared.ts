@@ -47,7 +47,11 @@ export function textEscape(s: string): string {
 
 /** Escape a static attribute value for embedding in a JS single-quoted string literal. */
 export function escapeForJsString(s: string): string {
-    return s.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r');
+    return s
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/\n/g, '\\n')
+        .replace(/\r/g, '\\r');
 }
 
 export const PROPERTY = 1;

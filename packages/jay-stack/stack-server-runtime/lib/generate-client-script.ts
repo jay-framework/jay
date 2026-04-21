@@ -150,16 +150,21 @@ ${parts.map((part) => '        ' + part.clientPart).join(',\n')}
 }
 
 /**
- * Client-side freeze shortcut script (DL#127).
+ * Client-side freeze shortcut script (DL#127, DL#128).
  * Alt+S (Option+S on Mac) captures the current ViewState, saves it, and opens a frozen tab.
+ * In embed mode (_jay_embed): suppresses Alt+S (parent owns it), listens for
+ * jay:requestFreeze from parent, posts jay:freeze back with the freeze ID.
  * Includes visual feedback: white flash + camera shutter sound.
  */
 const FREEZE_SHORTCUT_SCRIPT = `
-      // Page Freeze shortcut: Alt+S / Option+S (DL#127)
-      // Use e.code instead of e.key — on Mac, Option+S produces 'ß', not 's'
-      document.addEventListener('keydown', async (e) => {
-        if (e.altKey && e.code === 'KeyS') {
-          e.preventDefault();
+      // Page Freeze (DL#127, DL#128 iframe addendum)
+      // Sticky embed mode: URL param sets a session cookie so in-iframe navigation preserves it
+      if (new URLSearchParams(window.location.search).has('_jay_embed')) {
+        document.cookie = '_jay_embed=1;path=/;samesite=lax';
+      }
+      const __jayEmbedMode = document.cookie.split(';').some(c => c.trim().startsWith('_jay_embed='));
+
+      async function __jayDoFreeze() {
           const automation = window.__jay?.automation;
           if (!automation) return;
 
@@ -194,7 +199,7 @@ const FREEZE_SHORTCUT_SCRIPT = `
               body: JSON.stringify({ route, viewState: state.viewState }),
             });
             const { id } = await resp.json();
-            if (new URLSearchParams(window.location.search).has('_jay_embed')) {
+            if (__jayEmbedMode) {
               window.parent.postMessage({ type: 'jay:freeze', id, route }, '*');
             } else {
               window.open(route + '?_jay_freeze=' + id, '_blank');
@@ -202,8 +207,22 @@ const FREEZE_SHORTCUT_SCRIPT = `
           } catch (err) {
             console.error('[Freeze] Failed:', err);
           }
-        }
-      });`;
+      }
+
+      if (__jayEmbedMode) {
+        // Embed mode: parent triggers freeze via postMessage
+        window.addEventListener('message', (e) => {
+          if (e.data?.type === 'jay:requestFreeze') __jayDoFreeze();
+        });
+      } else {
+        // Standalone: Alt+S / Option+S keyboard shortcut
+        document.addEventListener('keydown', (e) => {
+          if (e.altKey && e.code === 'KeyS') {
+            e.preventDefault();
+            __jayDoFreeze();
+          }
+        });
+      }`;
 
 /**
  * Generate the automation wrapping code.

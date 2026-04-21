@@ -246,15 +246,16 @@ The only difference: the source files come from the plugin's NPM package instead
 **Route scanner: `compPath` existence check** — `route-scanner/lib/route-scanner.ts` always derived `compPath` by string replacement (`page.jay-html` → `page.ts`) without checking file existence. Routes without a `page.ts` got a non-existent `compPath`, causing SSR load failures. Fixed: `compPath` is now `''` when the file doesn't exist.
 
 **`loadRouteParams` uses `loadPageParts` + `runLoadParams`** — The original `loadRouteParams` in `DevServerService` only loaded `page.ts` directly, ignoring keyed headless components that may also define `loadParams`. Rewritten to:
+
 1. Call `loadPageParts()` to get all `DevServerPagePart[]` (page + keyed headless plugins)
 2. Delegate to `runLoadParams()` in `stack-server-runtime/lib/slowly-changing-runner.ts`, which iterates all parts and calls `loadParams` on each one that defines it
 3. Return empty when `compPath` is empty (no `page.ts`) or when no parts have `loadParams`
 
 `DevServerService` constructor now takes `pagesBase`, `projectBase`, and `jayRollupConfig` to support calling `loadPageParts`.
 
-| File | Change |
-| --- | --- |
-| `route-scanner/lib/route-scanner.ts` | Check file existence for `compPath`, set `''` if missing |
-| `stack-server-runtime/lib/slowly-changing-runner.ts` | `runLoadParams(parts)` iterates all parts, resolves services, yields param batches |
-| `dev-server/lib/dev-server-service.ts` | Constructor takes page/project config; `loadRouteParams` uses `loadPageParts` + `runLoadParams` |
-| `dev-server/lib/dev-server.ts` | Pass config args to `DevServerService` constructor |
+| File                                                 | Change                                                                                          |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `route-scanner/lib/route-scanner.ts`                 | Check file existence for `compPath`, set `''` if missing                                        |
+| `stack-server-runtime/lib/slowly-changing-runner.ts` | `runLoadParams(parts)` iterates all parts, resolves services, yields param batches              |
+| `dev-server/lib/dev-server-service.ts`               | Constructor takes page/project config; `loadRouteParams` uses `loadPageParts` + `runLoadParams` |
+| `dev-server/lib/dev-server.ts`                       | Pass config args to `DevServerService` constructor                                              |
