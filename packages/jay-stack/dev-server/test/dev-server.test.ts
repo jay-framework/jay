@@ -336,7 +336,7 @@ function clearScriptForTest(script: string) {
             .map((line) => line.trim())
             .join('\n')
             // Strip the freeze shortcut script (DL#128) — it's an implementation detail
-            .replace(/\n\/\/ Page Freeze shortcut:[\s\S]*?\n\/\/ source-map/, '\n// source-map')
+            .replace(/\n\/\/ Page Freeze[\s\S]*?\n\/\/ source-map/, '\n// source-map')
     );
 }
 

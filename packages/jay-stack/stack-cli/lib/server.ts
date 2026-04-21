@@ -111,7 +111,13 @@ export async function startDevServer(options: StartDevServerOptions = {}) {
             type: 'listFreezes' as const,
             success: true,
             freezes: (await freezeStore.list(params.route)).map(
-                ({ id, name, route, createdAt }) => ({ id, name, route, createdAt }),
+                ({ id, name, route, routePattern, createdAt }) => ({
+                    id,
+                    name,
+                    route,
+                    routePattern,
+                    createdAt,
+                }),
             ),
         }));
         editorServer.onRenameFreeze(async (params) => ({

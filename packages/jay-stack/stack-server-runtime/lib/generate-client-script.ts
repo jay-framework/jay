@@ -46,6 +46,8 @@ export interface GenerateClientScriptOptions {
      * so that AI/automation tools can see the complete page state.
      */
     slowViewState?: object;
+    /** Route pattern (e.g., /products/kitan{/:category}) for freeze entries */
+    routePattern?: string;
 }
 
 /**
@@ -156,7 +158,9 @@ ${parts.map((part) => '        ' + part.clientPart).join(',\n')}
  * jay:requestFreeze from parent, posts jay:freeze back with the freeze ID.
  * Includes visual feedback: white flash + camera shutter sound.
  */
-const FREEZE_SHORTCUT_SCRIPT = `
+function buildFreezeScript(routePattern?: string): string {
+    const routePatternLiteral = routePattern ? `'${routePattern}'` : 'undefined';
+    return `
       // Page Freeze (DL#127, DL#128 iframe addendum)
       // Sticky embed mode: URL param sets a session cookie so in-iframe navigation preserves it
       if (new URLSearchParams(window.location.search).has('_jay_embed')) {
@@ -193,10 +197,11 @@ const FREEZE_SHORTCUT_SCRIPT = `
           try {
             const state = automation.getPageState();
             const route = window.location.pathname;
+            const routePattern = ${routePatternLiteral};
             const resp = await fetch('/_jay/freeze', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ route, viewState: state.viewState }),
+              body: JSON.stringify({ route, routePattern, viewState: state.viewState }),
             });
             const { id } = await resp.json();
             if (__jayEmbedMode) {
@@ -223,6 +228,7 @@ const FREEZE_SHORTCUT_SCRIPT = `
           }
         });
       }`;
+}
 
 /**
  * Generate the automation wrapping code.
@@ -242,7 +248,7 @@ export function buildAutomationWrap(
 
     const appendLine = appendDom ? `\n      target.appendChild(wrapped.element.dom);` : '';
 
-    const freezeScript = FREEZE_SHORTCUT_SCRIPT;
+    const freezeScript = buildFreezeScript(options.routePattern);
 
     if (hasSlowViewState) {
         return `

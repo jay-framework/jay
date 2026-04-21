@@ -525,6 +525,7 @@ async function handleCachedRequest(
         projectInit,
         pluginsForPage,
         options,
+        routeToExpressRoute(route),
         cachedEntry.slowViewState,
         timing,
         cachedEntry.preRenderedContent,
@@ -785,6 +786,7 @@ async function handleClientOnlyRequest(
         pluginsForPage,
         {
             enableAutomation: !options.disableAutomation,
+            routePattern: routeToExpressRoute(route),
         },
     );
 
@@ -823,6 +825,7 @@ async function sendResponse(
     projectInit: ProjectClientInitInfo | undefined,
     pluginsForPage: PluginClientInitInfo[],
     options: DevServerOptions,
+    routePattern: string,
     slowViewState?: object,
     timing?: RequestTiming,
     preLoadedContent?: string,
@@ -865,6 +868,7 @@ async function sendResponse(
             {
                 enableAutomation: !options.disableAutomation,
                 slowViewState,
+                routePattern,
             },
             // Pass source directory for headfull FS file resolution when using pre-rendered path
             jayHtmlDir !== sourceDir ? sourceDir : undefined,
@@ -885,6 +889,7 @@ async function sendResponse(
             {
                 enableAutomation: !options.disableAutomation,
                 slowViewState,
+                routePattern,
             },
         );
     }
@@ -1417,13 +1422,13 @@ function setupFreezeEndpoint(vite: ViteDevServer, freezeStore: FreezeStore): voi
             req.on('data', (chunk: any) => (body += chunk));
             req.on('end', async () => {
                 try {
-                    const { route, viewState } = JSON.parse(body);
+                    const { route, routePattern, viewState } = JSON.parse(body);
                     if (!route || !viewState) {
                         res.writeHead(400, { 'Content-Type': 'application/json' });
                         res.end(JSON.stringify({ error: 'Missing route or viewState' }));
                         return;
                     }
-                    const entry = await freezeStore.save(route, viewState);
+                    const entry = await freezeStore.save(route, viewState, routePattern);
                     getLogger().info(`[Freeze] Saved freeze "${entry.id}" for ${route}`);
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify(entry));

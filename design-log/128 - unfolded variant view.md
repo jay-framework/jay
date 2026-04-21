@@ -272,3 +272,22 @@ interface JayFreezeMessage {
 - The AIditor is responsible for constructing the freeze URL (`route + '?_jay_freeze=' + id`) when it decides to display the frozen view
 - Visual feedback (flash + sound) still plays in the iframe — confirms the freeze was captured
 - The `*` target origin in `postMessage` is acceptable since the message contains only a freeze ID and route path (no sensitive data)
+- Embed mode is sticky via a session cookie (`_jay_embed=1`) — set on first load with the URL param, persists across in-iframe navigations
+
+### Implementation results
+
+#### FreezeEntry: `routePattern` field
+
+Freeze entries now store both `route` (concrete URL, e.g., `/products/kitan`) and `routePattern` (Express pattern, e.g., `/products/kitan{/:category}`). This allows `FreezeStore.list()` to match by pattern (exact match on `routePattern` or `route`) and the AIditor to display the concrete URL while grouping freezes by route.
+
+The route pattern is baked into the client script at generation time (`GenerateClientScriptOptions.routePattern`) and sent by the client in the `POST /_jay/freeze` body. This avoids server-side route matching on save — the server just stores what the client provides.
+
+#### Files changed
+
+| File | Change |
+| --- | --- |
+| `stack-server-runtime/lib/generate-client-script.ts` | `FREEZE_SHORTCUT_SCRIPT` → `buildFreezeScript(routePattern)`: bakes route pattern into client script; embed mode via session cookie; two-way postMessage protocol |
+| `dev-server/lib/freeze.ts` | `FreezeEntry.routePattern`; `save()` accepts `routePattern`; `list()` matches by `routePattern` or `route` |
+| `dev-server/lib/dev-server.ts` | Pass `routePattern` via `GenerateClientScriptOptions` at all render paths; `setupFreezeEndpoint` reads `routePattern` from POST body |
+| `editor-protocol/lib/protocol.ts` | `FreezeEntry.routePattern` |
+| `stack-cli/lib/server.ts` | `listFreezes` response includes `routePattern` |

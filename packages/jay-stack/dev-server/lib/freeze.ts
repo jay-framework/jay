@@ -13,7 +13,10 @@ import { randomUUID } from 'node:crypto';
 export interface FreezeEntry {
     id: string;
     name?: string;
+    /** The concrete URL path (e.g., /products/kitan) */
     route: string;
+    /** The route pattern (e.g., /products/kitan{/:category}) */
+    routePattern?: string;
     viewState: object;
     createdAt: string;
 }
@@ -25,11 +28,12 @@ export class FreezeStore {
         this.dir = path.join(buildFolder, 'freezes');
     }
 
-    async save(route: string, viewState: object): Promise<FreezeEntry> {
+    async save(route: string, viewState: object, routePattern?: string): Promise<FreezeEntry> {
         await fs.mkdir(this.dir, { recursive: true });
         const entry: FreezeEntry = {
             id: randomUUID().slice(0, 8),
             route,
+            ...(routePattern && { routePattern }),
             viewState,
             createdAt: new Date().toISOString(),
         };
@@ -59,7 +63,7 @@ export class FreezeStore {
                 try {
                     const content = await fs.readFile(path.join(this.dir, file), 'utf-8');
                     const entry = JSON.parse(content) as FreezeEntry;
-                    if (!route || entry.route === route) {
+                    if (!route || entry.routePattern === route || entry.route === route) {
                         entries.push(entry);
                     }
                 } catch {

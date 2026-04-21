@@ -160,7 +160,10 @@ export interface ImportResponse<TVendorDoc> extends BaseResponse {
 export interface FreezeEntry {
     id: string;
     name?: string;
+    /** The concrete URL path (e.g., /products/kitan) */
     route: string;
+    /** The route pattern (e.g., /products/kitan{/:category}) */
+    routePattern?: string;
     createdAt: string;
 }
 
