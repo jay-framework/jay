@@ -215,6 +215,9 @@ function buildFreezeScript(routePattern?: string): string {
       }
 
       if (__jayEmbedMode) {
+        // Notify parent of the current route on load (DL#128 route addendum)
+        window.parent.postMessage({ type: 'jay:route', route: window.location.pathname, routePattern: ${routePatternLiteral} }, '*');
+
         // Embed mode: parent triggers freeze via postMessage
         window.addEventListener('message', (e) => {
           if (e.data?.type === 'jay:requestFreeze') __jayDoFreeze();

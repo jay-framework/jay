@@ -291,3 +291,59 @@ The route pattern is baked into the client script at generation time (`GenerateC
 | `dev-server/lib/dev-server.ts` | Pass `routePattern` via `GenerateClientScriptOptions` at all render paths; `setupFreezeEndpoint` reads `routePattern` from POST body |
 | `editor-protocol/lib/protocol.ts` | `FreezeEntry.routePattern` |
 | `stack-cli/lib/server.ts` | `listFreezes` response includes `routePattern` |
+
+## Addendum: Route notification in embed mode
+
+### Problem
+
+When a page loads inside the AIditor iframe, the parent has no reliable way to know which route the iframe is displaying. The AIditor currently infers the route from `inferRouteFromPathname` and polls with a 300ms interval — both are fragile and wasteful. When the user clicks a link inside the iframe (client-side navigation or full reload), the parent doesn't learn the new route until the next poll cycle, and the inferred pattern may be wrong.
+
+### Design
+
+Add a `jay:route` postMessage that the iframe sends to the parent **on every page load** in embed mode. This gives the parent the exact route pattern and concrete path without guessing or polling.
+
+The message fires immediately in the `if (__jayEmbedMode)` block of `buildFreezeScript()`, since the `routePattern` literal is already available there.
+
+### Message format
+
+```typescript
+// Iframe → parent (fires on page load)
+interface JayRouteMessage {
+  type: 'jay:route';
+  route: string;        // concrete path (window.location.pathname)
+  routePattern: string; // route pattern literal baked into the script
+}
+```
+
+### Where it fires
+
+In `buildFreezeScript(routePattern)` (`stack-server-runtime/lib/generate-client-script.ts`), inside the existing `if (__jayEmbedMode)` block, before the `message` event listener:
+
+```js
+if (__jayEmbedMode) {
+  // Notify parent of the current route on load
+  window.parent.postMessage({
+    type: 'jay:route',
+    route: window.location.pathname,
+    routePattern: <routePatternLiteral>,
+  }, '*');
+
+  // ... existing jay:requestFreeze listener
+}
+```
+
+This fires once per page load — every time the iframe navigates to a new page, it gets a fresh script with the correct `routePattern` baked in.
+
+### What the AIditor does with it
+
+1. Listens for `jay:route` messages on `window`
+2. Uses `routePattern` to select the correct page route (replaces `inferRouteFromPathname`)
+3. Uses `route` for the preview path dropdown
+4. Can replace the 300ms polling probe with this event-driven approach for route sync
+
+### Notes
+
+- No new dependencies — uses the same `postMessage` + `*` origin as the existing freeze protocol
+- `routePattern` is the same literal already baked in for freeze entries — no new plumbing needed
+- Fires synchronously on script execution (not deferred) so the parent knows the route before any user interaction
+- On client-side SPA navigation within the iframe, the message only fires on full page loads (script re-execution). If SPA navigation is added later, a separate mechanism would be needed
