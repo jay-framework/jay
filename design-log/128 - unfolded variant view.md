@@ -284,13 +284,13 @@ The route pattern is baked into the client script at generation time (`GenerateC
 
 #### Files changed
 
-| File | Change |
-| --- | --- |
+| File                                                 | Change                                                                                                                                                            |
+| ---------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `stack-server-runtime/lib/generate-client-script.ts` | `FREEZE_SHORTCUT_SCRIPT` → `buildFreezeScript(routePattern)`: bakes route pattern into client script; embed mode via session cookie; two-way postMessage protocol |
-| `dev-server/lib/freeze.ts` | `FreezeEntry.routePattern`; `save()` accepts `routePattern`; `list()` matches by `routePattern` or `route` |
-| `dev-server/lib/dev-server.ts` | Pass `routePattern` via `GenerateClientScriptOptions` at all render paths; `setupFreezeEndpoint` reads `routePattern` from POST body |
-| `editor-protocol/lib/protocol.ts` | `FreezeEntry.routePattern` |
-| `stack-cli/lib/server.ts` | `listFreezes` response includes `routePattern` |
+| `dev-server/lib/freeze.ts`                           | `FreezeEntry.routePattern`; `save()` accepts `routePattern`; `list()` matches by `routePattern` or `route`                                                        |
+| `dev-server/lib/dev-server.ts`                       | Pass `routePattern` via `GenerateClientScriptOptions` at all render paths; `setupFreezeEndpoint` reads `routePattern` from POST body                              |
+| `editor-protocol/lib/protocol.ts`                    | `FreezeEntry.routePattern`                                                                                                                                        |
+| `stack-cli/lib/server.ts`                            | `listFreezes` response includes `routePattern`                                                                                                                    |
 
 ## Addendum: Route notification in embed mode
 
@@ -310,7 +310,7 @@ The message fires immediately in the `if (__jayEmbedMode)` block of `buildFreeze
 // Iframe → parent (fires on page load)
 interface JayRouteMessage {
   type: 'jay:route';
-  route: string;        // concrete path (window.location.pathname)
+  route: string; // concrete path (window.location.pathname)
   routePattern: string; // route pattern literal baked into the script
 }
 ```
